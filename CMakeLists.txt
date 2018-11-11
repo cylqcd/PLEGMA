@@ -1,0 +1,283 @@
+# basic setup for cmake
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
+set(CMAKE_COLOR_MAKEFILE ON)
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD 11)
+
+# disable in source builds
+# this is only a temporary fix, but for now we need it as cmake will
+# otherwise overwrite the existing makefiles
+set(CMAKE_DISABLE_SOURCE_CHANGES ON)
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+# add a directory for cmake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+enable_language(C)
+enable_language(CXX)
+
+project("PLEGMA" VERSION 0.0.1 LANGUAGES)
+
+set(QUDA_HOME "" CACHE PATH "path to QUDA")
+if("${QUDA_HOME}" STREQUAL "")
+  message( FATAL_ERROR "QUDA_HOME must be defined" )
+endif()
+FIND_LIBRARY(QUDA_LIB quda ${QUDA_HOME}/lib)
+include_directories(SYSTEM ${QUDA_HOME}/include)
+
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG HOSTDEBUG DEVICEDEBUG)
+
+# using dirs in LD_LIBRARY_PATh for searching for libraries
+string(REPLACE ":" ";" LIBRARY_DIRS $ENV{LD_LIBRARY_PATH})
+
+set(DEFAULT_GPU_ARCH sm_35)
+set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60)")
+set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60)
+
+#ARPACK
+set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
+if(PLEGMA_ARPACK)
+  add_definitions(-DHAVE_ARPACK)
+  set(PLEGMA_ARPACKHOME "" CACHE PATH "path to ARPACK")
+endif(PLEGMA_ARPACK)
+
+set(PLEGMA_2FLAVMG ON CACHE BOOL "compile 2-flavour MG routines. This requires modification of QUDA to add extra preconditioner pointers")
+if(PLEGMA_2FLAVMG)
+  add_definitions(-DPLEGMA_2FLAVMG)
+endif()
+
+# Locations for GSL HDF5 LIME
+#set(PLEGMA_GSLHOME "" CACHE PATH "path to GSL")
+set(PLEGMA_LIMEHOME "" CACHE PATH "path to LIME")
+set(PLEGMA_HDF5HOME "" CACHE PATH "path to HDF5")
+
+# Switch between MKL and OpenBlas BLAS
+set(PLEGMA_MKL OFF CACHE BOOL "build PLEGMA with MKL")
+set(PLEGMA_OPENBLAS OFF CACHE BOOL "build PLEGMA with OENBLAS")
+
+if(PLEGMA_MKL AND PLEGMA_OPENBLAS)
+  message(SEND_ERROR "Please specify either MKL or OpenBLAS libraries, not both")
+endif()
+
+# Locations for OPENBLAS or MKL
+if(${PLEGMA_OPENBLAS})
+  set(PLEGMA_OPENBLASHOME "" CACHE PATH "path to OPENBLAS source")
+  set(PLEGMA_OPENBLAS_LIBDIR "" CACHE PATH "path to OPENBLAS lib")
+endif()
+
+if(${PLEGMA_MKL})
+  set(PLEGMA_MKL_LIBDIR "${MKLROOT}/lib/intel64" CACHE PATH "path to MKL library dir")
+  set(PLEGMA_MKL_INCDIR "${MKLROOT}/include" CACHE PATH "path to MKL include dir")
+endif()
+
+
+#######################################################################
+# options that are not exposed at all because only one option exists
+set(CPU_ARCH ${CMAKE_HOST_SYSTEM_PROCESSOR})
+
+
+#######################################################################
+# everything below here is processing the setup
+#######################################################################
+# we need to check for some packages
+find_package(PythonInterp)
+
+if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
+  find_package(CUDAWrapper)
+  set(USING_CUDA_LANG_SUPPORT True)
+  set(CMAKE_CUDA_STANDARD 11)
+  set(CMAKE_CUDA_STANDARD_REQUIRED True)
+else()
+  set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
+  mark_as_advanced(CUDA_HOST_COMPILER)
+  find_package(CUDA REQUIRED)
+  set(USING_CUDA_LANG_SUPPORT False)
+endif()
+
+# We need threads
+find_package(Threads REQUIRED)
+
+# do all the build definitions
+#  
+#-C.K. Modified here to take OpenBlas and MKL switches into account  
+if(${PLEGMA_OPENBLAS})
+  add_definitions(-DHAVE_OPENBLAS)
+  FIND_LIBRARY(PLEGMA_OPENBLAS_LIB openblas ${PLEGMA_OPENBLAS_LIBDIR})
+  FIND_LIBRARY(PLEGMA_OPENBLAS_GOMP gomp ${LIBRARY_DIRS})
+  include_directories(SYSTEM ${PLEGMA_OPENBLASHOME})
+endif()
+
+if(${PLEGMA_MKL})
+  add_definitions(-DHAVE_MKL)
+  FIND_LIBRARY(PLEGMA_MKL_LIB_GFORTRAN gfortran /usr/lib64)
+  FIND_LIBRARY(PLEGMA_MKL_LIB_IOMP5 iomp5 /opt/intel/lib/intel64)
+  FIND_LIBRARY(PLEGMA_MKL_LIB_LP64 mkl_intel_lp64 ${PLEGMA_MKL_LIBDIR})
+  FIND_LIBRARY(PLEGMA_MKL_LIB_THREAD mkl_intel_thread ${PLEGMA_MKL_LIBDIR})
+  FIND_LIBRARY(PLEGMA_MKL_LIB_CORE mkl_core ${PLEGMA_MKL_LIBDIR})  
+  include_directories(SYSTEM ${PLEGMA_MKL_INCDIR})
+endif()
+
+if(PLEGMA_ARPACK)
+  FIND_LIBRARY(PLEGMA_GFORTRAN_LIB gfortran ${LIBRARY_DIRS})  
+  FIND_LIBRARY(PLEGMA_MPIFH_LIB mpi_mpifh ${LIBRARY_DIRS})  
+  FIND_LIBRARY(PLEGMA_Z_LIB z ${LIBRARY_DIRS})  
+  FIND_LIBRARY(PLEGMA_PARPACK_LIB parpack  ${PLEGMA_ARPACKHOME}/lib)
+  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/PARPACK/SRC/MPI)
+  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/PARPACK/UTIL/MPI)
+  
+  FIND_LIBRARY(PLEGMA_ARPACK_LIB arpack ${PLEGMA_ARPACKHOME}/lib)
+  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/SRC)
+  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/UTIL)
+endif(PLEGMA_ARPACK)
+
+#add_definitions(-DHAVE_GSL)
+#FIND_LIBRARY(PLEGMA_GSL_LIB gsl ${PLEGMA_GSLHOME}/lib)
+#include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)
+
+add_definitions(-DHAVE_HDF5)
+FIND_LIBRARY(PLEGMA_HDF5_LIB hdf5 ${PLEGMA_HDF5HOME}/lib)
+include_directories(SYSTEM ${PLEGMA_HDF5HOME}/include)
+
+add_definitions(-DHAVE_LIME)
+FIND_LIBRARY(PLEGMA_LIME_LIB lime ${PLEGMA_LIMEHOME}/lib)
+include_directories(SYSTEM ${PLEGMA_LIMEHOME}/include)
+
+LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} ${CUDA_curand_LIBRARY})
+LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY})
+
+add_definitions(-DMULTI_GPU)
+find_package(MPI)
+add_definitions(-DMPI_COMMS)
+include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+
+# COMPILER OPTIONS and BUILD types
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
+include_directories(include)
+include_directories(lib)
+include_directories(lib/kernels)
+
+
+# GPU ARCH
+STRING(REGEX REPLACE sm_ "" COMP_CAP ${GPU_ARCH})
+SET(COMP_CAP "${COMP_CAP}0")
+add_definitions(-D__COMPUTE_CAPABILITY__=${COMP_CAP})
+
+
+# NVCC FLAGS independet off build type
+if(NOT USING_CUDA_LANG_SUPPORT)
+  set(CUDA_NVCC_FLAGS "-std c++11 -arch=${GPU_ARCH} -ftz=true -prec-div=false -prec-sqrt=false")
+else()
+  set(CUDA_NVCC_FLAGS "-ftz=true -prec-div=false -prec-sqrt=false")
+  set(CMAKE_CUDA_FLAGS "-arch=${GPU_ARCH}" CACHE STRING "Flags used by the CUDA compiler" FORCE)
+endif()
+
+# some clang warnings shouds be warning even when turning warnings into errors
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CLANG_NOERROR "-Wno-error=unused-private-field")
+# this is a hack to get colored diagnostics back when using Ninja and clang
+    if(CMAKE_GENERATOR MATCHES "Ninja")
+      set(CLANG_FORCE_COLOR "-fcolor-diagnostics")
+    endif()
+endif()
+
+## define CUDA flags when CMake < 3.8
+set(CUDA_NVCC_FLAGS_DEVEL ${CUDA_NVCC_FLAGS} -Wno-deprecated-gpu-targets -Xcompiler -Wno-unknown-pragmas,-Wno-unused-function,-Wno-unused-local-typedef,-Wno-unused-private-field -O3 -lineinfo CACHE STRING
+    "Flags used by the CUDA compiler during regular development builds."
+    FORCE )
+set(CUDA_NVCC_FLAGS_STRICT ${CUDA_NVCC_FLAGS_DEVEL} CACHE STRING
+    "Flags used by the CUDA compiler during strict jenkins builds."
+    FORCE )
+set(CUDA_NVCC_FLAGS_RELEASE ${CUDA_NVCC_FLAGS} -O3 -w CACHE STRING
+    "Flags used by the C++ compiler during release builds."
+    FORCE )
+set(CUDA_NVCC_FLAGS_HOSTDEBUG ${CUDA_NVCC_FLAGS} -g -lineinfo -DHOST_DEBUG CACHE STRING
+    "Flags used by the C++ compiler during host-debug builds."
+    FORCE )
+set(CUDA_NVCC_FLAGS_DEVICEDEBUG ${CUDA_NVCC_FLAGS} -G CACHE STRING
+    "Flags used by the C++ compiler during device-debug builds."
+    FORCE )
+set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS} -g -DHOST_DEBUG -G CACHE STRING
+    "Flags used by the C++ compiler during full (host+device) debug builds."
+    FORCE )
+
+## define CUDA flags when CMake >= 3.8
+set(CMAKE_CUDA_FLAGS_DEVEL "${CUDA_NVCC_FLAGS} -Wno-deprecated-gpu-targets -Xcompiler -Wno-unknown-pragmas,-Wno-unused-function,-Wno-unused-local-typedef,-Wno-unused-private-field -O3 -lineinfo" CACHE STRING
+    "Flags used by the CUDA compiler during regular development builds."
+    FORCE )
+set(CMAKE_CUDA_FLAGS_STRICT "${CMAKE_CUDA_FLAGS_DEVEL}" CACHE STRING
+    "Flags used by the CUDA compiler during strict jenkins builds."
+    FORCE )
+set(CMAKE_CUDA_FLAGS_RELEASE "${CUDA_NVCC_FLAGS} -O3 -w" CACHE STRING
+    "Flags used by the CUDA compiler during release builds."
+    FORCE )
+set(CMAKE_CUDA_FLAGS_HOSTDEBUG "${CUDA_NVCC_FLAGS} -g -lineinfo -DHOST_DEBUG" CACHE STRING
+    "Flags used by the C++ compiler during host-debug builds."
+    FORCE )
+set(CMAKE_CUDA_FLAGS_DEVICEDEBUG "${CUDA_NVCC_FLAGS} -G" CACHE STRING
+    "Flags used by the C++ compiler during device-debug builds."
+    FORCE )
+set(CMAKE_CUDA_FLAGS_DEBUG "${CUDA_NVCC_FLAGS} -g -DHOST_DEBUG -G" CACHE STRING
+    "Flags used by the C++ compiler during full (host+device) debug builds."
+    FORCE )
+
+#define CXX FLAGS
+set(CMAKE_CXX_FLAGS_DEVEL  "${OpenMP_CXX_FLAGS} -O3 -Wall ${CLANG_FORCE_COLOR}" CACHE STRING
+"Flags used by the C++ compiler during regular development builds.")
+set(CMAKE_CXX_FLAGS_STRICT  "${OpenMP_CXX_FLAGS} -O3 -Wall -Werror ${CLANG_NOERROR}" CACHE STRING
+"Flags used by the C++ compiler during strict jenkins builds.")
+set(CMAKE_CXX_FLAGS_RELEASE "${OpenMP_CXX_FLAGS} -O3 -w" CACHE STRING
+    "Flags used by the C++ compiler during release builds.")
+set(CMAKE_CXX_FLAGS_HOSTDEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
+    "Flags used by the C++ compiler during host-debug builds.")
+set(CMAKE_CXX_FLAGS_DEVICEDEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas ${CLANG_FORCE_COLOR}" CACHE STRING
+    "Flags used by the C++ compiler during device-debug builds.")
+set(CMAKE_CXX_FLAGS_DEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
+    "Flags used by the C++ compiler during full (host+device) debug builds.")
+
+#define C FLAGS
+set(CMAKE_C_FLAGS_DEVEL "-Wall -O3"  CACHE STRING
+    "Flags used by the C compiler during regular development builds.")
+set(CMAKE_C_FLAGS_STRICT "-Wall -O3 -Werror -Wno-error=unused-private-field"  CACHE STRING
+    "Flags used by the C compiler during strict jenkins builds.")
+set(CMAKE_C_FLAGS_RELEASE "-Wall -O3 -w" CACHE STRING
+    "Flags used by the C compiler during release builds.")
+set(CMAKE_C_FLAGS_HOSTDEBUG "-Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG" CACHE STRING
+    "Flags used by the C compiler during host-debug builds.")
+set(CMAKE_C_FLAGS_DEVICEDEBUG "-Wall" CACHE STRING
+"Flags used by the C compiler during device-debug builds.")
+set(CMAKE_C_FLAGS_DEBUG "-Wall -g -fno-inline -DHOST_DEBUG" CACHE STRING
+    "Flags used by the C compiler during full (host+device) debug builds.")
+
+#define FORTRAN FLAGS
+set(CMAKE_F_FLAGS -std=c99 CACHE STRING "Fortran Flags")
+
+# make the compiler flags an advanced option for all user defined build types (cmake defined build types are advanced by default )
+mark_as_advanced(CMAKE_CXX_FLAGS_DEVEL)
+mark_as_advanced(CMAKE_CXX_FLAGS_STRICT)
+mark_as_advanced(CMAKE_CXX_FLAGS_HOSTDEBUG)
+mark_as_advanced(CMAKE_CXX_FLAGS_DEVICEDEBUG)
+
+mark_as_advanced(CUDA_NVCC_FLAGS_DEVEL)
+mark_as_advanced(CUDA_NVCC_FLAGS_STRICT)
+mark_as_advanced(CUDA_NVCC_FLAGS_HOSTDEBUG)
+mark_as_advanced(CUDA_NVCC_FLAGS_DEVICEDEBUG)
+mark_as_advanced(CMAKE_CUDA_FLAGS_DEVEL)
+mark_as_advanced(CMAKE_CUDA_FLAGS_STRICT)
+mark_as_advanced(CMAKE_CUDA_FLAGS_HOSTDEBUG)
+mark_as_advanced(CMAKE_CUDA_FLAGS_DEVICEDEBUG)
+
+mark_as_advanced(CMAKE_C_FLAGS_DEVEL)
+mark_as_advanced(CMAKE_C_FLAGS_STRICT)
+mark_as_advanced(CMAKE_C_FLAGS_HOSTDEBUG)
+mark_as_advanced(CMAKE_C_FLAGS_DEVICEDEBUG)
+
+mark_as_advanced(CMAKE_F_FLAGS)
+
+### add tests and quda library
+add_subdirectory(lib)
+### add PLEGMA directory
+add_subdirectory(utils)
+add_subdirectory(plegma)
+
