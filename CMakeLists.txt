@@ -6,6 +6,7 @@ set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 11)
+cmake_policy(SET CMP0074 NEW)
 
 # disable in source builds
 # this is only a temporary fix, but for now we need it as cmake will
@@ -138,7 +139,7 @@ endif(PLEGMA_ARPACK)
 # if PLEGMA_HDF5HOME has been specified, give this as a hint to
 # find_package via the *environment* variable HDF5_ROOT
 if(PLEGMA_HDF5HOME)
-  set(env(HDF5_ROOT ${PLEGMA_HDF5HOME}))
+  set(HDF5_ROOT ${PLEGMA_HDF5HOME})
 endif()
 # we want parallel HDF5
 set(HDF5_PREFER_PARALLEL TRUE)
