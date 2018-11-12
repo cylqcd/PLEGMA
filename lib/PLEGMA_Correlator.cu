@@ -65,6 +65,24 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   prop2.destroyTexObject(prop2Tex.tex);
 }
 
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+writeFile(char *filename, PLEGMA_params *params, FILE_WRITE_FORMAT CorrFileFormat) {
+  char* filename_out;
+  if(CorrFileFormat == ASCII_FORM) {
+    asprintf(&filename_out,"%s.dat");
+    writeASCII(filename_out);
+  }
+  else if(CorrFileFormat == HDF5_FORM) {
+    asprintf(&filename_out,"%s.h5");
+    writeHDF5(filename_out, params);
+  }
+  else {
+    errorQuda("FILE_WRITE_FORMAT not supported: %d\n", CorrFileFormat);
+  }
+  free(filename_out);
+}
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -190,7 +208,7 @@ static void fillDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace, int ndims,
 }
 
 /* Attribute writing */
-static void write_text_attribute(hid_t group_id,char* attr_name, char* attr_value) {
+static void write_text_attribute(hid_t group_id,const char* attr_name, char* attr_value) {
   hid_t attrdat_id = H5Screate(H5S_SCALAR);
   hid_t type_id = H5Tcopy(H5T_C_S1);
   H5Tset_size(type_id, strlen(attr_value));
