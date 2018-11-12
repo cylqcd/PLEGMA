@@ -54,6 +54,14 @@ int main(int argc, char **argv)
   loadGaugeQuda((void*)gauge_APE, &gauge_param);
   mapEvenOddToNormalGauge(gauge_APE,gauge_param,lL[0],lL[1],lL[2],lL[3]);
 
+  // Allocation done on BOTH, DEVICE and HOST
+  PLEGMA_Gauge<double> smearedGauge(BOTH);
+
+  smearedGauge.packGauge(gauge_APE);
+  smearedGauge.loadGauge();
+  printfQuda("Plaquette of smeared config:\n");
+  smearedGauge.calculatePlaq();
+
   // ensuring mu positive
   if(mu<0) mu*=-1.;
   QUDA_solver solverUP(mu);
@@ -62,11 +70,56 @@ int main(int argc, char **argv)
   if(mu>0) mu*=-1.;
   QUDA_solver solverDN(mu);
 
-  
+  PLEGMA_Vector<double> vectorIn(BOTH);
+  PLEGMA_Vector<double> vectorOut(BOTH);
+  PLEGMA_Vector<double> vectorAuxD(BOTH);
+  PLEGMA_Vector<float> vectorAuxF(BOTH);
+  PLEGMA_Propagator<float> propUP(BOTH);
+  PLEGMA_Propagator<float> propDN(BOTH);
+  PLEGMA_Correlator<float> corrMesons;
 
-  
-  delete &solverUP;
-  delete &solverDN;
+  for(int isource = 0 ; isource < params.Nsources ; isource++){
+    printfQuda("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
+	       isource,
+	       params.sourcePosition[isource][0],
+	       params.sourcePosition[isource][1],
+	       params.sourcePosition[isource][2],
+	       params.sourcePosition[isource][3]);
+
+    for(int isc = 0 ; isc < 12 ; isc++){
+      vectorAuxD.pointSource(params.sourcePosition[isource], isc/3, isc%3);
+      vectorAuxD.loadVector();
+      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
+
+      printfQuda("Going to invert UP for component %d\n", isc);
+      vectorOut.zero_device();
+      solverUP.solve(vectorOut, vectorIn);
+      vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
+      vectorAuxF.copy(vectorAuxD);
+      propUP.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
+
+      printfQuda("Going to invert DN for component %d\n", isc);
+      vectorOut.zero_device();
+      solverDN.solve(vectorOut, vectorIn);
+      vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
+      vectorAuxF.copy(vectorAuxD);
+      propDN.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
+    }
+    
+    corrMesons.contractMesons(propUP, propDN, isource, params.CorrSpace);
+
+    char* filename, *str;
+    if(params.CorrSpace==MOMENTUM_SPACE) asprintf(&str,"Qsq%d",params.Q_sq);
+    asprintf(&filename,"%s_mesons_%s_SS.%02d.%02d.%02d.%02d" ,
+	    twop_filename, str,
+	    params.sourcePosition[isource][0],
+	    params.sourcePosition[isource][1],
+	    params.sourcePosition[isource][2],
+	    params.sourcePosition[isource][3]);
+    free(str);
+    corrMesons.writeFile(filename, &params, params.CorrFileFormat);
+    free(filename);
+  }
   
   for(int i = 0 ; i < 4 ; i++){
     free(gauge[i]);
