@@ -1,21 +1,34 @@
 #include <PLEGMA_global.h>
 
+// struct that contains all variables
+//  necessary for the tuning evaluation
 struct ProfileStruct{
-  // flops
-  // bytes
+  long long flops;
+  long long outBytes;
+  long long inpBytes;
+  long long siteBytes;
   // sharedBytesPerThread
   // sharedBytesPerBlock
-  // volumeCB
+  long long volumeCB;
+};
+
+// structure that contains all arguments necessary
+//  to run the plaquette kernel
+template<typename Float, typename FloatG>
+struct ArgsPlaquette{
+  gaugeTex<FloatG> gaugeTex;
+  Float *partial_plaq
 };
 
 
-template<typename ArgStruct>
+// class to perform the kernel tuning
+template<typename ArgsStruct>
 class PLEGMA_kernel_tuner : public Tunable{
 
 protected:
 
   void *kernel;
-  ArgStruct args;
+  ArgsStruct args;
   ProfileStruct ps;
   
   long long flops() const {
@@ -23,16 +36,17 @@ protected:
   }
 
   long long bytes() const{
-    return arg.out.Bytes() + (2*3+1)*arg.in.Bytes() + arg.nParity*2*3*arg.U.Bytes()*meta.VolumeCB();
+    return ps.inpBytes + ps.outBytes + ps.siteBytes * ps.volumeCB;
   }
 
+  // check these
   bool tuneGridDim() const { return false; }
   unsigned int minThreads() const { return ps.volumeCB; }
 
   
 public:
 
-  PLEGMA_kernel_tuner( void *my_kernel, ArgStruct my_args, ProfileStruct my_ps );
+  PLEGMA_kernel_tuner( void *my_kernel, ArgsStruct my_args, ProfileStruct my_ps );
   void apply(const cudaStream_t &stream){
     TuneParam tp = tuneLaunch(*this, getTuning(), getVerbosity());
     kernel<<<tp.grid,tp.block,tp.shared_bytes,stream>>>(args);
@@ -40,9 +54,9 @@ public:
 
 };
 
-template<typename ArgStruct>
-PLEGMA_kernel_tuner<ArgStruct>::PLEGMA_kernel_tuner(void *my_kernel, ArgStruct my_args, ProfileStruct my_ps){
+template<typename ArgsStruct>
+PLEGMA_kernel_tuner<ArgsStruct>::PLEGMA_kernel_tuner(void *my_kernel, ArgsStruct my_args, ProfileStruct my_ps){
   kernel = my_kernel;
-  args = myargs;
-  
+  args = my_args;
+  ps = my_ps;
 };
