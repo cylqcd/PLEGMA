@@ -1,5 +1,4 @@
 set (QUDA_OBJS 
-#  PLEGMA_interface.cpp 
   PLEGMA_Correlator.cu
   PLEGMA.cu
   PLEGMA_Propagator.cu
