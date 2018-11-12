@@ -9,8 +9,8 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_Propagator<Float>::
-PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT): 
-  PLEGMA_Field<Float>(alloc_flag, classT){;}
+PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag): 
+  PLEGMA_Field<Float>(alloc_flag, PROPAGATOR){;}
 
 template <typename Float>
 void PLEGMA_Propagator<Float>::
@@ -415,9 +415,8 @@ void  PLEGMA_Propagator<Float>::apply_gamma5(){
 
 template<typename Float>
 PLEGMA_Propagator3D<Float>::
-PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag, 
-			  CLASS_ENUM classT): 
-  PLEGMA_Field<Float>(alloc_flag, classT){
+PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag): 
+  PLEGMA_Field<Float>(alloc_flag, PROPAGATOR3D){
   if(alloc_flag != BOTH)
     errorQuda("Propagator3D class is only implemented to allocate memory for both\n");
 }
