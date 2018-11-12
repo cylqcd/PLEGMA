@@ -18,7 +18,7 @@ namespace plegma {
   template<typename Float>
     class PLEGMA_Vector : public PLEGMA_Field<Float> {
   public:
-    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT);
+    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Vector(){;}
     
     void packVector(Float *vector);

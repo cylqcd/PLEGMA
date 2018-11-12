@@ -11,9 +11,8 @@ using namespace quda;
 //---------------------------//
 
 template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, 
-						CLASS_ENUM classT): 
-  PLEGMA_Field<Float>(alloc_flag, classT){ ; }
+PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag): 
+  PLEGMA_Field<Float>(alloc_flag, VECTOR){ ; }
 
 template<typename Float>
 void PLEGMA_Vector<Float>::packVector(Float *vector){
