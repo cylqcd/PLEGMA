@@ -26,7 +26,6 @@ int main(int argc, char **argv)
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
 
-  //-Read the gauge field in lime format
   double *gauge[4];
   int *lL = params.lL;
   size_t V = lL[0]*lL[1]*lL[2]*lL[3];
@@ -34,7 +33,7 @@ int main(int argc, char **argv)
     gauge[dir] = (double*) malloc(V*gaugeSiteSize*sizeof(double));
   }
 
-  // load in the command line supplied gauge field
+  //-Read the gauge field in lime format
   readLimeGauge(gauge, latfile, &gauge_param, params.procs);
 
   // The gauge is loaded in a format suitable for QUDA. We need to re-map it

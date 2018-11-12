@@ -32,12 +32,5 @@ endif(PLEGMA_MKL)
 cuda_add_executable(Plaquette Plaquette.cpp)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
-if(PLEGMA_2FLAVMG)
-  #CalcMG_2pt3pt_EvenOdd
-  # This function will calculate hadronic correlation functions using a 
-  # handful of randomly separated, gaussian smeared point sources, 
-  #constructed with a smeared gauge field. Even/Odd preconditioning is 
-  # employed, as well as QUDA's MG solver routines.
-  #cuda_add_executable(CalcMG_2pt3pt_EvenOdd CalcMG_2pt3pt_EvenOdd.cpp)
-  #target_link_libraries(CalcMG_2pt3pt_EvenOdd ${PLEGMA_LIBS})
-endif()  
+cuda_add_executable(Calc_2pt Calc_2pt.cpp)
+target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
