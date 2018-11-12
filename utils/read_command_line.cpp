@@ -191,8 +191,16 @@ static void finalize_values(){
   if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
   if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
   if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
+
+  if (dslash_type != QUDA_TWISTED_MASS_DSLASH && 
+      dslash_type != QUDA_TWISTED_CLOVER_DSLASH){
+    printfQuda("This test is only for twisted mass or twisted clover operator\n");
+    exit(-1);
+  }
+
 }
 
+// TODO: Everything should be done in the meanwhile we read the command line
 static void set_PLEGMA_params(plegma::PLEGMA_params *params){
   params->nsmearAPE = nsmearAPE;
   params->nsmearGauss = nsmearGauss;
@@ -208,6 +216,114 @@ static void set_PLEGMA_params(plegma::PLEGMA_params *params){
   params->Nsources = numSourcePositions;
   params->Q_sq = Q_sq;
   params->traj = traj;
+
+  if(strcmp(check_file_exist,"yes")==0 || 
+     strcmp(check_file_exist,"YES")==0 )  params->check_files = true;
+  else
+    params->check_files = false;
+  
+  // Determine whether to write the correlation functions in ASCII or HDF5 
+  // format
+  if( strcmp(corr_file_format,"ASCII")==0 || 
+      strcmp(corr_file_format,"ascii")==0 ) 
+    params->CorrFileFormat = ASCII_FORM;   
+  else if( strcmp(corr_file_format,"HDF5")==0 || 
+	   strcmp(corr_file_format,"hdf5")==0 ) 
+    params->CorrFileFormat = HDF5_FORM; 
+  else
+    fprintf(stderr,"Undefined option for --corr_file_format. Options are ASCII(ascii)/HDF5(hdf5)\n");
+   
+  // Determine for which source-positions to run for the 3pt
+  if(strcmp(run3pt,"all")==0 || 
+     strcmp(run3pt,"ALL")==0) {
+    for(int is = 0; is < numSourcePositions; is++) params->run3pt_src[is] = 1;
+  }
+  else if(strcmp(run3pt,"none")==0 || 
+	  strcmp(run3pt,"NONE")==0) {
+    for(int is = 0; is < numSourcePositions; is++) params->run3pt_src[is] = 0;
+  }
+  else if(strcmp(run3pt,"file")==0 || 
+	  strcmp(run3pt,"FILE")==0) {
+    printfQuda("Will read from file %s for which source-positions to perform the three-point function\n",pathListRun3pt);  
+    FILE *ptr_run3pt;
+    ptr_run3pt = fopen(pathListRun3pt,"r");
+    if(ptr_run3pt == NULL) {
+      fprintf(stderr,"Error opening file %s \n",pathListRun3pt);
+      exit(-1);
+    }
+    for(int is = 0; is < numSourcePositions; is++) 
+      fscanf(ptr_run3pt,"%d\n",&(params->run3pt_src[is]));
+    fclose(ptr_run3pt);
+  }
+  else {
+    for(int is = 0; is < numSourcePositions; is++) params->run3pt_src[is] = 1;
+  }
+
+  //-C.K: Get the list of source positions
+  FILE *ptr_sources;
+  ptr_sources = fopen(pathListSourcePositions,"r");
+  if(ptr_sources == NULL){
+    fprintf(stderr,"Error open file to read the source positions\n");
+    exit(-1);
+  }
+  for(int is = 0 ; is < numSourcePositions ; is++)
+    fscanf(ptr_sources,"%d %d %d %d",
+	   &(params->sourcePosition[is][0]),
+	   &(params->sourcePosition[is][1]), 
+	   &(params->sourcePosition[is][2]), 
+	   &(params->sourcePosition[is][3]));  
+  fclose(ptr_sources);
+
+    
+  //-C.K: Read in the sink-source separations
+  params->Ntsink = Ntsink;
+  FILE *ptr_tsink;
+  ptr_tsink = fopen(pathList_tsink,"r");
+  if(ptr_tsink == NULL){
+    fprintf(stderr,"Error opening file for sink-source separations\n");
+    exit(-1);
+  }
+  for(int it = 0 ; it < Ntsink ; it++) {
+    fscanf(ptr_tsink,"%d\n", &(params->tsinkSource[it]));
+  }
+  fclose(ptr_tsink);
+  
+  //-C.K: Determine for which projectors to run for the 3pt
+  if(strcmp(proj_list_file,"default")==0){
+    for(int i=0;i<Ntsink;i++){
+      params->proj_list[i][0] = 0;   // Do only the G4 projector for all tsink's
+      params->Nproj[i] = Nproj; // Nproj = 1 by default
+    }
+  }
+  else{
+    FILE *proj_ptr;
+    char *proj_file;
+    for(int it=0;it<Ntsink;it++){
+      asprintf(&proj_file,"%s_tsink%d.txt",proj_list_file,
+	       params->tsinkSource[it]);
+      if( (proj_ptr = fopen(proj_file,"r")) == NULL ) {
+	fprintf(stderr,"Cannot open projector file %s for reading.\n Hint: Make sure that 1: it ends as _tsink%d.txt and 2: the input passed is truncated up to this string.\n",proj_file,params->tsinkSource[it]);
+	exit(-1);
+      }
+      
+      fscanf(proj_ptr,"%d",&(params->Nproj[it]));
+      for(int p=0;p<params->Nproj[it];p++) fscanf(proj_ptr,"%d\n",
+					       &(params->proj_list[it][p]));
+      
+      fclose(proj_ptr);
+    }
+  }
+  
+  // Determine whether to write the correlation functions in position or 
+  // momentum space
+  if( strcmp(corr_write_space,"MOMENTUM")==0 || 
+      strcmp(corr_write_space,"momentum")==0 ) 
+    params->CorrSpace = MOMENTUM_SPACE;      
+  else if( strcmp(corr_write_space,"POSITION")==0 || 
+	   strcmp(corr_write_space,"position")==0 ) 
+    params->CorrSpace = POSITION_SPACE; 
+  else fprintf(stderr,"Undefined option for --corr_write_space. Options are MOMENTUM(momentum)/POSITION(position)\n");
+
 }
 
 static void usage(char** argv )

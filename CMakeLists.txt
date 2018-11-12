@@ -155,6 +155,7 @@ include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
 include_directories(include)
+include_directories(utils)
 include_directories(lib)
 include_directories(lib/kernels)
 

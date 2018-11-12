@@ -1,7 +1,29 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <quda_params.h>
+#include <invert_quda.h>
+#include <quda_solver.h>
 
 using namespace std;
+using namespace quda;
+
+// HACK definition missing in quda headers, but available in the library
+// define (static) checkGaugeParam() and checkInvertParam()
+#define CHECK_PARAM
+#include "check_params.h"
+#undef CHECK_PARAM
+
+// HACK definition missing in quda headers, but available in the library
+// void quda::setDiracPreParam(DiracParam &diracParam, QudaInvertParam *inv_param, const bool pc, bool comms);
+namespace quda{
+  void createDirac(Dirac *&d, Dirac *&dSloppy, Dirac *&dPre, QudaInvertParam &param, const bool pc_solve);
+}
+
+static TimeProfile profileQUDA("QUDA"); 
+
+Solver *solveU, *solveD;
+void *mg_preconditionerUP, *mg_preconditionerDN;
+QudaInvertParam inv_param;
 
 static void initRand()
 {
@@ -46,3 +68,114 @@ void finalizeComms()
   MPI_Finalize();
 #endif
 }
+
+QUDA_solver::QUDA_solver(double mu) {
+  char *profiler_name;
+  asprintf(&profiler_name, "Solver profiler mu=%f", mu);
+  profiler = new TimeProfile(profiler_name);
+  profiler->TPSTART(QUDA_PROFILE_TOTAL);
+  
+  mg_inv_param = newQudaInvertParam();
+  mg_param = newQudaMultigridParam();
+  mg_param.invert_param = &mg_inv_param;
+  setMultigridParam(mg_param);
+  
+  inv_param = newQudaInvertParam();
+  setInvertParam(inv_param);
+  pushVerbosity(inv_param.verbosity);
+  if (getVerbosity() >= QUDA_DEBUG_VERBOSE) 
+    printQudaInvertParam(&inv_param);
+  checkInvertParam(&inv_param);
+
+   // Constructing the clover term
+  // This line ensures that the clover inverse is constructed
+  if (mg_param.smoother_solve_type[0] == QUDA_DIRECT_PC_SOLVE || 
+      solve_type == QUDA_DIRECT_PC_SOLVE) {
+    inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
+  }
+
+  if (dslash_type == QUDA_TWISTED_CLOVER_DSLASH) 
+    loadCloverQuda(NULL, NULL, &inv_param);
+  
+  inv_param.solve_type = solve_type; // restore actual solve_type we want to do
+  
+  // TODO: add support for other solvers
+  if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 
+    errorQuda("initSolver: This function works only with Direct solve and even odd preconditioning");
+  
+  if(inv_param.inv_type != QUDA_GCR_INVERTER) 
+    errorQuda("initSolver: This function works only with GCR method");
+
+  if(inv_param.gamma_basis != QUDA_UKQCD_GAMMA_BASIS) 
+    errorQuda("initSolver: This function works only with ukqcd gamma basis\n");
+  if(inv_param.dirac_order != QUDA_DIRAC_ORDER) 
+    errorQuda("initSolver: This function works only with colors inside the spins\n");
+
+  inv_param.mu = mu;
+  mg_param.invert_param->mu = mu;
+  mg_preconditioner = newMultigridQuda(&mg_param);
+
+  bool pc_solution = false;
+  bool pc_solve = true;
+  bool mat_solution = ((inv_param.solution_type == QUDA_MAT_SOLUTION) || 
+		       (inv_param.solution_type == QUDA_MATPC_SOLUTION));
+  bool direct_solve = true;
+
+  inv_param.secs = 0;
+  inv_param.gflops = 0;
+  inv_param.iter = 0;
+
+  D = NULL;
+  DSloppy = NULL;
+  DPre = NULL;
+
+  // create the dirac operator
+  createDirac(D, DSloppy, DPre, inv_param, pc_solve);
+
+  // Create Operators
+  M = new DiracM(*D);
+  MSloppy = new DiracM(*DSloppy);
+  MPre = new DiracM(*DPre);
+
+  // Create Solvers
+  inv_param.preconditioner = mg_preconditioner;
+  solverParam = new SolverParam(inv_param);
+  solver = Solver::create(*solverParam, *M, *MSloppy, 
+			 *MPre, *profiler);
+}
+
+QUDA_solver::~QUDA_solver(){
+  destroyMultigridQuda(mg_preconditioner);
+  delete solver;
+}
+
+/*
+void invert() {
+  bool flag_eo;
+  if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
+    flag_eo = true;
+  else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
+    flag_eo = false;
+
+  //Zero out spinors
+  ColorSpinorParam cudaParam(cpuParam, inv_param);
+  cudaParam.create = QUDA_ZERO_FIELD_CREATE;
+  b = new cudaColorSpinorField(*h_b, cudaParam);
+  cudaParam.create = QUDA_ZERO_FIELD_CREATE;
+  x = new cudaColorSpinorField(cudaParam);
+
+  K_guess->copyToQUDA(b,flag_eo);
+
+  diracUP.prepare(in,out,*x,*b,param->solution_type);
+  (*solveU)(*out,*in);
+  diracUP.reconstruct(*x,*b,param->solution_type);
+
+  K_vector->copyFromQUDA(x,flag_eo);
+  if (param->mass_normalization == QUDA_MASS_NORMALIZATION || 
+      param->mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
+    K_vector->scaleVector(2*param->kappa);
+  }
+
+}
+
+*/
