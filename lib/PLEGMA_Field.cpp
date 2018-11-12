@@ -33,7 +33,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
     total_length = GK_localVolume;
     break;
   case GAUGE:
-    field_length = N_DIMS * N_COLS * N_SPINS;
+    field_length = N_DIMS * N_COLS * N_COLS;
     total_length = GK_localVolume;
     break;
   case VECTOR:
