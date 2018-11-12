@@ -135,9 +135,22 @@ endif(PLEGMA_ARPACK)
 #FIND_LIBRARY(PLEGMA_GSL_LIB gsl ${PLEGMA_GSLHOME}/lib)
 #include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)
 
-add_definitions(-DHAVE_HDF5)
-FIND_LIBRARY(PLEGMA_HDF5_LIB hdf5 ${PLEGMA_HDF5HOME}/lib)
-include_directories(SYSTEM ${PLEGMA_HDF5HOME}/include)
+# if PLEGMA_HDF5HOME has been specified, give this as a hint to
+# find_package via the *environment* variable HDF5_ROOT
+if(PLEGMA_HDF5HOME)
+  set(env(HDF5_ROOT ${PLEGMA_HDF5HOME}))
+endif()
+# we want parallel HDF5
+set(HDF5_PREFER_PARALLEL TRUE)
+find_package(HDF5)
+if(HDF5_FOUND)
+  add_definitions(-DHAVE_HDF5)
+  include_directories(SYSTEM ${HDF5_INCLUDE_DIRS})
+  link_libraries(${HDF5_LIBRARIES})
+  message(STATUS "HDF5 version ${HDF5_VERSION} found, include dir: ${HDF5_INCLUDE_DIRS}")
+else()
+  message(FATAL_ERROR "HDF5 could not be located, did you try specifying -DPLEGMA_HDF5HOME?")
+endif()
 
 add_definitions(-DHAVE_LIME)
 FIND_LIBRARY(PLEGMA_LIME_LIB lime ${PLEGMA_LIMEHOME}/lib)
