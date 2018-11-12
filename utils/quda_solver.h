@@ -25,7 +25,8 @@ namespace quda {
   public:
     QUDA_solver(double mu);
     virtual ~QUDA_solver();
-    void solve();
+    template<typename Float>
+    void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
   };
 }
 #endif
