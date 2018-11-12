@@ -399,6 +399,26 @@ void  PLEGMA_Vector<Float>::apply_gamma5(){
 }
 
 template<typename Float>
+void  PLEGMA_Vector<Float>::pointSource(int source[N_DIMS], int spin, int col){
+  this->zero_host();
+  
+  int my_src[N_DIMS];
+  size_t id=0;
+  for(int i = N_DIMS; i >= 0; i--) {
+    my_src[i] = (source[i] - comm_coords(default_topo)[i] * GK_localL[i]);
+
+    // if out of the local lattice we break
+    if((my_src[i]<0) || (my_src[i]>=GK_localL[i]))
+      return;
+
+    id = id * GK_localL[i] + my_src[i];
+  }
+
+  // If we arrive at the last iteration then we have the source in this process
+  this->h_elem[((id*N_SPINS + spin)*N_COLS + col)*2] = 1.0;
+}
+
+template<typename Float>
 void PLEGMA_Vector<Float>::norm2Host(){
   Float res = 0.;
   Float globalRes;
