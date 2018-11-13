@@ -122,45 +122,6 @@ namespace plegma {
     return res;
   }
 
-  template<typename Float>
-  struct Gauge2 {
-    Float2<Float> * arr;
-    inline __device__ Gauge2(Float* pointer) {
-      arr = (Float2<Float> *) pointer;
-    }
-    inline __device__ Float2<Float> get(short int dir, int a, int b, int sid, int stride) {
-      return arr[((dir*N_COLS + a)*N_COLS + b)*stride + sid];
-    }
-    inline __device__ Float2<Float> get(short int dir, int a, int b, int sid) {
-      return get(dir,a,b,sid,c_stride);
-    }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int dir, int sid, int stride) {
-      #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
-        #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  G[a][b] = get(dir, a, b, sid, stride);
-	}    
-      }
-    }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int dir, int sid) {
-      get(G, dir, sid, c_stride);
-    }
-    inline __device__ void getPlus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirPlus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
-	(c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-      int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
-      get(G, dirLink, sidPlus, stridePlus);
-    }
-    inline __device__ void getMinus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
-	(c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-      int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
-      get(G, dirLink, sidMinus, strideMinus);
-    }
-  };
 
 }
 #endif
