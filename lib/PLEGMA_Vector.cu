@@ -307,7 +307,6 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
     cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
-  // If we arrive at the last iteration then we have the source in this process
   
 }
 
