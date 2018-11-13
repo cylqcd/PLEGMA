@@ -15,14 +15,8 @@ namespace plegma {
     PLEGMA_Su3matrix(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Su3matrix(){;}
 
-    void absorbDir(PLEGMA_Gauge<Float> &u,int dir);
-    // void packGauge(double **gauge);
-    // void packGaugeToBackup(void **gauge);
-    // void loadGaugeFromBackup();
-    // void justDownloadGauge();
-    // void loadGauge();
-
-    // void calculatePlaq();
+    void absorbDir_device(PLEGMA_Gauge<Float> &u,int dir);
+    void absorbDir_host(PLEGMA_Gauge<Float> &u,int dir);
   };
 }
 

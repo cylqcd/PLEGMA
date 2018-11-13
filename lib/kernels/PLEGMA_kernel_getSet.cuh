@@ -38,7 +38,6 @@ namespace plegma {
     return (Float2<double>) make_double2(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
   
-
   template<typename Float>
   struct pFloat2 {
     Float2<Float>* p;

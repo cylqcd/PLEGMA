@@ -121,7 +121,5 @@ namespace plegma {
     res.y = -a.y;
     return res;
   }
-
-
 }
 #endif

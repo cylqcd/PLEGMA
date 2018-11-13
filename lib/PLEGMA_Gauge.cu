@@ -81,9 +81,9 @@ void PLEGMA_Gauge<Float>::loadGaugeFromBackup(){
 template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaq(){
   
-  PLEGMA_Field<Float>::ghostToHost();
-  PLEGMA_Field<Float>::cpuExchangeGhost();
-  PLEGMA_Field<Float>::ghostToDevice();
+  this->ghostToHost();
+  this->cpuExchangeGhost();
+  this->ghostToDevice();
   
   gaugeTex<Float> tex;
   tex.tex = this->createTexObject();
