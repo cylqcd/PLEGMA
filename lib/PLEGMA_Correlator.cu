@@ -65,6 +65,26 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   prop2.destroyTexObject(prop2Tex.tex);
 }
 
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+writeFile(char *filename, PLEGMA_params *params, FILE_WRITE_FORMAT CorrFileFormat) {
+  char* filename_out;
+  if(CorrFileFormat == ASCII_FORM) {
+    asprintf(&filename_out,"%s.dat",filename);
+    printfQuda("Going to write file %s in ASCII format\n",filename_out);
+    writeASCII(filename_out);
+  }
+  else if(CorrFileFormat == HDF5_FORM) {
+    asprintf(&filename_out,"%s.h5",filename);
+    printfQuda("Going to write file %s in HDF5 format\n",filename_out);
+    writeHDF5(filename_out, params);
+  }
+  else {
+    errorQuda("FILE_WRITE_FORMAT not supported: %d\n", CorrFileFormat);
+  }
+  free(filename_out);
+}
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -190,7 +210,7 @@ static void fillDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace, int ndims,
 }
 
 /* Attribute writing */
-static void write_text_attribute(hid_t group_id,char* attr_name, char* attr_value) {
+static void write_text_attribute(hid_t group_id,const char* attr_name, char* attr_value) {
   hid_t attrdat_id = H5Screate(H5S_SCALAR);
   hid_t type_id = H5Tcopy(H5T_C_S1);
   H5Tset_size(type_id, strlen(attr_value));
@@ -239,11 +259,9 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
   hid_t DATATYPE_H5;
   if( typeid(Float) == typeid(float) ){
     DATATYPE_H5 = H5T_NATIVE_FLOAT;
-    printfQuda("writeHDF5: Will write in single precision\n");
   }
   if( typeid(Float) == typeid(double)){
     DATATYPE_H5 = H5T_NATIVE_DOUBLE;
-    printfQuda("writeHDF5: Will write in double precision\n");
   }
 
   // checking for exceeding dims
@@ -254,7 +272,7 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
     if(start[i]+ldims[i] > dims[i]) {
       exceeding_dim[exceeding] = i;
       exceeding_ammount[i] = start[i]+ldims[i]-dims[i];
-      printf("rank %d: Dim %d exceeds of %d -> shifting\n",comm_rank(),i,exceeding_ammount[exceeding]);
+      //printf("rank %d: Dim %d exceeds of %d -> shifting\n",comm_rank(),i,exceeding_ammount[exceeding]);
       if(exceeding_dim[exceeding]>ldims[i]) {
 	errorQuda("Exceeding is too high. The method may have problems.");
       }
@@ -292,10 +310,10 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
       tmp/=2;
       j++;
     }
-    printf("rank %d: iter %d:\n",comm_rank(),i);
-    for(int j=0; j<ndims; j++) {
-      printf("rank %d: i=%d, dims[i]=%d tmp_ldims[i]=%d, tmp_start[i]=%d, tmp_shift[i]=%d,\n",comm_rank(),j,dims[j], tmp_ldims[j], tmp_start[j], tmp_shift[j]);
-    }
+    //printf("rank %d: iter %d:\n",comm_rank(),i);
+    //for(int j=0; j<ndims; j++) {
+    //  printf("rank %d: i=%d, dims[i]=%d tmp_ldims[i]=%d, tmp_start[i]=%d, tmp_shift[i]=%d,\n",comm_rank(),j,dims[j], tmp_ldims[j], tmp_start[j], tmp_shift[j]);
+    //}
     // copying the part of the buffer
     size_t vol = get_volume(ndims, tmp_ldims);
     Float tmp_buf[get_volume(ndims, tmp_ldims)];
