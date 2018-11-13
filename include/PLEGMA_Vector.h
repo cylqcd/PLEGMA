@@ -18,7 +18,7 @@ namespace plegma {
   template<typename Float>
     class PLEGMA_Vector : public PLEGMA_Field<Float> {
   public:
-    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT);
+    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Vector(){;}
     
     void packVector(Float *vector);
@@ -43,7 +43,7 @@ namespace plegma {
 			  int timeslice, int nu , int c2);
     void copyPropagator(PLEGMA_Propagator<Float> &prop, 
 			int nu , int c2);
-    void pointSource(Float *sourceposition, 
+    void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);
     void write(char* filename);
     void conjugate();

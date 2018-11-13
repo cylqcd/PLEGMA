@@ -11,9 +11,8 @@ using namespace quda;
 //---------------------------//
 
 template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, 
-						CLASS_ENUM classT): 
-  PLEGMA_Field<Float>(alloc_flag, classT){ ; }
+PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag): 
+  PLEGMA_Field<Float>(alloc_flag, VECTOR){ ; }
 
 template<typename Float>
 void PLEGMA_Vector<Float>::packVector(Float *vector){
@@ -464,7 +463,7 @@ void PLEGMA_Vector<Float>::copyPropagator(PLEGMA_Propagator<Float> &prop, int nu
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::pointSource(Float *sourceposition, int spin, int color, ALLOCATION_FLAG where){
+void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color, ALLOCATION_FLAG where){
   
   this->zero_where(where);
   int my_src[N_DIMS];
@@ -484,14 +483,14 @@ void PLEGMA_Vector<Float>::pointSource(Float *sourceposition, int spin, int colo
 
   if( where == BOTH ){
     this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else if (where == HOST){
     this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
   }
   else if (where == DEVICE){
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else if (where == BOTH_EXTRA){

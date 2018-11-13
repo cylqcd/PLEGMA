@@ -50,6 +50,14 @@ int main(int argc, char **argv)
     free(gauge[i]);
   }
 
+  // Check the point source
+  PLEGMA_Vector<double> vectorAuxD(BOTH);
+
+  vectorAuxD.pointSource(params.sourcePosition[0], 0, 0, DEVICE);
+ // vectorAuxD.norm2Host();
+  vectorAuxD.unloadVector();
+  vectorAuxD.norm2Host();
+
   // finalize the QUDA library
   saveTuneCache(true);
   endQuda();
