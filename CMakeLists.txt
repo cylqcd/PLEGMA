@@ -271,6 +271,17 @@ set(CMAKE_C_FLAGS_DEBUG "-Wall -g -fno-inline -DHOST_DEBUG" CACHE STRING
 #define FORTRAN FLAGS
 set(CMAKE_F_FLAGS -std=c99 CACHE STRING "Fortran Flags")
 
+set(PLEGMA_ALIGNMENT 64 CACHE STRING "Alignment size for allocations done with mealign, default = 64 bytes")
+mark_as_advanced(PLEGMA_ALIGNMENT)
+add_definitions(-DPLEGMA_ALIGNMENT=${PLEGMA_ALIGNMENT})
+
+check_symbol_exists(memalign malloc.h HAVE_MEMALIGN)
+if(HAVE_MEMALIGN)
+  add_definitions(-DPLEGMA_HAVE_MEMALIGN)
+else()
+  message(WARNING "Could not find memalign, alignment PLEGMA_ALIGNMENT=${PLEGMA_ALIGNMENT} will be ignored")
+endif()
+
 # make the compiler flags an advanced option for all user defined build types (cmake defined build types are advanced by default )
 mark_as_advanced(CMAKE_CXX_FLAGS_DEVEL)
 mark_as_advanced(CMAKE_CXX_FLAGS_STRICT)
