@@ -6,6 +6,7 @@ set (QUDA_OBJS
   PLEGMA_Vector.cu
   PLEGMA_Gauge.cu
   PLEGMA_Field.cpp
+  PLEGMA_Su3matrix.cu
 )
 
 ## split source into cu and cpp files
