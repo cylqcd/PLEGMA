@@ -27,32 +27,26 @@ int main(int argc, char **argv)
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
   
-  double *gauge[4];
-  double *gauge_APE[4];
-  int *lL = params.lL;
-  size_t V = lL[0]*lL[1]*lL[2]*lL[3];
-  for (int dir = 0; dir < 4; dir++) {
-    gauge[dir] = (double*) malloc(V*gaugeSiteSize*sizeof(double));
-    gauge_APE[dir] = (double*) malloc(V*gaugeSiteSize*sizeof(double));
-  }
   //-Read the gauge field in lime format
-  readLimeGauge(gauge, latfile, &gauge_param, params.procs);
+  GaugeBuffer<double> gauge(params);
+  readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
 
   // This gauge will be used for the inversions.
   // We need to apply the anti-periodic boundaries.
-  applyBoundaryCondition(gauge, V/2 ,&gauge_param);
+  applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
 
   // Load the gauge field into QUDA
-  initGaugeQuda((void*)gauge, gauge_param);
+  initGaugeQuda((void*)gauge.get_ptr(), gauge_param);
 
   //-Read the smeared gauge field in lime format
   // TODO: create locally the smeared gauge
-  readLimeGauge(gauge_APE, latfile_smeared, &gauge_param, params.procs);
-  mapEvenOddToNormalGauge(gauge_APE,gauge_param,lL[0],lL[1],lL[2],lL[3]);
+  GaugeBuffer<double> gauge_APE(params);
+  readLimeGauge(gauge_APE.get_ptr(), latfile_smeared, &gauge_param, params.procs);
+  mapEvenOddToNormalGauge(gauge_APE.get_ptr(),gauge_param,params.lL);
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> smearedGauge(BOTH);
-  smearedGauge.packGauge(gauge_APE);
+  smearedGauge.packGauge(gauge_APE.get_ptr());
   smearedGauge.loadGauge();
   printfQuda("Plaquette of smeared config:\n");
   smearedGauge.calculatePlaq();
@@ -115,11 +109,6 @@ int main(int argc, char **argv)
     free(str);
     corrMesons.writeFile(filename, &params, params.CorrFileFormat);
     free(filename);
-  }
-  
-  for(int i = 0 ; i < 4 ; i++){
-    free(gauge[i]);
-    free(gauge_APE[i]);
   }
   
   // finalize the QUDA library

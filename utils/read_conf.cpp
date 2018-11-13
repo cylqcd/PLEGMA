@@ -364,3 +364,8 @@ void applyBoundaryCondition(double **gauge, int Vh ,QudaGaugeParam *gauge_param)
   else
     errorQuda("boundary condition application implement only for double precision");
 }
+
+void applyBoundaryCondition(double **gauge, int lL[4] ,QudaGaugeParam *gauge_param){
+  int Vh = lL[0]*lL[1]*lL[2]*lL[3]/2;
+  applyBoundaryCondition(gauge, Vh, gauge_param);
+}
