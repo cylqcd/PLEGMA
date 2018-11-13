@@ -69,6 +69,30 @@ void finalizeComms()
 #endif
 }
 
+void initGaugeQuda(void* gauge, QudaGaugeParam gauge_param) {
+  loadGaugeQuda(gauge, &gauge_param);
+
+  if (dslash_type == QUDA_TWISTED_CLOVER_DSLASH)  {
+    QudaInvertParam inv_param = newQudaInvertParam();
+    setInvertParam(inv_param);
+    checkInvertParam(&inv_param);
+
+    inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
+    loadCloverQuda(NULL, NULL, &inv_param);
+  }
+}
+
+void finalizeGaugeQuda() {
+  freeGaugeQuda();
+  if (dslash_type == QUDA_CLOVER_WILSON_DSLASH || 
+      dslash_type == QUDA_TWISTED_CLOVER_DSLASH) freeCloverQuda();
+}
+
+void updateGaugeQuda(void* gauge, QudaGaugeParam gauge_param) {
+  finalizeGaugeQuda();
+  initGaugeQuda(gauge, gauge_param);
+}
+
 QUDA_solver::QUDA_solver(double mu) {
   char *profiler_name;
   asprintf(&profiler_name, "Solver profiler mu=%f", mu);
@@ -82,22 +106,7 @@ QUDA_solver::QUDA_solver(double mu) {
   
   inv_param = newQudaInvertParam();
   setInvertParam(inv_param);
-  pushVerbosity(inv_param.verbosity);
-  if (getVerbosity() >= QUDA_DEBUG_VERBOSE) 
-    printQudaInvertParam(&inv_param);
   checkInvertParam(&inv_param);
-
-   // Constructing the clover term
-  // This line ensures that the clover inverse is constructed
-  if (mg_param.smoother_solve_type[0] == QUDA_DIRECT_PC_SOLVE || 
-      solve_type == QUDA_DIRECT_PC_SOLVE) {
-    inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
-  }
-
-  if (dslash_type == QUDA_TWISTED_CLOVER_DSLASH) 
-    loadCloverQuda(NULL, NULL, &inv_param);
-  
-  inv_param.solve_type = solve_type; // restore actual solve_type we want to do
   
   // TODO: add support for other solvers
   if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 
@@ -142,11 +151,21 @@ QUDA_solver::QUDA_solver(double mu) {
   solverParam = new SolverParam(inv_param);
   solver = Solver::create(*solverParam, *M, *MSloppy, 
 			 *MPre, *profiler);
+
+  ColorSpinorParam cpuParam(NULL, inv_param, GK_localL, pc_solution,
+			    inv_param.input_location);
+  ColorSpinorParam cudaParam(cpuParam, inv_param);
+  cudaParam.create = QUDA_ZERO_FIELD_CREATE;
+  b = new cudaColorSpinorField(cudaParam);
+  x = new cudaColorSpinorField(cudaParam);
 }
 
 QUDA_solver::~QUDA_solver(){
   destroyMultigridQuda(mg_preconditioner);
   delete solver;
+  delete profiler;
+  delete b;
+  delete x;
 }
 
 template<typename Float>
@@ -157,32 +176,17 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
   else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
     flag_eo = false;
 
-  bool pc_solution = false;
-  //ColorSpinorParam cpuParam(NULL, inv_param, GK_localL, pc_solution,
-  ColorSpinorParam cpuParam(vectorIn.H_elem(), inv_param, GK_localL, pc_solution, 
-			    inv_param.input_location);
-  ColorSpinorParam cudaParam(cpuParam, inv_param);
-  ColorSpinorField *h_b = ColorSpinorField::Create(cpuParam);
-  cpuParam.v = vectorOut.H_elem();
-  ColorSpinorField *h_x = ColorSpinorField::Create(cpuParam);
-  cudaParam.create = QUDA_ZERO_FIELD_CREATE;
-  cudaColorSpinorField b(*h_b,cudaParam), x(*h_x,cudaParam);
-  //cudaColorSpinorField b(cudaParam), x(cudaParam);
-
   ColorSpinorField *in = NULL;
   ColorSpinorField *out = NULL;
-  vectorIn.copyToQUDA(&b,flag_eo);
-  D->prepare(in,out,x,b,inv_param.solution_type);
+  vectorIn.copyToQUDA(b,flag_eo);
+  D->prepare(in,out,*x,*b,inv_param.solution_type);
   (*solver)(*out, *in);
-  D->reconstruct(x,b,inv_param.solution_type);
-  vectorOut.copyFromQUDA(&x,flag_eo);
+  D->reconstruct(*x,*b,inv_param.solution_type);
+  vectorOut.copyFromQUDA(x,flag_eo);
   if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION || 
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
     vectorOut.scaleVector(2*inv_param.kappa);
   }
-  
-  delete h_b;
-  delete h_x;
 }
 
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
