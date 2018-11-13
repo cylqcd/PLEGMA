@@ -259,11 +259,9 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
   hid_t DATATYPE_H5;
   if( typeid(Float) == typeid(float) ){
     DATATYPE_H5 = H5T_NATIVE_FLOAT;
-    printfQuda("writeHDF5: Will write in single precision\n");
   }
   if( typeid(Float) == typeid(double)){
     DATATYPE_H5 = H5T_NATIVE_DOUBLE;
-    printfQuda("writeHDF5: Will write in double precision\n");
   }
 
   // checking for exceeding dims

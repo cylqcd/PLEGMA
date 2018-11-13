@@ -123,6 +123,7 @@ int main(int argc, char **argv)
   }
   
   // finalize the QUDA library
+  saveTuneCache(true);
   finalizeGaugeQuda();
   endQuda();
   
