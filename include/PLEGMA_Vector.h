@@ -43,6 +43,8 @@ namespace plegma {
 			  int timeslice, int nu , int c2);
     void copyPropagator(PLEGMA_Propagator<Float> &prop, 
 			int nu , int c2);
+    void pointSource(std::array<int, N_DIMS> sourceposition, 
+        int nu, int c1, ALLOCATION_FLAG alloc_flag);
     void write(char* filename);
     void conjugate();
     void apply_gamma5();

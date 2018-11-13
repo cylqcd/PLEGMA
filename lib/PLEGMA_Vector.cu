@@ -27,7 +27,6 @@ void PLEGMA_Vector<Float>::packVector(Float *vector){
 	}
 }
  
-
 template<typename Float>
 void PLEGMA_Vector<Float>::unpackVector(){
 
@@ -462,6 +461,22 @@ void PLEGMA_Vector<Float>::copyPropagator(PLEGMA_Propagator<Float> &prop, int nu
   pointer_dst = NULL;
   checkCudaError();
 
+}
+
+template<typename Float>
+void PLEGMA_Vector<Float>::pointSource(std::array<int, N_DIMS> sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag){
+
+  std::array<int, N_DIMS> local_src;
+  std::array<int, N_DIMS> local_lat;
+  std::copy(std::begin(GK_localL), std::end(GK_localL), std::begin(local_lat));
+  for(int i = 0 ; i < N_DIMS ; ++i)
+    local_src[i] = (sourceposition[i] - comm_coords(default_topo)[i] * GK_localL[i]);
+  
+  
+  this->zero_host();
+ // if(local_src >= std:array<int, N_DIMS> && local_src <= local_lat){}
+  
+  
 }
 
 template<typename Float>
