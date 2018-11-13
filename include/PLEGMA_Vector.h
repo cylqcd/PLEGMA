@@ -26,15 +26,13 @@ namespace plegma {
     void unpackVector(Float *vector);
     void loadVector();
     void unloadVector();
-    void ghostToHost();
-    void cpuExchangeGhost();
-    void ghostToDevice();
     
     void download(); // take the vector from device to host
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gaugeAPE);
     void scaleVector(Float a);
+    void pointSource(int source[N_DIMS], int spin, int col);
     void copy(PLEGMA_Vector<float> &vecIn);
     void copy(PLEGMA_Vector<double> &vecIn);
     void norm2Host();

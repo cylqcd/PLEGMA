@@ -23,9 +23,9 @@ namespace plegma {
     size_t bytes_total_plus_ghost_length;
 
     Float *h_elem;
-    Float *h_elem_backup;
     Float *d_elem;
     Float *h_ext_ghost;
+    Float *h_elem_backup;
 
     bool isAllocHost;
     bool isAllocDevice;
@@ -64,6 +64,9 @@ namespace plegma {
 	return 0;
     } 
     void printInfo();
+    void ghostToHost(int dirOr=-1);
+    void cpuExchangeGhost(int dirOr=-1);
+    void ghostToDevice();
   };
 }
 #endif

@@ -43,16 +43,19 @@ int main(int argc, char **argv)
   applyBoundaryCondition(gauge, V/2 ,&gauge_param);
 
   // Load the gauge field into QUDA
-  loadGaugeQuda((void*)gauge, &gauge_param);
+  initGaugeQuda((void*)gauge, gauge_param);
 
   //-Read the smeared gauge field in lime format
   // TODO: create locally the smeared gauge
   readLimeGauge(gauge_APE, latfile_smeared, &gauge_param, params.procs);
-
-  //-Loadin the gauge into QUDA for being used in case of QUDA-smearing
-  gauge_param.type = QUDA_SMEARED_LINKS;
-  loadGaugeQuda((void*)gauge_APE, &gauge_param);
   mapEvenOddToNormalGauge(gauge_APE,gauge_param,lL[0],lL[1],lL[2],lL[3]);
+
+  // Allocation done on BOTH, DEVICE and HOST
+  PLEGMA_Gauge<double> smearedGauge(BOTH);
+  smearedGauge.packGauge(gauge_APE);
+  smearedGauge.loadGauge();
+  printfQuda("Plaquette of smeared config:\n");
+  smearedGauge.calculatePlaq();
 
   // ensuring mu positive
   if(mu<0) mu*=-1.;
@@ -62,11 +65,57 @@ int main(int argc, char **argv)
   if(mu>0) mu*=-1.;
   QUDA_solver solverDN(mu);
 
-  
+  PLEGMA_Vector<double> vectorIn(BOTH);
+  PLEGMA_Vector<double> vectorOut(BOTH);
+  PLEGMA_Vector<double> vectorAuxD(BOTH);
+  PLEGMA_Vector<float> vectorAuxF(BOTH);
+  PLEGMA_Propagator<float> propUP(BOTH);
+  PLEGMA_Propagator<float> propDN(BOTH);
+  PLEGMA_Correlator<float> corrMesons;
 
-  
-  delete &solverUP;
-  delete &solverDN;
+  for(int isource = 0 ; isource < params.Nsources ; isource++){
+    printfQuda("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
+	       isource,
+	       params.sourcePosition[isource][0],
+	       params.sourcePosition[isource][1],
+	       params.sourcePosition[isource][2],
+	       params.sourcePosition[isource][3]);
+
+    for(int isc = 0 ; isc < 12 ; isc++){
+      vectorAuxD.pointSource(params.sourcePosition[isource], isc/3, isc%3);
+      vectorAuxD.loadVector();
+      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
+      
+      printfQuda("Going to invert UP for component %d\n", isc);
+      solverUP.solve(vectorOut, vectorIn);
+      vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
+      vectorAuxF.copy(vectorAuxD);
+      propUP.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
+
+      printfQuda("Going to invert DN for component %d\n", isc);
+      solverDN.solve(vectorOut, vectorIn);
+      vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
+      vectorAuxF.copy(vectorAuxD);
+      propDN.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
+    }
+
+    propUP.rotateToPhysicalBase_device(+1);
+    propDN.rotateToPhysicalBase_device(-1);
+
+    corrMesons.contractMesons(propUP, propDN, isource, params.CorrSpace);
+
+    char* filename, *str;
+    if(params.CorrSpace==MOMENTUM_SPACE) asprintf(&str,"Qsq%d",params.Q_sq);
+    asprintf(&filename,"%s_mesons_%s_SS.%02d.%02d.%02d.%02d" ,
+	    twop_filename, str,
+	    params.sourcePosition[isource][0],
+	    params.sourcePosition[isource][1],
+	    params.sourcePosition[isource][2],
+	    params.sourcePosition[isource][3]);
+    free(str);
+    corrMesons.writeFile(filename, &params, params.CorrFileFormat);
+    free(filename);
+  }
   
   for(int i = 0 ; i < 4 ; i++){
     free(gauge[i]);
@@ -74,6 +123,8 @@ int main(int argc, char **argv)
   }
   
   // finalize the QUDA library
+  saveTuneCache(true);
+  finalizeGaugeQuda();
   endQuda();
   
   // finalize the communications layer

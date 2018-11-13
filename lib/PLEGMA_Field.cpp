@@ -32,10 +32,14 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
     field_length = 1;
     total_length = GK_localVolume;
     break;
+  case SU3FIELD:
+    field_length = N_COLS * N_COLS;
+    total_length = GK_localVolume;
+    break;
   case GAUGE:
     field_length = N_DIMS * N_COLS * N_COLS;
     total_length = GK_localVolume;
-    break;
+    break;    
   case VECTOR:
     field_length = N_SPINS * N_COLS;
     total_length = GK_localVolume;
@@ -242,6 +246,135 @@ void PLEGMA_Field<Float>::printInfo(){
   printfQuda("The flag for the device allocation is %d\n",(int) isAllocDevice);
 }
 
+template<typename Float>
+static void getOffsets(int dirOr, int field_length,int *pos,
+		       int *height, size_t *width,
+		       size_t *spitch, size_t *dpitch,int *ghostOffset){
+
+  if(dirOr == 0 || dirOr == 4+0){
+    *pos=(dirOr<4)?GK_localL[0]-1:0;
+    *ghostOffset=(dirOr<4)?GK_minusGhost[0]:GK_plusGhost[0];
+    *height = GK_localL[1] * GK_localL[2] * GK_localL[3];
+    *width = 2*sizeof(Float);
+    *spitch = GK_localL[0]*(*width);
+    *dpitch = *width;
+  }
+  else if(dirOr == 1 || dirOr == 4+1){
+    *pos=(dirOr<4)?GK_localL[0]*(GK_localL[1]-1):0;
+    *ghostOffset=(dirOr<4)?GK_minusGhost[1]:GK_plusGhost[1];
+    *height = GK_localL[2] * GK_localL[3];
+    *width = GK_localL[0]*2*sizeof(Float);
+    *spitch = GK_localL[1]*(*width);
+    *dpitch = *width;
+  }
+  else if(dirOr == 2 || dirOr == 4+2){
+    *pos=(dirOr<4)?GK_localL[0]*GK_localL[1]*(GK_localL[2]-1):0;
+    *ghostOffset=(dirOr<4)?GK_minusGhost[2]:GK_plusGhost[2];
+    *height = GK_localL[3];
+    *width = GK_localL[1]*GK_localL[0]*2*sizeof(Float);
+    *spitch = GK_localL[2]*(*width);
+    *dpitch = *width;
+  }
+  else if(dirOr == 3 || dirOr == 4+3){
+    *pos=(dirOr<4)?GK_localL[0]*GK_localL[1]*GK_localL[2]*(GK_localL[3]-1):0;
+    *ghostOffset=(dirOr<4)?GK_minusGhost[3]:GK_plusGhost[3];
+    *height = field_length;
+    *width = GK_localL[2]*GK_localL[1]*GK_localL[0]*2*sizeof(Float);
+    *spitch = GK_localL[3]*(*width);
+    *dpitch = *width;
+  }
+  else{
+    errorQuda("Directions should be in [0,7] range");
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::ghostToHost(int dirOr){
+  if(dirOr<-1 || dirOr>7)
+    errorQuda("Directions should be in [0,7] range with -1 all directions");
+  bool isAll=(dirOr<0)?true:false;
+
+  int position=0;
+  int height=0;
+  size_t width=0;
+  size_t spitch=0;
+  size_t dpitch=0;
+  int ghostOffset=0;
+  for(int ir = 0 ; ir <= 7 ; ir++)
+    if(dirOr == ir || isAll){
+      if(GK_localL[ir%4] < GK_totalL[ir%4]){
+	Float *h_elem_offset = NULL;
+	Float *d_elem_offset = NULL;
+	getOffsets<Float>(ir,field_length,&position,&height,&width,&spitch,&dpitch,&ghostOffset);
+	int N=(ir==3 || ir==4+3)?1:field_length;
+	for(int i = 0 ; i < N; i++){
+	  d_elem_offset = d_elem + i*total_length*2 + position*2;
+	  h_elem_offset = h_elem + ghostOffset*field_length*2 + i*GK_surface3D[ir%4]*2;
+	  cudaMemcpy2D(h_elem_offset,dpitch,d_elem_offset, spitch,width,height,cudaMemcpyDeviceToHost);
+	  checkCudaError();  
+	}
+      }
+    }
+}
+
+
+template<typename Float>
+void PLEGMA_Field<Float>::cpuExchangeGhost(int dirOr){
+
+  if(dirOr<-1 || dirOr>7)
+    errorQuda("Directions should be in [0,7] range with -1 all directions");
+  bool isAll=(dirOr<0)?true:false;
+
+  MsgHandle *mh_send_fwd[4];
+  MsgHandle *mh_from_back[4];
+  MsgHandle *mh_from_fwd[4];
+  MsgHandle *mh_send_back[4];
+
+  Float *pointer_receive = NULL;
+  Float *pointer_send = NULL;
+
+  for(int ir = 0 ; ir <= 7 ; ir++)
+    if(dirOr == ir || isAll){
+      if(GK_localL[ir%4] < GK_totalL[ir%4]){
+	size_t nbytes = GK_surface3D[ir%4]*field_length*2*sizeof(Float);
+	int ghost = ir<4?GK_minusGhost[ir%4]:GK_plusGhost[ir%4];
+	pointer_receive=h_ext_ghost + (ghost-total_length)*field_length*2;
+	pointer_send=h_elem + ghost*field_length*2;
+	if(ir<4){
+	  mh_from_back[ir%4] = comm_declare_receive_relative(pointer_receive,ir%4,-1,nbytes);
+	  mh_send_fwd[ir%4] = comm_declare_send_relative(pointer_send,ir%4,1,nbytes);
+	  comm_start(mh_from_back[ir%4]);
+	  comm_start(mh_send_fwd[ir%4]);
+	  comm_wait(mh_send_fwd[ir%4]);
+	  comm_wait(mh_from_back[ir%4]);
+
+	  comm_free(mh_from_back[ir%4]);
+	  comm_free(mh_send_fwd[ir%4]);
+	}
+	else{
+	  mh_from_fwd[ir%4] = comm_declare_receive_relative(pointer_receive,ir%4,1,nbytes);
+	  mh_send_back[ir%4] = comm_declare_send_relative(pointer_send,ir%4,-1,nbytes);
+	  comm_start(mh_from_fwd[ir%4]);
+	  comm_start(mh_send_back[ir%4]);
+	  comm_wait(mh_send_back[ir%4]);
+	  comm_wait(mh_from_fwd[ir%4]);
+
+	  comm_free(mh_from_fwd[ir%4]);
+	  comm_free(mh_send_back[ir%4]);
+	}
+      }
+    }    
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::ghostToDevice(){
+  if(comm_size() > 1){
+    Float *host = h_ext_ghost;
+    Float *device = d_elem+GK_localVolume*field_length*2;
+    cudaMemcpy(device,host,bytes_ghost_length,cudaMemcpyHostToDevice);
+    checkCudaError();
+  }
+}
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
