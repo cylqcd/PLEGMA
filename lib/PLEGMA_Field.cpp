@@ -163,6 +163,33 @@ void PLEGMA_Field<Float>::zero_device(){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
+  
+  if( alloc_flag == BOTH ){
+    zero_host();
+    zero_device();
+  }
+  else if (alloc_flag == HOST){
+    zero_host();
+  }
+  else if (alloc_flag == DEVICE){
+    zero_device();
+  }
+  else if (alloc_flag == BOTH_EXTRA){
+    zero_host();
+    zero_host_backup();
+    zero_device();    
+  }
+}
+/*
+template<typename Float>
+void PLEGMA_Field<Float>::checkMemory(){
+  if(this->isBool
+}
+*/
+
+
+template<typename Float>
 cudaTextureObject_t PLEGMA_Field<Float>::createTexObject(){
   cudaTextureObject_t tex;
   cudaChannelFormatDesc desc;

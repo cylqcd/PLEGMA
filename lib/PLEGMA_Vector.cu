@@ -464,18 +464,43 @@ void PLEGMA_Vector<Float>::copyPropagator(PLEGMA_Propagator<Float> &prop, int nu
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::pointSource(std::array<int, N_DIMS> sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag){
+void PLEGMA_Vector<Float>::pointSource(Float *sourceposition, int spin, int color, ALLOCATION_FLAG where){
+  
+  this->zero_where(where);
+  int my_src[N_DIMS];
+  size_t id=0;
+  Float temp[1];
+  temp[0] = 1.0;
 
-  std::array<int, N_DIMS> local_src;
-  std::array<int, N_DIMS> local_lat;
-  std::copy(std::begin(GK_localL), std::end(GK_localL), std::begin(local_lat));
-  for(int i = 0 ; i < N_DIMS ; ++i)
-    local_src[i] = (sourceposition[i] - comm_coords(default_topo)[i] * GK_localL[i]);
-  
-  
-  this->zero_host();
- // if(local_src >= std:array<int, N_DIMS> && local_src <= local_lat){}
-  
+  for(int i = N_DIMS-1; i >= 0; i--) {
+    my_src[i] = (sourceposition[i] - comm_coords(default_topo)[i] * GK_localL[i]);
+
+    // if out of the local lattice we break
+    if((my_src[i]<0) || (my_src[i]>=GK_localL[i]))
+      return;
+
+    id = id * GK_localL[i] + my_src[i];
+  }
+
+  if( where == BOTH ){
+    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
+                cudaMemcpyHostToDevice ); 
+  }
+  else if (where == HOST){
+    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
+  }
+  else if (where == DEVICE){
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
+                cudaMemcpyHostToDevice ); 
+  }
+  else if (where == BOTH_EXTRA){
+    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
+    this->h_elem_backup[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0;
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
+                cudaMemcpyHostToDevice ); 
+  }
+  // If we arrive at the last iteration then we have the source in this process
   
 }
 
