@@ -132,8 +132,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     inv_param.clover_coeff = csw*inv_param.kappa;
   }
 
-  inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
-  inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
+  inv_param.input_location = QUDA_CUDA_FIELD_LOCATION;
+  inv_param.output_location = QUDA_CUDA_FIELD_LOCATION;
 
   inv_param.dslash_type = dslash_type;
 
@@ -287,8 +287,8 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.clover_coeff = csw*inv_param.kappa;
   }
 
-  inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
-  inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
+  inv_param.input_location = QUDA_CUDA_FIELD_LOCATION;
+  inv_param.output_location = QUDA_CUDA_FIELD_LOCATION;
 
   inv_param.dslash_type = dslash_type;
 
