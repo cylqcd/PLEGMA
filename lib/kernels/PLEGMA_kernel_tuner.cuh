@@ -3,13 +3,14 @@
 // struct that contains all variables
 //  necessary for the tuning evaluation
 struct ProfileStruct{
-  long long flops;
-  long long outBytes;
-  long long inpBytes;
-  long long siteBytes;
+  long long flops; // n. flop per lattice pt
+  long long outBytes; // output dimension
+  long long inpBytes; // input dimension
+  long long siteBytes; // bytes per lattice pt
   // sharedBytesPerThread
   // sharedBytesPerBlock
   long long volumeCB;
+  bool tuneY; // tune for the second dimension of thread blocks
 };
 
 // structure that contains all arguments necessary
