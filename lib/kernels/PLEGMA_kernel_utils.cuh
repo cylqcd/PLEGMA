@@ -8,7 +8,7 @@
 #include <typeinfo>
 #include <PLEGMA_kernel_extern.cuh>
 #include <PLEGMA_kernel_complex.cuh>
-#include <PLEGMA_kernel_texture.cuh>
+#include <PLEGMA_kernel_getSet.cuh>
 
 #ifndef PLEGMA_KERNEL_UTILS_CUH
 #define PLEGMA_KERNEL_UTILS_CUH

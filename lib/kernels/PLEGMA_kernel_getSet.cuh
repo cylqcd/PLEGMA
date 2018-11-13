@@ -24,6 +24,9 @@ namespace plegma {
   struct texture {
     cudaTextureObject_t tex;
     inline __device__ Float2<Float> fetch(int i);
+    inline __device__ Float2<Float> get(int i, int sid, int stride) {
+      return texture<Float>::fetch(i*stride + sid);
+    }
   };
   
   template<> inline __device__ Float2<float> texture<float>::fetch(int i) {
@@ -36,9 +39,50 @@ namespace plegma {
   }
   
   template<typename Float>
-  struct gaugeTex : texture<Float> {
+  struct pFloat2 {
+    Float2<Float>* p;
+    inline __device__ pFloat2(Float* pointer) {
+      p = (Float2<Float> *) pointer;
+    }
+    inline __device__ Float2<Float> get(int i, int sid, int stride) {
+      return p[i*stride + sid];
+    }
+  };
+    
+  template<typename Get, typename Float>
+  struct generic : Get {  
+    inline __device__ Float2<Float> get(int i, int sid, int stride) {
+      return Get::get(i,sid,stride);
+    }
+    inline __device__ Float2<Float> get(int i, int sid) {
+      return Get::get(i,sid,c_stride);
+    }
+    inline __device__ Float2<Float> getPlus(int i, int offset, short int dirPlus, int sid) {
+      int id[4] = GET_ID(sid);
+      int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
+	(c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
+      int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
+      get(i, sidPlus, stridePlus);
+    }
+    inline __device__ Float2<Float> getMinus(int i, int offset, short int dirMinus, int sid) {
+      int id[4] = GET_ID(sid);
+      int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
+	(c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
+      int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
+      get(i, sidMinus, strideMinus);
+    }
+  };
+
+  template<typename Float>
+    struct genericTex : generic<texture<Float>,Float> {};
+
+  template<typename Float>
+    struct generic2 : generic<pFloat2<Float>,Float> {};
+
+  template<typename Get, typename Float>
+  struct genericGauge : generic<Get,Float> {
     inline __device__ Float2<Float> get(short int dir, int a, int b, int sid, int stride) {
-      return texture<Float>::fetch(((dir*N_COLS + a)*N_COLS + b)*stride + sid);
+      return Get::get(((dir*N_COLS + a)*N_COLS + b), sid, stride);
     }
     inline __device__ Float2<Float> get(short int dir, int a, int b, int sid) {
       return get(dir,a,b,sid,c_stride);
@@ -72,9 +116,15 @@ namespace plegma {
   };
 
   template<typename Float>
-  struct vectorTex : texture<Float> {
+    struct gaugeTex : genericGauge<texture<Float>, Float>{};
+
+  template<typename Float>
+    struct gauge2 : genericGauge<pFloat2<Float>,Float >{};
+
+  template<typename Get,typename Float>
+  struct genericVector : generic<Get,Float> {
     inline __device__ Float2<Float> get(int mu, int c, int sid, int stride) {
-      return texture<Float>::fetch((mu*N_COLS + c)*stride + sid);
+      return Get::get((mu*N_COLS + c),sid,stride);
     }
     inline __device__ Float2<Float> get(int mu, int c, int sid) {
       return get(mu,c,sid,c_stride);
@@ -106,11 +156,17 @@ namespace plegma {
       get(S,sidMinus,strideMinus);
     }
   };
-    
+
   template<typename Float>
-  struct propTex : texture<Float> {
+    struct vectorTex : genericVector< texture<Float>, Float > {};
+
+  template<typename Float>
+    struct vector2 : genericVector< pFloat2<Float>, Float > {};
+
+  template<typename Get, typename Float>
+    struct genericProp : generic<Get,Float>  {
     inline __device__ Float2<Float> get(int mu, int nu, int a, int b, int sid, int stride) {
-      return texture<Float>::fetch((((mu*N_SPINS + nu)*N_COLS + a)*N_COLS + b)*stride + sid);
+      return Get::get((((mu*N_SPINS + nu)*N_COLS + a)*N_COLS + b), sid,stride);
     }
     inline __device__ Float2<Float> get(int mu, int nu, int c1, int c2, int sid) {
       return get(mu, nu, c1, c2, sid, c_stride);
@@ -144,5 +200,12 @@ namespace plegma {
       get( P, sidMinus, strideMinus );
     }
   };
+
+  template<typename Float>
+    struct propTex : genericProp< texture<Float>, Float > {};
+
+  template<typename Float>
+    struct prop2 : genericProp< pFloat2<Float>, Float > {};
+
 }
 #endif
