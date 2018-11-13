@@ -157,12 +157,17 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
   else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
     flag_eo = false;
 
-    bool pc_solution = false;
-  ColorSpinorParam cpuParam(NULL, inv_param, GK_localL, pc_solution, 
+  bool pc_solution = false;
+  //ColorSpinorParam cpuParam(NULL, inv_param, GK_localL, pc_solution,
+  ColorSpinorParam cpuParam(vectorIn.H_elem(), inv_param, GK_localL, pc_solution, 
 			    inv_param.input_location);
   ColorSpinorParam cudaParam(cpuParam, inv_param);
+  ColorSpinorField *h_b = ColorSpinorField::Create(cpuParam);
+  cpuParam.v = vectorOut.H_elem();
+  ColorSpinorField *h_x = ColorSpinorField::Create(cpuParam);
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
-  cudaColorSpinorField b(cudaParam), x(cudaParam);
+  cudaColorSpinorField b(*h_b,cudaParam), x(*h_x,cudaParam);
+  //cudaColorSpinorField b(cudaParam), x(cudaParam);
 
   ColorSpinorField *in = NULL;
   ColorSpinorField *out = NULL;
@@ -175,6 +180,9 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
     vectorOut.scaleVector(2*inv_param.kappa);
   }
+  
+  delete h_b;
+  delete h_x;
 }
 
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
