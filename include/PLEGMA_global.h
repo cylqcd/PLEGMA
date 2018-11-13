@@ -93,6 +93,8 @@ namespace plegma {
 
   enum THRP_TYPE{THRP_LOCAL2,THRP_NOETHER2,THRP_ONED2};
 
+  enum LATDIMS{DIM_X,DIM_Y,DIM_Z,DIM_T};
+
   enum APEDIM{D3,D4};
 
   typedef struct {
