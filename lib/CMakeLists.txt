@@ -1,11 +1,11 @@
 set (QUDA_OBJS 
-#  PLEGMA_interface.cpp 
   PLEGMA_Correlator.cu
   PLEGMA.cu
   PLEGMA_Propagator.cu
   PLEGMA_Vector.cu
   PLEGMA_Gauge.cu
   PLEGMA_Field.cpp
+  PLEGMA_Su3matrix.cu
 )
 
 ## split source into cu and cpp files

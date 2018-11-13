@@ -19,10 +19,7 @@ namespace plegma {
     void loadGaugeFromBackup();
     void justDownloadGauge();
     void loadGauge();
-    
-    void ghostToHost();
-    void cpuExchangeGhost();
-    void ghostToDevice();
+
     void calculatePlaq();
   };
 }

@@ -15,12 +15,8 @@ namespace plegma {
     class PLEGMA_Propagator : public PLEGMA_Field<Float> {
     
   public:
-    PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT);
+    PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Propagator(){;}
-    
-    void ghostToHost();
-    void cpuExchangeGhost();
-    void ghostToDevice();
     
     void conjugate();
     void apply_gamma5();
@@ -41,7 +37,7 @@ namespace plegma {
     class PLEGMA_Propagator3D : public PLEGMA_Field<Float> {
     
   public:
-    PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT);
+    PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Propagator3D(){;}
     
     void absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
