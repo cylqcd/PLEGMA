@@ -18,9 +18,9 @@ namespace plegma {
     PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT);
     ~PLEGMA_Propagator(){;}
     
-    void ghostToHost();
-    void cpuExchangeGhost();
-    void ghostToDevice();
+    // void ghostToHost();
+    // void cpuExchangeGhost();
+    // void ghostToDevice();
     
     void conjugate();
     void apply_gamma5();
