@@ -4,7 +4,7 @@ set (QUDA_OBJS
   PLEGMA_Propagator.cu
   PLEGMA_Vector.cu
   PLEGMA_Gauge.cu
-  PLEGMA_Field.cpp
+  PLEGMA_Field.cu
   PLEGMA_Su3matrix.cu
 )
 
