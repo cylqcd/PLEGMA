@@ -34,9 +34,9 @@ class GaugeBuffer {
         V *= lL[i];
       }
       for(int i = 0; i < N_DIMS; ++i){
-        buffer[i] = NULL;
+        buffer[i] = static_cast<T*>(NULL);
         buffer[i] = static_cast<T*>(BUFFER_MALLOC(PLEGMA_ALIGNMENT, V*gaugeSiteSize*sizeof(T))); 
-        if(buffer[N_DIMS] == NULL){
+        if(buffer[N_DIMS] == static_cast<T*>(NULL) ){
           throw( std::bad_alloc() );
         }
       }
@@ -58,7 +58,7 @@ class GaugeBuffer {
     }
   
   private:
-    T buffer[N_DIMS];
+    T* buffer[N_DIMS];
 };
 
 }
