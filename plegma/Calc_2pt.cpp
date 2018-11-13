@@ -43,20 +43,15 @@ int main(int argc, char **argv)
   applyBoundaryCondition(gauge, V/2 ,&gauge_param);
 
   // Load the gauge field into QUDA
-  loadGaugeQuda((void*)gauge, &gauge_param);
+  initGaugeQuda((void*)gauge, gauge_param);
 
   //-Read the smeared gauge field in lime format
   // TODO: create locally the smeared gauge
   readLimeGauge(gauge_APE, latfile_smeared, &gauge_param, params.procs);
-
-  //-Loadin the gauge into QUDA for being used in case of QUDA-smearing
-  gauge_param.type = QUDA_SMEARED_LINKS;
-  loadGaugeQuda((void*)gauge_APE, &gauge_param);
   mapEvenOddToNormalGauge(gauge_APE,gauge_param,lL[0],lL[1],lL[2],lL[3]);
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> smearedGauge(BOTH);
-
   smearedGauge.packGauge(gauge_APE);
   smearedGauge.loadGauge();
   printfQuda("Plaquette of smeared config:\n");
@@ -90,22 +85,23 @@ int main(int argc, char **argv)
       vectorAuxD.pointSource(params.sourcePosition[isource], isc/3, isc%3);
       vectorAuxD.loadVector();
       vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
-
+      
       printfQuda("Going to invert UP for component %d\n", isc);
-      vectorOut.zero_device();
       solverUP.solve(vectorOut, vectorIn);
       vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
       vectorAuxF.copy(vectorAuxD);
       propUP.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
 
       printfQuda("Going to invert DN for component %d\n", isc);
-      vectorOut.zero_device();
       solverDN.solve(vectorOut, vectorIn);
       vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
       vectorAuxF.copy(vectorAuxD);
       propDN.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
     }
-    
+
+    propUP.rotateToPhysicalBase_device(+1);
+    propDN.rotateToPhysicalBase_device(-1);
+
     corrMesons.contractMesons(propUP, propDN, isource, params.CorrSpace);
 
     char* filename, *str;
@@ -127,6 +123,7 @@ int main(int argc, char **argv)
   }
   
   // finalize the QUDA library
+  finalizeGaugeQuda();
   endQuda();
   
   // finalize the communications layer
