@@ -42,6 +42,9 @@ extern int dim_partitioned[];
 // quda_interface.cpp
 void initComms(int argc, char **argv, const int *commDims);
 void finalizeComms();
+void initGaugeQuda(void* gauge, QudaGaugeParam gauge_param);
+void updateGaugeQuda(void* gauge, QudaGaugeParam gauge_param);
+void finalizeGaugeQuda();
 
 // quda_params.cpp
 void print_info();

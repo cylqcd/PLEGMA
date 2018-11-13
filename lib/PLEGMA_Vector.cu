@@ -11,9 +11,8 @@ using namespace quda;
 //---------------------------//
 
 template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, 
-						CLASS_ENUM classT): 
-  PLEGMA_Field<Float>(alloc_flag, classT){ ; }
+PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag): 
+  PLEGMA_Field<Float>(alloc_flag, VECTOR){ ; }
 
 template<typename Float>
 void PLEGMA_Vector<Float>::packVector(Float *vector){
@@ -185,6 +184,26 @@ void  PLEGMA_Vector<Float>::conjugate(){
 template<typename Float>
 void  PLEGMA_Vector<Float>::apply_gamma5(){
   apply_gamma5_vector(PLEGMA_Field<Float>::d_elem);
+}
+
+template<typename Float>
+void  PLEGMA_Vector<Float>::pointSource(int source[N_DIMS], int spin, int col){
+  this->zero_host();
+  
+  int my_src[N_DIMS];
+  size_t id=0;
+  for(int i = N_DIMS-1; i >= 0; i--) {
+    my_src[i] = (source[i] - comm_coords(default_topo)[i] * GK_localL[i]);
+
+    // if out of the local lattice we break
+    if((my_src[i]<0) || (my_src[i]>=GK_localL[i]))
+      return;
+
+    id = id * GK_localL[i] + my_src[i];
+  }
+
+  // If we arrive at the last iteration then we have the source in this process
+  this->h_elem[((spin*N_COLS+col)*GK_localVolume + id)*2] = 1.0;
 }
 
 template<typename Float>
