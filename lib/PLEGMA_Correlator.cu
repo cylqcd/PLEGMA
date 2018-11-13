@@ -70,11 +70,13 @@ void PLEGMA_Correlator<Float>::
 writeFile(char *filename, PLEGMA_params *params, FILE_WRITE_FORMAT CorrFileFormat) {
   char* filename_out;
   if(CorrFileFormat == ASCII_FORM) {
-    asprintf(&filename_out,"%s.dat");
+    asprintf(&filename_out,"%s.dat",filename);
+    printfQuda("Going to write file %s in ASCII format\n",filename_out);
     writeASCII(filename_out);
   }
   else if(CorrFileFormat == HDF5_FORM) {
-    asprintf(&filename_out,"%s.h5");
+    asprintf(&filename_out,"%s.h5",filename);
+    printfQuda("Going to write file %s in HDF5 format\n",filename_out);
     writeHDF5(filename_out, params);
   }
   else {
@@ -272,7 +274,7 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
     if(start[i]+ldims[i] > dims[i]) {
       exceeding_dim[exceeding] = i;
       exceeding_ammount[i] = start[i]+ldims[i]-dims[i];
-      printf("rank %d: Dim %d exceeds of %d -> shifting\n",comm_rank(),i,exceeding_ammount[exceeding]);
+      //printf("rank %d: Dim %d exceeds of %d -> shifting\n",comm_rank(),i,exceeding_ammount[exceeding]);
       if(exceeding_dim[exceeding]>ldims[i]) {
 	errorQuda("Exceeding is too high. The method may have problems.");
       }
@@ -310,10 +312,10 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
       tmp/=2;
       j++;
     }
-    printf("rank %d: iter %d:\n",comm_rank(),i);
-    for(int j=0; j<ndims; j++) {
-      printf("rank %d: i=%d, dims[i]=%d tmp_ldims[i]=%d, tmp_start[i]=%d, tmp_shift[i]=%d,\n",comm_rank(),j,dims[j], tmp_ldims[j], tmp_start[j], tmp_shift[j]);
-    }
+    //printf("rank %d: iter %d:\n",comm_rank(),i);
+    //for(int j=0; j<ndims; j++) {
+    //  printf("rank %d: i=%d, dims[i]=%d tmp_ldims[i]=%d, tmp_start[i]=%d, tmp_shift[i]=%d,\n",comm_rank(),j,dims[j], tmp_ldims[j], tmp_start[j], tmp_shift[j]);
+    //}
     // copying the part of the buffer
     size_t vol = get_volume(ndims, tmp_ldims);
     Float tmp_buf[get_volume(ndims, tmp_ldims)];
