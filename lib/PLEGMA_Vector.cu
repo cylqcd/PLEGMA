@@ -404,7 +404,7 @@ void  PLEGMA_Vector<Float>::pointSource(int source[N_DIMS], int spin, int col){
   
   int my_src[N_DIMS];
   size_t id=0;
-  for(int i = N_DIMS; i >= 0; i--) {
+  for(int i = N_DIMS-1; i >= 0; i--) {
     my_src[i] = (source[i] - comm_coords(default_topo)[i] * GK_localL[i]);
 
     // if out of the local lattice we break
@@ -415,7 +415,7 @@ void  PLEGMA_Vector<Float>::pointSource(int source[N_DIMS], int spin, int col){
   }
 
   // If we arrive at the last iteration then we have the source in this process
-  this->h_elem[((id*N_SPINS + spin)*N_COLS + col)*2] = 1.0;
+  this->h_elem[((spin*N_COLS+col)*GK_localVolume + id)*2] = 1.0;
 }
 
 template<typename Float>
