@@ -18,10 +18,6 @@ namespace plegma {
     PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Propagator(){;}
     
-    // void ghostToHost();
-    // void cpuExchangeGhost();
-    // void ghostToDevice();
-    
     void conjugate();
     void apply_gamma5();
     
