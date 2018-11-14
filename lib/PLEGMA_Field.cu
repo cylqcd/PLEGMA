@@ -23,7 +23,7 @@ template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, 
 					      CLASS_ENUM classT):
   h_elem(NULL) , d_elem(NULL) , h_ext_ghost(NULL) , h_elem_backup(NULL) , 
-  isAllocHost(false) , isAllocDevice(false), isAllocHostBackup(false)
+  isAllocHost(false) , isAllocDevice(false), isAllocHostBackup(false), isRef(false)
 {
   if(GK_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
@@ -91,9 +91,11 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
 //Destructor
 template<typename Float>
 PLEGMA_Field<Float>::~PLEGMA_Field(){
-  if(h_elem != NULL) destroy_host();
-  if(h_elem_backup != NULL) destroy_host_backup();
-  if(d_elem != NULL) destroy_device();
+  if(!isRef){
+    if(h_elem != NULL) destroy_host();
+    if(h_elem_backup != NULL) destroy_host_backup();
+    if(d_elem != NULL) destroy_device();
+  }
 }
 
 template<typename Float>
@@ -352,6 +354,10 @@ void PLEGMA_Field<Float>::ghostToDevice(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
+  // we have to make sure that we have the ghost
+  Fin.ghostToHost();
+  Fin.cpuExchangeGhost();
+  Fin.ghostToDevice();
   shiftField(Fin,*this,dirOr);
 }
 
