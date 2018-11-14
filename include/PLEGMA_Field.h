@@ -70,6 +70,8 @@ namespace plegma {
     void ghostToHost(int dirOr=-1);
     void cpuExchangeGhost(int dirOr=-1);
     void ghostToDevice();
+
+    void shift(PLEGMA_Field &Fin, int dirOr);
   };
 }
 #endif

@@ -350,8 +350,8 @@ void PLEGMA_Field<Float>::ghostToDevice(){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::(){
-
+void PLEGMA_Field<Float>::shift(PLEGMA_Field &Fin, int dirOr){
+  shiftField(Fin,*this,dirOr);
 }
 
 template class PLEGMA_Field<float>;
