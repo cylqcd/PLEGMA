@@ -1,5 +1,6 @@
 #include <PLEGMA_Su3matrix.h>
 #include <PLEGMA_Gauge.h>
+#include <PLEGMA_su3matrix.cuh>
 using namespace plegma;
 
 //--------------------------//
@@ -13,8 +14,8 @@ PLEGMA_Su3matrix<Float>::PLEGMA_Su3matrix(ALLOCATION_FLAG alloc_flag):
 template<typename Float>
 PLEGMA_Su3matrix<Float>::PLEGMA_Su3matrix(PLEGMA_Gauge<Float> &u, int dir): 
   PLEGMA_Field<Float>(NONE, SU3FIELD){
-  this->d_elem = u.D_elem();
-  this->h_elem = u.H_elem();
+  this->d_elem = u.D_elem() + dir*(this->field_length)*(this->total_length)*2;
+  this->h_elem = u.H_elem() + dir*(this->field_length)*(this->total_length)*2;
   this->isRef=true;
 }
 
@@ -29,6 +30,69 @@ template<typename Float>
 void PLEGMA_Su3matrix<Float>::absorbDir_host(PLEGMA_Gauge<Float> &u,int dir){
   memcpy(this->h_elem, u.H_elem()+dir*(this->field_length)*(this->total_length)*2,
 	 this->bytes_total_length);
+}
+
+template<typename Float>
+void PLEGMA_Su3matrix<Float>::Udag(PLEGMA_Su3matrix<Float> &B){
+  Udag_k(*this,B);
+}
+
+template<typename Float>
+void PLEGMA_Su3matrix<Float>::UxU(PLEGMA_Su3matrix<Float> &B, PLEGMA_Su3matrix<Float> &C){
+  UxU_k(*this,B,C);
+}
+
+template<typename Float>
+void PLEGMA_Su3matrix<Float>::UxUdag(PLEGMA_Su3matrix<Float> &B, PLEGMA_Su3matrix<Float> &C){
+  UxUdag_k(*this,B,C);
+}
+
+
+template<typename Float>
+static void pathX(int *dir, int *sign, int length,PLEGMA_Su3matrix<Float> **u_s,
+		 PLEGMA_Su3matrix<Float>& s1, PLEGMA_Su3matrix<Float>& s2){
+  // do first step
+  if(sign[0] > 0) s1.shift( *(u_s[dir[0]]), dir[0] );
+  else s1.Udag( *(u_s[dir[0]]) );
+  // do the next steps
+  for(int j=1 ; j < length ; j++){
+    if(sign[j] > 0){
+      s2.UxU(s1, *(u_s[dir[j]]) );
+      s1.shift(s2, dir[j]);
+    }
+    else{
+      s2.shift(s1,4+dir[j]);
+      s1.UxUdag(s2, *(u_s[dir[j]]) );
+    }
+  }
+}
+
+static void dirsOrien(std::vector<int> &steps, int len, int *dir, int *sign){
+  for(int i = 0 ; i < len ; i++)
+    if( !((steps[i] >= 0) && (steps[i] <= 7)) ) errorQuda("Error you provided a direction which is not supported");
+  for(int i=0; i<len; ++i)
+    {
+      dir[i] = (steps[i]>3)?steps[i]-4:steps[i];
+      sign[i] = (steps[i]>3)?-1:1;
+    }
+}
+
+template<typename Float>
+void PLEGMA_Su3matrix<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u, PLEGMA_Su3matrix<Float> &tmp){
+  PLEGMA_Su3matrix<Float> *u_s[4];
+  for(int idir = 0; idir < 4 ; idir++) u_s[idir] = new PLEGMA_Su3matrix<Float>(u,idir);
+  int len = steps.size();
+  int dir[len], sign[len];
+  dirsOrien(steps,len,dir,sign);
+  pathX(dir,sign,len,u_s,*this,tmp);
+  for(int idir = 0; idir < 4 ; idir++)
+    delete u_s[idir];
+}
+
+template<typename Float>
+void PLEGMA_Su3matrix<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u){
+  PLEGMA_Su3matrix<Float> tmp(BOTH);
+  path(steps,u,tmp);
 }
 
 template class PLEGMA_Su3matrix<float>;
