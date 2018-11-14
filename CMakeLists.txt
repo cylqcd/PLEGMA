@@ -39,6 +39,11 @@ set(DEFAULT_GPU_ARCH sm_35)
 set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60)")
 set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60)
 
+# max threads
+set(PLEGMA_MAX_THREADS 256 CACHE INT "maximum number of threads per block in tuner")
+mark_as_advanced(PLEGMA_MAX_THREADS)
+add_definitions(-DMAX_THREADS=${PLEGMA_MAX_THREADS})
+
 #ARPACK
 set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
 if(PLEGMA_ARPACK)
