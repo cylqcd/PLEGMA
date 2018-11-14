@@ -51,7 +51,7 @@ int main(int argc, char **argv)
   }
 
   // finalize the QUDA library
-  saveTuneCache(true);
+  saveTuneCache(false);
   endQuda();
     
   // finalize the communications layer
