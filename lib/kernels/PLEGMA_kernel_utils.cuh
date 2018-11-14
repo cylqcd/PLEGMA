@@ -91,5 +91,20 @@ namespace plegma {
 	 }
        }
   }
+
+  template<typename T>
+  __inline__ __device__ void reduce(T *shared_cache, const int n_comp){
+    __syncthreads();
+    int i = blockDim.x/2;
+    while (i != 0){
+      if(threadIdx.x < i){
+	for(int ip = 0 ; ip < n_comp ; ip++){
+	  shared_cache[ip*blockDim.x + threadIdx.x] = shared_cache[ip*blockDim.x + threadIdx.x] + shared_cache[ip*blockDim.x + threadIdx.x + i];
+	}
+      }
+      __syncthreads();
+      i /= 2;
+    }
+  }
 }
 #endif

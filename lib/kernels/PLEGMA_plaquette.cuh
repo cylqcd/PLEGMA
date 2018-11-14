@@ -35,6 +35,8 @@ static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Floa
   } else {
     shared_cache[cacheIndex] = 0.;
   }
+  reduce(shared_cache, 1);
+  /*
   __syncthreads(); // synchronize threads to be sure that all have written their register trace to share memory
   // for reduction threads per block must be power of 2 ( this is always my case)
   int i = blockDim.x/2;
@@ -45,7 +47,7 @@ static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Floa
     __syncthreads();
     i /= 2;
   }
-
+  */
   // now on the first element of the shared memory we have the reduction of block threads
   if(cacheIndex == 0)
     partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory  
