@@ -44,61 +44,15 @@ __global__ void contract_mesons_kernel(propTex<FloatA> texProp1, propTex<FloatB>
 	}
       }
     }
-    __syncthreads();
-
     if(runFT) {
-      int cacheIndex = threadIdx.x;
+      int source_pos[3] = {x0, y0, z0}; 
       __shared__ Float2<FloatC> shared_cache[2*N_MESONS*THREADS_PER_BLOCK];
-      
-      int x_id, y_id , z_id;
-      int r1,r2;
-      
-      r1 = sid / c_localL[0];
-      x_id = sid - r1 * c_localL[0];
-      r2 = r1 / c_localL[1];
-      y_id = r1 - r2*c_localL[1];
-      z_id = r2;
-      
-      int x,y,z;
-      
-      x = x_id + c_procPosition[0] * c_localL[0] - x0;
-      y = y_id + c_procPosition[1] * c_localL[1] - y0;
-      z = z_id + c_procPosition[2] * c_localL[2] - z0;
-      
-      FloatC phase;
-      Float2<FloatC> expon;
-      for(int imom = 0 ; imom < c_Nmoms ; imom++){
-	phase = ( ((double) c_moms[imom][0]*x)/c_totalL[0] + ((double) c_moms[imom][1]*y)/c_totalL[1] + ((double) c_moms[imom][2]*z)/c_totalL[2] ) * 2. * PI;
-	expon.x = cos(phase);
-	expon.y = -sin(phase);
-	for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
-	  shared_cache[ip*THREADS_PER_BLOCK + cacheIndex] = accum[ip] * expon; 
-	}
-	__syncthreads();
-	int i = blockDim.x/2;
-	while (i != 0){
-	  if(cacheIndex < i){
-	    for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
-	      shared_cache[ip*THREADS_PER_BLOCK + cacheIndex] = shared_cache[ip*THREADS_PER_BLOCK + cacheIndex] +
-		shared_cache[ip*THREADS_PER_BLOCK + cacheIndex + i];
-	    }
-	  }
-	  __syncthreads();
-	  i /= 2;
-	}
-	
-	if(cacheIndex == 0){
-	  for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
-	    block2[(imom*2*N_MESONS + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*THREADS_PER_BLOCK];
-	  }
-	}
-      } // close momentum
+      fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid, source_pos);
     } else {
       for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
 	block2[ip*locV + sid] = accum[ip];
       }
     }
-    __syncthreads();
   }
 }
 

@@ -106,5 +106,37 @@ namespace plegma {
       i /= 2;
     }
   }
+  
+  template<typename Float>
+  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3]){
+    int cacheIndex = threadIdx.x;
+    int id[3] = GET_ID_ZYX(sid3D);
+    #pragma unroll
+    for(int i=0; i<3; i++) {
+      id[i] += c_procPosition[i] * c_localL[i] - sp[i];
+    }
+    
+    Float phase;
+    Float2<Float> expon;
+    for(int imom = 0 ; imom < c_Nmoms ; imom++){
+      phase = 0;
+      #pragma unroll
+      for(int i=0; i<3; i++)
+	phase += ((double) c_moms[imom][i]*id[i])/c_totalL[i];
+      phase *=  2. * PI;
+      expon.x = cos(phase);
+      expon.y = -sin(phase);
+      for(int ip = 0 ; ip < n_comp ; ip++){
+	shared_cache[ip*blockDim.x + cacheIndex] = in[ip] * expon; 
+      }
+      reduce(shared_cache,n_comp);
+      
+      if(cacheIndex == 0){
+	for(int ip = 0 ; ip < n_comp ; ip++){
+	  out[(imom*n_comp + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
+	}
+      }
+    }
+  }
 }
 #endif

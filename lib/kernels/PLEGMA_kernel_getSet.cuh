@@ -6,6 +6,10 @@
 		     ((sid)/c_localL[0]/c_localL[1]) % c_localL[2],	\
 		     ((sid)/c_localL[0]/c_localL[1]/c_localL[2]) % c_localL[3] }
 
+#define GET_ID_ZYX(sid) {(sid) % c_localL[0],				\
+			 ((sid)/c_localL[0]) % c_localL[1],		\
+			 ((sid)/c_localL[0]/c_localL[1]) % c_localL[2] }
+
 #define LEXIC_ID(id) LEXIC(id[3],id[2],id[1],id[0],c_localL)
 #define LEXIC_3D(i,id)(i==0 ? LEXIC_TZY(id[3],id[2],id[1],c_localL) : \
                       (i==1 ? LEXIC_TZX(id[3],id[2],id[0],c_localL) : \
