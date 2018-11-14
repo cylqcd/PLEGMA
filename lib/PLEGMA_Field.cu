@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h> 
+#include <PLEGMA_shifts.cuh>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -350,7 +351,7 @@ void PLEGMA_Field<Float>::ghostToDevice(){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::shift(PLEGMA_Field &Fin, int dirOr){
+void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
   shiftField(Fin,*this,dirOr);
 }
 

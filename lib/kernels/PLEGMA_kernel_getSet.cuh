@@ -50,34 +50,35 @@ namespace plegma {
   };
     
   template<typename Get, typename Float>
-  struct generic : Get {  
+  struct generic : Get {
+    using Get::Get;
     inline __device__ Float2<Float> get(int i, int sid, int stride) {
       return Get::get(i,sid,stride);
     }
     inline __device__ Float2<Float> get(int i, int sid) {
-      return Get::get(i,sid,c_stride);
+      return get(i,sid,c_stride);
     }
     inline __device__ Float2<Float> getPlus(int i, int offset, short int dirPlus, int sid) {
       int id[4] = GET_ID(sid);
       int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
 	(c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
       int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
-      get(i, sidPlus, stridePlus);
+      return get(i, sidPlus, stridePlus);
     }
     inline __device__ Float2<Float> getMinus(int i, int offset, short int dirMinus, int sid) {
       int id[4] = GET_ID(sid);
       int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
 	(c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
       int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
-      get(i, sidMinus, strideMinus);
+      return get(i, sidMinus, strideMinus);
     }
   };
 
   template<typename Float>
-    struct genericTex : generic<texture<Float>,Float> {};
+  struct genericTex : generic<texture<Float>,Float> {using generic<texture<Float>,Float>::generic;};
 
   template<typename Float>
-    struct generic2 : generic<pFloat2<Float>,Float> {};
+  struct generic2 : generic<pFloat2<Float>,Float> {using generic<pFloat2<Float>,Float>::generic;};
 
   template<typename Get, typename Float>
   struct genericGauge : generic<Get,Float> {
