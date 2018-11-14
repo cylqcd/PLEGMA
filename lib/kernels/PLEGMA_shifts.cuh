@@ -4,6 +4,7 @@ using namespace plegma;
 template<typename Float>
 static __global__ void shifts_kernel(Float *in, Float *out, int length_field, int dirOr) {
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if(sid < c_threads) return;
   generic2 R(in);
   Float2<Float> *out2 = (Float2<Float> *) out;
   #pragma unroll
