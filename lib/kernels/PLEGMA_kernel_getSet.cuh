@@ -204,8 +204,8 @@ namespace plegma {
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
       if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
       
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_COLS + LEXIC_3D(dirPlus,id)) :
+	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
       
       int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
       return get(S,sidPlusMinus,stridePlusMinus);
@@ -267,8 +267,8 @@ namespace plegma {
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
       if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
       
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
+	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
       
       int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
       return get(P,sidPlusMinus,stridePlusMinus);
