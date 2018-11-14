@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	       params.sourcePosition[isource][3]);
 
     for(int isc = 0 ; isc < 12 ; isc++){
-      vectorAuxD.pointSource(params.sourcePosition[isource], isc/3, isc%3);
+      vectorAuxD.pointSource(params.sourcePosition[isource], isc/3, isc%3, HOST);
       vectorAuxD.loadVector();
       vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
       

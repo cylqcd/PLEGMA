@@ -306,7 +306,7 @@ mark_as_advanced(CMAKE_F_FLAGS)
 
 ### add tests and quda library
 add_subdirectory(lib)
-add_subdirectory(test)
+add_subdirectory(tests)
 ### add PLEGMA directory
 add_subdirectory(utils)
 add_subdirectory(plegma)
