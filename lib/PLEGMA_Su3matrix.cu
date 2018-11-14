@@ -11,6 +11,14 @@ PLEGMA_Su3matrix<Float>::PLEGMA_Su3matrix(ALLOCATION_FLAG alloc_flag):
   PLEGMA_Field<Float>(alloc_flag, SU3FIELD){ ; }
 
 template<typename Float>
+PLEGMA_Su3matrix<Float>::PLEGMA_Su3matrix(PLEGMA_Gauge<Float> &u, int dir): 
+  PLEGMA_Field<Float>(NONE, SU3FIELD){
+  this->d_elem = u.D_elem();
+  this->h_elem = u.H_elem();
+  this->isRef=true;
+}
+
+template<typename Float>
 void PLEGMA_Su3matrix<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
   cudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
   	     this->bytes_total_length, cudaMemcpyDeviceToDevice);

@@ -13,6 +13,7 @@ namespace plegma {
     class PLEGMA_Su3matrix : public PLEGMA_Field<Float> {
   public:
     PLEGMA_Su3matrix(ALLOCATION_FLAG alloc_flag);
+    PLEGMA_Su3matrix(PLEGMA_Gauge<Float> &u, int dir);
     ~PLEGMA_Su3matrix(){;}
 
     void absorbDir_device(PLEGMA_Gauge<Float> &u,int dir);
