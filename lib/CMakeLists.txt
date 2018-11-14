@@ -36,21 +36,27 @@ if(PLEGMA_ARPACK)
 endif(PLEGMA_ARPACK)
 #PLEGMA: End DMH
 
-# generate a cmake object library for all cpp files first
-add_library(PLEGMA_cpp OBJECT ${QUDA_OBJS})
+set(PLEGMA_LIB ${QUDA_CU_OBJS})
 
-# add some deifnitions that cause issues with cmake 3.7 and nvcc only to cpp files
-target_compile_definitions(PLEGMA_cpp PUBLIC -DQUDA_HASH="${HASH}")
-IF(GITVERSION)
-  target_compile_definitions(PLEGMA_cpp PUBLIC -DGITVERSION="${GITVERSION}")
-ENDIF()
+# generate a cmake object library for all cpp files first
+if(QUDA_OBJS)
+  add_library(PLEGMA_cpp OBJECT ${QUDA_OBJS})
+
+  # add some definitions that cause issues with cmake 3.7 and nvcc only to cpp files 
+  target_compile_definitions(PLEGMA_cpp PUBLIC -DQUDA_HASH="${HASH}")
+  if(QUDA_BUILD_SHAREDLIB)
+    set_target_properties(PLEGMA_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+  endif()
+
+  APPEND(PLEGMA_LIB $<TARGET_OBJECTS:PLEGMA_cpp>)
+
+endif()
 
 # make one library
 if(QUDA_BUILD_SHAREDLIB)
-    set_target_properties(PLEGMA_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-    cuda_add_library(PLEGMA SHARED $<TARGET_OBJECTS:PLEGMA_cpp> ${QUDA_CU_OBJS} )
+    cuda_add_library(PLEGMA SHARED ${PLEGMA_LIB})
 else()
-  cuda_add_library(PLEGMA STATIC $<TARGET_OBJECTS:PLEGMA_cpp> ${QUDA_CU_OBJS})
+  cuda_add_library(PLEGMA STATIC ${PLEGMA_LIB})
 endif()
 target_include_directories(PLEGMA PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)

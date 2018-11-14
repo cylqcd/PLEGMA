@@ -415,7 +415,7 @@ static void map_Normal2EvenOdd_Gauge_automorph(Float **gauge , int nx ,int ny ,i
 }
 
 
-void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam param, int nx , int ny , int nz, int nt)
+void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt)
 {
 
   if(param.gauge_order == QUDA_QDP_GAUGE_ORDER)
@@ -424,12 +424,22 @@ void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam param, int nx , int 
     errorQuda("only QDP order supported for gauge");
 }
 
-void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam param, int nx , int ny , int nz, int nt)
+void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int lL[4])
+{
+  mapNormalToEvenOddGauge( gauge, param, lL[0], lL[1], lL[2], lL[3]);
+}
+
+void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt)
 {
 
   if(param.gauge_order == QUDA_QDP_GAUGE_ORDER)
-    map_EvenOdd2Normal_Gauge_automorph( gauge , nx ,ny ,nz, nt);
+    map_EvenOdd2Normal_Gauge_automorph(gauge, nx ,ny ,nz, nt);
   else
     errorQuda("only QDP order supported for gauge");
 
+}
+
+void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int lL[4])
+{
+  mapEvenOddToNormalGauge( gauge, param, lL[0], lL[1], lL[2], lL[3]);
 }

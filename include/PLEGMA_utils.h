@@ -1,4 +1,5 @@
 #include <PLEGMA.h>
+#include <PLEGMA_buffers.h>
 
 #ifndef _PLEGMA_UTILS_H
 #define _PLEGMA_UTILS_H
@@ -61,11 +62,13 @@ void read_command_line(int argc, char** argv, PLEGMA_params *params);
 // read_conf.cpp
 void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);
 void applyBoundaryCondition(double **gauge, int Vh ,QudaGaugeParam *gauge_param);
+void applyBoundaryCondition(double **gauge, int lL[4] ,QudaGaugeParam *gauge_param);
 
 // mapping_parity.cpp
-void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam param, int nx , int ny , int nz, int nt);
-void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam param, int nx , int ny , int nz, int nt);
+void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt);
+void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int lL[4]);
+void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt);
+void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int lL[4]);
 void mapNormalToEvenOdd(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt);
 void mapEvenOddToNormal(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt);
-
 #endif
