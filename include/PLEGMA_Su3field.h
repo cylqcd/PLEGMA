@@ -20,8 +20,8 @@ namespace plegma {
     void absorbDir_device(PLEGMA_Gauge<Float> &u,int dir);
     void absorbDir_host(PLEGMA_Gauge<Float> &u,int dir);
 
-    void path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u, PLEGMA_Su3field<Float> &tmp); // this avoids allocation and deallocation
-    void path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u);
+    void path(std::vector<int> &steps, PLEGMA_Su3field<Float> **u, PLEGMA_Su3field<Float> &tmp); // this avoids allocation and deallocation
+    void path(std::vector<int> &steps, PLEGMA_Su3field<Float> **u);
 
     void Udag(PLEGMA_Su3field<Float> &x);
     void UxU(PLEGMA_Su3field<Float> &x, PLEGMA_Su3field<Float> &y);
