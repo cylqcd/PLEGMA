@@ -100,10 +100,12 @@ namespace plegma {
     int r = blockDim.x%2;
     while (i > 0){
       __syncthreads();
-      if(cacheIndex < i){
-	shared_cache[cacheIndex] += shared_cache[cacheIndex + i];
-	if(r==1 && cacheIndex==i-1)
-	  shared_cache[cacheIndex] += shared_cache[cacheIndex + i+1];
+      if(threadIdx.x < i){
+	for(int ip = 0 ; ip < n_comp ; ip++) {
+	  shared_cache[ip*blockDim.x + threadIdx.x] = shared_cache[ip*blockDim.x + threadIdx.x] + shared_cache[ip*blockDim.x + threadIdx.x + i];
+	  if(r==1 && threadIdx.x==i-1)
+	    shared_cache[ip*blockDim.x + threadIdx.x] =  shared_cache[ip*blockDim.x + threadIdx.x] + shared_cache[ip*blockDim.x + threadIdx.x + i+1];
+	}
       }
       r = i%2;
       i /= 2;

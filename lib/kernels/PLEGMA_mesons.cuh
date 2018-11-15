@@ -12,7 +12,6 @@ __global__ void contract_mesons_kernel(propTex<FloatA> texProp1, propTex<FloatB>
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int vid = sid + it*c_stride_spatial;
-  int locV = blockDim.x * gridDim.x;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
   register Float2<FloatC> accum[2*N_MESONS];
