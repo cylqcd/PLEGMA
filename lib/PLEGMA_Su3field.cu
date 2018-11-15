@@ -78,19 +78,15 @@ static void dirsOrien(std::vector<int> &steps, int len, int *dir, int *sign){
 }
 
 template<typename Float>
-void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u, PLEGMA_Su3field<Float> &tmp){
-  PLEGMA_Su3field<Float> *u_s[4];
-  for(int idir = 0; idir < 4 ; idir++) u_s[idir] = new PLEGMA_Su3field<Float>(u,idir);
+void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Su3field<Float> **u, PLEGMA_Su3field<Float> &tmp){
   int len = steps.size();
   int dir[len], sign[len];
   dirsOrien(steps,len,dir,sign);
-  pathX(dir,sign,len,u_s,*this,tmp);
-  for(int idir = 0; idir < 4 ; idir++)
-    delete u_s[idir];
+  pathX(dir,sign,len,u,*this,tmp);
 }
 
 template<typename Float>
-void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u){
+void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Su3field<Float> **u){
   PLEGMA_Su3field<Float> tmp(BOTH);
   path(steps,u,tmp);
 }
