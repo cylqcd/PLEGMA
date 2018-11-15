@@ -9,6 +9,7 @@
 #include <PLEGMA_kernel_extern.cuh>
 #include <PLEGMA_kernel_complex.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
+#include <PLEGMA_kernel_tuner.cuh>
 
 #ifndef PLEGMA_KERNEL_UTILS_CUH
 #define PLEGMA_KERNEL_UTILS_CUH
@@ -136,7 +137,7 @@ namespace plegma {
       }
       reduce(shared_cache,n_comp);
       
-      if(cacheIndex == 0){
+      if(cacheIndex == 0 && out!=NULL){
 	for(int ip = 0 ; ip < n_comp ; ip++){
 	  out[(imom*n_comp + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
 	}
