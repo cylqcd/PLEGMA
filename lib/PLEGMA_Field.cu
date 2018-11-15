@@ -150,7 +150,7 @@ void PLEGMA_Field<Float>::destroy_device(){
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
   GK_deviceMemory -= bytes_total_length/(1024.*1024.);
-  printfQuda("Device memory in use is %f MB D \n",GK_deviceMemory);
+  printfQuda("Device memory in use is %f MB D PLEGMA\n",GK_deviceMemory);
 #endif
 }
 
@@ -355,8 +355,8 @@ void PLEGMA_Field<Float>::ghostToDevice(){
 template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
   // we have to make sure that we have the ghost
-  Fin.ghostToHost();
-  Fin.cpuExchangeGhost();
+  Fin.ghostToHost(dirOr);
+  Fin.cpuExchangeGhost(dirOr);
   Fin.ghostToDevice();
   shiftField(Fin,*this,dirOr);
 }
