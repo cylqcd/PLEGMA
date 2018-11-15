@@ -82,9 +82,11 @@ namespace plegma {
 	return get(i,sid);
       }
       bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
+
+      if(plus_ghost && minus_ghost) printf("!!!!!!!   ERROR: plus and minus ghost together need corner halos\n");
       
       int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) :
 	( minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
@@ -143,9 +145,9 @@ namespace plegma {
 	get(G,dirLink,sid);
       }
       bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
       
       int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
 	( minus_ghost ? (c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
@@ -204,9 +206,9 @@ namespace plegma {
 	get(S,sid);
       }
       bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
       
       int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_COLS + LEXIC_3D(dirPlus,id)) :
 	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
@@ -267,9 +269,9 @@ namespace plegma {
 	get(P,sid);
       }
       bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
       
       int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
 	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));

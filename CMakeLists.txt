@@ -39,6 +39,18 @@ set(DEFAULT_GPU_ARCH sm_35)
 set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60)")
 set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60)
 
+# max threads
+set(PLEGMA_MAX_THREADS 256 CACHE INT "maximum number of threads per block in tuner")
+mark_as_advanced(PLEGMA_MAX_THREADS)
+add_definitions(-DMAX_THREADS=${PLEGMA_MAX_THREADS})
+
+# perform tuning based on quda
+set(PLEGMA_NO_TUNING FALSE CACHE BOOL "force not to perform kernel tuning in PLEGMA")
+mark_as_advanced(PLEGMA_NO_TUNING)
+if(PLEGMA_NO_TUNING)
+  add_definitions(-DPLEGMA_NO_TUNING)
+endif()
+
 #ARPACK
 set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
 if(PLEGMA_ARPACK)
@@ -306,6 +318,7 @@ mark_as_advanced(CMAKE_F_FLAGS)
 
 ### add tests and quda library
 add_subdirectory(lib)
+add_subdirectory(tests)
 ### add PLEGMA directory
 add_subdirectory(utils)
 add_subdirectory(plegma)
