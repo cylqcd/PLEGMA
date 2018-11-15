@@ -36,7 +36,7 @@ namespace plegma {
   for(int i=0; i<N_COLS; i++)
     #pragma unroll
     for(int j=0; j<N_COLS; j++) {
-      a[i][j] = b[j][i].conj();
+      a[i][j] = conj(b[j][i]);
     }
   }
 
@@ -64,7 +64,7 @@ namespace plegma {
       a[i][j] = 0.;
       #pragma unroll
       for(int k=0; k<N_COLS; k++) {
-        a[i][j] = a[i][j] + b[i][k]*c[j][k].conj();
+        a[i][j] = a[i][j] + b[i][k]*conj(c[j][k]);
       }
     }
   }
