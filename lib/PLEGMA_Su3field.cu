@@ -1,18 +1,18 @@
-#include <PLEGMA_Su3matrix.h>
+#include <PLEGMA_Su3field.h>
 #include <PLEGMA_Gauge.h>
-#include <PLEGMA_su3matrix.cuh>
+#include <PLEGMA_su3field.cuh>
 using namespace plegma;
 
 //--------------------------//
-// class PLEGMA_Su3matrix //
+// class PLEGMA_Su3field //
 //--------------------------//
 
 template<typename Float>
-PLEGMA_Su3matrix<Float>::PLEGMA_Su3matrix(ALLOCATION_FLAG alloc_flag): 
+PLEGMA_Su3field<Float>::PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag): 
   PLEGMA_Field<Float>(alloc_flag, SU3FIELD){ ; }
 
 template<typename Float>
-PLEGMA_Su3matrix<Float>::PLEGMA_Su3matrix(PLEGMA_Gauge<Float> &u, int dir): 
+PLEGMA_Su3field<Float>::PLEGMA_Su3field(PLEGMA_Gauge<Float> &u, int dir): 
   PLEGMA_Field<Float>(NONE, SU3FIELD){
   this->d_elem = u.D_elem() + dir*(this->field_length)*(this->total_length)*2;
   this->h_elem = u.H_elem() + dir*(this->field_length)*(this->total_length)*2;
@@ -20,37 +20,37 @@ PLEGMA_Su3matrix<Float>::PLEGMA_Su3matrix(PLEGMA_Gauge<Float> &u, int dir):
 }
 
 template<typename Float>
-void PLEGMA_Su3matrix<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
+void PLEGMA_Su3field<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
   cudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
   	     this->bytes_total_length, cudaMemcpyDeviceToDevice);
   checkCudaError();
 }
 
 template<typename Float>
-void PLEGMA_Su3matrix<Float>::absorbDir_host(PLEGMA_Gauge<Float> &u,int dir){
+void PLEGMA_Su3field<Float>::absorbDir_host(PLEGMA_Gauge<Float> &u,int dir){
   memcpy(this->h_elem, u.H_elem()+dir*(this->field_length)*(this->total_length)*2,
 	 this->bytes_total_length);
 }
 
 template<typename Float>
-void PLEGMA_Su3matrix<Float>::Udag(PLEGMA_Su3matrix<Float> &B){
+void PLEGMA_Su3field<Float>::Udag(PLEGMA_Su3field<Float> &B){
   Udag_k(*this,B);
 }
 
 template<typename Float>
-void PLEGMA_Su3matrix<Float>::UxU(PLEGMA_Su3matrix<Float> &B, PLEGMA_Su3matrix<Float> &C){
+void PLEGMA_Su3field<Float>::UxU(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<Float> &C){
   UxU_k(*this,B,C);
 }
 
 template<typename Float>
-void PLEGMA_Su3matrix<Float>::UxUdag(PLEGMA_Su3matrix<Float> &B, PLEGMA_Su3matrix<Float> &C){
+void PLEGMA_Su3field<Float>::UxUdag(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<Float> &C){
   UxUdag_k(*this,B,C);
 }
 
 
 template<typename Float>
-static void pathX(int *dir, int *sign, int length,PLEGMA_Su3matrix<Float> **u_s,
-		 PLEGMA_Su3matrix<Float>& s1, PLEGMA_Su3matrix<Float>& s2){
+static void pathX(int *dir, int *sign, int length,PLEGMA_Su3field<Float> **u_s,
+		 PLEGMA_Su3field<Float>& s1, PLEGMA_Su3field<Float>& s2){
   // do first step
   if(sign[0] > 0) s1.shift( *(u_s[dir[0]]), dir[0] );
   else s1.Udag( *(u_s[dir[0]]) );
@@ -78,9 +78,9 @@ static void dirsOrien(std::vector<int> &steps, int len, int *dir, int *sign){
 }
 
 template<typename Float>
-void PLEGMA_Su3matrix<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u, PLEGMA_Su3matrix<Float> &tmp){
-  PLEGMA_Su3matrix<Float> *u_s[4];
-  for(int idir = 0; idir < 4 ; idir++) u_s[idir] = new PLEGMA_Su3matrix<Float>(u,idir);
+void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u, PLEGMA_Su3field<Float> &tmp){
+  PLEGMA_Su3field<Float> *u_s[4];
+  for(int idir = 0; idir < 4 ; idir++) u_s[idir] = new PLEGMA_Su3field<Float>(u,idir);
   int len = steps.size();
   int dir[len], sign[len];
   dirsOrien(steps,len,dir,sign);
@@ -90,10 +90,10 @@ void PLEGMA_Su3matrix<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> 
 }
 
 template<typename Float>
-void PLEGMA_Su3matrix<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u){
-  PLEGMA_Su3matrix<Float> tmp(BOTH);
+void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Gauge<Float> &u){
+  PLEGMA_Su3field<Float> tmp(BOTH);
   path(steps,u,tmp);
 }
 
-template class PLEGMA_Su3matrix<float>;
-template class PLEGMA_Su3matrix<double>;
+template class PLEGMA_Su3field<float>;
+template class PLEGMA_Su3field<double>;

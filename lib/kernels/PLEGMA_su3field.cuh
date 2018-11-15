@@ -60,7 +60,7 @@ static __global__ void UxUdag_kernel(FloatA *A, FloatB *B, FloatC *C){
 }
 
 template<typename FloatA, typename FloatB>
-static void Udag_k(PLEGMA_Su3matrix<FloatA> &A, PLEGMA_Su3matrix<FloatB> &B){
+static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   Udag_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
@@ -68,7 +68,7 @@ static void Udag_k(PLEGMA_Su3matrix<FloatA> &A, PLEGMA_Su3matrix<FloatB> &B){
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void UxU_k(PLEGMA_Su3matrix<FloatA> &A, PLEGMA_Su3matrix<FloatB> &B, PLEGMA_Su3matrix<FloatC> &C){
+static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   UxU_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
@@ -76,7 +76,7 @@ static void UxU_k(PLEGMA_Su3matrix<FloatA> &A, PLEGMA_Su3matrix<FloatB> &B, PLEG
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void UxUdag_k(PLEGMA_Su3matrix<FloatA> &A, PLEGMA_Su3matrix<FloatB> &B, PLEGMA_Su3matrix<FloatC> &C){
+static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   UxUdag_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
