@@ -21,8 +21,8 @@ using namespace plegma;
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, 
 					      CLASS_ENUM classT):
-  h_elem(NULL) , d_elem(NULL) , h_ext_ghost(NULL) , h_elem_backup(NULL) , 
-  isAllocHost(false) , isAllocDevice(false), isAllocHostBackup(false)
+  h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_elem_backup(NULL), 
+  allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
 {
   if(GK_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
@@ -164,6 +164,26 @@ void PLEGMA_Field<Float>::zero_host_backup(){
 template<typename Float>
 void PLEGMA_Field<Float>::zero_device(){
   cudaMemset(d_elem,0,bytes_total_plus_ghost_length);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
+  
+  if( alloc_flag == BOTH ){
+    zero_host();
+    zero_device();
+  }
+  else if (alloc_flag == HOST){
+    zero_host();
+  }
+  else if (alloc_flag == DEVICE){
+    zero_device();
+  }
+  else if (alloc_flag == BOTH_EXTRA){
+    zero_host();
+    zero_host_backup();
+    zero_device();    
+  }
 }
 
 template<typename Float>

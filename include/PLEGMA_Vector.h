@@ -32,7 +32,6 @@ namespace plegma {
     void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gaugeAPE);
     void scaleVector(Float a);
-    void pointSource(int source[N_DIMS], int spin, int col);
     void copy(PLEGMA_Vector<float> &vecIn);
     void copy(PLEGMA_Vector<double> &vecIn);
     void norm2Host();
@@ -41,6 +40,9 @@ namespace plegma {
 			  int timeslice, int nu , int c2);
     void copyPropagator(PLEGMA_Propagator<Float> &prop, 
 			int nu , int c2);
+    void pointSource(int *sourceposition, 
+        int spin, int color, ALLOCATION_FLAG alloc_flag);
+    void pointSource(int *sourceposition, int spin, int color);
     void write(char* filename);
     void conjugate();
     void apply_gamma5();
