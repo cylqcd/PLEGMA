@@ -18,6 +18,18 @@
 
 namespace plegma {
 
+  template<typename FloatR, typename FloatU>
+  __inline__ __device__ FloatR real_trace(Float2<FloatU> a[N_COLS][N_COLS]){
+    FloatR r = a[0][0].x+a[1][1].x+a[2][2].x;
+    return r;
+  }
+  
+  template<typename FloatR, typename FloatU>
+  __inline__ __device__ Float2<FloatR> trace(Float2<FloatU> a[N_COLS][N_COLS]){
+    Float2<FloatR> r = a[0][0]+a[1][1]+a[2][2];
+    return r;
+  }
+  
   template<typename FloatA, typename FloatB>
   __inline__ __device__ void Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
   #pragma unroll

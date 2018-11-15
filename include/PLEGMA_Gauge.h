@@ -21,6 +21,7 @@ namespace plegma {
     void loadGauge();
 
     void calculatePlaq();
+    void calculatePlaqShifts();
   };
 }
 
