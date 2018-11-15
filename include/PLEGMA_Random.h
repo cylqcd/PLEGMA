@@ -1,8 +1,3 @@
-#pragma once
-
-#ifdef __CUDACC_RTC__
-#define RNG int
-#else
 #include <curand_kernel.h>
 
 namespace PLEGMA {
@@ -11,7 +6,11 @@ namespace PLEGMA {
     // CLASS: PLEGMA_RNG   //
     /////////////////////////
     
-
+/**
+ *  Define the curand random number generator used in the library
+ *  XORWOW- XOR bit dependent RNG
+ *  MRG32K3a- MRG32 dependent RNG
+ *  */
 #if defined(XORWOW)
   typedef struct curandStateXORWOW cuRNGState;
 #elif defined(MRG32k3a)
@@ -25,6 +24,7 @@ namespace PLEGMA {
    *    */
   class PLEGMA_RNG {
     public:
+      /*!Constructor*/
       PLEGMA_RNG(int rng_sizes, int seedin, const int XX[4]);
       /*! free array */
       void Release();
@@ -142,5 +142,3 @@ namespace PLEGMA {
 
 
 }
-
-#endif
