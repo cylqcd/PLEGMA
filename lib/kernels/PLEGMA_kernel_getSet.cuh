@@ -6,6 +6,7 @@
 		     ((sid)/c_localL[0]/c_localL[1]) % c_localL[2],	\
 		     ((sid)/c_localL[0]/c_localL[1]/c_localL[2]) % c_localL[3] }
 
+#define LEXIC_ID(id) LEXIC(id[3],id[2],id[1],id[0],c_localL)
 #define LEXIC_3D(i,id)(i==0 ? LEXIC_TZY(id[3],id[2],id[1],c_localL) : \
                       (i==1 ? LEXIC_TZX(id[3],id[2],id[0],c_localL) : \
 		      (i==2 ? LEXIC_TYX(id[3],id[1],id[0],c_localL) : \
@@ -79,6 +80,25 @@ namespace plegma {
       int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
       return get(i, sidMinus, strideMinus);
     }
+    inline __device__ Float2<Float> getPlusMinus(int i, int offset, short int dirPlus, short int dirMinus, int sid) {
+      int id[4] = GET_ID(sid);
+      if(dirPlus == dirMinus) {
+	return get(i,sid);
+      }
+      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
+      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
+      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      
+      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) :
+	( minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+      
+      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      return get(i,sidPlusMinus,stridePlusMinus);
+    }
+    inline __device__ Float2<Float> getMinusPlus(int i, int offset, short int dirMinus, short int dirPlus, int sid) {
+      return getPlusMinus(i,offset,dirPlus,dirMinus,sid);
+    }
   };
 
   template<typename Float>
@@ -133,6 +153,25 @@ namespace plegma {
 	(c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
       int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
       get(G, dirLink, sidMinus, strideMinus);
+    }
+    inline __device__ void getPlusMinus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirPlus, short int dirMinus, int sid) {
+      int id[4] = GET_ID(sid);
+      if(dirPlus == dirMinus) {
+	get(G,dirLink,sid);
+      }
+      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
+      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
+      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      
+      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
+	( minus_ghost ? (c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+      
+      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      return get(G,dirLink,sidPlusMinus,stridePlusMinus);
+    }
+    inline __device__ void getMinusPlus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirMinus, short int dirPlus, int sid) {
+      getPlusMinus(G,dirLink,dirPlus,dirMinus,sid);
     }
   };
 
@@ -248,6 +287,25 @@ namespace plegma {
       int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
       get(S,sidMinus,strideMinus);
     }
+    inline __device__ void getPlusMinus(Float2<Float> S[N_SPINS][N_COLS], short int dirPlus, short int dirMinus, int sid) {
+      int id[4] = GET_ID(sid);
+      if(dirPlus == dirMinus) {
+	get(S,sid);
+      }
+      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
+      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
+      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      
+      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_COLS + LEXIC_3D(dirPlus,id)) :
+	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+      
+      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      return get(S,sidPlusMinus,stridePlusMinus);
+    }
+    inline __device__ void getMinusPlus(Float2<Float> S[N_SPINS][N_COLS], short int dirMinus, short int dirPlus, int sid) {
+      getPlusMinus(S,dirPlus,dirMinus,sid);
+    }
   };
 
   template<typename Float>
@@ -291,22 +349,41 @@ namespace plegma {
 	    for(int c2 = 0 ; c2 < N_COLS ; c2++)
 	      P[mu][nu][c1][c2] = get(mu, nu, c1, c2, sid, stride);
     }
-    inline __device__ void get(Float2<Float> P[4][4][3][3], int sid) {
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], int sid) {
       get( P, sid, c_stride );
     }
-    inline __device__ void getPlus(Float2<Float> P[4][4][3][3], short int dirPlus, int sid) {
+    inline __device__ void getPlus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirPlus, int sid) {
       int id[4] = GET_ID(sid);
       int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
 	(c_plusGhost[dirPlus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
       int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
       get( P, sidPlus, stridePlus );
     }
-    inline __device__ void getMinus(Float2<Float> P[4][4][3][3], short int dirMinus, int sid) {
+    inline __device__ void getMinus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirMinus, int sid) {
       int id[4] = GET_ID(sid);
       int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
 	(c_minusGhost[dirMinus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
       int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
       get( P, sidMinus, strideMinus );
+    }
+    inline __device__ void getPlusMinus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirPlus, short int dirMinus, int sid) {
+      int id[4] = GET_ID(sid);
+      if(dirPlus == dirMinus) {
+	get(P,sid);
+      }
+      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
+      if(!plus_ghost) id[dirPlus] = id[dirPlus] + 1; 
+      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
+      if(!minus_ghost) id[dirMinus] = id[dirMinus] - 1;
+      
+      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
+	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+      
+      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      return get(P,sidPlusMinus,stridePlusMinus);
+    }
+    inline __device__ void getMinusPlus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirMinus, short int dirPlus, int sid) {
+      getPlusMinus(P,dirPlus,dirMinus,sid);
     }
   };
 
