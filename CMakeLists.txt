@@ -44,6 +44,13 @@ set(PLEGMA_MAX_THREADS 256 CACHE INT "maximum number of threads per block in tun
 mark_as_advanced(PLEGMA_MAX_THREADS)
 add_definitions(-DMAX_THREADS=${PLEGMA_MAX_THREADS})
 
+# perform tuning based on quda
+set(PLEGMA_NO_TUNING FALSE CACHE BOOL "force not to perform kernel tuning in PLEGMA")
+mark_as_advanced(PLEGMA_NO_TUNING)
+if(PLEGMA_NO_TUNING)
+  add_definitions(-DPLEGMA_NO_TUNING)
+endif()
+
 #ARPACK
 set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
 if(PLEGMA_ARPACK)

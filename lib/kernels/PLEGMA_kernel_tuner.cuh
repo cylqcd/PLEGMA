@@ -55,10 +55,20 @@ public:
 
   // apply tuning and/or running with/without tuning
   void apply(const cudaStream_t &stream){
+    #ifdef PLEGMA_NO_TUNING
+    // asked for no tuning, using defaultparameters
+    dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+    tp.block = blockDim;
+    dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+    tp.grid
+    (*kernel)<<<tp.grid,tp.block>>>(*args);
+    #else
+    // performing tuning if we need to
     tp = tuneLaunch(*this, getTuning(), getVerbosity());
     tuned=true;
     if( onlyTuning && !activeTuning() ) return;
     (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,stream>>>(*args);
+    #endif
   }
   void tune(){
     onlyTuning = true;
