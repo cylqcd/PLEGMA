@@ -94,15 +94,18 @@ namespace plegma {
 
   template<typename T>
   __inline__ __device__ void reduce(T *shared_cache, const int n_comp){
-    __syncthreads();
+    // synchronize threads to be sure that all have written their register trace to share memory
+    // for reduction threads per block must be power of 2 ( this is always my case)
     int i = blockDim.x/2;
-    while (i != 0){
-      if(threadIdx.x < i){
-	for(int ip = 0 ; ip < n_comp ; ip++){
-	  shared_cache[ip*blockDim.x + threadIdx.x] = shared_cache[ip*blockDim.x + threadIdx.x] + shared_cache[ip*blockDim.x + threadIdx.x + i];
-	}
-      }
+    int r = blockDim.x%2;
+    while (i > 0){
       __syncthreads();
+      if(cacheIndex < i){
+	shared_cache[cacheIndex] += shared_cache[cacheIndex + i];
+	if(r==1 && cacheIndex==i-1)
+	  shared_cache[cacheIndex] += shared_cache[cacheIndex + i+1];
+      }
+      r = i%2;
       i /= 2;
     }
   }
