@@ -49,11 +49,15 @@ static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> arg
   __syncthreads(); // synchronize threads to be sure that all have written their register trace to share memory
   // for reduction threads per block must be power of 2 ( this is always my case)
   int i = blockDim.x/2;
-  
-  while (i != 0){
-    if(cacheIndex < i)
+  int r = blockDim.x%2;
+  while (i > 0){
+    if(cacheIndex < i){
       shared_cache[cacheIndex] += shared_cache[cacheIndex + i];
+      if(r==1 && cacheIndex==i-1)
+	 shared_cache[cacheIndex] += shared_cache[cacheIndex + i+1];
+    }
     __syncthreads();
+    r = i%2;
     i /= 2;
   }
 
@@ -80,8 +84,7 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   kernel_ps.stride = GK_strideFull;
   kernel_ps.tuneY = false ;
   kernel_ps.sharedMemory = true ;
-  kernel_ps.sharedMemoryPerThread = 1;
-  kernel_ps.typesize = sizeof(Float);
+  kernel_ps.sharedBytesPerThread = sizeof(Float);
   
   PLEGMA_kernel_tuner<ArgsPlaquette<Float,FloatG>> tuner( calculatePlaquette_kernel<Float,FloatG>, &kernel_args, kernel_ps );
   
