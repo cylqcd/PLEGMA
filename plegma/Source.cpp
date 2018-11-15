@@ -23,25 +23,15 @@ int main(int argc, char **argv)
   initialize(&params);
   print_status();
 
-  QudaGaugeParam gauge_param = newQudaGaugeParam();
-  setGaugeParam(gauge_param);
+  // Check the point source
+  PLEGMA_Vector<double> vectorAuxD(BOTH);
 
-  //-Read the gauge field in lime format
-  GaugeBuffer<double> gauge(params);
-  readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
-
-  // The gauge is loaded in a format suitable for QUDA. We need to re-map it
-  mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
-
-  // Allocation done on BOTH, DEVICE and HOST
-  PLEGMA_Gauge<double> pGauge(BOTH);
-
-  pGauge.packGauge(gauge.get_ptr());
-  pGauge.loadGauge();
-  pGauge.calculatePlaq();
-
+  vectorAuxD.pointSource(params.sourcePosition[0], 0, 0, DEVICE);
+  vectorAuxD.unloadVector();
+  vectorAuxD.norm2Host();
+  
   // finalize the QUDA library
-  saveTuneCache(false);
+  saveTuneCache(true);
   endQuda();
     
   // finalize the communications layer

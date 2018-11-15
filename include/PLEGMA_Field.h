@@ -26,6 +26,7 @@ namespace plegma {
     Float *h_ext_ghost;
     Float *h_elem_backup;
 
+    ALLOCATION_FLAG allocation;
     bool isAllocHost;
     bool isAllocDevice;
     bool isAllocHostBackup;
@@ -45,6 +46,7 @@ namespace plegma {
     void zero_host();
     void zero_host_backup();
     void zero_device();
+    void zero_where(ALLOCATION_FLAG alloc_flag);
     cudaTextureObject_t createTexObject();
     void destroyTexObject(cudaTextureObject_t tex);
     

@@ -37,3 +37,7 @@ target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
 cuda_add_executable(PlaquetteWshifts PlaquetteWshifts.cpp)
 target_link_libraries(PlaquetteWshifts ${PLEGMA_LIBS})
+
+cuda_add_executable(Source Source.cpp)
+target_link_libraries(Source ${PLEGMA_LIBS})
+
