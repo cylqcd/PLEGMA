@@ -12,7 +12,8 @@ struct ArgsPlaquette{
 
 template<typename Float, typename FloatG>
 static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> args) {
-  __shared__ Float shared_cache[MAX_THREADS];
+  extern __shared__ int ext_shared_cache[];
+  Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
@@ -72,13 +73,16 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
 
   ProfileStruct kernel_ps;
   kernel_ps.flops = N_DIMS*(N_DIMS-1)/2 * N_COLS*N_COLS*(3+N_COLS*4);
-  kernel_ps.outBytes = N_COLS*N_COLS*2*4*2 ;
-  kernel_ps.inpBytes = N_COLS*N_COLS*4*2 +1 ;
-  kernel_ps.siteBytes = N_COLS*N_COLS*N_DIMS*2;
+  kernel_ps.outBytes = N_COLS*N_COLS*2*4*2*sizeof(Float) ;
+  kernel_ps.inpBytes = (N_COLS*N_COLS*4*2 + 1)*sizeof(Float) ;
+  kernel_ps.siteBytes = N_COLS*N_COLS*N_DIMS*2*sizeof(Float) ;
   kernel_ps.volume = GK_localVolume ;
   kernel_ps.stride = GK_strideFull;
   kernel_ps.tuneY = false ;
-
+  kernel_ps.sharedMemory = true ;
+  kernel_ps.sharedMemoryPerThread = 1;
+  kernel_ps.typesize = sizeof(Float);
+  
   PLEGMA_kernel_tuner<ArgsPlaquette<Float,FloatG>> tuner( calculatePlaquette_kernel<Float,FloatG>, &kernel_args, kernel_ps );
   
 #ifdef TIMING_REPORT

@@ -14,6 +14,9 @@ struct ProfileStruct{
   long long volume;
   long long stride;
   bool tuneY; // tune for the second dimension of thread blocks
+  bool sharedMemory;
+  unsigned int sharedMemoryPerThread;
+  int typesize; // size of shared memory type
 };
 
 
@@ -42,8 +45,14 @@ protected:
   bool tuneGridDim() const { return false; }
   unsigned int minThreads() const { return ps.volume; }
 
-  unsigned int sharedBytesPerThread() const { return 0; }
-  unsigned int sharedBytesPerBlock(const TuneParam &param) const { return 0; }
+  unsigned int sharedBytesPerThread() const {
+    if ( ps.sharedMemory ) return ps.sharedMemoryPerThread * ps.typesize;
+    else return 0;
+  }
+  unsigned int sharedBytesPerBlock(const TuneParam &param) const {
+    if ( ps.sharedMemory ) return param.block.x;
+    else return 0;
+  }
   TuneKey tuneKey() const { return TuneKey(volString, typeid(*kernel).name(), aux); }
 
   unsigned int maxBlockSize(const TuneParam &param) const { return MAX_THREADS / (param.block.y*param.block.z); }
@@ -60,8 +69,9 @@ public:
     dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
     tp.block = blockDim;
     dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-    tp.grid
-    (*kernel)<<<tp.grid,tp.block>>>(*args);
+    tp.grid = gridDim;
+    tp.shared_bytes = THREADS_PER_BLOCK*ps.typesize;
+    (*kernel)<<<tp.grid,tp.block,tp.shared_bytes>>>(*args);
     #else
     // performing tuning if we need to
     tp = tuneLaunch(*this, getTuning(), getVerbosity());
