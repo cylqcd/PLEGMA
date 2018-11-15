@@ -14,7 +14,6 @@ namespace plegma {
     class PLEGMA_Su3field : public PLEGMA_Field<Float> {
   public:
     PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag);
-    PLEGMA_Su3field(PLEGMA_Gauge<Float> &u, int dir);
     ~PLEGMA_Su3field(){;}
 
     void absorbDir_device(PLEGMA_Gauge<Float> &u,int dir);

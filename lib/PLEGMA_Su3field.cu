@@ -12,14 +12,6 @@ PLEGMA_Su3field<Float>::PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag):
   PLEGMA_Field<Float>(alloc_flag, SU3FIELD){ ; }
 
 template<typename Float>
-PLEGMA_Su3field<Float>::PLEGMA_Su3field(PLEGMA_Gauge<Float> &u, int dir): 
-  PLEGMA_Field<Float>(NONE, SU3FIELD){
-  this->d_elem = u.D_elem() + dir*(this->field_length)*(this->total_length)*2;
-  this->h_elem = u.H_elem() + dir*(this->field_length)*(this->total_length)*2;
-  this->isRef=true;
-}
-
-template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
   cudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
   	     this->bytes_total_length, cudaMemcpyDeviceToDevice);

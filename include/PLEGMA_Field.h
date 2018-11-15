@@ -31,7 +31,6 @@ namespace plegma {
     bool isAllocDevice;
     bool isAllocHostBackup;
 
-    bool isRef; // to allowing just reference
     
     void create_host();
     void create_host_backup();

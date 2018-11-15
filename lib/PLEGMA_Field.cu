@@ -23,7 +23,7 @@ template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, 
 					      CLASS_ENUM classT):
   h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_elem_backup(NULL), 
-  allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false), isRef(false)
+  allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
 
 {
   if(GK_init_PLEGMA_flag == false) 
@@ -92,11 +92,9 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
 //Destructor
 template<typename Float>
 PLEGMA_Field<Float>::~PLEGMA_Field(){
-  if(!isRef){
-    if(h_elem != NULL) destroy_host();
-    if(h_elem_backup != NULL) destroy_host_backup();
-    if(d_elem != NULL) destroy_device();
-  }
+  if(h_elem != NULL) destroy_host();
+  if(h_elem_backup != NULL) destroy_host_backup();
+  if(d_elem != NULL) destroy_device();
 }
 
 template<typename Float>
