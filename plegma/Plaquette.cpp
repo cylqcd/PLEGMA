@@ -41,7 +41,7 @@ int main(int argc, char **argv)
   pGauge.calculatePlaq();
 
   // finalize the QUDA library
-  saveTuneCache(true);
+  saveTuneCache(false);
   endQuda();
     
   // finalize the communications layer
