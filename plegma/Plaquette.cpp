@@ -40,10 +40,6 @@ int main(int argc, char **argv)
   pGauge.loadGauge();
   pGauge.calculatePlaq();
 
-  for(int i = 0 ; i < 4 ; i++){
-    free(gauge[i]);
-  }
-
   // Check the point source
   PLEGMA_Vector<double> vectorAuxD(BOTH);
 
