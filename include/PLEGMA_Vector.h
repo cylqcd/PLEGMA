@@ -42,6 +42,7 @@ namespace plegma {
 			int nu , int c2);
     void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);
+    void pointSource(int *sourceposition, int spin, int color);
     void write(char* filename);
     void conjugate();
     void apply_gamma5();

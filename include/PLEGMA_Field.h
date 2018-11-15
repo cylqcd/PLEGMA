@@ -27,6 +27,7 @@ namespace plegma {
     Float *h_ext_ghost;
     Float *h_elem_backup;
 
+    ALLOCATION_FLAG allocation;
     bool isAllocHost;
     bool isAllocDevice;
     bool isAllocHostBackup;
