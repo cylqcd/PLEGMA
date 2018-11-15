@@ -1,6 +1,7 @@
 #include <PLEGMA_Correlator.h>
 #include <hdf5.h>
 #include <PLEGMA_mesons.cuh>
+#include <PLEGMA_baryons.cuh>
  
 using namespace plegma;
 
@@ -59,6 +60,29 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 
   for(int it = 0 ; it < GK_localL[3] ; it++) {
     contract_mesons(prop1Tex,prop2Tex,*this,it);
+  }
+
+  prop1.destroyTexObject(prop1Tex.tex);
+  prop2.destroyTexObject(prop2Tex.tex);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractBaryons(PLEGMA_Propagator<Float> &prop1,
+	       PLEGMA_Propagator<Float> &prop2, 
+	       int isource, CORR_SPACE corrSpace){
+
+  initialize(BARYONS,corrSpace);
+  this->isource = isource;
+  
+  propTex<Float> prop1Tex, prop2Tex;
+  prop1Tex.tex = prop1.createTexObject();
+  prop2Tex.tex = prop2.createTexObject();
+
+  printfQuda("contractMesons: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+
+  for(int it = 0; it < GK_localL[3]; it++) {
+    contract_baryons(prop1Tex,prop2Tex,*this,it);
   }
 
   prop1.destroyTexObject(prop1Tex.tex);

@@ -8,7 +8,12 @@ namespace plegma {
   // Information for correlators
   enum CORR_TYPE{MESONS,BARYONS,THRP_LOCAL,THRP_NOETHER,THRP_ONED,
 		 // add here
-                 N_CORR}; // N_CORR must be last 
+                 N_CORR}; // N_CORR must be last
+  
+  enum BARYONS_TYPE{NtoN, NtoR, RtoN, RtoR,
+		    // add here
+		    N_BARYONS}; // N_BARYONS must be last 
+
   const int nGroups[N_CORR] = { N_MESONS, N_BARYONS, 1, 1, 1 };
   const int nFlavors[N_CORR] = { 2, 2, 2, 2, 2 };
   const int nComp[N_CORR] = { 1, N_SPINS*N_SPINS, N_SPINS*N_SPINS, N_DIMS, N_SPINS*N_SPINS*N_DIMS };
@@ -22,8 +27,13 @@ namespace plegma {
   const static char *meson_flavors[2] = {"twop_meson_1",
 					 "twop_meson_2"};
 
-  const static char **corr_groups_names[N_CORR] = {meson_groups, NULL};
-  const static char **corr_flavors_names[N_CORR] = {meson_flavors, NULL};
+  const static char *baryons_groups[N_BARYONS] = {"nucl_nucl","nucl_roper","roper_nucl","roper_roper"};
+
+  const static char *baryons_flavors[2] = {"twop_baryon_1",
+					   "twop_baryon_2"};
+
+  const static char **corr_groups_names[N_CORR] = {meson_groups, baryons_groups, NULL};
+  const static char **corr_flavors_names[N_CORR] = {meson_flavors, baryons_flavors, NULL};
 
 
   
@@ -85,6 +95,10 @@ namespace plegma {
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2, 
 			int isource, CORR_SPACE CorrSpace);
+
+    void contractBaryons(PLEGMA_Propagator<Float> &prop1,
+			 PLEGMA_Propagator<Float> &prop2, 
+			 int isource, CORR_SPACE CorrSpace);
 
     void writeFile(char *filename_out, PLEGMA_params *params,
 		   FILE_WRITE_FORMAT CorrFileFormat);

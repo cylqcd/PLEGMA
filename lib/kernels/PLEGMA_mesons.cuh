@@ -50,7 +50,7 @@ __global__ void contract_mesons_kernel(propTex<FloatA> texProp1, propTex<FloatB>
       fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid, source_pos);
     } else {
       for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
-	block2[ip*locV + sid] = accum[ip];
+	block2[sid*2*N_MESONS + ip] = accum[ip];
       }
     }
   }
