@@ -15,15 +15,20 @@ namespace plegma {
     int field_length;
     int total_length;        
     int ghost_length;
+    int ghost_corner_length;
     int total_plus_ghost_length;
-
+    int total_plus_ghost_corner_length;
+    
     size_t bytes_total_length;
     size_t bytes_ghost_length;
     size_t bytes_total_plus_ghost_length;
-
+    size_t bytes_ghost_corner_length;
+    size_t bytes_total_plus_ghost_corner_length;
+    
     Float *h_elem;
     Float *d_elem;
     Float *h_ext_ghost;
+    Float *h_ext_ghost_corner;
     Float *h_elem_backup;
 
     ALLOCATION_FLAG allocation;
