@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h> 
+#include <PLEGMA_shifts.cuh>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -23,6 +24,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
 					      CLASS_ENUM classT):
   h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_elem_backup(NULL), 
   allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
+
 {
   if(GK_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
@@ -147,7 +149,7 @@ void PLEGMA_Field<Float>::destroy_device(){
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
   GK_deviceMemory -= bytes_total_length/(1024.*1024.);
-  printfQuda("Device memory in use is %f MB D \n",GK_deviceMemory);
+  printfQuda("Device memory in use is %f MB D PLEGMA\n",GK_deviceMemory);
 #endif
 }
 
@@ -367,6 +369,15 @@ void PLEGMA_Field<Float>::ghostToDevice(){
     cudaMemcpy(device,host,bytes_ghost_length,cudaMemcpyHostToDevice);
     checkCudaError();
   }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
+  // we have to make sure that we have the ghost
+  Fin.ghostToHost(dirOr);
+  Fin.cpuExchangeGhost(dirOr);
+  Fin.ghostToDevice();
+  shiftField(Fin,*this,dirOr);
 }
 
 template class PLEGMA_Field<float>;

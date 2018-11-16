@@ -17,6 +17,30 @@
 //#define TIMING_REPORT
 
 namespace plegma {
+
+  template<typename FloatR, typename FloatU>
+  __inline__ __device__ FloatR real_trace(Float2<FloatU> a[N_COLS][N_COLS]){
+    FloatR r = a[0][0].x+a[1][1].x+a[2][2].x;
+    return r;
+  }
+  
+  template<typename FloatR, typename FloatU>
+  __inline__ __device__ Float2<FloatR> trace(Float2<FloatU> a[N_COLS][N_COLS]){
+    Float2<FloatR> r = a[0][0]+a[1][1]+a[2][2];
+    return r;
+  }
+  
+  template<typename FloatA, typename FloatB>
+  __inline__ __device__ void Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++)
+    #pragma unroll
+    for(int j=0; j<N_COLS; j++) {
+      a[i][j] = conj(b[j][i]);
+    }
+  }
+
+
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
   #pragma unroll
@@ -31,6 +55,21 @@ namespace plegma {
     }
   }
 
+  template<typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ void mul_G_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++)
+    #pragma unroll
+    for(int j=0; j<N_COLS; j++) {
+      a[i][j] = 0.;
+      #pragma unroll
+      for(int k=0; k<N_COLS; k++) {
+        a[i][j] = a[i][j] + b[i][k]*conj(c[j][k]);
+      }
+    }
+  }
+
+  
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_Gdag_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
     #pragma unroll
