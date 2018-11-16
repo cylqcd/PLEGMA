@@ -286,7 +286,9 @@ static void getOffsetsCorner(int dir1, int dir2, int field_length,int *pos,
     int dirP = ( dir1 < dir2 ) dir2 : dir1;
     int dirM = ( dir1 < dir2 ) dir1 : dir2;
     *pos = (dirM > N_DIMS && dirP > N_DIMS) ? 0 :
-      ( (dirM > N_DIMS) : (GK_localL[dirM]-1) );
+      ( ( dirM > N_DIMS ) ? (GK_localL[dirM]-1) :
+	( dirP > N_DIMS ) ? (GK_localL[dirM]-1) :
+	(GK_localL[dirM])*(GK_localL[dirP])-1 );
     
     for(int i=0; i<N_DIMS; i++){
       if( i==dirM ) *pos = (dirM > N_DIMS) ? 0 : (GK_localL[dirM]-1);
