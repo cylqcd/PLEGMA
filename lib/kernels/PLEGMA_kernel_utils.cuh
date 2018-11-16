@@ -92,14 +92,5 @@ namespace plegma {
         }
     }
 
-  __inline__ void get_coords(int id, int *position){
-  
-      float temp = id/GK_localVolume;
-      for(int i = N_DIMS-1; i >=0; --i) {
-        
-        temp = temp * GK_localL[i];
-        position[i] = (int)temp % GK_localL[i];
-      }
-  }
 }
 #endif
