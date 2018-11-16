@@ -4,6 +4,7 @@
 #define _PLEGMA_GAUGE_H
 
 namespace plegma {
+  template<typename Float> class PLEGMA_Su3field;
   ////////////////////////
   // CLASS: PLEGMA_Gauge //
   ////////////////////////
@@ -20,6 +21,9 @@ namespace plegma {
     void justDownloadGauge();
     void loadGauge();
 
+    void absorbDir_device(PLEGMA_Su3field<Float> &su,int dir);
+    void absorbDir_host(PLEGMA_Su3field<Float> &su,int dir);
+    void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4);
     void calculatePlaq();
     void calculatePlaqShifts();
   };

@@ -1,6 +1,7 @@
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_su3field.cuh>
+#include <PLEGMA_field_utils.cuh>
 using namespace plegma;
 
 //--------------------------//
@@ -37,6 +38,11 @@ void PLEGMA_Su3field<Float>::UxU(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<Floa
 template<typename Float>
 void PLEGMA_Su3field<Float>::UxUdag(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<Float> &C){
   UxUdag_k(*this,B,C);
+}
+
+template<typename Float>
+void PLEGMA_Su3field<Float>::traceHerExpMap(PLEGMA_Su3field<Float> &A){
+  traceHerExpMap_kernel(*this,A);
 }
 
 
@@ -82,6 +88,31 @@ void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Su3field<Float
   PLEGMA_Su3field<Float> tmp(BOTH);
   path(steps,u,tmp);
 }
+
+template<typename Float>
+void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA_Su3field<Float> &tmp1,
+				     PLEGMA_Su3field<Float> &tmp2, Float rho, int D3D4){
+  if(D3D4 != 3 && D3D4 !=4) errorQuda("Only 3D and 4D sum of staples is allowed");
+  this->zero_device();
+  for(int i = 0 ; i < D3D4 ; i++)
+    if (i != dir){
+      int spath1[] = {i,dir,4+i};
+      std::vector<int> vspath1(spath1,spath1+3);
+      tmp2.path(vspath1,u,tmp1);
+      xpby(*this,*this,tmp2,rho);
+    }
+  for(int i = 0 ; i < D3D4 ; i++)
+    if (i != dir){
+      int spath2[] = {4+i,dir,i};
+      std::vector<int> vspath2(spath2,spath2+3);
+      tmp2.path(vspath1,u,tmp1);
+      xpby(*this,*this,tmp2,rho);
+    }
+  tmp1.shift(*this,4+dir);
+  cudaMemcpy(this->D_elem(), tmp1.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
+  checkCudaError();
+}
+
 
 template class PLEGMA_Su3field<float>;
 template class PLEGMA_Su3field<double>;

@@ -25,6 +25,8 @@ namespace plegma {
     void Udag(PLEGMA_Su3field<Float> &x);
     void UxU(PLEGMA_Su3field<Float> &x, PLEGMA_Su3field<Float> &y);
     void UxUdag(PLEGMA_Su3field<Float> &x, PLEGMA_Su3field<Float> &y);
+    void staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA_Su3field<Float> &tmp1, PLEGMA_Su3field<Float> &tmp2, Float rho, int D3D4);
+    void traceHerExpMap(PLEGMA_Su3field<Float> &A);
   };
 }
 

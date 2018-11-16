@@ -118,5 +118,60 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
 
 }
 
+template<typename Float>
+void PLEGMA_Gauge<Float>::absorbDir_device(PLEGMA_Su3field<Float> &su,int dir){
+  cudaMemcpy(this->d_elem + dir*(su.Field_length())*(su.Total_length())*2 , su.D_elem(),
+  	     su.Bytes_total(), cudaMemcpyDeviceToDevice);
+  checkCudaError();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::absorbDir_host(PLEGMA_Su3field<Float> &su,int dir){
+  memcpy(this->h_elem + dir*(su.Field_length())*(su.Total_length())*2, su.H_elem(),
+	 su.Bytes_total());
+}
+
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4){
+  if(nSmear < 1){
+    cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    return;
+  }
+  PLEGMA_Su3field<Float> tmp1(BOTH);
+  PLEGMA_Su3field<Float> tmp2(BOTH);
+
+  PLEGMA_Su3field<Float> *u_s1[D3D4];
+  PLEGMA_Su3field<Float> *u_s2[D3D4];
+  for(int idir = 0; idir < D3D4 ; idir++){
+    u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    u_s1[idir]->absorbDir_device(*this,idir);
+    u_s2[idir] = new PLEGMA_Su3field<Float>(BOTH);
+  }
+
+  for(int i = 0; i < nSmear; i++){
+    for(int idir = 0 ; idir < D3D4; idir++){
+      u_s2[idir]->staples(u_s1, idir, tmp1, tmp2, rho, D3D4);
+      tmp1.UxUdag(*(u_s2[idir]), *(u_s1[idir]));
+      tmp2.traceHerExpMap(tmp1);
+      u_s2[idir]->UxU(tmp2, *(u_s1[idir]));
+    }
+    for(int idir = 0 ; idir < D3D4; idir++) u_s1[idir]->exchangeRefs(*(u_s2[idir]));
+  }
+
+  for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);
+  if(D3D4 == 3){
+    int offset = 3*(tmp1.Field_length())*(tmp1.Total_length())*2;
+    cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
+    checkCudaError();
+  }
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    delete u_s1[idir];
+    delete u_s2[idir];
+  }
+}
+
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;
