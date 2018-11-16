@@ -9,8 +9,7 @@ namespace plegma {
   ////////////////////////
   
   template<typename Float>
-    class PLEGMA_Field {
-    // base class use only for inheritance not polymorphism
+  class PLEGMA_Field {
   protected:
     
     int field_length;
@@ -32,6 +31,7 @@ namespace plegma {
     bool isAllocDevice;
     bool isAllocHostBackup;
 
+    
     void create_host();
     void create_host_backup();
     void destroy_host();
@@ -55,6 +55,11 @@ namespace plegma {
     size_t Bytes_total() const { return bytes_total_length; }
     size_t Bytes_ghost() const { return bytes_ghost_length; }
     size_t Bytes_total_plus_ghost() const { return bytes_total_plus_ghost_length; }
+
+    int Field_length() const { return field_length;} // degrees of freedom per lattice point
+    int Total_length() const { return total_length;} // the length of the field (local)
+    int Ghost_length() const { return ghost_length;} // the length of the ghost
+    int TotalGhost_length() const { return total_plus_ghost_length;} // total + ghost
     
     int Precision() const{
       if( typeid(Float) == typeid(float) )
@@ -68,6 +73,8 @@ namespace plegma {
     void ghostToHost(int dirOr=-1);
     void cpuExchangeGhost(int dirOr=-1);
     void ghostToDevice();
+
+    void shift(PLEGMA_Field &Fin, int dirOr);
   };
 }
 #endif
