@@ -8,7 +8,6 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
-
   PLEGMA_params params;
   read_command_line(argc, argv, &params);
   
@@ -65,7 +64,7 @@ int main(int argc, char **argv)
   PLEGMA_Vector<float> vectorAuxF(BOTH);
   PLEGMA_Propagator<float> propUP(BOTH);
   PLEGMA_Propagator<float> propDN(BOTH);
-  PLEGMA_Correlator<float> corrMesons;
+  PLEGMA_Correlator<float> corr;
 
   for(int isource = 0 ; isource < params.Nsources ; isource++){
     printfQuda("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
@@ -95,19 +94,11 @@ int main(int argc, char **argv)
     propUP.rotateToPhysicalBase_device(+1);
     propDN.rotateToPhysicalBase_device(-1);
 
-    corrMesons.contractMesons(propUP, propDN, isource, params.CorrSpace);
+    corr.contractMesons(propUP, propDN, isource, params.CorrSpace);
+    corr.writeFile(params);
 
-    char* filename, *str;
-    if(params.CorrSpace==MOMENTUM_SPACE) asprintf(&str,"Qsq%d",params.Q_sq);
-    asprintf(&filename,"%s_mesons_%s_SS.%02d.%02d.%02d.%02d" ,
-	    twop_filename, str,
-	    params.sourcePosition[isource][0],
-	    params.sourcePosition[isource][1],
-	    params.sourcePosition[isource][2],
-	    params.sourcePosition[isource][3]);
-    free(str);
-    corrMesons.writeFile(filename, &params, params.CorrFileFormat);
-    free(filename);
+    corr.contractBaryons(propUP, propDN, isource, params.CorrSpace);
+    corr.writeFile(params);
   }
   
   // finalize the QUDA library

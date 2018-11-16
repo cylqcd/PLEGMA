@@ -100,12 +100,11 @@ namespace plegma {
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int isource, CORR_SPACE CorrSpace);
 
-    void writeFile(char *filename_out, PLEGMA_params *params,
-		   FILE_WRITE_FORMAT CorrFileFormat);
-    
-    void writeASCII(char *filename_out);
 
-    void writeHDF5(char *filename_out, PLEGMA_params *info);
+    void writeFile(PLEGMA_params &params);
+    void writeFile(char *filename, PLEGMA_params &params);
+    void writeASCII(char *filename);
+    void writeHDF5(char *filename, PLEGMA_params &params);
   };
 }
 

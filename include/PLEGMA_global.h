@@ -108,6 +108,7 @@ namespace plegma {
     int Nproj[MAX_TSINK];
     int traj;
     bool check_files;
+    char *corr_dir;
     char *thrp_type[3];
     char *thrp_proj_type[5];
     char *baryon_type[10];

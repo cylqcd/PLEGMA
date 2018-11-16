@@ -195,7 +195,6 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int vid = sid + it*c_stride_spatial;
-  int locV = blockDim.x * gridDim.x;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
   Float2<FloatC> accum[2*N_SPINS*N_SPINS];
@@ -237,21 +236,23 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   FloatC *h_partial_block = NULL;
   FloatC *d_partial_block = NULL;
 
-  int n_flavors;
-  int size;
-  int volume;
+  int n_flavors=2;
+  int site_size=N_SPINS*N_SPINS*2;
+  size_t volume;
+  size_t size;
   size_t alloc_size;
-  FloatC *corr_it;
   if(runFT==true){
-    size = 2*N_SPINS*N_SPINS * GK_Nmoms;
+    volume = GK_Nmoms;
+    size = n_flavors*site_size*volume;
     alloc_size = size * gridDim.x;
   } else {
-    size = 2*N_SPINS*N_SPINS * SpVol;
+    volume = SpVol;
+    size = n_flavors*site_size*volume;
     alloc_size = size; 
   }
-  h_partial_block = (FloatC*)malloc(alloc_size*2*sizeof(FloatC));
+  h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
   if(h_partial_block == NULL) errorQuda("contract_baryons_kernel: Cannot allocate host block.\n");
-  cudaMalloc((void**)&d_partial_block, alloc_size*2 * sizeof(FloatC) );
+  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(FloatC) );
   checkCudaError();
 
   int isource = corr.getIdSource();
@@ -263,23 +264,26 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 									       GK_sourcePosition[isource][2], (BARYONS_TYPE) ip);
     checkCudaError();
     
-    cudaMemcpy(h_partial_block , d_partial_block , alloc_size*2*sizeof(FloatC) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
     checkCudaError();
     
-    corr_it = corr.getCorr() + (ip*GK_localL[3]+it)*size*2;
     if(runFT==true){
-      FloatC *reduction =(FloatC*) calloc(size*2,sizeof(FloatC));
-      for(size_t i = 0 ; i < size; i++)
+      FloatC *reduction =(FloatC*) calloc(size,sizeof(FloatC));
+      for(size_t i = 0 ; i < size/2; i++)
 	for(int j = 0 ; j < gridDim.x; j++) {
 	  reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
 	  reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
 	}
-      MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
+      MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
       free(reduction);
-    } else {
-      for(size_t i = 0 ; i < size*2; i++)
-	corr_it[i] = h_partial_block[i];
     }
+    
+    FloatC *corr_ip = corr.getCorr() + ip*GK_localL[3]*size;
+    for(size_t v = 0 ; v < volume; v++)
+      for(int f = 0 ; f < n_flavors; f++)
+	for(int i = 0 ; i < site_size; i++)
+	  corr_ip[((f*GK_localL[3] + it)*volume +v)*site_size+i] = h_partial_block[(v*n_flavors+f)*site_size+i];
+    
   }
   free(h_partial_block);
   cudaFree(d_partial_block);

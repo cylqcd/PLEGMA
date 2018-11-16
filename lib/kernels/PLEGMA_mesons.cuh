@@ -65,29 +65,44 @@ __global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC,runFT> ar
 
 template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
 static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
-  int isource = corr.getIdSource();
 
+  int SpVol = GK_localVolume/GK_localL[3];
+  FloatC *d_partial_block = NULL;
+  int isource = corr.getIdSource();
+  int site_size=2*N_MESONS*2;
+  size_t volume;
+  size_t size;
+  if(runFT==true){
+    volume = GK_Nmoms;
+    size = site_size*volume;
+  } else {
+    volume = SpVol;
+    size = site_size*volume;
+  }
+  
   ArgsMesons<FloatA,FloatB,FloatC,runFT> kernel_args;
   kernel_args.texProp1 = texProp1;
   kernel_args.texProp2 = texProp2;
-  kernel_args.block = NULL;
+  kernel_args.block = d_partial_block;
   kernel_args.it = it;
   kernel_args.x0 = GK_sourcePosition[isource][0];
   kernel_args.y0 = GK_sourcePosition[isource][1];
   kernel_args.z0 = GK_sourcePosition[isource][2];
 
   ProfileStruct kernel_ps;
-  kernel_ps.flops = 2*N_MESONS*N_SPINS*N_SPINS*N_COLS*N_COLS*8; //fourier transform missing
-  kernel_ps.outBytes = 2*N_MESONS*2*sizeof(FloatC);
-  kernel_ps.inpBytes = 2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
+  kernel_ps.flops = site_size*N_SPINS*N_SPINS*N_COLS*N_COLS*8; //fourier transform missing
+  kernel_ps.outBytes = site_size*volume*2*sizeof(FloatC);
+  kernel_ps.inpBytes = volume*2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
   kernel_ps.siteBytes = 2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
-  kernel_ps.volume = GK_localVolume/GK_localL[3];
-  kernel_ps.stride = GK_strideFull/GK_localL[3];
+  kernel_ps.volume = SpVol;
+  kernel_ps.stride = SpVol;
   kernel_ps.tuneY = false ;
   kernel_ps.sharedMemory = true ;
-  kernel_ps.sharedBytesPerThread = 2*N_MESONS*sizeof(Float2<FloatC>);
+  kernel_ps.sharedBytesPerThread = site_size*sizeof(Float2<FloatC>);
 
   PLEGMA_kernel_tuner<ArgsMesons<FloatA,FloatB,FloatC,runFT>> tuner( contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>, &kernel_args, kernel_ps );
+  cudaFuncSetCacheConfig(contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>, cudaFuncCachePreferShared);
+  tuner.tune();
   
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;
@@ -97,18 +112,12 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
   cudaEventRecord(start,0);
 #endif
 
-  cudaFuncSetCacheConfig(contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>, cudaFuncCachePreferShared);
-  tuner.tune();
   int gridDimX = tuner.getGridDimX();
   size_t alloc_size;
-  FloatC *corr_it;
-  FloatC *d_partial_block = NULL;
   if(runFT==true){
-    alloc_size = corr.getSiteSize() * GK_Nmoms * gridDimX;
-    corr_it = corr.getCorr() + it*corr.getSiteSize()*GK_Nmoms*2;
+    alloc_size = size * gridDimX;
   } else {
-    alloc_size = corr.getSiteSize() * GK_localVolume/GK_localL[3];
-    corr_it = corr.getCorr() + it*alloc_size*2;
+    alloc_size = size;
   }
   cudaMalloc((void**)&d_partial_block, alloc_size*2*sizeof(FloatC));
   kernel_args.block = d_partial_block;
@@ -124,31 +133,32 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
   printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
 #endif
 
-  
-
   FloatC *h_partial_block = NULL;
-  h_partial_block = (FloatC*)malloc(alloc_size*2*sizeof(FloatC));
+  h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
   if(h_partial_block == NULL) errorQuda("contract_mesons_kernel: Cannot allocate host block.\n");
-  cudaMemcpy(h_partial_block , d_partial_block , alloc_size*2*sizeof(FloatC) , cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_block);
   checkCudaError();
   
   if(runFT==true){
-    alloc_size = corr.getSiteSize() * GK_Nmoms;
-    FloatC *reduction =(FloatC*) calloc(alloc_size*2,sizeof(FloatC));
-    for(size_t i = 0 ; i < alloc_size; i++)
+    FloatC *reduction =(FloatC*) calloc(size,sizeof(FloatC));
+    for(size_t i = 0 ; i < size/2; i++)
       for(int j = 0 ; j < gridDimX; j++) {
 	reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
 	reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
       }
-    MPI_Allreduce(reduction, corr_it, alloc_size*2, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
+    MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
     free(reduction);
-  } else {
-    for(size_t i = 0 ; i < alloc_size*2; i++)
-      corr_it[i] = h_partial_block[i];
   }
+  
+  FloatC *corr_pt = corr.getCorr();
+  for(size_t v = 0 ; v < volume; v++)
+    for(int f = 0 ; f < site_size/2; f++) {
+      corr_pt[((f*GK_localL[3] + it)*volume+v)*2+0] = h_partial_block[(v*site_size/2+f)*2+0];
+      corr_pt[((f*GK_localL[3] + it)*volume+v)*2+1] = h_partial_block[(v*site_size/2+f)*2+1];
+    }
+
   free(h_partial_block);
-  checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>

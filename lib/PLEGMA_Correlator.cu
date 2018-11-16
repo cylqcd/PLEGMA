@@ -1,5 +1,6 @@
 #include <PLEGMA_Correlator.h>
 #include <hdf5.h>
+#include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
  
@@ -91,22 +92,59 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeFile(char *filename, PLEGMA_params *params, FILE_WRITE_FORMAT CorrFileFormat) {
-  char* filename_out;
-  if(CorrFileFormat == ASCII_FORM) {
-    asprintf(&filename_out,"%s.dat",filename);
-    printfQuda("Going to write file %s in ASCII format\n",filename_out);
-    writeASCII(filename_out);
+writeFile(char *filename, PLEGMA_params &params) {
+  if(params.CorrFileFormat == ASCII_FORM) {
+    printfQuda("Going to write file %s in ASCII format\n",filename);
+    writeASCII(filename);
   }
-  else if(CorrFileFormat == HDF5_FORM) {
-    asprintf(&filename_out,"%s.h5",filename);
-    printfQuda("Going to write file %s in HDF5 format\n",filename_out);
-    writeHDF5(filename_out, params);
+  else if(params.CorrFileFormat == HDF5_FORM) {
+    printfQuda("Going to write file %s in HDF5 format\n",filename);
+    writeHDF5(filename, params);
   }
   else {
-    errorQuda("FILE_WRITE_FORMAT not supported: %d\n", CorrFileFormat);
+    errorQuda("FILE_WRITE_FORMAT not supported: %d\n", params.CorrFileFormat);
   }
-  free(filename_out);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+writeFile(PLEGMA_params &params) {
+  char *filename, *Qsq, *name2;
+  std::string ext="", name="";
+  if(params.CorrSpace==MOMENTUM_SPACE) asprintf(&Qsq,"Qsq%d_",params.Q_sq);
+  if(params.CorrFileFormat == ASCII_FORM) ext = ".dat";
+  else if(params.CorrFileFormat == HDF5_FORM) ext = ".h5";
+  switch(corr_type) {
+  case MESONS:
+    name = "twop.%04d_mesons";
+    break;
+  case BARYONS:
+    name = "twop.%04d_baryons";
+    break;
+  case THRP_LOCAL:
+    name = "thrp.%04d_local";
+    break;
+  case THRP_NOETHER:
+    name = "thrp.%04d_noether";
+    break;
+  case THRP_ONED:
+    name = "thrp.%04d_oneD";
+    break;
+  default:
+    name = "unknown.%04d";
+  }
+  asprintf(&name2, name.c_str(), params.traj);
+  
+  asprintf(&filename,"%s/%s.%04d_%sSS.%02d.%02d.%02d.%02d%s" ,
+	   params.corr_dir, name2, Qsq,
+	   params.sourcePosition[isource][0],
+	   params.sourcePosition[isource][1],
+	   params.sourcePosition[isource][2],
+	   params.sourcePosition[isource][3], ext.c_str());
+
+  writeFile(filename, params);
+  
+  free(Qsq);
 }
 
 
@@ -189,47 +227,47 @@ static int getNDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace) {
 static void fillDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace, int ndims,
 		     hsize_t* dims, hsize_t* ldims, hsize_t* start, int *sourcePosition, bool shift_source) {
   start[ndims-1] = 0; ldims[ndims-1] = dims[ndims-1] = 2; //re-im
+  switch(CorrType) {
+  case MESONS:
+    break;
+  case BARYONS:
+    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 16; //n-gamma
+    break;
+  case THRP_LOCAL:
+    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 16; //n-gamma
+    break;
+  case THRP_NOETHER:
+    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 4; //n-gamma
+    break;
+  case THRP_ONED:
+    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 16; //n-gamma
+    start[ndims-3] = 0; ldims[ndims-3] = dims[ndims-3] = 4; //n-dirs
+    break;
+  default:
+    errorQuda("Corralator: CorrType not supported: %d\n", CorrType);
+  }
   switch(CorrSpace) {
   case MOMENTUM_SPACE:
-    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = GK_Nmoms; //Nmoms
-    start[ndims-3] = GK_timeRank*GK_localL[3]; //starting point
-    ldims[ndims-3] = GK_localL[3]; //LT
-    dims[ndims-3] = GK_totalL[3]; //T
+    start[1] = 0; ldims[1] = dims[1] = GK_Nmoms; //Nmoms
+    start[0] = GK_timeRank*GK_localL[3]; //starting point
+    ldims[0] = GK_localL[3]; //LT
+    dims[0] = GK_totalL[3]; //T
     if(shift_source) {
       start[ndims-3] = (start[ndims-3] + GK_totalL[3] - sourcePosition[3]) % GK_totalL[3];
     }
     break;
   case POSITION_SPACE:
     for(int i=0; i<N_DIMS; i++) {
-      start[ndims-1-i] = comm_coords(default_topo)[i]*GK_localL[i]; //starting
-      ldims[ndims-1-i] = GK_localL[i]; //LT
-      dims[ndims-1-i] = GK_totalL[i]; //T
+      start[N_DIMS-1-i] = comm_coords(default_topo)[i]*GK_localL[i]; //starting
+      ldims[N_DIMS-1-i] = GK_localL[i]; //LT
+      dims[N_DIMS-1-i] = GK_totalL[i]; //T
       if(shift_source) {
-	start[ndims-1-i] = (start[ndims-1-i] + GK_totalL[i] - sourcePosition[i]) % GK_totalL[3];
+	start[N_DIMS-1-i] = (start[N_DIMS-1-i] + GK_totalL[i] - sourcePosition[i]) % GK_totalL[3];
       }
     }
     break;
   default:
     errorQuda("Corralator: CorrSpace not supported: %d\n", CorrSpace);
-  }
-  switch(CorrType) {
-  case MESONS:
-    break;
-  case BARYONS:
-    start[0] = 0; ldims[0] = dims[0] = 16; //n-gamma
-    break;
-  case THRP_LOCAL:
-    start[0] = 0; ldims[0] = dims[0] = 16; //n-gamma
-    break;
-  case THRP_NOETHER:
-    start[0] = 0; ldims[0] = dims[0] = 4; //n-gamma
-    break;
-  case THRP_ONED:
-    start[1] = 0; ldims[1] = dims[1] = 16; //n-gamma
-    start[0] = 0; ldims[0] = dims[0] = 4; //n-dirs
-    break;
-  default:
-    errorQuda("Corralator: CorrType not supported: %d\n", CorrType);
   }
 }
 
@@ -369,7 +407,7 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(char *filename, PLEGMA_params *info) {
+writeHDF5(char *filename, PLEGMA_params &params) {
   // only one per time writes in momentum space
   if(corr_space == MOMENTUM_SPACE && (GK_timeRank > GK_nProc[3] || GK_timeRank <0 ))
     return;
@@ -391,15 +429,6 @@ writeHDF5(char *filename, PLEGMA_params *info) {
     errorQuda("Corralator: corrSpace not supported: %d\n", corr_space);
   }
 
-  Float* corrHDF5 = (Float*) malloc(bytes_total_length);
-  // exchanging volume and site
-  for(int v=0; v<vol_size; v++){
-    for(int s=0; s<site_size; s++){
-      corrHDF5[(s*vol_size + v)*2 + 0] = corr[(v*site_size + s)*2 + 0];
-      corrHDF5[(s*vol_size + v)*2 + 1] = corr[(v*site_size + s)*2 + 1];
-    }
-  }
-
   int ndims = getNDims(corr_type, corr_space);
   hsize_t dims[ndims], ldims[ndims], start[ndims];
   fillDims(corr_type, corr_space, ndims, dims, ldims, start, GK_sourcePosition[isource], shift_source);
@@ -410,7 +439,7 @@ writeHDF5(char *filename, PLEGMA_params *info) {
   H5Pclose(fapl_id);
 
   char *group1_tag;
-  asprintf(&group1_tag,"conf_%04d",info->traj);
+  asprintf(&group1_tag,"conf_%04d",params.traj);
   hid_t group1_id = H5Gcreate(file_id, group1_tag, H5P_DEFAULT, 
 			      H5P_DEFAULT, H5P_DEFAULT);
 
@@ -445,7 +474,7 @@ writeHDF5(char *filename, PLEGMA_params *info) {
     hid_t group3_id = H5Gcreate(group2_id, corr_groups_names[corr_type][g], H5P_DEFAULT, 
 				H5P_DEFAULT, H5P_DEFAULT);
     for(int d=0; d<n_flavors; d++){
-      Float *writeBuf = corrHDF5 + (g*n_flavors+d)*spaceSize;
+      Float *writeBuf = corr + (g*n_flavors+d)*spaceSize;
       write_dataset(group3_id, corr_flavors_names[corr_type][d], writeBuf,
 		    ndims, dims, ldims, start);
     }
@@ -455,7 +484,6 @@ writeHDF5(char *filename, PLEGMA_params *info) {
   H5Gclose(group2_id);
   H5Gclose(group1_id);
   H5Fclose(file_id);
-  free(corrHDF5);
 }
 
 template class PLEGMA_Correlator<float>;
