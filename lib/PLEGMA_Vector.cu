@@ -287,7 +287,11 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
     cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
-  
+}
+
+template<typename Float>
+void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color){
+  pointSource(sourceposition,spin,color,this->allocation);
 }
 
 template<typename Float>

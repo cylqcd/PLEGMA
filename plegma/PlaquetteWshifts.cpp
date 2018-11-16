@@ -38,10 +38,10 @@ int main(int argc, char **argv)
 
   pGauge.packGauge(gauge.get_ptr());
   pGauge.loadGauge();
-  pGauge.calculatePlaq();
+  pGauge.calculatePlaqShifts();
 
   // finalize the QUDA library
-  saveTuneCache(false);
+  saveTuneCache(true);
   endQuda();
     
   // finalize the communications layer

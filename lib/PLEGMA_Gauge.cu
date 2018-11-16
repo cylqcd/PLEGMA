@@ -1,5 +1,7 @@
 #include <PLEGMA_Gauge.h>
+#include <PLEGMA_Su3field.h>
 #include <PLEGMA_plaquette.cuh>
+#include <PLEGMA_su3field.cuh>
 using namespace plegma;
 
 //--------------------------//
@@ -89,6 +91,31 @@ void PLEGMA_Gauge<Float>::calculatePlaq(){
   tex.tex = this->createTexObject();
   printfQuda("Calculated plaquette is %f\n",calculatePlaquette<Float>(tex));
   this->destroyTexObject(tex.tex);
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
+  PLEGMA_Su3field<Float> res(BOTH);
+  PLEGMA_Su3field<Float> tmp(BOTH);
+  PLEGMA_Su3field<Float> *u_s[4];
+  for(int idir = 0; idir < 4 ; idir++){
+    u_s[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    u_s[idir]->absorbDir_device(*this,idir);
+  }
+  
+  Float resV=0;
+  for(int dir1 = 0; dir1 < 4; dir1++)
+    for(int dir2 = dir1+1; dir2 < 4; dir2++){
+      int spath[] = {dir1,dir2,4+dir1,4+dir2};
+      std::vector<int> vspath(spath,spath+4);
+      res.path(vspath, u_s, tmp);
+      resV += sumRtraceU<Float,Float>(res);
+    }
+  printfQuda("Calculated plaquette is %f\n",resV/(GK_totalVolume*N_COLS*6));
+
+  for(int idir = 0; idir < 4 ; idir++)
+    delete u_s[idir];
+
 }
 
 template class PLEGMA_Gauge<float>;
