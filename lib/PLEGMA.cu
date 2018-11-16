@@ -15,6 +15,7 @@ __constant__ bool c_dimBreak[N_DIMS];
 __constant__ int c_localL[N_DIMS];
 __constant__ int c_plusGhost[N_DIMS];
 __constant__ int c_minusGhost[N_DIMS];
+__constant__ int c_cornerGhost[2*N_DIMS][2*N_DIMS];
 __constant__ int c_stride;
 __constant__ int c_stride_spatial;
 __constant__ int c_surface[N_DIMS];
@@ -58,6 +59,8 @@ int GK_nProc[N_DIMS];
 int GK_plusGhost[N_DIMS];
 int GK_minusGhost[N_DIMS];
 int GK_surface3D[N_DIMS];
+int GK_surface2D[N_DIMS][N_DIMS];
+int GK_cornerGhost[2*N_DIMS][2*N_DIMS];
 bool GK_init_PLEGMA_flag = false;
 int GK_Nsources;
 int GK_sourcePosition[MAX_NSOURCES][N_DIMS];
@@ -121,7 +124,14 @@ void plegma::initialize(PLEGMA_params *params){
       GK_localL[i] = params->lL[i];
       GK_totalL[i] = GK_nProc[i] * GK_localL[i];
     }
-
+    
+    for(int i = 0 ; i < N_DIMS ; i++){
+      if( GK_localL[i] < GK_totalL[i])
+	GK_dimBreak[i] = true;
+      else
+	GK_dimBreak[i] = false;
+    }
+    
     GK_localVolume = 1;
     GK_totalVolume = 1;
     for(int i = 0 ; i < N_DIMS ; i++){
@@ -138,34 +148,54 @@ void plegma::initialize(PLEGMA_params *params){
 	GK_surface3D[i] *= GK_localL[j];
       }
     }
-    
-    
+        
     for(int i = 0 ; i < N_DIMS ; i++)
       if( GK_localL[i] == GK_totalL[i] )
 	GK_surface3D[i] = 0;
+
+    for(int i=0; i<N_DIMS; i++){
+      for(int j=0; j<N_DIMS; j++){
+	if(i!=j && GK_dimBreak[i] && GK_dimBreak[j]){
+	  GK_surface2D[i][j] = 1;
+	  for(int k=0; k<N_DIMS; k++)
+	    GK_surface2D[i][j] *= (k!=i && k!=j) GK_localL[k] : 1;
+	}
+	else GK_surface2D[i][j] = 0;
+      }
+    }
+
     
     for(int i = 0 ; i < N_DIMS ; i++){
-      GK_plusGhost[i] =0;
+      GK_plusGhost[i] = 0;
       GK_minusGhost[i] = 0;
     }
-    
+
+    for(int i=0; i<2*N_DIMS; i++){
+      for(int j=0; j<2*N_DIMS; j++){
+	GK_cornerGhost[i][j] = 0;
+      }
+    }
     
 #ifdef MULTI_GPU
-    int lastIndex = GK_localVolume;
+
+    size_t lastIndex = GK_localVolume;
     for(int i = 0 ; i < N_DIMS ; i++)
       if( GK_localL[i] < GK_totalL[i] ){
 	GK_plusGhost[i] = lastIndex ;
 	GK_minusGhost[i] = lastIndex + GK_surface3D[i];
 	lastIndex += 2*GK_surface3D[i];
       }
-#endif
-    
-    for(int i = 0 ; i < N_DIMS ; i++){
-      if( GK_localL[i] < GK_totalL[i])
-	GK_dimBreak[i] = true;
-      else
-	GK_dimBreak[i] = false;
+
+    for(int i=0; i<2*N_DIMS; i++){
+      for(int j=0; j<2*N_DIMS; j++){
+	if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
+	  GK_cornerGhost[i][j] = lastIndex;
+	  lastIndex += GK_surface2D[i%N_DIMS][j%N_DIMS];
+	}
+      }
     }
+    
+#endif
 
     const int eps[6][3]=
       {
@@ -208,6 +238,7 @@ void plegma::initialize(PLEGMA_params *params){
     cudaMemcpyToSymbol(c_totalL , GK_totalL , N_DIMS*sizeof(int) );
     cudaMemcpyToSymbol(c_plusGhost , GK_plusGhost , N_DIMS*sizeof(int) );
     cudaMemcpyToSymbol(c_minusGhost , GK_minusGhost , N_DIMS*sizeof(int) );
+    cudaMemcpyToSymbol(c_cornerGhost, GK_cornerGhost, 4*N_DIMS*N_DIMS*sizeof(int));
     cudaMemcpyToSymbol(c_surface , GK_surface3D , N_DIMS*sizeof(int) );
     
     cudaMemcpyToSymbol(c_eps, &(eps[0][0]) , 6*3*sizeof(int) );
