@@ -10,7 +10,7 @@ static __global__ void xpby_kernel(FloatOut *z, FloatIn1 *x, FloatIn2 *y, Float 
   generic2<FloatIn1> Ry(y);
   generic2<FloatIn2> Rx(x);
   for(int i = 0 ; i < length_field ; i++)
-    Rz.set(Rx.get(i,sid) + beta*Ry.get(i,sid));
+    Rz.set(i, sid, Rx.get(i,sid) + beta*Ry.get(i,sid));
 }
 
 template<typename Float>

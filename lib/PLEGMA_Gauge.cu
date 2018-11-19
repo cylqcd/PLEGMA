@@ -144,6 +144,9 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
 
   PLEGMA_Su3field<Float> *u_s1[D3D4];
   PLEGMA_Su3field<Float> *u_s2[D3D4];
+
+  PLEGMA_Su3field<Float> *ref;
+  
   for(int idir = 0; idir < D3D4 ; idir++){
     u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
     u_s1[idir]->absorbDir_device(*this,idir);
@@ -157,7 +160,11 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
       tmp2.traceHerExpMap(tmp1);
       u_s2[idir]->UxU(tmp2, *(u_s1[idir]));
     }
-    for(int idir = 0 ; idir < D3D4; idir++) u_s1[idir]->exchangeRefs(*(u_s2[idir]));
+    for(int idir = 0 ; idir < D3D4; idir++){
+      ref=u_s2[idir];
+      u_s2[idir]=u_s1[idir];
+      u_s1[idir]=ref;
+    }
   }
 
   for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);

@@ -105,7 +105,7 @@ void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA
     if (i != dir){
       int spath2[] = {4+i,dir,i};
       std::vector<int> vspath2(spath2,spath2+3);
-      tmp2.path(vspath1,u,tmp1);
+      tmp2.path(vspath2,u,tmp1);
       xpby(*this,*this,tmp2,rho);
     }
   tmp1.shift(*this,4+dir);
