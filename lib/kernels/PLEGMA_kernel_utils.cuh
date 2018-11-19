@@ -51,8 +51,8 @@ namespace plegma {
     }
   }
 
-  template<typename Float, typename FloatG>
-  __inline__ __device__ void scaleG(Float2<FloatG> a[N_COLS][N_COLS], Float w){
+  template<typename T, typename FloatG>
+  __inline__ __device__ void scaleG(Float2<FloatG> a[N_COLS][N_COLS], T w){
   #pragma unroll
   for(int i=0; i<N_COLS; i++)
     #pragma unroll
@@ -61,18 +61,8 @@ namespace plegma {
     }
   }
 
-  template<typename Float, typename FloatG>
-  __inline__ __device__ void scaleG(Float2<FloatG> a[N_COLS][N_COLS], Float2<Float> w){
-  #pragma unroll
-  for(int i=0; i<N_COLS; i++)
-    #pragma unroll
-    for(int j=0; j<N_COLS; j++) {
-      a[i][j] = w*a[i][j];
-    }
-  }
-
-  template<typename Float, typename FloatG>
-  __inline__ __device__ void G_plus_aG(Float2<FloatG> a[N_COLS][N_COLS], Float2<FloatG> b[N_COLS][N_COLS], Float w){
+  template<typename T, typename FloatG>
+  __inline__ __device__ void G_plus_aG(Float2<FloatG> a[N_COLS][N_COLS], Float2<FloatG> b[N_COLS][N_COLS], T w){
   #pragma unroll
   for(int i=0; i<N_COLS; i++)
     #pragma unroll
@@ -81,8 +71,8 @@ namespace plegma {
     }
   }
 
-  template<typename Float, typename FloatG>
-  __inline__ __device__ void G_plus_aG(Float2<FloatG> a[N_COLS][N_COLS], Float2<FloatG> b[N_COLS][N_COLS], Float2<FloatG> c[N_COLS][N_COLS], Float w){
+  template<typename T, typename FloatG>
+  __inline__ __device__ void G_plus_aG(Float2<FloatG> a[N_COLS][N_COLS], Float2<FloatG> b[N_COLS][N_COLS], Float2<FloatG> c[N_COLS][N_COLS], T w){
   #pragma unroll
   for(int i=0; i<N_COLS; i++)
     #pragma unroll
