@@ -44,9 +44,8 @@ namespace plegma {
 	this->y = 0.;
       }	
     }
-    inline __device__ Float2<Float> conj() {
+    inline __device__ void conj() {
       this->y *= -1.;
-      return *this;
     }
   };
 

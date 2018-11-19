@@ -74,6 +74,8 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
     shared_cache[cacheIndex] = 0.;
   }
   __syncthreads();
+
+  //!!!!!!!!!!!!!!!!!!!!!!!!! Change to the one which works with not only powerrs of 2
   int i = blockDim.x/2;
   while (i != 0){
     if(cacheIndex < i)
@@ -81,10 +83,42 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
     __syncthreads();
     i /= 2;
   }
+  //!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
   if(cacheIndex == 0)
     partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory  
 }
 
+template<typename FloatA,typename FloatB>
+static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= c_threads) return;
+  Float2<FloatA> lA[N_COLS][N_COLS];
+  Float2<FloatB> lB[N_COLS][N_COLS];
+  su3_2<FloatA> RA(A);
+  su3_2<FloatB> RB(B);
+  RB.get(lB,sid);
+  Gdag(lA,lB);
+  G_plus_aG(lA,lB,-1.);
+  FloatA div3=1./3.;
+  Float2<FloatA> tr = div3*trace<FloatA,FloatA>(lA);
+  Float2<FloatA> I;
+  I.x=0.; I.y=0.5;
+  lA[0][0] = lA[0][0] - tr;
+  lA[1][1] = lA[1][1] - tr;
+  lA[2][2] = lA[2][2] - tr;
+  scaleG(lA,I);
+  exponentiate_iQ(lA);
+  RA.set(lA,sid);
+}
+
+template<typename FloatA, typename FloatB>
+static void traceHerExpMap_kernel(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  traceHerExpMap_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
+  checkCudaError();
+}
 
 template<typename FloatA, typename FloatB>
 static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
