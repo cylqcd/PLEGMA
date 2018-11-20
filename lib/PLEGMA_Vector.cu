@@ -16,35 +16,13 @@ PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag):
 
 template<typename Float>
 void PLEGMA_Vector<Float>::packVector(Float *vector){
-  for(int iv = 0 ; iv < GK_localVolume ; iv++)
-    for(int mu = 0 ; mu < N_SPINS ; mu++)  // always work with format colors inside spins
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int part = 0 ; part < 2 ; part++){
-	  PLEGMA_Field<Float>::h_elem[mu*N_COLS*GK_localVolume*2 + 
-		     c1*GK_localVolume*2 + iv*2 + part] = 
-	    vector[iv*N_SPINS*N_COLS*2 + mu*N_COLS*2 + c1*2 + part];
-	}
+  pack(vector);
 }
- 
+
+
 template<typename Float>
 void PLEGMA_Vector<Float>::unpackVector(){
-
-  Float *vector_tmp = (Float*) malloc( PLEGMA_Field<Float>::bytes_total_length );
-  if(vector_tmp == NULL)
-    errorQuda("Error in allocate memory of tmp vector in unpackVector\n");
-  
-  for(int iv = 0 ; iv < GK_localVolume ; iv++)
-    for(int mu = 0 ; mu < N_SPINS ; mu++) // always work with format colors inside spins
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int part = 0 ; part < 2 ; part++){
-	  vector_tmp[iv*N_SPINS*N_COLS*2 + mu*N_COLS*2+c1*2+part] = 
-	    PLEGMA_Field<Float>::h_elem[mu*N_COLS*GK_localVolume*2 + 
-		       c1*GK_localVolume*2 + iv*2 + part];
-	}
-  
-  memcpy(PLEGMA_Field<Float>::h_elem,vector_tmp, PLEGMA_Field<Float>::bytes_total_length);
-  
-  free(vector_tmp);
+  unpack<Float>();
 }
 
 template<typename Float>

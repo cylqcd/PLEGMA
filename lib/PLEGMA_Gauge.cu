@@ -13,20 +13,26 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag):
   PLEGMA_Field<Float>(alloc_flag, GAUGE){ ; }
 
 template<typename Float>
+void PLEGMA_Gauge<Float>::packGauge(double *p_gauge){
+  pack<Float>( (Float*)p_gauge ); 
+}
+
+template<typename Float>
 void PLEGMA_Gauge<Float>::packGauge(double **p_gauge){
-  
-  for(int dir = 0 ; dir < N_DIMS ; dir++)
-    for(int iv = 0 ; iv < GK_localVolume ; iv++)
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int c2 = 0 ; c2 < N_COLS ; c2++)
-	  for(int part = 0 ; part < 2 ; part++){
-	    PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + 
-		       c1*N_COLS*GK_localVolume*2 + 
-		       c2*GK_localVolume*2 + 
-		       iv*2 + part] = 
-	      (Float) p_gauge[dir][iv*N_COLS*N_COLS*2 + 
-				   c1*N_COLS*2 + c2*2 + part];
-	  }
+
+  #pragma unroll
+  for(int dir = 0 ; dir < N_DIMS ; dir++){
+    #pragma unroll
+    for(int i = 0 ; i < GK_localVolume ; iv++){
+      #pragma unroll
+      for(int j = 0; j < N_COLS*N_COLS; j++){
+	#pragma unroll
+	for(int part = 0; part < 2; part++)
+	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_loalVolume*2 + j*GK_localVolume*2 + i*2 + part] =
+	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part]
+      }
+    }
+  }
 }
 
 template<typename Float>
