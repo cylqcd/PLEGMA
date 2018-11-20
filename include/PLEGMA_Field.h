@@ -74,6 +74,9 @@ namespace plegma {
     void cpuExchangeGhost(int dirOr=-1);
     void ghostToDevice();
 
+    void pack(Float *topack);
+    void unpack();
+
     void shift(PLEGMA_Field &Fin, int dirOr);
   };
 }
