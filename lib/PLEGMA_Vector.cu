@@ -16,13 +16,13 @@ PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag):
 
 template<typename Float>
 void PLEGMA_Vector<Float>::packVector(Float *vector){
-  pack(vector);
+  PLEGMA_Field<Float>::pack(vector);
 }
 
 
 template<typename Float>
 void PLEGMA_Vector<Float>::unpackVector(){
-  unpack<Float>();
+  PLEGMA_Field<Float>::unpack();
 }
 
 template<typename Float>
@@ -36,21 +36,6 @@ void PLEGMA_Vector<Float>::unpackVector(Float *vector){
 	    vector[mu*N_COLS*GK_localVolume*2 + 
 		   c1*GK_localVolume*2 + iv*2 + part];
 	}
-}
-
-
-template<typename Float>
-void PLEGMA_Vector<Float>::loadVector(){
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyHostToDevice );
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Vector<Float>::unloadVector(){
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem, PLEGMA_Field<Float>::d_elem, PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
 }
 
 

@@ -77,6 +77,9 @@ namespace plegma {
     void pack(Float *topack);
     void unpack();
 
+    void load();
+    void unload();
+    
     void shift(PLEGMA_Field &Fin, int dirOr);
   };
 }

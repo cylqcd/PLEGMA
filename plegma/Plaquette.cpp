@@ -37,7 +37,7 @@ int main(int argc, char **argv)
   PLEGMA_Gauge<double> pGauge(BOTH);
 
   pGauge.packGauge(gauge.get_ptr());
-  pGauge.loadGauge();
+  pGauge.load();
   pGauge.calculatePlaq();
 
   // finalize the QUDA library

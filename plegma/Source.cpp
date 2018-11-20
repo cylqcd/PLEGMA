@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   PLEGMA_Vector<double> vectorAuxD(BOTH);
 
   vectorAuxD.pointSource(params.sourcePosition[0], 0, 0, DEVICE);
-  vectorAuxD.unloadVector();
+  vectorAuxD.unload();
   vectorAuxD.norm2Host();
   
   // finalize the QUDA library

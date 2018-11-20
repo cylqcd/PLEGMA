@@ -16,10 +16,9 @@ namespace plegma {
     ~PLEGMA_Gauge(){;}
     
     void packGauge(double **gauge);
+    void packGauge(double *gauge);
     void packGaugeToBackup(void **gauge);
     void loadGaugeFromBackup();
-    void justDownloadGauge();
-    void loadGauge();
 
     void absorbDir_device(PLEGMA_Su3field<Float> &su,int dir);
     void absorbDir_host(PLEGMA_Su3field<Float> &su,int dir);

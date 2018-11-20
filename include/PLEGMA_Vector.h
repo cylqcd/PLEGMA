@@ -24,8 +24,6 @@ namespace plegma {
     void packVector(Float *vector);
     void unpackVector();
     void unpackVector(Float *vector);
-    void loadVector();
-    void unloadVector();
     
     void download(); // take the vector from device to host
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);

@@ -14,7 +14,7 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag):
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::packGauge(double *p_gauge){
-  pack<Float>( (Float*)p_gauge ); 
+  PLEGMA_Field<Float>::pack( (Float*)p_gauge ); 
 }
 
 template<typename Float>
@@ -23,13 +23,13 @@ void PLEGMA_Gauge<Float>::packGauge(double **p_gauge){
   #pragma unroll
   for(int dir = 0 ; dir < N_DIMS ; dir++){
     #pragma unroll
-    for(int i = 0 ; i < GK_localVolume ; iv++){
+    for(int i = 0 ; i < GK_localVolume ; i++){
       #pragma unroll
       for(int j = 0; j < N_COLS*N_COLS; j++){
 	#pragma unroll
 	for(int part = 0; part < 2; part++)
-	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_loalVolume*2 + j*GK_localVolume*2 + i*2 + part] =
-	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part]
+	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + j*GK_localVolume*2 + i*2 + part] =
+	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part];
       }
     }
   }
@@ -57,20 +57,6 @@ void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
     errorQuda("Error you can call this method only if you allocate memory for h_elem_backup");
   }
 
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::justDownloadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyHostToDevice );
-  checkCudaError();
 }
 
 template<typename Float>
