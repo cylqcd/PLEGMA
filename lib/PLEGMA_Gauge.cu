@@ -180,5 +180,7 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
   }
 }
 
+
+
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;
