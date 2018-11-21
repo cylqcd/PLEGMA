@@ -44,3 +44,9 @@ target_link_libraries(Source ${PLEGMA_LIBS})
 cuda_add_executable(StoutSmearing StoutSmearing.cpp)
 target_link_libraries(StoutSmearing ${PLEGMA_LIBS})
 
+cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
+target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
+
+cuda_add_executable(APEsmearing APEsmearing.cpp)
+target_link_libraries(APEsmearing ${PLEGMA_LIBS})
+

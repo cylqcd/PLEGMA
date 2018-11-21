@@ -1,5 +1,9 @@
 #include <PLEGMA_Field.h> 
 #include <PLEGMA_shifts.cuh>
+#include <thrust/device_ptr.h>
+#include <thrust/fill.h>
+#include <vector>
+#include <algorithm>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -28,7 +32,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
 {
   if(GK_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
-
+  
   switch(classT){
   case FIELD:
     field_length = 1;
@@ -59,7 +63,6 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
     total_length = GK_localVolume/GK_localL[3];
     break;
   }
-
   ghost_length = 0;
 
   for(int i = 0 ; i < N_DIMS ; i++)
@@ -426,6 +429,22 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
   Fin.cpuExchangeGhost(dirOr);
   Fin.ghostToDevice();
   shiftField(Fin,*this,dirOr);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
+  /* 
+   * Set specific indices of Field to one as provided from indOne
+   * Example: For Su3 field indOne ={0,4,8};
+   */
+  for(int i = 0 ; i < Field_length(); i++){
+    std::vector<int>::iterator it = std::find(indDiag.begin(), indDiag.end(), i);
+    thrust::device_ptr<Float2<Float> > dev_ptr( (Float2<Float>*) (this->D_elem() + i*(this->Total_length())*2));
+    Float2<Float> value;
+    value.y=0.;
+    value.x=(it != indDiag.end() )?1.:0.;
+    thrust::fill(dev_ptr, dev_ptr + this->Total_length(), value);
+  }
 }
 
 template class PLEGMA_Field<float>;

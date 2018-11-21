@@ -2,6 +2,7 @@
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_plaquette.cuh>
 #include <PLEGMA_su3field.cuh>
+#include <PLEGMA_field_utils.cuh>
 using namespace plegma;
 
 //--------------------------//
@@ -151,6 +152,53 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
       tmp1.UxUdag(*(u_s2[idir]), *(u_s1[idir]));
       tmp2.traceHerExpMap(tmp1);
       u_s2[idir]->UxU(tmp2, *(u_s1[idir]));
+    }
+    for(int idir = 0 ; idir < D3D4; idir++){
+      ref=u_s2[idir];
+      u_s2[idir]=u_s1[idir];
+      u_s1[idir]=ref;
+    }
+  }
+
+  for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);
+  if(D3D4 == 3){
+    int offset = 3*(tmp1.Field_length())*(tmp1.Total_length())*2;
+    cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
+    checkCudaError();
+  }
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    delete u_s1[idir];
+    delete u_s2[idir];
+  }
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4){
+  if(nSmear < 1){
+    cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    return;
+  }
+  PLEGMA_Su3field<Float> tmp1(BOTH);
+  PLEGMA_Su3field<Float> tmp2(BOTH);
+
+  PLEGMA_Su3field<Float> *u_s1[D3D4];
+  PLEGMA_Su3field<Float> *u_s2[D3D4];
+
+  PLEGMA_Su3field<Float> *ref;
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    u_s1[idir]->absorbDir_device(*this,idir);
+    u_s2[idir] = new PLEGMA_Su3field<Float>(BOTH);
+  }
+
+  for(int i = 0; i < nSmear; i++){
+    for(int idir = 0 ; idir < D3D4; idir++){
+      u_s2[idir]->staples(u_s1, idir, tmp1, tmp2, alpha, D3D4);
+      xpby(*(u_s2[idir]), *(u_s2[idir]), *(u_s1[idir]), (Float) 1. );
+      u_s2[idir]->su3Projection();
     }
     for(int idir = 0 ; idir < D3D4; idir++){
       ref=u_s2[idir];
