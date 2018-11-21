@@ -18,6 +18,12 @@
 
 namespace plegma {
 
+  template<typename Float>
+  __inline__ __device__ Float2<Float> det(Float2<Float> a[N_COLS][N_COLS]){
+  return a[0][1]*a[1][2]*a[2][0] + a[0][2]*a[1][0]*a[2][1] +a[0][0]*a[1][1]*a[2][2]
+    - a[0][2]*a[1][1]*a[2][0] - a[0][0]*a[1][2]*a[2][1] - a[0][1]*a[1][0]*a[2][2];
+  }
+  
   template<typename FloatR, typename FloatU>
   __inline__ __device__ FloatR real_trace(Float2<FloatU> a[N_COLS][N_COLS]){
     FloatR r = a[0][0].x+a[1][1].x+a[2][2].x;
@@ -105,6 +111,20 @@ namespace plegma {
       #pragma unroll
       for(int k=0; k<N_COLS; k++) {
         a[i][j] = a[i][j] + b[i][k]*conj(c[j][k]);
+      }
+    }
+  }
+
+  template<typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ void mul_Gdag_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++)
+    #pragma unroll
+    for(int j=0; j<N_COLS; j++) {
+      a[i][j] = 0.;
+      #pragma unroll
+      for(int k=0; k<N_COLS; k++) {
+        a[i][j] = a[i][j] + conj(b[k][i])*c[k][j];
       }
     }
   }

@@ -65,6 +65,22 @@ namespace plegma {
   }
 
   template<typename Float>
+  inline __device__ Float2<Float> operator/(const Float2<Float> x, const Float2<Float> y){
+  Float2<Float> res;
+  res.x = (x.x * y.x + x.y * y.y) / (y.x * y.x + y.y * y.y);
+  res.y = (x.y * y.x - x.x * y.y) / (y.x * y.x + y.y * y.y);
+  return res;
+}
+
+  template<typename Float>
+  inline __device__ Float2<Float> operator/(const Float2<Float> a, const Float b){
+    Float2<Float> res;
+    res.x = a.x/b;
+    res.y = a.y/b;
+    return res;
+  }
+  
+  template<typename Float>
   inline __device__ Float2<Float> operator*(const Float a, const Float2<Float> b){
     Float2<Float> res;
     res.x = a*b.x;
@@ -120,5 +136,24 @@ namespace plegma {
     res.y = -a.y;
     return res;
   }
+
+  template<typename Float>
+  inline __device__ Float norm2(const Float2<Float> a){
+    return a.x*a.x + a.y*a.y;
+  }
+
+  template<typename Float>
+  inline __device__ Float norm(const Float2<Float> a){
+    return sqrt(norm2(a));
+  }
+
+  template<typename Float>
+  inline __device__ Float2<Float> cpow(const Float2<Float> x , const Float a){
+    Float2<Float> res;
+    res.x = pow(norm(x),a) * cos( atan2(x.y,x.x) * a);
+    res.y = pow(norm(x),a) * sin( atan2(x.y,x.x) * a);
+    return res;
+  }
+
 }
 #endif
