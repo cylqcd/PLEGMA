@@ -102,11 +102,8 @@ PLEGMA_Field<Float>::~PLEGMA_Field(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::pack( Float *topack ){
-  #pragma unroll
   for(int i=0; i<field_length; i++){
-    #pragma unroll
     for(int j=0; j<total_length; j++){
-      #pragma unroll
       for(int part=0; part<2; part++)
 	h_elem[i*total_length*2 + j*2 + part] = topack[j*field_length*2 + i*2 + part];
     }
@@ -114,23 +111,13 @@ void PLEGMA_Field<Float>::pack( Float *topack ){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::unpack(){
-
-  Float *tmp = (Float*) malloc( bytes_total_length );
-  if( tmp == NULL )
-    errorQuda("Error in allocate memory of tmp field obj in unpack\n");
-
-  #pragma unroll
+void PLEGMA_Field<Float>::unpack(Float *out){
   for(int i=0; i<field_length; i++){
-    #pragma unroll
     for(int j=0; j<total_length; j++){
-      #pragma unroll
       for(int part=0; part<2; part++)
-	tmp[j*field_length*2 + i*2 + part] = h_elem[i*total_length*2 + j*2 + part];
+	out[j*field_length*2 + i*2 + part] = h_elem[i*total_length*2 + j*2 + part];
     }
   }  
-  memcpy(h_elem, tmp, bytes_total_length);  
-  free(tmp);
 }
 
 

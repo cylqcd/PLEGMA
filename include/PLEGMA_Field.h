@@ -75,7 +75,7 @@ namespace plegma {
     void ghostToDevice();
 
     void pack(Float *topack);
-    void unpack();
+    void unpack(Float *out);
 
     void load();
     void unload();

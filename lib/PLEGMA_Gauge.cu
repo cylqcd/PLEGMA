@@ -14,13 +14,7 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag):
   PLEGMA_Field<Float>(alloc_flag, GAUGE){ ; }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGauge(double *p_gauge){
-  PLEGMA_Field<Float>::pack( (Float*)p_gauge ); 
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::packGauge(double **p_gauge){
-
+void PLEGMA_Gauge<Float>::pack(double **p_gauge){
   #pragma unroll
   for(int dir = 0 ; dir < N_DIMS ; dir++){
     #pragma unroll
@@ -37,7 +31,7 @@ void PLEGMA_Gauge<Float>::packGauge(double **p_gauge){
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
+void PLEGMA_Gauge<Float>::packToBackup(void **gauge){
   double **p_gauge = (double**) gauge;
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     for(int dir = 0 ; dir < N_DIMS ; dir++)
@@ -61,7 +55,7 @@ void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::loadGaugeFromBackup(){
+void PLEGMA_Gauge<Float>::loadFromBackup(){
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem_backup, PLEGMA_Field<Float>::bytes_total_length, 
 	       cudaMemcpyHostToDevice );

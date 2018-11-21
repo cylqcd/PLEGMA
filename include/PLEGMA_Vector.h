@@ -21,11 +21,6 @@ namespace plegma {
     PLEGMA_Vector(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Vector(){;}
     
-    void packVector(Float *vector);
-    void unpackVector();
-    void unpackVector(Float *vector);
-    
-    void download(); // take the vector from device to host
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gaugeAPE);
