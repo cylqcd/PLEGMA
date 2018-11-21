@@ -41,3 +41,6 @@ target_link_libraries(PlaquetteWshifts ${PLEGMA_LIBS})
 cuda_add_executable(Source Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
 
+cuda_add_executable(StoutSmearing StoutSmearing.cpp)
+target_link_libraries(StoutSmearing ${PLEGMA_LIBS})
+

@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 
   pGauge.packGauge(gauge.get_ptr());
   pGauge.loadGauge();
+  pGauge.stoutSmearing(pGauge, 10, 0.1, 4);
   pGauge.calculatePlaqShifts();
 
   // finalize the QUDA library
