@@ -176,7 +176,7 @@ static __global__ void su3Projection_kernel(Float* S){
       }
     }
     
-    mul_Gdag_G(H,M,v);
+    mul_G_Gdag(H,M,v);
     mul_G_G(U,H,vr);
 
     norma = norm2(U[0][0]) + norm2(U[1][0]) + norm2(U[2][0]);
