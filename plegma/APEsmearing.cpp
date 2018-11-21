@@ -36,8 +36,8 @@ int main(int argc, char **argv)
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> pGauge(BOTH);
 
-  pGauge.packGauge(gauge.get_ptr());
-  pGauge.loadGauge();
+  pGauge.pack(gauge.get_ptr());
+  pGauge.load();
   pGauge.APEsmearing(pGauge, 10, 0.1, 3);
   pGauge.calculatePlaqShifts();
 

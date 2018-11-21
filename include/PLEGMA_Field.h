@@ -74,6 +74,12 @@ namespace plegma {
     void cpuExchangeGhost(int dirOr=-1);
     void ghostToDevice();
 
+    void pack(Float *topack);
+    void unpack(Float *out);
+
+    void load();
+    void unload();
+    
     void shift(PLEGMA_Field &Fin, int dirOr);
     void setUnit(std::vector<int> indDiag);
   };

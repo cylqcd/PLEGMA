@@ -35,8 +35,8 @@ int main(int argc, char **argv)
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> pGauge(BOTH);
-  pGauge.packGauge(gauge.get_ptr());
-  pGauge.loadGauge();
+  pGauge.pack(gauge.get_ptr());
+  pGauge.load();
   //  std::vector<int> indDiag = {0, 4, 8, 9, 13, 17, 18, 22, 26, 27, 31, 35};
   //pGauge.setUnitMatrix(indDiag);
   PLEGMA_Su3field<double> su3(BOTH);

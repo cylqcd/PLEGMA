@@ -14,24 +14,22 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag):
   PLEGMA_Field<Float>(alloc_flag, GAUGE){ ; }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGauge(double **p_gauge){
-  
-  for(int dir = 0 ; dir < N_DIMS ; dir++)
-    for(int iv = 0 ; iv < GK_localVolume ; iv++)
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int c2 = 0 ; c2 < N_COLS ; c2++)
-	  for(int part = 0 ; part < 2 ; part++){
-	    PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + 
-		       c1*N_COLS*GK_localVolume*2 + 
-		       c2*GK_localVolume*2 + 
-		       iv*2 + part] = 
-	      (Float) p_gauge[dir][iv*N_COLS*N_COLS*2 + 
-				   c1*N_COLS*2 + c2*2 + part];
-	  }
+void PLEGMA_Gauge<Float>::pack(double **p_gauge){
+  for(int dir = 0 ; dir < N_DIMS ; dir++){
+    for(int i = 0 ; i < GK_localVolume ; i++){
+      #pragma unroll
+      for(int j = 0; j < N_COLS*N_COLS; j++){
+	#pragma unroll
+	for(int part = 0; part < 2; part++)
+	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + j*GK_localVolume*2 + i*2 + part] =
+	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part];
+      }
+    }
+  }
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
+void PLEGMA_Gauge<Float>::packToBackup(void **gauge){
   double **p_gauge = (double**) gauge;
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     for(int dir = 0 ; dir < N_DIMS ; dir++)
@@ -55,21 +53,7 @@ void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::justDownloadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyHostToDevice );
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadGaugeFromBackup(){
+void PLEGMA_Gauge<Float>::loadFromBackup(){
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem_backup, PLEGMA_Field<Float>::bytes_total_length, 
 	       cudaMemcpyHostToDevice );

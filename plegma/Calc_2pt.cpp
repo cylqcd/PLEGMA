@@ -46,8 +46,8 @@ int main(int argc, char **argv)
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> smearedGauge(BOTH);
-  smearedGauge.packGauge(gauge_APE.get_ptr());
-  smearedGauge.loadGauge();
+  smearedGauge.pack(gauge_APE.get_ptr());
+  smearedGauge.load();
   printfQuda("Plaquette of smeared config:\n");
   smearedGauge.calculatePlaq();
 

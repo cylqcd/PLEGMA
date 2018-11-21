@@ -101,6 +101,41 @@ PLEGMA_Field<Float>::~PLEGMA_Field(){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::pack( Float *topack ){
+  for(int i=0; i<field_length; i++){
+    for(int j=0; j<total_length; j++){
+      for(int part=0; part<2; part++)
+	h_elem[i*total_length*2 + j*2 + part] = topack[j*field_length*2 + i*2 + part];
+    }
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::unpack(Float *out){
+  for(int i=0; i<field_length; i++){
+    for(int j=0; j<total_length; j++){
+      for(int part=0; part<2; part++)
+	out[j*field_length*2 + i*2 + part] = h_elem[i*total_length*2 + j*2 + part];
+    }
+  }  
+}
+
+
+
+template<typename Float>
+void PLEGMA_Field<Float>::load(){
+  cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
+  checkCudaError();
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::unload(){
+  cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
+  checkCudaError();
+}
+
+
+template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
   h_elem = (Float*) malloc(bytes_total_plus_ghost_length);
   h_ext_ghost = (Float*) malloc(bytes_ghost_length);
