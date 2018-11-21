@@ -15,9 +15,7 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag):
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::pack(double **p_gauge){
-  #pragma unroll
   for(int dir = 0 ; dir < N_DIMS ; dir++){
-    #pragma unroll
     for(int i = 0 ; i < GK_localVolume ; i++){
       #pragma unroll
       for(int j = 0; j < N_COLS*N_COLS; j++){
