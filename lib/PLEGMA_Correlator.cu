@@ -112,6 +112,7 @@ writeFile(PLEGMA_params &params) {
   char *filename, *Qsq, *name2;
   std::string ext="", name="";
   if(params.CorrSpace==MOMENTUM_SPACE) asprintf(&Qsq,"Qsq%d_",params.Q_sq);
+  else asprintf(&Qsq,"");
   if(params.CorrFileFormat == ASCII_FORM) ext = ".dat";
   else if(params.CorrFileFormat == HDF5_FORM) ext = ".h5";
   switch(corr_type) {
@@ -134,8 +135,7 @@ writeFile(PLEGMA_params &params) {
     name = "unknown.%04d";
   }
   asprintf(&name2, name.c_str(), params.traj);
-  
-  asprintf(&filename,"%s/%s.%04d_%sSS.%02d.%02d.%02d.%02d%s" ,
+  asprintf(&filename,"%s/%s_%sSS.%02d.%02d.%02d.%02d%s" ,
 	   params.corr_dir, name2, Qsq,
 	   params.sourcePosition[isource][0],
 	   params.sourcePosition[isource][1],
@@ -143,8 +143,9 @@ writeFile(PLEGMA_params &params) {
 	   params.sourcePosition[isource][3], ext.c_str());
 
   writeFile(filename, params);
-  
+  free(name2);
   free(Qsq);
+  free(filename);
 }
 
 
