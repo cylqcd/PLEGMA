@@ -17,6 +17,8 @@
 #define THREADS_PER_BLOCK 64
 //#define TIMING_REPORT
 
+using namespace plegma;
+
 namespace plegma {
 
   template<typename FloatR, typename FloatU>
