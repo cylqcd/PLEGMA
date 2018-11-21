@@ -384,7 +384,7 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::setUnitMatrix(std::vector<int> indDiag){
+void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
   /* 
    * Set specific indices of Field to one as provided from indOne
    * Example: For Su3 field indOne ={0,4,8};

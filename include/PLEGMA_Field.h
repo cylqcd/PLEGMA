@@ -75,7 +75,7 @@ namespace plegma {
     void ghostToDevice();
 
     void shift(PLEGMA_Field &Fin, int dirOr);
-    void setUnitMatrix(std::vector<int> indDiag);
+    void setUnit(std::vector<int> indDiag);
   };
 }
 #endif
