@@ -76,9 +76,12 @@ namespace plegma {
     } 
     void printInfo();
     void ghostToHost(int dirOr=-1);
+    void ghostCornerToHost(int dirOr=-1);
     void cpuExchangeGhost(int dirOr=-1);
+    void cpuExchangeGhostCorner(int dirOr=-1);
     void ghostToDevice();
-
+    void ghostCornerToDevice();
+    
     void shift(PLEGMA_Field &Fin, int dirOr);
   };
 }

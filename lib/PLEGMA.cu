@@ -158,7 +158,7 @@ void plegma::initialize(PLEGMA_params *params){
 	if(i!=j && GK_dimBreak[i] && GK_dimBreak[j]){
 	  GK_surface2D[i][j] = 1;
 	  for(int k=0; k<N_DIMS; k++)
-	    GK_surface2D[i][j] *= (k!=i && k!=j) GK_localL[k] : 1;
+	    GK_surface2D[i][j] *= (k!=i && k!=j) ? GK_localL[k] : 1;
 	}
 	else GK_surface2D[i][j] = 0;
       }
