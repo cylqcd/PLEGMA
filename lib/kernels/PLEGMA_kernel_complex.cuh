@@ -34,6 +34,13 @@ namespace plegma {
       this->x = arg;
       this->y = 0.;
     }
+
+    template<typename FloatIn>
+    inline __device__ Float2<Float>(FloatIn x, FloatIn y){
+      this->x = x;
+      this->y = y;
+    }
+
     template<typename FloatIn>
     inline __device__ Float2<Float>(FloatIn arg, COMPLEX ri) {
       if(ri == IMAG) {
