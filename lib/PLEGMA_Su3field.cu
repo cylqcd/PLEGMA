@@ -3,6 +3,7 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_SU3_projection.cuh>
+
 using namespace plegma;
 
 //--------------------------//
@@ -119,6 +120,27 @@ void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA
   checkCudaError();
 }
 
+
+template<typename Float>
+void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLEGMA_Su3field<Float> &tmp,  int dirOr){
+  /* This function updates the wilson line with the provided input field
+   * The input field is also output in the sense that is shifted in order to
+   * continue building the Wilson line. The option dirOr is the direction and
+   * orientation we shift the fields to do the line. For example if you want
+   * to build a Wilson line in +x direction you should provide dirOr=4+0.
+   */
+  if( !((dirOr >= 0) && (dirOr <= 7)) ) errorQuda("Error you provided a direction which is not supported");
+  cudaMemcpy(tmp.D_elem(), inOut.D_elem(), tmp.Bytes_total(), cudaMemcpyDeviceToDevice);
+  checkCudaError();
+  if(dirOr > 3){
+    UxU(*this, inOut);
+    inOut.shift(tmp,dirOr);
+  }
+  else{
+    inOut.shift(tmp,dirOr);
+    UxUdag(*this, inOut);
+  }
+}
 
 template class PLEGMA_Su3field<float>;
 template class PLEGMA_Su3field<double>;
