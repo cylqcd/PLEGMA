@@ -15,15 +15,14 @@ namespace plegma {
     PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag);
     ~PLEGMA_Gauge(){;}
     
-    void packGauge(double **gauge);
-    void packGaugeToBackup(void **gauge);
-    void loadGaugeFromBackup();
-    void justDownloadGauge();
-    void loadGauge();
+    void pack(double **gauge);
+    void packToBackup(void **gauge);
+    void loadFromBackup();
 
     void absorbDir_device(PLEGMA_Su3field<Float> &su,int dir);
     void absorbDir_host(PLEGMA_Su3field<Float> &su,int dir);
     void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4);
+    void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
     void calculatePlaq();
     void calculatePlaqShifts();
   };

@@ -1,5 +1,5 @@
 #include <PLEGMA_global.h>
-
+#include <vector>
 #ifndef _PLEGMA_FIELD_H
 #define _PLEGMA_FIELD_H
 
@@ -16,7 +16,7 @@ namespace plegma {
     int total_length;        
     int ghost_length;
     int total_plus_ghost_length;
-
+    
     size_t bytes_total_length;
     size_t bytes_ghost_length;
     size_t bytes_total_plus_ghost_length;
@@ -74,7 +74,14 @@ namespace plegma {
     void cpuExchangeGhost(int dirOr=-1);
     void ghostToDevice();
 
+    void pack(Float *topack);
+    void unpack(Float *out);
+
+    void load();
+    void unload();
+    
     void shift(PLEGMA_Field &Fin, int dirOr);
+    void setUnit(std::vector<int> indDiag);
   };
 }
 #endif
