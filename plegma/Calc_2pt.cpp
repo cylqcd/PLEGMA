@@ -52,11 +52,11 @@ int main(int argc, char **argv)
 
   // ensuring mu positive
   if(mu<0) mu*=-1.;
-  QUDA_solver solverUP(mu);
+  QUDA_solver *solverUP = new QUDA_solver(mu);
 
   // ensuring mu negative
   if(mu>0) mu*=-1.;
-  QUDA_solver solverDN(mu);
+  QUDA_solver *solverDN = new QUDA_solver(mu);
 
   PLEGMA_Vector<double> vectorIn(BOTH);
   PLEGMA_Vector<double> vectorOut(BOTH);
@@ -79,13 +79,13 @@ int main(int argc, char **argv)
       vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
       
       printfQuda("Going to invert UP for component %d\n", isc);
-      solverUP.solve(vectorOut, vectorIn);
+      solverUP->solve(vectorOut, vectorIn);
       vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
       vectorAuxF.copy(vectorAuxD);
       propUP.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
 
       printfQuda("Going to invert DN for component %d\n", isc);
-      solverDN.solve(vectorOut, vectorIn);
+      solverDN->solve(vectorOut, vectorIn);
       vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
       vectorAuxF.copy(vectorAuxD);
       propDN.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
@@ -100,6 +100,9 @@ int main(int argc, char **argv)
     corr.contractBaryons(propUP, propDN, isource, params.CorrSpace);
     corr.writeFile(params);
   }
+
+  delete solverUP;
+  delete solverDN;
   
   // finalize the QUDA library
   saveTuneCache(false);
