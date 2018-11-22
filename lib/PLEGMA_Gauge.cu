@@ -2,6 +2,7 @@
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_plaquette.cuh>
 #include <PLEGMA_su3field.cuh>
+#include <PLEGMA_kernel_phase_gaugeField.cuh>
 using namespace plegma;
 
 //--------------------------//
@@ -179,6 +180,15 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
     delete u_s2[idir];
   }
 }
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::mulPhase_gauge(Float xi[4],int mom[4]){
+  phase_gauge_field(PLEGMA_Field<Float>::d_elem,xi,mom);
+  ghostToHost();
+  cpuExchangeGhost();
+  ghostToDevice();
+}
+
 
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;
