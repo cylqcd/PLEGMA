@@ -19,6 +19,7 @@ __constant__ int c_cornerGhost[2*N_DIMS][2*N_DIMS];
 __constant__ int c_stride;
 __constant__ int c_stride_spatial;
 __constant__ int c_surface[N_DIMS];
+__constant__ int c_surface2D[N_DIMS][N_DIMS];
 __constant__ double c_alphaAPE;
 __constant__ double c_alphaGauss;
 __constant__ int c_threads;

@@ -35,6 +35,12 @@
 #define LEXIC_TZX(it,iz,ix,L) ( (it)*L[0]*L[2] + (iz)*L[0] + (ix) )
 #define LEXIC_TYX(it,iy,ix,L) ( (it)*L[0]*L[1] + (iy)*L[0] + (ix) )
 #define LEXIC_ZYX(iz,iy,ix,L) ( (iz)*L[0]*L[1] + (iy)*L[0] + (ix) )
+#define LEXIC_TZ(it,iz,L) ( (it)*L[2] + (iz) )
+#define	LEXIC_TY(it,iy,L) ( (it)*L[1] + (iy) )
+#define	LEXIC_TX(it,ix,L) ( (it)*L[0] + (ix) )
+#define	LEXIC_ZY(iz,iy,L) ( (iz)*L[1] + (iy) )
+#define	LEXIC_ZX(iz,ix,L) ( (iz)*L[0] + (ix) )
+#define	LEXIC_YX(iy,ix,L) ( (iy)*L[0] + (ix) )
 
 template<typename Float> inline MPI_Datatype MPI_Type(Float a);
 template<> inline MPI_Datatype MPI_Type<float>(float a) { return MPI_FLOAT; }

@@ -11,6 +11,18 @@
                       (i==1 ? LEXIC_TZX(id[3],id[2],id[0],c_localL) : \
 		      (i==2 ? LEXIC_TYX(id[3],id[1],id[0],c_localL) : \
 		              LEXIC_ZYX(id[2],id[1],id[0],c_localL))))
+#define LEXIC_2D(i,j,id)( i==0 ? ( j==1 ? LEXIC_TZ(id[3],id[2],c_localL) : \
+				   ( j==2 ? LEXIC_TY(id[3],id[1],c_localL) : \
+				     ( j==3 ? LEXIC_ZY(id[2],id[1],c_localL) ) ) ) : \
+			  ( i==1 ? ( j==0 ? LEXIC_TZ(id[3],id[2],c_localL) : \
+				     ( j==2 ? LEXIC_TX(id[3],id[0],c_localL) : \
+				       ( j==3 ? LEXIC_ZX(id[2],id[0],c_localL) ) ) ) : \
+			    ( i==2 ? ( j==0 ? LEXIC_TY(id[3],id[1],c_localL) : \
+				       ( j==1 ? LEXIC_TX(id[3],id[0],c_localL) : \
+					 ( j==3 ? LEXIC_YX(id[1],id[0],c_localL) ) ) ) : \
+			      ( ( j==0 ? LEXIC_ZY(id[2],id[1],c_localL) : \
+				  ( j==1 ? LEXIC_ZX(id[2],id[0],c_localL) : \
+				    ( j==2 ? LEXIC_YX(id[1],id[0],c_localL) ) ) ) ) ) ) )  
 #define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]+1)%c_localL[0],c_localL) : \
                         (i==1 ? LEXIC(id[3],id[2],(id[1]+1)%c_localL[1],id[0],c_localL) : \
                         (i==2 ? LEXIC(id[3],(id[2]+1)%c_localL[2],id[1],id[0],c_localL) : \
@@ -90,12 +102,14 @@ namespace plegma {
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
       if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
 
-      if(plus_ghost && minus_ghost) printf("!!!!!!!   ERROR: plus and minus ghost together need corner halos\n");
-      
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
-      
-      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      if(plus_ghost && minus_ghost){
+	int sidPlusMinus = c_cornerGhost[dirPlus][N_DIMS+dirMinus]*offset + LEXIC_2D(dirPlus,dirMinus,id);
+	int stridePlusMinus = c_surface2D[dirPlus][dirMinus];
+      } else{
+	int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) :
+	  ( minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));	
+	int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      }
       return get(i,sidPlusMinus,stridePlusMinus);
     }
     inline __device__ Float2<Float> getMinusPlus(int i, int offset, short int dirMinus, short int dirPlus, int sid) {
@@ -165,11 +179,16 @@ namespace plegma {
       if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
       bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
       if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
-      
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
-      
-      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      int offset = N_SPINS*N_COLS*N_COLS;
+      if(plus_ghost && minus_ghost){
+	int sidPlusMinus = c_cornerGhost[dirPlus][N_DIMS+dirMinus]*offset + LEXIC_2D(dirPlus,dirMinus,id);
+	int stridePlusMinus = c_surface2D[dirPlus][dirMinus];
+      }
+      else{
+	int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) :
+	  ( minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+	int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+      }
       return get(G,dirLink,sidPlusMinus,stridePlusMinus);
     }
     inline __device__ void getMinusPlus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirMinus, short int dirPlus, int sid) {
