@@ -11,8 +11,11 @@
 
 namespace plegma {
   
-  void initialize(PLEGMA_params *params);
+  void PLEGMA_init(PLEGMA_params *params);
 
   void print_status();
+
+  void PLEGMA_end();
+  
 }
 #endif

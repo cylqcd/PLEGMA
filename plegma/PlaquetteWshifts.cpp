@@ -10,18 +10,7 @@ extern char latfile[];
 int main(int argc, char **argv)
 {
   PLEGMA_params params;
-  read_command_line(argc, argv, &params);
-  
-  // initialize QMP/MPI, QUDA comms grid and RNG 
-  initComms(argc, argv, params.procs);
-
-  // initialize the QUDA library
-  initQuda(device);
-  print_info();
-
-  // initialize PLEGMA info
-  initialize(&params);
-  print_status();
+  initialize(argc, argv, &params);
 
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
@@ -40,12 +29,6 @@ int main(int argc, char **argv)
   pGauge.load();
   pGauge.calculatePlaqShifts();
 
-  // finalize the QUDA library
-  saveTuneCache(false);
-  endQuda();
-    
-  // finalize the communications layer
-  finalizeComms();
-
+  finalize();
   return 0;
 }

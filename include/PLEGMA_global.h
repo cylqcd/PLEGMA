@@ -12,7 +12,6 @@
 #define PI 3.141592653589793
 
 #define N_MESONS  10
-#define N_BARYONS 10
 #define N_DIMS     4
 #define N_COLS     3
 #define N_SPINS    4
@@ -72,9 +71,6 @@ extern int GK_localRank;
 extern int GK_localSize;
 extern int GK_timeRank;
 extern int GK_timeSize;
-// preconditioner params
-extern void* preconditionerUP;
-extern void* preconditionerDN;
 
 namespace plegma {
   template<typename Float> struct texture;
@@ -112,6 +108,7 @@ namespace plegma {
     int Nproj[MAX_TSINK];
     int traj;
     bool check_files;
+    char *corr_dir;
     char *thrp_type[3];
     char *thrp_proj_type[5];
     char *baryon_type[10];

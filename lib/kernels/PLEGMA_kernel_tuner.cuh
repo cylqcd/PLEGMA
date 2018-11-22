@@ -2,6 +2,9 @@
 #include <tune_quda.h>
 using namespace quda;
 
+#ifndef PLEGMA_KERNEL_TUNER_H
+#define PLEGMA_KERNEL_TUNER_H
+
 extern __device__ cudaDeviceProp devProp;
 
 // struct that contains all variables
@@ -132,3 +135,5 @@ void PLEGMA_kernel_tuner<ArgsStruct>::run(){
   (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,0>>>(*args);
 #endif
 }
+
+#endif

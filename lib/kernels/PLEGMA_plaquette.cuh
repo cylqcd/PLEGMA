@@ -46,20 +46,7 @@ static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> arg
   } else {
     shared_cache[cacheIndex] = 0.;
   }
-  __syncthreads(); // synchronize threads to be sure that all have written their register trace to share memory
-  // for reduction threads per block must be power of 2 ( this is always my case)
-  int i = blockDim.x/2;
-  int r = blockDim.x%2;
-  while (i > 0){
-    if(cacheIndex < i){
-      shared_cache[cacheIndex] += shared_cache[cacheIndex + i];
-      if(r==1 && cacheIndex==i-1)
-	 shared_cache[cacheIndex] += shared_cache[cacheIndex + i+1];
-    }
-    __syncthreads();
-    r = i%2;
-    i /= 2;
-  }
+  reduce(shared_cache, 1);
 
   // now on the first element of the shared memory we have the reduction of block threads
   if(cacheIndex == 0 && args.partial_plaq!=NULL)

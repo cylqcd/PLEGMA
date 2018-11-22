@@ -166,6 +166,12 @@ QUDA_solver::~QUDA_solver(){
   delete profiler;
   delete b;
   delete x;
+  delete M;
+  delete MSloppy;
+  delete MPre;
+  delete D;
+  delete DSloppy;
+  delete DPre;
 }
 
 template<typename Float>
