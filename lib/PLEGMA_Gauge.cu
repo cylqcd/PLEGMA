@@ -3,6 +3,8 @@
 #include <PLEGMA_plaquette.cuh>
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_kernel_phase_gaugeField.cuh>
+#include <PLEGMA_field_utils.cuh>
+
 using namespace plegma;
 
 //--------------------------//
@@ -14,24 +16,22 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag):
   PLEGMA_Field<Float>(alloc_flag, GAUGE){ ; }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGauge(double **p_gauge){
-  
-  for(int dir = 0 ; dir < N_DIMS ; dir++)
-    for(int iv = 0 ; iv < GK_localVolume ; iv++)
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int c2 = 0 ; c2 < N_COLS ; c2++)
-	  for(int part = 0 ; part < 2 ; part++){
-	    PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + 
-		       c1*N_COLS*GK_localVolume*2 + 
-		       c2*GK_localVolume*2 + 
-		       iv*2 + part] = 
-	      (Float) p_gauge[dir][iv*N_COLS*N_COLS*2 + 
-				   c1*N_COLS*2 + c2*2 + part];
-	  }
+void PLEGMA_Gauge<Float>::pack(double **p_gauge){
+  for(int dir = 0 ; dir < N_DIMS ; dir++){
+    for(int i = 0 ; i < GK_localVolume ; i++){
+      #pragma unroll
+      for(int j = 0; j < N_COLS*N_COLS; j++){
+	#pragma unroll
+	for(int part = 0; part < 2; part++)
+	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + j*GK_localVolume*2 + i*2 + part] =
+	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part];
+      }
+    }
+  }
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
+void PLEGMA_Gauge<Float>::packToBackup(void **gauge){
   double **p_gauge = (double**) gauge;
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     for(int dir = 0 ; dir < N_DIMS ; dir++)
@@ -55,21 +55,7 @@ void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::justDownloadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyHostToDevice );
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadGaugeFromBackup(){
+void PLEGMA_Gauge<Float>::loadFromBackup(){
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem_backup, PLEGMA_Field<Float>::bytes_total_length, 
 	       cudaMemcpyHostToDevice );
@@ -182,11 +168,59 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
 }
 
 template<typename Float>
+
 void PLEGMA_Gauge<Float>::mulPhase_gauge(Float xi[4],int mom[4]){
   phase_gauge_field(PLEGMA_Field<Float>::d_elem,xi,mom);
   ghostToHost();
   cpuExchangeGhost();
   ghostToDevice();
+}
+
+
+void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4){
+  if(nSmear < 1){
+    cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    return;
+  }
+  PLEGMA_Su3field<Float> tmp1(BOTH);
+  PLEGMA_Su3field<Float> tmp2(BOTH);
+
+  PLEGMA_Su3field<Float> *u_s1[D3D4];
+  PLEGMA_Su3field<Float> *u_s2[D3D4];
+
+  PLEGMA_Su3field<Float> *ref;
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    u_s1[idir]->absorbDir_device(*this,idir);
+    u_s2[idir] = new PLEGMA_Su3field<Float>(BOTH);
+  }
+
+  for(int i = 0; i < nSmear; i++){
+    for(int idir = 0 ; idir < D3D4; idir++){
+      u_s2[idir]->staples(u_s1, idir, tmp1, tmp2, alpha, D3D4);
+      xpby(*(u_s2[idir]), *(u_s2[idir]), *(u_s1[idir]), (Float) 1. );
+      u_s2[idir]->su3Projection();
+    }
+    for(int idir = 0 ; idir < D3D4; idir++){
+      ref=u_s2[idir];
+      u_s2[idir]=u_s1[idir];
+      u_s1[idir]=ref;
+    }
+  }
+
+  for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);
+  if(D3D4 == 3){
+    int offset = 3*(tmp1.Field_length())*(tmp1.Total_length())*2;
+    cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
+    checkCudaError();
+  }
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    delete u_s1[idir];
+    delete u_s2[idir];
+  }
 }
 
 

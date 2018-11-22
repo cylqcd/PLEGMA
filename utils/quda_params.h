@@ -66,8 +66,6 @@ extern char vec_outfile[];
 
 extern QudaTwistFlavorType twist_flavor;
 
-extern void usage(char** );
-
 extern double clover_coeff;
 extern bool compute_clover;
 extern QudaMassNormalization normalization; // mass normalization of Dirac operators

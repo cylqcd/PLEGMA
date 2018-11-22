@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 {
   PLEGMA_params params;
   initialize(argc, argv, &params);
-
+  
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
 
@@ -27,8 +27,10 @@ int main(int argc, char **argv)
 
   pGauge.pack(gauge.get_ptr());
   pGauge.load();
+  pGauge.APEsmearing(pGauge, 10, 0.1, 3);
   pGauge.calculatePlaqShifts();
 
   finalize();
+
   return 0;
 }
