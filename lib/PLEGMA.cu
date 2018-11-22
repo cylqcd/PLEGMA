@@ -78,7 +78,7 @@ static void createMomenta(int Q_sq){
   GK_Nmoms=counter;
 }
 
-void plegma::initialize(PLEGMA_params *params){
+void plegma::PLEGMA_init(PLEGMA_params *params){
   
   if(GK_init_PLEGMA_flag == false){
     GK_alphaAPE = params->alphaAPE;
@@ -242,4 +242,8 @@ void plegma::print_status(){
   printfQuda("For Gauss smearing we use nsmear = %d , alpha = %lf\n",GK_nsmearGauss,GK_alphaGauss);
   printfQuda("I got %d source positions to work on\n",GK_Nsources);
   printfQuda("I got %d number of momenta to work on\n",GK_Nmoms);
+}
+
+void plegma::PLEGMA_end() {
+  // TODO: here we should destroy everything is created in init.
 }
