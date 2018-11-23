@@ -27,6 +27,9 @@ namespace quda {
   public:
     QUDA_solver(double mu);
     virtual ~QUDA_solver();
+    cudaColorSpinorField* solve(cudaColorSpinorField * rhs);
+    template<typename Float>
+    cudaColorSpinorField* solve(PLEGMA_Vector<Float> &vectorIn);
     template<typename Float>
     void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
   };

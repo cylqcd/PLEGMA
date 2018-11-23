@@ -174,6 +174,27 @@ QUDA_solver::~QUDA_solver(){
   delete DPre;
 }
 
+cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
+  ColorSpinorField *in = NULL;
+  ColorSpinorField *out = NULL;
+  D->prepare(in,out,*x,*rhs,inv_param.solution_type);
+  (*solver)(*out, *in);
+  D->reconstruct(*x,*rhs,inv_param.solution_type);
+  return x;
+}
+
+template<typename Float>
+cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
+  bool flag_eo;
+  if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
+    flag_eo = true;
+  else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
+    flag_eo = false;
+
+  vectorIn.copyToQUDA(b,flag_eo);
+  return solve(b);
+}
+
 template<typename Float>
 void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &vectorIn){
   bool flag_eo;
@@ -182,13 +203,8 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
   else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
     flag_eo = false;
 
-  ColorSpinorField *in = NULL;
-  ColorSpinorField *out = NULL;
-  vectorIn.copyToQUDA(b,flag_eo);
-  D->prepare(in,out,*x,*b,inv_param.solution_type);
-  (*solver)(*out, *in);
-  D->reconstruct(*x,*b,inv_param.solution_type);
-  vectorOut.copyFromQUDA(x,flag_eo);
+  x = solve(vectorIn); 
+  vectorOut.copyFromQUDA( x, flag_eo);
   if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION || 
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
     vectorOut.scaleVector(2*inv_param.kappa);
