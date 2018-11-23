@@ -25,6 +25,7 @@ namespace plegma {
     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
     void calculatePlaq();
     void calculatePlaqShifts();
+    void mulPhase_gauge(Float xi[4],int mom[4]);
   };
 }
 

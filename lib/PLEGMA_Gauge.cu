@@ -171,12 +171,12 @@ template<typename Float>
 
 void PLEGMA_Gauge<Float>::mulPhase_gauge(Float xi[4],int mom[4]){
   phase_gauge_field(PLEGMA_Field<Float>::d_elem,xi,mom);
-  ghostToHost();
-  cpuExchangeGhost();
-  ghostToDevice();
+  this->ghostToHost();
+  this->cpuExchangeGhost();
+  this->ghostToDevice();
 }
 
-
+template<typename Float>
 void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4){
   if(nSmear < 1){
     cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
