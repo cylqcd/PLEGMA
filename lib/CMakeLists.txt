@@ -10,6 +10,7 @@ set (QUDA_OBJS
   kernels/PLEGMA_baryons_NtoR.cu
   kernels/PLEGMA_baryons_RtoN.cu
   kernels/PLEGMA_baryons_RtoR.cu
+  PLEGMA_QLoops.cu
 )
 
 ## split source into cu and cpp files
@@ -27,7 +28,7 @@ LIST(REMOVE_ITEM QUDA_OBJS ${QUDA_CU_OBJS})
 
 # include_directories
 include_directories(${QUDA_HOME}/lib/)
-#PLEGMA: Begin DMH
+#PLEGMA: 
 include_directories(code_pieces)
 include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)
 include_directories(SYSTEM ${PLEGMA_HDF5HOME}/src)
@@ -38,7 +39,7 @@ if(PLEGMA_ARPACK)
   include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/SRC)
   include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/UTIL)
 endif(PLEGMA_ARPACK)
-#PLEGMA: End DMH
+#PLEGMA: 
 
 set(PLEGMA_LIB ${QUDA_CU_OBJS})
 
@@ -65,7 +66,7 @@ endif()
 target_include_directories(PLEGMA PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-#DMH
+
 LIST(APPEND PLEGMA ${PLEGMA_GSL_LIB})
 LIST(APPEND PLEGMA ${PLEGMA_HDF5_LIB})
 LIST(APPEND PLEGMA ${PLEGMA_LIME_LIB})
@@ -87,7 +88,7 @@ if(PLEGMA_MKL)
   LIST(APPEND PLEGMA ${PLEGMA_MKL_LIB_CORE})
 endif(PLEGMA_MKL)
 
-#DMH
+
 
 # add dependencies for linking
 # if CUDA_CUDA_LIBRARY (driver api) is not found look for stubs
