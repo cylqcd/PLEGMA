@@ -1,5 +1,5 @@
 #include <PLEGMA_global.h>
-
+#include <vector>
 #ifndef _PLEGMA_FIELD_H
 #define _PLEGMA_FIELD_H
 
@@ -81,8 +81,15 @@ namespace plegma {
     void cpuExchangeGhostCorner(int dirOr=-1);
     void ghostToDevice();
     void ghostCornerToDevice();
+
+    void pack(Float *topack);
+    void unpack(Float *out);
+
+    void load();
+    void unload();
     
     void shift(PLEGMA_Field &Fin, int dirOr);
+    void setUnit(std::vector<int> indDiag);
   };
 }
 #endif

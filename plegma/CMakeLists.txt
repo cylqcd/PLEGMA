@@ -35,9 +35,18 @@ target_link_libraries(Plaquette ${PLEGMA_LIBS})
 cuda_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
-cuda_add_executable(PlaquetteWshifts PlaquetteWshifts.cpp)
+cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
+target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
+
+cuda_add_executable(PlaquetteWshifts EXCLUDE_FROM_ALL PlaquetteWshifts.cpp)
 target_link_libraries(PlaquetteWshifts ${PLEGMA_LIBS})
 
-cuda_add_executable(Source Source.cpp)
+cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
+
+cuda_add_executable(StoutSmearing EXCLUDE_FROM_ALL StoutSmearing.cpp)
+target_link_libraries(StoutSmearing ${PLEGMA_LIBS})
+
+cuda_add_executable(APEsmearing EXCLUDE_FROM_ALL APEsmearing.cpp)
+target_link_libraries(APEsmearing ${PLEGMA_LIBS})
 

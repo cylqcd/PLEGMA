@@ -1,5 +1,7 @@
 #include <PLEGMA.h>
 #include <PLEGMA_buffers.h>
+#include <quda_params.h>
+#include <quda_solver.h>
 
 #ifndef _PLEGMA_UTILS_H
 #define _PLEGMA_UTILS_H
@@ -55,6 +57,8 @@ void setInvertParam(QudaInvertParam &inv_param);
 
 // utils.cpp
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
+void initialize(int argc, char** argv, PLEGMA_params *params);
+void finalize();
 
 // read_command_line.cpp
 void read_command_line(int argc, char** argv, PLEGMA_params *params);

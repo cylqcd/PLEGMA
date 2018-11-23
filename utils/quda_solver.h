@@ -3,6 +3,7 @@
 
 #ifndef _QUDA_SOLVER_H
 #define _QUDA_SOLVER_H
+using namespace plegma;
 
 namespace quda {
   ////////////////////////

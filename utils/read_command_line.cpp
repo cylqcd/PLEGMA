@@ -106,6 +106,7 @@ int nsmearGauss = 50;
 double alphaAPE = 0.5;
 double alphaGauss = 4.0;
 
+char corr_dirname[1024] = "./";
 char twop_filename[257] = "twop";
 char threep_filename[257] = "threep";
 char prop_path[257] = "prop";
@@ -232,7 +233,8 @@ static void set_PLEGMA_params(plegma::PLEGMA_params *params){
     params->CorrFileFormat = HDF5_FORM; 
   else
     fprintf(stderr,"Undefined option for --corr_file_format. Options are ASCII(ascii)/HDF5(hdf5)\n");
-   
+  params->corr_dir = corr_dirname;
+  
   // Determine for which source-positions to run for the 3pt
   if(strcmp(run3pt,"all")==0 || 
      strcmp(run3pt,"ALL")==0) {
@@ -437,7 +439,8 @@ static void usage(char** argv )
   printf("    --alphaAPE                                # APE smearing parameter (default 0.5)\n");
   printf("    --nsmearGauss                             # Number of Gauss smearing iterations (default 50)\n");
   printf("    --alphaGauss                              # Gauss smearing parameter (default 4.0)\n");
-  printf("    --twop-filename                           # File name to save twopoint function (default \"twop\")\n");
+  printf("    --corr-dirname                            # Dir name where to save correlator (default \"./\")\n");
+  //printf("    --twop-filename                           # File name to save twopoint function (default \"twop\")\n");
   printf("    --threep-filename                         # File name to save threepoint function (default \"threep\")\n");
   printf("    --prop_path                               # File name to save propagators is (default \"prop_path\")\n");
   printf("    --numSourcePositions                      # The number of source positions we want to calculate (default 1)\n");
@@ -1762,7 +1765,18 @@ static int process_command_line_option(int argc, char** argv, int* idx)
     ret = 0;
     goto out;
   }
- 
+
+  if( strcmp(argv[i], "--corr-dirname") == 0){
+    if (i+1 >= argc){
+      usage(argv);
+    }     
+    strcpy(corr_dirname, argv[i+1]);
+    i++;
+    ret = 0;
+    goto out;
+  }
+
+  /*
   if( strcmp(argv[i], "--twop-filename") == 0){
     if (i+1 >= argc){
       usage(argv);
@@ -1772,7 +1786,8 @@ static int process_command_line_option(int argc, char** argv, int* idx)
     ret = 0;
     goto out;
   }
-
+  */
+  
   if( strcmp(argv[i], "--prop-path") == 0){
     if (i+1 >= argc){
       usage(argv);
