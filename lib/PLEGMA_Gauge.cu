@@ -2,7 +2,7 @@
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_plaquette.cuh>
 #include <PLEGMA_su3field.cuh>
-#include <PLEGMA_kernel_phase_gaugeField.cuh>
+#include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
 
 using namespace plegma;
@@ -168,15 +168,24 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
 }
 
 template<typename Float>
-
-void PLEGMA_Gauge<Float>::mulPhase_gauge(Float xi[4],int mom[4]){
-  phase_gauge_field(PLEGMA_Field<Float>::d_elem,xi,mom);
-  ghostToHost();
-  cpuExchangeGhost();
-  ghostToDevice();
+void PLEGMA_Gauge<Float>::scaleDirWise(std::complex<Float> scale[N_DIMS]){
+  scale_dir_wise(PLEGMA_Field<Float>::d_elem, (Float*) scale);
+  this->ghostToHost();
+  this->cpuExchangeGhost();
+  this->ghostToDevice();
 }
 
+template<typename Float>
+void PLEGMA_Gauge<Float>::momPhase(Float phase[N_DIMS],int mom[N_DIMS]){
+  std::complex<Float> scale[N_DIMS];
+  for(int d=0; d<N_DIMS; d++) {
+    Float theta = 2.0*PI*((Float)mom[d])*phase[d]/((Float) GK_totalL[d]);
+    scale[d] = {cos(theta), sin(theta)};
+  }
+  scaleDirWise(scale);
+}
 
+template<typename Float>
 void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4){
   if(nSmear < 1){
     cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);

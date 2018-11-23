@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h>
+#include "complex"
 
 #ifndef _PLEGMA_GAUGE_H
 #define _PLEGMA_GAUGE_H
@@ -25,6 +26,9 @@ namespace plegma {
     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
     void calculatePlaq();
     void calculatePlaqShifts();
+
+    void scaleDirWise(std::complex<Float> scale[N_DIMS]);
+    void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
   };
 }
 
