@@ -7,10 +7,16 @@ set (QUDA_OBJS
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   kernels/PLEGMA_baryons_NtoN.cu
-  kernels/PLEGMA_baryons_NtoR.cu
-  kernels/PLEGMA_baryons_RtoN.cu
-  kernels/PLEGMA_baryons_RtoR.cu
 )
+
+if(PLEGMA_ALL_BARYONS)
+  LIST(APPEND QUDA_OBJS
+    kernels/PLEGMA_baryons_NtoR.cu
+    kernels/PLEGMA_baryons_RtoN.cu
+    kernels/PLEGMA_baryons_RtoR.cu
+    kernels/PLEGMA_baryons_deltas.cu
+  )
+endif()
 
 ## split source into cu and cpp files
 FOREACH(item ${QUDA_OBJS})
