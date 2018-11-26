@@ -49,8 +49,8 @@ void PLEGMA_Propagator<Float>::absorbVectorToDevice(PLEGMA_Vector<Float> &vec, i
 }
 
 template<typename Float>
-void PLEGMA_Propagator<Float>::removeBoundaries_device(int t0){
-  remove_boundaries(PLEGMA_Field<Float>::d_elem, t0);
+void PLEGMA_Propagator<Float>::applyBoundaries_device(int t0){
+  apply_boundaries(PLEGMA_Field<Float>::d_elem, t0);
 }
 
 template<typename Float>

@@ -53,7 +53,7 @@ void conjugate_propagator(Float *inOut){
 }
 
 template<typename Float>
-static __global__ void remove_boundaries_kernel(Float *inOut, int t0){
+static __global__ void apply_boundaries_kernel(Float *inOut, int t0){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= c_threads) return;
@@ -70,10 +70,10 @@ static __global__ void remove_boundaries_kernel(Float *inOut, int t0){
 }
 
 template<typename Float>
-void remove_boundaries(Float *inOut, int t0){
+void apply_boundaries(Float *inOut, int t0){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  remove_boundaries_kernel<<<gridDim,blockDim>>>(inOut,t0);
+  apply_boundaries_kernel<<<gridDim,blockDim>>>(inOut,t0);
   checkCudaError();
 }
 

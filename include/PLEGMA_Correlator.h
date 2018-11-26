@@ -33,7 +33,7 @@ namespace plegma {
 
   const static char *baryons_groups[N_BARYONS] = {"nucl_nucl",
 #ifdef ALL_BARYONS
-						  "nucl_roper","roper_nucl","roper_roper","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
+						  "nucl_nucl2","nucl2_nucl","nucl2_nucl2","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
 						  "deltapp_deltamm_11","deltapp_deltamm_22","deltapp_deltamm_33"
 #endif
   };
