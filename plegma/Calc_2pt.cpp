@@ -77,6 +77,8 @@ int main(int argc, char **argv)
 
     propUP.rotateToPhysicalBase_device(+1);
     propDN.rotateToPhysicalBase_device(-1);
+    propUP.removeBoundaries_device(params.sourcePosition[isource][3]);
+    propDN.removeBoundaries_device(params.sourcePosition[isource][3]);
 
     corr.contractMesons(propUP, propDN, isource, params.CorrSpace);
     corr.writeFile(params);

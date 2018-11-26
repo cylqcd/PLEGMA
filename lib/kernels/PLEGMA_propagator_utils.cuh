@@ -52,6 +52,31 @@ void conjugate_propagator(Float *inOut){
   checkCudaError();
 }
 
+template<typename Float>
+static __global__ void remove_boundaries_kernel(Float *inOut, int t0){
+
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= c_threads) return;
+  int t = (sid/c_localL[0]/c_localL[1]/c_localL[2]) % c_localL[3];
+  t += c_procPosition[3] * c_localL[3];
+
+  if( t < t0 ) {
+#pragma unroll
+    for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++) {
+      inOut[(i*c_stride + sid)*2 + 0] *= -1.;
+      inOut[(i*c_stride + sid)*2 + 1] *= -1.;
+    }
+  }
+}
+
+template<typename Float>
+void remove_boundaries(Float *inOut, int t0){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  remove_boundaries_kernel<<<gridDim,blockDim>>>(inOut,t0);
+  checkCudaError();
+}
+
 
 template<typename Float>
 static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){

@@ -49,6 +49,11 @@ void PLEGMA_Propagator<Float>::absorbVectorToDevice(PLEGMA_Vector<Float> &vec, i
 }
 
 template<typename Float>
+void PLEGMA_Propagator<Float>::removeBoundaries_device(int t0){
+  remove_boundaries(PLEGMA_Field<Float>::d_elem, t0);
+}
+
+template<typename Float>
 void PLEGMA_Propagator<Float>::rotateToPhysicalBase_device(int sign){
   if( (sign != +1) && (sign != -1) ) errorQuda("The sign can be only +-1\n");
   rotateToPhysicalBase(PLEGMA_Field<Float>::d_elem, sign);
