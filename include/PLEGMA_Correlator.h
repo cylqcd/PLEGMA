@@ -10,7 +10,11 @@ namespace plegma {
 		 // add here
                  N_CORR}; // N_CORR must be last
   
-  enum BARYONS_TYPE{NtoN, NtoR, RtoN, RtoR,
+  enum BARYONS_TYPE{NtoN,
+#ifdef ALL_BARYONS
+		    NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,
+		    DELTA_3O2_1, DELTA_3O2_2, DELTA_3O2_3,
+#endif
 		    // add here
 		    N_BARYONS}; // N_BARYONS must be last 
 
@@ -27,7 +31,12 @@ namespace plegma {
   const static char *meson_flavors[2] = {"twop_meson_1",
 					 "twop_meson_2"};
 
-  const static char *baryons_groups[N_BARYONS] = {"nucl_nucl","nucl_roper","roper_nucl","roper_roper"};
+  const static char *baryons_groups[N_BARYONS] = {"nucl_nucl",
+#ifdef ALL_BARYONS
+						  "nucl_nucl2","nucl2_nucl","nucl2_nucl2","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
+						  "deltapp_deltamm_11","deltapp_deltamm_22","deltapp_deltamm_33"
+#endif
+  };
 
   const static char *baryons_flavors[2] = {"twop_baryon_1",
 					   "twop_baryon_2"};
