@@ -51,6 +51,12 @@ if(PLEGMA_NO_TUNING)
   add_definitions(-DPLEGMA_NO_TUNING)
 endif()
 
+# compile contractions for all baryons
+set(PLEGMA_ALL_BARYONS FALSE CACHE BOOL "compile contractions for all baryons")
+if(PLEGMA_ALL_BARYONS)
+  add_definitions(-DALL_BARYONS)
+endif()
+
 #ARPACK
 set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
 if(PLEGMA_ARPACK)

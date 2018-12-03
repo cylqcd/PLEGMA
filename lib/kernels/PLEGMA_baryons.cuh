@@ -15,6 +15,12 @@ __device__ void contract_RtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> t
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_RtoR_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
+template<typename FloatA, typename FloatB, typename FloatC, int gamma>
+__device__ void contract_deltas_iso1o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+
+template<typename FloatA, typename FloatB, typename FloatC, int gamma>
+__device__ void contract_deltas_iso3o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+
 template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
 __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, FloatC* block,
 					int it, int x0, int y0, int z0, BARYONS_TYPE ip){
@@ -33,6 +39,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
+#ifdef ALL_BARYONS
     case NtoR:
       contract_NtoR_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
@@ -42,6 +49,25 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
     case RtoR:
       contract_RtoR_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
+    case DELTA_1O2_1:
+      contract_deltas_iso1o2_kernel<FloatA,FloatB,FloatC,0>(texProp1, texProp2, accum, vid);
+      break;
+    case DELTA_1O2_2:
+      contract_deltas_iso1o2_kernel<FloatA,FloatB,FloatC,1>(texProp1, texProp2, accum, vid);
+      break;
+    case DELTA_1O2_3:
+      contract_deltas_iso1o2_kernel<FloatA,FloatB,FloatC,2>(texProp1, texProp2, accum, vid);
+      break;
+    case DELTA_3O2_1:
+      contract_deltas_iso3o2_kernel<FloatA,FloatB,FloatC,0>(texProp1, texProp2, accum, vid);
+      break;
+    case DELTA_3O2_2:
+      contract_deltas_iso3o2_kernel<FloatA,FloatB,FloatC,1>(texProp1, texProp2, accum, vid);
+      break;
+    case DELTA_3O2_3:
+      contract_deltas_iso3o2_kernel<FloatA,FloatB,FloatC,2>(texProp1, texProp2, accum, vid);
+      break;
+#endif
     }
   }
   

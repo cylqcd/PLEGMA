@@ -13,6 +13,15 @@ set (QUDA_OBJS
   PLEGMA_QLoops.cu
 )
 
+if(PLEGMA_ALL_BARYONS)
+  LIST(APPEND QUDA_OBJS
+    kernels/PLEGMA_baryons_NtoR.cu
+    kernels/PLEGMA_baryons_RtoN.cu
+    kernels/PLEGMA_baryons_RtoR.cu
+    kernels/PLEGMA_baryons_deltas.cu
+  )
+endif()
+
 ## split source into cu and cpp files
 FOREACH(item ${QUDA_OBJS})
   STRING(REGEX MATCH ".+\\.cu$" item_match ${item})

@@ -254,16 +254,16 @@ static void fillDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace, int ndims,
     ldims[0] = GK_localL[3]; //LT
     dims[0] = GK_totalL[3]; //T
     if(shift_source) {
-      start[ndims-3] = (start[ndims-3] + GK_totalL[3] - sourcePosition[3]) % GK_totalL[3];
+      start[0] = (start[0] + GK_totalL[3] - sourcePosition[3]) % GK_totalL[3];
     }
     break;
   case POSITION_SPACE:
     for(int i=0; i<N_DIMS; i++) {
-      start[N_DIMS-1-i] = comm_coords(default_topo)[i]*GK_localL[i]; //starting
-      ldims[N_DIMS-1-i] = GK_localL[i]; //LT
-      dims[N_DIMS-1-i] = GK_totalL[i]; //T
+      start[i] = comm_coords(default_topo)[i]*GK_localL[i]; //starting
+      ldims[i] = GK_localL[i]; //LT
+      dims[i] = GK_totalL[i]; //T
       if(shift_source) {
-	start[N_DIMS-1-i] = (start[N_DIMS-1-i] + GK_totalL[i] - sourcePosition[i]) % GK_totalL[3];
+	start[i] = (start[i] + GK_totalL[i] - sourcePosition[i]) % GK_totalL[i];
       }
     }
     break;
