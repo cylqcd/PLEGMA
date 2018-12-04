@@ -25,6 +25,7 @@ namespace plegma {
     void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4);
     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
     void calculatePlaq();
+    void calculatePlaqCorners();
     void calculatePlaqShifts();
 
     void scaleDirWise(std::complex<Float> scale[N_DIMS]);
