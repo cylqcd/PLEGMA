@@ -25,86 +25,134 @@
 			         LEXIC((id[3]-1+c_localL[3])%c_localL[3],id[2],id[1],id[0],c_localL))))
 
 namespace plegma {
+  enum get_from { Me, Plus, Minus, PlusMinus, MinusPlus, MinusMinus, PlusPlus };
+
+  struct sidStride {
+    size_t sid;
+    size_t stride;
+    inline __device__ sidStride() = default; 
+    inline __device__ sidStride(size_t sid) {
+      this->sid = sid;
+      this->stride = c_stride;      
+    }  
+    template<get_from src>
+    inline __device__ void setSidStride(size_t sid, const int, short int);
+    template<get_from src>
+    inline __device__ void setSidStride(size_t sid, const int, short int, short int);
+  };
+  template<>
+  inline __device__ void sidStride::setSidStride<Plus>(size_t sid, const int offset, short int dirPlus) {
+    size_t id[4] = GET_ID(sid);
+    bool plus_ghost = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1));
+    this->sid = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
+    this->stride = plus_ghost ? c_surface[dirPlus] : c_stride;
+  }
+  template<>
+  inline __device__ void sidStride::setSidStride<Minus>(size_t sid, const int offset, short int dirMinus) {
+    size_t id[4] = GET_ID(sid);
+    bool minus_ghost = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0);
+    this->sid = minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
+    this->stride = minus_ghost ? c_surface[dirMinus] : c_stride;
+  }
+  template<>
+  inline __device__ void sidStride::setSidStride<PlusMinus>(size_t sid, const int offset, short int dirPlus, short int dirMinus) {
+    size_t id[4] = GET_ID(sid);
+    bool plus_ghost = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1));
+    if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
+    bool minus_ghost = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0);
+    if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
+    
+    if(plus_ghost && minus_ghost) printf("!!!!!!!   ERROR: plus and minus ghost together need corner halos\n");
+    
+    this->sid = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) :
+      ( minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
+    this->stride = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
+  }
+  template<>
+  inline __device__ void sidStride::setSidStride<MinusPlus>(size_t sid, const int offset, short int dirMinus, short int dirPlus) {
+    this->setSidStride<PlusMinus>(sid, offset, dirPlus, dirMinus);
+  }
+
   template<typename Float>
   struct texture {
     cudaTextureObject_t tex;
-    inline __device__ Float2<Float> fetch(int i);
-    inline __device__ Float2<Float> get(int i, int sid, int stride) {
+    inline __device__ texture() = default; 
+    inline __device__ texture(cudaTextureObject_t t) {
+      tex = t;
+    }
+    // Fetch is going to be specialized after
+    inline __device__ Float2<Float> fetch(size_t i);
+    inline __device__ Float2<Float> get(int i, size_t sid, int stride) {
       return texture<Float>::fetch(i*stride + sid);
     }
-    inline __device__ void set(int i, int sid, int stride, Float2<Float> v){;}
+    inline __device__ Float2<Float> get(int i, sidStride &ss) {
+      return texture<Float>::fetch(i*ss.stride + ss.sid);
+    }
+    inline __device__ void set(int i, size_t sid, int stride, Float2<Float> v){;}
+    inline __device__ void set(int i, sidStride &ss, Float2<Float> v);
   };
-  
-  template<> inline __device__ Float2<float> texture<float>::fetch(int i) {
+
+  // Here we specialize fetch
+  template<> inline __device__ Float2<float> texture<float>::fetch(size_t i) {
     return (Float2<float>) tex1Dfetch<float2>(tex,i);  
   }
-  
-  template<> inline __device__ Float2<double> texture<double>::fetch(int i) {
+  template<> inline __device__ Float2<double> texture<double>::fetch(size_t i) {
     int4 v = tex1Dfetch<int4>(tex,i);
     return (Float2<double>) make_double2(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
-  
+
   template<typename Float>
   struct pFloat2 {
     Float2<Float>* p;
     inline __device__ pFloat2(Float* pointer) {
       p = (Float2<Float> *) pointer;
     }
-    inline __device__ Float2<Float> get(int i, int sid, int stride) {
+    inline __device__ Float2<Float> get(int i, size_t sid, int stride) {
       return p[i*stride + sid];
     }
-    inline __device__ void set(int i, int sid, int stride, Float2<Float> v){
+    inline __device__ Float2<Float> get(int i, sidStride &ss) {
+      return p[i*ss.stride + ss.sid];
+    }
+    inline __device__ void set(int i, size_t sid, int stride, Float2<Float> v){
       p[i*stride + sid] = v;
+    }
+    inline __device__ void set(int i, sidStride &ss, Float2<Float> v){
+      p[i*ss.stride + ss.sid] = v;
     }
   };
     
   template<typename T, typename Float>
   struct generic : T {
     using T::T;
-    inline __device__ Float2<Float> get(int i, int sid, int stride) {
-      return T::get(i,sid,stride);
+    inline __device__ void set(int i, size_t sid, Float2<Float> v) {
+      sidStride ss(sid);
+      T::set(i,ss,v);
     }
-    inline __device__ void set(int i, int sid, Float2<Float> v) {
-      T::set(i,sid,c_stride,v);
+    inline __device__ Float2<Float> get(int i, sidStride &ss) {
+      return T::get(i,ss);
     }
-    inline __device__ Float2<Float> get(int i, int sid) {
-      return get(i,sid,c_stride);
+    inline __device__ Float2<Float> get(int i, size_t sid) {
+      sidStride ss(sid);
+      return get(i,ss);
     }
-    inline __device__ Float2<Float> getPlus(int i, int offset, short int dirPlus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
-	(c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-      int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
-      return get(i, sidPlus, stridePlus);
-    }
-    inline __device__ Float2<Float> getMinus(int i, int offset, short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
-	(c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-      int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
-      return get(i, sidMinus, strideMinus);
-    }
-    inline __device__ Float2<Float> getPlusMinus(int i, int offset, short int dirPlus, short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      if(dirPlus == dirMinus) {
-	return get(i,sid);
+    inline __device__ void get(Float2<Float> *p, int site_size, sidStride &ss) {
+#pragma unroll
+      for(int i=0; i<site_size; i++) {
+	p[i] = get(i,ss);
       }
-      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
-      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
-
-      if(plus_ghost && minus_ghost) printf("!!!!!!!   ERROR: plus and minus ghost together need corner halos\n");
-      
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
-      
-      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
-      return get(i,sidPlusMinus,stridePlusMinus);
     }
-    inline __device__ Float2<Float> getMinusPlus(int i, int offset, short int dirMinus, short int dirPlus, int sid) {
-      return getPlusMinus(i,offset,dirPlus,dirMinus,sid);
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(int i, size_t sid, int site_size, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, site_size, dirs ...);
+      return get(i, ss);
     }
+    template<get_from src, typename ...dir_t>
+    inline __device__ void get(Float2<Float> *p, size_t sid, int site_size, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, site_size, dirs ...);
+      get(p, ss); 
+    }    
   };
 
   template<typename Float>
@@ -116,68 +164,50 @@ namespace plegma {
   template<typename T, typename Float>
   struct genericGauge : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline __device__ void set(short int dir, int a, int b, int sid, Float2<Float> v) {
-      T::set(((dir*N_COLS + a)*N_COLS + b), sid, c_stride, v);
+    inline __device__ void set(short int mu, short int c1, short int c2, size_t sid, Float2<Float> v) {
+      sidStride ss(sid);
+      T::set(((mu*N_COLS + c1)*N_COLS + c2), ss, v);
     }
-    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], short int dir, int sid) {
-      #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
-        #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  set(dir, a, b, sid, G[a][b]);
+    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid) {
+#pragma unroll
+      for(short int c1=0; c1<N_COLS; c1++) {
+#pragma unroll
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  set(mu, c1, c2, sid, G[c1][c2]);
 	}    
       }
     }
-    inline __device__ Float2<Float> get(short int dir, int a, int b, int sid, int stride) {
-      return T::get(((dir*N_COLS + a)*N_COLS + b), sid, stride);
+    inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, sidStride &ss) {
+      return T::get(((mu*N_COLS + c1)*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(short int dir, int a, int b, int sid) {
-      return get(dir,a,b,sid,c_stride);
+    inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, size_t sid) {
+      sidStride ss(sid);
+      return get(mu, c1, c2, ss);
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int dir, int sid, int stride) {
-      #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
-        #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  G[a][b] = get(dir, a, b, sid, stride);
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
+      return get(mu,c1,c2,ss);
+    }
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int mu, sidStride &ss) {
+#pragma unroll
+      for(short int c1=0; c1<N_COLS; c1++) {
+#pragma unroll
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  G[c1][c2] = get(mu, c1, c2, ss);
 	}    
       }
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int dir, int sid) {
-      get(G, dir, sid, c_stride);
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid) {
+      sidStride ss(sid);
+      get(G, mu, ss);
     }
-    inline __device__ void getPlus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirPlus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
-	(c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-      int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
-      get(G, dirLink, sidPlus, stridePlus);
-    }
-    inline __device__ void getMinus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
-	(c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-      int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
-      get(G, dirLink, sidMinus, strideMinus);
-    }
-    inline __device__ void getPlusMinus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirPlus, short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      if(dirPlus == dirMinus) {
-	get(G,dirLink,sid);
-      }
-      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
-      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
-      
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
-      
-      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
-      return get(G,dirLink,sidPlusMinus,stridePlusMinus);
-    }
-    inline __device__ void getMinusPlus(Float2<Float> G[N_COLS][N_COLS], short int dirLink, short int dirMinus, short int dirPlus, int sid) {
-      getPlusMinus(G,dirLink,dirPlus,dirMinus,sid);
+    template<get_from src, typename ...dir_t>
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
+      get(G, mu, ss);
     }
   };
 
@@ -191,50 +221,51 @@ namespace plegma {
   template<typename T, typename Float>
   struct genericSu3 : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline __device__ void set(int a, int b, int sid, Float2<Float> v) {
-      T::set((a*N_COLS + b), sid, c_stride, v);
+    inline __device__ void set(short int c1, short int c2, size_t sid, Float2<Float> v) {
+      sidStride ss(sid);
+      T::set((c1*N_COLS + c2), ss, v);
     }
-    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], int sid) {
-      #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
-        #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  set(a, b, sid, G[a][b]);
+    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], size_t sid) {
+#pragma unroll
+      for(short int c1=0; c1<N_COLS; c1++) {
+#pragma unroll
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  set(c1, c2, sid, G[c1][c2]);
 	}    
       }
     }
 
-    inline __device__ Float2<Float> get(int a, int b, int sid, int stride) {
-      return T::get((a*N_COLS + b), sid, stride);
+    inline __device__ Float2<Float> get(short int c1, short int c2, sidStride &ss) {
+      return T::get((c1*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(int a, int b, int sid) {
-      return get(a,b,sid,c_stride);
+    inline __device__ Float2<Float> get(short int c1, short int c2, size_t sid) {
+      sidStride ss(sid);
+      return get(c1,c2,ss);
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], int sid, int stride) {
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(short int c1, short int c2, size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_COLS*N_COLS, dirs ...);
+      return get(c1,c2,ss);
+    }
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], sidStride &ss) {
       #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
+      for(short int c1=0; c1<N_COLS; c1++) {
         #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  G[a][b] = get(a, b, sid, stride);
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  G[c1][c2] = get(c1, c2, ss);
 	}    
       }
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], int sid) {
-      get(G, sid, c_stride);
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], size_t sid) {
+      sidStride ss(sid);
+      get(G, ss);
     }
-    inline __device__ void getPlus(Float2<Float> G[N_COLS][N_COLS], short int dirPlus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
-	(c_plusGhost[dirPlus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-      int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
-      get(G, sidPlus, stridePlus);
-    }
-    inline __device__ void getMinus(Float2<Float> G[N_COLS][N_COLS], short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
-	(c_minusGhost[dirMinus]*N_DIMS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-      int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
-      get(G, sidMinus, strideMinus);
+    template<get_from src, typename ...dir_t>
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
+      get(G, ss);
     }
   };
 
@@ -248,69 +279,49 @@ namespace plegma {
   template<typename T,typename Float>
   struct genericVector : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline void set(int mu, int c, int sid, Float2<Float> v) {
-      return T::set((mu*N_COLS + c),sid,c_stride,v);
+    inline void set(short int mu, short int c, size_t sid, Float2<Float> v) {
+      return T::set((mu*N_COLS + c),sid,v);
     }
-    inline __device__ void set(Float2<Float> S[N_SPINS][N_COLS], int sid) {
+    inline __device__ void set(Float2<Float> S[N_SPINS][N_COLS], size_t sid) {
       #pragma unroll
-      for(int mu=0; mu<N_SPINS; mu++) {
+      for(short int mu=0; mu<N_SPINS; mu++) {
         #pragma unroll
-	for(int c=0; c<N_COLS; c++) {
+	for(short int c=0; c<N_COLS; c++) {
 	  set(mu,c,sid,S[mu][c]);
 	}    
       }
     }
-
-    inline __device__ Float2<Float> get(int mu, int c, int sid, int stride) {
-      return T::get((mu*N_COLS + c),sid,stride);
+    inline __device__ Float2<Float> get(short int mu, short int c, sidStride &ss) {
+      return T::get((mu*N_COLS + c),ss);
     }
-    inline __device__ Float2<Float> get(int mu, int c, int sid) {
-      return get(mu,c,sid,c_stride);
+    inline __device__ Float2<Float> get(short int mu, short int c, size_t sid) {
+      sidStride ss(sid);
+      return get(mu,c,ss);
     }
-    inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], int sid, int stride) {
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(short int mu, short int c, size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_SPINS*N_COLS, dirs ...);
+      return get(mu,c,ss);
+    }
+    inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], sidStride &ss) {
       #pragma unroll
       for(int mu=0; mu<N_SPINS; mu++) {
         #pragma unroll
 	for(int c=0; c<N_COLS; c++) {
-	  S[mu][c] = get(mu,c,sid,stride);
+	  S[mu][c] = get(mu,c,ss);
 	}    
       }
     }
-    inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], int sid) {
-      get(S,sid,c_stride);
+    inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], size_t sid) {
+      sidStride ss(sid);
+      get(S,ss);
     }
-    inline __device__ void getPlus(Float2<Float> S[N_SPINS][N_COLS], short int dirPlus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
-	(c_plusGhost[dirPlus]*N_SPINS*N_COLS + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-      int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
-      get(S,sidPlus,stridePlus);
-    }
-    inline __device__ void getMinus(Float2<Float> S[N_SPINS][N_COLS], short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
-	(c_minusGhost[dirMinus]*N_SPINS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-      int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
-      get(S,sidMinus,strideMinus);
-    }
-    inline __device__ void getPlusMinus(Float2<Float> S[N_SPINS][N_COLS], short int dirPlus, short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      if(dirPlus == dirMinus) {
-	get(S,sid);
-      }
-      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
-      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
-      
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_COLS + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
-      
-      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
-      return get(S,sidPlusMinus,stridePlusMinus);
-    }
-    inline __device__ void getMinusPlus(Float2<Float> S[N_SPINS][N_COLS], short int dirMinus, short int dirPlus, int sid) {
-      getPlusMinus(S,dirPlus,dirMinus,sid);
+    template<get_from src, typename ...dir_t>
+    inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_SPINS*N_COLS, dirs ...);
+      return get(S,ss);
     }
   };
 
@@ -323,73 +334,54 @@ namespace plegma {
   template<typename T, typename Float>
     struct genericProp : generic<T,Float>  {
     using generic<T,Float>::generic;
-    inline __device__ void set(int mu, int nu, int a, int b, int sid, Float2<Float> v) {
-      T::set((((mu*N_SPINS + nu)*N_COLS + a)*N_COLS + b), sid,c_stride,v);
+    inline __device__ void set(short int mu, short int nu, short int c1, short int c2, size_t sid, Float2<Float> v) {
+      T::set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),sid,v);
     }
-    inline __device__ void set(Float2<Float> P[4][4][3][3], int sid) {
+    inline __device__ void set(Float2<Float> P[4][4][3][3], size_t sid) {
       #pragma unroll
-      for(int mu = 0 ; mu < N_SPINS ; mu++)
+      for(short int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
-	for(int nu = 0 ; nu < N_SPINS ; nu++)
+	for(short int nu = 0 ; nu < N_SPINS ; nu++)
           #pragma unroll
-	  for(int c1 = 0 ; c1 < N_COLS ; c1++)
+	  for(short int c1 = 0 ; c1 < N_COLS ; c1++)
             #pragma unroll
-	    for(int c2 = 0 ; c2 < N_COLS ; c2++)
+	    for(short int c2 = 0 ; c2 < N_COLS ; c2++)
 	      set(mu, nu, c1, c2, sid, P[mu][nu][c1][c2]);
     }
 
-    inline __device__ Float2<Float> get(int mu, int nu, int a, int b, int sid, int stride) {
-      return T::get((((mu*N_SPINS + nu)*N_COLS + a)*N_COLS + b), sid,stride);
+    inline __device__ Float2<Float> get(short int mu, short int nu, short int c1, short int c2, sidStride &ss) {
+      return T::get((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(int mu, int nu, int c1, int c2, int sid) {
-      return get(mu, nu, c1, c2, sid, c_stride);
+    inline __device__ Float2<Float> get(short int mu, short int nu, int c1, int c2, size_t sid) {
+      sidStride ss(sid);
+      return get(mu, nu, c1, c2, ss);
     }
-    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], int sid, int stride) {
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(short int mu, short int nu, short int c1, short int c2, size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
+      return get(mu,nu,c1,c2,ss);
+    }
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], sidStride &ss) {
       #pragma unroll
-      for(int mu = 0 ; mu < N_SPINS ; mu++)
+      for(short int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
-	for(int nu = 0 ; nu < N_SPINS ; nu++)
+	for(short int nu = 0 ; nu < N_SPINS ; nu++)
           #pragma unroll
-	  for(int c1 = 0 ; c1 < N_COLS ; c1++)
+	  for(short int c1 = 0 ; c1 < N_COLS ; c1++)
             #pragma unroll
-	    for(int c2 = 0 ; c2 < N_COLS ; c2++)
-	      P[mu][nu][c1][c2] = get(mu, nu, c1, c2, sid, stride);
+	    for(short int c2 = 0 ; c2 < N_COLS ; c2++)
+	      P[mu][nu][c1][c2] = get(mu, nu, c1, c2, ss);
     }
-    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], int sid) {
-      get( P, sid, c_stride );
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], size_t sid) {
+      sidStride ss(sid);
+      get( P, ss );
     }
-    inline __device__ void getPlus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirPlus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidPlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ?
-	(c_plusGhost[dirPlus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-      int stridePlus = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1)) ? c_surface[dirPlus] : c_stride;
-      get( P, sidPlus, stridePlus );
-    }
-    inline __device__ void getMinus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      int sidMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ?
-	(c_minusGhost[dirMinus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-      int strideMinus = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0) ? c_surface[dirMinus] : c_stride;
-      get( P, sidMinus, strideMinus );
-    }
-    inline __device__ void getPlusMinus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirPlus, short int dirMinus, int sid) {
-      int id[4] = GET_ID(sid);
-      if(dirPlus == dirMinus) {
-	get(P,sid);
-      }
-      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
-      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
-      
-      int sidPlusMinus = plus_ghost ? (c_plusGhost[dirPlus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirPlus,id)) :
-	( minus_ghost ? (c_minusGhost[dirMinus]*N_SPINS*N_SPINS*N_COLS*N_COLS + LEXIC_3D(dirMinus,id)) : LEXIC_ID(id));
-      
-      int stridePlusMinus = plus_ghost ? c_surface[dirPlus] : ( minus_ghost ? c_surface[dirMinus] : c_stride);
-      return get(P,sidPlusMinus,stridePlusMinus);
-    }
-    inline __device__ void getMinusPlus(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], short int dirMinus, short int dirPlus, int sid) {
-      getPlusMinus(P,dirPlus,dirMinus,sid);
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
+      sidStride ss;
+      ss.setSidStride<src>(sid, N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
+      return get(P,ss);
     }
   };
 
