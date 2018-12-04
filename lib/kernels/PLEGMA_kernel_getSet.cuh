@@ -248,7 +248,7 @@ namespace plegma {
   template<typename T,typename Float>
   struct genericVector : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline void set(int mu, int c, int sid, Float2<Float> v) {
+    inline __device__ void set(int mu, int c, int sid, Float2<Float> v) {
       return T::set((mu*N_COLS + c),sid,c_stride,v);
     }
     inline __device__ void set(Float2<Float> S[N_SPINS][N_COLS], int sid) {
