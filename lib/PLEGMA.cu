@@ -200,7 +200,7 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     cudaMemcpyToSymbol(c_minusGhost , GK_minusGhost , N_DIMS*sizeof(int) );
     cudaMemcpyToSymbol(c_cornerGhost, GK_cornerGhost, 4*N_DIMS*N_DIMS*sizeof(int));
     cudaMemcpyToSymbol(c_surface , GK_surface3D , N_DIMS*sizeof(int) );
-    cudaMemcpyToSymbol(c_surface2D , GK_surface2D , 4*N_DIMS*N_DIMS*sizeof(int) );
+    cudaMemcpyToSymbol(c_surface2D , GK_surface2D , N_DIMS*N_DIMS*sizeof(int) );
     
     cudaMemcpyToSymbol(c_procPosition, procPosition, N_DIMS*sizeof(int));
 
