@@ -73,7 +73,8 @@ namespace plegma {
     void ghostToHost(int dirOr=-1);
     void cpuExchangeGhost(int dirOr=-1);
     void ghostToDevice();
-
+    void communicateGhost(int dirOr=-1);
+    
     void pack(Float *topack);
     void unpack(Float *out);
 

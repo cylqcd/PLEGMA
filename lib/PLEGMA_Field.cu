@@ -414,6 +414,13 @@ void PLEGMA_Field<Float>::ghostToDevice(){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::communicateGhost(int dirOr){
+  ghostToHost(dirOr);
+  cpuExchangeGhost(dirOr);
+  ghostToDevice();
+}
+
+template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
   // we have to make sure that we have the ghost
   Fin.ghostToHost(dirOr);
