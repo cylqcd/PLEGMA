@@ -4,6 +4,7 @@
 #include <PLEGMA_lime.h>
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
+#include <PLEGMA_covD.cuh>
 using namespace plegma;
 using namespace quda;
 //---------------------------//
@@ -12,7 +13,19 @@ using namespace quda;
 
 template<typename Float>
 PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, VECTOR){ ; }
+  PLEGMA_Field<Float>(alloc_flag, VECTOR), gauge(NULL){ ; }
+
+template<typename Float>
+PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, PLEGMA_Gauge<Float> *gIn): 
+  PLEGMA_Field<Float>(alloc_flag, VECTOR), gauge(gIn){
+  // Use this constructor carefully. Since we take a reference to gauge
+  // we should not destroy it or modify it outside
+  
+  // make sure that we have the ghost
+  gauge->ghostToHost();
+  gauge->cpuExchangeGhost();
+  gauge->ghostToDevice();
+}
 
 template<typename FloatOut, typename FloatIn>
 static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &vecIn){
@@ -394,6 +407,21 @@ void PLEGMA_Vector<Float>::write(char *filename){
   free(buffer);
   MPI_File_close(&mpifid);
   MPI_Type_free(&subblock);
+}
+
+
+template<typename Float>
+void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, int dirOr){
+  // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
+  if(gauge == NULL) errorQuda("This vector has not constructed with a gauge field thus cannot use cov Der");
+  if(dirOr < 0 || dirOr > 7) errorQuda("Wrong direction is given");
+  vectorTex<Float> texVecIn;
+  texVecIn.tex= vecIn.createTexObject();
+  gaugeTex<Float> texGaugeIn;
+  texGaugeIn.tex = gauge->createTexObject();
+  covD_k<Float,Float,Float>(this->D_elem(), texVecIn, texGaugeIn, dirOr);
+  vecIn.destroyTexObject(texVecIn.tex);
+  gauge->destroyTexObject(texGaugeIn.tex);
 }
 
 template class PLEGMA_Vector<float>;

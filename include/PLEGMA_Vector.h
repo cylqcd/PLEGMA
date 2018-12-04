@@ -17,8 +17,11 @@ namespace plegma {
   
   template<typename Float>
     class PLEGMA_Vector : public PLEGMA_Field<Float> {
+  private:
+    PLEGMA_Gauge<Float> *gauge;
   public:
     PLEGMA_Vector(ALLOCATION_FLAG alloc_flag);
+    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, PLEGMA_Gauge<Float> *gIn);
     ~PLEGMA_Vector(){;}
     
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
@@ -39,6 +42,7 @@ namespace plegma {
     void write(char* filename);
     void conjugate();
     void apply_gamma5();
+    void covD(PLEGMA_Vector<Float> &vecIn, int dirOr);
   };
 }
 
