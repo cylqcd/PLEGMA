@@ -163,13 +163,9 @@ namespace plegma {
     }
     // Fetch is going to be specialized after
     inline __device__ Float2<Float> fetch(size_t i);
-    inline __device__ Float2<Float> get(int i, size_t sid, int stride) {
-      return texture<Float>::fetch(i*stride + sid);
-    }
     inline __device__ Float2<Float> get(int i, sidStride &ss) {
       return texture<Float>::fetch(i*ss.stride + ss.sid);
     }
-    inline __device__ void set(int i, size_t sid, int stride, Float2<Float> v){;}
     inline __device__ void set(int i, sidStride &ss, Float2<Float> v);
   };
 
@@ -188,14 +184,8 @@ namespace plegma {
     inline __device__ pFloat2(Float* pointer) {
       p = (Float2<Float> *) pointer;
     }
-    inline __device__ Float2<Float> get(int i, size_t sid, int stride) {
-      return p[i*stride + sid];
-    }
     inline __device__ Float2<Float> get(int i, sidStride &ss) {
       return p[i*ss.stride + ss.sid];
-    }
-    inline __device__ void set(int i, size_t sid, int stride, Float2<Float> v){
-      p[i*stride + sid] = v;
     }
     inline __device__ void set(int i, sidStride &ss, Float2<Float> v){
       p[i*ss.stride + ss.sid] = v;
@@ -246,8 +236,7 @@ namespace plegma {
   struct genericGauge : generic<T,Float> {
     using generic<T,Float>::generic;
     inline __device__ void set(short int dir, int a, int b, size_t sid, Float2<Float> v) {
-      sidStride ss(sid);
-      T::set(((dir*N_COLS + a)*N_COLS + b), ss, v);
+      T::set(((dir*N_COLS + a)*N_COLS + b), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], short int dir, size_t sid) {
 #pragma unroll
@@ -303,8 +292,7 @@ namespace plegma {
   struct genericSu3 : generic<T,Float> {
     using generic<T,Float>::generic;
     inline __device__ void set(int a, int b, size_t sid, Float2<Float> v) {
-      sidStride ss(sid);
-      T::set((a*N_COLS + b), ss, v);
+      T::set((a*N_COLS + b), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], size_t sid) {
       #pragma unroll
