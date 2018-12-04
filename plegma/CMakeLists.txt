@@ -50,3 +50,5 @@ target_link_libraries(StoutSmearing ${PLEGMA_LIBS})
 cuda_add_executable(APEsmearing EXCLUDE_FROM_ALL APEsmearing.cpp)
 target_link_libraries(APEsmearing ${PLEGMA_LIBS})
 
+cuda_add_executable(qLoops qLoops.cpp)
+target_link_libraries(qLoops ${PLEGMA_LIBS})

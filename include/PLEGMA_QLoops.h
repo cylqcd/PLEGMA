@@ -1,5 +1,7 @@
 #include <PLEGMA_Field.h>
-#include <dirac_quda.h>
+#include <PLEGMA_Vector.h>
+#include <string>
+
 #ifndef _PLEGMA_QLOOPS
 #define _PLEGMA_QLOOPS
 
@@ -17,13 +19,20 @@ namespace plegma{
     Float *h_oneDC[N_DIMS];
 
     bool isOneD;
-    quda::GaugeCovDev *cov;
   public:
-    PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag, quda::GaugeCovDev *cov = NULL);
+    PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag, bool isOneD=false);
     ~PLEGMA_QLoops();
+
+    void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
+		      Float val , bool accum );
+    void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
+		      PLEGMA_Vector<Float> &v_covD, Float val , bool accum );
+    void contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, ACCUM_TYPE acc_type);
+    void contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r);
+
+    void write_ASCII(std::string filename_local);
+    void write_ASCII(std::string filename_local, std::string filename_oneD, std::string filename_oneDC);
     
-    void oneEnd_trick(quda::cudaColorSpinorField &x_l, quda::cudaColorSpinorField &x_r,
-		      quda::cudaColorSpinorField &tmp, Float val = 1, bool accum = true);
   };
 
 }

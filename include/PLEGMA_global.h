@@ -94,6 +94,7 @@ namespace plegma {
 
   enum APEDIM{D3,D4};
 
+  enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
   typedef struct {
     int nsmearAPE;
     int nsmearGauss;
