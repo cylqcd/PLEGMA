@@ -20,13 +20,13 @@ __global__ void gaussian_smearing_kernel(FloatOut* out,
   // we don't smear the time -> N_DIMS-1
   #pragma unroll
   for(int dir = 0; dir < N_DIMS-1; dir++) {
-    gaugeTex.get(G,dir,sid);
-    vecInTex.getPlus(S,dir,sid);
+    gaugeTex.get(G, dir, sid);
+    vecInTex.get<Plus>(S, sid, dir);
 
     mul_G_V(P1,G,S);
 
-    gaugeTex.getMinus(G,dir,dir, sid);
-    vecInTex.getMinus(S,dir, sid);
+    gaugeTex.get<Minus>(G, dir, sid, dir);
+    vecInTex.get<Minus>(S, sid, dir);
     
     mul_Gdag_V(P2,G,S);
 

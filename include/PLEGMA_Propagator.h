@@ -25,6 +25,7 @@ namespace plegma {
 			    int nu, int c2);
     void absorbVectorToDevice(PLEGMA_Vector<Float> &vec, 
 			      int nu, int c2);
+    void applyBoundaries_device(int t0);
     void rotateToPhysicalBase_host(int sign);
     void rotateToPhysicalBase_device(int sign);
   };

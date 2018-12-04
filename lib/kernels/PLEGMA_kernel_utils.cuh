@@ -260,10 +260,10 @@ namespace plegma {
     Float phase;
     Float2<Float> expon;
     for(int imom = 0 ; imom < c_Nmoms ; imom++){
-      phase = 0;
+      phase = 0.;
       #pragma unroll
       for(int i=0; i<3; i++)
-	phase += ((double) c_moms[imom][i]*id[i])/c_totalL[i];
+	phase += ((Float) (c_moms[imom][i]*id[i]))/((Float) c_totalL[i]);
       phase *=  2. * PI;
       expon.x = cos(phase);
       expon.y = -sin(phase);

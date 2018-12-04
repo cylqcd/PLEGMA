@@ -30,11 +30,11 @@ static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> arg
       for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
 	args.gaugeTex.get(G1,dir1,sid);
-	args.gaugeTex.getPlus(G2,dir2,dir1,sid);
+	args.gaugeTex.get<Plus>(G2,dir2,sid,dir1);
       
 	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
-	args.gaugeTex.getPlus(G1,dir1,dir2,sid);
+	args.gaugeTex.get<Plus>(G1,dir1,sid,dir2);
 	args.gaugeTex.get(G2,dir2,sid);
       
 	mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
