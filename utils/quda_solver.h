@@ -25,6 +25,7 @@ namespace quda {
     cudaColorSpinorField *b, *x;
     
   public:
+    QudaInvertParam getInvParams() const{return inv_param;}
     QUDA_solver(double mu);
     virtual ~QUDA_solver();
     cudaColorSpinorField* solve(cudaColorSpinorField * rhs);

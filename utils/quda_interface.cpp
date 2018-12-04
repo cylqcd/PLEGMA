@@ -213,3 +213,6 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
 
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
 template void QUDA_solver::solve(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
+
+template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
+template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
