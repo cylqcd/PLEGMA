@@ -235,49 +235,49 @@ namespace plegma {
   template<typename T, typename Float>
   struct genericGauge : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline __device__ void set(short int dir, int a, int b, size_t sid, Float2<Float> v) {
-      T::set(((dir*N_COLS + a)*N_COLS + b), sid, v);
+    inline __device__ void set(short int mu, short int c1, short int c2, size_t sid, Float2<Float> v) {
+      generic::set(((mu*N_COLS + c1)*N_COLS + c2), sid, v);
     }
-    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], short int dir, size_t sid) {
+    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid) {
 #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
+      for(short int c1=0; c1<N_COLS; c1++) {
 #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  set(dir, a, b, sid, G[a][b]);
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  set(mu, c1, c2, sid, G[c1][c2]);
 	}    
       }
     }
-    inline __device__ Float2<Float> get(short int dir, int a, int b, sidStride &ss) {
-      return T::get(((dir*N_COLS + a)*N_COLS + b), ss);
+    inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, sidStride &ss) {
+      return T::get(((mu*N_COLS + c1)*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(short int dir, int a, int b, size_t sid) {
+    inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, size_t sid) {
       sidStride ss(sid);
-      return get(dir, a, b, ss);
+      return get(mu, c1, c2, ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(short int dirLink, int a, int b, size_t sid, dir_t ... dirs) {
+    inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
-      return get(dirLink,a,b,ss);
+      return get(mu,c1,c2,ss);
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int dir, sidStride &ss) {
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int mu, sidStride &ss) {
 #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
+      for(short int c1=0; c1<N_COLS; c1++) {
 #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  G[a][b] = get(dir, a, b, ss);
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  G[c1][c2] = get(mu, c1, c2, ss);
 	}    
       }
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int dir, size_t sid) {
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid) {
       sidStride ss(sid);
-      get(G, dir, ss);
+      get(G, mu, ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int dirLink, size_t sid, dir_t ... dirs) {
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
-      get(G, dirLink, ss);
+      get(G, mu, ss);
     }
   };
 
@@ -291,38 +291,38 @@ namespace plegma {
   template<typename T, typename Float>
   struct genericSu3 : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline __device__ void set(int a, int b, size_t sid, Float2<Float> v) {
-      T::set((a*N_COLS + b), sid, v);
+    inline __device__ void set(short int c1, short int c2, size_t sid, Float2<Float> v) {
+      generic::set((c1*N_COLS + c2), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], size_t sid) {
-      #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
-        #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  set(a, b, sid, G[a][b]);
+#pragma unroll
+      for(short int c1=0; c1<N_COLS; c1++) {
+#pragma unroll
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  set(c1, c2, sid, G[c1][c2]);
 	}    
       }
     }
 
-    inline __device__ Float2<Float> get(int a, int b, sidStride &ss) {
-      return T::get((a*N_COLS + b), ss);
+    inline __device__ Float2<Float> get(short int c1, short int c2, sidStride &ss) {
+      return T::get((c1*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(int a, int b, size_t sid) {
+    inline __device__ Float2<Float> get(short int c1, short int c2, size_t sid) {
       sidStride ss(sid);
-      return get(a,b,ss);
+      return get(c1,c2,ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(int a, int b, size_t sid, dir_t ... dirs) {
+    inline __device__ Float2<Float> get(short int c1, short int c2, size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_COLS*N_COLS, dirs ...);
-      return get(a,b,ss);
+      return get(c1,c2,ss);
     }
     inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], sidStride &ss) {
       #pragma unroll
-      for(int a=0; a<N_COLS; a++) {
+      for(short int c1=0; c1<N_COLS; c1++) {
         #pragma unroll
-	for(int b=0; b<N_COLS; b++) {
-	  G[a][b] = get(a, b, ss);
+	for(short int c2=0; c2<N_COLS; c2++) {
+	  G[c1][c2] = get(c1, c2, ss);
 	}    
       }
     }
@@ -348,27 +348,27 @@ namespace plegma {
   template<typename T,typename Float>
   struct genericVector : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline void set(int mu, int c, size_t sid, Float2<Float> v) {
-      return T::set((mu*N_COLS + c),sid,v);
+    inline void set(short int mu, short int c, size_t sid, Float2<Float> v) {
+      return generic::set((mu*N_COLS + c),sid,v);
     }
     inline __device__ void set(Float2<Float> S[N_SPINS][N_COLS], size_t sid) {
       #pragma unroll
-      for(int mu=0; mu<N_SPINS; mu++) {
+      for(short int mu=0; mu<N_SPINS; mu++) {
         #pragma unroll
-	for(int c=0; c<N_COLS; c++) {
+	for(short int c=0; c<N_COLS; c++) {
 	  set(mu,c,sid,S[mu][c]);
 	}    
       }
     }
-    inline __device__ Float2<Float> get(int mu, int c, sidStride &ss) {
+    inline __device__ Float2<Float> get(short int mu, short int c, sidStride &ss) {
       return T::get((mu*N_COLS + c),ss);
     }
-    inline __device__ Float2<Float> get(int mu, int c, size_t sid) {
+    inline __device__ Float2<Float> get(short int mu, short int c, size_t sid) {
       sidStride ss(sid);
       return get(mu,c,ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(int mu, int c, size_t sid, dir_t ... dirs) {
+    inline __device__ Float2<Float> get(short int mu, short int c, size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_SPINS*N_COLS, dirs ...);
       return get(mu,c,ss);
@@ -403,43 +403,43 @@ namespace plegma {
   template<typename T, typename Float>
     struct genericProp : generic<T,Float>  {
     using generic<T,Float>::generic;
-    inline __device__ void set(int mu, int nu, int a, int b, size_t sid, Float2<Float> v) {
-      T::set((((mu*N_SPINS + nu)*N_COLS + a)*N_COLS + b),sid,v);
+    inline __device__ void set(short int mu, short int nu, short int c1, short int c2, size_t sid, Float2<Float> v) {
+      generic::set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),sid,v);
     }
     inline __device__ void set(Float2<Float> P[4][4][3][3], size_t sid) {
       #pragma unroll
-      for(int mu = 0 ; mu < N_SPINS ; mu++)
+      for(short int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
-	for(int nu = 0 ; nu < N_SPINS ; nu++)
+	for(short int nu = 0 ; nu < N_SPINS ; nu++)
           #pragma unroll
-	  for(int c1 = 0 ; c1 < N_COLS ; c1++)
+	  for(short int c1 = 0 ; c1 < N_COLS ; c1++)
             #pragma unroll
-	    for(int c2 = 0 ; c2 < N_COLS ; c2++)
+	    for(short int c2 = 0 ; c2 < N_COLS ; c2++)
 	      set(mu, nu, c1, c2, sid, P[mu][nu][c1][c2]);
     }
 
-    inline __device__ Float2<Float> get(int mu, int nu, int a, int b, sidStride &ss) {
-      return T::get((((mu*N_SPINS + nu)*N_COLS + a)*N_COLS + b), ss);
+    inline __device__ Float2<Float> get(short int mu, short int nu, short int c1, short int c2, sidStride &ss) {
+      return T::get((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(int mu, int nu, int c1, int c2, size_t sid) {
+    inline __device__ Float2<Float> get(short int mu, short int nu, int c1, int c2, size_t sid) {
       sidStride ss(sid);
       return get(mu, nu, c1, c2, ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(int mu, int nu, int a, int b, size_t sid, dir_t ... dirs) {
+    inline __device__ Float2<Float> get(short int mu, short int nu, short int c1, short int c2, size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
-      return get(mu,nu,a,b,ss);
+      return get(mu,nu,c1,c2,ss);
     }
     inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], sidStride &ss) {
       #pragma unroll
-      for(int mu = 0 ; mu < N_SPINS ; mu++)
+      for(short int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
-	for(int nu = 0 ; nu < N_SPINS ; nu++)
+	for(short int nu = 0 ; nu < N_SPINS ; nu++)
           #pragma unroll
-	  for(int c1 = 0 ; c1 < N_COLS ; c1++)
+	  for(short int c1 = 0 ; c1 < N_COLS ; c1++)
             #pragma unroll
-	    for(int c2 = 0 ; c2 < N_COLS ; c2++)
+	    for(short int c2 = 0 ; c2 < N_COLS ; c2++)
 	      P[mu][nu][c1][c2] = get(mu, nu, c1, c2, ss);
     }
     inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], size_t sid) {
