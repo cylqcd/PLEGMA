@@ -70,12 +70,8 @@ void PLEGMA_Gauge<Float>::loadFromBackup(){
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaq(){
-  
-  this->ghostToHost();
-  this->cpuExchangeGhost();
-  this->ghostToDevice();
-  
   gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_SIDE);
   tex.tex = this->createTexObject();
   printfQuda("Calculated plaquette is %f\n",calculatePlaquette<Float>(tex));
   this->destroyTexObject(tex.tex);
@@ -83,12 +79,8 @@ void PLEGMA_Gauge<Float>::calculatePlaq(){
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
-  
-  this->ghostToHost();
-  this->cpuExchangeGhost();
-  this->ghostToDevice();
-  
   gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
   tex.tex = this->createTexObject();
   Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
   Float plaqRef = calculatePlaquette<Float>(tex);
@@ -117,6 +109,7 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
   Float plaqShifts = resV/(GK_totalVolume*N_COLS*6);
 
   gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_SIDE);
   tex.tex = this->createTexObject();
   Float plaqRef = calculatePlaquette<Float>(tex);
   this->destroyTexObject(tex.tex);
@@ -192,9 +185,7 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
 template<typename Float>
 void PLEGMA_Gauge<Float>::scaleDirWise(std::complex<Float> scale[N_DIMS]){
   scale_dir_wise(PLEGMA_Field<Float>::d_elem, (Float*) scale);
-  this->ghostToHost();
-  this->cpuExchangeGhost();
-  this->ghostToDevice();
+  this->communicateGhost();
 }
 
 template<typename Float>
