@@ -544,10 +544,26 @@ void PLEGMA_Field<Float>::ghostCornerToDevice(){
   }
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::communicateGhost(int dirOr, GHOST_FLAG which_ghost){
+  if(ghost_flag < which_ghost) {
+    errorQuda("Asking to communicate ghost but they have not been allocated.\n");
+  }
+  if(which_ghost >= FIRST_SIDE){
+    ghostToHost(dirOr);
+    cpuExchangeGhost(dirOr);
+    ghostToDevice();
+  }
+  if(which_ghost >= FIRST_CORNER){
+    ghostCornerToHost(dirOr);
+    cpuExchangeGhostCorner(dirOr);
+    ghostCornerToDevice();    
+  }
+}
+
+template<typename Float>
 void PLEGMA_Field<Float>::communicateGhost(int dirOr){
-  ghostToHost(dirOr);
-  cpuExchangeGhost(dirOr);
-  ghostToDevice();
+  this->communicateGhost(dirOr, ghost_flag);
 }
 
 template<typename Float>

@@ -80,6 +80,7 @@ namespace plegma {
     void cpuExchangeGhostCorner(int dirOr=-1);
     void ghostToDevice();
     void ghostCornerToDevice();
+    void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
     void communicateGhost(int dirOr=-1);
     
     void pack(Float *topack);
