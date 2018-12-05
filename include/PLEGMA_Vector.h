@@ -18,7 +18,7 @@ namespace plegma {
   template<typename Float>
     class PLEGMA_Vector : public PLEGMA_Field<Float> {
   public:
-    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag);
+    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Vector(){;}
     
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);

@@ -11,8 +11,8 @@ using namespace plegma;
 //--------------------------//
 
 template<typename Float>
-PLEGMA_Su3field<Float>::PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, SU3FIELD){ ; }
+PLEGMA_Su3field<Float>::PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, SU3FIELD, ghost_flag){ ; }
 
 template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){

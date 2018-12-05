@@ -13,8 +13,8 @@ using namespace plegma;
 //--------------------------//
 
 template<typename Float>
-PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, GAUGE){ ; }
+PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, GAUGE, ghost_flag){ ; }
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::pack(double **p_gauge){

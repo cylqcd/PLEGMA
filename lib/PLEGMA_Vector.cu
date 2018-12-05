@@ -11,8 +11,8 @@ using namespace quda;
 //---------------------------//
 
 template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, VECTOR){ ; }
+PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
 
 template<typename FloatOut, typename FloatIn>
 static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &vecIn){
