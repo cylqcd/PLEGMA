@@ -73,12 +73,14 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
   if(isOneD) errorQuda("This function cannot do the oneD");
   int NN = (this->Field_length()) * (this->Total_length());
   Float valsP[] = {val,0.};
-  //  Float valsM[] = {-val,0.};
   // local contraction
-  contractG5(x_l, x_r); //implement later
+  contractG5(x_l, x_r); 
   this->unload();
-  if(accum) axpy<Float>(NN,valsP, this->H_elem(), h_loc);
-  else memcpy(h_loc, this->H_elem(), this->Bytes_total());
+  if(accum) cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_loc);
+  else{
+    memcpy(h_loc, this->H_elem(), this->Bytes_total());
+    cBLAS::cscal<Float>(NN,valsP,h_loc);
+  }
 }
 
 template<typename Float>
@@ -89,11 +91,14 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
   Float valsP[] = {val,0.};
   Float valsM[] = {-val,0.};
   // local contraction
-  contractG5(x_l, x_r); //implement later
+  contractG5(x_l, x_r);
   this->unload();
-  if(accum) axpy<Float>(NN,valsP, this->H_elem(), h_loc);
-  else memcpy(h_loc, this->H_elem(), this->Bytes_total());
-
+  if(accum) cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_loc);
+  else{
+    memcpy(h_loc, this->H_elem(), this->Bytes_total());
+    cBLAS::cscal<Float>(NN,valsP,h_loc);
+  }
+  
   x_l.communicateGhost();
   x_r.communicateGhost();
   for(int mu=0; mu<4; mu++)
@@ -103,8 +108,11 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
       v_covD.covD(x_l,mu+4);
       contractG5(v_covD, x_r, ACC_PLUS); //Term 0 + Term 3
       this->unload();
-      if(accum) axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneD[mu]);
-      else memcpy(h_oneD[mu], this->H_elem(), this->Bytes_total());
+      if(accum) cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneD[mu]);
+      else{
+	memcpy(h_oneD[mu], this->H_elem(), this->Bytes_total());
+	cBLAS::cscal<Float>(NN,valsP,h_oneD[mu]);
+      }
       memcpy(h_oneDC[mu], h_oneD[mu], this->Bytes_total());
       
       v_covD.covD(x_l,mu);
@@ -112,8 +120,8 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
       v_covD.covD(x_r,mu+4);
       contractG5(x_l,v_covD, ACC_PLUS); // Term2 + Term1
       this->unload();
-      axpy(NN,valsM, (Float*) this->H_elem(), (Float*) h_oneD[mu]); // (0+3-(1+2))
-      axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneDC[mu]); // (0+3+(1+2))
+      cBLAS::axpy(NN,valsM, (Float*) this->H_elem(), (Float*) h_oneD[mu]); // (0+3-(1+2))
+      cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneDC[mu]); // (0+3+(1+2))
     }
 }
 
