@@ -24,9 +24,9 @@ using namespace plegma;
 // Propagtor3D: as above, but with sinks only at one timeslice.
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_ext_ghost_corner(NULL),h_elem_backup(NULL), 
-  allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
+  h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_ext_ghost_corner(NULL), h_elem_backup(NULL), 
+  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
 
 {
   if(GK_init_PLEGMA_flag == false) 
@@ -66,19 +66,17 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT)
   ghost_corner_length = 0;
   
   for(int i = 0 ; i < N_DIMS ; i++){
-    ghost_length += 2*GK_surface3D[i];
+    if(ghost_flag >= FIRST_SIDE) ghost_length += 2*GK_surface3D[i];
     for(int j = 0; j < N_DIMS; j++){
-      ghost_corner_length += 2*GK_surface2D[i][j];
+      if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 2*GK_surface2D[i][j];
     }
   }
-  total_plus_ghost_length = total_length + ghost_length;
-  total_plus_ghost_corner_length = total_plus_ghost_length + ghost_corner_length;
+  total_plus_ghost_length = total_plus_ghost_length + ghost_corner_length;
   
   bytes_total_length = total_length*field_length*2*sizeof(Float);
   bytes_ghost_length = ghost_length*field_length*2*sizeof(Float);
-  bytes_total_plus_ghost_length = total_plus_ghost_length*field_length*2*sizeof(Float);
   bytes_ghost_corner_length = ghost_corner_length*field_length*2*sizeof(Float);
-  bytes_total_plus_ghost_corner_length = total_plus_ghost_corner_length*field_length*2*sizeof(Float);
+  bytes_total_plus_ghost_length = total_plus_ghost_length*field_length*2*sizeof(Float);
 
   if( alloc_flag == BOTH ){
     create_host();
@@ -308,7 +306,6 @@ static void getOffsets(int dirOr, int field_length,int *pos,
     }
     *spitch = GK_localL[dirOr%N_DIMS] * (*width);
     *dpitch = *width;
-    if(*height == 1) *height = field_length;
   }
   else{
     errorQuda("Direction should be in [0,%d] range",2*N_DIMS-1);
@@ -322,36 +319,24 @@ static void getOffsetsCorner(int dir1, int dir2, int field_length,int *pos,
   if( (dir1 > -1 && dir1 < 2*N_DIMS) && (dir2 > -1 && dir2 < 2*N_DIMS) ){
     if( dir1 == dir2 ){ errorQuda("Directions must be different"); }
     *pos = (dir1 > N_DIMS && dir2 > N_DIMS) ? 0 :
-      ( ( dir1 > N_DIMS ) ? (GK_localL[dir1]-1) :
-	( dir2 > N_DIMS ) ? (GK_localL[dir2]-1) :
-	(GK_localL[dir2])*(GK_localL[dir1])-1 );
+      ( ( dir1 > N_DIMS ) ? (GK_localL[dir2]-1) :
+      ( ( dir2 > N_DIMS ) ? (GK_localL[dir1]-1) :
+	(GK_localL[dir2] * GK_localL[dir1] - 1)));
     *height = 1;
     *width = 2*sizeof(Float);
     *ghostOffset = GK_cornerGhost[dir1][dir2];
     for(int i=0; i<N_DIMS; i++){
-      for(int j=0; j<N_DIMS; j++){
-	if( dir1 % N_DIMS > i && dir2 % N_DIMS > j ){
-	  *pos *= GK_localL[i]*GK_localL[j];
-	  *width *= GK_localL[i]*GK_localL[j];
-	}
-	else if( dir1 % N_DIMS > i && dir2 % N_DIMS < j ){
-	  *pos *= GK_localL[i];
-	  *width *= GK_localL[i];
-	  *height *= GK_localL[j];
-	}
-	else if( dir1 % N_DIMS < i && dir2 % N_DIMS > j ){
-	  *pos *= GK_localL[j];
-	  *width *= GK_localL[j];
-	  *height *= GK_localL[i];
-	}
-	else if( dir1 % N_DIMS < i && dir2 % N_DIMS < j ){
-	  *height *= GK_localL[i]*GK_localL[j];
-	}
+      if( dir1 % N_DIMS < i && dir2 % N_DIMS < i ){
+	*height *= GK_localL[i];
+      } else if (dir1 % N_DIMS != i && dir2 % N_DIMS != i) {
+	*width *= GK_localL[i];
+      }
+      if( dir1 % N_DIMS > i && dir2 % N_DIMS > i ){
+	*pos *= GK_localL[i];
       }
     }
     *spitch = GK_localL[dir1%N_DIMS] * GK_localL[dir2%N_DIMS] * (*width);
     *dpitch = *width;
-    if(*height == 1) *height = field_length;
   }
   else{
     errorQuda("Directions should be in [0,%d] range",2*N_DIMS-1);
@@ -362,6 +347,9 @@ static void getOffsetsCorner(int dir1, int dir2, int field_length,int *pos,
 
 template<typename Float>
 void PLEGMA_Field<Float>::ghostToHost(int dirOr){
+  if(ghost_flag < FIRST_SIDE) {
+    errorQuda("First side ghosts have not been allocated.\n");
+  }
   if(dirOr<-1 || dirOr>7)
     errorQuda("Directions should be in [0,7] range with -1 all directions");
   bool isAll=(dirOr<0)?true:false;
@@ -378,8 +366,12 @@ void PLEGMA_Field<Float>::ghostToHost(int dirOr){
 	Float *h_elem_offset = NULL;
 	Float *d_elem_offset = NULL;
 	getOffsets<Float>(ir,field_length,&position,&height,&width,&spitch,&dpitch,&ghostOffset);
-	int N=(ir==3 || ir==4+3)?1:field_length;
-	for(int i = 0 ; i < N; i++){
+	int n_loop=field_length;
+	if(height==1) {
+	  n_loop = 1;
+	  height = field_length;
+	}
+	for(int i = 0 ; i < n_loop; i++){
 	  d_elem_offset = d_elem + i*total_length*2 + position*2;
 	  h_elem_offset = h_elem + ghostOffset*field_length*2 + i*GK_surface3D[ir%4]*2;
 	  cudaMemcpy2D(h_elem_offset,dpitch,d_elem_offset, spitch,width,height,cudaMemcpyDeviceToHost);
@@ -391,6 +383,9 @@ void PLEGMA_Field<Float>::ghostToHost(int dirOr){
 
 template<typename Float>
 void PLEGMA_Field<Float>::ghostCornerToHost(int dirOr){
+  if(ghost_flag < FIRST_CORNER) {
+    errorQuda("First corner ghosts have not been allocated.\n");
+  }
   if(dirOr<-1 || dirOr>2*N_DIMS-1)
     errorQuda("Directions should be in [0,%d] range with -1 all directions",2*N_DIMS-1);
   bool isAll = (dirOr<0) ? true:false;
@@ -409,15 +404,16 @@ void PLEGMA_Field<Float>::ghostCornerToHost(int dirOr){
 	 Float *h_elem_offset = NULL;
 	 Float *d_elem_offset = NULL;
 	 getOffsetsCorner<Float>(i,j,field_length,&position,&height,&width,&spitch,&dpitch,&ghostOffset);
-	 int Ni = ( i==N_DIMS-1 || i==2*N_DIMS-1 ) ? 1 : field_length;
-	 int Nj = ( j==N_DIMS-1 || j==2*N_DIMS-1 ) ? 1	: field_length;
-	 for(int ii=0; ii<Ni; ii++){
-	   for(int jj=0; jj<Nj; jj++){
-	     d_elem_offset = d_elem + ii*Nj*total_length*2 + jj*total_length*2 + position*2;
-	     h_elem_offset = h_elem + ghostOffset*field_length*2 + ii*Nj*GK_surface2D[i%N_DIMS][j%N_DIMS]*2 + jj*GK_surface2D[i%N_DIMS][j%N_DIMS]*2;
-	     cudaMemcpy2D(h_elem_offset,dpitch,d_elem_offset, spitch,width,height,cudaMemcpyDeviceToHost);
-	     checkCudaError();
-	   }
+	 int n_loop=field_length;
+	 if(height==1) {
+	   n_loop = 1;
+	   height = field_length;
+	 }
+	 for(int ii=0; ii<n_loop; ii++){
+	   d_elem_offset = d_elem + ii*total_length*2;
+	   h_elem_offset = h_elem + ghostOffset*field_length*2 + ii*GK_surface2D[i%N_DIMS][j%N_DIMS]*2;
+	   cudaMemcpy2D(h_elem_offset,dpitch,d_elem_offset, spitch,width,height,cudaMemcpyDeviceToHost);
+	   checkCudaError();
 	 }
        }
      }
@@ -428,6 +424,9 @@ void PLEGMA_Field<Float>::ghostCornerToHost(int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::cpuExchangeGhost(int dirOr){
 
+  if(ghost_flag < FIRST_SIDE) {
+    errorQuda("First side ghosts have not been allocated.\n");
+  }
   if(dirOr<-1 || dirOr>7)
     errorQuda("Directions should be in [0,7] range with -1 all directions");
   bool isAll = (dirOr<0) ? true:false;
@@ -476,6 +475,9 @@ void PLEGMA_Field<Float>::cpuExchangeGhost(int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::cpuExchangeGhostCorner(int dirOr){
 
+  if(ghost_flag < FIRST_CORNER) {
+    errorQuda("First corner ghosts have not been allocated.\n");
+  }
   if(dirOr<-1 || dirOr>2*N_DIMS-1)
     errorQuda("Directions should be in [0,%d] range with -1 all directions",2*N_DIMS-1);
   bool isAll = (dirOr<0) ? true:false;
@@ -519,6 +521,9 @@ void PLEGMA_Field<Float>::cpuExchangeGhostCorner(int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::ghostToDevice(){
   if(comm_size() > 1){
+    if(ghost_flag < FIRST_SIDE) {
+      errorQuda("First side ghosts have not been allocated.\n");
+    }
     Float *host = h_ext_ghost;
     Float *device = d_elem+GK_localVolume*field_length*2;
     cudaMemcpy(device,host,bytes_ghost_length,cudaMemcpyHostToDevice);
@@ -529,13 +534,15 @@ void PLEGMA_Field<Float>::ghostToDevice(){
 template<typename Float>
 void PLEGMA_Field<Float>::ghostCornerToDevice(){
   if(comm_size() > 1){
+    if(ghost_flag < FIRST_CORNER) {
+      errorQuda("First corner ghosts have not been allocated.\n");
+    }
     Float *hostCorner = h_ext_ghost_corner;
     Float *device = d_elem+GK_localVolume*field_length*2+bytes_ghost_length;
     cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
     checkCudaError();
   }
 }
-
 
 template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
