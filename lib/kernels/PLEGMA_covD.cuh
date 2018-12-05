@@ -16,13 +16,13 @@ __global__ void covD_kernel(FloatOut* out,
   
   if(dirOr < 4){
     gTex.get(G,dir,sid);
-    vTex.getPlus(Sin,dir,sid);
+    vTex.get<Plus>(Sin,sid,dir);
     mul_G_V(Sout,G,Sin);
     out2.set(Sout,sid);
   }
   else{
-    gTex.getMinus(G,dir,dir,sid);
-    vTex.getMinus(Sin,dir,sid);
+    gTex.get<Minus>(G,dir,sid,dir);
+    vTex.get<Minus>(Sin,sid,dir);
     mul_Gdag_V(Sout,G,Sin);
     out2.set(Sout,sid);
   }
