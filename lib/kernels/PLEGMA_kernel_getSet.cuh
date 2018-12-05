@@ -241,7 +241,7 @@ namespace plegma {
   struct genericGauge : generic<T,Float> {
     using generic<T,Float>::generic;
     inline __device__ void set(short int mu, short int c1, short int c2, size_t sid, Float2<Float> v) {
-      this->set(((mu*N_COLS + c1)*N_COLS + c2), sid, v);
+      generic<T,Float>::set(((mu*N_COLS + c1)*N_COLS + c2), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid) {
 #pragma unroll
@@ -253,7 +253,7 @@ namespace plegma {
       }
     }
     inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, sidStride &ss) {
-      return this->get(((mu*N_COLS + c1)*N_COLS + c2), ss);
+      return generic<T,Float>::get(((mu*N_COLS + c1)*N_COLS + c2), ss);
     }
     inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, size_t sid) {
       sidStride ss(sid);
@@ -296,7 +296,7 @@ namespace plegma {
   struct genericSu3 : generic<T,Float> {
     using generic<T,Float>::generic;
     inline __device__ void set(short int c1, short int c2, size_t sid, Float2<Float> v) {
-      this->set((c1*N_COLS + c2), sid, v);
+      generic<T,Float>::set((c1*N_COLS + c2), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], size_t sid) {
 #pragma unroll
@@ -309,7 +309,7 @@ namespace plegma {
     }
 
     inline __device__ Float2<Float> get(short int c1, short int c2, sidStride &ss) {
-      return this->get((c1*N_COLS + c2), ss);
+      return generic<T,Float>::get((c1*N_COLS + c2), ss);
     }
     inline __device__ Float2<Float> get(short int c1, short int c2, size_t sid) {
       sidStride ss(sid);
@@ -353,7 +353,7 @@ namespace plegma {
   struct genericVector : generic<T,Float> {
     using generic<T,Float>::generic;
     inline __device__ void set(short int mu, short int c, size_t sid, Float2<Float> v) {
-      this->set((mu*N_COLS + c),sid,v);
+      generic<T,Float>::set((mu*N_COLS + c),sid,v);
     }
     inline __device__ void set(Float2<Float> S[N_SPINS][N_COLS], size_t sid) {
       #pragma unroll
@@ -408,7 +408,7 @@ namespace plegma {
     struct genericProp : generic<T,Float>  {
     using generic<T,Float>::generic;
     inline __device__ void set(short int mu, short int nu, short int c1, short int c2, size_t sid, Float2<Float> v) {
-      this->set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),sid,v);
+      generic<T,Float>::set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),sid,v);
     }
     inline __device__ void set(Float2<Float> P[4][4][3][3], size_t sid) {
       #pragma unroll
