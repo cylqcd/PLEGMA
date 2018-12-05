@@ -78,11 +78,11 @@ namespace plegma {
       size_t id[4] = GET_ID(sid);
       bool plus1_ghost = c_dimBreak[dirPlus1] == true && id[dirPlus1] == (c_localL[dirPlus1]-1);
       if(!plus1_ghost) id[dirPlus1] = (id[dirPlus1] + 1)%c_localL[dirPlus1]; 
-      bool plus2_ghost = c_dimBreak[dirPlus2] == true && id[dirPlus2] == 0;
-      if(!plus2_ghost) id[dirPlus2] = (id[dirPlus2] + c_localL[dirPlus2] - 1)%c_localL[dirPlus2];
+      bool plus2_ghost = c_dimBreak[dirPlus2] == true && id[dirPlus2] == (c_localL[dirPlus1]-1);
+      if(!plus2_ghost) id[dirPlus2] = (id[dirPlus2] + 1)%c_localL[dirPlus2];
 
       if(plus1_ghost && plus2_ghost){
-	this->sid = c_cornerGhost[dirPlus1][N_DIMS+dirPlus2]*offset + LEXIC_2D(dirPlus1,dirPlus2,id);
+	this->sid = c_cornerGhost[dirPlus1][dirPlus2]*offset + LEXIC_2D(dirPlus1,dirPlus2,id);
 	this->stride = c_surface2D[dirPlus1][dirPlus2];
       } else if(plus1_ghost) {
 	this->sid = c_plusGhost[dirPlus1]*offset + LEXIC_3D(dirPlus1,id);
@@ -102,13 +102,13 @@ namespace plegma {
       printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
-      bool minus1_ghost = c_dimBreak[dirMinus1] == true && id[dirMinus1] == (c_localL[dirMinus1]-1);
-      if(!minus1_ghost) id[dirMinus1] = (id[dirMinus1] + 1)%c_localL[dirMinus1]; 
+      bool minus1_ghost = c_dimBreak[dirMinus1] == true && id[dirMinus1] == 0;
+      if(!minus1_ghost) id[dirMinus1] = (id[dirMinus1] + c_localL[dirMinus1] - 1)%c_localL[dirMinus1]; 
       bool minus2_ghost = c_dimBreak[dirMinus2] == true && id[dirMinus2] == 0;
       if(!minus2_ghost) id[dirMinus2] = (id[dirMinus2] + c_localL[dirMinus2] - 1)%c_localL[dirMinus2];
 
       if(minus1_ghost && minus2_ghost){
-	this->sid = c_cornerGhost[dirMinus1][N_DIMS+dirMinus2]*offset + LEXIC_2D(dirMinus1,dirMinus2,id);
+	this->sid = c_cornerGhost[N_DIMS+dirMinus1][N_DIMS+dirMinus2]*offset + LEXIC_2D(dirMinus1,dirMinus2,id);
 	this->stride = c_surface2D[dirMinus1][dirMinus2];
       } else if(minus1_ghost) {
 	this->sid = c_minusGhost[dirMinus1]*offset + LEXIC_3D(dirMinus1,id);

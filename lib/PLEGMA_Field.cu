@@ -146,7 +146,7 @@ void PLEGMA_Field<Float>::create_host(){
   h_elem = (Float*) malloc(bytes_total_plus_ghost_length);
   h_ext_ghost = (Float*) malloc(bytes_ghost_length);
   h_ext_ghost_corner = (Float*) malloc(bytes_ghost_corner_length);
-  if(h_elem == NULL || h_ext_ghost == NULL || h_ext_ghost_corner)
+  if(h_elem == NULL || h_ext_ghost == NULL || h_ext_ghost_corner == NULL)
     errorQuda("Error with allocation host memory");
   isAllocHost = true;
   zero_host();
