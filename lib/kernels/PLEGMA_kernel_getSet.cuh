@@ -199,6 +199,9 @@ namespace plegma {
       sidStride ss(sid);
       T::set(i,ss,v);
     }
+    inline __device__ void set(int i, sidStride &ss, Float2<Float> v) {
+      T::set(i,ss,v);
+    }
     inline __device__ Float2<Float> get(int i, sidStride &ss) {
       return T::get(i,ss);
     }
@@ -222,21 +225,23 @@ namespace plegma {
     inline __device__ void get(Float2<Float> *p, size_t sid, int site_size, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, site_size, dirs ...);
-      get(p, ss); 
+      get(p, site_size, ss); 
     }    
   };
 
-  template<typename Float>
-  struct genericTex : generic<texture<Float>,Float> {using generic<texture<Float>,Float>::generic;};
 
   template<typename Float>
-  struct generic2 : generic<pFloat2<Float>,Float> {using generic<pFloat2<Float>,Float>::generic;};
+  using genericTex = generic<texture<Float>,Float>;
+  
+  template<typename Float>
+  using generic2 = generic<pFloat2<Float>,Float>;
+
 
   template<typename T, typename Float>
   struct genericGauge : generic<T,Float> {
     using generic<T,Float>::generic;
     inline __device__ void set(short int mu, short int c1, short int c2, size_t sid, Float2<Float> v) {
-      generic::set(((mu*N_COLS + c1)*N_COLS + c2), sid, v);
+      this->set(((mu*N_COLS + c1)*N_COLS + c2), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], short int mu, size_t sid) {
 #pragma unroll
@@ -248,7 +253,7 @@ namespace plegma {
       }
     }
     inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, sidStride &ss) {
-      return T::get(((mu*N_COLS + c1)*N_COLS + c2), ss);
+      return this->get(((mu*N_COLS + c1)*N_COLS + c2), ss);
     }
     inline __device__ Float2<Float> get(short int mu, short int c1, short int c2, size_t sid) {
       sidStride ss(sid);
@@ -282,17 +287,16 @@ namespace plegma {
   };
 
   template<typename Float>
-  struct gaugeTex : genericGauge<texture<Float>, Float>{using genericGauge<texture<Float>, Float>::genericGauge;};
+  using gaugeTex = genericGauge<texture<Float>, Float >;
 
   template<typename Float>
-  struct gauge2 : genericGauge<pFloat2<Float>,Float >{using genericGauge<pFloat2<Float>,Float >::genericGauge;};
-
+  using gauge2 = genericGauge<pFloat2<Float>, Float >;
 
   template<typename T, typename Float>
   struct genericSu3 : generic<T,Float> {
     using generic<T,Float>::generic;
     inline __device__ void set(short int c1, short int c2, size_t sid, Float2<Float> v) {
-      generic::set((c1*N_COLS + c2), sid, v);
+      this->set((c1*N_COLS + c2), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], size_t sid) {
 #pragma unroll
@@ -305,7 +309,7 @@ namespace plegma {
     }
 
     inline __device__ Float2<Float> get(short int c1, short int c2, sidStride &ss) {
-      return T::get((c1*N_COLS + c2), ss);
+      return this->get((c1*N_COLS + c2), ss);
     }
     inline __device__ Float2<Float> get(short int c1, short int c2, size_t sid) {
       sidStride ss(sid);
@@ -339,17 +343,17 @@ namespace plegma {
   };
 
   template<typename Float>
-  struct su3Tex : genericSu3<texture<Float>, Float>{using genericSu3<texture<Float>, Float>::genericSu3;};
+  using su3Tex = genericSu3<texture<Float>, Float >;
 
   template<typename Float>
-  struct su3_2 : genericSu3<pFloat2<Float>,Float >{using genericSu3<pFloat2<Float>,Float >::genericSu3;};
-
+  using su3_2 = genericSu3<pFloat2<Float>, Float >;
+  
   
   template<typename T,typename Float>
   struct genericVector : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline void set(short int mu, short int c, size_t sid, Float2<Float> v) {
-      return generic::set((mu*N_COLS + c),sid,v);
+    inline __device__ void set(short int mu, short int c, size_t sid, Float2<Float> v) {
+      this->set((mu*N_COLS + c),sid,v);
     }
     inline __device__ void set(Float2<Float> S[N_SPINS][N_COLS], size_t sid) {
       #pragma unroll
@@ -361,7 +365,7 @@ namespace plegma {
       }
     }
     inline __device__ Float2<Float> get(short int mu, short int c, sidStride &ss) {
-      return T::get((mu*N_COLS + c),ss);
+      return generic<T,Float>::get((mu*N_COLS + c),ss);
     }
     inline __device__ Float2<Float> get(short int mu, short int c, size_t sid) {
       sidStride ss(sid);
@@ -395,16 +399,16 @@ namespace plegma {
   };
 
   template<typename Float>
-  struct vectorTex : genericVector< texture<Float>, Float > {using genericVector< texture<Float>, Float >::genericVector;};
+  using vectorTex = genericVector< texture<Float>, Float >;
 
   template<typename Float>
-  struct vector2 : genericVector< pFloat2<Float>, Float > {using genericVector< pFloat2<Float>, Float >::genericVector;};
+  using vector2 = genericVector< pFloat2<Float>, Float >;
 
   template<typename T, typename Float>
     struct genericProp : generic<T,Float>  {
     using generic<T,Float>::generic;
     inline __device__ void set(short int mu, short int nu, short int c1, short int c2, size_t sid, Float2<Float> v) {
-      generic::set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),sid,v);
+      this->set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),sid,v);
     }
     inline __device__ void set(Float2<Float> P[4][4][3][3], size_t sid) {
       #pragma unroll
@@ -419,7 +423,7 @@ namespace plegma {
     }
 
     inline __device__ Float2<Float> get(short int mu, short int nu, short int c1, short int c2, sidStride &ss) {
-      return T::get((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2), ss);
+      return generic<T,Float>::get((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2), ss);
     }
     inline __device__ Float2<Float> get(short int mu, short int nu, int c1, int c2, size_t sid) {
       sidStride ss(sid);
@@ -455,10 +459,10 @@ namespace plegma {
   };
 
   template<typename Float>
-  struct propTex : genericProp< texture<Float>, Float > {using genericProp< texture<Float>, Float >::genericProp;};
+  using propTex = genericProp< texture<Float>, Float >;
 
   template<typename Float>
-  struct prop2 : genericProp< pFloat2<Float>, Float > {using genericProp< pFloat2<Float>, Float >::genericProp;};
+  using prop2 = genericProp< pFloat2<Float>, Float >;
 
 }
 #endif
