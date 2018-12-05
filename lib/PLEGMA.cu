@@ -117,16 +117,16 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     GK_strideFull = GK_localVolume;
 
     for (int i=0; i<N_DIMS; i++) {
-      GK_surface3D[i] = 1;
-      for (int j=0; j<N_DIMS; j++) {
-	if (i==j) continue;
-	GK_surface3D[i] *= GK_localL[j];
+      if(GK_dimBreak[i]) {
+	GK_surface3D[i] = 1;
+	for (int j=0; j<N_DIMS; j++) {
+	  if (i==j) continue;
+	  GK_surface3D[i] *= GK_localL[j];
+	}
+      } else {
+	GK_surface3D[i] = 0;
       }
     }
-        
-    for(int i = 0 ; i < N_DIMS ; i++)
-      if( GK_localL[i] == GK_totalL[i] )
-	GK_surface3D[i] = 0;
 
     for(int i=0; i<N_DIMS; i++){
       for(int j=0; j<N_DIMS; j++){
@@ -138,7 +138,6 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
 	else GK_surface2D[i][j] = 0;
       }
     }
-
     
     for(int i = 0 ; i < N_DIMS ; i++){
       GK_plusGhost[i] = 0;
@@ -152,24 +151,24 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     }
     
 #ifdef MULTI_GPU
-
     size_t lastIndex = GK_localVolume;
+    
     for(int i = 0 ; i < N_DIMS ; i++)
-      if( GK_localL[i] < GK_totalL[i] ){
+      if( GK_dimBreak[i] ){
 	GK_plusGhost[i] = lastIndex ;
 	GK_minusGhost[i] = lastIndex + GK_surface3D[i];
 	lastIndex += 2*GK_surface3D[i];
       }
 
     for(int i=0; i<2*N_DIMS; i++){
-      for(int j=0; j<2*N_DIMS; j++){
+      for(int j=i+1; j<2*N_DIMS; j++){
 	if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
 	  GK_cornerGhost[i][j] = lastIndex;
+	  GK_cornerGhost[j][i] = lastIndex;
 	  lastIndex += GK_surface2D[i%N_DIMS][j%N_DIMS];
 	}
       }
     }
-    
 #endif
 
     int procPosition[4];
