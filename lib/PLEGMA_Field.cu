@@ -71,7 +71,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
       if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 2*GK_surface2D[i][j];
     }
   }
-  total_plus_ghost_length = total_plus_ghost_length + ghost_corner_length;
+  total_plus_ghost_length = total_length + ghost_length + ghost_corner_length;
   
   bytes_total_length = total_length*field_length*2*sizeof(Float);
   bytes_ghost_length = ghost_length*field_length*2*sizeof(Float);
@@ -497,7 +497,7 @@ void PLEGMA_Field<Float>::cpuExchangeGhostCorner(int dirOr){
 	  size_t nbytes = GK_surface2D[i][j]*field_length*2*sizeof(Float);
 	  // negative second direction communication
 	  int ghost =  GK_cornerGhost[i][j];
-	  pointer_receive = h_ext_ghost_corner + (ghost-total_length)*field_length*2;
+	  pointer_receive = h_ext_ghost_corner + (ghost-total_length-ghost_length)*field_length*2;
 	  pointer_send = h_elem + ghost*field_length*2;
 	  disp[i%N_DIMS] = (i<N_DIMS) ? -1 : 1;
 	  disp[j%N_DIMS] = (j<N_DIMS) ? -1 : 1;
@@ -525,7 +525,7 @@ void PLEGMA_Field<Float>::ghostToDevice(){
       errorQuda("First side ghosts have not been allocated.\n");
     }
     Float *host = h_ext_ghost;
-    Float *device = d_elem+GK_localVolume*field_length*2;
+    Float *device = d_elem+total_length*field_length*2;
     cudaMemcpy(device,host,bytes_ghost_length,cudaMemcpyHostToDevice);
     checkCudaError();
   }
@@ -538,7 +538,7 @@ void PLEGMA_Field<Float>::ghostCornerToDevice(){
       errorQuda("First corner ghosts have not been allocated.\n");
     }
     Float *hostCorner = h_ext_ghost_corner;
-    Float *device = d_elem+GK_localVolume*field_length*2+bytes_ghost_length;
+    Float *device = d_elem+(total_length+ghost_length)*field_length*2;
     cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
     checkCudaError();
   }
