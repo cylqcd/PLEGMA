@@ -3,6 +3,7 @@
 #include <quda_params.h>
 #include <invert_quda.h>
 #include <quda_solver.h>
+#include <PLEGMA_Qdirac.h>
 
 using namespace std;
 using namespace quda;
@@ -17,6 +18,7 @@ using namespace quda;
 // void quda::setDiracPreParam(DiracParam &diracParam, QudaInvertParam *inv_param, const bool pc, bool comms);
 namespace quda{
   void createDirac(Dirac *&d, Dirac *&dSloppy, Dirac *&dPre, QudaInvertParam &param, const bool pc_solve);
+  void setDiracParam(DiracParam &diracParam, QudaInvertParam *inv_param, const bool pc);
 }
 
 static TimeProfile profileQUDA("QUDA"); 
@@ -214,5 +216,93 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
 template void QUDA_solver::solve(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
 
+
 template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
 template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
+
+//######################### Quda Dirac operator class ################################
+
+PLEGMA_Qdirac::PLEGMA_Qdirac(QudaDslashType dslashType):
+  D(nullptr), in(nullptr), out(nullptr){
+  if(dslashType != QUDA_WILSON_DSLASH
+     && dslashType != QUDA_CLOVER_WILSON_DSLASH
+     && dslashType != QUDA_TWISTED_MASS_DSLASH
+     && dslashType != QUDA_TWISTED_CLOVER_DSLASH) errorQuda("Error dslashType is not allowed in PLEGMA");
+
+  inv_param = newQudaInvertParam();
+  setInvertParam(inv_param);
+  inv_param.dslash_type = dslashType; // change to the desired dslash type
+  setDiracParam(dParam, &inv_param, false);
+  if (dParam.gauge == nullptr) errorQuda("Gauge field not allocated");
+  if (dParam. clover == nullptr && ((inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH) || (inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH))) errorQuda("Clover field not allocated");
+  D = Dirac::create(dParam);
+
+  ColorSpinorParam cpuParam(nullptr, inv_param, GK_localL, false,
+			    inv_param.input_location);
+  ColorSpinorParam cudaParam(cpuParam, inv_param);
+  cudaParam.create = QUDA_ZERO_FIELD_CREATE;
+  in = new cudaColorSpinorField(cudaParam);
+  out = new cudaColorSpinorField(cudaParam);
+  if(in->SiteSubset() != QUDA_FULL_SITE_SUBSET || out->SiteSubset() != QUDA_FULL_SITE_SUBSET)
+    errorQuda("cudaColorSpinorField should be a full vector for this class");
+}
+
+PLEGMA_Qdirac::~PLEGMA_Qdirac(){
+  delete D;
+  delete in;
+  delete out;
+}
+
+template<typename Float>
+void PLEGMA_Qdirac::applyM(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
+  Pin.copyToQUDA(in,false);
+  D->M(*out,*in);
+  Pout.copyFromQUDA(out,false);
+}
+template void PLEGMA_Qdirac::applyM(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
+template void PLEGMA_Qdirac::applyM(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
+
+template<typename Float>
+void PLEGMA_Qdirac::applyMdag(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
+  Pin.copyToQUDA(in,false);
+  D->Mdag(*out,*in);
+  Pout.copyFromQUDA(out,false);
+}
+template void PLEGMA_Qdirac::applyMdag(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
+template void PLEGMA_Qdirac::applyMdag(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
+
+
+template<typename Float>
+void PLEGMA_Qdirac::applyMdagM(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
+  Pin.copyToQUDA(in,false);
+  D->MdagM(*out,*in);
+  Pout.copyFromQUDA(out,false);
+}
+template void PLEGMA_Qdirac::applyMdagM(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
+template void PLEGMA_Qdirac::applyMdagM(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
+
+template<typename Float>
+void PLEGMA_Qdirac::applyMMdag(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
+  Pin.copyToQUDA(in,false);
+  D->MMdag(*out,*in);
+  Pout.copyFromQUDA(out,false);
+}
+template void PLEGMA_Qdirac::applyMMdag(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
+template void PLEGMA_Qdirac::applyMMdag(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
+
+void PLEGMA_Qdirac::switch_mu(double mu){
+  delete D;
+  D=nullptr;
+  inv_param.mu = mu;
+  setDiracParam(dParam, &inv_param, false);
+  D = Dirac::create(dParam);
+}
+
+void PLEGMA_Qdirac::switch_kappa(double kappa){
+  delete D;
+  D=nullptr;
+  inv_param.kappa = kappa;
+  setDiracParam(dParam, &inv_param, false);
+  D = Dirac::create(dParam);
+}
+
