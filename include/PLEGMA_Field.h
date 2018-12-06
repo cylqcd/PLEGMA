@@ -75,11 +75,9 @@ namespace plegma {
     } 
     void printInfo();
     void ghostToHost(int dirOr=-1);
-    void ghostCornerToHost(int dirOr=-1);
     void cpuExchangeGhost(int dirOr=-1);
-    void cpuExchangeGhostCorner(int dirOr=-1);
     void ghostToDevice();
-    void ghostCornerToDevice();
+    void communicateCorners(int dirOr=-1);
     void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
     void communicateGhost(int dirOr=-1);
     
