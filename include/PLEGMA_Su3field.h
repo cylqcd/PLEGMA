@@ -13,7 +13,7 @@ namespace plegma {
   template<typename Float>
     class PLEGMA_Su3field : public PLEGMA_Field<Float> {
   public:
-    PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag);
+    PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Su3field(){;}
 
     void absorbDir_device(PLEGMA_Gauge<Float> &u,int dir);

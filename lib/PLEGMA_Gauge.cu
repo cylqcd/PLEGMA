@@ -1,6 +1,7 @@
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_plaquette.cuh>
+#include <PLEGMA_plaquetteCorners.cuh>
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
@@ -12,8 +13,8 @@ using namespace plegma;
 //--------------------------//
 
 template<typename Float>
-PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, GAUGE){ ; }
+PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, GAUGE, ghost_flag){ ; }
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::pack(double **p_gauge){
@@ -69,14 +70,21 @@ void PLEGMA_Gauge<Float>::loadFromBackup(){
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaq(){
-  
-  this->ghostToHost();
-  this->cpuExchangeGhost();
-  this->ghostToDevice();
-  
   gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_SIDE);
   tex.tex = this->createTexObject();
   printfQuda("Calculated plaquette is %f\n",calculatePlaquette<Float>(tex));
+  this->destroyTexObject(tex.tex);
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
+  tex.tex = this->createTexObject();
+  Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
+  Float plaqRef = calculatePlaquette<Float>(tex);
+  printfQuda("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
   this->destroyTexObject(tex.tex);
 }
 
@@ -98,7 +106,14 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
       res.path(vspath, u_s, tmp);
       resV += sumRtraceU<Float,Float>(res);
     }
-  printfQuda("Calculated plaquette is %f\n",resV/(GK_totalVolume*N_COLS*6));
+  Float plaqShifts = resV/(GK_totalVolume*N_COLS*6);
+
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_SIDE);
+  tex.tex = this->createTexObject();
+  Float plaqRef = calculatePlaquette<Float>(tex);
+  this->destroyTexObject(tex.tex);
+  printfQuda("TEST: Calculated plaquette with shifts is %f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
 
   for(int idir = 0; idir < 4 ; idir++)
     delete u_s[idir];
@@ -170,9 +185,7 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
 template<typename Float>
 void PLEGMA_Gauge<Float>::scaleDirWise(std::complex<Float> scale[N_DIMS]){
   scale_dir_wise(PLEGMA_Field<Float>::d_elem, (Float*) scale);
-  this->ghostToHost();
-  this->cpuExchangeGhost();
-  this->ghostToDevice();
+  this->communicateGhost();
 }
 
 template<typename Float>

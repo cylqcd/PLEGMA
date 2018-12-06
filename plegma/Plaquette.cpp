@@ -28,6 +28,8 @@ int main(int argc, char **argv)
   pGauge.pack(gauge.get_ptr());
   pGauge.load();
   pGauge.calculatePlaq();
+  pGauge.calculatePlaqCorners();
+  pGauge.calculatePlaqShifts();
 
   finalize();
  

@@ -15,17 +15,21 @@ namespace plegma {
     int field_length;
     int total_length;        
     int ghost_length;
+    int ghost_corner_length;
     int total_plus_ghost_length;
     
     size_t bytes_total_length;
     size_t bytes_ghost_length;
+    size_t bytes_ghost_corner_length;
     size_t bytes_total_plus_ghost_length;
-
+    
     Float *h_elem;
     Float *d_elem;
     Float *h_ext_ghost;
+    Float *h_ext_ghost_corner;
     Float *h_elem_backup;
 
+    GHOST_FLAG ghost_flag;
     ALLOCATION_FLAG allocation;
     bool isAllocHost;
     bool isAllocDevice;
@@ -40,7 +44,7 @@ namespace plegma {
     void destroy_device();
 
   public:
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag,CLASS_ENUM classT);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS);
     virtual ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();
@@ -73,7 +77,10 @@ namespace plegma {
     void ghostToHost(int dirOr=-1);
     void cpuExchangeGhost(int dirOr=-1);
     void ghostToDevice();
-
+    void communicateCorners(int dirOr=-1);
+    void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
+    void communicateGhost(int dirOr=-1);
+    
     void pack(Float *topack);
     void unpack(Float *out);
 

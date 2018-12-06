@@ -34,6 +34,12 @@
 #define LEXIC_TZX(it,iz,ix,L) ( (it)*L[0]*L[2] + (iz)*L[0] + (ix) )
 #define LEXIC_TYX(it,iy,ix,L) ( (it)*L[0]*L[1] + (iy)*L[0] + (ix) )
 #define LEXIC_ZYX(iz,iy,ix,L) ( (iz)*L[0]*L[1] + (iy)*L[0] + (ix) )
+#define LEXIC_TZ(it,iz,L) ( (it)*L[2] + (iz) )
+#define	LEXIC_TY(it,iy,L) ( (it)*L[1] + (iy) )
+#define	LEXIC_TX(it,ix,L) ( (it)*L[0] + (ix) )
+#define	LEXIC_ZY(iz,iy,L) ( (iz)*L[1] + (iy) )
+#define	LEXIC_ZX(iz,ix,L) ( (iz)*L[0] + (ix) )
+#define	LEXIC_YX(iy,ix,L) ( (iy)*L[0] + (ix) )
 
 template<typename Float> inline MPI_Datatype MPI_Type(Float a);
 template<> inline MPI_Datatype MPI_Type<float>(float a) { return MPI_FLOAT; }
@@ -58,7 +64,9 @@ extern int GK_totalL[N_DIMS];
 extern int GK_nProc[N_DIMS];
 extern int GK_plusGhost[N_DIMS];
 extern int GK_minusGhost[N_DIMS];
+extern int GK_cornerGhost[2*N_DIMS][2*N_DIMS];
 extern int GK_surface3D[N_DIMS];
+extern int GK_surface2D[N_DIMS][N_DIMS];
 extern bool GK_init_PLEGMA_flag;
 extern int GK_Nsources;
 extern int GK_sourcePosition[MAX_NSOURCES][N_DIMS];
@@ -83,6 +91,7 @@ namespace plegma {
   enum WHICHSPECTRUM{SR,LR,SM,LM,SI,LI};
   
   enum ALLOCATION_FLAG{NONE,HOST,DEVICE,BOTH,BOTH_EXTRA};
+  enum GHOST_FLAG{NO_GHOSTS,FIRST_SIDE,FIRST_CORNER};
   enum CLASS_ENUM{FIELD,SU3FIELD,GAUGE,VECTOR,PROPAGATOR,PROPAGATOR3D,VECTOR3D};
   enum WHICHPARTICLE{PROTON,NEUTRON};
   enum WHICHPROJECTOR{G4,G5G123,G5G1,G5G2,G5G3};
