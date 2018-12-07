@@ -53,7 +53,11 @@ int main(int argc, char **argv)
   
   loops_std.oneEnd_trick(phi,phi,tmp,-1.,true); //standard one-end trick
   std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
-  loops_std.write_ASCII(prefix+"std_local_loops.0000.dat", prefix+"std_oneD_loops.0000.dat", prefix+"std_oneDC_loops.0000.dat");
+
+  int rank = comm_rank();
+  loops_std.write_ASCII(prefix+"std_local_loops.0000.dat" + std::to_string(rank),
+			prefix+"std_oneD_loops.0000.dat" + std::to_string(rank),
+			prefix+"std_oneDC_loops.0000.dat" + std::to_string(rank));
 
   PLEGMA_QLoops<double> loops_gen(BOTH,true);
   PLEGMA_Vector<double> phi_r(BOTH);
@@ -68,7 +72,9 @@ int main(int argc, char **argv)
   D->apply<M>(phi_r,phi);
   phi_r.apply_gamma5();
   loops_gen.oneEnd_trick(phi, phi_r, tmp, +1., true); //generalized one-end trick
-  loops_gen.write_ASCII(prefix+"gen_local_loops.0000.dat", prefix+"gen_oneD_loops.0000.dat", prefix+"gen_oneDC_loops.0000.dat");
+  loops_gen.write_ASCII(prefix+"gen_local_loops.0000.dat" + std::to_string(rank),
+			prefix+"gen_oneD_loops.0000.dat" + std::to_string(rank),
+			prefix+"gen_oneDC_loops.0000.dat" + std::to_string(rank));
 
   delete D;
   delete solverDN;
