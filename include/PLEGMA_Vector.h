@@ -17,10 +17,7 @@ namespace plegma {
   
   template<typename Float>
     class PLEGMA_Vector : public PLEGMA_Field<Float> {
-  private:
-    PLEGMA_Gauge<Float> *gauge;
   public:
-    PLEGMA_Vector(PLEGMA_Gauge<Float> *gIn, ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     PLEGMA_Vector(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Vector(){;}
     
@@ -42,7 +39,7 @@ namespace plegma {
     void write(char* filename);
     void conjugate();
     void apply_gamma5();
-    void covD(PLEGMA_Vector<Float> &vecIn, int dirOr);
+    void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
   };
 }
 

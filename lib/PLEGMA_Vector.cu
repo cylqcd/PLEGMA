@@ -15,15 +15,6 @@ template<typename Float>
 PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
 
-template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(PLEGMA_Gauge<Float> *gIn,ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
-  PLEGMA_Field<Float>(alloc_flag, VECTOR), gauge(gIn){
-  // Use this constructor carefully. Since we take a reference to gauge
-  // we should not destroy it or modify it outside
-  
-  // make sure that we have the ghost
-  gauge->communicateGhost();
-}
 
 template<typename FloatOut, typename FloatIn>
 static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &vecIn){
@@ -409,17 +400,16 @@ void PLEGMA_Vector<Float>::write(char *filename){
 
 
 template<typename Float>
-void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, int dirOr){
+void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr){
   // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
-  if(gauge == NULL) errorQuda("This vector has not constructed with a gauge field thus cannot use cov Der");
   if(dirOr < 0 || dirOr > 7) errorQuda("Wrong direction is given");
   vectorTex<Float> texVecIn;
   texVecIn.tex= vecIn.createTexObject();
   gaugeTex<Float> texGaugeIn;
-  texGaugeIn.tex = gauge->createTexObject();
+  texGaugeIn.tex = gauge.createTexObject();
   covD_k<Float,Float,Float>(this->D_elem(), texVecIn, texGaugeIn, dirOr);
   vecIn.destroyTexObject(texVecIn.tex);
-  gauge->destroyTexObject(texGaugeIn.tex);
+  gauge.destroyTexObject(texGaugeIn.tex);
 }
 
 template class PLEGMA_Vector<float>;

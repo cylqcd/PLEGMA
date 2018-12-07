@@ -1,5 +1,6 @@
 #include <PLEGMA_Field.h>
 #include <PLEGMA_Vector.h>
+#include <PLEGMA_Gauge.h>
 #include <string>
 
 #ifndef _PLEGMA_QLOOPS
@@ -22,7 +23,7 @@ namespace plegma{
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 		      Float val , bool accum );
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
-		      PLEGMA_Vector<Float> &v_covD, Float val , bool accum );
+		      PLEGMA_Vector<Float> &tmp, PLEGMA_Gauge<Float> &gauge, Float val , bool accum );
     void contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, ACCUM_TYPE acc_type);
     void contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r);
 

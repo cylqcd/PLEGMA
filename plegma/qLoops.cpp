@@ -1,12 +1,5 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-#include <contractQuda.h>
-#include <quda_params.h>
-
-#include <quda_params.h>
-#include <invert_quda.h>
-#include <quda_solver.h>
-#include <PLEGMA_Qdirac.h>
 
 using namespace plegma;
 using namespace quda;
@@ -41,7 +34,7 @@ int main(int argc, char **argv)
   QUDA_solver *solverDN = new QUDA_solver(mu);
   PLEGMA_Vector<double> source(DEVICE);
   PLEGMA_Vector<double> phi;
-  PLEGMA_Vector<double> tmp(&pGauge);
+  PLEGMA_Vector<double> tmp;
   PLEGMA_QLoops<double> loops_std(BOTH,true);
   QudaInvertParam inv_params = solverDN->getInvParams();
   // just put units to the whole for debugging
@@ -50,8 +43,8 @@ int main(int argc, char **argv)
   // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
   phi.scaleVector(1./(2.*inv_params.kappa)); 
 
-  
-  loops_std.oneEnd_trick(phi,phi,tmp,-1.,true); //standard one-end trick
+  pGauge.communicateGhost();
+  loops_std.oneEnd_trick(phi,phi,tmp,pGauge,-1.,true); //standard one-end trick
   std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
 
   int rank = comm_rank();
@@ -61,17 +54,17 @@ int main(int argc, char **argv)
 
   PLEGMA_QLoops<double> loops_gen(BOTH,true);
   PLEGMA_Vector<double> phi_r;
-  PLEGMA_Qdirac *D = nullptr;
+  QUDA_dirac *D = nullptr;
   if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
-    D = new PLEGMA_Qdirac(QUDA_CLOVER_WILSON_DSLASH);
+    D = new QUDA_dirac(QUDA_CLOVER_WILSON_DSLASH);
   else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
-    D = new PLEGMA_Qdirac(QUDA_WILSON_DSLASH);
+    D = new QUDA_dirac(QUDA_WILSON_DSLASH);
   else
     errorQuda("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
 
   D->apply<M>(phi_r,phi);
   phi_r.apply_gamma5();
-  loops_gen.oneEnd_trick(phi, phi_r, tmp, +1., true); //generalized one-end trick
+  loops_gen.oneEnd_trick(phi, phi_r, tmp, pGauge, +1., true); //generalized one-end trick
   loops_gen.write_ASCII(prefix+"gen_local_loops.0000.dat" + std::to_string(rank),
 			prefix+"gen_oneD_loops.0000.dat" + std::to_string(rank),
 			prefix+"gen_oneDC_loops.0000.dat" + std::to_string(rank));
