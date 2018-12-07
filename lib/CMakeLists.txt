@@ -7,9 +7,6 @@ set (QUDA_OBJS
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   kernels/PLEGMA_baryons_NtoN.cu
-  kernels/PLEGMA_baryons_NtoR.cu
-  kernels/PLEGMA_baryons_RtoN.cu
-  kernels/PLEGMA_baryons_RtoR.cu
   PLEGMA_QLoops.cu
 )
 
