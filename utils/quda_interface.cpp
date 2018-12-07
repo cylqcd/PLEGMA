@@ -253,42 +253,31 @@ PLEGMA_Qdirac::~PLEGMA_Qdirac(){
   delete out;
 }
 
-template<typename Float>
-void PLEGMA_Qdirac::applyM(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
+template<APP_TYPE type,typename Float>
+void PLEGMA_Qdirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, QudaMassNormalization normType){
   Pin.copyToQUDA(in,false);
-  D->M(*out,*in);
+  switch (type){
+  case(M): D->M(*out,*in); break;
+  case(Mdag): D->Mdag(*out,*in); break;
+  case(MdagM): D->MdagM(*out,*in);  break;
+  case(MMdag): D->MMdag(*out,*in); break;
+  }
   Pout.copyFromQUDA(out,false);
+  if (normType == QUDA_MASS_NORMALIZATION || 
+      normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
+    Pout.scaleVector(1./(2*inv_param.kappa));
+  }
 }
-template void PLEGMA_Qdirac::applyM(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
-template void PLEGMA_Qdirac::applyM(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
 
-template<typename Float>
-void PLEGMA_Qdirac::applyMdag(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
-  Pin.copyToQUDA(in,false);
-  D->Mdag(*out,*in);
-  Pout.copyFromQUDA(out,false);
-}
-template void PLEGMA_Qdirac::applyMdag(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
-template void PLEGMA_Qdirac::applyMdag(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
+template void PLEGMA_Qdirac::apply<M>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void PLEGMA_Qdirac::apply<M>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void PLEGMA_Qdirac::apply<Mdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void PLEGMA_Qdirac::apply<Mdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void PLEGMA_Qdirac::apply<MdagM>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void PLEGMA_Qdirac::apply<MdagM>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void PLEGMA_Qdirac::apply<MMdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void PLEGMA_Qdirac::apply<MMdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
 
-
-template<typename Float>
-void PLEGMA_Qdirac::applyMdagM(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
-  Pin.copyToQUDA(in,false);
-  D->MdagM(*out,*in);
-  Pout.copyFromQUDA(out,false);
-}
-template void PLEGMA_Qdirac::applyMdagM(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
-template void PLEGMA_Qdirac::applyMdagM(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
-
-template<typename Float>
-void PLEGMA_Qdirac::applyMMdag(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin){
-  Pin.copyToQUDA(in,false);
-  D->MMdag(*out,*in);
-  Pout.copyFromQUDA(out,false);
-}
-template void PLEGMA_Qdirac::applyMMdag(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin);
-template void PLEGMA_Qdirac::applyMMdag(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin);
 
 void PLEGMA_Qdirac::switch_mu(double mu){
   delete D;

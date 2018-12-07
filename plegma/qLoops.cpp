@@ -61,7 +61,7 @@ int main(int argc, char **argv)
   if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
     D = new PLEGMA_Qdirac(QUDA_CLOVER_WILSON_DSLASH);
   else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
-    D =	new PLEGMA_Qdirac(QUDA_WILSON_DSLASH);
+    D = new PLEGMA_Qdirac(QUDA_WILSON_DSLASH);
   else
     errorQuda("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
 

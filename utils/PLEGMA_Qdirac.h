@@ -4,7 +4,7 @@
 #ifndef _PLEGMA_QDIRAC_H
 #define _PLEGMA_QDIRAC_H
 using namespace plegma;
-
+enum APP_TYPE {M,Mdag,MdagM,MMdag};
 namespace quda {
   
   class PLEGMA_Qdirac {
@@ -20,10 +20,7 @@ namespace quda {
     void print(){dParam.print();}
     void switch_mu(double mu);
     void switch_kappa(double kappa);
-    template<typename Float> void applyM(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
-    template<typename Float> void applyMdag(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
-    template<typename Float> void applyMdagM(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
-    template<typename Float> void applyMMdag(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+    template<APP_TYPE type, typename Float> void apply(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is does not put any normalization
   };
 
 }
