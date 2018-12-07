@@ -6,6 +6,7 @@
 #include <quda_params.h>
 #include <invert_quda.h>
 #include <quda_solver.h>
+#include <PLEGMA_Qdirac.h>
 
 using namespace plegma;
 using namespace quda;
@@ -41,18 +42,35 @@ int main(int argc, char **argv)
   PLEGMA_Vector<double> source(DEVICE);
   PLEGMA_Vector<double> phi(BOTH);
   PLEGMA_Vector<double> tmp(BOTH,&pGauge);
-  PLEGMA_QLoops<double> loops(BOTH,true);
+  PLEGMA_QLoops<double> loops_std(BOTH,true);
   QudaInvertParam inv_params = solverDN->getInvParams();
   // just put units to the whole for debugging
   source.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
   solverDN->solve(phi,source);
   // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
   phi.scaleVector(1./(2.*inv_params.kappa)); 
-  
-  loops.oneEnd_trick(phi,phi,tmp,-1.,true); //standard one-end trick
-  std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
-  loops.write_ASCII(prefix+"std_local_loops.0000.dat", prefix+"std_oneD_loops.0000.dat", prefix+"std_oneDC_loops.0000.dat");
 
+  
+  loops_std.oneEnd_trick(phi,phi,tmp,-1.,true); //standard one-end trick
+  std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
+  loops_std.write_ASCII(prefix+"std_local_loops.0000.dat", prefix+"std_oneD_loops.0000.dat", prefix+"std_oneDC_loops.0000.dat");
+
+  PLEGMA_QLoops<double> loops_gen(BOTH,true);
+  PLEGMA_Vector<double> phi_r(BOTH);
+  PLEGMA_Qdirac *D = nullptr;
+  if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
+    D = new PLEGMA_Qdirac(QUDA_CLOVER_WILSON_DSLASH);
+  else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
+    D =	new PLEGMA_Qdirac(QUDA_WILSON_DSLASH);
+  else
+    errorQuda("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
+
+  D->apply<M>(phi_r,phi);
+  phi_r.apply_gamma5();
+  loops_gen.oneEnd_trick(phi, phi_r, tmp, +1., true); //generalized one-end trick
+  loops_gen.write_ASCII(prefix+"gen_local_loops.0000.dat", prefix+"gen_oneD_loops.0000.dat", prefix+"gen_oneDC_loops.0000.dat");
+
+  delete D;
   delete solverDN;
   finalize();
 
