@@ -2,8 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <quda_params.h>
 #include <invert_quda.h>
-#include <quda_solver.h>
-#include <PLEGMA_Qdirac.h>
+#include <quda_interface.h>
 
 using namespace std;
 using namespace quda;
@@ -222,7 +221,7 @@ template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorI
 
 //######################### Quda Dirac operator class ################################
 
-PLEGMA_Qdirac::PLEGMA_Qdirac(QudaDslashType dslashType):
+QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
   D(nullptr), in(nullptr), out(nullptr){
   if(dslashType != QUDA_WILSON_DSLASH
      && dslashType != QUDA_CLOVER_WILSON_DSLASH
@@ -247,14 +246,14 @@ PLEGMA_Qdirac::PLEGMA_Qdirac(QudaDslashType dslashType):
     errorQuda("cudaColorSpinorField should be a full vector for this class");
 }
 
-PLEGMA_Qdirac::~PLEGMA_Qdirac(){
+QUDA_dirac::~QUDA_dirac(){
   delete D;
   delete in;
   delete out;
 }
 
 template<APP_TYPE type,typename Float>
-void PLEGMA_Qdirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, QudaMassNormalization normType){
+void QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, QudaMassNormalization normType){
   Pin.copyToQUDA(in,false);
   switch (type){
   case(M): D->M(*out,*in); break;
@@ -269,17 +268,17 @@ void PLEGMA_Qdirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin,
   }
 }
 
-template void PLEGMA_Qdirac::apply<M>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void PLEGMA_Qdirac::apply<M>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
-template void PLEGMA_Qdirac::apply<Mdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void PLEGMA_Qdirac::apply<Mdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
-template void PLEGMA_Qdirac::apply<MdagM>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void PLEGMA_Qdirac::apply<MdagM>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
-template void PLEGMA_Qdirac::apply<MMdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void PLEGMA_Qdirac::apply<MMdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
 
 
-void PLEGMA_Qdirac::switch_mu(double mu){
+void QUDA_dirac::switchMu(double mu){
   delete D;
   D=nullptr;
   inv_param.mu = mu;
@@ -287,7 +286,7 @@ void PLEGMA_Qdirac::switch_mu(double mu){
   D = Dirac::create(dParam);
 }
 
-void PLEGMA_Qdirac::switch_kappa(double kappa){
+void QUDA_dirac::switchKappa(double kappa){
   delete D;
   D=nullptr;
   inv_param.kappa = kappa;

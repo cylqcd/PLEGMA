@@ -1,7 +1,7 @@
 #include <PLEGMA.h>
 #include <PLEGMA_buffers.h>
 #include <quda_params.h>
-#include <quda_solver.h>
+#include <quda_interface.h>
 
 #ifndef _PLEGMA_UTILS_H
 #define _PLEGMA_UTILS_H

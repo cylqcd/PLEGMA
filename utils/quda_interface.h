@@ -1,15 +1,12 @@
 #include <PLEGMA.h>
 #include <invert_quda.h>
+#include <dirac_quda.h>
 
-#ifndef _QUDA_SOLVER_H
-#define _QUDA_SOLVER_H
+#ifndef _QUDA_INTERFACE_H
+#define _QUDA_INTERFACE_H
 using namespace plegma;
 
-namespace quda {
-  ////////////////////////
-  // CLASS: QUDA_solver //
-  ////////////////////////
-  
+namespace quda {  
   class QUDA_solver {
 
   protected:
@@ -33,6 +30,23 @@ namespace quda {
     cudaColorSpinorField* solve(PLEGMA_Vector<Float> &vectorIn);
     template<typename Float>
     void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+  };
+
+  enum APP_TYPE {M,Mdag,MdagM,MMdag};
+  class QUDA_dirac {
+  private:
+    DiracParam dParam;
+    QudaInvertParam inv_param;
+    Dirac *D;
+    cudaColorSpinorField *in, *out;
+  public:
+     //only QUDA_WILSON_DSLASH, QUDA_CLOVER_WILSON_DSLASH, QUDA_TWISTED_MASS_DSLASH, QUDA_TWISTED_CLOVER_DSLASH
+    QUDA_dirac(QudaDslashType dslashType);
+    virtual ~QUDA_dirac();
+    void print(){dParam.print();}
+    void switchMu(double mu);
+    void switchKappa(double kappa);
+    template<APP_TYPE type, typename Float> void apply(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is does not put any normalization
   };
 }
 #endif
