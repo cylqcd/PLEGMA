@@ -12,19 +12,17 @@ using namespace quda;
 //---------------------------//
 
 template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, VECTOR), gauge(NULL){ ; }
-
 template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, PLEGMA_Gauge<Float> *gIn): 
+PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
+
+PLEGMA_Vector<Float>::PLEGMA_Vector(PLEGMA_Gauge<Float> *gIn,ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, VECTOR), gauge(gIn){
   // Use this constructor carefully. Since we take a reference to gauge
   // we should not destroy it or modify it outside
   
   // make sure that we have the ghost
-  gauge->ghostToHost();
-  gauge->cpuExchangeGhost();
-  gauge->ghostToDevice();
+  gauge->communicateGhost();
 }
 
 template<typename FloatOut, typename FloatIn>

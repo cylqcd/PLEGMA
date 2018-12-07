@@ -20,8 +20,8 @@ namespace plegma {
   private:
     PLEGMA_Gauge<Float> *gauge;
   public:
-    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag);
-    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, PLEGMA_Gauge<Float> *gIn);
+    PLEGMA_Vector(PLEGMA_Gauge<Float> *gIn, ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
+    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Vector(){;}
     
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
