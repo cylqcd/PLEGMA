@@ -12,10 +12,10 @@ using namespace quda;
 //---------------------------//
 
 template<typename Float>
-template<typename Float>
 PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
 
+template<typename Float>
 PLEGMA_Vector<Float>::PLEGMA_Vector(PLEGMA_Gauge<Float> *gIn,ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, VECTOR), gauge(gIn){
   // Use this constructor carefully. Since we take a reference to gauge

@@ -6,10 +6,6 @@
 #define _PLEGMA_QLOOPS
 
 namespace plegma{
-
-  //enum LOOP_TYPE{S_ULTRALOCAL, G_ULTRALOCAL, S_ONED, G_ONED, S_ONEDC, G_ONEDC, N_LOOPS};
-  //const int nCompL[N_LOOPS] ={N_SPINS*N_SPINS, N_SPINS*N_SPINS, N_DIMS*N_SPINS*N_SPINS,
-  //			      N_DIMS*N_SPINS*N_SPINS, N_DIMS*N_SPINS*N_SPINS, N_DIMS*N_SPINS*N_SPINS};
     
   template<typename Float>
     class PLEGMA_QLoops : public PLEGMA_Field<Float> {
@@ -20,7 +16,7 @@ namespace plegma{
 
     bool isOneD;
   public:
-    PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag, bool isOneD=false);
+    PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag=BOTH, bool isOneD=false);
     ~PLEGMA_QLoops();
 
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,

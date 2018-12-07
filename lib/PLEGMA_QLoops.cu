@@ -2,10 +2,6 @@
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_contractG5_bilinear.cuh>
 using namespace plegma;
-
-//!!!!!!!!! TODO: Allow for all classes the option to do pagelocking for host memory
-//!!!!!!!!! TODO: host ext ghost is a good idea to be pagelocked
-//void contract(const quda::cudaColorSpinorField x, const quda::cudaColorSpinorField y, void *ctrn, const QudaContractType cType);
   
 template<typename Float>
 PLEGMA_QLoops<Float>::PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag, bool isOneD):

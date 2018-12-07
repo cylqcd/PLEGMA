@@ -40,8 +40,8 @@ int main(int argc, char **argv)
   if(mu>0) mu*=-1.;
   QUDA_solver *solverDN = new QUDA_solver(mu);
   PLEGMA_Vector<double> source(DEVICE);
-  PLEGMA_Vector<double> phi(BOTH);
-  PLEGMA_Vector<double> tmp(BOTH,&pGauge);
+  PLEGMA_Vector<double> phi;
+  PLEGMA_Vector<double> tmp(&pGauge);
   PLEGMA_QLoops<double> loops_std(BOTH,true);
   QudaInvertParam inv_params = solverDN->getInvParams();
   // just put units to the whole for debugging
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 			prefix+"std_oneDC_loops.0000.dat" + std::to_string(rank));
 
   PLEGMA_QLoops<double> loops_gen(BOTH,true);
-  PLEGMA_Vector<double> phi_r(BOTH);
+  PLEGMA_Vector<double> phi_r;
   PLEGMA_Qdirac *D = nullptr;
   if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
     D = new PLEGMA_Qdirac(QUDA_CLOVER_WILSON_DSLASH);
