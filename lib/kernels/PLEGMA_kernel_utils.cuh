@@ -228,6 +228,15 @@ namespace plegma {
        }
   }
 
+  template<typename FloatOutV, typename FloatInV>
+  __inline__ __device__ void Vdag_g5(Float2<FloatOutV> outV[N_SPINS][N_COLS], Float2<FloatInV> inV[N_SPINS][N_COLS]){
+#pragma unroll
+    for(int c1 = 0 ; c1 < N_COLS ; c1++)
+#pragma unroll
+      for(int mu = 0 ; mu < N_SPINS ; mu++)
+	outV[(mu+2)%4][c1] = conj(inV[mu][c1]);
+  }
+  
   template<typename T>
   __inline__ __device__ void reduce(T *shared_cache, const int n_comp){
     // synchronize threads to be sure that all have written their register trace to share memory

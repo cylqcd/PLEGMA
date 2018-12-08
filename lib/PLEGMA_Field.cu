@@ -62,6 +62,10 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     field_length = N_SPINS * N_COLS;
     total_length = GK_localVolume/GK_localL[3];
     break;
+  case QLOOPS:
+    field_length = N_SPINS * N_SPINS;
+    total_length = GK_localVolume;
+    break;
   }
   ghost_length = 0;
   ghost_corner_length = 0;

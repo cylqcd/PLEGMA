@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <quda_internal.h>
 #include <quda.h>
-
+#include <cublas_v2.h>
 #ifndef _PLEGMA_GLOBAL_H
 #define _PLEGMA_GLOBAL_H
 
@@ -79,7 +79,8 @@ extern int GK_localRank;
 extern int GK_localSize;
 extern int GK_timeRank;
 extern int GK_timeSize;
-
+// for cublas use
+extern cublasHandle_t cublas_handle;
 namespace plegma {
   template<typename Float> struct texture;
 
@@ -91,8 +92,9 @@ namespace plegma {
   enum WHICHSPECTRUM{SR,LR,SM,LM,SI,LI};
   
   enum ALLOCATION_FLAG{NONE,HOST,DEVICE,BOTH,BOTH_EXTRA};
+
+  enum CLASS_ENUM{FIELD,SU3FIELD,GAUGE,VECTOR,PROPAGATOR,PROPAGATOR3D,VECTOR3D,QLOOPS};
   enum GHOST_FLAG{NO_GHOSTS,FIRST_SIDE,FIRST_CORNER};
-  enum CLASS_ENUM{FIELD,SU3FIELD,GAUGE,VECTOR,PROPAGATOR,PROPAGATOR3D,VECTOR3D};
   enum WHICHPARTICLE{PROTON,NEUTRON};
   enum WHICHPROJECTOR{G4,G5G123,G5G1,G5G2,G5G3};
 
@@ -102,6 +104,7 @@ namespace plegma {
 
   enum APEDIM{D3,D4};
 
+  enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
   typedef struct {
     int nsmearAPE;
     int nsmearGauss;

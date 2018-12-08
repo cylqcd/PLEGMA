@@ -4,6 +4,7 @@
 #include <PLEGMA_lime.h>
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
+#include <PLEGMA_covD.cuh>
 using namespace plegma;
 using namespace quda;
 //---------------------------//
@@ -13,6 +14,7 @@ using namespace quda;
 template<typename Float>
 PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
+
 
 template<typename FloatOut, typename FloatIn>
 static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &vecIn){
@@ -394,6 +396,20 @@ void PLEGMA_Vector<Float>::write(char *filename){
   free(buffer);
   MPI_File_close(&mpifid);
   MPI_Type_free(&subblock);
+}
+
+
+template<typename Float>
+void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr){
+  // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
+  if(dirOr < 0 || dirOr > 7) errorQuda("Wrong direction is given");
+  vectorTex<Float> texVecIn;
+  texVecIn.tex= vecIn.createTexObject();
+  gaugeTex<Float> texGaugeIn;
+  texGaugeIn.tex = gauge.createTexObject();
+  covD_k<Float,Float,Float>(this->D_elem(), texVecIn, texGaugeIn, dirOr);
+  vecIn.destroyTexObject(texVecIn.tex);
+  gauge.destroyTexObject(texGaugeIn.tex);
 }
 
 template class PLEGMA_Vector<float>;

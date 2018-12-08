@@ -60,6 +60,8 @@ int GK_localRank;
 int GK_localSize;
 int GK_timeRank;
 int GK_timeSize;
+// for cublas use
+cublasHandle_t cublas_handle;
 
 //////////////////////////////////////////////////  
 static void createMomenta(int Q_sq){
@@ -245,6 +247,9 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     free(ranks);
     free(ranksTime);
 
+    cublasStatus_t error = cublasCreate(&cublas_handle);
+    if (error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCreate failed with error %d", error);
+    
     GK_init_PLEGMA_flag = true;
     printfQuda("PLEGMA has been initialized\n");
   }  
@@ -278,4 +283,6 @@ void plegma::print_status(){
 
 void plegma::PLEGMA_end() {
   // TODO: here we should destroy everything is created in init.
+  cublasStatus_t error = cublasDestroy(cublas_handle);
+  if (error != CUBLAS_STATUS_SUCCESS) errorQuda("\nError indestroying cublas context, error code = %d\n", error);
 }

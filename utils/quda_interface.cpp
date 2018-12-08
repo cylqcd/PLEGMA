@@ -2,7 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <quda_params.h>
 #include <invert_quda.h>
-#include <quda_solver.h>
+#include <quda_interface.h>
 
 using namespace std;
 using namespace quda;
@@ -17,6 +17,7 @@ using namespace quda;
 // void quda::setDiracPreParam(DiracParam &diracParam, QudaInvertParam *inv_param, const bool pc, bool comms);
 namespace quda{
   void createDirac(Dirac *&d, Dirac *&dSloppy, Dirac *&dPre, QudaInvertParam &param, const bool pc_solve);
+  void setDiracParam(DiracParam &diracParam, QudaInvertParam *inv_param, const bool pc);
 }
 
 static TimeProfile profileQUDA("QUDA"); 
@@ -213,3 +214,83 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
 
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
 template void QUDA_solver::solve(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
+
+
+template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
+template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
+
+//######################### Quda Dirac operator class ################################
+
+QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
+  D(nullptr), in(nullptr), out(nullptr){
+  if(dslashType != QUDA_WILSON_DSLASH
+     && dslashType != QUDA_CLOVER_WILSON_DSLASH
+     && dslashType != QUDA_TWISTED_MASS_DSLASH
+     && dslashType != QUDA_TWISTED_CLOVER_DSLASH) errorQuda("Error dslashType is not allowed in PLEGMA");
+
+  inv_param = newQudaInvertParam();
+  setInvertParam(inv_param);
+  inv_param.dslash_type = dslashType; // change to the desired dslash type
+  setDiracParam(dParam, &inv_param, false);
+  if (dParam.gauge == nullptr) errorQuda("Gauge field not allocated");
+  if (dParam. clover == nullptr && ((inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH) || (inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH))) errorQuda("Clover field not allocated");
+  D = Dirac::create(dParam);
+
+  ColorSpinorParam cpuParam(nullptr, inv_param, GK_localL, false,
+			    inv_param.input_location);
+  ColorSpinorParam cudaParam(cpuParam, inv_param);
+  cudaParam.create = QUDA_ZERO_FIELD_CREATE;
+  in = new cudaColorSpinorField(cudaParam);
+  out = new cudaColorSpinorField(cudaParam);
+  if(in->SiteSubset() != QUDA_FULL_SITE_SUBSET || out->SiteSubset() != QUDA_FULL_SITE_SUBSET)
+    errorQuda("cudaColorSpinorField should be a full vector for this class");
+}
+
+QUDA_dirac::~QUDA_dirac(){
+  delete D;
+  delete in;
+  delete out;
+}
+
+template<APP_TYPE type,typename Float>
+void QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, QudaMassNormalization normType){
+  Pin.copyToQUDA(in,false);
+  switch (type){
+  case(M): D->M(*out,*in); break;
+  case(Mdag): D->Mdag(*out,*in); break;
+  case(MdagM): D->MdagM(*out,*in);  break;
+  case(MMdag): D->MMdag(*out,*in); break;
+  }
+  Pout.copyFromQUDA(out,false);
+  if (normType == QUDA_MASS_NORMALIZATION || 
+      normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
+    Pout.scaleVector(1./(2*inv_param.kappa));
+  }
+}
+
+template void QUDA_dirac::apply<M>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+
+
+void QUDA_dirac::switchMu(double mu){
+  delete D;
+  D=nullptr;
+  inv_param.mu = mu;
+  setDiracParam(dParam, &inv_param, false);
+  D = Dirac::create(dParam);
+}
+
+void QUDA_dirac::switchKappa(double kappa){
+  delete D;
+  D=nullptr;
+  inv_param.kappa = kappa;
+  setDiracParam(dParam, &inv_param, false);
+  D = Dirac::create(dParam);
+}
+
