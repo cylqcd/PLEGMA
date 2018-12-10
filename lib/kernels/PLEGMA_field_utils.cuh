@@ -23,6 +23,37 @@ static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<
   checkCudaError();
 }
 
+template<typename FloatInOut>
+static __global__ void copy_side_to_ghost_kernel(FloatInOut *f, int dir, int sign, int length_field){
+  size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= c_surface3D[dir]) return;
+  generic2<FloatInOut> F(f);
+  size_t id[4], tmp_sid=sid;
+  for(int i = 0 ; i<N_DIMS; i++) {
+    if(i==dir) {
+      id[i] = sign==1 ? (c_localL[dir]-1):0;
+    } else {
+      id[i] = tmp_sid % c_localL[i];
+      tmp_sid /= c_localL[i];
+    }
+  }
+  size_t vid = LEXIC_ID(id);
+  sidStride ss;
+  ss.sid = c_sideGhost[dir + N_DIMS*sign]*length_field + sid;
+  ss.stride = c_surface3D[dir];
+  for(int i = 0 ; i < length_field ; i++)
+    F.set(i, ss, F.get(i,vid));
+}
+
+template<typename Float>
+static void copy_side_to_ghost(PLEGMA_Field<Float> &f, int dir){
+  if( GK_dimBreak[dir%N_DIMS] ){
+    dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+    dim3 gridDim( (GK_surface3D[dir%N_DIMS] + blockDim.x -1)/blockDim.x , 1 , 1);
+    copy_side_to_ghost_kernel<<<gridDim,blockDim>>>(f.D_elem(), dir%N_DIMS, dir/N_DIMS, f.Field_length());
+    checkCudaError();
+  }
+}
 
 template<typename FloatInOut>
 static __global__ void copy_corner_to_ghost_kernel(FloatInOut *f, int dir1, int dir2, int sign1, int sign2, int length_field){
@@ -57,3 +88,4 @@ static void copy_corner_to_ghost(PLEGMA_Field<Float> &f, int dir1, int dir2){
     checkCudaError();
   }
 }
+

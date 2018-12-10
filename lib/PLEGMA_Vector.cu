@@ -36,13 +36,8 @@ void PLEGMA_Vector<Float>::copy(PLEGMA_Vector<double> &vecIn)  {
 
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,PLEGMA_Gauge<Float> &gaugeAPE){
-  gaugeAPE.ghostToHost();
-  gaugeAPE.cpuExchangeGhost();
-  gaugeAPE.ghostToDevice();
-
-  vecIn.ghostToHost();
-  vecIn.cpuExchangeGhost();
-  vecIn.ghostToDevice();
+  gaugeAPE.communicateSideGhost();
+  vecIn.communicateSideGhost();
 
   gaugeTex<Float> texGauge;
   vectorTex<Float> texVecIn, texVecOut;
@@ -54,15 +49,11 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,PLEGMA_G
   for(int i = 0 ; i < GK_nsmearGauss ; i++){
     if( (i%2) == 0){
       gaussian_smearing(this->D_elem(),texVecIn,texGauge);
-      this->ghostToHost();
-      this->cpuExchangeGhost();
-      this->ghostToDevice();
+      this->communicateSideGhost();
     }
     else{
       gaussian_smearing(vecIn.D_elem(),texVecOut,texGauge);
-      vecIn.ghostToHost();
-      vecIn.cpuExchangeGhost();
-      vecIn.ghostToDevice();
+      vecIn.communicateSideGhost();
     }
   }
 
