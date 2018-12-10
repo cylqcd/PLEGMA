@@ -19,8 +19,32 @@ struct ProfileStruct{
   bool tuneY; // tune for the second dimension of thread blocks
   bool sharedMemory;
   unsigned int sharedBytesPerThread;
-};
 
+  ProfileStruct(){};
+  ProfileStruct(long long vol, bool shMem, unsigned int shBPT=0, bool tY=false){
+    flops = 0;
+    outBytes = 0;
+    inpBytes = 0;
+    siteBytes = 0;
+    volume = vol;
+    stride = vol;
+    tuneY = tY;
+    sharedMemory = shMem;
+    sharedBytesPerThread = shBPT;
+  };
+  ProfileStruct& operator=(ProfileStruct& ps){                                                                                            
+    flops = ps.flops;
+    outBytes = ps.outBytes;
+    inpBytes = ps.inpBytes;
+    siteBytes = ps.siteBytes;
+    volume = ps.volume;
+    stride = ps.stride;
+    tuneY = ps.tuneY;
+    sharedMemory = ps.sharedMemory;
+    sharedBytesPerThread = ps.sharedBytesPerThread;                                                                                                  
+    return *this;    
+  };
+};
 
 // class to perform the kernel tuning
 template<typename ArgsStruct>

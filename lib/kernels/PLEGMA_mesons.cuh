@@ -89,16 +89,11 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
   kernel_args.y0 = GK_sourcePosition[isource][1];
   kernel_args.z0 = GK_sourcePosition[isource][2];
 
-  ProfileStruct kernel_ps;
-  kernel_ps.flops = site_size*N_SPINS*N_SPINS*N_COLS*N_COLS*8; //fourier transform missing
-  kernel_ps.outBytes = site_size*volume*2*sizeof(FloatC);
-  kernel_ps.inpBytes = volume*2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
-  kernel_ps.siteBytes = 2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
-  kernel_ps.volume = SpVol;
-  kernel_ps.stride = SpVol;
-  kernel_ps.tuneY = false ;
-  kernel_ps.sharedMemory = true ;
-  kernel_ps.sharedBytesPerThread = site_size*sizeof(Float2<FloatC>);
+  ProfileStruct kernel_ps(SpVol, true, site_size*sizeof(Float2<FloatC>));
+  //kernel_ps.flops = site_size*N_SPINS*N_SPINS*N_COLS*N_COLS*8; //fourier transform missing
+  //kernel_ps.outBytes = site_size*volume*2*sizeof(FloatC);
+  //kernel_ps.inpBytes = volume*2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
+  //kernel_ps.siteBytes = 2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
 
   PLEGMA_kernel_tuner<ArgsMesons<FloatA,FloatB,FloatC,runFT>> tuner( contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>, &kernel_args, kernel_ps );
   cudaFuncSetCacheConfig(contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>, cudaFuncCachePreferShared);
