@@ -1,6 +1,11 @@
 #include <PLEGMA_Field.h> 
+#include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_shifts.cuh>
 #include <PLEGMA_Random.h>
+#include <thrust/device_ptr.h>
+#include <thrust/fill.h>
+#include <vector>
+#include <algorithm>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -21,15 +26,14 @@ using namespace plegma;
 // Propagtor3D: as above, but with sinks only at one timeslice.
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, 
-					      CLASS_ENUM classT):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_elem_backup(NULL), 
-  allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
+  h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_ext_ghost_corner(NULL), h_elem_backup(NULL), 
+  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
 
 {
   if(GK_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
-
+  
   switch(classT){
   case FIELD:
     field_length = 1;
@@ -59,17 +63,25 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag,
     field_length = N_SPINS * N_COLS;
     total_length = GK_localVolume/GK_localL[3];
     break;
+  case QLOOPS:
+    field_length = N_SPINS * N_SPINS;
+    total_length = GK_localVolume;
+    break;
   }
-
   ghost_length = 0;
-
-  for(int i = 0 ; i < N_DIMS ; i++)
-    ghost_length += 2*GK_surface3D[i];
-
-  total_plus_ghost_length = total_length + ghost_length;
-
+  ghost_corner_length = 0;
+  
+  for(int i = 0 ; i < N_DIMS ; i++){
+    if(ghost_flag >= FIRST_SIDE) ghost_length += 2*GK_surface3D[i];
+    for(int j = i+1; j < N_DIMS; j++){
+      if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*GK_surface2D[i][j];
+    }
+  }
+  total_plus_ghost_length = total_length + ghost_length + ghost_corner_length;
+  
   bytes_total_length = total_length*field_length*2*sizeof(Float);
   bytes_ghost_length = ghost_length*field_length*2*sizeof(Float);
+  bytes_ghost_corner_length = ghost_corner_length*field_length*2*sizeof(Float);
   bytes_total_plus_ghost_length = total_plus_ghost_length*field_length*2*sizeof(Float);
 
   if( alloc_flag == BOTH ){
@@ -99,11 +111,47 @@ PLEGMA_Field<Float>::~PLEGMA_Field(){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::pack( Float *topack ){
+  for(int i=0; i<field_length; i++){
+    for(int j=0; j<total_length; j++){
+      for(int part=0; part<2; part++)
+	h_elem[i*total_length*2 + j*2 + part] = topack[j*field_length*2 + i*2 + part];
+    }
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::unpack(Float *out){
+  for(int i=0; i<field_length; i++){
+    for(int j=0; j<total_length; j++){
+      for(int part=0; part<2; part++)
+	out[j*field_length*2 + i*2 + part] = h_elem[i*total_length*2 + j*2 + part];
+    }
+  }  
+}
+
+
+
+template<typename Float>
+void PLEGMA_Field<Float>::load(){
+  cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
+  checkCudaError();
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::unload(){
+  cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
+  checkCudaError();
+}
+
+
+template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
   h_elem = (Float*) malloc(bytes_total_plus_ghost_length);
   h_ext_ghost = (Float*) malloc(bytes_ghost_length);
-  if(h_elem == NULL || 
-     h_ext_ghost == NULL) errorQuda("Error with allocation host memory");
+  h_ext_ghost_corner = (Float*) malloc(bytes_ghost_corner_length);
+  if(h_elem == NULL || h_ext_ghost == NULL || h_ext_ghost_corner == NULL)
+    errorQuda("Error with allocation host memory");
   isAllocHost = true;
   zero_host();
 }
@@ -133,8 +181,10 @@ template<typename Float>
 void PLEGMA_Field<Float>::destroy_host(){
   free(h_elem);
   free(h_ext_ghost);
+  free(h_ext_ghost_corner);
   h_elem=NULL;
   h_ext_ghost = NULL;
+  h_ext_ghost_corner = NULL;
 }
 
 template<typename Float>
@@ -246,46 +296,33 @@ template<typename Float>
 static void getOffsets(int dirOr, int field_length,int *pos,
 		       int *height, size_t *width,
 		       size_t *spitch, size_t *dpitch,int *ghostOffset){
-
-  if(dirOr == 0 || dirOr == 4+0){
-    *pos=(dirOr<4)?GK_localL[0]-1:0;
-    *ghostOffset=(dirOr<4)?GK_minusGhost[0]:GK_plusGhost[0];
-    *height = GK_localL[1] * GK_localL[2] * GK_localL[3];
+  if( dirOr > -1 && dirOr < 2*N_DIMS ){
+    *pos = (dirOr > N_DIMS) ? 0 : (GK_localL[dirOr]-1);
+    *height = 1;
     *width = 2*sizeof(Float);
-    *spitch = GK_localL[0]*(*width);
-    *dpitch = *width;
-  }
-  else if(dirOr == 1 || dirOr == 4+1){
-    *pos=(dirOr<4)?GK_localL[0]*(GK_localL[1]-1):0;
-    *ghostOffset=(dirOr<4)?GK_minusGhost[1]:GK_plusGhost[1];
-    *height = GK_localL[2] * GK_localL[3];
-    *width = GK_localL[0]*2*sizeof(Float);
-    *spitch = GK_localL[1]*(*width);
-    *dpitch = *width;
-  }
-  else if(dirOr == 2 || dirOr == 4+2){
-    *pos=(dirOr<4)?GK_localL[0]*GK_localL[1]*(GK_localL[2]-1):0;
-    *ghostOffset=(dirOr<4)?GK_minusGhost[2]:GK_plusGhost[2];
-    *height = GK_localL[3];
-    *width = GK_localL[1]*GK_localL[0]*2*sizeof(Float);
-    *spitch = GK_localL[2]*(*width);
-    *dpitch = *width;
-  }
-  else if(dirOr == 3 || dirOr == 4+3){
-    *pos=(dirOr<4)?GK_localL[0]*GK_localL[1]*GK_localL[2]*(GK_localL[3]-1):0;
-    *ghostOffset=(dirOr<4)?GK_minusGhost[3]:GK_plusGhost[3];
-    *height = field_length;
-    *width = GK_localL[2]*GK_localL[1]*GK_localL[0]*2*sizeof(Float);
-    *spitch = GK_localL[3]*(*width);
+    *ghostOffset = ( dirOr < N_DIMS ) ? GK_minusGhost[dirOr%N_DIMS] : GK_plusGhost[dirOr%N_DIMS];
+    for(int i=0; i<N_DIMS; i++){
+      if( dirOr % N_DIMS > i ){
+	*pos *= GK_localL[i];
+	*width *= GK_localL[i];
+      }
+      else if( dirOr % N_DIMS < i ){
+	*height *= GK_localL[i];
+      }
+    }
+    *spitch = GK_localL[dirOr%N_DIMS] * (*width);
     *dpitch = *width;
   }
   else{
-    errorQuda("Directions should be in [0,7] range");
+    errorQuda("Direction should be in [0,%d] range",2*N_DIMS-1);
   }
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::ghostToHost(int dirOr){
+  if(ghost_flag < FIRST_SIDE) {
+    errorQuda("First side ghosts have not been allocated.\n");
+  }
   if(dirOr<-1 || dirOr>7)
     errorQuda("Directions should be in [0,7] range with -1 all directions");
   bool isAll=(dirOr<0)?true:false;
@@ -302,8 +339,12 @@ void PLEGMA_Field<Float>::ghostToHost(int dirOr){
 	Float *h_elem_offset = NULL;
 	Float *d_elem_offset = NULL;
 	getOffsets<Float>(ir,field_length,&position,&height,&width,&spitch,&dpitch,&ghostOffset);
-	int N=(ir==3 || ir==4+3)?1:field_length;
-	for(int i = 0 ; i < N; i++){
+	int n_loop=field_length;
+	if(height==1) {
+	  n_loop = 1;
+	  height = field_length;
+	}
+	for(int i = 0 ; i < n_loop; i++){
 	  d_elem_offset = d_elem + i*total_length*2 + position*2;
 	  h_elem_offset = h_elem + ghostOffset*field_length*2 + i*GK_surface3D[ir%4]*2;
 	  cudaMemcpy2D(h_elem_offset,dpitch,d_elem_offset, spitch,width,height,cudaMemcpyDeviceToHost);
@@ -313,13 +354,15 @@ void PLEGMA_Field<Float>::ghostToHost(int dirOr){
     }
 }
 
-
 template<typename Float>
 void PLEGMA_Field<Float>::cpuExchangeGhost(int dirOr){
 
+  if(ghost_flag < FIRST_SIDE) {
+    errorQuda("First side ghosts have not been allocated.\n");
+  }
   if(dirOr<-1 || dirOr>7)
     errorQuda("Directions should be in [0,7] range with -1 all directions");
-  bool isAll=(dirOr<0)?true:false;
+  bool isAll = (dirOr<0) ? true:false;
 
   MsgHandle *mh_send_fwd[4];
   MsgHandle *mh_from_back[4];
@@ -365,11 +408,109 @@ void PLEGMA_Field<Float>::cpuExchangeGhost(int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::ghostToDevice(){
   if(comm_size() > 1){
+    if(ghost_flag < FIRST_SIDE) {
+      errorQuda("First side ghosts have not been allocated.\n");
+    }
     Float *host = h_ext_ghost;
-    Float *device = d_elem+GK_localVolume*field_length*2;
+    Float *device = d_elem+total_length*field_length*2;
     cudaMemcpy(device,host,bytes_ghost_length,cudaMemcpyHostToDevice);
     checkCudaError();
   }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::communicateCorners(int dirOr){
+  if(comm_size() == 1)
+    return;
+  if(ghost_flag < FIRST_CORNER)
+    errorQuda("First corner ghosts have not been allocated.\n");
+  if(dirOr<-1 || dirOr>2*N_DIMS-1)
+    errorQuda("Directions should be in [-1,%d] range with -1 all directions",2*N_DIMS-1);
+
+  bool isAll = (dirOr<0) ? true:false;
+
+  std::vector<MsgHandle *> mh_recv;
+  std::vector<MsgHandle *> mh_send;
+
+  for(int i=0; i<2*N_DIMS; i++){
+    for(int j=i+1; j<2*N_DIMS; j++){
+      if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
+	if(dirOr == i || dirOr == j || isAll){
+	  Float *pointer_receive = h_ext_ghost_corner + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+	  Float *pointer_send = h_elem + GK_cornerGhost[i][j]*field_length*2;
+	  Float *pointer_device = d_elem + GK_cornerGhost[i][j]*field_length*2;
+	  int disp[N_DIMS] = {0};
+	  size_t nbytes = GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float);
+
+	  // collecting elements from device
+	  copy_corner_to_ghost(*this, i, j);
+	  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+	  checkCudaError();
+
+	  // communicating
+	  disp[i%N_DIMS] = (i<N_DIMS) ? -1 : 1;
+	  disp[j%N_DIMS] = (j<N_DIMS) ? -1 : 1;
+	  mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
+	  disp[i%N_DIMS] *= -1;
+	  disp[j%N_DIMS] *= -1;
+	  mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+	  disp[i%N_DIMS] = 0; disp[j%N_DIMS] = 0;	  
+	  comm_start(mh_recv.back());
+	  comm_start(mh_send.back());
+	}
+      }
+    }
+  }
+  // waiting for communications
+  while (! mh_recv.empty()) {
+    comm_wait(mh_recv.back());
+    comm_wait(mh_send.back());
+    comm_free(mh_recv.back());
+    comm_free(mh_send.back());
+    mh_recv.pop_back();
+    mh_send.pop_back();
+  }
+  //copying to device
+  if(isAll) {
+    Float *hostCorner = h_ext_ghost_corner;
+    Float *device = d_elem+(total_length+ghost_length)*field_length*2;
+    cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
+    checkCudaError();
+  } else {
+    for(int i=0; i<2*N_DIMS; i++){
+      for(int j=i+1; j<2*N_DIMS; j++){
+	if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
+	  if(dirOr == i || dirOr == j || isAll){
+	    Float *hostCorner = h_ext_ghost_corner + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+	    Float *device = d_elem+GK_cornerGhost[i][j]*field_length*2;
+	    cudaMemcpy(device, hostCorner, GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float),
+		       cudaMemcpyHostToDevice);
+	    checkCudaError();
+	  }
+	}
+      }
+    }
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::communicateGhost(int dirOr, GHOST_FLAG which_ghost){
+  if(ghost_flag < which_ghost) {
+    errorQuda("Asking to communicate ghost but they have not been allocated.\n");
+  }
+  if(which_ghost >= FIRST_SIDE){
+    ghostToHost(dirOr);
+    cpuExchangeGhost(dirOr);
+    ghostToDevice();
+  }
+  if(which_ghost >= FIRST_CORNER){
+    communicateCorners(dirOr);
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::communicateGhost(int dirOr){
+  this->communicateGhost(dirOr, ghost_flag);
 }
 
 template<typename Float>
@@ -389,11 +530,25 @@ void PLEGMA_Field<Float>::random(int seed){
     int rng_size = this->field_length;
     printf("Number of comm_rank: %d\n", comm_rank());
     PLEGMA_RNG randstate(rng_size, seed, comm_rank() );
-
+    checkCudaError();
     randstate.Init();
-    //set_random( randstate, *this, rng_size);        
+    set_random( randstate, *this, rng_size);        
+}
 
-
+template<typename Float>
+void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
+  /* 
+   * Set specific indices of Field to one as provided from indOne
+   * Example: For Su3 field indOne ={0,4,8};
+   */
+  for(int i = 0 ; i < Field_length(); i++){
+    std::vector<int>::iterator it = std::find(indDiag.begin(), indDiag.end(), i);
+    thrust::device_ptr<Float2<Float> > dev_ptr( (Float2<Float>*) (this->D_elem() + i*(this->Total_length())*2));
+    Float2<Float> value;
+    value.y=0.;
+    value.x=(it != indDiag.end() )?1.:0.;
+    thrust::fill(dev_ptr, dev_ptr + this->Total_length(), value);
+  }
 }
 
 template class PLEGMA_Field<float>;

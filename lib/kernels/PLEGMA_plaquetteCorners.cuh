@@ -1,3 +1,13 @@
+/*
+ * !!!!!!!!!!!!!!!!!! NOTE !!!!!!!!!!!!!!!!!!
+ * DO NOT USE THIS FUNCTION FOR THE PLAQUETTE
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *
+ * This is only a test function, copy of PLEGMA_plaquette.cuh (4/12/2018),
+ * created for the purpose of testing the corner implementations.
+ * Here the plaquette is computed 4 times by each site considering all the directions.
+*/
+
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
 using namespace plegma;
@@ -5,13 +15,13 @@ using namespace plegma;
 // structure that contains all arguments necessary
 //  to run the plaquette kernel
 template<typename Float, typename FloatG>
-struct ArgsPlaquette{
+struct ArgsPlaquetteCorners{
   gaugeTex<FloatG> gaugeTex;
   Float *partial_plaq;
 };
 
 template<typename Float, typename FloatG>
-static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> args) {
+static __global__ void calculatePlaquetteCorners_kernel(ArgsPlaquetteCorners<Float,FloatG> args) {
   extern __shared__ int ext_shared_cache[];
   Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -32,17 +42,56 @@ static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> arg
 	args.gaugeTex.get(G1,dir1,sid);
 	args.gaugeTex.get<Plus>(G2,dir2,sid,dir1);
       
-	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+	mul_G_G(G3,G1,G2);
       
 	args.gaugeTex.get<Plus>(G1,dir1,sid,dir2);
 	args.gaugeTex.get(G2,dir2,sid);
+      
+	mul_Gdag_Gdag(G4,G1,G2);
+      
+	trace += real_trace_mul_G_G<Float>(G3,G4);
+	
+	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
+	args.gaugeTex.get<Minus>(G1,dir1,sid,dir1);
+	args.gaugeTex.get(G2,dir2,sid);
+      
+	mul_G_G(G3,G1,G2);
+      
+	args.gaugeTex.get<MinusPlus>(G1,dir1,sid,dir1,dir2);
+	args.gaugeTex.get<Minus>(G2,dir2,sid,dir1);
+      
+	mul_Gdag_Gdag(G4,G1,G2);
+      
+	trace += real_trace_mul_G_G<Float>(G3,G4);
+
+	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
+	args.gaugeTex.get<MinusMinus>(G1,dir1,sid,dir1,dir2);
+	args.gaugeTex.get<Minus>(G2,dir2,sid,dir2);
+      
+	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+      
+	args.gaugeTex.get<Minus>(G1,dir1,sid,dir1);
+	args.gaugeTex.get<MinusMinus>(G2,dir2,sid,dir1,dir2);
+      
+	mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+      
+	trace += real_trace_mul_G_G<Float>(G3,G4); // flops = N_COLS*N_COLS*(2+1)
+
+	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
+	args.gaugeTex.get<Minus>(G1,dir1,sid,dir2);
+	args.gaugeTex.get<PlusMinus>(G2,dir2,sid,dir1,dir2);
+      
+	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+      
+	args.gaugeTex.get(G1,dir1,sid);
+	args.gaugeTex.get<Minus>(G2,dir2,sid,dir2);
       
 	mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
 	trace += real_trace_mul_G_G<Float>(G3,G4); // flops = N_COLS*N_COLS*(2+1)
       }
     } // tot_flop = (N_DIMS-1)*(N_DIMS)/2 * int_flops
-    shared_cache[cacheIndex] = trace;
+    shared_cache[cacheIndex] = trace/4.;
   } else {
     shared_cache[cacheIndex] = 0.;
   }
@@ -54,12 +103,12 @@ static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> arg
 }
 
 template<typename Float, typename FloatG>
-static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
+static Float calculatePlaquetteCorners(gaugeTex<FloatG> gaugeTex){
   Float plaquette = 0.;
-  Float globalPlaquette = 0.;
+  Float globalPlaquetteCorners = 0.;
   Float *d_partial_plaq = NULL;
   
-  ArgsPlaquette<Float,FloatG> kernel_args;
+  ArgsPlaquetteCorners<Float,FloatG> kernel_args;
   kernel_args.gaugeTex = gaugeTex;
 
   ProfileStruct kernel_ps;
@@ -73,7 +122,7 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   kernel_ps.sharedMemory = true ;
   kernel_ps.sharedBytesPerThread = sizeof(Float);
   
-  PLEGMA_kernel_tuner<ArgsPlaquette<Float,FloatG>> tuner( calculatePlaquette_kernel<Float,FloatG>, &kernel_args, kernel_ps );
+  PLEGMA_kernel_tuner<ArgsPlaquetteCorners<Float,FloatG>> tuner( calculatePlaquetteCorners_kernel<Float,FloatG>, &kernel_args, kernel_ps );
   
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;
@@ -110,6 +159,6 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
     plaquette += h_partial_plaq[i];
   free(h_partial_plaq);
 
-  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
-  return globalPlaquette/(GK_totalVolume*N_COLS*6);
+  MPI_Allreduce(&plaquette , &globalPlaquetteCorners , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
+  return globalPlaquetteCorners/(GK_totalVolume*N_COLS*6);
 }

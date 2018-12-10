@@ -5,14 +5,18 @@
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_QLoops.h>
 
 #ifndef _PLEGMA__H
 #define _PLEGMA__H
 
 namespace plegma {
   
-  void initialize(PLEGMA_params *params);
+  void PLEGMA_init(PLEGMA_params *params);
 
   void print_status();
+
+  void PLEGMA_end();
+  
 }
 #endif

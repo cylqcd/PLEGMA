@@ -51,6 +51,12 @@ if(PLEGMA_NO_TUNING)
   add_definitions(-DPLEGMA_NO_TUNING)
 endif()
 
+# compile contractions for all baryons
+set(PLEGMA_ALL_BARYONS FALSE CACHE BOOL "compile contractions for all baryons")
+if(PLEGMA_ALL_BARYONS)
+  add_definitions(-DALL_BARYONS)
+endif()
+
 #ARPACK
 set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
 if(PLEGMA_ARPACK)
@@ -121,7 +127,7 @@ if(${PLEGMA_OPENBLAS})
   add_definitions(-DHAVE_OPENBLAS)
   FIND_LIBRARY(PLEGMA_OPENBLAS_LIB openblas ${PLEGMA_OPENBLAS_LIBDIR})
   FIND_LIBRARY(PLEGMA_OPENBLAS_GOMP gomp ${LIBRARY_DIRS})
-  include_directories(SYSTEM ${PLEGMA_OPENBLASHOME})
+  include_directories(SYSTEM ${PLEGMA_OPENBLASHOME}/include)
 endif()
 
 if(${PLEGMA_MKL})

@@ -1,7 +1,11 @@
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_plaquette.cuh>
+#include <PLEGMA_plaquetteCorners.cuh>
 #include <PLEGMA_su3field.cuh>
+#include <PLEGMA_gauge_utils.cuh>
+#include <PLEGMA_field_utils.cuh>
+
 using namespace plegma;
 
 //--------------------------//
@@ -9,28 +13,26 @@ using namespace plegma;
 //--------------------------//
 
 template<typename Float>
-PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, GAUGE){ ; }
+PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, GAUGE, ghost_flag){ ; }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGauge(double **p_gauge){
-  
-  for(int dir = 0 ; dir < N_DIMS ; dir++)
-    for(int iv = 0 ; iv < GK_localVolume ; iv++)
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int c2 = 0 ; c2 < N_COLS ; c2++)
-	  for(int part = 0 ; part < 2 ; part++){
-	    PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + 
-		       c1*N_COLS*GK_localVolume*2 + 
-		       c2*GK_localVolume*2 + 
-		       iv*2 + part] = 
-	      (Float) p_gauge[dir][iv*N_COLS*N_COLS*2 + 
-				   c1*N_COLS*2 + c2*2 + part];
-	  }
+void PLEGMA_Gauge<Float>::pack(double **p_gauge){
+  for(int dir = 0 ; dir < N_DIMS ; dir++){
+    for(int i = 0 ; i < GK_localVolume ; i++){
+      #pragma unroll
+      for(int j = 0; j < N_COLS*N_COLS; j++){
+	#pragma unroll
+	for(int part = 0; part < 2; part++)
+	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + j*GK_localVolume*2 + i*2 + part] =
+	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part];
+      }
+    }
+  }
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
+void PLEGMA_Gauge<Float>::packToBackup(void **gauge){
   double **p_gauge = (double**) gauge;
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     for(int dir = 0 ; dir < N_DIMS ; dir++)
@@ -54,21 +56,7 @@ void PLEGMA_Gauge<Float>::packGaugeToBackup(void **gauge){
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::justDownloadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadGauge(){
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyHostToDevice );
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadGaugeFromBackup(){
+void PLEGMA_Gauge<Float>::loadFromBackup(){
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem_backup, PLEGMA_Field<Float>::bytes_total_length, 
 	       cudaMemcpyHostToDevice );
@@ -82,14 +70,21 @@ void PLEGMA_Gauge<Float>::loadGaugeFromBackup(){
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaq(){
-  
-  this->ghostToHost();
-  this->cpuExchangeGhost();
-  this->ghostToDevice();
-  
   gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_SIDE);
   tex.tex = this->createTexObject();
   printfQuda("Calculated plaquette is %f\n",calculatePlaquette<Float>(tex));
+  this->destroyTexObject(tex.tex);
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
+  tex.tex = this->createTexObject();
+  Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
+  Float plaqRef = calculatePlaquette<Float>(tex);
+  printfQuda("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
   this->destroyTexObject(tex.tex);
 }
 
@@ -111,12 +106,145 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
       res.path(vspath, u_s, tmp);
       resV += sumRtraceU<Float,Float>(res);
     }
-  printfQuda("Calculated plaquette is %f\n",resV/(GK_totalVolume*N_COLS*6));
+  Float plaqShifts = resV/(GK_totalVolume*N_COLS*6);
+
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_SIDE);
+  tex.tex = this->createTexObject();
+  Float plaqRef = calculatePlaquette<Float>(tex);
+  this->destroyTexObject(tex.tex);
+  printfQuda("TEST: Calculated plaquette with shifts is %f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
 
   for(int idir = 0; idir < 4 ; idir++)
     delete u_s[idir];
 
 }
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::absorbDir_device(PLEGMA_Su3field<Float> &su,int dir){
+  cudaMemcpy(this->d_elem + dir*(su.Field_length())*(su.Total_length())*2 , su.D_elem(),
+  	     su.Bytes_total(), cudaMemcpyDeviceToDevice);
+  checkCudaError();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::absorbDir_host(PLEGMA_Su3field<Float> &su,int dir){
+  memcpy(this->h_elem + dir*(su.Field_length())*(su.Total_length())*2, su.H_elem(),
+	 su.Bytes_total());
+}
+
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4){
+  if(nSmear < 1){
+    cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    return;
+  }
+  PLEGMA_Su3field<Float> tmp1(BOTH);
+  PLEGMA_Su3field<Float> tmp2(BOTH);
+
+  PLEGMA_Su3field<Float> *u_s1[D3D4];
+  PLEGMA_Su3field<Float> *u_s2[D3D4];
+
+  PLEGMA_Su3field<Float> *ref;
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    u_s1[idir]->absorbDir_device(*this,idir);
+    u_s2[idir] = new PLEGMA_Su3field<Float>(BOTH);
+  }
+
+  for(int i = 0; i < nSmear; i++){
+    for(int idir = 0 ; idir < D3D4; idir++){
+      u_s2[idir]->staples(u_s1, idir, tmp1, tmp2, rho, D3D4);
+      tmp1.UxUdag(*(u_s2[idir]), *(u_s1[idir]));
+      tmp2.traceHerExpMap(tmp1);
+      u_s2[idir]->UxU(tmp2, *(u_s1[idir]));
+    }
+    for(int idir = 0 ; idir < D3D4; idir++){
+      ref=u_s2[idir];
+      u_s2[idir]=u_s1[idir];
+      u_s1[idir]=ref;
+    }
+  }
+
+  for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);
+  if(D3D4 == 3){
+    int offset = 3*(tmp1.Field_length())*(tmp1.Total_length())*2;
+    cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
+    checkCudaError();
+  }
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    delete u_s1[idir];
+    delete u_s2[idir];
+  }
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::scaleDirWise(std::complex<Float> scale[N_DIMS]){
+  scale_dir_wise(PLEGMA_Field<Float>::d_elem, (Float*) scale);
+  this->communicateGhost();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::momPhase(Float phase[N_DIMS],int mom[N_DIMS]){
+  std::complex<Float> scale[N_DIMS];
+  for(int d=0; d<N_DIMS; d++) {
+    Float theta = 2.0*PI*((Float)mom[d])*phase[d]/((Float) GK_totalL[d]);
+    scale[d] = {cos(theta), sin(theta)};
+  }
+  scaleDirWise(scale);
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4){
+  if(nSmear < 1){
+    cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    return;
+  }
+  PLEGMA_Su3field<Float> tmp1(BOTH);
+  PLEGMA_Su3field<Float> tmp2(BOTH);
+
+  PLEGMA_Su3field<Float> *u_s1[D3D4];
+  PLEGMA_Su3field<Float> *u_s2[D3D4];
+
+  PLEGMA_Su3field<Float> *ref;
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    u_s1[idir]->absorbDir_device(*this,idir);
+    u_s2[idir] = new PLEGMA_Su3field<Float>(BOTH);
+  }
+
+  for(int i = 0; i < nSmear; i++){
+    for(int idir = 0 ; idir < D3D4; idir++){
+      u_s2[idir]->staples(u_s1, idir, tmp1, tmp2, alpha, D3D4);
+      xpby(*(u_s2[idir]), *(u_s2[idir]), *(u_s1[idir]), (Float) 1. );
+      u_s2[idir]->su3Projection();
+    }
+    for(int idir = 0 ; idir < D3D4; idir++){
+      ref=u_s2[idir];
+      u_s2[idir]=u_s1[idir];
+      u_s1[idir]=ref;
+    }
+  }
+
+  for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);
+  if(D3D4 == 3){
+    int offset = 3*(tmp1.Field_length())*(tmp1.Total_length())*2;
+    cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
+    checkCudaError();
+  }
+  
+  for(int idir = 0; idir < D3D4 ; idir++){
+    delete u_s1[idir];
+    delete u_s2[idir];
+  }
+}
+
 
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;

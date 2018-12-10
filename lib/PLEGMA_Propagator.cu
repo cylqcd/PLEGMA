@@ -8,9 +8,8 @@ using namespace plegma;
 //-------------------------------//
 
 template<typename Float>
-PLEGMA_Propagator<Float>::
-PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, PROPAGATOR){;}
+PLEGMA_Propagator<Float>::PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, PROPAGATOR, ghost_flag){;}
 
 template <typename Float>
 void PLEGMA_Propagator<Float>::
@@ -46,6 +45,11 @@ void PLEGMA_Propagator<Float>::absorbVectorToDevice(PLEGMA_Vector<Float> &vec, i
 		 cudaMemcpyDeviceToDevice); 
     }
   checkCudaError();
+}
+
+template<typename Float>
+void PLEGMA_Propagator<Float>::applyBoundaries_device(int t0){
+  apply_boundaries(PLEGMA_Field<Float>::d_elem, t0);
 }
 
 template<typename Float>
@@ -147,8 +151,8 @@ void  PLEGMA_Propagator<Float>::apply_gamma5(){
 
 template<typename Float>
 PLEGMA_Propagator3D<Float>::
-PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, PROPAGATOR3D){
+PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, PROPAGATOR3D, ghost_flag){
   if(alloc_flag != BOTH)
     errorQuda("Propagator3D class is only implemented to allocate memory for both\n");
 }

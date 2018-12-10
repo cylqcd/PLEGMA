@@ -18,16 +18,9 @@ namespace plegma {
   template<typename Float>
     class PLEGMA_Vector : public PLEGMA_Field<Float> {
   public:
-    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag);
+    PLEGMA_Vector(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Vector(){;}
     
-    void packVector(Float *vector);
-    void unpackVector();
-    void unpackVector(Float *vector);
-    void loadVector();
-    void unloadVector();
-    
-    void download(); // take the vector from device to host
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gaugeAPE);
@@ -46,6 +39,7 @@ namespace plegma {
     void write(char* filename);
     void conjugate();
     void apply_gamma5();
+    void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
   };
 }
 

@@ -24,11 +24,20 @@ int main(int argc, char **argv)
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> pGauge(BOTH);
-
   pGauge.pack(gauge.get_ptr());
   pGauge.load();
-  pGauge.calculatePlaqShifts();
+  //  std::vector<int> indDiag = {0, 4, 8, 9, 13, 17, 18, 22, 26, 27, 31, 35};
+  //pGauge.setUnitMatrix(indDiag);
+  PLEGMA_Su3field<double> su3(BOTH);
+  PLEGMA_Su3field<double> WL(BOTH);
+  PLEGMA_Su3field<double> tmp(BOTH);
+  su3.absorbDir_device(pGauge, 0);
+  WL.setUnit( (std::vector<int>) {0,4,8});
+  for(int i = 0 ; i < GK_totalL[0];i++ )
+    WL.wilsonLineUpdate(su3, tmp, 4+0); // build Wilson line in the +x direction
+  //  pGauge.calculatePlaqShifts();
 
   finalize();
+
   return 0;
 }

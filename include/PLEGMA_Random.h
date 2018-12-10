@@ -69,18 +69,18 @@ namespace plegma {
    *    @return  random number in range a,b
    *    */
   template<typename Float>
-    inline  __device__ Float Random(cuRNGState &state, Float a, Float b){
+    inline  __device__ Float PLEGMA_Random(cuRNGState &state, Float a, Float b){
       Float res;
       return res;
     }
 
   template<>
-    inline  __device__ float Random<float>(cuRNGState &state, float a, float b){
+    inline  __device__ float PLEGMA_Random<float>(cuRNGState &state, float a, float b){
       return a + (b - a) * curand_uniform(&state);
     }
 
   template<>
-    inline  __device__ double Random<double>(cuRNGState &state, double a, double b){
+    inline  __device__ double PLEGMA_Random<double>(cuRNGState &state, double a, double b){
       return a + (b - a) * curand_uniform_double(&state);
     }
 
@@ -90,18 +90,18 @@ namespace plegma {
    *    @return  random number in range 0,1
    *    */
   template<typename Float>
-    inline  __device__ Float Random(cuRNGState &state){
+    inline  __device__ Float PLEGMA_Random(cuRNGState &state){
       Float res;
       return res;
     }
 
   template<>
-    inline  __device__ float Random<float>(cuRNGState &state){
+    inline  __device__ float PLEGMA_Random<float>(cuRNGState &state){
       return curand_uniform(&state);
     }
 
   template<>
-    inline  __device__ double Random<double>(cuRNGState &state){
+    inline  __device__ double PLEGMA_Random<double>(cuRNGState &state){
       return curand_uniform_double(&state);
     }
 
@@ -111,14 +111,14 @@ namespace plegma {
   template<>
     struct uniform<float> {
       __device__
-        static inline float rand(cuRNGState &state) {
+        static inline float PLEGMA_rand(cuRNGState &state) {
           return curand_uniform(&state);
         }
     };
   template<>
     struct uniform<double> {
       __device__
-        static inline double rand(cuRNGState &state) {
+        static inline double PLEGMA_rand(cuRNGState &state) {
           return curand_uniform_double(&state);
         }
     };
@@ -130,14 +130,14 @@ namespace plegma {
   template<>
     struct normal<float> {
       __device__
-        static inline float rand(cuRNGState &state) {
+        static inline float PLEGMA_rand(cuRNGState &state) {
           return curand_normal(&state);
         }
     };
   template<>
     struct normal<double> {
       __device__
-        static inline double rand(cuRNGState &state) {
+        static inline double PLEGMA_rand(cuRNGState &state) {
           return curand_normal_double(&state);
         }
     };

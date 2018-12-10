@@ -4,6 +4,7 @@
 #include <PLEGMA_lime.h>
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
+#include <PLEGMA_covD.cuh>
 using namespace plegma;
 using namespace quda;
 //---------------------------//
@@ -11,94 +12,9 @@ using namespace quda;
 //---------------------------//
 
 template<typename Float>
-PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag): 
-  PLEGMA_Field<Float>(alloc_flag, VECTOR){ ; }
+PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
+  PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
 
-template<typename Float>
-void PLEGMA_Vector<Float>::packVector(Float *vector){
-  for(int iv = 0 ; iv < GK_localVolume ; iv++)
-    for(int mu = 0 ; mu < N_SPINS ; mu++)  // always work with format colors inside spins
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int part = 0 ; part < 2 ; part++){
-	  PLEGMA_Field<Float>::h_elem[mu*N_COLS*GK_localVolume*2 + 
-		     c1*GK_localVolume*2 + iv*2 + part] = 
-	    vector[iv*N_SPINS*N_COLS*2 + mu*N_COLS*2 + c1*2 + part];
-	}
-}
- 
-template<typename Float>
-void PLEGMA_Vector<Float>::unpackVector(){
-
-  Float *vector_tmp = (Float*) malloc( PLEGMA_Field<Float>::bytes_total_length );
-  if(vector_tmp == NULL)
-    errorQuda("Error in allocate memory of tmp vector in unpackVector\n");
-  
-  for(int iv = 0 ; iv < GK_localVolume ; iv++)
-    for(int mu = 0 ; mu < N_SPINS ; mu++) // always work with format colors inside spins
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int part = 0 ; part < 2 ; part++){
-	  vector_tmp[iv*N_SPINS*N_COLS*2 + mu*N_COLS*2+c1*2+part] = 
-	    PLEGMA_Field<Float>::h_elem[mu*N_COLS*GK_localVolume*2 + 
-		       c1*GK_localVolume*2 + iv*2 + part];
-	}
-  
-  memcpy(PLEGMA_Field<Float>::h_elem,vector_tmp, PLEGMA_Field<Float>::bytes_total_length);
-  
-  free(vector_tmp);
-}
-
-template<typename Float>
-void PLEGMA_Vector<Float>::unpackVector(Float *vector){
-  
-  for(int iv = 0 ; iv < GK_localVolume ; iv++)
-    for(int mu = 0 ; mu < N_SPINS ; mu++) // always work with format colors inside spins
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int part = 0 ; part < 2 ; part++){
-	  PLEGMA_Field<Float>::h_elem[iv*N_SPINS*N_COLS*2 + mu*N_COLS*2+c1*2+part] = 
-	    vector[mu*N_COLS*GK_localVolume*2 + 
-		   c1*GK_localVolume*2 + iv*2 + part];
-	}
-}
-
-
-template<typename Float>
-void PLEGMA_Vector<Float>::loadVector(){
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyHostToDevice );
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Vector<Float>::unloadVector(){
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem, PLEGMA_Field<Float>::d_elem, PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
-}
-
-
-template<typename Float>
-void PLEGMA_Vector<Float>::download(){
-
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem, PLEGMA_Field<Float>::d_elem, PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
-
-  Float *vector_tmp = (Float*) malloc( PLEGMA_Field<Float>::bytes_total_length );
-  if(vector_tmp == NULL) errorQuda("Error in allocate memory of tmp vector");
-
-  for(int iv = 0 ; iv < GK_localVolume ; iv++)
-    for(int mu = 0 ; mu < N_SPINS ; mu++) // always work with format colors inside spins
-      for(int c1 = 0 ; c1 < N_COLS ; c1++)
-	for(int part = 0 ; part < 2 ; part++){
-	  vector_tmp[iv*N_SPINS*N_COLS*2 + mu*N_COLS*2+c1*2+part] = 
-	    PLEGMA_Field<Float>::h_elem[mu*N_COLS*GK_localVolume*2 + 
-		       c1*GK_localVolume*2 + iv*2 + part];
-	}
-  
-  memcpy(PLEGMA_Field<Float>::h_elem, vector_tmp, PLEGMA_Field<Float>::bytes_total_length);
-
-  free(vector_tmp);
-}
 
 template<typename FloatOut, typename FloatIn>
 static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &vecIn){
@@ -117,8 +33,6 @@ template<typename Float>
 void PLEGMA_Vector<Float>::copy(PLEGMA_Vector<double> &vecIn)  {
   copyVector(*this,vecIn);
 }
-
-
 
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,PLEGMA_Gauge<Float> &gaugeAPE){
@@ -482,6 +396,20 @@ void PLEGMA_Vector<Float>::write(char *filename){
   free(buffer);
   MPI_File_close(&mpifid);
   MPI_Type_free(&subblock);
+}
+
+
+template<typename Float>
+void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr){
+  // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
+  if(dirOr < 0 || dirOr > 7) errorQuda("Wrong direction is given");
+  vectorTex<Float> texVecIn;
+  texVecIn.tex= vecIn.createTexObject();
+  gaugeTex<Float> texGaugeIn;
+  texGaugeIn.tex = gauge.createTexObject();
+  covD_k<Float,Float,Float>(this->D_elem(), texVecIn, texGaugeIn, dirOr);
+  vecIn.destroyTexObject(texVecIn.tex);
+  gauge.destroyTexObject(texGaugeIn.tex);
 }
 
 template class PLEGMA_Vector<float>;

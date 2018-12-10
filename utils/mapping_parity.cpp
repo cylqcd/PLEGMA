@@ -1,4 +1,3 @@
-//contractions, including the exact deflation using ARPACK
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -7,23 +6,12 @@
 #include <mpi.h>
 #include <limits>
 
-#ifdef HAVE_MKL
-#include <mkl.h>
-#endif
-
-#ifdef HAVE_OPENBLAS
-#include <cblas.h>
-#include <common.h>
-#endif
-
-#include <omp.h>
-#include <hdf5.h>
 
 static int getLatticeCoordinateParity2(int latt_coord, int nx , int ny , int nz)
 {
- 	int x2, x3, x4;                 //x / 2, y, z, t normal coordinates on even/odd latice                                                                     
+ 	int x2, x3, x4;                 //x / 2, y, z, t normal coordinates on even/odd latice  
         int z1, z2;
-        z1  = (2 * latt_coord) / nx;        //latt_coord - lattice coordinate of the half lattice                                                                       
+        z1  = (2 * latt_coord) / nx;        //latt_coord - lattice coordinate of the half lattice
         z2  = z1 / ny;
         x2  = z1 - z2 * ny;
         x4  = z2 / nz;

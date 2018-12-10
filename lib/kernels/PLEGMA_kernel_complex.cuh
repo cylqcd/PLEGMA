@@ -34,6 +34,13 @@ namespace plegma {
       this->x = arg;
       this->y = 0.;
     }
+
+    template<typename FloatIn>
+    inline __device__ Float2<Float>(FloatIn x, FloatIn y){
+      this->x = x;
+      this->y = y;
+    }
+
     template<typename FloatIn>
     inline __device__ Float2<Float>(FloatIn arg, COMPLEX ri) {
       if(ri == IMAG) {
@@ -44,9 +51,8 @@ namespace plegma {
 	this->y = 0.;
       }	
     }
-    inline __device__ Float2<Float> conj() {
+    inline __device__ void conj() {
       this->y *= -1.;
-      return *this;
     }
   };
 
@@ -65,6 +71,22 @@ namespace plegma {
     return res;
   }
 
+  template<typename Float>
+  inline __device__ Float2<Float> operator/(const Float2<Float> x, const Float2<Float> y){
+  Float2<Float> res;
+  res.x = (x.x * y.x + x.y * y.y) / (y.x * y.x + y.y * y.y);
+  res.y = (x.y * y.x - x.x * y.y) / (y.x * y.x + y.y * y.y);
+  return res;
+}
+
+  template<typename Float>
+  inline __device__ Float2<Float> operator/(const Float2<Float> a, const Float b){
+    Float2<Float> res;
+    res.x = a.x/b;
+    res.y = a.y/b;
+    return res;
+  }
+  
   template<typename Float>
   inline __device__ Float2<Float> operator*(const Float a, const Float2<Float> b){
     Float2<Float> res;
@@ -121,5 +143,24 @@ namespace plegma {
     res.y = -a.y;
     return res;
   }
+
+  template<typename Float>
+  inline __device__ Float norm2(const Float2<Float> a){
+    return a.x*a.x + a.y*a.y;
+  }
+
+  template<typename Float>
+  inline __device__ Float norm(const Float2<Float> a){
+    return sqrt(norm2(a));
+  }
+
+  template<typename Float>
+  inline __device__ Float2<Float> cpow(const Float2<Float> x , const Float a){
+    Float2<Float> res;
+    res.x = pow(norm(x),a) * cos( atan2(x.y,x.x) * a);
+    res.y = pow(norm(x),a) * sin( atan2(x.y,x.x) * a);
+    return res;
+  }
+
 }
 #endif

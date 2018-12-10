@@ -13,7 +13,7 @@ namespace plegma {
   template<typename Float>
     class PLEGMA_Su3field : public PLEGMA_Field<Float> {
   public:
-    PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag);
+    PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Su3field(){;}
 
     void absorbDir_device(PLEGMA_Gauge<Float> &u,int dir);
@@ -25,6 +25,10 @@ namespace plegma {
     void Udag(PLEGMA_Su3field<Float> &x);
     void UxU(PLEGMA_Su3field<Float> &x, PLEGMA_Su3field<Float> &y);
     void UxUdag(PLEGMA_Su3field<Float> &x, PLEGMA_Su3field<Float> &y);
+    void staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA_Su3field<Float> &tmp1, PLEGMA_Su3field<Float> &tmp2, Float rho, int D3D4);
+    void traceHerExpMap(PLEGMA_Su3field<Float> &A);
+    void wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLEGMA_Su3field<Float> &tmp, int dirOr);
+    void su3Projection();
   };
 }
 
