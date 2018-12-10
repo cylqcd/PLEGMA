@@ -69,7 +69,6 @@ namespace plegma {
     }
   }
 
-  
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_Gdag_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
     #pragma unroll
@@ -84,6 +83,7 @@ namespace plegma {
         a[i][j].y -= tmp.y;
       }
     }
+  }
 
   template<typename FloatA, typename FloatB>
     __inline__ __device__ FloatA real_trace_mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){

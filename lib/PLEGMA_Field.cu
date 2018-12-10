@@ -1,5 +1,6 @@
 #include <PLEGMA_Field.h> 
 #include <PLEGMA_shifts.cuh>
+#include <PLEGMA_Random.h>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -378,6 +379,21 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
   Fin.cpuExchangeGhost(dirOr);
   Fin.ghostToDevice();
   shiftField(Fin,*this,dirOr);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::random(int seed){
+    this->zero_device();
+    
+    //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
+    int rng_size = this->field_length;
+    printf("Number of comm_rank: %d\n", comm_rank());
+    PLEGMA_RNG randstate(rng_size, seed, comm_rank() );
+
+    randstate.Init();
+    //set_random( randstate, *this, rng_size);        
+
+
 }
 
 template class PLEGMA_Field<float>;

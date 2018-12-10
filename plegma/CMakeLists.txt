@@ -41,3 +41,5 @@ target_link_libraries(PlaquetteWshifts ${PLEGMA_LIBS})
 cuda_add_executable(Source Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
 
+cuda_add_executable(Random Random.cpp)
+target_link_libraries(Random ${PLEGMA_LIBS})

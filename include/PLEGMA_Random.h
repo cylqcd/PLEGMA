@@ -1,6 +1,9 @@
+#include <PLEGMA_global.h>
 #include <curand_kernel.h>
+#ifndef _PLEGMA_RANDOM_H
+#define _PLEGMA_RANDOM_H
 
-namespace PLEGMA {
+namespace plegma {
 
     /////////////////////////  
     // CLASS: PLEGMA_RNG   //
@@ -24,22 +27,22 @@ namespace PLEGMA {
    *    */
   class PLEGMA_RNG {
     public:
-      /*!Constructor*/
-      PLEGMA_RNG(int rng_sizes, int seedin, const int XX[4]);
+      /*! Constructor */
+      PLEGMA_RNG(int rng_sizes, int seedin, int offset);
       /*! free array */
-      void Release();
+      virtual ~PLEGMA_RNG();
       /*! initialize curand rng states with seed */
       void Init();
       /*! @brief return curand rng array size */
-      int Size(){ return rng_size;};
-      int Node_Offset(){ return node_offset;};
+      int Size() const { return rng_size;};
+      int Rank_Offset(){ return rank_offset;};
       int Seed(){ return seed;};
       __host__ __device__ __inline__ cuRNGState* State(){ return state;};
       /*! @brief Restore CURAND array states initialization */
       void restore();
       /*! @brief Backup CURAND array states initialization */
       void backup();
-    private:
+    protected:
       /*! array with current curand rng state */
       cuRNGState *state;
       /*! array for backup of current curand rng state */
@@ -49,12 +52,11 @@ namespace PLEGMA {
       /*! @brief number of curand states */
       int rng_size;
       /*! @brief offset in the index, in case of multigpus */
-      int node_offset;
-      int X[4];
+      int rank_offset;
       /*! @brief allocate curand rng states array in device memory */
       void AllocateRNG();
       /*! @brief CURAND array states initialization */
-      void INITRNG(int rng_sizes, int seedin, int offsetin);
+      void INITRNG(int rng_size, int seed, int rank_offsetin);
   };
 
 
@@ -142,3 +144,4 @@ namespace PLEGMA {
 
 
 }
+#endif

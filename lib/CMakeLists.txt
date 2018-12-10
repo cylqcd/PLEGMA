@@ -6,6 +6,7 @@ set (QUDA_OBJS
   PLEGMA_Gauge.cu
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
+  PLEGMA_Random.cu
 )
 
 ## split source into cu and cpp files

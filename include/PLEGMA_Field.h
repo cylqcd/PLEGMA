@@ -1,5 +1,5 @@
 #include <PLEGMA_global.h>
-
+#include <PLEGMA_Random.h>
 #ifndef _PLEGMA_FIELD_H
 #define _PLEGMA_FIELD_H
 
@@ -75,6 +75,7 @@ namespace plegma {
     void ghostToDevice();
 
     void shift(PLEGMA_Field &Fin, int dirOr);
+    void random(int seed);
   };
 }
 #endif
