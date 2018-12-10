@@ -20,8 +20,8 @@ struct ProfileStruct{
   bool sharedMemory;
   unsigned int sharedBytesPerThread;
 
-  ProfileStruct(){};
-  ProfileStruct(long long vol, bool shMem, unsigned int shBPT=0, bool tY=false){
+  ProfileStruct()=default;
+  ProfileStruct(long long vol, bool shMem=false, unsigned int shBPT=0, bool tY=false){
     flops = 0;
     outBytes = 0;
     inpBytes = 0;
@@ -32,28 +32,15 @@ struct ProfileStruct{
     sharedMemory = shMem;
     sharedBytesPerThread = shBPT;
   };
-  ProfileStruct& operator=(ProfileStruct& ps){                                                                                            
-    flops = ps.flops;
-    outBytes = ps.outBytes;
-    inpBytes = ps.inpBytes;
-    siteBytes = ps.siteBytes;
-    volume = ps.volume;
-    stride = ps.stride;
-    tuneY = ps.tuneY;
-    sharedMemory = ps.sharedMemory;
-    sharedBytesPerThread = ps.sharedBytesPerThread;                                                                                                  
-    return *this;    
-  };
 };
 
 // class to perform the kernel tuning
-template<typename ArgsStruct>
+template< template<typename ...> typename ArgsStruct, typename ...types>
 class PLEGMA_kernel_tuner : public Tunable{
 
 protected:
 
-  void (*kernel)(ArgsStruct);
-  ArgsStruct *args;
+  ArgsStruct<types...> *kernel;
   ProfileStruct ps;
   char volString[TuneKey::aux_n];
   bool onlyTuning;
@@ -86,7 +73,7 @@ protected:
 public:
 
   // ctor
-  PLEGMA_kernel_tuner( void (*my_kernel)(ArgsStruct), ArgsStruct *my_args, ProfileStruct my_ps );
+  PLEGMA_kernel_tuner( ArgsStruct<types...> *my_args, ProfileStruct my_ps );
   void tune();
   void run();
   void apply(const cudaStream_t &stream);
@@ -103,10 +90,10 @@ public:
   
 };
 
-template<typename ArgsStruct>
-PLEGMA_kernel_tuner<ArgsStruct>::PLEGMA_kernel_tuner(void (*my_kernel)(ArgsStruct), ArgsStruct *my_args, ProfileStruct my_ps){
-  kernel = my_kernel;
-  args = my_args;
+template< template<typename ...> typename ArgsStruct, typename ...types>
+PLEGMA_kernel_tuner<ArgsStruct, types...>::PLEGMA_kernel_tuner(ArgsStruct<types ...> *my_args, ProfileStruct my_ps){
+  kernel = my_args;
+  //count_kernel = ArgsStruct<FC<a>...>;
   ps = my_ps;
   sprintf(volString, "%lld", ps.volume);
   sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
@@ -114,8 +101,8 @@ PLEGMA_kernel_tuner<ArgsStruct>::PLEGMA_kernel_tuner(void (*my_kernel)(ArgsStruc
   tuned=false;
 };
 
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::tune(){
+template< template<typename ...> typename ArgsStruct, typename ...types>
+void PLEGMA_kernel_tuner<ArgsStruct,types...>::tune(){
 #ifdef PLEGMA_NO_TUNING
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   tp.block = blockDim;
@@ -131,8 +118,8 @@ void PLEGMA_kernel_tuner<ArgsStruct>::tune(){
 }
 
 // apply tuning and/or running with/without tuning
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::apply(const cudaStream_t &stream){
+template< template<typename ...> typename ArgsStruct, typename ...types>
+void PLEGMA_kernel_tuner<ArgsStruct, types...>::apply(const cudaStream_t &stream){
 #ifdef PLEGMA_NO_TUNING
   // asked for no tuning, using defaultparameters
   tune();
@@ -142,21 +129,21 @@ void PLEGMA_kernel_tuner<ArgsStruct>::apply(const cudaStream_t &stream){
   tp = tuneLaunch(*this, getTuning(), getVerbosity());
   tuned = true;
   if( onlyTuning && !activeTuning() ) return;
-  (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,stream>>>(*args);
+  (*kernel)(tp.grid,tp.block,tp.shared_bytes,stream);
 #endif
 }
 
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::apply(){ apply(0); }
+template< template<typename ...> typename ArgsStruct, typename ...types>
+void PLEGMA_kernel_tuner<ArgsStruct, types...>::apply(){ apply(0); }
 
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::run(){
+template< template<typename ...> typename ArgsStruct, typename ...types>
+void PLEGMA_kernel_tuner<ArgsStruct, types...>::run(){
 #ifdef PLEGMA_NO_TUNING
   if(!tuned) tune();
-  (*kernel)<<<tp.grid,tp.block,tp.shared_bytes>>>(*args);
+  (*kernel)(tp.grid,tp.block,tp.shared_bytes);
 #else
   if(!tuned) tp = tuneLaunch(*this, QUDA_TUNE_NO, getVerbosity());
-  (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,0>>>(*args);
+  (*kernel)(tp.grid,tp.block,tp.shared_bytes,0);
 #endif
 }
 

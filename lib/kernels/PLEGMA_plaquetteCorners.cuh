@@ -18,6 +18,7 @@ template<typename Float, typename FloatG>
 struct ArgsPlaquetteCorners{
   gaugeTex<FloatG> gaugeTex;
   Float *partial_plaq;
+  __host__ void operator()(dim3 blocks, dim3 threads, int shared, const cudaStream_t stream);
 };
 
 template<typename Float, typename FloatG>
@@ -102,27 +103,28 @@ static __global__ void calculatePlaquetteCorners_kernel(ArgsPlaquetteCorners<Flo
     args.partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory  
 }
 
+
+template<typename Float, typename FloatG>
+__host__ void ArgsPlaquetteCorners<Float,FloatG>::operator()(dim3 blocks, dim3 threads, int shared, const cudaStream_t stream){
+  calculatePlaquetteCorners_kernel<<<blocks,threads,shared,stream>>>(*this);
+}
+
+
 template<typename Float, typename FloatG>
 static Float calculatePlaquetteCorners(gaugeTex<FloatG> gaugeTex){
   Float plaquette = 0.;
   Float globalPlaquetteCorners = 0.;
   Float *d_partial_plaq = NULL;
   
-  ArgsPlaquetteCorners<Float,FloatG> kernel_args;
-  kernel_args.gaugeTex = gaugeTex;
+  ArgsPlaquetteCorners<Float,FloatG> kernel_args{gaugeTex, d_partial_plaq};
 
-  ProfileStruct kernel_ps;
-  kernel_ps.flops = N_DIMS*(N_DIMS-1)/2 * N_COLS*N_COLS*(3+N_COLS*4);
-  kernel_ps.outBytes = N_COLS*N_COLS*2*4*2*sizeof(Float) ;
-  kernel_ps.inpBytes = (N_COLS*N_COLS*4*2 + 1)*sizeof(Float) ;
-  kernel_ps.siteBytes = N_COLS*N_COLS*N_DIMS*2*sizeof(Float) ;
-  kernel_ps.volume = GK_localVolume ;
-  kernel_ps.stride = GK_strideFull;
-  kernel_ps.tuneY = false ;
-  kernel_ps.sharedMemory = true ;
-  kernel_ps.sharedBytesPerThread = sizeof(Float);
+  ProfileStruct kernel_ps(GK_localVolume, true, sizeof(Float));
+  //kernel_ps.flops = N_DIMS*(N_DIMS-1)/2 * N_COLS*N_COLS*(3+N_COLS*4);
+  //kernel_ps.outBytes = N_COLS*N_COLS*2*4*2*sizeof(Float) ;
+  //kernel_ps.inpBytes = (N_COLS*N_COLS*4*2 + 1)*sizeof(Float) ;
+  //kernel_ps.siteBytes = N_COLS*N_COLS*N_DIMS*2*sizeof(Float) ;
   
-  PLEGMA_kernel_tuner<ArgsPlaquetteCorners<Float,FloatG>> tuner( calculatePlaquetteCorners_kernel<Float,FloatG>, &kernel_args, kernel_ps );
+  PLEGMA_kernel_tuner<ArgsPlaquetteCorners,Float,FloatG> tuner(&kernel_args, kernel_ps );
   
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;

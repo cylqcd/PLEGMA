@@ -5,43 +5,45 @@ const __device__ short int mesons_indices[10][16][4] = {0,0,0,0,0,0,1,1,0,0,2,2,
 
 const __device__ float mesons_values[10][16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1};
 
-template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
+template<typename FloatA, typename FloatB, typename FloatC>
 struct ArgsMesons{
   propTex<FloatA> texProp1;
   propTex<FloatB> texProp2;
   FloatC* block;
   int it, x0, y0, z0;
+  bool runFT;
+  __host__ void operator()(dim3 blocks, dim3 threads, int shared, const cudaStream_t stream);
 };
 
-template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
-__global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC,runFT> args){
+template<typename FloatA, typename FloatB, typename FloatC>
+__global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC> args){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int vid = sid + args.it*c_stride_spatial;
   Float2<FloatC> *block2 = (Float2<FloatC> *)args.block;
-
+    
   register Float2<FloatC> accum[2*N_MESONS];
   for(int i = 0 ; i < 2*N_MESONS ; i++){
     accum[i] = 0.;
   }
-
+    
   if (sid < c_threads/c_localL[3]){ // run only on the spatial volume
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     args.texProp1.get(prop1,vid);
     args.texProp2.get(prop2,vid);
-    #pragma unroll
+#pragma unroll
     for(int ip = 0 ; ip < N_MESONS ; ip++){
-      #pragma unroll
+#pragma unroll
       for(int is = 0 ; is < N_SPINS*N_SPINS ; is++){
 	short int beta = mesons_indices[ip][is][0];
 	short int gamma = mesons_indices[ip][is][1];
 	short int delta = mesons_indices[ip][is][2];
 	short int alpha = mesons_indices[ip][is][3];
 	FloatC value = mesons_values[ip][is];
-	#pragma unroll
+#pragma unroll
 	for(int a = 0 ; a < N_COLS ; a++){
-	  #pragma unroll
+#pragma unroll
 	  for(int b = 0 ; b < N_COLS ; b++){
 	    accum[ip*2+0] = accum[ip*2+0] + value * prop1[alpha][beta][a][b] * conj(prop1[delta][gamma][a][b]);
 	    accum[ip*2+1] = accum[ip*2+1] + value * prop2[alpha][beta][a][b] * conj(prop2[delta][gamma][a][b]);
@@ -49,7 +51,7 @@ __global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC,runFT> ar
 	}
       }
     }
-    if(runFT) {
+    if(args.runFT) {
       extern __shared__ int ext_shared_cache[];
       Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
       int source_pos[3] = {args.x0, args.y0, args.z0}; 
@@ -62,6 +64,13 @@ __global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC,runFT> ar
     }
   }
 }
+
+
+template<typename FloatA, typename FloatB, typename FloatC>
+void ArgsMesons<FloatA,FloatB,FloatC>::operator()(dim3 blocks, dim3 threads, int shared, const cudaStream_t stream){
+  contract_mesons_kernel<<<blocks,threads,shared,stream>>>(*this);
+}
+
 
 template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
 static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
@@ -80,7 +89,7 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
     size = site_size*volume;
   }
   
-  ArgsMesons<FloatA,FloatB,FloatC,runFT> kernel_args;
+  ArgsMesons<FloatA,FloatB,FloatC> kernel_args;
   kernel_args.texProp1 = texProp1;
   kernel_args.texProp2 = texProp2;
   kernel_args.block = d_partial_block;
@@ -88,6 +97,7 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
   kernel_args.x0 = GK_sourcePosition[isource][0];
   kernel_args.y0 = GK_sourcePosition[isource][1];
   kernel_args.z0 = GK_sourcePosition[isource][2];
+  kernel_args.runFT = runFT;
 
   ProfileStruct kernel_ps(SpVol, true, site_size*sizeof(Float2<FloatC>));
   //kernel_ps.flops = site_size*N_SPINS*N_SPINS*N_COLS*N_COLS*8; //fourier transform missing
@@ -95,8 +105,8 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
   //kernel_ps.inpBytes = volume*2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
   //kernel_ps.siteBytes = 2*N_SPINS*N_SPINS*N_COLS*N_COLS*(sizeof(FloatA)+sizeof(FloatB));
 
-  PLEGMA_kernel_tuner<ArgsMesons<FloatA,FloatB,FloatC,runFT>> tuner( contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>, &kernel_args, kernel_ps );
-  cudaFuncSetCacheConfig(contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>, cudaFuncCachePreferShared);
+  PLEGMA_kernel_tuner<ArgsMesons,FloatA,FloatB,FloatC> tuner( &kernel_args, kernel_ps );
+  //cudaFuncSetCacheConfig(ArgsMesons<FloatA,FloatB,FloatC,runFT>.operator(), cudaFuncCachePreferShared);
   tuner.tune();
   
 #ifdef TIMING_REPORT

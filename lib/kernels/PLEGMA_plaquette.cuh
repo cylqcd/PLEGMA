@@ -5,26 +5,28 @@ using namespace plegma;
 // structure that contains all arguments necessary
 //  to run the plaquette kernel
 template<typename Float, typename FloatG>
-struct ArgsPlaquette{ gaugeTex<FloatG> gaugeTex; Float *partial_plaq; };
-
+struct ArgsPlaquette{
+  gaugeTex<FloatG> gaugeTex; Float *partial_plaq, plaquette;
+  __host__ void operator()(dim3 blocks, dim3 threads, int shared, const cudaStream_t stream);
+};
 
 template<typename Float, typename FloatG>
-static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> args) {
+static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> args){
   extern __shared__ int ext_shared_cache[];
   Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
   if (sid < c_threads) {
-
+      
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];
     Float trace = 0.;
-
+      
     // Loop over xy, xz, xt, yz, yt, zt
-    #pragma unroll
+#pragma unroll
     for(int dir1=0; dir1<N_DIMS-1; dir1++) {
-      #pragma unroll
+#pragma unroll
       for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
 	args.gaugeTex.get(G1,dir1,sid);
@@ -52,12 +54,30 @@ static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> arg
 }
 
 template<typename Float, typename FloatG>
+__host__ void ArgsPlaquette<Float,FloatG>::operator()(dim3 blocks, dim3 threads, int shared, const cudaStream_t stream){
+  int gridDimX=0;
+  gridDimX = blocks.x;
+  cudaMalloc((void**)&partial_plaq, gridDimX * sizeof(Float));
+  calculatePlaquette_kernel<<<blocks,threads,shared,stream>>>(*this);
+
+  Float *h_partial_plaq = NULL;
+  h_partial_plaq = (Float*) malloc(gridDimX * sizeof(Float) );
+  if(h_partial_plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
+  cudaMemcpy(h_partial_plaq, partial_plaq , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
+  cudaFree(partial_plaq);
+  checkCudaError();
+
+  for(int i = 0 ; i < gridDimX ; i++)
+    plaquette += h_partial_plaq[i];
+  free(h_partial_plaq);
+
+}
+
+template<typename Float, typename FloatG>
 static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
-  Float plaquette = 0.;
   Float globalPlaquette = 0.;
-  Float *d_partial_plaq = NULL;
   
-  ArgsPlaquette<Float,FloatG> kernel_args{ gaugeTex, d_partial_plaq};
+  ArgsPlaquette<Float,FloatG> kernel_args{ gaugeTex, NULL, 0.};
 
   ProfileStruct kernel_ps(GK_localVolume, true, sizeof(Float));
   //kernel_ps.flops = N_DIMS*(N_DIMS-1)/2 * N_COLS*N_COLS*(3+N_COLS*4);
@@ -65,7 +85,7 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   //kernel_ps.inpBytes = (N_COLS*N_COLS*4*2 + 1)*sizeof(Float) ;
   //kernel_ps.siteBytes = N_COLS*N_COLS*N_DIMS*2*sizeof(Float) ;
   
-  PLEGMA_kernel_tuner<ArgsPlaquette<Float,FloatG>> tuner( calculatePlaquette_kernel<Float,FloatG>, &kernel_args, kernel_ps );
+  PLEGMA_kernel_tuner<ArgsPlaquette,Float,FloatG> tuner( &kernel_args, kernel_ps );
   
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;
@@ -75,12 +95,7 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   cudaEventRecord(start,0);
 #endif
 
-  kernel_args.partial_plaq = NULL;
-  tuner.tune();
-  int gridDimX = tuner.getGridDimX();
-  cudaMalloc((void**)&d_partial_plaq, gridDimX * sizeof(Float));
-  kernel_args.partial_plaq = d_partial_plaq;
-  tuner.run();
+  tuner.apply();
   
 #ifdef TIMING_REPORT
   cudaEventRecord(stop,0);
@@ -91,17 +106,6 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
 #endif
 
-  Float *h_partial_plaq = NULL;
-  h_partial_plaq = (Float*) malloc(gridDimX * sizeof(Float) );
-  if(h_partial_plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
-  cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_plaq);
-  checkCudaError();
-
-  for(int i = 0 ; i < gridDimX ; i++)
-    plaquette += h_partial_plaq[i];
-  free(h_partial_plaq);
-
-  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
+  MPI_Allreduce(&(kernel_args.plaquette) , &globalPlaquette , 1 , MPI_Type(globalPlaquette) , MPI_SUM , MPI_COMM_WORLD);  
   return globalPlaquette/(GK_totalVolume*N_COLS*6);
 }
