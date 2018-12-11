@@ -89,7 +89,7 @@ namespace plegma {
     void unload();
     
     void shift(PLEGMA_Field &Fin, int dirOr);
-    void random(int seed);
+    void random(int seed, int n);
     void setUnit(std::vector<int> indDiag);
   };
 }

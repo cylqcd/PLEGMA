@@ -523,16 +523,16 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::random(int seed){
+void PLEGMA_Field<Float>::random(int seed, int n){
     this->zero_device();
     
     //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
     int rng_size = this->field_length;
-    printf("Number of comm_rank: %d\n", comm_rank());
+    //printf("Number of comm_rank: %d\n", comm_rank());
     PLEGMA_RNG randstate(rng_size, seed, comm_rank() );
     checkCudaError();
     randstate.Init();
-    set_random( randstate, *this, rng_size);        
+    set_random( randstate, *this, rng_size, n);        
 }
 
 template<typename Float>

@@ -15,21 +15,17 @@ int main(int argc, char **argv)
   
   print_status();
 
-  // Check the point source
   PLEGMA_Vector<double> vectorAuxD(BOTH);
 
-  vectorAuxD.random(1234);
-  //vectorAuxD.unloadVector();
-  //vectorAuxD.norm2Host();
- 
- // std::cout<<vectorAuxD.H_elem()[((0*N_COLS+0)*(params.lL[0] * params.lL[1] * params.lL[2] * params.lL[3] ))*2]<<std::endl;
-
-  // finalize the QUDA library
-  saveTuneCache(true);
-  endQuda();
-    
-  // finalize the communications layer
-  finalizeComms();
+  char stochfilename[100];
+  int nroots = 4;
+  std::snprintf( stochfilename,100, "Z_%d_stochastic_source.lime", nroots);
+  vectorAuxD.random(1234, 4);
+  vectorAuxD.unload();
+  vectorAuxD.norm2Host();
+  vectorAuxD.write(stochfilename); 
+  
+  finalize();
 
   return 0;
 }

@@ -33,7 +33,7 @@ PLEGMA_RNG::PLEGMA_RNG(int rng_sizes, int seedin, int offset) {
     state = NULL;
     seed = seedin;
     rng_size = rng_sizes;
-    printf("Number of rng_size[1.25]: %d\n", rng_size);
+   // printf("Number of rng_size[1.25]: %d\n", rng_size);
 
     rank_offset = offset;
 #if defined(XORWOW)
@@ -66,7 +66,6 @@ void PLEGMA_RNG::AllocateRNG() {
     } else {
         errorQuda("Array of random numbers not allocated, array size: %d !\nExiting...\n",rng_size);
     }
-    
 }
 
 /*! @brief Destructor !*/

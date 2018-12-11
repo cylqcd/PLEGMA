@@ -62,4 +62,5 @@ namespace cuBLAS{
     cublasStatus_t error =  cublasZaxpy(cublas_handle, NN, &cu_val,(cuDoubleComplex*) x, 1, (cuDoubleComplex*) y, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCreate failed with error %d", error);
   }
+
 }
