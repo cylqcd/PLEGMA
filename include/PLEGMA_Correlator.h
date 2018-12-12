@@ -1,5 +1,5 @@
 #include <PLEGMA_global.h>
-
+#include <PLEGMA_Su3field.h>
 #ifndef _PLEGMA_CORRELATOR_H
 #define _PLEGMA_CORRELATOR_H
 
@@ -109,6 +109,11 @@ namespace plegma {
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int isource, CORR_SPACE CorrSpace);
 
+    void contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
+			     PLEGMA_Propagator<Float> &fwdProp,
+			     int signProps, PLEGMA_Su3field<Float> &su3,
+			     std::vector<GAMMAS> gammas, int pp[3],
+			     int isource, CORR_SPACE corrSpace);
 
     void writeFile(PLEGMA_params &params);
     void writeFile(char *filename, PLEGMA_params &params);
