@@ -3,7 +3,7 @@
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
- 
+#include <PLEGMA_contractPropOpProp.cuh> 
 using namespace plegma;
 
 //--------------------------------//
@@ -89,6 +89,34 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
 }
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
+		    PLEGMA_Propagator<Float> &fwdProp,
+		    int signProps, PLEGMA_Su3field<Float> &su3,
+		    std::vector<GAMMAS> gammas, int pp[3],
+		    int isource, CORR_SPACE corrSpace){
+
+  initialize(THRP_LOCAL,corrSpace);
+  
+  propTex<Float> bwdPropTex, fwdPropTex;
+  su3Tex<Float> sTex;
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  sTex.tex = su3.createTexObject();
+  this->isource = isource;
+  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+
+  for(int it = 0; it < GK_localL[3]; it++) {
+    contractPropOpProp(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas,pp);
+  }
+
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+  su3.destroyTexObject(sTex.tex);
+}
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
