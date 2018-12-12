@@ -1,7 +1,9 @@
 #include <PLEGMA_kernel_complex.cuh>
+
+#ifndef PLEGMA_GAMMAS_CUH
+#define PLEGMA_GAMMAS_CUH
 namespace plegma{
-  enum GAMMAS {ONE,G1,G2,G3,G4,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
-  const __device__ Float2<float> gamma[16][4] =
+  const __device__ float gamma[16][4][2] =
     {{{1,0},{1,0},{1,0},{1,0}}, // 1
      {{0,1},{0,1},{0,-1},{0,-1}}, // g1
      {{1,0},{-1,0},{-1,0},{1,0}}, // g2
@@ -37,7 +39,7 @@ namespace plegma{
      {{0,3},{1,2},{2,1},{3,0}},
      {{0,2},{1,3},{2,0},{3,1}},
     };
-  const __device__ Float2<float> gammaTmP[16][4] =
+  const __device__ float gammaTmP[16][4][2] =
     {{{0,1},{0,1},{0,1},{0,1}},
      {{0,1},{0,1},{0,-1},{0,-1}},
      {{1,0},{-1,0},{-1,0},{1,0}},
@@ -73,7 +75,7 @@ namespace plegma{
      {{0,1},{1,0},{2,3},{3,2}},
      {{0,0},{1,1},{2,2},{3,3}},
     };
-  const __device__ Float2<float> gammaTmM[16][4] =
+  const __device__ float gammaTmM[16][4][2] =
     {{{0,-1},{0,-1},{0,-1},{0,-1}},
      {{0,1},{0,1},{0,-1},{0,-1}},
      {{1,0},{-1,0},{-1,0},{1,0}},
@@ -111,3 +113,5 @@ namespace plegma{
     };
 
 }
+
+#endif
