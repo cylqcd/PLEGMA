@@ -215,6 +215,53 @@ namespace plegma {
     }
   }
 
+  template<bool isLeftTrans,typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ void partial_trace_mul_Prop_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS]){
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+	A[mu][nu].x=0.; A[mu][nu].y=0.;
+#pragma unroll
+	for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+	  for(int a = 0; a < N_COLS; a++)
+#pragma unroll
+	    for(int b = 0; b < N_COLS; b++){
+	      if(isLeftTrans) A[mu][nu] = A[mu][nu] + B[mu][rho][b][a] * C[nu][rho][b][a];
+	      else A[mu][nu] = A[mu][nu] + B[rho][mu][a][b] * C[nu][rho][b][a];
+	    }
+	
+      }
+  }
+
+  template<bool isLeftTrans,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							 Float2<FloatD> D[N_COLS][N_COLS]){
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+	A[mu][nu].x=0.; A[mu][nu].y=0.;
+#pragma unroll
+	for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+	  for(int a = 0; a < N_COLS; a++)
+#pragma unroll
+	    for(int b = 0; b < N_COLS; b++)
+#pragma unroll
+	      for(int c = 0; c < N_COLS; c++){
+		if(isLeftTrans) A[mu][nu] = A[mu][nu] + B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
+		else A[mu][nu] = A[mu][nu] + B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
+	      }
+	
+      }
+  }
+
   template<typename FloatA, typename FloatB>
   __inline__ __device__ FloatA real_trace_mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
     FloatA tr=0.;
@@ -288,9 +335,9 @@ namespace plegma {
       i /= 2;
     }
   }
-  
+
   template<typename Float>
-  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3]){
+  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3], int padding = 0, int sign = -1){
     int cacheIndex = threadIdx.x;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
@@ -307,7 +354,7 @@ namespace plegma {
 	phase += ((Float) (c_moms[imom][i]*id[i]))/((Float) c_totalL[i]);
       phase *=  2. * PI;
       expon.x = cos(phase);
-      expon.y = -sin(phase);
+      expon.y = sign*sin(phase);
       for(int ip = 0 ; ip < n_comp ; ip++){
 	shared_cache[ip*blockDim.x + cacheIndex] = in[ip] * expon; 
       }
@@ -315,12 +362,12 @@ namespace plegma {
       
       if(cacheIndex == 0 && out!=NULL){
 	for(int ip = 0 ; ip < n_comp ; ip++){
-	  out[(imom*n_comp + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
+	  out[(imom*(n_comp+padding) + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
 	}
       }
-    }
+    }    
   }
-
+  
   template<typename Float>
   __inline__ __device__ Float xi0(Float w)
   {
