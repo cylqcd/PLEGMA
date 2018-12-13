@@ -60,15 +60,15 @@ namespace plegma {
   inline __device__ void sidStride::setSidStride<Plus>(size_t sid, const int offset, short int dirPlus) {
     size_t id[4] = GET_ID(sid);
     bool plus_ghost = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1));
-    this->sid = plus_ghost ? (c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-    this->stride = plus_ghost ? c_surface[dirPlus] : c_stride;
+    this->sid = plus_ghost ? (c_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
+    this->stride = plus_ghost ? c_surface3D[dirPlus] : c_stride;
   }
   template<>
   inline __device__ void sidStride::setSidStride<Minus>(size_t sid, const int offset, short int dirMinus) {
     size_t id[4] = GET_ID(sid);
     bool minus_ghost = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    this->sid = minus_ghost ? (c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-    this->stride = minus_ghost ? c_surface[dirMinus] : c_stride;
+    this->sid = minus_ghost ? (c_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
+    this->stride = minus_ghost ? c_surface3D[dirMinus] : c_stride;
   }
   template<>
   inline __device__ void sidStride::setSidStride<PlusPlus>(size_t sid, const int offset, short int dirPlus1, short int dirPlus2) {
@@ -85,11 +85,11 @@ namespace plegma {
 	this->sid = c_cornerGhost[dirPlus1][dirPlus2]*offset + LEXIC_2D(dirPlus1,dirPlus2,id);
 	this->stride = c_surface2D[dirPlus1][dirPlus2];
       } else if(plus1_ghost) {
-	this->sid = c_plusGhost[dirPlus1]*offset + LEXIC_3D(dirPlus1,id);
-	this->stride = c_surface[dirPlus1];
+	this->sid = c_sideGhost[dirPlus1]*offset + LEXIC_3D(dirPlus1,id);
+	this->stride = c_surface3D[dirPlus1];
       } else if(plus2_ghost) {
-	this->sid = c_plusGhost[dirPlus2]*offset + LEXIC_3D(dirPlus2,id);
-	this->stride = c_surface[dirPlus2];
+	this->sid = c_sideGhost[dirPlus2]*offset + LEXIC_3D(dirPlus2,id);
+	this->stride = c_surface3D[dirPlus2];
       } else {
 	this->sid = LEXIC_ID(id);
 	this->stride = c_stride;
@@ -111,11 +111,11 @@ namespace plegma {
 	this->sid = c_cornerGhost[N_DIMS+dirMinus1][N_DIMS+dirMinus2]*offset + LEXIC_2D(dirMinus1,dirMinus2,id);
 	this->stride = c_surface2D[dirMinus1][dirMinus2];
       } else if(minus1_ghost) {
-	this->sid = c_minusGhost[dirMinus1]*offset + LEXIC_3D(dirMinus1,id);
-	this->stride = c_surface[dirMinus1];
+	this->sid = c_sideGhost[dirMinus1+N_DIMS]*offset + LEXIC_3D(dirMinus1,id);
+	this->stride = c_surface3D[dirMinus1];
       } else if(minus2_ghost) {
-	this->sid = c_minusGhost[dirMinus2]*offset + LEXIC_3D(dirMinus2,id);
-	this->stride = c_surface[dirMinus2];
+	this->sid = c_sideGhost[dirMinus2+N_DIMS]*offset + LEXIC_3D(dirMinus2,id);
+	this->stride = c_surface3D[dirMinus2];
       } else {
 	this->sid = LEXIC_ID(id);
 	this->stride = c_stride;
@@ -138,11 +138,11 @@ namespace plegma {
 	this->sid = c_cornerGhost[dirPlus][N_DIMS+dirMinus]*offset + LEXIC_2D(dirPlus,dirMinus,id);
 	this->stride = c_surface2D[dirPlus][dirMinus];
       } else if(plus_ghost) {
-	this->sid = c_plusGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id);
-	this->stride = c_surface[dirPlus];
+	this->sid = c_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id);
+	this->stride = c_surface3D[dirPlus];
       } else if(minus_ghost) {
-	this->sid = c_minusGhost[dirMinus]*offset + LEXIC_3D(dirMinus,id);
-	this->stride = c_surface[dirMinus];
+	this->sid = c_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id);
+	this->stride = c_surface3D[dirMinus];
       } else {
 	this->sid = LEXIC_ID(id);
 	this->stride = c_stride;

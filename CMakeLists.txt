@@ -125,7 +125,7 @@ find_package(Threads REQUIRED)
 #-C.K. Modified here to take OpenBlas and MKL switches into account  
 if(${PLEGMA_OPENBLAS})
   add_definitions(-DHAVE_OPENBLAS)
-  FIND_LIBRARY(PLEGMA_OPENBLAS_LIB openblas ${PLEGMA_OPENBLAS_LIBDIR})
+  FIND_LIBRARY(PLEGMA_OPENBLAS_LIB openblas ${LIBRARY_DIRS} ${PLEGMA_OPENBLAS_LIBDIR})
   FIND_LIBRARY(PLEGMA_OPENBLAS_GOMP gomp ${LIBRARY_DIRS})
   include_directories(SYSTEM ${PLEGMA_OPENBLASHOME}/include)
 endif()
