@@ -95,7 +95,7 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
 		    PLEGMA_Propagator<Float> &fwdProp,
 		    int signProps, PLEGMA_Su3field<Float> &su3,
-		    std::vector<GAMMAS> gammas, int pp[3],
+		    std::vector<GAMMAS> gammas,
 		    int isource, CORR_SPACE corrSpace){
 
   initialize(THRP_LOCAL,corrSpace);
@@ -109,7 +109,7 @@ contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
   printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
 
   for(int it = 0; it < GK_localL[3]; it++) {
-    contractPropOpProp(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas,pp);
+    contractPropOpProp(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
   }
 
   bwdProp.destroyTexObject(bwdPropTex.tex);

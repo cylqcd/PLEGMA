@@ -14,7 +14,6 @@ struct ArgsPropOpProp{
   su3Tex<FloatS> su3;
   KernelArr<GAMMAS> listGammas;
   int it, x0, y0, z0;
-  KernelArr<int> pp;
   int signProps;
 };
 
@@ -81,7 +80,7 @@ __global__ void contractPropOpProp_kernel(ArgsPropOpProp<FloatC,FloatA,FloatB,Fl
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink>
 static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatA> prop2,
-				 int signProps, su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas, int pp[3]){
+				 int signProps, su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
   if(gammas.size() <= 0)
     errorQuda("Error the container of gamma matrices cannot be zero");
   if(gammas.size() > 16)
@@ -117,12 +116,6 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   args.y0 = GK_sourcePosition[isource][1];
   args.z0 = GK_sourcePosition[isource][2];
   args.it = it;
-  KernelArr<int> k_pp;
-  cudaMalloc((void**)&k_pp.array, 3*sizeof(int));
-  checkCudaError();
-  cudaMemcpy(k_pp.array, pp, 3*sizeof(int), cudaMemcpyHostToDevice);
-  checkCudaError();
-  args.pp = k_pp;
 
   // !!!!!!!!!!!!!!! Warning !!!!!!!!!!!!!!!! //
   // when do tuning do not set sharedBytesPerThread = site_size*sizeof(Float2<FloatC>); but sharedBytesPerThread = sizeof(Float2<FloatC>)
@@ -141,12 +134,13 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
 
   contractPropOpProp_kernel<<<gridDim,blockDim>>>(args);
   checkCudaError();
-
+  
   FloatC *h_partial_block = NULL;
   h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
   if(h_partial_block == NULL) errorQuda("contractPropOpProp: Cannot allocate host block.\n");
   cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_block);
+  cudaFree(listGammas.array);
   checkCudaError();
   
   if(runFT==true){
@@ -174,24 +168,24 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool isLink>
 static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
-			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas, int pp[3]){
+			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
   if(corr.getCorrSpace() == POSITION_SPACE)
-    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink>(corr,prop1,prop2,signProps,su3,it,gammas,pp);
+    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink>(corr,prop1,prop2,signProps,su3,it,gammas);
   else if(corr.getCorrSpace() == MOMENTUM_SPACE)
-    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink>(corr,prop1,prop2,signProps,su3,it,gammas,pp);
+    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink>(corr,prop1,prop2,signProps,su3,it,gammas);
   else
     errorQuda("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
 }
 
 template<typename FloatC,typename FloatA, typename FloatB>
 static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, int it,
-                                 std::vector<GAMMAS> gammas, int pp[3]){
+                                 std::vector<GAMMAS> gammas){
   su3Tex<FloatC> su3;
-  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,false>(corr,prop1,prop2,signProps,su3,it, gammas,pp);
+  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,false>(corr,prop1,prop2,signProps,su3,it, gammas);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
 static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
-			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas, int pp[3]){
-  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true>(corr,prop1,prop2,signProps,su3,it, gammas,pp);
+			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
+  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true>(corr,prop1,prop2,signProps,su3,it, gammas);
 }

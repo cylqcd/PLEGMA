@@ -112,7 +112,7 @@ namespace plegma {
     void contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
 			     PLEGMA_Propagator<Float> &fwdProp,
 			     int signProps, PLEGMA_Su3field<Float> &su3,
-			     std::vector<GAMMAS> gammas, int pp[3],
+			     std::vector<GAMMAS> gammas,
 			     int isource, CORR_SPACE corrSpace);
 
     void writeFile(PLEGMA_params &params);
