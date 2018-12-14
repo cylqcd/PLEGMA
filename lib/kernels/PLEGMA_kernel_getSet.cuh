@@ -47,9 +47,9 @@ namespace plegma {
     size_t sid;
     size_t stride;
     inline __device__ sidStride() = default; 
-    inline __device__ sidStride(size_t sid) {
+    inline __device__ sidStride(size_t sid, size_t stride=c_stride) {
       this->sid = sid;
-      this->stride = c_stride;      
+      this->stride = stride;      
     }  
     template<get_from src>
     inline __device__ void setSidStride(size_t sid, const int, short int);
