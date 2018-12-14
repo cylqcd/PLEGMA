@@ -19,8 +19,8 @@ int main(int argc, char **argv)
 
   char stochfilename[100];
   int nroots = 4;
-  std::snprintf( stochfilename,100, "Z_%d_stochastic_source.lime", nroots);
-  vectorAuxD.random(1234, 4);
+  std::snprintf( stochfilename,100, "1node_Z_%d_stochastic_source.lime", nroots);
+  vectorAuxD.random(1234, nroots);
   vectorAuxD.unload();
   vectorAuxD.norm2Host();
   vectorAuxD.write(stochfilename); 

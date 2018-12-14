@@ -11,12 +11,13 @@ using namespace plegma;
 __global__ void random_init_kernel(cuRNGState *state, int seed, int length_field, int offset){
     
     int sid = blockIdx.x*blockDim.x + threadIdx.x;
-    if ( sid < length_field ){
+    //printf("Field length %d", length_field);
+    //if ( sid < length_field ){
         // Each thread gets same seed, a different sequence number, no offset
         //Determine the global id of the field.
-        //printf("Number of threads %d and offset %d\n", sid, offset);
-        curand_init(seed, sid, offset, &state[sid]);
-    }
+        //printf("Number of threads %d and offset %d\n", sid, offset*length_field);
+        curand_init(seed, sid+offset*length_field, 0, &state[sid]);
+    //}
 }
 
   /**
