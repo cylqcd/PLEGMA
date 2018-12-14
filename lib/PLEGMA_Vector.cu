@@ -403,5 +403,30 @@ void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float>
   gauge.destroyTexObject(texGaugeIn.tex);
 }
 
+template<typename Float>
+void contractNucleonSeqSource(PLEGMA_Vector<Float> &vec, genericTex<Float> prop1, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
+template<typename Float>
+void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2){
+  this->zero_device();
+  genericTex<Float> texProp;
+  texProp.tex = prop.createTexObject();
+  contractNucleonSeqSource(*this, texProp, proj, particle, timeslice, c_nu, c_c2);
+  prop.destroyTexObject(texProp.tex);
+}
+
+template<typename Float>
+void contractNucleonSeqSource(PLEGMA_Vector<Float> &vec, genericTex<Float> prop1, genericTex<Float> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
+template<typename Float>
+void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2){
+  this->zero_device();
+  genericTex<Float> texProp1;
+  texProp1.tex = prop1.createTexObject();
+  genericTex<Float> texProp2;
+  texProp2.tex = prop2.createTexObject();
+  contractNucleonSeqSource(*this, texProp1,texProp2, proj, particle, timeslice, c_nu, c_c2);
+  prop1.destroyTexObject(texProp1.tex);
+  prop2.destroyTexObject(texProp2.tex);
+}
+
 template class PLEGMA_Vector<float>;
 template class PLEGMA_Vector<double>;
