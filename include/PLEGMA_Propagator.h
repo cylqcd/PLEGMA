@@ -20,7 +20,7 @@ namespace plegma {
     
     void conjugate();
     void apply_gamma5();
-    
+    void apply_gamma(short int, short int);
     void absorbVectorToHost(PLEGMA_Vector<Float> &vec, 
 			    int nu, int c2);
     void absorbVectorToDevice(PLEGMA_Vector<Float> &vec, 

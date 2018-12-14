@@ -36,6 +36,20 @@ namespace plegma {
   }
 
   template<LEFTRIGHT LF,typename Float>
+  __inline__ __device__ void gamma_generic_V(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS], short int r){
+#pragma unroll
+    for(int nz = 0; nz < N_SPINS; nz++){
+      int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
+      int nu = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
+#pragma unroll
+      for(int c1 = 0; c1 < N_COLS; c1++)
+	vout[mu][c1] = gamma[r][nz]*vin[nu][c1] ;
+    }
+  }
+
+  
+
+  template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaProp(Float2<Float> pout[N_SPINS][N_SPINS][N_COLS][N_COLS],
 				       Float2<Float> pin[N_SPINS][N_SPINS][N_COLS][N_COLS], short int r){
 #pragma unroll

@@ -1,6 +1,57 @@
 #include <PLEGMA_kernel_utils.cuh>
 using namespace plegma;
 
+
+
+
+template<typename Float>
+static __global__ void apply_gamma_prop_kernel(short int LF,Float *inOut, short int r){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  prop2<Float> prop(inOut);
+  Float2<Float> Sin[N_SPINS][N_SPINS][N_COLS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_SPINS][N_COLS][N_COLS];
+  const Float2<float> (*gamma2)[4];
+  gamma2=(Float2<float> (*)[4]) plegma::gamma;
+  if (sid >= c_threads) return;
+  prop.get(Sin,sid);
+
+#pragma unroll
+  for(int i=0;i<N_COLS;i++)
+#pragma unroll 
+    for(int j=0;j<N_COLS;j++)
+#pragma unroll
+      for(int k=0;k<N_SPINS;k++)
+#pragma unroll
+      for(int l=0;l<N_SPINS;l++){
+      Sout[k][l][i][j].x=0.;
+      Sout[k][l][i][j].y=0.;
+    }
+	
+#pragma unroll
+  for(int nz = 0; nz < N_SPINS; nz++){
+    int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
+    int nu = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
+#pragma unroll
+    for(int c1 = 0; c1 < N_COLS; c1++)
+#pragma unroll
+      for(int c2 = 0; c2 < N_COLS; c2++)
+#pragma unroll
+	for(int s =0 ;s < N_SPINS; s++)
+	  (LF == 0)? Sout[mu][s][c1][c2] =Sout[mu][s][c1][c2]+ Sin[nu][s][c1][c2]*gamma2[r][nz] : Sout[s][mu][c1][c2] =Sout[s][mu][c1][c2]+ Sin[s][nu][c1][c2]*gamma2[r][nz];
+  }
+
+  prop.set(Sout,sid);
+}
+
+template<typename Float>
+static void apply_gamma_prop(short int LF,Float *inOut,short int r){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  apply_gamma_prop_kernel<<<gridDim,blockDim>>>(LF,(Float*) inOut, r);
+  checkCudaError();
+}
+
+
 template<typename Float>
 static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
