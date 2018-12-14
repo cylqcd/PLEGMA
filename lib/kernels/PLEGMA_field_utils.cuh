@@ -63,8 +63,29 @@ static void copy_corner_to_ghost(PLEGMA_Field<Float> &f, int dir1, int dir2){
   @param state CURAND RNG state array, which is used to calculate Z_n noise
 
  */
-template<typename Float>
-__global__ void genUniform_kernel(cuRNGState *state, Float *inout, int length_field, int offset, int n){
+template<int n>
+__inline__ __device__ Float2<float> rootsunity(int order){
+    Float2<float> root;
+    root.x = cos(2.0*M_PI*((float)order)/(float)n);
+    root.y = sin(2.0*M_PI*((float)order)/(float)n);
+    return root;
+}
+template<>
+__inline__ __device__ Float2<float> rootsunity<2>(int order){
+    Float2<float> root;
+    if(order == 0){
+        root.x = 1.0;
+        root.y = 0.0;
+    }
+    else{
+        root.x = -1.0;
+        root.y = 0.0;
+    }
+    return root;
+}
+
+template<typename Float, int n>
+__global__ void genUniform_kernel(cuRNGState *state, Float *inout, int length_field){
     Float2<Float> *inout2 = (Float2<Float> *) inout;
     int sid = blockIdx.x*blockDim.x + threadIdx.x;
     if( n < 2) return;
@@ -76,8 +97,7 @@ __global__ void genUniform_kernel(cuRNGState *state, Float *inout, int length_fi
             
             if( tmp  < ((Float)order+1.0)/(Float)n ){
 
-                inout2[sid].x = cos(2.0*M_PI*((Float)order)/(Float)n);
-                inout2[sid].y = sin(2.0*M_PI*((Float)order)/(Float)n);
+                inout2[sid] = rootsunity<n>(order);
                 break;
             }
         }
@@ -87,11 +107,11 @@ __global__ void genUniform_kernel(cuRNGState *state, Float *inout, int length_fi
    // printf("stochastic source at : %d is %.8f\n", sid, tmp);
 
 } 
-template<typename Float>
-void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free, int offset, int n){
+template<typename Float, int n>
+void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free){
 
     dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
     dim3 gridDim( (GK_localVolume * field_deg_free + blockDim.x -1)/blockDim.x , 1 , 1);
-    genUniform_kernel<<<gridDim,blockDim>>>(rng_state.State(), inOut.D_elem(),  field_deg_free * GK_localVolume, offset, n );
+    genUniform_kernel<Float, n><<<gridDim,blockDim>>>(rng_state.State(), inOut.D_elem(),  field_deg_free * GK_localVolume);
 }
 
