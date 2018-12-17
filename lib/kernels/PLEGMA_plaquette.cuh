@@ -8,11 +8,11 @@ static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Floa
   Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
-  
+    
   if (sid < c_threads) {
 
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
-      G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];
+      G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];    
     Float trace = 0.;
 
     // Loop over xy, xz, xt, yz, yt, zt
@@ -42,7 +42,7 @@ static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Floa
 
   // now on the first element of the shared memory we have the reduction of block threads
   if(cacheIndex == 0 && partial_plaq!=NULL)
-    partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory  
+    partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory
 }
 
 template<typename Float, typename FloatG>
@@ -53,7 +53,7 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
 
   ProfileStruct ps(GK_localVolume,sizeof(Float));
   
-  tune(ps, calculatePlaquette_kernel<Float,FloatG>, gaugeTex, d_partial_plaq);
+  tune(ps, calculatePlaquette_kernel<Float,FloatG>, calculatePlaquette_kernel<count,count>, gaugeTex, d_partial_plaq);
   
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;
