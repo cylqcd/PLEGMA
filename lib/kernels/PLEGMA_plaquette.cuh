@@ -52,8 +52,9 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   Float *d_partial_plaq = NULL;
 
   ProfileStruct ps(GK_localVolume,sizeof(Float));
-  
-  tune(ps, calculatePlaquette_kernel<Float,FloatG>, calculatePlaquette_kernel<count,count>, gaugeTex, d_partial_plaq);
+
+  calcFlops(ps, calculatePlaquette_kernel<counter,counter>, gaugeTex, d_partial_plaq);
+  tune(ps, calculatePlaquette_kernel<Float,FloatG>, gaugeTex, d_partial_plaq);
   
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;

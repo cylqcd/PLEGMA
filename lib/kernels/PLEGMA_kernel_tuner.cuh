@@ -1,6 +1,6 @@
 #include <PLEGMA_global.h>
 #include <tune_quda.h>
-#include <PLEGMA_counter.cuh>
+#include <PLEGMA_kernel_counter.cuh>
 using namespace quda;
 
 #ifndef PLEGMA_KERNEL_TUNER_H
@@ -147,8 +147,13 @@ protected:
   void calculateFlops(){
     dim3 blockDim(1,1,1);
     dim3 gridDim(1,1,1);
+    counter::ops = 0;
+    counter::reads = 0;
+    counter::writes = 0;
     launchKernel(gridDim,blockDim,ps.sharedBytesPerThread,0);
-    ps.flops = counter::ops;
+    ps.flops = counter::getOps();
+    ps.inpBytes = counter::getReads();
+    ps.outBytes = counter::getWrites();
   }
 public:
 
@@ -158,6 +163,7 @@ public:
     args = std::tuple<types...>(kArgs...);
     sprintf(volString, "%lld", ps.volume);
     sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
+    kernelName = (std::string) typeid(*kernel).name(); // with cupti no longer necessary
     onlyTuning = false;
     tuned = false;
   } 
@@ -204,9 +210,6 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   run();
 #else
   // performing tuning if we need to
-  // calculate number of flops
-  //if( !tuned && ps.measured == false )
-  //calculateFlops( );
   // tune
   ps.tp = tuneLaunch(*this, getTuning(), getVerbosity());
   tuned = true;
@@ -245,6 +248,13 @@ template<class ...types>
 void tuneAndRun(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
   PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
   tuner.apply();
+}
+
+// implementation to be changed so that flops do not get calculated if already known
+template<class ...types>
+void calcFlops(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+  tuner.calculateFlops(); // calculates the number of flops and stores them in ps
 }
 
 #endif
