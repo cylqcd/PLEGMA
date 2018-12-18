@@ -422,9 +422,7 @@ namespace plegma {
   }
 
   template<typename Float>
-  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in,
-						   Float2<Float> *shared_cache, int n_comp,
-						   int sid3D, int sp[3], int padding = 0, int sign = -1){
+  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3], int sign = -1, int out_pad = 0, int out_shift = 0){
     int cacheIndex = threadIdx.x;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
@@ -447,7 +445,7 @@ namespace plegma {
       
       if(cacheIndex == 0 && out!=NULL){
 	for(int ip = 0 ; ip < n_comp ; ip++){
-	  out[(imom*(n_comp+padding) + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
+	  out[(imom*(n_comp+out_pad) + out_shift + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
 	}
       }
     }    

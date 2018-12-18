@@ -69,7 +69,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
       //    extern __shared__ int ext_shared_cache[];
       __shared__ Float2<FloatC> ext_shared_cache[THREADS_PER_BLOCK];
       Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
-      fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos,listGammas.size-1,+1);
+      fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos,+1,listGammas.size-1);
     }
     else{
       if (sid < DGC_localVolume3D)
