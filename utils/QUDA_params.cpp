@@ -7,8 +7,6 @@
 #include <util_quda.h>
 #include <PLEGMA_utils.h>
 
-#define MAX(a,b) ((a)>(b)?(a):(b))
-
 // In a typical application, quda.h is the only QUDA header required.
 #include <quda.h>
 
