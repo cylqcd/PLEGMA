@@ -653,30 +653,24 @@ def remove_symbols(name):
 
 #************************************Baryons saved all together*************************************************
     
-save_baryons_like_this = defaultdict(list)
-save_gamma_list_like_this = defaultdict(list)
-tmp_baryon_list = copy.deepcopy(list(flav_dict.keys()))
-    
+save_baryons_like_this = dict()
+for spin in all_gammas:
+  save_baryons_like_this[spin] = defaultdict(list)
 for enumb,baryon in enumerate(flav_dict.keys()):
   flavor ,spin = Construct_interpolation_field(baryon,flav_dict).build_baryon()
   gammas = all_gammas[spin]  
-    
+  
   flv_list1,flv_list2 = Construct_o_o_bar_list(baryon).produce_o_lists()
   O = copy.deepcopy(flv_list1)
   O_bar = copy.deepcopy(flv_list2)
   flv_list1[0].sort(key= lambda val : SORT_ORDER[val])
+
   prop_prod_general,sign_gamma_final,o_o_bar_gamma_indexlist = Return_gamma_coeff_and_gamma_sign(O,O_bar,baryon).combine_all()
   final_list = Non_zero_gamma(baryon,gammas,sign_gamma_final,o_o_bar_gamma_indexlist).give_non_zero_gamma()
   
-  if not tmp_baryon_list :
-    break
-  for enum_tmp_b, tmp_b in enumerate(tmp_baryon_list):
-    flv_l1,flv_l2 = Construct_o_o_bar_list(tmp_b).produce_o_lists()
-    flv_l1[0].sort(key= lambda val : SORT_ORDER[val])
-    if flv_list1 == flv_l1:
-      flv_key = "-".join(flv_list1[0])
-      save_baryons_like_this[flv_key].append([tmp_b,spin,final_list])
-      tmp_baryon_list.remove(tmp_b)
+  flv_key = "-".join(flv_list1[0])
+  save_baryons_like_this[spin][flv_key].append([baryon,final_list])
+
 
 host_header=sys.argv[1]
 device_header=sys.argv[2]
@@ -716,119 +710,84 @@ for f in file1,file2:
   
 # Printing the data
 
-n_baryons = 0
-n_site = 0
-n_site_list = ''
-for key_prop in save_baryons_like_this.keys():
-  for baryon in save_baryons_like_this[key_prop]:
-    n_baryons += 1
-    n_site += len(baryon[2].keys())
-    n_site_list += repr(len(baryon[2].keys())) + ", ";
-n_baryons = repr(n_baryons)
-n_site = repr(n_site)
-    
-all_v_string = "static __device__ float2 ***all_vals[" + repr(len(save_baryons_like_this.keys())) + "] = { "
-all_i_string = "static __device__ int (***all_idxs[" + repr(len(save_baryons_like_this.keys())) + "])[6] = { "
-all_lll_string = "static __device__ int **all_gamma_comp_length[" + repr(len(save_baryons_like_this.keys())) + "] = { "
-all_ll_string = "static __device__ int *all_gamma_length[" + repr(len(save_baryons_like_this.keys())) + "] = { "
-all_l_string = "static __device__ int all_baryon_length[" + repr(len(save_baryons_like_this.keys())) + "] = { "
-all_bn_string = "const static char *all_baryon_names[" + n_baryons + "] = { "
-all_bl_string = "const int all_baryons_length = " + n_baryons + ";\n"
-all_sl_string = "const int all_baryons_size = " + n_site + ";\n"
-all_bll_string = "const int all_baryons_n_gamma[" + n_baryons + "] = { " + n_site_list + ' };\n'
-all_gn_string = "const static char *all_gamma_names[" + n_baryons + "] = { "
-all_len_string = "static __device__ int all_prop_prod_length = " + repr(len(save_baryons_like_this.keys())) + ";\n";
-all_prop_string = "static __device__ char prop_prod[" + repr(len(save_baryons_like_this.keys())) + "][3] = { "
-for key_prop in save_baryons_like_this.keys():
-  prop_name = key_prop.replace('-','_')
-  prop_len = repr(len(save_baryons_like_this[key_prop]))
-  p_v_name =  prop_name + "_vals"
-  p_i_name =  prop_name + "_idxs"
-  p_ll_name =  prop_name + "_lens_lens"
-  p_l_name =  prop_name + "_lens"
-  p_bn_name =  prop_name + "_baryon_names"
-  p_gn_name =  prop_name + "_gamma_names"
-  p_v_string = "static __device__ float2 **"+ p_v_name +  "[" + prop_len + "] = { "
-  p_i_string = "static __device__ int (**"+ p_i_name +  "[" + prop_len + "])[6] = { "
-  p_ll_string = "static __device__ int *"+ p_ll_name +  "[" + prop_len + "] = { "
-  p_l_string = "static __device__ int "+ p_l_name +  "[" + prop_len + "] = { "
-  all_v_string += p_v_name + ", "
-  all_i_string += p_i_name + ", "
-  all_lll_string += p_ll_name + ", "
-  all_ll_string += p_l_name + ", "
-  all_l_string += prop_len + ", " 
-  all_prop_string += "{ "
-  for prop in  prop_name.split("_") :
-    all_prop_string += "'" + prop[0] + "', "
-  all_prop_string += "}, "
-  for baryon in save_baryons_like_this[key_prop]:
-    baryon_name =  remove_symbols(baryon[0])
-    baryon_len = repr(len(baryon[2].keys()))
-    b_v_name =  baryon_name + "_vals"
-    b_i_name =  baryon_name + "_idxs"
-    b_l_name =  baryon_name + "_lens"
-    b_v_string = "static __device__ float2 *"+ b_v_name +  "[" + baryon_len + "] = { "
-    b_i_string = "static __device__ int (*"+ b_i_name +  "[" + baryon_len + "])[6] = { "
-    b_l_string = "static __device__ int "+ b_l_name +  "[" + baryon_len + "] = { "
-    p_v_string += b_v_name + ", "
-    p_i_string += b_i_name + ", "
-    p_ll_string += b_l_name + ", "
-    p_l_string += baryon_len + ", "
-    all_bn_string += "\"" + baryon_name + "\", "
-    all_gn_string += "\"" 
-    for gamma in baryon[2].keys():
-      gamma_name = gamma.replace('-','_')
-      gamma_len = repr(len(baryon[2][gamma]))
-      b_g_v_name =  baryon_name + "_" + gamma_name + "_vals"
-      b_g_i_name =  baryon_name + "_" + gamma_name + "_idxs"
-      b_v_string += b_g_v_name + ", "
-      b_i_string += b_g_i_name + ", "
-      b_l_string += gamma_len + ", "
-      all_gn_string += gamma_name + ", "
-      string = "static __device__ float2 "+ b_g_v_name + "[" + gamma_len + "] = { "
-      for x in  baryon[2][gamma].values():
-        string += "{"+repr(x.real)+", "+repr(x.imag)+"}, "
-      string += "};\n"
-      file2.write(string)
-      string = "static __device__ int "+ b_g_i_name + "[" + gamma_len + "][6] = { "
-      for x in  baryon[2][gamma].keys():
-        string += repr(x).replace('(','{').replace(')','}, ')
-      string += "};\n"
-      file2.write(string)
-    b_v_string += "};\n"
-    b_i_string += "};\n"
-    b_l_string += "};\n"
-    all_gn_string += "\", " 
-    file2.write(b_v_string)
-    file2.write(b_i_string)
-    file2.write(b_l_string)
-  p_v_string += "};\n"
-  p_i_string += "};\n"
-  p_ll_string += "};\n"
-  p_l_string += "};\n"
-  file2.write(p_v_string)
-  file2.write(p_i_string)
-  file2.write(p_ll_string)
-  file2.write(p_l_string)
-all_v_string += "};\n"
-all_i_string += "};\n"
-all_lll_string += "};\n"
-all_ll_string += "};\n"
-all_l_string += "};\n"
-all_bn_string += "};\n"
-all_gn_string += "};\n"
-all_prop_string += "};\n"
-file2.write(all_v_string)
-file2.write(all_i_string)
-file2.write(all_lll_string)
-file2.write(all_ll_string)
-file2.write(all_l_string)
-file1.write(all_bn_string)
-file1.write(all_gn_string)
-file2.write(all_prop_string)
-file1.write(all_bl_string)
-file1.write(all_sl_string)
-file1.write(all_bll_string)
-file2.write(all_len_string)
+for spin in save_baryons_like_this.keys():
+  n_combs = 0
+  for prop in save_baryons_like_this[spin].values():
+    n_combs += len(prop)
+  n_combs = repr(n_combs)
 
+  if spin == 1/2:
+    name='1o2'
+  else:
+    name='3o2'
+  n_gammas=repr(len(all_gammas[spin]))
+  n_prop=repr(len(save_baryons_like_this[spin]))
+  bl_string = "const int baryons_"+name+"_combs = " + n_combs + ";\n"
+  gl_string = "const int gamma_"+name+"_combs = " + n_gammas + ";\n"
+  gn_string = "const static char *gamma_"+name+"_names = \"" + ", ".join(all_gammas[spin].keys()).replace('-','_') + "\";\n"
+  bn_string = "const static char *baryon_"+name+"_names[" + n_combs + "] = { "
+
+  pl_string = "static __device__ int prop_"+name+"_prod_combs = " + n_prop + ";\n";
+  pn_string = "static __device__ char prop_"+name+"_prod[" + n_prop + "][3] = { "
+  
+  i_string = "static __device__ int (*idxs_"+name+"[" + n_prop + "]["+ n_gammas + "])[6] = { "
+  v_string = "static __device__ float2 *vals_"+name+"[" + n_prop + "]["+ n_gammas + "] = { "
+  l_string = "static __device__ int combs_"+name+"["  + n_prop + "]["+ n_gammas + "] = { "
+
+  for key_prop,prop in save_baryons_like_this[spin].items():
+    prop_name = key_prop.replace('-','_')
+    pn_string += "{ "
+    for fl in  prop_name.split("_") :
+      pn_string += "'" + fl[0] + "', "
+    pn_string += "}, "
+    for baryon in prop:
+      baryon_name =  remove_symbols(baryon[0])
+      b_v_name =  baryon_name + "_vals"
+      b_i_name =  baryon_name + "_idxs"
+      b_l_name =  baryon_name + "_lens"
+      b_v_string = "static __device__ float2 *"+ b_v_name +  "[" + n_gammas + "] = { "
+      b_i_string = "static __device__ int (*"+ b_i_name +  "[" + n_gammas + "])[6] = { "
+      b_l_string = "static __device__ int "+ b_l_name +  "[" + n_gammas + "] = { "
+      v_string += b_v_name + ", "
+      i_string += b_i_name + ", "
+      l_string += b_l_name + ", "
+      bn_string += "\"" + baryon_name + "\", "
+      for gamma in baryon[1].keys():
+        gamma_name = gamma.replace('-','_')
+        gamma_len = repr(len(baryon[1][gamma]))
+        b_g_v_name =  baryon_name + "_" + gamma_name + "_vals"
+        b_g_i_name =  baryon_name + "_" + gamma_name + "_idxs"
+        b_v_string += b_g_v_name + ", "
+        b_i_string += b_g_i_name + ", "
+        b_l_string += gamma_len + ", "
+        string = "static __device__ float2 "+ b_g_v_name + "[" + gamma_len + "] = { "
+        for x in  baryon[1][gamma].values():
+          string += "{"+repr(x.real)+", "+repr(x.imag)+"}, "
+        string += "};\n"
+        file2.write(string)
+        string = "static __device__ int "+ b_g_i_name + "[" + gamma_len + "][6] = { "
+        for x in  baryon[1][gamma].keys():
+          string += repr(x).replace('(','{').replace(')','}, ')
+        string += "};\n"
+        file2.write(string)
+      b_v_string += "};\n"
+      b_i_string += "};\n"
+      b_l_string += "};\n"
+      file2.write(b_v_string)
+      file2.write(b_i_string)
+      file2.write(b_l_string)
+  v_string += "};\n"
+  i_string += "};\n"
+  l_string += "};\n"
+  bn_string += "};\n"
+  pn_string += "};\n"
+  file2.write(v_string)
+  file2.write(i_string)
+  file2.write(l_string)
+  file2.write(pn_string)
+
+  file1.write(gl_string)
+  file1.write(gn_string)
+  file1.write(bl_string)
+  file1.write(bn_string)
 

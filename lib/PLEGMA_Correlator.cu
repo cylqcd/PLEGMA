@@ -3,6 +3,9 @@
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <functional>
+#include <PLEGMA_all_baryons.h>
+#include <PLEGMA_all_baryons.cuh>
+ 
 using namespace plegma;
 
 //--------------------------------//
@@ -111,6 +114,73 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
 }
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractBaryons1o2(PLEGMA_Propagator<Float> &propUP,
+		   PLEGMA_Propagator<Float> &propDN, 
+		   PLEGMA_Propagator<Float> &propST, 
+		   PLEGMA_Propagator<Float> &propCH, 
+		   int source[4]){
+
+  setSource(source);
+  n_datasets = 1;
+  n_groups = baryons_1o2_combs;
+  shape = {gamma_1o2_combs};
+  datasets = {"twop_baryon_1o2"};
+  groups =  baryon_1o2_names;
+  description = gamma_1o2_names;
+
+  initialize();
+  propTex<Float> propUPTex, propDNTex, propSTTex, propCHTex;
+  propUPTex.tex = propUP.createTexObject();
+  propDNTex.tex = propDN.createTexObject();
+  propSTTex.tex = propST.createTexObject();
+  propCHTex.tex = propCH.createTexObject();
+
+  for(int it = 0; it < GK_localL[3]; it++) {
+    contract_baryons_1o2(propUPTex,propDNTex,propSTTex,propCHTex,*this,it);
+  }
+
+  propUP.destroyTexObject(propUPTex.tex);
+  propDN.destroyTexObject(propDNTex.tex);
+  propST.destroyTexObject(propSTTex.tex);
+  propCH.destroyTexObject(propCHTex.tex);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractBaryons3o2(PLEGMA_Propagator<Float> &propUP,
+		   PLEGMA_Propagator<Float> &propDN, 
+		   PLEGMA_Propagator<Float> &propST, 
+		   PLEGMA_Propagator<Float> &propCH, 
+		   int source[4]){
+
+  setSource(source);
+  n_datasets = 1;
+  n_groups = baryons_3o2_combs;
+  shape = {gamma_3o2_combs};
+  datasets = {"twop_baryon_3o2"};
+  groups =  baryon_3o2_names;
+  description = gamma_3o2_names;
+
+  initialize();
+  propTex<Float> propUPTex, propDNTex, propSTTex, propCHTex;
+  propUPTex.tex = propUP.createTexObject();
+  propDNTex.tex = propDN.createTexObject();
+  propSTTex.tex = propST.createTexObject();
+  propCHTex.tex = propCH.createTexObject();
+
+  for(int it = 0; it < GK_localL[3]; it++) {
+    contract_baryons_3o2(propUPTex,propDNTex,propSTTex,propCHTex,*this,it);
+  }
+
+  propUP.destroyTexObject(propUPTex.tex);
+  propDN.destroyTexObject(propDNTex.tex);
+  propST.destroyTexObject(propSTTex.tex);
+  propCH.destroyTexObject(propCHTex.tex);
+}
+
 
 template<typename FloatC,typename FloatA, typename FloatB>
 void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
@@ -267,50 +337,6 @@ writeFile(const char*filename, FILE_WRITE_FORMAT format) {
     PLEGMA_error("FILE_WRITE_FORMAT not supported: %d\n", format);
   }
 }
-
-/*
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-writeFile(PLEGMA_params &params) {
-  const char*filename, *Qsq, *name2;
-  std::string ext="", name="";
-  if(params.corr_space==MOMENTUM_SPACE) asprintf(&Qsq,"Qsq%d_",params.Q_sq);
-  else asprintf(&Qsq,"");
-  if(params.CorrFileFormat == ASCII_FORM) ext = ".dat";
-  else if(params.CorrFileFormat == HDF5_FORM) ext = ".h5";
-  switch(corr_type) {
-  case MESONS:
-    name = "twop.%04d_mesons";
-    break;
-  case BARYONS:
-    name = "twop.%04d_baryons";
-    break;
-  case THRP_LOCAL:
-    name = "thrp.%04d_local";
-    break;
-  case THRP_NOETHER:
-    name = "thrp.%04d_noether";
-    break;
-  case THRP_ONED:
-    name = "thrp.%04d_oneD";
-    break;
-  default:
-    name = "unknown.%04d";
-  }
-  asprintf(&name2, name.c_str(), params.traj);
-  asprintf(&filename,"%s/%s_%sSS.%02d.%02d.%02d.%02d%s" ,
-	   params.corr_dir, name2, Qsq,
-	   params.sourcePosition[isource][0],
-	   params.sourcePosition[isource][1],
-	   params.sourcePosition[isource][2],
-	   params.sourcePosition[isource][3], ext.c_str());
-
-  writeFile(filename, params);
-  free(name2);
-  free(Qsq);
-  free(filename);
-}
-*/
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
