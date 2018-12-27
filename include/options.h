@@ -28,7 +28,7 @@
 
    
 
-std::string demangle( const char* mangled_name ) {
+static std::string demangle( const char* mangled_name ) {
 
     std::string result ;
     std::size_t len = 0 ;
@@ -43,7 +43,7 @@ std::string demangle( const char* mangled_name ) {
 }
 
 #else
-std::string demangle( const char* name ) { return name ; }
+static std::string demangle( const char* name ) { return name ; }
 #endif // _GNUG_
 
 struct argument{std::string name, value;};
