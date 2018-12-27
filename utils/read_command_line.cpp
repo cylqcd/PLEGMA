@@ -8,8 +8,6 @@
 #include <quda_types.h>
 #include <comm_quda.h>
 
-#include <options.h>
-
 #ifdef MULTI_GPU
 int device = -1;
 #else
@@ -2313,6 +2311,7 @@ template<typename T> static inline void map_to_array_MG(std::map<int,std::string
 
 void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool visualize = false){
   basicOptions(opt,params,visualize);
+  set_default_values(); // default values for MG
   bool isFound;
   std::string tmpString;
   bool tmpBool;

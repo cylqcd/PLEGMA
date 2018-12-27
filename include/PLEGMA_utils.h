@@ -2,6 +2,7 @@
 #include <PLEGMA_buffers.h>
 #include <quda_params.h>
 #include <quda_interface.h>
+#include <options.h>
 
 #ifndef _PLEGMA_UTILS_H
 #define _PLEGMA_UTILS_H
@@ -62,6 +63,8 @@ void finalize();
 
 // read_command_line.cpp
 void read_command_line(int argc, char** argv, PLEGMA_params *params);
+void basicOptions(Options &opt, PLEGMA_params *params, bool visualize = false);
+void basicOptionsWsolver(Options &opt, PLEGMA_params *params, bool visualize = false);
 
 // read_conf.cpp
 void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);
