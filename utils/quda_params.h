@@ -25,6 +25,7 @@ extern double mu;
 extern double anisotropy;
 extern double tol; // tolerance for inverter
 extern double tol_hq; // heavy-quark tolerance for inverter
+extern double reliable_delta;
 extern char latfile[];
 extern int Nsrc; // number of spinors to apply to simultaneously
 extern int niter;
