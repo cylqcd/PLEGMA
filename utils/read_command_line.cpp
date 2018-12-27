@@ -2264,7 +2264,7 @@ void read_command_line(int argc, char **argv, plegma::PLEGMA_params *params) {
   set_PLEGMA_params(params);
 }
 
-void basicOptions(Options &opt, plegma::PLEGMA_params *params, bool visualize = false){
+void basicOptions(Options &opt, plegma::PLEGMA_params *params, bool visualize){
   bool isFound;
   
   opt.setForced("dims","Set dimensions (X Y Z T), default (24 24 24 24)", visualize, xdim, ydim, zdim, tdim);
@@ -2309,7 +2309,7 @@ template<typename T> static inline void map_to_array_MG(std::map<int,std::string
   }
 }
 
-void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool visualize = false){
+void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool visualize){
   basicOptions(opt,params,visualize);
   set_default_values(); // default values for MG
   bool isFound;
