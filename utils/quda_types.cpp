@@ -8,7 +8,7 @@
 #include "util_quda.h"
 
 QudaVerbosity
-get_verbosity_type(char* s)
+get_verbosity_type(const char* s)
 {
   QudaVerbosity ret =  QUDA_INVALID_VERBOSITY;
 
@@ -55,7 +55,7 @@ get_verbosity_str(QudaVerbosity type)
 }
 
 QudaReconstructType
-get_recon(char* s)
+get_recon(const char* s)
 {
     QudaReconstructType  ret;
     
@@ -80,7 +80,7 @@ get_recon(char* s)
 }
 
 QudaPrecision
-get_prec(char* s)
+get_prec(const char* s)
 {
   QudaPrecision ret = QUDA_DOUBLE_PRECISION;
 
@@ -262,7 +262,7 @@ get_staggered_test_type(int t)
     return ret;
 }
 
-int get_rank_order(char* s)
+int get_rank_order(const char* s)
 {
   int ret = -1;
 
@@ -279,7 +279,7 @@ int get_rank_order(char* s)
 }
 
 QudaDslashType
-get_dslash_type(char* s)
+get_dslash_type(const char* s)
 {
   QudaDslashType ret =  QUDA_INVALID_DSLASH;
   
@@ -358,7 +358,7 @@ get_dslash_str(QudaDslashType type)
 }
 
 QudaMassNormalization
-get_mass_normalization_type(char* s)
+get_mass_normalization_type(const char* s)
 {
   QudaMassNormalization ret =  QUDA_INVALID_NORMALIZATION;
 
@@ -400,7 +400,7 @@ get_mass_normalization_str(QudaMassNormalization type)
 }
 
 QudaMatPCType
-get_matpc_type(char* s)
+get_matpc_type(const char* s)
 {
   QudaMatPCType ret =  QUDA_MATPC_INVALID;
 
@@ -447,7 +447,7 @@ get_matpc_str(QudaMatPCType type)
 }
 
 QudaSolveType
-get_solve_type(char* s)
+get_solve_type(const char* s)
 {
   QudaSolveType ret = QUDA_INVALID_SOLVE;
 
@@ -504,7 +504,7 @@ get_solve_str(QudaSolveType type)
 }
 
 QudaSchwarzType
-get_schwarz_type(char* s)
+get_schwarz_type(const char* s)
 {
   QudaSchwarzType ret = QUDA_INVALID_SCHWARZ;
 
@@ -523,7 +523,7 @@ get_schwarz_type(char* s)
 }
 
 QudaTwistFlavorType
-get_flavor_type(char* s)
+get_flavor_type(const char* s)
 {
   QudaTwistFlavorType ret =  QUDA_TWIST_SINGLET;
   
@@ -570,7 +570,7 @@ get_flavor_str(QudaTwistFlavorType type)
 }
 
 QudaInverterType
-get_solver_type(char* s)
+get_solver_type(const char* s)
 {
   QudaInverterType ret =  QUDA_INVALID_INVERTER;
   
@@ -728,7 +728,7 @@ get_quda_ver_str()
 
 
 QudaExtLibType
-get_solve_ext_lib_type(char* s)
+get_solve_ext_lib_type(const char* s)
 {
   QudaExtLibType ret = QUDA_EXTLIB_INVALID;
 
@@ -745,7 +745,7 @@ get_solve_ext_lib_type(char* s)
 }
 
 QudaFieldLocation
-get_location(char* s)
+get_location(const char* s)
 {
   QudaFieldLocation ret = QUDA_INVALID_FIELD_LOCATION;
 
@@ -763,7 +763,7 @@ get_location(char* s)
 
 
 QudaMemoryType
-get_df_mem_type_ritz(char* s)
+get_df_mem_type_ritz(const char* s)
 {
   QudaMemoryType ret = QUDA_MEMORY_INVALID;
 
