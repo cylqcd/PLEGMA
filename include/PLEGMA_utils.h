@@ -64,8 +64,8 @@ void finalize();
 
 // read_command_line.cpp
 void read_command_line(int argc, char** argv, PLEGMA_params *params);
-void basicOptions(Options &opt, PLEGMA_params *params, bool visualize = false);
-void basicOptionsWsolver(Options &opt, PLEGMA_params *params, bool visualize = false);
+void basicOptions(Options &opt, PLEGMA_params *params, bool showThem  = false);
+void basicOptionsWsolver(Options &opt, PLEGMA_params *params, bool showThem = false);
 
 // read_conf.cpp
 void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);
