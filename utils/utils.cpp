@@ -3,6 +3,14 @@
 
 using namespace quda;
 
+
+void initPlegma(int argc, char **argv, PLEGMA_params *params){
+  initComms(argc, argv, params->procs);
+  initQuda(device);
+  PLEGMA_init(params);
+  print_status();  
+}
+
 void initialize(int argc, char **argv, PLEGMA_params *params) {
   read_command_line(argc, argv, params);
   
