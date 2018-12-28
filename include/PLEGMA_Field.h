@@ -25,8 +25,10 @@ namespace plegma {
     
     Float *h_elem;
     Float *d_elem;
-    Float *h_ext_ghost;
-    Float *h_ext_ghost_corner;
+    Float *h_ext_ghost_r;
+    Float *h_ext_ghost_s;
+    Float *h_ext_ghost_corner_r;
+    Float *h_ext_ghost_corner_s;
     Float *h_elem_backup;
 
     GHOST_FLAG ghost_flag;
