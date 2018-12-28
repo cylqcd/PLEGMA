@@ -66,6 +66,12 @@ protected:
     str = str.substr(first, last-first+1);
   }
 
+  bool isCommented(std::string& str){
+    if (str.empty()) return false;
+    if(str.find_first_of("#") == 0) return true;
+    else return false;
+  }
+  
   void trimPrefix(std::string& str){
     if (str.empty()) return;
     checkPrefix(str);
@@ -98,6 +104,7 @@ protected:
     while(std::getline(ifs,line)){
       argument arg;
       if(line.empty()) continue;
+      if(isCommented(line)) continue;
       trimSpaceTab(line);
       if(line.find(" ") == std::string::npos && line.find("\t") == std::string::npos)
 	_ERROR_("Error: name [%s] does not have a value\n",line.c_str());
@@ -152,6 +159,8 @@ public:
 
   virtual ~Arguments(){}
 
+  bool getIsHelp() const{return isHelp;}
+  
   std::string get_value(std::string name) const{
     for(int i = 0 ; i < args.size(); i++)
       if(args[i].name == name)
