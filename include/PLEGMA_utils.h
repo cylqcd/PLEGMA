@@ -59,6 +59,7 @@ void setInvertParam(QudaInvertParam &inv_param);
 // utils.cpp
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 void initialize(int argc, char** argv, PLEGMA_params *params);
+void initPlegma(int argc, char **argv, PLEGMA_params *params);
 void finalize();
 
 // read_command_line.cpp
