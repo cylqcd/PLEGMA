@@ -29,7 +29,7 @@ int tdim = 24;
 int Lsdim = 16;
 QudaDagType dagger = QUDA_DAG_NO;
 int gridsize_from_cmdline[4] = {1,1,1,1};
-QudaDslashType dslash_type = QUDA_WILSON_DSLASH;
+QudaDslashType dslash_type = QUDA_TWISTED_CLOVER_DSLASH;
 char latfile[256] = "";
 int Nsrc = 1;
 int Msrc = 1;
@@ -2335,16 +2335,16 @@ void basicOptions(Options &opt, plegma::PLEGMA_params *params, bool showThem){
   bool isFound;
   
   opt.setForced("dims","Set dimensions (X Y Z T), default (24 24 24 24)", false, xdim, ydim, zdim, tdim);
-  if( (xdim < 0 || xdim > 512) || (ydim < 0 || ydim > 512)  || (zdim < 0 || zdim > 512) || (tdim < 0 || tdim > 512)) _ERROR_("Error: dims should be > 0 and < 512\n");
+  if(!opt.getIsHelp()) if( (xdim < 0 || xdim > 512) || (ydim < 0 || ydim > 512)  || (zdim < 0 || zdim > 512) || (tdim < 0 || tdim > 512)) _ERROR_("Error: dims should be > 0 and < 512\n");
 
   opt.setForced("gridsize","Set grid size (X Y Z T), default (1 1 1 1)", false,gridsize_from_cmdline[0], gridsize_from_cmdline[1],gridsize_from_cmdline[2],gridsize_from_cmdline[3]);
-  for(int i = 0 ; i < 4; i++) if(gridsize_from_cmdline[i]<=0) _ERROR_("Error: Negative gridsize in %d dim\n",i);
+  if(!opt.getIsHelp()) for(int i = 0 ; i < 4; i++) if(gridsize_from_cmdline[i]<=0) _ERROR_("Error: Negative gridsize in %d dim\n",i);
 
   std::string gfile;
   isFound=opt.set("load-gauge", "Path to the gauge field, default (empty string)", false, gfile);
   if(isFound)strcpy(latfile,gfile.c_str());
 
-  if(showThem) printBasicOptions();
+  if(showThem && !opt.getIsHelp()) printBasicOptions();
   
   params->lL[0] = xdim;
   params->lL[1] = ydim;
@@ -2409,8 +2409,10 @@ void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool showT
   if(isFound)link_recon_precondition  = get_recon(tmpString.c_str());
 
   opt.setForced("Q-dslash-type", "Set the dslash type, options for now (twisted-mass/twisted-clover)",false, tmpString);
-  if((tmpString != "twisted-mass") && (tmpString != "twisted-clover"))_ERROR_("Error: only twisted-mass or twisted-clover are allowed for now");
-  dslash_type =  get_dslash_type(tmpString.c_str());
+  if(!opt.getIsHelp()){
+    if((tmpString != "twisted-mass") && (tmpString != "twisted-clover"))_ERROR_("Error: only twisted-mass or twisted-clover are allowed for now");
+    dslash_type =  get_dslash_type(tmpString.c_str());
+  }
 
   isFound=opt.set("Q-dagger", "In case you want the dagger operator, default (false)", false, tmpBool);
   if(isFound && tmpBool) dagger = QUDA_DAG_YES;
@@ -2535,7 +2537,7 @@ void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool showT
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid (default false)", false, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid (default false)", false, post_orthonormalize);
 
-  if(showThem) printBasicOptionsWsolver();
+  if(showThem && !opt.getIsHelp()) printBasicOptionsWsolver();
 }
 
   //  isFound=opt.set("Q-prec-refine", "Sloppy precision for refinement in the GPU, options (double,single,half),default (invalid)", visualize, tmpString);

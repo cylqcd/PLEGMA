@@ -303,7 +303,7 @@ public:
   bool set(std::string name, std::string desc, bool visualize, T &p1, Pars & ... par){
     std::string fullDesc = getfullDesc(name,desc,p1,par...);
     descOpt.push_back(fullDesc);
-    if(noOptions || isHelp) return true;
+    if(noOptions || isHelp) return false;
     checkIfSet(name);
     std::stringstream cs;
     int countF=0;
@@ -328,7 +328,7 @@ public:
   template<typename T, typename... Pars>
   void setForced(std::string name, std::string desc, bool visualize, T &p1, Pars & ... par){
     bool check = set(name,desc + " (FORCED)", visualize, p1, par...);
-    if (!check) errorCollection.push_back("Error: [" + name + "] is not found in the arguments");
+    if (!check && !getIsHelp()) errorCollection.push_back("Error: [" + name + "] is not found in the arguments");
   }    
 
   
@@ -336,7 +336,7 @@ public:
   bool set(std::string name, std::string desc, bool visualize, std::vector<T> &vec, int n=-1){
     std::string fullDesc = getfullDesc(name,desc,vec);
     descOpt.push_back(fullDesc);
-    if(noOptions || isHelp) return true;
+    if(noOptions || isHelp) return false;
     checkIfSet(name);
     std::stringstream cs;
     int countF = 0;
@@ -368,14 +368,14 @@ public:
   template<typename T>
   void setForced(std::string name, std::string desc, bool visualize, std::vector<T> &vec, int n=-1){
     bool check = set(name,desc + " (FORCED)", visualize,vec,n);
-    if (!check) errorCollection.push_back("Error: " + name + " is not found in the arguments");
+    if (!check && !getIsHelp()) errorCollection.push_back("Error: " + name + " is not found in the arguments");
   }
 
   template<typename T1, typename T2>
   bool set(std::string name, std::string desc, bool visualize, std::map<T1,T2> &tpl, int n=-1){
     std::string fullDesc = getfullDesc(name,desc,tpl);
     descOpt.push_back(fullDesc);
-    if(noOptions || isHelp) return true;
+    if(noOptions || isHelp) return false;
     checkIfSet(name);
     std::stringstream cs;
     int countF=0;
@@ -410,7 +410,7 @@ public:
   template<typename T1, typename T2>
   void setForced(std::string name, std::string desc, bool visualize, std::map<T1,T2> &tpl, int n=-1){
     bool check = set(name,desc + " (FORCED)",visualize,tpl,n);
-    if (!check) errorCollection.push_back("Error: " + name + " is not found in the arguments");
+    if (!check && !getIsHelp()) errorCollection.push_back("Error: " + name + " is not found in the arguments");
   }
 
   void checkErrors(){

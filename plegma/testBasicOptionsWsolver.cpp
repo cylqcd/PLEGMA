@@ -17,6 +17,7 @@ int main(int argc, char **argv)
   PLEGMA_params params;
   {// block for getting options
     Options opt(argc,argv);
+    //    basicOptions(opt,&params,false);
     basicOptionsWsolver(opt,&params,true);
     // add more options within the block
   }
