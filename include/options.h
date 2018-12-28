@@ -37,8 +37,8 @@ static std::string demangle( const char* mangled_name ) {
 
     if( status == 0 ) result = ptr ; // hope that this won't throw
     else result = "demangle error" ;
-
     ::free(ptr) ;
+    if(result.find("basic_string") != std::string::npos) return "std::string"; 
     return result ;
 }
 
@@ -285,7 +285,23 @@ private:
     (void)expander{0, (void(res += "{"  + demangle(typeid(std::forward<Pars>(par)).name()) + "} "), 0)...};
     return res;
   }
-    
+
+  template<typename T>
+  std::string getOptTypes(std::vector<T> &vec){
+    std::string res;
+    res = "{std::vector";
+    res += "<" + demangle(typeid(T).name()) + ">} ";
+    return res;
+  }
+
+  template<typename T1, typename T2>
+  std::string getOptTypes(std::map<T1,T2> &tpl){
+    std::string res;
+    res = "{std::map";
+    res += "<" + demangle(typeid(T1).name()) + "," + demangle(typeid(T2).name()) + ">} ";
+    return res;
+  }
+
   template<typename... Pars>
   std::string getfullDesc(std::string name,std::string desc, Pars & ... par){
     return "[" + name + "] " + getOptTypes(par...) + dressDesc + " " + desc;
