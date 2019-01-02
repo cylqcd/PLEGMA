@@ -26,8 +26,8 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), h_elem_backup(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), 
+  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false)
 
 {
   if(GK_init_PLEGMA_flag == false) 
@@ -93,19 +93,15 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   else if (alloc_flag == DEVICE){
     create_device();
   }
-  else if (alloc_flag == BOTH_EXTRA){
-    create_host();
-    create_host_backup();
-    create_device();    
+  else{
+    errorQuda("Error not supported %d\n",alloc_flag);
   }
-
 }
 
 //Destructor
 template<typename Float>
 PLEGMA_Field<Float>::~PLEGMA_Field(){
   if(isAllocHost) destroy_host();
-  if(isAllocHostBackup) destroy_host_backup();
   if(isAllocDevice) destroy_device();
 }
 
@@ -146,19 +142,11 @@ void PLEGMA_Field<Float>::unload(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
-  h_elem = (Float*) malloc(bytes_total_length);
+  h_elem = (Float*) malloc(bytes_total_plus_ghost_length);
   if(h_elem == NULL)
     errorQuda("Error with allocation host memory");
   isAllocHost = true;
   zero_host();
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::create_host_backup(){
-  h_elem_backup = (Float*) malloc(bytes_total_length);
-  if(h_elem_backup == NULL) errorQuda("Error with allocation host memory");
-  isAllocHostBackup = true;
-  zero_host_backup();
 }
 
 template<typename Float>
@@ -171,11 +159,14 @@ void PLEGMA_Field<Float>::create_device(){
   printfQuda("Device memory in use is %f MB A PLEGMA \n",GK_deviceMemory);
 #endif
   zero_device();
-
-  cudaMallocHost((void**)&h_ext_ghost_r, bytes_ghost_length);
-  cudaMallocHost((void**)&h_ext_ghost_s, bytes_ghost_length);
-  cudaMallocHost((void**)&h_ext_ghost_corner_r, bytes_ghost_corner_length);
-  cudaMallocHost((void**)&h_ext_ghost_corner_s, bytes_ghost_corner_length);
+  if(ghost_flag >= FIRST_SIDE){
+    cudaMallocHost((void**)&h_ext_ghost_r, bytes_ghost_length);
+    cudaMallocHost((void**)&h_ext_ghost_s, bytes_ghost_length);
+  }
+  if(ghost_flag == FIRST_CORNER){
+    cudaMallocHost((void**)&h_ext_ghost_corner_r, bytes_ghost_corner_length);
+    cudaMallocHost((void**)&h_ext_ghost_corner_s, bytes_ghost_corner_length);
+  }
   checkCudaError();
   isAllocDevice = true;
 }
@@ -188,13 +179,6 @@ void PLEGMA_Field<Float>::destroy_host(){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::destroy_host_backup(){
-  free(h_elem_backup);
-  h_elem_backup=NULL;
-  isAllocHostBackup=false;
-}
-
-template<typename Float>
 void PLEGMA_Field<Float>::destroy_device(){
   cudaFree(d_elem);
   checkCudaError();
@@ -203,22 +187,21 @@ void PLEGMA_Field<Float>::destroy_device(){
   GK_deviceMemory -= bytes_total_plus_ghost_length/(1024.*1024.);
   printfQuda("Device memory in use is %f MB D PLEGMA\n",GK_deviceMemory);
 #endif
-  cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
-  cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
-  cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
-  cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
+  if(ghost_flag >= FIRST_SIDE){
+    cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
+    cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
+  }
+  if(ghost_flag == FIRST_CORNER){
+    cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
+    cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
+  }
   checkCudaError();
   isAllocDevice=false;
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::zero_host(){
-  if(isAllocHost)memset(h_elem,0,bytes_total_length);
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::zero_host_backup(){
-  if(isAllocHostBackup)memset(h_elem_backup,0,bytes_total_length);
+  if(isAllocHost)memset(h_elem,0,bytes_total_plus_ghost_length);
 }
 
 template<typename Float>
@@ -239,10 +222,8 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
   else if (alloc_flag == DEVICE){
     zero_device();
   }
-  else if (alloc_flag == BOTH_EXTRA){
-    zero_host();
-    zero_host_backup();
-    zero_device();    
+  else{
+    errorQuda("Not supported %d\n",alloc_flag);
   }
 }
 

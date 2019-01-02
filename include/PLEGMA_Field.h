@@ -29,19 +29,15 @@ namespace plegma {
     Float *h_ext_ghost_s;
     Float *h_ext_ghost_corner_r;
     Float *h_ext_ghost_corner_s;
-    Float *h_elem_backup;
 
     GHOST_FLAG ghost_flag;
     ALLOCATION_FLAG allocation;
     bool isAllocHost;
     bool isAllocDevice;
-    bool isAllocHostBackup;
 
     
     void create_host();
-    void create_host_backup();
     void destroy_host();
-    void destroy_host_backup();
     void create_device();
     void destroy_device();
 
