@@ -62,8 +62,7 @@ extern bool GK_dimBreak[N_DIMS];
 extern int GK_localL[N_DIMS];
 extern int GK_totalL[N_DIMS];
 extern int GK_nProc[N_DIMS];
-extern int GK_plusGhost[N_DIMS];
-extern int GK_minusGhost[N_DIMS];
+extern int GK_sideGhost[2*N_DIMS];
 extern int GK_cornerGhost[2*N_DIMS][2*N_DIMS];
 extern int GK_surface3D[N_DIMS];
 extern int GK_surface2D[N_DIMS][N_DIMS];
@@ -91,7 +90,7 @@ namespace plegma {
   enum FILE_WRITE_FORMAT{ASCII_FORM,HDF5_FORM};
   enum WHICHSPECTRUM{SR,LR,SM,LM,SI,LI};
   
-  enum ALLOCATION_FLAG{NONE,HOST,DEVICE,BOTH,BOTH_EXTRA};
+  enum ALLOCATION_FLAG{NONE,HOST,DEVICE,BOTH};
 
   enum CLASS_ENUM{FIELD,SU3FIELD,GAUGE,VECTOR,PROPAGATOR,PROPAGATOR3D,VECTOR3D,QLOOPS};
   enum GHOST_FLAG{NO_GHOSTS,FIRST_SIDE,FIRST_CORNER};
