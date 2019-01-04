@@ -186,11 +186,8 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
     cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
-  else if (where == BOTH_EXTRA){
-    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
-    this->h_elem_backup[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0;
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
-                cudaMemcpyHostToDevice ); 
+  else{
+    errorQuda("Not supported %d\n",where);
   }
 }
 
