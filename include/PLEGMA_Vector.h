@@ -41,6 +41,10 @@ namespace plegma {
     void apply_gamma5();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
   };
+
+  template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
+  template<typename Float> void copyFromQUDA(Float* delem, quda::ColorSpinorField *cudaVector, bool isEv = false);
+  
 }
 
 #endif
