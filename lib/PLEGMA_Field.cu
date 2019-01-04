@@ -129,12 +129,14 @@ void PLEGMA_Field<Float>::unpack(Float *out){
 
 template<typename Float>
 void PLEGMA_Field<Float>::load(){
+  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
   checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload(){
+  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
   checkCudaError();
 }
