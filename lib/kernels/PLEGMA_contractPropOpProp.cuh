@@ -67,7 +67,7 @@ __global__ void contractPropOpProp_kernel(ArgsPropOpProp<FloatC,FloatA,FloatB,Fl
       //    extern __shared__ int ext_shared_cache[];
       __shared__ Float2<FloatC> ext_shared_cache[THREADS_PER_BLOCK];
       Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
-      fourier_transform_3D(block2, &accum, shared_cache, 1, sid, source_pos,args.listGammas.size-1,+1);
+      fourier_transform_3D(block2+opId*gridDim.x, &accum, shared_cache, 1, sid, source_pos,args.listGammas.size-1,+1);
       // shuffling
     }
     else{
@@ -155,10 +155,12 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   }
   
   FloatC *corr_pt = corr.getCorr();
+  int sz = corr.getSiteSize();
+  if(sz < gammas.size())errorQuda("The size of list with gammas exceeds the site_size of correlators\n");
   for(size_t v = 0 ; v < volume; v++)
-    for(int f = 0 ; f < site_size/2; f++) {
-      corr_pt[((f*GK_localL[3] + it)*volume+v)*2+0] = h_partial_block[(v*site_size/2+f)*2+0];
-      corr_pt[((f*GK_localL[3] + it)*volume+v)*2+1] = h_partial_block[(v*site_size/2+f)*2+1];
+    for(int i = 0 ; i < gammas.size(); i++) {
+      corr_pt[it*volume*sz*2+v*sz*2+i*2+0] = h_partial_block[(v*gammas.size()+i)*2+0];
+      corr_pt[it*volume*sz*2+v*sz*2+i*2+1] = h_partial_block[(v*gammas.size()+i)*2+1];
     }
 
   free(h_partial_block);
@@ -181,6 +183,7 @@ template<typename FloatC,typename FloatA, typename FloatB>
 static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, int it,
                                  std::vector<GAMMAS> gammas){
   su3Tex<FloatC> su3;
+  su3.tex=0;
   contractPropOpProp<FloatC,FloatA,FloatB,FloatC,false>(corr,prop1,prop2,signProps,su3,it, gammas);
 }
 
