@@ -105,30 +105,26 @@ void PLEGMA_Vector<Float>::norm2Host(){
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::copyPropagator3D(PLEGMA_Propagator3D<Float> &prop, int timeslice, int nu , int c2){
+void PLEGMA_Vector<Float>::copyPropagator3D(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2){
+  if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
+
+  int V3 = GK_localVolume/GK_localL[3];
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
-  int V3 = GK_localVolume/GK_localL[3];
   
   for(int mu = 0 ; mu < 4 ; mu++)
     for(int c1 = 0 ; c1 < 3 ; c1++){
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + 
-		     mu*3*GK_localVolume*2 + 
-		     c1*GK_localVolume*2 + 
-		     timeslice*V3*2);
-      pointer_src = (prop.D_elem() + 
-		     mu*4*3*3*V3*2 + 
-		     nu*3*3*V3*2 + 
-		     c1*3*V3*2 + 
-		     c2*V3*2);
-      cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), 
-		 cudaMemcpyDeviceToDevice);
+      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*3*GK_localVolume*2 + c1*GK_localVolume*2 + global_it*V3*2);
+      if(is_myIt){
+	pointer_src = (prop.D_elem() + mu*4*3*3*V3*2 + nu*3*3*V3*2 + c1*3*V3*2 + c2*V3*2);
+	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      }
+      else
+	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
-
-  pointer_src = NULL;
-  pointer_dst = NULL;
   checkCudaError();
-
 }
 
 template<typename Float>
@@ -403,26 +399,38 @@ void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float>
 template<typename FloatC, typename FloatA>
 void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
 template<typename Float>
-void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2){
+void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
+  if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
   this->zero_device();
-  genericTex<Float> texProp;
-  texProp.tex = prop.createTexObject();
-  contractNucleonSeqSource<Float,Float>(*this, texProp, proj, particle, timeslice, c_nu, c_c2);
-  prop.destroyTexObject(texProp.tex);
+  if(is_myIt){
+    genericTex<Float> texProp;
+    texProp.tex = prop.createTexObject();
+    contractNucleonSeqSource<Float,Float>(*this, texProp, proj, particle, my_it, c_nu, c_c2);
+    prop.destroyTexObject(texProp.tex);
+  }
+  comm_barrier();
 }
 
 template<typename FloatC, typename FloatA, typename FloatB>
 void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
 template<typename Float>
-void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2){
+void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
+  if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
   this->zero_device();
-  genericTex<Float> texProp1;
-  texProp1.tex = prop1.createTexObject();
-  genericTex<Float> texProp2;
-  texProp2.tex = prop2.createTexObject();
-  contractNucleonSeqSource<Float,Float,Float>(*this, texProp1,texProp2, proj, particle, timeslice, c_nu, c_c2);
-  prop1.destroyTexObject(texProp1.tex);
-  prop2.destroyTexObject(texProp2.tex);
+  if(is_myIt){
+    genericTex<Float> texProp1;
+    texProp1.tex = prop1.createTexObject();
+    genericTex<Float> texProp2;
+    texProp2.tex = prop2.createTexObject();
+    contractNucleonSeqSource<Float,Float,Float>(*this, texProp1,texProp2, proj, particle, my_it, c_nu, c_c2);
+    prop1.destroyTexObject(texProp1.tex);
+    prop2.destroyTexObject(texProp2.tex);
+  }
+  comm_barrier();
 }
 
 template class PLEGMA_Vector<float>;
