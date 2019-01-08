@@ -39,6 +39,7 @@ namespace quda {
     QudaInvertParam inv_param;
     Dirac *D;
     cudaColorSpinorField *in, *out;
+    template<APP_TYPE type> void apply();
   public:
      //only QUDA_WILSON_DSLASH, QUDA_CLOVER_WILSON_DSLASH, QUDA_TWISTED_MASS_DSLASH, QUDA_TWISTED_CLOVER_DSLASH
     QUDA_dirac(QudaDslashType dslashType);
@@ -46,7 +47,8 @@ namespace quda {
     void print(){dParam.print();}
     void switchMu(double mu);
     void switchKappa(double kappa);
-    template<APP_TYPE type, typename Float> void apply(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is does not put any normalization
+    template<APP_TYPE type, typename Float> void apply(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
+    template<APP_TYPE type, typename Float> void apply(Float *dout, Float *din, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is without any normalization // Note that dout and din are device pointers
   };
 }
 #endif
