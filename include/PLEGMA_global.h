@@ -102,7 +102,7 @@ namespace plegma {
   enum LATDIMS{DIM_X,DIM_Y,DIM_Z,DIM_T};
 
   enum APEDIM{D3,D4};
-  enum GAMMAS {ONE,G1,G2,G3,G4,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43}; // Do not change this order
+  enum GAMMAS {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43}; // Do not change this order
   enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
   typedef struct {
     int nsmearAPE;
