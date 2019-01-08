@@ -153,41 +153,44 @@ template<typename Float>
 PLEGMA_Propagator3D<Float>::
 PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, PROPAGATOR3D, ghost_flag){
-  if(alloc_flag != BOTH)
-    errorQuda("Propagator3D class is only implemented to allocate memory for both\n");
+  //  if(alloc_flag != BOTH)
+  //  errorQuda("Propagator3D class is only implemented to allocate memory for both\n");
 }
 
-template<typename Float>
-void PLEGMA_Propagator3D<Float>::
-absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
-			int timeslice){
-  int V3 = GK_localVolume/GK_localL[3];
+// template<typename Float>
+// void PLEGMA_Propagator3D<Float>::
+// absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
+// 			int timeslice){
+//   int V3 = GK_localVolume/GK_localL[3];
   
-  for(int mu = 0 ; mu < 4 ; mu++)
-  for(int nu = 0 ; nu < 4 ; nu++)
-  for(int c1 = 0 ; c1 < 3 ; c1++)
-  for(int c2 = 0 ; c2 < 3 ; c2++)
-  for(int iv3 = 0 ; iv3 < V3 ; iv3++)
-  for(int ipart = 0 ; ipart < 2 ; ipart++)
-    PLEGMA_Field<Float>::h_elem[ (mu*N_SPINS*N_COLS*N_COLS*V3 + 
-		 nu*N_COLS*N_COLS*V3 + 
-		 c1*N_COLS*V3 + 
-		 c2*V3 + iv3)*2 + ipart] = 
-      prop.H_elem()[(mu*N_SPINS*N_COLS*N_COLS*GK_localVolume + 
-		     nu*N_COLS*N_COLS*GK_localVolume + 
-		     c1*N_COLS*GK_localVolume + 
-		     c2*GK_localVolume + 
-		     timeslice*V3 + iv3)*2 + ipart];
+//   for(int mu = 0 ; mu < 4 ; mu++)
+//   for(int nu = 0 ; nu < 4 ; nu++)
+//   for(int c1 = 0 ; c1 < 3 ; c1++)
+//   for(int c2 = 0 ; c2 < 3 ; c2++)
+//   for(int iv3 = 0 ; iv3 < V3 ; iv3++)
+//   for(int ipart = 0 ; ipart < 2 ; ipart++)
+//     PLEGMA_Field<Float>::h_elem[ (mu*N_SPINS*N_COLS*N_COLS*V3 + 
+// 		 nu*N_COLS*N_COLS*V3 + 
+// 		 c1*N_COLS*V3 + 
+// 		 c2*V3 + iv3)*2 + ipart] = 
+//       prop.H_elem()[(mu*N_SPINS*N_COLS*N_COLS*GK_localVolume + 
+// 		     nu*N_COLS*N_COLS*GK_localVolume + 
+// 		     c1*N_COLS*GK_localVolume + 
+// 		     c2*GK_localVolume + 
+// 		     timeslice*V3 + iv3)*2 + ipart];
   
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,
-	     N_SPINS*N_SPINS*N_COLS*N_COLS*V3*2*sizeof(Float),
-	     cudaMemcpyHostToDevice);
-  checkCudaError();
-}
+//   cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem,
+// 	     N_SPINS*N_SPINS*N_COLS*N_COLS*V3*2*sizeof(Float),
+// 	     cudaMemcpyHostToDevice);
+//   checkCudaError();
+// }
 
 template<typename Float>
-void PLEGMA_Propagator3D<Float>::
-absorbTimeSlice(PLEGMA_Propagator<Float> &prop, int timeslice){
+void PLEGMA_Propagator3D<Float>::absorbTimeSlice(PLEGMA_Propagator<Float> &prop, int global_it){
+  if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
+
   int V3 = GK_localVolume/GK_localL[3];
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
@@ -196,60 +199,64 @@ absorbTimeSlice(PLEGMA_Propagator<Float> &prop, int timeslice){
     for(int nu=0; nu<4; nu++)
       for(int c1=0; c1<3; c1++)
 	for(int c2=0; c2<3; c2++){
-	  pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*4*3*3*V3*2 + nu*3*3*V3*2 + 
-			 c1*3*V3*2 + c2*V3*2);
-	  pointer_src = (prop.D_elem() + mu*4*3*3*GK_localVolume*2 + 
-			 nu*3*3*GK_localVolume*2 + c1*3*GK_localVolume*2 + 
-			 c2*GK_localVolume*2 + timeslice*V3*2);
-	  cudaMemcpy(pointer_dst, pointer_src, V3*2*sizeof(Float), 
-		     cudaMemcpyDeviceToDevice);
+	  pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*4*3*3*V3*2 + nu*3*3*V3*2 + c1*3*V3*2 + c2*V3*2);
+	  if(is_myIt){
+	    pointer_src = (prop.D_elem() + mu*4*3*3*GK_localVolume*2 +  nu*3*3*GK_localVolume*2 + c1*3*GK_localVolume*2 + 
+			   c2*GK_localVolume*2 + my_it*V3*2);
+	    cudaMemcpy(pointer_dst, pointer_src, V3*2*sizeof(Float), cudaMemcpyDeviceToDevice);
+	  }
+	  else
+	    cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
 	}
   checkCudaError();
-  pointer_src = NULL;
-  pointer_dst = NULL;
 }
 
-template<typename Float>
-void PLEGMA_Propagator3D<Float>::
-absorbVectorTimeSlice(PLEGMA_Vector<Float> &vec, 
-		      int timeslice, int nu, int c2){
+template<typename Float> // change in the future with just absorb
+void PLEGMA_Propagator3D<Float>::absorbVectorTimeSlice(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2){
+  if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
+  
   int V3 = GK_localVolume/GK_localL[3];
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
-  
+    
   for(int mu = 0 ; mu < 4 ; mu++)
     for(int c1 = 0 ; c1 < 3 ; c1++){
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*4*3*3*V3*2 + nu*3*3*V3*2 + 
-		     c1*3*V3*2 + c2*V3*2);
-      pointer_src = (vec.D_elem() + mu*3*GK_localVolume*2 + 
-		     c1*GK_localVolume*2 + timeslice*V3*2);
-      cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), 
-		 cudaMemcpyDeviceToDevice);
+      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*4*3*3*V3*2 + nu*3*3*V3*2 + c1*3*V3*2 + c2*V3*2);
+      if(is_myIt){
+	pointer_src = (vec.D_elem() + mu*3*GK_localVolume*2 + c1*GK_localVolume*2 + my_it*V3*2);
+	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      }
+      else
+	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
+  checkCudaError();
 }
 
-template<typename Float>
-void PLEGMA_Propagator3D<Float>::broadcast(int tsink){
-  cudaMemcpy(PLEGMA_Field<Float>::h_elem , PLEGMA_Field<Float>::d_elem , PLEGMA_Field<Float>::bytes_total_length , 
-	     cudaMemcpyDeviceToHost);
-  checkCudaError();
-  comm_barrier();
-  int bcastRank = tsink/GK_localL[3];
-  int V3 = GK_localVolume/GK_localL[3];
-  if( typeid(Float) == typeid(float) ){
-    int error = MPI_Bcast(PLEGMA_Field<Float>::h_elem , 4*4*3*3*V3*2 , MPI_FLOAT , 
-			  bcastRank , GK_timeComm );
-    if(error != MPI_SUCCESS)errorQuda("Error in mpi broadcasting");
-  }
-  else if( typeid(Float) == typeid(double) ){
-    int error = MPI_Bcast(PLEGMA_Field<Float>::h_elem , 4*4*3*3*V3*2 , MPI_DOUBLE , 
-			  bcastRank , GK_timeComm );
-    if(error != MPI_SUCCESS)errorQuda("Error in mpi broadcasting");    
-  }
-  cudaMemcpy(PLEGMA_Field<Float>::d_elem , PLEGMA_Field<Float>::h_elem , PLEGMA_Field<Float>::bytes_total_length, 
-	     cudaMemcpyHostToDevice);
-  checkCudaError();
-}
+//obsolete remove in the future
+// template<typename Float>
+// void PLEGMA_Propagator3D<Float>::broadcast(int tsink){
+//   cudaMemcpy(PLEGMA_Field<Float>::h_elem , PLEGMA_Field<Float>::d_elem , PLEGMA_Field<Float>::bytes_total_length , 
+// 	     cudaMemcpyDeviceToHost);
+//   checkCudaError();
+//   comm_barrier();
+//   int bcastRank = tsink/GK_localL[3];
+//   int V3 = GK_localVolume/GK_localL[3];
+//   if( typeid(Float) == typeid(float) ){
+//     int error = MPI_Bcast(PLEGMA_Field<Float>::h_elem , 4*4*3*3*V3*2 , MPI_FLOAT , 
+// 			  bcastRank , GK_timeComm );
+//     if(error != MPI_SUCCESS)errorQuda("Error in mpi broadcasting");
+//   }
+//   else if( typeid(Float) == typeid(double) ){
+//     int error = MPI_Bcast(PLEGMA_Field<Float>::h_elem , 4*4*3*3*V3*2 , MPI_DOUBLE , 
+// 			  bcastRank , GK_timeComm );
+//     if(error != MPI_SUCCESS)errorQuda("Error in mpi broadcasting");    
+//   }
+//   cudaMemcpy(PLEGMA_Field<Float>::d_elem , PLEGMA_Field<Float>::h_elem , PLEGMA_Field<Float>::bytes_total_length, 
+// 	     cudaMemcpyHostToDevice);
+//   checkCudaError();
+// }
 
 template  class PLEGMA_Propagator<double>;
 template  class PLEGMA_Propagator3D<double>;

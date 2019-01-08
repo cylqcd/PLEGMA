@@ -41,13 +41,10 @@ namespace plegma {
     PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS);
     ~PLEGMA_Propagator3D(){;}
     
-    void absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
-				 int timeslice);
-    void absorbTimeSlice(PLEGMA_Propagator<Float> &prop, 
-			 int timeslice);
-    void absorbVectorTimeSlice(PLEGMA_Vector<Float> &vec, 
-			       int timeslice, int nu, int c2);
-    void broadcast(int tsink);
+    //    void absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, int global_it);
+    void absorbTimeSlice(PLEGMA_Propagator<Float> &prop, int global_it);
+    void absorbVectorTimeSlice(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2);
+    //    void broadcast(int tsink);
   };
 }
 
