@@ -19,7 +19,7 @@ namespace plegma {
 		    N_BARYONS}; // N_BARYONS must be last 
 
   const int nGroups[N_CORR] = { N_MESONS, N_BARYONS, 1, 1, 1 };
-  const int nFlavors[N_CORR] = { 2, 2, 2, 2, 2 };
+  const int nFlavors[N_CORR] = { 2, 2, 1, 1, 1 };
   const int nComp[N_CORR] = { 1, N_SPINS*N_SPINS, N_SPINS*N_SPINS, N_DIMS, N_SPINS*N_SPINS*N_DIMS };
   const int nDims[N_CORR] = { 0, 1, 1, 1, 2 };
 
@@ -111,8 +111,7 @@ namespace plegma {
 
     void contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
 			     PLEGMA_Propagator<Float> &fwdProp,
-			     int signProps, PLEGMA_Su3field<Float> &su3,
-			     std::vector<GAMMAS> gammas,
+			     int signProps, std::vector<GAMMAS> gammas,
 			     int isource, CORR_SPACE corrSpace);
 
     void writeFile(PLEGMA_params &params);

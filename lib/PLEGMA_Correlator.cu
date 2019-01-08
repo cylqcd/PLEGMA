@@ -42,6 +42,7 @@ initialize(CORR_TYPE CorrType, CORR_SPACE CorrSpace) {
      errorQuda("Correlator: Cannot allocate memory of size %d.", bytes_total_length);
   else
     isAlloc = true;
+  memset(corr,0,bytes_total_length);
 }
 
 template<typename Float>
@@ -90,31 +91,38 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop2.destroyTexObject(prop2Tex.tex);
 }
 
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
-		    PLEGMA_Propagator<Float> &fwdProp,
-		    int signProps, PLEGMA_Su3field<Float> &su3,
-		    std::vector<GAMMAS> gammas,
-		    int isource, CORR_SPACE corrSpace){
-
-  initialize(THRP_LOCAL,corrSpace);
+// template<typename Float>
+// void PLEGMA_Correlator<Float>::contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
+// 		    int signProps, PLEGMA_Su3field<Float> &su3, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
+//   initialize(THRP_LOCAL,corrSpace);
   
+//   propTex<Float> bwdPropTex, fwdPropTex;
+//   su3Tex<Float> sTex;
+//   bwdPropTex.tex = bwdProp.createTexObject();
+//   fwdPropTex.tex = fwdProp.createTexObject();
+//   sTex.tex = su3.createTexObject();
+//   this->isource = isource;
+//   printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+
+//   for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
+
+//   bwdProp.destroyTexObject(bwdPropTex.tex);
+//   fwdProp.destroyTexObject(fwdPropTex.tex);
+//   su3.destroyTexObject(sTex.tex);
+// }
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
+		    int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
+  initialize(THRP_LOCAL,corrSpace);
   propTex<Float> bwdPropTex, fwdPropTex;
-  su3Tex<Float> sTex;
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
-  sTex.tex = su3.createTexObject();
   this->isource = isource;
   printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
-
-  for(int it = 0; it < GK_localL[3]; it++) {
-    contractPropOpProp(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
-  }
-
+  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
-  su3.destroyTexObject(sTex.tex);
 }
 
 
@@ -216,20 +224,21 @@ writeASCII(char *filename_out) {
   if(rank == 0){
     ptr_out = fopen(filename_out,"w");
     if(ptr_out == NULL) errorQuda("Error opening file for writing\n");
-    for(size_t v=0; v<g_vol_size; v++) {
-      size_t shift=v*site_size;
+    if(n_flavors != 1) errorQuda("For now works with n_flavors = 1\n");
+    for(size_t v=0; v<g_vol_size*site_size; v++) {
+      int it = v/(GK_Nmoms*site_size);
+      int imom = v/(site_size) - it*GK_Nmoms;
+      int is = v%site_size;
+      int it_shift = (it + GK_sourcePosition[isource][3])%GK_totalL[3];
+      int ipos = it_shift*GK_Nmoms*site_size + imom*site_size + is;
       if(corr_space == MOMENTUM_SPACE) {
-	fprintf(ptr_out, "%30d  %+20d  %+20d  %+20d ", v/GK_totalL[3], GK_moms[v%GK_totalL[3]][0],
-		GK_moms[v%GK_totalL[3]][1], GK_moms[v%GK_totalL[3]][2]);
-	shift=((v/GK_totalL[3]+GK_sourcePosition[isource][3])%GK_totalL[3])*GK_Nmoms + v%GK_totalL[3];
+	if(is == 0)fprintf(ptr_out, "%d  %+d  %+d  %+d ", v/(GK_Nmoms*site_size), GK_moms[imom][0], GK_moms[imom][1], GK_moms[imom][2]);
       }
       else if (corr_space == POSITION_SPACE) {
 	//TODO
       }
-      for(size_t s=0; s<site_size; s+=2) {
-	fprintf(ptr_out, "%+e %+eI ", corrGlobal[shift*2+s], corrGlobal[shift*2+s+1]);
-      }
-      fprintf(ptr_out, "\n");
+      fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2], corrGlobal[ipos*2+1]);
+      if(is == site_size-1)fprintf(ptr_out, "\n");
     }
     fclose(ptr_out);
     free(corrGlobal);
