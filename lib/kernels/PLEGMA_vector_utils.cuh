@@ -104,27 +104,6 @@ void norm2_device(Float norm, Float* in){
 
 }
 
-template<typename Float>
-__inline__ __global__ void stochastic_source_kernel(Float* inOut){
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if( sid >= c_threads) return;
-
-  #pragma unroll
-  for(int i = 0 ; i < N_SPINS*N_COLS ; ++i) {
-   // inOut[(i*c_stride + sid)*2 + 0]   
-
-  }   
-}
-
-template<typename Float>
-void stochastic_source(Float* inOut){
-  dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-
-  stochastic_source_kernel<<<gridDim,blockDim>>>( inOut);
-  checkCudaError();
-}
-
 template<typename FloatIn, typename FloatOut, bool outEvenB, bool outOddB> 
 static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *outOdd){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;

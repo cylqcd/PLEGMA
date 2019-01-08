@@ -1,5 +1,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_Random.h>
+
+
 using namespace plegma;
   /**
      @brief CUDA kernel to initialize CURAND RNG states
@@ -15,8 +17,11 @@ __global__ void random_init_kernel(cuRNGState *state, int seed, int length_field
     //if ( sid < length_field ){
         // Each thread gets same seed, a different sequence number, no offset
         //Determine the global id of the field.
-        //printf("Number of threads %d and offset %d\n", sid, offset*length_field);
-        curand_init(seed, sid+offset*length_field, 0, &state[sid]);
+        //curand_init(seed, sid+offset*length_field, 0, &state[sid]);
+    int seq_number  = LEXIC_1DL_1DG(sid, length_field);
+    //printf("Number of threads %d and seq number %d\n", sid, seq_number);
+  
+    curand_init(seed, seq_number, 0, &state[sid]);
     //}
 }
 
@@ -32,7 +37,7 @@ void launch_random_init( cuRNGState *state, int seed, int field_deg_free, int of
     dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
     //printfQuda("Number of volume[3]: %d\n", GK_localVolume * field_deg_free);
     dim3 gridDim( (GK_localVolume * field_deg_free + blockDim.x -1)/blockDim.x , 1 , 1);
-    random_init_kernel<<<gridDim,blockDim>>>(state, seed, field_deg_free * GK_localVolume, offset );
+    random_init_kernel<<<gridDim,blockDim>>>(state, seed, field_deg_free, offset );
     //checkCudaError();
     cudaDeviceSynchronize();
 }

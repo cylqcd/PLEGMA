@@ -85,7 +85,8 @@ namespace plegma {
     void unload();
     
     void shift(PLEGMA_Field &Fin, int dirOr);
-    void randomZ(int seed, int n=2);
+    void stochastic_Z(int seed, int n=2);
+    void random(int seed);
     void setUnit(std::vector<int> indDiag);
   };
 }

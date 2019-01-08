@@ -447,7 +447,7 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::randomZ(int seed, int n){
+void PLEGMA_Field<Float>::stochastic_Z(int seed, int n){
     this->zero_device();
     
     //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
@@ -458,17 +458,30 @@ void PLEGMA_Field<Float>::randomZ(int seed, int n){
     randstate.Init();
     switch( n ){
         case 2:
-            set_random<Float, 2>( randstate, *this, rng_size);
+            set_stochastic<Float, 2>( randstate, *this, rng_size);
             break;
         case 3:
-            set_random<Float, 3>( randstate, *this, rng_size);
+            set_stochastic<Float, 3>( randstate, *this, rng_size);
             break;
         case 4:
-            set_random<Float, 4>( randstate, *this, rng_size);
+            set_stochastic<Float, 4>( randstate, *this, rng_size);
             break;
         default:
             errorQuda("This value of n has not been compiled. Come here to add it");
     }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::random(int seed){
+    this->zero_device();
+    
+    //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
+    int rng_size = this->field_length;
+    printf("Number of comm_rank: %d\n", comm_rank());
+    PLEGMA_RNG randstate(rng_size, seed, comm_rank());
+    checkCudaError();
+    randstate.Init();
+    set_random<Float>( randstate, *this, rng_size);
 }
 
 template<typename Float>

@@ -16,13 +16,15 @@ int main(int argc, char **argv)
   print_status();
 
   PLEGMA_Vector<double> vectorAuxD(BOTH);
+  PLEGMA_Vector<double> vectorOutD(HOST);
   int nroots=2;
   char stochfilename[100];
-  std::snprintf( stochfilename,100, "1node_Z_%d_stochastic_source.lime", nroots);
-  vectorAuxD.randomZ(1234,2);
+  std::snprintf( stochfilename,100, "Z_%d_stochastic_source.lime", nroots);
+  vectorAuxD.stochastic_Z(1234,2);
   vectorAuxD.unload();
-  vectorAuxD.norm2Host();
-  vectorAuxD.write(stochfilename); 
+  vectorAuxD.unpack(vectorOutD.H_elem());
+  vectorOutD.norm2Host();
+  vectorOutD.write(stochfilename); 
   
   finalize();
 

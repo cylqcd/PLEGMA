@@ -21,6 +21,7 @@ namespace plegma {
 #else
   typedef struct curandStateMRG32k3a cuRNGState;
 #endif
+  enum DIST { Uniform, Normal };
 
   /**
    *    @brief Class declaration to initialize and hold CURAND RNG states
@@ -68,20 +69,31 @@ namespace plegma {
    *    @param b upper range
    *    @return  random number in range a,b
    *    */
-  template<typename Float>
+
+  template<typename Float, DIST sampling>
     inline  __device__ Float PLEGMA_Random(cuRNGState &state, Float a, Float b){
       Float res;
       return res;
     }
 
   template<>
-    inline  __device__ float PLEGMA_Random<float>(cuRNGState &state, float a, float b){
+    inline  __device__ float PLEGMA_Random<float, Uniform>(cuRNGState &state, float a, float b){
       return a + (b - a) * curand_uniform(&state);
     }
 
   template<>
-    inline  __device__ double PLEGMA_Random<double>(cuRNGState &state, double a, double b){
+    inline  __device__ double PLEGMA_Random<double, Uniform>(cuRNGState &state, double a, double b){
       return a + (b - a) * curand_uniform_double(&state);
+    }
+  
+  template<>
+    inline  __device__ float PLEGMA_Random<float, Normal>(cuRNGState &state, float a, float b){
+      return a + b * curand_normal(&state);
+    }
+
+  template<>
+    inline  __device__ double PLEGMA_Random<double, Normal>(cuRNGState &state, double a, double b){
+      return a + b * curand_normal_double(&state);
     }
 
   /**
@@ -89,59 +101,31 @@ namespace plegma {
    *    @param state curand rng state
    *    @return  random number in range 0,1
    *    */
-  template<typename Float>
+  template<typename Float, DIST sampling>
     inline  __device__ Float PLEGMA_Random(cuRNGState &state){
       Float res;
       return res;
     }
 
   template<>
-    inline  __device__ float PLEGMA_Random<float>(cuRNGState &state){
+    inline  __device__ float PLEGMA_Random<float, Uniform>(cuRNGState &state){
       return curand_uniform(&state);
     }
 
   template<>
-    inline  __device__ double PLEGMA_Random<double>(cuRNGState &state){
+    inline  __device__ double PLEGMA_Random<double, Uniform>(cuRNGState &state){
       return curand_uniform_double(&state);
     }
-
-
-  template<typename Float>
-    struct uniform { };
+  
   template<>
-    struct uniform<float> {
-      __device__
-        static inline float PLEGMA_rand(cuRNGState &state) {
-          return curand_uniform(&state);
-        }
-    };
+    inline  __device__ float PLEGMA_Random<float, Normal>(cuRNGState &state){
+      return curand_normal(&state);
+    }
+
   template<>
-    struct uniform<double> {
-      __device__
-        static inline double PLEGMA_rand(cuRNGState &state) {
-          return curand_uniform_double(&state);
-        }
-    };
-
-
-
-  template<typename Float>
-    struct normal { };
-  template<>
-    struct normal<float> {
-      __device__
-        static inline float PLEGMA_rand(cuRNGState &state) {
-          return curand_normal(&state);
-        }
-    };
-  template<>
-    struct normal<double> {
-      __device__
-        static inline double PLEGMA_rand(cuRNGState &state) {
-          return curand_normal_double(&state);
-        }
-    };
-
+    inline  __device__ double PLEGMA_Random<double, Normal>(cuRNGState &state){
+      return curand_normal_double(&state);
+    }
 
 }
 #endif
