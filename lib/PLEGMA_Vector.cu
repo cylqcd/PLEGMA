@@ -435,3 +435,22 @@ void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, P
 
 template class PLEGMA_Vector<float>;
 template class PLEGMA_Vector<double>;
+
+namespace plegma{
+  
+  template<typename Float>
+  void copyToQUDA(ColorSpinorField *qudaVector, Float* delem, bool isEv){
+    copy_to_QUDA(delem, *qudaVector, isEv);
+  }
+  template void copyToQUDA<float>(ColorSpinorField *qudaVector, float* delem, bool isEv);
+  template void copyToQUDA<double>(ColorSpinorField *qudaVector, double* delem, bool isEv);
+
+  template<typename Float>
+  void copyFromQUDA(Float* delem, ColorSpinorField *qudaVector, bool isEv){
+    copy_from_QUDA(delem, *qudaVector, isEv);
+  }
+
+  template void copyFromQUDA<float>(float* delem, ColorSpinorField *qudaVector, bool isEv);
+  template void copyFromQUDA<double>(double* delem, ColorSpinorField *qudaVector, bool isEv);
+
+}
