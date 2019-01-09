@@ -3,8 +3,13 @@
 #include <PLEGMA_shifts.cuh>
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>
+#include <thrust/for_each.h>
+#include <thrust/tuple.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <vector>
 #include <algorithm>
+#include <PLEGMA_BLAS.h>
+#include <PLEGMA_FT.cuh>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -459,6 +464,15 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
     value.x=(it != indDiag.end() )?1.:0.;
     thrust::fill(dev_ptr, dev_ptr + this->Total_length(), value);
   }
+}
+
+template<typename Float>
+Float* PLEGMA_Field<Float>::FT3D(std::vector<std::vector<int> > mom, int sign){
+  /*
+   * This function computes FT of a field using cuBLAS dot products
+   * It returns a host pointer to the field in momentum space with size NDF*T*Nmom
+   */
+  return FT3D_k<Float>(*this,mom, sign);
 }
 
 template class PLEGMA_Field<float>;
