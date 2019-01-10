@@ -19,12 +19,18 @@ int main(int argc, char **argv)
   PLEGMA_Vector<double> vectorOutD(HOST);
   int nroots=2;
   char stochfilename[100];
-  std::snprintf( stochfilename,100, "Z_%d_stochastic_source.lime", nroots);
-  vectorAuxD.stochastic_Z(1234,2);
-  vectorAuxD.unload();
-  vectorAuxD.unpack(vectorOutD.H_elem());
-  vectorOutD.norm2Host();
-  vectorOutD.write(stochfilename); 
+  vectorAuxD.randInit(1234);
+  for(int i=0; i<10; ++i){
+    
+    std::snprintf( stochfilename,100, "%d_Z_%d_stochastic_source.lime", i, nroots);
+    vectorAuxD.stochastic_Z(2);
+    vectorAuxD.unload();
+    vectorAuxD.unpack(vectorOutD.H_elem());
+    vectorOutD.norm2Host();
+    vectorOutD.write(stochfilename); 
+    vectorAuxD.zero_device();
+  
+  }
   
   finalize();
 

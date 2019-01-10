@@ -117,19 +117,21 @@ __inline__ __device__ Float2<float> rootsunity<2>(int order){
 }
 
 template<typename Float, int n>
-__global__ void genStochasticUniform_kernel(cuRNGState *state, Float *inout){
-    Float2<Float> *inout2 = (Float2<Float> *) inout;
-    int sid = blockIdx.x*blockDim.x + threadIdx.x;
-    if( n < 2) return;
+__global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field, Float *inout){
 
-        
+  Float2<Float> *inout2 = (Float2<Float> *) inout;
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if( n < 2) return;
+
+  for( int i = 0; i < length_field; ++i){
+  
     Float tmp = PLEGMA_Random<Float, Uniform>(state[sid]);
     //printf("Z2 random number for sid %d with offset %d at :  %.8f\n", sid, LEXIC_1DL_1DG(sid), tmp);
     for( int order = 0; order <= n-1; ++order){
             
       if( tmp  < ((Float)order+1.0)/(Float)n ){
 
-        inout2[sid] = rootsunity<n>(order);
+        inout2[sid + i*(c_threads)] = rootsunity<n>(order);
         break;
       }
     }
@@ -137,29 +139,31 @@ __global__ void genStochasticUniform_kernel(cuRNGState *state, Float *inout){
     //}
 
    // printf("stochastic source at : %d is %.8f\n", sid, tmp);
-
+  }
 } 
+
 template<typename Float, int n>
-void set_stochastic( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free){
+void set_stochastic( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free, int rng_size){
 
     dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
-    dim3 gridDim( (GK_localVolume * field_deg_free + blockDim.x -1)/blockDim.x , 1 , 1);
-    genStochasticUniform_kernel<Float, n><<<gridDim,blockDim>>>(rng_state.State(), inOut.D_elem());
+    dim3 gridDim( (rng_size  + blockDim.x -1)/blockDim.x , 1 , 1);
+    genStochasticUniform_kernel<Float, n><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
 }
 template<typename Float>
-__global__ void genRandomUniform_kernel(cuRNGState *state, Float *inout){
-    Float2<Float> *inout2 = (Float2<Float> *) inout;
-    int sid = blockIdx.x*blockDim.x + threadIdx.x;
+__global__ void genRandomUniform_kernel(cuRNGState *state, int length_field, Float *inout){
+  Float2<Float> *inout2 = (Float2<Float> *) inout;
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
         
+  for( int i = 0; i < length_field; ++i){
     inout2[sid] = PLEGMA_Random<Float, Uniform>(state[sid]);
     //printf("Z2 random number for sid %d with offset %d at :  %.8f\n", sid, LEXIC_1DL_1DG(sid), tmp);
-
+  }
 } 
 template<typename Float>
-void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free){
+void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free, int rng_size){
 
     dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
-    dim3 gridDim( (GK_localVolume * field_deg_free + blockDim.x -1)/blockDim.x , 1 , 1);
-    genRandomUniform_kernel<Float><<<gridDim,blockDim>>>(rng_state.State(), inOut.D_elem());
+    dim3 gridDim( (rng_size + blockDim.x -1)/blockDim.x , 1 , 1);
+    genRandomUniform_kernel<Float><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
 }
 

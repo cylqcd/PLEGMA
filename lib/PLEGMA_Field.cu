@@ -71,6 +71,9 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   ghost_length = 0;
   ghost_corner_length = 0;
   
+  randstate_ptr = new PLEGMA_RNG();
+  randstate_ptr->AllocateRNG(total_length);
+
   for(int i = 0 ; i < N_DIMS ; i++){
     if(ghost_flag >= FIRST_SIDE) ghost_length += 2*GK_surface3D[i];
     for(int j = i+1; j < N_DIMS; j++){
@@ -104,6 +107,7 @@ template<typename Float>
 PLEGMA_Field<Float>::~PLEGMA_Field(){
   if(isAllocHost) destroy_host();
   if(isAllocDevice) destroy_device();
+//  destroy_randstate();
 }
 
 template<typename Float>
@@ -447,42 +451,42 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::stochastic_Z(int seed, int n){
+void PLEGMA_Field<Float>::randInit(int seed){
+  
+  randstate_ptr->Init(seed);
+  checkCudaError();  
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::stochastic_Z(int n){
     this->zero_device();
     
     //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
-    int rng_size = this->field_length;
-    printf("Number of comm_rank: %d\n", comm_rank());
-    PLEGMA_RNG randstate(rng_size, seed, comm_rank());
-    checkCudaError();
-    randstate.Init();
+    int rng_size = this->total_length;
     switch( n ){
         case 2:
-            set_stochastic<Float, 2>( randstate, *this, rng_size);
+            set_stochastic<Float, 2>( *randstate_ptr, *this, this->field_length, rng_size);
             break;
         case 3:
-            set_stochastic<Float, 3>( randstate, *this, rng_size);
+            set_stochastic<Float, 3>( *randstate_ptr, *this, this->field_length, rng_size);
             break;
         case 4:
-            set_stochastic<Float, 4>( randstate, *this, rng_size);
+            set_stochastic<Float, 4>( *randstate_ptr, *this, this->field_length, rng_size);
             break;
         default:
             errorQuda("This value of n has not been compiled. Come here to add it");
     }
+    checkCudaError();
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::random(int seed){
+void PLEGMA_Field<Float>::random(){
     this->zero_device();
-    
     //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
-    int rng_size = this->field_length;
-    printf("Number of comm_rank: %d\n", comm_rank());
-    PLEGMA_RNG randstate(rng_size, seed, comm_rank());
-    checkCudaError();
-    randstate.Init();
-    set_random<Float>( randstate, *this, rng_size);
+    int rng_size = this->total_length;
+    set_random<Float>( *randstate_ptr, *this, this->field_length, rng_size);    
 }
+
 
 template<typename Float>
 void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){

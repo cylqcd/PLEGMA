@@ -457,37 +457,25 @@ namespace plegma {
     normalizeUnitary(v);
   }
   
-  __inline__ __device__ int LEXIC_1DL_1DG(int sid, int field_length) {
-    //compute 4 space-time + 1 color + 1 spin index for given sid  
+  __inline__ __device__ int LEXIC_1DL_1DG(int sid) {
+    //compute 4 space-time GLOBID  
+    
     int skipvol = 1;
     int globid = 0;
-    int TZYX_local[N_DIMS+1];
-    int TZYX_global[N_DIMS+1];
-    int dimlocvol[N_DIMS+1]; 
-    int dimglobvol[N_DIMS+1];
-    //creating array from fastest to slowest
-    dimlocvol[0]=c_localL[0];
-    dimlocvol[1]=c_localL[1];
-    dimlocvol[2]=c_localL[2];
-    dimlocvol[3]=c_localL[3];
-    dimlocvol[4]=field_length;
+    int TZYX_local[N_DIMS];
+    int TZYX_global[N_DIMS];
     
-    dimglobvol[0]= c_totalL[0];
-    dimglobvol[1]= c_totalL[1];
-    dimglobvol[2]= c_totalL[2];
-    dimglobvol[3]= c_totalL[3];
-    dimglobvol[4]=field_length;
-
-    for(int i = 0; i < N_DIMS+1; ++i){
-      TZYX_local[i] = (sid/skipvol) % dimlocvol[i];
-      skipvol *= dimlocvol[i];
-      TZYX_global[i] = TZYX_local[i];
+    //creating array from fastest to slowest
+    for(int i = 0; i < N_DIMS; ++i){
+      TZYX_local[i] = (sid/skipvol) % c_localL[i];
+      skipvol *= c_localL[i];
+      //TZYX_global[i] = TZYX_local[i];
     }
     for(int i = 0; i < N_DIMS; ++i)
-      TZYX_global[i] = TZYX_local[i] + c_procPosition[i] * dimlocvol[i];
+      TZYX_global[i] = TZYX_local[i] + c_procPosition[i] * c_localL[i];
     
-    for(int i = N_DIMS; i>=0; i--)
-      globid = globid * dimglobvol[i] + TZYX_global[i];
+    for(int i = N_DIMS-1; i>=0; i--)
+      globid = globid * c_totalL[i] + TZYX_global[i];
 
     return globid;
   }

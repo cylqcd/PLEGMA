@@ -29,11 +29,13 @@ namespace plegma {
   class PLEGMA_RNG {
     public:
       /*! Constructor */
-      PLEGMA_RNG(int rng_sizes, int seedin, int offset);
+      PLEGMA_RNG();
       /*! free array */
       virtual ~PLEGMA_RNG();
       /*! initialize curand rng states with seed */
-      void Init();
+      void Init(int seedin);
+      /*! @brief allocate curand rng states array in device memory */
+      void AllocateRNG(int rng_sizes);
       /*! @brief return curand rng array size */
       int Size() const { return rng_size;};
       int Rank_Offset(){ return rank_offset;};
@@ -43,6 +45,8 @@ namespace plegma {
       void restore();
       /*! @brief Backup CURAND array states initialization */
       void backup();
+      /*! array with current curand rng state */
+      //cuRNGState *state;
     protected:
       /*! array with current curand rng state */
       cuRNGState *state;
@@ -54,8 +58,6 @@ namespace plegma {
       int rng_size;
       /*! @brief offset in the index, in case of multigpus */
       int rank_offset;
-      /*! @brief allocate curand rng states array in device memory */
-      void AllocateRNG();
       /*! @brief CURAND array states initialization */
       void INITRNG(int rng_size, int seed, int rank_offsetin);
   };

@@ -28,14 +28,15 @@ using namespace plegma;
 // Useful variables: 
 // c_procPosition: position of the processors
 // rngArg computes the required input to the RNG
-PLEGMA_RNG::PLEGMA_RNG(int rng_sizes, int seedin, int offset) {
+PLEGMA_RNG::PLEGMA_RNG() {
   
     state = NULL;
-    seed = seedin;
-    rng_size = rng_sizes;
+    seed = 0;
+    rng_size = 0;
    // printf("Number of rng_size[1.25]: %d\n", rng_size);
 
-    rank_offset = offset;
+    rank_offset = 0;
+
 #if defined(XORWOW)
     printfQuda("Using curandStateXORWOW\n");
 #elif defined(RG32k3a)
@@ -48,21 +49,24 @@ PLEGMA_RNG::PLEGMA_RNG(int rng_sizes, int seedin, int offset) {
 /**
   @brief Initialize CURAND RNG states
  */
-void PLEGMA_RNG::Init() {
-    AllocateRNG();
+void PLEGMA_RNG::Init(int seedin) {
     //printf("Number of rng_size[2]: %d\n", rng_size);
-    launch_random_init(state, seed, rng_size, rank_offset);
+    seed = seedin;
+    //AllocateRNG();
+    launch_random_init(state, seed, rank_offset, rng_size);
 }
 
 /**
   @brief Allocate Device memory for CURAND RNG states
  */
-void PLEGMA_RNG::AllocateRNG() {
+void PLEGMA_RNG::AllocateRNG(int rng_sizes) {
+
+    rng_size = rng_sizes;
     //printf("Number of rng_size[1.5]: %d\n", rng_size);
     if (rng_size>0 && state == NULL) {
-        cudaMalloc((void**)&state, GK_localVolume * rng_size *sizeof(cuRNGState));
-        cudaMemset( state , 0 , GK_localVolume * rng_size * sizeof(cuRNGState) );
-        printfQuda("Allocated array of random numbers with rng_size: %.2f MB\n",((float)GK_localVolume * (float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
+        cudaMalloc((void**)&state, rng_size * sizeof(cuRNGState));
+        cudaMemset( state , 0 , rng_size * sizeof(cuRNGState) );
+        printfQuda("Allocated array of random numbers with rng_size: %.2f MB\n",((float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
     } else {
         errorQuda("Array of random numbers not allocated, array size: %d !\nExiting...\n",rng_size);
     }
@@ -71,7 +75,7 @@ void PLEGMA_RNG::AllocateRNG() {
 /*! @brief Destructor !*/
 PLEGMA_RNG::~PLEGMA_RNG(){
       cudaFree(state);
-      printfQuda("Free array of random numbers with rng_size: %.2f MB\n", ((float)GK_localVolume * (float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
+      printfQuda("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(cuRNGState))/(1024*1024));
       rng_size = 0;
       state = NULL;
       checkCudaError();
