@@ -72,7 +72,6 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   ghost_corner_length = 0;
   
   randstate_ptr = new PLEGMA_RNG();
-  randstate_ptr->AllocateRNG(total_length);
 
   for(int i = 0 ; i < N_DIMS ; i++){
     if(ghost_flag >= FIRST_SIDE) ghost_length += 2*GK_surface3D[i];
@@ -453,6 +452,7 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
   
+  randstate_ptr->AllocateRNG(total_length);
   randstate_ptr->Init(seed);
   checkCudaError();  
 }
