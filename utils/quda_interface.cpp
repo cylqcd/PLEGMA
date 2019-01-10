@@ -3,6 +3,7 @@
 #include <quda_params.h>
 #include <invert_quda.h>
 #include <quda_interface.h>
+#include <PLEGMA_BLAS.h>
 
 using namespace std;
 using namespace quda;
@@ -252,20 +253,21 @@ QUDA_dirac::~QUDA_dirac(){
   delete out;
 }
 
-template<APP_TYPE type,typename Float>
-void QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, QudaMassNormalization normType){
-  Pin.copyToQUDA(in,false);
+template<APP_TYPE type> void QUDA_dirac::apply(){
   switch (type){
   case(M): D->M(*out,*in); break;
   case(Mdag): D->Mdag(*out,*in); break;
   case(MdagM): D->MdagM(*out,*in);  break;
   case(MMdag): D->MMdag(*out,*in); break;
   }
-  Pout.copyFromQUDA(out,false);
-  if (normType == QUDA_MASS_NORMALIZATION || 
-      normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
-    Pout.scaleVector(1./(2*inv_param.kappa));
-  }
+}
+
+template<APP_TYPE type,typename Float>
+void QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, QudaMassNormalization normType){
+  Pin.copyToQUDA(in);
+  apply<type>();
+  Pout.copyFromQUDA(out);
+  if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) Pout.scaleVector(1./(2*inv_param.kappa));
 }
 
 template void QUDA_dirac::apply<M>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
@@ -276,6 +278,24 @@ template void QUDA_dirac::apply<MdagM>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector
 template void QUDA_dirac::apply<MdagM>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
 template void QUDA_dirac::apply<MMdag>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
 template void QUDA_dirac::apply<MMdag>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+
+template<APP_TYPE type,typename Float>
+void QUDA_dirac::apply(Float *dout, Float *din, QudaMassNormalization normType){
+  plegma::copyToQUDA(in,din);
+  apply<type>();
+  plegma::copyFromQUDA(dout,out);
+  if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
+    cuBLAS::scal<Float>(N_SPINS*N_COLS*GK_localVolume, (Float) (1./(2*inv_param.kappa)), dout);
+}
+
+template void QUDA_dirac::apply<M>(float *dout, float *din, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M>(double *dout, double *din, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag>(float *dout, float *din, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag>(double *dout, double *din, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM>(float *dout, float *din, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM>(double *dout, double *din, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag>(float *dout, float *din, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag>(double *dout, double *din, QudaMassNormalization normType);
 
 
 void QUDA_dirac::switchMu(double mu){

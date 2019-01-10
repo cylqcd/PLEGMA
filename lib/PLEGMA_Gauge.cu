@@ -179,7 +179,7 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
   
   for(int idir = 0; idir < D3D4 ; idir++){
     u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
-    u_s1[idir]->absorbDir_device(*this,idir);
+    u_s1[idir]->absorbDir_device(uin,idir);
     u_s2[idir] = new PLEGMA_Su3field<Float>(BOTH);
   }
 
