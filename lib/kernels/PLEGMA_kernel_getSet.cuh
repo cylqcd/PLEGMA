@@ -181,7 +181,7 @@ namespace plegma {
   }
   template<> inline __device__ Float2<counter> texture<counter>::fetch(size_t i) {
     counter::incReads();
-    return 0;
+    return Float2<counter>();
   }
   
   template<typename Float>
@@ -234,8 +234,7 @@ namespace plegma {
       get(p, site_size, ss); 
     }    
   };
-
-
+  
   template<typename Float>
   using genericTex = generic<texture<Float>,Float>;
   

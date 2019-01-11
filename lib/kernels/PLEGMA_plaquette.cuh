@@ -8,7 +8,7 @@ static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Floa
   Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
-    
+
   if (sid < c_threads) {
 
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
@@ -53,7 +53,6 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
 
   ProfileStruct ps(GK_localVolume,sizeof(Float));
 
-  calcFlops(ps, calculatePlaquette_kernel<counter,counter>, gaugeTex, d_partial_plaq);
   tune(ps, calculatePlaquette_kernel<Float,FloatG>, gaugeTex, d_partial_plaq);
   
 #ifdef TIMING_REPORT

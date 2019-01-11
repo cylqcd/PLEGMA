@@ -1,6 +1,7 @@
 #include <PLEGMA_global.h>
 #include <tune_quda.h>
-#include <PLEGMA_kernel_counter.cuh>
+// Classes to count flops and reads/writes
+// #include <PLEGMA_kernel_counter.cuh>
 using namespace quda;
 
 #ifndef PLEGMA_KERNEL_TUNER_H
@@ -16,14 +17,17 @@ using namespace quda;
 */
 
 extern __device__ cudaDeviceProp devProp;
+extern __device__ long unsigned int *counterOps;
+extern __device__ long unsigned int *counterReads;
+extern __device__ long unsigned int *counterWrites;
 
 // struct that contains all variables
 //  necessary for the tuning evaluation
 struct ProfileStruct{
   bool measured;
-  long long flops; 
-  long long outBytes; 
-  long long inpBytes;
+  long unsigned int flops; 
+  long unsigned int outBytes; 
+  long unsigned int inpBytes;
   long long texBytes;
   long long volume;
   long long stride;
@@ -67,7 +71,7 @@ protected:
 
   void (*kernel)(types...); // initialised only when tuning is required
   std::tuple<types...> args; // see above
-
+  
   std::string kernelName;
   
   char volString[TuneKey::aux_n];
@@ -103,11 +107,13 @@ protected:
   template<int ...S>
   void callKernel(dim3 grid3d, dim3 block3d, int shared, const cudaStream_t stream, seq<S...>) {
     (*kernel)<<<grid3d,block3d,shared,stream>>>(std::get<S>(args)...);
+    cudaDeviceSynchronize();
   }
   void launchKernel( dim3 grid3d, dim3 block3d, int shared, const cudaStream_t stream) {
     callKernel(grid3d,block3d,shared,stream,typename gens<sizeof...(types)>::type());
   }
-  // calculate flops with CUPTI - rehabilitate later
+
+  // calculate flops with CUPTI
   /*
   void calculateFlops(){
     
@@ -144,17 +150,7 @@ protected:
     printf("Flops %d\n",ps.flops);
   }
   */
-  void calculateFlops(){
-    dim3 blockDim(1,1,1);
-    dim3 gridDim(1,1,1);
-    counter::ops = 0;
-    counter::reads = 0;
-    counter::writes = 0;
-    launchKernel(gridDim,blockDim,ps.sharedBytesPerThread,0);
-    ps.flops = counter::getOps();
-    ps.inpBytes = counter::getReads();
-    ps.outBytes = counter::getWrites();
-  }
+  
 public:
 
   // ctor
@@ -167,7 +163,7 @@ public:
     onlyTuning = false;
     tuned = false;
   } 
-
+    
   // initialisation
   void initTuneParam(TuneParam &param) const {
     Tunable::initTuneParam(param);
@@ -182,7 +178,61 @@ public:
 
   // utilities
   int getGridDimX(){ return ps.tp.grid.x; }
-  
+
+  // TODO: Restore if we find a way to cast flops as counters
+  /* 
+  void calculateFlops(){
+    dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+    dim3 gridDim( (ps.volume + blockDim.x -1)/blockDim.x , 1 , 1);
+    //resetCounters( ps.volume );
+    int size = ps.volume;
+    long unsigned int *dummy = new long unsigned int[size];
+    long unsigned int loc, glob;
+      
+    for(int i=0; i<size; ++i)
+      dummy[i] = 0;                                                                                                         
+
+    cudaMalloc(&counterOps,size*sizeof(long unsigned int));
+    cudaMalloc(&counterReads,size*sizeof(long unsigned int));
+    cudaMalloc(&counterWrites,size*sizeof(long unsigned int));
+    cudaMemcpy(&counterOps, &dummy, size*sizeof(long unsigned int),cudaMemcpyHostToDevice);
+    cudaMemcpy(&counterReads, &dummy, size*sizeof(long unsigned int),cudaMemcpyHostToDevice);
+    cudaMemcpy(&counterWrites, &dummy, size*sizeof(long unsigned int),cudaMemcpyHostToDevice);
+    
+    launchKernel(gridDim,blockDim,ps.sharedBytesPerThread,0);
+
+    loc = 0;
+    cudaMemcpy(&dummy, &counterOps, size*sizeof(long unsigned int),cudaMemcpyDeviceToHost);
+    for(int i=0; i<size; i++){
+      if (i<100) printf("%d \t %d\n",i,dummy[i]);
+      loc += dummy[i];
+    }
+    MPI_Allreduce(&loc,&glob,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+    ps.flops = glob;
+
+    loc = 0;
+    cudaMemcpy(&dummy, &counterReads, size*sizeof(long unsigned int),cudaMemcpyDeviceToHost);
+    for(int i=0; i<size; i++)
+      loc += dummy[i];
+    MPI_Allreduce(&loc,&glob,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+    ps.inpBytes = glob;
+
+    loc = 0;
+    cudaMemcpy(&dummy, &counterWrites, size*sizeof(long unsigned int),cudaMemcpyDeviceToHost);
+    for(int i=0; i<size; i++)
+      loc += dummy[i];
+    MPI_Allreduce(&loc,&glob,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+    ps.outBytes = glob;
+    
+    printf("Flops %ld\n", ps.flops);
+    printf("In Bytes %ld\n", ps.inpBytes);
+
+    cudaFree(&counterOps);
+    cudaFree(&counterWrites);
+    cudaFree(&counterReads);
+    delete [] dummy;
+  }
+  */
 };
 
 template<class ...types>
@@ -250,11 +300,30 @@ void tuneAndRun(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
   tuner.apply();
 }
 
+/*
+template<class T>
+T dummyCasting(T arg) {
+  return arg;
+}
+
+template<class T, class U>
+T dummyCasting(U arg) {
+  //T dummy;
+  //return dummy;
+  return T();
+}
+
+template<template<class> class T, class U>
+T<counter> dummyCasting(T<U> arg){
+  return T<counter>(counter(arg));
+}
+
 // implementation to be changed so that flops do not get calculated if already known
-template<class ...types>
-void calcFlops(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+template<typename ...types, typename ...args>
+void calcFlops(ProfileStruct &ps, void(* kernel)(types...), args... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, dummyCasting<types>(kArgs)...);
   tuner.calculateFlops(); // calculates the number of flops and stores them in ps
 }
+*/
 
 #endif

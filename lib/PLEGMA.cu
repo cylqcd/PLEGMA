@@ -27,9 +27,15 @@ __constant__ int c_procPosition[N_DIMS];
 __constant__ int c_totalL[N_DIMS];
 __constant__ int c_Nmoms;
 __constant__ short int c_moms[MAX_NMOMENTA][3];
+extern __device__ long unsigned int *counterOps;
+extern __device__ long unsigned int *counterReads;
+extern __device__ long unsigned int *counterWrites;
+long unsigned int *counterOps;
+long unsigned int *counterReads;
+long unsigned int *counterWrites;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////                                                                                                                                                    
+///////////////////////////////////////////////////
 /* Block for global variables */
 float GK_deviceMemory = 0.;
 int GK_strideFull;
@@ -185,7 +191,7 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     for(int is = 0 ; is < GK_Nsources ; is++)
       for(int i = 0 ; i < 4 ; i++)
 	GK_sourcePosition[is][i] = params->sourcePosition[is][i];
-
+    
     // initialization consist also from define device constants
     cudaMemcpyToSymbol(c_stride, &GK_strideFull, sizeof(int) );
     int tmp = GK_strideFull/GK_localL[3];
