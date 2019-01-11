@@ -8,6 +8,10 @@ set (QUDA_OBJS
   PLEGMA_Su3field.cu
   kernels/PLEGMA_baryons_NtoN.cu
   kernels/PLEGMA_seqSourceNucleon.cu
+  kernels/PLEGMA_contractPropOpProp_local.cu
+  kernels/PLEGMA_contractPropOpProp_noe.cu
+  kernels/PLEGMA_contractPropOpProp_oneD.cu
+  kernels/PLEGMA_contractPropOpProp_wilsonLine.cu
   PLEGMA_QLoops.cu
 )
 
