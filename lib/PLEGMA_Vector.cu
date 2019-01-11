@@ -195,7 +195,6 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color)
 template<typename Float>
 void PLEGMA_Vector<Float>::write(char *filename){
   FILE *fid;
-  int error_in_header=0;
   LimeWriter *limewriter;
   LimeRecordHeader *limeheader = NULL;
   int ME_flag=0, MB_flag=0, limeStatus;
@@ -221,7 +220,6 @@ void PLEGMA_Vector<Float>::write(char *filename){
       limewriter = limeCreateWriter(fid);
       if(limewriter == (LimeWriter*)NULL) {
 	fprintf(stderr, "Error in %s. LIME error in file for writing!\n", __func__);
-	error_in_header=1;
 	comm_abort(-1);
       }
       else
@@ -229,18 +227,17 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	  sprintf(tmp_string, "DiracFermion_Sink");
 	  message_length=(long int) strlen(tmp_string);
 	  MB_flag=1; ME_flag=1;
-	  limeheader = limeCreateHeader(MB_flag, ME_flag, "propagator-type", message_length);
+	  std::string m1 = "propagator-type";
+	  limeheader = limeCreateHeader(MB_flag, ME_flag, &m1[0], message_length);
 	  if(limeheader == (LimeRecordHeader*)NULL)
 	    {
 	      fprintf(stderr, "Error in %s. LIME create header error.\n", __func__);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeStatus = limeWriteRecordHeader(limeheader, limewriter);
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeDestroyHeader(limeheader);
@@ -248,7 +245,6 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header error %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 
@@ -259,19 +255,17 @@ void PLEGMA_Vector<Float>::write(char *filename){
 
 	  message_length=(long int) strlen(tmp_string); 
 	  MB_flag=1; ME_flag=1;
-
-	  limeheader = limeCreateHeader(MB_flag, ME_flag, "quda-propagator-format", message_length);
+	  std::string m2 = "quda-propagator-format";
+	  limeheader = limeCreateHeader(MB_flag, ME_flag,&m2[0], message_length);
 	  if(limeheader == (LimeRecordHeader*)NULL)
 	    {
 	      fprintf(stderr, "Error in %s. LIME create header error.\n", __func__);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeStatus = limeWriteRecordHeader(limeheader, limewriter);
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeDestroyHeader(limeheader);
@@ -279,18 +273,17 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header error %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  
 	  message_length = GK_totalVolume*4*3*2*sizeof(Float);
 	  MB_flag=1; ME_flag=1;
-	  limeheader = limeCreateHeader(MB_flag, ME_flag, "scidac-binary-data", message_length);
+	  std::string m3 = "scidac-binary-data";
+	  limeheader = limeCreateHeader(MB_flag, ME_flag, &m3[0], message_length);
 	  limeStatus = limeWriteRecordHeader( limeheader, limewriter);
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header error %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	    }
 	  limeDestroyHeader( limeheader );
 	}
