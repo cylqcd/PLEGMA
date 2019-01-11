@@ -27,19 +27,20 @@ int main(int argc, char **argv)
   // The gauge is loaded in a format suitable for QUDA. We need to re-map it
   mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
 
-  PLEGMA_Gauge<double> pGauge;
-  pGauge.pack(gauge.get_ptr());
-  pGauge.load();
-  pGauge.calculatePlaq();
+  PLEGMA_Gauge<double> *pGauge = new PLEGMA_Gauge<double>();
+  pGauge->pack(gauge.get_ptr());
+  pGauge->load();
+  pGauge->calculatePlaq();
   
   PLEGMA_Gauge<double> smearedGauge;
-  smearedGauge.APEsmearing(pGauge, nsmearAPE, alphaAPE, 3);
+  smearedGauge.APEsmearing(*pGauge, nsmearAPE, alphaAPE, 3);
   smearedGauge.calculatePlaq();
-
-  // pGauge will be used later for the derivatives also in the temporal directions so should have the sign
+  delete pGauge;
+  
+  PLEGMA_Gauge<float> contractGauge;
   applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
-  pGauge.pack(gauge.get_ptr());
-  pGauge.load();
+  contractGauge.pack(gauge.get_ptr());
+  contractGauge.load();
   
   // ensuring mu positive
   if(mu<0) mu*=-1.;
@@ -56,8 +57,14 @@ int main(int argc, char **argv)
   PLEGMA_Propagator<float> seqProp;
   PLEGMA_Propagator3D<float> propUP3D;
   PLEGMA_Propagator3D<float> propDN3D;
+
   PLEGMA_Correlator<float> nucleonThrpLocal_CP1;
   PLEGMA_Correlator<float> nucleonThrpLocal_CP2;
+  PLEGMA_Correlator<float> nucleonThrpOneD_CP1;
+  PLEGMA_Correlator<float> nucleonThrpOneD_CP2;
+  PLEGMA_Correlator<float> nucleonThrpNoe_CP1;
+  PLEGMA_Correlator<float> nucleonThrpNoe_CP2;
+
   // for the test use sinkSourceSep = 10;
   int  isource=0;
 
@@ -125,17 +132,25 @@ int main(int argc, char **argv)
       }
     seqProp.apply_gamma5();
     seqProp.conjugate();
-    seqProp.communicateGhost();
-    pGauge.communicateGhost();
-    if(nucleon == PROTON) propUP.communicateGhost(); else propDN.communicateGhost();
     int signProps = (nucleon == PROTON) ? +1: -1;
-    std::vector<GAMMAS> lgammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
-    if(nucleon == PROTON) nucleonThrpLocal_CP2.contractNucleonThrp(seqProp, propUP, signProps, lgammas, 0, MOMENTUM_SPACE); // 0 is isource change later to do many source pos
-    else nucleonThrpLocal_CP2.contractNucleonThrp(seqProp, propDN, signProps, lgammas, 0, MOMENTUM_SPACE);
-    if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpLocal_CP2.getTotalSize()*2; iv++) (nucleonThrpLocal_CP2.getCorr())[iv] *= signPer;
-      
+
+    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propUP : propDN;
+    // LOCAL contractions
+    nucleonThrpLocal_CP2.contractNucleonThrp_local(seqProp, propF, signProps, 0, MOMENTUM_SPACE); // 0 is isource change later 
+    if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpLocal_CP2.getTotalSize()*2; iv++) (nucleonThrpLocal_CP2.getCorr())[iv] *= signPer;      
     nucleonThrpLocal_CP2.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP2.dat");
-    // do the contractions also for the conserved and oneD
+
+    // ONED contractions
+    nucleonThrpOneD_CP2.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, 0, MOMENTUM_SPACE); // 0 is isource change lat
+    if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpOneD_CP2.getTotalSize()*2; iv++) (nucleonThrpOneD_CP2.getCorr())[iv] *= signPer;      
+    nucleonThrpOneD_CP2.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP2.dat");
+
+    // noe contractions
+    nucleonThrpNoe_CP2.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, 0, MOMENTUM_SPACE); // 0 is isource change lat
+    if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpNoe_CP2.getTotalSize()*2; iv++) (nucleonThrpNoe_CP2.getCorr())[iv] *= signPer;      
+    nucleonThrpNoe_CP2.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_noe_CP2.dat");
+
+    // do the contractions also for the conserved
   }
   
   //seq source part 1Prop contraction
@@ -159,16 +174,25 @@ int main(int argc, char **argv)
       }
     seqProp.apply_gamma5();
     seqProp.conjugate();
-    seqProp.communicateGhost();
-    pGauge.communicateGhost();
-    if(nucleon == PROTON) propDN.communicateGhost(); else propUP.communicateGhost();
     int signProps = (nucleon == PROTON) ? -1: +1;
-    std::vector<GAMMAS> lgammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
-    if(nucleon == PROTON) nucleonThrpLocal_CP1.contractNucleonThrp(seqProp, propDN, signProps, lgammas, 0, MOMENTUM_SPACE); // 0 is isource change later to do many source pos
-    else nucleonThrpLocal_CP1.contractNucleonThrp(seqProp, propUP, signProps, lgammas, 0, MOMENTUM_SPACE);
+    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propDN : propUP;
+    
+    //LOCAL
+    nucleonThrpLocal_CP1.contractNucleonThrp_local(seqProp, propF, signProps, 0, MOMENTUM_SPACE); // 0 is isource change later
     if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpLocal_CP1.getTotalSize()*2; iv++) (nucleonThrpLocal_CP1.getCorr())[iv] *= signPer;
     nucleonThrpLocal_CP1.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP1.dat");
-    // do the contractions also for the conserved and oneD
+
+    //ONED
+    nucleonThrpOneD_CP1.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, 0, MOMENTUM_SPACE); // 0 is isource change la
+    if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpOneD_CP1.getTotalSize()*2; iv++) (nucleonThrpOneD_CP1.getCorr())[iv] *= signPer;
+    nucleonThrpOneD_CP1.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP1.dat");
+
+    //ONED
+    nucleonThrpNoe_CP1.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, 0, MOMENTUM_SPACE); // 0 is isource change la
+    if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpNoe_CP1.getTotalSize()*2; iv++) (nucleonThrpNoe_CP1.getCorr())[iv] *= signPer;
+    nucleonThrpNoe_CP1.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_noe_CP1.dat");
+
+    // do the contractions also for the conserved
   }
 
   // smear the forward props
