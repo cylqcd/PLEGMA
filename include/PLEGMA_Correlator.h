@@ -109,14 +109,18 @@ namespace plegma {
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int isource, CORR_SPACE CorrSpace);
 
-    void contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp,
-			     PLEGMA_Propagator<Float> &fwdProp,
-			     int signProps, std::vector<GAMMAS> gammas,
-			     int isource, CORR_SPACE corrSpace);
-
+    void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
+				   PLEGMA_Propagator<Float> &fwdProp,
+				   int signProps,
+				   int isource, CORR_SPACE corrSpace);
+    void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
+				  int signProps, int isource, CORR_SPACE corrSpace);
+    void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
+				  int signProps, int isource, CORR_SPACE corrSpace);
+    
     void writeFile(PLEGMA_params &params);
     void writeFile(char *filename, PLEGMA_params &params);
-    void writeASCII(char *filename);
+    void writeASCII(const char *filename);
     void writeHDF5(char *filename, PLEGMA_params &params);
   };
 }
