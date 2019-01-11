@@ -13,12 +13,11 @@ using namespace plegma;
 /* block for device constants */
 __constant__ bool c_dimBreak[N_DIMS];
 __constant__ int c_localL[N_DIMS];
-__constant__ int c_plusGhost[N_DIMS];
-__constant__ int c_minusGhost[N_DIMS];
+__constant__ int c_sideGhost[2*N_DIMS];
 __constant__ int c_cornerGhost[2*N_DIMS][2*N_DIMS];
 __constant__ int c_stride;
 __constant__ int c_stride_spatial;
-__constant__ int c_surface[N_DIMS];
+__constant__ int c_surface3D[N_DIMS];
 __constant__ int c_surface2D[N_DIMS][N_DIMS];
 __constant__ double c_alphaAPE;
 __constant__ double c_alphaGauss;
@@ -49,11 +48,10 @@ bool GK_dimBreak[N_DIMS];
 int GK_localL[N_DIMS];
 int GK_totalL[N_DIMS];
 int GK_nProc[N_DIMS];
-int GK_plusGhost[N_DIMS];
-int GK_minusGhost[N_DIMS];
+int GK_sideGhost[2*N_DIMS];
+int GK_cornerGhost[2*N_DIMS][2*N_DIMS];
 int GK_surface3D[N_DIMS];
 int GK_surface2D[N_DIMS][N_DIMS];
-int GK_cornerGhost[2*N_DIMS][2*N_DIMS];
 bool GK_init_PLEGMA_flag = false;
 int GK_Nsources;
 int GK_sourcePosition[MAX_NSOURCES][N_DIMS];
@@ -147,9 +145,8 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
       }
     }
     
-    for(int i = 0 ; i < N_DIMS ; i++){
-      GK_plusGhost[i] = 0;
-      GK_minusGhost[i] = 0;
+    for(int i = 0 ; i < 2*N_DIMS ; i++){
+      GK_sideGhost[i] = 0;
     }
 
     for(int i=0; i<2*N_DIMS; i++){
@@ -161,11 +158,10 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
 #ifdef MULTI_GPU
     size_t lastIndex = GK_localVolume;
     
-    for(int i = 0 ; i < N_DIMS ; i++)
-      if( GK_dimBreak[i] ){
-	GK_plusGhost[i] = lastIndex ;
-	GK_minusGhost[i] = lastIndex + GK_surface3D[i];
-	lastIndex += 2*GK_surface3D[i];
+    for(int i = 0 ; i < 2*N_DIMS ; i++)
+      if( GK_dimBreak[i%N_DIMS] ){
+	GK_sideGhost[i] = lastIndex ;
+	lastIndex += GK_surface3D[i%N_DIMS];
       }
 
     for(int i=0; i<2*N_DIMS; i++){
@@ -203,10 +199,9 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     cudaMemcpyToSymbol(c_dimBreak , GK_dimBreak , N_DIMS*sizeof(bool) );
     cudaMemcpyToSymbol(c_localL , GK_localL , N_DIMS*sizeof(int) );
     cudaMemcpyToSymbol(c_totalL , GK_totalL , N_DIMS*sizeof(int) );
-    cudaMemcpyToSymbol(c_plusGhost , GK_plusGhost , N_DIMS*sizeof(int) );
-    cudaMemcpyToSymbol(c_minusGhost , GK_minusGhost , N_DIMS*sizeof(int) );
+    cudaMemcpyToSymbol(c_sideGhost , GK_sideGhost , 2*N_DIMS*sizeof(int) );
     cudaMemcpyToSymbol(c_cornerGhost, GK_cornerGhost, 4*N_DIMS*N_DIMS*sizeof(int));
-    cudaMemcpyToSymbol(c_surface , GK_surface3D , N_DIMS*sizeof(int) );
+    cudaMemcpyToSymbol(c_surface3D, GK_surface3D , N_DIMS*sizeof(int) );
     cudaMemcpyToSymbol(c_surface2D , GK_surface2D , N_DIMS*N_DIMS*sizeof(int) );
     
     cudaMemcpyToSymbol(c_procPosition, procPosition, N_DIMS*sizeof(int));
@@ -279,8 +274,8 @@ void plegma::print_status(){
   printfQuda("Total volume is %d\n",GK_totalVolume);
   printfQuda("Local volume is %d\n",GK_localVolume);
   printfQuda("Surface is (x,y,z,t) ( %d , %d , %d , %d)\n",GK_surface3D[0],GK_surface3D[1],GK_surface3D[2],GK_surface3D[3]);
-  printfQuda("The plus Ghost points in directions (x,y,z,t) ( %d , %d , %d , %d )\n",GK_plusGhost[0],GK_plusGhost[1],GK_plusGhost[2],GK_plusGhost[3]);
-  printfQuda("The Minus Ghost points in directixons (x,y,z,t) ( %d , %d , %d , %d )\n",GK_minusGhost[0],GK_minusGhost[1],GK_minusGhost[2],GK_minusGhost[3]);
+  printfQuda("The plus Ghost points in directions (x,y,z,t) ( %d , %d , %d , %d )\n",GK_sideGhost[0],GK_sideGhost[1],GK_sideGhost[2],GK_sideGhost[3]);
+  printfQuda("The Minus Ghost points in directixons (x,y,z,t) ( %d , %d , %d , %d )\n",GK_sideGhost[4],GK_sideGhost[5],GK_sideGhost[6],GK_sideGhost[7]);
   printfQuda("For APE smearing we use nsmear = %d , alpha = %lf\n",GK_nsmearAPE,GK_alphaAPE);
   printfQuda("For Gauss smearing we use nsmear = %d , alpha = %lf\n",GK_nsmearGauss,GK_alphaGauss);
   printfQuda("I got %d source positions to work on\n",GK_Nsources);

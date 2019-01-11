@@ -26,8 +26,8 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost(NULL), h_ext_ghost_corner(NULL), h_elem_backup(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), isAllocHostBackup(false)
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), 
+  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false)
 
 {
   if(GK_init_PLEGMA_flag == false) 
@@ -93,20 +93,16 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   else if (alloc_flag == DEVICE){
     create_device();
   }
-  else if (alloc_flag == BOTH_EXTRA){
-    create_host();
-    create_host_backup();
-    create_device();    
+  else{
+    errorQuda("Error not supported %d\n",alloc_flag);
   }
-
 }
 
 //Destructor
 template<typename Float>
 PLEGMA_Field<Float>::~PLEGMA_Field(){
-  if(h_elem != NULL) destroy_host();
-  if(h_elem_backup != NULL) destroy_host_backup();
-  if(d_elem != NULL) destroy_device();
+  if(isAllocHost) destroy_host();
+  if(isAllocDevice) destroy_device();
 }
 
 template<typename Float>
@@ -147,20 +143,10 @@ void PLEGMA_Field<Float>::unload(){
 template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
   h_elem = (Float*) malloc(bytes_total_plus_ghost_length);
-  h_ext_ghost = (Float*) malloc(bytes_ghost_length);
-  h_ext_ghost_corner = (Float*) malloc(bytes_ghost_corner_length);
-  if(h_elem == NULL || h_ext_ghost == NULL || h_ext_ghost_corner == NULL)
+  if(h_elem == NULL)
     errorQuda("Error with allocation host memory");
   isAllocHost = true;
   zero_host();
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::create_host_backup(){
-  h_elem_backup = (Float*) malloc(bytes_total_plus_ghost_length);
-  if(h_elem_backup == NULL) errorQuda("Error with allocation host memory");
-  isAllocHostBackup = true;
-  zero_host_backup();
 }
 
 template<typename Float>
@@ -169,27 +155,27 @@ void PLEGMA_Field<Float>::create_device(){
   checkCudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
-  GK_deviceMemory += bytes_total_length/(1024.*1024.);          
+  GK_deviceMemory += bytes_total_plus_ghost_length/(1024.*1024.);          
   printfQuda("Device memory in use is %f MB A PLEGMA \n",GK_deviceMemory);
 #endif
-  isAllocDevice = true;
   zero_device();
+  if(ghost_flag >= FIRST_SIDE){
+    cudaMallocHost((void**)&h_ext_ghost_r, bytes_ghost_length);
+    cudaMallocHost((void**)&h_ext_ghost_s, bytes_ghost_length);
+  }
+  if(ghost_flag == FIRST_CORNER){
+    cudaMallocHost((void**)&h_ext_ghost_corner_r, bytes_ghost_corner_length);
+    cudaMallocHost((void**)&h_ext_ghost_corner_s, bytes_ghost_corner_length);
+  }
+  checkCudaError();
+  isAllocDevice = true;
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_host(){
   free(h_elem);
-  free(h_ext_ghost);
-  free(h_ext_ghost_corner);
   h_elem=NULL;
-  h_ext_ghost = NULL;
-  h_ext_ghost_corner = NULL;
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::destroy_host_backup(){
-  free(h_elem_backup);
-  h_elem=NULL;
+  isAllocHost=false;
 }
 
 template<typename Float>
@@ -198,24 +184,29 @@ void PLEGMA_Field<Float>::destroy_device(){
   checkCudaError();
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
-  GK_deviceMemory -= bytes_total_length/(1024.*1024.);
+  GK_deviceMemory -= bytes_total_plus_ghost_length/(1024.*1024.);
   printfQuda("Device memory in use is %f MB D PLEGMA\n",GK_deviceMemory);
 #endif
+  if(ghost_flag >= FIRST_SIDE){
+    cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
+    cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
+  }
+  if(ghost_flag == FIRST_CORNER){
+    cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
+    cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
+  }
+  checkCudaError();
+  isAllocDevice=false;
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::zero_host(){
-  memset(h_elem,0,bytes_total_plus_ghost_length);
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::zero_host_backup(){
-  memset(h_elem_backup,0,bytes_total_plus_ghost_length);
+  if(isAllocHost)memset(h_elem,0,bytes_total_plus_ghost_length);
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::zero_device(){
-  cudaMemset(d_elem,0,bytes_total_plus_ghost_length);
+  if(isAllocDevice)cudaMemset(d_elem,0,bytes_total_plus_ghost_length);
 }
 
 template<typename Float>
@@ -231,10 +222,8 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
   else if (alloc_flag == DEVICE){
     zero_device();
   }
-  else if (alloc_flag == BOTH_EXTRA){
-    zero_host();
-    zero_host_backup();
-    zero_device();    
+  else{
+    errorQuda("Not supported %d\n",alloc_flag);
   }
 }
 
@@ -276,7 +265,6 @@ cudaTextureObject_t PLEGMA_Field<Float>::createTexObject(){
   return tex;
 }
 
-
 template<typename Float>
 void PLEGMA_Field<Float>::destroyTexObject(cudaTextureObject_t tex){
   cudaDestroyTextureObject(tex);
@@ -292,133 +280,73 @@ void PLEGMA_Field<Float>::printInfo(){
 }
 
 template<typename Float>
-static void getOffsets(int dirOr, int field_length,int *pos,
-		       int *height, size_t *width,
-		       size_t *spitch, size_t *dpitch,int *ghostOffset){
-  if( dirOr > -1 && dirOr < 2*N_DIMS ){
-    *pos = (dirOr > N_DIMS) ? 0 : (GK_localL[dirOr]-1);
-    *height = 1;
-    *width = 2*sizeof(Float);
-    *ghostOffset = ( dirOr < N_DIMS ) ? GK_minusGhost[dirOr%N_DIMS] : GK_plusGhost[dirOr%N_DIMS];
-    for(int i=0; i<N_DIMS; i++){
-      if( dirOr % N_DIMS > i ){
-	*pos *= GK_localL[i];
-	*width *= GK_localL[i];
-      }
-      else if( dirOr % N_DIMS < i ){
-	*height *= GK_localL[i];
-      }
-    }
-    *spitch = GK_localL[dirOr%N_DIMS] * (*width);
-    *dpitch = *width;
-  }
-  else{
-    errorQuda("Direction should be in [0,%d] range",2*N_DIMS-1);
-  }
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::ghostToHost(int dirOr){
-  if(ghost_flag < FIRST_SIDE) {
+void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
+  if(comm_size() == 1)
+    return;
+  if(ghost_flag < FIRST_SIDE)
     errorQuda("First side ghosts have not been allocated.\n");
-  }
-  if(dirOr<-1 || dirOr>7)
-    errorQuda("Directions should be in [0,7] range with -1 all directions");
-  bool isAll=(dirOr<0)?true:false;
+  if(dirOr<-1 || dirOr>2*N_DIMS-1)
+    errorQuda("Directions should be in [-1,%d] range with -1 all directions",2*N_DIMS-1);
 
-  int position=0;
-  int height=0;
-  size_t width=0;
-  size_t spitch=0;
-  size_t dpitch=0;
-  int ghostOffset=0;
-  for(int ir = 0 ; ir <= 7 ; ir++)
-    if(dirOr == ir || isAll){
-      if(GK_localL[ir%4] < GK_totalL[ir%4]){
-	Float *h_elem_offset = NULL;
-	Float *d_elem_offset = NULL;
-	getOffsets<Float>(ir,field_length,&position,&height,&width,&spitch,&dpitch,&ghostOffset);
-	int n_loop=field_length;
-	if(height==1) {
-	  n_loop = 1;
-	  height = field_length;
-	}
-	for(int i = 0 ; i < n_loop; i++){
-	  d_elem_offset = d_elem + i*total_length*2 + position*2;
-	  h_elem_offset = h_elem + ghostOffset*field_length*2 + i*GK_surface3D[ir%4]*2;
-	  cudaMemcpy2D(h_elem_offset,dpitch,d_elem_offset, spitch,width,height,cudaMemcpyDeviceToHost);
-	  checkCudaError();  
-	}
-      }
-    }
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::cpuExchangeGhost(int dirOr){
-
-  if(ghost_flag < FIRST_SIDE) {
-    errorQuda("First side ghosts have not been allocated.\n");
-  }
-  if(dirOr<-1 || dirOr>7)
-    errorQuda("Directions should be in [0,7] range with -1 all directions");
   bool isAll = (dirOr<0) ? true:false;
 
-  MsgHandle *mh_send_fwd[4];
-  MsgHandle *mh_from_back[4];
-  MsgHandle *mh_from_fwd[4];
-  MsgHandle *mh_send_back[4];
+  std::vector<MsgHandle *> mh_recv;
+  std::vector<MsgHandle *> mh_send;
 
-  Float *pointer_receive = NULL;
-  Float *pointer_send = NULL;
-
-  for(int ir = 0 ; ir <= 7 ; ir++)
-    if(dirOr == ir || isAll){
-      if(GK_localL[ir%4] < GK_totalL[ir%4]){
-	size_t nbytes = GK_surface3D[ir%4]*field_length*2*sizeof(Float);
-	int ghost = ir<4?GK_minusGhost[ir%4]:GK_plusGhost[ir%4];
-	pointer_receive=h_ext_ghost + (ghost-total_length)*field_length*2;
-	pointer_send=h_elem + ghost*field_length*2;
-	if(ir<4){
-	  mh_from_back[ir%4] = comm_declare_receive_relative(pointer_receive,ir%4,-1,nbytes);
-	  mh_send_fwd[ir%4] = comm_declare_send_relative(pointer_send,ir%4,1,nbytes);
-	  comm_start(mh_from_back[ir%4]);
-	  comm_start(mh_send_fwd[ir%4]);
-	  comm_wait(mh_send_fwd[ir%4]);
-	  comm_wait(mh_from_back[ir%4]);
-
-	  comm_free(mh_from_back[ir%4]);
-	  comm_free(mh_send_fwd[ir%4]);
-	}
-	else{
-	  mh_from_fwd[ir%4] = comm_declare_receive_relative(pointer_receive,ir%4,1,nbytes);
-	  mh_send_back[ir%4] = comm_declare_send_relative(pointer_send,ir%4,-1,nbytes);
-	  comm_start(mh_from_fwd[ir%4]);
-	  comm_start(mh_send_back[ir%4]);
-	  comm_wait(mh_send_back[ir%4]);
-	  comm_wait(mh_from_fwd[ir%4]);
-
-	  comm_free(mh_from_fwd[ir%4]);
-	  comm_free(mh_send_back[ir%4]);
-	}
+  for(int i=0; i<2*N_DIMS; i++){
+    if( GK_dimBreak[i%N_DIMS] ){
+      if(dirOr == i || isAll){
+	Float *pointer_receive = h_ext_ghost_r + (GK_sideGhost[i]-total_length)*field_length*2;
+	Float *pointer_send = h_ext_ghost_s + (GK_sideGhost[i]-total_length)*field_length*2;
+	Float *pointer_device = d_elem + GK_sideGhost[i]*field_length*2;
+	int disp[N_DIMS] = {0};
+	size_t nbytes = GK_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
+	
+	// collecting elements from device
+	copy_side_to_ghost(*this, i);
+	cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+	checkCudaError();
+	
+	// communicating
+	disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
+	mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
+	disp[i%N_DIMS] *= -1;
+	mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+	disp[i%N_DIMS] = 0;
+	comm_start(mh_recv.back());
+	comm_start(mh_send.back());
       }
-    }    
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::ghostToDevice(){
-  if(comm_size() > 1){
-    if(ghost_flag < FIRST_SIDE) {
-      errorQuda("First side ghosts have not been allocated.\n");
     }
-    Float *host = h_ext_ghost;
+  }
+  // waiting for communications
+  while (! mh_recv.empty()) {
+    comm_wait(mh_recv.back());
+    comm_wait(mh_send.back());
+    comm_free(mh_recv.back());
+    comm_free(mh_send.back());
+    mh_recv.pop_back();
+    mh_send.pop_back();
+  }
+  //copying to device
+  if(isAll) {
+    Float *host = h_ext_ghost_r;
     Float *device = d_elem+total_length*field_length*2;
-    cudaMemcpy(device,host,bytes_ghost_length,cudaMemcpyHostToDevice);
+    cudaMemcpy(device, host, bytes_ghost_length,cudaMemcpyHostToDevice);
     checkCudaError();
+  } else {
+    if( GK_dimBreak[dirOr%N_DIMS] ){
+      Float *host = h_ext_ghost_r + (GK_sideGhost[dirOr]-total_length)*field_length*2;
+      Float *device = d_elem + GK_sideGhost[dirOr]*field_length*2;
+      cudaMemcpy(device, host, GK_surface3D[dirOr%N_DIMS]*field_length*2*sizeof(Float),
+		 cudaMemcpyHostToDevice);
+      checkCudaError();
+    }
   }
 }
 
+
 template<typename Float>
-void PLEGMA_Field<Float>::communicateCorners(int dirOr){
+void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
   if(comm_size() == 1)
     return;
   if(ghost_flag < FIRST_CORNER)
@@ -435,8 +363,8 @@ void PLEGMA_Field<Float>::communicateCorners(int dirOr){
     for(int j=i+1; j<2*N_DIMS; j++){
       if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
 	if(dirOr == i || dirOr == j || isAll){
-	  Float *pointer_receive = h_ext_ghost_corner + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
-	  Float *pointer_send = h_elem + GK_cornerGhost[i][j]*field_length*2;
+	  Float *pointer_receive = h_ext_ghost_corner_r + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+	  Float *pointer_send = h_ext_ghost_corner_s + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
 	  Float *pointer_device = d_elem + GK_cornerGhost[i][j]*field_length*2;
 	  int disp[N_DIMS] = {0};
 	  size_t nbytes = GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float);
@@ -447,8 +375,8 @@ void PLEGMA_Field<Float>::communicateCorners(int dirOr){
 	  checkCudaError();
 
 	  // communicating
-	  disp[i%N_DIMS] = (i<N_DIMS) ? -1 : 1;
-	  disp[j%N_DIMS] = (j<N_DIMS) ? -1 : 1;
+	  disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
+	  disp[j%N_DIMS] = (j<N_DIMS) ? +1 : -1;
 	  mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
 	  disp[i%N_DIMS] *= -1;
 	  disp[j%N_DIMS] *= -1;
@@ -471,7 +399,7 @@ void PLEGMA_Field<Float>::communicateCorners(int dirOr){
   }
   //copying to device
   if(isAll) {
-    Float *hostCorner = h_ext_ghost_corner;
+    Float *hostCorner = h_ext_ghost_corner_r;
     Float *device = d_elem+(total_length+ghost_length)*field_length*2;
     cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
     checkCudaError();
@@ -480,7 +408,7 @@ void PLEGMA_Field<Float>::communicateCorners(int dirOr){
       for(int j=i+1; j<2*N_DIMS; j++){
 	if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
 	  if(dirOr == i || dirOr == j || isAll){
-	    Float *hostCorner = h_ext_ghost_corner + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+	    Float *hostCorner = h_ext_ghost_corner_r + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
 	    Float *device = d_elem+GK_cornerGhost[i][j]*field_length*2;
 	    cudaMemcpy(device, hostCorner, GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float),
 		       cudaMemcpyHostToDevice);
@@ -498,12 +426,10 @@ void PLEGMA_Field<Float>::communicateGhost(int dirOr, GHOST_FLAG which_ghost){
     errorQuda("Asking to communicate ghost but they have not been allocated.\n");
   }
   if(which_ghost >= FIRST_SIDE){
-    ghostToHost(dirOr);
-    cpuExchangeGhost(dirOr);
-    ghostToDevice();
+    communicateSideGhost(dirOr);
   }
   if(which_ghost >= FIRST_CORNER){
-    communicateCorners(dirOr);
+    communicateCornerGhost(dirOr);
   }
 }
 
@@ -515,9 +441,7 @@ void PLEGMA_Field<Float>::communicateGhost(int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
   // we have to make sure that we have the ghost
-  Fin.ghostToHost(dirOr);
-  Fin.cpuExchangeGhost(dirOr);
-  Fin.ghostToDevice();
+  Fin.communicateSideGhost((dirOr+N_DIMS)%(2*N_DIMS));
   shiftField(Fin,*this,dirOr);
 }
 

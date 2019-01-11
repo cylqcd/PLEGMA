@@ -36,13 +36,8 @@ void PLEGMA_Vector<Float>::copy(PLEGMA_Vector<double> &vecIn)  {
 
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,PLEGMA_Gauge<Float> &gaugeAPE){
-  gaugeAPE.ghostToHost();
-  gaugeAPE.cpuExchangeGhost();
-  gaugeAPE.ghostToDevice();
-
-  vecIn.ghostToHost();
-  vecIn.cpuExchangeGhost();
-  vecIn.ghostToDevice();
+  gaugeAPE.communicateSideGhost();
+  vecIn.communicateSideGhost();
 
   gaugeTex<Float> texGauge;
   vectorTex<Float> texVecIn, texVecOut;
@@ -54,15 +49,11 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,PLEGMA_G
   for(int i = 0 ; i < GK_nsmearGauss ; i++){
     if( (i%2) == 0){
       gaussian_smearing(this->D_elem(),texVecIn,texGauge);
-      this->ghostToHost();
-      this->cpuExchangeGhost();
-      this->ghostToDevice();
+      this->communicateSideGhost();
     }
     else{
       gaussian_smearing(vecIn.D_elem(),texVecOut,texGauge);
-      vecIn.ghostToHost();
-      vecIn.cpuExchangeGhost();
-      vecIn.ghostToDevice();
+      vecIn.communicateSideGhost();
     }
   }
 
@@ -195,11 +186,8 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
     cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
-  else if (where == BOTH_EXTRA){
-    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
-    this->h_elem_backup[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0;
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
-                cudaMemcpyHostToDevice ); 
+  else{
+    errorQuda("Not supported %d\n",where);
   }
 }
 
@@ -414,3 +402,22 @@ void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float>
 
 template class PLEGMA_Vector<float>;
 template class PLEGMA_Vector<double>;
+
+namespace plegma{
+  
+  template<typename Float>
+  void copyToQUDA(ColorSpinorField *qudaVector, Float* delem, bool isEv){
+    copy_to_QUDA(delem, *qudaVector, isEv);
+  }
+  template void copyToQUDA<float>(ColorSpinorField *qudaVector, float* delem, bool isEv);
+  template void copyToQUDA<double>(ColorSpinorField *qudaVector, double* delem, bool isEv);
+
+  template<typename Float>
+  void copyFromQUDA(Float* delem, ColorSpinorField *qudaVector, bool isEv){
+    copy_from_QUDA(delem, *qudaVector, isEv);
+  }
+
+  template void copyFromQUDA<float>(float* delem, ColorSpinorField *qudaVector, bool isEv);
+  template void copyFromQUDA<double>(double* delem, ColorSpinorField *qudaVector, bool isEv);
+
+}

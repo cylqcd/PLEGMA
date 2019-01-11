@@ -6,8 +6,8 @@ using namespace plegma;
 template<typename Float>
 PLEGMA_QLoops<Float>::PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag, bool isOneD):
   PLEGMA_Field<Float>(alloc_flag, QLOOPS),isOneD(isOneD){
-  h_loc = (Float*) malloc(this->Bytes_total());
-  if(h_loc == NULL) errorQuda("Error with allocation host memory");
+  cudaMallocHost((void**)&h_loc, this->Bytes_total());
+  checkCudaError();
   memset(h_loc,0,this->Bytes_total());
   for(int idir = 0 ; idir < N_DIMS ; idir++){
     h_oneD[idir] = NULL;
@@ -15,9 +15,9 @@ PLEGMA_QLoops<Float>::PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag, bool isOneD):
   }
   if(isOneD){
     for(int idir = 0 ; idir < N_DIMS ; idir++){
-      h_oneD[idir] = (Float*) malloc(this->Bytes_total());
-      h_oneDC[idir] = (Float*) malloc(this->Bytes_total());
-      if(h_oneD[idir] == NULL || h_oneDC[idir] == NULL) errorQuda("Error with allocation host memory");
+      cudaMallocHost((void**)&h_oneD[idir], this->Bytes_total());
+      cudaMallocHost((void**)&h_oneDC[idir], this->Bytes_total());
+      checkCudaError();
       memset(h_oneD[idir],0,this->Bytes_total());
       memset(h_oneDC[idir],0,this->Bytes_total());
     }
@@ -26,11 +26,11 @@ PLEGMA_QLoops<Float>::PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag, bool isOneD):
 
 template<typename Float>
 PLEGMA_QLoops<Float>::~PLEGMA_QLoops(){
-  free(h_loc);
+  cudaFreeHost(h_loc);
   if(isOneD)
     for(int idir = 0 ; idir < N_DIMS ; idir++){
-      free(h_oneDC[idir]);
-      free(h_oneD[idir]);
+      cudaFreeHost(h_oneDC[idir]);
+      cudaFreeHost(h_oneD[idir]);
     }
 }
 
