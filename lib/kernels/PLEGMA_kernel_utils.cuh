@@ -22,6 +22,33 @@ using namespace plegma;
 
 namespace plegma {
   enum LEFTRIGHT {LEFT, RIGHT};
+  enum TMROT {NOROT, TMP, TMM};
+
+  template<bool isTransMatrix,typename Float>
+  __inline__ __device__ Float2<Float> trace_gamma_S(int opId, TMROT trot, Float2<Float> R[N_SPINS][N_SPINS]){
+      const Float2<float> (*g)[4];
+      const short int (*gIn)[4][2];
+      if(trot == TMP){
+	g = (Float2<float> (*)[4]) gammaTmP;
+	gIn = gammaIndTmP; 
+      }else if (trot == TMM){
+	g = (Float2<float> (*)[4]) gammaTmM;
+	gIn = gammaIndTmM;     
+      }
+      else{
+	g = (Float2<float> (*)[4]) gamma;
+	gIn = gammaInd;
+      }
+      Float2<Float> accum = 0.;
+#pragma unroll
+      for(int nz = 0 ; nz < N_SPINS ; nz++){
+	int mu = gIn[opId][nz][0];
+        int nu = gIn[opId][nz][1];
+        Float2<Float> val = g[opId][nz];
+        accum += isTransMatrix ? val*R[mu][nu] : val*R[nu][mu];
+      }
+      return accum;
+  }
   
   template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaV(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS], short int r){
@@ -126,6 +153,12 @@ namespace plegma {
     }
   }
 
+  template<typename FloatA>
+  __inline__ __device__ void Gdag(Float2<FloatA> a[N_COLS][N_COLS]){
+    Gtrans(a);
+    Gconj(a);
+  }
+  
   template<typename T, typename FloatG>
   __inline__ __device__ void scaleG(Float2<FloatG> a[N_COLS][N_COLS], T w){
   #pragma unroll
@@ -215,7 +248,7 @@ namespace plegma {
     }
   }
 
-  template<bool isLeftTrans,typename FloatA, typename FloatB, typename FloatC>
+  template<bool isLeftTrans, ACCUM_TYPE aty,typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void partial_trace_mul_Prop_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
 							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
 							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS]){
@@ -223,30 +256,37 @@ namespace plegma {
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	A[mu][nu].x=0.; A[mu][nu].y=0.;
+	if(aty == ACC_ZERO) {A[mu][nu].x=0.; A[mu][nu].y=0.;}
 #pragma unroll
 	for(int rho = 0 ; rho < N_SPINS; rho++)
 #pragma unroll
 	  for(int a = 0; a < N_COLS; a++)
 #pragma unroll
 	    for(int b = 0; b < N_COLS; b++){
-	      if(isLeftTrans) A[mu][nu] = A[mu][nu] + B[mu][rho][b][a] * C[nu][rho][b][a];
-	      else A[mu][nu] = A[mu][nu] + B[rho][mu][a][b] * C[nu][rho][b][a];
+	      if(aty == ACC_ZERO || aty == ACC_PLUS){
+		if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * C[nu][rho][b][a];
+		else A[mu][nu] +=  B[rho][mu][a][b] * C[nu][rho][b][a];
+	      }
+	      else{
+		if(isLeftTrans) A[mu][nu] -=  B[mu][rho][b][a] * C[nu][rho][b][a];
+		else A[mu][nu] -=  B[rho][mu][a][b] * C[nu][rho][b][a];		
+	      }
 	    }
 	
       }
   }
 
-  template<bool isLeftTrans,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
   __inline__ __device__ void partial_trace_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
 							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
 							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
 							 Float2<FloatD> D[N_COLS][N_COLS]){
+    if(isGdag) Gdag(D);
 #pragma unroll
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	A[mu][nu].x=0.; A[mu][nu].y=0.;
+	if(aty == ACC_ZERO){ A[mu][nu].x=0.; A[mu][nu].y=0.;}
 #pragma unroll
 	for(int rho = 0 ; rho < N_SPINS; rho++)
 #pragma unroll
@@ -255,11 +295,18 @@ namespace plegma {
 	    for(int b = 0; b < N_COLS; b++)
 #pragma unroll
 	      for(int c = 0; c < N_COLS; c++){
-		if(isLeftTrans) A[mu][nu] = A[mu][nu] + B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
-		else A[mu][nu] = A[mu][nu] + B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
+		if(aty == ACC_ZERO || aty == ACC_PLUS){
+		  if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
+		  else A[mu][nu] += B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
+		}
+		else{
+		  if(isLeftTrans) A[mu][nu] -=  B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
+		  else A[mu][nu] -= B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
+		}
 	      }
 	
       }
+    if(isGdag) Gdag(D);
   }
 
   template<typename FloatA, typename FloatB>
