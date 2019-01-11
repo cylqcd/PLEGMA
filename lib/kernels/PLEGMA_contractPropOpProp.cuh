@@ -6,79 +6,80 @@ using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink>
-struct ArgsPropOpProp{
-  FloatC* block;
-  propTex<FloatA> prop1;
-  propTex<FloatB> prop2;
-  su3Tex<FloatS> su3;
-  KernelArr<GAMMAS> listGammas;
-  int it, x0, y0, z0;
-  int signProps;
-};
-
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink>
-__global__ void contractPropOpProp_kernel(ArgsPropOpProp<FloatC,FloatA,FloatB,FloatS,runFT,isLink> args){
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink, int dir, bool isCons>
+__global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex, su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas, int it, int x0, int y0, int z0, int signProps){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + args.it*c_stride_spatial;
-  Float2<FloatC> *block2 = (Float2<FloatC> *)args.block;
+  int vid = sid + it*c_stride_spatial;
+  Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
-  Float2<FloatC> accum = 0.;
-  int source_pos[3] = {args.x0, args.y0, args.z0};
   Float2<FloatC> R[N_SPINS][N_SPINS];
+  Float2<FloatC> noeV;  
   if (sid < c_threads/c_localL[3]){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
-    args.prop1.get(prop1,vid);
-    args.prop2.get(prop2,vid);
-    if(isLink){
-      Float2<FloatS> su3[N_COLS][N_COLS];
-      args.su3.get(su3,vid);
-      partial_trace_mul_Prop_G_Prop<true>(R,prop1,prop2,su3);
-    }
-    else
-      partial_trace_mul_Prop_Prop<true>(R,prop1,prop2); 
-  }
-
-
-  const Float2<float> (*gtm)[4];
-  const short int (*gtmIn)[4][2];
-  if(args.signProps > 0){
-    gtm = (Float2<float> (*)[4]) gammaTmP;
-    gtmIn = gammaIndTmP; 
-  }else{
-    gtm = (Float2<float> (*)[4]) gammaTmM;
-    gtmIn = gammaIndTmM;     
-  }
-  
-  for(int iop = 0; iop < args.listGammas.size; iop++){
-    int opId=args.listGammas.array[iop];
-    accum=0.;
-    if (sid < c_threads/c_localL[3]){
-#pragma unroll
-      for(int nz = 0 ; nz < N_SPINS ; nz++){
-	int mu = gtmIn[opId][nz][0];
-	int nu = gtmIn[opId][nz][1];
-	Float2<FloatC> val = gtm[opId][nz];
-	accum = accum + val*R[mu][nu];
+    if(dir < 0){ // either local or Wilson line
+      prop1Tex.get(prop1,vid);
+      prop2Tex.get(prop2,vid);
+      if(isLink){ // for Wilson line
+	Float2<FloatS> su3[N_COLS][N_COLS];
+	su3Tx.get(su3,vid);
+	partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
       }
+      else{ // local operators
+	partial_trace_mul_Prop_Prop<true,ACC_ZERO>(R,prop1,prop2);}
+    }
+    else{ // either oneD or conserved current
+      // term x, x, x+dir
+      Float2<FloatS> su3[N_COLS][N_COLS];
+      prop1Tex.get(prop1,vid);  su3Tx.get(su3,vid); prop2Tex.get<Plus>(prop2,vid,dir);
+      partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+      if(isCons) noeV = trace_gamma_S<true>(listGammas.array[0],NOROT,R) - trace_gamma_S<true>(ONE,NOROT,R);
+
+      //term x, x-dir, x-dir
+      su3Tx.get<Minus>(su3,vid,dir); prop2Tex.get<Minus>(prop2,vid,dir);
+      if(isCons){ partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3);
+	noeV += trace_gamma_S<true>(listGammas.array[0],NOROT,R) + trace_gamma_S<true>(ONE,NOROT,R);}
+      else partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+
+      //term x+dir, x, x
+      prop1Tex.get<Plus>(prop1,vid,dir); su3Tx.get(su3,vid); prop2Tex.get(prop2,vid);
+      if(isCons){ partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3);
+	noeV += trace_gamma_S<true>(listGammas.array[0],NOROT,R) + trace_gamma_S<true>(ONE,NOROT,R);}
+      else partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+
+      //term x-dir, x-dir, x
+      prop1Tex.get<Minus>(prop1,vid,dir); su3Tx.get<Minus>(su3,vid,dir);
+      if(isCons){ partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+	noeV += trace_gamma_S<true>(listGammas.array[0],NOROT,R) - trace_gamma_S<true>(ONE,NOROT,R);}
+      else partial_trace_mul_Prop_G_Prop<true,ACC_PLUS,false>(R,prop1,prop2,su3);      
+    }    
+  }
+
+  Float2<FloatC> accum = 0.;
+  int source_pos[3] = {x0, y0, z0};
+
+  for(int iop = 0; iop < listGammas.size; iop++){
+    int opId=listGammas.array[iop];
+    accum.x=0.;accum.y=0.;
+    if (sid < c_threads/c_localL[3]){
+      if(isCons) accum = 0.25*noeV;
+      else accum = (dir<0 ? 1. : 0.25) * ( (signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
     }
     if(runFT){
       //    extern __shared__ int ext_shared_cache[];
       __shared__ Float2<FloatC> ext_shared_cache[THREADS_PER_BLOCK];
       Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
-      fourier_transform_3D(block2+opId*gridDim.x, &accum, shared_cache, 1, sid, source_pos,args.listGammas.size-1,+1);
-      // shuffling
+      fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos,listGammas.size-1,+1);
     }
     else{
       if (sid < c_threads/c_localL[3])
-	for(int iop = 0; iop < args.listGammas.size; iop++)
-	  block2[sid*args.listGammas.size + iop] = accum;
+	for(int iop = 0; iop < listGammas.size; iop++)
+	  block2[sid*listGammas.size +iop] = accum;
     }
   }
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink>
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink, int dir, bool isCons>
 static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatA> prop2,
 				 int signProps, su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
   if(gammas.size() <= 0)
@@ -99,23 +100,12 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
     size = site_size*volume;
   }
 
-  ArgsPropOpProp<FloatC,FloatA,FloatB,FloatS,runFT,isLink> args;
-  args.prop1 = prop1;
-  args.prop2 = prop2;
-  args.su3 = su3;
-  args.signProps = signProps;
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
   cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
   checkCudaError();
   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
   checkCudaError();
-  args.listGammas = listGammas;
-
-  args.x0 = GK_sourcePosition[isource][0];
-  args.y0 = GK_sourcePosition[isource][1];
-  args.z0 = GK_sourcePosition[isource][2];
-  args.it = it;
 
   // !!!!!!!!!!!!!!! Warning !!!!!!!!!!!!!!!! //
   // when do tuning do not set sharedBytesPerThread = site_size*sizeof(Float2<FloatC>); but sharedBytesPerThread = sizeof(Float2<FloatC>)
@@ -129,10 +119,11 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
     alloc_size = size;
   }
   cudaMalloc((void**)&d_partial_block, alloc_size*2*sizeof(FloatC));
-  args.block = d_partial_block;
   checkCudaError();
-
-  contractPropOpProp_kernel<<<gridDim,blockDim>>>(args);
+  contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT, isLink, dir,isCons>
+    <<<gridDim,blockDim>>>(d_partial_block, prop1, prop2, su3, listGammas, it,
+			   GK_sourcePosition[isource][0], GK_sourcePosition[isource][1],
+			   GK_sourcePosition[isource][2], signProps);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
@@ -157,10 +148,11 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   FloatC *corr_pt = corr.getCorr();
   int sz = corr.getSiteSize();
   if(sz < gammas.size())errorQuda("The size of list with gammas exceeds the site_size of correlators\n");
+  int shift = (dir<0) ? 0 : dir*gammas.size()*2;
   for(size_t v = 0 ; v < volume; v++)
     for(int i = 0 ; i < gammas.size(); i++) {
-      corr_pt[it*volume*sz*2+v*sz*2+i*2+0] = h_partial_block[(v*gammas.size()+i)*2+0];
-      corr_pt[it*volume*sz*2+v*sz*2+i*2+1] = h_partial_block[(v*gammas.size()+i)*2+1];
+      corr_pt[it*volume*sz*2+v*sz*2+shift+i*2+0] = h_partial_block[(v*gammas.size()+i)*2+0];
+      corr_pt[it*volume*sz*2+v*sz*2+shift+i*2+1] = h_partial_block[(v*gammas.size()+i)*2+1];
     }
 
   free(h_partial_block);
@@ -168,27 +160,68 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
 }
 
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool isLink>
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool isLink, int dir, bool isCons>
 static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
 			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
+  if(!isLink && dir>=0) errorQuda("Does not make sence to do not have links and have directions");
+  if(isCons && !isLink) errorQuda("Does not make sence to do noether current without links");
+  
   if(corr.getCorrSpace() == POSITION_SPACE)
-    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink>(corr,prop1,prop2,signProps,su3,it,gammas);
+    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else if(corr.getCorrSpace() == MOMENTUM_SPACE)
-    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink>(corr,prop1,prop2,signProps,su3,it,gammas);
+    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else
     errorQuda("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
 }
 
 template<typename FloatC,typename FloatA, typename FloatB>
-static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, int it,
-                                 std::vector<GAMMAS> gammas){
+void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, int it){
   su3Tex<FloatC> su3;
   su3.tex=0;
-  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,false>(corr,prop1,prop2,signProps,su3,it, gammas);
+  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
+  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,false,-1,false>(corr,prop1,prop2,signProps,su3,it, gammas);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
+void contractPropOpProp_wilsonLine(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
 			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
-  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true>(corr,prop1,prop2,signProps,su3,it, gammas);
+  contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,-1,false>(corr,prop1,prop2,signProps,su3,it, gammas);
+}
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
+void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
+				     su3Tex<FloatS> su3, int it, int dir){
+  if(dir < 0 || dir > 3) errorQuda("Allowed directions are 0,1,2,3\n");
+  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
+  switch(dir){
+  case(0): contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,0,false>(corr,prop1,prop2,signProps,su3,it, gammas); break;
+  case(1): contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,1,false>(corr,prop1,prop2,signProps,su3,it, gammas);	break;
+  case(2): contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,2,false>(corr,prop1,prop2,signProps,su3,it, gammas);	break;
+  case(3): contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,3,false>(corr,prop1,prop2,signProps,su3,it, gammas);	break;
+  }
+}
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
+void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
+				     su3Tex<FloatS> su3, int it, int dir){
+  if(dir < 0 || dir > 3) errorQuda("Allowed directions are 0,1,2,3\n");
+  std::vector<GAMMAS> gammas;
+  switch(dir){
+  case(0):
+    gammas.push_back(G1);
+    contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,0,true>(corr,prop1,prop2,signProps,su3,it, gammas);
+    break;
+  case(1):
+    gammas.push_back(G2);
+    contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,1,true>(corr,prop1,prop2,signProps,su3,it, gammas);
+    break;
+  case(2):
+    gammas.push_back(G3);
+    contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,2,true>(corr,prop1,prop2,signProps,su3,it, gammas);
+    break;
+  case(3):
+    gammas.push_back(G4);
+    contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,3,true>(corr,prop1,prop2,signProps,su3,it, gammas);
+    break;
+  }
 }
