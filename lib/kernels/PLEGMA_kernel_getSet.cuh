@@ -394,7 +394,7 @@ namespace plegma {
     inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_SPINS*N_COLS, dirs ...);
-      return get(S,ss);
+      get(S,ss);
     }
   };
 
@@ -451,10 +451,10 @@ namespace plegma {
       get( P, ss );
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
-      return get(P,ss);
+      get(P,ss);
     }
   };
 
