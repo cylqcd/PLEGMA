@@ -54,7 +54,7 @@ namespace plegma {
     PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS);
     ~PLEGMA_Vector3D(){;}
     void absorb(PLEGMA_Propagator3D<Float> &prop, int nu, int c2);
-    void absorb(PLEGMA_Propagator4D<Float> &prop, int global_it, int nu, int c2);
+    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2);
   };
 }
 

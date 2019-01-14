@@ -7,6 +7,7 @@ namespace plegma {
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Vector3D;
+  template<typename Float>  class PLEGMA_Propagator3D;
   /////////////////////////////
   // CLASS: PLEGMA_Propagator //
   /////////////////////////////

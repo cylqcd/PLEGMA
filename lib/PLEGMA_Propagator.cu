@@ -318,12 +318,8 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int nu, int
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
-      if(is_myIt){
-	pointer_src = (vec.D_elem() + mu*N_COLS*V3*2 + c1*V3*2);
-	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
-      }
-      else
-	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+      pointer_src = (vec.D_elem() + mu*N_COLS*V3*2 + c1*V3*2);
+      cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
     }
   checkCudaError();
 }
