@@ -475,5 +475,7 @@ Float* PLEGMA_Field<Float>::FT3D(std::vector<std::vector<int> > mom, int sign){
   return FT3D_k<Float>(*this,mom, sign);
 }
 
+
+
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
