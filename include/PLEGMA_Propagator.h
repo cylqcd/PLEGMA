@@ -6,7 +6,7 @@
 namespace plegma {
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
-
+  template<typename Float>  class PLEGMA_Vector3D;
   /////////////////////////////
   // CLASS: PLEGMA_Propagator //
   /////////////////////////////
@@ -23,8 +23,10 @@ namespace plegma {
     
     void absorbVectorToHost(PLEGMA_Vector<Float> &vec, 
 			    int nu, int c2);
-    void absorbVectorToDevice(PLEGMA_Vector<Float> &vec, 
-			      int nu, int c2);
+    void absorb(PLEGMA_Vector<Float> &vec, int nu, int c2);
+    void absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2);
+    void absorb(PLEGMA_Propagator3D<Float> &prop, int global_it);
+    void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, int nu, int c2);
     void applyBoundaries_device(int t0);
     void rotateToPhysicalBase_host(int sign);
     void rotateToPhysicalBase_device(int sign);
@@ -43,11 +45,10 @@ namespace plegma {
     
     void absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
 				 int timeslice);
-    void absorbTimeSlice(PLEGMA_Propagator<Float> &prop, 
-			 int timeslice);
-    void absorbVectorTimeSlice(PLEGMA_Vector<Float> &vec, 
-			       int timeslice, int nu, int c2);
-    void broadcast(int tsink);
+    
+    void absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2);
+    void absorb(PLEGMA_Propagator<Float> &prop, int global_it);
+    void absorb(PLEGMA_Vector3D<Float> &vec, int nu, int c2);
   };
 }
 

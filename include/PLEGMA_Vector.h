@@ -29,10 +29,9 @@ namespace plegma {
     void copy(PLEGMA_Vector<double> &vecIn);
     void norm2Host();
     void norm2Device();
-    void copyPropagator3D(PLEGMA_Propagator3D<Float> &prop, 
-			  int timeslice, int nu , int c2);
-    void copyPropagator(PLEGMA_Propagator<Float> &prop, 
-			int nu , int c2);
+    void absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2);
+    void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
+    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2);
     void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);
     void pointSource(int *sourceposition, int spin, int color);
@@ -44,7 +43,19 @@ namespace plegma {
 
   template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
   template<typename Float> void copyFromQUDA(Float* delem, quda::ColorSpinorField *cudaVector, bool isEv = false);
+
+  /////////////////////////////////////
+  // CLASS: PLEGMA_Vector3D ///////////
+  ////////////////////////////////////
   
+  template<typename Float>
+    class PLEGMA_Vector3D : public PLEGMA_Field<Float> {
+  public:
+    PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS);
+    ~PLEGMA_Vector3D(){;}
+    void absorb(PLEGMA_Propagator3D<Float> &prop, int nu, int c2);
+    void absorb(PLEGMA_Propagator4D<Float> &prop, int global_it, int nu, int c2);
+  };
 }
 
 #endif
