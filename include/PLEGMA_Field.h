@@ -86,7 +86,6 @@ namespace plegma {
     void shift(PLEGMA_Field &Fin, int dirOr);
     void setUnit(std::vector<int> indDiag);
 
-    Float* FT3D(std::vector<std::vector<int> > mom, int sign=-1);
   };
 }
 #endif
