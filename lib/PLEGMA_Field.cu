@@ -465,16 +465,6 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
   }
 }
 
-// template<typename Float>
-// Float* PLEGMA_Field<Float>::FT3D(std::vector<std::vector<int> > mom, int sign){
-//   /*
-//    * This function computes FT of a field using cuBLAS dot products
-//    * It returns a host pointer to the field in momentum space with size NDF*T*Nmom
-//    */
-//   return FT3D_k<Float>(*this,mom, sign);
-// }
-
-
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
