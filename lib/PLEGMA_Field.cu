@@ -9,7 +9,6 @@
 #include <vector>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
-#include <PLEGMA_FT.cuh>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -466,14 +465,14 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
   }
 }
 
-template<typename Float>
-Float* PLEGMA_Field<Float>::FT3D(std::vector<std::vector<int> > mom, int sign){
-  /*
-   * This function computes FT of a field using cuBLAS dot products
-   * It returns a host pointer to the field in momentum space with size NDF*T*Nmom
-   */
-  return FT3D_k<Float>(*this,mom, sign);
-}
+// template<typename Float>
+// Float* PLEGMA_Field<Float>::FT3D(std::vector<std::vector<int> > mom, int sign){
+//   /*
+//    * This function computes FT of a field using cuBLAS dot products
+//    * It returns a host pointer to the field in momentum space with size NDF*T*Nmom
+//    */
+//   return FT3D_k<Float>(*this,mom, sign);
+// }
 
 
 

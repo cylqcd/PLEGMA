@@ -19,16 +19,21 @@ namespace plegma {
     Float *h_elem; // memory to hold the transformed data
     int dims; // the dimensionality of the transformation either 3 or 4
     int dimT; // if dims = 3, dimT = (dims ==3) ? GK_localL[3] : 1; 
+    bool accum;
     void createMom();
     void checkAllocation(int newDof);
+    void zero();
   public:
-    PLEGMA_FT(int Q2_max, int D3D4 = 3); // allow also for a transformation in 4D
+    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); // allow also for a transformation in 4D
     ~PLEGMA_FT();
-    int Nmoms() const{ return momList.size();};
-    VVint MomList() const{ return momList;};
+    int Nmoms() const{ return momList.size();}
+    VVint MomList() const{ return momList;}
+    int Dims() const{return dims;}
+    int DimT() const{return dimT;}
     void writeToDisk(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift = 0);
-    void applyNaive(const PLEGMA_Field<Float> &f); // naive transformation using a simple custom kernel for reduction
-    void apply(const PLEGMA_Field<Float> &f);      // transformation using THRUST for the momentum field and cuBLAS for reduction
-    void applyFFT(const PLEGMA_Field<Float> &f);  // use FFT in case in the future is implemented
+    void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
+    void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction
+    void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
+    void mulMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
   };
 }
