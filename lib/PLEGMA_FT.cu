@@ -34,8 +34,8 @@ void PLEGMA_FT<Float>::zero(){
 
 template<typename Float>
 void PLEGMA_FT<Float>::createMom(){
-  std::vector<int> v3,v4;
-  v3.reserve(3); v4.reserve(4);
+  std::vector<int> v3 = {0,0,0};
+  std::vector<int> v4 = {0,0,0,0};
   for(int iQ = 0 ; iQ <= Q2_max ; iQ++)
     for(int nx = iQ ; nx >= -iQ ; nx--)
       for(int ny = iQ ; ny >= -iQ ; ny--)
@@ -92,7 +92,7 @@ void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, int sign){
   if(f.Total_length() != GK_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
   if(!accum) zero();
-  FT(*this,f,momList,sign);
+  FT<Float>(*this,f,momList,sign);
 }
 
 template<typename Float>
@@ -102,13 +102,12 @@ void PLEGMA_FT<Float>::mulMomentumPhases(Vint src, int sign){
   if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
   Float phase;
   std::complex<Float> expPhase;
-  std::complex<Float> *h2 = (std::complex<Float> *) h_elem();
+  std::complex<Float> *h2 = (std::complex<Float> *) h_elem;
   for(int imom = 0; imom < Nmoms(); imom++){
     phase=0.;
     for(int i = 0; i < dims; i++) phase += ((Float) src[i] * momList[imom][i])/((Float) GK_totalL[i]);
     phase *= 2. * PI;
-    expPhase.real = cos(phase);
-    expPhase.imag = sign*sin(phase);
+    expPhase = (std::complex<Float>) { cos(phase), sign*sin(phase) };
     for(int idf = 0 ; idf < dof; idf++)
       for(int it = 0 ; it < dimT; it++)
 	h2[it*dof*Nmoms()+idf*Nmoms()+imom] *= expPhase;
@@ -122,17 +121,19 @@ void PLEGMA_FT<Float>::writeToDisk(std::string filename, FILE_WRITE_FORMAT outpu
   if(outputFormat == ASCII_FORM){
     Float *helem_global=NULL;
     if(dimT != 1){
-      int sizeN= Nmoms()*GK_totalL[3]*dof*2;
-      helem_global = (Float*) malloc(sizeN*sizeof(Float));
-      MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,GK_timeRank);
+      int sizeN= Nmoms()*GK_localL[3]*dof*2;
+      helem_global = (Float*) malloc(GK_nProc[3]*sizeN*sizeof(Float));
+      if(helem_global == NULL) errorQuda("Allocation failed\n");
+      MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,GK_timeComm);
     }
     else
       helem_global = h_elem;
     if(comm_rank() == 0){
       FILE *ptr = fopen(filename.c_str(), "w");
       if(ptr == NULL) errorQuda("Cannot open file:%s for writting\n",filename.c_str());
+      int T = (dimT != 1)?GK_totalL[3]:1;
       for(int idf = 0 ; idf < dof; idf++)
-	for(int it = 0 ; it < (dimT != 1)?GK_totalL[3]:1; it++){
+	for(int it = 0 ; it < T; it++){
 	  int its = (it + timeshift)%GK_totalL[3];
 	  for(int imom = 0; imom < Nmoms(); imom++)
 	    fprintf(ptr, "%d %d  %+d %+d %+d \t %+e %+e\n", idf,it, momList[imom][0], momList[imom][1], momList[imom][2],
@@ -148,3 +149,6 @@ void PLEGMA_FT<Float>::writeToDisk(std::string filename, FILE_WRITE_FORMAT outpu
   else
     errorQuda("The output file format is unknown");
 }
+
+template class PLEGMA_FT<float>;
+template class PLEGMA_FT<double>;

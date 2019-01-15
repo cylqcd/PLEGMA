@@ -30,7 +30,7 @@ template<typename Float>
 static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int sign){
   if(D3D4 == 3){
     if(mom.size() != 3) errorQuda("A momentum vector in three dimensions need three components\n");}
-  else if (D3D4 == 3){
+  else if (D3D4 == 4){
     if(mom.size() != 4) errorQuda("A momentum vector in four dimensions need four components\n");}
   else errorQuda("Not supported");
   int V = (D3D4 == 3) ? GK_localVolume/GK_localL[3] : GK_localVolume;
@@ -47,7 +47,7 @@ static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int
 
 
 template<typename Float>
-static void FT(PLEGMA_FT<Float> &ft, PLEGMA_Field<Float> &f, std::vector<std::vector<int> > mom, int sign){
+static void FT(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<std::vector<int> > mom, int sign){
   if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
   if(mom.size() == 0) errorQuda("Momentum container is empty");
   int Nmom = mom.size();
@@ -66,7 +66,7 @@ static void FT(PLEGMA_FT<Float> &ft, PLEGMA_Field<Float> &f, std::vector<std::ve
 	cuBLAS::dot((Float*) &res, (ft.Dims() == 3) ? V3 : GK_localVolume,
 		    (Float*) x,(Float*) y, (ft.Dims() == 3) ? GK_spaceComm : MPI_COMM_WORLD);
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.x;
-	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.x;
+	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.y;
       }
   }
   cudaFree(x);
