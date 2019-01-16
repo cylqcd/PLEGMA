@@ -32,43 +32,6 @@ void PLEGMA_Gauge<Float>::pack(double **p_gauge){
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::packToBackup(void **gauge){
-  double **p_gauge = (double**) gauge;
-  if(PLEGMA_Field<Float>::h_elem_backup != NULL){
-    for(int dir = 0 ; dir < N_DIMS ; dir++)
-    for(int iv = 0 ; iv < HGC_localVolume ; iv++)
-    for(int c1 = 0 ; c1 < N_COLS ; c1++)
-    for(int c2 = 0 ; c2 < N_COLS ; c2++)
-    for(int part = 0 ; part < 2 ; part++){
-      PLEGMA_Field<Float>::h_elem_backup[dir*N_COLS*N_COLS*HGC_localVolume*2 + 
-			c1*N_COLS*HGC_localVolume*2 + 
-			c2*HGC_localVolume*2 + 
-			iv*2 + part] = 
-	(Float) p_gauge[dir][iv*N_COLS*N_COLS*2 + 
-			     c1*N_COLS*2 + 
-			     c2*2 + part];
-    }
-  }
-  else{
-    errorQuda("Error you can call this method only if you allocate memory for h_elem_backup");
-  }
-
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::loadFromBackup(){
-  if(PLEGMA_Field<Float>::h_elem_backup != NULL){
-    cudaMemcpy(PLEGMA_Field<Float>::d_elem,PLEGMA_Field<Float>::h_elem_backup, PLEGMA_Field<Float>::bytes_total_length, 
-	       cudaMemcpyHostToDevice );
-    checkCudaError();
-  }
-  else{
-    errorQuda("Error you can call this method only if you allocate memory for h_elem_backup");
-  }
-}
-
-
-template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaq(){
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_SIDE);
@@ -215,7 +178,7 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
   
   for(int idir = 0; idir < D3D4 ; idir++){
     u_s1[idir] = new PLEGMA_Su3field<Float>(BOTH);
-    u_s1[idir]->absorbDir_device(*this,idir);
+    u_s1[idir]->absorbDir_device(uin,idir);
     u_s2[idir] = new PLEGMA_Su3field<Float>(BOTH);
   }
 

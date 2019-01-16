@@ -6,6 +6,7 @@
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_QLoops.h>
+#include <PLEGMA_FT.h>
 
 #ifndef _PLEGMA__H
 #define _PLEGMA__H

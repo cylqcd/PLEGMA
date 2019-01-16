@@ -25,21 +25,19 @@ namespace plegma {
     
     Float *h_elem;
     Float *d_elem;
-    Float *h_ext_ghost;
-    Float *h_ext_ghost_corner;
-    Float *h_elem_backup;
+    Float *h_ext_ghost_r;
+    Float *h_ext_ghost_s;
+    Float *h_ext_ghost_corner_r;
+    Float *h_ext_ghost_corner_s;
 
     GHOST_FLAG ghost_flag;
     ALLOCATION_FLAG allocation;
     bool isAllocHost;
     bool isAllocDevice;
-    bool isAllocHostBackup;
 
     
     void create_host();
-    void create_host_backup();
     void destroy_host();
-    void destroy_host_backup();
     void create_device();
     void destroy_device();
 
@@ -87,6 +85,7 @@ namespace plegma {
     
     void shift(PLEGMA_Field &Fin, int dirOr);
     void setUnit(std::vector<int> indDiag);
+
   };
 }
 #endif

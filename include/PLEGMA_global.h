@@ -57,8 +57,6 @@ namespace plegma {
 
   enum LATDIMS{DIM_X,DIM_Y,DIM_Z,DIM_T};
 
-  enum APEDIM{D3,D4};
-
   enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
 
   // Preparation for global variables
