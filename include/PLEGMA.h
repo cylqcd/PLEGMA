@@ -12,7 +12,7 @@
 
 namespace plegma {
   
-  void PLEGMA_init(PLEGMA_params *params);
+  void PLEGMA_init();
 
   void print_status();
 
