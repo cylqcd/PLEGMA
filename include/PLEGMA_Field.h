@@ -85,6 +85,7 @@ namespace plegma {
     
     void shift(PLEGMA_Field &Fin, int dirOr);
     void setUnit(std::vector<int> indDiag);
+
   };
 }
 #endif

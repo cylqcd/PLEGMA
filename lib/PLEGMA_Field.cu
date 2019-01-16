@@ -3,8 +3,12 @@
 #include <PLEGMA_shifts.cuh>
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>
+#include <thrust/for_each.h>
+#include <thrust/tuple.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <vector>
 #include <algorithm>
+#include <PLEGMA_BLAS.h>
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -460,6 +464,7 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
     thrust::fill(dev_ptr, dev_ptr + this->Total_length(), value);
   }
 }
+
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
