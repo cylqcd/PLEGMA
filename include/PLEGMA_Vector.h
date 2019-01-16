@@ -29,9 +29,35 @@ namespace plegma {
     void copy(PLEGMA_Vector<double> &vecIn);
     void norm2Host();
     void norm2Device();
-    void absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2);
-    void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
+    /**
+       @brief Absorbs elements nu, c2 from a 4D propagator at specific global time and puts it in a 4D vector
+       @param PLEGMA_Propagator<Float> prop, The 4D propagator
+       @param int global_it, The global time slice which we want to extract, the rest of the time-slices will become zero in the output
+       @param int nu, The spin index we want to extract
+       @param int c2, The color index we want to extract
+       @return void
+     **/
     void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2);
+    
+    /**
+       @brief Absorbs elements nu, c2 from a 3D propagator and puts it at a specific global time of the 4D vector
+       @param PLEGMA_Propagator3D<Float> prop, The 3D propagator
+       @param int global_it, The global time slice where data will be inserted, the rest of the time-slices will become zero in the 4D vector
+       @param int nu, The spin index we want to extract
+       @param int c2, The color index we want to extract
+       @return void
+     **/    
+    void absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2);
+
+    /**
+       @brief Absorbs elements nu, c2 from a 4D propagator to a 4D vector
+       @param PLEGMA_Propagator<Float> prop, The 4D propagator
+       @param int nu, The spin index we want to extract
+       @param int c2, The color index we want to extract
+       @return void
+     **/    
+    void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
+    
     void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);
     void pointSource(int *sourceposition, int spin, int color);
@@ -53,7 +79,24 @@ namespace plegma {
   public:
     PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS);
     ~PLEGMA_Vector3D(){;}
+
+    /**
+       @brief Absorbs elements nu, c2 from a 3D propagator to a 3D vector
+       @param PLEGMA_Propagator3D<Float> prop, The 3D propagator
+       @param int nu, The spin index we want to extract
+       @param int c2, The color index we want to extract
+       @return void
+     **/    
     void absorb(PLEGMA_Propagator3D<Float> &prop, int nu, int c2);
+
+    /**
+       @brief Absorbs elements nu, c2 from a 4D propagator at specific global time and puts it in a 3D vector
+       @param PLEGMA_Propagator<Float> prop, The 4D propagator
+       @param int global_it, The global time slice which we want to extract
+       @param int nu, The spin index we want to extract
+       @param int c2, The color index we want to extract
+       @return void
+     **/
     void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2);
   };
 }
