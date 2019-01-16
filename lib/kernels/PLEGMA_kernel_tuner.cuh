@@ -1,20 +1,11 @@
 #include <PLEGMA_global.h>
 #include <tune_quda.h>
-// Classes to count flops and reads/writes
-// #include <PLEGMA_kernel_counter.cuh>
 using namespace quda;
 
 #ifndef PLEGMA_KERNEL_TUNER_H
 #define PLEGMA_KERNEL_TUNER_H
 
 #define THREADS_PER_BLOCK 64
-
-/* CUPTI functionalities disabled for the moment
- * since it's impossible to make it work properly
-#ifndef PLEGMA_NO_TUNING
-#include <cupti_profiler.h>
-#endif
-*/
 
 extern __device__ cudaDeviceProp devProp;
 extern __device__ long unsigned int *counterOps;
@@ -112,44 +103,6 @@ protected:
   void launchKernel( dim3 grid3d, dim3 block3d, int shared, const cudaStream_t stream) {
     callKernel(grid3d,block3d,shared,stream,typename gens<sizeof...(types)>::type());
   }
-
-  // calculate flops with CUPTI
-  /*
-  void calculateFlops(){
-    
-    dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-    dim3 gridDim( (ps.volume + blockDim.x -1)/blockDim.x , 1 , 1);
-
-    launchKernel(gridDim,blockDim,THREADS_PER_BLOCK*ps.sharedBytesPerThread,0);
-
-    std::vector<std::string> event_names { "warps_launched",
-					   "active_cycles" };
-    std::vector<std::string> metric_names {"flop_count_dp",
-					   "flop_count_sp",
-					   "dram_read_throughput",
-					   "dram_write_throughput",
-					   "tex_cache_throughput"};
-    cupti_profiler::profiler profiler(event_names, metric_names);
-
-    profiler.start();
-    for(int i=0; i<profiler.get_passes()+1; i++){
-      launchKernel(gridDim,blockDim,THREADS_PER_BLOCK*ps.sharedBytesPerThread,0);
-      cudaDeviceSynchronize();
-    }
-    profiler.stop();
-
-    kernelName = (std::string) profiler.get_kernel_names()[0];
-    printf("### %s ###\n",kernelName.c_str());
-   
-    auto metrics = profiler.get_metric_values(kernelName.c_str());
-    ps.flops = metrics[0].metricValueUint64 + metrics[1].metricValueUint64;
-    //ps.inpBytes = metrics[2].metricValueUint64;
-    //ps.outBytes = metrics[3].metricValueUint64;
-    //ps.texBytes = metrics[4].metricValueUint64;
-    ps.measured = true;
-    printf("Flops %d\n",ps.flops);
-  }
-  */
   
 public:
 
@@ -179,60 +132,6 @@ public:
   // utilities
   int getGridDimX(){ return ps.tp.grid.x; }
 
-  // TODO: Restore if we find a way to cast flops as counters
-  /* 
-  void calculateFlops(){
-    dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-    dim3 gridDim( (ps.volume + blockDim.x -1)/blockDim.x , 1 , 1);
-    //resetCounters( ps.volume );
-    int size = ps.volume;
-    long unsigned int *dummy = new long unsigned int[size];
-    long unsigned int loc, glob;
-      
-    for(int i=0; i<size; ++i)
-      dummy[i] = 0;                                                                                                         
-
-    cudaMalloc(&counterOps,size*sizeof(long unsigned int));
-    cudaMalloc(&counterReads,size*sizeof(long unsigned int));
-    cudaMalloc(&counterWrites,size*sizeof(long unsigned int));
-    cudaMemcpy(&counterOps, &dummy, size*sizeof(long unsigned int),cudaMemcpyHostToDevice);
-    cudaMemcpy(&counterReads, &dummy, size*sizeof(long unsigned int),cudaMemcpyHostToDevice);
-    cudaMemcpy(&counterWrites, &dummy, size*sizeof(long unsigned int),cudaMemcpyHostToDevice);
-    
-    launchKernel(gridDim,blockDim,ps.sharedBytesPerThread,0);
-
-    loc = 0;
-    cudaMemcpy(&dummy, &counterOps, size*sizeof(long unsigned int),cudaMemcpyDeviceToHost);
-    for(int i=0; i<size; i++){
-      if (i<100) printf("%d \t %d\n",i,dummy[i]);
-      loc += dummy[i];
-    }
-    MPI_Allreduce(&loc,&glob,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
-    ps.flops = glob;
-
-    loc = 0;
-    cudaMemcpy(&dummy, &counterReads, size*sizeof(long unsigned int),cudaMemcpyDeviceToHost);
-    for(int i=0; i<size; i++)
-      loc += dummy[i];
-    MPI_Allreduce(&loc,&glob,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
-    ps.inpBytes = glob;
-
-    loc = 0;
-    cudaMemcpy(&dummy, &counterWrites, size*sizeof(long unsigned int),cudaMemcpyDeviceToHost);
-    for(int i=0; i<size; i++)
-      loc += dummy[i];
-    MPI_Allreduce(&loc,&glob,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
-    ps.outBytes = glob;
-    
-    printf("Flops %ld\n", ps.flops);
-    printf("In Bytes %ld\n", ps.inpBytes);
-
-    cudaFree(&counterOps);
-    cudaFree(&counterWrites);
-    cudaFree(&counterReads);
-    delete [] dummy;
-  }
-  */
 };
 
 template<class ...types>
@@ -299,31 +198,5 @@ void tuneAndRun(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
   PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
   tuner.apply();
 }
-
-/*
-template<class T>
-T dummyCasting(T arg) {
-  return arg;
-}
-
-template<class T, class U>
-T dummyCasting(U arg) {
-  //T dummy;
-  //return dummy;
-  return T();
-}
-
-template<template<class> class T, class U>
-T<counter> dummyCasting(T<U> arg){
-  return T<counter>(counter(arg));
-}
-
-// implementation to be changed so that flops do not get calculated if already known
-template<typename ...types, typename ...args>
-void calcFlops(ProfileStruct &ps, void(* kernel)(types...), args... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, dummyCasting<types>(kArgs)...);
-  tuner.calculateFlops(); // calculates the number of flops and stores them in ps
-}
-*/
 
 #endif
