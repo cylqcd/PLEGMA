@@ -91,25 +91,28 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop2.destroyTexObject(prop2Tex.tex);
 }
 
-// template<typename Float>
-// void PLEGMA_Correlator<Float>::contractNucleonThrp(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
-// 		    int signProps, PLEGMA_Su3field<Float> &su3, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
-//   initialize(THRP_LOCAL,corrSpace);
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
+void contractPropOpProp_wilsonLine(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
+				   su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas);
+template<typename Float>
+void PLEGMA_Correlator<Float>::contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
+		    int signProps, PLEGMA_Su3field<Float> &su3, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
+  initialize(THRP_PDFS,corrSpace);
   
-//   propTex<Float> bwdPropTex, fwdPropTex;
-//   su3Tex<Float> sTex;
-//   bwdPropTex.tex = bwdProp.createTexObject();
-//   fwdPropTex.tex = fwdProp.createTexObject();
-//   sTex.tex = su3.createTexObject();
-//   this->isource = isource;
-//   printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+  propTex<Float> bwdPropTex, fwdPropTex;
+  su3Tex<Float> sTex;
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  sTex.tex = su3.createTexObject();
+  this->isource = isource;
+  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
 
-//   for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
+  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
 
-//   bwdProp.destroyTexObject(bwdPropTex.tex);
-//   fwdProp.destroyTexObject(fwdPropTex.tex);
-//   su3.destroyTexObject(sTex.tex);
-// }
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+  su3.destroyTexObject(sTex.tex);
+}
 
 template<typename FloatC,typename FloatA, typename FloatB>
 void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, int it);
