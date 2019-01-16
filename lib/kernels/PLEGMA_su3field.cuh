@@ -5,7 +5,7 @@ template<typename FloatA,typename FloatB>
 static __global__ void Udag_kernel(FloatA *A, FloatB *B){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
@@ -22,7 +22,7 @@ template<typename FloatA,typename FloatB, typename FloatC>
 static __global__ void UxU_kernel(FloatA *A, FloatB *B, FloatC *C){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
@@ -43,7 +43,7 @@ template<typename FloatA,typename FloatB, typename FloatC>
 static __global__ void UxUdag_kernel(FloatA *A, FloatB *B, FloatC *C){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
@@ -64,7 +64,7 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
   __shared__ Float shared_cache[THREADS_PER_BLOCK];
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
-  if(sid < c_threads){
+  if(sid < DGC_threads){
   Float2<FloatU> lU[N_COLS][N_COLS];
   su3_2<FloatU> RU(U);
   RU.get(lU,sid);
@@ -92,7 +92,7 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
 template<typename FloatA,typename FloatB>
 static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatB> lB[N_COLS][N_COLS];
   su3_2<FloatA> RA(A);
@@ -115,7 +115,7 @@ static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
 template<typename FloatA, typename FloatB>
 static void traceHerExpMap_kernel(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   traceHerExpMap_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
   checkCudaError();
 }
@@ -123,7 +123,7 @@ static void traceHerExpMap_kernel(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<Fl
 template<typename FloatA, typename FloatB>
 static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   Udag_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
   checkCudaError();
 }
@@ -131,7 +131,7 @@ static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   UxU_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
@@ -139,7 +139,7 @@ static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   UxUdag_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
@@ -149,7 +149,7 @@ static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
   Float sum = 0.;
   Float globalSum = 0.;
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   Float *h_partial_sum = NULL;
   Float *d_partial_sum = NULL;
   h_partial_sum = (Float*) malloc(gridDim.x * sizeof(Float) );

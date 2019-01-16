@@ -17,7 +17,7 @@ template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
 __global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC,runFT> args){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + args.it*c_stride_spatial;
+  int vid = sid + args.it*DGC_stride_spatial;
   Float2<FloatC> *block2 = (Float2<FloatC> *)args.block;
 
   register Float2<FloatC> accum[2*N_MESONS];
@@ -25,7 +25,7 @@ __global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC,runFT> ar
     accum[i] = 0.;
   }
 
-  if (sid < c_threads/c_localL[3]){ // run only on the spatial volume
+  if (sid < DGC_threads/DGC_localL[3]){ // run only on the spatial volume
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     args.texProp1.get(prop1,vid);
@@ -66,14 +66,14 @@ __global__ void contract_mesons_kernel(ArgsMesons<FloatA,FloatB,FloatC,runFT> ar
 template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
 static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
 
-  int SpVol = GK_localVolume/GK_localL[3];
+  int SpVol = HGC_localVolume/HGC_localL[3];
   FloatC *d_partial_block = NULL;
   int isource = corr.getIdSource();
   int site_size=2*N_MESONS*2;
   size_t volume;
   size_t size;
   if(runFT==true){
-    volume = GK_Nmoms;
+    volume = HGC_Nmoms;
     size = site_size*volume;
   } else {
     volume = SpVol;
@@ -85,9 +85,9 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
   kernel_args.texProp2 = texProp2;
   kernel_args.block = d_partial_block;
   kernel_args.it = it;
-  kernel_args.x0 = GK_sourcePosition[isource][0];
-  kernel_args.y0 = GK_sourcePosition[isource][1];
-  kernel_args.z0 = GK_sourcePosition[isource][2];
+  kernel_args.x0 = HGC_sourcePosition[isource][0];
+  kernel_args.y0 = HGC_sourcePosition[isource][1];
+  kernel_args.z0 = HGC_sourcePosition[isource][2];
 
   ProfileStruct kernel_ps;
   kernel_ps.flops = site_size*N_SPINS*N_SPINS*N_COLS*N_COLS*8; //fourier transform missing
@@ -147,15 +147,15 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
 	reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
 	reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
       }
-    MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
+    MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
     free(reduction);
   }
   
   FloatC *corr_pt = corr.getCorr();
   for(size_t v = 0 ; v < volume; v++)
     for(int f = 0 ; f < site_size/2; f++) {
-      corr_pt[((f*GK_localL[3] + it)*volume+v)*2+0] = h_partial_block[(v*site_size/2+f)*2+0];
-      corr_pt[((f*GK_localL[3] + it)*volume+v)*2+1] = h_partial_block[(v*site_size/2+f)*2+1];
+      corr_pt[((f*HGC_localL[3] + it)*volume+v)*2+0] = h_partial_block[(v*site_size/2+f)*2+0];
+      corr_pt[((f*HGC_localL[3] + it)*volume+v)*2+1] = h_partial_block[(v*site_size/2+f)*2+1];
     }
 
   free(h_partial_block);

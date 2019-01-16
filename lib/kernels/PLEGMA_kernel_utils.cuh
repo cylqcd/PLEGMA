@@ -20,6 +20,15 @@
 using namespace plegma;
 
 namespace plegma {
+
+  static const __device__ int eps[6][3]= {{0,1,2},
+					  {2,0,1},
+					  {1,2,0},
+					  {2,1,0},
+					  {0,2,1},
+					  {1,0,2}};
+    
+  static const __device__ int sgn_eps[6]= { +1,+1,+1,-1,-1,-1 };
   
   template<typename Float>
   __inline__ __device__ Float2<Float> det(Float2<Float> a[N_COLS][N_COLS]){
@@ -263,16 +272,16 @@ namespace plegma {
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
     for(int i=0; i<3; i++) {
-      id[i] += c_procPosition[i] * c_localL[i] - sp[i];
+      id[i] += DGC_procPosition[i] * DGC_localL[i] - sp[i];
     }
     
     Float phase;
     Float2<Float> expon;
-    for(int imom = 0 ; imom < c_Nmoms ; imom++){
+    for(int imom = 0 ; imom < DGC_Nmoms ; imom++){
       phase = 0.;
       #pragma unroll
       for(int i=0; i<3; i++)
-	phase += ((Float) (c_moms[imom][i]*id[i]))/((Float) c_totalL[i]);
+	phase += ((Float) (DGC_moms[imom][i]*id[i]))/((Float) DGC_totalL[i]);
       phase *=  2. * PI;
       expon.x = cos(phase);
       expon.y = -sin(phase);

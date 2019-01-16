@@ -5,7 +5,7 @@ __global__ void gaussian_smearing_kernel(FloatOut* out,
 					 vectorTex<FloatIn> vecInTex, 
 					 gaugeTex<FloatGauge> gaugeTex){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   Float2<FloatGauge> G[N_COLS][N_COLS];
   Float2<FloatIn> S[N_SPINS][N_COLS], P1[N_SPINS][N_COLS], P2[N_SPINS][N_COLS];
@@ -40,12 +40,12 @@ __global__ void gaussian_smearing_kernel(FloatOut* out,
   vecInTex.get(S,sid);
 
   double normalize;
-  normalize = 1./(1. + 6. * c_alphaGauss);
+  normalize = 1./(1. + 6. * DGC_alphaGauss);
 
   #pragma unroll
     for(int mu=0; mu<N_SPINS; mu++) 
       for(int c=0; c<N_COLS; c++)
-	out2[(mu*N_COLS + c)*c_stride + sid] = normalize * (S[mu][c] + c_alphaGauss * tmp[mu][c]);
+	out2[(mu*N_COLS + c)*DGC_stride + sid] = normalize * (S[mu][c] + DGC_alphaGauss * tmp[mu][c]);
 }
 
 template<typename FloatOut,typename FloatIn, typename FloatGauge>
@@ -53,7 +53,7 @@ static void gaussian_smearing(FloatOut* out,
 			      vectorTex<FloatIn> vecInTex, 
 			      gaugeTex<FloatGauge> gaugeTex){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
 
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;

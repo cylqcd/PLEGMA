@@ -26,7 +26,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
 					int it, int x0, int y0, int z0, BARYONS_TYPE ip){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*c_stride_spatial;
+  int vid = sid + it*DGC_stride_spatial;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
   Float2<FloatC> accum[2*N_SPINS*N_SPINS];
@@ -34,7 +34,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
   for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
     accum[i]=0;
   }
-  if (sid < c_threads/c_localL[3]){ // I work only on the spatial volume
+  if (sid < DGC_threads/DGC_localL[3]){ // I work only on the spatial volume
     switch(ip){
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
@@ -85,7 +85,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
 template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
 static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
 
-  int SpVol = GK_localVolume/GK_localL[3];
+  int SpVol = HGC_localVolume/HGC_localL[3];
 
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (SpVol + blockDim.x -1)/blockDim.x , 1 , 1); // spawn threads only for the spatial volume
@@ -99,7 +99,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   size_t size;
   size_t alloc_size;
   if(runFT==true){
-    volume = GK_Nmoms;
+    volume = HGC_Nmoms;
     size = n_flavors*site_size*volume;
     alloc_size = size * gridDim.x;
   } else {
@@ -117,9 +117,9 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   int isource = corr.getIdSource();
   for(int ip=0; ip<N_BARYONS; ip++) {
     contract_baryons_kernel<FloatA,FloatB,FloatC,runFT><<<gridDim,blockDim>>>( texProp1, texProp2, d_partial_block, it,
-									       GK_sourcePosition[isource][0],
-									       GK_sourcePosition[isource][1],
-									       GK_sourcePosition[isource][2], (BARYONS_TYPE) ip);
+									       HGC_sourcePosition[isource][0],
+									       HGC_sourcePosition[isource][1],
+									       HGC_sourcePosition[isource][2], (BARYONS_TYPE) ip);
     checkCudaError();
     
     cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
@@ -132,15 +132,15 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 	  reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
 	  reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
 	}
-      MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
+      MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
       free(reduction);
     }
 
-    FloatC *corr_ip = corr.getCorr() + ip*GK_localL[3]*size;
+    FloatC *corr_ip = corr.getCorr() + ip*HGC_localL[3]*size;
     for(size_t v = 0 ; v < volume; v++)
       for(int f = 0 ; f < n_flavors; f++)
 	for(int i = 0 ; i < site_size; i++)
-	  corr_ip[((f*GK_localL[3] + it)*volume +v)*site_size+i] = h_partial_block[(v*n_flavors+f)*site_size+i];
+	  corr_ip[((f*HGC_localL[3] + it)*volume +v)*site_size+i] = h_partial_block[(v*n_flavors+f)*site_size+i];
     
   }
   free(h_partial_block);

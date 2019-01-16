@@ -95,7 +95,7 @@ void PLEGMA_kernel_tuner<ArgsStruct>::tune(){
 #ifdef PLEGMA_NO_TUNING
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   tp.block = blockDim;
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   tp.grid = gridDim;
   tp.shared_bytes = THREADS_PER_BLOCK*ps.sharedBytesPerThread;    
   tuned = true;

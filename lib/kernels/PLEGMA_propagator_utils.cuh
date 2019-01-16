@@ -5,7 +5,7 @@ template<typename Float>
 static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> *inOut2 = (Float2<Float> *) inOut;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
    
   #pragma unroll
   for(int nu = 0 ; nu < N_SPINS ; nu++)
@@ -17,11 +17,11 @@ static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
 	// inline shuffling
         #pragma unroll
 	for(int mu = 0 ; mu < N_SPINS ; mu++)
-	  spinor[(mu+2)%4] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*c_stride + sid];
+	  spinor[(mu+2)%4] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid];
 	// replacing
         #pragma unroll
 	for(int mu = 0 ; mu < N_SPINS ; mu++)
-	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*c_stride + sid] = spinor[mu];
+	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid] = spinor[mu];
   }
 
 }
@@ -29,7 +29,7 @@ static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
 template<typename Float>
 void apply_gamma5_propagator(Float *inOut){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   apply_gamma5_propagator_kernel<<<gridDim,blockDim>>>(inOut);
 }
 
@@ -37,17 +37,17 @@ template<typename Float>
 static __global__ void conjugate_propagator_kernel(Float *inOut){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++)
-    inOut[(i*c_stride + sid)*2 + 1] *= -1.;
+    inOut[(i*DGC_stride + sid)*2 + 1] *= -1.;
 }
 
 template<typename Float>
 void conjugate_propagator(Float *inOut){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   conjugate_propagator_kernel<<<gridDim,blockDim>>>(inOut);
   checkCudaError();
 }
@@ -56,15 +56,15 @@ template<typename Float>
 static __global__ void apply_boundaries_kernel(Float *inOut, int t0){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
-  int t = (sid/c_localL[0]/c_localL[1]/c_localL[2]) % c_localL[3];
-  t += c_procPosition[3] * c_localL[3];
+  if (sid >= DGC_threads) return;
+  int t = (sid/DGC_localL[0]/DGC_localL[1]/DGC_localL[2]) % DGC_localL[3];
+  t += DGC_procPosition[3] * DGC_localL[3];
 
   if( t < t0 ) {
 #pragma unroll
     for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++) {
-      inOut[(i*c_stride + sid)*2 + 0] *= -1.;
-      inOut[(i*c_stride + sid)*2 + 1] *= -1.;
+      inOut[(i*DGC_stride + sid)*2 + 0] *= -1.;
+      inOut[(i*DGC_stride + sid)*2 + 1] *= -1.;
     }
   }
 }
@@ -72,7 +72,7 @@ static __global__ void apply_boundaries_kernel(Float *inOut, int t0){
 template<typename Float>
 void apply_boundaries(Float *inOut, int t0){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   apply_boundaries_kernel<<<gridDim,blockDim>>>(inOut,t0);
   checkCudaError();
 }
@@ -82,7 +82,7 @@ template<typename Float>
 static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   Float2<Float> P[4][4], PT[4][4], sign_imag_unit(sign*1., IMAG),
     *inOut2 = (Float2<Float> *) inOut;
@@ -97,7 +97,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
       for(int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
 	for(int nu = 0 ; nu < N_SPINS; nu++)
-	  P[mu][nu] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*c_stride + sid];
+	  P[mu][nu] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid];
 
       // shuffling
       #pragma unroll
@@ -111,7 +111,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
       for(int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
 	for(int nu = 0 ; nu < N_SPINS; nu++)
-	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*c_stride + sid] = PT[mu][nu];
+	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid] = PT[mu][nu];
     }
 
 }
@@ -119,7 +119,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
 template<typename Float>
 void rotateToPhysicalBase(Float* inOut, int sign){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   rotateToPhysicalBase_kernel<Float><<<gridDim,blockDim>>>((Float*) inOut,sign);
   checkCudaError();
 }

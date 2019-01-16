@@ -17,7 +17,7 @@ static __global__ void calculatePlaquette_kernel(ArgsPlaquette<Float,FloatG> arg
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
-  if (sid < c_threads) {
+  if (sid < DGC_threads) {
 
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];
@@ -67,8 +67,8 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   kernel_ps.outBytes = N_COLS*N_COLS*2*4*2*sizeof(Float) ;
   kernel_ps.inpBytes = (N_COLS*N_COLS*4*2 + 1)*sizeof(Float) ;
   kernel_ps.siteBytes = N_COLS*N_COLS*N_DIMS*2*sizeof(Float) ;
-  kernel_ps.volume = GK_localVolume ;
-  kernel_ps.stride = GK_strideFull;
+  kernel_ps.volume = HGC_localVolume ;
+  kernel_ps.stride = HGC_strideFull;
   kernel_ps.tuneY = false ;
   kernel_ps.sharedMemory = true ;
   kernel_ps.sharedBytesPerThread = sizeof(Float);
@@ -111,5 +111,5 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   free(h_partial_plaq);
 
   MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
-  return globalPlaquette/(GK_totalVolume*N_COLS*6);
+  return globalPlaquette/(HGC_totalVolume*N_COLS*6);
 }

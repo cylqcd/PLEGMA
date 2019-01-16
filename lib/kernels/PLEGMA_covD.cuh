@@ -6,7 +6,7 @@ __global__ void covD_kernel(FloatOut* out,
 			    vectorTex<FloatIn> vTex, 
 			    gaugeTex<FloatGauge> gTex, int dirOr){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
   
   Float2<FloatGauge> G[N_COLS][N_COLS];
   Float2<FloatIn> Sin[N_SPINS][N_COLS];
@@ -31,7 +31,7 @@ __global__ void covD_kernel(FloatOut* out,
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
 static void covD_k(FloatOut *out, vectorTex<FloatIn> v, gaugeTex<FloatGauge> g, int dirOr){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   covD_kernel<FloatOut,FloatIn,FloatGauge><<<gridDim,blockDim>>>(out, v, g, dirOr);
   checkCudaError();
 }

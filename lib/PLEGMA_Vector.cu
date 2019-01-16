@@ -46,7 +46,7 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,PLEGMA_G
   texVecIn.tex = vecIn.createTexObject();
   texGauge.tex = gaugeAPE.createTexObject();
   
-  for(int i = 0 ; i < GK_nsmearGauss ; i++){
+  for(int i = 0 ; i < HGC_nsmearGauss ; i++){
     if( (i%2) == 0){
       gaussian_smearing(this->D_elem(),texVecIn,texGauge);
       this->communicateSideGhost();
@@ -57,7 +57,7 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,PLEGMA_G
     }
   }
 
-  if( (GK_nsmearGauss%2) == 0) cudaMemcpy(this->D_elem(),vecIn.D_elem(),PLEGMA_Field<Float>::bytes_total_length,cudaMemcpyDeviceToDevice);
+  if( (HGC_nsmearGauss%2) == 0) cudaMemcpy(this->D_elem(),vecIn.D_elem(),PLEGMA_Field<Float>::bytes_total_length,cudaMemcpyDeviceToDevice);
   
   this->destroyTexObject(texVecOut.tex);
   vecIn.destroyTexObject(texVecIn.tex);
@@ -95,7 +95,7 @@ void PLEGMA_Vector<Float>::norm2Host(){
   Float res = 0.;
   Float globalRes;
 
-  for(int i = 0 ; i < N_SPINS*N_COLS*GK_localVolume ; i++){
+  for(int i = 0 ; i < N_SPINS*N_COLS*HGC_localVolume ; i++){
     res += PLEGMA_Field<Float>::h_elem[i*2 + 0]*PLEGMA_Field<Float>::h_elem[i*2 + 0] + PLEGMA_Field<Float>::h_elem[i*2 + 1]*PLEGMA_Field<Float>::h_elem[i*2 + 1];
   }
 
@@ -108,13 +108,13 @@ template<typename Float>
 void PLEGMA_Vector<Float>::copyPropagator3D(PLEGMA_Propagator3D<Float> &prop, int timeslice, int nu , int c2){
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
-  int V3 = GK_localVolume/GK_localL[3];
+  int V3 = HGC_localVolume/HGC_localL[3];
   
   for(int mu = 0 ; mu < 4 ; mu++)
     for(int c1 = 0 ; c1 < 3 ; c1++){
       pointer_dst = (PLEGMA_Field<Float>::d_elem + 
-		     mu*3*GK_localVolume*2 + 
-		     c1*GK_localVolume*2 + 
+		     mu*3*HGC_localVolume*2 + 
+		     c1*HGC_localVolume*2 + 
 		     timeslice*V3*2);
       pointer_src = (prop.D_elem() + 
 		     mu*4*3*3*V3*2 + 
@@ -139,14 +139,14 @@ void PLEGMA_Vector<Float>::copyPropagator(PLEGMA_Propagator<Float> &prop, int nu
   for(int mu = 0 ; mu < 4 ; mu++)
     for(int c1 = 0 ; c1 < 3 ; c1++){
       pointer_dst = (PLEGMA_Field<Float>::d_elem + 
-		     mu*3*GK_localVolume*2 + 
-		     c1*GK_localVolume*2);
+		     mu*3*HGC_localVolume*2 + 
+		     c1*HGC_localVolume*2);
       pointer_src = (prop.D_elem() + 
-		     mu*4*3*3*GK_localVolume*2 + 
-		     nu*3*3*GK_localVolume*2 + 
-		     c1*3*GK_localVolume*2 + 
-		     c2*GK_localVolume*2);
-      cudaMemcpy(pointer_dst, pointer_src, GK_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+		     mu*4*3*3*HGC_localVolume*2 + 
+		     nu*3*3*HGC_localVolume*2 + 
+		     c1*3*HGC_localVolume*2 + 
+		     c2*HGC_localVolume*2);
+      cudaMemcpy(pointer_dst, pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
     }
   
   pointer_src = NULL;
@@ -165,31 +165,31 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
   temp[0] = 1.0;
 
   for(int i = N_DIMS-1; i >= 0; i--) {
-    my_src[i] = (sourceposition[i] - comm_coords(default_topo)[i] * GK_localL[i]);
+    my_src[i] = (sourceposition[i] - comm_coords(default_topo)[i] * HGC_localL[i]);
 
     // if out of the local lattice we break
-    if((my_src[i]<0) || (my_src[i]>=GK_localL[i]))
+    if((my_src[i]<0) || (my_src[i]>=HGC_localL[i]))
       return;
 
-    id = id * GK_localL[i] + my_src[i];
+    id = id * HGC_localL[i] + my_src[i];
   }
 
   if( where == BOTH ){
-    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2), temp,sizeof(Float),
+    this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*HGC_localVolume + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else if (where == HOST){
-    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
+    this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
   }
   else if (where == DEVICE){
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2), temp,sizeof(Float),
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*HGC_localVolume + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else if (where == BOTH_EXTRA){
-    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
-    this->h_elem_backup[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0;
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2),temp,sizeof(Float),
+    this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
+    this->h_elem_backup[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0;
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*HGC_localVolume + id)*2),temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
 }
@@ -260,9 +260,9 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	    }
 
 	  if( typeid(Float) == typeid(double) )
-	    sprintf(tmp_string, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<etmcFormat>\n\t<field>diracFermion</field>\n\t<precision>64</precision>\n\t<flavours>1</flavours>\n\t<lx>%d</lx>\n\t<ly>%d</ly>\n\t<lz>%d</lz>\n\t<lt>%d</lt>\n\t<spin>4</spin>\n\t<colour>3</colour>\n</etmcFormat>", GK_totalL[0], GK_totalL[1], GK_totalL[2], GK_totalL[3]);
+	    sprintf(tmp_string, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<etmcFormat>\n\t<field>diracFermion</field>\n\t<precision>64</precision>\n\t<flavours>1</flavours>\n\t<lx>%d</lx>\n\t<ly>%d</ly>\n\t<lz>%d</lz>\n\t<lt>%d</lt>\n\t<spin>4</spin>\n\t<colour>3</colour>\n</etmcFormat>", HGC_totalL[0], HGC_totalL[1], HGC_totalL[2], HGC_totalL[3]);
 	  else
-	    sprintf(tmp_string, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<etmcFormat>\n\t<field>diracFermion</field>\n\t<precision>32</precision>\n\t<flavours>1</flavours>\n\t<lx>%d</lx>\n\t<ly>%d</ly>\n\t<lz>%d</lz>\n\t<lt>%d</lt>\n\t<spin>4</spin>\n\t<colour>3</colour>\n</etmcFormat>", GK_totalL[0], GK_totalL[1], GK_totalL[2], GK_totalL[3]);
+	    sprintf(tmp_string, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<etmcFormat>\n\t<field>diracFermion</field>\n\t<precision>32</precision>\n\t<flavours>1</flavours>\n\t<lx>%d</lx>\n\t<ly>%d</ly>\n\t<lz>%d</lz>\n\t<lt>%d</lt>\n\t<spin>4</spin>\n\t<colour>3</colour>\n</etmcFormat>", HGC_totalL[0], HGC_totalL[1], HGC_totalL[2], HGC_totalL[3]);
 
 	  message_length=(long int) strlen(tmp_string); 
 	  MB_flag=1; ME_flag=1;
@@ -290,7 +290,7 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	      comm_abort(-1);
 	    }
 	  
-	  message_length = GK_totalVolume*4*3*2*sizeof(Float);
+	  message_length = HGC_totalVolume*4*3*2*sizeof(Float);
 	  MB_flag=1; ME_flag=1;
 	  limeheader = limeCreateHeader(MB_flag, ME_flag, "scidac-binary-data", message_length);
 	  limeStatus = limeWriteRecordHeader( limeheader, limewriter);
@@ -311,20 +311,20 @@ void PLEGMA_Vector<Float>::write(char *filename){
 
   MPI_Bcast(&offset,sizeof(MPI_Offset),MPI_BYTE,0,MPI_COMM_WORLD);
   
-  sizes[0]=GK_totalL[3];
-  sizes[1]=GK_totalL[2];
-  sizes[2]=GK_totalL[1];
-  sizes[3]=GK_totalL[0];
+  sizes[0]=HGC_totalL[3];
+  sizes[1]=HGC_totalL[2];
+  sizes[2]=HGC_totalL[1];
+  sizes[3]=HGC_totalL[0];
   sizes[4]=4*3*2;
-  lsizes[0]=GK_localL[3];
-  lsizes[1]=GK_localL[2];
-  lsizes[2]=GK_localL[1];
-  lsizes[3]=GK_localL[0];
+  lsizes[0]=HGC_localL[3];
+  lsizes[1]=HGC_localL[2];
+  lsizes[2]=HGC_localL[1];
+  lsizes[3]=HGC_localL[0];
   lsizes[4]=sizes[4];
-  starts[0]=comm_coords(default_topo)[3]*GK_localL[3];
-  starts[1]=comm_coords(default_topo)[2]*GK_localL[2];
-  starts[2]=comm_coords(default_topo)[1]*GK_localL[1];
-  starts[3]=comm_coords(default_topo)[0]*GK_localL[0];
+  starts[0]=comm_coords(default_topo)[3]*HGC_localL[3];
+  starts[1]=comm_coords(default_topo)[2]*HGC_localL[2];
+  starts[2]=comm_coords(default_topo)[1]*HGC_localL[1];
+  starts[3]=comm_coords(default_topo)[0]*HGC_localL[0];
   starts[4]=0;  
 
   if( typeid(Float) == typeid(double) )
@@ -341,7 +341,7 @@ void PLEGMA_Vector<Float>::write(char *filename){
 		    "native", MPI_INFO_NULL);
 
   chunksize=4*3*2*sizeof(Float);
-  buffer = (char*) malloc(chunksize*GK_localVolume);
+  buffer = (char*) malloc(chunksize*HGC_localVolume);
 
   if(buffer==NULL)  
     {
@@ -351,37 +351,37 @@ void PLEGMA_Vector<Float>::write(char *filename){
 
   i=0;
                         
-  for(t=0; t<GK_localL[3];t++)
-  for(z=0; z<GK_localL[2];z++)
-  for(y=0; y<GK_localL[1];y++)
-  for(x=0; x<GK_localL[0];x++)
+  for(t=0; t<HGC_localL[3];t++)
+  for(z=0; z<HGC_localL[2];z++)
+  for(y=0; y<HGC_localL[1];y++)
+  for(x=0; x<HGC_localL[0];x++)
   for(mu=0; mu<4; mu++)
   for(c1=0; c1<3; c1++) 
     // works only for QUDA_DIRAC_ORDER (color inside spin)
     {
       ((Float *)buffer)[i] = 
-	(PLEGMA_Field<Float>::h_elem[t*GK_localL[2]*GK_localL[1]*GK_localL[0]*4*3*2 + 
-		    z*GK_localL[1]*GK_localL[0]*4*3*2 + 
-		    y*GK_localL[0]*4*3*2 + 
+	(PLEGMA_Field<Float>::h_elem[t*HGC_localL[2]*HGC_localL[1]*HGC_localL[0]*4*3*2 + 
+		    z*HGC_localL[1]*HGC_localL[0]*4*3*2 + 
+		    y*HGC_localL[0]*4*3*2 + 
 		    x*4*3*2 + mu*3*2 + c1*2 + 0]);
       
       ((Float *)buffer)[i+1] = 
-	(PLEGMA_Field<Float>::h_elem[t*GK_localL[2]*GK_localL[1]*GK_localL[0]*4*3*2 + 
-		    z*GK_localL[1]*GK_localL[0]*4*3*2 + 
-		    y*GK_localL[0]*4*3*2 + 
+	(PLEGMA_Field<Float>::h_elem[t*HGC_localL[2]*HGC_localL[1]*HGC_localL[0]*4*3*2 + 
+		    z*HGC_localL[1]*HGC_localL[0]*4*3*2 + 
+		    y*HGC_localL[0]*4*3*2 + 
 		    x*4*3*2 + mu*3*2 + c1*2 + 1]);
       i+=2;
     }
   if(!qcd_isBigEndian()){
     if( typeid(Float) == typeid(double) ) 
-      qcd_swap_8((double*) buffer,2*4*3*GK_localVolume);
-    else qcd_swap_4((float*) buffer,2*4*3*GK_localVolume);
+      qcd_swap_8((double*) buffer,2*4*3*HGC_localVolume);
+    else qcd_swap_4((float*) buffer,2*4*3*HGC_localVolume);
   }
   if( typeid(Float) == typeid(double) )
-    MPI_File_write_all(mpifid, buffer, 4*3*2*GK_localVolume, 
+    MPI_File_write_all(mpifid, buffer, 4*3*2*HGC_localVolume, 
 		       MPI_DOUBLE, &status);
   else
-    MPI_File_write_all(mpifid, buffer, 4*3*2*GK_localVolume, 
+    MPI_File_write_all(mpifid, buffer, 4*3*2*HGC_localVolume, 
 		       MPI_FLOAT, &status);
 
   free(buffer);

@@ -22,10 +22,10 @@ initialize(CORR_TYPE CorrType, CORR_SPACE CorrSpace) {
 
   switch(CorrSpace) {
   case MOMENTUM_SPACE:
-    vol_size = GK_localL[3]*GK_Nmoms;
+    vol_size = HGC_localL[3]*HGC_Nmoms;
     break;
   case POSITION_SPACE:
-    vol_size = GK_localVolume;
+    vol_size = HGC_localVolume;
     break;
   default:
     errorQuda("Corralator: CorrSpace not supported: %d\n", CorrSpace);
@@ -59,7 +59,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 
   printfQuda("contractMesons: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
 
-  for(int it = 0 ; it < GK_localL[3] ; it++) {
+  for(int it = 0 ; it < HGC_localL[3] ; it++) {
     contract_mesons(prop1Tex,prop2Tex,*this,it);
   }
 
@@ -82,7 +82,7 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 
   printfQuda("contractMesons: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
 
-  for(int it = 0; it < GK_localL[3]; it++) {
+  for(int it = 0; it < HGC_localL[3]; it++) {
     contract_baryons(prop1Tex,prop2Tex,*this,it);
   }
 
@@ -92,12 +92,12 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeFile(char *filename, PLEGMA_params &params) {
-  if(params.CorrFileFormat == ASCII_FORM) {
+writeFile(char *filename, FILE_WRITE_FORMAT format) {
+  if(format == ASCII_FORM) {
     printfQuda("Going to write file %s in ASCII format\n",filename);
     writeASCII(filename);
   }
-  else if(params.CorrFileFormat == HDF5_FORM) {
+  else if(format == HDF5_FORM) {
     printfQuda("Going to write file %s in HDF5 format\n",filename);
     writeHDF5(filename, params);
   }
@@ -106,6 +106,7 @@ writeFile(char *filename, PLEGMA_params &params) {
   }
 }
 
+/*
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeFile(PLEGMA_params &params) {
@@ -147,7 +148,7 @@ writeFile(PLEGMA_params &params) {
   free(Qsq);
   free(filename);
 }
-
+*/
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -156,17 +157,17 @@ writeASCII(char *filename_out) {
   size_t g_vol_size;
   int rank;
   
-  if(corr_space == MOMENTUM_SPACE && (GK_timeRank > GK_nProc[3] || GK_timeRank <0 ))
+  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 ))
     return;
 
   switch(corr_space) {
   case MOMENTUM_SPACE:
-    g_vol_size = vol_size*GK_nProc[3];
-    comm = GK_timeComm;
-    rank = GK_timeRank;
+    g_vol_size = vol_size*HGC_nProc[3];
+    comm = HGC_timeComm;
+    rank = HGC_timeRank;
     break;
   case POSITION_SPACE:
-    g_vol_size = vol_size*GK_nProc[0]*GK_nProc[1]*GK_nProc[2]*GK_nProc[3];
+    g_vol_size = vol_size*HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
     comm = MPI_COMM_WORLD;
     rank = comm_rank();
     break;
@@ -191,9 +192,9 @@ writeASCII(char *filename_out) {
     for(size_t v=0; v<g_vol_size; v++) {
       size_t shift=v*site_size;
       if(corr_space == MOMENTUM_SPACE) {
-	fprintf(ptr_out, "%30d  %+20d  %+20d  %+20d ", v/GK_totalL[3], GK_moms[v%GK_totalL[3]][0],
-		GK_moms[v%GK_totalL[3]][1], GK_moms[v%GK_totalL[3]][2]);
-	shift=((v/GK_totalL[3]+GK_sourcePosition[isource][3])%GK_totalL[3])*GK_Nmoms + v%GK_totalL[3];
+	fprintf(ptr_out, "%30d  %+20d  %+20d  %+20d ", v/HGC_totalL[3], HGC_moms[v%HGC_totalL[3]][0],
+		HGC_moms[v%HGC_totalL[3]][1], HGC_moms[v%HGC_totalL[3]][2]);
+	shift=((v/HGC_totalL[3]+HGC_sourcePosition[isource][3])%HGC_totalL[3])*HGC_Nmoms + v%HGC_totalL[3];
       }
       else if (corr_space == POSITION_SPACE) {
 	//TODO
@@ -249,21 +250,21 @@ static void fillDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace, int ndims,
   }
   switch(CorrSpace) {
   case MOMENTUM_SPACE:
-    start[1] = 0; ldims[1] = dims[1] = GK_Nmoms; //Nmoms
-    start[0] = GK_timeRank*GK_localL[3]; //starting point
-    ldims[0] = GK_localL[3]; //LT
-    dims[0] = GK_totalL[3]; //T
+    start[1] = 0; ldims[1] = dims[1] = HGC_Nmoms; //Nmoms
+    start[0] = HGC_timeRank*HGC_localL[3]; //starting point
+    ldims[0] = HGC_localL[3]; //LT
+    dims[0] = HGC_totalL[3]; //T
     if(shift_source) {
-      start[0] = (start[0] + GK_totalL[3] - sourcePosition[3]) % GK_totalL[3];
+      start[0] = (start[0] + HGC_totalL[3] - sourcePosition[3]) % HGC_totalL[3];
     }
     break;
   case POSITION_SPACE:
     for(int i=0; i<N_DIMS; i++) {
-      start[i] = comm_coords(default_topo)[i]*GK_localL[i]; //starting
-      ldims[i] = GK_localL[i]; //LT
-      dims[i] = GK_totalL[i]; //T
+      start[i] = comm_coords(default_topo)[i]*HGC_localL[i]; //starting
+      ldims[i] = HGC_localL[i]; //LT
+      dims[i] = HGC_totalL[i]; //T
       if(shift_source) {
-	start[i] = (start[i] + GK_totalL[i] - sourcePosition[i]) % GK_totalL[i];
+	start[i] = (start[i] + HGC_totalL[i] - sourcePosition[i]) % HGC_totalL[i];
       }
     }
     break;
@@ -410,14 +411,14 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeHDF5(char *filename, PLEGMA_params &params) {
   // only one per time writes in momentum space
-  if(corr_space == MOMENTUM_SPACE && (GK_timeRank > GK_nProc[3] || GK_timeRank <0 ))
+  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 ))
     return;
 
   MPI_Comm comm;
   bool shift_source = false;
   switch(corr_space) {
   case MOMENTUM_SPACE:
-    comm = GK_timeComm;
+    comm = HGC_timeComm;
     shift_source = true;
     break;
   case POSITION_SPACE:
@@ -432,7 +433,7 @@ writeHDF5(char *filename, PLEGMA_params &params) {
 
   int ndims = getNDims(corr_type, corr_space);
   hsize_t dims[ndims], ldims[ndims], start[ndims];
-  fillDims(corr_type, corr_space, ndims, dims, ldims, start, GK_sourcePosition[isource], shift_source);
+  fillDims(corr_type, corr_space, ndims, dims, ldims, start, HGC_sourcePosition[isource], shift_source);
 
   hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
@@ -446,20 +447,20 @@ writeHDF5(char *filename, PLEGMA_params &params) {
 
   char *group2_tag;
   asprintf(&group2_tag,"sx%02dsy%02dsz%02dst%02d",
-	   GK_sourcePosition[isource][0],
-	   GK_sourcePosition[isource][1],
-	   GK_sourcePosition[isource][2],
-	   GK_sourcePosition[isource][3]);
+	   HGC_sourcePosition[isource][0],
+	   HGC_sourcePosition[isource][1],
+	   HGC_sourcePosition[isource][2],
+	   HGC_sourcePosition[isource][3]);
   hid_t group2_id = H5Gcreate(group1_id, group2_tag, H5P_DEFAULT, 
 			      H5P_DEFAULT, H5P_DEFAULT);
 
   //- Source position
   char *src_pos;
   asprintf(&src_pos," [x, y, z, t] = [%02d, %02d, %02d, %02d]\0",
-	   GK_sourcePosition[isource][0],
-	   GK_sourcePosition[isource][1],
-	   GK_sourcePosition[isource][2],
-	   GK_sourcePosition[isource][3]);
+	   HGC_sourcePosition[isource][0],
+	   HGC_sourcePosition[isource][1],
+	   HGC_sourcePosition[isource][2],
+	   HGC_sourcePosition[isource][3]);
   write_text_attribute(group2_id, "source-position", src_pos);
   free(src_pos);
 

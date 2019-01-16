@@ -7,7 +7,7 @@ template<typename FloatOut,typename FloatIn>
 static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   #pragma unroll
   for(int mu = 0 ; mu < 4 ; mu++){
@@ -15,7 +15,7 @@ static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
     for(int c1 = 0 ; c1 < 3 ; c1++){
       #pragma unroll
       for(int ri = 0 ; ri < 2 ; ri++){
-	out[((mu*3+c1)*c_stride+sid)*2+ri] = in[((mu*3+c1)*c_stride+sid)*2+ri];
+	out[((mu*3+c1)*DGC_stride+sid)*2+ri] = in[((mu*3+c1)*DGC_stride+sid)*2+ri];
       }
     }
   }
@@ -24,7 +24,7 @@ static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
 template<typename FloatOut,typename FloatIn>
 static void castVector(FloatOut *out, FloatIn *in){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   castVector_kernel<<<gridDim,blockDim>>>((FloatOut*) out, (FloatIn*) in);
   checkCudaError();
 }
@@ -33,7 +33,7 @@ template<typename Float>
 static __global__ void apply_gamma5_vector_kernel(Float *inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> *inOut2 = (Float2<Float> *) inOut;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
     
   #pragma unroll
   for(int c1 = 0 ; c1 < N_COLS ; c1++){
@@ -41,11 +41,11 @@ static __global__ void apply_gamma5_vector_kernel(Float *inOut){
     // inline shuffling
     #pragma unroll
     for(int mu = 0 ; mu < N_SPINS ; mu++)
-      spinor[(mu+2)%4] = inOut2[(mu*N_COLS+c1)*c_stride + sid];
+      spinor[(mu+2)%4] = inOut2[(mu*N_COLS+c1)*DGC_stride + sid];
     // replacing
     #pragma unroll
     for(int mu = 0 ; mu < N_SPINS ; mu++)
-      inOut2[(mu*N_COLS+c1)*c_stride + sid] = spinor[mu];
+      inOut2[(mu*N_COLS+c1)*DGC_stride + sid] = spinor[mu];
   }
 
 }
@@ -53,7 +53,7 @@ static __global__ void apply_gamma5_vector_kernel(Float *inOut){
 template<typename Float>
 void apply_gamma5_vector(Float *inOut){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   apply_gamma5_vector_kernel<<<gridDim,blockDim>>>(inOut);
 }
 
@@ -62,17 +62,17 @@ template<typename Float>
 static __global__ void conjugate_vector_kernel(Float *inOut){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_COLS ; i++)
-    inOut[(i*c_stride + sid)*2 + 1] *= -1.;
+    inOut[(i*DGC_stride + sid)*2 + 1] *= -1.;
 }
 
 template<typename Float>
 void conjugate_vector(Float *inOut){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   conjugate_vector_kernel<<<gridDim,blockDim>>>(inOut);
   checkCudaError();
 }
@@ -80,19 +80,19 @@ void conjugate_vector(Float *inOut){
 template<typename Float>
 __inline__ __global__ void scale_vector_kernel(Float a, Float* inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_threads) return;
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_COLS ; i++) {
-    inOut[(i*c_stride + sid)*2 + 0] *= a;
-    inOut[(i*c_stride + sid)*2 + 1] *= a;
+    inOut[(i*DGC_stride + sid)*2 + 0] *= a;
+    inOut[(i*DGC_stride + sid)*2 + 1] *= a;
   }
 }
 
 template<typename Float>
 void scale_vector(Float a, Float* inOut){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
 
   scale_vector_kernel<<<gridDim,blockDim>>>( a, inOut);
   checkCudaError();
@@ -105,19 +105,19 @@ void norm2_device(Float norm, Float* in){
 template<typename FloatIn, typename FloatOut, bool outEvenB, bool outOddB> 
 static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *outOdd){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads/2) return;
+  if (sid >= DGC_threads/2) return;
 
   // take indices on 4d lattice
-  int half_stride = c_stride/2;
+  int half_stride = DGC_stride/2;
   int latt_coord = 2*sid;
 
   int r1,r2,x_id,y_id,z_id,t_id;
-  r1 = latt_coord/(c_localL[0]);
-  r2 = r1/(c_localL[1]);
-  x_id = latt_coord - r1*(c_localL[0]);
-  y_id = r1 - r2*(c_localL[1]);
-  t_id = r2/(c_localL[2]);
-  z_id = r2 - t_id*(c_localL[2]);
+  r1 = latt_coord/(DGC_localL[0]);
+  r2 = r1/(DGC_localL[1]);
+  x_id = latt_coord - r1*(DGC_localL[0]);
+  y_id = r1 - r2*(DGC_localL[1]);
+  t_id = r2/(DGC_localL[2]);
+  z_id = r2 - t_id*(DGC_localL[2]);
   int evenSiteBit = ((x_id+y_id+z_id+t_id) & 1);
   int oddSiteBit  = evenSiteBit ^ 1;
   Float2<FloatOut> *outEven2 = (Float2<FloatOut> *) outEven;
@@ -130,13 +130,13 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
     for(int ic = 0 ; ic < N_COLS ; ic++){
       if(outEvenB) {
 	outEven2[(mu*N_COLS + ic)*half_stride + sid] =
-	  in2[(mu*N_COLS + ic)*c_stride + latt_coord + evenSiteBit];
+	  in2[(mu*N_COLS + ic)*DGC_stride + latt_coord + evenSiteBit];
       } else
 	outEven2[(mu*N_COLS + ic)*half_stride + sid] = 0.;
 
       if(outOddB) {
 	outOdd2[(mu*N_COLS + ic)*half_stride + sid] =
-	  in2[(mu*N_COLS + ic)*c_stride + latt_coord + oddSiteBit];
+	  in2[(mu*N_COLS + ic)*DGC_stride + latt_coord + oddSiteBit];
       } else
 	outOdd2[(mu*N_COLS + ic)*half_stride + sid] = 0.;
     }
@@ -146,7 +146,7 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
 template<typename FloatIn, typename FloatOut> 
 static void copy_to_QUDA(FloatIn* in,ColorSpinorField &qudaVec, bool isEven){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
       copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) qudaVec.V(), NULL);
@@ -172,18 +172,18 @@ template<typename FloatOut, typename FloatIn, bool inEvenB, bool inOddB>
 static __global__ void copy_from_QUDA(FloatOut *out, FloatIn *inEven, FloatIn *inOdd){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads/2) return;
+  if (sid >= DGC_threads/2) return;
 
-  int half_stride = c_stride/2;
+  int half_stride = DGC_stride/2;
   int latt_coord = 2*sid;
 
   int r1,r2,x_id,y_id,z_id,t_id;
-  r1 = latt_coord/(c_localL[0]);
-  r2 = r1/(c_localL[1]);
-  x_id = latt_coord - r1*(c_localL[0]);
-  y_id = r1 - r2*(c_localL[1]);
-  t_id = r2/(c_localL[2]);
-  z_id = r2 - t_id*(c_localL[2]);
+  r1 = latt_coord/(DGC_localL[0]);
+  r2 = r1/(DGC_localL[1]);
+  x_id = latt_coord - r1*(DGC_localL[0]);
+  y_id = r1 - r2*(DGC_localL[1]);
+  t_id = r2/(DGC_localL[2]);
+  z_id = r2 - t_id*(DGC_localL[2]);
   int evenSiteBit = ((x_id+y_id+z_id+t_id) & 1);
   int oddSiteBit  = evenSiteBit ^ 1;
   Float2<FloatIn> *inEven2 = (Float2<FloatIn> *) inEven;
@@ -195,16 +195,16 @@ static __global__ void copy_from_QUDA(FloatOut *out, FloatIn *inEven, FloatIn *i
     #pragma unroll
     for(int ic = 0 ; ic < N_COLS ; ic++) {
       if(inEvenB) {
-	out2[(mu*N_COLS + ic)*c_stride + latt_coord + evenSiteBit] =
+	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + evenSiteBit] =
 	  inEven2[(mu*N_COLS + ic)*half_stride + sid];
       } else
-	out2[(mu*N_COLS + ic)*c_stride + latt_coord + evenSiteBit] = 0.;
+	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + evenSiteBit] = 0.;
 
       if(inOddB) {
-	out2[(mu*N_COLS + ic)*c_stride + latt_coord + oddSiteBit] =
+	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + oddSiteBit] =
 	  inOdd2[(mu*N_COLS + ic)*half_stride + sid];
       } else
-	out2[(mu*N_COLS + ic)*c_stride + latt_coord + oddSiteBit] = 0.;
+	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + oddSiteBit] = 0.;
     }
   }
 }
@@ -212,7 +212,7 @@ static __global__ void copy_from_QUDA(FloatOut *out, FloatIn *inEven, FloatIn *i
 template<typename FloatOut, typename FloatIn> 
 static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
       copy_from_QUDA<FloatOut,FloatIn,true,false><<<gridDim,blockDim>>>( out,(FloatIn*) qudaVec.V(), NULL);

@@ -19,12 +19,12 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_f
 template<typename Float>
 void PLEGMA_Gauge<Float>::pack(double **p_gauge){
   for(int dir = 0 ; dir < N_DIMS ; dir++){
-    for(int i = 0 ; i < GK_localVolume ; i++){
+    for(int i = 0 ; i < HGC_localVolume ; i++){
       #pragma unroll
       for(int j = 0; j < N_COLS*N_COLS; j++){
 	#pragma unroll
 	for(int part = 0; part < 2; part++)
-	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*GK_localVolume*2 + j*GK_localVolume*2 + i*2 + part] =
+	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*HGC_localVolume*2 + j*HGC_localVolume*2 + i*2 + part] =
 	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part];
       }
     }
@@ -36,13 +36,13 @@ void PLEGMA_Gauge<Float>::packToBackup(void **gauge){
   double **p_gauge = (double**) gauge;
   if(PLEGMA_Field<Float>::h_elem_backup != NULL){
     for(int dir = 0 ; dir < N_DIMS ; dir++)
-    for(int iv = 0 ; iv < GK_localVolume ; iv++)
+    for(int iv = 0 ; iv < HGC_localVolume ; iv++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++)
     for(int c2 = 0 ; c2 < N_COLS ; c2++)
     for(int part = 0 ; part < 2 ; part++){
-      PLEGMA_Field<Float>::h_elem_backup[dir*N_COLS*N_COLS*GK_localVolume*2 + 
-			c1*N_COLS*GK_localVolume*2 + 
-			c2*GK_localVolume*2 + 
+      PLEGMA_Field<Float>::h_elem_backup[dir*N_COLS*N_COLS*HGC_localVolume*2 + 
+			c1*N_COLS*HGC_localVolume*2 + 
+			c2*HGC_localVolume*2 + 
 			iv*2 + part] = 
 	(Float) p_gauge[dir][iv*N_COLS*N_COLS*2 + 
 			     c1*N_COLS*2 + 
@@ -106,7 +106,7 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
       res.path(vspath, u_s, tmp);
       resV += sumRtraceU<Float,Float>(res);
     }
-  Float plaqShifts = resV/(GK_totalVolume*N_COLS*6);
+  Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
 
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_SIDE);
@@ -192,7 +192,7 @@ template<typename Float>
 void PLEGMA_Gauge<Float>::momPhase(Float phase[N_DIMS],int mom[N_DIMS]){
   std::complex<Float> scale[N_DIMS];
   for(int d=0; d<N_DIMS; d++) {
-    Float theta = 2.0*PI*((Float)mom[d])*phase[d]/((Float) GK_totalL[d]);
+    Float theta = 2.0*PI*((Float)mom[d])*phase[d]/((Float) HGC_totalL[d]);
     scale[d] = {cos(theta), sin(theta)};
   }
   scaleDirWise(scale);
