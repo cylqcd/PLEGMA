@@ -66,13 +66,13 @@ int main(int argc, char **argv)
       solverUP->solve(vectorOut, vectorIn);
       vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
       vectorAuxF.copy(vectorAuxD);
-      propUP.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
+      propUP.absorb(vectorAuxF, isc/3, isc%3);
 
       printfQuda("Going to invert DN for component %d\n", isc);
       solverDN->solve(vectorOut, vectorIn);
       vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
       vectorAuxF.copy(vectorAuxD);
-      propDN.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
+      propDN.absorb(vectorAuxF, isc/3, isc%3);
     }
 
     propUP.rotateToPhysicalBase_device(+1);
