@@ -21,11 +21,11 @@ int main(int argc, char **argv)
   PLEGMA_FT<double> ft4(0,4,true);
   ft4.apply(f);
   ft4.apply(f); // apply twice to check accumulation
-  ft4.writeToDisk("/onyx/noether/h/khadjiyiannakou/runs/momTest_field_ft4.dat", ASCII_FORM);
+  ft4.writeToFile("/onyx/noether/h/khadjiyiannakou/runs/momTest_field_ft4.dat", ASCII_FORM);
 
   PLEGMA_FT<double> ft3(0,3);
   ft3.apply(prop3D);
-  ft3.writeToDisk("/onyx/noether/h/khadjiyiannakou/runs/momTest_prop3D_ft3.dat", ASCII_FORM);
+  ft3.writeToFile("/onyx/noether/h/khadjiyiannakou/runs/momTest_prop3D_ft3.dat", ASCII_FORM);
   
   finalize();
 

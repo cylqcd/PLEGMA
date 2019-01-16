@@ -31,7 +31,7 @@ namespace plegma {
     int Dims() const{return dims;}
     int DimT() const{return dimT;}
     Float* H_elem() const{return h_elem;}
-    void writeToDisk(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift = 0);
+    void writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift = 0);
     void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
     void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction
     void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented

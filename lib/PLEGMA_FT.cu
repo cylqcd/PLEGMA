@@ -115,7 +115,7 @@ void PLEGMA_FT<Float>::mulMomentumPhases(Vint src, int sign){
 }
 
 template<typename Float>
-void PLEGMA_FT<Float>::writeToDisk(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift){
+void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift){
   if(dims == 4 && timeshift > 0) errorQuda("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!isAllocated) errorQuda("Memory not allocated cannot write data");
   if(outputFormat == ASCII_FORM){
