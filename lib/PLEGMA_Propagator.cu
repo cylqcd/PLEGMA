@@ -288,7 +288,6 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int glob
   if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
   int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
->>>>>>> master
   int V3 = GK_localVolume/GK_localL[3];
   int V4 = GK_localVolume;
   Float *pointer_src = NULL;

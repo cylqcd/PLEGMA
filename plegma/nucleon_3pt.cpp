@@ -81,14 +81,14 @@ int main(int argc, char **argv)
     printfQuda("Going to invert UP for component %d\n", isc);
     solverUP->solve(vectorOut, vectorIn);
     vectorAuxF.copy(vectorOut);
-    propUP.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
-    propUP3D.absorbVectorTimeSlice(vectorAuxF,global_fixSinkTime,isc/3, isc%3); // later when we have copy from 4D specific time slice we change it
+    propUP.absorb(vectorAuxF, isc/3, isc%3);
+    //    propUP3D.absorbVectorTimeSlice(vectorAuxF,global_fixSinkTime,isc/3, isc%3); // later when we have copy from 4D specific time slice we change it
     
     printfQuda("Going to invert DN for component %d\n", isc);
     solverDN->solve(vectorOut, vectorIn);
     vectorAuxF.copy(vectorOut);
-    propDN.absorbVectorToDevice(vectorAuxF, isc/3, isc%3);
-    propDN3D.absorbVectorTimeSlice(vectorAuxF,global_fixSinkTime,isc/3, isc%3);// later when we have copy from 4D specific time slice we change it
+    propDN.absorb(vectorAuxF, isc/3, isc%3);
+    //    propDN3D.absorbVectorTimeSlice(vectorAuxF,global_fixSinkTime,isc/3, isc%3);// later when we have copy from 4D specific time slice we change it
   }
 
 
@@ -96,17 +96,19 @@ int main(int argc, char **argv)
   for(int nu = 0 ; nu < 4 ; nu++)
     for(int c2 = 0 ; c2 < 3 ; c2++){
       // later when we have copy from 4D specific time slice we change it
-      vectorAuxF.copyPropagator3D(propUP3D, global_fixSinkTime, nu, c2);
+      //      vectorAuxF.copyPropagator3D(propUP3D, global_fixSinkTime, nu, c2);
+      vectorAuxF.absorb(propUP, global_fixSinkTime, nu, c2);
       vectorAuxD.copy(vectorAuxF);
       vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
       vectorAuxF.copy(vectorOut);
-      propUP3D.absorbVectorTimeSlice(vectorAuxF,global_fixSinkTime,nu, c2);
+      propUP3D.absorb(vectorAuxF,global_fixSinkTime,nu, c2);
 
-      vectorAuxF.copyPropagator3D(propDN3D, global_fixSinkTime, nu, c2);
+      //      vectorAuxF.copyPropagator3D(propDN3D, global_fixSinkTime, nu, c2);
+      vectorAuxF.absorb(propDN, global_fixSinkTime, nu, c2);
       vectorAuxD.copy(vectorAuxF);
       vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
       vectorAuxF.copy(vectorOut);
-      propDN3D.absorbVectorTimeSlice(vectorAuxF,global_fixSinkTime,nu, c2);
+      propDN3D.absorb(vectorAuxF,global_fixSinkTime,nu, c2);
     }
 
   WHICHPARTICLE nucleon = NEUTRON; // for the test is NEUTRON, later we can provide an option
@@ -128,7 +130,7 @@ int main(int argc, char **argv)
 	if(nucleon == PROTON) solverDN->solve(vectorOut, vectorIn); else solverUP->solve(vectorOut, vectorIn);
 	// if we normalize the seqsource we have to take it out here
 	vectorAuxF.copy(vectorOut);
-	seqProp.absorbVectorToDevice(vectorAuxF, nu, c2);
+	seqProp.absorb(vectorAuxF, nu, c2);
       }
     seqProp.apply_gamma5();
     seqProp.conjugate();
@@ -170,7 +172,7 @@ int main(int argc, char **argv)
 	if(nucleon == PROTON) solverUP->solve(vectorOut, vectorIn); else solverDN->solve(vectorOut, vectorIn);
 	// if we normalize the seqsource we have to take it out here
 	vectorAuxF.copy(vectorOut);
-	seqProp.absorbVectorToDevice(vectorAuxF, nu, c2);
+	seqProp.absorb(vectorAuxF, nu, c2);
       }
     seqProp.apply_gamma5();
     seqProp.conjugate();
