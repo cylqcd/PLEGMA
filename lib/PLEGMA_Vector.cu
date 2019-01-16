@@ -23,6 +23,7 @@ static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &
   else
     cudaMemcpy(vecOut.D_elem(), vecIn.D_elem(), vecIn.Bytes_total(), 
 	       cudaMemcpyDeviceToDevice);
+  checkCudaError();
 }
 
 template<typename Float>
