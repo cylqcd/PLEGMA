@@ -463,5 +463,30 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
   }
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where){
+  if(bytes_total_length != f.Bytes_total()) errorQuda("Size of the fields does not match\n");
+  if(field_length != f.Field_length()) errorQuda("The d.o.f of the fields does not match\n");
+  switch(where){
+  case(NONE):
+    break;
+  case(HOST):
+    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    break;
+  case(DEVICE):
+    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
+    checkCudaError();
+  case(BOTH):
+    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    break;
+  }
+}
+
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;

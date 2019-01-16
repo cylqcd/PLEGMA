@@ -54,6 +54,9 @@ namespace plegma {
     Float* H_elem() const { return h_elem; }
     Float* D_elem() const { return d_elem; }
 
+    bool IsAllocHost() const { return isAllocHost;}
+    bool IsAllocDevice() const { return isAllocDevice;}
+    
     size_t Bytes_total() const { return bytes_total_length; }
     size_t Bytes_ghost() const { return bytes_ghost_length; }
     size_t Bytes_total_plus_ghost() const { return bytes_total_plus_ghost_length; }
@@ -85,6 +88,8 @@ namespace plegma {
     
     void shift(PLEGMA_Field &Fin, int dirOr);
     void setUnit(std::vector<int> indDiag);
+
+    void copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where = DEVICE);
   };
 }
 #endif
