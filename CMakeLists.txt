@@ -93,6 +93,10 @@ if(${PLEGMA_MKL})
   set(PLEGMA_MKL_INCDIR "${MKLROOT}/include" CACHE PATH "path to MKL include dir")
 endif()
 
+#######################################################################
+# build PLEGMA as shared library
+set(PLEGMA_BUILD_SHAREDLIB OFF CACHE BOOL "build PLEGMA as shared library")
+mark_as_advanced(PLEGMA_BUILD_SHAREDLIB)
 
 #######################################################################
 # options that are not exposed at all because only one option exists

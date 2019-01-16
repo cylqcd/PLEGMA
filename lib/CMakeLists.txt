@@ -55,7 +55,7 @@ if(QUDA_OBJS)
 
   # add some definitions that cause issues with cmake 3.7 and nvcc only to cpp files 
   target_compile_definitions(PLEGMA_cpp PUBLIC -DQUDA_HASH="${HASH}")
-  if(QUDA_BUILD_SHAREDLIB)
+  if(PLEGMA_BUILD_SHAREDLIB)
     set_target_properties(PLEGMA_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
   endif()
 
@@ -64,7 +64,7 @@ if(QUDA_OBJS)
 endif()
 
 # make one library
-if(QUDA_BUILD_SHAREDLIB)
+if(PLEGMA_BUILD_SHAREDLIB)
     cuda_add_library(PLEGMA SHARED ${PLEGMA_LIB})
 else()
   cuda_add_library(PLEGMA STATIC ${PLEGMA_LIB})
