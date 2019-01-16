@@ -1,8 +1,6 @@
 #ifndef PLEGMA_KERNEL_TEXTURE_CUH
 #define PLEGMA_KERNEL_TEXTURE_CUH
 
-#include <PLEGMA_kernel_counter.cuh>
-
 #define GET_ID(sid) {(sid) % c_localL[0],				\
 		     ((sid)/c_localL[0]) % c_localL[1],			\
 		     ((sid)/c_localL[0]/c_localL[1]) % c_localL[2],	\
@@ -179,11 +177,7 @@ namespace plegma {
     int4 v = tex1Dfetch<int4>(tex,i);
     return (Float2<double>) make_double2(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
-  template<> inline __device__ Float2<counter> texture<counter>::fetch(size_t i) {
-    counter::incReads();
-    return Float2<counter>();
-  }
-  
+    
   template<typename Float>
   struct pFloat2 {
     Float2<Float>* p;

@@ -26,12 +26,6 @@ __constant__ int c_procPosition[N_DIMS];
 __constant__ int c_totalL[N_DIMS];
 __constant__ int c_Nmoms;
 __constant__ short int c_moms[MAX_NMOMENTA][3];
-extern __device__ long unsigned int *counterOps;
-extern __device__ long unsigned int *counterReads;
-extern __device__ long unsigned int *counterWrites;
-long unsigned int *counterOps;
-long unsigned int *counterReads;
-long unsigned int *counterWrites;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////

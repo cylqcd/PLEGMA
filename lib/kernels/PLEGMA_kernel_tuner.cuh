@@ -8,9 +8,6 @@ using namespace quda;
 #define THREADS_PER_BLOCK 64
 
 extern __device__ cudaDeviceProp devProp;
-extern __device__ long unsigned int *counterOps;
-extern __device__ long unsigned int *counterReads;
-extern __device__ long unsigned int *counterWrites;
 
 // struct that contains all variables
 //  necessary for the tuning evaluation
