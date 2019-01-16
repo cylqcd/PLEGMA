@@ -97,6 +97,11 @@ endif()
 # build PLEGMA as shared library
 set(PLEGMA_BUILD_SHAREDLIB OFF CACHE BOOL "build PLEGMA as shared library")
 mark_as_advanced(PLEGMA_BUILD_SHAREDLIB)
+if(${PLEGMA_BUILD_SHAREDLIB})
+  if("${QUDA_LIB}" STREQUAL "${QUDA_HOME}/lib/libquda.a")
+    message( FATAL_ERROR "QUDA_LIB must be a shared library" )
+  endif()
+endif()
 
 #######################################################################
 # options that are not exposed at all because only one option exists
