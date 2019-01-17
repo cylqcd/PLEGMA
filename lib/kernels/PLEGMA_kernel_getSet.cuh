@@ -177,7 +177,7 @@ namespace plegma {
     int4 v = tex1Dfetch<int4>(tex,i);
     return (Float2<double>) make_double2(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
-
+    
   template<typename Float>
   struct pFloat2 {
     Float2<Float>* p;
@@ -228,8 +228,7 @@ namespace plegma {
       get(p, site_size, ss); 
     }    
   };
-
-
+  
   template<typename Float>
   using genericTex = generic<texture<Float>,Float>;
   

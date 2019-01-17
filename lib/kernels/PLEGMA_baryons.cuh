@@ -107,6 +107,26 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     size = n_flavors*site_size*volume;
     alloc_size = size; 
   }
+
+  int isource = corr.getIdSource();
+  ProfileStruct ps(volume, site_size*sizeof(Float2<FloatC>));
+  tune( ps, contract_baryons_kernel<FloatA,FloatB,FloatC,runFT>,
+	texProp1, texProp2, d_partial_block, it,
+	GK_sourcePosition[isource][0],
+	GK_sourcePosition[isource][1],
+	GK_sourcePosition[isource][2],  (BARYONS_TYPE) 0); // tuning done for first baryon
+  
+  int gridDimX = ps.tp.grid.x;
+    if(runFT==true){
+    volume = GK_Nmoms;
+    size = n_flavors*site_size*volume;
+    alloc_size = size * gridDimX;
+  } else {
+    volume = SpVol;
+    size = n_flavors*site_size*volume;
+    alloc_size = size;
+  }
+  
   h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
   if(h_partial_block == NULL) errorQuda("contract_baryons_kernel: Cannot allocate host block.\n");
   cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(FloatC) );
@@ -114,12 +134,13 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 
   if(runFT) cudaFuncSetCacheConfig(contract_baryons_kernel<FloatA,FloatB,FloatC,runFT>, cudaFuncCachePreferShared);
 
-  int isource = corr.getIdSource();
   for(int ip=0; ip<N_BARYONS; ip++) {
-    contract_baryons_kernel<FloatA,FloatB,FloatC,runFT><<<gridDim,blockDim>>>( texProp1, texProp2, d_partial_block, it,
-									       GK_sourcePosition[isource][0],
-									       GK_sourcePosition[isource][1],
-									       GK_sourcePosition[isource][2], (BARYONS_TYPE) ip);
+    contract_baryons_kernel<FloatA,FloatB,FloatC,runFT><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>( texProp1, texProp2,
+													d_partial_block, it,
+													GK_sourcePosition[isource][0],
+													GK_sourcePosition[isource][1],
+													GK_sourcePosition[isource][2],
+													(BARYONS_TYPE) ip);
     checkCudaError();
     
     cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
