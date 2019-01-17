@@ -52,9 +52,6 @@ template<typename FloatOut,typename FloatIn, typename FloatGauge>
 static void gaussian_smearing(FloatOut* out,
 			      vectorTex<FloatIn> vecInTex, 
 			      gaugeTex<FloatGauge> gaugeTex){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  
   ProfileStruct ps(GK_localVolume);
   tune(ps, gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex);
   

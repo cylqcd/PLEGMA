@@ -30,8 +30,6 @@ __global__ void covD_kernel(FloatOut* out,
 
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
 static void covD_k(FloatOut *out, vectorTex<FloatIn> v, gaugeTex<FloatGauge> g, int dirOr){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   ProfileStruct ps(GK_localVolume);
   tuneAndRun(ps, covD_kernel<FloatOut,FloatIn,FloatGauge>, out, v, g, dirOr);
   checkCudaError();

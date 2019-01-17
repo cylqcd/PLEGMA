@@ -64,7 +64,6 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
 #endif
 
   int gridDimX = ps.tp.grid.x;
-  printf("grid dim x %d \n",ps.tp.grid.x);
   cudaMalloc((void**)&d_partial_plaq, gridDimX * sizeof(Float));
   calculatePlaquette_kernel<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gaugeTex, d_partial_plaq);
   
