@@ -53,26 +53,5 @@ static void gaussian_smearing(FloatOut* out,
 			      vectorTex<FloatIn> vecInTex, 
 			      gaugeTex<FloatGauge> gaugeTex){
   ProfileStruct ps(GK_localVolume);
-  tune(ps, gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex);
-  
-#ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-#endif
-
-  gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge><<<ps.tp.grid,ps.tp.block>>>(out, vecInTex, gaugeTex);
-  checkCudaError();
-
-#ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for 1 step in gaussian smearing is %f ms\n",elapsedTime);
-#endif
-
+  tuneAndRun(ps, gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex);
 }
