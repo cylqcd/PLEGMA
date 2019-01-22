@@ -141,9 +141,10 @@ void  PLEGMA_Propagator<Float>::conjugate(){
 }
 
 
-template<typename Float> 
-void  PLEGMA_Propagator<Float>::apply_gamma(short int lr,short int r){
-  apply_gamma_prop(lr,PLEGMA_Field<Float>::d_elem,r);
+template<typename Float>
+template<LEFTRIGHT LR>
+void  PLEGMA_Propagator<Float>::apply_gamma(short int r){
+  apply_gamma_prop(LR,PLEGMA_Field<Float>::d_elem,r);
 }
 
 template<typename Float>

@@ -44,10 +44,10 @@ static __global__ void apply_gamma_prop_kernel(short int LF,Float *inOut, short 
 }
 
 template<typename Float>
-static void apply_gamma_prop(short int LF,Float *inOut,short int r){
+static void apply_gamma_prop(LEFTRIGHT LR, Float *inOut,short int r){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  apply_gamma_prop_kernel<<<gridDim,blockDim>>>(LF,(Float*) inOut, r);
+  apply_gamma_prop_kernel<<<gridDim,blockDim>>>(LR,(Float*) inOut, r);
   checkCudaError();
 }
 
