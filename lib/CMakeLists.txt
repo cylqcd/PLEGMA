@@ -9,6 +9,7 @@ set (QUDA_OBJS
   kernels/PLEGMA_baryons_NtoN.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
+  PLEGMA_BLAS.cu
 )
 
 if(PLEGMA_ALL_BARYONS)

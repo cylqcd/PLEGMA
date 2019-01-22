@@ -35,6 +35,6 @@ namespace plegma {
     void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
     void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction
     void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
-    void mulMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
+    void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
   };
 }
