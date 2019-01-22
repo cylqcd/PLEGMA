@@ -98,6 +98,12 @@ namespace cuBLAS{
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdotc failed with error %d", error);
     int mpiErr = MPI_Allreduce((double*) &cu_res, res, 2, MPI_DOUBLE, MPI_SUM, comm);
     if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
-  }
+  }  
+}
 
+//=================================================================//
+
+namespace plegma{
+  template<typename Float>
+  void elemWiseMul(int NN, Float* x, Float* y);
 }
