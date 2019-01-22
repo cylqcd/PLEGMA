@@ -88,8 +88,8 @@ namespace plegma {
     
     void shift(PLEGMA_Field &Fin, int dirOr);
     void setUnit(std::vector<int> indDiag);
-
     void copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where = DEVICE);
+    void mulMomentumPhases(std::vector<int> mom, int sign=-1);
   };
 }
 #endif

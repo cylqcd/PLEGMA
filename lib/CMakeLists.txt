@@ -14,6 +14,7 @@ set (QUDA_OBJS
   kernels/PLEGMA_contractPropOpProp_wilsonLine.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
+  PLEGMA_BLAS.cu
 )
 
 if(PLEGMA_ALL_BARYONS)
