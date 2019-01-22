@@ -1,10 +1,6 @@
 #include <PLEGMA_Field.h>
 #include <PLEGMA_FT.h>
-#include <thrust/device_ptr.h>
-#include <thrust/fill.h>
-#include <thrust/for_each.h>
-#include <thrust/tuple.h>
-#include <thrust/iterator/counting_iterator.h>
+#include <PLEGMA_Thrust.h>
 #include <vector>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
@@ -96,12 +92,13 @@ void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, int sign){
 }
 
 template<typename Float>
-void PLEGMA_FT<Float>::mulMomentumPhases(Vint src, int sign){
+void PLEGMA_FT<Float>::mulConstMomentumPhases(Vint src, int sign){
   if(dims == 3 && src.size() != 3) errorQuda("Src size is incompatible with the dimensionality of the FT");
   if(dims == 4 && src.size() != 4) errorQuda("Src size is incompatible with the dimensionality of the FT");
   if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
   Float phase;
   std::complex<Float> expPhase;
+  if(!isAllocated) errorQuda("Apply first FT and then the const phases");
   std::complex<Float> *h2 = (std::complex<Float> *) h_elem;
   for(int imom = 0; imom < Nmoms(); imom++){
     phase=0.;
