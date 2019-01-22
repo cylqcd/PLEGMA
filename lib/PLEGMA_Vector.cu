@@ -101,8 +101,8 @@ void  PLEGMA_Vector<Float>::apply_gamma5(){
 
 
 template<typename Float> 
-void  PLEGMA_Vector<Float>::apply_gamma(short int lr,short int r){
-  apply_gamma_vector(lr,PLEGMA_Field<Float>::d_elem,r);
+void  PLEGMA_Vector<Float>::apply_gamma(LEFTRIGHT LR,GAMMAS gMat){
+  apply_gamma_vector(LR,PLEGMA_Field<Float>::d_elem,gMat);
 }
 
 template<typename Float>

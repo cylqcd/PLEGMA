@@ -31,8 +31,8 @@ static void castVector(FloatOut *out, FloatIn *in){
 }
 
 
-template<typename Float>
-static __global__ void apply_gamma_vector_kernel(short int LF,Float *inOut, short int r){
+template<LEFTRIGHT LF,typename Float>
+static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   vector2<Float> vec(inOut);
   Float2<Float> Sin[N_SPINS][N_COLS];
@@ -51,8 +51,8 @@ static __global__ void apply_gamma_vector_kernel(short int LF,Float *inOut, shor
 	
 #pragma unroll
   for(int nz = 0; nz < N_SPINS; nz++){
-    int mu = (LF == 0)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
-    int nu = (LF == 0)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
+    int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
+    int nu = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
 #pragma unroll
     for(int c1 = 0; c1 < N_COLS; c1++)
       Sout[mu][c1] =Sout[mu][c1]+ Sin[nu][c1]*gamma2[r][nz];
@@ -62,10 +62,17 @@ static __global__ void apply_gamma_vector_kernel(short int LF,Float *inOut, shor
 }
 
 template<typename Float>
-static void apply_gamma_vector(short int LF,Float *inOut,short int r){
+static void apply_gamma_vector(LEFTRIGHT LF,Float *inOut,GAMMAS r){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  apply_gamma_vector_kernel<<<gridDim,blockDim>>>(LF,(Float*) inOut, r);
+  switch(LR){
+  case(LEFT):
+    apply_gamma_vector_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  case(RIGHT):
+    apply_gamma_vector_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  }
   checkCudaError();
 }
 

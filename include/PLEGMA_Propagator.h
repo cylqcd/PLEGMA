@@ -10,8 +10,6 @@ namespace plegma {
   /////////////////////////////
   // CLASS: PLEGMA_Propagator //
   /////////////////////////////
-  enum LEFTRIGHT{LEFT,RIGHT};
-
   template<typename Float>
     class PLEGMA_Propagator : public PLEGMA_Field<Float> {
     
@@ -20,7 +18,7 @@ namespace plegma {
     ~PLEGMA_Propagator(){;}
     
     void conjugate();
-    template<LEFTRIGHT LR> void apply_gamma(short int r);
+    void apply_gamma(LEFTRIGHT LR,GAMMAS gMat);
     void apply_gamma5();
     void absorbVectorToHost(PLEGMA_Vector<Float> &vec, 
 			    int nu, int c2);

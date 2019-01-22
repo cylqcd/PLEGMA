@@ -1,11 +1,8 @@
 #include <PLEGMA_kernel_utils.cuh>
 using namespace plegma;
 
-
-
-
-template<typename Float>
-static __global__ void apply_gamma_prop_kernel(short int LF,Float *inOut, short int r){
+template<LEFTRIGHT LF,typename Float>
+static __global__ void apply_gamma_prop_kernel(Float *inOut, GAMMAS r){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   prop2<Float> prop(inOut);
   Float2<Float> Sin[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -37,17 +34,24 @@ static __global__ void apply_gamma_prop_kernel(short int LF,Float *inOut, short 
       for(int c2 = 0; c2 < N_COLS; c2++)
 #pragma unroll
 	for(int s =0 ;s < N_SPINS; s++)
-	  (LF == 0)? Sout[mu][s][c1][c2] =Sout[mu][s][c1][c2]+ Sin[nu][s][c1][c2]*gamma2[r][nz] : Sout[s][mu][c1][c2] =Sout[s][mu][c1][c2]+ Sin[s][nu][c1][c2]*gamma2[r][nz];
+	  (LF == LEFT) ? Sout[mu][s][c1][c2] =Sout[mu][s][c1][c2]+ Sin[nu][s][c1][c2]*gamma2[r][nz] : Sout[s][mu][c1][c2] =Sout[s][mu][c1][c2]+ Sin[s][nu][c1][c2]*gamma2[r][nz];
   }
 
   prop.set(Sout,sid);
 }
 
 template<typename Float>
-static void apply_gamma_prop(LEFTRIGHT LR, Float *inOut,short int r){
+static void apply_gamma_prop(LEFTRIGHT LR, Float *inOut, GAMMAS r){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  apply_gamma_prop_kernel<<<gridDim,blockDim>>>(LR,(Float*) inOut, r);
+  switch(LR){
+  case(LEFT):
+    apply_gamma_prop_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  case(RIGHT):
+    apply_gamma_prop_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  }
   checkCudaError();
 }
 

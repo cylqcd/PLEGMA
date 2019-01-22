@@ -39,7 +39,7 @@ namespace plegma {
     void write(char* filename);
     void conjugate();
     void apply_gamma5();
-    void apply_gamma(short int,short int);
+    void apply_gamma(LEFTRIGHT LR, GAMMAS gMat);
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
   };
 }
