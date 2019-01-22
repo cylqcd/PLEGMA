@@ -111,6 +111,7 @@ int main(int argc, char **argv)
       propDN3D.absorb(vectorAuxF,global_fixSinkTime,nu, c2);
     }
 
+
   WHICHPARTICLE nucleon = NEUTRON; // for the test is NEUTRON, later we can provide an option
   
   //seq source part 2Props and contraction block
@@ -123,7 +124,7 @@ int main(int argc, char **argv)
 	  vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, P4_P, nucleon, global_fixSinkTime, nu, c2);
 	// put a momentum in the sink later
 	vectorAuxF.conjugate();
-	vectorAuxF.apply_gamma5();
+	vectorAuxF.apply_gamma(G5);
 	vectorAuxD.copy(vectorAuxF);
 	vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
 	// check if we need to normalize the seqsource for mix precision solver
@@ -132,7 +133,7 @@ int main(int argc, char **argv)
 	vectorAuxF.copy(vectorOut);
 	seqProp.absorb(vectorAuxF, nu, c2);
       }
-    seqProp.apply_gamma5();
+    seqProp.apply_gamma(G5);
     seqProp.conjugate();
     int signProps = (nucleon == PROTON) ? +1: -1;
 
@@ -165,7 +166,7 @@ int main(int argc, char **argv)
 	  vectorAuxF.seqSourceNucleon(propDN3D, P4_P, nucleon, global_fixSinkTime, nu, c2);
 	// put a momentum in the sink later
 	vectorAuxF.conjugate();
-	vectorAuxF.apply_gamma5();
+	vectorAuxF.apply_gamma(G5);
 	vectorAuxD.copy(vectorAuxF);
 	vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
 	// check if we need to normalize the seqsource for mix precision solver
@@ -174,7 +175,7 @@ int main(int argc, char **argv)
 	vectorAuxF.copy(vectorOut);
 	seqProp.absorb(vectorAuxF, nu, c2);
       }
-    seqProp.apply_gamma5();
+    seqProp.apply_gamma(G5);
     seqProp.conjugate();
     int signProps = (nucleon == PROTON) ? -1: +1;
     PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propDN : propUP;

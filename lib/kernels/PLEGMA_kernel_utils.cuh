@@ -22,7 +22,6 @@ using namespace plegma;
 
 namespace plegma {
 
-  enum LEFTRIGHT {LEFT, RIGHT};
   enum TMROT {NOROT, TMP, TMM};
 
   template<bool isTransMatrix,typename Float>
@@ -53,13 +52,15 @@ namespace plegma {
   
   template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaV(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS], short int r){
+    const Float2<float> (*gamma2)[4];
+    gamma2=(Float2<float> (*)[4]) plegma::gamma;
 #pragma unroll
     for(int nz = 0; nz < N_SPINS; nz++){
       int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
       int nu = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
 #pragma unroll
       for(int c1 = 0; c1 < N_COLS; c1++)
-	vout[mu][c1] = gamma[r][nz]*vin[nu][c1] ;
+	vout[mu][c1] = vin[nu][c1] * gamma2[r][nz] ;
     }
   }
 
@@ -67,6 +68,8 @@ namespace plegma {
   template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaProp(Float2<Float> pout[N_SPINS][N_SPINS][N_COLS][N_COLS],
 				       Float2<Float> pin[N_SPINS][N_SPINS][N_COLS][N_COLS], short int r){
+    const Float2<float> (*gamma2)[4];
+    gamma2=(Float2<float> (*)[4]) plegma::gamma;
 #pragma unroll
     for(int nu = 0 ; nu < N_SPINS; nu++)
 #pragma unroll
@@ -78,8 +81,8 @@ namespace plegma {
 	for(int c2 = 0; c2 < N_COLS; c2++){
 	  Float2<Float> p;
 	  p = (LF == LEFT)? pin[rho][nu][c1][c2]: pin[nu][rho][c1][c2];
-	  if (LF == LEFT) pout[mu][nu][c1][c2] = gamma[r][nz]*p;
-	  else pout[nu][mu][c1][c2] = gamma[r][nz]*p ;
+	  if (LF == LEFT) pout[mu][nu][c1][c2] = p*gamma2[r][nz];
+	  else pout[nu][mu][c1][c2] = p*gamma2[r][nz] ;
 	}
     }
   }

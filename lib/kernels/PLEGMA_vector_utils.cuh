@@ -37,27 +37,9 @@ static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
   vector2<Float> vec(inOut);
   Float2<Float> Sin[N_SPINS][N_COLS];
   Float2<Float> Sout[N_SPINS][N_COLS]; 
-  const Float2<float> (*gamma2)[4];
-  gamma2=(Float2<float> (*)[4]) plegma::gamma;
-
   if (sid >= c_threads) return;
   vec.get(Sin,sid);
-  
-  for(int i=0;i<N_COLS;i++)
-    for(int j=0;j<N_SPINS;j++){
-      Sout[j][i].x=0.;
-      Sout[j][i].y=0.;
-    }
-	
-#pragma unroll
-  for(int nz = 0; nz < N_SPINS; nz++){
-    int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
-    int nu = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
-#pragma unroll
-    for(int c1 = 0; c1 < N_COLS; c1++)
-      Sout[mu][c1] =Sout[mu][c1]+ Sin[nu][c1]*gamma2[r][nz];
-  }
-
+  gammaV<LF>(Sout,Sin,r);
   vec.set(Sout,sid);
 }
 
