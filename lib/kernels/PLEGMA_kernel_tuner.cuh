@@ -5,43 +5,75 @@ using namespace quda;
 #ifndef PLEGMA_KERNEL_TUNER_H
 #define PLEGMA_KERNEL_TUNER_H
 
+#define THREADS_PER_BLOCK 64
+
 extern __device__ cudaDeviceProp devProp;
 
 // struct that contains all variables
 //  necessary for the tuning evaluation
 struct ProfileStruct{
-  long long flops; // n. flop per lattice pt
-  long long outBytes; // output dimension
-  long long inpBytes; // input dimension
-  long long siteBytes; // bytes per lattice pt
+  bool measured;
+  long unsigned int flops; 
+  long unsigned int outBytes; 
+  long unsigned int inpBytes;
+  long long texBytes;
   long long volume;
   long long stride;
   bool tuneY; // tune for the second dimension of thread blocks
   bool sharedMemory;
   unsigned int sharedBytesPerThread;
+
+  TuneParam tp;
+  
+  ProfileStruct()=default;
+  ProfileStruct(long long vol, unsigned int shBPT=0, bool tY=false){
+    measured = false;
+    flops = 0;
+    outBytes = 0;
+    inpBytes = 0;
+    texBytes = 0;
+    volume = vol;
+    stride = vol;
+    tuneY = tY;
+    sharedMemory = (shBPT>0) ? true : false;
+    sharedBytesPerThread = shBPT;
+  };
 };
 
+template<int ...>
+struct seq { };
+
+template<int N, int ...S>
+struct gens : gens<N-1, N-1, S...> { };
+
+template<int ...S>
+struct gens<0, S...> {
+  typedef seq<S...> type;
+};
 
 // class to perform the kernel tuning
-template<typename ArgsStruct>
+template<class ...types>
 class PLEGMA_kernel_tuner : public Tunable{
 
 protected:
 
-  void (*kernel)(ArgsStruct);
-  ArgsStruct *args;
-  ProfileStruct ps;
+  void (*kernel)(types...); // initialised only when tuning is required
+  std::tuple<types...> args; // see above
+  
+  std::string kernelName;
+  
   char volString[TuneKey::aux_n];
   bool onlyTuning;
-  TuneParam tp;
   bool tuned;
 
+  ProfileStruct &ps;
+  
   long long flops() const {
-    return ps.flops * ps.volume;
+    return ps.flops*ps.tp.block.x;
   }
 
   long long bytes() const{
-    return ps.inpBytes + ps.outBytes + ps.siteBytes * ps.volume;
+    return ps.inpBytes + ps.outBytes + ps.texBytes;
   }
 
   bool tuneGridDim() const { return false; }
@@ -55,49 +87,58 @@ protected:
     if ( ps.sharedMemory ) return param.block.x;
     else return 0;
   }
-  TuneKey tuneKey() const { return TuneKey(volString, typeid(*kernel).name(), aux); }
+  TuneKey tuneKey() const { return TuneKey(volString, kernelName.c_str(), aux); }
 
   unsigned int maxBlockSize(const TuneParam &param) const { return MAX_THREADS / (param.block.y*param.block.z); }
+
+  // launching utilities  
+  template<int ...S>
+  void callKernel(dim3 grid3d, dim3 block3d, int shared, const cudaStream_t stream, seq<S...>) {
+    (*kernel)<<<grid3d,block3d,shared,stream>>>(std::get<S>(args)...);
+    cudaDeviceSynchronize();
+  }
+  void launchKernel( dim3 grid3d, dim3 block3d, int shared, const cudaStream_t stream) {
+    callKernel(grid3d,block3d,shared,stream,typename gens<sizeof...(types)>::type());
+  }
   
 public:
 
   // ctor
-  PLEGMA_kernel_tuner( void (*my_kernel)(ArgsStruct), ArgsStruct *my_args, ProfileStruct my_ps );
+  PLEGMA_kernel_tuner( ProfileStruct &myps, void(* mykernel)(types...), types... kArgs ) : ps(myps) {
+    kernel = mykernel;
+    args = std::tuple<types...>(kArgs...);
+    sprintf(volString, "%lld", ps.volume);
+    sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
+    kernelName = (std::string) typeid(*kernel).name(); // with cupti no longer necessary
+    onlyTuning = false;
+    tuned = false;
+  } 
+    
+  // initialisation
+  void initTuneParam(TuneParam &param) const {
+    Tunable::initTuneParam(param);
+    if( ps.tuneY ) param.block.y = 2; // not needed at the moment
+  }
+  
+  // tuning functions
   void tune();
   void run();
   void apply(const cudaStream_t &stream);
   void apply();
 
-  // initialisation
-  void initTuneParam(TuneParam &param) const {
-    Tunable::initTuneParam(param);
-    if( ps.tuneY ) param.block.y = 2;
-  }
+  // utilities
+  int getGridDimX(){ return ps.tp.grid.x; }
 
-  // utility parameter returns
-  int getGridDimX(){ return tp.grid.x; }
-  
 };
 
-template<typename ArgsStruct>
-PLEGMA_kernel_tuner<ArgsStruct>::PLEGMA_kernel_tuner(void (*my_kernel)(ArgsStruct), ArgsStruct *my_args, ProfileStruct my_ps){
-  kernel = my_kernel;
-  args = my_args;
-  ps = my_ps;
-  sprintf(volString, "%lld", ps.volume);
-  sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
-  onlyTuning = false;
-  tuned=false;
-};
-
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::tune(){
+template<class ...types>
+void PLEGMA_kernel_tuner<types...>::tune(){
 #ifdef PLEGMA_NO_TUNING
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  tp.block = blockDim;
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  tp.grid = gridDim;
-  tp.shared_bytes = THREADS_PER_BLOCK*ps.sharedBytesPerThread;    
+  ps.tp.block = blockDim;
+  dim3 gridDim( (ps.volume + blockDim.x -1)/blockDim.x , 1 , 1);
+  ps.tp.grid = gridDim;
+  ps.tp.shared_bytes = THREADS_PER_BLOCK*ps.sharedBytesPerThread;
   tuned = true;
 #else
   onlyTuning = true;
@@ -107,33 +148,52 @@ void PLEGMA_kernel_tuner<ArgsStruct>::tune(){
 }
 
 // apply tuning and/or running with/without tuning
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::apply(const cudaStream_t &stream){
+template<class ...types>
+void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
 #ifdef PLEGMA_NO_TUNING
-  // asked for no tuning, using defaultparameters
+  // asked for no tuning, using default parameters
   tune();
   run();
 #else
   // performing tuning if we need to
-  tp = tuneLaunch(*this, getTuning(), getVerbosity());
+  // tune
+  ps.tp = tuneLaunch(*this, getTuning(), getVerbosity());
   tuned = true;
   if( onlyTuning && !activeTuning() ) return;
-  (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,stream>>>(*args);
+  launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,stream);
 #endif
 }
 
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::apply(){ apply(0); }
-
-template<typename ArgsStruct>
-void PLEGMA_kernel_tuner<ArgsStruct>::run(){
+template<class ...types>
+void PLEGMA_kernel_tuner<types...>::apply(){ apply(0); }
+  
+template<class ...types>
+void PLEGMA_kernel_tuner<types...>::run(){
 #ifdef PLEGMA_NO_TUNING
   if(!tuned) tune();
-  (*kernel)<<<tp.grid,tp.block,tp.shared_bytes>>>(*args);
+  launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!tuned) tp = tuneLaunch(*this, QUDA_TUNE_NO, getVerbosity());
-  (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,0>>>(*args);
+  if(!tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, getVerbosity());
+  launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #endif
+}
+
+template<class ...types>
+void tune(ProfileStruct &ps, void (*kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+  tuner.tune();
+}
+
+template<class ...types>
+void run(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+  tuner.run();
+}
+
+template<class ...types>
+void tuneAndRun(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+  tuner.apply();
 }
 
 #endif
