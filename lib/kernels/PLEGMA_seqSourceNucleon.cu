@@ -1,12 +1,15 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_projectors.cuh>
 
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 static const __device__ short int NtoN_indices[16][4] = {0,1,0,1,0,1,1,0,0,1,2,3,0,1,3,2,1,0,0,1,1,0,1,0,1,0,2,3,1,0,3,2,2,3,0,1,2,3,1,0,2,3,2,3,2,3,3,2,3,2,0,1,3,2,1,0,3,2,2,3,3,2,3,2};
 static const __device__ float NtoN_values[16] = {-1,1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1};
+#endif
 
 using namespace plegma;
 template<typename FloatC, typename FloatA, typename FloatB, bool isTwoPropDiff, int c_nu, int c_c2>
 __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice){
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   size_t space_stride = c_stride/c_localL[3];
   sidStride ss(sid,space_stride);
@@ -40,24 +43,24 @@ __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, 
   prop1.get(pP,N_SPINS*N_SPINS*N_COLS*N_COLS,ss);
   if(isTwoPropDiff) prop2.get(pP2, N_SPINS*N_SPINS*N_COLS*N_COLS,ss);
 
-//#pragma unroll
+#pragma unroll
   for(short cc1 = 0 ; cc1 < 6 ; cc1++){
     short c1 = eps[cc1][0];
     short c2 = eps[cc1][1];
     short c3 = eps[cc1][2];
-//#pragma unroll
+#pragma unroll
     for(short cc2 = 0 ; cc2 < 6 ; cc2++){
       short c1p = eps[cc2][0];
       short c2p = eps[cc2][1];
       short c3p = eps[cc2][2];
       if(c3p == c_c2)
-//#pragma unroll
+#pragma unroll
 	for(short idx = 0 ; idx < 16 ; idx++){
 	  short mu = NtoN_indices[idx][0];
 	  short nu = NtoN_indices[idx][1];
 	  short ku = NtoN_indices[idx][2];
 	  short lu = NtoN_indices[idx][3];
-//#pragma unroll
+#pragma unroll
 	  for(short nz = 0; nz < 8; nz++){
 	    int b = prInd[proj][nz][0];
 	    int a = prInd[proj][nz][1];
@@ -69,7 +72,7 @@ __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, 
 	      }
 	    }
 	    else
-//#pragma unroll
+#pragma unroll
 	      for(short gu = 0 ; gu < 4 ; gu++){
                 if( mu == gu && b == c_nu ) spinor[gu][c3] = spinor[gu][c3] + factor * P2[nu][lu][c1][c1p] * P[a][ku][c2][c2p];
                 if( mu == gu && ku == c_nu ) spinor[gu][c3] = spinor[gu][c3] + factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
@@ -78,11 +81,12 @@ __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, 
 	      }
 	  }   
 	}}}
-//#pragma unroll
+#pragma unroll
   for(short mu = 0 ; mu < 4 ; mu++)
-//#pragma unroll
+#pragma unroll
     for(short ic = 0 ; ic < 3 ; ic++)
       vec2[(mu*N_COLS + ic)*c_stride + timeslice*space_stride + sid] = spinor[mu][ic];
+#endif
 }
 
 
@@ -122,13 +126,21 @@ static void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<Floa
 
 template<typename FloatC, typename FloatA>
 void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1,WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2){
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   genericTex<FloatA> prop2 = prop1;
   contractNucleonSeqSource(vec, prop1,prop2, proj,particle, timeslice, false, c_nu, c_c2);
+#else
+  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
+#endif
 }
 
 template<typename FloatC, typename FloatA, typename FloatB>
 void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2,WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2){
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   contractNucleonSeqSource(vec, prop1, prop2, proj,particle, timeslice, true, c_nu, c_c2);
+#else
+  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
+#endif
 }
 
 template void contractNucleonSeqSource<float,float>(PLEGMA_Vector<float> &vec, genericTex<float> prop1, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);

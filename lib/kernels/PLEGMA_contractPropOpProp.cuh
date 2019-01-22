@@ -165,13 +165,16 @@ static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> 
 			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
   if(!isLink && dir>=0) errorQuda("Does not make sence to do not have links and have directions");
   if(isCons && !isLink) errorQuda("Does not make sence to do noether current without links");
-  
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(corr.getCorrSpace() == POSITION_SPACE)
     contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else if(corr.getCorrSpace() == MOMENTUM_SPACE)
     contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else
     errorQuda("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
+#else
+  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
+#endif
 }
 
 template<typename FloatC,typename FloatA, typename FloatB>
