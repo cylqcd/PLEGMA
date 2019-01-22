@@ -21,6 +21,7 @@
 using namespace plegma;
 
 namespace plegma {
+
   enum LEFTRIGHT {LEFT, RIGHT};
   enum TMROT {NOROT, TMP, TMM};
 
@@ -62,6 +63,7 @@ namespace plegma {
     }
   }
 
+  
   template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaProp(Float2<Float> pout[N_SPINS][N_SPINS][N_COLS][N_COLS],
 				       Float2<Float> pin[N_SPINS][N_SPINS][N_COLS][N_COLS], short int r){
@@ -74,8 +76,10 @@ namespace plegma {
 #pragma unroll
       for(int c1 = 0; c1 < N_COLS; c1++)
 	for(int c2 = 0; c2 < N_COLS; c2++){
-	  Float2<Float> p = (LF == LEFT)? pin[rho][nu][c1][c2]: pin[nu][rho][c1][c2];
-	  pout[nu][mu][c1][c2] = gamma[r][nz]*p ;
+	  Float2<Float> p;
+	  p = (LF == LEFT)? pin[rho][nu][c1][c2]: pin[nu][rho][c1][c2];
+	  if (LF == LEFT) pout[mu][nu][c1][c2] = gamma[r][nz]*p;
+	  else pout[nu][mu][c1][c2] = gamma[r][nz]*p ;
 	}
     }
   }

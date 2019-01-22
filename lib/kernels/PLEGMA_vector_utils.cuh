@@ -1,5 +1,6 @@
 #include <cublas_v2.h>
 #include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_gammas.cuh>
 using namespace plegma;
 using namespace quda;
 
@@ -26,6 +27,52 @@ static void castVector(FloatOut *out, FloatIn *in){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   castVector_kernel<<<gridDim,blockDim>>>((FloatOut*) out, (FloatIn*) in);
+  checkCudaError();
+}
+
+
+template<LEFTRIGHT LF,typename Float>
+static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  vector2<Float> vec(inOut);
+  Float2<Float> Sin[N_SPINS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_COLS]; 
+  const Float2<float> (*gamma2)[4];
+  gamma2=(Float2<float> (*)[4]) plegma::gamma;
+
+  if (sid >= c_threads) return;
+  vec.get(Sin,sid);
+  
+  for(int i=0;i<N_COLS;i++)
+    for(int j=0;j<N_SPINS;j++){
+      Sout[j][i].x=0.;
+      Sout[j][i].y=0.;
+    }
+	
+#pragma unroll
+  for(int nz = 0; nz < N_SPINS; nz++){
+    int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
+    int nu = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
+#pragma unroll
+    for(int c1 = 0; c1 < N_COLS; c1++)
+      Sout[mu][c1] =Sout[mu][c1]+ Sin[nu][c1]*gamma2[r][nz];
+  }
+
+  vec.set(Sout,sid);
+}
+
+template<typename Float>
+static void apply_gamma_vector(LEFTRIGHT LF,Float *inOut,GAMMAS r){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  switch(LR){
+  case(LEFT):
+    apply_gamma_vector_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  case(RIGHT):
+    apply_gamma_vector_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  }
   checkCudaError();
 }
 
@@ -58,6 +105,8 @@ void apply_gamma5_vector(Float *inOut){
 }
 
 
+
+  
 template<typename Float>
 static __global__ void conjugate_vector_kernel(Float *inOut){
 

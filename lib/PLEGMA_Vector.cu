@@ -91,6 +91,12 @@ void  PLEGMA_Vector<Float>::apply_gamma5(){
   apply_gamma5_vector(PLEGMA_Field<Float>::d_elem);
 }
 
+
+template<typename Float> 
+void  PLEGMA_Vector<Float>::apply_gamma(LEFTRIGHT LR,GAMMAS gMat){
+  apply_gamma_vector(LR,PLEGMA_Field<Float>::d_elem,gMat);
+}
+
 template<typename Float>
 void PLEGMA_Vector<Float>::norm2Host(){
   Float res = 0.;

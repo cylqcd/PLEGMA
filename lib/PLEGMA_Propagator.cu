@@ -216,6 +216,12 @@ void  PLEGMA_Propagator<Float>::conjugate(){
   conjugate_propagator(PLEGMA_Field<Float>::d_elem);
 }
 
+
+template<typename Float>
+void  PLEGMA_Propagator<Float>::apply_gamma(LEFTRIGHT LR,GAMMAS gMat){
+  apply_gamma_prop(LR,PLEGMA_Field<Float>::d_elem,gMat);
+}
+
 template<typename Float>
 void  PLEGMA_Propagator<Float>::apply_gamma5(){
   apply_gamma5_propagator(PLEGMA_Field<Float>::d_elem);

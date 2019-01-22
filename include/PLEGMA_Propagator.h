@@ -11,7 +11,6 @@ namespace plegma {
   /////////////////////////////
   // CLASS: PLEGMA_Propagator //
   /////////////////////////////
-  
   template<typename Float>
     class PLEGMA_Propagator : public PLEGMA_Field<Float> {
     
@@ -20,8 +19,8 @@ namespace plegma {
     ~PLEGMA_Propagator(){;}
     
     void conjugate();
+    void apply_gamma(LEFTRIGHT LR,GAMMAS gMat);
     void apply_gamma5();
-    
     void absorbVectorToHost(PLEGMA_Vector<Float> &vec, 
 			    int nu, int c2);
     /**
