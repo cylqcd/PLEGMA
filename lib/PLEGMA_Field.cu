@@ -4,8 +4,12 @@
 #include <PLEGMA_Random.h>
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>
+#include <PLEGMA_Thrust.h>
 #include <vector>
 #include <algorithm>
+#include <PLEGMA_BLAS.h>
+#include <PLEGMA_FT.cuh>
+
 using namespace plegma;
  
 #define DEVICE_MEMORY_REPORT
@@ -493,6 +497,7 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
    * Set specific indices of Field to one as provided from indOne
    * Example: For Su3 field indOne ={0,4,8};
    */
+  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
   for(int i = 0 ; i < Field_length(); i++){
     std::vector<int>::iterator it = std::find(indDiag.begin(), indDiag.end(), i);
     thrust::device_ptr<Float2<Float> > dev_ptr( (Float2<Float>*) (this->D_elem() + i*(this->Total_length())*2));
@@ -501,6 +506,25 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
     value.x=(it != indDiag.end() )?1.:0.;
     thrust::fill(dev_ptr, dev_ptr + this->Total_length(), value);
   }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
+  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
+  if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
+  if(mom.size() != 3 && mom.size() != 4) errorQuda("Momentum size vector should be either 3 or 4\n");
+  if(total_length == GK_localVolume && mom.size() != 4 ) errorQuda("A 4D field needs a 4D momentum vector\n");
+  if( (total_length == GK_localVolume/GK_localL[3]) && mom.size() != 3 ) errorQuda("A 3D field needs a 3D momentum vector\n");
+  int D3D4 = mom.size();
+  int V = D3D4 == 3 ? GK_localVolume/GK_localL[3] : GK_localVolume;
+  Float2<Float> *x;
+  cudaMalloc((void**)&x, V*2*sizeof(Float));
+  cudaMemset((void*) x,0,V*2*sizeof(Float));
+  checkCudaError();
+  createMomField(x, mom, D3D4, sign);
+  for(int dof = 0; dof < field_length; dof++)
+    plegma::elemWiseMul(V,(Float*) x, d_elem + dof*total_length*2);
+  cudaFree(x);
 }
 
 template class PLEGMA_Field<float>;

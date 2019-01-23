@@ -91,6 +91,7 @@ namespace plegma {
     void stochastic_Z(int n=2);
     void random(DIST sampling=Uniform);
     void setUnit(std::vector<int> indDiag);
+    void mulMomentumPhases(std::vector<int> mom, int sign=-1);
   };
 }
 #endif

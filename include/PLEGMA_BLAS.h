@@ -12,6 +12,7 @@
 #endif
 
 #include <cublas_v2.h>
+#include <mpi.h>
 
 namespace cBLAS{
   //========================================================//
@@ -77,4 +78,33 @@ namespace cuBLAS{
     cublasStatus_t error = cublasZdscal(cublas_handle, NN, &val, (cuDoubleComplex*) x, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdscal failed with error %d", error);
   }
+
+  template<typename Float>
+  inline void dot(Float res[2],int NN, const Float *x, const Float *y, MPI_Comm comm);
+
+  template<>
+  inline void dot<float>(float res[2], int NN, const float *x, const float *y, MPI_Comm comm){
+    cuComplex cu_res;
+    cublasStatus_t error = cublasCdotc(cublas_handle, NN,(cuComplex*)x, 1, (cuComplex*)y,1,&cu_res);
+    if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCdotc failed with error %d", error);
+    int mpiErr = MPI_Allreduce((float*) &cu_res, res, 2, MPI_FLOAT, MPI_SUM, comm);
+    if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+  }
+
+  template<>
+  inline void dot<double>(double res[2], int NN, const double *x, const double *y, MPI_Comm comm){
+    cuDoubleComplex cu_res;
+    cublasStatus_t error = cublasZdotc(cublas_handle, NN,(cuDoubleComplex*)x, 1, (cuDoubleComplex*)y,1,&cu_res);
+    if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdotc failed with error %d", error);
+    int mpiErr = MPI_Allreduce((double*) &cu_res, res, 2, MPI_DOUBLE, MPI_SUM, comm);
+    if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+  }  
+}
+
+//=================================================================//
+
+namespace plegma{
+  template<typename Float>
+  void elemWiseMul(int NN, Float* x, Float* y);
+>>>>>>> master
 }
