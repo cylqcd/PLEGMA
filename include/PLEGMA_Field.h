@@ -18,7 +18,6 @@ namespace plegma {
     int ghost_length;
     int ghost_corner_length;
     int total_plus_ghost_length;
-    PLEGMA_RNG *randstate_ptr;
 
     size_t bytes_total_length;
     size_t bytes_ghost_length;
@@ -31,7 +30,8 @@ namespace plegma {
     Float *h_ext_ghost_s;
     Float *h_ext_ghost_corner_r;
     Float *h_ext_ghost_corner_s;
-
+    PLEGMA_RNG *randstate_ptr;
+    
     GHOST_FLAG ghost_flag;
     ALLOCATION_FLAG allocation;
     bool isAllocHost;
@@ -89,7 +89,7 @@ namespace plegma {
     void randInit(int seed);
     void destroy_randstate();
     void stochastic_Z(int n=2);
-    void random();
+    void random(DIST sampling=Uniform);
     void setUnit(std::vector<int> indDiag);
   };
 }

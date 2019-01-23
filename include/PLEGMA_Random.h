@@ -29,25 +29,21 @@ namespace plegma {
   class PLEGMA_RNG {
     public:
       /*! Constructor */
-      PLEGMA_RNG();
+      PLEGMA_RNG(int seedin, int rng_sizes);
       /*! free array */
       virtual ~PLEGMA_RNG();
-      /*! initialize curand rng states with seed */
-      void Init(int seedin);
-      /*! @brief allocate curand rng states array in device memory */
-      void AllocateRNG(int rng_sizes);
       /*! @brief return curand rng array size */
       int Size() const { return rng_size;};
       int Rank_Offset(){ return rank_offset;};
       int Seed(){ return seed;};
-      __host__ __device__ __inline__ cuRNGState* State(){ return state;};
       /*! @brief Restore CURAND array states initialization */
       void restore();
       /*! @brief Backup CURAND array states initialization */
       void backup();
       /*! array with current curand rng state */
+      __host__ __device__ __inline__ cuRNGState* State(){ return state;};
       //cuRNGState *state;
-    protected:
+    private:
       /*! array with current curand rng state */
       cuRNGState *state;
       /*! array for backup of current curand rng state */
@@ -60,6 +56,10 @@ namespace plegma {
       int rank_offset;
       /*! @brief CURAND array states initialization */
       void INITRNG(int rng_size, int seed, int rank_offsetin);
+      /*! initialize curand rng states with seed */
+      void Init();
+      /*! @brief allocate curand rng states array in device memory */
+      void AllocateRNG();
   };
 
 

@@ -27,7 +27,7 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), 
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false)
 
 {
@@ -70,8 +70,8 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   }
   ghost_length = 0;
   ghost_corner_length = 0;
+
   
-  randstate_ptr = new PLEGMA_RNG();
 
   for(int i = 0 ; i < N_DIMS ; i++){
     if(ghost_flag >= FIRST_SIDE) ghost_length += 2*GK_surface3D[i];
@@ -452,8 +452,7 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
   
-  randstate_ptr->AllocateRNG(total_length);
-  randstate_ptr->Init(seed);
+  randstate_ptr = new PLEGMA_RNG(seed, total_length);
   checkCudaError();  
 }
 
@@ -480,11 +479,11 @@ void PLEGMA_Field<Float>::stochastic_Z(int n){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::random(){
+void PLEGMA_Field<Float>::random(DIST sampling){
     this->zero_device();
     //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
     int rng_size = this->total_length;
-    set_random<Float>( *randstate_ptr, *this, this->field_length, rng_size);    
+    set_random<Float>( *randstate_ptr, *this, this->field_length, rng_size, sampling);    
 }
 
 

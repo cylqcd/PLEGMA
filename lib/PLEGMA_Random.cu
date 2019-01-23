@@ -28,15 +28,16 @@ using namespace plegma;
 // Useful variables: 
 // c_procPosition: position of the processors
 // rngArg computes the required input to the RNG
-PLEGMA_RNG::PLEGMA_RNG() {
+PLEGMA_RNG::PLEGMA_RNG(int seedin, int rng_sizes) {
   
     state = NULL;
-    seed = 0;
-    rng_size = 0;
+    seed = seedin;
+    rng_size = rng_sizes;
    // printf("Number of rng_size[1.25]: %d\n", rng_size);
 
     rank_offset = 0;
 
+    Init();
 #if defined(XORWOW)
     printfQuda("Using curandStateXORWOW\n");
 #elif defined(RG32k3a)
@@ -49,19 +50,17 @@ PLEGMA_RNG::PLEGMA_RNG() {
 /**
   @brief Initialize CURAND RNG states
  */
-void PLEGMA_RNG::Init(int seedin) {
+void PLEGMA_RNG::Init() {
     //printf("Number of rng_size[2]: %d\n", rng_size);
-    seed = seedin;
-    //AllocateRNG();
+    AllocateRNG();
     launch_random_init(state, seed, rank_offset, rng_size);
 }
 
 /**
   @brief Allocate Device memory for CURAND RNG states
  */
-void PLEGMA_RNG::AllocateRNG(int rng_sizes) {
+void PLEGMA_RNG::AllocateRNG() {
 
-    rng_size = rng_sizes;
     //printf("Number of rng_size[1.5]: %d\n", rng_size);
     if (rng_size>0 && state == NULL) {
         cudaMalloc((void**)&state, rng_size * sizeof(cuRNGState));
@@ -95,7 +94,9 @@ void PLEGMA_RNG::restore() {
 
 /*! @brief Backup CURAND array states initialization */
 void PLEGMA_RNG::backup() {
-    backup_state = (cuRNGState*) safe_malloc(rng_size * sizeof(cuRNGState));
+    backup_state = (cuRNGState*) malloc(rng_size * sizeof(cuRNGState));
+    if(backup_state == NULL)
+      errorQuda("Memory on host not allocated");
     cudaError_t err = cudaMemcpy(backup_state, state, rng_size * sizeof(cuRNGState), cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         host_free(backup_state);

@@ -116,6 +116,28 @@ __inline__ __device__ Float2<float> rootsunity<2>(int order){
     return root;
 }
 
+template<>
+__inline__ __device__ Float2<float> rootsunity<4>(int order){
+    Float2<float> root;
+    if(order == 0){
+        root.x = 1.0/sqrt(2.0);
+        root.y = 1.0/sqrt(2.0);
+    }
+    else if(order == 1){
+        root.x = -1.0/sqrt(2.0);
+        root.y = 1.0/sqrt(2.0);
+    }
+    else if(order == 2){
+        root.x = -1.0/sqrt(2.0);
+        root.y = -1.0/sqrt(2.0);
+    }
+    else{
+        root.x = 1.0/sqrt(2.0);
+        root.y = -1.0/sqrt(2.0);
+    }
+    return root;
+}
+
 template<typename Float, int n>
 __global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field, Float *inout){
 
@@ -126,7 +148,7 @@ __global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field,
   for( int i = 0; i < length_field; ++i){
   
     Float tmp = PLEGMA_Random<Float, Uniform>(state[sid]);
-    //printf("Z2 random number for sid %d with offset %d at :  %.8f\n", sid, LEXIC_1DL_1DG(sid), tmp);
+
     for( int order = 0; order <= n-1; ++order){
             
       if( tmp  < ((Float)order+1.0)/(Float)n ){
@@ -135,10 +157,6 @@ __global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field,
         break;
       }
     }
-        //printf("Z2 stochastic source at : %d has real %.8f complex %.8f\n", sid, inout[sid*2], inout[sid*2+1]);
-    //}
-
-   // printf("stochastic source at : %d is %.8f\n", sid, tmp);
   }
 } 
 
@@ -156,14 +174,29 @@ __global__ void genRandomUniform_kernel(cuRNGState *state, int length_field, Flo
         
   for( int i = 0; i < length_field; ++i){
     inout2[sid] = PLEGMA_Random<Float, Uniform>(state[sid]);
-    //printf("Z2 random number for sid %d with offset %d at :  %.8f\n", sid, LEXIC_1DL_1DG(sid), tmp);
   }
 } 
+
 template<typename Float>
-void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free, int rng_size){
+__global__ void genRandomNormal_kernel(cuRNGState *state, int length_field, Float *inout){
+  Float2<Float> *inout2 = (Float2<Float> *) inout;
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+        
+  for( int i = 0; i < length_field; ++i){
+    inout2[sid] = PLEGMA_Random<Float, Normal>(state[sid]);
+  }
+} 
+
+template<typename Float>
+void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_deg_free, int rng_size, DIST sampling){
 
     dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
     dim3 gridDim( (rng_size + blockDim.x -1)/blockDim.x , 1 , 1);
-    genRandomUniform_kernel<Float><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
+    if(sampling == Uniform)
+      genRandomUniform_kernel<Float><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
+    else if( sampling == Normal)
+      genRandomNormal_kernel<Float><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
+    else
+      errorQuda("The given distribution is not defined.\n");
 }
 
