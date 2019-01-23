@@ -44,6 +44,9 @@ target_link_libraries(PlaquetteWshifts ${PLEGMA_LIBS})
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
 
+cuda_add_executable(Random Random.cpp)
+target_link_libraries(Random ${PLEGMA_LIBS})
+
 cuda_add_executable(StoutSmearing EXCLUDE_FROM_ALL StoutSmearing.cpp)
 target_link_libraries(StoutSmearing ${PLEGMA_LIBS})
 

@@ -1,4 +1,5 @@
 #include <cublas_v2.h>
+#include <PLEGMA_Random.h>
 #include <PLEGMA_kernel_utils.cuh>
 using namespace plegma;
 using namespace quda;
@@ -102,6 +103,7 @@ template<typename Float>
 void norm2_device(Float norm, Float* in){
 
 }
+
 template<typename FloatIn, typename FloatOut, bool outEvenB, bool outOddB> 
 static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *outOdd){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;

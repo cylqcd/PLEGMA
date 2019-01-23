@@ -106,4 +106,5 @@ namespace cuBLAS{
 namespace plegma{
   template<typename Float>
   void elemWiseMul(int NN, Float* x, Float* y);
+
 }
