@@ -1,4 +1,5 @@
 #include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_kernel_tuner.cuh>
 using namespace plegma;
 
 template<typename FloatA,typename FloatB>
@@ -113,37 +114,34 @@ static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
 }
 
 template<typename FloatA, typename FloatB>
-static void traceHerExpMap_kernel(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  traceHerExpMap_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
+static void traceHerExpMap_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
+  ProfileStruct ps(GK_localVolume);
+  tuneAndRun(ps,traceHerExpMap_kernel<FloatA,FloatB>, A.D_elem(), B.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB>
 static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  Udag_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
+  ProfileStruct ps(GK_localVolume);
+  tuneAndRun(ps,Udag_kernel<FloatA,FloatB>,A.D_elem(), B.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  UxU_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
+  ProfileStruct ps(GK_localVolume);
+  tuneAndRun(ps,UxU_kernel<FloatA,FloatB,FloatC>,A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  UxUdag_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
+  ProfileStruct ps(GK_localVolume);
+  tuneAndRun(ps,UxUdag_kernel<FloatA,FloatB,FloatC>,A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
 
+// this is the one to worry about
 template<typename Float, typename FloatS>
 static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
   Float sum = 0.;
