@@ -5,15 +5,15 @@
 
 namespace plegma {
 
-    /////////////////////////  
-    // CLASS: PLEGMA_RNG   //
-    /////////////////////////
-    
-/**
- *  Define the curand random number generator used in the library
- *  XORWOW- XOR bit dependent RNG
- *  MRG32K3a- MRG32 dependent RNG
- *  */
+  /////////////////////////  
+  // CLASS: PLEGMA_RNG   //
+  /////////////////////////
+
+  /**
+   *  Define the curand random number generator used in the library
+   *  XORWOW- XOR bit dependent RNG
+   *  MRG32K3a- MRG32 dependent RNG
+   *  */
 #if defined(XORWOW)
   typedef struct curandStateXORWOW cuRNGState;
 #elif defined(MRG32k3a)
@@ -87,7 +87,7 @@ namespace plegma {
     inline  __device__ double PLEGMA_Random<double, Uniform>(cuRNGState &state, double a, double b){
       return a + (b - a) * curand_uniform_double(&state);
     }
-  
+
   template<>
     inline  __device__ float PLEGMA_Random<float, Normal>(cuRNGState &state, float a, float b){
       return a + b * curand_normal(&state);
@@ -118,7 +118,7 @@ namespace plegma {
     inline  __device__ double PLEGMA_Random<double, Uniform>(cuRNGState &state){
       return curand_uniform_double(&state);
     }
-  
+
   template<>
     inline  __device__ float PLEGMA_Random<float, Normal>(cuRNGState &state){
       return curand_normal(&state);

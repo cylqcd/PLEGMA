@@ -29,21 +29,21 @@ using namespace plegma;
 // c_procPosition: position of the processors
 // rngArg computes the required input to the RNG
 PLEGMA_RNG::PLEGMA_RNG(int seedin, int rng_sizes) {
-  
-    state = NULL;
-    seed = seedin;
-    rng_size = rng_sizes;
-   // printf("Number of rng_size[1.25]: %d\n", rng_size);
 
-    rank_offset = 0;
+  state = NULL;
+  seed = seedin;
+  rng_size = rng_sizes;
+  // printf("Number of rng_size[1.25]: %d\n", rng_size);
 
-    Init();
+  rank_offset = 0;
+
+  Init();
 #if defined(XORWOW)
-    printfQuda("Using curandStateXORWOW\n");
+  printfQuda("Using curandStateXORWOW\n");
 #elif defined(RG32k3a)
-    printfQuda("Using curandStateMRG32k3a\n");
+  printfQuda("Using curandStateMRG32k3a\n");
 #else
-    printfQuda("Using curandStateMRG32k3a\n");
+  printfQuda("Using curandStateMRG32k3a\n");
 #endif
 }
 
@@ -51,9 +51,9 @@ PLEGMA_RNG::PLEGMA_RNG(int seedin, int rng_sizes) {
   @brief Initialize CURAND RNG states
  */
 void PLEGMA_RNG::Init() {
-    //printf("Number of rng_size[2]: %d\n", rng_size);
-    AllocateRNG();
-    launch_random_init(state, seed, rank_offset, rng_size);
+  //printf("Number of rng_size[2]: %d\n", rng_size);
+  AllocateRNG();
+  launch_random_init(state, seed, rank_offset, rng_size);
 }
 
 /**
@@ -61,47 +61,47 @@ void PLEGMA_RNG::Init() {
  */
 void PLEGMA_RNG::AllocateRNG() {
 
-    //printf("Number of rng_size[1.5]: %d\n", rng_size);
-    if (rng_size>0 && state == NULL) {
-        cudaMalloc((void**)&state, rng_size * sizeof(cuRNGState));
-        cudaMemset( state , 0 , rng_size * sizeof(cuRNGState) );
-        printfQuda("Allocated array of random numbers with rng_size: %.2f MB\n",((float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
-    } else {
-        errorQuda("Array of random numbers not allocated, array size: %d !\nExiting...\n",rng_size);
-    }
+  //printf("Number of rng_size[1.5]: %d\n", rng_size);
+  if (rng_size>0 && state == NULL) {
+    cudaMalloc((void**)&state, rng_size * sizeof(cuRNGState));
+    cudaMemset( state , 0 , rng_size * sizeof(cuRNGState) );
+    printfQuda("Allocated array of random numbers with rng_size: %.2f MB\n",((float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
+  } else {
+    errorQuda("Array of random numbers not allocated, array size: %d !\nExiting...\n",rng_size);
+  }
 }
 
 /*! @brief Destructor !*/
 PLEGMA_RNG::~PLEGMA_RNG(){
-      cudaFree(state);
-      printfQuda("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(cuRNGState))/(1024*1024));
-      rng_size = 0;
-      state = NULL;
-      checkCudaError();
+  cudaFree(state);
+  printfQuda("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(cuRNGState))/(1024*1024));
+  rng_size = 0;
+  state = NULL;
+  checkCudaError();
 }
 
 /*! @brief Generating random numbers from random distribution */
 /*! @brief Restore CURAND array states initialization */
 void PLEGMA_RNG::restore() {
-    cudaError_t err = cudaMemcpy(state, backup_state, rng_size * sizeof(cuRNGState), cudaMemcpyHostToDevice);
-    if (err != cudaSuccess) {
-        host_free(backup_state);
-        printfQuda("ERROR: Failed to restore curand rng states array\n");
-        errorQuda("Aborting");
-    }
-    host_free(backup_state);
+  cudaError_t err = cudaMemcpy(state, backup_state, rng_size * sizeof(cuRNGState), cudaMemcpyHostToDevice);
+  if (err != cudaSuccess) {
+    free(backup_state);
+    printfQuda("ERROR: Failed to restore curand rng states array\n");
+    errorQuda("Aborting");
+  }
+  free(backup_state);
 }
 
 /*! @brief Backup CURAND array states initialization */
 void PLEGMA_RNG::backup() {
-    backup_state = (cuRNGState*) malloc(rng_size * sizeof(cuRNGState));
-    if(backup_state == NULL)
-      errorQuda("Memory on host not allocated");
-    cudaError_t err = cudaMemcpy(backup_state, state, rng_size * sizeof(cuRNGState), cudaMemcpyDeviceToHost);
-    if (err != cudaSuccess) {
-        host_free(backup_state);
-        printfQuda("ERROR: Failed to backup curand rng states array\n");
-        errorQuda("Aborting");
-    }
+  backup_state = (cuRNGState*) malloc(rng_size * sizeof(cuRNGState));
+  if(backup_state == NULL)
+    errorQuda("Memory on host not allocated");
+  cudaError_t err = cudaMemcpy(backup_state, state, rng_size * sizeof(cuRNGState), cudaMemcpyDeviceToHost);
+  if (err != cudaSuccess) {
+    free(backup_state);
+    printfQuda("ERROR: Failed to backup curand rng states array\n");
+    errorQuda("Aborting");
+  }
 }
 
