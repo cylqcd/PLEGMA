@@ -87,9 +87,6 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 
   int SpVol = GK_localVolume/GK_localL[3];
 
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (SpVol + blockDim.x -1)/blockDim.x , 1 , 1); // spawn threads only for the spatial volume
-
   FloatC *h_partial_block = NULL;
   FloatC *d_partial_block = NULL;
 
@@ -97,19 +94,17 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   int site_size=N_SPINS*N_SPINS*2;
   size_t volume;
   size_t size;
-  size_t alloc_size;
   if(runFT==true){
     volume = GK_Nmoms;
     size = n_flavors*site_size*volume;
-    alloc_size = size * gridDim.x;
   } else {
     volume = SpVol;
     size = n_flavors*site_size*volume;
-    alloc_size = size; 
   }
 
   int isource = corr.getIdSource();
-  ProfileStruct ps(volume, site_size*sizeof(Float2<FloatC>));
+  int shared_size = (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0;
+  ProfileStruct ps(SpVol, shared_size);
   tune( ps, contract_baryons_kernel<FloatA,FloatB,FloatC,runFT>,
 	texProp1, texProp2, d_partial_block, it,
 	GK_sourcePosition[isource][0],
@@ -117,14 +112,11 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 	GK_sourcePosition[isource][2],  (BARYONS_TYPE) 0); // tuning done for first baryon
   
   int gridDimX = ps.tp.grid.x;
-    if(runFT==true){
-    volume = GK_Nmoms;
-    size = n_flavors*site_size*volume;
-    alloc_size = size * gridDimX;
+  size_t alloc_size;
+  if(runFT==true){
+      alloc_size = size * gridDimX;
   } else {
-    volume = SpVol;
-    size = n_flavors*site_size*volume;
-    alloc_size = size;
+      alloc_size = size;
   }
   
   h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
@@ -149,9 +141,9 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     if(runFT==true){
       FloatC *reduction =(FloatC*) calloc(size,sizeof(FloatC));
       for(size_t i = 0 ; i < size/2; i++)
-	for(int j = 0 ; j < gridDim.x; j++) {
-	  reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
-	  reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
+	for(int j = 0 ; j < gridDimX; j++) {
+	  reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
+	  reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
 	}
       MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
       free(reduction);
