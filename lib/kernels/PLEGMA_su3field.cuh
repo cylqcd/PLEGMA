@@ -62,6 +62,7 @@ static __global__ void UxUdag_kernel(FloatA *A, FloatB *B, FloatC *C){
 
 template<typename Float,typename FloatU>
 static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
+
   extern __shared__ int ext_shared_cache[];
   Float *shared_cache = (Float*)ext_shared_cache;
   
@@ -80,7 +81,7 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
 
   reduce(shared_cache,1);
   
-  if(cacheIndex == 0)
+  if(cacheIndex == 0 && partial_plaq!=NULL)
     partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory  
 }
 
@@ -153,7 +154,7 @@ static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
 
   sum_real_trace_kernel<Float,FloatS><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(su3M.D_elem(), d_partial_sum);
 
-  cudaMemcpy(h_partial_sum, d_partial_sum , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_partial_sum, d_partial_sum , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_sum);
   checkCudaError();
 
