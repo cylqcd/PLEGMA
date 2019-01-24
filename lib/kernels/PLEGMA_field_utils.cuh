@@ -17,9 +17,8 @@ template<typename Float>
 static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<Float> &Fy, Float beta){
   if(Fz.Field_length() != Fx.Field_length()) errorQuda("Error input, output fields do not match");
   if(Fz.Field_length() != Fy.Field_length()) errorQuda("Error input, output fields do not match");
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  xpby_kernel<<<gridDim,blockDim>>>(Fz.D_elem(), Fx.D_elem(), Fy.D_elem(),beta,Fz.Field_length());
+  ProfileStruct ps(GK_localVolume);
+  tuneAndRun(ps,xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(), Fy.D_elem(),beta,Fz.Field_length());
   checkCudaError();
 }
 
