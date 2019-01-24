@@ -75,14 +75,15 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
     size = site_size*volume;
   }
 
-  ProfileStruct ps(SpVol, site_size*sizeof(Float2<FloatC>));
+  int shared_size = (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0;
+  
+  ProfileStruct ps(SpVol, shared_size);
  
   tune( ps, contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>,
 	texProp1, texProp2, d_partial_block, it,
 	GK_sourcePosition[isource][0], GK_sourcePosition[isource][1],
 	GK_sourcePosition[isource][2]);
-  //cudaFuncSetCacheConfig(ArgsMesons<FloatA,FloatB,FloatC,runFT>.operator(), cudaFuncCachePreferShared);
-  
+    
 #ifdef TIMING_REPORT
   cudaEvent_t start,stop;
   float elapsedTime;

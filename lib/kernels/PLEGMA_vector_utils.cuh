@@ -1,5 +1,6 @@
 #include <cublas_v2.h>
 #include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_kernel_tuner.cuh>
 using namespace plegma;
 using namespace quda;
 
@@ -168,7 +169,7 @@ static void copy_to_QUDA(FloatIn* in, ColorSpinorField &qudaVec, bool isEven){
 }
 
 template<typename FloatOut, typename FloatIn, bool inEvenB, bool inOddB> 
-static __global__ void copy_from_QUDA(FloatOut *out, FloatIn *inEven, FloatIn *inOdd){
+static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, FloatIn *inOdd){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= c_threads/2) return;
@@ -213,11 +214,11 @@ static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven
   ProfileStruct ps(GK_localVolume);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      tuneAndRun(ps,copy_from_QUDA<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), NULL);
+      tuneAndRun(ps,copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
     else
-      tuneAndRun(ps, copy_from_QUDA<FloatOut,FloatIn,false,true>, out, NULL,(FloatIn*) qudaVec.V());
+      tuneAndRun(ps, copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
   } else
-    tuneAndRun(ps, copy_from_QUDA<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+    tuneAndRun(ps, copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
 }
 
 template<typename FloatOut> 
