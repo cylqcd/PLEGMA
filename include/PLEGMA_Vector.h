@@ -58,6 +58,13 @@ namespace plegma {
      **/    
     void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
     
+    
+    void dilutespin(PLEGMA_Vector<Float> &vecIn, int spin);
+
+    void dilutecolor(PLEGMA_Vector<Float> &vecIn, int color);
+    
+    void dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color);
+    
     void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);
     void pointSource(int *sourceposition, int spin, int color);
