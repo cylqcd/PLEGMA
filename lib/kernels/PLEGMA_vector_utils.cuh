@@ -23,9 +23,8 @@ static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
 
 template<typename FloatOut,typename FloatIn>
 static void castVector(FloatOut *out, FloatIn *in){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  castVector_kernel<<<gridDim,blockDim>>>((FloatOut*) out, (FloatIn*) in);
+  ProfileStruct ps(GK_localVolume);
+  tuneAndRun(ps,castVector_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in);
   checkCudaError();
 }
 
@@ -211,15 +210,14 @@ static __global__ void copy_from_QUDA(FloatOut *out, FloatIn *inEven, FloatIn *i
 
 template<typename FloatOut, typename FloatIn> 
 static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  ProfileStruct ps(GK_localVolume);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      copy_from_QUDA<FloatOut,FloatIn,true,false><<<gridDim,blockDim>>>( out,(FloatIn*) qudaVec.V(), NULL);
+      tuneAndRun(ps,copy_from_QUDA<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), NULL);
     else
-      copy_from_QUDA<FloatOut,FloatIn,false,true><<<gridDim,blockDim>>>( out, NULL,(FloatIn*) qudaVec.V());
+      tuneAndRun(ps, copy_from_QUDA<FloatOut,FloatIn,false,true>, out, NULL,(FloatIn*) qudaVec.V());
   } else
-    copy_from_QUDA<FloatOut,FloatIn,true,true><<<gridDim,blockDim>>>( out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+    tuneAndRun(ps, copy_from_QUDA<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
 }
 
 template<typename FloatOut> 
