@@ -75,7 +75,7 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
     size = site_size*volume;
   }
 
-  ProfileStruct ps(volume, site_size*sizeof(Float2<FloatC>));
+  ProfileStruct ps(SpVol, site_size*sizeof(Float2<FloatC>));
  
   tune( ps, contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>,
 	texProp1, texProp2, d_partial_block, it,

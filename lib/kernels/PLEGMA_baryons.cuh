@@ -87,9 +87,6 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 
   int SpVol = GK_localVolume/GK_localL[3];
 
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (SpVol + blockDim.x -1)/blockDim.x , 1 , 1); // spawn threads only for the spatial volume
-
   FloatC *h_partial_block = NULL;
   FloatC *d_partial_block = NULL;
 
@@ -109,7 +106,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   }
 
   int isource = corr.getIdSource();
-  ProfileStruct ps(volume, site_size*sizeof(Float2<FloatC>));
+  ProfileStruct ps(SpVol, site_size*sizeof(Float2<FloatC>));
   tune( ps, contract_baryons_kernel<FloatA,FloatB,FloatC,runFT>,
 	texProp1, texProp2, d_partial_block, it,
 	GK_sourcePosition[isource][0],
