@@ -139,8 +139,6 @@ template<typename Float, typename FloatS>
 static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
   Float sum = 0.;
   Float globalSum = 0.;
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   Float *h_partial_sum = NULL;
   Float *d_partial_sum = NULL;
 
