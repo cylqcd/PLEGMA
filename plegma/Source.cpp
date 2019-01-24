@@ -18,7 +18,14 @@ int main(int argc, char **argv)
   vectorAuxD.pointSource(params.sourcePosition[0], 0, 0, DEVICE);
   vectorAuxD.unload();
   vectorAuxD.norm2Host();
-  
+ 
+  std::cout<<vectorAuxD.H_elem()[((0*N_COLS+0)*(params.lL[0] * params.lL[1] * params.lL[2] * params.lL[3] ))*2]<<std::endl;
+
+  // finalize the QUDA library
+  saveTuneCache(true);
+  endQuda();
+    
+  // finalize the communications layer
   finalize();
 
   return 0;

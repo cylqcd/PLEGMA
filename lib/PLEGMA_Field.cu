@@ -1,6 +1,7 @@
 #include <PLEGMA_Field.h> 
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_shifts.cuh>
+#include <PLEGMA_Random.h>
 #include <PLEGMA_Thrust.h>
 #include <vector>
 #include <algorithm>
@@ -8,7 +9,7 @@
 #include <PLEGMA_FT.cuh>
 
 using namespace plegma;
- 
+
 #define DEVICE_MEMORY_REPORT
 #define CMPLX_FLOAT std::complex<Float>
 
@@ -28,50 +29,52 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), 
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false)
 
 {
   if(GK_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
-  
+
   switch(classT){
-  case FIELD:
-    field_length = 1;
-    total_length = GK_localVolume;
-    break;
-  case SU3FIELD:
-    field_length = N_COLS * N_COLS;
-    total_length = GK_localVolume;
-    break;
-  case GAUGE:
-    field_length = N_DIMS * N_COLS * N_COLS;
-    total_length = GK_localVolume;
-    break;    
-  case VECTOR:
-    field_length = N_SPINS * N_COLS;
-    total_length = GK_localVolume;
-    break;
-  case PROPAGATOR:
-    field_length = N_SPINS * N_COLS * N_SPINS * N_COLS;
-    total_length = GK_localVolume;
-    break;
-  case PROPAGATOR3D:
-    field_length = N_SPINS * N_COLS * N_SPINS * N_COLS;
-    total_length = GK_localVolume/GK_localL[3];
-    break;
-  case VECTOR3D:
-    field_length = N_SPINS * N_COLS;
-    total_length = GK_localVolume/GK_localL[3];
-    break;
-  case QLOOPS:
-    field_length = N_SPINS * N_SPINS;
-    total_length = GK_localVolume;
-    break;
+    case FIELD:
+      field_length = 1;
+      total_length = GK_localVolume;
+      break;
+    case SU3FIELD:
+      field_length = N_COLS * N_COLS;
+      total_length = GK_localVolume;
+      break;
+    case GAUGE:
+      field_length = N_DIMS * N_COLS * N_COLS;
+      total_length = GK_localVolume;
+      break;    
+    case VECTOR:
+      field_length = N_SPINS * N_COLS;
+      total_length = GK_localVolume;
+      break;
+    case PROPAGATOR:
+      field_length = N_SPINS * N_COLS * N_SPINS * N_COLS;
+      total_length = GK_localVolume;
+      break;
+    case PROPAGATOR3D:
+      field_length = N_SPINS * N_COLS * N_SPINS * N_COLS;
+      total_length = GK_localVolume/GK_localL[3];
+      break;
+    case VECTOR3D:
+      field_length = N_SPINS * N_COLS;
+      total_length = GK_localVolume/GK_localL[3];
+      break;
+    case QLOOPS:
+      field_length = N_SPINS * N_SPINS;
+      total_length = GK_localVolume;
+      break;
   }
   ghost_length = 0;
   ghost_corner_length = 0;
-  
+
+
+
   for(int i = 0 ; i < N_DIMS ; i++){
     if(ghost_flag >= FIRST_SIDE) ghost_length += 2*GK_surface3D[i];
     for(int j = i+1; j < N_DIMS; j++){
@@ -79,7 +82,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     }
   }
   total_plus_ghost_length = total_length + ghost_length + ghost_corner_length;
-  
+
   bytes_total_length = total_length*field_length*2*sizeof(Float);
   bytes_ghost_length = ghost_length*field_length*2*sizeof(Float);
   bytes_ghost_corner_length = ghost_corner_length*field_length*2*sizeof(Float);
@@ -112,7 +115,7 @@ void PLEGMA_Field<Float>::pack( Float *topack ){
   for(int i=0; i<field_length; i++){
     for(int j=0; j<total_length; j++){
       for(int part=0; part<2; part++)
-	h_elem[i*total_length*2 + j*2 + part] = topack[j*field_length*2 + i*2 + part];
+        h_elem[i*total_length*2 + j*2 + part] = topack[j*field_length*2 + i*2 + part];
     }
   }
 }
@@ -122,7 +125,7 @@ void PLEGMA_Field<Float>::unpack(Float *out){
   for(int i=0; i<field_length; i++){
     for(int j=0; j<total_length; j++){
       for(int part=0; part<2; part++)
-	out[j*field_length*2 + i*2 + part] = h_elem[i*total_length*2 + j*2 + part];
+        out[j*field_length*2 + i*2 + part] = h_elem[i*total_length*2 + j*2 + part];
     }
   }  
 }
@@ -215,7 +218,7 @@ void PLEGMA_Field<Float>::zero_device(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
-  
+
   if( alloc_flag == BOTH ){
     zero_host();
     zero_device();
@@ -278,7 +281,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::printInfo(){
   printfQuda("This object has precision %d\n",Precision());
   printfQuda("This object needs %f Mb\n",
-	     bytes_total_plus_ghost_length/(1024.*1024.));
+      bytes_total_plus_ghost_length/(1024.*1024.));
   printfQuda("The flag for the host allocation is %d\n",(int) isAllocHost);
   printfQuda("The flag for the device allocation is %d\n",(int) isAllocDevice);
 }
@@ -300,25 +303,25 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
   for(int i=0; i<2*N_DIMS; i++){
     if( GK_dimBreak[i%N_DIMS] ){
       if(dirOr == i || isAll){
-	Float *pointer_receive = h_ext_ghost_r + (GK_sideGhost[i]-total_length)*field_length*2;
-	Float *pointer_send = h_ext_ghost_s + (GK_sideGhost[i]-total_length)*field_length*2;
-	Float *pointer_device = d_elem + GK_sideGhost[i]*field_length*2;
-	int disp[N_DIMS] = {0};
-	size_t nbytes = GK_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
-	
-	// collecting elements from device
-	copy_side_to_ghost(*this, i);
-	cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-	checkCudaError();
-	
-	// communicating
-	disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
-	mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
-	disp[i%N_DIMS] *= -1;
-	mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
-	disp[i%N_DIMS] = 0;
-	comm_start(mh_recv.back());
-	comm_start(mh_send.back());
+        Float *pointer_receive = h_ext_ghost_r + (GK_sideGhost[i]-total_length)*field_length*2;
+        Float *pointer_send = h_ext_ghost_s + (GK_sideGhost[i]-total_length)*field_length*2;
+        Float *pointer_device = d_elem + GK_sideGhost[i]*field_length*2;
+        int disp[N_DIMS] = {0};
+        size_t nbytes = GK_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
+
+        // collecting elements from device
+        copy_side_to_ghost(*this, i);
+        cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+        checkCudaError();
+
+        // communicating
+        disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
+        mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
+        disp[i%N_DIMS] *= -1;
+        mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+        disp[i%N_DIMS] = 0;
+        comm_start(mh_recv.back());
+        comm_start(mh_send.back());
       }
     }
   }
@@ -342,7 +345,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
       Float *host = h_ext_ghost_r + (GK_sideGhost[dirOr]-total_length)*field_length*2;
       Float *device = d_elem + GK_sideGhost[dirOr]*field_length*2;
       cudaMemcpy(device, host, GK_surface3D[dirOr%N_DIMS]*field_length*2*sizeof(Float),
-		 cudaMemcpyHostToDevice);
+          cudaMemcpyHostToDevice);
       checkCudaError();
     }
   }
@@ -366,29 +369,29 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
   for(int i=0; i<2*N_DIMS; i++){
     for(int j=i+1; j<2*N_DIMS; j++){
       if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
-	if(dirOr == i || dirOr == j || isAll){
-	  Float *pointer_receive = h_ext_ghost_corner_r + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
-	  Float *pointer_send = h_ext_ghost_corner_s + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
-	  Float *pointer_device = d_elem + GK_cornerGhost[i][j]*field_length*2;
-	  int disp[N_DIMS] = {0};
-	  size_t nbytes = GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float);
+        if(dirOr == i || dirOr == j || isAll){
+          Float *pointer_receive = h_ext_ghost_corner_r + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+          Float *pointer_send = h_ext_ghost_corner_s + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+          Float *pointer_device = d_elem + GK_cornerGhost[i][j]*field_length*2;
+          int disp[N_DIMS] = {0};
+          size_t nbytes = GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float);
 
-	  // collecting elements from device
-	  copy_corner_to_ghost(*this, i, j);
-	  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-	  checkCudaError();
+          // collecting elements from device
+          copy_corner_to_ghost(*this, i, j);
+          cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+          checkCudaError();
 
-	  // communicating
-	  disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
-	  disp[j%N_DIMS] = (j<N_DIMS) ? +1 : -1;
-	  mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
-	  disp[i%N_DIMS] *= -1;
-	  disp[j%N_DIMS] *= -1;
-	  mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
-	  disp[i%N_DIMS] = 0; disp[j%N_DIMS] = 0;	  
-	  comm_start(mh_recv.back());
-	  comm_start(mh_send.back());
-	}
+          // communicating
+          disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
+          disp[j%N_DIMS] = (j<N_DIMS) ? +1 : -1;
+          mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
+          disp[i%N_DIMS] *= -1;
+          disp[j%N_DIMS] *= -1;
+          mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+          disp[i%N_DIMS] = 0; disp[j%N_DIMS] = 0;	  
+          comm_start(mh_recv.back());
+          comm_start(mh_send.back());
+        }
       }
     }
   }
@@ -410,15 +413,15 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
   } else {
     for(int i=0; i<2*N_DIMS; i++){
       for(int j=i+1; j<2*N_DIMS; j++){
-	if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
-	  if(dirOr == i || dirOr == j || isAll){
-	    Float *hostCorner = h_ext_ghost_corner_r + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
-	    Float *device = d_elem+GK_cornerGhost[i][j]*field_length*2;
-	    cudaMemcpy(device, hostCorner, GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float),
-		       cudaMemcpyHostToDevice);
-	    checkCudaError();
-	  }
-	}
+        if( (i%N_DIMS != j%N_DIMS ) && GK_dimBreak[i%N_DIMS] && GK_dimBreak[j%N_DIMS] ){
+          if(dirOr == i || dirOr == j || isAll){
+            Float *hostCorner = h_ext_ghost_corner_r + (GK_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+            Float *device = d_elem+GK_cornerGhost[i][j]*field_length*2;
+            cudaMemcpy(device, hostCorner, GK_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float),
+                cudaMemcpyHostToDevice);
+            checkCudaError();
+          }
+        }
       }
     }
   }
@@ -448,6 +451,44 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
   Fin.communicateSideGhost((dirOr+N_DIMS)%(2*N_DIMS));
   shiftField(Fin,*this,dirOr);
 }
+
+template<typename Float>
+void PLEGMA_Field<Float>::randInit(int seed){
+
+  randstate_ptr = new PLEGMA_RNG(seed, total_length);
+  checkCudaError();  
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::stochastic_Z(int n){
+  this->zero_device();
+
+  //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
+  int rng_size = this->total_length;
+  switch( n ){
+    case 2:
+      set_stochastic<Float, 2>( *randstate_ptr, *this, this->field_length, rng_size);
+      break;
+    case 3:
+      set_stochastic<Float, 3>( *randstate_ptr, *this, this->field_length, rng_size);
+      break;
+    case 4:
+      set_stochastic<Float, 4>( *randstate_ptr, *this, this->field_length, rng_size);
+      break;
+    default:
+      errorQuda("This value of n has not been compiled. Come here to add it");
+  }
+  checkCudaError();
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::random(DIST sampling){
+  this->zero_device();
+  //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
+  int rng_size = this->total_length;
+  set_random<Float>( *randstate_ptr, *this, this->field_length, rng_size, sampling);    
+}
+
 
 template<typename Float>
 void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
