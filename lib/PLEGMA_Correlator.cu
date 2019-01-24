@@ -86,7 +86,6 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   for(int it = 0; it < GK_localL[3]; it++) {
     contract_baryons(prop1Tex,prop2Tex,*this,it);
   }
-
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
 }
