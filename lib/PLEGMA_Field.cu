@@ -486,6 +486,12 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
+  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
+  cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
+}
+
+template<typename Float>
 void PLEGMA_Field<Float>::copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where){
   if(bytes_total_length != f.Bytes_total()) errorQuda("Size of the fields does not match\n");
   if(field_length != f.Field_length()) errorQuda("The d.o.f of the fields does not match\n");
