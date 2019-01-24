@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   //  int nsmearAPE = 20;
   // double alphaAPE = 0.5;
   double xiMomSm = 0.6; //remember the sign later
-  std::vector<int> moms = {0,0,0,0};
+  std::vector<int> moms = {0,0,1,0};
     
   PLEGMA_params params;
   initialize(argc, argv, &params);
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
   smearedGauge.calculatePlaq();
   delete pGauge;
 
-  // put the momentum phase to smeared gauge field
+  //put the momentum phase to smeared gauge field
   std::complex<double> momSmScale[N_DIMS];
   std::complex<double> I(0,1);
   for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*moms[i]/GK_totalL[i])*I);
@@ -131,6 +131,8 @@ int main(int argc, char **argv)
   PLEGMA_Su3field<float> WL;
   PLEGMA_Su3field<float> tmp;
 
+  propUP->unload();
+  propDN->unload();
   //seq source part 2Props and contraction block
   {
     for(int nu = 0 ; nu < 4 ; nu++)
@@ -160,8 +162,6 @@ int main(int argc, char **argv)
     
     int signProps = (nucleon == PROTON) ? +1: -1;
 
-    propUP->unload();
-    propDN->unload();
     PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
     std::vector<GAMMAS> gammas = {G3};
 
@@ -189,21 +189,97 @@ int main(int argc, char **argv)
       WL.wilsonLineUpdate(su3, tmp, 2); // build Wilson line in the +z direction
       propF->shift(*propIn, 2);
     }
+    propF->load();
   }
-  propF->load();
-  
-  // propUP->rotateToPhysicalBase_device(+1);
-  // propDN->rotateToPhysicalBase_device(-1);
-  // propUP->applyBoundaries_device(params.sourcePosition[isource][3]);
-  // propDN->applyBoundaries_device(params.sourcePosition[isource][3]);
-  
-  // PLEGMA_Correlator<float> corr;
+
+
+  //seq source part 1Props and contraction block
+  {
+    for(int nu = 0 ; nu < 4 ; nu++)
+      for(int c2 = 0 ; c2 < 3 ; c2++){
+	if(nucleon == PROTON)
+	  vectorAuxF.seqSourceNucleon(propUP3D, P4_P, nucleon, global_fixSinkTime, nu, c2); //test case unpolarized proj
+	else
+	  vectorAuxF.seqSourceNucleon(propDN3D, P4_P, nucleon, global_fixSinkTime, nu, c2);
+	vectorAuxF.mulMomentumPhases(moms,-1); // put momentum at the sink
+	std::complex<float> Isingle(0,1);
+	float phase = 2.*PI*(((float) moms[0] * params.sourcePosition[isource][0])/GK_totalL[0]
+			     + ((float)moms[1] * params.sourcePosition[isource][1])/GK_totalL[1]
+			     + ((float)moms[2] * params.sourcePosition[isource][2])/GK_totalL[2]);
+	vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
+	vectorAuxF.conjugate();
+	vectorAuxF.apply_gamma(G5);
+	vectorAuxD.copy(vectorAuxF);
+	vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
+	// check if we need to normalize the seqsource for mix precision solver
+	if(nucleon == PROTON) solverUP->solve(vectorOut, vectorIn); else solverDN->solve(vectorOut, vectorIn);
+	// if we normalize the seqsource we have to take it out here
+	vectorAuxF.copy(vectorOut);
+	seqPropOut->absorb(vectorAuxF, nu, c2);
+      }
+    seqPropOut->apply_gamma(G5);
+    seqPropOut->conjugate();
     
-  // corr.contractMesons(*propUP, *propDN, isource, params.CorrSpace);
-  // corr.writeFile(params);
+    int signProps = (nucleon == PROTON) ? -1: +1;
+
+    PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
+    std::vector<GAMMAS> gammas = {G3};
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
+    
+    su3.absorbDir_device(WLGauge, 2); // only for z direction
+    WL.setUnit( (std::vector<int>) {0,4,8});
+    for(int i = 0 ; i < GK_totalL[2]/2;i++){ // GK_totalL[2] only for z direction
+      nucleonThrpWL_CP1[0][i].contractNucleonThrp_wilsonLine(*seqPropOut, *propF, signProps, WL, gammas, 0, MOMENTUM_SPACE);
+      if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpWL_CP1[0][i].getTotalSize()*2; iv++) (nucleonThrpWL_CP1[0][i].getCorr())[iv] *= signPer;
+      nucleonThrpWL_CP1[0][i].writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Plus" + std::to_string(i) + ".dat").c_str() );
+      propExchange = propIn; propIn = propF; propF = propExchange;
+      WL.wilsonLineUpdate(su3, tmp, 4+2); // build Wilson line in the +z direction
+      propF->shift(*propIn, 4+2);
+    }
+    
+    propF->load();
+    su3.absorbDir_device(WLGauge, 2); // only for z direction
+    WL.setUnit( (std::vector<int>) {0,4,8});
+    for(int i = 0 ; i < GK_totalL[2]/2;i++){ // GK_totalL[2] only for z direction
+      nucleonThrpWL_CP1[1][i].contractNucleonThrp_wilsonLine(*seqPropOut, *propF, signProps, WL, gammas, 0, MOMENTUM_SPACE);
+      if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpWL_CP1[1][i].getTotalSize()*2; iv++) (nucleonThrpWL_CP1[1][i].getCorr())[iv] *= signPer;
+      nucleonThrpWL_CP1[1][i].writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Minus" + std::to_string(i) + ".dat").c_str() );
+      propExchange = propIn; propIn = propF; propF = propExchange;
+      WL.wilsonLineUpdate(su3, tmp, 2); // build Wilson line in the +z direction
+      propF->shift(*propIn, 2);
+    }
+    propF->load();
+  }
+
+  for(int nu = 0 ; nu < 4 ; nu++)
+    for(int c2 = 0 ; c2 < 3 ; c2++){
+      vectorAuxF.absorb(*propUP, nu, c2);
+      vectorAuxD.copy(vectorAuxF);
+      vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
+      vectorAuxF.copy(vectorOut);
+      propUP->absorb(vectorAuxF, nu, c2);
+
+      vectorAuxF.absorb(*propDN, nu, c2);
+      vectorAuxD.copy(vectorAuxF);
+      vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
+      vectorAuxF.copy(vectorOut);
+      propDN->absorb(vectorAuxF, nu, c2);
+    }
   
-  // corr.contractBaryons(*propUP, *propDN, isource, params.CorrSpace);
-  // corr.writeFile(params);
+  propUP->rotateToPhysicalBase_device(+1);
+  propDN->rotateToPhysicalBase_device(-1);
+  propUP->applyBoundaries_device(params.sourcePosition[isource][3]);
+  propDN->applyBoundaries_device(params.sourcePosition[isource][3]);
+  
+  PLEGMA_Correlator<float> corr;
+    
+  corr.contractMesons(*propUP, *propDN, isource, params.CorrSpace);
+  corr.writeFile(params);
+
+  //maybe later we choose the specific momentum when this allows it
+  corr.contractBaryons(*propUP, *propDN, isource, params.CorrSpace);
+  corr.writeFile(params);
 
   delete propUP;
   delete propDN;
