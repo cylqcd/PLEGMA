@@ -209,39 +209,3 @@ int main(int argc, char **argv)
   return 0;
 }
 
-  // int v3 = GK_localVolume/GK_localL[3];
-  // int v = GK_localVolume;
-  // propDN3D.unload();
-  
-  // printfQuda("%+e %+e\n",propDN3D.H_elem()[0], propDN3D.H_elem()[1]);
-
-  // FILE *ptr_out = NULL;
-  // ptr_out = fopen("/onyx/noether/h/khadjiyiannakou/runs/seqSource.dat","w");
-  // if(ptr_out == NULL) errorQuda("Error opening file for writing\n");
-  // WHICHPARTICLE nucleon = NEUTRON;
-
-  // for(int isc = 0; isc < 12; isc++){ 
-  //   vectorAuxF.zero_device();
-  //   if(nucleon == PROTON)
-  //     vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, P4_P, nucleon, global_fixSinkTime, isc/3, isc%3);
-  //   else
-  //     vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, P4_P, nucleon, global_fixSinkTime, isc/3, isc%3);
-  //   vectorAuxF.unload();
-  //   for(int nu = 0; nu < 4 ; nu++)
-  //     for(int c2 = 0; c2 < 3; c2++)
-  // 	for(int iv3 = 0 ; iv3 < v3; iv3++)
-  // 	  if(is_myST) fprintf(ptr_out, "%+e %+e\n", vectorAuxF.H_elem()[nu*3*v*2 + c2*v*2 + my_fixSinkTime*v3*2 + iv3*2], vectorAuxF.H_elem()[nu*3*v*2 + c2*v*2 + my_fixSinkTime*v3*2 + iv3*2 + 1]);
-  // }
-
-  // for(int isc = 0; isc < 1; isc++){ 
-  //   vectorAuxF.zero_device();
-  //   if(nucleon == PROTON)
-  //     vectorAuxF.seqSourceNucleon(propUP3D, P4_P, nucleon, global_fixSinkTime, isc/3, isc%3);
-  //   else
-  //     vectorAuxF.seqSourceNucleon(propDN3D, P4_P, nucleon, global_fixSinkTime, isc/3, isc%3);
-  //   vectorAuxF.unload();
-  //   for(int nu = 0; nu < 4 ; nu++)
-  //     for(int c2 = 0; c2 < 3; c2++)
-  // 	for(int iv3 = 0 ; iv3 < v3; iv3++)
-  // 	  if(is_myST) fprintf(ptr_out, "%+e %+e\n", vectorAuxF.H_elem()[nu*3*v*2 + c2*v*2 + my_fixSinkTime*v3*2 + iv3*2], vectorAuxF.H_elem()[nu*3*v*2 + c2*v*2 + my_fixSinkTime*v3*2 + iv3*2 + 1]);
-  // }
