@@ -155,6 +155,11 @@ void PLEGMA_QLoops<Float>::write_ASCII(std::string filename_local, std::string f
 
 }
 
+template<typename Float>
+void PLEGMA_QLoops<Float>::load(Float* h_ptr){
+  cudaMemcpy(D_elem(), h_ptr, Bytes_total(), cudaMemcpyHostToDevice );
+}
+
 // template<typename Float>
 // void PLEGMA_QLoops<Float>::oneEnd_trick(quda::cudaColorSpinorField &x_l, quda::cudaColorSpinorField &x_r,
 // 				   quda::cudaColorSpinorField &tmp, Float val , bool accum ){

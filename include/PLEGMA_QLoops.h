@@ -20,6 +20,10 @@ namespace plegma{
     PLEGMA_QLoops(ALLOCATION_FLAG alloc_flag=BOTH, bool isOneD=false);
     ~PLEGMA_QLoops();
 
+    Float* H_loc() const{return h_loc;}
+    Float** H_oneD() const{if(isOneD) return h_oneD; else errorQuda("oneD is not enabled");}
+    Float** H_oneDC() const{if(isOneD) return h_oneDC; else errorQuda("oneD is not enabled");}
+
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 		      Float val , bool accum );
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
@@ -30,6 +34,7 @@ namespace plegma{
     void write_ASCII(std::string filename_local);
     void write_ASCII(std::string filename_local, std::string filename_oneD, std::string filename_oneDC);
     
+    void load(Float* h_ptr);
   };
 
 }
