@@ -117,11 +117,12 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
   if(!isAllocated) errorQuda("Memory not allocated cannot write data");
   if(outputFormat == ASCII_FORM){
     Float *helem_global=NULL;
-    if(dimT != 1){
+    if(dimT != 1 && GK_nProc[3] != 1){
       int sizeN= Nmoms()*GK_localL[3]*dof*2;
       helem_global = (Float*) malloc(GK_nProc[3]*sizeN*sizeof(Float));
       if(helem_global == NULL) errorQuda("Allocation failed\n");
-      MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,GK_timeComm);
+      int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,GK_timeComm);
+      if(error != MPI_SUCCESS) errorQuda("MPI_Gather with %d\n",error);
     }
     else
       helem_global = h_elem;
@@ -138,7 +139,7 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
 	}
       fclose(ptr);
     }
-    if(dimT != 1)free(helem_global);
+    if(dimT != 1 && GK_nProc[3] != 1)free(helem_global);
   }
   else if(outputFormat == HDF5_FORM){
     errorQuda("Not implemented yet");

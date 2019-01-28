@@ -84,6 +84,7 @@ namespace cuBLAS{
 
   template<>
   inline void dot<float>(float res[2], int NN, const float *x, const float *y, MPI_Comm comm){
+    if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
     cuComplex cu_res;
     cublasStatus_t error = cublasCdotc(cublas_handle, NN,(cuComplex*)x, 1, (cuComplex*)y,1,&cu_res);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCdotc failed with error %d", error);
@@ -93,6 +94,7 @@ namespace cuBLAS{
 
   template<>
   inline void dot<double>(double res[2], int NN, const double *x, const double *y, MPI_Comm comm){
+    if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
     cuDoubleComplex cu_res;
     cublasStatus_t error = cublasZdotc(cublas_handle, NN,(cuDoubleComplex*)x, 1, (cuDoubleComplex*)y,1,&cu_res);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdotc failed with error %d", error);

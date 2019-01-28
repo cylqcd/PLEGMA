@@ -224,7 +224,6 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     MPI_Group_rank(GK_spaceGroup,&GK_localRank);
     MPI_Group_size(GK_spaceGroup,&GK_localSize);
     MPI_Comm_create(MPI_COMM_WORLD, GK_spaceGroup , &GK_spaceComm);
-
     //if(GK_spaceComm == MPI_COMM_NULL) printf("NULL %d\n",comm_rank());
     //exit(-1);
     // create group of process to use mpi gather
@@ -237,7 +236,6 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     MPI_Group_rank(GK_timeGroup, &GK_timeRank);
     MPI_Group_size(GK_timeGroup, &GK_timeSize);
     MPI_Comm_create(MPI_COMM_WORLD, GK_timeGroup, &GK_timeComm);
-
     //////////////////////////////////////////////////////////////////////////////
     free(ranks);
     free(ranksTime);
