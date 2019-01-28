@@ -157,48 +157,9 @@ void PLEGMA_QLoops<Float>::write_ASCII(std::string filename_local, std::string f
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::load(Float* h_ptr){
-  cudaMemcpy(D_elem(), h_ptr, Bytes_total(), cudaMemcpyHostToDevice );
+  cudaMemcpy(this->D_elem(), h_ptr, this->Bytes_total(), cudaMemcpyHostToDevice );
 }
 
-// template<typename Float>
-// void PLEGMA_QLoops<Float>::oneEnd_trick(quda::cudaColorSpinorField &x_l, quda::cudaColorSpinorField &x_r,
-// 				   quda::cudaColorSpinorField &tmp, Float val , bool accum ){
-//   if(x_l.Precision() != this->Precision()) errorQuda("Precision between QUDA and PLEGMA fields do not much");
-  
-//   int NN = (this->Field_length()) * (this->Total_length());
-//   Float valsP[] = {val,0.};
-//   Float valsM[] = {-val,0.};
-//   // local contraction
-//   checkCudaError();
-//   printfQuda("Error 1\n");
-//   contract(x_l, x_r, (void*) this->D_elem(), QUDA_CONTRACT_GAMMA5);
-//   checkCudaError();
-//   printfQuda("Error 2\n");
-//   this->unload();
-//   if(accum) axpy<Float>(NN,valsP, this->H_elem(), h_loc);
-//   else memcpy(h_loc, this->H_elem(), this->Bytes_total());
-
-//   if(isOneD)
-//     for(int mu=0; mu<4; mu++)
-//       {
-// 	cov->MCD(tmp,x_r,mu);
-// 	contract(x_l, tmp, this->D_elem(), QUDA_CONTRACT_GAMMA5);      // Term 0
-// 	cov->MCD(tmp,x_l,mu+4);
-// 	contract(tmp, x_r, this->D_elem(), QUDA_CONTRACT_GAMMA5_PLUS); //Term 0 + Term 3
-// 	this->unload();
-// 	if(accum) axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneD[mu]);
-// 	else memcpy(h_oneD[mu], this->H_elem(), this->Bytes_total());
-// 	memcpy(h_oneDC[mu], h_oneD[mu], this->Bytes_total());
-
-// 	cov->MCD(tmp,x_l,mu);
-// 	contract(tmp,x_r, this->D_elem(), QUDA_CONTRACT_GAMMA5); // Term 2
-// 	cov->MCD(tmp,x_r,mu+4);
-// 	contract(x_l,tmp, this->D_elem(), QUDA_CONTRACT_GAMMA5_PLUS); // Term2 + Term1
-// 	this->unload();
-// 	axpy(NN,valsM, (Float*) this->H_elem(), (Float*) h_oneD[mu]); // (0+3-(1+2))
-// 	axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneDC[mu]); // (0+3+(1+2))
-//       }
-// }
 
 template class PLEGMA_QLoops<float>;
 template class PLEGMA_QLoops<double>;

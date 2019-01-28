@@ -48,7 +48,7 @@ int main(int argc, char **argv)
   loops_std.oneEnd_trick(phi,phi,tmp,pGauge,-1.,true); //standard one-end trick
 
   std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
-  PLEGMA_FT ft(1, 3);
+  PLEGMA_FT<double> ft(1, 3);
 
   // do the FT and write to File std trick
   loops_std.load(loops_std.H_loc());
