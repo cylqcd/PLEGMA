@@ -42,6 +42,22 @@ namespace cBLAS{
   inline void cscal<double>(int NN, double val[2], double *x){
     cblas_zscal(NN,val,x,1);
   }
+
+  //--------------------------------------------------------
+  template<typename Float>
+  inline void scal(int NN, Float val, Float *x){}
+
+  template<>
+  inline void scal<float>(int NN, float val, float *x){
+    cblas_csscal(NN,val,x,1);
+  }
+
+  template<>
+  inline void scal<double>(int NN, double val, double *x){
+    cblas_zdscal(NN,val,x,1);
+  }
+
+  
 }
 //=================================================================//
 

@@ -58,10 +58,12 @@ int main(int argc, char **argv)
     for(int mu = 0 ; mu < 4 ; mu++){
       loops_std.load(loops_std.H_oneD()[mu]);
       ft.apply(loops_std);
+      ft.scale(0.25);
       ft.writeToFile(prefix + "std_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);
 
       loops_std.load(loops_std.H_oneDC()[mu]);
       ft.apply(loops_std);
+      ft.scale(0.25);
       ft.writeToFile(prefix + "std_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);      
     }
   
@@ -93,10 +95,12 @@ int main(int argc, char **argv)
     for(int mu = 0 ; mu < 4 ; mu++){
       loops_gen.load(loops_gen.H_oneD()[mu]);
       ft.apply(loops_gen);
+      ft.scale(0.25);
       ft.writeToFile(prefix + "gen_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);
 
       loops_gen.load(loops_gen.H_oneDC()[mu]);
       ft.apply(loops_gen);
+      ft.scale(0.25);
       ft.writeToFile(prefix + "gen_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);      
     }
 

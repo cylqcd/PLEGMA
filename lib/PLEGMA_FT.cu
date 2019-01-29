@@ -11,7 +11,7 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
-  Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), dims(D3D4), dimT(0), accum(accum){
+  Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
   if(dims!= 3 && dims !=4) errorQuda("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? GK_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) errorQuda("The maximum number of Q2 cannot be negative\n");
@@ -56,12 +56,13 @@ template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
   if(isAllocated && dof == newDof) return;
   try{
-    if(!isAllocated){dof = newDof; h_elem = new Float[Nmoms()*dimT*dof*2];}
+    if(!isAllocated){dof = newDof; sizeN = Nmoms()*dimT*dof*2; h_elem = new Float[sizeN];}
     else{
       if(dof != newDof){
 	dof = newDof;
 	delete[] h_elem;
-	h_elem = new Float[Nmoms()*dimT*dof*2];
+	sizeN = Nmoms()*dimT*dof*2;
+	h_elem = new Float[sizeN];
       }
     }
   }
@@ -112,6 +113,13 @@ void PLEGMA_FT<Float>::mulConstMomentumPhases(Vint src, int sign){
 }
 
 template<typename Float>
+void PLEGMA_FT<Float>::scale(Float a){
+  if(!isAllocated) errorQuda("Apply first FT and then you can scale it");
+  cBLAS::scal(sizeN/2, a, h_elem);
+}
+
+
+template<typename Float>
 void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift){
   if(dims == 4 && timeshift > 0) errorQuda("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!isAllocated) errorQuda("Memory not allocated cannot write data");
@@ -119,7 +127,6 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
     Float *helem_global=NULL;
     bool gAlloc=false;
     if(dimT != 1 && GK_nProc[3] != 1 && GK_spaceRank == 0){
-      int sizeN= Nmoms()*GK_localL[3]*dof*2;
       helem_global = (Float*) malloc(GK_nProc[3]*sizeN*sizeof(Float));
       if(helem_global == NULL) errorQuda("Allocation failed\n");
       gAlloc=true;

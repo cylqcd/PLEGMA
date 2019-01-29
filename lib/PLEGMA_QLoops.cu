@@ -69,13 +69,13 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
   if(isOneD) errorQuda("This function cannot do the oneD");
   int NN = (this->Field_length()) * (this->Total_length());
   Float valsP[] = {val,0.};
-  // local contraction
+  //local contraction
   contractG5(x_l, x_r); 
   this->unload();
   if(accum) cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_loc);
   else{
     memcpy(h_loc, this->H_elem(), this->Bytes_total());
-    cBLAS::cscal<Float>(NN,valsP,h_loc);
+    cBLAS::scal<Float>(NN,valsP[0],h_loc);
   }
 }
 
@@ -92,7 +92,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
   if(accum) cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_loc);
   else{
     memcpy(h_loc, this->H_elem(), this->Bytes_total());
-    cBLAS::cscal<Float>(NN,valsP,h_loc);
+    cBLAS::scal<Float>(NN,valsP[0],h_loc);
   }
   
   x_l.communicateGhost();
@@ -107,7 +107,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
       if(accum) cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneD[mu]);
       else{
 	memcpy(h_oneD[mu], this->H_elem(), this->Bytes_total());
-	cBLAS::cscal<Float>(NN,valsP,h_oneD[mu]);
+	cBLAS::scal<Float>(NN,valsP[0],h_oneD[mu]);
       }
       memcpy(h_oneDC[mu], h_oneD[mu], this->Bytes_total());
       
