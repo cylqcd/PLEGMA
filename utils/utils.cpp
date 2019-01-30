@@ -1,4 +1,5 @@
 #include <PLEGMA.h>
+#include <cmath>
 #include <PLEGMA_utils.h>
 
 using namespace quda;
@@ -48,13 +49,40 @@ void createMom(int *Nmom, int momElem[][3], int Q_sq){
   *Nmom = counter;
 }
 
-void get_coords(int id, int *position){
+/* ================ Small introduction to Hierarchical probing ============
+# There is an unsigned integer "k" running from 1 until ...
+# From this integer we can specify several important quantities regarding the coloring
+# The total number of colors is given by N_{hc} = 2 * 2^{d(k-1)} where d is the number of dimensions
+# The distance seperating neighbors carrying the same color is D=2^k
+# The extent of the elementary coloring block is given L_u=2^{k-1}
+# A condition must be fulfilled in order to be able to do the coloring for a specific k
+# The condition must be that the number of blocks in each direction must be even
+# And that Ls%(2*Lu)=0 and Lt%(2*Lu)=0
+ */
 
-  float temp = id/GK_localVolume;
-  for(int i = N_DIMS-1; i >=0; --i) {
+class Hprobing{
+private:
+  int k;  // index for the coloring distance
+  int Nc; // Number of colors = Number of Hadamard vectors
+  short d; // Number of dimension of Hprob (For now d=4)
+  unsigned int* Vc; // array to hold the coloring of the lattice
+public:
+  Hprobing(int k_probing, int d=4);
+};
 
-    temp = temp * GK_localL[i];
-    position[i] = (int)temp % GK_localL[i];
-    position[i] += comm_coords(default_topo)[i] * GK_localL[i]; 
-  }
+Hprobing::Hprobing(int k_probing, int d):k(k_probing),d(d){
+  if(!GK_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
+  if(d != 4) errorQuda("Hierarchical probing supports only 4D coloring up to now");
+  if(k<=0) errorQuda("The index of the Hprobing should greater than zero");
+  Nc = 2*std::pow(2,d*(k-1));
+  
 }
+
+/*
+@brief: This function computes the colors for the elementary color block
+Inputs:
+lc: Pointer to the array where we want to store the colors
+Nc: The number of colors we want to put in the block
+Lu: The extent of the color block
+d: Dimension, either 2 or 3
+ */
