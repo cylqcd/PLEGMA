@@ -24,7 +24,7 @@ int main(int argc, char **argv)
   PLEGMA_Vector<double> vectorSDilD2(BOTH);
   PLEGMA_Vector<double> vectorCDilD(BOTH);
   PLEGMA_Vector<double> vectorSCDilD(BOTH);
-  double res[2];
+  std::complex<double> res;
 
   int nroots=2;
   vectorAuxD.randInit(1234);
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   vectorSDilD2.dilutespin(vectorAuxD, 2);
   vectorCDilD.dilutecolor(vectorAuxD, 2);
   vectorSCDilD.dilutespincolor(vectorAuxD, 2, 1);
-  vectorSDilD1.dot(res, vectorSDilD2);
+  res = vectorSDilD1.dot(vectorSDilD2);
   vectorSDilD.unload();
   vectorCDilD.unload();
   vectorSCDilD.unload();

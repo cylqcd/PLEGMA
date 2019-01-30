@@ -92,7 +92,7 @@ namespace plegma {
     void random(DIST sampling=Uniform);
     void setUnit(std::vector<int> indDiag);
     void mulMomentumPhases(std::vector<int> mom, int sign=-1);
-    void dot(Float res[2], PLEGMA_Field<Float> &FieldIn);    
+    std::complex<Float> dot(PLEGMA_Field<Float> &FieldIn);    
   };
 }
 #endif
