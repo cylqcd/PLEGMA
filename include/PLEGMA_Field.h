@@ -96,6 +96,7 @@ namespace plegma {
     void setUnit(std::vector<int> indDiag);
     void copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where = DEVICE);
     void mulMomentumPhases(std::vector<int> mom, int sign=-1);
+    std::complex<Float> dot(PLEGMA_Field<Float> &FieldIn);    
     void cscale(std::complex<Float> val);
   };
 }

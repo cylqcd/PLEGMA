@@ -527,6 +527,15 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
 }
 
 template<typename Float>
+std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
+  
+  Float res[2];
+  cuBLAS::dot(res, total_length*field_length, PLEGMA_Field<Float>::d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
+  printfQuda("Vector dot product is %e %e\n",res[0], res[1]);
+  std::complex<Float> result(res[0], res[1]);
+  return result;
+}
+
 void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
   if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
   cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
