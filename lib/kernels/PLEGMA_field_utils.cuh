@@ -19,7 +19,8 @@ static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<
   if(Fz.Field_length() != Fx.Field_length()) errorQuda("Error input, output fields do not match");
   if(Fz.Field_length() != Fy.Field_length()) errorQuda("Error input, output fields do not match");
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps,xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(), Fy.D_elem(),beta,Fz.Field_length());
+  tuneAndRun(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
+	     Fy.D_elem(),beta,Fz.Field_length());
   checkCudaError();
 }
 

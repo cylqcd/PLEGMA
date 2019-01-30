@@ -104,12 +104,12 @@ protected:
 public:
 
   // ctor
-  PLEGMA_kernel_tuner( ProfileStruct &myps, void(* mykernel)(types...), types... kArgs ) : ps(myps) {
+  PLEGMA_kernel_tuner( ProfileStruct &myps, std::string kname, void(* mykernel)(types...), types... kArgs ) : ps(myps) {
     kernel = mykernel;
     args = std::tuple<types...>(kArgs...);
     sprintf(volString, "%lld", ps.volume);
     sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
-    kernelName = (std::string) typeid(*kernel).name(); // with cupti no longer necessary
+    kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
     onlyTuning = false;
     tuned = false;
   } 
@@ -179,8 +179,8 @@ void PLEGMA_kernel_tuner<types...>::run(){
 }
 
 template<class ...types>
-void tune(ProfileStruct &ps, void (*kernel)(types...), types... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+void tune(ProfileStruct &ps, std::string kname, void (*kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kname, kernel, kArgs...);
   tuner.tune();
 }
 
@@ -191,8 +191,8 @@ void run(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
 }
 
 template<class ...types>
-void tuneAndRun(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+void tuneAndRun(ProfileStruct &ps, std::string kname, void(* kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kname, kernel, kArgs...);
   tuner.apply();
 }
 

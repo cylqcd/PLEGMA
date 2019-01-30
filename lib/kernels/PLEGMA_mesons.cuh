@@ -79,7 +79,7 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, 
   
   ProfileStruct ps(SpVol, shared_size);
  
-  tune( ps, contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>,
+  tune( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>,
 	texProp1, texProp2, d_partial_block, it,
 	GK_sourcePosition[isource][0], GK_sourcePosition[isource][1],
 	GK_sourcePosition[isource][2]);

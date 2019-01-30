@@ -111,28 +111,28 @@ static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
 template<typename FloatA, typename FloatB>
 static void traceHerExpMap_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps,traceHerExpMap_kernel<FloatA,FloatB>, A.D_elem(), B.D_elem());
+  tuneAndRun(ps, "traceHerExpMap_kernel", traceHerExpMap_kernel<FloatA,FloatB>, A.D_elem(), B.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB>
 static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps,Udag_kernel<FloatA,FloatB>,A.D_elem(), B.D_elem());
+  tuneAndRun(ps, "Udag_kernel", Udag_kernel<FloatA,FloatB>,A.D_elem(), B.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps,UxU_kernel<FloatA,FloatB,FloatC>,A.D_elem(), B.D_elem(),C.D_elem());
+  tuneAndRun(ps, "UxU_kernel", UxU_kernel<FloatA,FloatB,FloatC>,A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps,UxUdag_kernel<FloatA,FloatB,FloatC>,A.D_elem(), B.D_elem(),C.D_elem());
+  tuneAndRun(ps, "UxUdag_kernel", UxUdag_kernel<FloatA,FloatB,FloatC>, A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
 
@@ -144,7 +144,7 @@ static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
   Float *d_partial_sum = NULL;
 
   ProfileStruct ps(GK_localVolume,sizeof(FloatS));
-  tune(ps,sum_real_trace_kernel<Float,FloatS>,su3M.D_elem(), d_partial_sum);
+  tune(ps, "sum_real_trace_kernel", sum_real_trace_kernel<Float,FloatS>,su3M.D_elem(), d_partial_sum);
 
   int gridDimX = ps.tp.grid.x;
   
