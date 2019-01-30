@@ -234,7 +234,7 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
   }
 
   if( where == BOTH ){
-    this->h_elem[((id*N_SPINS+spin)*N_COLS + color)*2] = 1.0; 
+    this->h_elem[((spin*N_COLS+color)*GK_localVolume + id)*2] = 1.0; 
     cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*GK_localVolume + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
