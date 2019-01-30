@@ -33,6 +33,8 @@ static __global__ void contractG5_bilinear_kernel(Float *qLoops, vectorTex<Float
 template<typename Float>
 static void contractG5_bilinear(Float *qLoops, vectorTex<Float> v_l, vectorTex<Float> v_r, Float accum_sign){
   ProfileStruct ps(GK_localVolume);
+  //tuneInOut(ps, "contractG5_bilinear_kernel", contractG5_bilinear_kernel<Float>,qLoops, v_l, v_r, accum_sign);
   tuneAndRun(ps, "contractG5_bilinear_kernel", contractG5_bilinear_kernel<Float>,qLoops, v_l, v_r, accum_sign);
+  //run(ps, contractG5_bilinear_kernel<Float,Float>,qLoops, v_l, v_r, accum_sign);
   checkCudaError();
 }
