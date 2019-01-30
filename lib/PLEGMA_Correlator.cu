@@ -3,7 +3,7 @@
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
- 
+#include <functional>
 using namespace plegma;
 
 //--------------------------------//
@@ -42,6 +42,7 @@ initialize(CORR_TYPE CorrType, CORR_SPACE CorrSpace) {
      errorQuda("Correlator: Cannot allocate memory of size %d.", bytes_total_length);
   else
     isAlloc = true;
+  memset(corr,0,bytes_total_length);
 }
 
 template<typename Float>
@@ -85,9 +86,98 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   for(int it = 0; it < GK_localL[3]; it++) {
     contract_baryons(prop1Tex,prop2Tex,*this,it);
   }
-
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
+}
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
+void contractPropOpProp_wilsonLine(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
+				   su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas);
+template<typename Float>
+void PLEGMA_Correlator<Float>::contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
+		    int signProps, PLEGMA_Su3field<Float> &su3, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
+  initialize(THRP_PDFS,corrSpace);
+  
+  propTex<Float> bwdPropTex, fwdPropTex;
+  su3Tex<Float> sTex;
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  sTex.tex = su3.createTexObject();
+  this->isource = isource;
+  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+
+  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
+
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+  su3.destroyTexObject(sTex.tex);
+}
+
+template<typename FloatC,typename FloatA, typename FloatB>
+void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
+			      int it, std::vector<GAMMAS> gammas);
+template<typename Float>
+void PLEGMA_Correlator<Float>::contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
+							 int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
+  initialize(THRP_LOCAL,corrSpace);
+  propTex<Float> bwdPropTex, fwdPropTex;
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  this->isource = isource;
+  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+}
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
+void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
+void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
+
+template<typename Float>
+static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge, int signProps,std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace,
+				       std::function<void(PLEGMA_Correlator<Float>&,propTex<Float>,
+							  propTex<Float>,int,su3Tex<Float>,int,int,std::vector<GAMMAS>)> funcContract){
+  // gauge should have the sign for the antiperiodic boundary conditions
+
+  PLEGMA_Su3field<Float> gsu3(DEVICE);
+  propTex<Float> bwdPropTex, fwdPropTex;
+  su3Tex<Float> gsu3Tex;
+  gsu3Tex.tex = gsu3.createTexObject();
+  bwdProp.communicateGhost();
+  fwdProp.communicateGhost();
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+  for(int idir = 0; idir < N_DIMS; idir++){
+    gsu3.absorbDir_device(gauge,idir);
+    gsu3.communicateGhost(idir+N_DIMS); // later do only the direction we are interested in
+    for(int it = 0; it < GK_localL[3]; it++)
+      funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,it, idir,gammas);
+  }
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+  gsu3.destroyTexObject(gsu3Tex.tex);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
+							int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
+  initialize(THRP_ONED,corrSpace);
+  this->isource=isource;
+  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,isource,corrSpace,contractPropOpProp_oneD<Float,Float,Float,Float>);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
+		    int signProps, int isource, CORR_SPACE corrSpace){
+  initialize(THRP_NOETHER,corrSpace);
+  this->isource=isource;
+  std::vector<GAMMAS> gammas = {};
+  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,isource,corrSpace,contractPropOpProp_noe<Float,Float,Float,Float>);
 }
 
 template<typename Float>
@@ -151,7 +241,7 @@ writeFile(PLEGMA_params &params) {
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeASCII(char *filename_out) {
+writeASCII(const char *filename_out) {
   MPI_Comm comm;
   size_t g_vol_size;
   int rank;
@@ -188,20 +278,21 @@ writeASCII(char *filename_out) {
   if(rank == 0){
     ptr_out = fopen(filename_out,"w");
     if(ptr_out == NULL) errorQuda("Error opening file for writing\n");
-    for(size_t v=0; v<g_vol_size; v++) {
-      size_t shift=v*site_size;
+    if(n_flavors != 1) errorQuda("For now works with n_flavors = 1\n");
+    for(size_t v=0; v<g_vol_size*site_size; v++) {
+      int it = v/(GK_Nmoms*site_size);
+      int imom = v/(site_size) - it*GK_Nmoms;
+      int is = v%site_size;
+      int it_shift = (it + GK_sourcePosition[isource][3])%GK_totalL[3];
+      int ipos = it_shift*GK_Nmoms*site_size + imom*site_size + is;
       if(corr_space == MOMENTUM_SPACE) {
-	fprintf(ptr_out, "%30d  %+20d  %+20d  %+20d ", v/GK_totalL[3], GK_moms[v%GK_totalL[3]][0],
-		GK_moms[v%GK_totalL[3]][1], GK_moms[v%GK_totalL[3]][2]);
-	shift=((v/GK_totalL[3]+GK_sourcePosition[isource][3])%GK_totalL[3])*GK_Nmoms + v%GK_totalL[3];
+	if(is == 0)fprintf(ptr_out, "%d  %+d  %+d  %+d ", v/(GK_Nmoms*site_size), GK_moms[imom][0], GK_moms[imom][1], GK_moms[imom][2]);
       }
       else if (corr_space == POSITION_SPACE) {
 	//TODO
       }
-      for(size_t s=0; s<site_size; s+=2) {
-	fprintf(ptr_out, "%+e %+eI ", corrGlobal[shift*2+s], corrGlobal[shift*2+s+1]);
-      }
-      fprintf(ptr_out, "\n");
+      fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2], corrGlobal[ipos*2+1]);
+      if(is == site_size-1)fprintf(ptr_out, "\n");
     }
     fclose(ptr_out);
     free(corrGlobal);

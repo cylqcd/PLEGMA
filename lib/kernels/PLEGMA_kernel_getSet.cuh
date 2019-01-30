@@ -47,9 +47,9 @@ namespace plegma {
     size_t sid;
     size_t stride;
     inline __device__ sidStride() = default; 
-    inline __device__ sidStride(size_t sid) {
+    inline __device__ sidStride(size_t sid, size_t stride=c_stride) {
       this->sid = sid;
-      this->stride = c_stride;      
+      this->stride = stride;      
     }  
     template<get_from src>
     inline __device__ void setSidStride(size_t sid, const int, short int);
@@ -393,7 +393,7 @@ namespace plegma {
     inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_SPINS*N_COLS, dirs ...);
-      return get(S,ss);
+      get(S,ss);
     }
   };
 
@@ -450,10 +450,10 @@ namespace plegma {
       get( P, ss );
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
       sidStride ss;
       ss.setSidStride<src>(sid, N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
-      return get(P,ss);
+      get(P,ss);
     }
   };
 

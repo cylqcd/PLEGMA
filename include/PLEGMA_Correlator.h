@@ -1,12 +1,12 @@
 #include <PLEGMA_global.h>
-
+#include <PLEGMA_Su3field.h>
 #ifndef _PLEGMA_CORRELATOR_H
 #define _PLEGMA_CORRELATOR_H
 
 namespace plegma {
 
   // Information for correlators
-  enum CORR_TYPE{MESONS,BARYONS,THRP_LOCAL,THRP_NOETHER,THRP_ONED,
+  enum CORR_TYPE{MESONS,BARYONS,THRP_LOCAL,THRP_NOETHER,THRP_ONED,THRP_PDFS,
 		 // add here
                  N_CORR}; // N_CORR must be last
   
@@ -18,10 +18,10 @@ namespace plegma {
 		    // add here
 		    N_BARYONS}; // N_BARYONS must be last 
 
-  const int nGroups[N_CORR] = { N_MESONS, N_BARYONS, 1, 1, 1 };
-  const int nFlavors[N_CORR] = { 2, 2, 2, 2, 2 };
-  const int nComp[N_CORR] = { 1, N_SPINS*N_SPINS, N_SPINS*N_SPINS, N_DIMS, N_SPINS*N_SPINS*N_DIMS };
-  const int nDims[N_CORR] = { 0, 1, 1, 1, 2 };
+  const int nGroups[N_CORR] = { N_MESONS, N_BARYONS, 1, 1, 1, 1 };
+  const int nFlavors[N_CORR] = { 2, 2, 1, 1, 1, 1 };
+  const int nComp[N_CORR] = { 1, N_SPINS*N_SPINS, N_SPINS*N_SPINS, N_DIMS, N_SPINS*N_SPINS*N_DIMS, 1 };
+  const int nDims[N_CORR] = { 0, 1, 1, 1, 2, 1}; // KH: check it since I do not understand what is doing
 
   // Names used for writing in HDF5
   const static char *meson_groups[N_MESONS] = {"pseudoscalar", "scalar",
@@ -109,10 +109,19 @@ namespace plegma {
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int isource, CORR_SPACE CorrSpace);
 
-
+    void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
+				   PLEGMA_Propagator<Float> &fwdProp,
+				   int signProps,std::vector<GAMMAS> gammas,
+				   int isource, CORR_SPACE corrSpace);
+    void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
+				  int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace);
+    void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
+				  int signProps, int isource, CORR_SPACE corrSpace);
+    void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
+				  int signProps, PLEGMA_Su3field<Float> &su3, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace);
     void writeFile(PLEGMA_params &params);
     void writeFile(char *filename, PLEGMA_params &params);
-    void writeASCII(char *filename);
+    void writeASCII(const char *filename);
     void writeHDF5(char *filename, PLEGMA_params &params);
   };
 }

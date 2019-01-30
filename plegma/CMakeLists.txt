@@ -38,6 +38,9 @@ target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
+cuda_add_executable(nucleon_3pt nucleon_3pt.cpp)
+target_link_libraries(nucleon_3pt ${PLEGMA_LIBS})
+
 cuda_add_executable(PlaquetteWshifts EXCLUDE_FROM_ALL PlaquetteWshifts.cpp)
 target_link_libraries(PlaquetteWshifts ${PLEGMA_LIBS})
 
