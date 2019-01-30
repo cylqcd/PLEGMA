@@ -54,8 +54,8 @@ short int GK_moms[MAX_NMOMENTA][3];
 // for mpi use global  variables
 MPI_Group GK_fullGroup , GK_spaceGroup , GK_timeGroup;
 MPI_Comm GK_spaceComm , GK_timeComm;
-int GK_localRank;
-int GK_localSize;
+int GK_spaceRank;
+int GK_spaceSize;
 int GK_timeRank;
 int GK_timeSize;
 // for cublas use
@@ -214,19 +214,12 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     for(int i= 0 ; i < space3D_proc ; i++)
       ranks[i] = comm_coords(default_topo)[3] + GK_nProc[3]*i;
 
-    //    for(int i= 0 ; i < space3D_proc ; i++)
-    //      printf("%d (%d,%d,%d,%d)\n",comm_rank(),comm_coords(default_topo)[0],comm_coords(default_topo)[1],comm_coords(default_topo)[2],comm_coords(default_topo)[3]);
-
-    //  for(int i= 0 ; i < space3D_proc ; i++)
-    //printf("%d %d\n",comm_rank(),ranks[i]);
 
     MPI_Group_incl(GK_fullGroup,space3D_proc,ranks,&GK_spaceGroup);
-    MPI_Group_rank(GK_spaceGroup,&GK_localRank);
-    MPI_Group_size(GK_spaceGroup,&GK_localSize);
+    MPI_Group_rank(GK_spaceGroup,&GK_spaceRank);
+    MPI_Group_size(GK_spaceGroup,&GK_spaceSize);
     MPI_Comm_create(MPI_COMM_WORLD, GK_spaceGroup , &GK_spaceComm);
 
-    //if(GK_spaceComm == MPI_COMM_NULL) printf("NULL %d\n",comm_rank());
-    //exit(-1);
     // create group of process to use mpi gather
     int *ranksTime = (int*) malloc(GK_nProc[3]*sizeof(int));
 
@@ -237,7 +230,6 @@ void plegma::PLEGMA_init(PLEGMA_params *params){
     MPI_Group_rank(GK_timeGroup, &GK_timeRank);
     MPI_Group_size(GK_timeGroup, &GK_timeSize);
     MPI_Comm_create(MPI_COMM_WORLD, GK_timeGroup, &GK_timeComm);
-
     //////////////////////////////////////////////////////////////////////////////
     free(ranks);
     free(ranksTime);

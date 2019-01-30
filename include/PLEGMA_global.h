@@ -74,8 +74,8 @@ extern short int GK_moms[MAX_NMOMENTA][3];
 // for mpi use global variables
 extern MPI_Group GK_fullGroup , GK_spaceGroup , GK_timeGroup;
 extern MPI_Comm GK_spaceComm , GK_timeComm;
-extern int GK_localRank;
-extern int GK_localSize;
+extern int GK_spaceRank;
+extern int GK_spaceSize;
 extern int GK_timeRank;
 extern int GK_timeSize;
 // for cublas use
