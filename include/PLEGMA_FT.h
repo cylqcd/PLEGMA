@@ -17,6 +17,7 @@ namespace plegma {
     bool isAllocated;
     int dof; // degrees of freedom the field has
     Float *h_elem; // memory to hold the transformed data
+    int sizeN; // size of the elements array include real,imag
     int dims; // the dimensionality of the transformation either 3 or 4
     int dimT; // if dims = 3, dimT = (dims ==3) ? GK_localL[3] : 1; 
     bool accum;
@@ -36,5 +37,6 @@ namespace plegma {
     void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction
     void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
     void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
+    void scale(Float a);
   };
 }
