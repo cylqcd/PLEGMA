@@ -174,7 +174,7 @@ void PLEGMA_Vector<Float>::dilutespin(PLEGMA_Vector<Float> &vecIn, int spin){
   this->zero_device();
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      if(mu != spin){
+      if(mu == spin){
         pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*GK_localVolume*2);
         cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*GK_localVolume)*2), pointer_src, GK_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
       } 
@@ -189,7 +189,7 @@ void PLEGMA_Vector<Float>::dilutecolor(PLEGMA_Vector<Float> &vecIn, int color){
   this->zero_device();
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      if(c1 != color){
+      if(c1 == color){
         pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*GK_localVolume*2);
         cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*GK_localVolume)*2), pointer_src, GK_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
       } 
@@ -205,13 +205,14 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
   this->zero_device();
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      if(c1 != color && mu != spin){
+      if(c1 == color && mu == spin){
         pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*GK_localVolume*2);
         cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*GK_localVolume)*2), pointer_src, GK_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
       } 
     }
   checkCudaError();
 }
+
 
 template<typename Float>
 void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color, ALLOCATION_FLAG where){

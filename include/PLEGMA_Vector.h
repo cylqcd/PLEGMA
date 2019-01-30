@@ -58,7 +58,6 @@ namespace plegma {
      **/    
     void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
     
-    
     void dilutespin(PLEGMA_Vector<Float> &vecIn, int spin);
 
     void dilutecolor(PLEGMA_Vector<Float> &vecIn, int color);

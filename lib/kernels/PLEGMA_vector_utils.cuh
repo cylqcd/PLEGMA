@@ -1,4 +1,4 @@
-#include <cublas_v2.h>
+#include <PLEGMA_BLAS.h>
 #include <PLEGMA_Random.h>
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_tuner.cuh>

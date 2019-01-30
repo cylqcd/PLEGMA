@@ -524,5 +524,11 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   cudaFree(x);
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::dot(Float res[2], PLEGMA_Field<Float> &fieldIn){
+  
+  cuBLAS::dot(res, total_length*field_length, PLEGMA_Field<Float>::d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
+  printfQuda("Vector dot product is %e %e\n",res[0], res[1]);  
+}
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;

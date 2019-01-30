@@ -20,14 +20,21 @@ int main(int argc, char **argv)
   PLEGMA_Vector<double> vectorCOutD(HOST);
   PLEGMA_Vector<double> vectorSCOutD(HOST);
   PLEGMA_Vector<double> vectorSDilD(BOTH);
+  PLEGMA_Vector<double> vectorSDilD1(BOTH);
+  PLEGMA_Vector<double> vectorSDilD2(BOTH);
   PLEGMA_Vector<double> vectorCDilD(BOTH);
   PLEGMA_Vector<double> vectorSCDilD(BOTH);
+  double res[2];
+
   int nroots=2;
   vectorAuxD.randInit(1234);
   vectorAuxD.stochastic_Z(nroots);
   vectorSDilD.dilutespin(vectorAuxD, 1);
+  vectorSDilD1.dilutespin(vectorAuxD, 1);
+  vectorSDilD2.dilutespin(vectorAuxD, 2);
   vectorCDilD.dilutecolor(vectorAuxD, 2);
   vectorSCDilD.dilutespincolor(vectorAuxD, 2, 1);
+  vectorSDilD1.dot(res, vectorSDilD2);
   vectorSDilD.unload();
   vectorCDilD.unload();
   vectorSCDilD.unload();
