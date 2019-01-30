@@ -95,15 +95,12 @@ int main(int argc, char **argv)
   //smear the 3D propagators
   for(int nu = 0 ; nu < 4 ; nu++)
     for(int c2 = 0 ; c2 < 3 ; c2++){
-      // later when we have copy from 4D specific time slice we change it
-      //      vectorAuxF.copyPropagator3D(propUP3D, global_fixSinkTime, nu, c2);
       vectorAuxF.absorb(propUP, global_fixSinkTime, nu, c2);
       vectorAuxD.copy(vectorAuxF);
       vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
       vectorAuxF.copy(vectorOut);
       propUP3D.absorb(vectorAuxF,global_fixSinkTime,nu, c2);
 
-      //      vectorAuxF.copyPropagator3D(propDN3D, global_fixSinkTime, nu, c2);
       vectorAuxF.absorb(propDN, global_fixSinkTime, nu, c2);
       vectorAuxD.copy(vectorAuxF);
       vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
@@ -113,7 +110,7 @@ int main(int argc, char **argv)
 
 
   WHICHPARTICLE nucleon = NEUTRON; // for the test is NEUTRON, later we can provide an option
-  
+  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
   //seq source part 2Props and contraction block
   {
     for(int nu = 0 ; nu < 4 ; nu++)
@@ -139,12 +136,12 @@ int main(int argc, char **argv)
 
     PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propUP : propDN;
     // LOCAL contractions
-    nucleonThrpLocal_CP2.contractNucleonThrp_local(seqProp, propF, signProps, 0, MOMENTUM_SPACE); // 0 is isource change later 
+    nucleonThrpLocal_CP2.contractNucleonThrp_local(seqProp, propF, signProps, gammas, 0, MOMENTUM_SPACE); // 0 is isource change later 
     if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpLocal_CP2.getTotalSize()*2; iv++) (nucleonThrpLocal_CP2.getCorr())[iv] *= signPer;      
     nucleonThrpLocal_CP2.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP2.dat");
 
     // ONED contractions
-    nucleonThrpOneD_CP2.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, 0, MOMENTUM_SPACE); // 0 is isource change lat
+    nucleonThrpOneD_CP2.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, 0, MOMENTUM_SPACE); // 0 is isource change lat
     if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpOneD_CP2.getTotalSize()*2; iv++) (nucleonThrpOneD_CP2.getCorr())[iv] *= signPer;      
     nucleonThrpOneD_CP2.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP2.dat");
 
@@ -181,12 +178,12 @@ int main(int argc, char **argv)
     PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propDN : propUP;
     
     //LOCAL
-    nucleonThrpLocal_CP1.contractNucleonThrp_local(seqProp, propF, signProps, 0, MOMENTUM_SPACE); // 0 is isource change later
+    nucleonThrpLocal_CP1.contractNucleonThrp_local(seqProp, propF, signProps, gammas, 0, MOMENTUM_SPACE); // 0 is isource change later
     if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpLocal_CP1.getTotalSize()*2; iv++) (nucleonThrpLocal_CP1.getCorr())[iv] *= signPer;
     nucleonThrpLocal_CP1.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP1.dat");
 
     //ONED
-    nucleonThrpOneD_CP1.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, 0, MOMENTUM_SPACE); // 0 is isource change la
+    nucleonThrpOneD_CP1.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, 0, MOMENTUM_SPACE); // 0 is isource change la
     if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpOneD_CP1.getTotalSize()*2; iv++) (nucleonThrpOneD_CP1.getCorr())[iv] *= signPer;
     nucleonThrpOneD_CP1.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP1.dat");
 
@@ -198,9 +195,33 @@ int main(int argc, char **argv)
     // do the contractions also for the conserved
   }
 
-  // smear the forward props
-  // rotate to physical basis
-  // do contractions for the two point functions
+  for(int nu = 0 ; nu < 4 ; nu++)
+    for(int c2 = 0 ; c2 < 3 ; c2++){
+      vectorAuxF.absorb(propUP, nu, c2);
+      vectorAuxD.copy(vectorAuxF);
+      vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
+      vectorAuxF.copy(vectorOut);
+      propUP.absorb(vectorAuxF, nu, c2);
+
+      vectorAuxF.absorb(propDN, nu, c2);
+      vectorAuxD.copy(vectorAuxF);
+      vectorOut.gaussianSmearing(vectorAuxD, smearedGauge);
+      vectorAuxF.copy(vectorOut);
+      propDN.absorb(vectorAuxF, nu, c2);
+    }
+  
+  propUP.rotateToPhysicalBase_device(+1);
+  propDN.rotateToPhysicalBase_device(-1);
+  propUP.applyBoundaries_device(params.sourcePosition[isource][3]);
+  propDN.applyBoundaries_device(params.sourcePosition[isource][3]);
+  
+  PLEGMA_Correlator<float> corr;
+    
+  corr.contractMesons(propUP, propDN, isource, params.CorrSpace);
+  corr.writeFile(params);
+
+  corr.contractBaryons(propUP, propDN, isource, params.CorrSpace);
+  corr.writeFile(params);
   
   delete solverUP;
   delete solverDN;

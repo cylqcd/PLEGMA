@@ -114,30 +114,32 @@ void PLEGMA_Correlator<Float>::contractNucleonThrp_wilsonLine(PLEGMA_Propagator<
 }
 
 template<typename FloatC,typename FloatA, typename FloatB>
-void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, int it);
+void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
+			      int it, std::vector<GAMMAS> gammas);
 template<typename Float>
 void PLEGMA_Correlator<Float>::contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
-		    int signProps, int isource, CORR_SPACE corrSpace){
+							 int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
   initialize(THRP_LOCAL,corrSpace);
   propTex<Float> bwdPropTex, fwdPropTex;
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
   this->isource = isource;
+  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
   printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
-  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it);
+  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir);
+void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir);
+void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
 
 template<typename Float>
-static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge, int signProps, int isource, CORR_SPACE corrSpace,
+static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge, int signProps,std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace,
 				       std::function<void(PLEGMA_Correlator<Float>&,propTex<Float>,
-							  propTex<Float>,int,su3Tex<Float>,int,int)> funcContract){
+							  propTex<Float>,int,su3Tex<Float>,int,int,std::vector<GAMMAS>)> funcContract){
   // gauge should have the sign for the antiperiodic boundary conditions
 
   PLEGMA_Su3field<Float> gsu3(DEVICE);
@@ -153,7 +155,7 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
     gsu3.absorbDir_device(gauge,idir);
     gsu3.communicateGhost(idir+N_DIMS); // later do only the direction we are interested in
     for(int it = 0; it < GK_localL[3]; it++)
-      funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,it, idir);
+      funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,it, idir,gammas);
   }
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
@@ -162,10 +164,11 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
-		    int signProps, int isource, CORR_SPACE corrSpace){
+							int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
   initialize(THRP_ONED,corrSpace);
   this->isource=isource;
-  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,isource,corrSpace,contractPropOpProp_oneD<Float,Float,Float,Float>);
+  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,isource,corrSpace,contractPropOpProp_oneD<Float,Float,Float,Float>);
 }
 
 template<typename Float>
@@ -173,7 +176,8 @@ void PLEGMA_Correlator<Float>::contractNucleonThrp_noe(PLEGMA_Propagator<Float> 
 		    int signProps, int isource, CORR_SPACE corrSpace){
   initialize(THRP_NOETHER,corrSpace);
   this->isource=isource;
-  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,isource,corrSpace,contractPropOpProp_noe<Float,Float,Float,Float>);
+  std::vector<GAMMAS> gammas = {};
+  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,isource,corrSpace,contractPropOpProp_noe<Float,Float,Float,Float>);
 }
 
 template<typename Float>

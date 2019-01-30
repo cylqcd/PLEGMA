@@ -111,10 +111,10 @@ namespace plegma {
 
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
-				   int signProps,
+				   int signProps,std::vector<GAMMAS> gammas,
 				   int isource, CORR_SPACE corrSpace);
     void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
-				  int signProps, int isource, CORR_SPACE corrSpace);
+				  int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace);
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
 				  int signProps, int isource, CORR_SPACE corrSpace);
     void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,

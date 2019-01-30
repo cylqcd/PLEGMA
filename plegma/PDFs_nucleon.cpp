@@ -277,7 +277,7 @@ int main(int argc, char **argv)
   corr.contractMesons(*propUP, *propDN, isource, params.CorrSpace);
   corr.writeFile(params);
 
-  //maybe later we choose the specific momentum when this allows it
+  //!!!!!!!!!! maybe later we choose the specific momentum when this allows it
   corr.contractBaryons(*propUP, *propDN, isource, params.CorrSpace);
   corr.writeFile(params);
 
