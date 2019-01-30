@@ -23,6 +23,7 @@ static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &
   else
     cudaMemcpy(vecOut.D_elem(), vecIn.D_elem(), vecIn.Bytes_total(), 
 	       cudaMemcpyDeviceToDevice);
+  checkCudaError();
 }
 
 template<typename Float>
@@ -90,6 +91,12 @@ void  PLEGMA_Vector<Float>::apply_gamma5(){
   apply_gamma5_vector(PLEGMA_Field<Float>::d_elem);
 }
 
+
+template<typename Float> 
+void  PLEGMA_Vector<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
+  apply_gamma_vector(LR,PLEGMA_Field<Float>::d_elem,gMat);
+}
+
 template<typename Float>
 void PLEGMA_Vector<Float>::norm2Host(){
   Float res = 0.;
@@ -117,14 +124,13 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
       if(is_myIt){
+	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
-      else
-	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
+  comm_barrier();
   checkCudaError();
 }
 
@@ -141,14 +147,13 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
       if(is_myIt){
-	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
-	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
+       	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
+       	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
-      else
-	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
+  comm_barrier();
   checkCudaError();
 }
 
@@ -258,7 +263,6 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color)
 template<typename Float>
 void PLEGMA_Vector<Float>::write(char *filename){
   FILE *fid;
-  int error_in_header=0;
   LimeWriter *limewriter;
   LimeRecordHeader *limeheader = NULL;
   int ME_flag=0, MB_flag=0, limeStatus;
@@ -284,7 +288,6 @@ void PLEGMA_Vector<Float>::write(char *filename){
       limewriter = limeCreateWriter(fid);
       if(limewriter == (LimeWriter*)NULL) {
 	fprintf(stderr, "Error in %s. LIME error in file for writing!\n", __func__);
-	error_in_header=1;
 	comm_abort(-1);
       }
       else
@@ -292,18 +295,17 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	  sprintf(tmp_string, "DiracFermion_Sink");
 	  message_length=(long int) strlen(tmp_string);
 	  MB_flag=1; ME_flag=1;
-	  limeheader = limeCreateHeader(MB_flag, ME_flag, "propagator-type", message_length);
+	  std::string m1 = "propagator-type";
+	  limeheader = limeCreateHeader(MB_flag, ME_flag, &m1[0], message_length);
 	  if(limeheader == (LimeRecordHeader*)NULL)
 	    {
 	      fprintf(stderr, "Error in %s. LIME create header error.\n", __func__);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeStatus = limeWriteRecordHeader(limeheader, limewriter);
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeDestroyHeader(limeheader);
@@ -311,7 +313,6 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header error %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 
@@ -322,19 +323,17 @@ void PLEGMA_Vector<Float>::write(char *filename){
 
 	  message_length=(long int) strlen(tmp_string); 
 	  MB_flag=1; ME_flag=1;
-
-	  limeheader = limeCreateHeader(MB_flag, ME_flag, "quda-propagator-format", message_length);
+	  std::string m2 = "quda-propagator-format";
+	  limeheader = limeCreateHeader(MB_flag, ME_flag,&m2[0], message_length);
 	  if(limeheader == (LimeRecordHeader*)NULL)
 	    {
 	      fprintf(stderr, "Error in %s. LIME create header error.\n", __func__);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeStatus = limeWriteRecordHeader(limeheader, limewriter);
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  limeDestroyHeader(limeheader);
@@ -342,18 +341,17 @@ void PLEGMA_Vector<Float>::write(char *filename){
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header error %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	      comm_abort(-1);
 	    }
 	  
 	  message_length = GK_totalVolume*4*3*2*sizeof(Float);
 	  MB_flag=1; ME_flag=1;
-	  limeheader = limeCreateHeader(MB_flag, ME_flag, "scidac-binary-data", message_length);
+	  std::string m3 = "scidac-binary-data";
+	  limeheader = limeCreateHeader(MB_flag, ME_flag, &m3[0], message_length);
 	  limeStatus = limeWriteRecordHeader( limeheader, limewriter);
 	  if(limeStatus < 0 )
 	    {
 	      fprintf(stderr, "Error in %s. LIME write header error %d\n", __func__, limeStatus);
-	      error_in_header=1;
 	    }
 	  limeDestroyHeader( limeheader );
 	}
@@ -457,6 +455,43 @@ void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float>
   covD_k<Float,Float,Float>(this->D_elem(), texVecIn, texGaugeIn, dirOr);
   vecIn.destroyTexObject(texVecIn.tex);
   gauge.destroyTexObject(texGaugeIn.tex);
+}
+
+template<typename FloatC, typename FloatA>
+void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
+template<typename Float>
+void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
+  if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
+  this->zero_device();
+  if(is_myIt){
+    genericTex<Float> texProp;
+    texProp.tex = prop.createTexObject();
+    contractNucleonSeqSource<Float,Float>(*this, texProp, proj, particle, my_it, c_nu, c_c2);
+    prop.destroyTexObject(texProp.tex);
+  }
+  comm_barrier();
+}
+
+template<typename FloatC, typename FloatA, typename FloatB>
+void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
+template<typename Float>
+void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
+  if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
+  this->zero_device();
+  if(is_myIt){
+    genericTex<Float> texProp1;
+    texProp1.tex = prop1.createTexObject();
+    genericTex<Float> texProp2;
+    texProp2.tex = prop2.createTexObject();
+    contractNucleonSeqSource<Float,Float,Float>(*this, texProp1,texProp2, proj, particle, my_it, c_nu, c_c2);
+    prop1.destroyTexObject(texProp1.tex);
+    prop2.destroyTexObject(texProp2.tex);
+  }
+  comm_barrier();
 }
 
 template class PLEGMA_Vector<float>;

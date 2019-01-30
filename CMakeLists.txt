@@ -51,6 +51,12 @@ if(PLEGMA_NO_TUNING)
   add_definitions(-DPLEGMA_NO_TUNING)
 endif()
 
+# compile contractions for nucleon fix sink 3pf
+set(PLEGMA_NUCLEON_3PF_FIX_SINK FALSE CACHE BOOL "compile contractions for nucleon 3pf fix sink method")
+if(PLEGMA_NUCLEON_3PF_FIX_SINK)
+  add_definitions(-DPLEGMA_NUCLEON_3PF_FIX_SINK)
+endif()
+
 # compile contractions for all baryons
 set(PLEGMA_ALL_BARYONS FALSE CACHE BOOL "compile contractions for all baryons")
 if(PLEGMA_ALL_BARYONS)

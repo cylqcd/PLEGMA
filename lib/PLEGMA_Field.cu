@@ -134,12 +134,14 @@ void PLEGMA_Field<Float>::unpack(Float *out){
 
 template<typename Float>
 void PLEGMA_Field<Float>::load(){
+  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
   checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload(){
+  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
   checkCudaError();
 }
@@ -533,5 +535,36 @@ std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
   std::complex<Float> result(res[0], res[1]);
   return result;
 }
+
+void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
+  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
+  cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where){
+  if(bytes_total_length != f.Bytes_total()) errorQuda("Size of the fields does not match\n");
+  if(field_length != f.Field_length()) errorQuda("The d.o.f of the fields does not match\n");
+  switch(where){
+  case(NONE):
+    break;
+  case(HOST):
+    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    break;
+  case(DEVICE):
+    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
+    checkCudaError();
+  case(BOTH):
+    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    break;
+  }
+}
+
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;

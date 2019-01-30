@@ -47,3 +47,5 @@ __device__ void contract_NtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> t
 
 template __device__ void contract_NtoN_kernel<float,float,float>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
 template __device__ void contract_NtoN_kernel<double,double,double>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+
+

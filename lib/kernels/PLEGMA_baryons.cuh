@@ -133,11 +133,9 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 													GK_sourcePosition[isource][1],
 													GK_sourcePosition[isource][2],
 													(BARYONS_TYPE) ip);
-    checkCudaError();
-    
+    checkCudaError();    
     cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
     checkCudaError();
-    
     if(runFT==true){
       FloatC *reduction =(FloatC*) calloc(size,sizeof(FloatC));
       for(size_t i = 0 ; i < size/2; i++)

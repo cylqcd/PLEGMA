@@ -54,6 +54,19 @@ namespace plegma {
     inline __device__ void conj() {
       this->y *= -1.;
     }
+
+    template<typename FloatIn>
+    inline __device__ void operator+=(const Float2<FloatIn> a){
+      this->x = this->x + a.x;
+      this->y = this->y + a.y;
+    }
+
+    template<typename FloatIn>
+    inline __device__ void operator-=(const Float2<FloatIn> a){
+      this->x = this->x - a.x;
+      this->y = this->y - a.y;
+    }
+
   };
 
   inline __device__ Float2<float> operator*(const Float2<float> a, const Float2<float> b){
@@ -102,7 +115,7 @@ namespace plegma {
     res.y = a.y + b.y;
     return res;
   }
-
+  
   inline __device__ Float2<double> operator+(const Float2<double> a, const Float2<float> b){
     Float2<double> res;
     res.x = a.x + b.x;
