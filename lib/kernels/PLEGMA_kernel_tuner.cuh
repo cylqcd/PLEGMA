@@ -187,33 +187,13 @@ void tune(ProfileStruct &ps, std::string kname, void (*kernel)(types...), types.
 
 template<class ...types>
 void run(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
-  tuner.run();
+  (*kernel)<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>( kArgs...);
 }
 
 template<class ...types>
 void tuneAndRun(ProfileStruct &ps, std::string kname, void(* kernel)(types...), types... kArgs){
   PLEGMA_kernel_tuner<types...> tuner(ps, kname, kernel, kArgs...);
   tuner.apply();
-}
-
-template<class T>
-T dummyCasting(T arg) {
-  return arg;
-}
-
-
-template<class T, class U>
-T dummyCasting(U arg) {
-  T dummy;
-  return dummy;
-}
-
-template<typename ...types, typename ...args>
-void tuneInOut(ProfileStruct &ps, std::string kname, void(* kernel)(types...), args... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, dummyCasting<DoNotChange>(kArgs)...);
-  tuner.tune();
-  // change name string here
 }
 
 #endif

@@ -52,7 +52,7 @@ void PLEGMA_QLoops<Float>::contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<F
   vectorTex<Float> vtex_l, vtex_r;
   vtex_l.tex = x_l.createTexObject();
   vtex_r.tex = x_r.createTexObject();
-  contractG5_bilinear(this->D_elem(), vtex_l, vtex_r, accum_sign);
+  contractG5_bilinear(*this, vtex_l, vtex_r, accum_sign);
   x_l.destroyTexObject(vtex_l.tex);
   x_r.destroyTexObject(vtex_r.tex);
   checkCudaError();
