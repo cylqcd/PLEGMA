@@ -157,7 +157,7 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
 #else
   // performing tuning if we need to
   // tune
-  ps.tp = tuneLaunch(*this, getTuning(), getVerbosity());
+  ps.tp = tuneLaunch(*this, getTuning(), QUDA_DEBUG_VERBOSE);
   tuned = true;
   if( onlyTuning && !activeTuning() ) return;
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,stream);
@@ -173,7 +173,7 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!tuned) tune();
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, getVerbosity());
+  if(!tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, QUDA_DEBUG_VERBOSE);
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #endif
 }
