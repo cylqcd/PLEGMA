@@ -1,5 +1,5 @@
 #include <PLEGMA_global.h>
-//#include <PLEGMA_kernel_donotchange.cuh>
+#include <PLEGMA_kernel_donotchange.cuh>
 #include <tune_quda.h>
 using namespace quda;
 
@@ -196,12 +196,24 @@ void tuneAndRun(ProfileStruct &ps, std::string kname, void(* kernel)(types...), 
   PLEGMA_kernel_tuner<types...> tuner(ps, kname, kernel, kArgs...);
   tuner.apply();
 }
-/*
+
+template<class T>
+T dummyCasting(T arg) {
+  return arg;
+}
+
+
+template<class T, class U>
+T dummyCasting(U arg) {
+  T dummy;
+  return dummy;
+}
+
 template<typename ...types, typename ...args>
 void tuneInOut(ProfileStruct &ps, std::string kname, void(* kernel)(types...), args... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, DoNotChange(kArgs)...);
+  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, dummyCasting<DoNotChange>(kArgs)...);
   tuner.tune();
   // change name string here
 }
-*/
+
 #endif
