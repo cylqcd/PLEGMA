@@ -536,6 +536,7 @@ std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
   return result;
 }
 
+template<typename Float>
 void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
   if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
   cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
