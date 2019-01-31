@@ -1,5 +1,4 @@
 #include <PLEGMA_global.h>
-#include <PLEGMA_kernel_donotchange.cuh>
 #include <tune_quda.h>
 using namespace quda;
 
