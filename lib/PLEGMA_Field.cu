@@ -134,12 +134,14 @@ void PLEGMA_Field<Float>::unpack(Float *out){
 
 template<typename Float>
 void PLEGMA_Field<Float>::load(){
+  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
   checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload(){
+  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
   checkCudaError();
 }
@@ -522,6 +524,47 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   for(int dof = 0; dof < field_length; dof++)
     plegma::elemWiseMul(V,(Float*) x, d_elem + dof*total_length*2);
   cudaFree(x);
+}
+
+template<typename Float>
+std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
+  
+  Float res[2];
+  cuBLAS::dot(res, total_length*field_length, PLEGMA_Field<Float>::d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
+  printfQuda("Vector dot product is %e %e\n",res[0], res[1]);
+  std::complex<Float> result(res[0], res[1]);
+  return result;
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
+  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
+  cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where){
+  if(bytes_total_length != f.Bytes_total()) errorQuda("Size of the fields does not match\n");
+  if(field_length != f.Field_length()) errorQuda("The d.o.f of the fields does not match\n");
+  switch(where){
+  case(NONE):
+    break;
+  case(HOST):
+    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    break;
+  case(DEVICE):
+    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
+    checkCudaError();
+  case(BOTH):
+    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
+    checkCudaError();
+    break;
+  }
 }
 
 template class PLEGMA_Field<float>;

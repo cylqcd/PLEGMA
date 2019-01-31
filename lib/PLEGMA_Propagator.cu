@@ -61,14 +61,13 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, 
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2, 0, V4*2*sizeof(Float));
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
       if(is_myIt){
+	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	pointer_src = (vec.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
-      else
-	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
+  comm_barrier();
   checkCudaError();
 }
 
@@ -85,14 +84,13 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2, 0, V4*2*sizeof(Float));
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
       if(is_myIt){
+	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	pointer_src = (vec.D_elem() + mu*N_COLS*V3*2 + c1*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
-      else
-	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
+  comm_barrier();
   checkCudaError();
 }
 
@@ -111,15 +109,13 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int glob
       for(int c1=0; c1<N_COLS; c1++)
 	for(int c2=0; c2<N_COLS; c2++){
 	  cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2, 0, V4*2*sizeof(Float));
-	  pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 +  nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + 
-			 c2*V4*2 + my_it*V3*2);
 	  if(is_myIt){
+	    pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 +  nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 +  c2*V4*2 + my_it*V3*2);
 	    pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
 	    cudaMemcpy(pointer_dst, pointer_src, V3*2*sizeof(Float), cudaMemcpyDeviceToDevice);
 	  }
-	  else
-	    cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
 	}
+  comm_barrier();
   checkCudaError();
 }
 
@@ -216,6 +212,12 @@ void  PLEGMA_Propagator<Float>::conjugate(){
   conjugate_propagator(PLEGMA_Field<Float>::d_elem);
 }
 
+
+template<typename Float>
+void  PLEGMA_Propagator<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
+  apply_gamma_prop(LR,PLEGMA_Field<Float>::d_elem,gMat);
+}
+
 template<typename Float>
 void  PLEGMA_Propagator<Float>::apply_gamma5(){
   apply_gamma5_propagator(PLEGMA_Field<Float>::d_elem);
@@ -229,8 +231,6 @@ template<typename Float>
 PLEGMA_Propagator3D<Float>::
 PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, PROPAGATOR3D, ghost_flag){
-  if(alloc_flag != BOTH)
-    errorQuda("Propagator3D class is only implemented to allocate memory for both\n");
 }
 
 template<typename Float>
@@ -324,28 +324,6 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int nu, int
   checkCudaError();
 }
 
-// template<typename Float>
-// void PLEGMA_Propagator3D<Float>::broadcast(int tsink){
-//   cudaMemcpy(PLEGMA_Field<Float>::h_elem , PLEGMA_Field<Float>::d_elem , PLEGMA_Field<Float>::bytes_total_length , 
-// 	     cudaMemcpyDeviceToHost);
-//   checkCudaError();
-//   comm_barrier();
-//   int bcastRank = tsink/GK_localL[3];
-//   int V3 = GK_localVolume/GK_localL[3];
-//   if( typeid(Float) == typeid(float) ){
-//     int error = MPI_Bcast(PLEGMA_Field<Float>::h_elem , 4*4*3*3*V3*2 , MPI_FLOAT , 
-// 			  bcastRank , GK_timeComm );
-//     if(error != MPI_SUCCESS)errorQuda("Error in mpi broadcasting");
-//   }
-//   else if( typeid(Float) == typeid(double) ){
-//     int error = MPI_Bcast(PLEGMA_Field<Float>::h_elem , 4*4*3*3*V3*2 , MPI_DOUBLE , 
-// 			  bcastRank , GK_timeComm );
-//     if(error != MPI_SUCCESS)errorQuda("Error in mpi broadcasting");    
-//   }
-//   cudaMemcpy(PLEGMA_Field<Float>::d_elem , PLEGMA_Field<Float>::h_elem , PLEGMA_Field<Float>::bytes_total_length, 
-// 	     cudaMemcpyHostToDevice);
-//   checkCudaError();
-// }
 
 template  class PLEGMA_Propagator<double>;
 template  class PLEGMA_Propagator3D<double>;
