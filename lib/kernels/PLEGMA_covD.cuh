@@ -31,6 +31,6 @@ __global__ void covD_kernel(FloatOut* out,
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
 static void covD_k(FloatOut *out, vectorTex<FloatIn> v, gaugeTex<FloatGauge> g, int dirOr){
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps, covD_kernel<FloatOut,FloatIn,FloatGauge>, out, v, g, dirOr);
+  tuneAndRun(ps, "covD_kernel", covD_kernel<FloatOut,FloatIn,FloatGauge>, out, v, g, dirOr);
   checkCudaError();
 }

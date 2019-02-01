@@ -105,7 +105,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   int isource = corr.getIdSource();
   int shared_size = (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0;
   ProfileStruct ps(SpVol, shared_size);
-  tune( ps, contract_baryons_kernel<FloatA,FloatB,FloatC,runFT>,
+  tune( ps, "contract_baryons_kernel", contract_baryons_kernel<FloatA,FloatB,FloatC,runFT>,
 	texProp1, texProp2, d_partial_block, it,
 	GK_sourcePosition[isource][0],
 	GK_sourcePosition[isource][1],
