@@ -1,4 +1,6 @@
 #include <cublas_v2.h>
+#include <PLEGMA_BLAS.h>
+#include <PLEGMA_Thrust.h>
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_Random.h>
 using namespace plegma;
@@ -199,3 +201,41 @@ void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_de
     errorQuda("The given distribution is not defined.\n");
 }
 
+template<typename Float>
+struct HadCol{
+  int ih;
+  __device__ HadCol(int ih):ih(ih){}
+  __device__ int  HadamardElements(int i, int j){
+    int sum=0;
+    for(int k = 0 ; k < 32 ; k++){
+      sum += (i%2)*(j%2);
+      i=i>>1;
+      j=j>>1;
+    }
+    if( (sum%2) ==0 )
+      return 1;
+    else
+      return -1;
+  }
+  template<typename Tuple>
+  __device__ void operator()(Tuple t){
+    int color = thrust::get<0>(t);
+    int signHad = HadamardElements(color,ih);
+    Float2<Float> &el = (thrust::get<1>(t));
+    el.x = signHad*el.x;
+    el.y = signHad*el.y;
+  }
+};
+
+template<typename Float>
+static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
+  // make sure before that is not a 3D field
+  int V = GK_localVolume;
+  thrust::device_ptr<int> th_c(d_colors);
+  thrust::device_ptr<Float2<Float> > th_e((Float2<Float>*)d_elems);
+  typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<Float2<Float> > > tplDIntDFl2;
+  typedef thrust::zip_iterator<tplDIntDFl2> zipTplDIntDFl2;
+  zipTplDIntDFl2 z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c,th_e));
+  zipTplDIntDFl2 z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c+V,th_e+V));
+  thrust::for_each(z1,z2,HadCol<Float>(ih));
+}
