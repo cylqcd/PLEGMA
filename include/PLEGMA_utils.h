@@ -59,29 +59,6 @@ void setInvertParam(QudaInvertParam &inv_param);
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 void initialize(int argc, char** argv, PLEGMA_params *params);
 void finalize();
-int getVecToInd(std::vector<int> x, std::vector<int> L );
-std::vector<int> getIndToVec(int ind, std::vector<int> L);
-
-class Hprobing{
-private:
-  int k;  // index for the coloring distance
-  int Nc; // Number of colors = Number of Hadamard vectors
-  short d; // Number of dimension of Hprob (For now d=4)
-  short D; // Distance of coloring D=2^k
-  short Lu; // extent of the elementaty coloring block (assume symmetric block)
-  int* h_arrVc; // array to hold the coloring of the lattice on HOST
-  int* d_arrVc; // array to hold the coloring of the lattice on Device
-  int* arrlc; // array to hold the elementary coloring block
-  void createElemColBlock(){for(int i = 0; i < Nc; i++) arrlc[i]=i;}
-  void createColLattice();
-  void checkColoring();
-public:
-  Hprobing(int k_probing, int d=4, bool check = false);
-  ~Hprobing();
-  int* H_arrVc() const{return h_arrVc;}
-  int* D_arrVc() const{return d_arrVc;}
-};
-
 
 //=================== read_command_line.cpp ==========================//
 void read_command_line(int argc, char** argv, PLEGMA_params *params);
