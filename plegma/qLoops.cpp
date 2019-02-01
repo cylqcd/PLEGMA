@@ -1,6 +1,7 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-
+#include <PLEGMA_Hprobing.h>
+#include <stdio.h>
 using namespace plegma;
 using namespace quda;
 
@@ -12,6 +13,26 @@ int main(int argc, char **argv)
   PLEGMA_params params;
   initialize(argc, argv, &params);
 
+#ifdef CHECK_HPROP
+  PLEGMA_Hprobing hprop(3);
+  PLEGMA_Vector<double> vectorAuxD;
+  PLEGMA_Vector<double> vectorAuxDD;
+  vectorAuxD.setUnit((std::vector<int>) {0});
+  FILE *ptr_test = NULL;
+  std::string strM = "/onyx/noether/h/khadjiyiannakou/runs/Hhad";
+  for(int ih = 0; ih < hprop.get_NHad(); ih++){
+    ptr_test = fopen((strM+std::to_string(ih)).c_str(),"w");
+    vectorAuxDD.applyHpropColoring4D(vectorAuxD,hprop,ih,(std::vector<int>) {0});
+    vectorAuxDD.unload();
+    for (int i = 0; i < vectorAuxDD.Total_length(); ++i) {
+      fprintf(ptr_test,"%d %d\n",(int) vectorAuxDD.H_elem()[i*2],(int) vectorAuxDD.H_elem()[i*2+1] );
+    }
+    fclose(ptr_test);
+  }
+  exit(-1);
+#endif // 
+
+  
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
 
