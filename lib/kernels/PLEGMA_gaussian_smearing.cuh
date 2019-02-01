@@ -53,5 +53,5 @@ static void gaussian_smearing(FloatOut* out,
 			      vectorTex<FloatIn> vecInTex, 
 			      gaugeTex<FloatGauge> gaugeTex){
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps, gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex);
+  tuneAndRun(ps, "gaussian_smearing_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex);
 }

@@ -104,12 +104,12 @@ protected:
 public:
 
   // ctor
-  PLEGMA_kernel_tuner( ProfileStruct &myps, void(* mykernel)(types...), types... kArgs ) : ps(myps) {
+  PLEGMA_kernel_tuner( ProfileStruct &myps, std::string kname, void(* mykernel)(types...), types... kArgs ) : ps(myps) {
     kernel = mykernel;
     args = std::tuple<types...>(kArgs...);
-    sprintf(volString, "%lld", ps.volume);
+    sprintf(volString, "%lldx%lldx%lldx%lld", GK_localL[0], GK_localL[1], GK_localL[2], GK_localL[3]);
     sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
-    kernelName = (std::string) typeid(*kernel).name(); // with cupti no longer necessary
+    kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
     onlyTuning = false;
     tuned = false;
   } 
@@ -157,7 +157,7 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
 #else
   // performing tuning if we need to
   // tune
-  ps.tp = tuneLaunch(*this, getTuning(), getVerbosity());
+  ps.tp = tuneLaunch(*this, getTuning(), QUDA_DEBUG_VERBOSE);
   tuned = true;
   if( onlyTuning && !activeTuning() ) return;
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,stream);
@@ -173,26 +173,25 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!tuned) tune();
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, getVerbosity());
+  if(!tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, QUDA_DEBUG_VERBOSE);
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #endif
 }
 
 template<class ...types>
-void tune(ProfileStruct &ps, void (*kernel)(types...), types... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+void tune(ProfileStruct &ps, std::string kname, void (*kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kname, kernel, kArgs...);
   tuner.tune();
 }
 
 template<class ...types>
 void run(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
-  tuner.run();
+  (*kernel)<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>( kArgs...);
 }
 
 template<class ...types>
-void tuneAndRun(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
-  PLEGMA_kernel_tuner<types...> tuner(ps, kernel, kArgs...);
+void tuneAndRun(ProfileStruct &ps, std::string kname, void(* kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kname, kernel, kArgs...);
   tuner.apply();
 }
 

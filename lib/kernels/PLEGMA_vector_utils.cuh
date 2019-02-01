@@ -28,7 +28,7 @@ static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
 template<typename FloatOut,typename FloatIn>
 static void castVector(FloatOut *out, FloatIn *in){
   ProfileStruct ps(GK_localVolume);
-  tuneAndRun(ps,castVector_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in);
+  tuneAndRun(ps, "castVector_kernel", castVector_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in);
   checkCudaError();
 }
 
@@ -248,11 +248,11 @@ static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven
   ProfileStruct ps(GK_localVolume);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      tuneAndRun(ps,copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
     else
-      tuneAndRun(ps, copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
   } else
-    tuneAndRun(ps, copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+    tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
 }
 
 template<typename FloatOut> 

@@ -18,6 +18,6 @@ template<typename Float>
 static void shiftField(PLEGMA_Field<Float> &Fin, PLEGMA_Field<Float> &Fout, int dirOr){
   if(Fin.Field_length() != Fout.Field_length()) errorQuda("Error input, output fields do not match");
   ProfileStruct ps( GK_localVolume );
-  tuneAndRun(ps, shifts_kernel<Float>, Fin.D_elem(), Fout.D_elem(),Fin.Field_length(),dirOr);
+  tuneAndRun(ps, "shifts_kernel", shifts_kernel<Float>, Fin.D_elem(), Fout.D_elem(),Fin.Field_length(),dirOr);
   checkCudaError();
 }
