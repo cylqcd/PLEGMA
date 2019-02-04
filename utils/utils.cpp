@@ -48,13 +48,3 @@ void createMom(int *Nmom, int momElem[][3], int Q_sq){
   *Nmom = counter;
 }
 
-void get_coords(int id, int *position){
-
-  float temp = id/GK_localVolume;
-  for(int i = N_DIMS-1; i >=0; --i) {
-
-    temp = temp * GK_localL[i];
-    position[i] = (int)temp % GK_localL[i];
-    position[i] += comm_coords(default_topo)[i] * GK_localL[i]; 
-  }
-}

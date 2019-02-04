@@ -1,8 +1,8 @@
 #include <PLEGMA_Field.h> 
+#include <PLEGMA_Thrust.h>
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_shifts.cuh>
 #include <PLEGMA_Random.h>
-#include <PLEGMA_Thrust.h>
 #include <vector>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
@@ -564,6 +564,19 @@ void PLEGMA_Field<Float>::copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where){
     cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
     checkCudaError();
     break;
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof){
+  if(total_length != GK_localVolume || fin.Total_length() != GK_localVolume) errorQuda("Probing for now works only for 4D fields");
+  if(ih >= hprob.get_NHad()) errorQuda("You have exceeded the size of the Hadamard matrix");
+  copy(fin,DEVICE);
+  for(int i = 0 ; i < Field_length(); i++){
+    std::vector<int>::iterator it = std::find(indDof.begin(), indDof.end(), i);
+    if(it != indDof.end()){
+      apply_hprob_coloring_4D(D_elem() + i*total_length*2, hprob.D_arrVc(), ih);
+    }
   }
 }
 

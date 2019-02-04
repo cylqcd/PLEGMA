@@ -1,5 +1,6 @@
 #include <PLEGMA_global.h>
 #include <PLEGMA_Random.h>
+#include <PLEGMA_Hprobing.h>
 #include <vector>
 #ifndef _PLEGMA_FIELD_H
 #define _PLEGMA_FIELD_H
@@ -98,6 +99,7 @@ namespace plegma {
     void mulMomentumPhases(std::vector<int> mom, int sign=-1);
     std::complex<Float> dot(PLEGMA_Field<Float> &FieldIn);    
     void cscale(std::complex<Float> val);
+    void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
   };
 }
 #endif

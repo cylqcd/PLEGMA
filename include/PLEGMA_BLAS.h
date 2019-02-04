@@ -13,7 +13,7 @@
 
 #include <cublas_v2.h>
 #include <mpi.h>
-
+#pragma once
 namespace cBLAS{
   //========================================================//
   template<typename Float>
