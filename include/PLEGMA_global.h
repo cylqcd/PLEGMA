@@ -1,8 +1,16 @@
 #pragma once
-#include <mpi.h>  
+#include <mpi.h>
+#include <cuda.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
+#include <array>
+#include <quda.h>
+#include <quda_internal.h>
+#include <cublas_v2.h>
 
 // Constants values
 #define PI 3.141592653589793
@@ -87,31 +95,41 @@ namespace plegma {
 	both_type.push_back(typeof(host));	
 	both_name.push_back(name);
       }
-    };
+    }
     void copyToDevice() {
       for(int i = 0; i != both_pointer.size(); i++) {
 	cudaMemcpyToSymbol( both_pointer[i][1], both_pointer[i][0], both_size[i]);
       }
       checkCudaError();
-    };
+    }
     void print() {
 
-    };
+    }
   };
   
 //These generates global constants either on host (global_host) only or also on device (global_both). It will append respectively HGC_ and DGC_.
 #ifndef ALLOCATE
   extern global_vars globals;
-#define global_host(dtype, name, ...) extern dtype "HGC_"##name __VA_ARGS__;
-#define global_both(dtype, name, ...) extern dtype "HGC_"##name __VA_ARGS__;\
-                         extern __constant__ dtype "DGC_"##name __VA_ARGS__; 
+#define global_host(dtype, name, ...)					\
+  extern dtype HGC_##name __VA_ARGS__;				\
+  extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated));
+#define global_both(dtype, name, ...)					\
+  extern dtype HGC_##name __VA_ARGS__;				\
+  extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated));	\
+  extern __constant__ dtype DGC_##name __VA_ARGS__;			\
+  extern __constant__ dtype c_##name __VA_ARGS__  __attribute__((deprecated)); 
 #else
   global_vars globals;
-#define global_host(dtype, name, ...) dtype "HGC_"##name __VA_ARGS__;\
-                         globals.add(#name, "HGC_"##name);
-#define global_both(dtype, name, ...) dtype "HGC_"##name __VA_ARGS__;\
-                         __constant__ dtype "DGC_"##name __VA_ARGS__;\
-			 globals.add(#name, "HGC_"##name, "DGC_"##name);
+#define global_host(dtype, name, ...)					\
+  dtype HGC_##name __VA_ARGS__;					\
+  dtype& GK_##name __VA_ARGS__ =  HGC_##name __attribute__((deprecated)); \
+  globals.add(#name, HGC_##name);
+#define global_both(dtype, name, ...)					\
+  dtype HGC_##name __VA_ARGS__;					\
+  dtype& GK_##name __VA_ARGS__ =  HGC_##name __attribute__((deprecated)); \
+  __constant__ dtype DGC_##name __VA_ARGS__;				\
+  __constant__ dtype& c_##name __VA_ARGS__ = DGC_##name;		\
+  globals.add(#name, HGC_##name, DGC_##name);
 #endif
   
   // Global variables
