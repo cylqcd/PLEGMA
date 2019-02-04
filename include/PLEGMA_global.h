@@ -111,21 +111,21 @@ namespace plegma {
 #ifndef ALLOCATE
   extern global_vars globals;
 #define global_host(dtype, name, ...)					\
-  extern dtype HGC_##name __VA_ARGS__;				\
-  extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated));
+  extern dtype HGC_##name __VA_ARGS__;					\
+  extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated)); // This line should be removed
 #define global_both(dtype, name, ...)					\
-  extern dtype HGC_##name __VA_ARGS__;				\
+  extern dtype HGC_##name __VA_ARGS__;					\
   extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated));	\
   extern __constant__ dtype DGC_##name __VA_ARGS__;			\
-  extern __constant__ dtype c_##name __VA_ARGS__  __attribute__((deprecated)); 
+  extern __constant__ dtype c_##name __VA_ARGS__  __attribute__((deprecated)); // This line should be removed
 #else
   global_vars globals;
 #define global_host(dtype, name, ...)					\
-  dtype HGC_##name __VA_ARGS__;					\
-  dtype& GK_##name __VA_ARGS__ =  HGC_##name __attribute__((deprecated)); \
-  globals.add(#name, HGC_##name);
+  dtype HGC_##name __VA_ARGS__;						\
+  globals.add(#name, HGC_##name);					\
+  dtype& GK_##name __VA_ARGS__ =  HGC_##name __attribute__((deprecated)); // This line should be removed
 #define global_both(dtype, name, ...)					\
-  dtype HGC_##name __VA_ARGS__;					\
+  dtype HGC_##name __VA_ARGS__;						\
   dtype& GK_##name __VA_ARGS__ =  HGC_##name __attribute__((deprecated)); \
   __constant__ dtype DGC_##name __VA_ARGS__;				\
   __constant__ dtype& c_##name __VA_ARGS__ = DGC_##name;		\
@@ -137,7 +137,7 @@ namespace plegma {
   global_host(float, deviceMemory);
 
   // variables visible on both host and device
-  global_both(size_t, stride_full);
+  global_both(size_t, stride);
   global_both(size_t, stride_spatial);
   global_both(size_t, localVolume);
   global_both(size_t, totalVolume);
@@ -150,8 +150,8 @@ namespace plegma {
   global_both(size_t, surface2D, [N_DIMS][N_DIMS]);
 
   // for mpi use global variables (host only)
+  global_both(bool, dimBreak, [N_DIMS]);
   global_host(Topology *, default_topo);
-  global_host(bool, dimBreak, [N_DIMS]);
   global_host(int, nProc, [N_DIMS]);
   global_host(MPI_Group, fullGroup);
   global_host(MPI_Group, spaceGroup);
