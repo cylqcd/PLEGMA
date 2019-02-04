@@ -329,7 +329,7 @@ void applyGaugeFieldScaling(Float **gauge, int Vh, QudaGaugeParam *param) {
 
   // Apply boundary conditions to temporal links
   if (param->t_boundary == QUDA_ANTI_PERIODIC_T && last_node_in_t) {
-    for (int j = (GK_localL[0]/2)*GK_localL[1]*GK_localL[2]*(GK_localL[3]-1); j < Vh; j++) {
+    for (int j = (HGC_localL[0]/2)*HGC_localL[1]*HGC_localL[2]*(HGC_localL[3]-1); j < Vh; j++) {
       for (int i = 0; i < gaugeSiteSize; i++) {
 	gauge[3][j*gaugeSiteSize+i] *= -1.0;
 	gauge[3][(Vh+j)*gaugeSiteSize+i] *= -1.0;
@@ -338,9 +338,9 @@ void applyGaugeFieldScaling(Float **gauge, int Vh, QudaGaugeParam *param) {
   }
     
   if (param->gauge_fix) {
-    // set all gauge links (except for the last GK_localL[0]*GK_localL[1]*GK_localL[2]/2) to the identity,
+    // set all gauge links (except for the last HGC_localL[0]*HGC_localL[1]*HGC_localL[2]/2) to the identity,
     // to simulate fixing to the temporal gauge.
-    int iMax = ( last_node_in_t ? (GK_localL[0]/2)*GK_localL[1]*GK_localL[2]*(GK_localL[3]-1) : Vh );
+    int iMax = ( last_node_in_t ? (HGC_localL[0]/2)*HGC_localL[1]*HGC_localL[2]*(HGC_localL[3]-1) : Vh );
     int dir = 3; // time direction only
     Float *even = gauge[dir];
     Float *odd  = gauge[dir]+Vh*gaugeSiteSize;

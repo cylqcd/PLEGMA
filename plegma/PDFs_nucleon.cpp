@@ -33,7 +33,7 @@ int main(int argc, char **argv)
   PLEGMA_Su3field<double> tmp(BOTH);
   su3.absorbDir_device(pGauge, 0);
   WL.setUnit( (std::vector<int>) {0,4,8});
-  for(int i = 0 ; i < GK_totalL[0];i++ )
+  for(int i = 0 ; i < HGC_totalL[0];i++ )
     WL.wilsonLineUpdate(su3, tmp, 4+0); // build Wilson line in the +x direction
   //  pGauge.calculatePlaqShifts();
 

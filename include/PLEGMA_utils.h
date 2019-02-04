@@ -58,14 +58,14 @@ void setInvertParam(QudaInvertParam &inv_param);
 
 // utils.cpp
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
-void initialize(int argc, char** argv, PLEGMA_params *params);
-void initPlegma(int argc, char **argv, PLEGMA_params *params);
+void initialize(int argc, char** argv);
+void initPlegma(int argc, char **argv);
 void finalize();
 
 // read_command_line.cpp
-void read_command_line(int argc, char** argv, PLEGMA_params *params);
-void basicOptions(Options &opt, PLEGMA_params *params, bool showThem  = false);
-void basicOptionsWsolver(Options &opt, PLEGMA_params *params, bool showThem = false);
+void read_command_line(int argc, char** argv);
+void basicOptions(Options &opt, bool showThem  = false);
+void basicOptionsWsolver(Options &opt, bool showThem = false);
 
 // read_conf.cpp
 void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);
