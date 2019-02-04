@@ -52,27 +52,6 @@ template<typename FloatOut,typename FloatIn, typename FloatGauge>
 static void gaussian_smearing(FloatOut* out,
 			      vectorTex<FloatIn> vecInTex, 
 			      gaugeTex<FloatGauge> gaugeTex){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-
-#ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-#endif
-
-  gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge><<<gridDim,blockDim>>>(out, vecInTex, gaugeTex);
-  checkCudaError();
-
-#ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for 1 step in gaussian smearing is %f ms\n",elapsedTime);
-#endif
-
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps, "gaussian_smearing_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex);
 }

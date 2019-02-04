@@ -49,7 +49,7 @@ void PLEGMA_Su3field<Float>::su3Projection(){
 
 template<typename Float>
 void PLEGMA_Su3field<Float>::traceHerExpMap(PLEGMA_Su3field<Float> &A){
-  traceHerExpMap_kernel(*this,A);
+  traceHerExpMap_k(*this,A);
 }
 
 

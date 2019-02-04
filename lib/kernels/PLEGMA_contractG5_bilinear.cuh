@@ -31,9 +31,8 @@ static __global__ void contractG5_bilinear_kernel(Float *qLoops, vectorTex<Float
 }
 
 template<typename Float>
-static void contractG5_bilinear(Float *qLoops, vectorTex<Float> v_l, vectorTex<Float> v_r, Float accum_sign){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  contractG5_bilinear_kernel<Float><<<gridDim,blockDim>>>(qLoops, v_l, v_r, accum_sign );
+static void contractG5_bilinear( PLEGMA_Field<Float> &qLoops, vectorTex<Float> v_l, vectorTex<Float> v_r, Float accum_sign){
+  ProfileStruct ps(HGC_localVolume);
+  run(ps, contractG5_bilinear_kernel<Float>, qLoops.D_elem(), v_l, v_r, accum_sign);
   checkCudaError();
 }

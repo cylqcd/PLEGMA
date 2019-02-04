@@ -1,5 +1,5 @@
 # basic setup for cmake
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
@@ -49,6 +49,14 @@ set(PLEGMA_NO_TUNING FALSE CACHE BOOL "force not to perform kernel tuning in PLE
 mark_as_advanced(PLEGMA_NO_TUNING)
 if(PLEGMA_NO_TUNING)
   add_definitions(-DPLEGMA_NO_TUNING)
+else()
+  
+endif()
+
+# compile contractions for nucleon fix sink 3pf
+set(PLEGMA_NUCLEON_3PF_FIX_SINK FALSE CACHE BOOL "compile contractions for nucleon 3pf fix sink method")
+if(PLEGMA_NUCLEON_3PF_FIX_SINK)
+  add_definitions(-DPLEGMA_NUCLEON_3PF_FIX_SINK)
 endif()
 
 # compile contractions for all baryons
@@ -93,6 +101,15 @@ if(${PLEGMA_MKL})
   set(PLEGMA_MKL_INCDIR "${MKLROOT}/include" CACHE PATH "path to MKL include dir")
 endif()
 
+#######################################################################
+# build PLEGMA as shared library
+set(PLEGMA_BUILD_SHAREDLIB OFF CACHE BOOL "build PLEGMA as shared library")
+mark_as_advanced(PLEGMA_BUILD_SHAREDLIB)
+if(${PLEGMA_BUILD_SHAREDLIB})
+  if( NOT( ${QUDA_LIB} MATCHES "[.]so$") )
+    message( FATAL_ERROR "QUDA_LIB must be a shared library " ${QUDA_LIB})
+  endif()
+endif()
 
 #######################################################################
 # options that are not exposed at all because only one option exists
@@ -115,6 +132,14 @@ else()
   mark_as_advanced(CUDA_HOST_COMPILER)
   find_package(CUDA REQUIRED)
   set(USING_CUDA_LANG_SUPPORT False)
+endif()
+
+# solve compiler issues with CUDA and tuples
+if( (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.5) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)  AND (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER 9.0) AND (CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 9.2))
+  message(FATAL_ERROR "This library will have compilation problems with CUDA 9.1 and gcc 6")
+endif()
+if( (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6) AND (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER 9.1) AND (CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 9.3) )
+  message(FATAL_ERROR "This library will have compilation problems with CUDA 9.2 and gcc < 6")
 endif()
 
 # We need threads

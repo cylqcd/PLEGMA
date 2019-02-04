@@ -9,6 +9,7 @@
 #include <PLEGMA_kernel_complex.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
+#include <PLEGMA_gammas.cuh>
 
 #ifndef PLEGMA_KERNEL_UTILS_CUH
 #define PLEGMA_KERNEL_UTILS_CUH
@@ -28,7 +29,71 @@ namespace plegma {
 					  {1,0,2}};
     
   static const __device__ int sgn_eps[6]= { +1,+1,+1,-1,-1,-1 };
+  enum TMROT {NOROT, TMP, TMM};
+
+  template<bool isTransMatrix,typename Float>
+  __inline__ __device__ Float2<Float> trace_gamma_S(int opId, TMROT trot, Float2<Float> R[N_SPINS][N_SPINS]){
+      const Float2<float> (*g)[4];
+      const short int (*gIn)[4][2];
+      if(trot == TMP){
+	g = (Float2<float> (*)[4]) gammaTmP;
+	gIn = gammaIndTmP; 
+      }else if (trot == TMM){
+	g = (Float2<float> (*)[4]) gammaTmM;
+	gIn = gammaIndTmM;     
+      }
+      else{
+	g = (Float2<float> (*)[4]) gamma;
+	gIn = gammaInd;
+      }
+      Float2<Float> accum = 0.;
+#pragma unroll
+      for(int nz = 0 ; nz < N_SPINS ; nz++){
+	int mu = gIn[opId][nz][0];
+        int nu = gIn[opId][nz][1];
+        Float2<Float> val = g[opId][nz];
+        accum += isTransMatrix ? val*R[mu][nu] : val*R[nu][mu];
+      }
+      return accum;
+  }
   
+  template<LEFTRIGHT LF,typename Float>
+  __inline__ __device__ void gammaV(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS], short int r){
+    const Float2<float> (*gamma2)[4];
+    gamma2=(Float2<float> (*)[4]) plegma::gamma;
+#pragma unroll
+    for(int nz = 0; nz < N_SPINS; nz++){
+      int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
+      int nu = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
+#pragma unroll
+      for(int c1 = 0; c1 < N_COLS; c1++)
+	vout[mu][c1] = vin[nu][c1] * gamma2[r][nz] ;
+    }
+  }
+
+  
+  template<LEFTRIGHT LF,typename Float>
+  __inline__ __device__ void gammaProp(Float2<Float> pout[N_SPINS][N_SPINS][N_COLS][N_COLS],
+				       Float2<Float> pin[N_SPINS][N_SPINS][N_COLS][N_COLS], short int r){
+    const Float2<float> (*gamma2)[4];
+    gamma2=(Float2<float> (*)[4]) plegma::gamma;
+#pragma unroll
+    for(int nu = 0 ; nu < N_SPINS; nu++)
+#pragma unroll
+    for(int nz = 0; nz < N_SPINS; nz++){
+      int mu = (LF == LEFT)? gammaInd[r][nz][0] : gammaInd[r][nz][1];
+      int rho = (LF == LEFT)? gammaInd[r][nz][1] : gammaInd[r][nz][0];
+#pragma unroll
+      for(int c1 = 0; c1 < N_COLS; c1++)
+	for(int c2 = 0; c2 < N_COLS; c2++){
+	  Float2<Float> p;
+	  p = (LF == LEFT)? pin[rho][nu][c1][c2]: pin[nu][rho][c1][c2];
+	  if (LF == LEFT) pout[mu][nu][c1][c2] = p*gamma2[r][nz];
+	  else pout[nu][mu][c1][c2] = p*gamma2[r][nz] ;
+	}
+    }
+  }
+
   template<typename Float>
   __inline__ __device__ Float2<Float> det(Float2<Float> a[N_COLS][N_COLS]){
   return a[0][1]*a[1][2]*a[2][0] + a[0][2]*a[1][0]*a[2][1] +a[0][0]*a[1][1]*a[2][2]
@@ -102,6 +167,12 @@ namespace plegma {
     }
   }
 
+  template<typename FloatA>
+  __inline__ __device__ void Gdag(Float2<FloatA> a[N_COLS][N_COLS]){
+    Gtrans(a);
+    Gconj(a);
+  }
+  
   template<typename T, typename FloatG>
   __inline__ __device__ void scaleG(Float2<FloatG> a[N_COLS][N_COLS], T w){
   #pragma unroll
@@ -133,18 +204,18 @@ namespace plegma {
   }
 
   template<typename FloatA, typename FloatB, typename FloatC>
-  __inline__ __device__ void mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
-  #pragma unroll
-  for(int i=0; i<N_COLS; i++)
-    #pragma unroll
-    for(int j=0; j<N_COLS; j++) {
-      a[i][j] = 0.;
-      #pragma unroll
-      for(int k=0; k<N_COLS; k++) {
-        a[i][j] = a[i][j] + b[i][k]*c[k][j];
-      }
+    __inline__ __device__ void mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
+#pragma unroll
+      for(int i=0; i<N_COLS; i++)
+#pragma unroll
+        for(int j=0; j<N_COLS; j++) {
+          a[i][j] = 0.;
+#pragma unroll
+          for(int k=0; k<N_COLS; k++) {
+            a[i][j] = a[i][j] + b[i][k]*c[k][j];
+          }
+        }
     }
-  }
 
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_G_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
@@ -191,34 +262,95 @@ namespace plegma {
     }
   }
 
-  template<typename FloatA, typename FloatB>
-  __inline__ __device__ FloatA real_trace_mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
-    FloatA tr=0.;
-    #pragma unroll
-    for(int i=0; i<N_COLS; i++){
-      #pragma unroll
-      for(int j=0; j<N_COLS; j++) {
-	tr+=(a[i][j]*b[j][i]).x;
+  template<bool isLeftTrans, ACCUM_TYPE aty,typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ void partial_trace_mul_Prop_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS]){
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+	if(aty == ACC_ZERO) {A[mu][nu].x=0.; A[mu][nu].y=0.;}
+#pragma unroll
+	for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+	  for(int a = 0; a < N_COLS; a++)
+#pragma unroll
+	    for(int b = 0; b < N_COLS; b++){
+	      if(aty == ACC_ZERO || aty == ACC_PLUS){
+		if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * C[nu][rho][b][a];
+		else A[mu][nu] +=  B[rho][mu][a][b] * C[nu][rho][b][a];
+	      }
+	      else{
+		if(isLeftTrans) A[mu][nu] -=  B[mu][rho][b][a] * C[nu][rho][b][a];
+		else A[mu][nu] -=  B[rho][mu][a][b] * C[nu][rho][b][a];		
+	      }
+	    }
+	
       }
-    }
-    return tr;
   }
 
-  template<typename FloatOutV, typename FloatG, typename FloatInV>
-  __inline__ __device__ void mul_G_V(Float2<FloatOutV> outV[N_SPINS][N_COLS],
-				     Float2<FloatG> G[N_COLS][N_COLS],
-				     Float2<FloatInV> inV[N_SPINS][N_COLS]){
-     #pragma unroll
-     for(int mu=0; mu<N_SPINS; mu++)
-       #pragma unroll
-       for(int j=0; j<N_COLS; j++) {
-	 outV[mu][j] = 0.;
-         #pragma unroll
-	 for(int k=0; k<N_COLS; k++) {
-	   outV[mu][j] = outV[mu][j] + G[j][k]*inV[mu][k];
-	 }
-       }
+  template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							 Float2<FloatD> D[N_COLS][N_COLS]){
+    if(isGdag) Gdag(D);
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+	if(aty == ACC_ZERO){ A[mu][nu].x=0.; A[mu][nu].y=0.;}
+#pragma unroll
+	for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+	  for(int a = 0; a < N_COLS; a++)
+#pragma unroll
+	    for(int b = 0; b < N_COLS; b++)
+#pragma unroll
+	      for(int c = 0; c < N_COLS; c++){
+		if(aty == ACC_ZERO || aty == ACC_PLUS){
+		  if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
+		  else A[mu][nu] += B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
+		}
+		else{
+		  if(isLeftTrans) A[mu][nu] -=  B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
+		  else A[mu][nu] -= B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
+		}
+	      }
+	
+      }
+    if(isGdag) Gdag(D);
   }
+
+  template<typename FloatA, typename FloatB>
+    __inline__ __device__ FloatA real_trace_mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
+      FloatA tr=0.;
+#pragma unroll
+      for(int i=0; i<N_COLS; i++){
+#pragma unroll
+        for(int j=0; j<N_COLS; j++) {
+          tr+=(a[i][j]*b[j][i]).x;
+        }
+      }
+      return tr;
+    }
+
+  template<typename FloatOutV, typename FloatG, typename FloatInV>
+    __inline__ __device__ void mul_G_V(Float2<FloatOutV> outV[N_SPINS][N_COLS],
+        Float2<FloatG> G[N_COLS][N_COLS],
+        Float2<FloatInV> inV[N_SPINS][N_COLS]){
+#pragma unroll
+      for(int mu=0; mu<N_SPINS; mu++)
+#pragma unroll
+        for(int j=0; j<N_COLS; j++) {
+          outV[mu][j] = 0.;
+#pragma unroll
+          for(int k=0; k<N_COLS; k++) {
+            outV[mu][j] = outV[mu][j] + G[j][k]*inV[mu][k];
+          }
+        }
+    }
 
   template<typename FloatOutV, typename FloatG, typename FloatInV>
   __inline__ __device__ void mul_Gdag_V(Float2<FloatOutV> outV[N_SPINS][N_COLS],
@@ -248,7 +380,6 @@ namespace plegma {
   template<typename T>
   __inline__ __device__ void reduce(T *shared_cache, const int n_comp){
     // synchronize threads to be sure that all have written their register trace to share memory
-    // for reduction threads per block must be power of 2 ( this is always my case)
     int i = blockDim.x/2;
     int r = blockDim.x%2;
     while (i > 0){
@@ -264,9 +395,9 @@ namespace plegma {
       i /= 2;
     }
   }
-  
+
   template<typename Float>
-  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3]){
+  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3], int padding = 0, int sign = -1){
     int cacheIndex = threadIdx.x;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
@@ -283,7 +414,7 @@ namespace plegma {
 	phase += ((Float) (DGC_moms[imom][i]*id[i]))/((Float) DGC_totalL[i]);
       phase *=  2. * PI;
       expon.x = cos(phase);
-      expon.y = -sin(phase);
+      expon.y = sign*sin(phase);
       for(int ip = 0 ; ip < n_comp ; ip++){
 	shared_cache[ip*blockDim.x + cacheIndex] = in[ip] * expon; 
       }
@@ -291,12 +422,12 @@ namespace plegma {
       
       if(cacheIndex == 0 && out!=NULL){
 	for(int ip = 0 ; ip < n_comp ; ip++){
-	  out[(imom*n_comp + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
+	  out[(imom*(n_comp+padding) + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
 	}
       }
-    }
+    }    
   }
-
+  
   template<typename Float>
   __inline__ __device__ Float xi0(Float w)
   {
@@ -464,5 +595,29 @@ namespace plegma {
     v[1][2].y = 0.;
     normalizeUnitary(v);
   }
+  
+  __inline__ __device__ int LEXIC_1DL_1DG(int sid) {
+    //compute 4 space-time GLOBID  
+    
+    int skipvol = 1;
+    int globid = 0;
+    int TZYX_local[N_DIMS];
+    int TZYX_global[N_DIMS];
+    
+    //creating array from fastest to slowest
+    for(int i = 0; i < N_DIMS; ++i){
+      TZYX_local[i] = (sid/skipvol) % c_localL[i];
+      skipvol *= c_localL[i];
+      //TZYX_global[i] = TZYX_local[i];
+    }
+    for(int i = 0; i < N_DIMS; ++i)
+      TZYX_global[i] = TZYX_local[i] + c_procPosition[i] * c_localL[i];
+    
+    for(int i = N_DIMS-1; i>=0; i--)
+      globid = globid * c_totalL[i] + TZYX_global[i];
+
+    return globid;
+  }
+
 }
 #endif

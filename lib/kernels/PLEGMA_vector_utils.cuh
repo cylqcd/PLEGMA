@@ -1,5 +1,9 @@
-#include <cublas_v2.h>
+#include <PLEGMA_BLAS.h>
+#include <PLEGMA_Random.h>
 #include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_gammas.cuh>
+#include <PLEGMA_kernel_tuner.cuh>
+
 using namespace plegma;
 using namespace quda;
 
@@ -23,9 +27,36 @@ static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
 
 template<typename FloatOut,typename FloatIn>
 static void castVector(FloatOut *out, FloatIn *in){
+  ProfileStruct ps(GK_localVolume);
+  tuneAndRun(ps, "castVector_kernel", castVector_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in);
+  checkCudaError();
+}
+
+
+template<LEFTRIGHT LF,typename Float>
+static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  vector2<Float> vec(inOut);
+  Float2<Float> Sin[N_SPINS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_COLS]; 
+  if (sid >= c_threads) return;
+  vec.get(Sin,sid);
+  gammaV<LF>(Sout,Sin,r);
+  vec.set(Sout,sid);
+}
+
+template<typename Float>
+static void apply_gamma_vector(LEFTRIGHT LF,Float *inOut,GAMMAS r){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  castVector_kernel<<<gridDim,blockDim>>>((FloatOut*) out, (FloatIn*) in);
+  switch(LR){
+  case(LEFT):
+    apply_gamma_vector_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  case(RIGHT):
+    apply_gamma_vector_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  }
   checkCudaError();
 }
 
@@ -58,6 +89,8 @@ void apply_gamma5_vector(Float *inOut){
 }
 
 
+
+  
 template<typename Float>
 static __global__ void conjugate_vector_kernel(Float *inOut){
 
@@ -102,6 +135,7 @@ template<typename Float>
 void norm2_device(Float norm, Float* in){
 
 }
+
 template<typename FloatIn, typename FloatOut, bool outEvenB, bool outOddB> 
 static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *outOdd){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -169,7 +203,7 @@ static void copy_to_QUDA(FloatIn* in, ColorSpinorField &qudaVec, bool isEven){
 }
 
 template<typename FloatOut, typename FloatIn, bool inEvenB, bool inOddB> 
-static __global__ void copy_from_QUDA(FloatOut *out, FloatIn *inEven, FloatIn *inOdd){
+static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, FloatIn *inOdd){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_threads/2) return;
@@ -211,15 +245,14 @@ static __global__ void copy_from_QUDA(FloatOut *out, FloatIn *inEven, FloatIn *i
 
 template<typename FloatOut, typename FloatIn> 
 static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  ProfileStruct ps(HGC_localVolume);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      copy_from_QUDA<FloatOut,FloatIn,true,false><<<gridDim,blockDim>>>( out,(FloatIn*) qudaVec.V(), NULL);
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
     else
-      copy_from_QUDA<FloatOut,FloatIn,false,true><<<gridDim,blockDim>>>( out, NULL,(FloatIn*) qudaVec.V());
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
   } else
-    copy_from_QUDA<FloatOut,FloatIn,true,true><<<gridDim,blockDim>>>( out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+    tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
 }
 
 template<typename FloatOut> 

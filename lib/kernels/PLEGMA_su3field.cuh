@@ -1,4 +1,5 @@
 #include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_kernel_tuner.cuh>
 using namespace plegma;
 
 template<typename FloatA,typename FloatB>
@@ -61,7 +62,10 @@ static __global__ void UxUdag_kernel(FloatA *A, FloatB *B, FloatC *C){
 
 template<typename Float,typename FloatU>
 static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
-  __shared__ Float shared_cache[THREADS_PER_BLOCK];
+
+  extern __shared__ int ext_shared_cache[];
+  Float *shared_cache = (Float*)ext_shared_cache;
+  
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   if(sid < DGC_threads){
@@ -75,17 +79,9 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
   }
   __syncthreads();
 
-  //!!!!!!!!!!!!!!!!!!!!!!!!! Change to the one which works with not only powerrs of 2
-  int i = blockDim.x/2;
-  while (i != 0){
-    if(cacheIndex < i)
-      shared_cache[cacheIndex] += shared_cache[cacheIndex + i];
-    __syncthreads();
-    i /= 2;
-  }
-  //!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  reduce(shared_cache,1);
   
-  if(cacheIndex == 0)
+  if(cacheIndex == 0 && partial_plaq!=NULL)
     partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory  
 }
 
@@ -113,34 +109,30 @@ static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
 }
 
 template<typename FloatA, typename FloatB>
-static void traceHerExpMap_kernel(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  traceHerExpMap_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
+static void traceHerExpMap_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps, "traceHerExpMap_kernel", traceHerExpMap_kernel<FloatA,FloatB>, A.D_elem(), B.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB>
 static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  Udag_kernel<FloatA,FloatB><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem());
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps, "Udag_kernel", Udag_kernel<FloatA,FloatB>,A.D_elem(), B.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  UxU_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps, "UxU_kernel", UxU_kernel<FloatA,FloatB,FloatC>,A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  UxUdag_kernel<FloatA,FloatB,FloatC><<<gridDim,blockDim>>>(A.D_elem(), B.D_elem(),C.D_elem());
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps, "UxUdag_kernel", UxUdag_kernel<FloatA,FloatB,FloatC>, A.D_elem(), B.D_elem(),C.D_elem());
   checkCudaError();
 }
 
@@ -148,36 +140,25 @@ template<typename Float, typename FloatS>
 static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
   Float sum = 0.;
   Float globalSum = 0.;
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   Float *h_partial_sum = NULL;
   Float *d_partial_sum = NULL;
-  h_partial_sum = (Float*) malloc(gridDim.x * sizeof(Float) );
+
+  ProfileStruct ps(HGC_localVolume,sizeof(FloatS));
+  tune(ps, "sum_real_trace_kernel", sum_real_trace_kernel<Float,FloatS>,su3M.D_elem(), d_partial_sum);
+
+  int gridDimX = ps.tp.grid.x;
+  
+  h_partial_sum = (Float*) malloc(gridDimX * sizeof(Float) );
   if(h_partial_sum == NULL) errorQuda("Error allocate memory for host partial sum");
-  cudaMalloc((void**)&d_partial_sum, gridDim.x * sizeof(Float));
+  cudaMalloc((void**)&d_partial_sum, gridDimX * sizeof(Float));
 
-#ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-#endif
-  sum_real_trace_kernel<Float,FloatS><<<gridDim,blockDim>>>(su3M.D_elem(), d_partial_sum);
-#ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for sumuette kernel is %f ms\n",elapsedTime);
-#endif
+  sum_real_trace_kernel<Float,FloatS><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(su3M.D_elem(), d_partial_sum);
 
-  cudaMemcpy(h_partial_sum, d_partial_sum , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_partial_sum, d_partial_sum , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_sum);
   checkCudaError();
 
-  for(int i = 0 ; i < gridDim.x ; i++)
+  for(int i = 0 ; i < gridDimX ; i++)
     sum += h_partial_sum[i];
   free(h_partial_sum);
 

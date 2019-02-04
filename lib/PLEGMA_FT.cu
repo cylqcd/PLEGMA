@@ -1,10 +1,6 @@
 #include <PLEGMA_Field.h>
 #include <PLEGMA_FT.h>
-#include <thrust/device_ptr.h>
-#include <thrust/fill.h>
-#include <thrust/for_each.h>
-#include <thrust/tuple.h>
-#include <thrust/iterator/counting_iterator.h>
+#include <PLEGMA_Thrust.h>
 #include <vector>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
@@ -15,7 +11,7 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
-  Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), dims(D3D4), dimT(0), accum(accum){
+  Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
   if(dims!= 3 && dims !=4) errorQuda("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) errorQuda("The maximum number of Q2 cannot be negative\n");
@@ -60,12 +56,13 @@ template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
   if(isAllocated && dof == newDof) return;
   try{
-    if(!isAllocated){dof = newDof; h_elem = new Float[Nmoms()*dimT*dof*2];}
+    if(!isAllocated){dof = newDof; sizeN = Nmoms()*dimT*dof*2; h_elem = new Float[sizeN];}
     else{
       if(dof != newDof){
 	dof = newDof;
 	delete[] h_elem;
-	h_elem = new Float[Nmoms()*dimT*dof*2];
+	sizeN = Nmoms()*dimT*dof*2;
+	h_elem = new Float[sizeN];
       }
     }
   }
@@ -96,12 +93,13 @@ void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, int sign){
 }
 
 template<typename Float>
-void PLEGMA_FT<Float>::mulMomentumPhases(Vint src, int sign){
+void PLEGMA_FT<Float>::mulConstMomentumPhases(Vint src, int sign){
   if(dims == 3 && src.size() != 3) errorQuda("Src size is incompatible with the dimensionality of the FT");
   if(dims == 4 && src.size() != 4) errorQuda("Src size is incompatible with the dimensionality of the FT");
   if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
   Float phase;
   std::complex<Float> expPhase;
+  if(!isAllocated) errorQuda("Apply first FT and then the const phases");
   std::complex<Float> *h2 = (std::complex<Float> *) h_elem;
   for(int imom = 0; imom < Nmoms(); imom++){
     phase=0.;
@@ -115,16 +113,26 @@ void PLEGMA_FT<Float>::mulMomentumPhases(Vint src, int sign){
 }
 
 template<typename Float>
+void PLEGMA_FT<Float>::scale(Float a){
+  if(!isAllocated) errorQuda("Apply first FT and then you can scale it");
+  cBLAS::scal(sizeN/2, a, h_elem);
+}
+
+
+template<typename Float>
 void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift){
   if(dims == 4 && timeshift > 0) errorQuda("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!isAllocated) errorQuda("Memory not allocated cannot write data");
   if(outputFormat == ASCII_FORM){
     Float *helem_global=NULL;
-    if(dimT != 1){
-      int sizeN= Nmoms()*HGC_localL[3]*dof*2;
+    bool gAlloc=false;
+    if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
       helem_global = (Float*) malloc(HGC_nProc[3]*sizeN*sizeof(Float));
       if(helem_global == NULL) errorQuda("Allocation failed\n");
-      MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
+      gAlloc=true;
+      if(HGC_timeComm == MPI_COMM_NULL) errorQuda("Try to use a NULL communicator for MPI Gather which will give an error");
+      int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
+      if(error != MPI_SUCCESS) errorQuda("MPI_Gather with %d\n",error);
     }
     else
       helem_global = h_elem;
@@ -141,7 +149,8 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
 	}
       fclose(ptr);
     }
-    if(dimT != 1)free(helem_global);
+    if(gAlloc)free(helem_global);
+    comm_barrier();
   }
   else if(outputFormat == HDF5_FORM){
     errorQuda("Not implemented yet");

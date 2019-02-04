@@ -55,3 +55,4 @@ void createMom(int *Nmom, int momElem[][3], int Q_sq){
   }
   *Nmom = counter;
 }
+

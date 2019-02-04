@@ -1,4 +1,6 @@
 #include <PLEGMA_global.h>
+#include <PLEGMA_Random.h>
+#include <PLEGMA_Hprobing.h>
 #include <vector>
 #ifndef _PLEGMA_FIELD_H
 #define _PLEGMA_FIELD_H
@@ -17,7 +19,7 @@ namespace plegma {
     int ghost_length;
     int ghost_corner_length;
     int total_plus_ghost_length;
-    
+
     size_t bytes_total_length;
     size_t bytes_ghost_length;
     size_t bytes_ghost_corner_length;
@@ -29,7 +31,8 @@ namespace plegma {
     Float *h_ext_ghost_s;
     Float *h_ext_ghost_corner_r;
     Float *h_ext_ghost_corner_s;
-
+    PLEGMA_RNG *randstate_ptr;
+    
     GHOST_FLAG ghost_flag;
     ALLOCATION_FLAG allocation;
     bool isAllocHost;
@@ -54,6 +57,9 @@ namespace plegma {
     Float* H_elem() const { return h_elem; }
     Float* D_elem() const { return d_elem; }
 
+    bool IsAllocHost() const { return isAllocHost;}
+    bool IsAllocDevice() const { return isAllocDevice;}
+    
     size_t Bytes_total() const { return bytes_total_length; }
     size_t Bytes_ghost() const { return bytes_ghost_length; }
     size_t Bytes_total_plus_ghost() const { return bytes_total_plus_ghost_length; }
@@ -84,8 +90,16 @@ namespace plegma {
     void unload();
     
     void shift(PLEGMA_Field &Fin, int dirOr);
+    void randInit(int seed);
+    void destroy_randstate();
+    void stochastic_Z(int n=2);
+    void random(DIST sampling=Uniform);
     void setUnit(std::vector<int> indDiag);
-
+    void copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where = DEVICE);
+    void mulMomentumPhases(std::vector<int> mom, int sign=-1);
+    std::complex<Float> dot(PLEGMA_Field<Float> &FieldIn);    
+    void cscale(std::complex<Float> val);
+    void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
   };
 }
 #endif

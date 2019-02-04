@@ -1,6 +1,34 @@
 #include <PLEGMA_kernel_utils.cuh>
 using namespace plegma;
 
+template<LEFTRIGHT LF,typename Float>
+static __global__ void apply_gamma_prop_kernel(Float *inOut, GAMMAS r){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  prop2<Float> prop(inOut);
+  Float2<Float> Sin[N_SPINS][N_SPINS][N_COLS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_SPINS][N_COLS][N_COLS];
+  if (sid >= c_threads) return;
+  prop.get(Sin,sid);
+  gammaProp<LF>(Sout,Sin,r);
+  prop.set(Sout,sid);
+}
+
+template<typename Float>
+static void apply_gamma_prop(LEFTRIGHT LR, Float *inOut, GAMMAS r){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  switch(LR){
+  case(LEFT):
+    apply_gamma_prop_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  case(RIGHT):
+    apply_gamma_prop_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  }
+  checkCudaError();
+}
+
+
 template<typename Float>
 static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;

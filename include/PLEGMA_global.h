@@ -59,13 +59,15 @@ namespace plegma {
   enum CLASS_ENUM{FIELD,SU3FIELD,GAUGE,VECTOR,PROPAGATOR,PROPAGATOR3D,VECTOR3D,QLOOPS};
   enum GHOST_FLAG{NO_GHOSTS,FIRST_SIDE,FIRST_CORNER};
   enum WHICHPARTICLE{PROTON,NEUTRON};
-  enum WHICHPROJECTOR{G4,G5G123,G5G1,G5G2,G5G3};
+  enum WHICHPROJECTOR{P4_P,P4G5G1_P,P4G5G2_P,P4G5G3_P,P4_M,P4G5G1_M,P4G5G2_M,P4G5G3_M}; // Do not change this order
 
   enum THRP_TYPE{THRP_LOCAL2,THRP_NOETHER2,THRP_ONED2};
 
   enum LATDIMS{DIM_X,DIM_Y,DIM_Z,DIM_T};
 
+  enum GAMMAS {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43}; // Do not change this order
   enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
+  enum LEFTRIGHT {LEFT, RIGHT};
 
   // Preparation for global variables
   // here we collect the global variables for then running some default functions on them (print and copy to device)
@@ -158,8 +160,10 @@ namespace plegma {
   global_host(MPI_Group, timeGroup);
   global_host(MPI_Comm, spaceComm);
   global_host(MPI_Comm, timeComm);
-  global_host(int, localRank);
-  global_host(int, localSize);
+  global_host(int, fullRank);
+  global_host(int, fullSize);
+  global_host(int, spaceRank);
+  global_host(int, spaceSize);
   global_host(int, timeRank);
   global_host(int, timeSize);
 

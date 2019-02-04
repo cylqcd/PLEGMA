@@ -10,6 +10,27 @@
 //#define TIMING_REPORT
 using namespace plegma;
 
+//////////////////////////////////////////////////  
+static void createMomenta(int Q_sq){
+  int counter=0;
+  for(int iQ = 0 ; iQ <= Q_sq ; iQ++){
+    for(int nx = iQ ; nx >= -iQ ; nx--){
+      for(int ny = iQ ; ny >= -iQ ; ny--){
+        for(int nz = iQ ; nz >= -iQ ; nz--){
+          if( nx*nx + ny*ny + nz*nz == iQ ){
+            GK_moms[counter][0] = nx;
+            GK_moms[counter][1] = ny;
+            GK_moms[counter][2] = nz;
+            counter++;
+          }
+        }
+      }
+    }
+  }
+  if(counter > MAX_NMOMENTA)errorQuda("Error exceeded max number of momenta\n");
+  GK_Nmoms=counter;
+}
+
 void plegma::PLEGMA_init(){
   
   if(HGC_init_PLEGMA_flag == false){
@@ -99,6 +120,9 @@ void plegma::PLEGMA_init(){
 
     // create groups of process to use mpi reduce only on spatial points
     MPI_Comm_group(MPI_COMM_WORLD, &HGC_fullGroup);
+    MPI_Group_rank(HGC_fullGroup,&HGC_fullRank);
+    MPI_Group_size(HGC_fullGroup,&HGC_fullSize);
+
     int space3D_proc;
     space3D_proc = HGC_nProc[0] * HGC_nProc[1] * HGC_nProc[2];
     int *ranks = (int*) malloc(space3D_proc*sizeof(int));
@@ -107,8 +131,8 @@ void plegma::PLEGMA_init(){
       ranks[i] = comm_coords(default_topo)[3] + HGC_nProc[3]*i;
 
     MPI_Group_incl(HGC_fullGroup,space3D_proc,ranks,&HGC_spaceGroup);
-    MPI_Group_rank(HGC_spaceGroup,&HGC_localRank);
-    MPI_Group_size(HGC_spaceGroup,&HGC_localSize);
+    MPI_Group_rank(HGC_spaceGroup,&HGC_spaceRank);
+    MPI_Group_size(HGC_spaceGroup,&HGC_spaceSize);
     MPI_Comm_create(MPI_COMM_WORLD, HGC_spaceGroup , &HGC_spaceComm);
 
     // create group of process to use mpi gather
