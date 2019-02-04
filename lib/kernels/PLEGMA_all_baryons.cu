@@ -34,8 +34,8 @@ static __device__ void create_prop_product(Float2<FloatC> propProd[N_SPINS][N_SP
 		    int b1 = eps[cc2][1];
 		    int c1 = eps[cc2][2];
 		    FloatC factor = sgn_eps[cc1] * sgn_eps[cc2];
-		    propProd[mu1][mu2][mu3][mu4][mu5][mu6] = propProd[mu1][mu2][mu3][mu4][mu5][mu6] +
-		      factor*(prop1[mu1][mu2][a][a1] + prop2[mu3][mu4][b][b1] + prop3[mu5][mu6][c][c1]);
+		    propProd[mu1][mu2][mu3][mu4][mu5][mu6] += factor *
+		      (prop1[mu1][mu2][a][a1] + prop2[mu3][mu4][b][b1] + prop3[mu5][mu6][c][c1]);
 		  }
 		}
 
@@ -72,7 +72,9 @@ __global__ void contract_all_baryons_kernel(propTex<FloatA> texPropUP, propTex<F
 	else if(prop_prod[p][i] == 'c')
 	  props[i] = texPropCH;
       }
+      printf("Running for %c %c %c\n", prop_prod[p][0], prop_prod[p][1], prop_prod[p][2]);
       create_prop_product(propProd, props[0], props[1], props[2], vid);
+      printf("created prop product\n", prop_prod[p][0], prop_prod[p][1], prop_prod[p][2]);
 
   
       // loop over baryons with the same prop. product
@@ -98,6 +100,7 @@ __global__ void contract_all_baryons_kernel(propTex<FloatA> texPropUP, propTex<F
     }
   }
   if(runFT) {
+    printf("Running FT\n");
     const int shared_size = 10;
     __shared__ Float2<FloatC> shared_cache[shared_size*THREADS_PER_BLOCK];
     for(int i=0; i < (all_baryons_size+shared_size-1)/shared_size; i++) {
