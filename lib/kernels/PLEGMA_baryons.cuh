@@ -36,7 +36,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
-#ifdef ALL_BARYONS
+#ifdef PLEGMA_ALL_BARYONS
     case NtoR:
       contract_NtoR_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;

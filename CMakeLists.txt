@@ -92,7 +92,7 @@ endif()
 # compile contractions for all baryons
 set(PLEGMA_ALL_BARYONS FALSE CACHE BOOL "compile contractions for all baryons")
 if(PLEGMA_ALL_BARYONS)
-  add_definitions(-DALL_BARYONS)
+  add_definitions(-DPLEGMA_ALL_BARYONS)
 endif()
 
 set(PLEGMA_EIGENSOLVER FALSE CACHE BOOL "build eigensolver")
