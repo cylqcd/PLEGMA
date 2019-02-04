@@ -27,8 +27,8 @@ namespace plegma {
 template<typename T>
 class GaugeBuffer {
   public:
-    GaugeBuffer(PLEGMA_params & params) {
-      int *lL = params.lL;
+    GaugeBuffer() {
+      int *lL = HGC_localL;
       size_t V = lL[0];
       for(int i = 1; i < N_DIMS; ++i){
         V *= lL[i];

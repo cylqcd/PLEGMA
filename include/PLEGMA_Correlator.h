@@ -5,6 +5,7 @@
 
 namespace plegma {
 
+  const int N_MESONS=10;
   // Information for correlators
   enum CORR_TYPE{MESONS,BARYONS,THRP_LOCAL,THRP_NOETHER,THRP_ONED,
 		 // add here
@@ -110,10 +111,9 @@ namespace plegma {
 			 int isource, CORR_SPACE CorrSpace);
 
 
-    void writeFile(PLEGMA_params &params);
-    void writeFile(char *filename, PLEGMA_params &params);
+    void writeFile(char *filename, FILE_WRITE_FORMAT format);
     void writeASCII(char *filename);
-    void writeHDF5(char *filename, PLEGMA_params &params);
+    void writeHDF5(char *filename);
   };
 }
 
