@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
-#include <PLEGMA_kernel_extern.cuh>
 #include <PLEGMA_kernel_complex.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
