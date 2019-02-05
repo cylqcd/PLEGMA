@@ -47,7 +47,7 @@ int main(int argc, char **argv)
   pGauge.communicateGhost();
   loops_std.oneEnd_trick(phi,phi,tmp,pGauge,-1.,true); //standard one-end trick
 
-  std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
+  std::string prefix = "/onyx/noether/h/dnole/runs/";
   PLEGMA_FT<double> ft(1, 3);
 
   // do the FT and write to File std trick

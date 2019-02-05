@@ -21,7 +21,7 @@ int main(int argc, char **argv)
   PLEGMA_FT<double> ft4(1,4,true);
   ft4.apply(f);
   ft4.apply(f); // apply twice to check accumulation
-  ft4.writeToFile("/onyx/noether/h/khadjiyiannakou/runs/momTest_field_ft4.dat", ASCII_FORM);
+  ft4.writeToFile("/onyx/noether/h/dnole/runs/momTest_field_ft4.dat", ASCII_FORM);
 
   f.mulMomentumPhases((std::vector<int>) {+1,0,0,0});
   
