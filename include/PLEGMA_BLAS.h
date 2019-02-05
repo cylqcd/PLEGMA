@@ -130,4 +130,6 @@ namespace plegma{
   template<typename Float>
   void elemWiseMul(int NN, Float* x, Float* y);
 
+  template<typename Float>
+  void axpbypcz(int NN, Float a[2], Float* x, Float b[2], Float* y, Float c[2], Float* z);
 }
