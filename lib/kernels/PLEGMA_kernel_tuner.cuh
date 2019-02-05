@@ -185,8 +185,9 @@ void tune(ProfileStruct &ps, std::string kname, void (*kernel)(types...), types.
 }
 
 template<class ...types>
-void run(ProfileStruct &ps, void(* kernel)(types...), types... kArgs){
-  (*kernel)<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>( kArgs...);
+void run(ProfileStruct &ps, std::string kname, void(* kernel)(types...), types... kArgs){
+  PLEGMA_kernel_tuner<types...> tuner(ps, kname, kernel, kArgs...);
+  tuner.run();
 }
 
 template<class ...types>
