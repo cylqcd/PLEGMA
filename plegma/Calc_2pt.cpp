@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
   // Removing anti-periodic boundaries.
   applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
-  mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
+  mapEvenOddToNormalGauge(gauge.get_ptr(),params.lL);
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> readGauge(BOTH);

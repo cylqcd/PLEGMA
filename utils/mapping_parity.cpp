@@ -251,35 +251,27 @@ void map_EvenOdd2Normal_automorph(Float *spinor , int nx ,int ny ,int nz, int nt
 }
 
 
-void mapNormalToEvenOdd(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt)
+template<typename Float>
+void mapNormalToEvenOdd(Float *spinor, int lL[4], QudaDiracFieldOrder order)
 {
-
-  if(param.cpu_prec == QUDA_DOUBLE_PRECISION){
-    if(param.dirac_order == QUDA_DIRAC_ORDER) map_Normal2EvenOdd_DiracOrderedSpinor_automorph((double*) spinor , nx ,ny, nz, nt);
-    if(param.dirac_order == QUDA_QDP_DIRAC_ORDER) map_Normal2EvenOdd_QDPDiracOrderedSpinor_automorph((double*)spinor, nx ,ny, nz, nt);
-  }
-  else
-    {
-    if(param.dirac_order == QUDA_DIRAC_ORDER) map_Normal2EvenOdd_DiracOrderedSpinor_automorph((float*) spinor , nx ,ny, nz, nt);
-    if(param.dirac_order == QUDA_QDP_DIRAC_ORDER) map_Normal2EvenOdd_QDPDiracOrderedSpinor_automorph((float*)spinor, nx ,ny, nz, nt);
-    }
+  if(order == QUDA_DIRAC_ORDER) map_Normal2EvenOdd_DiracOrderedSpinor_automorph(spinor , lL[0] ,lL[1], lL[2], lL[3]);
+  else if(order == QUDA_QDP_DIRAC_ORDER) map_Normal2EvenOdd_QDPDiracOrderedSpinor_automorph(spinor, lL[0] ,lL[1], lL[2], lL[3]);
+  else errorQuda("Not supported");
 }
 
-void mapEvenOddToNormal(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt)
+template void mapNormalToEvenOdd<float>(float *spinor, int lL[4], QudaDiracFieldOrder order);
+template void mapNormalToEvenOdd<double>(double *spinor, int lL[4], QudaDiracFieldOrder order);
+
+template<typename Float>
+void mapEvenOddToNormal(Float *spinor, int lL[4], QudaDiracFieldOrder order)
 {
-
-  if(param.cpu_prec == QUDA_DOUBLE_PRECISION){
-    if(param.dirac_order == QUDA_DIRAC_ORDER) map_EvenOdd2Normal_DiracOrderedSpinor_automorph((double*) spinor , nx ,ny, nz, nt);
-    if(param.dirac_order == QUDA_QDP_DIRAC_ORDER) map_EvenOdd2Normal_QDPDiracOrderedSpinor_automorph((double*) spinor , nx ,ny, nz, nt);
-  }
-  else
-    {
-    if(param.dirac_order == QUDA_DIRAC_ORDER) map_EvenOdd2Normal_DiracOrderedSpinor_automorph((float*) spinor , nx ,ny, nz, nt);
-    if(param.dirac_order == QUDA_QDP_DIRAC_ORDER) map_EvenOdd2Normal_QDPDiracOrderedSpinor_automorph((float*) spinor , nx ,ny, nz, nt);
-    }
-
+    if(order == QUDA_DIRAC_ORDER) map_EvenOdd2Normal_DiracOrderedSpinor_automorph(spinor , lL[0] ,lL[1], lL[2], lL[3]);
+    else if(order == QUDA_QDP_DIRAC_ORDER) map_EvenOdd2Normal_QDPDiracOrderedSpinor_automorph(spinor , lL[0] ,lL[1], lL[2], lL[3]);
+    else errorQuda("Not supported");
 }
 
+template void mapEvenOddToNormal<float>(float *spinor, int lL[4], QudaDiracFieldOrder order);
+template void mapEvenOddToNormal<double>(double *spinor, int lL[4], QudaDiracFieldOrder order);
 
 
 
@@ -398,36 +390,29 @@ static void map_Normal2EvenOdd_Gauge_automorph(Float **gauge , int nx ,int ny ,i
 
 
   for(int dir = 0 ; dir < 4 ; dir++)
-    free(gauge_tmp[dir]);
-  
+    free(gauge_tmp[dir]); 
 }
 
-
-void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt)
+template<typename Float>
+void mapNormalToEvenOddGauge(Float **gauge, int lL[4], QudaGaugeFieldOrder order)
 {
-
-  if(param.gauge_order == QUDA_QDP_GAUGE_ORDER)
-    map_Normal2EvenOdd_Gauge_automorph( gauge , nx ,ny ,nz, nt);
+  if(order == QUDA_QDP_GAUGE_ORDER)
+    map_Normal2EvenOdd_Gauge_automorph( gauge , lL[0] ,lL[1] ,lL[2], lL[3]);
   else
     errorQuda("only QDP order supported for gauge");
 }
 
-void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int lL[4])
-{
-  mapNormalToEvenOddGauge( gauge, param, lL[0], lL[1], lL[2], lL[3]);
-}
+template void mapNormalToEvenOddGauge<float>(float **gauge, int lL[4], QudaGaugeFieldOrder order);
+template void mapNormalToEvenOddGauge<double>(double **gauge, int lL[4], QudaGaugeFieldOrder order);
 
-void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt)
+template<typename Float>
+void mapEvenOddToNormalGauge(Float **gauge, int lL[4], QudaGaugeFieldOrder order)
 {
-
-  if(param.gauge_order == QUDA_QDP_GAUGE_ORDER)
-    map_EvenOdd2Normal_Gauge_automorph(gauge, nx ,ny ,nz, nt);
+  if(order == QUDA_QDP_GAUGE_ORDER)
+    map_EvenOdd2Normal_Gauge_automorph(gauge, lL[0] ,lL[1] ,lL[2], lL[3]);
   else
     errorQuda("only QDP order supported for gauge");
-
 }
 
-void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int lL[4])
-{
-  mapEvenOddToNormalGauge( gauge, param, lL[0], lL[1], lL[2], lL[3]);
-}
+template void mapEvenOddToNormalGauge<float>(float **gauge, int lL[4], QudaGaugeFieldOrder order);
+template void mapEvenOddToNormalGauge<double>(double **gauge, int lL[4], QudaGaugeFieldOrder order);

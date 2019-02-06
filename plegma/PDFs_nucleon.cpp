@@ -30,7 +30,7 @@ int main(int argc, char **argv)
   initGaugeQuda((void*)gauge.get_ptr(), gauge_param);
   applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
   // The gauge is loaded in a format suitable for QUDA. We need to re-map it
-  mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
+  mapEvenOddToNormalGauge(gauge.get_ptr(),params.lL);
 
   PLEGMA_Gauge<double> *pGauge = new PLEGMA_Gauge<double>();
   pGauge->pack(gauge.get_ptr());

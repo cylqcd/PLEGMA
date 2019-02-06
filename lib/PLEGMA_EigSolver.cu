@@ -1,6 +1,9 @@
 #include <PLEGMA_EigSolver.h>
 #include <PLEGMA_BLAS.h>
 #include <algorithm>
+using namespace plegma;
+using namespace quda;
+
 PLEGMA_EigSolver::PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose):verbose(verbose),p(params),
 												    h_eigVecs(nullptr),h_eigVals(nullptr),dOp(nullptr),
 												    d_in(nullptr),d_out(nullptr),
@@ -29,7 +32,7 @@ PLEGMA_EigSolver::PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslash
   }
   
   //start the diracOp
-  dOp = new quda::QUDA_dirac(dslashType);
+  dOp = new QUDA_dirac(dslashType);
 
   d_in = new PLEGMA_Vector<double>(DEVICE);
   d_out = new PLEGMA_Vector<double>(DEVICE);
@@ -48,7 +51,7 @@ PLEGMA_EigSolver::PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslash
   initEigSolver();
   computeEigVecs();
   computeEigVals();
-  mapEvenOddToFull();
+  for (int j = 0; j < p.NeV; ++j)  mapEvenOddToNormal(h_eigVecs+j*size_per_Vec*2,GK_localL);
   delete d_in;
   delete d_out;
   delete tmp1;
@@ -64,7 +67,7 @@ PLEGMA_EigSolver::~PLEGMA_EigSolver(){
 void PLEGMA_EigSolver::applyOperator(double *out, double *in){
   cudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,cudaMemcpyHostToDevice);
   checkCudaError();
-  if(!p.isACC) dOp->apply<quda::MdagM>(*d_out,*d_in);
+  if(!p.isACC) dOp->apply<MdagM>(*d_out,*d_in);
   else{
     double delta,theta;
     double sigma,sigma1,sigma_old;
@@ -76,7 +79,7 @@ void PLEGMA_EigSolver::applyOperator(double *out, double *in){
     sigma1 = -delta/theta;
     d1.real(sigma1/delta);
     d2.real(1.0);
-    dOp->apply<quda::MdagM>(*d_out,*d_in);
+    dOp->apply<MdagM>(*d_out,*d_in);
     cuBLAS::scal(size_per_Vec, d1.real(), d_out->D_elem() );
     cuBLAS::axpy(size_per_Vec, reinterpret_cast<double(&)[2]>(d2), d_in->D_elem(), d_out->D_elem());
     if(p.PolyDeg > 1){
@@ -87,7 +90,7 @@ void PLEGMA_EigSolver::applyOperator(double *out, double *in){
 	d1.real(2.0*sigma/delta);
 	d2.real(-d1.real()*theta);
 	d3.real(-sigma*sigma_old);
-	dOp->apply<quda::MdagM>(*d_out, *tmp2);
+	dOp->apply<MdagM>(*d_out, *tmp2);
 	plegma::axpbypcz(size_per_Vec,reinterpret_cast<double(&)[2]>(d3),tmp1->D_elem(),
 			 reinterpret_cast<double(&)[2]>(d2),tmp2->D_elem(),
 			 reinterpret_cast<double(&)[2]>(d1),d_out->D_elem());
@@ -225,7 +228,7 @@ void PLEGMA_EigSolver::computeEigVals(){
     double one[2] = {1.,0.};
     cudaMemcpy(tmp1->D_elem(),h_eigVecs+j*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
     checkCudaError();
-    dOp->apply<quda::MdagM>(*tmp2,*tmp1);
+    dOp->apply<MdagM>(*tmp2,*tmp1);
     std::complex<double> eval;
     std::complex<double> res;
     cuBLAS::dot(reinterpret_cast<double(&)[2]>(eval), size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), MPI_COMM_WORLD);
@@ -265,3 +268,4 @@ void PLEGMA_EigSolver::dumpEvalsVdagG5V(std::string filename){
     fclose(ptr);
   }
 }
+

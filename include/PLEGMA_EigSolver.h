@@ -78,7 +78,6 @@ class PLEGMA_EigSolver{
   void initEigSolver();
   void computeEigVecs();
   void computeEigVals();
-  void mapEvenOddToFull();
   void print();
  public:
   PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose=false);
