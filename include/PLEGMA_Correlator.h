@@ -67,6 +67,13 @@ namespace plegma {
     size_t getTotalSize() {
       return site_size*vol_size;
     }
+    int3 getSource3() {
+      int3 source;
+      source.x = source_position[0];
+      source.y = source_position[1];
+      source.z = source_position[2];
+      return source;
+    }
     std::array<int,4> getSource() {
       return source_position;
     }
