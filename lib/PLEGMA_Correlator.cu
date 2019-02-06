@@ -1,5 +1,4 @@
 #include <PLEGMA_Correlator.h>
-#include <hdf5.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
@@ -12,53 +11,60 @@ using namespace plegma;
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-initialize(CORR_TYPE CorrType, CORR_SPACE CorrSpace) {
-  if(isAlloc && corr_type==CorrType && corr_space==CorrSpace)
+initialize() {
+  if(isAlloc && site_size == getSiteSize())
     return;
-
   finalize();
-  corr_type=CorrType;
-  corr_space=CorrSpace;
-
-  switch(CorrSpace) {
-  case MOMENTUM_SPACE:
-    vol_size = HGC_localL[3]*HGC_Nmoms;
-    break;
-  case POSITION_SPACE:
-    vol_size = HGC_localVolume;
-    break;
-  default:
-    errorQuda("Corralator: CorrSpace not supported: %d\n", CorrSpace);
+  site_size = getSiteSize();
+  if(corr_space == MOMENTUM_SPACE) {
+    corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    corr_mom_space->checkAllocation(site_size);
+    corr = corr_mom_space->H_elem();
+    vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();
   }
+  else if(corr_space == POSITION_SPACE) {
+    corr_pos_space = new PLEGMA_Field<Float>(HOST, site_size, NO_GHOSTS);
+    corr = corr_pos_space->H_elem();
+    vol_size = corr_pos_space->Total_length();
+  }
+  else {
+    errorQuda("corr_space not supported by correlator");
+  }
+  isAlloc = true;
+}
 
-  n_groups = nGroups[CorrType];
-  n_flavors = nFlavors[CorrType];
-  n_comp = nComp[CorrType];
-  site_size = n_groups*n_flavors*n_comp;
-
-  bytes_total_length = vol_size*site_size*2*sizeof(Float);
-  corr = (Float*) malloc(bytes_total_length);
-  if(corr == NULL)
-     errorQuda("Correlator: Cannot allocate memory of size %d.", bytes_total_length);
-  else
-    isAlloc = true;
-  memset(corr,0,bytes_total_length);
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+finalize() {
+  if (isAlloc) {
+    if(corr_space == POSITION_SPACE)
+      delete corr_pos_space;
+    else if(corr_space == MOMENTUM_SPACE)	 
+      delete corr_mom_space;
+    else
+      errorQuda("corr_space not supported by correlator");
+  }
+  isAlloc = false;
 }
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       PLEGMA_Propagator<Float> &prop2, 
-	       int isource, CORR_SPACE corrSpace){
+	       int source[4]){
 
-  initialize(MESONS,corrSpace);
-  this->isource = isource;
+  setSource(source);
+  n_flavors = 2;
+  n_groups = N_MESONS;
+  shape = {};
+  flavors =  {"twop_meson_1", "twop_meson_2"};
+  groups =  {"pseudoscalar", "scalar", "g5g1", "g5g2", "g5g3", "g5g4", "g1", "g2", "g3", "g4"};
+  description = "";
   
+  initialize();
   propTex<Float> prop1Tex, prop2Tex;
   prop1Tex.tex = prop1.createTexObject();
   prop2Tex.tex = prop2.createTexObject();
-
-  printfQuda("contractMesons: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
 
   for(int it = 0 ; it < HGC_localL[3] ; it++) {
     contract_mesons(prop1Tex,prop2Tex,*this,it);
@@ -71,17 +77,26 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractBaryons(PLEGMA_Propagator<Float> &prop1,
-	       PLEGMA_Propagator<Float> &prop2, 
-	       int isource, CORR_SPACE corrSpace){
+		PLEGMA_Propagator<Float> &prop2, 
+		int source[4]){
 
-  initialize(BARYONS,corrSpace);
-  this->isource = isource;
-  
+  setSource(source);
+  n_flavors = 2;
+  n_groups = N_BARYONS;
+  shape = {16};
+  flavors = {"twop_baryon_1", "twop_baryon_2"};
+  groups =  {"nucl_nucl",
+#ifdef ALL_BARYONS
+	     "nucl_nucl2","nucl2_nucl","nucl2_nucl2","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
+	     "deltapp_deltamm_11","deltapp_deltamm_22","deltapp_deltamm_33"
+#endif
+  };
+  description = "1,g1,g2,g3,g4,g5,g5g1,g5g2,g5g3,g5g4,s12,s13,s23,s41,s42,s43";
+
+  initialize();
   propTex<Float> prop1Tex, prop2Tex;
   prop1Tex.tex = prop1.createTexObject();
   prop2Tex.tex = prop2.createTexObject();
-
-  printfQuda("contractMesons: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
 
   for(int it = 0; it < HGC_localL[3]; it++) {
     contract_baryons(prop1Tex,prop2Tex,*this,it);
@@ -90,56 +105,49 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop2.destroyTexObject(prop2Tex.tex);
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_wilsonLine(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
-				   su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas);
-template<typename Float>
-void PLEGMA_Correlator<Float>::contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
-		    int signProps, PLEGMA_Su3field<Float> &su3, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
-  initialize(THRP_PDFS,corrSpace);
-  
-  propTex<Float> bwdPropTex, fwdPropTex;
-  su3Tex<Float> sTex;
-  bwdPropTex.tex = bwdProp.createTexObject();
-  fwdPropTex.tex = fwdProp.createTexObject();
-  sTex.tex = su3.createTexObject();
-  this->isource = isource;
-  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
-
-  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
-
-  bwdProp.destroyTexObject(bwdPropTex.tex);
-  fwdProp.destroyTexObject(fwdPropTex.tex);
-  su3.destroyTexObject(sTex.tex);
-}
-
 template<typename FloatC,typename FloatA, typename FloatB>
-void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
-			      int it, std::vector<GAMMAS> gammas);
+void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
+			      int signProps, int it, std::vector<GAMMAS> gammas);
 template<typename Float>
-void PLEGMA_Correlator<Float>::contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
-							 int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
-  initialize(THRP_LOCAL,corrSpace);
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
+			  PLEGMA_Propagator<Float> &fwdProp,
+			  int signProps, std::vector<GAMMAS> gammas,
+			  int source[4], const char* flavor_string){
+  n_flavors = 1;
+  n_groups = 1;
+  shape = {gammas.size()};
+  setSource(source);
+  flavors = {flavor_string};
+  groups =  {"Local"};
+  description = getGammasString(gammas)+" / re,im";
+  initialize();
+
   propTex<Float> bwdPropTex, fwdPropTex;
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
-  this->isource = isource;
   if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
-  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
-  for(int it = 0; it < GK_localL[3]; it++) contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
+
+  for(int it = 0; it < GK_localL[3]; it++)
+    contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
+void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
+			     int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
+void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
+			    int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
 
 template<typename Float>
-static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge, int signProps,std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace,
+static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Propagator<Float> &bwdProp,
+				       PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
+				       int signProps, std::vector<GAMMAS> gammas,
 				       std::function<void(PLEGMA_Correlator<Float>&,propTex<Float>,
-							  propTex<Float>,int,su3Tex<Float>,int,int,std::vector<GAMMAS>)> funcContract){
+							  propTex<Float>,int,su3Tex<Float>,int,int,
+							  std::vector<GAMMAS>)> funcContract){
   // gauge should have the sign for the antiperiodic boundary conditions
 
   PLEGMA_Su3field<Float> gsu3(DEVICE);
@@ -163,26 +171,84 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
 }
 
 template<typename Float>
-void PLEGMA_Correlator<Float>::contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
-							int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace){
-  initialize(THRP_ONED,corrSpace);
-  this->isource=isource;
-  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
-  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,isource,corrSpace,contractPropOpProp_oneD<Float,Float,Float,Float>);
-}
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
+			 PLEGMA_Propagator<Float> &fwdProp,
+			 PLEGMA_Gauge<Float> &gauge,
+			 int signProps, std::vector<GAMMAS> gammas,
+			 int source[4], const char* flavor_string){
+  n_flavors = 1;
+  n_groups = 1;
+  shape = {N_DIMS, gammas.size()};
+  setSource(source);
+  flavors = {flavor_string};
+  groups =  {"OneD"};
+  description = getGammasString(gammas)+" / re,im";
+  initialize();
 
-template<typename Float>
-void PLEGMA_Correlator<Float>::contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
-		    int signProps, int isource, CORR_SPACE corrSpace){
-  initialize(THRP_NOETHER,corrSpace);
-  this->isource=isource;
-  std::vector<GAMMAS> gammas = {};
-  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,isource,corrSpace,contractPropOpProp_noe<Float,Float,Float,Float>);
+  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,
+				    contractPropOpProp_oneD<Float,Float,Float,Float>);
 }
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeFile(char *filename, FILE_WRITE_FORMAT format) {
+contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
+			PLEGMA_Propagator<Float> &fwdProp,
+			PLEGMA_Gauge<Float> &gauge,
+			int signProps, int source[4], const char* flavor_string){
+  n_flavors = 1;
+  n_groups = 1;
+  shape = {N_DIMS, gammas.size()};
+  setSource(source);
+  flavors = {flavor_string};
+  groups =  {"Noether"};
+  description = getGammasString(gammas)+" / re,im";
+  initialize();
+
+  std::vector<GAMMAS> gammas = {};
+  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,
+				    contractPropOpProp_noe<Float,Float,Float,Float>);
+}
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
+void contractPropOpProp_wilsonLine(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1,
+				   propTex<FloatB> prop2, int signProps,
+				   su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas);
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
+			       PLEGMA_Propagator<Float> &fwdProp,
+			       PLEGMA_Su3field<Float> &su3,
+			       int signProps, std::vector<GAMMAS> gammas,
+			       int source[4], const char* flavor_string){
+  n_flavors = 1;
+  n_groups = 1;
+  shape = {gammas.size()};
+  setSource(source);
+  flavors = {flavor_string};
+  groups =  {"wilsonLine"};
+  description = getGammasString(gammas)+" / re,im";
+  initialize();
+  
+  propTex<Float> bwdPropTex, fwdPropTex;
+  su3Tex<Float> sTex;
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  sTex.tex = su3.createTexObject();
+  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+
+  for(int it = 0; it < GK_localL[3]; it++)
+    contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
+
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+  su3.destroyTexObject(sTex.tex);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+writeFile(const char*filename, FILE_WRITE_FORMAT format) {
   if(format == ASCII_FORM) {
     printfQuda("Going to write file %s in ASCII format\n",filename);
     writeASCII(filename);
@@ -200,9 +266,9 @@ writeFile(char *filename, FILE_WRITE_FORMAT format) {
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeFile(PLEGMA_params &params) {
-  char *filename, *Qsq, *name2;
+  const char*filename, *Qsq, *name2;
   std::string ext="", name="";
-  if(params.CorrSpace==MOMENTUM_SPACE) asprintf(&Qsq,"Qsq%d_",params.Q_sq);
+  if(params.corr_space==MOMENTUM_SPACE) asprintf(&Qsq,"Qsq%d_",params.Q_sq);
   else asprintf(&Qsq,"");
   if(params.CorrFileFormat == ASCII_FORM) ext = ".dat";
   else if(params.CorrFileFormat == HDF5_FORM) ext = ".h5";
@@ -284,7 +350,7 @@ writeASCII(const char *filename_out) {
       int it = v/(GK_Nmoms*site_size);
       int imom = v/(site_size) - it*GK_Nmoms;
       int is = v%site_size;
-      int it_shift = (it + GK_sourcePosition[isource][3])%GK_totalL[3];
+      int it_shift = (it + source_position[3])%GK_totalL[3];
       int ipos = it_shift*GK_Nmoms*site_size + imom*site_size + is;
       if(corr_space == MOMENTUM_SPACE) {
 	if(is == 0)fprintf(ptr_out, "%d  %+d  %+d  %+d ", v/(HGC_Nmoms*site_size), HGC_moms[imom][0], HGC_moms[imom][1], HGC_moms[imom][2]);
@@ -300,9 +366,11 @@ writeASCII(const char *filename_out) {
   }  
 }
 
-static int getNDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace) {
-  int ndims = 1; //re-im
-  switch(CorrSpace) {
+template<typename Float>
+int PLEGMA_Correlator<Float>::
+getNDims() {
+  int ndims = shape.size()+1; // shape + re-im
+  switch(corr_space) {
   case MOMENTUM_SPACE:
     ndims += 2; // mom, t
     break;
@@ -310,62 +378,50 @@ static int getNDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace) {
     ndims += 4; // t, z, y, x
     break;
   default:
-    errorQuda("Corralator: CorrSpace not supported: %d\n", CorrSpace);
+    errorQuda("Corralator: corr_space not supported: %d\n", corr_space);
   }
-  ndims+=nDims[CorrType];
  
   return ndims;
 }
 
-static void fillDims(CORR_TYPE CorrType, CORR_SPACE CorrSpace, int ndims,
-		     hsize_t* dims, hsize_t* ldims, hsize_t* start, int *sourcePosition, bool shift_source) {
-  start[ndims-1] = 0; ldims[ndims-1] = dims[ndims-1] = 2; //re-im
-  switch(CorrType) {
-  case MESONS:
-    break;
-  case BARYONS:
-    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 16; //n-gamma
-    break;
-  case THRP_LOCAL:
-    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 16; //n-gamma
-    break;
-  case THRP_NOETHER:
-    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 4; //n-gamma
-    break;
-  case THRP_ONED:
-    start[ndims-2] = 0; ldims[ndims-2] = dims[ndims-2] = 16; //n-gamma
-    start[ndims-3] = 0; ldims[ndims-3] = dims[ndims-3] = 4; //n-dirs
-    break;
-  default:
-    errorQuda("Corralator: CorrType not supported: %d\n", CorrType);
-  }
-  switch(CorrSpace) {
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+fillDims(hsize_t* dims, hsize_t* ldims, hsize_t* start, bool shift_source) {
+  int i=0;
+  switch(corr_space) {
   case MOMENTUM_SPACE:
-    start[1] = 0; ldims[1] = dims[1] = HGC_Nmoms; //Nmoms
     start[0] = HGC_timeRank*HGC_localL[3]; //starting point
+    if(shift_source) {
+      start[0] = (start[0] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3];
+    }
     ldims[0] = HGC_localL[3]; //LT
     dims[0] = HGC_totalL[3]; //T
-    if(shift_source) {
-      start[0] = (start[0] + HGC_totalL[3] - sourcePosition[3]) % HGC_totalL[3];
-    }
+    start[1] = 0; ldims[1] = dims[1] = vol_size/HGC_totalL[3]; //Nmoms
+    i=2;
     break;
   case POSITION_SPACE:
-    for(int i=0; i<N_DIMS; i++) {
-      start[i] = comm_coords(default_topo)[i]*HGC_localL[i]; //starting
+    for(i=0; i<N_DIMS; i++) {
+      start[i] = comm_coords(HGC_default_topo)[i]*HGC_localL[i]; //starting
+      if(shift_source) {
+	start[i] = (start[i] + HGC_totalL[i] - source_position[i]) % HGC_totalL[i];
+      }
       ldims[i] = HGC_localL[i]; //LT
       dims[i] = HGC_totalL[i]; //T
-      if(shift_source) {
-	start[i] = (start[i] + HGC_totalL[i] - sourcePosition[i]) % HGC_totalL[i];
-      }
     }
     break;
   default:
-    errorQuda("Corralator: CorrSpace not supported: %d\n", CorrSpace);
+    errorQuda("Corralator: corr_space not supported: %d\n", corr_space);
   }
+  std::for_each(shape.begin(), shape.end(), [&] (int n) {
+					      start[i] = 0;
+					      ldims[i] = dims[i] = n;
+					      i++;}); //shape
+  
+  start[i] = 0; ldims[i] = dims[i] = 2; //re-im
 }
 
 /* Attribute writing */
-static void write_text_attribute(hid_t group_id,const char* attr_name, char* attr_value) {
+static void write_text_attribute(hid_t group_id,const char* attr_name, const char* attr_value) {
   hid_t attrdat_id = H5Screate(H5S_SCALAR);
   hid_t type_id = H5Tcopy(H5T_C_S1);
   H5Tset_size(type_id, strlen(attr_value));
@@ -500,7 +556,7 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(char *filename, PLEGMA_params &params) {
+writeHDF5(const char*filename, const char* top) {
   // only one per time writes in momentum space
   if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 ))
     return;
@@ -522,9 +578,9 @@ writeHDF5(char *filename, PLEGMA_params &params) {
     errorQuda("Corralator: corrSpace not supported: %d\n", corr_space);
   }
 
-  int ndims = getNDims(corr_type, corr_space);
+  int ndims = getNDims();
   hsize_t dims[ndims], ldims[ndims], start[ndims];
-  fillDims(corr_type, corr_space, ndims, dims, ldims, start, HGC_sourcePosition[isource], shift_source);
+  fillDims(dims, ldims, start, shift_source);
 
   hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
@@ -532,26 +588,25 @@ writeHDF5(char *filename, PLEGMA_params &params) {
   H5Pclose(fapl_id);
 
   char *group1_tag;
-  asprintf(&group1_tag,"conf_%04d",params.traj);
-  hid_t group1_id = H5Gcreate(file_id, group1_tag, H5P_DEFAULT, 
+  hid_t group1_id = H5Gcreate(file_id, top, H5P_DEFAULT, 
 			      H5P_DEFAULT, H5P_DEFAULT);
 
   char *group2_tag;
   asprintf(&group2_tag,"sx%02dsy%02dsz%02dst%02d",
-	   HGC_sourcePosition[isource][0],
-	   HGC_sourcePosition[isource][1],
-	   HGC_sourcePosition[isource][2],
-	   HGC_sourcePosition[isource][3]);
+	   source_position[0],
+	   source_position[1],
+	   source_position[2],
+	   source_position[3]);
   hid_t group2_id = H5Gcreate(group1_id, group2_tag, H5P_DEFAULT, 
 			      H5P_DEFAULT, H5P_DEFAULT);
 
   //- Source position
   char *src_pos;
   asprintf(&src_pos," [x, y, z, t] = [%02d, %02d, %02d, %02d]\0",
-	   HGC_sourcePosition[isource][0],
-	   HGC_sourcePosition[isource][1],
-	   HGC_sourcePosition[isource][2],
-	   HGC_sourcePosition[isource][3]);
+	   source_position[0],
+	   source_position[1],
+	   source_position[2],
+	   source_position[3]);
   write_text_attribute(group2_id, "source-position", src_pos);
   free(src_pos);
 

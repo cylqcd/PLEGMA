@@ -1,52 +1,11 @@
+#pragma once
 #include <PLEGMA_global.h>
 #include <PLEGMA_Su3field.h>
-#ifndef _PLEGMA_CORRELATOR_H
-#define _PLEGMA_CORRELATOR_H
+#include <PLEGMA_FT.h>
+#include <hdf5.h>
 
 namespace plegma {
 
-  const int N_MESONS=10;
-  // Information for correlators
-  enum CORR_TYPE{MESONS,BARYONS,THRP_LOCAL,THRP_NOETHER,THRP_ONED,THRP_PDFS,
-		 // add here
-                 N_CORR}; // N_CORR must be last
-  
-  enum BARYONS_TYPE{NtoN,
-#ifdef ALL_BARYONS
-		    NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,
-		    DELTA_3O2_1, DELTA_3O2_2, DELTA_3O2_3,
-#endif
-		    // add here
-		    N_BARYONS}; // N_BARYONS must be last 
-
-  const int nGroups[N_CORR] = { N_MESONS, N_BARYONS, 1, 1, 1, 1 };
-  const int nFlavors[N_CORR] = { 2, 2, 1, 1, 1, 1 };
-  const int nComp[N_CORR] = { 1, N_SPINS*N_SPINS, N_SPINS*N_SPINS, N_DIMS, N_SPINS*N_SPINS*N_DIMS, 1 };
-  const int nDims[N_CORR] = { 0, 1, 1, 1, 2, 1}; // KH: check it since I do not understand what is doing
-
-  // Names used for writing in HDF5
-  const static char *meson_groups[N_MESONS] = {"pseudoscalar", "scalar",
-					       "g5g1", "g5g2", "g5g3", "g5g4",
-					       "g1", "g2", "g3", "g4"};
-
-  const static char *meson_flavors[2] = {"twop_meson_1",
-					 "twop_meson_2"};
-
-  const static char *baryons_groups[N_BARYONS] = {"nucl_nucl",
-#ifdef ALL_BARYONS
-						  "nucl_nucl2","nucl2_nucl","nucl2_nucl2","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
-						  "deltapp_deltamm_11","deltapp_deltamm_22","deltapp_deltamm_33"
-#endif
-  };
-
-  const static char *baryons_flavors[2] = {"twop_baryon_1",
-					   "twop_baryon_2"};
-
-  const static char **corr_groups_names[N_CORR] = {meson_groups, baryons_groups, NULL};
-  const static char **corr_flavors_names[N_CORR] = {meson_flavors, baryons_flavors, NULL};
-
-
-  
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Propagator;
@@ -57,38 +16,50 @@ namespace plegma {
   ////////////////////////////// 
 
   template<typename Float>
-    class PLEGMA_Correlator {
+  class PLEGMA_Correlator {
   protected:
-    Float* corr;
+    // Allocation
     bool isAlloc;
-    
-    CORR_TYPE corr_type;
+    PLEGMA_Field<Float>* corr_pos_space;
+    PLEGMA_FT<Float>* corr_mom_space;
+    Float* corr;
+
+    // Correlator info
     CORR_SPACE corr_space;
-    int isource;
-
-    int n_groups;
-    int n_flavors;
-    int n_comp;
+    int Q2_max;
     size_t vol_size;
-    size_t site_size;
-    size_t bytes_total_length;
+    int n_flavors;
+    int n_groups;
+    std::vector<int> shape;
+    // Allocated site_size = n_flavors * n_groups * prod(shape) (slowest to fastest running index)
+    int site_size;
+    std::array<int,4> source_position;
 
-    void change_order_for_HDF5(Float* corrHDF5);
-    void initialize(CORR_TYPE CorrType, CORR_SPACE CorrSpace);
-    void finalize() {
-      if (isAlloc) free(corr);
-      isAlloc = 0;
-    }
+    // Writing informations
+    std::vector<std::string> flavors;
+    std::vector<std::string> groups;
+    std::string description;
 
+    void initialize();
+    void finalize();
+    
+    // For HDF5 file writing
+    int getNDims();
+    void fillDims(hsize_t* dims, hsize_t* ldims, hsize_t* start, bool shift_source);
+    
   public:
-    PLEGMA_Correlator(){isAlloc = 0;}
-    PLEGMA_Correlator(CORR_TYPE CorrType, CORR_SPACE CorrSpace){isAlloc = 0; initialize(CorrType, CorrSpace);};
+    PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, int Q2_max = 64):
+      isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
+      Q2_max(Q2_max)
+    {}
     ~PLEGMA_Correlator(){finalize();}
     CORR_SPACE getCorrSpace() {
       return corr_space;
     }
     size_t getSiteSize() {
-      return site_size;
+      int size=n_flavors*n_groups;
+      std::for_each(shape.begin(), shape.end(), [&] (int n) {size *= n;});
+      return size;
     }
     size_t getVolSize() {
       return vol_size;
@@ -96,34 +67,48 @@ namespace plegma {
     size_t getTotalSize() {
       return site_size*vol_size;
     }
-    int getIdSource() {
-      return isource;
+    std::array<int,4> getSource() {
+      return source_position;
+    }
+    void setSource(int source[4]) {
+      for ( int i = 0; i < 4; i++ )
+	source_position[i] = source[i];
     }
     Float* getCorr() {
       return corr;
     }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2, 
-			int isource, CORR_SPACE CorrSpace);
+			int source[4]);
 
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2, 
-			 int isource, CORR_SPACE CorrSpace);
+			 int source[4]);
 
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
-				   int signProps,std::vector<GAMMAS> gammas,
-				   int isource, CORR_SPACE corrSpace);
-    void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
-				  int signProps, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace);
-    void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
-				  int signProps, int isource, CORR_SPACE corrSpace);
-    void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp, PLEGMA_Propagator<Float> &fwdProp,
-				  int signProps, PLEGMA_Su3field<Float> &su3, std::vector<GAMMAS> gammas, int isource, CORR_SPACE corrSpace);
-    void writeFile(PLEGMA_params &params);
+				   int signProps, std::vector<GAMMAS> gammas,
+				   int source[4], const char* flavor_string);
+    
+    void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
+				  PLEGMA_Propagator<Float> &fwdProp,
+				  PLEGMA_Gauge<Float> &gauge,
+				  int signProps, std::vector<GAMMAS> gammas,
+				  int source[4], const char* flavor_string);
+    
+    void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
+				 PLEGMA_Propagator<Float> &fwdProp,
+				 PLEGMA_Gauge<Float> &gauge,
+				 int signProps, int source[4], const char* flavor_string);
+
+    void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
+					PLEGMA_Propagator<Float> &fwdProp,
+					PLEGMA_Su3field<Float> &su3,
+					int signProps, std::vector<GAMMAS> gammas,
+					int source[4], const char* flavor_string);
+
+    void writeFile(const char *filename, FILE_WRITE_FORMAT format);
     void writeASCII(const char *filename);
-    void writeHDF5(char *filename);
+    void writeHDF5(const char *filename, const char* top = "/");
   };
 }
-
-#endif
