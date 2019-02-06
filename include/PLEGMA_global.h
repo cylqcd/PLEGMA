@@ -49,6 +49,22 @@ namespace plegma {
   template<> inline MPI_Datatype MPI_Type<double>(double a) { return MPI_DOUBLE; }
   template<> inline MPI_Datatype MPI_Type<double*>(double* a) { return MPI_DOUBLE; }
 
+  // Global variable for mom list
+  struct tex_mom_list {
+    size_t Nmoms;
+    cudaTextureObject_t tex;
+    inline __device__ int4 get(size_t i){
+      return tex1Dfetch<int4>(tex,i);
+    };
+    void free(){
+      cudaResourceDesc desc;
+      cudaGetTextureObjectResourceDesc(&desc, tex);
+      cudaFree(desc.res.linear.devPtr);
+      cudaDestroyTextureObject(tex);
+      checkCudaError();
+    };
+  };
+  
   // Enumerations
   enum COMPLEX{REAL,IMAG};
   enum SOURCE_T{UNITY,RANDOM};
@@ -120,6 +136,7 @@ namespace plegma {
   
 //These generates global constants either on host (global_host) only or also on device (global_both). It will append respectively HGC_ and DGC_.
 #ifndef ALLOCATE
+  
   extern global_vars globals;
 #define global_host(dtype, name, ...)					\
   extern dtype HGC_##name __VA_ARGS__;					\
@@ -129,7 +146,9 @@ namespace plegma {
   extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated));	\
   extern __constant__ dtype DGC_##name __VA_ARGS__;			\
   extern __constant__ dtype c_##name __VA_ARGS__  __attribute__((deprecated)); // This line should be removed
+  
 #else
+  
   global_vars globals;
 #define global_host(dtype, name, ...)					\
   dtype HGC_##name __VA_ARGS__;						\
@@ -141,6 +160,7 @@ namespace plegma {
   __constant__ dtype DGC_##name __VA_ARGS__;				\
   __constant__ dtype& c_##name __VA_ARGS__ = DGC_##name;		\
   globals.add(#name, HGC_##name, DGC_##name);
+  
 #endif
   
   // Global variables
@@ -148,6 +168,7 @@ namespace plegma {
   global_host(float, deviceMemory);
 
   // variables visible on both host and device
+  global_both(tex_mom_list, moms);
   global_both(size_t, stride);
   global_both(size_t, stride_spatial);
   global_both(size_t, localVolume);
@@ -179,6 +200,7 @@ namespace plegma {
   // for cublas use
   global_host(cublasHandle_t, cublas_handle);
 }
+using namespace plegma; // TODO: Maybe this one shouldn't be here.. But helps avoiding missing namespace.
 
 #undef global_both
 #undef global_host

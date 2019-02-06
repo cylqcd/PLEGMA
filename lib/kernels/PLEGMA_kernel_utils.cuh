@@ -397,7 +397,9 @@ namespace plegma {
   }
 
   template<typename Float>
-  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3], int padding = 0, int sign = -1){
+  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in,
+						   Float2<Float> *shared_cache, int n_comp,
+						   int sid3D, int sp[3], int padding = 0, int sign = -1){
     int cacheIndex = threadIdx.x;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
@@ -407,11 +409,9 @@ namespace plegma {
     
     Float phase;
     Float2<Float> expon;
-    for(int imom = 0 ; imom < DGC_Nmoms ; imom++){
-      phase = 0.;
-      #pragma unroll
-      for(int i=0; i<3; i++)
-	phase += ((Float) (DGC_moms[imom][i]*id[i]))/((Float) DGC_totalL[i]);
+    for(size_t imom = 0 ; imom < DGC_moms.Nmoms ; imom++){
+      int4 momv = DGC_moms.get(imom);
+      phase = momv.x/((Float) DGC_totalL[0]) + momv.y/((Float) DGC_totalL[1]) + momv.z/((Float) DGC_totalL[2]);
       phase *=  2. * PI;
       expon.x = cos(phase);
       expon.y = sign*sin(phase);
@@ -606,15 +606,15 @@ namespace plegma {
     
     //creating array from fastest to slowest
     for(int i = 0; i < N_DIMS; ++i){
-      TZYX_local[i] = (sid/skipvol) % c_localL[i];
-      skipvol *= c_localL[i];
+      TZYX_local[i] = (sid/skipvol) % DGC_localL[i];
+      skipvol *= DGC_localL[i];
       //TZYX_global[i] = TZYX_local[i];
     }
     for(int i = 0; i < N_DIMS; ++i)
-      TZYX_global[i] = TZYX_local[i] + c_procPosition[i] * c_localL[i];
+      TZYX_global[i] = TZYX_local[i] + DGC_procPosition[i] * DGC_localL[i];
     
     for(int i = N_DIMS-1; i>=0; i--)
-      globid = globid * c_totalL[i] + TZYX_global[i];
+      globid = globid * DGC_totalL[i] + TZYX_global[i];
 
     return globid;
   }
