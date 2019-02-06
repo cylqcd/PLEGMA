@@ -39,6 +39,7 @@ struct  EigSolverParams{
   double amax; // High boundary for polynomial accelator
 #if defined(HAVE_ARPACK)
   std::string spectrumPart; // available options for arpack are (SR,LR)
+  std::string logFile; // path to the eigensolver log file
   double tol;
   int maxIters;
   int mode; 
@@ -53,10 +54,10 @@ class PLEGMA_EigSolver{
   EigSolverParams p;
   bool verbose;
   int field_length;
-  size_t size_per_Vec;
-  size_t size_NeV;
-  size_t size_NkV;
-  size_t size_total;
+  int size_per_Vec;
+  int size_NeV;
+  int size_NkV;
+  int size_total;
   size_t bytes_per_Vec;
   size_t bytes_NeV;
   size_t bytes_NkV;
@@ -64,22 +65,25 @@ class PLEGMA_EigSolver{
   
   double *h_eigVecs;
   double *h_eigVals;
-
+  
   quda::QUDA_dirac *dOp;
 
   PLEGMA_Vector<double> *d_in;
   PLEGMA_Vector<double> *d_out;
   PLEGMA_Vector<double> *tmp1;
   PLEGMA_Vector<double> *tmp2;
-
+  std::vector< std::tuple<double,double,double,int> > evalsOrdered; // real, imag, residual, orderInd
+  
   void applyOperator(double *out, double *in);
   void initEigSolver();
   void computeEigVecs();
   void computeEigVals();
+  void mapEvenOddToFull();
   void print();
  public:
   PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose=false);
   virtual ~PLEGMA_EigSolver();
   void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
+  void dumpEvalsVdagG5V(std::string filename);
 };
 #endif /* PLEGMA_EIGSOLVER_H */
