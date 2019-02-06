@@ -22,11 +22,11 @@ namespace plegma {
     int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[3] : 1; 
     bool accum;
     void createMom();
-    void checkAllocation(int newDof);
     void zero();
   public:
     PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); // allow also for a transformation in 4D
     ~PLEGMA_FT();
+    void checkAllocation(int newDof);
     int Nmoms() const{ return momList.size();}
     VVint MomList() const{ return momList;}
     int Dims() const{return dims;}
