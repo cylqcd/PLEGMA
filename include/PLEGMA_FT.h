@@ -27,16 +27,22 @@ namespace plegma {
     PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); // allow also for a transformation in 4D
     ~PLEGMA_FT();
     void checkAllocation(int newDof);
+
     int Nmoms() const{ return momList.size();}
     VVint MomList() const{ return momList;}
     int Dims() const{return dims;}
     int DimT() const{return dimT;}
+    
     Float* H_elem() const{return h_elem;}
-    void writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift = 0);
+    tex_mom_list getTexMomList();
+    
     void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
     void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction
     void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
+    
     void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
     void scale(Float a);
-  };
+
+    void writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift = 0);
+};
 }

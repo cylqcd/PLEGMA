@@ -73,6 +73,47 @@ void PLEGMA_FT<Float>::checkAllocation(int newDof){
   zero();
 }
 
+tex_mom_list getTexMomList() {
+  tex_mom_list tex_mom;
+  tex_mom.Nmoms=Nmoms();
+  cudaTextureObject_t tex;
+  cudaChannelFormatDesc desc;
+  memset(&desc, 0, sizeof(cudaChannelFormatDesc));
+  desc.f = cudaChannelFormatKindSigned;
+  desc.x = 8*4;
+  desc.y = 8*4;
+  desc.z = 8*4;
+  desc.w = dims==4 ? 8*4 : 0;
+
+  cudaResourceDesc resDesc;
+  memset(&resDesc, 0, sizeof(resDesc));
+  resDesc.resType = cudaResourceTypeLinear;
+  resDesc.res.linear.desc = desc;
+
+  size_t bytes = tex_mom.Nmoms*dims*sizeof(int);
+  void * devPtr;
+  int * hostPtr = (int *) malloc(bytes);
+  cudaMalloc(&devPtr, bytes);
+  for(int i=0; int i<tex_mom.Nmoms; i++) {
+    for(int j=0; j<dims; j++) {
+      hostPtr[i*dims+j]=momList[i][j];
+    }
+  }
+  cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
+  free(hostPtr);
+  resDesc.res.linear.devPtr = devPtr;
+  resDesc.res.linear.sizeInBytes = bytes;
+
+  cudaTextureDesc texDesc;
+  memset(&texDesc, 0, sizeof(texDesc));
+  texDesc.readMode = cudaReadModeElementType;
+
+  cudaCreateTextureObject(&tex_mom.tex, &resDesc, &texDesc, NULL);
+  checkCudaError();
+  return tex_mom;
+}
+    
+
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   errorQuda("Not implemented yet");
