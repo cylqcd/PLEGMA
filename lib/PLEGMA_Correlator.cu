@@ -21,6 +21,11 @@ initialize() {
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();
+    if(HGC_moms.Nmoms>0) {
+      HGC_moms.free();
+    }
+    HGC_moms = corr_mom_space->getTexMomList();
+    cudaMemcpyToSymbol((void*) &DGC_moms, (void*) &HGC_moms, sizeof(tex_mom_list));
   }
   else if(corr_space == POSITION_SPACE) {
     corr_pos_space = new PLEGMA_Field<Float>(HOST, site_size, NO_GHOSTS);

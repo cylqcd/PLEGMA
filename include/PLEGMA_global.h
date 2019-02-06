@@ -62,6 +62,7 @@ namespace plegma {
       cudaFree(desc.res.linear.devPtr);
       cudaDestroyTextureObject(tex);
       checkCudaError();
+      Nmoms=0;
     };
   };
   
