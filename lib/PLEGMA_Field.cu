@@ -28,52 +28,15 @@ using namespace plegma;
 // Propagtor3D: as above, but with sinks only at one timeslice.
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false)
-
-{
+PLEGMA_Field<Float>::initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG ghost_flag) {
   if(HGC_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
 
-  switch(classT){
-    case FIELD:
-      field_length = 1;
-      total_length = HGC_localVolume;
-      break;
-    case SU3FIELD:
-      field_length = N_COLS * N_COLS;
-      total_length = HGC_localVolume;
-      break;
-    case GAUGE:
-      field_length = N_DIMS * N_COLS * N_COLS;
-      total_length = HGC_localVolume;
-      break;    
-    case VECTOR:
-      field_length = N_SPINS * N_COLS;
-      total_length = HGC_localVolume;
-      break;
-    case PROPAGATOR:
-      field_length = N_SPINS * N_COLS * N_SPINS * N_COLS;
-      total_length = HGC_localVolume;
-      break;
-    case PROPAGATOR3D:
-      field_length = N_SPINS * N_COLS * N_SPINS * N_COLS;
-      total_length = HGC_localVolume/HGC_localL[3];
-      break;
-    case VECTOR3D:
-      field_length = N_SPINS * N_COLS;
-      total_length = HGC_localVolume/HGC_localL[3];
-      break;
-    case QLOOPS:
-      field_length = N_SPINS * N_SPINS;
-      total_length = HGC_localVolume;
-      break;
-  }
+  field_length = field_l;
+  total_length = vol_l;
+  
   ghost_length = 0;
   ghost_corner_length = 0;
-
-
 
   for(int i = 0 ; i < N_DIMS ; i++){
     if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i];
@@ -100,6 +63,50 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   }
   else{
     errorQuda("Error not supported %d\n",alloc_flag);
+  }
+}
+
+template<typename Float>
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag):
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
+  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM),
+{
+  initialize(alloc_flag, site_size, HGC_localVolume, ghost_flag);
+}
+
+template<typename Float>
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
+  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(classT)
+{
+  if(HGC_init_PLEGMA_flag == false) 
+    errorQuda("You must initialize init_PLEGMA first");
+
+  switch(classT){
+    case SCALAR:
+      initialize(alloc_flag, 1, HGC_localVolume, ghost_flag);
+      break;
+    case SU3FIELD:
+      initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume, ghost_flag);
+      break;
+    case GAUGE:
+      initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume, ghost_flag);
+      break;    
+    case VECTOR:
+      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume, ghost_flag);
+      break;
+    case PROPAGATOR:
+      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume, ghost_flag);
+      break;
+    case PROPAGATOR3D:
+      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      break;
+    case VECTOR3D:
+      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      break;
+    case QLOOPS:
+      initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume, ghost_flag);
+      break;
   }
 }
 

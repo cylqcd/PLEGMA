@@ -38,6 +38,7 @@ namespace plegma {
     bool isAllocHost;
     bool isAllocDevice;
 
+    CLASS_ENUM field_type;
     
     void create_host();
     void destroy_host();
@@ -46,6 +47,7 @@ namespace plegma {
 
   public:
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS);
     virtual ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();
