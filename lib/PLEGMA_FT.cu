@@ -73,10 +73,10 @@ void PLEGMA_FT<Float>::checkAllocation(int newDof){
   zero();
 }
 
-tex_mom_list getTexMomList() {
+template<typename Float>
+tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   tex_mom_list tex_mom;
   tex_mom.Nmoms=Nmoms();
-  cudaTextureObject_t tex;
   cudaChannelFormatDesc desc;
   memset(&desc, 0, sizeof(cudaChannelFormatDesc));
   desc.f = cudaChannelFormatKindSigned;
@@ -94,7 +94,7 @@ tex_mom_list getTexMomList() {
   void * devPtr;
   int * hostPtr = (int *) malloc(bytes);
   cudaMalloc(&devPtr, bytes);
-  for(int i=0; int i<tex_mom.Nmoms; i++) {
+  for(int i=0; i<tex_mom.Nmoms; i++) {
     for(int j=0; j<dims; j++) {
       hostPtr[i*dims+j]=momList[i][j];
     }

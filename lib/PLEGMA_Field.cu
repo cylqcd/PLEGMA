@@ -28,7 +28,8 @@ using namespace plegma;
 // Propagtor3D: as above, but with sinks only at one timeslice.
 
 template<typename Float>
-PLEGMA_Field<Float>::initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG ghost_flag) {
+void PLEGMA_Field<Float>::
+initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG ghost_flag) {
   if(HGC_init_PLEGMA_flag == false) 
     errorQuda("You must initialize init_PLEGMA first");
 
@@ -69,7 +70,7 @@ PLEGMA_Field<Float>::initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM),
+  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
 {
   initialize(alloc_flag, site_size, HGC_localVolume, ghost_flag);
 }
@@ -552,8 +553,6 @@ void PLEGMA_Field<Float>::copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where){
   if(bytes_total_length != f.Bytes_total()) errorQuda("Size of the fields does not match\n");
   if(field_length != f.Field_length()) errorQuda("The d.o.f of the fields does not match\n");
   switch(where){
-  case(NONE):
-    break;
   case(HOST):
     if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
     memcpy(h_elem, f.H_elem(), bytes_total_length);
