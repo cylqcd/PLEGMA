@@ -5,7 +5,7 @@ template<typename Float>
 static __global__ void contractG5_bilinear_kernel(Float *qLoops, vectorTex<Float> x_l,
 						  vectorTex<Float> x_r, Float accum_sign) {
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   Float2<Float> vl[N_SPINS][N_COLS];
   Float2<Float> vl_dag_g5[N_SPINS][N_COLS];
@@ -25,7 +25,7 @@ static __global__ void contractG5_bilinear_kernel(Float *qLoops, vectorTex<Float
 #pragma unroll
       for(int c1 = 0 ; c1 < N_COLS ; c1++)
 	accum = accum + vl_dag_g5[mu][c1] * vr[nu][c1];
-      int ind=sid+DGC_threads*(nu + mu*N_SPINS);
+      int ind=sid+DGC_localVolume*(nu + mu*N_SPINS);
       qLoops2[ind] = qLoops2[ind] + accum_sign*accum;
     }
 }

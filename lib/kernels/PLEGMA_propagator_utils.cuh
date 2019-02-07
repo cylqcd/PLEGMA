@@ -7,7 +7,7 @@ static __global__ void apply_gamma_prop_kernel(Float *inOut, GAMMAS r){
   prop2<Float> prop(inOut);
   Float2<Float> Sin[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<Float> Sout[N_SPINS][N_SPINS][N_COLS][N_COLS];
-  if (sid >= c_threads) return;
+  if (sid >= DGC_localVolume) return;
   prop.get(Sin,sid);
   gammaProp<LF>(Sout,Sin,r);
   prop.set(Sout,sid);
@@ -16,7 +16,7 @@ static __global__ void apply_gamma_prop_kernel(Float *inOut, GAMMAS r){
 template<typename Float>
 static void apply_gamma_prop(LEFTRIGHT LR, Float *inOut, GAMMAS r){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   switch(LR){
   case(LEFT):
     apply_gamma_prop_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
@@ -33,7 +33,7 @@ template<typename Float>
 static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> *inOut2 = (Float2<Float> *) inOut;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
    
   #pragma unroll
   for(int nu = 0 ; nu < N_SPINS ; nu++)
@@ -65,7 +65,7 @@ template<typename Float>
 static __global__ void conjugate_propagator_kernel(Float *inOut){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++)
@@ -84,7 +84,7 @@ template<typename Float>
 static __global__ void apply_boundaries_kernel(Float *inOut, int t0){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
   int t = (sid/DGC_localL[0]/DGC_localL[1]/DGC_localL[2]) % DGC_localL[3];
   t += DGC_procPosition[3] * DGC_localL[3];
 
@@ -110,7 +110,7 @@ template<typename Float>
 static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   Float2<Float> P[4][4], PT[4][4], sign_imag_unit(sign*1., IMAG),
     *inOut2 = (Float2<Float> *) inOut;

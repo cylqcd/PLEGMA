@@ -6,7 +6,7 @@ template<typename FloatA,typename FloatB>
 static __global__ void Udag_kernel(FloatA *A, FloatB *B){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
@@ -23,7 +23,7 @@ template<typename FloatA,typename FloatB, typename FloatC>
 static __global__ void UxU_kernel(FloatA *A, FloatB *B, FloatC *C){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
@@ -44,7 +44,7 @@ template<typename FloatA,typename FloatB, typename FloatC>
 static __global__ void UxUdag_kernel(FloatA *A, FloatB *B, FloatC *C){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
@@ -68,7 +68,7 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
-  if(sid < DGC_threads){
+  if(sid < DGC_localVolume){
   Float2<FloatU> lU[N_COLS][N_COLS];
   su3_2<FloatU> RU(U);
   RU.get(lU,sid);
@@ -88,7 +88,7 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
 template<typename FloatA,typename FloatB>
 static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatB> lB[N_COLS][N_COLS];
   su3_2<FloatA> RA(A);

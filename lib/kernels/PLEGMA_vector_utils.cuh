@@ -11,7 +11,7 @@ template<typename FloatOut,typename FloatIn>
 static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   #pragma unroll
   for(int mu = 0 ; mu < 4 ; mu++){
@@ -27,7 +27,7 @@ static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
 
 template<typename FloatOut,typename FloatIn>
 static void castVector(FloatOut *out, FloatIn *in){
-  ProfileStruct ps(GK_localVolume);
+  ProfileStruct ps(HGC_localVolume);
   tuneAndRun(ps, "castVector_kernel", castVector_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in);
   checkCudaError();
 }
@@ -39,7 +39,7 @@ static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
   vector2<Float> vec(inOut);
   Float2<Float> Sin[N_SPINS][N_COLS];
   Float2<Float> Sout[N_SPINS][N_COLS]; 
-  if (sid >= c_threads) return;
+  if (sid >= DGC_localVolume) return;
   vec.get(Sin,sid);
   gammaV<LF>(Sout,Sin,r);
   vec.set(Sout,sid);
@@ -64,7 +64,7 @@ template<typename Float>
 static __global__ void apply_gamma5_vector_kernel(Float *inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> *inOut2 = (Float2<Float> *) inOut;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
     
   #pragma unroll
   for(int c1 = 0 ; c1 < N_COLS ; c1++){
@@ -95,7 +95,7 @@ template<typename Float>
 static __global__ void conjugate_vector_kernel(Float *inOut){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_COLS ; i++)
@@ -113,7 +113,7 @@ void conjugate_vector(Float *inOut){
 template<typename Float>
 __inline__ __global__ void scale_vector_kernel(Float a, Float* inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_COLS ; i++) {
@@ -139,7 +139,7 @@ void norm2_device(Float norm, Float* in){
 template<typename FloatIn, typename FloatOut, bool outEvenB, bool outOddB> 
 static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *outOdd){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads/2) return;
+  if (sid >= DGC_localVolume/2) return;
 
   // take indices on 4d lattice
   int half_stride = DGC_stride/2;
@@ -206,7 +206,7 @@ template<typename FloatOut, typename FloatIn, bool inEvenB, bool inOddB>
 static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, FloatIn *inOdd){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads/2) return;
+  if (sid >= DGC_localVolume/2) return;
 
   int half_stride = DGC_stride/2;
   int latt_coord = 2*sid;

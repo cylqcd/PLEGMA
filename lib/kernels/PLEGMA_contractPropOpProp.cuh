@@ -14,7 +14,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
 
   Float2<FloatC> R[N_SPINS][N_SPINS];
   Float2<FloatC> noeV;  
-  if (sid < c_threads/c_localL[3]){
+  if (sid < DGC_localVolume/DGC_localL[3]){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     if(dir < 0){ // either local or Wilson line
@@ -61,7 +61,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
   for(int iop = 0; iop < listGammas.size; iop++){
     int opId=listGammas.array[iop];
     accum.x=0.;accum.y=0.;
-    if (sid < c_threads/c_localL[3]){
+    if (sid < DGC_localVolume/DGC_localL[3]){
       if(isCons) accum = 0.25*noeV;
       else accum = (dir<0 ? 1. : 0.25) * ( (signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
     }
@@ -72,7 +72,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
       fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos,listGammas.size-1,+1);
     }
     else{
-      if (sid < c_threads/c_localL[3])
+      if (sid < DGC_localVolume/DGC_localL[3])
 	for(int iop = 0; iop < listGammas.size; iop++)
 	  block2[sid*listGammas.size +iop] = accum;
     }
@@ -86,14 +86,14 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
     errorQuda("Error the container of gamma matrices cannot be zero");
   if(gammas.size() > 16)
     errorQuda("Error maximum number of gamma matrices is 16");
-  int SpVol = GK_localVolume/GK_localL[3];
+  int SpVol = HGC_localVolume/HGC_localL[3];
   FloatC *d_partial_block = NULL;
   int isource = corr.getIdSource();
   int site_size=2*gammas.size();
   size_t volume;
   size_t size;
   if(runFT==true){
-    volume = GK_Nmoms;
+    volume = HGC_Nmoms;
     size = site_size*volume;
   } else {
     volume = SpVol;
@@ -122,8 +122,8 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   checkCudaError();
   contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT, isLink, dir,isCons>
     <<<gridDim,blockDim>>>(d_partial_block, prop1, prop2, su3, listGammas, it,
-			   GK_sourcePosition[isource][0], GK_sourcePosition[isource][1],
-			   GK_sourcePosition[isource][2], signProps);
+			   HGC_sourcePosition[isource][0], HGC_sourcePosition[isource][1],
+			   HGC_sourcePosition[isource][2], signProps);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
@@ -141,7 +141,7 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
 	reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
 	reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
       }
-    MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
+    MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
     free(reduction);
   }
   

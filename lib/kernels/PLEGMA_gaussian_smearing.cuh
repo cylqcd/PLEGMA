@@ -5,7 +5,7 @@ __global__ void gaussian_smearing_kernel(FloatOut* out,
 					 vectorTex<FloatIn> vecInTex, 
 					 gaugeTex<FloatGauge> gaugeTex){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   Float2<FloatGauge> G[N_COLS][N_COLS];
   Float2<FloatIn> S[N_SPINS][N_COLS], P1[N_SPINS][N_COLS], P2[N_SPINS][N_COLS];

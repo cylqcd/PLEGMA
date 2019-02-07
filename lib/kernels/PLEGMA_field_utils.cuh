@@ -8,7 +8,7 @@ using namespace plegma;
 template<typename FloatOut,typename FloatIn1, typename FloatIn2, typename Float>
 static __global__ void xpby_kernel(FloatOut *z, FloatIn1 *x, FloatIn2 *y, Float beta, int length_field){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
   generic2<FloatOut> Rz(z);
   generic2<FloatIn1> Ry(y);
   generic2<FloatIn2> Rx(x);
@@ -155,7 +155,7 @@ __global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field,
 
       if( tmp  < ((Float)order+1.0)/(Float)n ){
 
-        inout2[sid + i*(c_threads)] = rootsunity<n>(order);
+        inout2[sid + i*(DGC_localVolume)] = rootsunity<n>(order);
         break;
       }
     }
@@ -231,7 +231,7 @@ struct HadCol{
 template<typename Float>
 static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   // make sure before that is not a 3D field
-  int V = GK_localVolume;
+  int V = HGC_localVolume;
   thrust::device_ptr<int> th_c(d_colors);
   thrust::device_ptr<Float2<Float> > th_e((Float2<Float>*)d_elems);
   typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<Float2<Float> > > tplDIntDFl2;

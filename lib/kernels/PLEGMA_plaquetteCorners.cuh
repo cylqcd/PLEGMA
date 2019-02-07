@@ -20,7 +20,7 @@ static __global__ void calculatePlaquetteCorners_kernel(gaugeTex<FloatG> gaugeTe
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
-  if (sid < DGC_threads) {
+  if (sid < DGC_localVolume) {
 
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];

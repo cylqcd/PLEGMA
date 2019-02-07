@@ -32,7 +32,7 @@ __global__ void random_init_kernel(cuRNGState *state, int seed, int offset){
 void launch_random_init( cuRNGState *state, int seed, int offset, int rng_size){
     
     dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
-    //printfQuda("Number of volume[3]: %d\n", GK_localVolume * field_deg_free);
+    //printfQuda("Number of volume[3]: %d\n", HGC_localVolume * field_deg_free);
     dim3 gridDim( (rng_size + blockDim.x -1)/blockDim.x , 1 , 1);
     random_init_kernel<<<gridDim,blockDim>>>(state, seed, offset );
     cudaDeviceSynchronize();

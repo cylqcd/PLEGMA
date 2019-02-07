@@ -6,7 +6,7 @@ __global__ void covD_kernel(FloatOut* out,
 			    vectorTex<FloatIn> vTex, 
 			    gaugeTex<FloatGauge> gTex, int dirOr){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
   
   Float2<FloatGauge> G[N_COLS][N_COLS];
   Float2<FloatIn> Sin[N_SPINS][N_COLS];

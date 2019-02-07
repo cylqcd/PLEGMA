@@ -3,7 +3,7 @@ using namespace plegma;
 template<typename Float>
 static __global__ void su3Projection_kernel(Float* S){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   su3_2<Float> RS(S);
   Float2<Float> M[N_COLS][N_COLS] , H[N_COLS][N_COLS] , U[N_COLS][N_COLS], v[N_COLS][N_COLS] , vr[N_COLS][N_COLS];

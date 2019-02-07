@@ -5,7 +5,7 @@ template< typename Float, typename FloatGauge>
 __global__ void scale_dir_wise_kernel(FloatGauge* gauge, Float2<Float> scale[N_DIMS]){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   gauge2<FloatGauge> G(gauge);
 #pragma unroll
