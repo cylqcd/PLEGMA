@@ -67,7 +67,11 @@ namespace plegma {
     size_t Nmoms;
     cudaTextureObject_t tex;
     inline __device__ int4 get(size_t i){
+#ifdef __NVCC__
       return tex1Dfetch<int4>(tex,i);
+#else
+      return make_int4(0,0,0,0);
+#endif
     };
     void free(){
       cudaResourceDesc desc;
