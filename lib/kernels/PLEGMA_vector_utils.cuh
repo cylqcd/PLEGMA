@@ -46,7 +46,7 @@ static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
 }
 
 template<typename Float>
-static void apply_gamma_vector(LEFTRIGHT LF,Float *inOut,GAMMAS r){
+static void apply_gamma_vector(LEFTRIGHT LR,Float *inOut,GAMMAS r){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   switch(LR){
