@@ -2,8 +2,9 @@
 using namespace plegma;
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
 __global__ void gaussian_smearing_kernel(FloatOut* out,
-					 vectorTex<FloatIn> vecInTex, 
-					 gaugeTex<FloatGauge> gaugeTex){
+					 vectorTex<FloatIn> vecInTex,
+					 gaugeTex<FloatGauge> gaugeTex,
+					 FloatOut alpha){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_localVolume) return;
 
@@ -40,18 +41,18 @@ __global__ void gaussian_smearing_kernel(FloatOut* out,
   vecInTex.get(S,sid);
 
   double normalize;
-  normalize = 1./(1. + 6. * DGC_alphaGauss);
+  normalize = 1./(1. + 6. * alpha);
 
   #pragma unroll
     for(int mu=0; mu<N_SPINS; mu++) 
       for(int c=0; c<N_COLS; c++)
-	out2[(mu*N_COLS + c)*DGC_stride + sid] = normalize * (S[mu][c] + DGC_alphaGauss * tmp[mu][c]);
+	out2[(mu*N_COLS + c)*DGC_stride + sid] = normalize *
+	  (S[mu][c] + alpha * tmp[mu][c]);
 }
 
 template<typename FloatOut,typename FloatIn, typename FloatGauge>
-static void gaussian_smearing(FloatOut* out,
-			      vectorTex<FloatIn> vecInTex, 
-			      gaugeTex<FloatGauge> gaugeTex){
+static void gaussian_smearing(FloatOut* out, vectorTex<FloatIn> vecInTex, 
+			      gaugeTex<FloatGauge> gaugeTex, FloatOut alpha){
   ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps, "gaussian_smearing_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex);
+  tuneAndRun(ps, "gaussian_smearing_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge>, out, vecInTex, gaugeTex, alpha);
 }

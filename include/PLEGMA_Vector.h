@@ -23,7 +23,8 @@ namespace plegma {
     
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
-    void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gaugeAPE);
+    void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge,
+			  int nsmearGauss, Float alphaGauss);
     void scaleVector(Float a);
     void copy(PLEGMA_Vector<float> &vecIn);
     void copy(PLEGMA_Vector<double> &vecIn);
