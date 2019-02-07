@@ -10,28 +10,11 @@
 //#define TIMING_REPORT
 using namespace plegma;
 
-//////////////////////////////////////////////////  
-static void createMomenta(int Q_sq){
-  int counter=0;
-  for(int iQ = 0 ; iQ <= Q_sq ; iQ++){
-    for(int nx = iQ ; nx >= -iQ ; nx--){
-      for(int ny = iQ ; ny >= -iQ ; ny--){
-        for(int nz = iQ ; nz >= -iQ ; nz--){
-          if( nx*nx + ny*ny + nz*nz == iQ ){
-            GK_moms[counter][0] = nx;
-            GK_moms[counter][1] = ny;
-            GK_moms[counter][2] = nz;
-            counter++;
-          }
-        }
-      }
-    }
-  }
-  if(counter > MAX_NMOMENTA)errorQuda("Error exceeded max number of momenta\n");
-  GK_Nmoms=counter;
-}
-
 void plegma::PLEGMA_init(){
+
+#define ADD_TO_GLOBAL
+#include<PLEGMA_global_vars.h>
+#undef ADD_TO_GLOBAL
   
   if(HGC_init_PLEGMA_flag == false){
     
@@ -39,7 +22,7 @@ void plegma::PLEGMA_init(){
       HGC_nProc[i] = comm_dim(i);
     
     for(int i = 0 ; i < N_DIMS ; i++){   // take local and total lattice
-      HGC_localL[i] = params->lL[i];
+      // HGC_localL[i] = params->lL[i]; this is set in the executable
       HGC_totalL[i] = HGC_nProc[i] * HGC_localL[i];
     }
     
@@ -57,7 +40,7 @@ void plegma::PLEGMA_init(){
       HGC_totalVolume *= HGC_totalL[i];
     }
 
-    HGC_strideFull = HGC_localVolume;
+    HGC_stride = HGC_localVolume;
 
     for (int i=0; i<N_DIMS; i++) {
       if(HGC_dimBreak[i]) {
@@ -113,10 +96,10 @@ void plegma::PLEGMA_init(){
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)
-      HGC_procPosition[i] = comm_coords(default_topo)[i];
+      HGC_procPosition[i] = comm_coords(HGC_default_topo)[i];
 
     // copying globals to device
-    globals.copyToDevice();
+    HGC_globals_vars.copyToDevice();
 
     // create groups of process to use mpi reduce only on spatial points
     MPI_Comm_group(MPI_COMM_WORLD, &HGC_fullGroup);
@@ -128,7 +111,7 @@ void plegma::PLEGMA_init(){
     int *ranks = (int*) malloc(space3D_proc*sizeof(int));
 
     for(int i= 0 ; i < space3D_proc ; i++)
-      ranks[i] = comm_coords(default_topo)[3] + HGC_nProc[3]*i;
+      ranks[i] = comm_coords(HGC_default_topo)[3] + HGC_nProc[3]*i;
 
     MPI_Group_incl(HGC_fullGroup,space3D_proc,ranks,&HGC_spaceGroup);
     MPI_Group_rank(HGC_spaceGroup,&HGC_spaceRank);
@@ -150,7 +133,7 @@ void plegma::PLEGMA_init(){
     free(ranks);
     free(ranksTime);
 
-    cublasStatus_t error = cublasCreate(&cublas_handle);
+    cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
     if (error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCreate failed with error %d", error);
     
     HGC_init_PLEGMA_flag = true;
@@ -169,11 +152,11 @@ void plegma::print_status(){
   printfQuda("Number of colors is %d\n",N_COLS);
   printfQuda("Number of spins is %d\n",N_SPINS);
   printfQuda("Number of dimensions is %d\n",N_DIMS);
-  globals.print();
+  HGC_globals_vars.print();
 }
 
 void plegma::PLEGMA_end() {
   // TODO: here we should destroy everything is created in init.
-  cublasStatus_t error = cublasDestroy(cublas_handle);
+  cublasStatus_t error = cublasDestroy(HGC_cublas_handle);
   if (error != CUBLAS_STATUS_SUCCESS) errorQuda("\nError indestroying cublas context, error code = %d\n", error);
 }
