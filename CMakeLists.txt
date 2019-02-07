@@ -30,6 +30,23 @@ endif()
 FIND_LIBRARY(QUDA_LIB quda ${QUDA_HOME}/lib)
 include_directories(SYSTEM ${QUDA_HOME}/include)
 
+include(ExternalProject)
+
+find_package(Boost)
+if(Boost_FOUND)
+  include_directories(${Boost_INCLUDE_DIRS})
+else()
+  message(WARNING
+    "Boost was not found; we will download what needed.")
+  set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
+  ExternalProject_Add(BoostPP
+    GIT_REPOSITORY https://github.com/boostorg/preprocessor
+    STEP_TARGETS build
+    EXCLUDE_FROM_ALL TRUE
+  )
+  include_directories(${CMAKE_BINARY_DIR}/BoostPP-prefix/src/BoostPP/include)
+endif()
+
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG HOSTDEBUG DEVICEDEBUG)
 
 # using dirs in LD_LIBRARY_PATh for searching for libraries
@@ -114,6 +131,10 @@ endif()
 #######################################################################
 # options that are not exposed at all because only one option exists
 set(CPU_ARCH ${CMAKE_HOST_SYSTEM_PROCESSOR})
+
+# Compile and run tests
+set(PLEGMA_RUN_TESTS FALSE CACHE BOOL "Compile and run tests with googletest")
+mark_as_advanced(PLEGMA_RUN_TESTS)
 
 
 #######################################################################
