@@ -88,17 +88,13 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
     errorQuda("Error maximum number of gamma matrices is 16");
   int SpVol = HGC_localVolume/HGC_localL[3];
   FloatC *d_partial_block = NULL;
-  int isource = corr.getIdSource();
-  int site_size=2*gammas.size();
-  size_t volume;
-  size_t size;
-  if(runFT==true){
-    volume = HGC_Nmoms;
-    size = site_size*volume;
-  } else {
-    volume = SpVol;
-    size = site_size*volume;
-  }
+  int site_size=gammas.size();
+  size_t volume = corr.getVolSize()/HGC_localL[3];
+  size_t size = corr.getTotalSize()/HGC_localL[3];
+  int3 source = corr.getSource3();
+
+  if(corr.getSiteSize() != site_size)
+    errorQuda("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
@@ -114,16 +110,16 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   dim3 gridDim( (SpVol + blockDim.x -1)/blockDim.x , 1 , 1); // spawn threads only for the spatial volume
   size_t alloc_size;
   if(runFT==true){
-    alloc_size = size * gridDim.x;
+    alloc_size = size * gridDim.x * 2;
   } else {
-    alloc_size = size;
+    alloc_size = size * 2;
   }
-  cudaMalloc((void**)&d_partial_block, alloc_size*2*sizeof(FloatC));
+  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(FloatC));
   checkCudaError();
-  contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT, isLink, dir,isCons>
+  contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT,
+			    isLink, dir,isCons>
     <<<gridDim,blockDim>>>(d_partial_block, prop1, prop2, su3, listGammas, it,
-			   HGC_sourcePosition[isource][0], HGC_sourcePosition[isource][1],
-			   HGC_sourcePosition[isource][2], signProps);
+			   source, signProps);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
@@ -135,8 +131,8 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   checkCudaError();
   
   if(runFT==true){
-    FloatC *reduction =(FloatC*) calloc(size,sizeof(FloatC));
-    for(size_t i = 0 ; i < size/2; i++)
+    FloatC *reduction =(FloatC*) calloc(size*2,sizeof(FloatC));
+    for(size_t i = 0 ; i < size; i++)
       for(int j = 0 ; j < gridDim.x; j++) {
 	reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
 	reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
@@ -146,13 +142,13 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   }
   
   FloatC *corr_pt = corr.getCorr();
-  int sz = corr.getSiteSize();
-  if(sz < gammas.size())errorQuda("The size of list with gammas exceeds the site_size of correlators\n");
   int shift = (dir<0) ? 0 : dir*gammas.size()*2;
   for(size_t v = 0 ; v < volume; v++)
     for(int i = 0 ; i < gammas.size(); i++) {
-      corr_pt[it*volume*sz*2+v*sz*2+shift+i*2+0] = h_partial_block[(v*gammas.size()+i)*2+0];
-      corr_pt[it*volume*sz*2+v*sz*2+shift+i*2+1] = h_partial_block[(v*gammas.size()+i)*2+1];
+      corr_pt[it*volume*site_size*2+v*site_size*2+shift+i*2+0] =
+	h_partial_block[(v*gammas.size()+i)*2+0];
+      corr_pt[it*volume*site_size*2+v*site_size*2+shift+i*2+1] =
+	h_partial_block[(v*gammas.size()+i)*2+1];
     }
 
   free(h_partial_block);
