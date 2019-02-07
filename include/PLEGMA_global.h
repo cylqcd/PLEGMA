@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
+#include <typeindex>
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
@@ -49,6 +50,18 @@ namespace plegma {
   template<> inline MPI_Datatype MPI_Type<double>(double a) { return MPI_DOUBLE; }
   template<> inline MPI_Datatype MPI_Type<double*>(double* a) { return MPI_DOUBLE; }
 
+  template<typename T> inline char type_char(){ return 'p';};
+  template<typename T> inline char type_char(T a){ return type_char<T>();};
+  template<> inline char type_char<char>() { return 'c'; }
+  template<> inline char type_char<int>() { return 'd'; }
+  template<> inline char type_char<float>() { return 'e'; }
+  template<> inline char type_char<double>() { return 'e'; }
+  template<> inline char type_char<char*>() { return 's'; }
+  template<> inline char type_char<const char*>() { return 's'; }
+  template<> inline char type_char<void*>() { return 'p'; }
+
+  
+  
   // Global variable for mom list
   struct tex_mom_list {
     size_t Nmoms;
@@ -100,33 +113,37 @@ namespace plegma {
   struct global_vars {
     // globals on host only
     std::vector<void*> host_only_pointer;
-    std::vector<size_t> host_only_size;
-    std::vector<std::type_info> host_only_type;
-    std::vector<char*> host_only_name;
+    std::vector<int> host_only_size;
+    std::vector<size_t> host_only_bytes;
+    std::vector<char> host_only_type;
+    std::vector<std::string> host_only_name;
     
     // globals on both, host and device
     std::vector<std::array<void*, 2>> both_pointer;
-    std::vector<size_t> both_size;
-    std::vector<std::type_info> both_type;
-    std::vector<char*> both_name;
+    std::vector<int> both_size;
+    std::vector<size_t> both_bytes;
+    std::vector<char> both_type;
+    std::vector<std::string> both_name;
 
+    template<typename hostT>
+    void add(const char* name, hostT &host, int size=1) {
+      host_only_pointer.push_back((void*) &host);
+      host_only_size.push_back(size);
+      host_only_bytes.push_back(sizeof(hostT)*size);
+      host_only_type.push_back(type_char<hostT>());	
+      host_only_name.push_back(name);	
+    }
     template<typename hostT, typename deviceT>
-    void add(char* name, hostT &host, deviceT &device=NULL) {
-      if(device == NULL) {
-	host_only_pointer.push_back((void*) &host);
-	host_only_size.push_back(sizeof(host));
-	host_only_type.push_back(typeof(host));	
-	host_only_name.push_back(name);	
-      } else {
-	both_pointer.push_back({(void*) &host, (void*) &device});
-	both_size.push_back(sizeof(host));
-	both_type.push_back(typeof(host));	
-	both_name.push_back(name);
-      }
+    void add(const char* name, hostT &host, deviceT &device=NULL, int size=1) {
+      both_pointer.push_back({(void*) &host, (void*) &device});
+      both_size.push_back(size);
+      both_bytes.push_back(sizeof(hostT)*size);
+      both_type.push_back(type_char<hostT>());	
+      both_name.push_back(name);
     }
     void copyToDevice() {
       for(int i = 0; i != both_pointer.size(); i++) {
-	cudaMemcpyToSymbol( both_pointer[i][1], both_pointer[i][0], both_size[i]);
+	cudaMemcpyToSymbol( both_pointer[i][1], both_pointer[i][0], both_bytes[i]);
       }
       checkCudaError();
     }
@@ -134,74 +151,14 @@ namespace plegma {
 
     }
   };
-  
-//These generates global constants either on host (global_host) only or also on device (global_both). It will append respectively HGC_ and DGC_.
-#ifndef ALLOCATE
-  
-  extern global_vars globals;
-#define global_host(dtype, name, ...)					\
-  extern dtype HGC_##name __VA_ARGS__;					\
-  extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated)); // This line should be removed
-#define global_both(dtype, name, ...)					\
-  extern dtype HGC_##name __VA_ARGS__;					\
-  extern dtype GK_##name __VA_ARGS__ __attribute__((deprecated));	\
-  extern __constant__ dtype DGC_##name __VA_ARGS__;			\
-  extern __constant__ dtype c_##name __VA_ARGS__  __attribute__((deprecated)); // This line should be removed
-  
-#else
-  
-  global_vars globals;
-#define global_host(dtype, name, ...)					\
-  dtype HGC_##name __VA_ARGS__;						\
-  globals.add(#name, HGC_##name);					\
-  dtype& GK_##name __VA_ARGS__ =  HGC_##name __attribute__((deprecated)); // This line should be removed
-#define global_both(dtype, name, ...)					\
-  dtype HGC_##name __VA_ARGS__;						\
-  dtype& GK_##name __VA_ARGS__ =  HGC_##name __attribute__((deprecated)); \
-  __constant__ dtype DGC_##name __VA_ARGS__;				\
-  __constant__ dtype& c_##name __VA_ARGS__ = DGC_##name;		\
-  globals.add(#name, HGC_##name, DGC_##name);
-  
-#endif
-  
-  // Global variables
-  global_host(bool, init_PLEGMA_flag);
-  global_host(float, deviceMemory);
 
-  // variables visible on both host and device
-  global_both(tex_mom_list, moms);
-  global_both(size_t, stride);
-  global_both(size_t, stride_spatial);
-  global_both(size_t, localVolume);
-  global_both(size_t, totalVolume);
-  global_both(int, localL, [N_DIMS]);
-  global_both(int, totalL, [N_DIMS]);
-  global_both(int, procPosition, [N_DIMS]);
-  global_both(size_t, sideGhost, [2*N_DIMS]);
-  global_both(size_t, cornerGhost, [2*N_DIMS][2*N_DIMS]);
-  global_both(size_t, surface3D, [N_DIMS]);
-  global_both(size_t, surface2D, [N_DIMS][N_DIMS]);
-
-  // for mpi use global variables (host only)
-  global_both(bool, dimBreak, [N_DIMS]);
-  global_host(Topology *, default_topo);
-  global_host(int, nProc, [N_DIMS]);
-  global_host(MPI_Group, fullGroup);
-  global_host(MPI_Group, spaceGroup);
-  global_host(MPI_Group, timeGroup);
-  global_host(MPI_Comm, spaceComm);
-  global_host(MPI_Comm, timeComm);
-  global_host(int, fullRank);
-  global_host(int, fullSize);
-  global_host(int, spaceRank);
-  global_host(int, spaceSize);
-  global_host(int, timeRank);
-  global_host(int, timeSize);
-
-  // for cublas use
-  global_host(cublasHandle_t, cublas_handle);
+  #ifdef ALLOCATE
+  global_vars HGC_globals_vars;
+  #else
+  extern global_vars HGC_globals_vars;
+  #define EXTERNAL
+  #endif
+  #include <PLEGMA_global_vars.h>
+  #undef EXTERNAL
 }
-using namespace plegma; // TODO: Maybe this one shouldn't be here.. But helps avoiding missing namespace.
-
-#undef global_both
-#undef global_host
+using namespace plegma; // TODO: This one shouldn't be here.. But helps avoiding missing namespace.
