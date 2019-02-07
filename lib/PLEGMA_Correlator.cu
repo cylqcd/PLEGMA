@@ -121,7 +121,7 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  int source[4], const char* flavor_string){
   n_flavors = 1;
   n_groups = 1;
-  shape = {gammas.size()};
+  shape = {(int) gammas.size()};
   setSource(source);
   flavors = {flavor_string};
   groups =  {"Local"};
@@ -184,11 +184,11 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 int source[4], const char* flavor_string){
   n_flavors = 1;
   n_groups = 1;
-  shape = {N_DIMS, gammas.size()};
+  shape = {N_DIMS, (int) gammas.size()};
   setSource(source);
   flavors = {flavor_string};
   groups =  {"OneD"};
-  description = getGammasString(gammas)+" / re,im";
+  description = "x,y,z,t / "+getGammasString(gammas)+" / re,im";
   initialize();
 
   if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
@@ -204,11 +204,11 @@ contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			int signProps, int source[4], const char* flavor_string){
   n_flavors = 1;
   n_groups = 1;
-  shape = {N_DIMS, gammas.size()};
+  shape = {N_DIMS};
   setSource(source);
   flavors = {flavor_string};
   groups =  {"Noether"};
-  description = getGammasString(gammas)+" / re,im";
+  description = "x,y,z,t / re,im";
   initialize();
 
   std::vector<GAMMAS> gammas = {};
@@ -229,7 +229,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       int source[4], const char* flavor_string){
   n_flavors = 1;
   n_groups = 1;
-  shape = {gammas.size()};
+  shape = {(int) gammas.size()};
   setSource(source);
   flavors = {flavor_string};
   groups =  {"wilsonLine"};
@@ -260,10 +260,10 @@ writeFile(const char*filename, FILE_WRITE_FORMAT format) {
   }
   else if(format == HDF5_FORM) {
     printfQuda("Going to write file %s in HDF5 format\n",filename);
-    writeHDF5(filename, params);
+    writeHDF5(filename);
   }
   else {
-    errorQuda("FILE_WRITE_FORMAT not supported: %d\n", params.CorrFileFormat);
+    errorQuda("FILE_WRITE_FORMAT not supported: %d\n", format);
   }
 }
 
@@ -342,6 +342,8 @@ writeASCII(const char *filename_out) {
     if( corrGlobal == NULL ) errorQuda("writeASCII: Cannot allocate memory.");
   }
 
+  // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
+  // in the second case requires reordering of the memory
   MPI_Gather(corr,site_size*vol_size*2,MPI_Type(corr),
 	     corrGlobal,site_size*vol_size*2,MPI_Type(corr),
 	     0,comm);
@@ -350,21 +352,24 @@ writeASCII(const char *filename_out) {
   if(rank == 0){
     ptr_out = fopen(filename_out,"w");
     if(ptr_out == NULL) errorQuda("Error opening file for writing\n");
-    if(n_flavors != 1) errorQuda("For now works with n_flavors = 1\n");
-    for(size_t v=0; v<g_vol_size*site_size; v++) {
-      int it = v/(GK_Nmoms*site_size);
-      int imom = v/(site_size) - it*GK_Nmoms;
-      int is = v%site_size;
-      int it_shift = (it + source_position[3])%GK_totalL[3];
-      int ipos = it_shift*GK_Nmoms*site_size + imom*site_size + is;
-      if(corr_space == MOMENTUM_SPACE) {
-	if(is == 0)fprintf(ptr_out, "%d  %+d  %+d  %+d ", v/(HGC_Nmoms*site_size), HGC_moms[imom][0], HGC_moms[imom][1], HGC_moms[imom][2]);
+
+    if(corr_space == MOMENTUM_SPACE) {
+      int Nmoms = corr_mom_space->Nmoms();
+      std::vector<std::vector<int>> momV = corr_mom_space->MomList();
+      for(int it=0; it<HGC_totalL[3]; it++) {
+	int it_shift = (it + source_position[3])%HGC_totalL[3];
+	for(int imom=0; imom<Nmoms; imom++) {
+	  int ipos = (it_shift*Nmoms + imom)*site_size;
+	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, momV[imom][0], momV[imom][1], momV[imom][2]);
+	  for(int is = 0; is<site_size; is++)
+	    fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2], corrGlobal[ipos*2+1]);
+	  fprintf(ptr_out, "\n");
+	}
       }
-      else if (corr_space == POSITION_SPACE) {
-	//TODO
-      }
-      fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2], corrGlobal[ipos*2+1]);
-      if(is == site_size-1)fprintf(ptr_out, "\n");
+    }
+    else if (corr_space == POSITION_SPACE) {
+      //TODO
+      errorQuda("WriteASCII do not support writing in position space.\n");
     }
     fclose(ptr_out);
     free(corrGlobal);
@@ -592,7 +597,6 @@ writeHDF5(const char*filename, const char* top) {
   hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
   H5Pclose(fapl_id);
 
-  char *group1_tag;
   hid_t group1_id = H5Gcreate(file_id, top, H5P_DEFAULT, 
 			      H5P_DEFAULT, H5P_DEFAULT);
 
@@ -624,11 +628,11 @@ writeHDF5(const char*filename, const char* top) {
   size_t spaceSize = get_volume(ndims, ldims);
 
   for(int g=0; g<n_groups; g++){
-    hid_t group3_id = H5Gcreate(group2_id, corr_groups_names[corr_type][g], H5P_DEFAULT, 
+    hid_t group3_id = H5Gcreate(group2_id, groups[g].c_str(), H5P_DEFAULT, 
 				H5P_DEFAULT, H5P_DEFAULT);
     for(int d=0; d<n_flavors; d++){
       Float *writeBuf = corr + (g*n_flavors+d)*spaceSize;
-      write_dataset(group3_id, corr_flavors_names[corr_type][d], writeBuf,
+      write_dataset(group3_id, flavors[d].c_str(), writeBuf,
 		    ndims, dims, ldims, start);
     }
     H5Gclose(group3_id);
