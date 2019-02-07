@@ -52,7 +52,7 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int nu, int c2)
 template<typename Float> 
 void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2){
   if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -75,7 +75,7 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, 
 template<typename Float> 
 void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, int nu, int c2){
   if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -98,7 +98,7 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it
 template<typename Float>
 void PLEGMA_Propagator<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_it){
   if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -265,7 +265,7 @@ absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop,
 template<typename Float> 
 void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2){
   if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -288,7 +288,7 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it
 template<typename Float>
 void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it){
   if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;

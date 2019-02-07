@@ -133,7 +133,7 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
   fwdPropTex.tex = fwdProp.createTexObject();
   if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
 
-  for(int it = 0; it < GK_localL[3]; it++)
+  for(int it = 0; it < HGC_localL[3]; it++)
     contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
@@ -167,7 +167,7 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
   for(int idir = 0; idir < N_DIMS; idir++){
     gsu3.absorbDir_device(gauge,idir);
     gsu3.communicateGhost(idir+N_DIMS); // later do only the direction we are interested in
-    for(int it = 0; it < GK_localL[3]; it++)
+    for(int it = 0; it < HGC_localL[3]; it++)
       funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,it, idir,gammas);
   }
   bwdProp.destroyTexObject(bwdPropTex.tex);
@@ -243,7 +243,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
   sTex.tex = su3.createTexObject();
   if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
 
-  for(int it = 0; it < GK_localL[3]; it++)
+  for(int it = 0; it < HGC_localL[3]; it++)
     contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
 
   bwdProp.destroyTexObject(bwdPropTex.tex);

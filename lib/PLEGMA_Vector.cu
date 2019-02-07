@@ -115,7 +115,7 @@ void PLEGMA_Vector<Float>::norm2Host(){
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2){
   if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -138,7 +138,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
   if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -229,7 +229,7 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
   temp[0] = 1.0;
 
   for(int i = N_DIMS-1; i >= 0; i--) {
-    my_src[i] = (sourceposition[i] - comm_coords(default_topo)[i] * HGC_localL[i]);
+    my_src[i] = (sourceposition[i] - comm_coords(HGC_default_topo)[i] * HGC_localL[i]);
 
     // if out of the local lattice we break
     if((my_src[i]<0) || (my_src[i]>=HGC_localL[i]))
@@ -375,10 +375,10 @@ void PLEGMA_Vector<Float>::write(char *filename){
   lsizes[2]=HGC_localL[1];
   lsizes[3]=HGC_localL[0];
   lsizes[4]=sizes[4];
-  starts[0]=comm_coords(default_topo)[3]*HGC_localL[3];
-  starts[1]=comm_coords(default_topo)[2]*HGC_localL[2];
-  starts[2]=comm_coords(default_topo)[1]*HGC_localL[1];
-  starts[3]=comm_coords(default_topo)[0]*HGC_localL[0];
+  starts[0]=comm_coords(HGC_default_topo)[3]*HGC_localL[3];
+  starts[1]=comm_coords(HGC_default_topo)[2]*HGC_localL[2];
+  starts[2]=comm_coords(HGC_default_topo)[1]*HGC_localL[1];
+  starts[3]=comm_coords(HGC_default_topo)[0]*HGC_localL[0];
   starts[4]=0;  
 
   if( typeid(Float) == typeid(double) )
@@ -462,7 +462,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
 template<typename Float>
 void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
   if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * GK_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
   this->zero_device();
   if(is_myIt){
@@ -479,7 +479,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
 template<typename Float>
 void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
   if(global_it >= GK_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(default_topo)[3] * GK_localL[3];
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * GK_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < GK_localL[3] );
   this->zero_device();
   if(is_myIt){
@@ -542,7 +542,7 @@ namespace plegma{
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
     if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
-    int my_it = global_it - comm_coords(default_topo)[3] * HGC_localL[3];
+    int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     int V3 = HGC_localVolume/HGC_localL[3];
     int V4 = HGC_localVolume;

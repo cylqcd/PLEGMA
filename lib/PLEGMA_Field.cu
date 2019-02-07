@@ -137,8 +137,6 @@ void PLEGMA_Field<Float>::unpack(Float *out){
   }  
 }
 
-
-
 template<typename Float>
 void PLEGMA_Field<Float>::load(){
   if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");

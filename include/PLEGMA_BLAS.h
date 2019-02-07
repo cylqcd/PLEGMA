@@ -64,13 +64,13 @@ namespace cuBLAS{
   template<>
   inline void axpy<float>(int NN, float val[2], float *x, float *y){
     cuComplex cu_val = make_cuComplex(val[0],val[1]);
-    cublasStatus_t error =  cublasCaxpy(cublas_handle,NN, &cu_val, (cuComplex*) x, 1, (cuComplex*) y, 1);
+    cublasStatus_t error =  cublasCaxpy(HGC_cublas_handle,NN, &cu_val, (cuComplex*) x, 1, (cuComplex*) y, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCaxpy failed with error %d", error);
   }
   template<>
   inline void axpy<double>(int NN, double val[2], double *x, double *y){
     cuDoubleComplex cu_val = make_cuDoubleComplex(val[0],val[1]);
-    cublasStatus_t error =  cublasZaxpy(cublas_handle, NN, &cu_val,(cuDoubleComplex*) x, 1, (cuDoubleComplex*) y, 1);
+    cublasStatus_t error =  cublasZaxpy(HGC_cublas_handle, NN, &cu_val,(cuDoubleComplex*) x, 1, (cuDoubleComplex*) y, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZaxpy failed with error %d", error);
   }
   
@@ -79,12 +79,12 @@ namespace cuBLAS{
   inline void scal(int NN, const Float val, Float *x);
   template<>
   inline void scal<float>(int NN, const float val, float *x){
-    cublasStatus_t error = cublasCsscal(cublas_handle, NN, &val, (cuComplex*) x, 1);
+    cublasStatus_t error = cublasCsscal(HGC_cublas_handle, NN, &val, (cuComplex*) x, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCsscal failed with error %d", error);
   }
   template<>
   inline void scal<double>(int NN, const double val, double *x){
-    cublasStatus_t error = cublasZdscal(cublas_handle, NN, &val, (cuDoubleComplex*) x, 1);
+    cublasStatus_t error = cublasZdscal(HGC_cublas_handle, NN, &val, (cuDoubleComplex*) x, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdscal failed with error %d", error);
   }
   //------------------------------------------------------------------
@@ -93,13 +93,13 @@ namespace cuBLAS{
   template<>
   inline void cscal<float>(int NN, const float val[2], float *x){
     cuComplex cu_val = make_cuComplex(val[0],val[1]);
-    cublasStatus_t error = cublasCscal(cublas_handle, NN, &cu_val, (cuComplex*) x, 1);
+    cublasStatus_t error = cublasCscal(HGC_cublas_handle, NN, &cu_val, (cuComplex*) x, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCscal failed with error %d", error);
   }
   template<>
   inline void cscal<double>(int NN, const double val[2], double *x){
     cuDoubleComplex cu_val = make_cuDoubleComplex(val[0],val[1]);
-    cublasStatus_t error = cublasZscal(cublas_handle, NN, &cu_val, (cuDoubleComplex*) x, 1);
+    cublasStatus_t error = cublasZscal(HGC_cublas_handle, NN, &cu_val, (cuDoubleComplex*) x, 1);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZscal failed with error %d", error);
   }
   //-----------------------------------------------------------------
@@ -109,7 +109,7 @@ namespace cuBLAS{
   inline void dot<float>(float res[2], int NN, const float *x, const float *y, MPI_Comm comm){
     if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
     cuComplex cu_res;
-    cublasStatus_t error = cublasCdotc(cublas_handle, NN,(cuComplex*)x, 1, (cuComplex*)y,1,&cu_res);
+    cublasStatus_t error = cublasCdotc(HGC_cublas_handle, NN,(cuComplex*)x, 1, (cuComplex*)y,1,&cu_res);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCdotc failed with error %d", error);
     int mpiErr = MPI_Allreduce((float*) &cu_res, res, 2, MPI_FLOAT, MPI_SUM, comm);
     if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
@@ -118,7 +118,7 @@ namespace cuBLAS{
   inline void dot<double>(double res[2], int NN, const double *x, const double *y, MPI_Comm comm){
     if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
     cuDoubleComplex cu_res;
-    cublasStatus_t error = cublasZdotc(cublas_handle, NN,(cuDoubleComplex*)x, 1, (cuDoubleComplex*)y,1,&cu_res);
+    cublasStatus_t error = cublasZdotc(HGC_cublas_handle, NN,(cuDoubleComplex*)x, 1, (cuDoubleComplex*)y,1,&cu_res);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdotc failed with error %d", error);
     int mpiErr = MPI_Allreduce((double*) &cu_res, res, 2, MPI_DOUBLE, MPI_SUM, comm);
     if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
