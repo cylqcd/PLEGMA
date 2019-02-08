@@ -13,6 +13,10 @@
 #include <quda.h>
 #include <quda_internal.h>
 #include <cublas_v2.h>
+#ifdef __GNUG__ // gnu C++ compiler
+#include <cxxabi.h>
+#include <stdlib.h>
+#endif
 
 // Constants values
 #define PI 3.141592653589793
@@ -60,8 +64,23 @@ namespace plegma {
   template<> inline char type_char<const char*>() { return 's'; }
   template<> inline char type_char<void*>() { return 'p'; }
 
-  
-  
+  static std::string demangle( const char* mangled_name ) {
+#ifdef __GNUG__ // gnu C++ compiler
+    std::string result ;
+    std::size_t len = 0 ;
+    int status = 0 ;
+    char* ptr = __cxxabiv1::__cxa_demangle( mangled_name, nullptr, &len, &status ) ;
+
+    if( status == 0 ) result = ptr ; // hope that this won't throw
+    else result = "demangle error" ;
+    ::free(ptr) ;
+    if(result.find("basic_string") != std::string::npos) return "std::string"; 
+    return result ;
+#else
+    return std:string(mangled_name);
+#endif
+  }
+
   // Global variable for mom list
   struct tex_mom_list {
     size_t Nmoms;
@@ -120,6 +139,7 @@ namespace plegma {
     std::vector<int> host_only_size;
     std::vector<size_t> host_only_bytes;
     std::vector<char> host_only_type;
+    std::vector<std::string> host_only_type_name;
     std::vector<std::string> host_only_name;
     
     // globals on both, host and device
@@ -127,6 +147,7 @@ namespace plegma {
     std::vector<int> both_size;
     std::vector<size_t> both_bytes;
     std::vector<char> both_type;
+    std::vector<std::string> both_type_name;
     std::vector<std::string> both_name;
 
     template<typename hostT>
@@ -135,6 +156,7 @@ namespace plegma {
       host_only_size.push_back(size);
       host_only_bytes.push_back(sizeof(hostT)*size);
       host_only_type.push_back(type_char<hostT>());	
+      host_only_type_name.push_back(demangle(typeid(host).name()));	
       host_only_name.push_back(name);	
     }
     template<typename hostT, typename deviceT>
@@ -143,6 +165,7 @@ namespace plegma {
       both_size.push_back(size);
       both_bytes.push_back(sizeof(hostT)*size);
       both_type.push_back(type_char<hostT>());	
+      both_type_name.push_back(demangle(typeid(host).name()));	
       both_name.push_back(name);
     }
     void copyToDevice() {

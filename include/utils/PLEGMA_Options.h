@@ -12,10 +12,6 @@
 
 #pragma once
 
-#ifdef __GNUG__ // gnu C++ compiler
-#include <cxxabi.h>
-#include <stdlib.h>
-
 #define _PRINT_(...){				\
   fprintf(stdout, __VA_ARGS__);			\
   fflush(stdout);				\
@@ -25,26 +21,6 @@
   fflush(stderr);				\
   exit(-1);					\
   }
-
-   
-
-static std::string demangle( const char* mangled_name ) {
-
-    std::string result ;
-    std::size_t len = 0 ;
-    int status = 0 ;
-    char* ptr = __cxxabiv1::__cxa_demangle( mangled_name, nullptr, &len, &status ) ;
-
-    if( status == 0 ) result = ptr ; // hope that this won't throw
-    else result = "demangle error" ;
-    ::free(ptr) ;
-    if(result.find("basic_string") != std::string::npos) return "std::string"; 
-    return result ;
-}
-
-#else
-static std::string demangle( const char* name ) { return name ; }
-#endif // _GNUG_
 
 struct argument{std::string name, value;};
 
