@@ -6,9 +6,6 @@
 
 #include <util_quda.h>
 #include <PLEGMA_utils.h>
-#include <quda_types.h>
-
-#include <quda_params.h>
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 

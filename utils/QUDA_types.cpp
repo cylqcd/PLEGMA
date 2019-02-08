@@ -1,9 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "quda.h"
-#include <string.h>
+#include <PLEGMA_utils.h>
 #include "invert_quda.h"
-#include "quda_types.h"
 #include <assert.h>
 #include "util_quda.h"
 

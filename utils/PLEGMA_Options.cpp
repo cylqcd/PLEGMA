@@ -1,8 +1,3 @@
-#include <complex>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 #include <quda_types.h>
@@ -174,28 +169,8 @@ int hadamLow = 0;
 int hadamHigh = 0;
 //===========//
 
-// function call as last after all params have been read
-static void finalize_values(){ // Do we need this?
-  if (prec_sloppy == QUDA_INVALID_PRECISION) prec_sloppy = prec; // why the sloppy precision is the same as the normal precision?
-  if (prec_precondition == QUDA_INVALID_PRECISION) prec_precondition = prec_sloppy;
-  if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
-  if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
-  if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
-
-  if (dslash_type != QUDA_TWISTED_MASS_DSLASH && 
-      dslash_type != QUDA_TWISTED_CLOVER_DSLASH){
-    printfQuda("This test is only for twisted mass or twisted clover operator\n");
-    exit(-1);
-  }
-
-}
-
 // TODO: Everything should be done in the meanwhile we read the command line
 static void set_PLEGMA_params(plegma::PLEGMA_params *params){
-  params->nsmearAPE = nsmearAPE;
-  params->nsmearGauss = nsmearGauss;
-  params->alphaAPE = alphaAPE;
-  params->alphaGauss = alphaGauss;
   params->isEven = isEven;
   params->lL[0] = xdim;
   params->lL[1] = ydim;
@@ -2253,6 +2228,7 @@ static void printBasicOptionsWsolver(){
   _PRINT_("Q-prec, %d\n",prec);
   _PRINT_("Q-prec-sloppy, %d\n",prec_sloppy);
   _PRINT_("Q-prec-precondition, %d\n",prec_precondition);
+  _PRINT_("Q-prec-null, %d\n",prec_null);
   _PRINT_("Q-recon, %d\n",link_recon);
   _PRINT_("Q-recon-sloppy, %d\n",link_recon_sloppy);
   _PRINT_("Q-recon-precondition, %d\n",link_recon_precondition);
@@ -2374,20 +2350,22 @@ void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool showT
   isFound=opt.set("Q-prec", "Precision in the GPU, options (double,single,half), default (single)", false, tmpString);
   if(isFound)prec = get_prec(tmpString.c_str());
 
-  isFound=opt.set("Q-prec-sloppy", "Sloppy precision in the GPU, options (double,single,half), default (invalid)", false, tmpString);
+  isFound=opt.set("Q-prec-sloppy", "Sloppy precision in the GPU, options (double,single,half), default (Q-prec)", false, tmpString);
   if(isFound)prec_sloppy = get_prec(tmpString.c_str());
 
-
-  isFound=opt.set("Q-prec-precondition", "Preconditioner precision in the GPU, options (double,single,half),default (invalid)", false, tmpString);
+  isFound=opt.set("Q-prec-precondition", "Preconditioner precision in the GPU, options (double,single,half),default (Q-prec)", false, tmpString);
   if(isFound)prec_precondition = get_prec(tmpString.c_str());
+
+  isFound=opt.set("Q-prec-null", "NUll-vector precision in the GPU, options (double,single,half), default (Q-prec)", false, tmpString);
+  if(isFound)prec_null = get_prec(tmpString.c_str());
 
   isFound=opt.set("Q-recon", "Type of link reconstruction, options (8,9,12,13,18), default (18 no reconstruction)", false, tmpString);
   if(isFound)link_recon  = get_recon(tmpString.c_str());
 
-  isFound=opt.set("Q-recon-sloppy", "Type of link reconstruction for sloppy, options (8,9,12,13,18), default (invalid)", false, tmpString);
+  isFound=opt.set("Q-recon-sloppy", "Type of link reconstruction for sloppy, options (8,9,12,13,18), default (Q-recon)", false, tmpString);
   if(isFound)link_recon_sloppy  = get_recon(tmpString.c_str());
 
-  isFound=opt.set("Q-recon-precondition", "Type of link reconstruction for precon, options (8,9,12,13,18), default (invalid)", false, tmpString);
+  isFound=opt.set("Q-recon-precondition", "Type of link reconstruction for precon, options (8,9,12,13,18), default (Q-recon)", false, tmpString);
   if(isFound)link_recon_precondition  = get_recon(tmpString.c_str());
 
   opt.setForced("Q-dslash-type", "Set the dslash type, options for now (twisted-mass/twisted-clover)",false, tmpString);
@@ -2518,6 +2496,13 @@ void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool showT
   
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid (default false)", false, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid (default false)", false, post_orthonormalize);
+
+  // Cross-referencing in case have not been set
+  if (prec_sloppy == QUDA_INVALID_PRECISION) prec_sloppy = prec;
+  if (prec_precondition == QUDA_INVALID_PRECISION) prec_precondition = prec_sloppy;
+  if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
+  if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
+  if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
 
   if(showThem && !opt.getIsHelp()) printBasicOptionsWsolver();
 }
