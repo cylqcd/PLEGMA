@@ -48,8 +48,6 @@ class GaugeBuffer {
 
     // no copy constructor to avoid implementing deep copy stuff
     GaugeBuffer(const GaugeBuffer & other) = delete;
-    // no default constructor
-    GaugeBuffer(void) = delete;
 
     ~GaugeBuffer() {
       for(int i = 0; i < N_DIMS; ++i){
