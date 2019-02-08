@@ -1,10 +1,7 @@
+#pragma once
 extern "C" {
 #include <lime.h>
 }
-
-#ifdef MULTI_GPU
-#include <mpi.h>
-#endif
 
 #include <unistd.h>
 #include <stdio.h>

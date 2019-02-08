@@ -1,5 +1,4 @@
-#ifndef QUDA_PARAMS_H
-#define QUDA_PARAMS_H
+#pragma once
 
 //-----------------//
 // QUDA Parameters //
@@ -71,5 +70,3 @@ extern double clover_coeff;
 extern bool compute_clover;
 extern QudaMassNormalization normalization; // mass normalization of Dirac operators
 extern bool verify_results;
-
-#endif

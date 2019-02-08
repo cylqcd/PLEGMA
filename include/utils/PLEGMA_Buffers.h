@@ -1,10 +1,5 @@
-#ifndef _PLEGMA_BUFFER_H
-#define _PLEGMA_BUFFER_H
-
-#include <PLEGMA_global.h>
-#include <stdlib.h>
+#pragma once
 #include <malloc.h>
-
 #include <new> // for availability of std::bad_alloc exception
 
 namespace plegma {
@@ -24,8 +19,8 @@ namespace plegma {
     free(memptr);
   }
 
-template<typename T>
-class GaugeBuffer {
+  template<typename T>
+  class GaugeBuffer {
   public:
     GaugeBuffer() {
       int *lL = HGC_localL;
@@ -57,8 +52,5 @@ class GaugeBuffer {
   
   private:
     T* buffer[N_DIMS];
-};
-
+  };
 }
-
-#endif

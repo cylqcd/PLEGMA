@@ -1,7 +1,4 @@
-#ifndef __MISC_H__
-#define __MISC_H__
-
-#include <quda.h>
+#pragma once
 
 QudaReconstructType get_recon(const char* s);
 const char* get_recon_str(QudaReconstructType recon);
@@ -45,20 +42,5 @@ QudaExtLibType get_solve_ext_lib_type(const char* s);
 QudaFieldLocation get_location(const char* s);
 
 QudaMemoryType get_df_mem_type_ritz(const char* s);
-
-#define XUP 0
-#define YUP 1
-#define ZUP 2
-#define TUP 3
-#define TDOWN 4
-#define ZDOWN 5
-#define YDOWN 6
-#define XDOWN 7
-#define OPP_DIR(dir)    (7-(dir))
-#define GOES_FORWARDS(dir) (dir<=3)
-#define GOES_BACKWARDS(dir) (dir>3)
-
-
-#endif
 
 
