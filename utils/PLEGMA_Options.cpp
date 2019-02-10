@@ -176,7 +176,7 @@ static void printBasicOptions(){
   _PRINT_("load-gauge, %s\n", latfile);
 }
 
-static void printBasicOptionsWsolver(){
+static void printQudaSolverOptions(){
   _PRINT_("Q-prec, %d\n",prec);
   _PRINT_("Q-prec-sloppy, %d\n",prec_sloppy);
   _PRINT_("Q-prec-precondition, %d\n",prec_precondition);
@@ -238,7 +238,7 @@ static void printBasicOptionsWsolver(){
   _PRINT_("Q-mg-post-orth, %d\n", post_orthonormalize);
 }
 
-void basicOptions(Options &opt, plegma::PLEGMA_params *params, bool showThem){
+void basicOptions(Options &opt, bool showThem){
   bool isFound;
   
   opt.setForced("dims","Set dimensions (X Y Z T), default (24 24 24 24)", false, xdim, ydim, zdim, tdim);
@@ -247,7 +247,7 @@ void basicOptions(Options &opt, plegma::PLEGMA_params *params, bool showThem){
 
   opt.setForced("procs","Set number of processors (X Y Z T), default (1 1 1 1)", false, xproc, yproc, zproc, tproc);
   if(!opt.getIsHelp()) if( (xproc <= 0 || xdim%xproc != 0) || (yproc <= 0 || ydim%yproc != 0) || (zproc <= 0 || zdim%zproc != 0) || (tproc <= 0 || tdim%tproc != 0) )
-			 _ERROR_("Error in %d dim: Negative proc or not divisor of dim\n",i);
+			 _ERROR_("Error: Negative proc or not divisor of dim\n");
 
   std::string gfile;
   isFound=opt.set("load-gauge", "Path to the gauge field, default (empty string)", false, gfile);
@@ -293,9 +293,7 @@ template<typename T> static inline void map_to_array_MG(std::map<int,std::string
   }
 }
 
-void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool showThem){
-  basicOptions(opt,params,showThem);
-  set_default_values(); // default values for MG
+void qudaSolverOptions(Options &opt, bool showThem){
   bool isFound;
   std::string tmpString;
   bool tmpBool;
@@ -457,7 +455,7 @@ void basicOptionsWsolver(Options &opt, plegma::PLEGMA_params *params, bool showT
   if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
   if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
 
-  if(showThem && !opt.getIsHelp()) printBasicOptionsWsolver();
+  if(showThem && !opt.getIsHelp()) printQudaSolverOptions();
 }
 
   //  isFound=opt.set("Q-prec-refine", "Sloppy precision for refinement in the GPU, options (double,single,half),default (invalid)", visualize, tmpString);
