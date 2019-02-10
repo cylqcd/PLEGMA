@@ -1,8 +1,6 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-#include <quda_params.h>
 #include <invert_quda.h>
-#include <quda_interface.h>
 #include <PLEGMA_BLAS.h>
 
 using namespace std;

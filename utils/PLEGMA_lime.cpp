@@ -7,7 +7,6 @@
 #include <limits>
 
 #include <PLEGMA_utils.h>
-#include <PLEGMA_lime.h>
 
 // read ildg confs format
 // using Alex modified function

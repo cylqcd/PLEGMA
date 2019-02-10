@@ -18,19 +18,19 @@ namespace quda {
 
 int dimPartitioned(int dim)
 {
-  return ((gridsize_from_cmdline[dim] > 1) || dim_partitioned[dim]);
+  return ((procs[dim] > 1) || dim_partitioned[dim]);
 }
 
 void
-print_info()
+infoQuda()
 {
   printfQuda("running the following test:\n");
     
-  printfQuda("prec    sloppy_prec    link_recon  sloppy_link_recon S_dimension T_dimension Ls_dimension\n");
-  printfQuda("%s   %s             %s            %s            %d/%d/%d          %d         %d\n",
+  printfQuda("prec    sloppy_prec    link_recon  sloppy_link_recon S_dimension T_dimension\n");
+  printfQuda("%s   %s             %s            %s            %d/%d/%d          %d\n",
 	     get_prec_str(prec),get_prec_str(prec_sloppy),
 	     get_recon_str(link_recon), 
-	     get_recon_str(link_recon_sloppy),  xdim, ydim, zdim, tdim, Lsdim);     
+	     get_recon_str(link_recon_sloppy),  dims[0], dims[1], dims[2], dims[3]);     
 
   printfQuda("MG parameters\n");
   printfQuda(" - number of levels %d\n", mg_levels);
@@ -56,10 +56,8 @@ QudaPrecision &cuda_prec_sloppy = prec_sloppy;
 QudaPrecision &cuda_prec_precondition = prec_precondition;
 
 void setGaugeParam(QudaGaugeParam &gauge_param) {
-  gauge_param.X[0] = xdim;
-  gauge_param.X[1] = ydim;
-  gauge_param.X[2] = zdim;
-  gauge_param.X[3] = tdim;
+  for(int i=0; i<4; i++)
+    gauge_param.X[i] = dims[i];
 
   gauge_param.anisotropy = anisotropy;
   gauge_param.type = QUDA_WILSON_LINKS;
