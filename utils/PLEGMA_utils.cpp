@@ -2,6 +2,10 @@
 #include <PLEGMA_utils.h>
 
 using namespace quda;
+#define ALLOCATE
+#include "utils/PLEGMA_params.h"
+#include "utils/QUDA_params.h"
+#undef ALLOCATE
 
 void initialize(int argc, char **argv, bool print=true, bool withQuda=true) {
   

@@ -1,39 +1,40 @@
-#pragma once
-
-//------------------//
+//-------------------//
 // PLEGMA Parameters //
-//------------------//
-extern int dims[];
-extern int procs[];
+//-------------------//
 
-extern char latfile_smeared[];
-extern char verbosity_level[];
-extern int traj;
-extern bool isEven;
+#include <boost/preprocessor/control/if.hpp>
+#ifdef ALLOCATE
+#define NOTHING(...)
+#define EQUAL_CAT(...) =  __VA_ARGS__
+#define EQUAL(...) BOOST_PP_IF(IS_EMPTY(__VA_ARGS__),		\
+			       NOTHING,				\
+			       EQUAL_CAT) (__VA_ARGS__)
+#define define(var,...) var EQUAL(__VA_ARGS__)
+#else
+#define define(var,...) extern var 
+#endif
 
-extern int src[];
-extern int Ntsink;
-extern char pathList_tsink[];
-extern int Q_sq;
-extern int nsmearAPE;
-extern int nsmearGauss;
-extern double alphaAPE;
-extern double alphaGauss;
-extern char twop_filename[];
-extern char threep_filename[];
+// Main paramters -- read by basicOptions
+define(int dims[N_DIMS], {8,8,8,16});
+define(int procs[N_DIMS], {1,1,1,1});
+define(char* latfile);
+define(int verbose, 1);
 
-extern char prop_path[];
-extern double csw;
+// Additional paramters -- read by extraOptions
+define(int nsmearAPE, 20);
+define(double alphaAPE, 0.5);
+define(int nsmearGauss, 50);
+define(double alphaGauss, 0.2);
 
-extern int numSourcePositions;
-extern char pathListSourcePositions[];
-extern char pathListRun3pt[];
-extern char run3pt[];
-extern char *corr_file_format;
-extern char check_file_exist[];
+define(int numSourcePositions, 1);
+define(char* pathListSourcePositions);
+define(int maxQsq, 64);
+define(int corr_file_format, 1);
+define(int corr_space, 1);
+define(char* twop_filename);
+define(char* threep_filename);
+define(int numTSink);
+define(char* pathListTSink);
+define(int numProj);
+define(char* pathListProj);
 
-extern int Nproj;
-extern char proj_list_file[];
-
-extern char *corr_write_space;
-extern int dim_partitioned[];

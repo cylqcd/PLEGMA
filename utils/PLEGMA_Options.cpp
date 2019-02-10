@@ -2,168 +2,6 @@
 #include <PLEGMA_utils.h>
 #include <comm_quda.h>
 
-#ifdef MULTI_GPU
-int device = -1;
-#else
-int device = 0;
-#endif
-
-QudaReconstructType link_recon = QUDA_RECONSTRUCT_NO;
-QudaReconstructType link_recon_sloppy = QUDA_RECONSTRUCT_INVALID;
-QudaReconstructType link_recon_precondition = QUDA_RECONSTRUCT_INVALID;
-QudaPrecision prec = QUDA_SINGLE_PRECISION;
-QudaPrecision  prec_sloppy = QUDA_INVALID_PRECISION;
-//QudaPrecision prec_refinement_sloppy = QUDA_INVALID_PRECISION;
-QudaPrecision  prec_precondition = QUDA_INVALID_PRECISION;
-QudaPrecision prec_null = QUDA_INVALID_PRECISION;
-int dims[4] = {8,8,8,16};
-int procs[4] = {1,1,1,1};
-QudaDagType dagger = QUDA_DAG_NO;
-QudaDslashType dslash_type = QUDA_TWISTED_CLOVER_DSLASH;
-char latfile[256] = "";
-int Nsrc = 1;
-int Msrc = 1;
-int niter = 100;
-int gcrNkrylov = 10;
-int pipeline = 0;
-int solution_accumulator_pipeline = 0;
-int test_type = 0;
-int nvec[QUDA_MAX_MG_LEVEL] = { };
-char vec_infile[256] = "";
-char vec_outfile[256] = "";
-QudaInverterType inv_type;
-QudaInverterType precon_type = QUDA_INVALID_INVERTER;
-int multishift = 0;
-bool verify_results = true;
-double mass = 0.1;
-double kappa = -1.0;
-double mu = 0.1;
-double anisotropy = 1.0;
-double clover_coeff = 0.1;
-bool compute_clover = false;
-double tol = 1e-9; // KH: I switch from 1e-7 to 1e-9
-double tol_hq = 0.1;
-double reliable_delta = 0.1; // KH: Why reliable delta was missing?
-QudaTwistFlavorType twist_flavor = QUDA_TWIST_SINGLET;
-bool kernel_pack_t = false;
-QudaMassNormalization normalization = QUDA_KAPPA_NORMALIZATION;
-QudaMatPCType matpc_type = QUDA_MATPC_EVEN_EVEN;
-QudaSolveType solve_type = QUDA_DIRECT_PC_SOLVE;
-
-int mg_levels = 2;
-
-int nu_pre = 2;
-int nu_post = 2;
-double mu_factor[QUDA_MAX_MG_LEVEL] = { };
-QudaVerbosity mg_verbosity[QUDA_MAX_MG_LEVEL] = { };
-QudaInverterType setup_inv[QUDA_MAX_MG_LEVEL] = { };
-int num_setup_iter[QUDA_MAX_MG_LEVEL] = { };//
-
-//double setup_tol[QUDA_MAX_MG_LEVEL] = { };
-//int setup_maxiter[QUDA_MAX_MG_LEVEL] = { };
-//int setup_maxiter_refresh[QUDA_MAX_MG_LEVEL] = { };
-
-double setup_tol = 5e-6;
-QudaSetupType setup_type = QUDA_NULL_VECTOR_SETUP;//
-bool pre_orthonormalize = false;//
-bool post_orthonormalize = true;//
-double omega = 0.85;
-//QudaSolveType coarse_solve_type[QUDA_MAX_MG_LEVEL] = { };
-//QudaSolveType smoother_solve_type[QUDA_MAX_MG_LEVEL] = { };
-QudaInverterType coarse_solver[QUDA_MAX_MG_LEVEL] = { };
-double coarse_solver_tol[QUDA_MAX_MG_LEVEL] = { };
-QudaInverterType smoother_type[QUDA_MAX_MG_LEVEL] = { };
-double smoother_tol[QUDA_MAX_MG_LEVEL] = { };
-int coarse_solver_maxiter[QUDA_MAX_MG_LEVEL] = { };
-bool generate_nullspace = true;
-bool generate_all_levels = true;
-QudaSchwarzType schwarz_type[QUDA_MAX_MG_LEVEL] = { };
-int schwarz_cycle[QUDA_MAX_MG_LEVEL] = { };
-
-int geo_block_size[QUDA_MAX_MG_LEVEL][QUDA_MAX_DIM] = { };
-
-int dim_partitioned[4] = {0,0,0,0};
-
-/////////////////////
-// QKXTM additions //
-/////////////////////
-
-//-C.K. Generic Input parameters
-int traj;
-char latfile_smeared[257] = "";
-double csw = 1.57551;
-char verbosity_level[257] = "summarize";
-bool isEven = true;
-
-//-C.K. Correlation functions input parameters
-int src[4] = {0,0,0,0};
-int Ntsink = 1;
-char pathList_tsink[257] = "list_tsinksource.txt";
-int Q_sq = 0;
-int nsmearAPE = 20;
-int nsmearGauss = 50;
-double alphaAPE = 0.5;
-double alphaGauss = 4.0;
-
-char corr_dirname[1024] = "./";
-char twop_filename[257] = "twop";
-char threep_filename[257] = "threep";
-char prop_path[257] = "prop";
-
-char pathListRun3pt[257] = "listrun3pt.txt";
-char run3pt[257] = "all";
-char check_file_exist[257] = "no";
-char *corr_file_format = (char*)"ASCII";
-
-int numSourcePositions = 1;
-char pathListSourcePositions[257] = "listSourcePositions.txt";
-
-int Nproj = 1;
-char proj_list_file[257] = "default";
-
-char *corr_write_space =(char*) "MOMENTUM";
-
-//-C.K. loop Parameters
-int Nstoch = 100;              // Number of stochastic noise vectors
-int Ndump  = 10;               // Write the loop every Ndump stoch. vectors
-unsigned long int seed = 100;  // The seed for the stochastic vectors
-char loop_fname[512] = "loop";
-char *loop_file_format =(char*) "ASCII";
-char source_type[257] = "random";
-
-#ifdef HAVE_ARPACK
-//- Loop params with ARPACK enabled
-int defl_steps = 1;
-int defl_step_nEv[10] = { };
-
-//-C.K. ARPACK Parameters
-char pathEigenVectorsUp[257] = "ev_u.0000";
-char pathEigenVectorsDown[257] = "ev_d.0000";
-char pathEigenValuesUp[257] = "evals_u.dat";
-char pathEigenValuesDown[257] = "evals_d.dat";
-
-int PolyDeg = 100;         // degree of the Chebysev polynomial
-int nEv = 100;             // Number of the eigenvectors we want
-int nKv = 200;             // total size of Krylov space
-char *spectrumPart = "SR"; // for which part of the spectrum we want to solve
-bool isACC = true;
-double tolArpack = 1.0e-5;
-int maxIterArpack = 100000;
-int modeArpack = 1;
-char arpack_logfile[512] = "arpack.log";
-double amin = 3.0e-4;
-double amax = 3.5;
-#endif
-bool isFullOp = false;
-int k_probing = 0; // default is without probing
-bool spinColorDil = false;
-
-// these variables will allow us to do the probing in different runs
-// if you plan to do the hadamard vectors all in one run then this is not needed
-int hadamLow = 0;
-int hadamHigh = 0;
-//===========//
-
 static void printBasicOptions(){
   _PRINT_("dims, %d %d %d %d\n",dims[0],dims[1],dims[2],dims[3]);
   _PRINT_("procs, %d %d %d %d\n",procs[0],procs[1],procs[2],procs[3]);
@@ -209,7 +47,7 @@ static void printQudaSolverOptions(){
   for(int i = 0; i < mg_levels-1; i++)
     _PRINT_("Q-mg-smoother, %d %d\n", i, smoother_type[i]);
   for(int i = 0; i < mg_levels-1; i++)
-    _PRINT_("Q-mg-block-size, %d \t %d %d %d %d\n", i, geo_block_size[i][0], geo_block_size[i][1], geo_block_size[i][2], geo_block_size[i][3]);
+    _PRINT_("Q-mg-block-size, %d \t %d %d %d %d\n", i, mg_block_size[i][0], mg_block_size[i][1], mg_block_size[i][2], mg_block_size[i][3]);
   for(int i = 0; i < mg_levels-1; i++)
     _PRINT_("Q-mg-mu-factor, %d %f\n", i, mu_factor[i]);
   for(int i = 0; i < mg_levels-1; i++)
@@ -386,7 +224,7 @@ void qudaSolverOptions(Options &opt, bool showThem){
     if(mg_levels != (nl+1)) _ERROR_("Error: Check that Q-mg-levels agrees with the number of levels provided in the blocks\n");
     for(int i = 0; i < nl; i++)
       for(int j = 0; j < 4; j++)
-	geo_block_size[intVec[i*5]][j]=intVec[i*5+1+j];
+	mg_block_size[intVec[i*5]][j]=intVec[i*5+1+j];
   }
 
   tpl_int_double.clear();
