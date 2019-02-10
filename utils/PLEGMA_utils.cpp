@@ -7,24 +7,24 @@ using namespace quda;
 #include "utils/QUDA_params.h"
 #undef ALLOCATE
 
-void initialize(int argc, char **argv, bool print=true, bool withQuda=true) {
+void initialize(int argc, char **argv, bool withQuda=true) {
   
   Options opt(argc,argv);
-  basicOptions(opt, print);
+  basicOptions(opt);
   
   // initialize QMP/MPI, QUDA comms grid and RNG 
   initComms(argc, argv, procs);
 
   if(withQuda) {
-    qudaSolverOptions(opt,print);
+    qudaSolverOptions(opt);
     // initialize the QUDA library
     initQuda(device);
-    infoQuda();
+    if(verbose>0) infoQuda();
   }
 
   // initialize PLEGMA params
   PLEGMA_init(dims, procs);
-  PLEGMA_status();
+  if(verbose>0) PLEGMA_status();
 }
 
 void finalize() {

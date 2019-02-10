@@ -38,8 +38,8 @@ void mapNormalToEvenOdd(void *spinor, QudaInvertParam param, int nx , int ny , i
 void mapEvenOddToNormal(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt);
 
 //=================== PLEGMA_Options.cpp ==========================//
-void basicOptions(Options &opt, bool showThem  = false);
-void qudaSolverOptions(Options &opt, bool showThem = false);
+void basicOptions(Options &opt);
+void qudaSolverOptions(Options &opt);
 
 //================== PLEGMA_lime.cpp ===================================//
 void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);
