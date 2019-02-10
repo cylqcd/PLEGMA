@@ -10,16 +10,21 @@
 //#define TIMING_REPORT
 using namespace plegma;
 
-void plegma::PLEGMA_init(){
+void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
 
 #define ADD_TO_GLOBAL
 #include<PLEGMA_global_vars.h>
 #undef ADD_TO_GLOBAL
   
   if(HGC_init_PLEGMA_flag == false){
-    
     for(int i = 0 ; i < N_DIMS ; i++)
-      HGC_nProc[i] = comm_dim(i);
+      HGC_localL[i] = localL[i];
+    
+    for(int i = 0 ; i < N_DIMS ; i++) {
+      HGC_nProc[i] = nProcs[i];
+      if(HGC_nProc[i] != comm_dim(i))
+	errorQuda("nProcs and comm_dim do not match for dim %d",i);
+    }
     
     for(int i = 0 ; i < N_DIMS ; i++){   // take local and total lattice
       // HGC_localL[i] = params->lL[i]; this is set in the executable
@@ -146,7 +151,7 @@ void plegma::PLEGMA_init(){
   
 }
 
-void plegma::print_status(){
+void plegma::PLEGMA_status(){
 
   if(HGC_init_PLEGMA_flag == false) errorQuda("You must initialize init_PLEGMA first");
   printfQuda("Number of colors is %d\n",N_COLS);

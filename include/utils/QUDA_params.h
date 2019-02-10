@@ -5,12 +5,6 @@
 //-----------------//
 extern QudaDslashType dslash_type;
 extern int device;
-extern int xdim;
-extern int ydim;
-extern int zdim;
-extern int tdim;
-extern int Lsdim;
-extern int gridsize_from_cmdline[];
 extern QudaReconstructType link_recon;
 extern QudaPrecision prec;
 extern QudaPrecision  prec_sloppy;

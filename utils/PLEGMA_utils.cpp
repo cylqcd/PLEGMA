@@ -3,26 +3,24 @@
 
 using namespace quda;
 
-void initPlegma(int argc, char **argv, PLEGMA_params *params){
-  initComms(argc, argv, params->procs);
-  initQuda(device);
-  PLEGMA_init(params);
-  print_status();  
-}
-
-void initialize(int argc, char **argv, PLEGMA_params *params) {
-  read_command_line(argc, argv, params);
+void initialize(int argc, char **argv, bool print=true, bool withQuda=true) {
+  
+  Options opt(argc,argv);
+  basicOptions(opt, print);
   
   // initialize QMP/MPI, QUDA comms grid and RNG 
-  initComms(argc, argv, params->procs);
+  initComms(argc, argv, procs);
 
-  // initialize the QUDA library
-  initQuda(device);
-  print_info();
+  if(withQuda) {
+    qudaSolverOptions(opt,print);
+    // initialize the QUDA library
+    initQuda(device);
+    infoQuda();
+  }
 
   // initialize PLEGMA params
-  PLEGMA_init(params);
-  print_status();
+  PLEGMA_init(dims, procs);
+  PLEGMA_status();
 }
 
 void finalize() {

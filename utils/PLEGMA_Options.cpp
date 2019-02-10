@@ -16,14 +16,8 @@ QudaPrecision  prec_sloppy = QUDA_INVALID_PRECISION;
 //QudaPrecision prec_refinement_sloppy = QUDA_INVALID_PRECISION;
 QudaPrecision  prec_precondition = QUDA_INVALID_PRECISION;
 QudaPrecision prec_null = QUDA_INVALID_PRECISION;
-int xdim = 24;
-int ydim = 24;
-int zdim = 24;
-int tdim = 24;
-int xproc = 1;
-int yproc = 1;
-int zproc = 1;
-int tproc = 1;
+int dims[4] = {8,8,8,16};
+int procs[4] = {1,1,1,1};
 QudaDagType dagger = QUDA_DAG_NO;
 QudaDslashType dslash_type = QUDA_TWISTED_CLOVER_DSLASH;
 char latfile[256] = "";
@@ -171,8 +165,8 @@ int hadamHigh = 0;
 //===========//
 
 static void printBasicOptions(){
-  _PRINT_("dims, %d %d %d %d\n",xdim,ydim,zdim,tdim);
-  _PRINT_("procs, %d %d %d %d\n",xproc,yproc,zproc,tproc);
+  _PRINT_("dims, %d %d %d %d\n",dims[0],dims[1],dims[2],dims[3]);
+  _PRINT_("procs, %d %d %d %d\n",procs[0],procs[1],procs[2],procs[3]);
   _PRINT_("load-gauge, %s\n", latfile);
 }
 
@@ -241,29 +235,17 @@ static void printQudaSolverOptions(){
 void basicOptions(Options &opt, bool showThem){
   bool isFound;
   
-  opt.setForced("dims","Set dimensions (X Y Z T), default (24 24 24 24)", false, xdim, ydim, zdim, tdim);
-  if(!opt.getIsHelp()) if( (xdim <= 0 || xdim > 512) || (ydim <= 0 || ydim > 512)  || (zdim <= 0 || zdim > 512) || (tdim <= 0 || tdim > 512))
-			 _ERROR_("Error: dims should be > 0 and < 512\n");
+  opt.setForced("dims","Set dimensions (X Y Z T), e.g. 8 8 8 16", false, dims[0], dims[1], dims[2], dims[3]);
+  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) _ERROR_("Error with dim %d: dims should be > 0 and < 512\n", i);
 
-  opt.setForced("procs","Set number of processors (X Y Z T), default (1 1 1 1)", false, xproc, yproc, zproc, tproc);
-  if(!opt.getIsHelp()) if( (xproc <= 0 || xdim%xproc != 0) || (yproc <= 0 || ydim%yproc != 0) || (zproc <= 0 || zdim%zproc != 0) || (tproc <= 0 || tdim%tproc != 0) )
-			 _ERROR_("Error: Negative proc or not divisor of dim\n");
+  opt.setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", false, procs[0], procs[1], procs[2], procs[3]);
+  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (procs[i] <= 0 || dims[i]%procs[i] != 0) ) _ERROR_("Error with dim %d: Negative proc or not divisor of dim\n", i);
 
   std::string gfile;
   isFound=opt.set("load-gauge", "Path to the gauge field, default (empty string)", false, gfile);
   if(isFound)strcpy(latfile,gfile.c_str());
 
   if(showThem && !opt.getIsHelp()) printBasicOptions();
-
-  // This are the only HGC variables need to be set. The others are computed accordingly.
-  HGC_localL[0] = xdim;
-  HGC_localL[1] = ydim;
-  HGC_localL[2] = zdim;
-  HGC_localL[3] = tdim;
-  HGC_nProc[0] = xproc;
-  HGC_nProc[1] = yproc;
-  HGC_nProc[2] = zproc;
-  HGC_nProc[3] = tproc;
 }
 
 template<typename T> static inline void map_to_array_MG(std::map<int,T> &tpl, T *arr, T def, T noSm, T noBig, std::string err){

@@ -6,6 +6,7 @@
 #include <utils/QUDA_types.h>
 #include <utils/QUDA_interface.h>
 #include <utils/PLEGMA_Options.h>
+#include <utils/PLEGMA_lime.h>
 
 using namespace plegma;
 
@@ -17,7 +18,7 @@ void updateGaugeQuda(void* gauge, QudaGaugeParam gauge_param);
 void finalizeGaugeQuda();
 
 //============= QUDA_params.cpp ===================================//
-void print_info();
+void infoQuda();
 void setGaugeParam(QudaGaugeParam &gauge_param);
 void setMultigridParam(QudaMultigridParam &mg_param);
 void setInvertParam(QudaInvertParam &inv_param);
@@ -37,9 +38,8 @@ void mapNormalToEvenOdd(void *spinor, QudaInvertParam param, int nx , int ny , i
 void mapEvenOddToNormal(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt);
 
 //=================== PLEGMA_Options.cpp ==========================//
-void read_command_line(int argc, char** argv);
 void basicOptions(Options &opt, bool showThem  = false);
-void basicOptionsWsolver(Options &opt, bool showThem = false);
+void qudaSolverOptions(Options &opt, bool showThem = false);
 
 //================== PLEGMA_lime.cpp ===================================//
 void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);

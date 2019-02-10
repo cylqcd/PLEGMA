@@ -3,6 +3,9 @@
 //------------------//
 // PLEGMA Parameters //
 //------------------//
+extern int dims[];
+extern int procs[];
+
 extern char latfile_smeared[];
 extern char verbosity_level[];
 extern int traj;
