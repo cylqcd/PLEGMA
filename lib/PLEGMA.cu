@@ -10,6 +10,7 @@
 //#define TIMING_REPORT
 using namespace plegma;
 extern Topology *default_topo;
+extern int verbose;
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
 
@@ -22,6 +23,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
       HGC_localL[i] = localL[i];
 
     HGC_default_topo = default_topo;
+    HGC_verbosity = verbose;
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];
       if(HGC_nProc[i] != comm_dim(i))

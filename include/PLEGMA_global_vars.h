@@ -95,6 +95,7 @@
 // Global variables
 global_host(bool, init_PLEGMA_flag);
 global_host(float, deviceMemory);
+global_host(int, verbosity);
 
 // variables visible on both host and device
 global_both(tex_mom_list, moms);
