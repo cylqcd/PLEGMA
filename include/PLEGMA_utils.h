@@ -25,8 +25,7 @@ void setInvertParam(QudaInvertParam &inv_param);
 
 //============== PLEGMA_utils.cpp =======================================//
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
-void initialize(int argc, char** argv);
-void initPlegma(int argc, char **argv);
+void initialize(int argc, char** argv, bool withQuda=true);
 void finalize();
 void applyBoundaryCondition(double **gauge, int Vh ,QudaGaugeParam *gauge_param);
 void applyBoundaryCondition(double **gauge, int lL[4] ,QudaGaugeParam *gauge_param);
@@ -42,4 +41,4 @@ void basicOptions(Options &opt);
 void qudaSolverOptions(Options &opt);
 
 //================== PLEGMA_lime.cpp ===================================//
-void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);
+void readLimeGauge(double **gauge, const char *fname, QudaGaugeParam *param, int gridSize[4]);

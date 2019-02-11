@@ -17,7 +17,7 @@
 // Main paramters -- read by basicOptions
 define(int dims[N_DIMS], {8,8,8,16});
 define(int procs[N_DIMS], {1,1,1,1});
-define(char* latfile);
+define(std::string latfile);
 define(int verbose, 1);
 
 // Additional paramters -- read by extraOptions
@@ -27,14 +27,14 @@ define(int nsmearGauss, 50);
 define(double alphaGauss, 0.2);
 
 define(int numSourcePositions, 1);
-define(char* pathListSourcePositions);
+define(std::string pathListSourcePositions);
 define(int maxQsq, 64);
 define(int corr_file_format, 1);
 define(int corr_space, 1);
-define(char* twop_filename);
-define(char* threep_filename);
+define(std::string twop_filename);
+define(std::string threep_filename);
 define(int numTSink);
-define(char* pathListTSink);
+define(std::string pathListTSink);
 define(int numProj);
-define(char* pathListProj);
+define(std::string pathListProj);
 

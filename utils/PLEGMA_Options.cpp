@@ -5,7 +5,7 @@
 static void printBasicOptions(){
   _PRINT_("dims, %d %d %d %d\n",dims[0],dims[1],dims[2],dims[3]);
   _PRINT_("procs, %d %d %d %d\n",procs[0],procs[1],procs[2],procs[3]);
-  _PRINT_("load-gauge, %s\n", latfile);
+  _PRINT_("load-gauge, %s\n", latfile.c_str());
   _PRINT_("verbose, %d\n", verbose);
 }
 
@@ -76,15 +76,13 @@ void basicOptions(Options &opt){
   opt.set("verbose","Set verbosity level, 0 minimal, 1 verbose, 2 debug, 3 debug all", false, verbose);
   if(verbose > 2) debug=true;
   
-  opt.setForced("dims","Set dimensions (X Y Z T), e.g. 8 8 8 16", debug, dims[0], dims[1], dims[2], dims[3]);
+  opt.setForced("dims","Set local dimensions (X Y Z T), e.g. 8 8 8 16", debug, dims[0], dims[1], dims[2], dims[3]);
   if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) _ERROR_("Error with dim %d: dims should be > 0 and < 512\n", i);
 
   opt.setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", debug, procs[0], procs[1], procs[2], procs[3]);
-  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (procs[i] <= 0 || dims[i]%procs[i] != 0) ) _ERROR_("Error with dim %d: Negative proc or not divisor of dim\n", i);
+  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( procs[i] <= 0 ) _ERROR_("Error with dim %d: Negative proc or not divisor of dim\n", i);
 
-  std::string gfile;
-  isFound=opt.set("load-gauge", "Path to the gauge field, default (empty string)", debug, gfile);
-  if(isFound)strcpy(latfile,gfile.c_str());
+  isFound=opt.set("load-gauge", "Path to the gauge field, default (empty string)", debug, latfile);
 
   if(verbose > 1 && !opt.getIsHelp()) printBasicOptions();
 }
@@ -143,8 +141,8 @@ void qudaSolverOptions(Options &opt){
   isFound=opt.set("Q-recon-precondition", "Type of link reconstruction for precon, options (8,9,12,13,18), default (Q-recon)", debug, tmpString);
   if(isFound)link_recon_precondition  = get_recon(tmpString.c_str());
 
-  opt.setForced("Q-dslash-type", "Set the dslash type, options for now (twisted-mass/twisted-clover)",debug, tmpString);
-  if(!opt.getIsHelp()){
+  isFound=opt.set("Q-dslash-type", "Set the dslash type, options for now (twisted-mass/twisted-clover)",debug, tmpString);
+  if(isFound) {
     if((tmpString != "twisted-mass") && (tmpString != "twisted-clover"))_ERROR_("Error: only twisted-mass or twisted-clover are allowed for now");
     dslash_type =  get_dslash_type(tmpString.c_str());
   }

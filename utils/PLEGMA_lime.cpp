@@ -20,7 +20,7 @@ typedef struct
 } qcd_complex_16;
 
 
-void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4])
+void readLimeGauge(double **gauge, const char *fname, QudaGaugeParam *param, int gridSize[4])
 {
 /*
 read gauge fileld config stored in binary file
