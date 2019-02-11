@@ -9,6 +9,7 @@
 
 //#define TIMING_REPORT
 using namespace plegma;
+extern Topology *default_topo;
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
 
@@ -19,7 +20,8 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
   if(HGC_init_PLEGMA_flag == false){
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
-    
+
+    HGC_default_topo = default_topo;
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];
       if(HGC_nProc[i] != comm_dim(i))
@@ -27,7 +29,6 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
     }
     
     for(int i = 0 ; i < N_DIMS ; i++){   // take local and total lattice
-      // HGC_localL[i] = params->lL[i]; this is set in the executable
       HGC_totalL[i] = HGC_nProc[i] * HGC_localL[i];
     }
     

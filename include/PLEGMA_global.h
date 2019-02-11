@@ -64,7 +64,7 @@ namespace plegma {
   template<> inline char type_char<const char*>() { return 's'; }
   template<> inline char type_char<void*>() { return 'p'; }
 
-  static std::string demangle( const char* mangled_name ) {
+  static inline std::string demangle( const char* mangled_name ) {
 #ifdef __GNUG__ // gnu C++ compiler
     std::string result ;
     std::size_t len = 0 ;
@@ -120,9 +120,9 @@ namespace plegma {
   enum LATDIMS{DIM_X,DIM_Y,DIM_Z,DIM_T};
 
   enum GAMMAS {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43}; // Do not change this order
-  std::string GAMMAS_STR[16] {"1","g1","g2","g3","g4","g5","g5g1","g5g2","g5g3","g5g4",
+  const std::string GAMMAS_STR[16] {"1","g1","g2","g3","g4","g5","g5g1","g5g2","g5g3","g5g4",
       "s12","s13","s23","s41","s42","s43"};
-  std::string getGammasString(std::vector<GAMMAS> gammas) {
+  static inline std::string getGammasString(std::vector<GAMMAS> gammas) {
     std::string s = "";
     std::for_each(gammas.begin(), gammas.end(), [&] (GAMMAS n) {s += GAMMAS_STR[(int) n]+",";});
     return s;
@@ -160,7 +160,7 @@ namespace plegma {
       host_only_name.push_back(name);	
     }
     template<typename hostT, typename deviceT>
-    void add(const char* name, hostT &host, deviceT &device=NULL, int size=1) {
+    void add(const char* name, hostT &host, deviceT &device, int size=1) {
       both_pointer.push_back({(void*) &host, (void*) &device});
       both_size.push_back(size);
       both_bytes.push_back(sizeof(hostT)*size);
@@ -170,7 +170,7 @@ namespace plegma {
     }
     void copyToDevice() {
       for(int i = 0; i != both_pointer.size(); i++) {
-	cudaMemcpyToSymbol( both_pointer[i][1], both_pointer[i][0], both_bytes[i]);
+	cudaMemcpyToSymbol( *((char**) both_pointer[i][1]), both_pointer[i][0], both_bytes[i]);
       }
       checkCudaError();
     }

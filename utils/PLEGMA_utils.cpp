@@ -7,7 +7,7 @@ using namespace quda;
 #include "utils/QUDA_params.h"
 #undef ALLOCATE
 
-void initialize(int argc, char **argv, bool withQuda=true) {
+void initialize(int argc, char **argv, bool withQuda) {
   
   Options opt(argc,argv);
   basicOptions(opt);
@@ -20,6 +20,7 @@ void initialize(int argc, char **argv, bool withQuda=true) {
     // initialize the QUDA library
     initQuda(device);
     if(verbose>0) infoQuda();
+    qudaInitialized=true;
   }
 
   // initialize PLEGMA params
@@ -30,10 +31,12 @@ void initialize(int argc, char **argv, bool withQuda=true) {
 void finalize() {
   PLEGMA_end();
   
-  // finalize the QUDA library
   saveTuneCache(false);
-  finalizeGaugeQuda();
-  endQuda();
+  // finalize the QUDA library
+  if(qudaInitialized) {
+    finalizeGaugeQuda();
+    endQuda();
+  }
   
   // finalize the communications layer
   finalizeComms();
