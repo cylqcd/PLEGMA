@@ -18,7 +18,7 @@ namespace plegma {
     
     void pack(double **gauge);
     void packToBackup(void **gauge);
-    void loadFromBackup();
+    void readFromLime(std::string filename);
 
     void absorbDir_device(PLEGMA_Su3field<Float> &su,int dir);
     void absorbDir_host(PLEGMA_Su3field<Float> &su,int dir);

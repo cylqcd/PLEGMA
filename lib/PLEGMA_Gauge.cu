@@ -5,6 +5,7 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
+#include <utils/PLEGMA_lime.h>
 
 using namespace plegma;
 
@@ -29,6 +30,98 @@ void PLEGMA_Gauge<Float>::pack(double **p_gauge){
       }
     }
   }
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
+  FILE *fid;
+  LimeReader *limereader;
+
+  fid=fopen(filename.c_str(),"r");
+  if(fid==NULL) {
+    errorQuda("Error reading configuration! Could not open path for reading: %s\n", filename.c_str());
+  }
+	
+  if ((limereader = limeCreateReader(fid))==NULL) {
+    errorQuda("Could not create limeReader");
+  }
+	
+  while(limeReaderNextRecord(limereader) != LIME_EOF ) {
+    char* lime_type = limeReaderType(limereader);
+    
+    if(strcmp(lime_type,"ildg-binary-data") == 0)
+      break;
+    
+    if( HGC_verbosity > 0 && strcmp(lime_type,"xlf-info")==0)
+      print_xlf_info(limereader);
+
+    if( HGC_verbosity > 0 && strcmp(lime_type,"ildg-format")==0)
+      print_ildg_format(limereader);
+  }
+
+#ifdef	MULTI_GPU
+  // Read 1 byte to set file-pointer to start of binary data
+  n_uint64_t one=1;
+  char dummy;
+  limeReaderReadData(&dummy,&one,limereader);
+  MPI_Offset offset = ftell(fid)-1;
+#endif
+  limeDestroyReader(limereader);
+
+  int dof = N_DIMS*N_COLS*N_COLS*2;
+  double *ftmp = (double*) malloc(dof*HGC_localVolume*sizeof(double));
+  if(ftmp == NULL) {
+    errorQuda(" Out of memory\n");
+  }
+
+#ifdef	MULTI_GPU
+  MPI_Datatype subblock;  //MPI-type, 5d subarray
+  MPI_File mpifid;
+  MPI_Status status;
+  int sizes[5], lsizes[5], starts[5];
+  for(int i=0; i<4; i++) {
+    sizes[i] = HGC_totalL[3-i];
+    lsizes[i] = HGC_localL[3-i];
+    starts[i] = HGC_procPosition[3-i]*HGC_localL[3-i];
+  }
+  lsizes[4] = sizes[4] = dof;
+  starts[4] = 0;
+
+  MPI_Type_create_subarray(5,sizes,lsizes,starts,MPI_ORDER_C,MPI_DOUBLE,&subblock);
+  MPI_Type_commit(&subblock);
+	
+  MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifid);
+  MPI_File_set_view(mpifid, offset, MPI_DOUBLE, subblock, "native", MPI_INFO_NULL);
+
+  if(MPI_File_read_all(mpifid, ftmp, sizes[4]*HGC_localVolume, MPI_DOUBLE, &status) == 1)
+    errorQuda("Error in MPI_File_read_all\n");
+  MPI_File_close(&mpifid);
+  
+  if(dof*HGC_localVolume*sizeof(double) > 2147483648)  {
+    warningQuda("File too large. At least %d processes are needed to read this file properly.\n",
+	     (dof*HGC_localVolume*sizeof(double)/2147483648)+1);
+    warningQuda("If some results are wrong, try increasing the number of MPI processes.\n");
+  }
+#else
+  if(fread(ftmp, sizeof(double), dof*HGC_localVolume, fid) != dof*HGC_localVolume) {
+    errorQuda("Error, could not read proper amount of data");
+  }
+#endif
+  fclose(fid);
+
+  if(!isBigEndian())
+    swap_8(ftmp,dof*HGC_localVolume);
+  
+  for(size_t i = 0; i < HGC_localVolume; i++) {
+    double U[dof/2][2];
+    memcpy(U[0], ftmp + i*dof, dof*sizeof(double));
+    for(int s = 0; s < dof/2; s++) {
+      this->h_elem[(s*HGC_localVolume + i)*2 + 0] = U[s][0];
+      this->h_elem[(s*HGC_localVolume + i)*2 + 1] = U[s][1];
+    }
+  }
+  
+  free(ftmp);
 }
 
 template<typename Float>
