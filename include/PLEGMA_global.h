@@ -48,11 +48,12 @@ namespace plegma {
   // Custom types and functions
   template<typename Float> struct texture;
 
-  template<typename Float> inline MPI_Datatype MPI_Type(Float a);
-  template<> inline MPI_Datatype MPI_Type<float>(float a) { return MPI_FLOAT; }
-  template<> inline MPI_Datatype MPI_Type<float*>(float* a) { return MPI_FLOAT; }
-  template<> inline MPI_Datatype MPI_Type<double>(double a) { return MPI_DOUBLE; }
-  template<> inline MPI_Datatype MPI_Type<double*>(double* a) { return MPI_DOUBLE; }
+  template<typename Float> inline MPI_Datatype MPI_Type();
+  template<typename Float> inline MPI_Datatype MPI_Type(Float a){ return MPI_Type<Float>(); }
+  template<> inline MPI_Datatype MPI_Type<float>() { return MPI_FLOAT; }
+  template<> inline MPI_Datatype MPI_Type<float*>() { return MPI_FLOAT; }
+  template<> inline MPI_Datatype MPI_Type<double>() { return MPI_DOUBLE; }
+  template<> inline MPI_Datatype MPI_Type<double*>() { return MPI_DOUBLE; }
 
   template<typename T> inline char type_char(){ return 'p';};
   template<typename T> inline char type_char(T a){ return type_char<T>();};

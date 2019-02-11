@@ -61,12 +61,16 @@ static void FT(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<s
     createMomField(x,mom[imom],ft.Dims(),-sign); // change sign to compensate dagger
     for(int idf = 0 ; idf < f.Field_length(); idf++)
       for(int it = 0 ; it < ft.DimT(); it++){
-	Float2<Float> res;
-	Float2<Float> *y = (Float2<Float> *)f.D_elem() + idf*f.Total_length() + it*V3;
-	cuBLAS::dot((Float*) &res, (ft.Dims() == 3) ? V3 : HGC_localVolume,
-		    (Float*) x,(Float*) y, (ft.Dims() == 3) ? HGC_spaceComm : MPI_COMM_WORLD);
-	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.x;
-	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.y;
+ 	Float2<Float> *y = (Float2<Float> *)f.D_elem() + idf*f.Total_length() + it*V3;
+	std::complex<Float> res, lres = cuBLAS::dot((ft.Dims() == 3) ? V3 : HGC_localVolume, (Float*) x,(Float*) y);
+	int mpiErr = MPI_Allreduce((Float*) &lres, (Float*) &res, 2,
+				   MPI_Type<Float>(), MPI_SUM, (ft.Dims() == 3) ?
+				   HGC_spaceComm : MPI_COMM_WORLD);
+	if(mpiErr != MPI_SUCCESS)
+	  errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+
+	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.real();
+	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.imag();
       }
   }
   cudaFree(x);

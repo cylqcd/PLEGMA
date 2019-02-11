@@ -85,7 +85,7 @@ namespace plegma {
     void communicateCornerGhost(int dirOr=-1);
     void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
     void communicateGhost(int dirOr=-1);
-    
+
     void pack(Float *topack);
     void unpack(Float *out);
 
@@ -100,8 +100,12 @@ namespace plegma {
     void setUnit(std::vector<int> indDiag);
     void copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where = DEVICE);
     void mulMomentumPhases(std::vector<int> mom, int sign=-1);
+
+    void axpy(PLEGMA_Field &Fin, std::complex<Float> alpha);
     std::complex<Float> dot(PLEGMA_Field<Float> &FieldIn);    
+    Float norm();
     void cscale(std::complex<Float> val);
+    
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
   };
 }

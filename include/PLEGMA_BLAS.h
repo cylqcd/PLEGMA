@@ -104,25 +104,38 @@ namespace cuBLAS{
   }
   //-----------------------------------------------------------------
   template<typename Float>
-  inline void dot(Float res[2],int NN, const Float *x, const Float *y, MPI_Comm comm);
+  inline std::complex<Float> dot(int NN, const Float *x, const Float *y);
   template<>
-  inline void dot<float>(float res[2], int NN, const float *x, const float *y, MPI_Comm comm){
-    if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
+  inline std::complex<float> dot<float>(int NN, const float *x, const float *y){
     cuComplex cu_res;
     cublasStatus_t error = cublasCdotc(HGC_cublas_handle, NN,(cuComplex*)x, 1, (cuComplex*)y,1,&cu_res);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCdotc failed with error %d", error);
-    int mpiErr = MPI_Allreduce((float*) &cu_res, res, 2, MPI_FLOAT, MPI_SUM, comm);
-    if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+    return std::complex<float>(cu_res.x,cu_res.y);
   }
   template<>
-  inline void dot<double>(double res[2], int NN, const double *x, const double *y, MPI_Comm comm){
-    if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
+  inline std::complex<double> dot<double>(int NN, const double *x, const double *y){
     cuDoubleComplex cu_res;
     cublasStatus_t error = cublasZdotc(HGC_cublas_handle, NN,(cuDoubleComplex*)x, 1, (cuDoubleComplex*)y,1,&cu_res);
     if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdotc failed with error %d", error);
-    int mpiErr = MPI_Allreduce((double*) &cu_res, res, 2, MPI_DOUBLE, MPI_SUM, comm);
-    if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+    return std::complex<double>(cu_res.x,cu_res.y);
   }  
+  //-----------------------------------------------------------------
+  template<typename Float>
+  inline Float norm(int NN, const Float *x);
+  template<>
+  inline float norm<float>(int NN, const float *x){
+    float res;
+    cublasStatus_t error = cublasScnrm2(HGC_cublas_handle, NN, (cuComplex*)x, 1, &res);
+    if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCdotc failed with error %d", error);
+    return res;
+  }
+  template<>
+  inline double norm<double>(int NN, const double *x){
+    double res;
+    cublasStatus_t error = cublasDznrm2(HGC_cublas_handle, NN, (cuDoubleComplex*)x, 1, &res);
+    if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCdotc failed with error %d", error);
+    return res;
+  }
 }
 //=================================================================//
 

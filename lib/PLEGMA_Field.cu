@@ -533,12 +533,30 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::axpy(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
+  Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
+  cuBLAS::axpy(total_length*field_length, a, d_elem, fieldIn.D_elem());
+}
+
+
+template<typename Float>
 std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
+  std::complex<Float> result, res = cuBLAS::dot(total_length*field_length,
+						d_elem, fieldIn.D_elem());
   
-  Float res[2];
-  cuBLAS::dot(res, total_length*field_length, PLEGMA_Field<Float>::d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
-  printfQuda("Vector dot product is %e %e\n",res[0], res[1]);
-  std::complex<Float> result(res[0], res[1]);
+  int mpiErr = MPI_Allreduce((Float*) &res, (Float*) &result, 2,
+			     MPI_Type<Float>(), MPI_SUM, MPI_COMM_WORLD);
+  if(mpiErr != MPI_SUCCESS)
+    errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+  return result;
+}
+
+template<typename Float>
+Float PLEGMA_Field<Float>::norm(){
+  Float result, loc_res = cuBLAS::norm(total_length*field_length, d_elem);
+  int mpiErr = MPI_Allreduce(&result, &loc_res, 1, MPI_Type<Float>(), MPI_SUM,
+			     MPI_COMM_WORLD);
+  if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
   return result;
 }
 
