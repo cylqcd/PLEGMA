@@ -16,9 +16,9 @@ namespace quda {
   extern void setTransferGPU(bool);
 }
 
-int dimPartitioned(int dim)
+static inline int dimPartitioned(int dim)
 {
-  return ((procs[dim] > 1) || dim_partitioned[dim]);
+  return (procs[dim] > 1);
 }
 
 void

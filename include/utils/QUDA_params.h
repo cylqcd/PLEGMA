@@ -21,7 +21,7 @@ define(int device, -1);
 define(int device, 0);
 #endif
 
-define(int dim_partitioned[N_DIMS]);
+define(bool qudaInitialized, false);
 
 define(char* verbosity_level);
 define(QudaDslashType dslash_type, QUDA_TWISTED_CLOVER_DSLASH);
