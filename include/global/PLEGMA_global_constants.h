@@ -19,27 +19,15 @@
 #ifdef ADD_TO_GLOBAL
 
 #define global_host(dtype, name, ...)					\
-  HGC_globals_vars.add<dtype>(#name,					\
-			      HGC_##name PARENTHESES(0,__VA_ARGS__),	\
-			      PRODUCT(__VA_ARGS__))
+  HGC_global_vars.add<dtype>(#name,					\
+			     HGC_##name PARENTHESES(0,__VA_ARGS__),	\
+			     PRODUCT(__VA_ARGS__))
 
 #define global_both(dtype, name, ...)					\
-  HGC_globals_vars.add<dtype,dtype>(#name,				\
-				    HGC_##name PARENTHESES(0,__VA_ARGS__), \
-				    DGC_##name PARENTHESES(0,__VA_ARGS__), \
-				    PRODUCT(__VA_ARGS__))
-
-#else
-#ifdef EXTERNAL
-
-#define global_host(dtype, name, ...)					\
-  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
-  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
-#define global_both(dtype, name, ...)					\
-  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
-  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); \
-  extern __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);	\
-  extern __constant__ dtype c_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
+  HGC_global_vars.add<dtype,dtype>(#name,				\
+				   HGC_##name PARENTHESES(0,__VA_ARGS__), \
+				   DGC_##name PARENTHESES(0,__VA_ARGS__), \
+				   PRODUCT(__VA_ARGS__))
 
 #else
 #ifdef ALLOCATE
@@ -51,8 +39,16 @@
   __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);		
 
 #else
-#error "PLEGMA_global_vars.h should be included with either ALLOCATE, EXTERNAL, or ADD_TO_GLOBAL"
-#endif
+
+#define global_host(dtype, name, ...)					\
+  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
+  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
+#define global_both(dtype, name, ...)					\
+  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
+  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); \
+  extern __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);	\
+  extern __constant__ dtype c_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
+
 #endif
 #endif
 
@@ -62,7 +58,8 @@
 global_host(bool, init_PLEGMA_flag);
 global_host(float, deviceMemory);
 global_host(int, verbosity);
-global_host(int, used_memory);
+global_host(size_t, used_memory);
+global_host(global_vars, global_vars);
 
 // variables visible on both host and device
 global_both(tex_mom_list, moms);

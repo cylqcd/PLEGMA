@@ -107,7 +107,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
       HGC_procPosition[i] = comm_coords(HGC_default_topo)[i];
 
     // copying globals to device
-    HGC_globals_vars.copyToDevice();
+    HGC_global_vars.copyToDevice();
 
     // create groups of process to use mpi reduce only on spatial points
     MPI_Comm_group(MPI_COMM_WORLD, &HGC_fullGroup);
@@ -162,7 +162,7 @@ void plegma::PLEGMA_status(){
   printfQuda("Number of colors is %d\n",N_COLS);
   printfQuda("Number of spins is %d\n",N_SPINS);
   printfQuda("Number of dimensions is %d\n",N_DIMS);
-  HGC_globals_vars.print();
+  HGC_global_vars.print();
 }
 
 void plegma::PLEGMA_end() {
