@@ -65,7 +65,7 @@ static inline void unpackGaugeToEvenOdd(FloatOut *buf[4], PLEGMA_Gauge<FloatIn> 
     int tmp = norm_coord/dims[0];
     for(int i=1; i<N_DIMS; i++) {
       evenSiteBit += tmp%dims[i];
-      tmp/dims[i];
+      tmp /= dims[i];
     }
     evenSiteBit = evenSiteBit % 2;
     int oddSiteBit  = evenSiteBit ^ 1;
