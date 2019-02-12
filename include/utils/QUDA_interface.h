@@ -49,3 +49,56 @@ namespace quda {
     template<APP_TYPE type, typename Float> void apply(Float *dout, Float *din, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is without any normalization // Note that dout and din are device pointers
   };
 }
+
+template<typename FloatOut, typename FloatIn>
+static inline void unpackGaugeToEvenOdd(FloatOut *buf[4], PLEGMA_Gauge<FloatIn> &gauge)
+{
+  int VOLUME=gauge.Total_length();
+  int VOLUMEh = VOLUME / 2;
+  int gSize = N_COLS*N_COLS;
+ 
+  for(int even = 0; even < VOLUMEh; even++) {
+    int odd = even+VOLUMEh;
+    int norm_coord = 2 * even;
+    
+    int evenSiteBit = 0;
+    int tmp = norm_coord/dims[0];
+    for(int i=1; i<N_DIMS; i++) {
+      evenSiteBit += tmp%dims[i];
+      tmp/dims[i];
+    }
+    evenSiteBit = evenSiteBit % 2;
+    int oddSiteBit  = evenSiteBit ^ 1;
+    
+    for(int dir = 0 ; dir < N_DIMS; dir++)
+      for(int c = 0; c < gSize; c++) {
+	buf[dir][(even*gSize + c)*2 + 0] = gauge.H_elem()[((dir*gSize+c)*VOLUME + norm_coord + evenSiteBit)*2  +0];
+	buf[dir][(even*gSize + c)*2 + 1] = gauge.H_elem()[((dir*gSize+c)*VOLUME + norm_coord + evenSiteBit)*2  +1];
+	buf[dir][(odd*gSize + c)*2 + 0] = gauge.H_elem()[((dir*gSize+c)*VOLUME + norm_coord + oddSiteBit)*2  +0];
+	buf[dir][(odd*gSize + c)*2 + 1] = gauge.H_elem()[((dir*gSize+c)*VOLUME + norm_coord + oddSiteBit)*2  +1];
+      }
+  }
+}
+
+template<typename Float>
+static inline void applyAntiperiodicBoundary(Float **buf)
+{
+  // only apply T-boundary at edge nodes
+#ifdef MULTI_GPU
+  bool last_node_in_t = (commCoords(3) == commDim(3)-1) ? true : false;
+#else
+  bool last_node_in_t = true;
+#endif
+
+  // Apply boundary conditions to temporal links
+  if (last_node_in_t) {
+    int gSize = N_DIMS*N_DIMS*2;
+    size_t Vh = dims[0]*dims[1]*dims[2]*dims[3]/2;
+    for (int j = Vh-dims[0]*dims[1]*dims[2]/2; j < Vh; j++) {
+      for (int i = 0; i < gSize; i++) {
+	buf[3][j*gSize+i] *= -1.0;
+	buf[3][(Vh+j)*gSize+i] *= -1.0;
+      }
+    }
+  }
+}

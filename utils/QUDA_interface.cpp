@@ -69,8 +69,23 @@ void finalizeComms()
 #endif
 }
 
-void initGaugeQuda(void* gauge, QudaGaugeParam gauge_param) {
-  loadGaugeQuda(gauge, &gauge_param);
+void initGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic, QudaLinkType type) {
+  QudaGaugeParam gauge_param = newQudaGaugeParam();
+  setGaugeParam(gauge_param);
+  gauge_param.type = type;
+  
+  double* buf[N_DIMS];
+  for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gauge.Bytes_total()/4);
+
+  unpackGaugeToEvenOdd(buf, gauge);
+  if(antiperiodic) {
+    applyAntiperiodicBoundary(buf);
+    gauge_param.t_boundary = QUDA_ANTI_PERIODIC_T;
+  }
+  else {
+    gauge_param.t_boundary = QUDA_PERIODIC_T;
+  }
+  loadGaugeQuda(buf, &gauge_param);
 
   if (dslash_type == QUDA_TWISTED_CLOVER_DSLASH)  {
     QudaInvertParam inv_param = newQudaInvertParam();
@@ -80,6 +95,7 @@ void initGaugeQuda(void* gauge, QudaGaugeParam gauge_param) {
     inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
     loadCloverQuda(NULL, NULL, &inv_param);
   }
+  for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gauge.Bytes_total()/4);
 }
 
 void finalizeGaugeQuda() {
@@ -88,9 +104,9 @@ void finalizeGaugeQuda() {
       dslash_type == QUDA_TWISTED_CLOVER_DSLASH) freeCloverQuda();
 }
 
-void updateGaugeQuda(void* gauge, QudaGaugeParam gauge_param) {
+void updateGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic, QudaLinkType type) {
   finalizeGaugeQuda();
-  initGaugeQuda(gauge, gauge_param);
+  initGaugeQuda(gauge,antiperiodic,type);
 }
 
 QUDA_solver::QUDA_solver(double mu) {
