@@ -230,8 +230,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
   mg_param.run_verify = verify_results ? QUDA_BOOLEAN_YES : QUDA_BOOLEAN_NO;
 
   // set file i/o parameters
-  strcpy(mg_param.vec_infile, vec_infile);
-  strcpy(mg_param.vec_outfile, vec_outfile);
+  strcpy(mg_param.vec_infile, vec_infile.c_str());
+  strcpy(mg_param.vec_outfile, vec_outfile.c_str());
 
   // these need to be set for now but are actually ignored by the MG setup
   // needed to make it pass the initialization test
@@ -349,15 +349,5 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.maxiter_precondition = 1;
   inv_param.omega = 1.0;
 
-
-  if(strcmp(verbosity_level,"verbose")==0) 
-    inv_param.verbosity = QUDA_VERBOSE;
-  else if(strcmp(verbosity_level,"summarize")==0) 
-    inv_param.verbosity = QUDA_SUMMARIZE;
-  else if(strcmp(verbosity_level,"silent")==0) 
-    inv_param.verbosity = QUDA_SILENT;
-  else{
-    warningQuda("Unknown verbosity level %s. Proceeding with QUDA_SUMMARIZE verbosity level\n",verbosity_level);
-    inv_param.verbosity = QUDA_SUMMARIZE;
-  }
+  inv_param.verbosity = verbosity_level;
 }

@@ -23,12 +23,12 @@ define(int device, 0);
 
 define(bool qudaInitialized, false);
 
-define(char* verbosity_level);
+define(QudaVerbosity verbosity_level, QUDA_SUMMARIZE);
 define(QudaDslashType dslash_type, QUDA_TWISTED_CLOVER_DSLASH);
 define(QudaReconstructType link_recon, QUDA_RECONSTRUCT_NO);
 define(QudaReconstructType link_recon_sloppy, QUDA_RECONSTRUCT_INVALID);
 define(QudaReconstructType link_recon_precondition, QUDA_RECONSTRUCT_INVALID);
-define(QudaPrecision prec, QUDA_SINGLE_PRECISION);
+define(QudaPrecision prec, QUDA_DOUBLE_PRECISION);
 define(QudaPrecision  prec_sloppy, QUDA_INVALID_PRECISION);
 define(QudaPrecision  prec_precondition, QUDA_INVALID_PRECISION);
 define(QudaPrecision prec_null, QUDA_INVALID_PRECISION);
@@ -48,11 +48,11 @@ define(bool isEven, true);
 // Solver options
 define(double tol, 1e-9); // tolerance for inverter
 define(double tol_hq, 0.1); // heavy-quark tolerance for inverter
-define(double reliable_delta, 0.1);
+define(double reliable_delta, 1e-4);
 define(int niter,100);
 define(QudaMatPCType matpc_type, QUDA_MATPC_EVEN_EVEN);
 define(QudaSolveType solve_type, QUDA_DIRECT_PC_SOLVE);
-define(bool verify_results, true);
+define(bool verify_results, false);
 define(bool kernel_pack_t, false);
 define(int pipeline, 0); // length of pipeline for fused operations in GCR or BiCGstab-l
 define(int solution_accumulator_pipeline, 0);
@@ -84,7 +84,7 @@ define(double smoother_tol[QUDA_MAX_MG_LEVEL], {});
 define(int coarse_solver_maxiter[QUDA_MAX_MG_LEVEL], {});
 define(QudaSchwarzType schwarz_type[QUDA_MAX_MG_LEVEL], {});
 define(int schwarz_cycle[QUDA_MAX_MG_LEVEL], {});
-define(char* vec_infile);
-define(char* vec_outfile);
+define(std::string vec_infile, "");
+define(std::string vec_outfile, "");
 
 #undef define
