@@ -17,6 +17,8 @@
 #include <cxxabi.h>
 #include <stdlib.h>
 #endif
+#include <malloc.h>
+#include <new> // for availability of std::bad_alloc exception
 
 // Constants values
 #define PI 3.141592653589793
@@ -44,6 +46,35 @@
 #define	LEXIC_YX(iy,ix,L) ( (iy)*L[0] + (ix) )
 
 namespace plegma {
+
+  // Enumerations
+  enum COMPLEX{REAL,IMAG};
+  enum SOURCE_T{UNITY,RANDOM};
+  enum CORR_SPACE{POSITION_SPACE,MOMENTUM_SPACE};
+  enum FILE_WRITE_FORMAT{ASCII_FORM,HDF5_FORM};
+  
+  enum ALLOCATION_FLAG{HOST,DEVICE,BOTH};
+
+  enum CLASS_ENUM{CUSTOM,SCALAR,SU3FIELD,GAUGE,VECTOR,PROPAGATOR,PROPAGATOR3D,VECTOR3D,QLOOPS};
+  enum GHOST_FLAG{NO_GHOSTS,FIRST_SIDE,FIRST_CORNER};
+  enum WHICHPARTICLE{PROTON,NEUTRON};
+  enum WHICHPROJECTOR{P4_P,P4G5G1_P,P4G5G2_P,P4G5G3_P,P4_M,P4G5G1_M,P4G5G2_M,P4G5G3_M}; // Do not change this order
+
+  enum THRP_TYPE{THRP_LOCAL2,THRP_NOETHER2,THRP_ONED2};
+
+  enum LATDIMS{DIM_X,DIM_Y,DIM_Z,DIM_T};
+
+  enum GAMMAS {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43}; // Do not change this order
+  const std::string GAMMAS_STR[16] {"1","g1","g2","g3","g4","g5","g5g1","g5g2","g5g3","g5g4",
+      "s12","s13","s23","s41","s42","s43"};
+  static inline std::string getGammasString(std::vector<GAMMAS> gammas) {
+    std::string s = "";
+    std::for_each(gammas.begin(), gammas.end(), [&] (GAMMAS n) {s += GAMMAS_STR[(int) n]+",";});
+    return s;
+  }
+  
+  enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
+  enum LEFTRIGHT {LEFT, RIGHT};
 
   // Custom types and functions
   template<typename Float> struct texture;
@@ -102,37 +133,7 @@ namespace plegma {
       Nmoms=0;
     };
   };
-  
-  // Enumerations
-  enum COMPLEX{REAL,IMAG};
-  enum SOURCE_T{UNITY,RANDOM};
-  enum CORR_SPACE{POSITION_SPACE,MOMENTUM_SPACE};
-  enum FILE_WRITE_FORMAT{ASCII_FORM,HDF5_FORM};
-  
-  enum ALLOCATION_FLAG{HOST,DEVICE,BOTH};
 
-  enum CLASS_ENUM{CUSTOM,SCALAR,SU3FIELD,GAUGE,VECTOR,PROPAGATOR,PROPAGATOR3D,VECTOR3D,QLOOPS};
-  enum GHOST_FLAG{NO_GHOSTS,FIRST_SIDE,FIRST_CORNER};
-  enum WHICHPARTICLE{PROTON,NEUTRON};
-  enum WHICHPROJECTOR{P4_P,P4G5G1_P,P4G5G2_P,P4G5G3_P,P4_M,P4G5G1_M,P4G5G2_M,P4G5G3_M}; // Do not change this order
-
-  enum THRP_TYPE{THRP_LOCAL2,THRP_NOETHER2,THRP_ONED2};
-
-  enum LATDIMS{DIM_X,DIM_Y,DIM_Z,DIM_T};
-
-  enum GAMMAS {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43}; // Do not change this order
-  const std::string GAMMAS_STR[16] {"1","g1","g2","g3","g4","g5","g5g1","g5g2","g5g3","g5g4",
-      "s12","s13","s23","s41","s42","s43"};
-  static inline std::string getGammasString(std::vector<GAMMAS> gammas) {
-    std::string s = "";
-    std::for_each(gammas.begin(), gammas.end(), [&] (GAMMAS n) {s += GAMMAS_STR[(int) n]+",";});
-    return s;
-  }
-  
-  enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
-  enum LEFTRIGHT {LEFT, RIGHT};
-
-  // Preparation for global variables
   // here we collect the global variables for then running some default functions on them (print and copy to device)
   struct global_vars {
     // globals on host only
@@ -188,5 +189,23 @@ namespace plegma {
   #endif
   #include <PLEGMA_global_vars.h>
   #undef EXTERNAL
+
+  template<typename T> inline void buffer_malloc(T &ptr, size_t size) {
+#ifdef PLEGMA_HAVE_MEMALIGN
+    ptr = static_cast<T>(memalign(PLEGMA_ALIGNMENT, size));
+#else
+    ptr = static_cast<T>(malloc(size));
+#endif
+    if(ptr == static_cast<T>(NULL) ){
+      warningQuda("Bad alloc. Total memory in use: %lu\n", HGC_used_memory);
+      throw( std::bad_alloc() );
+    }
+    HGC_used_memory += sizeof(T)*size;
+  }
+  template<typename T> inline void buffer_free(T &ptr, size_t size) {
+    free(ptr);
+    ptr=NULL;
+    HGC_used_memory -= sizeof(T)*size;
+  }
 }
 using namespace plegma; // TODO: This one shouldn't be here.. But helps avoiding missing namespace.
