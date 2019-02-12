@@ -16,73 +16,39 @@
  *   - on device: __constant__ "dtype" DGC_"name" "[s1][s2][..]"
  */
 
-//--------------- Here some macros -----------------//
-
-#define BOOST_PP_VARIADICS 1
-#include <boost/preprocessor/cat.hpp>
-#include <boost/preprocessor/seq/for_each.hpp>
-#include <boost/preprocessor/control/if.hpp>
-#include <boost/preprocessor/tuple/to_seq.hpp>
-#include <boost/preprocessor/arithmetic/mul.hpp>
-#include <boost/preprocessor/facilities/overload.hpp>
-#include <boost/preprocessor/facilities/empty.hpp>
-#include <utils/MACRO_IS_EMPTY.hpp>
-
-#define ADD_PARENTHESES(r, data, elem) BOOST_PP_IF( data,  [elem], [0])
-#define FOR_EACH(...) BOOST_PP_SEQ_FOR_EACH(ADD_PARENTHESES, PAR_VALUE, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
-#define NOTHING(...)
-#define PARENTHESES(...) BOOST_PP_IF(IS_EMPTY(__VA_ARGS__),	\
-				     NOTHING,			\
-				     FOR_EACH) (__VA_ARGS__)
-
-#define MUL_1(a) (a)
-#define MUL_2(a,b) (a)*(b)
-#define MUL_3(a,b,c) MUL_2(MUL_2(a,b),c)
-#define MUL_4(a,b,c,d) MUL_3(MUL_2(a,b),c,d)
-// define more if needed
-#define ONE(...) 1
-#define MUL(...) BOOST_PP_OVERLOAD(MUL_,__VA_ARGS__)(__VA_ARGS__)
-#define PRODUCT(...) BOOST_PP_IF(IS_EMPTY(__VA_ARGS__),			\
-				 ONE,					\
-				 MUL) (__VA_ARGS__)
-
-
 #ifdef ADD_TO_GLOBAL
 
-#define PAR_VALUE 0
 #define global_host(dtype, name, ...)					\
   HGC_globals_vars.add<dtype>(#name,					\
-			      HGC_##name PARENTHESES(__VA_ARGS__),	\
+			      HGC_##name PARENTHESES(0,__VA_ARGS__),	\
 			      PRODUCT(__VA_ARGS__))
-    
+
 #define global_both(dtype, name, ...)					\
   HGC_globals_vars.add<dtype,dtype>(#name,				\
-				    HGC_##name PARENTHESES(__VA_ARGS__), \
-				    DGC_##name PARENTHESES(__VA_ARGS__), \
+				    HGC_##name PARENTHESES(0,__VA_ARGS__), \
+				    DGC_##name PARENTHESES(0,__VA_ARGS__), \
 				    PRODUCT(__VA_ARGS__))
 
 #else
 #ifdef EXTERNAL
 
-#define PAR_VALUE 1
 #define global_host(dtype, name, ...)					\
-  extern dtype HGC_##name PARENTHESES(__VA_ARGS__);			\
-  extern dtype GK_##name PARENTHESES(__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
+  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
+  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
 #define global_both(dtype, name, ...)					\
-  extern dtype HGC_##name PARENTHESES(__VA_ARGS__);			\
-  extern dtype GK_##name PARENTHESES(__VA_ARGS__) __attribute__((deprecated)); \
-  extern __constant__ dtype DGC_##name PARENTHESES(__VA_ARGS__);	\
-  extern __constant__ dtype c_##name PARENTHESES(__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
+  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
+  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); \
+  extern __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);	\
+  extern __constant__ dtype c_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
 
 #else
 #ifdef ALLOCATE
 
-#define PAR_VALUE 1
 #define global_host(dtype, name, ...)					\
-  dtype HGC_##name PARENTHESES(__VA_ARGS__);				
+  dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				
 #define global_both(dtype, name, ...)					\
-  dtype HGC_##name PARENTHESES(__VA_ARGS__);				\
-  __constant__ dtype DGC_##name PARENTHESES(__VA_ARGS__);		
+  dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				\
+  __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);		
 
 #else
 #error "PLEGMA_global_vars.h should be included with either ALLOCATE, EXTERNAL, or ADD_TO_GLOBAL"

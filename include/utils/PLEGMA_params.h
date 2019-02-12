@@ -2,13 +2,7 @@
 // PLEGMA Parameters //
 //-------------------//
 
-#include <boost/preprocessor/control/if.hpp>
 #ifdef ALLOCATE
-#define NOTHING(...)
-#define EQUAL_CAT(...) =  __VA_ARGS__
-#define EQUAL(...) BOOST_PP_IF(IS_EMPTY(__VA_ARGS__),		\
-			       NOTHING,				\
-			       EQUAL_CAT) (__VA_ARGS__)
 #define define(var,...) var EQUAL(__VA_ARGS__)
 #else
 #define define(var,...) extern var 

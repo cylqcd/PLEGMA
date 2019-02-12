@@ -15,7 +15,7 @@ extern int verbose;
 void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
 
 #define ADD_TO_GLOBAL
-#include<PLEGMA_global_vars.h>
+#include<global/PLEGMA_global_constants.h>
 #undef ADD_TO_GLOBAL
   
   if(HGC_init_PLEGMA_flag == false){
