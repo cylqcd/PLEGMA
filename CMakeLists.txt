@@ -23,12 +23,18 @@ enable_language(CXX)
 
 project("PLEGMA" VERSION 0.0.1 LANGUAGES)
 
+# TODO: add authomatic download and compilation of QUDA
 set(QUDA_HOME "" CACHE PATH "path to QUDA")
 if("${QUDA_HOME}" STREQUAL "")
   message( FATAL_ERROR "QUDA_HOME must be defined" )
 endif()
 FIND_LIBRARY(QUDA_LIB quda ${QUDA_HOME}/lib)
 include_directories(SYSTEM ${QUDA_HOME}/include)
+
+set(QUDA_SRC "" CACHE PATH "path to QUDA src directory")
+if("${QUDA_SRC}" STREQUAL "")
+  message( FATAL_ERROR "QUDA_SRC must be defined" )
+endif()
 
 include(ExternalProject)
 
