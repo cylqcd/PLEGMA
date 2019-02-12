@@ -178,6 +178,9 @@ void qudaSolverOptions(Options &opt){
   opt.set("Q-mu", "Twisted mass value", debug, mu);
   opt.set("Q-csw", "The coefficient of the clover term", debug, csw);
 
+  opt.set("Q-verbosity", "The verbosity of QUDA, (default summarize)", debug, tmpString);
+  if(isFound) verbosity_level = get_verbosity_type(tmpString.c_str());
+
   isFound=opt.set("Q-mass-normalization", "Normalization of the dirac operator,options (kappa,mass,asym-mass), default (kappa)", debug, tmpString);
   if(isFound) normalization = get_mass_normalization_type(tmpString.c_str());
 
