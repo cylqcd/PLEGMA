@@ -62,8 +62,5 @@ target_link_libraries(APEsmearing ${PLEGMA_LIBS})
 cuda_add_executable(qLoops qLoops.cpp)
 target_link_libraries(qLoops ${PLEGMA_LIBS})
 
-cuda_add_executable(testBasicOptionsWsolver EXCLUDE_FROM_ALL testBasicOptionsWsolver.cpp)
-target_link_libraries(testBasicOptionsWsolver ${PLEGMA_LIBS})
-
 cuda_add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
 target_link_libraries(FT ${PLEGMA_LIBS})
