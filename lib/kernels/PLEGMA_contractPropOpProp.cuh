@@ -123,22 +123,25 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
-  h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
-  if(h_partial_block == NULL) errorQuda("contractPropOpProp: Cannot allocate host block.\n");
+  hostMalloc(h_partial_block, alloc_size*sizeof(FloatC));
   cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_block);
   cudaFree(listGammas.array);
   checkCudaError();
   
   if(runFT==true){
-    FloatC *reduction =(FloatC*) calloc(size*2,sizeof(FloatC));
-    for(size_t i = 0 ; i < size; i++)
+    FloatC *reduction;
+    hostMalloc(reduction, size*2*sizeof(FloatC));
+    for(size_t i = 0 ; i < size; i++) {
+      reduction[i*2+0] = 0;
+      reduction[i*2+1] = 0;
       for(int j = 0 ; j < gridDim.x; j++) {
 	reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
 	reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
       }
-    MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
-    free(reduction);
+    }
+    MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
+    hostFree(reduction, size*2*sizeof(FloatC));
   }
   
   FloatC *corr_pt = corr.getCorr();
@@ -150,9 +153,7 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
       corr_pt[it*volume*site_size*2+v*site_size*2+shift+i*2+1] =
 	h_partial_block[(v*gammas.size()+i)*2+1];
     }
-
-  free(h_partial_block);
-
+  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
 }
 
 

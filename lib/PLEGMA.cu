@@ -116,7 +116,8 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
 
     int space3D_proc;
     space3D_proc = HGC_nProc[0] * HGC_nProc[1] * HGC_nProc[2];
-    int *ranks = (int*) malloc(space3D_proc*sizeof(int));
+    int *ranks;
+    hostMalloc(ranks, space3D_proc*sizeof(int));
 
     for(int i= 0 ; i < space3D_proc ; i++)
       ranks[i] = comm_coords(HGC_default_topo)[3] + HGC_nProc[3]*i;
@@ -127,7 +128,8 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
     MPI_Comm_create(MPI_COMM_WORLD, HGC_spaceGroup , &HGC_spaceComm);
 
     // create group of process to use mpi gather
-    int *ranksTime = (int*) malloc(HGC_nProc[3]*sizeof(int));
+    int *ranksTime;
+    hostMalloc(ranksTime, HGC_nProc[3]*sizeof(int));
 
     for(int i=0 ; i < HGC_nProc[3] ; i++)
       ranksTime[i] = i;
@@ -138,8 +140,8 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
     MPI_Comm_create(MPI_COMM_WORLD, HGC_timeGroup, &HGC_timeComm);
 
     //////////////////////////////////////////////////////////////////////////////
-    free(ranks);
-    free(ranksTime);
+    hostFree(ranks, space3D_proc*sizeof(int));
+    hostFree(ranksTime, HGC_nProc[3]*sizeof(int));
 
     cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
     if (error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCreate failed with error %d", error);

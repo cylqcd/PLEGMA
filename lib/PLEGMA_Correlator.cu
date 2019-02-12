@@ -337,10 +337,7 @@ writeASCII(const char *filename_out) {
   }
 
   Float *corrGlobal;
-  if(rank == 0){
-    corrGlobal = (Float*) malloc(g_vol_size*site_size*2*sizeof(Float));
-    if( corrGlobal == NULL ) errorQuda("writeASCII: Cannot allocate memory.");
-  }
+  if(rank == 0) hostMalloc(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
 
   // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
   // in the second case requires reordering of the memory
@@ -372,7 +369,7 @@ writeASCII(const char *filename_out) {
       errorQuda("WriteASCII do not support writing in position space.\n");
     }
     fclose(ptr_out);
-    free(corrGlobal);
+    hostFree(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
   }  
 }
 

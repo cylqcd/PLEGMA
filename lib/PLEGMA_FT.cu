@@ -92,7 +92,8 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
 
   size_t bytes = tex_mom.Nmoms*dims*sizeof(int);
   void * devPtr;
-  int * hostPtr = (int *) malloc(bytes);
+  int * hostPtr;
+  hostMalloc(hostPtr, bytes);
   cudaMalloc(&devPtr, bytes);
   for(int i=0; i<tex_mom.Nmoms; i++) {
     for(int j=0; j<dims; j++) {
@@ -100,7 +101,7 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
     }
   }
   cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
-  free(hostPtr);
+  hostFree(hostPtr, bytes);
   resDesc.res.linear.devPtr = devPtr;
   resDesc.res.linear.sizeInBytes = bytes;
 
@@ -168,8 +169,7 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
     Float *helem_global=NULL;
     bool gAlloc=false;
     if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
-      helem_global = (Float*) malloc(HGC_nProc[3]*sizeN*sizeof(Float));
-      if(helem_global == NULL) errorQuda("Allocation failed\n");
+      hostMalloc(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
       gAlloc=true;
       if(HGC_timeComm == MPI_COMM_NULL) errorQuda("Try to use a NULL communicator for MPI Gather which will give an error");
       int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
@@ -190,7 +190,7 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
 	}
       fclose(ptr);
     }
-    if(gAlloc)free(helem_global);
+    if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
     comm_barrier();
   }
   else if(outputFormat == HDF5_FORM){

@@ -87,7 +87,8 @@ static char* getParamComma(const char * token, char* params, int len) {
 
 static void print_xlf_info(LimeReader *limereader) {
   n_uint64_t lime_data_size = limeReaderBytes(limereader);
-  char * lime_data = (char * )malloc(lime_data_size);
+  char * lime_data;
+  hostMalloc(lime_data, lime_data_size);
   limeReaderReadData((void *)lime_data, &lime_data_size, limereader);
   
   double dDummy;
@@ -97,12 +98,13 @@ static void print_xlf_info(LimeReader *limereader) {
   sscanf(getParamComma("mu =",lime_data, lime_data_size),"%lf",&dDummy);
   printfQuda("Mu conf is : %f\n", dDummy);
   
-  free(lime_data);
+  hostFree(lime_data, lime_data_size);
 }
 
 static void print_ildg_format(LimeReader *limereader) {
   n_uint64_t lime_data_size = limeReaderBytes(limereader);
-  char * lime_data = (char * )malloc(lime_data_size);
+  char * lime_data;
+  hostMalloc(lime_data, lime_data_size);
   limeReaderReadData((void *)lime_data, &lime_data_size, limereader);
   
   int iDummy, ln[4];
@@ -128,5 +130,5 @@ static void print_ildg_format(LimeReader *limereader) {
   
   printfQuda("Volume:   \t%ix%ix%ix%i\n", ln[0], ln[1], ln[2], ln[3]);
 	      
-  free(lime_data);
+  hostFree(lime_data, lime_data_size);
 }

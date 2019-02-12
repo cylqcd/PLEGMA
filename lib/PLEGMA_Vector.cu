@@ -406,13 +406,7 @@ void PLEGMA_Vector<Float>::write(char *filename){
 		    "native", MPI_INFO_NULL);
 
   chunksize=4*3*2*sizeof(Float);
-  buffer = (char*) malloc(chunksize*HGC_localVolume);
-
-  if(buffer==NULL)  
-    {
-      fprintf(stderr,"Error in %s! Out of memory\n", __func__);
-      comm_abort(-1);
-    }
+  hostMalloc(buffer, chunksize*HGC_localVolume);
 
   i=0;
                         
@@ -449,7 +443,7 @@ void PLEGMA_Vector<Float>::write(char *filename){
     MPI_File_write_all(mpifid, buffer, 4*3*2*HGC_localVolume, 
 		       MPI_FLOAT, &status);
 
-  free(buffer);
+  hostFree(buffer, chunksize*HGC_localVolume);
   MPI_File_close(&mpifid);
   MPI_Type_free(&subblock);
 }

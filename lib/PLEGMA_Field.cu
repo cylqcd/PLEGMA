@@ -155,9 +155,7 @@ void PLEGMA_Field<Float>::unload(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
-  h_elem = (Float*) malloc(bytes_total_plus_ghost_length);
-  if(h_elem == NULL)
-    errorQuda("Error with allocation host memory");
+  hostMalloc(h_elem, bytes_total_plus_ghost_length);
   isAllocHost = true;
   zero_host();
 }
@@ -169,7 +167,7 @@ void PLEGMA_Field<Float>::create_device(){
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
   HGC_deviceMemory += bytes_total_plus_ghost_length/(1024.*1024.);          
-  printfQuda("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
+  if(HGC_verbosity>1) printfQuda("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
 #endif
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
@@ -186,8 +184,7 @@ void PLEGMA_Field<Float>::create_device(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_host(){
-  free(h_elem);
-  h_elem=NULL;
+  hostFree(h_elem, bytes_total_plus_ghost_length);
   isAllocHost=false;
 }
 
@@ -198,7 +195,7 @@ void PLEGMA_Field<Float>::destroy_device(){
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
   HGC_deviceMemory -= bytes_total_plus_ghost_length/(1024.*1024.);
-  printfQuda("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
+  if(HGC_verbosity>1) printfQuda("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
 #endif
   if(ghost_flag >= FIRST_SIDE){
     cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;

@@ -148,8 +148,7 @@ static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
 
   int gridDimX = ps.tp.grid.x;
   
-  h_partial_sum = (Float*) malloc(gridDimX * sizeof(Float) );
-  if(h_partial_sum == NULL) errorQuda("Error allocate memory for host partial sum");
+  hostMalloc(h_partial_sum, gridDimX * sizeof(Float) );
   cudaMalloc((void**)&d_partial_sum, gridDimX * sizeof(Float));
 
   sum_real_trace_kernel<Float,FloatS><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(su3M.D_elem(), d_partial_sum);
@@ -160,7 +159,7 @@ static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
 
   for(int i = 0 ; i < gridDimX ; i++)
     sum += h_partial_sum[i];
-  free(h_partial_sum);
+  hostFree(h_partial_sum, gridDimX * sizeof(Float) );
 
   MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , MPI_COMM_WORLD);  
   return globalSum;

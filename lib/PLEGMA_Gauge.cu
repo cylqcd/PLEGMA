@@ -18,21 +18,6 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_f
   PLEGMA_Field<Float>(alloc_flag, GAUGE, ghost_flag){ ; }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::pack(double **p_gauge){
-  for(int dir = 0 ; dir < N_DIMS ; dir++){
-    for(int i = 0 ; i < HGC_localVolume ; i++){
-      #pragma unroll
-      for(int j = 0; j < N_COLS*N_COLS; j++){
-	#pragma unroll
-	for(int part = 0; part < 2; part++)
-	  PLEGMA_Field<Float>::h_elem[dir*N_COLS*N_COLS*HGC_localVolume*2 + j*HGC_localVolume*2 + i*2 + part] =
-	    (Float) p_gauge[dir][i*N_COLS*N_COLS*2 + j*2 + part];
-      }
-    }
-  }
-}
-
-template<typename Float>
 void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
   FILE *fid;
   LimeReader *limereader;
@@ -69,10 +54,8 @@ void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
   limeDestroyReader(limereader);
 
   int dof = N_DIMS*N_COLS*N_COLS*2;
-  double *ftmp = (double*) malloc(dof*HGC_localVolume*sizeof(double));
-  if(ftmp == NULL) {
-    errorQuda(" Out of memory\n");
-  }
+  double *ftmp;
+  hostMalloc(ftmp, dof*HGC_localVolume*sizeof(double));
 
 #ifdef	MULTI_GPU
   MPI_Datatype subblock;  //MPI-type, 5d subarray
@@ -121,7 +104,7 @@ void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
     }
   }
   
-  free(ftmp);
+  hostFree(ftmp, dof*HGC_localVolume*sizeof(double));
 }
 
 template<typename Float>

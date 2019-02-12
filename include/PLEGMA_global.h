@@ -190,7 +190,7 @@ namespace plegma {
   #include <PLEGMA_global_vars.h>
   #undef EXTERNAL
 
-  template<typename T> inline void buffer_malloc(T &ptr, size_t size) {
+  template<typename T> inline void hostMalloc(T &ptr, size_t size) {
 #ifdef PLEGMA_HAVE_MEMALIGN
     ptr = static_cast<T>(memalign(PLEGMA_ALIGNMENT, size));
 #else
@@ -202,7 +202,7 @@ namespace plegma {
     }
     HGC_used_memory += sizeof(T)*size;
   }
-  template<typename T> inline void buffer_free(T &ptr, size_t size) {
+  template<typename T> inline void hostFree(T &ptr, size_t size) {
     free(ptr);
     ptr=NULL;
     HGC_used_memory -= sizeof(T)*size;

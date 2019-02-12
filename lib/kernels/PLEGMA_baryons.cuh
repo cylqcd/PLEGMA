@@ -118,8 +118,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   } else {
       alloc_size = size * 2;
   }
-  h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
-  if(h_partial_block == NULL) errorQuda("contract_baryons_kernel: Cannot allocate host block.\n");
+  hostMalloc(h_partial_block, alloc_size*sizeof(FloatC));
   cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(FloatC) );
   checkCudaError();
 
@@ -133,14 +132,18 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     checkCudaError();
     if(runFT==true){
       int gridDimX = ps.tp.grid.x;
-      FloatC *reduction =(FloatC*) calloc(size,sizeof(FloatC));
-      for(size_t i = 0 ; i < size; i++)
+      FloatC *reduction;
+      hostMalloc(reduction, size*2*sizeof(FloatC));
+      for(size_t i = 0 ; i < size; i++) {
+	reduction[i*2+0] = 0;
+	reduction[i*2+1] = 0;
 	for(int j = 0 ; j < gridDimX; j++) {
 	  reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
 	  reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
 	}
+      }
       MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
-      free(reduction);
+      hostFree(reduction, size*2*sizeof(FloatC));
     }
 
     // Reordering accordingly to the wanted data layout
@@ -151,7 +154,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 	  corr_ip[((f*HGC_localL[3] + it)*volume +v)*site_size+i] = h_partial_block[(v*2+f)*site_size+i];
     
   }
-  free(h_partial_block);
+  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
   cudaFree(d_partial_block);
   checkCudaError();
 }

@@ -83,25 +83,15 @@ PLEGMA_RNG::~PLEGMA_RNG(){
 /*! @brief Generating random numbers from random distribution */
 /*! @brief Restore CURAND array states initialization */
 void PLEGMA_RNG::restore() {
-  cudaError_t err = cudaMemcpy(state, backup_state, rng_size * sizeof(cuRNGState), cudaMemcpyHostToDevice);
-  if (err != cudaSuccess) {
-    free(backup_state);
-    printfQuda("ERROR: Failed to restore curand rng states array\n");
-    errorQuda("Aborting");
-  }
-  free(backup_state);
+  cudaMemcpy(state, backup_state, rng_size * sizeof(cuRNGState), cudaMemcpyHostToDevice);
+  checkCudaError();
+  hostFree(backup_state, rng_size * sizeof(cuRNGState));
 }
 
 /*! @brief Backup CURAND array states initialization */
 void PLEGMA_RNG::backup() {
-  backup_state = (cuRNGState*) malloc(rng_size * sizeof(cuRNGState));
-  if(backup_state == NULL)
-    errorQuda("Memory on host not allocated");
-  cudaError_t err = cudaMemcpy(backup_state, state, rng_size * sizeof(cuRNGState), cudaMemcpyDeviceToHost);
-  if (err != cudaSuccess) {
-    free(backup_state);
-    printfQuda("ERROR: Failed to backup curand rng states array\n");
-    errorQuda("Aborting");
-  }
+  hostMalloc(backup_state, rng_size * sizeof(cuRNGState));
+  cudaMemcpy(backup_state, state, rng_size * sizeof(cuRNGState), cudaMemcpyDeviceToHost);
+  checkCudaError();
 }
 
