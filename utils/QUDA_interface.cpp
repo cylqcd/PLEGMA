@@ -69,14 +69,15 @@ void finalizeComms()
 #endif
 }
 
-void initGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic, QudaLinkType type) {
+void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType type) {
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
   gauge_param.type = type;
-  
-  double* buf[N_DIMS];
-  for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gauge.Bytes_total()/4);
 
+  double* buf[N_DIMS];
+  for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gauge.Bytes_total()/N_DIMS);
+
+  gauge.unload();
   unpackGaugeToEvenOdd(buf, gauge);
   if(antiperiodic) {
     applyAntiperiodicBoundary(buf);
@@ -87,7 +88,7 @@ void initGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic, QudaLinkType t
   }
   loadGaugeQuda(buf, &gauge_param);
 
-  if (dslash_type == QUDA_TWISTED_CLOVER_DSLASH)  {
+  if (type == QUDA_WILSON_LINKS && dslash_type == QUDA_TWISTED_CLOVER_DSLASH)  {
     QudaInvertParam inv_param = newQudaInvertParam();
     setInvertParam(inv_param);
     checkInvertParam(&inv_param);
@@ -95,7 +96,7 @@ void initGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic, QudaLinkType t
     inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
     loadCloverQuda(NULL, NULL, &inv_param);
   }
-  for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gauge.Bytes_total()/4);
+  for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gauge.Bytes_total()/N_DIMS);
 }
 
 void finalizeGaugeQuda() {
@@ -104,7 +105,7 @@ void finalizeGaugeQuda() {
       dslash_type == QUDA_TWISTED_CLOVER_DSLASH) freeCloverQuda();
 }
 
-void updateGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic, QudaLinkType type) {
+void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType type) {
   finalizeGaugeQuda();
   initGaugeQuda(gauge,antiperiodic,type);
 }

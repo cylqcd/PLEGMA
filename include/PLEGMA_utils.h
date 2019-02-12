@@ -12,8 +12,8 @@ using namespace plegma;
 //============ QUDA_interface.cpp ===============================//
 void initComms(int argc, char **argv, const int *commDims);
 void finalizeComms();
-void initGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
-void updateGaugeQuda(PLEGMA_Gauge<double> gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
+void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
+void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
 void finalizeGaugeQuda();
 
 //============= QUDA_params.cpp ===================================//
