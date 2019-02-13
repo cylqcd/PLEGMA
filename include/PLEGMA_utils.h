@@ -74,4 +74,6 @@ template<typename Float> void mapNormalToEvenOddGauge(Float **gauge, int lL[4], 
 template<typename Float> void mapEvenOddToNormalGauge(Float **gauge, int lL[4], QudaGaugeFieldOrder order = QUDA_QDP_GAUGE_ORDER);
 template<typename Float> void mapNormalToEvenOdd(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
 template<typename Float> void mapEvenOddToNormal(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
+template<typename Float> void mapNormalToEvenOddGPUformat(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
+template<typename Float> void mapEvenOddToNormalGPUformat(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
 #endif
