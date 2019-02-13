@@ -8,24 +8,24 @@ PLEGMA_EigSolver::PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslash
 												    h_eigVecs(nullptr),h_eigVals(nullptr),dOp(nullptr),
 												    d_in(nullptr),d_out(nullptr),
 												    tmp1(nullptr),tmp2(nullptr)
-												    {
+{
+  if(!GK_init_PLEGMA_flag) errorQuda("Initialize PLEGMA first");
+    
   if(p.NeV <=0 ){
     printfQuda("Warning: Eigensolver instructed to use NeV=%d, skipping eigenvectors calculation\n",p.NeV);
     return;
   }
   if(p.NkV < p.NeV) errorQuda("The NkV should be larger than NeV");
   field_length = N_SPINS * N_COLS;
-  size_per_Vec = GK_totalVolume * field_length;
+  size_per_Vec = GK_localVolume * field_length;
   size_NeV = p.NeV * size_per_Vec;
   size_NkV = p.NkV * size_per_Vec;
-  size_total = size_NeV + size_NkV;
   bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
   bytes_NeV = size_NeV * 2 * sizeof(double);
   bytes_NkV = size_NkV * 2 * sizeof(double);
-  bytes_total = size_total * 2 * sizeof(double);
   try{
-    h_eigVecs = new double[size_total*2];
-    h_eigVals = new double[p.NeV*2];
+    h_eigVecs = new double[size_NkV*2];
+    h_eigVals = new double[p.NkV*2];
   }
   catch (std::bad_alloc& err){
     errorQuda(err.what());
@@ -51,17 +51,17 @@ PLEGMA_EigSolver::PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslash
   initEigSolver();
   computeEigVecs();
   computeEigVals();
-  for (int j = 0; j < p.NeV; ++j)  mapEvenOddToNormal(h_eigVecs+j*size_per_Vec*2,GK_localL);
+  for (int j = 0; j < p.NeV; ++j)  mapEvenOddToNormalGPUformat(h_eigVecs+j*size_per_Vec*2,GK_localL);
   delete d_in;
   delete d_out;
   delete tmp1;
   delete tmp2;
+  delete dOp;
+  delete[] h_eigVals;
 }
 
 PLEGMA_EigSolver::~PLEGMA_EigSolver(){
   delete[] h_eigVecs;
-  delete[] h_eigVals;
-  delete dOp;
 }
 
 void PLEGMA_EigSolver::applyOperator(double *out, double *in){
@@ -85,6 +85,7 @@ void PLEGMA_EigSolver::applyOperator(double *out, double *in){
     if(p.PolyDeg > 1){
       tmp1->copy(*d_in);
       tmp2->copy(*d_out);
+      sigma_old = sigma1;
       for(int i=2; i <= p.PolyDeg; i++){
 	sigma = 1.0/(2.0/sigma1-sigma_old);
 	d1.real(2.0*sigma/delta);
@@ -144,16 +145,14 @@ void PLEGMA_EigSolver::computeEigVecs(){
   char *which_evals = strdup(p.spectrumPart.c_str());
   std::complex<double> * pin=nullptr;
   std::complex<double> * pout=nullptr;
-  int *ipntr, *select, *iparam; //*sorted_evals_index
-  double *rwork; //*sorted_evals
+  int *ipntr, *select, *iparam; 
+  double *rwork; 
   std::complex<double> *resid, *workd, *workl, *workev;
   try{
     ipntr              = new int[14];
     select             = new int[p.NkV];
-    //    sorted_evals_index = new int[p.NkV];
     iparam             = new int[11];
     rwork        = new double[p.NkV];
-    //    sorted_evals = new double[p.NkV];
   
     resid  = new std::complex<double>[size_per_Vec];
     workd  = new std::complex<double>[3*size_per_Vec];
@@ -168,7 +167,7 @@ void PLEGMA_EigSolver::computeEigVecs(){
   iparam[2] = p.maxIters;
   iparam[3] = 1;
   iparam[6] = 1;
-  iparam[7] = p.mode;
+  iparam[7] = 1; // arpack mode
 
   int info = 0; // random initial guess
   int nconv;
@@ -213,10 +212,8 @@ void PLEGMA_EigSolver::computeEigVecs(){
   free(which_evals);
   delete[] ipntr;
   delete[] select;
-  //  delete[] sorted_evals_index;
   delete[] iparam;
   delete[] rwork;
-  //  delete[] sorted_evals;
   delete[] resid;
   delete[] workd;
   delete[] workl;
@@ -232,7 +229,7 @@ void PLEGMA_EigSolver::computeEigVals(){
     std::complex<double> eval;
     std::complex<double> res;
     cuBLAS::dot(reinterpret_cast<double(&)[2]>(eval), size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), MPI_COMM_WORLD);
-    cuBLAS::scal(size_per_Vec,eval.real(),tmp1->D_elem());
+    cuBLAS::scal(size_per_Vec,-eval.real(),tmp1->D_elem());
     cuBLAS::axpy(size_per_Vec,one,tmp2->D_elem(),tmp1->D_elem());
     cuBLAS::dot(reinterpret_cast<double(&)[2]>(res), size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), MPI_COMM_WORLD);
     evalsOrdered.push_back(std::make_tuple(eval.real(), eval.imag(), std::sqrt(res.real()), j));
@@ -240,12 +237,28 @@ void PLEGMA_EigSolver::computeEigVals(){
   std::sort(evalsOrdered.begin(), evalsOrdered.end());
   if(verbose)
     for (int j = 0; j < p.NeV; ++j)
-      printfQuda("Eval[%04d] = (%+e,%+e), Residual: %+e, Order Index: %d", std::get<0>(evalsOrdered[j]), std::get<1>(evalsOrdered[j]),
+      printfQuda("Eval[%04d] = (%+e,%+e), Residual: %+e, Order Index: %d\n", j, std::get<0>(evalsOrdered[j]), std::get<1>(evalsOrdered[j]),
 		 std::get<2>(evalsOrdered[j]), std::get<3>(evalsOrdered[j]));
 }
 
+// vecOut = (1 - U * U^\dag) vecIn
 void PLEGMA_EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn){
-
+  if(p.NeV <= 0){
+    if(verbose) printfQuda("Skipping deflation of source vector since NeV=%d\n",p.NeV);
+    vecOut.copy(vecIn);
+    return;
+  }
+  if(!vecOut.IsAllocHost() || !vecIn.IsAllocHost()) errorQuda("This functions needs both vecs to have also Host allocation");
+  vecIn.unload();
+  double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
+  double *tmpArr = nullptr;
+  try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { errorQuda(err.what());}
+  memset(tmpArr,0,p.NeV*2*sizeof(double));
+  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vecIn.H_elem(), b, tmpArr, MPI_COMM_WORLD);
+  cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, b, vecOut.H_elem());
+  cBLAS::axpy(size_per_Vec, aP, vecIn.H_elem(), vecOut.H_elem());
+  vecOut.load();
+  delete[] tmpArr;
 }
 
 void PLEGMA_EigSolver::dumpEvalsVdagG5V(std::string filename){
