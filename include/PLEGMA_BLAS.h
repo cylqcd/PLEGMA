@@ -14,6 +14,7 @@
 #include <cublas_v2.h>
 #include <mpi.h>
 #pragma once
+enum OPER_MATR_BLAS {NOTRANS, TRANS, DAGGER};
 namespace cBLAS{
   //========================================================//
   template<typename Float>
@@ -52,6 +53,44 @@ namespace cBLAS{
     cblas_zdscal(NN,val,x,1);
   }
 
+  //---------------------------------------------------------
+  template<typename Float>
+  inline void gemv_(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y){}
+
+  template<>
+  inline void gemv_<float>(OPER_MATR_BLAS trans, int m, int n, float alpha[2], float* A, float* x, float beta[2], float* y){
+    CBLAS_TRANSPOSE Oper;
+    switch(trans){case(NOTRANS): Oper=CblasNoTrans; break; case(TRANS): Oper=CblasTrans; break; case(DAGGER): Oper=CblasConjTrans; break;}
+    cblas_cgemv(CblasColMajor, Oper, m, n, (float*) alpha, A, m, x, 1, (float*) beta, y, 1);
+  }
+
+  template<>
+  inline void gemv_<double>(OPER_MATR_BLAS trans, int m, int n, double alpha[2], double* A, double* x, double beta[2], double* y){
+    CBLAS_TRANSPOSE Oper;
+    switch(trans){case(NOTRANS): Oper=CblasNoTrans; break; case(TRANS): Oper=CblasTrans; break; case(DAGGER): Oper=CblasConjTrans; break;}
+    cblas_zgemv(CblasColMajor, Oper, m, n, (double*) alpha, A, m, x, 1, (double*) beta, y, 1);
+  }
+
+  // In case of m is partitioned and trans=NOTRANS OR m is not partitioned one can use whatever trans
+  // Cannot work if n is partitioned
+  template<typename Float>
+  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y){
+    gemv_(trans, m, n, alpha, A, x, beta, y);
+  }
+  // In case that m is partitioned and we take trans of dagger then reduction is needed
+  // Cannot work if n is partitioned
+  template<typename Float>
+  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, MPI_Comm comm){
+    if(trans == NOTRANS) errorQuda("Use gemv without MPI comm");
+    if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
+    Float *yr = nullptr;
+    try{yr = new Float[n*2];} catch (std::bad_alloc& err){ errorQuda(err.what());}
+    gemv_(trans, m, n, alpha, A, x, beta, y);
+    int mpiErr = MPI_Allreduce(y,yr,n*2,MPI_Type(yr),MPI_SUM,comm);
+    if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+    memcpy(y,yr,n*2*sizeof(Float));
+    delete[] yr;
+  }
   
 }
 //=================================================================//
