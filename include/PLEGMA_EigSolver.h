@@ -31,18 +31,16 @@ extern "C"{
 
 struct  EigSolverParams{
   int NeV; // total number of eigenvalues & eigenvectors
-  int NkV; // Krylov space size > NeV
-
-  bool isACC; // In case we want to use Polymonial accelarator
+  int NkV; // Krylov space size should be > NeV
+  bool isACC; // In case we want to use Polymonial accelerator
   int PolyDeg; // Order of the Polynomial
-  double amin; // Low boundary for polymonial accelator
-  double amax; // High boundary for polynomial accelator
+  double amin; // Low boundary for polymonial accelerator
+  double amax; // High boundary for polynomial accelerator
 #if defined(HAVE_ARPACK)
   std::string spectrumPart; // available options for arpack are (SR,LR)
   std::string logFile; // path to the eigensolver log file
-  double tol;
-  int maxIters;
-  int mode; 
+  double tol;          // tolerance of the eigen solver
+  int maxIters;        // maximum number of iterations for solver
 #elif defined(HAVE_PRIMME)
   
 #else
@@ -57,11 +55,9 @@ class PLEGMA_EigSolver{
   int size_per_Vec;
   int size_NeV;
   int size_NkV;
-  int size_total;
   size_t bytes_per_Vec;
   size_t bytes_NeV;
   size_t bytes_NkV;
-  size_t bytes_total;
   
   double *h_eigVecs;
   double *h_eigVals;
@@ -81,8 +77,10 @@ class PLEGMA_EigSolver{
   void print();
  public:
   PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose=false);
-  virtual ~PLEGMA_EigSolver();
+  ~PLEGMA_EigSolver();
   void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
   void dumpEvalsVdagG5V(std::string filename);
+  double* getEigVecs() const{return h_eigVecs;}
+  std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
 };
 #endif /* PLEGMA_EIGSOLVER_H */
