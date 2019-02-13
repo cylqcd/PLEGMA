@@ -1,6 +1,7 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 #include <PLEGMA_BLAS.h>
+#include <PLEGMA_EigSolver.h>
 
 using namespace plegma;
 using namespace quda;
@@ -12,14 +13,37 @@ int main(int argc, char **argv)
 {
   PLEGMA_params params;
   initialize(argc, argv, &params);
-  PLEGMA_Vector<double> source(DEVICE);
-  source.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
-  std::complex<double> a(2.,0.);
-  std::complex<double> b(3.,0.);
-  std::complex<double> c(2.,0.);
-  plegma::axpbypcz(4*3*GK_localVolume,reinterpret_cast<double(&)[2]>(a), source.D_elem(), reinterpret_cast<double(&)[2]>(b), source.D_elem(), reinterpret_cast<double(&)[2]>(c), source.D_elem());
-  std::complex<double> aka = source.dot(source);
-  finalize();
+  QudaGaugeParam gauge_param = newQudaGaugeParam();
+  setGaugeParam(gauge_param);
 
+  //-Read the gauge field in lime format
+  GaugeBuffer<double> gauge(params);
+  readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
+
+  applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
+  initGaugeQuda((void*)gauge.get_ptr(), gauge_param);
+
+  EigSolverParams eigParam;
+  eigParam.NeV = 50;
+  eigParam.NkV = 80;
+  eigParam.isACC = true;
+  eigParam.PolyDeg = 300;
+  eigParam.amin = 5e-04;
+  eigParam.amax = 4.5;
+  eigParam.spectrumPart = "SR";
+  eigParam.logFile = "/home/khadjiyiannakou_tmp/khadjiyiannakou/runs/arpack.log";
+  eigParam.tol =1e-05;//1e-05;
+  eigParam.maxIters = 100000;
+  PLEGMA_EigSolver eigSol(eigParam, QUDA_TWISTED_CLOVER_DSLASH , true);
+  finalize();
   return 0;
 }
+
+  // PLEGMA_Vector<double> source(DEVICE);
+  // source.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
+  // std::complex<double> a(2.,0.);
+  // std::complex<double> b(3.,0.);
+  // std::complex<double> c(2.,0.);
+  // plegma::axpbypcz(4*3*GK_localVolume,reinterpret_cast<double(&)[2]>(a), source.D_elem(), reinterpret_cast<double(&)[2]>(b), source.D_elem(), reinterpret_cast<double(&)[2]>(c), source.D_elem());
+  // std::complex<double> aka = source.dot(source);
+  // finalize();
