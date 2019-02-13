@@ -35,6 +35,10 @@ int main(int argc, char **argv)
   eigParam.tol =1e-05;//1e-05;
   eigParam.maxIters = 100000;
   PLEGMA_EigSolver eigSol(eigParam, QUDA_TWISTED_CLOVER_DSLASH , true);
+  PLEGMA_Vector<double> in,out;
+  in.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
+  eigSol.projectVector(out,in);
+  std::complex<double> aka = out.dot(out);
   finalize();
   return 0;
 }

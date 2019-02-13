@@ -69,6 +69,7 @@ void PLEGMA_EigSolver::applyOperator(double *out, double *in){
   checkCudaError();
   if(!p.isACC) dOp->apply<MdagM>(*d_out,*d_in);
   else{
+    if(p.PolyDeg < 1) errorQuda("Degree of the Polynomial shoud be >= 1");
     double delta,theta;
     double sigma,sigma1,sigma_old;
     std::complex<double> d1(0.,0.),d2(0.,0.),d3(0.,0.);
@@ -170,6 +171,12 @@ void PLEGMA_EigSolver::computeEigVecs(){
   iparam[7] = 1; // arpack mode
 
   int info = 0; // random initial guess
+  // int info = 1;
+  // for (int i = 0; i < size_per_Vec; ++i) {
+  //   resid[i].real(1.);
+  //   resid[i].imag(0.);
+  // }
+
   int nconv;
   bool checkIdo = true;
   int arpack_iter = 0;
