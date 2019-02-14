@@ -23,22 +23,36 @@ int main(int argc, char **argv)
   applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
   initGaugeQuda((void*)gauge.get_ptr(), gauge_param);
 
+#if defined(HAVE_EIGENSOLVER)
   EigSolverParams eigParam;
   eigParam.NeV = 50;
-  eigParam.NkV = 80;
   eigParam.isACC = true;
   eigParam.PolyDeg = 300;
   eigParam.amin = 5e-04;
   eigParam.amax = 4.5;
   eigParam.spectrumPart = "SR";
-  eigParam.logFile = "/home/khadjiyiannakou_tmp/khadjiyiannakou/runs/arpack.log";
   eigParam.tol =1e-05;//1e-05;
   eigParam.maxIters = 100000;
+#if defined(HAVE_ARPACK)
+  eigParam.NkV = 80;
+  eigParam.logFile = "/home/khadjiyiannakou_tmp/khadjiyiannakou/runs/arpack.log";
+#elif defined(HAVE_PRIMME)
+  eigParam.printLevel = 4;
+  eigParam.primme_method=PRIMME_GD_plusK;
+#else
+  errorQuda("No arpack or primme is compiled");
+#endif
+ 
   PLEGMA_EigSolver eigSol(eigParam, QUDA_TWISTED_CLOVER_DSLASH , true);
   PLEGMA_Vector<double> in,out;
   in.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
   eigSol.projectVector(out,in);
   std::complex<double> aka = out.dot(out);
+
+#else
+  errorQuda("No eigenSolver is compiled");
+#endif
+
   finalize();
   return 0;
 }

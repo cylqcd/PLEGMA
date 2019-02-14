@@ -3,6 +3,8 @@
 #ifndef PLEGMA_EIGSOLVER_H
 #define PLEGMA_EIGSOLVER_H
 
+#ifdef HAVE_EIGENSOLVER
+
 #if defined(HAVE_ARPACK) && defined(HAVE_PRIMME)
 #error Cannot have both ARPACK and PRIMME
 #endif
@@ -31,18 +33,36 @@ extern "C"{
 
 struct  EigSolverParams{
   int NeV; // total number of eigenvalues & eigenvectors
-  int NkV; // Krylov space size should be > NeV
+  std::string spectrumPart; // available options for arpack are (SR,LR)
   bool isACC; // In case we want to use Polymonial accelerator
   int PolyDeg; // Order of the Polynomial
   double amin; // Low boundary for polymonial accelerator
   double amax; // High boundary for polynomial accelerator
-#if defined(HAVE_ARPACK)
-  std::string spectrumPart; // available options for arpack are (SR,LR)
-  std::string logFile; // path to the eigensolver log file
   double tol;          // tolerance of the eigen solver
   int maxIters;        // maximum number of iterations for solver
+#if defined(HAVE_ARPACK)
+  int NkV; // Krylov space size should be > NeV
+  std::string logFile; // path to the eigensolver log file
 #elif defined(HAVE_PRIMME)
-  
+  int printLevel; // primme level of print (0 for no printing at all), (5, for printing everything)
+  primme_preset_method primme_method; // method to eigenSolver
+  /* Available methods
+  PRIMME_DYNAMIC
+  PRIMME_DEFAULT_MIN_TIME
+  PRIMME_DEFAULT_MIN_MATVECS
+  PRIMME_Arnoldi
+  PRIMME_GD
+  PRIMME_GD_plusK
+  PRIMME_GD_Olsen_plusK
+  PRIMME_JD_Olsen_plusK
+  PRIMME_RQI
+  PRIMME_JDQR
+  PRIMME_JDQMR
+  PRIMME_JDQMR_ETol
+  PRIMME_STEEPEST_DESCENT
+  PRIMME_LOBPCG_OrthoBasis
+  PRIMME_LOBPCG_OrthoBasis_Window
+  */
 #else
 #endif
 };
@@ -54,23 +74,25 @@ class PLEGMA_EigSolver{
   int field_length;
   int size_per_Vec;
   int size_NeV;
+#if defined(HAVE_ARPACK)
   int size_NkV;
+#endif
   size_t bytes_per_Vec;
   size_t bytes_NeV;
+#if defined(HAVE_ARPACK)
   size_t bytes_NkV;
+#endif
   
   double *h_eigVecs;
   double *h_eigVals;
-  
-  quda::QUDA_dirac *dOp;
-
-  PLEGMA_Vector<double> *d_in;
-  PLEGMA_Vector<double> *d_out;
-  PLEGMA_Vector<double> *tmp1;
-  PLEGMA_Vector<double> *tmp2;
+#if defined(HAVE_PRIMME)
+  double *h_rnorms;
+  primme_params primme_pars;
+#endif
   std::vector< std::tuple<double,double,double,int> > evalsOrdered; // real, imag, residual, orderInd
-  
+#if defined(HAVE_ARPACK)  
   void applyOperator(double *out, double *in);
+#endif
   void initEigSolver();
   void computeEigVecs();
   void computeEigVals();
@@ -83,4 +105,5 @@ class PLEGMA_EigSolver{
   double* getEigVecs() const{return h_eigVecs;}
   std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
 };
+#endif /* HAVE_EIGENSOLVER */
 #endif /* PLEGMA_EIGSOLVER_H */
