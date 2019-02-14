@@ -67,6 +67,7 @@ endif()
 
 set(PLEGMA_EIGENSOLVER OFF CACHE BOOL "build eigensolver")
 if(PLEGMA_EIGENSOLVER)
+  add_definitions(-DHAVE_EIGENSOLVER)
   #ARPACK || PRIMME
   set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
   set(PLEGMA_PRIMME OFF CACHE BOOL "build PRIMME interface")
