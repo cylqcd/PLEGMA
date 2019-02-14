@@ -16,7 +16,6 @@ set (QUDA_OBJS
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
-  PLEGMA_EigSolver.cu
 )
 
 if(PLEGMA_ALL_BARYONS)

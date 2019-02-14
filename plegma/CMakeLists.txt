@@ -70,5 +70,5 @@ target_link_libraries(qLoops ${PLEGMA_LIBS})
 cuda_add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
 target_link_libraries(FT ${PLEGMA_LIBS})
 
-cuda_add_executable(eigSolver eigSolver.cpp)
-target_link_libraries(eigSolver ${PLEGMA_LIBS})
+cuda_add_executable(LowModesCalc LowModesCalc.cpp)
+target_link_libraries(LowModesCalc ${PLEGMA_LIBS})

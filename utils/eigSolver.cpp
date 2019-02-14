@@ -1,4 +1,4 @@
-#include <PLEGMA_EigSolver.h>
+#include <eigSolver.h>
 #include <PLEGMA_BLAS.h>
 #include <algorithm>
 using namespace plegma;
@@ -16,7 +16,7 @@ static bool G_isACC;
 static double G_amin;
 static double G_amax;
 
-PLEGMA_EigSolver::PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose):verbose(verbose),p(params),
+EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose):verbose(verbose),p(params),
 												    h_eigVecs(nullptr),h_eigVals(nullptr)
 {
   if(!GK_init_PLEGMA_flag) errorQuda("Initialize PLEGMA first");
@@ -88,7 +88,7 @@ PLEGMA_EigSolver::PLEGMA_EigSolver(EigSolverParams params, QudaDslashType dslash
 #endif
 }
 
-PLEGMA_EigSolver::~PLEGMA_EigSolver(){
+EigSolver::~EigSolver(){
   delete[] h_eigVecs;
 }
 
@@ -98,7 +98,7 @@ PLEGMA_EigSolver::~PLEGMA_EigSolver(){
 static void applyOperator(double *out, double *in, int size_per_Vec){
   size_t bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
 #else
-void PLEGMA_EigSolver::applyOperator(double *out, double *in){  
+void EigSolver::applyOperator(double *out, double *in){  
 #endif
   cudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,cudaMemcpyHostToDevice);
   checkCudaError();
@@ -157,7 +157,7 @@ static void par_GlobalSumForDouble(void *sendBuf, void *recvBuf, int *count, pri
 }
 #endif
 
-void PLEGMA_EigSolver::initEigSolver(){
+void EigSolver::initEigSolver(){
 #ifdef HAVE_ARPACK
   int arpack_log_u = 9999;
   if(!p.logFile.empty() && comm_rank() == 0){
@@ -191,7 +191,7 @@ void PLEGMA_EigSolver::initEigSolver(){
 #endif
 }
 
-void PLEGMA_EigSolver::print(){
+void EigSolver::print(){
   printfQuda("Number of eigenvalues requested: %d\n",p.NeV);
 #if defined(HAVE_ARPACK)
   printfQuda("Size of Krylov space requested: %d\n",p.NkV);
@@ -210,7 +210,7 @@ void PLEGMA_EigSolver::print(){
 #endif
 }
 
-void PLEGMA_EigSolver::computeEigVecs(){
+void EigSolver::computeEigVecs(){
 #if defined(HAVE_ARPACK)
   MPI_Fint mpi_comm_f = MPI_Comm_c2f(MPI_COMM_WORLD);
   char *bmat = strdup("I");
@@ -308,7 +308,7 @@ void PLEGMA_EigSolver::computeEigVecs(){
 #endif
 }
 
-void PLEGMA_EigSolver::computeEigVals(){
+void EigSolver::computeEigVals(){
   for(int j = 0 ; j < p.NeV; j++){
     double one[2] = {1.,0.};
     cudaMemcpy(tmp1->D_elem(),h_eigVecs+j*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
@@ -330,7 +330,7 @@ void PLEGMA_EigSolver::computeEigVals(){
 }
 
 // vecOut = (1 - U * U^\dag) vecIn
-void PLEGMA_EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn){
+void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn){
   if(p.NeV <= 0){
     if(verbose) printfQuda("Skipping deflation of source vector since NeV=%d\n",p.NeV);
     vecOut.copy(vecIn);
@@ -349,7 +349,7 @@ void PLEGMA_EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vecto
   delete[] tmpArr;
 }
 
-void PLEGMA_EigSolver::dumpEvalsVdagG5V(std::string filename){
+void EigSolver::dumpEvalsVdagG5V(std::string filename){
   if(p.NeV <= 0){ printfQuda("Skipping dumping of evals v^+ g5 v since NeV=%d\n",p.NeV); return;}
   PLEGMA_Vector<double> g5V(DEVICE);
   PLEGMA_Vector<double> V(DEVICE);
