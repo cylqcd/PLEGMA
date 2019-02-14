@@ -38,12 +38,13 @@ int main(int argc, char **argv)
   eigParam.logFile = "/home/khadjiyiannakou_tmp/khadjiyiannakou/runs/arpack.log";
 #elif defined(HAVE_PRIMME)
   eigParam.printLevel = 4;
-  eigParam.primme_method=PRIMME_GD_plusK;
+  eigParam.primme_method=PRIMME_GD_Olsen_plusK;
 #else
   errorQuda("No arpack or primme is compiled");
 #endif
  
   PLEGMA_EigSolver eigSol(eigParam, QUDA_TWISTED_CLOVER_DSLASH , true);
+  eigSol.dumpEvalsVdagG5V("/home/khadjiyiannakou_tmp/khadjiyiannakou/runs/eigVals_VdagG5V.dat");
   PLEGMA_Vector<double> in,out;
   in.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
   eigSol.projectVector(out,in);
