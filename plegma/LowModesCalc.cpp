@@ -37,7 +37,7 @@ int main(int argc, char **argv)
   eigParam.logFile = "/home/khadjiyiannakou_tmp//khadjiyiannakou/runs/arpack.log";
 #elif defined(HAVE_PRIMME)
   eigParam.printLevel = 4;
-  eigParam.primme_method=PRIMME_JD_Olsen_plusK;
+  eigParam.primme_method=PRIMME_RQI;
 #else
   errorQuda("No arpack or primme is compiled");
 #endif
