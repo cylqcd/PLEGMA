@@ -52,9 +52,21 @@ struct pointer_holder {
       checkCudaError();
     }
   }
+  void copyFromDevice() {
+    if(devPointer != NULL) {
+      cudaMemcpy( hostPointer, devPointer, bytes*size, cudaMemcpyDeviceToHost);
+      checkCudaError();
+    }
+  }
   void copyToDeviceConstant() {
     if(devPointer != NULL) {
       cudaMemcpyToSymbol( *((char**) devPointer), hostPointer, bytes*size);
+      checkCudaError();
+    }
+  }
+  void copyFromDeviceConstant() {
+    if(devPointer != NULL) {
+      cudaMemcpyFromSymbol(hostPointer, *((char**) devPointer), bytes*size);
       checkCudaError();
     }
   }
@@ -96,7 +108,10 @@ struct global_vars {
     PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
     for(int i = 0; i < globals.size(); i++) {
       if(globals[i].devPointer == NULL) continue;
-      std::string line = "H/DGC_" + globals[i].get_value();
+      std::string line = "HGC_" + globals[i].get_value();
+      PLEGMA_printf(line.c_str());
+      globals[i].copyFromDeviceConstant();
+      line = "DGC_" + globals[i].get_value();
       PLEGMA_printf(line.c_str());
     }
     PLEGMA_printf("\n\n");
