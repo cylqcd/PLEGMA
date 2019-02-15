@@ -15,6 +15,7 @@ void finalizeComms();
 void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
 void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
 void finalizeGaugeQuda();
+void plaqQuda();
 
 //============= QUDA_params.cpp ===================================//
 void infoQuda();

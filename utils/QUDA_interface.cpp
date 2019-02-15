@@ -110,6 +110,12 @@ void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkTyp
   initGaugeQuda(gauge,antiperiodic,type);
 }
 
+void plaqQuda() {
+  double plq[3]; // total, spatial and temporal plaquette
+  plaqQuda(plq);
+  printfQuda("TEST: Calculated plaquette in QUDA: %f (sp: %f, T: %f)\n", plq[0], plq[1], plq[2]);
+}
+
 QUDA_solver::QUDA_solver(double mu) {
   char *profiler_name;
   asprintf(&profiler_name, "Solver profiler mu=%f", mu);

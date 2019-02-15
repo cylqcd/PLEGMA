@@ -22,9 +22,7 @@ int main(int argc, char **argv)
 
   // Loading to QUDA and computing plaquette also there
   initGaugeQuda(gauge, false, QUDA_SU3_LINKS);
-  double plq[3]; // total, spatial and temporal plaquette
-  plaqQuda(plq);
-  printfQuda("TEST: Calculated plaquette in QUDA: %f (sp: %f, T: %f)\n", plq[0], plq[1], plq[2]);
+  plaqQuda();
   
   finalize();
  
