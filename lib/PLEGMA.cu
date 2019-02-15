@@ -158,10 +158,13 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
 
 void plegma::PLEGMA_status(){
   if(HGC_init_PLEGMA_flag == false) PLEGMA_error("You must initialize init_PLEGMA first");
-  PLEGMA_printf("Number of colors is %d\n",N_COLS);
-  PLEGMA_printf("Number of spins is %d\n",N_SPINS);
-  PLEGMA_printf("Number of dimensions is %d\n",N_DIMS);
-  HGC_global_vars.print();
+  if(HGC_global_vars.check() == false) PLEGMA_error("Global variables do not match between host and device.\n");
+  if(HGC_verbosity > 2) {
+    PLEGMA_printf("Number of colors is %d\n",N_COLS);
+    PLEGMA_printf("Number of spins is %d\n",N_SPINS);
+    PLEGMA_printf("Number of dimensions is %d\n",N_DIMS);
+    HGC_global_vars.print();
+  }
 }
 
 void plegma::PLEGMA_end() {
