@@ -31,6 +31,6 @@ void finalize();
 
 
 //=================== PLEGMA_Options.cpp ==========================//
-void basicOptions(Options &opt);
-void qudaSolverOptions(Options &opt);
+void plegmaOptions(Options &opt);
+void qudaOptions(Options &opt);
 

@@ -2,9 +2,15 @@
 #include <PLEGMA_utils.h>
 #include <comm_quda.h>
 
-void basicOptions(Options &opt){
+void plegmaOptions(Options &opt){
   bool isFound;
   opt.set("verbosity","Set verbosity level, 0 minimal, 1 verbose, 2 debug, 3 debug all", 1, verbosity);
+  
+  if(verbosity>0) {
+    PLEGMA_printf("\nParameters read by plegmaOptions:\n");
+  } else if(verbosity>1) {
+    PLEGMA_printf("\nAll parameters available in plegmaOptions with read or default value:\n");
+  }
   
   opt.setForced("dims","Set local dimensions (X Y Z T), e.g. 8 8 8 16", verbosity, dims[0], dims[1], dims[2], dims[3]);
   if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);
@@ -42,10 +48,16 @@ template<typename T> static inline void map_to_array_MG(std::map<int,std::string
   }
 }
 
-void qudaSolverOptions(Options &opt){
+void qudaOptions(Options &opt){
   std::string tmpString;
   bool tmpBool;
   bool isFound;
+
+  if(verbosity>0) {
+    PLEGMA_printf("\nParameters read by qudaOptions:\n");
+  } else if(verbosity>1) {
+    PLEGMA_printf("\nAll parameters available in qudaOptions with read or default value:\n");
+  }
     
   isFound=opt.set("Q-prec", "Precision in the GPU, options (double,single,half), default (single)", verbosity, tmpString);
   if(isFound)prec = get_prec(tmpString.c_str());

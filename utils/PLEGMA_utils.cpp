@@ -11,14 +11,14 @@ void initialize(int argc, char **argv, bool withQuda) {
   MPI_Init( NULL, NULL ); // initializing MPI only to control the printing
   
   Options opt(argc,argv);
-  basicOptions(opt);
+  plegmaOptions(opt);
   
   // initialize QMP/MPI, QUDA comms grid and RNG
   MPI_Finalize(); // initializing the wanted communications here
   initComms(argc, argv, procs);
 
   if(withQuda) {
-    qudaSolverOptions(opt);
+    qudaOptions(opt);
     // initialize the QUDA library
     initQuda(device);
     if(verbosity>0) infoQuda();
