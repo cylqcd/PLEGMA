@@ -6,35 +6,20 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
-  PLEGMA_params params;
-  initialize(argc, argv, &params);
+  initialize(argc, argv);
 
-  // Setting the QUDA params as read from command line
-  QudaGaugeParam gauge_param = newQudaGaugeParam();
-  setGaugeParam(gauge_param);
-  
-  //-Read the gauge field in lime format
-  GaugeBuffer<double> gauge(params);
-  readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
+  // Reading from Lime file and loading to device
+  PLEGMA_Gauge<double> gauge;
+  gauge.readFromLime(latfile.c_str());
+  gauge.load();
+  gauge.calculatePlaq();
 
-  // This gauge will be used for the inversions.
-  // We need to apply the anti-periodic boundaries.
-  applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
+  // Loading to QUDA and computing plaquette also there
+  initGaugeQuda(gauge, true);
+  plaqQuda();
 
-  // Load the gauge field into QUDA
-  initGaugeQuda((void*)gauge.get_ptr(), gauge_param);
-
-  // Removing anti-periodic boundaries.
-  applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
-  mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
-
-  // Allocation done on BOTH, DEVICE and HOST
-  PLEGMA_Gauge<double> readGauge(BOTH);
+  // Smearing
   PLEGMA_Gauge<double> smearedGauge(BOTH);
-  readGauge.pack(gauge.get_ptr());
-  readGauge.load();
-  printfQuda("Plaquette before smearing:\n");
-  readGauge.calculatePlaq();
   smearedGauge.APEsmearing(readGauge, 0, 0.1, 3); // TODO: here should go the smearing params
   printfQuda("Plaquette after smearing:\n");
   smearedGauge.calculatePlaq();

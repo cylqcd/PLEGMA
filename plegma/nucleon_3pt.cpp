@@ -4,38 +4,25 @@
 using namespace plegma;
 using namespace quda;
 
-extern int device;
-extern char latfile[];
-extern int nsmearAPE;
-extern double alphaAPE;
-
 int main(int argc, char **argv)
 {
-  PLEGMA_params params;
-  initialize(argc, argv, &params);
+  initialize(argc, argv);
 
-  QudaGaugeParam gauge_param = newQudaGaugeParam();
-  setGaugeParam(gauge_param);
+  // Reading from Lime file and loading to device
+  PLEGMA_Gauge<double> gauge;
+  gauge.readFromLime(latfile.c_str());
+  gauge.load();
+  gauge.calculatePlaq();
 
-  //-Read the gauge field in lime format
-  GaugeBuffer<double> gauge(params);
-  readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
+  // Loading to QUDA and computing plaquette also there
+  initGaugeQuda(gauge, true);
+  plaqQuda();
 
-  applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
-  initGaugeQuda((void*)gauge.get_ptr(), gauge_param);
-  applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
-  // The gauge is loaded in a format suitable for QUDA. We need to re-map it
-  mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
-
-  PLEGMA_Gauge<double> *pGauge = new PLEGMA_Gauge<double>();
-  pGauge->pack(gauge.get_ptr());
-  pGauge->load();
-  pGauge->calculatePlaq();
-  
-  PLEGMA_Gauge<double> smearedGauge;
-  smearedGauge.APEsmearing(*pGauge, nsmearAPE, alphaAPE, 3);
+  // Smearing
+  PLEGMA_Gauge<double> smearedGauge(BOTH);
+  smearedGauge.APEsmearing(readGauge, 0, 0.1, 3); // TODO: here should go the smearing params
+  printfQuda("Plaquette after smearing:\n");
   smearedGauge.calculatePlaq();
-  delete pGauge;
   
   PLEGMA_Gauge<float> contractGauge;
   applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
