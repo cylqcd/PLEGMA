@@ -2,11 +2,6 @@
 #include <PLEGMA_Thrust.h>
 
 namespace plegma{
-  // template<typename Float> using DevF2 = thrust::device_ptr<Float2<Float> >;
-  // template<typename DevF2> using tplDevF2DevF2 = thrust::tuple<DevF2,DevF2>;
-  // template<typename tplDevF2DevF2> using zipTplDevF2DevF2 = thrust::zip_iterator<tplDevF2DevF2>;
-  // template<typename DevF2> using tplDevF2DevF2DevF2 = thrust::tuple<DevF2,DevF2,DevF2>;
-  // template<typename tplDevF2DevF2DevF2> using zipTplDevF2DevF2DevF2 = thrust::zip_iterator<tplDevF2DevF2DevF2>;
   
   template<typename Float>
   struct ElemWiseMul{
