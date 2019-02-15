@@ -118,12 +118,12 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
 			  int signProps, std::vector<GAMMAS> gammas,
-			  int source[4], const char* flavor_string){
+			  int source[4]){
   n_flavors = 1;
   n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
-  flavors = {flavor_string};
+  flavors = {"threep"};
   groups =  {"Local"};
   description = getGammasString(gammas)+" / re,im";
   initialize();
@@ -181,12 +181,12 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas,
-			 int source[4], const char* flavor_string){
+			 int source[4]){
   n_flavors = 1;
   n_groups = 1;
   shape = {N_DIMS, (int) gammas.size()};
   setSource(source);
-  flavors = {flavor_string};
+  flavors = {"threep"};
   groups =  {"OneD"};
   description = "x,y,z,t / "+getGammasString(gammas)+" / re,im";
   initialize();
@@ -201,12 +201,12 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Gauge<Float> &gauge,
-			int signProps, int source[4], const char* flavor_string){
+			int signProps, int source[4]){
   n_flavors = 1;
   n_groups = 1;
   shape = {N_DIMS};
   setSource(source);
-  flavors = {flavor_string};
+  flavors = {"threep"};
   groups =  {"Noether"};
   description = "x,y,z,t / re,im";
   initialize();
@@ -226,12 +226,12 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Propagator<Float> &fwdProp,
 			       PLEGMA_Su3field<Float> &su3,
 			       int signProps, std::vector<GAMMAS> gammas,
-			       int source[4], const char* flavor_string){
+			       int source[4]){
   n_flavors = 1;
   n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
-  flavors = {flavor_string};
+  flavors = {"threep"};
   groups =  {"wilsonLine"};
   description = getGammasString(gammas)+" / re,im";
   initialize();

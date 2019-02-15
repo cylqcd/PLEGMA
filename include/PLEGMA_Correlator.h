@@ -95,24 +95,24 @@ namespace plegma {
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
 				   int signProps, std::vector<GAMMAS> gammas,
-				   int source[4], const char* flavor_string);
+				   int source[4]);
     
     void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 				  PLEGMA_Propagator<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
 				  int signProps, std::vector<GAMMAS> gammas,
-				  int source[4], const char* flavor_string);
+				  int source[4]);
     
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,
 				 PLEGMA_Gauge<Float> &gauge,
-				 int signProps, int source[4], const char* flavor_string);
+				 int signProps, int source[4]);
 
     void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 					PLEGMA_Propagator<Float> &fwdProp,
 					PLEGMA_Su3field<Float> &su3,
 					int signProps, std::vector<GAMMAS> gammas,
-					int source[4], const char* flavor_string);
+					int source[4]);
 
     void writeFile(const char *filename, FILE_WRITE_FORMAT format);
     void writeASCII(const char *filename);
