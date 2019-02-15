@@ -12,16 +12,6 @@
 
 #pragma once
 
-#define _PRINT_(...){				\
-  fprintf(stdout, __VA_ARGS__);			\
-  fflush(stdout);				\
-  }
-#define _ERROR_(...){				\
-  fprintf(stderr, __VA_ARGS__);			\
-  fflush(stderr);				\
-  exit(-1);					\
-  }
-
 struct argument{std::string name, value;};
 
 class Arguments{
@@ -57,17 +47,17 @@ protected:
 
   bool checkPrefix(std::string &str, bool throwExit = true){
     if(str.empty()){
-      if(throwExit) _ERROR_("Error: Empty string got when checking for [%s] prefix\n",prefixOpt.c_str());
+      if(throwExit) PLEGMA_error("Error: Empty string got when checking for [%s] prefix\n",prefixOpt.c_str());
       return false;
     }
     size_t pos = str.find(prefixOpt);
     if(pos != 0 || (prefixOpt.size() == str.size()) ){
-      if(throwExit) _ERROR_("Error: Option [%s] does not have the prefix [%s]\n",str.c_str(),prefixOpt.c_str());
+      if(throwExit) PLEGMA_error("Error: Option [%s] does not have the prefix [%s]\n",str.c_str(),prefixOpt.c_str());
       return false;
     }
     std::string sstr = str.substr(prefixOpt.size());
     if(sstr.find(prefixOpt) != std::string::npos){
-      if(throwExit)_ERROR_("Error: Found dublications of [%s] in the option [%s]\n",prefixOpt.c_str(),str.c_str());
+      if(throwExit)PLEGMA_error("Error: Found dublications of [%s] in the option [%s]\n",prefixOpt.c_str(),str.c_str());
       return false;
     }
     return true;
@@ -75,7 +65,7 @@ protected:
 
   void processInputFile(std::string infile){
     std::ifstream ifs(infile,std::ifstream::in);
-    if(ifs.fail()) _ERROR_("Error: filename [%s] does not exist\n",infile.c_str());
+    if(ifs.fail()) PLEGMA_error("Error: filename [%s] does not exist\n",infile.c_str());
     std::string line;
     while(std::getline(ifs,line)){
       argument arg;
@@ -83,7 +73,7 @@ protected:
       if(isCommented(line)) continue;
       trimSpaceTab(line);
       if(line.find(" ") == std::string::npos && line.find("\t") == std::string::npos)
-	_ERROR_("Error: name [%s] does not have a value\n",line.c_str());
+	PLEGMA_error("Error: name [%s] does not have a value\n",line.c_str());
       int sp = line.find_first_of(" \t");
       arg.name = line.substr(0,sp);
       std::string rest = line.substr(sp);
@@ -116,7 +106,7 @@ public:
 	arg.name = arg_cmd[i];
 	trimPrefix(arg.name);
 	i++;
-	if(i >= arg_cmd.size()) _ERROR_("Error: name [%s] does not have a value\n",arg.name.c_str());
+	if(i >= arg_cmd.size()) PLEGMA_error("Error: name [%s] does not have a value\n",arg.name.c_str());
 	std::stringstream cs;
 	while(!checkPrefix(arg_cmd.at(i),false)){
 	  cs << " " << arg_cmd.at(i);
@@ -126,7 +116,7 @@ public:
 	i--;
 	std::string str = cs.str();
 	trimSpaceTab(str);
-	if(str.empty())_ERROR_("Error: name [%s] does not have a value\n",arg.name.c_str());
+	if(str.empty())PLEGMA_error("Error: name [%s] does not have a value\n",arg.name.c_str());
 	arg.value = str;
 	args.push_back(arg);
       }
@@ -147,7 +137,7 @@ public:
 
   void showArgsList() const{
     for(int i = 0 ; i < args.size(); i++)
-      _PRINT_("%s %s\n",args[i].name.c_str(), args[i].value.c_str());
+      PLEGMA_printf("%s %s\n",args[i].name.c_str(), args[i].value.c_str());
   }
     
   void areDuplications() const{
@@ -156,7 +146,7 @@ public:
       for(int j = 0 ; j < args.size(); j++)
 	if(i!=j)
 	  if(check_name == args[j].name)
-	    _ERROR_("Error: Duplication of parameter [%s] found\n",check_name.c_str());
+	    PLEGMA_error("Error: Duplication of parameter [%s] found\n",check_name.c_str());
     }
   }
     
@@ -169,7 +159,7 @@ private:
   std::vector<std::string> errorCollection; // to keep the errors for show at the end
   std::vector<std::string> listSetOpt; // list that keeps what is already set
   void usage(){
-    _PRINT_("\n\n USAGE FOR %s\n",nameExec.c_str());
+    PLEGMA_printf("\n\n USAGE FOR %s\n",nameExec.c_str());
     int maxPos=0;
     for(int i = 0 ; i < descOpt.size(); i++){
       int pos = descOpt[i].find(dressDesc);
@@ -184,7 +174,7 @@ private:
       std::string spaces(maxPos-pos+1,' ');
       descOpt[i] = firstP + spaces + secondP;
     }
-    for(int i = 0 ; i < descOpt.size(); i++) _PRINT_("%s\n",descOpt[i].c_str());
+    for(int i = 0 ; i < descOpt.size(); i++) PLEGMA_printf("%s\n",descOpt[i].c_str());
   }
   template<typename T>
   void set(std::string name,std::stringstream &cs, T &v){
@@ -221,36 +211,36 @@ private:
   void print(T & p1, Pars & ... pars){
     std::stringstream cs;
     cs << " " << p1;
-    _PRINT_("%s",cs.str().c_str());
+    PLEGMA_printf("%s",cs.str().c_str());
     print(pars...);
   }
 
   template<typename T, typename... Pars>
   void print(std::string name, T & p1, Pars & ... pars){
-    _PRINT_("%s",name.c_str());
+    PLEGMA_printf("%s",name.c_str());
     print(p1,pars...);
-    _PRINT_("\n");
+    PLEGMA_printf("\n");
   }
 
   template<typename T>
   void print(std::string name, std::vector<T> &vec){
-    _PRINT_("%s",name.c_str());
+    PLEGMA_printf("%s",name.c_str());
     std::stringstream cs;
     for(int i = 0 ; i < vec.size(); i++) cs << " " << vec[i];
     cs << std::endl;
-    _PRINT_("%s\n",cs.str().c_str());
+    PLEGMA_printf("%s\n",cs.str().c_str());
   }
 
   template<typename T1, typename T2>
   void print(std::string name, std::map<T1,T2> &tpl){
-    _PRINT_("%s",name.c_str());
+    PLEGMA_printf("%s",name.c_str());
     std::stringstream cs;
     typename std::map<T1,T2>::iterator it_b = tpl.begin();
     while(it_b != tpl.end()){
       cs << " (" <<it_b->first << "," << it_b->second << ")";
       it_b++;
     }
-    _PRINT_("%s\n",cs.str().c_str());
+    PLEGMA_printf("%s\n",cs.str().c_str());
   }
 
   template<typename T, typename... Pars>
@@ -285,14 +275,14 @@ private:
 
   void checkIfSet(std::string name){
     for(int i = 0; i < listSetOpt.size(); i++)
-      if(name == listSetOpt[i]) _ERROR_("Error: Option [%s] already set\n",name.c_str());
+      if(name == listSetOpt[i]) PLEGMA_error("Error: Option [%s] already set\n",name.c_str());
   }
 public:
   Options(int argc,char **argv):Arguments(argc,argv),dressDesc("#++#"){;}
   ~Options(){checkErrors();}
     
   template<typename T, typename... Pars>
-  bool set(std::string name, std::string desc, bool visualize, T &p1, Pars & ... par){
+  bool set(std::string name, std::string desc, int visualize, T &p1, Pars & ... par){
     std::string fullDesc = getfullDesc(name,desc,p1,par...);
     descOpt.push_back(fullDesc);
     if(noOptions || isHelp) return false;
@@ -308,24 +298,24 @@ public:
 	args.erase(args.begin()+i);
 	countF++;
       }
-    if(countF == 0) return false;
+    if(countF == 0) { if(visualize>1) print(name,p1,par...); return false; }
     else{
       if(visualize)print(name,p1,par...);
       listSetOpt.push_back(name);
-      if(countF>1) _PRINT_("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);
+      if(countF>1) PLEGMA_printf("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);
       return true;
     }
   }
     
   template<typename T, typename... Pars>
-  void setForced(std::string name, std::string desc, bool visualize, T &p1, Pars & ... par){
+  void setForced(std::string name, std::string desc, int visualize, T &p1, Pars & ... par){
     bool check = set(name,desc + " (FORCED)", visualize, p1, par...);
     if (!check && !getIsHelp()) errorCollection.push_back("Error: [" + name + "] is not found in the arguments");
   }    
 
   
   template<typename T>
-  bool set(std::string name, std::string desc, bool visualize, std::vector<T> &vec, int n=-1){
+  bool set(std::string name, std::string desc, int visualize, std::vector<T> &vec, int n=-1){
     std::string fullDesc = getfullDesc(name,desc,vec);
     descOpt.push_back(fullDesc);
     if(noOptions || isHelp) return false;
@@ -348,23 +338,23 @@ public:
 	  errorCollection.push_back("Error: " + name + " got wrong number of elements");
       }
 
-    if(countF == 0) return false;
+    if(countF == 0) { if(visualize>1) print(name,vec); return false; }
     else{
       if(visualize)print(name,vec);
       listSetOpt.push_back(name);
-      if(countF>1) _PRINT_("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);
+      if(countF>1) PLEGMA_printf("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);
       return true;
     }
   }
 
   template<typename T>
-  void setForced(std::string name, std::string desc, bool visualize, std::vector<T> &vec, int n=-1){
+  void setForced(std::string name, std::string desc, int visualize, std::vector<T> &vec, int n=-1){
     bool check = set(name,desc + " (FORCED)", visualize,vec,n);
     if (!check && !getIsHelp()) errorCollection.push_back("Error: " + name + " is not found in the arguments");
   }
 
   template<typename T1, typename T2>
-  bool set(std::string name, std::string desc, bool visualize, std::map<T1,T2> &tpl, int n=-1){
+  bool set(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, int n=-1){
     std::string fullDesc = getfullDesc(name,desc,tpl);
     descOpt.push_back(fullDesc);
     if(noOptions || isHelp) return false;
@@ -389,18 +379,18 @@ public:
 	}
       }
 
-    if(countF == 0) return false;
+    if(countF == 0) { if(visualize>1) print(name,tpl); return false; }
     else{
       if(visualize)print(name,tpl);
       listSetOpt.push_back(name);
-      if(countF>1) _PRINT_("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);      
+      if(countF>1) PLEGMA_printf("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);      
       return true;
     }      
   }
 
 
   template<typename T1, typename T2>
-  void setForced(std::string name, std::string desc, bool visualize, std::map<T1,T2> &tpl, int n=-1){
+  void setForced(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, int n=-1){
     bool check = set(name,desc + " (FORCED)",visualize,tpl,n);
     if (!check && !getIsHelp()) errorCollection.push_back("Error: " + name + " is not found in the arguments");
   }
@@ -409,12 +399,12 @@ public:
     if(isHelp){usage();exit(-1);}
     if(args.size() != 0){
       for(int i = 0; i<args.size(); i++)
-	_PRINT_("Error: What option is %s\n", args[i].name.c_str() );
+	PLEGMA_printf("Error: What option is %s\n", args[i].name.c_str() );
       usage();
       exit(-1);
     }
     if(errorCollection.size() <= 0) return;
-    for(int i = 0 ; i < errorCollection.size(); i++) _PRINT_("%s\n",errorCollection[i].c_str());
+    for(int i = 0 ; i < errorCollection.size(); i++) PLEGMA_printf("%s\n",errorCollection[i].c_str());
     usage();
     exit(-1);
   }

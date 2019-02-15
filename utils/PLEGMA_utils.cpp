@@ -19,13 +19,13 @@ void initialize(int argc, char **argv, bool withQuda) {
     qudaSolverOptions(opt);
     // initialize the QUDA library
     initQuda(device);
-    if(verbose>0) infoQuda();
+    if(verbosity>0) infoQuda();
     qudaInitialized=true;
   }
 
   // initialize PLEGMA params
-  PLEGMA_init(dims, procs);
-  if(verbose>0) PLEGMA_status();
+  PLEGMA_init(dims, procs, verbosity);
+  PLEGMA_status();
 }
 
 void finalize() {

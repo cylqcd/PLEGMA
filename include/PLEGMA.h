@@ -11,7 +11,7 @@
 
 namespace plegma {
   
-  void PLEGMA_init(int localL[4], int nProcs[4]);
+  void PLEGMA_init(int localL[4], int nProcs[4], int verbosity);
   
   void PLEGMA_status();
   

@@ -8,13 +8,12 @@
 #define define(var,...) extern var 
 #endif
 
-// Main paramters -- read by basicOptions
+// Main paramters -- read by plegmaOptions
 define(int dims[N_DIMS], {8,8,8,16});
 define(int procs[N_DIMS], {1,1,1,1});
 define(std::string latfile);
-define(int verbose, 1);
+define(int verbosity, 1);
 
-// Additional paramters -- read by extraOptions
 define(int nsmearAPE, 20);
 define(double alphaAPE, 0.5);
 define(int nsmearGauss, 50);
