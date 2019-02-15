@@ -39,11 +39,11 @@ PLEGMA_RNG::PLEGMA_RNG(int seedin, int rng_sizes) {
 
   Init();
 #if defined(XORWOW)
-  printfQuda("Using curandStateXORWOW\n");
+  PLEGMA_printf("Using curandStateXORWOW\n");
 #elif defined(RG32k3a)
-  printfQuda("Using curandStateMRG32k3a\n");
+  PLEGMA_printf("Using curandStateMRG32k3a\n");
 #else
-  printfQuda("Using curandStateMRG32k3a\n");
+  PLEGMA_printf("Using curandStateMRG32k3a\n");
 #endif
 }
 
@@ -65,16 +65,16 @@ void PLEGMA_RNG::AllocateRNG() {
   if (rng_size>0 && state == NULL) {
     cudaMalloc((void**)&state, rng_size * sizeof(cuRNGState));
     cudaMemset( state , 0 , rng_size * sizeof(cuRNGState) );
-    printfQuda("Allocated array of random numbers with rng_size: %.2f MB\n",((float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
+    PLEGMA_printf("Allocated array of random numbers with rng_size: %.2f MB\n",((float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
   } else {
-    errorQuda("Array of random numbers not allocated, array size: %d !\nExiting...\n",rng_size);
+    PLEGMA_error("Array of random numbers not allocated, array size: %d !\nExiting...\n",rng_size);
   }
 }
 
 /*! @brief Destructor !*/
 PLEGMA_RNG::~PLEGMA_RNG(){
   cudaFree(state);
-  printfQuda("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(cuRNGState))/(1024*1024));
+  PLEGMA_printf("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(cuRNGState))/(1024*1024));
   rng_size = 0;
   state = NULL;
   checkCudaError();

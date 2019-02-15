@@ -25,7 +25,7 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
-    warningQuda("VecIn is not allocated on BOTH; gaussianSmearing will overwrite the device memory.\n");
+    PLEGMA_warning("VecIn is not allocated on BOTH; gaussianSmearing will overwrite the device memory.\n");
   }
   
   gaugeTex<Float> texGauge;
@@ -99,14 +99,14 @@ void PLEGMA_Vector<Float>::norm2Host(){
   }
 
   int rc = MPI_Allreduce(&res, &globalRes , 1, sizeof(Float)==4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  if( rc != MPI_SUCCESS ) errorQuda("Error in MPI reduction for plaquette");
-  printfQuda("Vector norm2 is %e\n",globalRes);
+  if( rc != MPI_SUCCESS ) PLEGMA_error("Error in MPI reduction for plaquette");
+  PLEGMA_printf("Vector norm2 is %e\n",globalRes);
 }
 
 // vec4D <- Prop3D
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2){
-  if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
@@ -129,7 +129,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
 // vec4D <- prop4D (it)
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
-  if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
@@ -167,7 +167,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
 template<typename Float>
 void PLEGMA_Vector<Float>::dilutespin(PLEGMA_Vector<Float> &vecIn, int spin){
   Float *pointer_src = NULL;
-  if(spin >= N_SPINS) errorQuda("The spin index you provided exceed the total spin content\n");
+  if(spin >= N_SPINS) PLEGMA_error("The spin index you provided exceed the total spin content\n");
   this->zero_device();
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
@@ -182,7 +182,7 @@ void PLEGMA_Vector<Float>::dilutespin(PLEGMA_Vector<Float> &vecIn, int spin){
 template<typename Float>
 void PLEGMA_Vector<Float>::dilutecolor(PLEGMA_Vector<Float> &vecIn, int color){
   Float *pointer_src = NULL;
-  if(color >= N_COLS) errorQuda("The color index you provided exceed the total color content\n");
+  if(color >= N_COLS) PLEGMA_error("The color index you provided exceed the total color content\n");
   this->zero_device();
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
@@ -197,8 +197,8 @@ void PLEGMA_Vector<Float>::dilutecolor(PLEGMA_Vector<Float> &vecIn, int color){
 template<typename Float>
 void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color){
   Float *pointer_src = NULL;
-  if(color >= N_COLS) errorQuda("The color index you provided exceed the total color content\n");
-  if(spin >= N_SPINS) errorQuda("The spin index you provided exceed the total spin content\n");
+  if(color >= N_COLS) PLEGMA_error("The color index you provided exceed the total color content\n");
+  if(spin >= N_SPINS) PLEGMA_error("The spin index you provided exceed the total spin content\n");
   this->zero_device();
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
@@ -243,7 +243,7 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
                 cudaMemcpyHostToDevice ); 
   }
   else{
-    errorQuda("Not supported %d\n",where);
+    PLEGMA_error("Not supported %d\n",where);
   }
 }
 
@@ -433,7 +433,7 @@ void PLEGMA_Vector<Float>::write(char *filename){
 template<typename Float>
 void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr){
   // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
-  if(dirOr < 0 || dirOr > 7) errorQuda("Wrong direction is given");
+  if(dirOr < 0 || dirOr > 7) PLEGMA_error("Wrong direction is given");
   vectorTex<Float> texVecIn;
   texVecIn.tex= vecIn.createTexObject();
   gaugeTex<Float> texGaugeIn;
@@ -447,7 +447,7 @@ template<typename FloatC, typename FloatA>
 void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
 template<typename Float>
 void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
-  if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   this->zero_device();
@@ -464,7 +464,7 @@ template<typename FloatC, typename FloatA, typename FloatB>
 void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
 template<typename Float>
 void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
-  if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   this->zero_device();
@@ -527,7 +527,7 @@ namespace plegma{
   // vec3D <- Prop4D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
-    if(global_it >= HGC_totalL[3]) errorQuda("The global time slice you provided exceed the temporal extent\n");
+    if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
     int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     int V3 = HGC_localVolume/HGC_localL[3];

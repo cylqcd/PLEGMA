@@ -16,7 +16,7 @@ static __global__ void shifts_kernel(Float *in, Float *out, int length_field, in
 
 template<typename Float>
 static void shiftField(PLEGMA_Field<Float> &Fin, PLEGMA_Field<Float> &Fout, int dirOr){
-  if(Fin.Field_length() != Fout.Field_length()) errorQuda("Error input, output fields do not match");
+  if(Fin.Field_length() != Fout.Field_length()) PLEGMA_error("Error input, output fields do not match");
   ProfileStruct ps( HGC_localVolume );
   tuneAndRun(ps, "shifts_kernel", shifts_kernel<Float>, Fin.D_elem(), Fout.D_elem(),Fin.Field_length(),dirOr);
   checkCudaError();

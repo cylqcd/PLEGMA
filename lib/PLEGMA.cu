@@ -27,7 +27,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];
       if(HGC_nProc[i] != comm_dim(i))
-	errorQuda("nProcs and comm_dim do not match for dim %d",i);
+	PLEGMA_error("nProcs and comm_dim do not match for dim %d",i);
     }
     
     for(int i = 0 ; i < N_DIMS ; i++){   // take local and total lattice
@@ -144,29 +144,28 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4]){
     hostFree(ranksTime, HGC_nProc[3]*sizeof(int));
 
     cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
-    if (error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCreate failed with error %d", error);
+    if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCreate failed with error %d", error);
     
     HGC_init_PLEGMA_flag = true;
-    printfQuda("PLEGMA has been initialized\n");
+    PLEGMA_printf("PLEGMA has been initialized\n");
   }  
   else{
-    printfQuda("PLEGMA already initialized. Doing nothing.\n");
+    PLEGMA_printf("PLEGMA already initialized. Doing nothing.\n");
     return;
   }
   
 }
 
 void plegma::PLEGMA_status(){
-
-  if(HGC_init_PLEGMA_flag == false) errorQuda("You must initialize init_PLEGMA first");
-  printfQuda("Number of colors is %d\n",N_COLS);
-  printfQuda("Number of spins is %d\n",N_SPINS);
-  printfQuda("Number of dimensions is %d\n",N_DIMS);
+  if(HGC_init_PLEGMA_flag == false) PLEGMA_error("You must initialize init_PLEGMA first");
+  PLEGMA_printf("Number of colors is %d\n",N_COLS);
+  PLEGMA_printf("Number of spins is %d\n",N_SPINS);
+  PLEGMA_printf("Number of dimensions is %d\n",N_DIMS);
   HGC_global_vars.print();
 }
 
 void plegma::PLEGMA_end() {
   // TODO: here we should destroy everything is created in init.
   cublasStatus_t error = cublasDestroy(HGC_cublas_handle);
-  if (error != CUBLAS_STATUS_SUCCESS) errorQuda("\nError indestroying cublas context, error code = %d\n", error);
+  if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("\nError indestroying cublas context, error code = %d\n", error);
 }

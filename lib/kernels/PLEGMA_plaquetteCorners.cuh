@@ -122,7 +122,7 @@ static Float calculatePlaquetteCorners(gaugeTex<FloatG> gaugeTex){
   cudaEventElapsedTime(&elapsedTime,start,stop);
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
-  printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
+  PLEGMA_printf("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
 #endif
 
   Float *h_partial_plaq = NULL;

@@ -24,11 +24,11 @@ void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
 
   fid=fopen(filename.c_str(),"r");
   if(fid==NULL) {
-    errorQuda("Error reading configuration! Could not open path for reading: %s\n", filename.c_str());
+    PLEGMA_error("Error reading configuration! Could not open path for reading: %s\n", filename.c_str());
   }
 	
   if ((limereader = limeCreateReader(fid))==NULL) {
-    errorQuda("Could not create limeReader");
+    PLEGMA_error("Could not create limeReader");
   }
 	
   while(limeReaderNextRecord(limereader) != LIME_EOF ) {
@@ -77,17 +77,17 @@ void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
   MPI_File_set_view(mpifid, offset, MPI_DOUBLE, subblock, "native", MPI_INFO_NULL);
 
   if(MPI_File_read_all(mpifid, ftmp, sizes[4]*HGC_localVolume, MPI_DOUBLE, &status) == 1)
-    errorQuda("Error in MPI_File_read_all\n");
+    PLEGMA_error("Error in MPI_File_read_all\n");
   MPI_File_close(&mpifid);
   
   if(dof*HGC_localVolume*sizeof(double) > 2147483648)  {
-    warningQuda("File too large. At least %d processes are needed to read this file properly.\n",
+    PLEGMA_warning("File too large. At least %d processes are needed to read this file properly.\n",
 	     (dof*HGC_localVolume*sizeof(double)/2147483648)+1);
-    warningQuda("If some results are wrong, try increasing the number of MPI processes.\n");
+    PLEGMA_warning("If some results are wrong, try increasing the number of MPI processes.\n");
   }
 #else
   if(fread(ftmp, sizeof(double), dof*HGC_localVolume, fid) != dof*HGC_localVolume) {
-    errorQuda("Error, could not read proper amount of data");
+    PLEGMA_error("Error, could not read proper amount of data");
   }
 #endif
   fclose(fid);
@@ -112,7 +112,7 @@ void PLEGMA_Gauge<Float>::calculatePlaq(){
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_SIDE);
   tex.tex = this->createTexObject();
-  printfQuda("Calculated plaquette is %f\n",calculatePlaquette<Float>(tex));
+  PLEGMA_printf("Calculated plaquette is %f\n",calculatePlaquette<Float>(tex));
   this->destroyTexObject(tex.tex);
 }
 
@@ -123,7 +123,7 @@ void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
   tex.tex = this->createTexObject();
   Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
   Float plaqRef = calculatePlaquette<Float>(tex);
-  printfQuda("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
+  PLEGMA_printf("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
   this->destroyTexObject(tex.tex);
 }
 
@@ -152,7 +152,7 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
   tex.tex = this->createTexObject();
   Float plaqRef = calculatePlaquette<Float>(tex);
   this->destroyTexObject(tex.tex);
-  printfQuda("TEST: Calculated plaquette with shifts is %f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
+  PLEGMA_printf("TEST: Calculated plaquette with shifts is %f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
 
   for(int idir = 0; idir < 4 ; idir++)
     delete u_s[idir];

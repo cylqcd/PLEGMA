@@ -72,12 +72,12 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   cudaEventElapsedTime(&elapsedTime,start,stop);
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
-  printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
+  PLEGMA_printf("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
 #endif
 
   Float *h_partial_plaq = NULL;
   hostMalloc(h_partial_plaq, gridDimX * sizeof(Float) );
-  if(h_partial_plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
+  if(h_partial_plaq == NULL) PLEGMA_error("Error allocate memory for host partial plaq");
   cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_plaq);
   checkCudaError();

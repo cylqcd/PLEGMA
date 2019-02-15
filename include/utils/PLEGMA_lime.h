@@ -93,10 +93,10 @@ static void print_xlf_info(LimeReader *limereader) {
   
   double dDummy;
   sscanf(getParamComma("kappa =",lime_data, lime_data_size),"%lf",&dDummy);    
-  printfQuda("Kappa conf is : %.8f\n", dDummy);
+  PLEGMA_printf("Kappa conf is : %.8f\n", dDummy);
   
   sscanf(getParamComma("mu =",lime_data, lime_data_size),"%lf",&dDummy);
-  printfQuda("Mu conf is : %f\n", dDummy);
+  PLEGMA_printf("Mu conf is : %f\n", dDummy);
   
   hostFree(lime_data, lime_data_size);
 }
@@ -109,26 +109,26 @@ static void print_ildg_format(LimeReader *limereader) {
   
   int iDummy, ln[4];
   sscanf(getParam("<precision>", lime_data, lime_data_size),"%i",&iDummy);    
-  printfQuda("Precision:\t%i bit\n",iDummy);
-  if(iDummy != 64) warningQuda("Only double precision supported (64). Continuing...\n");
+  PLEGMA_printf("Precision:\t%i bit\n",iDummy);
+  if(iDummy != 64) PLEGMA_warning("Only double precision supported (64). Continuing...\n");
 	      
   sscanf(getParam("<lx>", lime_data, lime_data_size),"%i",&iDummy);
-  if(iDummy != HGC_totalL[0]) warningQuda("Read lx different from HGC_totalL[0]. Continuing...\n");
+  if(iDummy != HGC_totalL[0]) PLEGMA_warning("Read lx different from HGC_totalL[0]. Continuing...\n");
   ln[0] = iDummy;
 
   sscanf(getParam("<ly>", lime_data, lime_data_size),"%i",&iDummy);
-  if(iDummy != HGC_totalL[1]) warningQuda("Read ly different from HGC_totalL[1]. Continuing...\n");
+  if(iDummy != HGC_totalL[1]) PLEGMA_warning("Read ly different from HGC_totalL[1]. Continuing...\n");
   ln[1] = iDummy;
 
   sscanf(getParam("<lz>", lime_data, lime_data_size),"%i",&iDummy);
-  if(iDummy != HGC_totalL[2]) warningQuda("Read lz different from HGC_totalL[2]. Continuing...\n");
+  if(iDummy != HGC_totalL[2]) PLEGMA_warning("Read lz different from HGC_totalL[2]. Continuing...\n");
   ln[2] = iDummy;
 
   sscanf(getParam("<lt>", lime_data, lime_data_size),"%i",&iDummy);
-  if(iDummy != HGC_totalL[3]) warningQuda("Read lt different from HGC_totalL[3]. Continuing...\n");
+  if(iDummy != HGC_totalL[3]) PLEGMA_warning("Read lt different from HGC_totalL[3]. Continuing...\n");
   ln[3] = iDummy;
   
-  printfQuda("Volume:   \t%ix%ix%ix%i\n", ln[0], ln[1], ln[2], ln[3]);
+  PLEGMA_printf("Volume:   \t%ix%ix%ix%i\n", ln[0], ln[1], ln[2], ln[3]);
 	      
   hostFree(lime_data, lime_data_size);
 }

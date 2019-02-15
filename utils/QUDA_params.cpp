@@ -24,25 +24,25 @@ static inline int dimPartitioned(int dim)
 void
 infoQuda()
 {
-  printfQuda("running the following test:\n");
+  PLEGMA_printf("running the following test:\n");
     
-  printfQuda("prec    sloppy_prec    link_recon  sloppy_link_recon S_dimension T_dimension\n");
-  printfQuda("%s   %s             %s            %s            %d/%d/%d          %d\n",
+  PLEGMA_printf("prec    sloppy_prec    link_recon  sloppy_link_recon S_dimension T_dimension\n");
+  PLEGMA_printf("%s   %s             %s            %s            %d/%d/%d          %d\n",
 	     get_prec_str(prec),get_prec_str(prec_sloppy),
 	     get_recon_str(link_recon), 
 	     get_recon_str(link_recon_sloppy),  dims[0], dims[1], dims[2], dims[3]);     
 
-  printfQuda("MG parameters\n");
-  printfQuda(" - number of levels %d\n", mg_levels);
-  for (int i=0; i<mg_levels-1; i++) printfQuda(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
-  printfQuda(" - number of pre-smoother applications %d\n", nu_pre);
-  printfQuda(" - number of post-smoother applications %d\n", nu_post);
+  PLEGMA_printf("MG parameters\n");
+  PLEGMA_printf(" - number of levels %d\n", mg_levels);
+  for (int i=0; i<mg_levels-1; i++) PLEGMA_printf(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
+  PLEGMA_printf(" - number of pre-smoother applications %d\n", nu_pre);
+  PLEGMA_printf(" - number of post-smoother applications %d\n", nu_post);
 
-  printfQuda("Outer solver paramers\n");
-  printfQuda(" - pipeline = %d\n", pipeline);
+  PLEGMA_printf("Outer solver paramers\n");
+  PLEGMA_printf(" - pipeline = %d\n", pipeline);
 
-  printfQuda("Grid partition info:     X  Y  Z  T\n"); 
-  printfQuda("                         %d  %d  %d  %d\n", 
+  PLEGMA_printf("Grid partition info:     X  Y  Z  T\n"); 
+  PLEGMA_printf("                         %d  %d  %d  %d\n", 
 	     dimPartitioned(0),
 	     dimPartitioned(1),
 	     dimPartitioned(2),
@@ -102,7 +102,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     inv_param.mass = 0.5/kappa - (1.0 + 3.0/anisotropy);
   }
 
-  printfQuda("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
+  PLEGMA_printf("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
 
   inv_param.Ls = 1;
 
@@ -140,7 +140,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
       2 : 1;
     
     if (twist_flavor == QUDA_TWIST_NONDEG_DOUBLET) {
-      printfQuda("Twisted-mass doublet non supported (yet)\n");
+      PLEGMA_printf("Twisted-mass doublet non supported (yet)\n");
       exit(0);
     }
   }
@@ -255,7 +255,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.mass = 0.5/kappa - (1.0 + 3.0/anisotropy);
   }
   
-  printfQuda("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
+  PLEGMA_printf("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
 
 
   inv_param.Ls = 1;
@@ -295,7 +295,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
       2 : 1;
 
     if (twist_flavor == QUDA_TWIST_NONDEG_DOUBLET) {
-      printfQuda("Twisted-mass doublet non supported (yet)\n");
+      PLEGMA_printf("Twisted-mass doublet non supported (yet)\n");
       exit(0);
     }
   }
@@ -310,10 +310,10 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.solve_type = solve_type;
   if(isEven) {
     inv_param.matpc_type = QUDA_MATPC_EVEN_EVEN;
-    printfQuda("### Running for the Even-Even Operator\n");
+    PLEGMA_printf("### Running for the Even-Even Operator\n");
   }
   else {
-    printfQuda("### Running for the Odd-Odd Operator\n");
+    PLEGMA_printf("### Running for the Odd-Odd Operator\n");
     inv_param.matpc_type = QUDA_MATPC_ODD_ODD;
   }
 

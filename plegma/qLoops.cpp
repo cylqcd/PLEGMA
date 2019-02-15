@@ -90,7 +90,7 @@ int main(int argc, char **argv)
   else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
     D = new QUDA_dirac(QUDA_WILSON_DSLASH);
   else
-    errorQuda("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
+    PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
 
   D->apply<M>(phi_r,phi);
   phi_r.apply_gamma5();

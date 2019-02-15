@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   eigParam.printLevel = 4;
   eigParam.primme_method=PRIMME_RQI;
 #else
-  errorQuda("No arpack or primme is compiled");
+  PLEGMA_error("No arpack or primme is compiled");
 #endif
  
   EigSolver eigSol(eigParam, QUDA_TWISTED_CLOVER_DSLASH , true);
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
   std::complex<double> aka = out.dot(out);
 
 #else
-  errorQuda("No eigenSolver is compiled");
+  PLEGMA_error("No eigenSolver is compiled");
 #endif
 
   finalize();

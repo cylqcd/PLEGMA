@@ -701,7 +701,7 @@ get_solver_str(QudaInverterType type)
     break;
   default:
     ret = "unknown";
-    errorQuda("Error: invalid solver type %d\n", type);
+    PLEGMA_error("Error: invalid solver type %d\n", type);
     break;
   }
 

@@ -18,8 +18,8 @@ static __global__ void xpby_kernel(FloatOut *z, FloatIn1 *x, FloatIn2 *y, Float 
 
 template<typename Float>
 static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<Float> &Fy, Float beta){
-  if(Fz.Field_length() != Fx.Field_length()) errorQuda("Error input, output fields do not match");
-  if(Fz.Field_length() != Fy.Field_length()) errorQuda("Error input, output fields do not match");
+  if(Fz.Field_length() != Fx.Field_length()) PLEGMA_error("Error input, output fields do not match");
+  if(Fz.Field_length() != Fy.Field_length()) PLEGMA_error("Error input, output fields do not match");
   ProfileStruct ps(HGC_localVolume);
   tuneAndRun(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
 	     Fy.D_elem(),beta,Fz.Field_length());
@@ -216,7 +216,7 @@ void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_de
   else if( sampling == Normal)
     genRandomNormal_kernel<Float><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
   else
-    errorQuda("The given distribution is not defined.\n");
+    PLEGMA_error("The given distribution is not defined.\n");
 }
 
 template<typename Float>

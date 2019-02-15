@@ -3,7 +3,7 @@
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
 void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
 			     su3Tex<FloatS> su3, int it, int dir, std::vector<GAMMAS> gammas){
-  if(dir < 0 || dir > 3) errorQuda("Allowed directions are 0,1,2,3\n");
+  if(dir < 0 || dir > 3) PLEGMA_error("Allowed directions are 0,1,2,3\n");
   switch(dir){
   case(0): contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,0,false>(corr,prop1,prop2,signProps,su3,it, gammas); break;
   case(1): contractPropOpProp<FloatC,FloatA,FloatB,FloatC,true,1,false>(corr,prop1,prop2,signProps,su3,it, gammas);	break;

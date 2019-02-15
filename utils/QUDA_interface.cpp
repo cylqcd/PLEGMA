@@ -113,7 +113,7 @@ void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkTyp
 void plaqQuda() {
   double plq[3]; // total, spatial and temporal plaquette
   plaqQuda(plq);
-  printfQuda("TEST: Calculated plaquette in QUDA: %f (sp: %f, T: %f)\n", plq[0], plq[1], plq[2]);
+  PLEGMA_printf("TEST: Calculated plaquette in QUDA: %f (sp: %f, T: %f)\n", plq[0], plq[1], plq[2]);
 }
 
 QUDA_solver::QUDA_solver(double mu) {
@@ -133,15 +133,15 @@ QUDA_solver::QUDA_solver(double mu) {
   
   // TODO: add support for other solvers
   if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 
-    errorQuda("initSolver: This function works only with Direct solve and even odd preconditioning");
+    PLEGMA_error("initSolver: This function works only with Direct solve and even odd preconditioning");
   
   if(inv_param.inv_type != QUDA_GCR_INVERTER) 
-    errorQuda("initSolver: This function works only with GCR method");
+    PLEGMA_error("initSolver: This function works only with GCR method");
 
   if(inv_param.gamma_basis != QUDA_UKQCD_GAMMA_BASIS) 
-    errorQuda("initSolver: This function works only with ukqcd gamma basis\n");
+    PLEGMA_error("initSolver: This function works only with ukqcd gamma basis\n");
   if(inv_param.dirac_order != QUDA_DIRAC_ORDER) 
-    errorQuda("initSolver: This function works only with colors inside the spins\n");
+    PLEGMA_error("initSolver: This function works only with colors inside the spins\n");
 
   inv_param.mu = mu;
   mg_param.invert_param->mu = mu;
@@ -248,14 +248,14 @@ QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
   if(dslashType != QUDA_WILSON_DSLASH
      && dslashType != QUDA_CLOVER_WILSON_DSLASH
      && dslashType != QUDA_TWISTED_MASS_DSLASH
-     && dslashType != QUDA_TWISTED_CLOVER_DSLASH) errorQuda("Error dslashType is not allowed in PLEGMA");
+     && dslashType != QUDA_TWISTED_CLOVER_DSLASH) PLEGMA_error("Error dslashType is not allowed in PLEGMA");
 
   inv_param = newQudaInvertParam();
   setInvertParam(inv_param);
   inv_param.dslash_type = dslashType; // change to the desired dslash type
   setDiracParam(dParam, &inv_param, false);
-  if (dParam.gauge == nullptr) errorQuda("Gauge field not allocated");
-  if (dParam. clover == nullptr && ((inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH) || (inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH))) errorQuda("Clover field not allocated");
+  if (dParam.gauge == nullptr) PLEGMA_error("Gauge field not allocated");
+  if (dParam. clover == nullptr && ((inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH) || (inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH))) PLEGMA_error("Clover field not allocated");
   D = Dirac::create(dParam);
 
   ColorSpinorParam cpuParam(nullptr, inv_param, HGC_localL, false,
@@ -265,7 +265,7 @@ QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
   in = new cudaColorSpinorField(cudaParam);
   out = new cudaColorSpinorField(cudaParam);
   if(in->SiteSubset() != QUDA_FULL_SITE_SUBSET || out->SiteSubset() != QUDA_FULL_SITE_SUBSET)
-    errorQuda("cudaColorSpinorField should be a full vector for this class");
+    PLEGMA_error("cudaColorSpinorField should be a full vector for this class");
 }
 
 QUDA_dirac::~QUDA_dirac(){

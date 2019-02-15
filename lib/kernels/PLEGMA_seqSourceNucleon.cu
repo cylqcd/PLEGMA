@@ -130,7 +130,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
   genericTex<FloatA> prop2 = prop1;
   contractNucleonSeqSource(vec, prop1,prop2, proj,particle, timeslice, false, c_nu, c_c2);
 #else
-  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
+  PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
 #endif
 }
 
@@ -139,7 +139,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   contractNucleonSeqSource(vec, prop1, prop2, proj,particle, timeslice, true, c_nu, c_c2);
 #else
-  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
+  PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
 #endif
 }
 

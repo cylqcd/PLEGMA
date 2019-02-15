@@ -29,10 +29,10 @@ struct MomF{
 template<typename Float>
 static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int sign){
   if(D3D4 == 3){
-    if(mom.size() != 3) errorQuda("A momentum vector in three dimensions need three components\n");}
+    if(mom.size() != 3) PLEGMA_error("A momentum vector in three dimensions need three components\n");}
   else if (D3D4 == 4){
-    if(mom.size() != 4) errorQuda("A momentum vector in four dimensions need four components\n");}
-  else errorQuda("Not supported");
+    if(mom.size() != 4) PLEGMA_error("A momentum vector in four dimensions need four components\n");}
+  else PLEGMA_error("Not supported");
   int V = (D3D4 == 3) ? HGC_localVolume/HGC_localL[3] : HGC_localVolume;
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + V;
@@ -48,8 +48,8 @@ static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int
 
 template<typename Float>
 static void FT(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<std::vector<int> > mom, int sign){
-  if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
-  if(mom.size() == 0) errorQuda("Momentum container is empty");
+  if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
+  if(mom.size() == 0) PLEGMA_error("Momentum container is empty");
   int Nmom = mom.size();
   int V3 = HGC_localVolume/HGC_localL[3];
   int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
@@ -67,7 +67,7 @@ static void FT(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<s
 				   MPI_Type<Float>(), MPI_SUM, (ft.Dims() == 3) ?
 				   HGC_spaceComm : MPI_COMM_WORLD);
 	if(mpiErr != MPI_SUCCESS)
-	  errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+	  PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
 
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.real();
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.imag();

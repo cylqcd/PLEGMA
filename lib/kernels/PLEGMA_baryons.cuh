@@ -105,7 +105,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   int3 source = corr.getSource3();
   
   if(corr.getSiteSize() != site_size)
-    errorQuda("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
   int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
   ProfileStruct ps(SpVol, shared_size);
@@ -169,6 +169,6 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     contract_baryons<FloatA,FloatB,FloatC,true>(texProp1,texProp2,corr,it);
   }
   else
-    errorQuda("run_contract_baryons: Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
+    PLEGMA_error("run_contract_baryons: Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
   checkCudaError();
 }

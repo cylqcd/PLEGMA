@@ -37,7 +37,7 @@ namespace plegma{
       thrust::for_each(z1,z2,ElemWiseMul<Float>());
     }
     catch(thrust::system_error &err){
-      errorQuda("Thrust error detected: %s", err.what());
+      PLEGMA_error("Thrust error detected: %s", err.what());
     }
   }
   template void elemWiseMul<float>(int NN, float* x, float* y);
@@ -79,7 +79,7 @@ namespace plegma{
       thrust::for_each(z1,z2,Axpbypcz<Float>(a2,b2,c2));
     }
     catch(thrust::system_error &err){
-      errorQuda("Thrust error detected: %s", err.what());
+      PLEGMA_error("Thrust error detected: %s", err.what());
     }
   }
 

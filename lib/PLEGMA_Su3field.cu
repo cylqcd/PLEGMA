@@ -74,7 +74,7 @@ static void pathX(int *dir, int *sign, int length,PLEGMA_Su3field<Float> **u_s,
 
 static void dirsOrien(std::vector<int> &steps, int len, int *dir, int *sign){
   for(int i = 0 ; i < len ; i++)
-    if( !((steps[i] >= 0) && (steps[i] <= 7)) ) errorQuda("Error you provided a direction which is not supported");
+    if( !((steps[i] >= 0) && (steps[i] <= 7)) ) PLEGMA_error("Error you provided a direction which is not supported");
   for(int i=0; i<len; ++i)
     {
       dir[i] = (steps[i]>3)?steps[i]-4:steps[i];
@@ -99,7 +99,7 @@ void PLEGMA_Su3field<Float>::path(std::vector<int> &steps, PLEGMA_Su3field<Float
 template<typename Float>
 void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA_Su3field<Float> &tmp1,
 				     PLEGMA_Su3field<Float> &tmp2, Float rho, int D3D4){
-  if(D3D4 != 3 && D3D4 !=4) errorQuda("Only 3D and 4D sum of staples is allowed");
+  if(D3D4 != 3 && D3D4 !=4) PLEGMA_error("Only 3D and 4D sum of staples is allowed");
   this->zero_device();
   for(int i = 0 ; i < D3D4 ; i++)
     if (i != dir){
@@ -129,7 +129,7 @@ void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLE
    * orientation we shift the fields to do the line. For example if you want
    * to build a Wilson line in +x direction you should provide dirOr=4+0.
    */
-  if( !((dirOr >= 0) && (dirOr <= 7)) ) errorQuda("Error you provided a direction which is not supported");
+  if( !((dirOr >= 0) && (dirOr <= 7)) ) PLEGMA_error("Error you provided a direction which is not supported");
   cudaMemcpy(tmp.D_elem(), inOut.D_elem(), tmp.Bytes_total(), cudaMemcpyDeviceToDevice);
   checkCudaError();
   if(dirOr > 3){

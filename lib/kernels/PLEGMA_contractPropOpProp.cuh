@@ -83,9 +83,9 @@ template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool
 static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatA> prop2,
 				 int signProps, su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
   if(gammas.size() <= 0)
-    errorQuda("Error the container of gamma matrices cannot be zero");
+    PLEGMA_error("Error the container of gamma matrices cannot be zero");
   if(gammas.size() > 16)
-    errorQuda("Error maximum number of gamma matrices is 16");
+    PLEGMA_error("Error maximum number of gamma matrices is 16");
   int SpVol = HGC_localVolume/HGC_localL[3];
   FloatC *d_partial_block = NULL;
   int site_size=gammas.size();
@@ -94,7 +94,7 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   int3 source = corr.getSource3();
 
   if(corr.getSiteSize() != site_size)
-    errorQuda("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
@@ -160,16 +160,16 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool isLink, int dir, bool isCons>
 static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
 			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
-  if(!isLink && dir>=0) errorQuda("Does not make sence to do not have links and have directions");
-  if(isCons && !isLink) errorQuda("Does not make sence to do noether current without links");
+  if(!isLink && dir>=0) PLEGMA_error("Does not make sence to do not have links and have directions");
+  if(isCons && !isLink) PLEGMA_error("Does not make sence to do noether current without links");
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(corr.getCorrSpace() == POSITION_SPACE)
     contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else if(corr.getCorrSpace() == MOMENTUM_SPACE)
     contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else
-    errorQuda("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
+    PLEGMA_error("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
 #else
-  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
+  PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
 #endif
 }

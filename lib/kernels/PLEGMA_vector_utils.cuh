@@ -171,7 +171,7 @@ static void copy_to_QUDA(FloatIn* in, ColorSpinorField &qudaVec, bool isEven){
   else if ( qudaVec.Precision() == QUDA_DOUBLE_PRECISION )
     copy_to_QUDA<FloatIn,double>(in, qudaVec, isEven);
   else
-    errorQuda("Precision %d not supported", qudaVec.Precision());
+    PLEGMA_error("Precision %d not supported", qudaVec.Precision());
 
   checkCudaError();
 }
@@ -236,7 +236,7 @@ static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven
   else if ( qudaVec.Precision() == QUDA_DOUBLE_PRECISION )
     copy_from_QUDA<FloatOut,double>(out, qudaVec, isEven);
   else
-    errorQuda("Precision %d not supported", qudaVec.Precision());
+    PLEGMA_error("Precision %d not supported", qudaVec.Precision());
   
   checkCudaError();
 }

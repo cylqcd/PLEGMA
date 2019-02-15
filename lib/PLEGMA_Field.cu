@@ -31,7 +31,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::
 initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG ghost_flag) {
   if(HGC_init_PLEGMA_flag == false) 
-    errorQuda("You must initialize init_PLEGMA first");
+    PLEGMA_error("You must initialize init_PLEGMA first");
 
   field_length = field_l;
   total_length = vol_l;
@@ -63,7 +63,7 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG gho
     create_device();
   }
   else{
-    errorQuda("Error not supported %d\n",alloc_flag);
+    PLEGMA_error("Error not supported %d\n",alloc_flag);
   }
 }
 
@@ -81,7 +81,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(classT)
 {
   if(HGC_init_PLEGMA_flag == false) 
-    errorQuda("You must initialize init_PLEGMA first");
+    PLEGMA_error("You must initialize init_PLEGMA first");
 
   switch(classT){
     case SCALAR:
@@ -140,14 +140,14 @@ void PLEGMA_Field<Float>::unpack(Float *out){
 
 template<typename Float>
 void PLEGMA_Field<Float>::load(){
-  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
+  if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
   checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload(){
-  if(allocation != BOTH) errorQuda("Load from Host to Device needs BOTH allocation");
+  if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
   checkCudaError();
 }
@@ -167,7 +167,7 @@ void PLEGMA_Field<Float>::create_device(){
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
   HGC_deviceMemory += bytes_total_plus_ghost_length/(1024.*1024.);          
-  if(HGC_verbosity>1) printfQuda("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
+  if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
 #endif
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
@@ -195,7 +195,7 @@ void PLEGMA_Field<Float>::destroy_device(){
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
   HGC_deviceMemory -= bytes_total_plus_ghost_length/(1024.*1024.);
-  if(HGC_verbosity>1) printfQuda("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
+  if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
 #endif
   if(ghost_flag >= FIRST_SIDE){
     cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
@@ -233,7 +233,7 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
     zero_device();
   }
   else{
-    errorQuda("Not supported %d\n",alloc_flag);
+    PLEGMA_error("Not supported %d\n",alloc_flag);
   }
 }
 
@@ -282,11 +282,11 @@ void PLEGMA_Field<Float>::destroyTexObject(cudaTextureObject_t tex){
 
 template<typename Float>
 void PLEGMA_Field<Float>::printInfo(){
-  printfQuda("This object has precision %d\n",Precision());
-  printfQuda("This object needs %f Mb\n",
+  PLEGMA_printf("This object has precision %d\n",Precision());
+  PLEGMA_printf("This object needs %f Mb\n",
       bytes_total_plus_ghost_length/(1024.*1024.));
-  printfQuda("The flag for the host allocation is %d\n",(int) isAllocHost);
-  printfQuda("The flag for the device allocation is %d\n",(int) isAllocDevice);
+  PLEGMA_printf("The flag for the host allocation is %d\n",(int) isAllocHost);
+  PLEGMA_printf("The flag for the device allocation is %d\n",(int) isAllocDevice);
 }
 
 template<typename Float>
@@ -294,9 +294,9 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
   if(comm_size() == 1)
     return;
   if(ghost_flag < FIRST_SIDE)
-    errorQuda("First side ghosts have not been allocated.\n");
+    PLEGMA_error("First side ghosts have not been allocated.\n");
   if(dirOr<-1 || dirOr>2*N_DIMS-1)
-    errorQuda("Directions should be in [-1,%d] range with -1 all directions",2*N_DIMS-1);
+    PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",2*N_DIMS-1);
 
   bool isAll = (dirOr<0) ? true:false;
 
@@ -360,9 +360,9 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
   if(comm_size() == 1)
     return;
   if(ghost_flag < FIRST_CORNER)
-    errorQuda("First corner ghosts have not been allocated.\n");
+    PLEGMA_error("First corner ghosts have not been allocated.\n");
   if(dirOr<-1 || dirOr>2*N_DIMS-1)
-    errorQuda("Directions should be in [-1,%d] range with -1 all directions",2*N_DIMS-1);
+    PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",2*N_DIMS-1);
 
   bool isAll = (dirOr<0) ? true:false;
 
@@ -433,7 +433,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
 template<typename Float>
 void PLEGMA_Field<Float>::communicateGhost(int dirOr, GHOST_FLAG which_ghost){
   if(ghost_flag < which_ghost) {
-    errorQuda("Asking to communicate ghost but they have not been allocated.\n");
+    PLEGMA_error("Asking to communicate ghost but they have not been allocated.\n");
   }
   if(which_ghost >= FIRST_SIDE){
     communicateSideGhost(dirOr);
@@ -479,7 +479,7 @@ void PLEGMA_Field<Float>::stochastic_Z(int n){
       set_stochastic<Float, 4>( *randstate_ptr, *this, this->field_length, rng_size);
       break;
     default:
-      errorQuda("This value of n has not been compiled. Come here to add it");
+      PLEGMA_error("This value of n has not been compiled. Come here to add it");
   }
   checkCudaError();
 }
@@ -499,7 +499,7 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
    * Set specific indices of Field to one as provided from indOne
    * Example: For Su3 field indOne ={0,4,8};
    */
-  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
+  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   for(int i = 0 ; i < Field_length(); i++){
     std::vector<int>::iterator it = std::find(indDiag.begin(), indDiag.end(), i);
     thrust::device_ptr<Float2<Float> > dev_ptr( (Float2<Float>*) (this->D_elem() + i*(this->Total_length())*2));
@@ -512,11 +512,11 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
 
 template<typename Float>
 void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
-  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
-  if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
-  if(mom.size() != 3 && mom.size() != 4) errorQuda("Momentum size vector should be either 3 or 4\n");
-  if(total_length == HGC_localVolume && mom.size() != 4 ) errorQuda("A 4D field needs a 4D momentum vector\n");
-  if( (total_length == HGC_localVolume/HGC_localL[3]) && mom.size() != 3 ) errorQuda("A 3D field needs a 3D momentum vector\n");
+  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
+  if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
+  if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
+  if(total_length == HGC_localVolume && mom.size() != 4 ) PLEGMA_error("A 4D field needs a 4D momentum vector\n");
+  if( (total_length == HGC_localVolume/HGC_localL[3]) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume/HGC_localL[3] : HGC_localVolume;
   Float2<Float> *x;
@@ -544,7 +544,7 @@ std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
   int mpiErr = MPI_Allreduce((Float*) &res, (Float*) &result, 2,
 			     MPI_Type<Float>(), MPI_SUM, MPI_COMM_WORLD);
   if(mpiErr != MPI_SUCCESS)
-    errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+    PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
   return result;
 }
 
@@ -553,13 +553,13 @@ Float PLEGMA_Field<Float>::norm(){
   Float result, loc_res = cuBLAS::norm(total_length*field_length, d_elem);
   int mpiErr = MPI_Allreduce(&result, &loc_res, 1, MPI_Type<Float>(), MPI_SUM,
 			     MPI_COMM_WORLD);
-  if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
+  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
   return result;
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
-  if(!isAllocDevice) errorQuda("This function needs allocation on the device to work\n");
+  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
 }
 
@@ -585,21 +585,21 @@ static void hostCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatI
 template<typename FloatOut>
 template<typename FloatIn>
 void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where){
-  if(bytes_total_length != f.Bytes_total()) errorQuda("Size of the fields does not match\n");
-  if(field_length != f.Field_length()) errorQuda("The d.o.f of the fields does not match\n");
+  if(bytes_total_length != f.Bytes_total()) PLEGMA_error("Size of the fields does not match\n");
+  if(field_length != f.Field_length()) PLEGMA_error("The d.o.f of the fields does not match\n");
   switch(where){
   case(HOST):
-    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    if(!isAllocHost || !f.IsAllocHost() ) PLEGMA_error("Allocation flags do not match for copying\n");
     hostCopyOrCast(*this, f);
     break;
   case(DEVICE):
-    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    if(!isAllocDevice || !f.IsAllocDevice() ) PLEGMA_error("Allocation flags do not match for copying\n");
     cudaCopyOrCast(*this, f);
     break;
   case(BOTH):
-    if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
+    if(!isAllocHost || !f.IsAllocHost() ) PLEGMA_error("Allocation flags do not match for copying\n");
     hostCopyOrCast(*this, f);
-    if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
+    if(!isAllocDevice || !f.IsAllocDevice() ) PLEGMA_error("Allocation flags do not match for copying\n");
     hostCopyOrCast(*this, f);
     break;
   }
@@ -607,8 +607,8 @@ void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG wher
 
 template<typename Float>
 void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof){
-  if(total_length != HGC_localVolume || fin.Total_length() != HGC_localVolume) errorQuda("Probing for now works only for 4D fields");
-  if(ih >= hprob.get_NHad()) errorQuda("You have exceeded the size of the Hadamard matrix");
+  if(total_length != HGC_localVolume || fin.Total_length() != HGC_localVolume) PLEGMA_error("Probing for now works only for 4D fields");
+  if(ih >= hprob.get_NHad()) PLEGMA_error("You have exceeded the size of the Hadamard matrix");
   copy(fin,DEVICE);
   for(int i = 0 ; i < Field_length(); i++){
     std::vector<int>::iterator it = std::find(indDof.begin(), indDof.end(), i);

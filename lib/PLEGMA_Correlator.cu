@@ -33,7 +33,7 @@ initialize() {
     vol_size = corr_pos_space->Total_length();
   }
   else {
-    errorQuda("corr_space not supported by correlator");
+    PLEGMA_error("corr_space not supported by correlator");
   }
   isAlloc = true;
 }
@@ -47,7 +47,7 @@ finalize() {
     else if(corr_space == MOMENTUM_SPACE)	 
       delete corr_mom_space;
     else
-      errorQuda("corr_space not supported by correlator");
+      PLEGMA_error("corr_space not supported by correlator");
   }
   isAlloc = false;
 }
@@ -131,7 +131,7 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
   propTex<Float> bwdPropTex, fwdPropTex;
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
-  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
   for(int it = 0; it < HGC_localL[3]; it++)
     contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
@@ -163,7 +163,7 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
   fwdProp.communicateGhost();
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
-  printfQuda("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
+  PLEGMA_printf("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
   for(int idir = 0; idir < N_DIMS; idir++){
     gsu3.absorbDir_device(gauge,idir);
     gsu3.communicateGhost(idir+N_DIMS); // later do only the direction we are interested in
@@ -191,7 +191,7 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
   description = "x,y,z,t / "+getGammasString(gammas)+" / re,im";
   initialize();
 
-  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
   contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,
 				    contractPropOpProp_oneD<Float,Float,Float,Float>);
 }
@@ -241,7 +241,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
   sTex.tex = su3.createTexObject();
-  if(gammas.size() == 0) errorQuda("List of gammas provided is empty");
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
   for(int it = 0; it < HGC_localL[3]; it++)
     contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
@@ -255,15 +255,15 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeFile(const char*filename, FILE_WRITE_FORMAT format) {
   if(format == ASCII_FORM) {
-    printfQuda("Going to write file %s in ASCII format\n",filename);
+    PLEGMA_printf("Going to write file %s in ASCII format\n",filename);
     writeASCII(filename);
   }
   else if(format == HDF5_FORM) {
-    printfQuda("Going to write file %s in HDF5 format\n",filename);
+    PLEGMA_printf("Going to write file %s in HDF5 format\n",filename);
     writeHDF5(filename);
   }
   else {
-    errorQuda("FILE_WRITE_FORMAT not supported: %d\n", format);
+    PLEGMA_error("FILE_WRITE_FORMAT not supported: %d\n", format);
   }
 }
 
@@ -333,7 +333,7 @@ writeASCII(const char *filename_out) {
     rank = comm_rank();
     break;
   default:
-    errorQuda("Corralator: corrSpace not supported: %d\n", corr_space);
+    PLEGMA_error("Corralator: corrSpace not supported: %d\n", corr_space);
   }
 
   Float *corrGlobal;
@@ -348,7 +348,7 @@ writeASCII(const char *filename_out) {
   FILE *ptr_out = NULL;
   if(rank == 0){
     ptr_out = fopen(filename_out,"w");
-    if(ptr_out == NULL) errorQuda("Error opening file for writing\n");
+    if(ptr_out == NULL) PLEGMA_error("Error opening file for writing\n");
 
     if(corr_space == MOMENTUM_SPACE) {
       int Nmoms = corr_mom_space->Nmoms();
@@ -366,7 +366,7 @@ writeASCII(const char *filename_out) {
     }
     else if (corr_space == POSITION_SPACE) {
       //TODO
-      errorQuda("WriteASCII do not support writing in position space.\n");
+      PLEGMA_error("WriteASCII do not support writing in position space.\n");
     }
     fclose(ptr_out);
     hostFree(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
@@ -385,7 +385,7 @@ getNDims() {
     ndims += 4; // t, z, y, x
     break;
   default:
-    errorQuda("Corralator: corr_space not supported: %d\n", corr_space);
+    PLEGMA_error("Corralator: corr_space not supported: %d\n", corr_space);
   }
  
   return ndims;
@@ -417,7 +417,7 @@ fillDims(hsize_t* dims, hsize_t* ldims, hsize_t* start, bool shift_source) {
     }
     break;
   default:
-    errorQuda("Corralator: corr_space not supported: %d\n", corr_space);
+    PLEGMA_error("Corralator: corr_space not supported: %d\n", corr_space);
   }
   std::for_each(shape.begin(), shape.end(), [&] (int n) {
 					      start[i] = 0;
@@ -492,7 +492,7 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
       exceeding_ammount[i] = start[i]+ldims[i]-dims[i];
       //printf("rank %d: Dim %d exceeds of %d -> shifting\n",comm_rank(),i,exceeding_ammount[exceeding]);
       if(exceeding_dim[exceeding]>ldims[i]) {
-	errorQuda("Exceeding is too high. The method may have problems.");
+	PLEGMA_error("Exceeding is too high. The method may have problems.");
       }
       exceeding++;
     }
@@ -551,7 +551,7 @@ static void write_dataset(hid_t group_id, const char* name, Float *buf, int ndim
     // TODO: we need to fix the parallel writing in case of more than one processor has an exceeding direction.
     herr_t status = H5Dwrite(dataset_id, DATATYPE_H5, subspace, filespace, 
 			     i==0 ? plist_id : H5P_DEFAULT, tmp_buf);
-    if(status<0) errorQuda("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
+    if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
     H5Sclose(subspace);
     H5Pclose(plist_id);    
     H5Sclose(filespace);
@@ -582,7 +582,7 @@ writeHDF5(const char*filename, const char* top) {
     shift_source = false;
     break;
   default:
-    errorQuda("Corralator: corrSpace not supported: %d\n", corr_space);
+    PLEGMA_error("Corralator: corrSpace not supported: %d\n", corr_space);
   }
 
   int ndims = getNDims();

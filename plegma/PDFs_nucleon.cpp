@@ -26,7 +26,7 @@ int main(int argc, char **argv)
   // Smearing
   PLEGMA_Gauge<double> smearedGauge;
   smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
-  printfQuda("Plaquette after smearing:\n");
+  PLEGMA_printf("Plaquette after smearing:\n");
   smearedGauge.calculatePlaq();
 
   //Momentum smearing: put the momentum phase to smeared gauge field
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
     vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
     
-    printfQuda("Going to invert UP for component %d\n", isc);
+    PLEGMA_printf("Going to invert UP for component %d\n", isc);
     solverUP->solve(vectorOut, vectorIn);
     vectorAuxF.copy(vectorOut);
     propUP->absorb(vectorAuxF, isc/3, isc%3);
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     propUP3D.absorb(vectorAuxF,global_fixSinkTime, isc/3, isc%3);
     
     
-    printfQuda("Going to invert DN for component %d\n", isc);
+    PLEGMA_printf("Going to invert DN for component %d\n", isc);
     solverDN->solve(vectorOut, vectorIn);
     vectorAuxF.copy(vectorOut);
     propDN->absorb(vectorAuxF, isc/3, isc%3);
