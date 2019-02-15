@@ -20,61 +20,58 @@ int main(int argc, char **argv)
 
   // Smearing
   PLEGMA_Gauge<double> smearedGauge(BOTH);
-  smearedGauge.APEsmearing(readGauge, 0, 0.1, 3); // TODO: here should go the smearing params
+  smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
   printfQuda("Plaquette after smearing:\n");
   smearedGauge.calculatePlaq();
   
   // ensuring mu positive
   if(mu<0) mu*=-1.;
-  QUDA_solver *solverUP = new QUDA_solver(mu);
+  QUDA_solver solverUP(mu);
   mu*=-1.;
-  QUDA_solver *solverDN = new QUDA_solver(mu);
+  QUDA_solver solverDN(mu);
 
-  PLEGMA_Vector<double> vectorIn(BOTH);
-  PLEGMA_Vector<double> vectorOut(BOTH);
-  PLEGMA_Vector<double> vectorAuxD(BOTH);
-  PLEGMA_Vector<float> vectorAuxF(BOTH);
-  PLEGMA_Propagator<float> propUP(BOTH);
-  PLEGMA_Propagator<float> propDN(BOTH);
-  PLEGMA_Correlator<float> corr;
+  PLEGMA_Vector<double> vectorIn;
+  PLEGMA_Vector<double> vectorOut;
+  PLEGMA_Vector<double> vectorAuxD;
+  PLEGMA_Vector<float> vectorAuxF;
+  PLEGMA_Propagator<float> propUP;
+  PLEGMA_Propagator<float> propDN;
+  PLEGMA_Correlator<float> corr(corr_space, maxQsq);
 
-  for(int isource = 0 ; isource < params.Nsources ; isource++){
+  for(int isource = 0 ; isource < numSourcePositions; isource++){
     printfQuda("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
-	       isource, params.sourcePosition[isource][0], params.sourcePosition[isource][1],
-	       params.sourcePosition[isource][2], params.sourcePosition[isource][3]);
+	       isource, sourcePositions[isource][0], sourcePositions[isource][1],
+	       sourcePositions[isource][2], sourcePositions[isource][3]);
 
     for(int isc = 0 ; isc < 12 ; isc++){
-      vectorAuxD.pointSource(params.sourcePosition[isource], isc/3, isc%3, DEVICE);
-      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge);
+      vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+      vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
       
       printfQuda("Going to invert UP for component %d\n", isc);
-      solverUP->solve(vectorOut, vectorIn);
-      vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
+      solverUP.solve(vectorOut, vectorIn);
+      vectorAuxD.gaussianSmearing(vectorOut, smearedGauge, nsmearGauss, alphaGauss);
       vectorAuxF.copy(vectorAuxD);
       propUP.absorb(vectorAuxF, isc/3, isc%3);
 
       printfQuda("Going to invert DN for component %d\n", isc);
-      solverDN->solve(vectorOut, vectorIn);
-      vectorAuxD.gaussianSmearing(vectorOut,smearedGauge);
+      solverDN.solve(vectorOut, vectorIn);
+      vectorAuxD.gaussianSmearing(vectorOut,smearedGauge, nsmearGauss, alphaGauss);
       vectorAuxF.copy(vectorAuxD);
       propDN.absorb(vectorAuxF, isc/3, isc%3);
     }
 
     propUP.rotateToPhysicalBase_device(+1);
     propDN.rotateToPhysicalBase_device(-1);
-    propUP.applyBoundaries_device(params.sourcePosition[isource][3]);
-    propDN.applyBoundaries_device(params.sourcePosition[isource][3]);
+    propUP.applyBoundaries_device(sourcePositions[isource][3]);
+    propDN.applyBoundaries_device(sourcePositions[isource][3]);
 
-    corr.contractMesons(propUP, propDN, isource, params.CorrSpace);
-    corr.writeFile(params);
+    corr.contractMesons(propUP, propDN, sourcePositions[isource]);
+    corr.writeFile(twop_filename.c_str(), corr_file_format);
 
-    corr.contractBaryons(propUP, propDN, isource, params.CorrSpace);
-    corr.writeFile(params);
+    corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
+    corr.writeFile(twop_filename.c_str(), corr_file_format);
   }
 
-  delete solverUP;
-  delete solverDN;
-  
   finalize();
   return 0;
 }
