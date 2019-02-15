@@ -7,32 +7,6 @@
 using namespace plegma;
 using namespace quda;
 
-template<typename FloatOut,typename FloatIn>
-static __global__ void castVector_kernel(FloatOut *out, FloatIn *in){
-  
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
-
-  #pragma unroll
-  for(int mu = 0 ; mu < 4 ; mu++){
-    #pragma unroll
-    for(int c1 = 0 ; c1 < 3 ; c1++){
-      #pragma unroll
-      for(int ri = 0 ; ri < 2 ; ri++){
-	out[((mu*3+c1)*DGC_stride+sid)*2+ri] = in[((mu*3+c1)*DGC_stride+sid)*2+ri];
-      }
-    }
-  }
-}
-
-template<typename FloatOut,typename FloatIn>
-static void castVector(FloatOut *out, FloatIn *in){
-  ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps, "castVector_kernel", castVector_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in);
-  checkCudaError();
-}
-
-
 template<LEFTRIGHT LF,typename Float>
 static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;

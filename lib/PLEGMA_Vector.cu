@@ -16,25 +16,6 @@ PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost
   PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
 
 
-template<typename FloatOut, typename FloatIn>
-static void copyVector(PLEGMA_Vector<FloatOut> &vecOut, PLEGMA_Vector<FloatIn> &vecIn){
-  if(typeid(FloatIn) != typeid(FloatOut) )
-    castVector(vecOut.D_elem(), vecIn.D_elem());
-  else
-    cudaMemcpy(vecOut.D_elem(), vecIn.D_elem(), vecIn.Bytes_total(), 
-	       cudaMemcpyDeviceToDevice);
-  checkCudaError();
-}
-
-template<typename Float>
-void PLEGMA_Vector<Float>::copy(PLEGMA_Vector<float> &vecIn) {
-  copyVector(*this,vecIn);
-}
-template<typename Float>
-void PLEGMA_Vector<Float>::copy(PLEGMA_Vector<double> &vecIn)  {
-  copyVector(*this,vecIn);
-}
-
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,

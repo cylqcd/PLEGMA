@@ -98,7 +98,10 @@ namespace plegma {
     void stochastic_Z(int n=2);
     void random(DIST sampling=Uniform);
     void setUnit(std::vector<int> indDiag);
-    void copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where = DEVICE);
+
+    template<typename FloatIn>
+    void copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where=DEVICE);
+    
     void mulMomentumPhases(std::vector<int> mom, int sign=-1);
 
     void axpy(PLEGMA_Field &Fin, std::complex<Float> alpha);

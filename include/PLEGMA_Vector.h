@@ -26,8 +26,6 @@ namespace plegma {
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge,
 			  int nsmearGauss, Float alphaGauss);
     void scaleVector(Float a);
-    void copy(PLEGMA_Vector<float> &vecIn);
-    void copy(PLEGMA_Vector<double> &vecIn);
     void norm2Host();
     void norm2Device();
     /**

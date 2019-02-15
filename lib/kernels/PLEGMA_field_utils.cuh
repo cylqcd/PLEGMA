@@ -26,6 +26,23 @@ static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<
   checkCudaError();
 }
 
+template<typename FloatOut,typename FloatIn>
+static __global__ void cast_kernel(FloatOut *out, FloatIn *in, size_t size){
+  
+  size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
+
+  for (; sid < size; sid += gridDim.x * blockDim.x)
+    out[sid] = (FloatIn) in[sid];
+}
+
+template<typename FloatOut,typename FloatIn>
+static void cudaCast(FloatOut *out, FloatIn *in, size_t size){
+  ProfileStruct ps(HGC_localVolume); // here we can actually use any size
+  tuneAndRun(ps, "cast_kernel", cast_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in, size);
+  checkCudaError();
+}
+
+
 template<typename FloatInOut>
 static __global__ void copy_side_to_ghost_kernel(FloatInOut *f, int dir, int sign, int length_field){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;

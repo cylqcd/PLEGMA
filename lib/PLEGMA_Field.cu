@@ -563,25 +563,44 @@ void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
   cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
 }
 
-template<typename Float>
-void PLEGMA_Field<Float>::copy(PLEGMA_Field<Float> &f, ALLOCATION_FLAG where){
+template<typename FloatOut, typename FloatIn>
+static void cudaCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatIn> &fieldIn){
+  if(typeid(FloatIn) != typeid(FloatOut) )
+    cudaCast(fieldOut.D_elem(), fieldIn.D_elem(), fieldIn.Bytes_total()/sizeof(FloatIn));
+  else
+    cudaMemcpy(fieldOut.D_elem(), fieldIn.D_elem(), fieldIn.Bytes_total(), 
+	       cudaMemcpyDeviceToDevice);
+  checkCudaError();
+}
+
+template<typename FloatOut, typename FloatIn>
+static void hostCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatIn> &fieldIn){
+  if(typeid(FloatIn) != typeid(FloatOut) )
+    for(size_t i = 0; i<fieldIn.Bytes_total()/sizeof(FloatIn); i++)
+      fieldOut.H_elem()[i] = (FloatOut) fieldIn.H_elem()[i];
+  else
+    memcpy(fieldOut.H_elem(), fieldIn.H_elem(), fieldIn.Bytes_total());
+}
+
+template<typename FloatOut>
+template<typename FloatIn>
+void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where){
   if(bytes_total_length != f.Bytes_total()) errorQuda("Size of the fields does not match\n");
   if(field_length != f.Field_length()) errorQuda("The d.o.f of the fields does not match\n");
   switch(where){
   case(HOST):
     if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
-    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    hostCopyOrCast(*this, f);
     break;
   case(DEVICE):
     if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
-    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
-    checkCudaError();
+    cudaCopyOrCast(*this, f);
+    break;
   case(BOTH):
     if(!isAllocHost || !f.IsAllocHost() ) errorQuda("Allocation flags do not match for copying\n");
-    memcpy(h_elem, f.H_elem(), bytes_total_length);
+    hostCopyOrCast(*this, f);
     if(!isAllocDevice || !f.IsAllocDevice() ) errorQuda("Allocation flags do not match for copying\n");
-    cudaMemcpy(d_elem, f.D_elem(), bytes_total_length, cudaMemcpyDeviceToDevice);
-    checkCudaError();
+    hostCopyOrCast(*this, f);
     break;
   }
 }
@@ -601,3 +620,12 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
+// Forcing initialization of the following cases
+template<> template<>
+void PLEGMA_Field<float>::copy(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
+template<> template<>
+void PLEGMA_Field<float>::copy(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
+template<> template<>
+void PLEGMA_Field<double>::copy(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
+template<> template<>
+void PLEGMA_Field<double>::copy(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
