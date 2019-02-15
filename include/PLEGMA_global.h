@@ -32,6 +32,9 @@
 //======== Preprocessor macros =========//
 #include <global/PLEGMA_macros.hpp>
 
+//======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//
+#include <global/PLEGMA_prints.hpp>
+
 namespace plegma {
 
   //======== Enumerations =========//
@@ -45,6 +48,7 @@ namespace plegma {
 
   //======== Global constants on host and device =========//
 #include <global/PLEGMA_global_constants.h>
+
 
 }
 using namespace plegma; // TODO: This one shouldn't be here.. But helps avoiding missing namespace.
