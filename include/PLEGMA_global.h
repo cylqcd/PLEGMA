@@ -32,10 +32,9 @@
 //======== Preprocessor macros =========//
 #include <global/PLEGMA_macros.hpp>
 
-//======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//
-#include <global/PLEGMA_prints.hpp>
-
 namespace plegma {
+  //======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//
+#include <global/PLEGMA_prints.hpp>
 
   //======== Enumerations =========//
 #include <global/PLEGMA_enums.h>
