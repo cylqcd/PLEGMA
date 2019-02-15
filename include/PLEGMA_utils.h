@@ -6,6 +6,7 @@
 #include <utils/QUDA_interface.h>
 #include <utils/PLEGMA_Options.h>
 #include <utils/PLEGMA_lime.h>
+#include <utils/PLEGMA_eigSolver.h>
 
 using namespace plegma;
 
@@ -32,3 +33,4 @@ void finalize();
 //=================== PLEGMA_Options.cpp ==========================//
 void basicOptions(Options &opt);
 void qudaSolverOptions(Options &opt);
+

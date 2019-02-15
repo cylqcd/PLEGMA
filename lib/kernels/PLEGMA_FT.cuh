@@ -7,7 +7,7 @@ template<typename Float>
 struct MomF{
   int sign;
   int momx, momy, momz, momt;
-  __device__ MomF(int sign, int momx, int momy, int momz, int momt):sign(sign),momx(momx),momy(momy),momz(momz),momt(momt){}
+  MomF(int sign, int momx, int momy, int momz, int momt):sign(sign),momx(momx),momy(momy),momz(momz),momt(momt){}
   template<typename Tuple>
   __device__ void operator()(Tuple t){
     int id = thrust::get<0>(t);

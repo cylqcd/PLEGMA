@@ -10,6 +10,11 @@ if(PLEGMA_ARPACK)
   LIST(APPEND PLEGMA_LIBS ${PLEGMA_ARPACK_LIB})
 endif()
 
+if(PLEGMA_PRIMME)
+  LIST(APPEND PLEGMA_LIBS ${PLEGMA_GFORTRAN_LIB})
+  LIST(APPEND PLEGMA_LIBS ${PLEGMA_PRIMME_LIB})
+endif()
+
 LIST(APPEND PLEGMA_LIBS ${PLEGMA_GSL_LIB})
 LIST(APPEND PLEGMA_LIBS ${HDF5_C_LIBRARY_hdf5})
 LIST(APPEND PLEGMA_LIBS ${PLEGMA_LIME_LIB})
@@ -41,9 +46,6 @@ target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 cuda_add_executable(nucleon_3pt nucleon_3pt.cpp)
 target_link_libraries(nucleon_3pt ${PLEGMA_LIBS})
 
-cuda_add_executable(PlaquetteWshifts EXCLUDE_FROM_ALL PlaquetteWshifts.cpp)
-target_link_libraries(PlaquetteWshifts ${PLEGMA_LIBS})
-
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
 
@@ -53,14 +55,14 @@ target_link_libraries(Random ${PLEGMA_LIBS})
 cuda_add_executable(Dilution EXCLUDE_FROM_ALL Dilution.cpp)
 target_link_libraries(Dilution ${PLEGMA_LIBS})
 
-cuda_add_executable(StoutSmearing EXCLUDE_FROM_ALL StoutSmearing.cpp)
-target_link_libraries(StoutSmearing ${PLEGMA_LIBS})
-
-cuda_add_executable(APEsmearing EXCLUDE_FROM_ALL APEsmearing.cpp)
-target_link_libraries(APEsmearing ${PLEGMA_LIBS})
+cuda_add_executable(testSmearings EXCLUDE_FROM_ALL testSmearings.cpp)
+target_link_libraries(testSmearings ${PLEGMA_LIBS})
 
 cuda_add_executable(qLoops qLoops.cpp)
 target_link_libraries(qLoops ${PLEGMA_LIBS})
 
 cuda_add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
 target_link_libraries(FT ${PLEGMA_LIBS})
+
+cuda_add_executable(LowModesCalc LowModesCalc.cpp)
+target_link_libraries(LowModesCalc ${PLEGMA_LIBS})
