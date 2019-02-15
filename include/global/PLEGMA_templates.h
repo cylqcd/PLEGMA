@@ -18,7 +18,7 @@ template<typename T> inline void hostMalloc(T &ptr, size_t size) {
   ptr = static_cast<T>(malloc(size));
 #endif
   if(ptr == static_cast<T>(NULL) ){
-    warningQuda("Bad alloc. Total memory in use: %lu\n", HGC_used_memory);
+    PLEGMA_warning("Bad alloc. Total memory in use: %lu\n", HGC_used_memory);
     throw( std::bad_alloc() );
   }
   HGC_used_memory += sizeof(T)*size;
@@ -35,19 +35,80 @@ template<typename T> inline void hostFree(T &ptr, size_t size) {
 }
 template<typename T> inline void hostFree(T &ptr) {
   hostFree(ptr,0);
-  warningQuda("Freeing without providing the size. This will create a mismatch in HGC_used_memory.\n");
+  PLEGMA_warning("Freeing without providing the size. This will create a mismatch in HGC_used_memory.\n");
 }
 
-// type_char(): return the preferred char used in printf for printing the variable
-template<typename T> inline char type_char(){ return 'p';};
+// type_char(): identifying char for the variable. It is later used in type_print()
+template<typename T> inline char type_char(){ return 'B';};
 template<typename T> inline char type_char(T a){ return type_char<T>();};
+template<> inline char type_char<int>() { return 'i'; }
+template<> inline char type_char<long>() { return 'i'; }
+template<> inline char type_char<long long>() { return 'i'; }
+template<> inline char type_char<unsigned>() { return 'u'; }
+template<> inline char type_char<unsigned long>() { return 'u'; }
+template<> inline char type_char<unsigned long long>() { return 'u'; }
+template<> inline char type_char<float>() { return 'f'; }
+template<> inline char type_char<double>() { return 'f'; }
+template<> inline char type_char<long double>() { return 'f'; }
 template<> inline char type_char<char>() { return 'c'; }
-template<> inline char type_char<int>() { return 'd'; }
-template<> inline char type_char<float>() { return 'e'; }
-template<> inline char type_char<double>() { return 'e'; }
 template<> inline char type_char<char*>() { return 's'; }
-template<> inline char type_char<const char*>() { return 's'; }
 template<> inline char type_char<void*>() { return 'p'; }
+template<> inline char type_char<bool>() { return 'b'; }
+
+inline std::string type_print(void* ptr, char type, int bytes) {
+  switch(type) {
+  case 'i':
+    switch(bytes) {
+    case 4:
+      return std::to_string(*((int*)ptr));
+    case 8:
+      return std::to_string(*((long*)ptr));
+    case 16:
+      return std::to_string(*((long long*)ptr));
+    default:
+      goto end;
+    }
+  case 'u':
+    switch(bytes) {
+    case 4:
+      return std::to_string(*((unsigned int*)ptr));
+    case 8:
+      return std::to_string(*((unsigned long*)ptr));
+    case 16:
+      return std::to_string(*((unsigned long long*)ptr));
+    default:
+      goto end;
+    }
+  case 'f':
+    switch(bytes) {
+    case 4:
+      return std::to_string(*((float*)ptr));
+    case 8:
+      return std::to_string(*((double*)ptr));
+    case 16:
+      return std::to_string(*((long double*)ptr));
+    default:
+      goto end;
+    }
+  case 'c':
+    return std::string(1,*((char*) ptr));
+  case 's':
+    return (char*) ptr;
+  case 'b':
+    if(*((bool*) ptr)) return "True";
+    else return "False";
+  default:
+  end:
+    constexpr char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+			       '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    std::string s(bytes * 2, ' ');
+    for(int i=0; i<bytes; i++) {
+      s[2 * i]     = hexmap[(((char*)ptr)[i] & 0xF0) >> 4];
+      s[2 * i + 1] = hexmap[((char*)ptr)[i] & 0x0F];
+    }
+    return "0x"+s;
+  }
+}
 
 // type_name(): return the demangled typename of a type
 static inline std::string demangle( const char* mangled_name ) {

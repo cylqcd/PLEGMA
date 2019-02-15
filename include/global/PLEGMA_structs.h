@@ -22,29 +22,29 @@ struct tex_mom_list {
   };
 };
 
-struct var_holder {
+struct pointer_holder {
   void * hostPointer;
   void * devPointer;
   int size;
   int bytes;
   std::string var_name;
   std::string type_name;
-  std::string type_print;
+  char type_char;
   
   template<typename hostT>
-  var_holder(const char* name, hostT &host, int s=0) {
-    hostPointer = (void*) &host;
+  pointer_holder(const char* name, hostT *host, int s=0) {
+    hostPointer = (void*) host;
     devPointer = NULL;
-    if(s==0) size = sizeof(host)/sizeof(hostT);
+    if(s<=0) size = sizeof(host)/sizeof(hostT);
     else size=s;
     bytes = sizeof(hostT);
     var_name = name;
     type_name = plegma::type_name<hostT>();
-    type_print = type_char<hostT>();
+    type_char = plegma::type_char<hostT>();
   }
   template<typename hostT, typename devT>
-  var_holder(const char* name, hostT &host, devT &dev, int s=0) : var_holder(name, host, s) {
-    devPointer = (void*) &dev;
+  pointer_holder(const char* name, hostT *host, devT *dev, int s=0) : pointer_holder(name, host, s) {
+    devPointer = (void*) dev;
   }
   void copyToDevice() {
     if(devPointer != NULL) {
@@ -58,19 +58,28 @@ struct var_holder {
       checkCudaError();
     }
   }
+  std::string get_value() {
+    std::string line = var_name + " = (type: " + type_name + ", size: " + std::to_string(size) + (size==1 ? ", value:" : ", values:");
+    char* tmp = (char*) hostPointer;
+    for(int i = 0; i<size; i++) {
+      line+= " " + type_print((void*)(tmp + bytes*i), type_char, bytes);
+    }
+    line += ");\n";
+    return line;
+  }
 };
   
 // here we collect the global variables for then running some default functions on them (print and copy to device)
 struct global_vars {
-  std::vector<var_holder> globals;
+  std::vector<pointer_holder> globals;
 
   template<typename hostT>
-  void add(const char* name, hostT &host, int size=0) {
-    globals.push_back(var_holder(name,host,size));
+  void add(const char* name, hostT &host, int size) {
+    globals.push_back(pointer_holder(name,&host,size));
   }
   template<typename hostT, typename deviceT>
-  void add(const char* name, hostT &host, deviceT &device, int size=1) {
-    globals.push_back(var_holder(name,host,device, size));
+  void add(const char* name, hostT &host, deviceT &device, int size) {
+    globals.push_back(pointer_holder(name,&host,&device, size));
   }
   void copyToDevice() {
     for(int i = 0; i != globals.size(); i++) {
@@ -78,21 +87,18 @@ struct global_vars {
     }
   }
   void print() {
-    /*
-    printfQuda("Global constants available only on host:\n");
-    for(int i = 0; i != host_only_pointer.size(); i++) {
-      std::string line = "HGC_" + host_only_name[i] + ", type: " + host_only_type_name[i] + ", size: " + std::to_string(host_only_size[i]) + ", values:";
-      int bytes = host_only_bytes[i] / host_only_size[i]; 
-      for(int j=0; j<host_only_size[i]; j++) {
-	char * value, type[] = " %d";
-	type[2] = host_only_type[i];
-	asprintf(&value, type, *((char *) host_only_pointer[i] + j*bytes));
-	line += value;
-	free(value);
-      }
-      line+="\n";
-      printfQuda(line.c_str());
+    PLEGMA_printf("\nGlobal constants available only on host:\n");
+    for(int i = 0; i < globals.size(); i++) {
+      if(globals[i].devPointer != NULL) continue;
+      std::string line = "HGC_" + globals[i].get_value();
+      PLEGMA_printf(line.c_str());
     }
-    */
+    PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
+    for(int i = 0; i < globals.size(); i++) {
+      if(globals[i].devPointer == NULL) continue;
+      std::string line = "H/DGC_" + globals[i].get_value();
+      PLEGMA_printf(line.c_str());
+    }
+    PLEGMA_printf("\n\n");
   }
 };
