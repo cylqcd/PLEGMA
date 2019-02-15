@@ -621,11 +621,7 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
 // Forcing initialization of the following cases
-template<> template<>
-void PLEGMA_Field<float>::copy(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
-template<> template<>
-void PLEGMA_Field<float>::copy(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
-template<> template<>
-void PLEGMA_Field<double>::copy(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
-template<> template<>
-void PLEGMA_Field<double>::copy(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
+template void PLEGMA_Field<float>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
+template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
+template void PLEGMA_Field<double>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
+template void PLEGMA_Field<double>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);

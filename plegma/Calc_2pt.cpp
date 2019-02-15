@@ -36,7 +36,6 @@ int main(int argc, char **argv)
   PLEGMA_Vector<float> vectorAuxF;
   PLEGMA_Propagator<float> propUP;
   PLEGMA_Propagator<float> propDN;
-  PLEGMA_Correlator<float> corr(corr_space, maxQsq);
 
   for(int isource = 0 ; isource < numSourcePositions; isource++){
     printfQuda("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
@@ -65,6 +64,7 @@ int main(int argc, char **argv)
     propUP.applyBoundaries_device(sourcePositions[isource][3]);
     propDN.applyBoundaries_device(sourcePositions[isource][3]);
 
+    PLEGMA_Correlator<float> corr(corr_space, maxQsq);
     corr.contractMesons(propUP, propDN, sourcePositions[isource]);
     corr.writeFile(twop_filename.c_str(), corr_file_format);
 
