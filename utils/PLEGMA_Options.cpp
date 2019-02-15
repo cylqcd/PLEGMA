@@ -4,19 +4,19 @@
 
 void plegmaOptions(Options &opt){
   bool isFound;
-  opt.set("verbosity","Set verbosity level, 0 minimal, 1 verbose, 2 debug, 3 debug all", 1, verbosity);
+  opt.set("verbosity","Set verbosity level, 0 minimal, 1 verbose, 2 debug, 3 debug all", 0, verbosity);
   
-  if(verbosity>0) {
+  if(verbosity==1) {
     PLEGMA_printf("\nParameters read by plegmaOptions:\n");
+    PLEGMA_printf( "procs %d %d %d %d\n",  procs[0], procs[1], procs[2], procs[3]);
   } else if(verbosity>1) {
     PLEGMA_printf("\nAll parameters available in plegmaOptions with read or default value:\n");
+    PLEGMA_printf( "verbosity %d\n", verbosity);
+    PLEGMA_printf( "procs %d %d %d %d\n",  procs[0], procs[1], procs[2], procs[3]);
   }
-  
+
   opt.setForced("dims","Set local dimensions (X Y Z T), e.g. 8 8 8 16", verbosity, dims[0], dims[1], dims[2], dims[3]);
   if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);
-
-  opt.setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", verbosity, procs[0], procs[1], procs[2], procs[3]);
-  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( procs[i] <= 0 ) PLEGMA_error("Error with dim %d: Negative proc or not divisor of dim\n", i);
 
   isFound=opt.set("load-gauge", "Path to the gauge field, default (empty string)", verbosity, latfile);
 }
