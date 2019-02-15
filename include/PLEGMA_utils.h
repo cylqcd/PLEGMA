@@ -69,10 +69,11 @@ void applyBoundaryCondition(double **gauge, int Vh ,QudaGaugeParam *gauge_param)
 void applyBoundaryCondition(double **gauge, int lL[4] ,QudaGaugeParam *gauge_param);
 
 //================ mapping_parity.cpp ================================//
-void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt);
-void mapNormalToEvenOddGauge(double **gauge, QudaGaugeParam &param, int lL[4]);
-void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int nx , int ny , int nz, int nt);
-void mapEvenOddToNormalGauge(double **gauge, QudaGaugeParam &param, int lL[4]);
-void mapNormalToEvenOdd(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt);
-void mapEvenOddToNormal(void *spinor, QudaInvertParam param, int nx , int ny , int nz, int nt);
+
+template<typename Float> void mapNormalToEvenOddGauge(Float **gauge, int lL[4], QudaGaugeFieldOrder order = QUDA_QDP_GAUGE_ORDER);
+template<typename Float> void mapEvenOddToNormalGauge(Float **gauge, int lL[4], QudaGaugeFieldOrder order = QUDA_QDP_GAUGE_ORDER);
+template<typename Float> void mapNormalToEvenOdd(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
+template<typename Float> void mapEvenOddToNormal(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
+template<typename Float> void mapNormalToEvenOddGPUformat(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
+template<typename Float> void mapEvenOddToNormalGPUformat(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
 #endif

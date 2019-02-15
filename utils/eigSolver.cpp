@@ -1,0 +1,374 @@
+#include <eigSolver.h>
+#include <PLEGMA_BLAS.h>
+#include <algorithm>
+using namespace plegma;
+using namespace quda;
+
+#ifdef HAVE_EIGENSOLVER
+
+static quda::QUDA_dirac *dOp;
+static PLEGMA_Vector<double> *d_in;
+static PLEGMA_Vector<double> *d_out;
+static PLEGMA_Vector<double> *tmp1;
+static PLEGMA_Vector<double> *tmp2;
+static int G_PolyDeg;
+static bool G_isACC;
+static double G_amin;
+static double G_amax;
+
+EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose):verbose(verbose),p(params),
+												    h_eigVecs(nullptr),h_eigVals(nullptr)
+{
+  if(!GK_init_PLEGMA_flag) errorQuda("Initialize PLEGMA first");
+    
+  if(p.NeV <=0 ){
+    printfQuda("Warning: Eigensolver instructed to use NeV=%d, skipping eigenvectors calculation\n",p.NeV);
+    return;
+  }
+  G_PolyDeg = p.PolyDeg;
+  G_isACC = p.isACC;
+  G_amax = p.amax;
+  G_amin = p.amin;
+  
+  field_length = N_SPINS * N_COLS;
+  size_per_Vec = GK_localVolume * field_length;
+  size_NeV = p.NeV * size_per_Vec;
+  bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
+  bytes_NeV = size_NeV * 2 * sizeof(double);
+#if defined(HAVE_ARPACK)
+  if(p.NkV < p.NeV) errorQuda("The NkV should be larger than NeV");
+  size_NkV = p.NkV * size_per_Vec;
+  bytes_NkV = size_NkV * 2 * sizeof(double);
+#endif
+  try{
+#if defined(HAVE_ARPACK)
+    h_eigVecs = new double[size_NkV*2];
+    h_eigVals = new double[p.NkV*2];
+#elif defined(HAVE_PRIMME)
+    h_eigVecs = new double[size_NeV*2];
+    h_eigVals = new double[p.NeV];
+    h_rnorms = new double[p.NeV];
+#else
+    errorQuda("Not implemented");
+#endif
+  }
+  catch (std::bad_alloc& err){
+    errorQuda(err.what());
+  }
+
+  dOp = new QUDA_dirac(dslashType);
+  d_in = new PLEGMA_Vector<double>(DEVICE);
+  d_out = new PLEGMA_Vector<double>(DEVICE);
+  tmp1 = new PLEGMA_Vector<double>(DEVICE);
+  tmp2 = new PLEGMA_Vector<double>(DEVICE);
+
+  // check the spectrumPart
+  if(p.spectrumPart != "SR" && p.spectrumPart != "LR") errorQuda("Allowed values for spectrum part are SR or LR");
+  if(p.isACC){
+    if(p.spectrumPart == "SR") p.spectrumPart = "LR";
+    else if(p.spectrumPart == "LR") p.spectrumPart = "SR";
+    else errorQuda("Not implemented");
+  }
+  
+  initEigSolver();
+  if(verbose) print();
+  computeEigVecs();
+  computeEigVals();
+  for (int j = 0; j < p.NeV; ++j)  mapEvenOddToNormalGPUformat(h_eigVecs+j*size_per_Vec*2,GK_localL);
+  delete[] h_eigVals;
+  delete d_in;
+  delete d_out;
+  delete tmp1;
+  delete tmp2;
+  delete dOp;
+  d_in = nullptr; d_out = nullptr; tmp1 = nullptr; tmp2 = nullptr; dOp = nullptr;
+#if defined(HAVE_PRIMME)
+  delete[] h_rnorms;
+  primme_free(&primme_pars);
+#endif
+}
+
+EigSolver::~EigSolver(){
+  delete[] h_eigVecs;
+}
+
+
+  
+#if defined(HAVE_PRIMME)
+static void applyOperator(double *out, double *in, int size_per_Vec){
+  size_t bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
+#else
+void EigSolver::applyOperator(double *out, double *in){  
+#endif
+  cudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,cudaMemcpyHostToDevice);
+  checkCudaError();
+  if(!G_isACC) dOp->apply<MdagM>(*d_out,*d_in);
+  else{
+    if(G_PolyDeg < 1) errorQuda("Degree of the Polynomial shoud be >= 1");
+    double delta,theta;
+    double sigma,sigma1,sigma_old;
+    std::complex<double> d1(0.,0.),d2(0.,0.),d3(0.,0.);
+    double a = G_amin;
+    double b = G_amax;
+    delta = (b-a)/2.0;
+    theta = (b+a)/2.0;
+    sigma1 = -delta/theta;
+    d1.real(sigma1/delta);
+    d2.real(1.0);
+    dOp->apply<MdagM>(*d_out,*d_in);
+    cuBLAS::scal(size_per_Vec, d1.real(), d_out->D_elem() );
+    cuBLAS::axpy(size_per_Vec, reinterpret_cast<double(&)[2]>(d2), d_in->D_elem(), d_out->D_elem());
+    if(G_PolyDeg > 1){
+      tmp1->copy(*d_in);
+      tmp2->copy(*d_out);
+      sigma_old = sigma1;
+      for(int i=2; i <= G_PolyDeg; i++){
+	sigma = 1.0/(2.0/sigma1-sigma_old);
+	d1.real(2.0*sigma/delta);
+	d2.real(-d1.real()*theta);
+	d3.real(-sigma*sigma_old);
+	dOp->apply<MdagM>(*d_out, *tmp2);
+	plegma::axpbypcz(size_per_Vec,reinterpret_cast<double(&)[2]>(d3),tmp1->D_elem(),
+			 reinterpret_cast<double(&)[2]>(d2),tmp2->D_elem(),
+			 reinterpret_cast<double(&)[2]>(d1),d_out->D_elem());
+	tmp1->copy(*tmp2);
+	tmp2->copy(*d_out);
+	sigma_old=sigma;
+      }
+    }
+  }
+  cudaMemcpy(out,d_out->D_elem(),bytes_per_Vec,cudaMemcpyDeviceToHost);
+  checkCudaError();
+}
+
+#if defined(HAVE_PRIMME)
+static void applyOperator(void *in, PRIMME_INT *ldx, void *out, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *ierr){
+  *blockSize=1;
+  applyOperator((double*) out, (double*) in, primme->nLocal);
+  *ierr=0;
+}
+
+static void par_GlobalSumForDouble(void *sendBuf, void *recvBuf, int *count, primme_params *primme, int *ierr) {
+  MPI_Comm communicator = MPI_COMM_WORLD;	
+  if (sendBuf == recvBuf)
+    *ierr = MPI_Allreduce(MPI_IN_PLACE, recvBuf, *count, MPI_DOUBLE, MPI_SUM, communicator) != MPI_SUCCESS;
+  else
+    *ierr = MPI_Allreduce(sendBuf, recvBuf, *count, MPI_DOUBLE, MPI_SUM, communicator) != MPI_SUCCESS;
+}
+#endif
+
+void EigSolver::initEigSolver(){
+#ifdef HAVE_ARPACK
+  int arpack_log_u = 9999;
+  if(!p.logFile.empty() && comm_rank() == 0){
+    char *tmps = strdup(p.logFile.c_str());
+    initlog_(&arpack_log_u, tmps, p.logFile.length());
+    free(tmps);
+    int msglvl0 = 0;//, msglvl1 = 1, msglvl2 = 2, msglvl3 = 3;
+    int msglvl3 = 3;
+    pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
+  }
+#elif HAVE_PRIMME
+  primme_initialize(&primme_pars);
+  primme_pars.matrixMatvec = applyOperator;
+  MPI_Comm commPRIMME = MPI_COMM_WORLD;
+  primme_pars.commInfo=&commPRIMME;
+  primme_pars.globalSumReal=par_GlobalSumForDouble;
+  primme_pars.numProcs=GK_nProc[0]*GK_nProc[1]*GK_nProc[2]*GK_nProc[3];
+  primme_pars.procID=comm_rank();
+  primme_pars.nLocal = size_per_Vec;
+  primme_pars.n = size_per_Vec * GK_nProc[0]*GK_nProc[1]*GK_nProc[2]*GK_nProc[3];
+  primme_pars.numEvals = p.NeV;
+  primme_pars.eps = p.tol;
+  primme_pars.maxOuterIterations = p.maxIters;
+  if(p.spectrumPart == "SR") primme_pars.target = primme_smallest;
+  else if(p.spectrumPart == "LR") primme_pars.target = primme_largest;
+  else errorQuda("Not implemented");
+  primme_pars.printLevel = p.printLevel;
+  primme_set_method(p.primme_method, &primme_pars);
+#else
+  errorQuda("Not implemented")
+#endif
+}
+
+void EigSolver::print(){
+  printfQuda("Number of eigenvalues requested: %d\n",p.NeV);
+#if defined(HAVE_ARPACK)
+  printfQuda("Size of Krylov space requested: %d\n",p.NkV);
+#endif
+  if(p.isACC) printfQuda("Using Polynomial acceleration with parameters: Degree=%d, amin=%+e, amax=%+e\n",p.PolyDeg,p.amin,p.amax);
+  printfQuda("Part of the spectrum to be computed: %s",p.spectrumPart.c_str());
+  if(p.isACC) printfQuda("\n Flipped due to polynomial acceleration\n");
+  else printfQuda("\n");
+  printfQuda("Tolerance for eigenSolver is %+e\n",p.tol);
+  printfQuda("Max number of iterations for eigenSolver is %d\n",p.maxIters);
+#if defined(HAVE_ARPACK)
+  printfQuda("The eigensolver logfile is: %s\n",p.logFile.c_str());
+#endif
+#if defined(HAVE_PRIMME)
+  primme_display_params(primme_pars);
+#endif
+}
+
+void EigSolver::computeEigVecs(){
+#if defined(HAVE_ARPACK)
+  MPI_Fint mpi_comm_f = MPI_Comm_c2f(MPI_COMM_WORLD);
+  char *bmat = strdup("I");
+  int rvec = 1;
+  int lworkl = (3*p.NkV*p.NkV+5*p.NkV)*2;
+  std::complex<double> sigma;
+  char *howmany = strdup("P");
+  char *which_evals = strdup(p.spectrumPart.c_str());
+  std::complex<double> * pin=nullptr;
+  std::complex<double> * pout=nullptr;
+  int *ipntr, *select, *iparam; 
+  double *rwork; 
+  std::complex<double> *resid, *workd, *workl, *workev;
+  try{
+    ipntr              = new int[14];
+    select             = new int[p.NkV];
+    iparam             = new int[11];
+    rwork        = new double[p.NkV];
+  
+    resid  = new std::complex<double>[size_per_Vec];
+    workd  = new std::complex<double>[3*size_per_Vec];
+    workl  = new std::complex<double>[lworkl];
+    workev = new std::complex<double>[2*p.NkV];
+  }
+  catch (std::bad_alloc& err){
+    errorQuda(err.what());
+  }
+  
+  iparam[0] = 1;  //use exact shifts
+  iparam[2] = p.maxIters;
+  iparam[3] = 1;
+  iparam[6] = 1;
+  iparam[7] = 1; // arpack mode
+
+  int info = 0; // random initial guess
+  // int info = 1;
+  // for (int i = 0; i < size_per_Vec; ++i) {
+  //   resid[i].real(1.);
+  //   resid[i].imag(0.);
+  // }
+
+  int nconv;
+  bool checkIdo = true;
+  int arpack_iter = 0;
+  int ido = 0;
+
+  // start solver
+  do{
+    pznaupd_(&mpi_comm_f, &ido,bmat, &size_per_Vec, which_evals, 
+	     &p.NeV, &p.tol, resid, &p.NkV,
+	     (std::complex<double>*)h_eigVecs, &size_per_Vec, iparam, ipntr, workd, 
+	     workl, &lworkl,rwork,&info,1,2);
+    if(checkIdo){
+      pin=workd+ipntr[0]-1;
+      pout=workd+ipntr[1]-1;
+      checkIdo = false;
+    }
+    if (ido == 99 || info == 1)break;
+    if( (ido==-1) || (ido==1) ) applyOperator((double*)pout, (double*)pin);
+    if(verbose)printfQuda("arpack iter = %d\n", arpack_iter);
+    arpack_iter++;
+  }while(ido != 99);
+    
+  if(info < 0) errorQuda("EigSolver error: info = %d\n",info);
+  nconv = iparam[4];
+  if(nconv != p.NeV) errorQuda("Converged number of eigvalues %d != %d\n", nconv, p.NeV);
+  if(verbose) printfQuda("EigSolver: Number of converged eigenvalues: %d\n", nconv);
+
+  // compute eigenvectors
+  pzneupd_(&mpi_comm_f,&rvec,howmany, select, (std::complex<double>*) h_eigVals,(std::complex<double>*) h_eigVecs, &size_per_Vec,&sigma, 
+	   workev,bmat,&size_per_Vec,which_evals,&p.NeV,&p.tol, resid,&p.NkV, 
+	   (std::complex<double>*) h_eigVecs,&size_per_Vec,iparam,ipntr,workd,workl,&lworkl,rwork,&info,1,1,2);
+
+  if(info == 1) printfQuda("Warning: Maximum number of iterations reached.\n");
+  if(info == 3) errorQuda("No shifts could be applied during implicit, Arnoldi update, try increasing NkV\n");
+  int arpack_log_u = 9999;
+  if(!p.logFile.empty() && comm_rank() == 0)finilog_(&arpack_log_u);
+
+  free(bmat);
+  free(howmany);
+  free(which_evals);
+  delete[] ipntr;
+  delete[] select;
+  delete[] iparam;
+  delete[] rwork;
+  delete[] resid;
+  delete[] workd;
+  delete[] workl;
+  delete[] workev;
+
+#elif defined(HAVE_PRIMME)
+  zprimme(h_eigVals, (std::complex<double> *) h_eigVecs, h_rnorms, &primme_pars);
+#else
+  errorQuda("Not implemented");
+#endif
+}
+
+void EigSolver::computeEigVals(){
+  for(int j = 0 ; j < p.NeV; j++){
+    double one[2] = {1.,0.};
+    cudaMemcpy(tmp1->D_elem(),h_eigVecs+j*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
+    checkCudaError();
+    dOp->apply<MdagM>(*tmp2,*tmp1);
+    std::complex<double> eval;
+    std::complex<double> res;
+    cuBLAS::dot(reinterpret_cast<double(&)[2]>(eval), size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), MPI_COMM_WORLD);
+    cuBLAS::scal(size_per_Vec,-eval.real(),tmp1->D_elem());
+    cuBLAS::axpy(size_per_Vec,one,tmp2->D_elem(),tmp1->D_elem());
+    cuBLAS::dot(reinterpret_cast<double(&)[2]>(res), size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), MPI_COMM_WORLD);
+    evalsOrdered.push_back(std::make_tuple(eval.real(), eval.imag(), std::sqrt(res.real()), j));
+  }
+  std::sort(evalsOrdered.begin(), evalsOrdered.end());
+  if(verbose)
+    for (int j = 0; j < p.NeV; ++j)
+      printfQuda("Eval[%04d] = (%+e,%+e), Residual: %+e, Order Index: %d\n", j, std::get<0>(evalsOrdered[j]), std::get<1>(evalsOrdered[j]),
+		 std::get<2>(evalsOrdered[j]), std::get<3>(evalsOrdered[j]));
+}
+
+// vecOut = (1 - U * U^\dag) vecIn
+void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn){
+  if(p.NeV <= 0){
+    if(verbose) printfQuda("Skipping deflation of source vector since NeV=%d\n",p.NeV);
+    vecOut.copy(vecIn);
+    return;
+  }
+  if(!vecOut.IsAllocHost() || !vecIn.IsAllocHost()) errorQuda("This functions needs both vecs to have also Host allocation");
+  vecIn.unload();
+  double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
+  double *tmpArr = nullptr;
+  try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { errorQuda(err.what());}
+  memset(tmpArr,0,p.NeV*2*sizeof(double));
+  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vecIn.H_elem(), b, tmpArr, MPI_COMM_WORLD);
+  cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, b, vecOut.H_elem());
+  cBLAS::axpy(size_per_Vec, aP, vecIn.H_elem(), vecOut.H_elem());
+  vecOut.load();
+  delete[] tmpArr;
+}
+
+void EigSolver::dumpEvalsVdagG5V(std::string filename){
+  if(p.NeV <= 0){ printfQuda("Skipping dumping of evals v^+ g5 v since NeV=%d\n",p.NeV); return;}
+  PLEGMA_Vector<double> g5V(DEVICE);
+  PLEGMA_Vector<double> V(DEVICE);
+  std::vector<double> VdagG5V;
+  for (int j = 0; j < p.NeV; ++j) {
+    cudaMemcpy(g5V.D_elem(),h_eigVecs+j*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
+    checkCudaError();
+    V.copy(g5V);
+    g5V.apply_gamma(G5);
+    std::complex<double> res;
+    cuBLAS::dot(reinterpret_cast<double(&)[2]>(res), size_per_Vec, V.D_elem(), g5V.D_elem(),MPI_COMM_WORLD);
+    VdagG5V.push_back(res.real());
+  }
+  if(comm_rank() == 0){
+    FILE *ptr = fopen(filename.c_str(), "w");
+    if(ptr == NULL) errorQuda("Cannot open file:%s for writting\n",filename.c_str());
+    for (int i = 0; i < p.NeV; ++i) fprintf(ptr, "%+e %+e\n", std::get<0>(evalsOrdered[i]), VdagG5V[std::get<3>(evalsOrdered[i])]);
+    fclose(ptr);
+  }
+}
+
+#endif

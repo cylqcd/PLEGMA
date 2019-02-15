@@ -43,7 +43,7 @@ int main(int argc, char **argv)
   // We need to apply the anti-periodic boundaries.
   applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
   initGaugeQuda((void*)gauge.get_ptr(), gauge_param);  
-  mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
+  mapEvenOddToNormalGauge(gauge.get_ptr(),params.lL);
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> pGauge(BOTH);

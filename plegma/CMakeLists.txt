@@ -10,6 +10,11 @@ if(PLEGMA_ARPACK)
   LIST(APPEND PLEGMA_LIBS ${PLEGMA_ARPACK_LIB})
 endif()
 
+if(PLEGMA_PRIMME)
+  LIST(APPEND PLEGMA_LIBS ${PLEGMA_GFORTRAN_LIB})
+  LIST(APPEND PLEGMA_LIBS ${PLEGMA_PRIMME_LIB})
+endif()
+
 LIST(APPEND PLEGMA_LIBS ${PLEGMA_GSL_LIB})
 LIST(APPEND PLEGMA_LIBS ${HDF5_C_LIBRARY_hdf5})
 LIST(APPEND PLEGMA_LIBS ${PLEGMA_LIME_LIB})
@@ -64,3 +69,6 @@ target_link_libraries(qLoops ${PLEGMA_LIBS})
 
 cuda_add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
 target_link_libraries(FT ${PLEGMA_LIBS})
+
+cuda_add_executable(LowModesCalc LowModesCalc.cpp)
+target_link_libraries(LowModesCalc ${PLEGMA_LIBS})

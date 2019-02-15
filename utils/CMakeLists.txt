@@ -7,5 +7,6 @@ set(PLEGMA_UTILS
     read_conf.cpp
     mapping_parity.cpp
     utils.cpp
+    eigSolver.cpp
     )
 cuda_add_library(PLEGMAutils STATIC ${PLEGMA_UTILS})

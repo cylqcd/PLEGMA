@@ -20,7 +20,7 @@ int main(int argc, char **argv)
   readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
 
   // The gauge is loaded in a format suitable for QUDA. We need to re-map it
-  mapEvenOddToNormalGauge(gauge.get_ptr(),gauge_param,params.lL);
+  mapEvenOddToNormalGauge(gauge.get_ptr(),params.lL);
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> pGauge(BOTH);
