@@ -1,12 +1,12 @@
 #pragma once
 #include <PLEGMA.h>
 #include <utils/PLEGMA_params.h>
+#include <utils/PLEGMA_Options.h>
+#include <utils/PLEGMA_readList.h>
+#include <utils/PLEGMA_eigSolver.h>
 #include <utils/QUDA_params.h>
 #include <utils/QUDA_types.h>
 #include <utils/QUDA_interface.h>
-#include <utils/PLEGMA_Options.h>
-#include <utils/PLEGMA_lime.h>
-#include <utils/PLEGMA_eigSolver.h>
 
 using namespace plegma;
 
