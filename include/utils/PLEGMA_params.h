@@ -18,6 +18,8 @@ define(int nsmearAPE, 20);
 define(double alphaAPE, 0.5);
 define(int nsmearGauss, 50);
 define(double alphaGauss, 0.2);
+define(int nsmearStout, 5);
+define(double alphaStout, 0.2);
 
 define(int numSourcePositions, 1);
 define(std::string pathListSourcePositions);
@@ -27,8 +29,10 @@ define(FILE_WRITE_FORMAT corr_file_format, HDF5_FORM);
 define(CORR_SPACE corr_space, MOMENTUM_SPACE);
 define(std::string twop_filename, "./twop");
 define(std::string threep_filename, "./threep");
-define(int numTSink);
+define(int numTSink,1);
 define(std::string pathListTSink);
-define(int numProj);
+define(int* tSink);
+define(int numProj,1);
 define(std::string pathListProj);
+define(WHICHPROJECTOR* proj);
 
