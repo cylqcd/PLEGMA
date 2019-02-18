@@ -25,7 +25,6 @@
 //======== Constant values =========//
 #define PI 3.141592653589793
 
-#define N_DIMS     4
 #define N_COLS     3
 #define N_SPINS    4
 

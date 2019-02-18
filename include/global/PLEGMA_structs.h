@@ -1,6 +1,29 @@
 //======== Some custom data struct =========//
 template<typename Float> struct texture;
 
+struct site {
+  std::array<int,N_DIMS> x;
+  site() = default;
+  site(std::array<int,N_DIMS> y) : x(y) {}
+  // TODO: add functions line to_ID, from_ID, etc
+};
+inline std::ostream& operator << (std::ostream &o, site &x){
+  o<<x.x[0];
+  for(int i=1; i<N_DIMS; i++)   o<<"-"<<x.x[i];
+  return o;
+}
+inline std::istream& operator >> (std::istream &i, site &x){
+  for(int j=0; j<N_DIMS; j++) {
+    bool check = static_cast<bool> (i >> x.x[j]);
+    if(!check) {
+      PLEGMA_warning("Not enough arguments to unpack site\n");
+      break;
+    }
+  }
+  return i;
+}
+
+
 // Global variable for mom list
 struct tex_mom_list {
   size_t Nmoms;
