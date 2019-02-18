@@ -26,6 +26,7 @@ const char* get_solve_str(QudaSolveType);
 QudaSchwarzType get_schwarz_type(const char* s);
 
 QudaTwistFlavorType get_flavor_type(const char* s);
+const char* get_flavor_str(QudaTwistFlavorType);
 
 int get_rank_order(const char* s);
 
