@@ -347,12 +347,10 @@ void EigSolver::computeEigVals(){
     cudaMemcpy(tmp1->D_elem(),h_eigVecs+j*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
     checkCudaError();
     dOp->apply<MdagM>(*tmp2,*tmp1);
-    std::complex<double> eval;
-    std::complex<double> res;
-    cuBLAS::dot(reinterpret_cast<double(&)[2]>(eval), size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), MPI_COMM_WORLD);
+    std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), MPI_COMM_WORLD);
     cuBLAS::scal(size_per_Vec,-eval.real(),tmp1->D_elem());
     cuBLAS::axpy(size_per_Vec,one,tmp2->D_elem(),tmp1->D_elem());
-    cuBLAS::dot(reinterpret_cast<double(&)[2]>(res), size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), MPI_COMM_WORLD);
+    std::complex<double> res = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), MPI_COMM_WORLD);
     evalsOrdered.push_back(std::make_tuple(eval.real(), eval.imag(), std::sqrt(res.real()), j));
   }
   std::sort(evalsOrdered.begin(), evalsOrdered.end());

@@ -158,6 +158,16 @@ namespace cuBLAS{
     if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasZdotc failed with error %d", error);
     return std::complex<double>(cu_res.x,cu_res.y);
   }  
+  template<typename Float>
+  inline std::complex<Float> dot(int NN, const Float *x, const Float *y, MPI_Comm comm) {
+    if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
+    std::complex<Float> result, res = cuBLAS::dot(NN, x, y);
+    int mpiErr = MPI_Allreduce((Float*) &res, (Float*) &result, 2,
+			       MPI_Type<Float>(), MPI_SUM, comm);
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
+    return result;
+  }
+  
   //-----------------------------------------------------------------
   template<typename Float>
   inline Float norm(int NN, const Float *x);
@@ -174,6 +184,15 @@ namespace cuBLAS{
     cublasStatus_t error = cublasDznrm2(HGC_cublas_handle, NN, (cuDoubleComplex*)x, 1, &res);
     if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCdotc failed with error %d", error);
     return res;
+  }
+  template<typename Float>
+  inline Float norm(int NN, const Float *x, MPI_Comm comm) {
+    if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
+    Float result, loc_res = cuBLAS::norm(NN, x);
+    int mpiErr = MPI_Allreduce(&result, &loc_res, 1, MPI_Type<Float>(), MPI_SUM,
+			       comm);
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
+    return result;
   }
 }
 //=================================================================//

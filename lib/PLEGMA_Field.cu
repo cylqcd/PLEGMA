@@ -538,23 +538,12 @@ void PLEGMA_Field<Float>::axpy(PLEGMA_Field<Float> &fieldIn, std::complex<Float>
 
 template<typename Float>
 std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
-  std::complex<Float> result, res = cuBLAS::dot(total_length*field_length,
-						d_elem, fieldIn.D_elem());
-  
-  int mpiErr = MPI_Allreduce((Float*) &res, (Float*) &result, 2,
-			     MPI_Type<Float>(), MPI_SUM, MPI_COMM_WORLD);
-  if(mpiErr != MPI_SUCCESS)
-    PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-  return result;
+  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
 }
 
 template<typename Float>
 Float PLEGMA_Field<Float>::norm(){
-  Float result, loc_res = cuBLAS::norm(total_length*field_length, d_elem);
-  int mpiErr = MPI_Allreduce(&result, &loc_res, 1, MPI_Type<Float>(), MPI_SUM,
-			     MPI_COMM_WORLD);
-  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-  return result;
+  return cuBLAS::norm(total_length*field_length, d_elem, MPI_COMM_WORLD);
 }
 
 template<typename Float>
