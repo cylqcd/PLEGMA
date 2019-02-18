@@ -1,6 +1,7 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 #include <algorithm>
+#include <PLEGMA_BLAS.h>
 using namespace plegma;
 using namespace quda;
 
@@ -20,17 +21,17 @@ template <typename Float>
 static void mapEvenOddToNormal(Float *spinor) {
   size_t VOLUME = HGC_localVolume;
   size_t VOLUMEh = VOLUME / 2;
-  int sSize = N_COLS*N_SPIN;
+  int sSize = N_COLS*N_SPINS;
   Float *tmp = (Float*)malloc(VOLUME * sSize * 2 * sizeof(Float));
   for(int even = 0; even < VOLUMEh; even++) {
     int norm_coord = 2 * even;
     int odd = even+VOLUMEh;
     
     int evenSiteBit = 0;
-    int tmp = norm_coord/dims[0];
+    int tmp2 = norm_coord/dims[0];
     for(int i=1; i<N_DIMS; i++) {
-      evenSiteBit += tmp%dims[i];
-      tmp /= dims[i];
+      evenSiteBit += tmp2%dims[i];
+      tmp2 /= dims[i];
     }
     evenSiteBit = evenSiteBit % 2;
     int oddSiteBit  = evenSiteBit ^ 1;
@@ -52,7 +53,7 @@ static void mapEvenOddToNormal(Float *spinor) {
 EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose):verbose(verbose),p(params),
 												    h_eigVecs(nullptr),h_eigVals(nullptr)
 {
-  if(!GK_init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
+  if(!HGC_init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
     
   if(p.NeV <=0 ){
     PLEGMA_printf("Warning: Eigensolver instructed to use NeV=%d, skipping eigenvectors calculation\n",p.NeV);
@@ -64,7 +65,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool ver
   G_amin = p.amin;
   
   field_length = N_SPINS * N_COLS;
-  size_per_Vec = GK_localVolume * field_length;
+  size_per_Vec = HGC_localVolume * field_length;
   size_NeV = p.NeV * size_per_Vec;
   bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
   bytes_NeV = size_NeV * 2 * sizeof(double);
@@ -207,10 +208,10 @@ void EigSolver::initEigSolver(){
   MPI_Comm commPRIMME = MPI_COMM_WORLD;
   primme_pars.commInfo=&commPRIMME;
   primme_pars.globalSumReal=par_GlobalSumForDouble;
-  primme_pars.numProcs=GK_nProc[0]*GK_nProc[1]*GK_nProc[2]*GK_nProc[3];
+  primme_pars.numProcs=HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
   primme_pars.procID=comm_rank();
   primme_pars.nLocal = size_per_Vec;
-  primme_pars.n = size_per_Vec * GK_nProc[0]*GK_nProc[1]*GK_nProc[2]*GK_nProc[3];
+  primme_pars.n = size_per_Vec * HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
   primme_pars.numEvals = p.NeV;
   primme_pars.eps = p.tol;
   primme_pars.maxOuterIterations = p.maxIters;
