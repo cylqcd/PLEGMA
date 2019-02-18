@@ -9,21 +9,21 @@ using namespace quda;
 
 void initialize(int argc, char **argv, bool withQuda) {
   
-  Options opt(argc,argv);
+  HGC_options = new Options(argc,argv);
 
   // initialize QMP/MPI, QUDA comms grid and RNG
   // we need to do it first for enabling the printing
-  opt.setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", 0,
-		procs[0], procs[1], procs[2], procs[3]);
+  HGC_options->setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", 0,
+			 procs[0], procs[1], procs[2], procs[3]);
   for(int i=0; i<4; i++) if( procs[i] <= 0 )
 			   PLEGMA_error("Error with dim %d: Negative proc or not divisor of dim\n", i);
   initComms(argc, argv, procs);
 
   // Reading plegma options
-  plegmaOptions(opt);
+  plegmaOptions(*HGC_options);
 
   if(withQuda) {
-    qudaOptions(opt);
+    qudaOptions(*HGC_options);
     // initialize the QUDA library
     initQuda(device);
     if(verbosity>0) infoQuda();

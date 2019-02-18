@@ -60,6 +60,8 @@ global_host(float, deviceMemory);
 global_host(int, verbosity);
 global_host(size_t, used_memory);
 global_host(global_vars, global_vars);
+global_host(Options *, options);
+global_host(bool, hold_exit);
 
 // variables visible on both host and device
 global_both(tex_mom_list, moms);

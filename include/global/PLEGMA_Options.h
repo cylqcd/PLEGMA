@@ -1,15 +1,3 @@
-#include <string>
-#include <sstream>
-#include <iostream>
-#include <vector>
-#include <assert.h>
-#include <fstream>
-#include <algorithm>
-#include <map>
-#include <iterator>
-#include <stdio.h>
-#include <stdlib.h>
-
 #pragma once
 
 struct argument{std::string name, value;};
@@ -22,6 +10,7 @@ protected:
   std::string forInput;
   std::vector<argument> args;
   std::string nameExec;
+  std::vector<std::string> errorCollection; // to keep the errors for show at the end
 
   void trimSpaceTab(std::string& str){
     if (str.empty()) return;
@@ -47,17 +36,17 @@ protected:
 
   bool checkPrefix(std::string &str, bool throwExit = true){
     if(str.empty()){
-      if(throwExit) PLEGMA_error("Error: Empty string got when checking for [%s] prefix\n",prefixOpt.c_str());
+      if(throwExit) errorCollection.push_back("ERROR: Empty string got when checking for ["+prefixOpt+"] prefix\n");
       return false;
     }
     size_t pos = str.find(prefixOpt);
     if(pos != 0 || (prefixOpt.size() == str.size()) ){
-      if(throwExit) PLEGMA_error("Error: Option [%s] does not have the prefix [%s]\n",str.c_str(),prefixOpt.c_str());
+      if(throwExit) errorCollection.push_back("ERROR: Option ["+str+"] does not have the prefix ["+prefixOpt.c_str()+"]\n");
       return false;
     }
     std::string sstr = str.substr(prefixOpt.size());
     if(sstr.find(prefixOpt) != std::string::npos){
-      if(throwExit)PLEGMA_error("Error: Found dublications of [%s] in the option [%s]\n",prefixOpt.c_str(),str.c_str());
+      if(throwExit) errorCollection.push_back("ERROR: Found dublications of ["+prefixOpt+"] in the option ["+str+"]\n");
       return false;
     }
     return true;
@@ -65,7 +54,10 @@ protected:
 
   void processInputFile(std::string infile){
     std::ifstream ifs(infile,std::ifstream::in);
-    if(ifs.fail()) PLEGMA_error("Error: filename [%s] does not exist\n",infile.c_str());
+    if(ifs.fail())  {
+      errorCollection.push_back("Error: filename ["+infile+"] does not exist\n");
+      return;
+    }
     std::string line;
     while(std::getline(ifs,line)){
       argument arg;
@@ -73,7 +65,7 @@ protected:
       if(isCommented(line)) continue;
       trimSpaceTab(line);
       if(line.find(" ") == std::string::npos && line.find("\t") == std::string::npos)
-	PLEGMA_error("Error: name [%s] does not have a value\n",line.c_str());
+	errorCollection.push_back("Error: name ["+line+"] does not have a value\n");
       int sp = line.find_first_of(" \t");
       arg.name = line.substr(0,sp);
       std::string rest = line.substr(sp);
@@ -106,7 +98,7 @@ public:
 	arg.name = arg_cmd[i];
 	trimPrefix(arg.name);
 	i++;
-	if(i >= arg_cmd.size()) PLEGMA_error("Error: name [%s] does not have a value\n",arg.name.c_str());
+	if(i >= arg_cmd.size()) errorCollection.push_back("Error: name ["+arg.name+"] does not have a value\n");
 	std::stringstream cs;
 	while(!checkPrefix(arg_cmd.at(i),false)){
 	  cs << " " << arg_cmd.at(i);
@@ -116,7 +108,7 @@ public:
 	i--;
 	std::string str = cs.str();
 	trimSpaceTab(str);
-	if(str.empty())PLEGMA_error("Error: name [%s] does not have a value\n",arg.name.c_str());
+	if(str.empty()) errorCollection.push_back("Error: name ["+arg.name+"] does not have a value\n");
 	arg.value = str;
 	args.push_back(arg);
       }
@@ -140,13 +132,13 @@ public:
       PLEGMA_printf("%s %s\n",args[i].name.c_str(), args[i].value.c_str());
   }
     
-  void areDuplications() const{
+  void areDuplications() {
     for(int i = 0 ; i < args.size(); i++){
       std::string check_name = args[i].name;
       for(int j = 0 ; j < args.size(); j++)
 	if(i!=j)
 	  if(check_name == args[j].name)
-	    PLEGMA_error("Error: Duplication of parameter [%s] found\n",check_name.c_str());
+	    errorCollection.push_back("Error: Duplication of parameter ["+check_name+"] found\n");
     }
   }
     
@@ -156,7 +148,6 @@ class Options : public Arguments{
 private:
   std::string dressDesc;
   std::vector<std::string> descOpt; // to keep info about the description of the arguments
-  std::vector<std::string> errorCollection; // to keep the errors for show at the end
   std::vector<std::string> listSetOpt; // list that keeps what is already set
   void usage(){
     PLEGMA_printf("\n\n USAGE FOR %s\n",nameExec.c_str());
@@ -274,7 +265,7 @@ private:
 
   void checkIfSet(std::string name){
     for(int i = 0; i < listSetOpt.size(); i++)
-      if(name == listSetOpt[i]) PLEGMA_error("Error: Option [%s] already set\n",name.c_str());
+      if(name == listSetOpt[i]) errorCollection.push_back("Error: Option ["+name+"] already set\n");
   }
 public:
   Options(int argc,char **argv):Arguments(argc,argv),dressDesc("#++#"){;}
@@ -400,16 +391,16 @@ public:
   }
 
   void checkErrors(){
-    if(isHelp){usage();exit(-1);}
+    if(isHelp){usage(); PLEGMA_exit(-1);}
     if(args.size() != 0){
       for(int i = 0; i<args.size(); i++)
 	PLEGMA_printf("Error: What option is %s\n", args[i].name.c_str() );
       usage();
-      exit(-1);
+      PLEGMA_exit(-1);
     }
     if(errorCollection.size() <= 0) return;
     for(int i = 0 ; i < errorCollection.size(); i++) PLEGMA_printf("%s\n",errorCollection[i].c_str());
     usage();
-    exit(-1);
+    PLEGMA_exit(-1);
   }
 };

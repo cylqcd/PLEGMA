@@ -12,6 +12,8 @@ using namespace plegma;
 extern Topology *default_topo;
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
+  HGC_hold_exit = false;
+  HGC_options->checkErrors();
 
 #define ADD_TO_GLOBAL
 #include<global/PLEGMA_global_constants.h>

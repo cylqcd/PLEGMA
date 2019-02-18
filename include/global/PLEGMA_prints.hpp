@@ -4,15 +4,33 @@
  */
 #pragma once
 
+extern bool HGC_hold_exit; // used to hold exit until all the errors have been printed
 extern bool HGC_init_PLEGMA_flag;
+extern struct global_vars HGC_global_vars;
+extern class Options * HGC_options;
 
-#define PLEGMA_printf(...) do {					\
-    if (HGC_init_PLEGMA_flag) {					\
-      sprintf(getPrintBuffer(), __VA_ARGS__);			\
-      if (getRankVerbosity()) {					\
-	fprintf(getOutputFile(), "%s", getOutputPrefix());	\
-	fprintf(getOutputFile(), "%s", getPrintBuffer());	\
-	fflush(getOutputFile());				\
+#define PLEGMA_exit(value) do {			\
+    if(! HGC_hold_exit) {			\
+      if (HGC_init_PLEGMA_flag) {		\
+	comm_abort(value);			\
+      } else {					\
+	int init = 0;				\
+	MPI_Initialized(&init);			\
+	if(init) {				\
+	  comm_abort(value);			\
+	}					\
+      }						\
+      exit(value);				\
+    }						\
+  } while (0)
+
+#define PLEGMA_printf(...) {						\
+    if (HGC_init_PLEGMA_flag) {						\
+      sprintf(getPrintBuffer(), __VA_ARGS__);				\
+      if (getRankVerbosity()) {						\
+	fprintf(getOutputFile(), "%s", getOutputPrefix());		\
+	fprintf(getOutputFile(), "%s", getPrintBuffer());		\
+	fflush(getOutputFile());					\
       }									\
     } else {								\
       int rank = 0;							\
@@ -26,9 +44,11 @@ extern bool HGC_init_PLEGMA_flag;
 	printf(__VA_ARGS__);						\
       }									\
     }									\
-  } while (0)
+  }
 
 #define PLEGMA_error(...) do {						\
+    HGC_hold_exit = true;						\
+    HGC_options->checkErrors();						\
     if (HGC_init_PLEGMA_flag) {						\
       fprintf(getOutputFile(), "%sERROR: ", getOutputPrefix());		\
       fprintf(getOutputFile(), __VA_ARGS__);				\
@@ -40,7 +60,6 @@ extern bool HGC_init_PLEGMA_flag;
       HGC_global_vars.print();						\
       fflush(getOutputFile());						\
       quda::saveTuneCache(true);					\
-      comm_abort(1);							\
     } else {								\
       int rank = 0;							\
       MPI_Initialized(&rank);						\
@@ -50,28 +69,28 @@ extern bool HGC_init_PLEGMA_flag;
 	printf(__VA_ARGS__);						\
 	printf(" (rank %d, " __FILE__ ":%d in %s())\n",			\
 	       rank, __LINE__, __func__);				\
-	comm_abort(1);							\
       } else {								\
 	printf( "ERROR: ");						\
 	printf(__VA_ARGS__);						\
 	printf(" (" __FILE__ ":%d in %s())\n",				\
 	       __LINE__, __func__);					\
-	exit(1);							\
       }									\
     }									\
-  } while (0)
+    HGC_hold_exit = false;						\
+    PLEGMA_exit(1);							\
+  } while(0)
 
 #define PLEGMA_warning(...) do {					\
     if (HGC_init_PLEGMA_flag) {						\
-    if (getVerbosity() > QUDA_SILENT) {					\
-      sprintf(getPrintBuffer(), __VA_ARGS__);				\
-      if (getRankVerbosity()) {						\
-	fprintf(getOutputFile(), "%sWARNING: ", getOutputPrefix());	\
-	fprintf(getOutputFile(), "%s", getPrintBuffer());		\
-	fprintf(getOutputFile(), "\n");					\
-	fflush(getOutputFile());					\
+      if (getVerbosity() > QUDA_SILENT) {				\
+	sprintf(getPrintBuffer(), __VA_ARGS__);				\
+	if (getRankVerbosity()) {					\
+	  fprintf(getOutputFile(), "%sWARNING: ", getOutputPrefix());	\
+	  fprintf(getOutputFile(), "%s", getPrintBuffer());		\
+	  fprintf(getOutputFile(), "\n");				\
+	  fflush(getOutputFile());					\
+	}								\
       }									\
-    }									\
     } else {								\
       int rank = 0;							\
       MPI_Initialized(&rank);						\

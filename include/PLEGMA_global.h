@@ -21,6 +21,13 @@
 #endif
 #include <malloc.h>
 #include <new> // for availability of std::bad_alloc exception
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <assert.h>
+#include <fstream>
+#include <map>
+#include <iterator>
 
 //======== Constant values =========//
 #define PI 3.141592653589793
@@ -43,6 +50,9 @@ namespace plegma {
 
   //======== Some custom data struct =========//
 #include <global/PLEGMA_structs.h>
+
+  //======== Class for reading options from command line or file =========//
+#include <global/PLEGMA_Options.h>
 
   //======== Global constants on host and device =========//
 #include <global/PLEGMA_global_constants.h>
