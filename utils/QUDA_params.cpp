@@ -28,9 +28,9 @@ infoQuda()
     
   PLEGMA_printf("prec    sloppy_prec    link_recon  sloppy_link_recon S_dimension T_dimension\n");
   PLEGMA_printf("%s   %s             %s            %s            %d/%d/%d          %d\n",
-	     get_prec_str(prec),get_prec_str(prec_sloppy),
-	     get_recon_str(link_recon), 
-	     get_recon_str(link_recon_sloppy),  dims[0], dims[1], dims[2], dims[3]);     
+		get_prec_str(prec).c_str(),get_prec_str(prec_sloppy).c_str(),
+		get_recon_str(link_recon).c_str(), 
+		get_recon_str(link_recon_sloppy).c_str(), dims[0], dims[1], dims[2], dims[3]);     
 
   PLEGMA_printf("MG parameters\n");
   PLEGMA_printf(" - number of levels %d\n", mg_levels);
