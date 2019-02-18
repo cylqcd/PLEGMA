@@ -21,9 +21,12 @@ void plegmaOptions(Options &opt){
   isFound=opt.set("load-gauge", "Path to the gauge field, default (empty string)", verbosity, latfile);
 }
 
-template<typename T> static inline void map_to_array_MG(std::map<int,T> &tpl, T *arr, T def, T noSm, T noBig, std::string err){
-  for(int i=0; i<QUDA_MAX_MG_LEVEL; i++) arr[i] = def;
-  if(tpl.empty()) return;
+template<typename T> static inline void default_map_MG(std::map<int,T> &tpl, T def){
+  tpl.clear();
+  for(int i=0; i<QUDA_MAX_MG_LEVEL; i++) tpl.insert(std::make_pair(i,def));
+}
+
+template<typename T> static inline void map_to_array_MG(std::map<int,T> &tpl, T *arr, T noSm, T noBig, std::string err){
   typename std::map<int,T>::iterator it = tpl.begin();
   while(it != tpl.end()){
     int lvl=it->first;
@@ -35,9 +38,7 @@ template<typename T> static inline void map_to_array_MG(std::map<int,T> &tpl, T 
   }
 }
 
-template<typename T> static inline void map_to_array_MG(std::map<int,std::string> &tpl, T *arr, T def, std::function<T(const char*)> func){
-  for(int i=0; i<QUDA_MAX_MG_LEVEL; i++) arr[i] = def;
-  if(tpl.empty()) return;
+template<typename T> static inline void map_to_array_MG(std::map<int,std::string> &tpl, T *arr, std::function<T(const char*)> func){
   typename std::map<int,std::string>::iterator it = tpl.begin();
   while(it != tpl.end()){
     int lvl=it->first;
@@ -53,45 +54,61 @@ void qudaOptions(Options &opt){
   bool tmpBool;
   bool isFound;
 
-  if(verbosity>0) {
+  if(verbosity==1) {
     PLEGMA_printf("\nParameters read by qudaOptions:\n");
   } else if(verbosity>1) {
     PLEGMA_printf("\nAll parameters available in qudaOptions with read or default value:\n");
   }
-    
+
+  tmpString = get_prec_str(prec);
   isFound=opt.set("Q-prec", "Precision in the GPU, options (double,single,half), default (single)", verbosity, tmpString);
   if(isFound)prec = get_prec(tmpString.c_str());
 
+  tmpString = get_prec_str(prec);
   isFound=opt.set("Q-prec-sloppy", "Sloppy precision in the GPU, options (double,single,half), default (Q-prec)", verbosity, tmpString);
   if(isFound)prec_sloppy = get_prec(tmpString.c_str());
-
+  if (prec_sloppy == QUDA_INVALID_PRECISION) prec_sloppy = prec;
+  
+  tmpString = get_prec_str(prec);
   isFound=opt.set("Q-prec-precondition", "Preconditioner precision in the GPU, options (double,single,half),default (Q-prec)", verbosity, tmpString);
   if(isFound)prec_precondition = get_prec(tmpString.c_str());
+  if (prec_precondition == QUDA_INVALID_PRECISION) prec_precondition = prec_sloppy;
 
+  tmpString = get_prec_str(prec);
   isFound=opt.set("Q-prec-null", "NUll-vector precision in the GPU, options (double,single,half), default (Q-prec)", verbosity, tmpString);
   if(isFound)prec_null = get_prec(tmpString.c_str());
+  if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
 
+  tmpString = get_recon_str(link_recon);
   isFound=opt.set("Q-recon", "Type of link reconstruction, options (8,9,12,13,18), default (18 no reconstruction)", verbosity, tmpString);
   if(isFound)link_recon  = get_recon(tmpString.c_str());
 
+  tmpString = get_recon_str(link_recon);
   isFound=opt.set("Q-recon-sloppy", "Type of link reconstruction for sloppy, options (8,9,12,13,18), default (Q-recon)", verbosity, tmpString);
   if(isFound)link_recon_sloppy  = get_recon(tmpString.c_str());
+  if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
 
+  tmpString = get_recon_str(link_recon);
   isFound=opt.set("Q-recon-precondition", "Type of link reconstruction for precon, options (8,9,12,13,18), default (Q-recon)", verbosity, tmpString);
   if(isFound)link_recon_precondition  = get_recon(tmpString.c_str());
+  if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
 
+  tmpString = get_dslash_str(dslash_type);
   isFound=opt.set("Q-dslash-type", "Set the dslash type, options for now (twisted-mass/twisted-clover)",verbosity, tmpString);
   if(isFound) {
     if((tmpString != "twisted-mass") && (tmpString != "twisted-clover"))PLEGMA_error("Error: only twisted-mass or twisted-clover are allowed for now");
     dslash_type =  get_dslash_type(tmpString.c_str());
   }
 
+  tmpBool = (dagger == QUDA_DAG_YES);
   isFound=opt.set("Q-dagger", "In case you want the dagger operator, default (false)", verbosity, tmpBool);
   if(isFound && tmpBool) dagger = QUDA_DAG_YES;
 
+  tmpBool = kernel_pack_t;
   isFound=opt.set("Q-kernel-pack-t", "Kernel packing in the T direction, default (false)", verbosity, tmpBool);
   if(isFound && tmpBool) kernel_pack_t = true;
 
+  tmpString = get_flavor_str(twist_flavor);
   isFound=opt.set("Q-flavor", "Twisted mass type of flavor, options for now (singlet), default (singlet)", verbosity,tmpString);
   if(isFound) twist_flavor = get_flavor_type(tmpString.c_str());
 
@@ -107,9 +124,11 @@ void qudaOptions(Options &opt){
   opt.set("Q-solution-pipeline", "The pipeline length for fused solution accumulation, options (0,..,16), (default 0, no pipelining)", verbosity, solution_accumulator_pipeline);
   if (solution_accumulator_pipeline < 0 || solution_accumulator_pipeline > 16)  PLEGMA_error("Error: Invalid number [%d] for solution pipeline length\n",solution_accumulator_pipeline);
 
+  tmpString = get_solver_str(inv_type);
   isFound=opt.set("Q-inv-type", "The type of solver to use, options (cg,bicgstab,gcr), default (cg)", verbosity, tmpString);
   if(isFound) inv_type = get_solver_type(tmpString.c_str());
 
+  tmpString = get_solver_str(precon_type);
   isFound=opt.set("Q-precon-type", "The type of precon solver to use, options (mr,none), default (none)", verbosity, tmpString);
   if(isFound)precon_type = get_solver_type(tmpString.c_str());
 
@@ -117,15 +136,19 @@ void qudaOptions(Options &opt){
   opt.set("Q-mu", "Twisted mass value", verbosity, mu);
   opt.set("Q-csw", "The coefficient of the clover term", verbosity, csw);
 
+  tmpString = get_verbosity_str(verbosity_level);
   opt.set("Q-verbosity", "The verbosity of QUDA, (default summarize)", verbosity, tmpString);
   if(isFound) verbosity_level = get_verbosity_type(tmpString.c_str());
 
+  tmpString = get_mass_normalization_str(normalization);
   isFound=opt.set("Q-mass-normalization", "Normalization of the dirac operator,options (kappa,mass,asym-mass), default (kappa)", verbosity, tmpString);
   if(isFound) normalization = get_mass_normalization_type(tmpString.c_str());
 
+  tmpString = get_matpc_str(matpc_type);
   isFound=opt.set("Q-matpc", "Operator preconditioning type, options (even-even, odd-odd, even-even-asym, odd-odd-asym), default(even-even)", verbosity, tmpString);
   if(isFound) matpc_type = get_matpc_type(tmpString.c_str());
 
+  tmpString = get_solve_str(solve_type);
   isFound=opt.set("Q-solve-type", "The way to solve the system, options (direct, direct-pc, normop, normop-pc, normerr, normerr-pc), default (direct-pc)", verbosity, tmpString);
   if(isFound) solve_type = get_solve_type(tmpString.c_str());
 
@@ -137,11 +160,13 @@ void qudaOptions(Options &opt){
   opt.set("Q-mg-levels", "The number of multigrid levels to do. One level has no meaning. (default 2)", verbosity, mg_levels);
   
   std::map<int,int> tpl_int_int;
+  std::map<int,site> tpl_int_site;
   std::map<int,std::string> tpl_int_string;
   std::map<int,double> tpl_int_double;
 
+  default_map_MG(tpl_int_int, 24);
   isFound=opt.set("Q-mg-nvec", "Number of null-space vectors for multigrid, usage (level,nvec)", verbosity, tpl_int_int);
-  map_to_array_MG<int>(tpl_int_int, nvec, 24, 1, 128, "ERROR: invalid number of vectors");
+  map_to_array_MG<int>(tpl_int_int, nvec, 1, 128, "ERROR: invalid number of vectors");
 
   isFound=opt.set("Q-mg-nu-pre", "Number of pre-smoother applications, 0-20", verbosity, nu_pre);
   if(isFound) if (nu_pre < 0 || nu_pre > 20) PLEGMA_error("ERROR: invalid pre-smoother applications value (nu_pre=%d)\n", nu_pre);
@@ -149,76 +174,71 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-nu-post", "Number of post-smoother applications, 0-20", verbosity, nu_post);
   if(isFound) if (nu_post < 0 || nu_post > 20) PLEGMA_error("ERROR: invalid post-smoother applications value (nu_post=%d)\n", nu_post);
   
-  tpl_int_string.clear();
+  default_map_MG(tpl_int_string, (std::string) "bicgstab");
   isFound=opt.set("Q-mg-setup-inv", "The inverter to use for the setup of multigrid, usage(level,inv), (default bicgstab)", verbosity, tpl_int_string);
-  map_to_array_MG<QudaInverterType>(tpl_int_string, setup_inv, QUDA_BICGSTAB_INVERTER, get_solver_type);
+  map_to_array_MG<QudaInverterType>(tpl_int_string, setup_inv, get_solver_type);
 
   opt.set("Q-mg-setup-tol", "The tolerance to use for the setup of multigrid, (default 5e-6)", verbosity, setup_tol);
   opt.set("Q-mg-omega", "The over/under relaxation factor for the smoother of multigrid (default 0.85)", verbosity, omega);
 
-  tpl_int_string.clear();
+  default_map_MG(tpl_int_string, (std::string) "mr");
   isFound=opt.set("Q-mg-smoother", "The smoother to use for multigrid, usage(level,inv), (default mr)", verbosity, tpl_int_string);
-  map_to_array_MG<QudaInverterType>(tpl_int_string, smoother_type, QUDA_MR_INVERTER, get_solver_type);
+  map_to_array_MG<QudaInverterType>(tpl_int_string, smoother_type, get_solver_type);
 
-  std::vector<int> intVec;
-  isFound=opt.set("Q-mg-block-size", "Set the geometric block size for the each multigrid level's transfer operator (default 4 4 4 4)", verbosity, intVec);
-  if(isFound){
-    if(intVec.size()%5 != 0) PLEGMA_error("Error: For Q-mg-block-size format is (lvl,X,Y,Z,T)\n");
-    int nl=intVec.size()/5;
-    if(mg_levels != (nl+1)) PLEGMA_error("Error: Check that Q-mg-levels agrees with the number of levels provided in the blocks\n");
-    for(int i = 0; i < nl; i++)
-      for(int j = 0; j < 4; j++)
-	mg_block_size[intVec[i*5]][j]=intVec[i*5+1+j];
+  default_map_MG(tpl_int_site, (site) (std::array<int,4>) {2,2,2,2});
+  tpl_int_site[0] = site({4,4,4,4});
+  isFound=opt.set("Q-mg-block-size", "Set the geometric block size for the each multigrid level's transfer operator (default 4 4 4 4)", verbosity, tpl_int_site);
+  { // custom map_to_array for site tuple. If needed more often create function.
+    auto it = tpl_int_site.begin();
+    while(it != tpl_int_site.end()){
+      int lvl=it->first;
+      site val = it->second;
+      if(lvl < 0 || lvl >= QUDA_MAX_MG_LEVEL) PLEGMA_error("ERROR: invalid multigrid level %d", lvl);
+      for(int j=0; j<N_DIMS; j++) {
+	mg_block_size[lvl][j]=val.x[j];
+      }
+      it++;
+    }
   }
 
-  tpl_int_double.clear();
+  default_map_MG(tpl_int_double, 1.0);
   isFound=opt.set("Q-mg-mu-factor", "Set the multiplicative factor for the twisted mass mu parameter on each level, usage(level,float), (default 1)", verbosity, tpl_int_double);
-  map_to_array_MG<double>(tpl_int_double, mu_factor, 1, 0, 100, "ERROR: invalid mu factor for the multigrid");
+  map_to_array_MG<double>(tpl_int_double, mu_factor, 0, 100, "ERROR: invalid mu factor for the multigrid");
 
-  tpl_int_string.clear();
+  default_map_MG(tpl_int_string, (std::string) "summarize");
   isFound=opt.set("Q-mg-verbosity", "The verbosity to use on each level of the multigrid, usage(level, verb), (default summarize)", verbosity, tpl_int_string);
-  map_to_array_MG<QudaVerbosity>(tpl_int_string, mg_verbosity, QUDA_SUMMARIZE, get_verbosity_type);
+  map_to_array_MG<QudaVerbosity>(tpl_int_string, mg_verbosity, get_verbosity_type);
     
-  //==============================================//
-  // KH: From now on does not exist in the QUDA 0.9. Do we need them?
-  tpl_int_string.clear();
+  default_map_MG(tpl_int_string, (std::string) "gcr");
   isFound=opt.set("Q-mg-coarse-solver", "The solver to wrap the V cycle on each level, usage(level,inv), (default gcr, only for levels 1+)", verbosity, tpl_int_string);
-  map_to_array_MG<QudaInverterType>(tpl_int_string, coarse_solver, QUDA_GCR_INVERTER, get_solver_type);
+  map_to_array_MG<QudaInverterType>(tpl_int_string, coarse_solver, get_solver_type);
 
-  tpl_int_double.clear();
+  default_map_MG(tpl_int_double, 0.25);
   isFound=opt.set("Q-mg-coarse-solver-tol", "The coarse solver tolerance for each level, usage(level,float(0,1)), (default 0.25, only for levels 1+)", verbosity, tpl_int_double);
-  map_to_array_MG<double>(tpl_int_double, coarse_solver_tol, 0.25, 0, 1, "ERROR: invalid tolerance for the MG coarse solver");
+  map_to_array_MG<double>(tpl_int_double, coarse_solver_tol, 0, 1, "ERROR: invalid tolerance for the MG coarse solver");
 
-  tpl_int_int.clear();
+  default_map_MG(tpl_int_int, 100);
   isFound=opt.set("Q-mg-coarse-solver-maxiter", "The coarse solver maxiter for each level, usage(level,int), (default 100)", verbosity, tpl_int_int);
-  map_to_array_MG<int>(tpl_int_int, coarse_solver_maxiter, 100, 0, 10000, "ERROR: invalid max number of MG setup coarse solver max iter");
+  map_to_array_MG<int>(tpl_int_int, coarse_solver_maxiter, 0, 10000, "ERROR: invalid max number of MG setup coarse solver max iter");
 
-  tpl_int_string.clear();
+  default_map_MG(tpl_int_string, (std::string) "false");
   isFound=opt.set("Q-mg-schwarz-type", "Whether to use Schwarz preconditioning (requires MR smoother and GCR setup solver), usage(level,add/mul) (default false)", verbosity,tpl_int_string);
-  map_to_array_MG<QudaSchwarzType>(tpl_int_string, schwarz_type, QUDA_INVALID_SCHWARZ, get_schwarz_type);
+  map_to_array_MG<QudaSchwarzType>(tpl_int_string, schwarz_type, get_schwarz_type);
 
-  tpl_int_int.clear();
+  default_map_MG(tpl_int_int, 1);
   isFound=opt.set("Q-mg-schwarz-cycle", "The number of Schwarz cycles to apply per smoother application, usage(level,int), (default=1)", verbosity, tpl_int_int);
-  map_to_array_MG<int>(tpl_int_int, schwarz_cycle, 1, 0, 127, "ERROR: invalid Schwarz cycle value requested");
+  map_to_array_MG<int>(tpl_int_int, schwarz_cycle, 0, 127, "ERROR: invalid Schwarz cycle value requested");
 
-  tpl_int_double.clear();
+  default_map_MG(tpl_int_double, 0.25);
   isFound=opt.set("Q-mg-smoother-tol", "The smoother tolerance to use for each multigrid, usage(level,float(0,1)), (default 0.25)", verbosity, tpl_int_double);
-  map_to_array_MG<double>(tpl_int_double, smoother_tol, 0.25, 0, 1, "ERROR: invalid tolerance for the MG smoother");
+  map_to_array_MG<double>(tpl_int_double, smoother_tol, 0, 1, "ERROR: invalid tolerance for the MG smoother");
 
-  tpl_int_int.clear();
+  default_map_MG(tpl_int_int, 1);
   isFound=opt.set("Q-mg-setup-iters", "The number of setup iterations to use for the multigrid, usage (level,int), (default 1)", verbosity, tpl_int_int);
-  map_to_array_MG<int>(tpl_int_int, num_setup_iter, 1, 0, 10, "ERROR: invalid max number of MG setup iterations refresh");
+  map_to_array_MG<int>(tpl_int_int, num_setup_iter, 0, 10, "ERROR: invalid max number of MG setup iterations refresh");
   
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid (default false)", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid (default false)", verbosity, post_orthonormalize);
-
-  // Cross-referencing in case have not been set
-  if (prec_sloppy == QUDA_INVALID_PRECISION) prec_sloppy = prec;
-  if (prec_precondition == QUDA_INVALID_PRECISION) prec_precondition = prec_sloppy;
-  if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
-  if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
-  if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
-
 }
 
   //  isFound=opt.set("Q-prec-refine", "Sloppy precision for refinement in the GPU, options (double,single,half),default (invalid)", visualize, tmpString);
