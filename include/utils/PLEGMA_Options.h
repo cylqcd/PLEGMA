@@ -179,24 +179,23 @@ private:
   template<typename T>
   void set(std::string name,std::stringstream &cs, T &v){
     bool check;
-    if(typeid(T) == typeid(bool)){
-      std::string tmp;
-      check = static_cast<bool> ( cs >> tmp );
-      if(!check){
-	errorCollection.push_back("Error: Not enough arguments to unpack for option [" + name + "]");
-	return;
-      }
-      if(tmp == "true")
-	v = true;
-      else if(tmp == "false")
-	v = false;
-      else
-	errorCollection.push_back("Error: Boolean variable [" + name +"] accept either true or false ");
+    check = static_cast<bool>(cs >> v);
+    if(!check) errorCollection.push_back("Error: Not enough arguments to unpack for option [" + name + "]");
+  }
+  void set(std::string name,std::stringstream &cs, bool &v){
+    bool check;
+    std::string tmp;
+    check = static_cast<bool> ( cs >> tmp );
+    if(!check){
+      errorCollection.push_back("Error: Not enough arguments to unpack for option [" + name + "]");
+      return;
     }
-    else{
-      check = static_cast<bool>(cs >> v);
-      if(!check) errorCollection.push_back("Error: Not enough arguments to unpack for option [" + name + "]");
-    }
+    if(tmp == "true")
+      v = true;
+    else if(tmp == "false")
+      v = false;
+    else
+      errorCollection.push_back("Error: Boolean variable [" + name +"] accept either true or false ");
   }
     
   template<typename T, typename... Pars>
@@ -370,7 +369,12 @@ public:
 	  T2 t2;
 	  set(name,cs,t1);
 	  set(name,cs,t2);
-	  tpl.insert(std::make_pair(t1, t2));
+	  auto search = tpl.find(2);
+	  if (search != tpl.end()) {
+	    tpl[t1] = t2;
+	  } else {
+	    tpl.insert(std::make_pair(t1, t2));
+	  }
 	}
 	args.erase(args.begin()+i);
 	countF++;
