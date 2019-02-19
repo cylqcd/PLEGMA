@@ -574,7 +574,6 @@ static void hostCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatI
 template<typename FloatOut>
 template<typename FloatIn>
 void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where){
-  if(bytes_total_length != f.Bytes_total()) PLEGMA_error("Size of the fields does not match\n");
   if(field_length != f.Field_length()) PLEGMA_error("The d.o.f of the fields does not match\n");
   switch(where){
   case(HOST):
@@ -589,7 +588,7 @@ void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG wher
     if(!isAllocHost || !f.IsAllocHost() ) PLEGMA_error("Allocation flags do not match for copying\n");
     hostCopyOrCast(*this, f);
     if(!isAllocDevice || !f.IsAllocDevice() ) PLEGMA_error("Allocation flags do not match for copying\n");
-    hostCopyOrCast(*this, f);
+    cudaCopyOrCast(*this, f);
     break;
   }
 }
