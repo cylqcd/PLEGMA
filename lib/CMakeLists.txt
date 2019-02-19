@@ -1,4 +1,4 @@
-set (QUDA_OBJS 
+set (PLEGMA_OBJS 
   PLEGMA_Correlator.cu
   PLEGMA.cu
   PLEGMA_Propagator.cu
@@ -19,7 +19,7 @@ set (QUDA_OBJS
 )
 
 if(PLEGMA_ALL_BARYONS)
-  LIST(APPEND QUDA_OBJS
+  LIST(APPEND PLEGMA_OBJS
     kernels/PLEGMA_baryons_NtoR.cu
     kernels/PLEGMA_baryons_RtoN.cu
     kernels/PLEGMA_baryons_RtoR.cu
@@ -28,17 +28,17 @@ if(PLEGMA_ALL_BARYONS)
 endif()
 
 ## split source into cu and cpp files
-FOREACH(item ${QUDA_OBJS})
+FOREACH(item ${PLEGMA_OBJS})
   STRING(REGEX MATCH ".+\\.cu$" item_match ${item})
   IF(item_match)
     LIST(APPEND QUDA_CU_OBJS ${item})
   ENDIF(item_match)
-ENDFOREACH(item ${QUDA_OBJS})
+ENDFOREACH(item ${PLEGMA_OBJS})
 
-LIST(REMOVE_ITEM QUDA_OBJS ${QUDA_CU_OBJS})
+LIST(REMOVE_ITEM PLEGMA_OBJS ${QUDA_CU_OBJS})
 
 # QUDA_CU_OBJS shoudl contain all cuda files now
-# QUDA_OBJS all c, cpp, fortran sources
+# PLEGMA_OBJS all c, cpp, fortran sources
 
 # include_directories
 include_directories(${QUDA_HOME}/lib/)
@@ -58,8 +58,8 @@ endif(PLEGMA_ARPACK)
 set(PLEGMA_LIB ${QUDA_CU_OBJS})
 
 # generate a cmake object library for all cpp files first
-if(QUDA_OBJS)
-  add_library(PLEGMA_cpp OBJECT ${QUDA_OBJS})
+if(PLEGMA_OBJS)
+  add_library(PLEGMA_cpp OBJECT ${PLEGMA_OBJS})
 
   # add some definitions that cause issues with cmake 3.7 and nvcc only to cpp files 
   target_compile_definitions(PLEGMA_cpp PUBLIC -DQUDA_HASH="${HASH}")
@@ -109,6 +109,7 @@ endif(PLEGMA_MKL)
 FIND_LIBRARY(CUDA_CUDA_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
 
 target_link_libraries(PLEGMA ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${QUDA_LIBS} ${CUDA_CUDA_LIBRARY})
+add_dependencies(PLEGMA BoostPP)
 
 if(QUDA_QMP)
   target_link_libraries(PLEGMA ${QMP_LIB} ${MPI_CXX_LIBRARIES})
