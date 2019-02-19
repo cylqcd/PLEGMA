@@ -9,7 +9,7 @@ struct KernelArr {T* array; int size;};
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink, int dir, bool isCons>
 __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex, su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas, int it, int x0, int y0, int z0, int signProps){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*c_stride_spatial;
+  int vid = sid + it*DGC_stride_spatial;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
   Float2<FloatC> R[N_SPINS][N_SPINS];
@@ -119,7 +119,7 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT,
 			    isLink, dir,isCons>
     <<<gridDim,blockDim>>>(d_partial_block, prop1, prop2, su3, listGammas, it,
-			   source, signProps);
+			   source.x,source.y,source.z, signProps);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;

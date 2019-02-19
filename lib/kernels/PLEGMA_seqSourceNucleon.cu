@@ -11,7 +11,7 @@ template<typename FloatC, typename FloatA, typename FloatB, bool isTwoPropDiff, 
 __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
-  size_t space_stride = c_stride/DGC_localL[3];
+  size_t space_stride = DGC_stride/DGC_localL[3];
   sidStride ss(sid,space_stride);
   if(sid >= space_stride) return;
   Float2<FloatC> *vec2 = (Float2<FloatC> *) vec;
@@ -85,7 +85,7 @@ __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, 
   for(short mu = 0 ; mu < 4 ; mu++)
 #pragma unroll
     for(short ic = 0 ; ic < 3 ; ic++)
-      vec2[(mu*N_COLS + ic)*c_stride + timeslice*space_stride + sid] = spinor[mu][ic];
+      vec2[(mu*N_COLS + ic)*DGC_stride + timeslice*space_stride + sid] = spinor[mu][ic];
 #endif
 }
 
