@@ -232,8 +232,8 @@ void EigSolver::print(){
 #endif
   if(p.isACC) PLEGMA_printf("Using Polynomial acceleration with parameters: Degree=%d, amin=%+e, amax=%+e\n",p.PolyDeg,p.amin,p.amax);
   PLEGMA_printf("Part of the spectrum to be computed: %s",p.spectrumPart.c_str());
-  if(p.isACC) PLEGMA_printf("\n Flipped due to polynomial acceleration\n");
-  else PLEGMA_printf("\n");
+  if(p.isACC){ PLEGMA_printf("\n Flipped due to polynomial acceleration\n");}
+  else{ PLEGMA_printf("\n");}
   PLEGMA_printf("Tolerance for eigenSolver is %+e\n",p.tol);
   PLEGMA_printf("Max number of iterations for eigenSolver is %d\n",p.maxIters);
 #if defined(HAVE_ARPACK)
@@ -391,8 +391,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
     checkCudaError();
     V.copy(g5V);
     g5V.apply_gamma(G5);
-    std::complex<double> res;
-    cuBLAS::dot(reinterpret_cast<double(&)[2]>(res), size_per_Vec, V.D_elem(), g5V.D_elem(),MPI_COMM_WORLD);
+    std::complex<double> res = cuBLAS::dot(size_per_Vec, V.D_elem(), g5V.D_elem(),MPI_COMM_WORLD);
     VdagG5V.push_back(res.real());
   }
   if(comm_rank() == 0){
