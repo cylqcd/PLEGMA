@@ -8,7 +8,7 @@ inline void readSourceList() {
   hostMalloc(sourcePositions, N_DIMS*numSourcePositions*sizeof(int));
   std::ifstream file(pathListSourcePositions.c_str(), std::ifstream::in);
   int i=0;
-  while (!file.eof() || i<N_DIMS*numSourcePositions) {
+  while (!file.eof() && i<N_DIMS*numSourcePositions) {
     file >> sourcePositions[i/N_DIMS][i%N_DIMS];
     i++;
   }
@@ -29,7 +29,7 @@ inline void readTSinkList() {
   hostMalloc(tSink, numTSink*sizeof(tSink));
   std::ifstream file(pathListTSink.c_str(), std::ifstream::in);
   int i=0;
-  while (!file.eof() || i<numTSink) {
+  while (!file.eof() && i<numTSink) {
     file >> tSink[i];
     i++;
   }
@@ -52,7 +52,7 @@ inline void readProjList() {
   int i=0;
   std::string tmpString;
   std::string proj_str[]={"P4_P","P4G5G1_P","P4G5G3_P","P4_M","P4G5G1_M","P4G5G2_M","P4G5G3_M"};
-  while (!file.eof() || i<numProj) {
+  while (!file.eof() && i<numProj) {
     file >> tmpString;
     std::string *p = std::find (proj_str, proj_str+(int)N_PROJS, tmpString);
     proj[i] = (WHICHPROJECTOR) (int) (p - proj_str);
