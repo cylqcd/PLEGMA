@@ -92,7 +92,7 @@ static inline void applyAntiperiodicBoundary(Float **buf)
 
   // Apply boundary conditions to temporal links
   if (last_node_in_t) {
-    int gSize = N_DIMS*N_DIMS*2;
+    int gSize = N_COLS*N_COLS*2;
     size_t Vh = dims[0]*dims[1]*dims[2]*dims[3]/2;
     for (int j = Vh-dims[0]*dims[1]*dims[2]/2; j < Vh; j++) {
       for (int i = 0; i < gSize; i++) {
