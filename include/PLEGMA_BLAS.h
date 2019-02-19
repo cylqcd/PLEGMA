@@ -143,27 +143,6 @@ namespace cuBLAS{
   }
   //-----------------------------------------------------------------
   template<typename Float>
-  inline void dot(Float res[2],int NN, const Float *x, const Float *y, MPI_Comm comm);
-  template<>
-  inline void dot<float>(float res[2], int NN, const float *x, const float *y, MPI_Comm comm){
-    if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
-    cuComplex cu_res;
-    cublasStatus_t error = cublasCdotc(HGC_cublas_handle, NN,(cuComplex*)x, 1, (cuComplex*)y,1,&cu_res);
-    if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasCdotc failed with error %d", error);
-    int mpiErr = MPI_Allreduce((float*) &cu_res, res, 2, MPI_FLOAT, MPI_SUM, comm);
-    if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
-  }
-  template<>
-  inline void dot<double>(double res[2], int NN, const double *x, const double *y, MPI_Comm comm){
-    if(comm == MPI_COMM_NULL) errorQuda("Communicator is NULL and cannot be used for MPI reduction");
-    cuDoubleComplex cu_res;
-    cublasStatus_t error = cublasZdotc(HGC_cublas_handle, NN,(cuDoubleComplex*)x, 1, (cuDoubleComplex*)y,1,&cu_res);
-    if(error != CUBLAS_STATUS_SUCCESS) errorQuda("cublasZdotc failed with error %d", error);
-    int mpiErr = MPI_Allreduce((double*) &cu_res, res, 2, MPI_DOUBLE, MPI_SUM, comm);
-    if(mpiErr != MPI_SUCCESS) errorQuda("MPI_Allreduce failed with error %d\n", mpiErr);
-  }  
-  //-----------------------------------------------------------------
-  template<typename Float>
   inline std::complex<Float> dot(int NN, const Float *x, const Float *y);
   template<>
   inline std::complex<float> dot<float>(int NN, const float *x, const float *y){
@@ -184,11 +163,10 @@ namespace cuBLAS{
     if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
     std::complex<Float> result, res = cuBLAS::dot(NN, x, y);
     int mpiErr = MPI_Allreduce((Float*) &res, (Float*) &result, 2,
-			       MPI_Type<Float>(), MPI_SUM, comm);
+  			       MPI_Type<Float>(), MPI_SUM, comm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
     return result;
-  }
-  
+  }  
   //-----------------------------------------------------------------
   template<typename Float>
   inline Float norm(int NN, const Float *x);
