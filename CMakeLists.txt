@@ -47,10 +47,15 @@ else()
   set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
   ExternalProject_Add(BoostPP
     GIT_REPOSITORY https://github.com/boostorg/preprocessor
-    STEP_TARGETS build
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+    UPDATE_COMMAND ""
+    LOG_DOWNLOAD ON
     EXCLUDE_FROM_ALL TRUE
   )
-  include_directories(${CMAKE_BINARY_DIR}/BoostPP-prefix/src/BoostPP/include)
+  ExternalProject_Get_Property(BoostPP DOWNLOAD_DIR)
+  include_directories(${DOWNLOAD_DIR}/BoostPP/include)
 endif()
 
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG HOSTDEBUG DEVICEDEBUG)

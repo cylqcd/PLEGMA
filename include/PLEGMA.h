@@ -1,5 +1,6 @@
 #pragma once
 #include <PLEGMA_global.h>
+#include <utils/PLEGMA_lime.h>
 #include <PLEGMA_Field.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Su3field.h>

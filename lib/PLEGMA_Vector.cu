@@ -1,7 +1,6 @@
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Propagator.h>
-#include <PLEGMA_lime.h>
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
 #include <PLEGMA_covD.cuh>
@@ -412,10 +411,10 @@ void PLEGMA_Vector<Float>::write(char *filename){
 		    x*4*3*2 + mu*3*2 + c1*2 + 1]);
       i+=2;
     }
-  if(!qcd_isBigEndian()){
+  if(!isBigEndian()){
     if( typeid(Float) == typeid(double) ) 
-      qcd_swap_8((double*) buffer,2*4*3*HGC_localVolume);
-    else qcd_swap_4((float*) buffer,2*4*3*HGC_localVolume);
+      swap_8((double*) buffer,2*4*3*HGC_localVolume);
+    else swap_4((float*) buffer,2*4*3*HGC_localVolume);
   }
   if( typeid(Float) == typeid(double) )
     MPI_File_write_all(mpifid, buffer, 4*3*2*HGC_localVolume, 

@@ -24,7 +24,7 @@ extern class Options * HGC_options;
     }						\
   } while (0)
 
-#define PLEGMA_printf(...) {						\
+#define PLEGMA_printf(...) do {						\
     if (HGC_init_PLEGMA_flag) {						\
       sprintf(getPrintBuffer(), __VA_ARGS__);				\
       if (getRankVerbosity()) {						\
@@ -44,7 +44,7 @@ extern class Options * HGC_options;
 	printf(__VA_ARGS__);						\
       }									\
     }									\
-  }
+  } while(0)
 
 #define PLEGMA_error(...) do {						\
     HGC_hold_exit = true;						\
