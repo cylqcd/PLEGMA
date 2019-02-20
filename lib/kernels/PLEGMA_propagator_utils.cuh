@@ -45,11 +45,11 @@ static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
 	// inline shuffling
         #pragma unroll
 	for(int mu = 0 ; mu < N_SPINS ; mu++)
-	  spinor[(mu+2)%4] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid];
+	  spinor[(mu+2)%4] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid];
 	// replacing
         #pragma unroll
 	for(int mu = 0 ; mu < N_SPINS ; mu++)
-	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid] = spinor[mu];
+	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid] = spinor[mu];
   }
 
 }
@@ -69,7 +69,7 @@ static __global__ void conjugate_propagator_kernel(Float *inOut){
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++)
-    inOut[(i*DGC_stride + sid)*2 + 1] *= -1.;
+    inOut[(i*DGC_localVolume + sid)*2 + 1] *= -1.;
 }
 
 template<typename Float>
@@ -91,8 +91,8 @@ static __global__ void apply_boundaries_kernel(Float *inOut, int t0){
   if( t < t0 ) {
 #pragma unroll
     for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++) {
-      inOut[(i*DGC_stride + sid)*2 + 0] *= -1.;
-      inOut[(i*DGC_stride + sid)*2 + 1] *= -1.;
+      inOut[(i*DGC_localVolume + sid)*2 + 0] *= -1.;
+      inOut[(i*DGC_localVolume + sid)*2 + 1] *= -1.;
     }
   }
 }
@@ -125,7 +125,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
       for(int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
 	for(int nu = 0 ; nu < N_SPINS; nu++)
-	  P[mu][nu] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid];
+	  P[mu][nu] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid];
 
       // shuffling
       #pragma unroll
@@ -139,7 +139,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
       for(int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
 	for(int nu = 0 ; nu < N_SPINS; nu++)
-	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_stride + sid] = PT[mu][nu];
+	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid] = PT[mu][nu];
     }
 
 }

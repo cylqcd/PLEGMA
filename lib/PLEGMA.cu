@@ -48,9 +48,8 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
       HGC_localVolume *= HGC_localL[i];
       HGC_totalVolume *= HGC_totalL[i];
     }
-
-    HGC_stride = HGC_localVolume;
-    HGC_stride_spatial = HGC_localVolume/HGC_localL[3];
+    HGC_localVolume3D = HGC_localVolume/HGC_localL[3];
+    
     for (int i=0; i<N_DIMS; i++) {
       if(HGC_dimBreak[i]) {
 	HGC_surface3D[i] = 1;

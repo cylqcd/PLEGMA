@@ -47,7 +47,7 @@ namespace plegma {
     size_t sid;
     size_t stride;
     inline __device__ sidStride() = default; 
-    inline __device__ sidStride(size_t sid, size_t stride=DGC_stride) {
+    inline __device__ sidStride(size_t sid, size_t stride=DGC_localVolume) {
       this->sid = sid;
       this->stride = stride;      
     }  
@@ -61,14 +61,14 @@ namespace plegma {
     size_t id[4] = GET_ID(sid);
     bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
     this->sid = plus_ghost ? (DGC_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-    this->stride = plus_ghost ? DGC_surface3D[dirPlus] : DGC_stride;
+    this->stride = plus_ghost ? DGC_surface3D[dirPlus] : DGC_localVolume;
   }
   template<>
   inline __device__ void sidStride::setSidStride<Minus>(size_t sid, const int offset, short int dirMinus) {
     size_t id[4] = GET_ID(sid);
     bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
     this->sid = minus_ghost ? (DGC_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-    this->stride = minus_ghost ? DGC_surface3D[dirMinus] : DGC_stride;
+    this->stride = minus_ghost ? DGC_surface3D[dirMinus] : DGC_localVolume;
   }
   template<>
   inline __device__ void sidStride::setSidStride<PlusPlus>(size_t sid, const int offset, short int dirPlus1, short int dirPlus2) {
@@ -92,7 +92,7 @@ namespace plegma {
 	this->stride = DGC_surface3D[dirPlus2];
       } else {
 	this->sid = LEXIC_ID(id);
-	this->stride = DGC_stride;
+	this->stride = DGC_localVolume;
       }
     }
   }
@@ -118,7 +118,7 @@ namespace plegma {
 	this->stride = DGC_surface3D[dirMinus2];
       } else {
 	this->sid = LEXIC_ID(id);
-	this->stride = DGC_stride;
+	this->stride = DGC_localVolume;
       }
     }
   }
@@ -126,7 +126,7 @@ namespace plegma {
   inline __device__ void sidStride::setSidStride<PlusMinus>(size_t sid, const int offset, short int dirPlus, short int dirMinus) {
     if(dirPlus == dirMinus) {
       this->sid = sid;
-      this->stride = DGC_stride;      
+      this->stride = DGC_localVolume;      
     } else {
       size_t id[4] = GET_ID(sid);
       bool plus_ghost = DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1);
@@ -145,7 +145,7 @@ namespace plegma {
 	this->stride = DGC_surface3D[dirMinus];
       } else {
 	this->sid = LEXIC_ID(id);
-	this->stride = DGC_stride;
+	this->stride = DGC_localVolume;
       }
     }
   }

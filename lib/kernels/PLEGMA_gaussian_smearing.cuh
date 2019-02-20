@@ -46,7 +46,7 @@ __global__ void gaussian_smearing_kernel(FloatOut* out,
   #pragma unroll
     for(int mu=0; mu<N_SPINS; mu++) 
       for(int c=0; c<N_COLS; c++)
-	out2[(mu*N_COLS + c)*DGC_stride + sid] = normalize *
+	out2[(mu*N_COLS + c)*DGC_localVolume + sid] = normalize *
 	  (S[mu][c] + alpha * tmp[mu][c]);
 }
 

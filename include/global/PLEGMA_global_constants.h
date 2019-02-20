@@ -65,9 +65,8 @@ global_host(bool, hold_exit);
 
 // variables visible on both host and device
 global_both(tex_mom_list, moms);
-global_both(size_t, stride);
-global_both(size_t, stride_spatial);
 global_both(size_t, localVolume);
+global_both(size_t, localVolume3D);
 global_both(size_t, totalVolume);
 global_both(int, localL, N_DIMS);
 global_both(int, totalL, N_DIMS);

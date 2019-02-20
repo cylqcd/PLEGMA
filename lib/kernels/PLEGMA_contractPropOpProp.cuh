@@ -9,12 +9,12 @@ struct KernelArr {T* array; int size;};
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink, int dir, bool isCons>
 __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex, su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas, int it, int x0, int y0, int z0, int signProps){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*DGC_stride_spatial;
+  int vid = sid + it*DGC_localVolume3D;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
   Float2<FloatC> R[N_SPINS][N_SPINS];
   Float2<FloatC> noeV;  
-  if (sid < DGC_localVolume/DGC_localL[3]){
+  if (sid < DGC_localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     if(dir < 0){ // either local or Wilson line
@@ -61,7 +61,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
   for(int iop = 0; iop < listGammas.size; iop++){
     int opId=listGammas.array[iop];
     accum.x=0.;accum.y=0.;
-    if (sid < DGC_localVolume/DGC_localL[3]){
+    if (sid < DGC_localVolume3D){
       if(isCons) accum = 0.25*noeV;
       else accum = (dir<0 ? 1. : 0.25) * ( (signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
     }
@@ -72,7 +72,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
       fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos,listGammas.size-1,+1);
     }
     else{
-      if (sid < DGC_localVolume/DGC_localL[3])
+      if (sid < DGC_localVolume3D)
 	for(int iop = 0; iop < listGammas.size; iop++)
 	  block2[sid*listGammas.size +iop] = accum;
     }

@@ -34,7 +34,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
 					int it, int3 source, BARYONS_TYPE ip){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*DGC_stride_spatial;
+  int vid = sid + it*DGC_localVolume3D;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
   Float2<FloatC> accum[2*N_SPINS*N_SPINS];
@@ -42,7 +42,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
   for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
     accum[i]=0;
   }
-  if (sid < DGC_localVolume/DGC_localL[3]){ // I work only on the spatial volume
+  if (sid < DGC_localVolume3D){ // I work only on the spatial volume
     switch(ip){
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);

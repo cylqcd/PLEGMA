@@ -46,11 +46,11 @@ static __global__ void apply_gamma5_vector_kernel(Float *inOut){
     // inline shuffling
     #pragma unroll
     for(int mu = 0 ; mu < N_SPINS ; mu++)
-      spinor[(mu+2)%4] = inOut2[(mu*N_COLS+c1)*DGC_stride + sid];
+      spinor[(mu+2)%4] = inOut2[(mu*N_COLS+c1)*DGC_localVolume + sid];
     // replacing
     #pragma unroll
     for(int mu = 0 ; mu < N_SPINS ; mu++)
-      inOut2[(mu*N_COLS+c1)*DGC_stride + sid] = spinor[mu];
+      inOut2[(mu*N_COLS+c1)*DGC_localVolume + sid] = spinor[mu];
   }
 
 }
@@ -73,7 +73,7 @@ static __global__ void conjugate_vector_kernel(Float *inOut){
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_COLS ; i++)
-    inOut[(i*DGC_stride + sid)*2 + 1] *= -1.;
+    inOut[(i*DGC_localVolume + sid)*2 + 1] *= -1.;
 }
 
 template<typename Float>
@@ -91,8 +91,8 @@ __inline__ __global__ void scale_vector_kernel(Float a, Float* inOut){
 
   #pragma unroll
   for(int i = 0 ; i < N_SPINS*N_COLS ; i++) {
-    inOut[(i*DGC_stride + sid)*2 + 0] *= a;
-    inOut[(i*DGC_stride + sid)*2 + 1] *= a;
+    inOut[(i*DGC_localVolume + sid)*2 + 0] *= a;
+    inOut[(i*DGC_localVolume + sid)*2 + 1] *= a;
   }
 }
 
@@ -116,7 +116,7 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
   if (sid >= DGC_localVolume/2) return;
 
   // take indices on 4d lattice
-  int half_stride = DGC_stride/2;
+  int half_stride = DGC_localVolume/2;
   int latt_coord = 2*sid;
 
   int r1,r2,x_id,y_id,z_id,t_id;
@@ -138,13 +138,13 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
     for(int ic = 0 ; ic < N_COLS ; ic++){
       if(outEvenB) {
 	outEven2[(mu*N_COLS + ic)*half_stride + sid] =
-	  in2[(mu*N_COLS + ic)*DGC_stride + latt_coord + evenSiteBit];
+	  in2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + evenSiteBit];
       } else
 	outEven2[(mu*N_COLS + ic)*half_stride + sid] = 0.;
 
       if(outOddB) {
 	outOdd2[(mu*N_COLS + ic)*half_stride + sid] =
-	  in2[(mu*N_COLS + ic)*DGC_stride + latt_coord + oddSiteBit];
+	  in2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + oddSiteBit];
       } else
 	outOdd2[(mu*N_COLS + ic)*half_stride + sid] = 0.;
     }
@@ -182,7 +182,7 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_localVolume/2) return;
 
-  int half_stride = DGC_stride/2;
+  int half_stride = DGC_localVolume/2;
   int latt_coord = 2*sid;
 
   int r1,r2,x_id,y_id,z_id,t_id;
@@ -203,16 +203,16 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
     #pragma unroll
     for(int ic = 0 ; ic < N_COLS ; ic++) {
       if(inEvenB) {
-	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + evenSiteBit] =
+	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + evenSiteBit] =
 	  inEven2[(mu*N_COLS + ic)*half_stride + sid];
       } else
-	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + evenSiteBit] = 0.;
+	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + evenSiteBit] = 0.;
 
       if(inOddB) {
-	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + oddSiteBit] =
+	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + oddSiteBit] =
 	  inOdd2[(mu*N_COLS + ic)*half_stride + sid];
       } else
-	out2[(mu*N_COLS + ic)*DGC_stride + latt_coord + oddSiteBit] = 0.;
+	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + oddSiteBit] = 0.;
     }
   }
 }

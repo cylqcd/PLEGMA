@@ -13,7 +13,7 @@ __global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
 					int it, int3 source){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*DGC_stride_spatial;
+  int vid = sid + it*DGC_localVolume3D;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
     
   register Float2<FloatC> accum[2*N_MESONS];
@@ -21,7 +21,7 @@ __global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
     accum[i] = 0.;
   }
 
-  if (sid < DGC_localVolume/DGC_localL[3]){ // run only on the spatial volume
+  if (sid < DGC_localVolume3D){ // run only on the spatial volume
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     texProp1.get(prop1,vid);
