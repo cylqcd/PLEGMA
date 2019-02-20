@@ -167,7 +167,7 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
   PLEGMA_printf("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
   for(int idir = 0; idir < N_DIMS; idir++){
     gsu3.absorbDir_device(gauge,idir);
-    gsu3.communicateGhost(idir+N_DIMS); // later do only the direction we are interested in
+    gsu3.communicateGhost(idir+N_DIMS);
     for(int it = 0; it < HGC_localL[3]; it++)
       funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,it, idir,gammas);
   }
@@ -360,7 +360,7 @@ writeASCII(const char *filename_out) {
 	  int ipos = (it_shift*Nmoms + imom)*site_size;
 	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, momV[imom][0], momV[imom][1], momV[imom][2]);
 	  for(int is = 0; is<site_size; is++)
-	    fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2], corrGlobal[ipos*2+1]);
+	    fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2+is*2], corrGlobal[ipos*2+is*2+1]);
 	  fprintf(ptr_out, "\n");
 	}
       }
