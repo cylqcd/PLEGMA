@@ -94,6 +94,7 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   int3 source = corr.getSource3();
 
   int shift = (dir<0) ? 0 : dir*gammas.size()*2;
+  int Mshift = (dir<0) ? 1 : N_DIMS;
   if(dir <  0){
     if(corr.getSiteSize() != site_size)
       PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
@@ -154,9 +155,9 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   FloatC *corr_pt = corr.getCorr();
   for(size_t v = 0 ; v < volume; v++)
     for(int i = 0 ; i < gammas.size(); i++) {
-      corr_pt[it*volume*site_size*2+v*site_size*2+shift+i*2+0] =
+      corr_pt[it*volume*Mshift*site_size*2+v*Mshift*site_size*2+shift+i*2+0] =
 	h_partial_block[(v*gammas.size()+i)*2+0];
-      corr_pt[it*volume*site_size*2+v*site_size*2+shift+i*2+1] =
+      corr_pt[it*volume*Mshift*site_size*2+v*Mshift*site_size*2+shift+i*2+1] =
 	h_partial_block[(v*gammas.size()+i)*2+1];
     }
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
