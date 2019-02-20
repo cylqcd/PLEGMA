@@ -6,7 +6,7 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
-  initialize(argc, argv);
+  initialize(argc, argv, true);
 
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
@@ -15,7 +15,7 @@ int main(int argc, char **argv)
   gauge.calculatePlaq();
 
   // Loading to QUDA and computing plaquette also there
-  initGaugeQuda(gauge, true);
+  initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
   plaqQuda();
 
   // Smearing
@@ -43,7 +43,7 @@ int main(int argc, char **argv)
   PLEGMA_Propagator3D<float> propUP3D;
   PLEGMA_Propagator3D<float> propDN3D;
 
-  PLEGMA_Correlator<float> corr;
+  PLEGMA_Correlator<float> corr(MOMENTUM_SPACE,1);
 
   // for the test use sinkSourceSep = 10;
   int  isource=0;
@@ -102,17 +102,17 @@ int main(int argc, char **argv)
     // LOCAL contractions
     corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas, sourcePositions[isource]); // 0 is isource change later 
     if(signPer < 0) for(int iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;      
-    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP2.dat");
+    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP2_new.dat");
 
     // ONED contractions
     corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, sourcePositions[isource]); // 0 is isource change lat
     if(signPer < 0) for(int iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;      
-    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP2.dat");
+    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP2_new.dat");
 
     // noe contractions
     corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, sourcePositions[isource]); // 0 is isource change lat
     if(signPer < 0) for(int iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;      
-    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_noe_CP2.dat");
+    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_noe_CP2_new.dat");
 
     // do the contractions also for the conserved
   }
@@ -144,17 +144,17 @@ int main(int argc, char **argv)
     //LOCAL
     corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas, sourcePositions[isource]);
     if(signPer < 0) for(int iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
-    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP1.dat");
+    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_local_CP1_new.dat");
 
     //ONED
     corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, sourcePositions[isource]);
     if(signPer < 0) for(int iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
-    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP1.dat");
+    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_oneD_CP1_new.dat");
 
     //ONED
     corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, sourcePositions[isource]);
     if(signPer < 0) for(int iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
-    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_noe_CP1.dat");
+    corr.writeASCII("/onyx/noether/h/khadjiyiannakou/runs/threep_noe_CP1_new.dat");
 
     // do the contractions also for the conserved
   }
