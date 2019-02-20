@@ -411,7 +411,7 @@ namespace plegma {
     Float2<Float> expon;
     for(size_t imom = 0 ; imom < DGC_moms.Nmoms ; imom++){
       int4 momv = DGC_moms.get(imom);
-      phase = momv.x/((Float) DGC_totalL[0]) + momv.y/((Float) DGC_totalL[1]) + momv.z/((Float) DGC_totalL[2]);
+      phase = momv.x*id[0]/((Float) DGC_totalL[0]) + momv.y*id[1]/((Float) DGC_totalL[1]) + momv.z*id[2]/((Float) DGC_totalL[2]);
       phase *=  2. * PI;
       expon.x = cos(phase);
       expon.y = sign*sin(phase);

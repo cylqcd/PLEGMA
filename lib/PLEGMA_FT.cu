@@ -98,7 +98,7 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   cudaMalloc(&devPtr, bytes);
   for(int i=0; i<tex_mom.Nmoms; i++) {
     for(int j=0; j<dims; j++) {
-      hostPtr[i*dims+j]=momList[i][j];
+      hostPtr[i*4+j]=momList[i][j];
     }
   }
   cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
