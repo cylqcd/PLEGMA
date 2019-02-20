@@ -83,17 +83,18 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   desc.x = 8*4;
   desc.y = 8*4;
   desc.z = 8*4;
-  desc.w = dims==4 ? 8*4 : 0;
+  desc.w = 8*4;
 
   cudaResourceDesc resDesc;
   memset(&resDesc, 0, sizeof(resDesc));
   resDesc.resType = cudaResourceTypeLinear;
   resDesc.res.linear.desc = desc;
 
-  size_t bytes = tex_mom.Nmoms*dims*sizeof(int);
+  size_t bytes = tex_mom.Nmoms*4*sizeof(int);
   void * devPtr;
   int * hostPtr;
   hostMalloc(hostPtr, bytes);
+  memset(hostPtr, 0, sizeof(bytes));
   cudaMalloc(&devPtr, bytes);
   for(int i=0; i<tex_mom.Nmoms; i++) {
     for(int j=0; j<dims; j++) {

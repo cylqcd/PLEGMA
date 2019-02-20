@@ -25,7 +25,7 @@ initialize() {
       HGC_moms.free();
     }
     HGC_moms = corr_mom_space->getTexMomList();
-    cudaMemcpyToSymbol((void*) &DGC_moms, (void*) &HGC_moms, sizeof(tex_mom_list));
+    cudaMemcpyToSymbol(DGC_moms, (void*) &HGC_moms, sizeof(tex_mom_list));
   }
   else if(corr_space == POSITION_SPACE) {
     corr_pos_space = new PLEGMA_Field<Float>(HOST, site_size, NO_GHOSTS);
