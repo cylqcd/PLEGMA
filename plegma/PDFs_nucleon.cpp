@@ -20,7 +20,7 @@ int main(int argc, char **argv)
   gauge.calculatePlaq();
 
   // Loading to QUDA and computing plaquette also there
-  initGaugeQuda(gauge, true);
+  initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
   plaqQuda();
   
   // Smearing
@@ -57,19 +57,21 @@ int main(int argc, char **argv)
   PLEGMA_Propagator3D<float> propUP3D;
   PLEGMA_Propagator3D<float> propDN3D;
 
-  PLEGMA_Correlator<float> *nucleonThrpWLP_CP1 = new PLEGMA_Correlator<float>[HGC_totalL[2]]; // if is the z direction
-  PLEGMA_Correlator<float> *nucleonThrpWLP_CP2 = new PLEGMA_Correlator<float>[HGC_totalL[2]];
+  PLEGMA_Correlator<float> corrThrpWL(MOMENTUM_SPACE,0);
+  
+  // PLEGMA_Correlator<float> *nucleonThrpWLP_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]]; // if is the z direction
+  // PLEGMA_Correlator<float> *nucleonThrpWLP_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
 
-  PLEGMA_Correlator<float> *nucleonThrpWLM_CP1 = new PLEGMA_Correlator<float>[HGC_totalL[2]];
-  PLEGMA_Correlator<float> *nucleonThrpWLM_CP2 = new PLEGMA_Correlator<float>[HGC_totalL[2]];
+  // PLEGMA_Correlator<float> *nucleonThrpWLM_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
+  // PLEGMA_Correlator<float> *nucleonThrpWLM_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
 
-  PLEGMA_Correlator<float> *nucleonThrpWL_CP2[2];
-  nucleonThrpWL_CP2[0] = nucleonThrpWLP_CP2;
-  nucleonThrpWL_CP2[1] = nucleonThrpWLM_CP2;
+  // PLEGMA_Correlator<float> *nucleonThrpWL_CP2[2];
+  // nucleonThrpWL_CP2[0] = nucleonThrpWLP_CP2;
+  // nucleonThrpWL_CP2[1] = nucleonThrpWLM_CP2;
 
-  PLEGMA_Correlator<float> *nucleonThrpWL_CP1[2];
-  nucleonThrpWL_CP1[0] = nucleonThrpWLP_CP1;
-  nucleonThrpWL_CP1[1] = nucleonThrpWLM_CP1;
+  // PLEGMA_Correlator<float> *nucleonThrpWL_CP1[2];
+  // nucleonThrpWL_CP1[0] = nucleonThrpWLP_CP1;
+  // nucleonThrpWL_CP1[1] = nucleonThrpWLM_CP1;
 
 
     // for the test use sinkSourceSep = 10;
@@ -148,9 +150,9 @@ int main(int argc, char **argv)
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
-      nucleonThrpWL_CP2[0][i].contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-      if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpWL_CP2[0][i].getTotalSize()*2; iv++) (nucleonThrpWL_CP2[0][i].getCorr())[iv] *= signPer;
-      nucleonThrpWL_CP2[0][i].writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP2_Plus" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP2_Plus_new" + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 4+2); // build Wilson line in the +z direction
       propF->shift(*propIn, 4+2);
@@ -160,9 +162,9 @@ int main(int argc, char **argv)
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
-      nucleonThrpWL_CP2[1][i].contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-      if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpWL_CP2[1][i].getTotalSize()*2; iv++) (nucleonThrpWL_CP2[1][i].getCorr())[iv] *= signPer;
-      nucleonThrpWL_CP2[1][i].writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP2_Minus" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP2_Minus_new" + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 2); // build Wilson line in the +z direction
       propF->shift(*propIn, 2);
@@ -208,9 +210,9 @@ int main(int argc, char **argv)
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
-      nucleonThrpWL_CP1[0][i].contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-      if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpWL_CP1[0][i].getTotalSize()*2; iv++) (nucleonThrpWL_CP1[0][i].getCorr())[iv] *= signPer;
-      nucleonThrpWL_CP1[0][i].writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Plus" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Plus_new" + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 4+2); // build Wilson line in the +z direction
       propF->shift(*propIn, 4+2);
@@ -220,9 +222,9 @@ int main(int argc, char **argv)
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
-      nucleonThrpWL_CP1[1][i].contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-      if(signPer < 0) for(int iv = 0 ; iv < nucleonThrpWL_CP1[1][i].getTotalSize()*2; iv++) (nucleonThrpWL_CP1[1][i].getCorr())[iv] *= signPer;
-      nucleonThrpWL_CP1[1][i].writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Minus" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Minus_new" + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 2); // build Wilson line in the +z direction
       propF->shift(*propIn, 2);
@@ -263,11 +265,11 @@ int main(int argc, char **argv)
   delete propIn;
   delete seqPropOut;
   
-  delete[] nucleonThrpWLP_CP1;
-  delete[] nucleonThrpWLP_CP2;
+  // delete[] nucleonThrpWLP_CP1;
+  // delete[] nucleonThrpWLP_CP2;
 
-  delete[] nucleonThrpWLM_CP1;
-  delete[] nucleonThrpWLM_CP2;
+  // delete[] nucleonThrpWLM_CP1;
+  // delete[] nucleonThrpWLM_CP2;
 
   delete solverUP;
   delete solverDN;
