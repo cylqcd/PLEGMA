@@ -1,8 +1,8 @@
 #pragma once
 #include <PLEGMA_global.h>
+#include <PLEGMA_io.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_FT.h>
-#include <hdf5.h>
 
 namespace plegma {
 
@@ -116,6 +116,6 @@ namespace plegma {
 
     void writeFile(const char *filename, FILE_WRITE_FORMAT format);
     void writeASCII(const char *filename);
-    void writeHDF5(const char *filename, const char* top = "/");
+    void writeHDF5(std::string filename, std::string top = "/");
   };
 }

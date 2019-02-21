@@ -5,7 +5,7 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
-#include <utils/PLEGMA_lime.h>
+#include <PLEGMA_io.h>
 
 using namespace plegma;
 
