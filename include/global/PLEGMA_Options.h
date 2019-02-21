@@ -269,7 +269,7 @@ private:
   }
 public:
   Options(int argc,char **argv):Arguments(argc,argv),dressDesc("#++#"){;}
-  ~Options(){checkErrors();}
+  ~Options(){close();}
     
   template<typename T, typename... Pars>
   bool set(std::string name, std::string desc, int visualize, T &p1, Pars & ... par){
@@ -391,16 +391,19 @@ public:
   }
 
   void checkErrors(){
+    if(errorCollection.size() <= 0) return;
+    for(int i = 0 ; i < errorCollection.size(); i++) PLEGMA_printf("%s\n",errorCollection[i].c_str());
+    PLEGMA_exit(-1);
+  }
+
+  void close(){
     if(isHelp){usage(); PLEGMA_exit(-1);}
+    checkErrors();
     if(args.size() != 0){
       for(int i = 0; i<args.size(); i++)
 	PLEGMA_printf("Error: What option is %s\n", args[i].name.c_str() );
       usage();
       PLEGMA_exit(-1);
     }
-    if(errorCollection.size() <= 0) return;
-    for(int i = 0 ; i < errorCollection.size(); i++) PLEGMA_printf("%s\n",errorCollection[i].c_str());
-    usage();
-    PLEGMA_exit(-1);
   }
 };
