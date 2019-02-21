@@ -18,16 +18,15 @@ void initialize(int argc, char **argv, bool withQuda) {
   for(int i=0; i<4; i++) if( procs[i] <= 0 )
 			   PLEGMA_error("Error with dim %d: Negative proc or not divisor of dim\n", i);
   initComms(argc, argv, procs);
-
+  initQuda(device);
+  qudaInitialized=true;
   // Reading plegma options
   plegmaOptions(*HGC_options);
 
   if(withQuda) {
     qudaOptions(*HGC_options);
     // initialize the QUDA library
-    initQuda(device);
     if(verbosity>0) infoQuda();
-    qudaInitialized=true;
   }
 
   // initialize PLEGMA params
@@ -36,6 +35,7 @@ void initialize(int argc, char **argv, bool withQuda) {
 }
 
 void finalize() {
+  delete HGC_options;
   PLEGMA_end();
   
   saveTuneCache(false);
