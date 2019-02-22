@@ -149,6 +149,7 @@ private:
   std::string dressDesc;
   std::vector<std::string> descOpt; // to keep info about the description of the arguments
   std::vector<std::string> listSetOpt; // list that keeps what is already set
+  bool isOpen;
   void usage(){
     PLEGMA_printf("\n\n USAGE FOR %s\n",nameExec.c_str());
     int maxPos=0;
@@ -268,11 +269,13 @@ private:
       if(name == listSetOpt[i]) errorCollection.push_back("Error: Option ["+name+"] already set\n");
   }
 public:
-  Options(int argc,char **argv):Arguments(argc,argv),dressDesc("#++#"){;}
+  Options(int argc,char **argv):Arguments(argc,argv),dressDesc("#++#"),isOpen(true){
+  }
   ~Options(){close();}
     
   template<typename T, typename... Pars>
   bool set(std::string name, std::string desc, int visualize, T &p1, Pars & ... par){
+    if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,p1,par...);
     descOpt.push_back(fullDesc);
     if(noOptions || isHelp) return false;
@@ -299,6 +302,7 @@ public:
     
   template<typename T, typename... Pars>
   void setForced(std::string name, std::string desc, int visualize, T &p1, Pars & ... par){
+    if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     bool check = set(name,desc + " (FORCED)", visualize, p1, par...);
     if (!check && !getIsHelp()) errorCollection.push_back("Error: [" + name + "] is not found in the arguments");
   }    
@@ -306,6 +310,7 @@ public:
   
   template<typename T>
   bool set(std::string name, std::string desc, int visualize, std::vector<T> &vec, int n=-1){
+    if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,vec);
     descOpt.push_back(fullDesc);
     if(noOptions || isHelp) return false;
@@ -339,12 +344,14 @@ public:
 
   template<typename T>
   void setForced(std::string name, std::string desc, int visualize, std::vector<T> &vec, int n=-1){
+    if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     bool check = set(name,desc + " (FORCED)", visualize,vec,n);
     if (!check && !getIsHelp()) errorCollection.push_back("Error: " + name + " is not found in the arguments");
   }
 
   template<typename T1, typename T2>
   bool set(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, int n=-1){
+    if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,tpl);
     descOpt.push_back(fullDesc);
     if(noOptions || isHelp) return false;
@@ -386,6 +393,7 @@ public:
 
   template<typename T1, typename T2>
   void setForced(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, int n=-1){
+    if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     bool check = set(name,desc + " (FORCED)",visualize,tpl,n);
     if (!check && !getIsHelp()) errorCollection.push_back("Error: " + name + " is not found in the arguments");
   }
@@ -405,5 +413,6 @@ public:
       usage();
       PLEGMA_exit(-1);
     }
+    isOpen=false;
   }
 };

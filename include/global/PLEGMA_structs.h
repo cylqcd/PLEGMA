@@ -151,6 +151,7 @@ struct global_vars {
       std::string line = "HGC_" + globals[i].get_value();
       PLEGMA_printf(line.c_str());
     }
+#ifdef __NVCC__
     PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
     for(int i = 0; i < globals.size(); i++) {
       if(globals[i].devPointer == NULL) continue;
@@ -166,6 +167,7 @@ struct global_vars {
 	PLEGMA_printf(line.c_str());
       }
     }
+#endif
     PLEGMA_printf("\n\n");
   }
 };
