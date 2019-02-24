@@ -60,10 +60,10 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       int source[4]){
 
   setSource(source);
-  n_flavors = 2;
+  n_datasets = 2;
   n_groups = N_MESONS;
   shape = {};
-  flavors =  {"twop_meson_1", "twop_meson_2"};
+  datasets =  {"twop_meson_1", "twop_meson_2"};
   groups =  {"pseudoscalar", "scalar", "g5g1", "g5g2", "g5g3", "g5g4", "g1", "g2", "g3", "g4"};
   description = "";
   
@@ -87,10 +87,10 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 		int source[4]){
 
   setSource(source);
-  n_flavors = 2;
+  n_datasets = 2;
   n_groups = N_BARYONS;
   shape = {16};
-  flavors = {"twop_baryon_1", "twop_baryon_2"};
+  datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"nucl_nucl",
 #ifdef ALL_BARYONS
 	     "nucl_nucl2","nucl2_nucl","nucl2_nucl2","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
@@ -120,13 +120,13 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
 			  int signProps, std::vector<GAMMAS> gammas,
 			  int source[4]){
-  n_flavors = 1;
+  n_datasets = 1;
   n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
-  flavors = {"threep"};
+  datasets = {"threep"};
   groups =  {"Local"};
-  description = getGammasString(gammas)+" / re,im";
+  description = getGammasString(gammas);
   initialize();
 
   propTex<Float> bwdPropTex, fwdPropTex;
@@ -183,13 +183,13 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas,
 			 int source[4]){
-  n_flavors = 1;
+  n_datasets = 1;
   n_groups = 1;
   shape = {N_DIMS, (int) gammas.size()};
   setSource(source);
-  flavors = {"threep"};
+  datasets = {"threep"};
   groups =  {"OneD"};
-  description = "x,y,z,t / "+getGammasString(gammas)+" / re,im";
+  description = "x,y,z,t / "+getGammasString(gammas);
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
@@ -203,13 +203,13 @@ contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Gauge<Float> &gauge,
 			int signProps, int source[4]){
-  n_flavors = 1;
+  n_datasets = 1;
   n_groups = 1;
   shape = {N_DIMS};
   setSource(source);
-  flavors = {"threep"};
+  datasets = {"threep"};
   groups =  {"Noether"};
-  description = "x,y,z,t / re,im";
+  description = "x,y,z,t";
   initialize();
 
   std::vector<GAMMAS> gammas = {};
@@ -228,13 +228,13 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Su3field<Float> &su3,
 			       int signProps, std::vector<GAMMAS> gammas,
 			       int source[4]){
-  n_flavors = 1;
+  n_datasets = 1;
   n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
-  flavors = {"threep"};
+  datasets = {"threep"};
   groups =  {"wilsonLine"};
-  description = getGammasString(gammas)+" / re,im";
+  description = getGammasString(gammas);
   initialize();
   
   propTex<Float> bwdPropTex, fwdPropTex;
@@ -374,58 +374,49 @@ writeASCII(const char *filename_out) {
   }  
 }
 
-template<typename Float>
-int PLEGMA_Correlator<Float>::
-getNDims() {
-  int ndims = shape.size()+1; // shape + re-im
-  switch(corr_space) {
-  case MOMENTUM_SPACE:
-    ndims += 2; // mom, t
-    break;
-  case POSITION_SPACE:
-    ndims += 4; // t, z, y, x
-    break;
-  default:
-    PLEGMA_error("Corralator: corr_space not supported: %d\n", corr_space);
-  }
- 
-  return ndims;
-}
 
 template<typename Float>
-void PLEGMA_Correlator<Float>::
-fillDims(hsize_t* dims, hsize_t* ldims, hsize_t* start, bool shift_source) {
-  int i=0;
+std::string PLEGMA_Correlator<Float>::
+fill_H5_shapes(std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start) {
+  std::string descr = "shape: ";
   switch(corr_space) {
   case MOMENTUM_SPACE:
-    start[0] = HGC_timeRank*HGC_localL[3]; //starting point
-    if(shift_source) {
-      start[0] = (start[0] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3];
-    }
-    ldims[0] = HGC_localL[3]; //LT
-    dims[0] = HGC_totalL[3]; //T
-    start[1] = 0; ldims[1] = dims[1] = vol_size/HGC_totalL[3]; //Nmoms
-    i=2;
+    descr += "/time/moms";
+    // Time
+    shape.push_back(HGC_totalL[3]);
+    lshape.push_back(HGC_localL[3]);
+    start.push_back((start[0] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
+    // Moms
+    shape.push_back(vol_size/HGC_totalL[3]);
+    lshape.push_back(vol_size/HGC_totalL[3]);
+    start.push_back(0);
     break;
   case POSITION_SPACE:
-    for(i=0; i<N_DIMS; i++) {
-      start[i] = comm_coords(HGC_default_topo)[i]*HGC_localL[i]; //starting
-      if(shift_source) {
-	start[i] = (start[i] + HGC_totalL[i] - source_position[i]) % HGC_totalL[i];
-      }
-      ldims[i] = HGC_localL[i]; //LT
-      dims[i] = HGC_totalL[i]; //T
+    descr += "/x/y/z/t";
+    // Volume
+    for(int i=0; i<N_DIMS; i++) {
+      shape.push_back(HGC_totalL[i]);
+      lshape.push_back(HGC_localL[i]);
+      start.push_back((start[i] + HGC_totalL[i] - source_position[i]) % HGC_totalL[i]);
     }
     break;
   default:
     PLEGMA_error("Corralator: corr_space not supported: %d\n", corr_space);
   }
-  std::for_each(shape.begin(), shape.end(), [&] (int n) {
-					      start[i] = 0;
-					      ldims[i] = dims[i] = n;
-					      i++;}); //shape
-  
-  start[i] = 0; ldims[i] = dims[i] = 2; //re-im
+  // Correlator shape
+  descr += "/" + description;
+  for(auto s : this->shape) {
+    shape.push_back(s);
+    lshape.push_back(s);
+    start.push_back(0);    
+  }
+  //re-im
+  descr += "/re-im";
+  shape.push_back(2);
+  lshape.push_back(2);
+  start.push_back(0);
+
+  return descr;
 }
 
 
@@ -433,51 +424,35 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeHDF5(std::string filename, std::string top) {
   // only one per time writes in momentum space
-  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 ))
+  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 || HGC_timeRank == MPI_UNDEFINED ))
     return;
 
-  MPI_Comm comm;
-  bool shift_source = false;
-  switch(corr_space) {
-  case MOMENTUM_SPACE:
-    comm = HGC_timeComm;
-    shift_source = true;
-    break;
-  case POSITION_SPACE:
-    comm = MPI_COMM_WORLD;
-    // shift source not yet supported in position space. the parallel writing needs to be fixed.
-    // TODO: command_line_flag
-    shift_source = false;
-    break;
-  default:
-    PLEGMA_error("Corralator: corrSpace not supported: %d\n", corr_space);
-  }
+  std::vector<hsize_t> shape, lshape, start;
+  std::string descr = fill_H5_shapes(shape, lshape, start);
 
-  int ndims = getNDims();
-  hsize_t dims[ndims], ldims[ndims], start[ndims];
-  fillDims(dims, ldims, start, shift_source);
-
-  hid_t file = H5_open_file(filename, comm);
+  HDF5 writer(filename, corr_space==MOMENTUM_SPACE ? HGC_timeComm : MPI_COMM_WORLD);
 
   char *source;
-  asprintf(&source,"/sx%02dsy%02dsz%02dst%02d", source_position[0], source_position[1], source_position[2], source_position[3]);
-
-  hid_t top_group = H5_open_group(file, top+source);
+  asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
+	   source_position[3]);
+  top="/"+top+source; 
   free(source);
   
-  size_t spaceSize = get_volume(ndims, ldims);
+  hsize_t writeSize = 1;
+  for(auto l: lshape) writeSize*=l;
   for(int g=0; g<n_groups; g++){
-    hid_t group = H5_open_group(top_group, groups[g]);    
-    for(int d=0; d<n_flavors; d++) {
-      Float *writeBuf = corr + (g*n_flavors+d)*spaceSize;
-      H5_write_dataset(group, flavors[d], writeBuf,
-		    ndims, dims, ldims, start); 
+    writer.cd(top+groups[g]);
+    if(corr_space == MOMENTUM_SPACE) {
+      std::vector<hsize_t> momShape = { (hsize_t) corr_mom_space->Nmoms(),
+					(hsize_t) corr_mom_space->Dims()};
+      writer.write_dataset("mvec", corr_mom_space->MomList()[0].data(), momShape);
     }
-    H5Gclose(group);
+    for(int d=0; d<n_datasets; d++) {
+      Float *writeBuf = corr + (g*n_datasets+d)*writeSize;
+      writer.write_dataset(datasets[d], writeBuf, shape, lshape, start);
+      writer.write_attribute(datasets[d], "description", descr);
+    }
   }
-
-  H5Gclose(top_group);
-  H5Fclose(file);
 }
 
 template class PLEGMA_Correlator<float>;
