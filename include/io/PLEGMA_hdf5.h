@@ -108,19 +108,20 @@ protected:
     if(path_id.empty()) PLEGMA_error("Tried to go back but path_id is empty\n");
     H5Gclose(path_id.back());
     path_id.pop_back();
+    if(HGC_verbosity > 2) PLEGMA_printf("Closed group %s\n", path_str.back().c_str());
     path_str.pop_back();
   }
 
   // pop and close all groups
   inline void go_top() {
-    while(path_id.empty()) go_back();
+    while(!path_id.empty()) go_back();
   }
 
   // Splitting, cleaning and checking until what point path is the same with the current path
   inline std::vector<std::string> prepare_path(std::string path) {
-    if(HGC_verbosity > 2) PLEGMA_printf("Path before clening %s\n", path.c_str());
+    if(HGC_verbosity > 2) PLEGMA_printf("Path before cleaning %s\n", path.c_str());
     std::vector<std::string> vp = clean_path(split_path(path));
-    if(HGC_verbosity > 2) PLEGMA_printf("Path after clening %s\n", join_path(vp).c_str());
+    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", join_path(vp).c_str());
     // checking if starts with '/'
     if(!path_id.empty() && path[0]=='/') {
       if(vp.empty() || vp[0] != path_str[0]) go_top();
@@ -387,6 +388,7 @@ public:
   ~HDF5() {
     go_top();
     H5Fclose(file_id);
+    if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
   }
 
   /*
@@ -403,6 +405,7 @@ public:
 			     path+"/"+object.substr(0,check));
     cd(path);
     _write_attribute(object, attr_name, attr_value);
+    if(HGC_verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
   }
 
   /*
