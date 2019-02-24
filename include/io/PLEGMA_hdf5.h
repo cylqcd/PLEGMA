@@ -18,17 +18,14 @@ protected:
   std::vector<hid_t> path_id;
   std::vector<std::string> path_str;
 
-public:
-  /*
-   * Returns the current directory
-   */
-  std::string pwd() {
+protected:
+  
+  inline std::string join_path(std::vector<std::string> vp) {
     std::string ret;
-    for (auto s : path_str) ret += "/" + s;
+    for (auto s : vp) ret += "/" + s;
     return ret;
   }
 
-protected:  
   inline int getRank(){
     int rank;
     MPI_Comm_rank(comm, &rank);
@@ -121,9 +118,11 @@ protected:
 
   // Splitting, cleaning and checking until what point path is the same with the current path
   inline std::vector<std::string> prepare_path(std::string path) {
+    if(HGC_verbosity > 2) PLEGMA_printf("Path before clening %s\n", path.c_str());
     std::vector<std::string> vp = clean_path(split_path(path));
+    if(HGC_verbosity > 2) PLEGMA_printf("Path after clening %s\n", join_path(vp).c_str());
     // checking if starts with '/'
-    if(path[0]=='/') {
+    if(!path_id.empty() && path[0]=='/') {
       if(vp.empty() || vp[0] != path_str[0]) go_top();
       else {
 	auto it = vp.begin();
@@ -166,7 +165,7 @@ protected:
       }
       else {
 	PLEGMA_error("A link with dir %s exists but it is not a group\n File: %s\n Path: %s", dir.c_str(),
-		     filename.c_str(), pwd().c_str());
+		     filename.c_str(), join_path(path_str).c_str());
       }
     }
     else {
@@ -258,14 +257,20 @@ protected:
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
     for(int i=0; i<shape.size(); i++) {
-      exceeding_shape.push_back(start[i] + lshape[i] - shape[i]);
-      if(exceeding_shape[i]>0) // then i it's exceeding
+      int exceeding = start[i] + lshape[i] - shape[i];
+      if(exceeding > 0) { // then i it's exceeding
+	if(HGC_verbosity > 2)
+	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);
-      else
-	exceeding_shape[i] = 0;
+	exceeding_shape.push_back(exceeding);
+      } else {
+	exceeding_shape.push_back(0);
+      }
     }
-    my_n_writings = 1<<exceeding_id.size();
+    if(!exceeding_id.empty())
+      my_n_writings = 1<<exceeding_id.size();
     MPI_Allreduce( &my_n_writings, &n_writings, 1, MPI_Type(n_writings), MPI_MAX, comm);
+    if(HGC_verbosity > 2) PLEGMA_printf("%s: %d writing(s) are needed for writing the dataset\n", name.c_str(), n_writings);
 
     if(n_writings>1) {
       // looping over the writings 
@@ -312,6 +317,13 @@ protected:
 
 public:
   /*
+   * Returns the current directory
+   */
+  std::string pwd() {
+    return join_path(path_str);
+  }
+  
+  /*
    * Creates or opens a path.
    * - If the path starts with "/" then is considered as an absolute path starting from the file
    * - Else it is considered as a relative path from the last location
@@ -319,9 +331,12 @@ public:
    */
   void cd(std::string path) {
     if(path=="") return;
+    if(path==".") return;
+    else if(path=="/") go_top();
     auto vp = prepare_path(path);
     for (auto it = vp.begin(); it != vp.end(); it++) {
       if(*it == "..") go_back();
+      else if(path==".") continue;
       else open(*it);
     }
   }
@@ -341,9 +356,9 @@ public:
     std::string path = "/";
     // checking if .h5 is given and at the end of file
     size_t ext = name.rfind(".h5");
-    if(ext + 3 < name.length()) {
+    if(ext == std::string::npos || ext + 3 < name.length()) {
       // checking if followed by '/'
-      if (name[ext+3] == '/') {
+      if (ext != std::string::npos && name[ext+3] == '/') {
 	filename = name.substr(0, ext+3);
 	path = name.substr(ext+3);
       } else {
@@ -355,12 +370,12 @@ public:
     }
   
     // checking if file exists or creating it
-    if(access( name.c_str(), F_OK ) != -1) {
-      file_id = H5Fopen(name.c_str(),  H5F_ACC_RDWR, fapl_id);
-      if(HGC_verbosity > 2) PLEGMA_printf("Opened file %s\n", name.c_str());
+    if(access( filename.c_str(), F_OK ) != -1) {
+      file_id = H5Fopen(filename.c_str(),  H5F_ACC_RDWR, fapl_id);
+      if(HGC_verbosity > 2) PLEGMA_printf("Opened file %s\n", filename.c_str());
     } else {
-      file_id = H5Fcreate(name.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
-      if(HGC_verbosity > 2) PLEGMA_printf("Created file %s\n", name.c_str());
+      file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
+      if(HGC_verbosity > 2) PLEGMA_printf("Created file %s\n", filename.c_str());
     }
     H5Pclose(fapl_id);
 
@@ -380,7 +395,7 @@ public:
    */
   template<typename T>
   void write_attribute(std::string object, std::string attr_name, T attr_value,
-		       std::string path="") {
+		       std::string path=".") {
     // checking for / in attr_name
     size_t check = object.rfind("/");
     if(check != std::string::npos)
@@ -399,7 +414,7 @@ public:
    */
   template<typename T>
   void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
-			    std::vector<hsize_t> start={}, std::string path="") {
+			    std::vector<hsize_t> start={}, std::string path=".") {
     // checking for / in name
     size_t check = name.rfind("/");
     if(check != std::string::npos)
