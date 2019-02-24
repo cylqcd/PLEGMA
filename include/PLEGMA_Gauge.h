@@ -24,7 +24,7 @@ namespace plegma {
 
     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
 
-    void calculatePlaq();
+    Float calculatePlaq();
     void calculatePlaqCorners();
     void calculatePlaqShifts();
 
