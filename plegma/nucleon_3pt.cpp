@@ -26,6 +26,11 @@ int main(int argc, char **argv)
   
   PLEGMA_Gauge<float> contractGauge;
   contractGauge.copy(gauge);
+
+  // apply boundary conditions since is needed for the covariant derivative
+  // this needs to be done after initGaugeQuda otherwise causes troubles
+  applyBoundaryConditions(contractGauge,true);
+
   
   // ensuring mu positive
   if(mu<0) mu*=-1.;
