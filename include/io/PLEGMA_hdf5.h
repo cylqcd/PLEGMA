@@ -128,6 +128,11 @@ protected:
     for(int i=0; i < shape.size(); i++) res.push_back(0);
     return res;
   }
+  inline std::vector<hsize_t> ones_like(std::vector<hsize_t> shape){
+    std::vector<hsize_t> res;
+    for(int i=0; i < shape.size(); i++) res.push_back(1);
+    return res;
+  }
 
   // replace the first finding in a string
   inline bool replace(std::string& str, const std::string& from, const std::string& to) {
@@ -284,7 +289,7 @@ protected:
       
       // Shifting the data accordingly to start
       if(needs_shift) {
-	hostMalloc(tmp, product(shape));
+	hostMalloc(tmp, product(shape)*sizeof(T));
 	for(hsize_t i = 0; i<product(shape); i++) {
 	  hsize_t j = to_id( add( from_id(i, shape), start), shape);
 	  tmp[i] = buf[j];
@@ -295,7 +300,7 @@ protected:
       if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
 
       if(needs_shift) {
-	hostFree(tmp, product(shape));
+	hostFree(tmp, product(shape)*sizeof(T));
       }
     }
     H5Dclose(dataset_id);
@@ -313,7 +318,6 @@ protected:
     if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
     H5Sclose(subspace);
     H5Pclose(plist_id);
-    //H5Sclose(filespace);
   }
   
   template<typename T>
@@ -344,10 +348,12 @@ protected:
     if(n_writings>1) {
       // looping over the writings 
       for(size_t i=0; i<n_writings; i++) {
+	// standard behaviour
 	T* tmp = buf;
-	std::vector<hsize_t> tmp_lshape = zero_like(lshape);
+	std::vector<hsize_t> tmp_lshape = lshape;
 	std::vector<hsize_t> tmp_start = start;
-	if(i < my_n_writings) {
+	// creating the shifted case
+	if(!exceeding_id.empty() && i < my_n_writings) {
 	  std::vector<hsize_t> shift = zero_like(start);
 	  for(int j=0; j<lshape.size(); j++)
 	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
@@ -368,14 +374,17 @@ protected:
 	  }
 
 	  // copying the part of the buffer to write
-	  hostMalloc(tmp, product(tmp_lshape));
+	  hostMalloc(tmp, product(tmp_lshape)*sizeof(T));
 	  for(hsize_t i = 0; i<product(tmp_lshape); i++) {
 	    hsize_t j = to_id( add( from_id(i, tmp_lshape), shift), lshape);
 	    tmp[i] = buf[j];
 	  }
+	} else if(i >= my_n_writings) {
+	  // do a dummy write to keep the communications active
+	  tmp_lshape = ones_like(lshape);
 	}
 	_write_dataset_parallel(dataset_id, tmp, shape, tmp_lshape, tmp_start);
-	if(tmp != buf) hostFree(tmp, product(tmp_lshape));
+	if(tmp != buf) hostFree(tmp, product(tmp_lshape)*sizeof(T));
       }
     } else {
       _write_dataset_parallel(dataset_id, buf, shape, lshape, start);
