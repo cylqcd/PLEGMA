@@ -147,7 +147,9 @@ struct global_vars {
   void print() {
     PLEGMA_printf("\nGlobal constants available only on host:\n");
     for(int i = 0; i < globals.size(); i++) {
+#ifdef __NVCC__
       if(globals[i].devPointer != NULL) continue;
+#endif
       std::string line = "HGC_" + globals[i].get_value();
       PLEGMA_printf(line.c_str());
     }

@@ -1,8 +1,8 @@
 #pragma once
 #include <PLEGMA_global.h>
+#include <PLEGMA_io.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_FT.h>
-#include <hdf5.h>
 
 namespace plegma {
 
@@ -28,15 +28,15 @@ namespace plegma {
     CORR_SPACE corr_space;
     int Q2_max;
     size_t vol_size;
-    int n_flavors;
+    int n_datasets;
     int n_groups;
     std::vector<int> shape;
-    // Allocated site_size = n_flavors * n_groups * prod(shape) (slowest to fastest running index)
+    // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
     int site_size;
     std::array<int,4> source_position;
 
     // Writing informations
-    std::vector<std::string> flavors;
+    std::vector<std::string> datasets;
     std::vector<std::string> groups;
     std::string description;
 
@@ -44,8 +44,7 @@ namespace plegma {
     void finalize();
     
     // For HDF5 file writing
-    int getNDims();
-    void fillDims(hsize_t* dims, hsize_t* ldims, hsize_t* start, bool shift_source);
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
     
   public:
     PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, int Q2_max = 64):
@@ -57,7 +56,7 @@ namespace plegma {
       return corr_space;
     }
     size_t getSiteSize() {
-      int size=n_flavors*n_groups;
+      int size=n_datasets*n_groups;
       std::for_each(shape.begin(), shape.end(), [&] (int n) {size *= n;});
       return size;
     }
@@ -116,6 +115,6 @@ namespace plegma {
 
     void writeFile(const char *filename, FILE_WRITE_FORMAT format);
     void writeASCII(const char *filename);
-    void writeHDF5(const char *filename, const char* top = "/");
+    void writeHDF5(std::string filename, std::string top = "/");
   };
 }

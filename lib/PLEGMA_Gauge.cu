@@ -5,7 +5,7 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
-#include <utils/PLEGMA_lime.h>
+#include <PLEGMA_io.h>
 
 using namespace plegma;
 
@@ -108,12 +108,14 @@ void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::calculatePlaq(){
+Float PLEGMA_Gauge<Float>::calculatePlaq(){
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_SIDE);
   tex.tex = this->createTexObject();
-  PLEGMA_printf("Calculated plaquette is %f\n",calculatePlaquette<Float>(tex));
+  Float plaq = calculatePlaquette<Float>(tex);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
   this->destroyTexObject(tex.tex);
+  return plaq;
 }
 
 template<typename Float>

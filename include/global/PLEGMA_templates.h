@@ -7,7 +7,12 @@ template<> inline MPI_Datatype MPI_Type<float>() { return MPI_FLOAT; }
 template<> inline MPI_Datatype MPI_Type<float*>() { return MPI_FLOAT; }
 template<> inline MPI_Datatype MPI_Type<double>() { return MPI_DOUBLE; }
 template<> inline MPI_Datatype MPI_Type<double*>() { return MPI_DOUBLE; }
-
+template<> inline MPI_Datatype MPI_Type<int>() { return MPI_INT; }
+template<> inline MPI_Datatype MPI_Type<int*>() { return MPI_INT; }
+template<> inline MPI_Datatype MPI_Type<unsigned int>() { return MPI_UNSIGNED; }
+template<> inline MPI_Datatype MPI_Type<long>() { return MPI_LONG; }
+template<> inline MPI_Datatype MPI_Type<unsigned long>() { return MPI_UNSIGNED_LONG; }
+template<> inline MPI_Datatype MPI_Type<long long>() { return MPI_LONG_LONG_INT; }
 
 // hostMalloc and hostFree: functions to use in replace of malloc and free
 extern size_t HGC_used_memory;

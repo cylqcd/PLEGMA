@@ -209,7 +209,7 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-nu-post", "Number of post-smoother applications, 0-20", verbosity, nu_post);
   if(isFound) if (nu_post < 0 || nu_post > 20) PLEGMA_error("ERROR: invalid post-smoother applications value (nu_post=%d)\n", nu_post);
   
-  default_map_MG(tpl_int_string, (std::string) "bicgstab");
+  default_map_MG(tpl_int_string, (std::string) "cg");
   isFound=opt.set("Q-mg-setup-inv", "The inverter to use for the setup of multigrid, usage(level,inv), (default bicgstab)", verbosity, tpl_int_string);
   map_to_array_MG<QudaInverterType>(tpl_int_string, setup_inv, get_solver_type);
 
