@@ -389,11 +389,15 @@ public:
 
   ~HDF5() {
     go_top();
-    if(H5Fget_obj_count(file_id, H5F_OBJ_ALL) > 1) {
-      printf("rank %d has %d objects open\n", comm_rank(), (int) H5Fget_obj_count(file_id, H5F_OBJ_ALL));
+    int open_obj = 1, my_open_obj = H5Fget_obj_count(file_id, H5F_OBJ_ALL);
+    if(my_open_obj > 1) {
+      printf("ERROR: rank %d has %d objects open. Closing will not work\n",
+	     comm_rank(), (int) H5Fget_obj_count(file_id, H5F_OBJ_ALL));
     }
-    printf("rank %d before barrier\n", comm_rank());
-    MPI_Barrier(comm);
+    MPI_Allreduce( &my_open_obj, &open_obj, 1, MPI_Type(open_obj), MPI_MAX, comm);
+    if(open_obj > 1) {
+      PLEGMA_error("More than one objects open. The closing will hang, so we crash the code here.");
+    }
     H5Fclose(file_id);
     if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
   }
