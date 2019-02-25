@@ -207,30 +207,32 @@ protected:
 
   template<typename T>
   inline void _write_dataset_single(std::string name, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> start) {
-    // In this function only one processor writes
-    if(getRank() > 0) return;
     
     hid_t dataset_id = require_dataset<T>(name, shape);
 
-    bool needs_shift = false;
-    T* tmp = buf;
-    if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
+    // In this function only one processor writes
+    if(getRank() == 0) {
+      bool needs_shift = false;
+      T* tmp = buf;
+      if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
+      
+      // Shifting the data accordingly to start
+      if(needs_shift) {
+	hostMalloc(tmp, product(shape));
+	for(hsize_t i = 0; i<product(shape); i++) {
+	  hsize_t j = to_id( add( from_id(i, shape), start), shape);
+	  tmp[i] = buf[j];
+	}
+      }
+      
+      herr_t status = H5Dwrite(dataset_id, datatype<T>(), H5S_ALL, H5S_ALL, H5P_DEFAULT, tmp);
+      if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
 
-    // Shifting the data accordingly to start
-    if(needs_shift) {
-      hostMalloc(tmp, product(shape));
-      for(hsize_t i = 0; i<product(shape); i++) {
-	hsize_t j = to_id( add( from_id(i, shape), start), shape);
-	tmp[i] = buf[j];
+      if(needs_shift) {
+	hostFree(tmp, product(shape));
       }
     }
-
-    herr_t status = H5Dwrite(dataset_id, datatype<T>(), H5S_ALL, H5S_ALL, H5P_DEFAULT, tmp);
-    if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
     H5Dclose(dataset_id);
-    if(needs_shift) {
-      hostFree(tmp, product(shape));
-    }
   }
 
   template<typename T>
@@ -244,8 +246,8 @@ protected:
     herr_t status = H5Dwrite(dataset_id, datatype<T>(), subspace, filespace, plist_id, buf);
     if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
     H5Sclose(subspace);
-    H5Pclose(plist_id);    
-    H5Sclose(filespace);
+    H5Pclose(plist_id);
+    //H5Sclose(filespace);
   }
   
   template<typename T>
@@ -387,6 +389,11 @@ public:
 
   ~HDF5() {
     go_top();
+    if(H5Fget_obj_count(file_id, H5F_OBJ_ALL) > 1) {
+      printf("rank %d has %d objects open\n", comm_rank(), (int) H5Fget_obj_count(file_id, H5F_OBJ_ALL));
+    }
+    printf("rank %d before barrier\n", comm_rank());
+    MPI_Barrier(comm);
     H5Fclose(file_id);
     if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
   }
@@ -442,6 +449,7 @@ public:
     else
       PLEGMA_error("lshape is not appropriate for the given communicator\n");
 
-    if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s\n", name.c_str());
+    if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
+					(lshape.empty() || comm_size == 1) ? "single" : "parallel");
   }
 };
