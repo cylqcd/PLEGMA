@@ -442,14 +442,9 @@ writeHDF5(std::string filename, std::string top) {
   free(source);
 
   
-  std::vector<hsize_t> momShape = { (hsize_t) corr_mom_space->Nmoms(),
-				    (hsize_t) corr_mom_space->Dims()};
-  int *mvec = NULL;
-  if(corr_space == MOMENTUM_SPACE) {
-    hostMalloc(mvec, momShape[0]*momShape[1]*sizeof(int));
-    size_t i=0;
-    for(auto mv: corr_mom_space->MomList()) for(auto m: mv){ mvec[i]=m; i++; }
-  }
+  std::vector<hsize_t> momShape = { 3 };
+  std::vector<int> mvec;
+  if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
   
   hsize_t writeSize = 1;
   for(auto l: lshape) writeSize*=l;
@@ -463,10 +458,6 @@ writeHDF5(std::string filename, std::string top) {
       writer.write_dataset(datasets[d], writeBuf, shape, lshape, start);
       writer.write_attribute(datasets[d], "description", descr);
     }
-  }
-
-  if(corr_space == MOMENTUM_SPACE) {
-    hostFree(mvec, momShape[0]*momShape[1]*sizeof(int));
   }
 }
 
