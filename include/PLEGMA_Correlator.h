@@ -44,7 +44,7 @@ namespace plegma {
     void finalize();
     
     // For HDF5 file writing
-    std::string fill_H5_shapes(std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start);
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
     
   public:
     PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, int Q2_max = 64):

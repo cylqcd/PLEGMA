@@ -377,7 +377,7 @@ writeASCII(const char *filename_out) {
 
 template<typename Float>
 std::string PLEGMA_Correlator<Float>::
-fill_H5_shapes(std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start) {
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
   std::string descr = "shape: ";
   switch(corr_space) {
   case MOMENTUM_SPACE:
@@ -385,7 +385,7 @@ fill_H5_shapes(std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vec
     // Time
     shape.push_back(HGC_totalL[3]);
     lshape.push_back(HGC_localL[3]);
-    start.push_back((start[0] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
+    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
     // Moms
     shape.push_back(vol_size/HGC_totalL[3]);
     lshape.push_back(vol_size/HGC_totalL[3]);
@@ -397,18 +397,20 @@ fill_H5_shapes(std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vec
     for(int i=0; i<N_DIMS; i++) {
       shape.push_back(HGC_totalL[i]);
       lshape.push_back(HGC_localL[i]);
-      start.push_back((start[i] + HGC_totalL[i] - source_position[i]) % HGC_totalL[i]);
+      start.push_back((HGC_procPosition[i]*HGC_localL[i] + HGC_totalL[i] - source_position[i]) % HGC_totalL[i]);
     }
     break;
   default:
     PLEGMA_error("Corralator: corr_space not supported: %d\n", corr_space);
   }
   // Correlator shape
-  descr += "/" + description;
-  for(auto s : this->shape) {
-    shape.push_back(s);
-    lshape.push_back(s);
-    start.push_back(0);    
+  if(!this->shape.empty()) {
+    descr += "/" + description;
+    for(auto s : this->shape) {
+      shape.push_back(s);
+      lshape.push_back(s);
+      start.push_back(0);    
+    }
   }
   //re-im
   descr += "/re-im";
