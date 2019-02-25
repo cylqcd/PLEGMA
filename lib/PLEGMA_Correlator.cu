@@ -64,7 +64,8 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   n_groups = N_MESONS;
   shape = {};
   datasets =  {"twop_meson_1", "twop_meson_2"};
-  groups =  {"pseudoscalar", "scalar", "g5g1", "g5g2", "g5g3", "g5g4", "g1", "g2", "g3", "g4"};
+  groups =  {"pion/pseudoscalar", "pion/scalar", "pion/g5g1", "pion/g5g2",
+	     "pion/g5g3", "pion/g5g4", "pion/g1", "pion/g2", "pion/g3", "pion/g4"};
   description = "";
   
   initialize();
@@ -387,8 +388,8 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     lshape.push_back(HGC_localL[3]);
     start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
     // Moms
-    shape.push_back(vol_size/HGC_totalL[3]);
-    lshape.push_back(vol_size/HGC_totalL[3]);
+    shape.push_back((hsize_t)corr_mom_space->Nmoms());
+    lshape.push_back((hsize_t)corr_mom_space->Nmoms());
     start.push_back(0);
     break;
   case POSITION_SPACE:
@@ -439,21 +440,33 @@ writeHDF5(std::string filename, std::string top) {
 	   source_position[3]);
   top="/"+top+source; 
   free(source);
+
+  
+  std::vector<hsize_t> momShape = { (hsize_t) corr_mom_space->Nmoms(),
+				    (hsize_t) corr_mom_space->Dims()};
+  int *mvec = NULL;
+  if(corr_space == MOMENTUM_SPACE) {
+    hostMalloc(mvec, momShape[0]*momShape[1]*sizeof(int));
+    size_t i=0;
+    for(auto mv: corr_mom_space->MomList()) for(auto m: mv){ mvec[i]=m; i++; }
+  }
   
   hsize_t writeSize = 1;
   for(auto l: lshape) writeSize*=l;
   for(int g=0; g<n_groups; g++){
     writer.cd(top+groups[g]);
     if(corr_space == MOMENTUM_SPACE) {
-      std::vector<hsize_t> momShape = { (hsize_t) corr_mom_space->Nmoms(),
-					(hsize_t) corr_mom_space->Dims()};
-      writer.write_dataset("mvec", corr_mom_space->MomList()[0].data(), momShape);
+      writer.write_dataset("mvec", mvec, momShape);
     }
     for(int d=0; d<n_datasets; d++) {
       Float *writeBuf = corr + (g*n_datasets+d)*writeSize;
       writer.write_dataset(datasets[d], writeBuf, shape, lshape, start);
       writer.write_attribute(datasets[d], "description", descr);
     }
+  }
+
+  if(corr_space == MOMENTUM_SPACE) {
+    hostFree(mvec, momShape[0]*momShape[1]*sizeof(int));
   }
 }
 
