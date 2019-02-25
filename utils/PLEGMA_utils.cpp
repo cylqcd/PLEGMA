@@ -29,6 +29,8 @@ void initialize(int argc, char **argv, bool withQuda) {
     if(verbosity>0) infoQuda();
   }
 
+  if(HGC_options->getIsHelp()) HGC_options->close();
+  
   // initialize PLEGMA params
   PLEGMA_init(dims, procs, verbosity);
   PLEGMA_status();
