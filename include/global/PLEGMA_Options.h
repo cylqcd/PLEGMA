@@ -262,7 +262,7 @@ private:
 
   template<typename... Pars>
   std::string getfullDesc(std::string name,std::string desc, Pars & ... par){
-    return "[" + name + "] " + getOptTypes(par...) + dressDesc + " " + desc + " (default:" + toString(par...) + ")";
+    return "[" + name + "] " + getOptTypes(par...) + dressDesc + " " + desc + ", default:" + toString(par...);
   }
 
   void checkIfSet(std::string name){
