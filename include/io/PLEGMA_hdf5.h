@@ -10,6 +10,9 @@ template<> inline hid_t datatype<float*>() {return H5T_NATIVE_FLOAT; }
 template<> inline hid_t datatype<double>() {return H5T_NATIVE_DOUBLE; }
 template<> inline hid_t datatype<double*>() {return H5T_NATIVE_DOUBLE; }
 
+/**
+ *    @brief Class for HDF5 data writing (TODO: and reading)
+ **/
 class HDF5 {
 protected:
   MPI_Comm comm;
@@ -18,14 +21,77 @@ protected:
   std::vector<hid_t> path_id;
   std::vector<std::string> path_str;
 
-protected:
-  
-  inline std::string join_path(std::vector<std::string> vp) {
-    std::string ret;
+  inline std::string join_path(std::vector<std::string> vp, bool fromTop = true) {
+    std::string ret = fromTop ? "" : "." ;
     for (auto s : vp) ret += "/" + s;
     return ret;
   }
 
+public:
+  // here the descriprion of classes that will be implemented after.
+  /*
+   * @brief Creates or opens an existing HDF5 file.
+   * @param name the filename. The extension '.h5' will be added if not provided. It can also contain a list of groups to open, e.g. name="./sample.h5/group1/group2" would create the file sample.h5 an dthen go to group1 and group2.
+   * @param comm the communicator to use during the file writing.
+   **/
+  //  HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD);
+
+  /*
+   * @brief Does sanity checks and close the file.
+   */
+  //  ~HDF5();
+  
+  /*
+   * @brief Returns the path to the current group
+   * @return a string contining the path to the current
+   */
+  inline std::string pwd() {
+    return join_path(path_str);
+  }
+  
+  /*
+   * @brief Creates or opens the groups to reach the path.
+   * @param path a string containing the path. Similar rules to filesystem are used: 
+   *  - If the path starts with "/" then is considered as an absolute path starting from the file
+   *    otherwise it is considered as a relative path from the last location
+   *  - ../ ./ are implemented. (TODO: ~/ to go home)
+   */
+  //  void cd(std::string path);
+
+  /*
+   * @brief Writes an attribute to an object
+   * @param object the name of the object. It can aslo contain a path in front, e.g. path/object.
+   * @param attr_name the name of the attribute
+   * @param attr_value the value of the attribute
+   * @param path the path to the object. Default the last location (pwd).
+   */
+  //  template<typename T>
+  //  void write_attribute(std::string object, std::string attr_name, T attr_value, std::string path=".");
+
+  /*
+   * @brief Writes a dataset
+   * @param name the dataset name. It can aslo contain a path in front, e.g. path/name.
+   * @param buf the pointer to the buffer to write.
+   * @param shape the global shape of the dataset.
+   * @param lshape the local shape of the dataset. If empty then only one process will write the dataset.
+   * @param start the starting point of the writing. Can be empty if lshape is empty.
+   * @param path the path to the object. Default the last location (pwd). 
+   */
+  //  template<typename T>
+  //  void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
+  //		     std::vector<hsize_t> start={}, std::string path=".");
+
+  /*
+   * @brief Writes a dataset
+   * @param name the dataset name. It can aslo contain a path in front, e.g. path/name.
+   * @param buf a vector containing the data to write
+   * @param shape the desired shape of the vector. Can also be partial and the rest is deduced from the buf size
+   * @param path the path to the object. Default the last location (pwd). 
+   */
+  //  template<typename T>
+  //  void write_dataset(std::string name, std::vector<T> buf, std::vector<hsize_t> shape, std::string path=".");
+  
+protected:
   inline int getRank(){
     int rank;
     MPI_Comm_rank(comm, &rank);
@@ -121,7 +187,7 @@ protected:
   inline std::vector<std::string> prepare_path(std::string path) {
     if(HGC_verbosity > 2) PLEGMA_printf("Path before cleaning %s\n", path.c_str());
     std::vector<std::string> vp = clean_path(split_path(path));
-    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", join_path(vp).c_str());
+    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", join_path(vp).c_str(), path[0]=='/');
     // checking if starts with '/'
     if(!path_id.empty() && path[0]=='/') {
       if(vp.empty() || vp[0] != path_str[0]) go_top();
@@ -166,7 +232,7 @@ protected:
       }
       else {
 	PLEGMA_error("A link with dir %s exists but it is not a group\n File: %s\n Path: %s", dir.c_str(),
-		     filename.c_str(), join_path(path_str).c_str());
+		     filename.c_str(), pwd().c_str());
       }
     }
     else {
@@ -320,13 +386,6 @@ protected:
 
 public:
   /*
-   * Returns the current directory
-   */
-  std::string pwd() {
-    return join_path(path_str);
-  }
-  
-  /*
    * Creates or opens a path.
    * - If the path starts with "/" then is considered as an absolute path starting from the file
    * - Else it is considered as a relative path from the last location
@@ -455,5 +514,17 @@ public:
 
     if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
 					(lshape.empty() || comm_size == 1) ? "single" : "parallel");
+  }
+
+  template<typename T>
+  void write_dataset(std::string name, std::vector<T> buf, std::vector<hsize_t> shape, std::string path=".") {
+    if(buf.size() != product(shape)) {
+      if(buf.size() % product(shape) == 0) {
+	shape.insert(shape.begin(), buf.size()/product(shape));
+      } else {
+	PLEGMA_error("buf.size() is not multiple of shape\n");
+      }
+    }
+    return write_dataset(name, buf.data(), shape, {}, {}, path);
   }
 };
