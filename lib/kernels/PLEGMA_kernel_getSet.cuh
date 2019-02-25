@@ -336,7 +336,7 @@ namespace plegma {
     template<get_from src, typename ...dir_t>
     inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
       sidStride ss;
-      ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
+      ss.setSidStride<src>(sid, N_COLS*N_COLS, dirs ...);
       get(G, ss);
     }
   };

@@ -28,7 +28,10 @@ void setInvertParam(QudaInvertParam &inv_param);
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 void initialize(int argc, char** argv, bool withQuda=true);
 void finalize();
-
+template<typename FloatOut, typename FloatIn> void unpackGaugeToEvenOdd(FloatOut *buf[4], PLEGMA_Gauge<FloatIn> &gauge);
+template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gauge<FloatOut> &gauge, FloatIn *buf[4]);
+template<typename Float> void applyAntiperiodicBoundary(Float **buf);
+template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic);
 
 //=================== PLEGMA_Options.cpp ==========================//
 void plegmaOptions(Options &opt);
