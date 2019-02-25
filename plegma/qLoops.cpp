@@ -38,6 +38,10 @@ int main(int argc, char **argv)
   initGaugeQuda(gauge, true);
   plaqQuda();
 
+  // apply boundary conditions since is needed for the covariant derivative
+  // this needs to be done after initGaugeQuda otherwise causes troubles
+  applyBoundaryConditions(gauge,true);
+  
   // ensuring mu negative
   if(mu>0) mu*=-1.;
   QUDA_solver *solverDN = new QUDA_solver(mu);
@@ -56,7 +60,7 @@ int main(int argc, char **argv)
   gauge.communicateGhost();
   loops_std.oneEnd_trick(phi,phi,tmp,gauge,-1.,true); //standard one-end trick
 
-  std::string prefix = "/onyx/noether/h/dnole/runs/";
+  std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
   PLEGMA_FT<double> ft(1, 3);
 
   // do the FT and write to File std trick
