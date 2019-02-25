@@ -196,44 +196,44 @@ private:
     set(name, cs, pars...);
   }
 
-  void print(){;}
-    
-  template<typename T, typename... Pars>
-  void print(T & p1, Pars & ... pars){
-    std::stringstream cs;
-    cs << " " << p1;
-    PLEGMA_printf("%s",cs.str().c_str());
-    print(pars...);
-  }
+  std::string toString(){return "";}
 
   template<typename T, typename... Pars>
-  void print(std::string name, T & p1, Pars & ... pars){
-    PLEGMA_printf("%s",name.c_str());
-    print(p1,pars...);
-    PLEGMA_printf("\n");
+  std::string toString(T & p1, Pars & ... pars){
+    std::stringstream cs;
+    cs << " " << p1;
+    return cs.str() + toString(pars...);
   }
 
   template<typename T>
-  void print(std::string name, std::vector<T> &vec){
-    PLEGMA_printf("%s",name.c_str());
+  std::string toString(std::vector<T> &vec){
     std::stringstream cs;
-    for(int i = 0 ; i < vec.size(); i++) cs << " " << vec[i];
-    cs << std::endl;
-    PLEGMA_printf("%s\n",cs.str().c_str());
+    for(T i : vec) cs << " " << i;
+    return cs.str();
   }
 
   template<typename T1, typename T2>
-  void print(std::string name, std::map<T1,T2> &tpl){
-    PLEGMA_printf("%s",name.c_str());
+  std::string toString(std::map<T1,T2> &tpl){
     std::stringstream cs;
     typename std::map<T1,T2>::iterator it_b = tpl.begin();
     while(it_b != tpl.end()){
-      cs << " (" <<it_b->first << "," << it_b->second << ")";
+      cs << " (" <<it_b->first << ", " << it_b->second << ")";
       it_b++;
     }
-    PLEGMA_printf("%s\n",cs.str().c_str());
+    return cs.str();
   }
 
+  template<typename... Pars>
+  void print(Pars & ... pars){
+    PLEGMA_printf("%s",toString(pars...).c_str());
+  }
+
+  template<typename... Pars>
+  void print(std::string name, Pars & ... pars){
+    PLEGMA_printf("%s\n",(name+toString(pars...)).c_str());
+  }
+
+  
   template<typename T, typename... Pars>
   std::string getOptTypes(T &p1, Pars & ... par){
     std::string res;
@@ -259,9 +259,10 @@ private:
     return res;
   }
 
+
   template<typename... Pars>
   std::string getfullDesc(std::string name,std::string desc, Pars & ... par){
-    return "[" + name + "] " + getOptTypes(par...) + dressDesc + " " + desc;
+    return "[" + name + "] " + getOptTypes(par...) + dressDesc + " " + desc + " (default:" + toString(par...) + ")";
   }
 
   void checkIfSet(std::string name){
