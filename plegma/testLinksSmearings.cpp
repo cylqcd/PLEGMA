@@ -5,16 +5,16 @@ using namespace plegma;
 using namespace quda;
 
 extern int device;
-//extern char latfile[];
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-stout", "alpha-stout"};
 
 int main(int argc, char **argv)
 {
-  initialize(argc, argv, false);
+  initialize(argc, argv, false, listOpt);
   int dimStout=3;
   int dimAPE=3;
   
-  HGC_options->set("dim-stout", "Directions to do the Stout smearing. Allowed options (3,4). Default 3", verbosity, dimStout);
-  HGC_options->set("dim-APE", "Directions to do the APE smearing. Allowed options (3,4) Default 3", verbosity, dimAPE);
+  HGC_options->set("dim-stout", "Directions to do the Stout smearing. Allowed options (3,4)", verbosity, dimStout);
+  HGC_options->set("dim-APE", "Directions to do the APE smearing. Allowed options (3,4)", verbosity, dimAPE);
 
   HGC_options->close();
   // Allocation done on BOTH, DEVICE and HOST
