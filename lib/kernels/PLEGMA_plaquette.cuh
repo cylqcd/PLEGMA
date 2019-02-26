@@ -8,9 +8,8 @@ static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Floa
   Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
-
-  if (sid < c_threads) {
-
+  
+  if (sid < DGC_localVolume) {
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];    
     Float trace = 0.;
@@ -51,7 +50,7 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   Float globalPlaquette = 0.;
   Float *d_partial_plaq = NULL;
 
-  ProfileStruct ps(GK_localVolume,sizeof(Float));
+  ProfileStruct ps(HGC_localVolume,sizeof(Float));
 
   tune(ps, "calculatePlaquette_kernel", calculatePlaquette_kernel<Float,FloatG>, gaugeTex, d_partial_plaq);
   
@@ -73,20 +72,20 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   cudaEventElapsedTime(&elapsedTime,start,stop);
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
-  printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
+  PLEGMA_printf("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
 #endif
 
   Float *h_partial_plaq = NULL;
-  h_partial_plaq = (Float*) malloc(gridDimX * sizeof(Float) );
-  if(h_partial_plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
+  hostMalloc(h_partial_plaq, gridDimX * sizeof(Float) );
+  if(h_partial_plaq == NULL) PLEGMA_error("Error allocate memory for host partial plaq");
   cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_plaq);
   checkCudaError();
 
   for(int i = 0 ; i < gridDimX ; i++)
     plaquette += h_partial_plaq[i];
-  free(h_partial_plaq);
+  hostFree(h_partial_plaq, gridDimX * sizeof(Float) );
 
   MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
-  return globalPlaquette/(GK_totalVolume*N_COLS*6);
+  return globalPlaquette/(HGC_totalVolume*N_COLS*6);
 }

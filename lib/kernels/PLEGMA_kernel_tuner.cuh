@@ -107,7 +107,7 @@ public:
   PLEGMA_kernel_tuner( ProfileStruct &myps, std::string kname, void(* mykernel)(types...), types... kArgs ) : ps(myps) {
     kernel = mykernel;
     args = std::tuple<types...>(kArgs...);
-    sprintf(volString, "%lldx%lldx%lldx%lld", GK_localL[0], GK_localL[1], GK_localL[2], GK_localL[3]);
+    sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
     sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
     onlyTuning = false;

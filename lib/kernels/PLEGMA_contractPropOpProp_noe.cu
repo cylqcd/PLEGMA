@@ -3,8 +3,8 @@
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
 void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
 			    su3Tex<FloatS> su3, int it, int dir, std::vector<GAMMAS> gammas){
-  if(dir < 0 || dir > 3) errorQuda("Allowed directions are 0,1,2,3\n");
-  if(gammas.size() != 0) errorQuda("For the conserved the gammas list should be passed as empty");
+  if(dir < 0 || dir > 3) PLEGMA_error("Allowed directions are 0,1,2,3\n");
+  if(gammas.size() != 0) PLEGMA_error("For the conserved the gammas list should be passed as empty");
   switch(dir){
   case(0):
     gammas.push_back(G1);

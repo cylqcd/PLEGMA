@@ -5,13 +5,9 @@
 using namespace plegma;
 using namespace quda;
 
-extern int device;
-extern char latfile[];
-
 int main(int argc, char **argv)
 {
-  PLEGMA_params params;
-  initialize(argc, argv, &params);
+  initialize(argc, argv);
 
 #ifdef CHECK_HPROP
   PLEGMA_Hprobing hprop(3);
@@ -31,25 +27,21 @@ int main(int argc, char **argv)
   }
   exit(-1);
 #endif // 
-
   
-  QudaGaugeParam gauge_param = newQudaGaugeParam();
-  setGaugeParam(gauge_param);
+  // Reading from Lime file and loading to device
+  PLEGMA_Gauge<double> gauge;
+  gauge.readFromLime(latfile.c_str());
+  gauge.load();
+  gauge.calculatePlaq();
 
-  //-Read the gauge field in lime format
-  GaugeBuffer<double> gauge(params);
-  readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
-  // This gauge will be used for the inversions.
-  // We need to apply the anti-periodic boundaries.
-  applyBoundaryCondition(gauge.get_ptr(), params.lL, &gauge_param);
-  initGaugeQuda((void*)gauge.get_ptr(), gauge_param);  
-  mapEvenOddToNormalGauge(gauge.get_ptr(),params.lL);
+  // Loading to QUDA and computing plaquette also there
+  initGaugeQuda(gauge, true);
+  plaqQuda();
 
-  // Allocation done on BOTH, DEVICE and HOST
-  PLEGMA_Gauge<double> pGauge(BOTH);
-  pGauge.pack(gauge.get_ptr());
-  pGauge.load();
-
+  // apply boundary conditions since is needed for the covariant derivative
+  // this needs to be done after initGaugeQuda otherwise causes troubles
+  applyBoundaryConditions(gauge,true);
+  
   // ensuring mu negative
   if(mu>0) mu*=-1.;
   QUDA_solver *solverDN = new QUDA_solver(mu);
@@ -65,10 +57,10 @@ int main(int argc, char **argv)
   // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
   phi.scaleVector(1./(2.*inv_params.kappa)); 
 
-  pGauge.communicateGhost();
-  loops_std.oneEnd_trick(phi,phi,tmp,pGauge,-1.,true); //standard one-end trick
+  gauge.communicateGhost();
+  loops_std.oneEnd_trick(phi,phi,tmp,gauge,-1.,true); //standard one-end trick
 
-  std::string prefix = "/onyx/noether/h/dnole/runs/";
+  std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
   PLEGMA_FT<double> ft(1, 3);
 
   // do the FT and write to File std trick
@@ -102,11 +94,11 @@ int main(int argc, char **argv)
   else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
     D = new QUDA_dirac(QUDA_WILSON_DSLASH);
   else
-    errorQuda("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
+    PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
 
   D->apply<M>(phi_r,phi);
   phi_r.apply_gamma5();
-  loops_gen.oneEnd_trick(phi, phi_r, tmp, pGauge, +1., true); //generalized one-end trick
+  loops_gen.oneEnd_trick(phi, phi_r, tmp, gauge, +1., true); //generalized one-end trick
 
   // do the FT and write to File std trick
   loops_gen.load(loops_gen.H_loc());

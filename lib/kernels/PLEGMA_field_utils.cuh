@@ -8,7 +8,7 @@ using namespace plegma;
 template<typename FloatOut,typename FloatIn1, typename FloatIn2, typename Float>
 static __global__ void xpby_kernel(FloatOut *z, FloatIn1 *x, FloatIn2 *y, Float beta, int length_field){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_localVolume) return;
   generic2<FloatOut> Rz(z);
   generic2<FloatIn1> Ry(y);
   generic2<FloatIn2> Rx(x);
@@ -18,41 +18,58 @@ static __global__ void xpby_kernel(FloatOut *z, FloatIn1 *x, FloatIn2 *y, Float 
 
 template<typename Float>
 static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<Float> &Fy, Float beta){
-  if(Fz.Field_length() != Fx.Field_length()) errorQuda("Error input, output fields do not match");
-  if(Fz.Field_length() != Fy.Field_length()) errorQuda("Error input, output fields do not match");
-  ProfileStruct ps(GK_localVolume);
+  if(Fz.Field_length() != Fx.Field_length()) PLEGMA_error("Error input, output fields do not match");
+  if(Fz.Field_length() != Fy.Field_length()) PLEGMA_error("Error input, output fields do not match");
+  ProfileStruct ps(HGC_localVolume);
   tuneAndRun(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
 	     Fy.D_elem(),beta,Fz.Field_length());
   checkCudaError();
 }
 
+template<typename FloatOut,typename FloatIn>
+static __global__ void cast_kernel(FloatOut *out, FloatIn *in, size_t size){
+  
+  size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
+
+  for (; sid < size; sid += gridDim.x * blockDim.x)
+    out[sid] = (FloatIn) in[sid];
+}
+
+template<typename FloatOut,typename FloatIn>
+static void cudaCast(FloatOut *out, FloatIn *in, size_t size){
+  ProfileStruct ps(HGC_localVolume); // here we can actually use any size
+  tuneAndRun(ps, "cast_kernel", cast_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in, size);
+  checkCudaError();
+}
+
+
 template<typename FloatInOut>
 static __global__ void copy_side_to_ghost_kernel(FloatInOut *f, int dir, int sign, int length_field){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_surface3D[dir]) return;
+  if (sid >= DGC_surface3D[dir]) return;
   generic2<FloatInOut> F(f);
   size_t id[4], tmp_sid=sid;
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir) {
-      id[i] = sign==1 ? (c_localL[dir]-1):0;
+      id[i] = sign==1 ? (DGC_localL[dir]-1):0;
     } else {
-      id[i] = tmp_sid % c_localL[i];
-      tmp_sid /= c_localL[i];
+      id[i] = tmp_sid % DGC_localL[i];
+      tmp_sid /= DGC_localL[i];
     }
   }
   size_t vid = LEXIC_ID(id);
   sidStride ss;
-  ss.sid = c_sideGhost[dir + N_DIMS*sign]*length_field + sid;
-  ss.stride = c_surface3D[dir];
+  ss.sid = DGC_sideGhost[dir + N_DIMS*sign]*length_field + sid;
+  ss.stride = DGC_surface3D[dir];
   for(int i = 0 ; i < length_field ; i++)
     F.set(i, ss, F.get(i,vid));
 }
 
 template<typename Float>
 static void copy_side_to_ghost(PLEGMA_Field<Float> &f, int dir){
-  if( GK_dimBreak[dir%N_DIMS] ){
+  if( HGC_dimBreak[dir%N_DIMS] ){
     dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-    dim3 gridDim( (GK_surface3D[dir%N_DIMS] + blockDim.x -1)/blockDim.x , 1 , 1);
+    dim3 gridDim( (HGC_surface3D[dir%N_DIMS] + blockDim.x -1)/blockDim.x , 1 , 1);
     copy_side_to_ghost_kernel<<<gridDim,blockDim>>>(f.D_elem(), dir%N_DIMS, dir/N_DIMS, f.Field_length());
     checkCudaError();
   }
@@ -61,32 +78,32 @@ static void copy_side_to_ghost(PLEGMA_Field<Float> &f, int dir){
 template<typename FloatInOut>
 static __global__ void copy_corner_to_ghost_kernel(FloatInOut *f, int dir1, int dir2, int sign1, int sign2, int length_field){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_surface2D[dir1][dir2]) return;
+  if (sid >= DGC_surface2D[dir1][dir2]) return;
   generic2<FloatInOut> F(f);
   size_t id[4], tmp_sid=sid;
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir1) {
-      id[i] = sign1==1 ? (c_localL[dir1]-1):0;
+      id[i] = sign1==1 ? (DGC_localL[dir1]-1):0;
     } else if(i==dir2) {
-      id[i] = sign2==1 ? (c_localL[dir2]-1):0;      
+      id[i] = sign2==1 ? (DGC_localL[dir2]-1):0;      
     } else {
-      id[i] = tmp_sid % c_localL[i];
-      tmp_sid /= c_localL[i];
+      id[i] = tmp_sid % DGC_localL[i];
+      tmp_sid /= DGC_localL[i];
     }
   }
   size_t vid = LEXIC_ID(id);
   sidStride ss;
-  ss.sid = c_cornerGhost[dir1 + N_DIMS*sign1][dir2 + N_DIMS*sign2]*length_field + sid;
-  ss.stride = c_surface2D[dir1][dir2];
+  ss.sid = DGC_cornerGhost[dir1 + N_DIMS*sign1][dir2 + N_DIMS*sign2]*length_field + sid;
+  ss.stride = DGC_surface2D[dir1][dir2];
   for(int i = 0 ; i < length_field ; i++)
     F.set(i, ss, F.get(i,vid));
 }
 
 template<typename Float>
 static void copy_corner_to_ghost(PLEGMA_Field<Float> &f, int dir1, int dir2){
-  if( (dir1%N_DIMS != dir2%N_DIMS ) && GK_dimBreak[dir1%N_DIMS] && GK_dimBreak[dir2%N_DIMS] ){
+  if( (dir1%N_DIMS != dir2%N_DIMS ) && HGC_dimBreak[dir1%N_DIMS] && HGC_dimBreak[dir2%N_DIMS] ){
     dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-    dim3 gridDim( (GK_surface2D[dir1%N_DIMS][dir2%N_DIMS] + blockDim.x -1)/blockDim.x , 1 , 1);
+    dim3 gridDim( (HGC_surface2D[dir1%N_DIMS][dir2%N_DIMS] + blockDim.x -1)/blockDim.x , 1 , 1);
     copy_corner_to_ghost_kernel<<<gridDim,blockDim>>>(f.D_elem(), dir1%N_DIMS, dir2%N_DIMS, dir1/N_DIMS, dir2/N_DIMS, f.Field_length());
     checkCudaError();
   }
@@ -155,7 +172,7 @@ __global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field,
 
       if( tmp  < ((Float)order+1.0)/(Float)n ){
 
-        inout2[sid + i*(c_threads)] = rootsunity<n>(order);
+        inout2[sid + i*(DGC_localVolume)] = rootsunity<n>(order);
         break;
       }
     }
@@ -199,7 +216,7 @@ void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_de
   else if( sampling == Normal)
     genRandomNormal_kernel<Float><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
   else
-    errorQuda("The given distribution is not defined.\n");
+    PLEGMA_error("The given distribution is not defined.\n");
 }
 
 template<typename Float>
@@ -231,7 +248,7 @@ struct HadCol{
 template<typename Float>
 static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   // make sure before that is not a 3D field
-  int V = GK_localVolume;
+  int V = HGC_localVolume;
   thrust::device_ptr<int> th_c(d_colors);
   thrust::device_ptr<Float2<Float> > th_e((Float2<Float>*)d_elems);
   typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<Float2<Float> > > tplDIntDFl2;

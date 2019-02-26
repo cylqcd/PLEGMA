@@ -14,11 +14,11 @@ struct MomF{
     int x[4] = GET_ID(id);
 #pragma unroll
     for(int i=0; i<4; i++)
-      x[i] += c_procPosition[i] * c_localL[i];
-    Float phase = ((Float) momx*x[0]) / ((Float) c_totalL[0])  +
-      ((Float) momy*x[1]) / ((Float) c_totalL[1]) +
-      ((Float) momz*x[2]) / ((Float) c_totalL[2]) +
-      ((Float) momt*x[3]) / ((Float) c_totalL[3]);
+      x[i] += DGC_procPosition[i] * DGC_localL[i];
+    Float phase = ((Float) momx*x[0]) / ((Float) DGC_totalL[0])  +
+      ((Float) momy*x[1]) / ((Float) DGC_totalL[1]) +
+      ((Float) momz*x[2]) / ((Float) DGC_totalL[2]) +
+      ((Float) momt*x[3]) / ((Float) DGC_totalL[3]);
     Float2<Float> &el = (thrust::get<1>(t));
     phase *= 2. * PI;
     el.x = cos(phase);
@@ -29,11 +29,11 @@ struct MomF{
 template<typename Float>
 static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int sign){
   if(D3D4 == 3){
-    if(mom.size() != 3) errorQuda("A momentum vector in three dimensions need three components\n");}
+    if(mom.size() != 3) PLEGMA_error("A momentum vector in three dimensions need three components\n");}
   else if (D3D4 == 4){
-    if(mom.size() != 4) errorQuda("A momentum vector in four dimensions need four components\n");}
-  else errorQuda("Not supported");
-  int V = (D3D4 == 3) ? GK_localVolume/GK_localL[3] : GK_localVolume;
+    if(mom.size() != 4) PLEGMA_error("A momentum vector in four dimensions need four components\n");}
+  else PLEGMA_error("Not supported");
+  int V = (D3D4 == 3) ? HGC_localVolume/HGC_localL[3] : HGC_localVolume;
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + V;
   thrust::device_ptr<Float2<Float> > dev_ptr(x);
@@ -48,11 +48,11 @@ static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int
 
 template<typename Float>
 static void FT(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<std::vector<int> > mom, int sign){
-  if(sign != +1 && sign != -1) errorQuda("Sign should be either +1 or -1\n");
-  if(mom.size() == 0) errorQuda("Momentum container is empty");
+  if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
+  if(mom.size() == 0) PLEGMA_error("Momentum container is empty");
   int Nmom = mom.size();
-  int V3 = GK_localVolume/GK_localL[3];
-  int V = ft.Dims() == 3 ? V3 : GK_localVolume;
+  int V3 = HGC_localVolume/HGC_localL[3];
+  int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
   Float2<Float> *x;
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset(x,0,V*2*sizeof(Float));
@@ -61,12 +61,11 @@ static void FT(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<s
     createMomField(x,mom[imom],ft.Dims(),-sign); // change sign to compensate dagger
     for(int idf = 0 ; idf < f.Field_length(); idf++)
       for(int it = 0 ; it < ft.DimT(); it++){
-	Float2<Float> res;
-	Float2<Float> *y = (Float2<Float> *)f.D_elem() + idf*f.Total_length() + it*V3;
-	cuBLAS::dot((Float*) &res, (ft.Dims() == 3) ? V3 : GK_localVolume,
-		    (Float*) x,(Float*) y, (ft.Dims() == 3) ? GK_spaceComm : MPI_COMM_WORLD);
-	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.x;
-	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.y;
+ 	Float2<Float> *y = (Float2<Float> *)f.D_elem() + idf*f.Total_length() + it*V3;
+	std::complex<Float> res = cuBLAS::dot((ft.Dims() == 3) ? V3 : HGC_localVolume, (Float*) x,(Float*) y,
+					      (ft.Dims() == 3) ? HGC_spaceComm : MPI_COMM_WORLD);
+	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.real();
+	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.imag();
       }
   }
   cudaFree(x);

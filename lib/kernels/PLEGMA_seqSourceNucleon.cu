@@ -11,7 +11,7 @@ template<typename FloatC, typename FloatA, typename FloatB, bool isTwoPropDiff, 
 __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
-  size_t space_stride = c_stride/c_localL[3];
+  size_t space_stride = DGC_localVolume3D;
   sidStride ss(sid,space_stride);
   if(sid >= space_stride) return;
   Float2<FloatC> *vec2 = (Float2<FloatC> *) vec;
@@ -85,7 +85,7 @@ __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, 
   for(short mu = 0 ; mu < 4 ; mu++)
 #pragma unroll
     for(short ic = 0 ; ic < 3 ; ic++)
-      vec2[(mu*N_COLS + ic)*c_stride + timeslice*space_stride + sid] = spinor[mu][ic];
+      vec2[(mu*N_COLS + ic)*DGC_localVolume + timeslice*space_stride + sid] = spinor[mu][ic];
 #endif
 }
 
@@ -117,7 +117,7 @@ __global__ void contractNucleonSeqSource_kernel(FloatC* vec, genericTex<FloatA> 
 
 template<typename FloatC, typename FloatA, typename FloatB>
 static void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, bool isTwoPropDiff, int c_nu, int c_c2){
-  int SpVol = GK_localVolume/GK_localL[3];
+  int SpVol = HGC_localVolume/HGC_localL[3];
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (SpVol + blockDim.x -1)/blockDim.x , 1 , 1); // spawn threads only for the spatial volume
   contractNucleonSeqSource_kernel<<<gridDim,blockDim>>>(vec.D_elem(), prop1, prop2, proj, particle, timeslice, isTwoPropDiff, c_nu, c_c2);
@@ -130,7 +130,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
   genericTex<FloatA> prop2 = prop1;
   contractNucleonSeqSource(vec, prop1,prop2, proj,particle, timeslice, false, c_nu, c_c2);
 #else
-  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
+  PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
 #endif
 }
 
@@ -139,7 +139,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   contractNucleonSeqSource(vec, prop1, prop2, proj,particle, timeslice, true, c_nu, c_c2);
 #else
-  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
+  PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK");
 #endif
 }
 

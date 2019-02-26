@@ -9,12 +9,12 @@ struct KernelArr {T* array; int size;};
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink, int dir, bool isCons>
 __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex, su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas, int it, int x0, int y0, int z0, int signProps){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*c_stride_spatial;
+  int vid = sid + it*DGC_localVolume3D;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
 
   Float2<FloatC> R[N_SPINS][N_SPINS];
   Float2<FloatC> noeV;  
-  if (sid < c_threads/c_localL[3]){
+  if (sid < DGC_localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     if(dir < 0){ // either local or Wilson line
@@ -61,7 +61,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
   for(int iop = 0; iop < listGammas.size; iop++){
     int opId=listGammas.array[iop];
     accum.x=0.;accum.y=0.;
-    if (sid < c_threads/c_localL[3]){
+    if (sid < DGC_localVolume3D){
       if(isCons) accum = 0.25*noeV;
       else accum = (dir<0 ? 1. : 0.25) * ( (signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
     }
@@ -72,7 +72,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
       fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos,listGammas.size-1,+1);
     }
     else{
-      if (sid < c_threads/c_localL[3])
+      if (sid < DGC_localVolume3D)
 	for(int iop = 0; iop < listGammas.size; iop++)
 	  block2[sid*listGammas.size +iop] = accum;
     }
@@ -83,21 +83,25 @@ template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool
 static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatA> prop2,
 				 int signProps, su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
   if(gammas.size() <= 0)
-    errorQuda("Error the container of gamma matrices cannot be zero");
+    PLEGMA_error("Error the container of gamma matrices cannot be zero");
   if(gammas.size() > 16)
-    errorQuda("Error maximum number of gamma matrices is 16");
-  int SpVol = GK_localVolume/GK_localL[3];
+    PLEGMA_error("Error maximum number of gamma matrices is 16");
+  int SpVol = HGC_localVolume/HGC_localL[3];
   FloatC *d_partial_block = NULL;
-  int isource = corr.getIdSource();
-  int site_size=2*gammas.size();
-  size_t volume;
-  size_t size;
-  if(runFT==true){
-    volume = GK_Nmoms;
-    size = site_size*volume;
-  } else {
-    volume = SpVol;
-    size = site_size*volume;
+  int site_size=gammas.size();
+  size_t volume = corr.getVolSize()/HGC_localL[3];
+  size_t size = corr.getTotalSize()/HGC_localL[3];
+  int3 source = corr.getSource3();
+
+  int shift = (dir<0) ? 0 : dir*gammas.size()*2;
+  int Mshift = (dir<0) ? 1 : N_DIMS;
+  if(dir <  0){
+    if(corr.getSiteSize() != site_size)
+      PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+  }
+  else{
+    if(corr.getSiteSize() != N_DIMS * site_size)
+      PLEGMA_error("Correlator siteSize do not match: %d != %d * %d\n", corr.getSiteSize(), N_DIMS, site_size);
   }
 
   KernelArr<GAMMAS> listGammas;
@@ -114,65 +118,65 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   dim3 gridDim( (SpVol + blockDim.x -1)/blockDim.x , 1 , 1); // spawn threads only for the spatial volume
   size_t alloc_size;
   if(runFT==true){
-    alloc_size = size * gridDim.x;
+    alloc_size = size * gridDim.x * 2;
   } else {
-    alloc_size = size;
+    alloc_size = size * 2;
   }
-  cudaMalloc((void**)&d_partial_block, alloc_size*2*sizeof(FloatC));
+  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(FloatC));
   checkCudaError();
-  contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT, isLink, dir,isCons>
+  contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT,
+			    isLink, dir,isCons>
     <<<gridDim,blockDim>>>(d_partial_block, prop1, prop2, su3, listGammas, it,
-			   GK_sourcePosition[isource][0], GK_sourcePosition[isource][1],
-			   GK_sourcePosition[isource][2], signProps);
+			   source.x,source.y,source.z, signProps);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
-  h_partial_block = (FloatC*)malloc(alloc_size*sizeof(FloatC));
-  if(h_partial_block == NULL) errorQuda("contractPropOpProp: Cannot allocate host block.\n");
+  hostMalloc(h_partial_block, alloc_size*sizeof(FloatC));
   cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_block);
   cudaFree(listGammas.array);
   checkCudaError();
   
   if(runFT==true){
-    FloatC *reduction =(FloatC*) calloc(size,sizeof(FloatC));
-    for(size_t i = 0 ; i < size/2; i++)
+    FloatC *reduction;
+    hostMalloc(reduction, size*2*sizeof(FloatC));
+    for(size_t i = 0 ; i < size; i++) {
+      reduction[i*2+0] = 0;
+      reduction[i*2+1] = 0;
       for(int j = 0 ; j < gridDim.x; j++) {
 	reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
 	reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
       }
-    MPI_Allreduce(reduction, h_partial_block, size, MPI_Type(reduction), MPI_SUM, GK_spaceComm);
-    free(reduction);
+    }
+    MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
+    hostFree(reduction, size*2*sizeof(FloatC));
   }
   
   FloatC *corr_pt = corr.getCorr();
-  int sz = corr.getSiteSize();
-  if(sz < gammas.size())errorQuda("The size of list with gammas exceeds the site_size of correlators\n");
-  int shift = (dir<0) ? 0 : dir*gammas.size()*2;
   for(size_t v = 0 ; v < volume; v++)
     for(int i = 0 ; i < gammas.size(); i++) {
-      corr_pt[it*volume*sz*2+v*sz*2+shift+i*2+0] = h_partial_block[(v*gammas.size()+i)*2+0];
-      corr_pt[it*volume*sz*2+v*sz*2+shift+i*2+1] = h_partial_block[(v*gammas.size()+i)*2+1];
+      corr_pt[it*volume*Mshift*site_size*2+v*Mshift*site_size*2+shift+i*2+0] =
+	h_partial_block[(v*gammas.size()+i)*2+0];
+      corr_pt[it*volume*Mshift*site_size*2+v*Mshift*site_size*2+shift+i*2+1] =
+	h_partial_block[(v*gammas.size()+i)*2+1];
     }
-
-  free(h_partial_block);
-
+  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
 }
 
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool isLink, int dir, bool isCons>
 static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
 			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
-  if(!isLink && dir>=0) errorQuda("Does not make sence to do not have links and have directions");
-  if(isCons && !isLink) errorQuda("Does not make sence to do noether current without links");
+  if(!isLink && dir>=0) PLEGMA_error("Does not make sence to do not have links and have directions");
+  if(isCons && !isLink) PLEGMA_error("Does not make sence to do noether current without links");
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(corr.getCorrSpace() == POSITION_SPACE)
     contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else if(corr.getCorrSpace() == MOMENTUM_SPACE)
     contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
   else
-    errorQuda("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
+    PLEGMA_error("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
 #else
-  errorQuda("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
+  PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
 #endif
 }

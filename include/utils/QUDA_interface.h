@@ -1,9 +1,7 @@
+#pragma once
 #include <PLEGMA.h>
 #include <invert_quda.h>
 #include <dirac_quda.h>
-
-#ifndef _QUDA_INTERFACE_H
-#define _QUDA_INTERFACE_H
 using namespace plegma;
 
 namespace quda {  
@@ -51,4 +49,4 @@ namespace quda {
     template<APP_TYPE type, typename Float> void apply(Float *dout, Float *din, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is without any normalization // Note that dout and din are device pointers
   };
 }
-#endif
+

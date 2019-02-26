@@ -6,9 +6,6 @@
 
 #include <util_quda.h>
 #include <PLEGMA_utils.h>
-#include <quda_types.h>
-
-#include <quda_params.h>
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
@@ -19,33 +16,33 @@ namespace quda {
   extern void setTransferGPU(bool);
 }
 
-int dimPartitioned(int dim)
+static inline int dimPartitioned(int dim)
 {
-  return ((gridsize_from_cmdline[dim] > 1) || dim_partitioned[dim]);
+  return (procs[dim] > 1);
 }
 
 void
-print_info()
+infoQuda()
 {
-  printfQuda("running the following test:\n");
+  PLEGMA_printf("running the following test:\n");
     
-  printfQuda("prec    sloppy_prec    link_recon  sloppy_link_recon S_dimension T_dimension Ls_dimension\n");
-  printfQuda("%s   %s             %s            %s            %d/%d/%d          %d         %d\n",
-	     get_prec_str(prec),get_prec_str(prec_sloppy),
-	     get_recon_str(link_recon), 
-	     get_recon_str(link_recon_sloppy),  xdim, ydim, zdim, tdim, Lsdim);     
+  PLEGMA_printf("prec    sloppy_prec    link_recon  sloppy_link_recon S_dimension T_dimension\n");
+  PLEGMA_printf("%s   %s             %s            %s            %d/%d/%d          %d\n",
+		get_prec_str(prec).c_str(),get_prec_str(prec_sloppy).c_str(),
+		get_recon_str(link_recon).c_str(), 
+		get_recon_str(link_recon_sloppy).c_str(), dims[0], dims[1], dims[2], dims[3]);     
 
-  printfQuda("MG parameters\n");
-  printfQuda(" - number of levels %d\n", mg_levels);
-  for (int i=0; i<mg_levels-1; i++) printfQuda(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
-  printfQuda(" - number of pre-smoother applications %d\n", nu_pre);
-  printfQuda(" - number of post-smoother applications %d\n", nu_post);
+  PLEGMA_printf("MG parameters\n");
+  PLEGMA_printf(" - number of levels %d\n", mg_levels);
+  for (int i=0; i<mg_levels-1; i++) PLEGMA_printf(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
+  PLEGMA_printf(" - number of pre-smoother applications %d\n", nu_pre);
+  PLEGMA_printf(" - number of post-smoother applications %d\n", nu_post);
 
-  printfQuda("Outer solver paramers\n");
-  printfQuda(" - pipeline = %d\n", pipeline);
+  PLEGMA_printf("Outer solver paramers\n");
+  PLEGMA_printf(" - pipeline = %d\n", pipeline);
 
-  printfQuda("Grid partition info:     X  Y  Z  T\n"); 
-  printfQuda("                         %d  %d  %d  %d\n", 
+  PLEGMA_printf("Grid partition info:     X  Y  Z  T\n"); 
+  PLEGMA_printf("                         %d  %d  %d  %d\n", 
 	     dimPartitioned(0),
 	     dimPartitioned(1),
 	     dimPartitioned(2),
@@ -59,10 +56,8 @@ QudaPrecision &cuda_prec_sloppy = prec_sloppy;
 QudaPrecision &cuda_prec_precondition = prec_precondition;
 
 void setGaugeParam(QudaGaugeParam &gauge_param) {
-  gauge_param.X[0] = xdim;
-  gauge_param.X[1] = ydim;
-  gauge_param.X[2] = zdim;
-  gauge_param.X[3] = tdim;
+  for(int i=0; i<4; i++)
+    gauge_param.X[i] = dims[i];
 
   gauge_param.anisotropy = anisotropy;
   gauge_param.type = QUDA_WILSON_LINKS;
@@ -107,7 +102,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     inv_param.mass = 0.5/kappa - (1.0 + 3.0/anisotropy);
   }
 
-  printfQuda("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
+  PLEGMA_printf("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
 
   inv_param.Ls = 1;
 
@@ -145,7 +140,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
       2 : 1;
     
     if (twist_flavor == QUDA_TWIST_NONDEG_DOUBLET) {
-      printfQuda("Twisted-mass doublet non supported (yet)\n");
+      PLEGMA_printf("Twisted-mass doublet non supported (yet)\n");
       exit(0);
     }
   }
@@ -166,8 +161,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
   for (int i=0; i<mg_param.n_level; i++) {
     for (int j=0; j<QUDA_MAX_DIM; j++) {
 	// if not defined use 4
-      mg_param.geo_block_size[i][j] = geo_block_size[i][j] ? 
-	geo_block_size[i][j] : 4;      
+      mg_param.geo_block_size[i][j] = mg_block_size[i][j] ? 
+	mg_block_size[i][j] : 4;      
     }
     mg_param.verbosity[i] = mg_verbosity[i];
     mg_param.setup_inv_type[i] = setup_inv[i];
@@ -235,8 +230,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
   mg_param.run_verify = verify_results ? QUDA_BOOLEAN_YES : QUDA_BOOLEAN_NO;
 
   // set file i/o parameters
-  strcpy(mg_param.vec_infile, vec_infile);
-  strcpy(mg_param.vec_outfile, vec_outfile);
+  strcpy(mg_param.vec_infile, vec_infile.c_str());
+  strcpy(mg_param.vec_outfile, vec_outfile.c_str());
 
   // these need to be set for now but are actually ignored by the MG setup
   // needed to make it pass the initialization test
@@ -260,7 +255,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.mass = 0.5/kappa - (1.0 + 3.0/anisotropy);
   }
   
-  printfQuda("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
+  PLEGMA_printf("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
 
 
   inv_param.Ls = 1;
@@ -300,7 +295,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
       2 : 1;
 
     if (twist_flavor == QUDA_TWIST_NONDEG_DOUBLET) {
-      printfQuda("Twisted-mass doublet non supported (yet)\n");
+      PLEGMA_printf("Twisted-mass doublet non supported (yet)\n");
       exit(0);
     }
   }
@@ -315,10 +310,10 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.solve_type = solve_type;
   if(isEven) {
     inv_param.matpc_type = QUDA_MATPC_EVEN_EVEN;
-    printfQuda("### Running for the Even-Even Operator\n");
+    PLEGMA_printf("### Running for the Even-Even Operator\n");
   }
   else {
-    printfQuda("### Running for the Odd-Odd Operator\n");
+    PLEGMA_printf("### Running for the Odd-Odd Operator\n");
     inv_param.matpc_type = QUDA_MATPC_ODD_ODD;
   }
 
@@ -345,7 +340,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.tol_hq_offset[i] = inv_param.tol_hq;
   }
   inv_param.maxiter = niter;
-  inv_param.reliable_delta = 1e-4;
+  inv_param.reliable_delta = reliable_delta; 
 
   // domain decomposition preconditioner parameters
   inv_param.schwarz_type = QUDA_ADDITIVE_SCHWARZ;
@@ -354,15 +349,5 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.maxiter_precondition = 1;
   inv_param.omega = 1.0;
 
-
-  if(strcmp(verbosity_level,"verbose")==0) 
-    inv_param.verbosity = QUDA_VERBOSE;
-  else if(strcmp(verbosity_level,"summarize")==0) 
-    inv_param.verbosity = QUDA_SUMMARIZE;
-  else if(strcmp(verbosity_level,"silent")==0) 
-    inv_param.verbosity = QUDA_SILENT;
-  else{
-    warningQuda("Unknown verbosity level %s. Proceeding with QUDA_SUMMARIZE verbosity level\n",verbosity_level);
-    inv_param.verbosity = QUDA_SUMMARIZE;
-  }
+  inv_param.verbosity = verbosity_level;
 }

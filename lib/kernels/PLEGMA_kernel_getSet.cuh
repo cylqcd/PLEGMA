@@ -1,44 +1,44 @@
 #ifndef PLEGMA_KERNEL_TEXTURE_CUH
 #define PLEGMA_KERNEL_TEXTURE_CUH
 
-#define GET_ID(sid) {(sid) % c_localL[0],				\
-		     ((sid)/c_localL[0]) % c_localL[1],			\
-		     ((sid)/c_localL[0]/c_localL[1]) % c_localL[2],	\
-		     ((sid)/c_localL[0]/c_localL[1]/c_localL[2]) % c_localL[3] }
+#define GET_ID(sid) {(sid) % DGC_localL[0],				\
+		     ((sid)/DGC_localL[0]) % DGC_localL[1],			\
+		     ((sid)/DGC_localL[0]/DGC_localL[1]) % DGC_localL[2],	\
+		     ((sid)/DGC_localL[0]/DGC_localL[1]/DGC_localL[2]) % DGC_localL[3] }
 
-#define GET_ID_ZYX(sid) {(sid) % c_localL[0],				\
-			 ((sid)/c_localL[0]) % c_localL[1],		\
-			 ((sid)/c_localL[0]/c_localL[1]) % c_localL[2] }
+#define GET_ID_ZYX(sid) {(sid) % DGC_localL[0],				\
+			 ((sid)/DGC_localL[0]) % DGC_localL[1],		\
+			 ((sid)/DGC_localL[0]/DGC_localL[1]) % DGC_localL[2] }
 
-#define LEXIC_ID(id) LEXIC(id[3],id[2],id[1],id[0],c_localL)
-#define LEXIC_3D(i,id)(i==0 ? LEXIC_TZY(id[3],id[2],id[1],c_localL) : \
-                      (i==1 ? LEXIC_TZX(id[3],id[2],id[0],c_localL) : \
-		      (i==2 ? LEXIC_TYX(id[3],id[1],id[0],c_localL) : \
-		              LEXIC_ZYX(id[2],id[1],id[0],c_localL))))
-#define LEXIC_NOX(j,id)( j==1 ? LEXIC_TZ(id[3],id[2],c_localL) : \
-			 ( j==2 ? LEXIC_TY(id[3],id[1],c_localL) : \
-			   LEXIC_ZY(id[2],id[1],c_localL) ) )
-#define	LEXIC_NOY(j,id)( j==0 ? LEXIC_TZ(id[3],id[2],c_localL) : \
-			 ( j==2 ? LEXIC_TX(id[3],id[0],c_localL) : \
-			   LEXIC_ZX(id[2],id[0],c_localL) ) )
-#define LEXIC_NOZ(j,id)( j==0 ? LEXIC_TY(id[3],id[1],c_localL) : \
-			 ( j==1 ? LEXIC_TX(id[3],id[0],c_localL) : \
-			   LEXIC_YX(id[1],id[0],c_localL) ) )
-#define LEXIC_NOT(j,id)( j==0 ? LEXIC_ZY(id[2],id[1],c_localL) : \
-			 ( j==1 ? LEXIC_ZX(id[2],id[0],c_localL) : \
-			   LEXIC_YX(id[1],id[0],c_localL)  ) )
+#define LEXIC_ID(id) LEXIC(id[3],id[2],id[1],id[0],DGC_localL)
+#define LEXIC_3D(i,id)(i==0 ? LEXIC_TZY(id[3],id[2],id[1],DGC_localL) : \
+                      (i==1 ? LEXIC_TZX(id[3],id[2],id[0],DGC_localL) : \
+		      (i==2 ? LEXIC_TYX(id[3],id[1],id[0],DGC_localL) : \
+		              LEXIC_ZYX(id[2],id[1],id[0],DGC_localL))))
+#define LEXIC_NOX(j,id)( j==1 ? LEXIC_TZ(id[3],id[2],DGC_localL) : \
+			 ( j==2 ? LEXIC_TY(id[3],id[1],DGC_localL) : \
+			   LEXIC_ZY(id[2],id[1],DGC_localL) ) )
+#define	LEXIC_NOY(j,id)( j==0 ? LEXIC_TZ(id[3],id[2],DGC_localL) : \
+			 ( j==2 ? LEXIC_TX(id[3],id[0],DGC_localL) : \
+			   LEXIC_ZX(id[2],id[0],DGC_localL) ) )
+#define LEXIC_NOZ(j,id)( j==0 ? LEXIC_TY(id[3],id[1],DGC_localL) : \
+			 ( j==1 ? LEXIC_TX(id[3],id[0],DGC_localL) : \
+			   LEXIC_YX(id[1],id[0],DGC_localL) ) )
+#define LEXIC_NOT(j,id)( j==0 ? LEXIC_ZY(id[2],id[1],DGC_localL) : \
+			 ( j==1 ? LEXIC_ZX(id[2],id[0],DGC_localL) : \
+			   LEXIC_YX(id[1],id[0],DGC_localL)  ) )
 // assuming i!=j
 #define LEXIC_2D(i,j,id)( i==0 ? LEXIC_NOX(j,id) :   \
 			  ( i==1 ? LEXIC_NOY(j,id) : \
 			    ( i==2 ? LEXIC_NOZ(j,id) : LEXIC_NOT(j,id) )))
-#define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]+1)%c_localL[0],c_localL) : \
-                        (i==1 ? LEXIC(id[3],id[2],(id[1]+1)%c_localL[1],id[0],c_localL) : \
-                        (i==2 ? LEXIC(id[3],(id[2]+1)%c_localL[2],id[1],id[0],c_localL) : \
-			        LEXIC((id[3]+1)%c_localL[3],id[2],id[1],id[0],c_localL))))
-#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]-1+c_localL[0])%c_localL[0],c_localL) : \
-                         (i==1 ? LEXIC(id[3],id[2],(id[1]-1+c_localL[1])%c_localL[1],id[0],c_localL) : \
-                         (i==2 ? LEXIC(id[3],(id[2]-1+c_localL[2])%c_localL[2],id[1],id[0],c_localL) : \
-			         LEXIC((id[3]-1+c_localL[3])%c_localL[3],id[2],id[1],id[0],c_localL))))
+#define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]+1)%DGC_localL[0],DGC_localL) : \
+                        (i==1 ? LEXIC(id[3],id[2],(id[1]+1)%DGC_localL[1],id[0],DGC_localL) : \
+                        (i==2 ? LEXIC(id[3],(id[2]+1)%DGC_localL[2],id[1],id[0],DGC_localL) : \
+			        LEXIC((id[3]+1)%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
+#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]-1+DGC_localL[0])%DGC_localL[0],DGC_localL) : \
+                         (i==1 ? LEXIC(id[3],id[2],(id[1]-1+DGC_localL[1])%DGC_localL[1],id[0],DGC_localL) : \
+                         (i==2 ? LEXIC(id[3],(id[2]-1+DGC_localL[2])%DGC_localL[2],id[1],id[0],DGC_localL) : \
+			         LEXIC((id[3]-1+DGC_localL[3])%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
 
 namespace plegma {
   enum get_from { Me, Plus, Minus, PlusPlus, MinusMinus, PlusMinus, MinusPlus };
@@ -47,7 +47,7 @@ namespace plegma {
     size_t sid;
     size_t stride;
     inline __device__ sidStride() = default; 
-    inline __device__ sidStride(size_t sid, size_t stride=c_stride) {
+    inline __device__ sidStride(size_t sid, size_t stride=DGC_localVolume) {
       this->sid = sid;
       this->stride = stride;      
     }  
@@ -59,66 +59,66 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::setSidStride<Plus>(size_t sid, const int offset, short int dirPlus) {
     size_t id[4] = GET_ID(sid);
-    bool plus_ghost = (c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1));
-    this->sid = plus_ghost ? (c_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-    this->stride = plus_ghost ? c_surface3D[dirPlus] : c_stride;
+    bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
+    this->sid = plus_ghost ? (DGC_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
+    this->stride = plus_ghost ? DGC_surface3D[dirPlus] : DGC_localVolume;
   }
   template<>
   inline __device__ void sidStride::setSidStride<Minus>(size_t sid, const int offset, short int dirMinus) {
     size_t id[4] = GET_ID(sid);
-    bool minus_ghost = (c_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    this->sid = minus_ghost ? (c_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-    this->stride = minus_ghost ? c_surface3D[dirMinus] : c_stride;
+    bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
+    this->sid = minus_ghost ? (DGC_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
+    this->stride = minus_ghost ? DGC_surface3D[dirMinus] : DGC_localVolume;
   }
   template<>
   inline __device__ void sidStride::setSidStride<PlusPlus>(size_t sid, const int offset, short int dirPlus1, short int dirPlus2) {
-    if(dirPlus1 == dirPlus2 && c_dimBreak[dirPlus1]) {
+    if(dirPlus1 == dirPlus2 && DGC_dimBreak[dirPlus1]) {
       printf(" !!! ERROR: in PlusPlus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
-      bool plus1_ghost = c_dimBreak[dirPlus1] == true && id[dirPlus1] == (c_localL[dirPlus1]-1);
-      if(!plus1_ghost) id[dirPlus1] = (id[dirPlus1] + 1)%c_localL[dirPlus1]; 
-      bool plus2_ghost = c_dimBreak[dirPlus2] == true && id[dirPlus2] == (c_localL[dirPlus1]-1);
-      if(!plus2_ghost) id[dirPlus2] = (id[dirPlus2] + 1)%c_localL[dirPlus2];
+      bool plus1_ghost = DGC_dimBreak[dirPlus1] == true && id[dirPlus1] == (DGC_localL[dirPlus1]-1);
+      if(!plus1_ghost) id[dirPlus1] = (id[dirPlus1] + 1)%DGC_localL[dirPlus1]; 
+      bool plus2_ghost = DGC_dimBreak[dirPlus2] == true && id[dirPlus2] == (DGC_localL[dirPlus1]-1);
+      if(!plus2_ghost) id[dirPlus2] = (id[dirPlus2] + 1)%DGC_localL[dirPlus2];
 
       if(plus1_ghost && plus2_ghost){
-	this->sid = c_cornerGhost[dirPlus1][dirPlus2]*offset + LEXIC_2D(dirPlus1,dirPlus2,id);
-	this->stride = c_surface2D[dirPlus1][dirPlus2];
+	this->sid = DGC_cornerGhost[dirPlus1][dirPlus2]*offset + LEXIC_2D(dirPlus1,dirPlus2,id);
+	this->stride = DGC_surface2D[dirPlus1][dirPlus2];
       } else if(plus1_ghost) {
-	this->sid = c_sideGhost[dirPlus1]*offset + LEXIC_3D(dirPlus1,id);
-	this->stride = c_surface3D[dirPlus1];
+	this->sid = DGC_sideGhost[dirPlus1]*offset + LEXIC_3D(dirPlus1,id);
+	this->stride = DGC_surface3D[dirPlus1];
       } else if(plus2_ghost) {
-	this->sid = c_sideGhost[dirPlus2]*offset + LEXIC_3D(dirPlus2,id);
-	this->stride = c_surface3D[dirPlus2];
+	this->sid = DGC_sideGhost[dirPlus2]*offset + LEXIC_3D(dirPlus2,id);
+	this->stride = DGC_surface3D[dirPlus2];
       } else {
 	this->sid = LEXIC_ID(id);
-	this->stride = c_stride;
+	this->stride = DGC_localVolume;
       }
     }
   }
   template<>
   inline __device__ void sidStride::setSidStride<MinusMinus>(size_t sid, const int offset, short int dirMinus1, short int dirMinus2) {
-    if(dirMinus1 == dirMinus2 && c_dimBreak[dirMinus1]) {
+    if(dirMinus1 == dirMinus2 && DGC_dimBreak[dirMinus1]) {
       printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
-      bool minus1_ghost = c_dimBreak[dirMinus1] == true && id[dirMinus1] == 0;
-      if(!minus1_ghost) id[dirMinus1] = (id[dirMinus1] + c_localL[dirMinus1] - 1)%c_localL[dirMinus1]; 
-      bool minus2_ghost = c_dimBreak[dirMinus2] == true && id[dirMinus2] == 0;
-      if(!minus2_ghost) id[dirMinus2] = (id[dirMinus2] + c_localL[dirMinus2] - 1)%c_localL[dirMinus2];
+      bool minus1_ghost = DGC_dimBreak[dirMinus1] == true && id[dirMinus1] == 0;
+      if(!minus1_ghost) id[dirMinus1] = (id[dirMinus1] + DGC_localL[dirMinus1] - 1)%DGC_localL[dirMinus1]; 
+      bool minus2_ghost = DGC_dimBreak[dirMinus2] == true && id[dirMinus2] == 0;
+      if(!minus2_ghost) id[dirMinus2] = (id[dirMinus2] + DGC_localL[dirMinus2] - 1)%DGC_localL[dirMinus2];
 
       if(minus1_ghost && minus2_ghost){
-	this->sid = c_cornerGhost[N_DIMS+dirMinus1][N_DIMS+dirMinus2]*offset + LEXIC_2D(dirMinus1,dirMinus2,id);
-	this->stride = c_surface2D[dirMinus1][dirMinus2];
+	this->sid = DGC_cornerGhost[N_DIMS+dirMinus1][N_DIMS+dirMinus2]*offset + LEXIC_2D(dirMinus1,dirMinus2,id);
+	this->stride = DGC_surface2D[dirMinus1][dirMinus2];
       } else if(minus1_ghost) {
-	this->sid = c_sideGhost[dirMinus1+N_DIMS]*offset + LEXIC_3D(dirMinus1,id);
-	this->stride = c_surface3D[dirMinus1];
+	this->sid = DGC_sideGhost[dirMinus1+N_DIMS]*offset + LEXIC_3D(dirMinus1,id);
+	this->stride = DGC_surface3D[dirMinus1];
       } else if(minus2_ghost) {
-	this->sid = c_sideGhost[dirMinus2+N_DIMS]*offset + LEXIC_3D(dirMinus2,id);
-	this->stride = c_surface3D[dirMinus2];
+	this->sid = DGC_sideGhost[dirMinus2+N_DIMS]*offset + LEXIC_3D(dirMinus2,id);
+	this->stride = DGC_surface3D[dirMinus2];
       } else {
 	this->sid = LEXIC_ID(id);
-	this->stride = c_stride;
+	this->stride = DGC_localVolume;
       }
     }
   }
@@ -126,26 +126,26 @@ namespace plegma {
   inline __device__ void sidStride::setSidStride<PlusMinus>(size_t sid, const int offset, short int dirPlus, short int dirMinus) {
     if(dirPlus == dirMinus) {
       this->sid = sid;
-      this->stride = c_stride;      
+      this->stride = DGC_localVolume;      
     } else {
       size_t id[4] = GET_ID(sid);
-      bool plus_ghost = c_dimBreak[dirPlus] == true && id[dirPlus] == (c_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%c_localL[dirPlus]; 
-      bool minus_ghost = c_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + c_localL[dirMinus] - 1)%c_localL[dirMinus];
+      bool plus_ghost = DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1);
+      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%DGC_localL[dirPlus]; 
+      bool minus_ghost = DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0;
+      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + DGC_localL[dirMinus] - 1)%DGC_localL[dirMinus];
 
       if(plus_ghost && minus_ghost){
-	this->sid = c_cornerGhost[dirPlus][N_DIMS+dirMinus]*offset + LEXIC_2D(dirPlus,dirMinus,id);
-	this->stride = c_surface2D[dirPlus][dirMinus];
+	this->sid = DGC_cornerGhost[dirPlus][N_DIMS+dirMinus]*offset + LEXIC_2D(dirPlus,dirMinus,id);
+	this->stride = DGC_surface2D[dirPlus][dirMinus];
       } else if(plus_ghost) {
-	this->sid = c_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id);
-	this->stride = c_surface3D[dirPlus];
+	this->sid = DGC_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id);
+	this->stride = DGC_surface3D[dirPlus];
       } else if(minus_ghost) {
-	this->sid = c_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id);
-	this->stride = c_surface3D[dirMinus];
+	this->sid = DGC_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id);
+	this->stride = DGC_surface3D[dirMinus];
       } else {
 	this->sid = LEXIC_ID(id);
-	this->stride = c_stride;
+	this->stride = DGC_localVolume;
       }
     }
   }
@@ -336,7 +336,7 @@ namespace plegma {
     template<get_from src, typename ...dir_t>
     inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], size_t sid, dir_t ... dirs) {
       sidStride ss;
-      ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
+      ss.setSidStride<src>(sid, N_COLS*N_COLS, dirs ...);
       get(G, ss);
     }
   };

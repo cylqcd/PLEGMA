@@ -21,8 +21,8 @@ namespace plegma{
     ~PLEGMA_QLoops();
 
     Float* H_loc() const{return h_loc;}
-    Float** H_oneD() const{if(!isOneD) errorQuda("oneD is not enabled");  return (Float**)h_oneD;}
-    Float** H_oneDC() const{if(!isOneD) errorQuda("oneD is not enabled");  return (Float**)h_oneDC;}
+    Float** H_oneD() const{if(!isOneD) PLEGMA_error("oneD is not enabled");  return (Float**)h_oneD;}
+    Float** H_oneDC() const{if(!isOneD) PLEGMA_error("oneD is not enabled");  return (Float**)h_oneDC;}
 
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 		      Float val , bool accum );

@@ -1,4 +1,6 @@
+#pragma once
 #include <PLEGMA_global.h>
+#include <PLEGMA_io.h>
 #include <PLEGMA_Field.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Su3field.h>
@@ -8,16 +10,12 @@
 #include <PLEGMA_QLoops.h>
 #include <PLEGMA_FT.h>
 
-#ifndef _PLEGMA__H
-#define _PLEGMA__H
-
 namespace plegma {
   
-  void PLEGMA_init(PLEGMA_params *params);
-
-  void print_status();
-
+  void PLEGMA_init(int localL[4], int nProcs[4], int verbosity);
+  
+  void PLEGMA_status();
+  
   void PLEGMA_end();
   
 }
-#endif

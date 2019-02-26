@@ -6,7 +6,7 @@ __global__ void covD_kernel(FloatOut* out,
 			    vectorTex<FloatIn> vTex, 
 			    gaugeTex<FloatGauge> gTex, int dirOr){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_localVolume) return;
   
   Float2<FloatGauge> G[N_COLS][N_COLS];
   Float2<FloatIn> Sin[N_SPINS][N_COLS];
@@ -30,7 +30,7 @@ __global__ void covD_kernel(FloatOut* out,
 
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
 static void covD_k(FloatOut *out, vectorTex<FloatIn> v, gaugeTex<FloatGauge> g, int dirOr){
-  ProfileStruct ps(GK_localVolume);
+  ProfileStruct ps(HGC_localVolume);
   tuneAndRun(ps, "covD_kernel", covD_kernel<FloatOut,FloatIn,FloatGauge>, out, v, g, dirOr);
   checkCudaError();
 }

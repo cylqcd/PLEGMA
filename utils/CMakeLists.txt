@@ -1,12 +1,8 @@
 #build a common library for all test utilities
-set(PLEGMA_UTILS
-    quda_types.cpp
-    quda_params.cpp
-    quda_interface.cpp
-    read_command_line.cpp
-    read_conf.cpp
-    mapping_parity.cpp
-    utils.cpp
-    eigSolver.cpp
-    )
+file(GLOB PLEGMA_UTILS
+     "*.cpp"
+)
+
 cuda_add_library(PLEGMAutils STATIC ${PLEGMA_UTILS})
+target_include_directories(PLEGMAutils SYSTEM PRIVATE ${QUDA_SRC}/lib )
+add_dependencies(PLEGMAutils BoostPP)

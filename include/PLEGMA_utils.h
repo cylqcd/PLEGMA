@@ -1,79 +1,39 @@
+#pragma once
 #include <PLEGMA.h>
-#include <PLEGMA_buffers.h>
-#include <quda_params.h>
-#include <quda_interface.h>
+#include <utils/PLEGMA_params.h>
+#include <utils/PLEGMA_types.h>
+#include <utils/PLEGMA_readList.h>
+#include <utils/PLEGMA_eigSolver.h>
+#include <utils/QUDA_params.h>
+#include <utils/QUDA_types.h>
+#include <utils/QUDA_interface.h>
 
-#ifndef _PLEGMA_UTILS_H
-#define _PLEGMA_UTILS_H
 using namespace plegma;
 
-//------------------//
-// PLEGMA Parameters //
-//------------------//
-extern char latfile_smeared[];
-extern char verbosity_level[];
-extern int traj;
-extern bool isEven;
-
-extern int src[];
-extern int Ntsink;
-extern char pathList_tsink[];
-extern int Q_sq;
-extern int nsmearAPE;
-extern int nsmearGauss;
-extern double alphaAPE;
-extern double alphaGauss;
-extern char twop_filename[];
-extern char threep_filename[];
-
-extern char prop_path[];
-extern double csw;
-
-extern int numSourcePositions;
-extern char pathListSourcePositions[];
-extern char pathListRun3pt[];
-extern char run3pt[];
-extern char *corr_file_format;
-extern char check_file_exist[];
-
-extern int Nproj;
-extern char proj_list_file[];
-
-extern char *corr_write_space;
-extern int dim_partitioned[];
-
-// quda_interface.cpp
+//============ QUDA_interface.cpp ===============================//
 void initComms(int argc, char **argv, const int *commDims);
 void finalizeComms();
-void initGaugeQuda(void* gauge, QudaGaugeParam gauge_param);
-void updateGaugeQuda(void* gauge, QudaGaugeParam gauge_param);
+void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
+void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
 void finalizeGaugeQuda();
+void plaqQuda();
 
-//============= quda_params.cpp ===================================//
-void print_info();
+//============= QUDA_params.cpp ===================================//
+void infoQuda();
 void setGaugeParam(QudaGaugeParam &gauge_param);
 void setMultigridParam(QudaMultigridParam &mg_param);
 void setInvertParam(QudaInvertParam &inv_param);
 
-//============== utils.cpp =======================================//
+//============== PLEGMA_utils.cpp =======================================//
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
-void initialize(int argc, char** argv, PLEGMA_params *params);
+void initialize(int argc, char** argv, bool withQuda=true);
 void finalize();
+template<typename FloatOut, typename FloatIn> void unpackGaugeToEvenOdd(FloatOut *buf[4], PLEGMA_Gauge<FloatIn> &gauge);
+template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gauge<FloatOut> &gauge, FloatIn *buf[4]);
+template<typename Float> void applyAntiperiodicBoundary(Float **buf);
+template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic);
 
-//=================== read_command_line.cpp ==========================//
-void read_command_line(int argc, char** argv, PLEGMA_params *params);
+//=================== PLEGMA_Options.cpp ==========================//
+void plegmaOptions(Options &opt);
+void qudaOptions(Options &opt);
 
-//================== read_conf.cpp ===================================//
-void readLimeGauge(double **gauge, char *fname, QudaGaugeParam *param, int gridSize[4]);
-void applyBoundaryCondition(double **gauge, int Vh ,QudaGaugeParam *gauge_param);
-void applyBoundaryCondition(double **gauge, int lL[4] ,QudaGaugeParam *gauge_param);
-
-//================ mapping_parity.cpp ================================//
-
-template<typename Float> void mapNormalToEvenOddGauge(Float **gauge, int lL[4], QudaGaugeFieldOrder order = QUDA_QDP_GAUGE_ORDER);
-template<typename Float> void mapEvenOddToNormalGauge(Float **gauge, int lL[4], QudaGaugeFieldOrder order = QUDA_QDP_GAUGE_ORDER);
-template<typename Float> void mapNormalToEvenOdd(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
-template<typename Float> void mapEvenOddToNormal(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
-template<typename Float> void mapNormalToEvenOddGPUformat(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
-template<typename Float> void mapEvenOddToNormalGPUformat(Float *spinor, int lL[4], QudaDiracFieldOrder order = QUDA_DIRAC_ORDER);
-#endif

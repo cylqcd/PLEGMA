@@ -66,7 +66,7 @@ void PLEGMA_QLoops<Float>::contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<F
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 					Float val , bool accum ){
-  if(isOneD) errorQuda("This function cannot do the oneD");
+  if(isOneD) PLEGMA_error("This function cannot do the oneD");
   int NN = (this->Field_length()) * (this->Total_length());
   Float valsP[] = {val,0.};
   //local contraction
@@ -82,7 +82,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 					PLEGMA_Vector<Float> &tmp, PLEGMA_Gauge<Float> &gauge, Float val , bool accum ){
-  if(!isOneD) errorQuda("This function is called to do also the oneD");
+  if(!isOneD) PLEGMA_error("This function is called to do also the oneD");
   int NN = (this->Field_length()) * (this->Total_length());
   Float valsP[] = {val,0.};
   Float valsM[] = {-val,0.};
@@ -125,7 +125,7 @@ template<typename Float>
 void PLEGMA_QLoops<Float>::write_ASCII(std::string filename_local){
   FILE *ptr_out = NULL;
   ptr_out = fopen(filename_local.c_str(),"w");
-  if(ptr_out == NULL) errorQuda("Error opening file for writing\n");
+  if(ptr_out == NULL) PLEGMA_error("Error opening file for writing\n");
   for(int i =0 ; i < this->Field_length() * this->Total_length(); i++)
     fprintf(ptr_out,"%+e %+e\n", h_loc[i*2], h_loc[i*2+1] );
   fclose(ptr_out);
@@ -135,11 +135,11 @@ template<typename Float>
 void PLEGMA_QLoops<Float>::write_ASCII(std::string filename_local, std::string filename_oneD, std::string filename_oneDC){
   // just for crosschecking improve in the future
   write_ASCII(filename_local);
-  if(!isOneD) errorQuda("Cannot write oneD files because oneD is not enabled");
+  if(!isOneD) PLEGMA_error("Cannot write oneD files because oneD is not enabled");
 
   FILE *ptr_out_oneD = NULL;
   ptr_out_oneD = fopen(filename_oneD.c_str(),"w");
-  if(ptr_out_oneD == NULL) errorQuda("Error opening file for writing\n");
+  if(ptr_out_oneD == NULL) PLEGMA_error("Error opening file for writing\n");
   for(int mu = 0; mu < N_DIMS; mu++)
     for(int i =0 ; i < this->Field_length() * this->Total_length(); i++)
       fprintf(ptr_out_oneD,"%+e %+e\n", h_oneD[mu][i*2], h_oneD[mu][i*2+1] );
@@ -147,7 +147,7 @@ void PLEGMA_QLoops<Float>::write_ASCII(std::string filename_local, std::string f
 
   FILE *ptr_out_oneDC = NULL;
   ptr_out_oneDC = fopen(filename_oneDC.c_str(),"w");
-  if(ptr_out_oneDC == NULL) errorQuda("Error opening file for writing\n");
+  if(ptr_out_oneDC == NULL) PLEGMA_error("Error opening file for writing\n");
   for(int mu = 0; mu < N_DIMS; mu++)
     for(int i =0 ; i < this->Field_length() * this->Total_length(); i++)
       fprintf(ptr_out_oneDC,"%+e %+e\n", h_oneDC[mu][i*2], h_oneDC[mu][i*2+1] );

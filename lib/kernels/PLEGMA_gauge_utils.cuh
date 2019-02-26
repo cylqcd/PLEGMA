@@ -5,7 +5,7 @@ template< typename Float, typename FloatGauge>
 __global__ void scale_dir_wise_kernel(FloatGauge* gauge, Float2<Float> scale[N_DIMS]){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= c_threads) return;
+  if (sid >= DGC_localVolume) return;
 
   gauge2<FloatGauge> G(gauge);
 #pragma unroll
@@ -22,7 +22,7 @@ __global__ void scale_dir_wise_kernel(FloatGauge* gauge, Float2<Float> scale[N_D
 template<typename Float, typename FloatGauge>
 static void scale_dir_wise(FloatGauge* gauge, Float* scale){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (GK_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   Float2<Float> *d_scale;
   cudaMalloc((void**) &d_scale, N_DIMS*sizeof(Float2<Float>));
   cudaMemcpy( d_scale, scale, N_DIMS*sizeof(Float2<Float>),cudaMemcpyHostToDevice);

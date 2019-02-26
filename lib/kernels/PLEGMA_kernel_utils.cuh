@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
-#include <PLEGMA_kernel_extern.cuh>
 #include <PLEGMA_kernel_complex.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
@@ -22,6 +21,14 @@ using namespace plegma;
 
 namespace plegma {
 
+  static const __device__ int eps[6][3]= {{0,1,2},
+					  {2,0,1},
+					  {1,2,0},
+					  {2,1,0},
+					  {0,2,1},
+					  {1,0,2}};
+    
+  static const __device__ int sgn_eps[6]= { +1,+1,+1,-1,-1,-1 };
   enum TMROT {NOROT, TMP, TMM};
 
   template<bool isTransMatrix,typename Float>
@@ -390,21 +397,21 @@ namespace plegma {
   }
 
   template<typename Float>
-  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in, Float2<Float> *shared_cache, int n_comp, int sid3D, int sp[3], int padding = 0, int sign = -1){
+  __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in,
+						   Float2<Float> *shared_cache, int n_comp,
+						   int sid3D, int sp[3], int padding = 0, int sign = -1){
     int cacheIndex = threadIdx.x;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
     for(int i=0; i<3; i++) {
-      id[i] += c_procPosition[i] * c_localL[i] - sp[i];
+      id[i] += DGC_procPosition[i] * DGC_localL[i] - sp[i];
     }
     
     Float phase;
     Float2<Float> expon;
-    for(int imom = 0 ; imom < c_Nmoms ; imom++){
-      phase = 0.;
-      #pragma unroll
-      for(int i=0; i<3; i++)
-	phase += ((Float) (c_moms[imom][i]*id[i]))/((Float) c_totalL[i]);
+    for(size_t imom = 0 ; imom < DGC_moms.Nmoms ; imom++){
+      int4 momv = DGC_moms.get(imom);
+      phase = momv.x*id[0]/((Float) DGC_totalL[0]) + momv.y*id[1]/((Float) DGC_totalL[1]) + momv.z*id[2]/((Float) DGC_totalL[2]);
       phase *=  2. * PI;
       expon.x = cos(phase);
       expon.y = sign*sin(phase);
@@ -599,15 +606,15 @@ namespace plegma {
     
     //creating array from fastest to slowest
     for(int i = 0; i < N_DIMS; ++i){
-      TZYX_local[i] = (sid/skipvol) % c_localL[i];
-      skipvol *= c_localL[i];
+      TZYX_local[i] = (sid/skipvol) % DGC_localL[i];
+      skipvol *= DGC_localL[i];
       //TZYX_global[i] = TZYX_local[i];
     }
     for(int i = 0; i < N_DIMS; ++i)
-      TZYX_global[i] = TZYX_local[i] + c_procPosition[i] * c_localL[i];
+      TZYX_global[i] = TZYX_local[i] + DGC_procPosition[i] * DGC_localL[i];
     
     for(int i = N_DIMS-1; i>=0; i--)
-      globid = globid * c_totalL[i] + TZYX_global[i];
+      globid = globid * DGC_totalL[i] + TZYX_global[i];
 
     return globid;
   }

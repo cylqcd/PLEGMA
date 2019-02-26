@@ -4,33 +4,26 @@
 using namespace plegma;
 using namespace quda;
 
-extern int device;
-extern char latfile[];
-
 int main(int argc, char **argv)
 {
-  PLEGMA_params params;
-  initialize(argc, argv, &params);
-
-  QudaGaugeParam gauge_param = newQudaGaugeParam();
-  setGaugeParam(gauge_param);
-
-  //-Read the gauge field in lime format
-  GaugeBuffer<double> gauge(params);
-  readLimeGauge(gauge.get_ptr(), latfile, &gauge_param, params.procs);
-
-  // The gauge is loaded in a format suitable for QUDA. We need to re-map it
-  mapEvenOddToNormalGauge(gauge.get_ptr(),params.lL);
+  initialize(argc, argv);
 
   // Allocation done on BOTH, DEVICE and HOST
-  PLEGMA_Gauge<double> pGauge(BOTH);
+  PLEGMA_Gauge<double> gauge(BOTH);
 
-  pGauge.pack(gauge.get_ptr());
-  pGauge.load();
-  pGauge.calculatePlaq();
-  pGauge.calculatePlaqCorners();
-  pGauge.calculatePlaqShifts();
+  // Reading from Lime file and loading to device
+  gauge.readFromLime(latfile.c_str());
+  gauge.load();
+  
+  // Compuiting plaquette on device in three different way for crosschecking
+  gauge.calculatePlaq();
+  gauge.calculatePlaqCorners();
+  gauge.calculatePlaqShifts();
 
+  // Loading to QUDA and computing plaquette also there
+  initGaugeQuda(gauge, false, QUDA_SU3_LINKS);
+  plaqQuda();
+  
   finalize();
  
   return 0;
