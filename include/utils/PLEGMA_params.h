@@ -36,3 +36,18 @@ define(int numProj,1);
 define(std::string pathListProj);
 define(WHICHPROJECTOR* proj);
 
+define(int Eig_NeV, 10);
+define(bool Eig_isACC, true);
+define(int Eig_PolyDeg, 100);
+define(double Eig_amin, 1e-04);
+define(double Eig_amax, 4.5);
+define(std::string Eig_spectrumPart, "SR");
+define(double Eig_tol, 1e-05);
+define(int Eig_maxIters, 100000);
+#if defined(HAVE_ARPACK)
+define(int Eig_NkV, 2*Eig_NeV);
+define(std::string Eig_logFile, "./logfile.out");
+#elif defined(HAVE_PRIMME)
+define(std::string Eig_method, "PRIMME_Arnoldi");
+define(int Eig_printLevel, 4);
+#endif

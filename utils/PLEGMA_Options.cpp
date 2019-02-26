@@ -3,9 +3,16 @@
 #include <comm_quda.h>
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-					       "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
-					       "threep-filename",  "corr-file-format", "corr-space", "n-tsink", "tsink-filename",
-					       "n-projs", "tsink-filename"};
+						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
+						     "threep-filename",  "corr-file-format", "corr-space", "n-tsink", "tsink-filename",
+						     "n-projs", "tsink-filename", "Eig-NeV"
+#ifdef HAVE_ARPACK
+						     ,"Eig-NkV", "Eig-logFile"
+#elif HAVE_PRIMME
+						     ,"Eig-printLevel", "Eig-method-PRIMME"
+#endif
+						     ,"Eig-isACC", "Eig-PolyDeg", "Eig-amin", "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters"
+};
 
 static inline bool isInList(std::vector<std::string> list,std::string str){
   if(std::find(list.begin(),list.end(),str) != list.end() ) return true;
@@ -32,7 +39,7 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
 
   if(isInList(list,"load-gauge")) opt.set("load-gauge", "Path to the gauge field", verbosity, latfile);
 
-  // smearing
+  // smearing ----------------------------------------------------------------------------------------------
   if(isInList(list,"nsmear-APE")) opt.set("nsmear-APE", "Number of APE smearing step", verbosity, nsmearAPE);
   if(isInList(list,"alpha-APE")) opt.set("alpha-APE", "Coefficient for the APE smearing", verbosity, alphaAPE);
   if(isInList(list,"nsmear-gauss")) opt.set("nsmear-gauss", "Number of Gaussian smearing step", verbosity, nsmearGauss);
@@ -40,13 +47,14 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list,"nsmear-stout")) opt.set("nsmear-stout", "Number of stout smearing step", verbosity, nsmearStout);
   if(isInList(list,"alpha-stout")) opt.set("alpha-stout", "Coefficient for the stout smearing", verbosity, alphaStout);
 
-  // sources
+  // sources----------------------------------------------------------------------------------------------
   if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions", verbosity, numSourcePositions);
   if(isInList(list,"src-filename")){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
-  // Correlators
+
+  // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);
   if(isInList(list,"threep-filename")) opt.set("threep-filename", "File name for three-point functions, extension will be added", verbosity, threep_filename);
@@ -74,6 +82,24 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     isFound = opt.set("tsink-filename", "Filename of list of projectors", verbosity, pathListTSink);
     if(isFound) readProjList();
   }
+
+  // Eigensolver ------------------------------------------------------------------------------------------
+  if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
+#ifdef HAVE_ARPACK
+  if(isInList(list, "Eig-NkV")) opt.set("Eig-NkV", "Number of vectors for the Krylov subspace", verbosity, Eig_NkV);
+  if(isInList(list, "Eig-logFile")) opt.set("Eig-logFile", "Path for the logfile of the eigensolver", verbosity, Eig_logFile);
+#elif HAVE_PRIMME
+  if(isInList(list, "Eig-printLevel")) opt.set("Eig-printLevel", "Print Level for the PRIMEE eigenSolver", verbosity, Eig_printLevel);
+  if(isInList(list, "Eig-method-PRIMME")) opt.set("Eig-method-PRIMME", "The method for eigensolver from PRIMME see manual for all", verbosity, Eig_method);
+#endif
+  if(isInList(list, "Eig-isACC")) opt.set("Eig-isACC", "If we want to use Polynomial acceleration", verbosity, Eig_isACC);
+  if(isInList(list, "Eig-PolyDeg")) opt.set("Eig-PolyDeg", "The degree of the Polynomial", verbosity, Eig_PolyDeg);
+  if(isInList(list, "Eig-amin")) opt.set("Eig-amin", "The low bound of the Polynomial called amin", verbosity, Eig_amin);
+  if(isInList(list, "Eig-amax")) opt.set("Eig-amax", "The upper bound of the Polynomial called amax", verbosity, Eig_amax);
+  if(isInList(list, "Eig-spectrumPart")) opt.set("Eig-spectrumPart", "Which part of the spectrum you want to compute. Options (SR, LR)", verbosity, Eig_spectrumPart);
+  if(isInList(list, "Eig-tol")) opt.set("Eig-tol", "Tolerance for the eigensolver. At least all eigenpairs converge to this tol", verbosity, Eig_tol);
+  if(isInList(list, "Eig-maxIters")) opt.set("Eig-maxIters", "Tolerance for the eigensolver. At least all eigenpairs converge to this tol", verbosity, Eig_maxIters);
+
 }
 
 template<typename T> static inline void default_map_MG(std::map<int,T> &tpl, T def){
