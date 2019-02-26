@@ -7,7 +7,7 @@ using namespace quda;
 #include "utils/QUDA_params.h"
 #undef ALLOCATE
 
-void initialize(int argc, char **argv, bool withQuda) {
+void initialize(int argc, char **argv, bool withQuda, std::vector<std::string> listOptPLEGMA) {
   
   HGC_options = new Options(argc,argv);
 
@@ -21,15 +21,13 @@ void initialize(int argc, char **argv, bool withQuda) {
   initQuda(device);
   qudaInitialized=true;
   // Reading plegma options
-  plegmaOptions(*HGC_options);
+  plegmaOptions(*HGC_options, listOptPLEGMA);
 
   if(withQuda) {
     qudaOptions(*HGC_options);
     // initialize the QUDA library
     if(verbosity>0) infoQuda();
   }
-
-  if(HGC_options->getIsHelp()) HGC_options->close();
   
   // initialize PLEGMA params
   PLEGMA_init(dims, procs, verbosity);
