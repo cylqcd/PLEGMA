@@ -10,11 +10,14 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsmear-AP
 
 int main(int argc, char **argv)
 {
-  initialize(argc, argv, true, listOpt);
+  initializeOptions(argc, argv, true, listOpt);
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
   std::string prOrNt = "neutron";
   HGC_options->set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
-  HGC_options->close(); // no further options are neede
   if(prOrNt != "proton" && prOrNt != "neutron") PLEGMA_error("This exec is only for nucleon, %s is not allowed",prOrNt.c_str());
+  //=========================================================================================================//
+  initializePLEGMA();
+  
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFromLime(latfile.c_str());

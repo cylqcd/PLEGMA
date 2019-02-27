@@ -7,8 +7,9 @@ using namespace quda;
 #include "utils/QUDA_params.h"
 #undef ALLOCATE
 
-void initialize(int argc, char **argv, bool withQuda, std::vector<std::string> listOptPLEGMA) {
-  
+static bool isInitOpt = false;
+
+void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::string> listOptPLEGMA){
   HGC_options = new Options(argc,argv);
 
   // initialize QMP/MPI, QUDA comms grid and RNG
@@ -18,8 +19,7 @@ void initialize(int argc, char **argv, bool withQuda, std::vector<std::string> l
   for(int i=0; i<4; i++) if( procs[i] <= 0 )
 			   PLEGMA_error("Error with dim %d: Negative proc or not divisor of dim\n", i);
   initComms(argc, argv, procs);
-  initQuda(device);
-  qudaInitialized=true;
+
   // Reading plegma options
   plegmaOptions(*HGC_options, listOptPLEGMA);
 
@@ -28,7 +28,14 @@ void initialize(int argc, char **argv, bool withQuda, std::vector<std::string> l
     // initialize the QUDA library
     if(verbosity>0) infoQuda();
   }
-  
+  isInitOpt=true;
+}
+
+void initializePLEGMA() {
+  if(!isInitOpt){fprintf(stderr,"initializeOptions should be called before initializePLEGMA");exit(EXIT_FAILURE);}
+  HGC_options->close();
+  initQuda(device);
+  qudaInitialized=true;
   // initialize PLEGMA params
   PLEGMA_init(dims, procs, verbosity);
   PLEGMA_status();

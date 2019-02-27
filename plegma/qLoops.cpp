@@ -7,7 +7,11 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
-  initialize(argc, argv);
+  initializeOptions(argc, argv); // Put list of options later
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+
+  //=========================================================================================================//
+  initializePLEGMA();
 
 #ifdef CHECK_HPROP
   PLEGMA_Hprobing hprop(3);

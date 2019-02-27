@@ -8,9 +8,11 @@ static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-A
   
 int main(int argc, char **argv)
 {
-  initialize(argc, argv, true, listOpt);
+  initializeOptions(argc, argv, true, listOpt);
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
 
-  HGC_options->close(); // no further options are needed
+  //=========================================================================================================//
+  initializePLEGMA();
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFromLime(latfile.c_str());

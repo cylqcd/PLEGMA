@@ -6,7 +6,11 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
-  initialize(argc, argv);
+  initializeOptions(argc, argv, false); // Add list of options
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+
+  //=========================================================================================================//
+  initializePLEGMA();
 
   { 
     // This creates the file foo.h5

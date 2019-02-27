@@ -5,15 +5,15 @@ using namespace plegma;
 using namespace quda;
 
 extern int device;
-extern char latfile[];
 
 int main(int argc, char **argv)
 {
   
-  PLEGMA_params params;
-  initialize(argc, argv, &params);
-  
-  print_status();
+  initializeOptions(argc, argv, false);
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+
+  //=========================================================================================================//
+  initializePLEGMA();
 
   PLEGMA_Vector<double> vectorAuxD(BOTH);
   PLEGMA_Vector<double> vectorOutD(HOST);
