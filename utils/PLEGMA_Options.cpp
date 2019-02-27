@@ -4,8 +4,7 @@
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
-						     "threep-filename",  "corr-file-format", "corr-space", "n-tsink", "tsink-filename",
-						     "n-projs", "tsink-filename", "Eig-NeV"
+						     "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
 #ifdef HAVE_ARPACK
 						     ,"Eig-NkV", "Eig-logFile"
 #elif HAVE_PRIMME
@@ -70,18 +69,9 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     isFound=opt.set("corr-space", "Correlators space format to use in data writing, options (momentum, position)", verbosity, tmpString);
     if(isFound) corr_space = get_space(tmpString.c_str());
   }
-  
-  if(isInList(list, "n-tsink")) opt.set("n-tsink", "Number of T sinks", verbosity, numTSink);
-  if(isInList(list, "tsink-filename")){
-    isFound = opt.set("tsink-filename", "Filename of list of T sink", verbosity, pathListTSink);
-    if(isFound) readTSinkList();
-  }
 
-  if(isInList(list, "n-projs")) opt.set("n-projs", "Number of projectors", verbosity, numProj);
-  if(isInList(list, "tsink-filename")){
-    isFound = opt.set("tsink-filename", "Filename of list of projectors", verbosity, pathListTSink);
-    if(isFound) readProjList();
-  }
+  if(isInList(list, "tSinks")) opt.set("tSinks", "List with the source-sink time separations to do", verbosity, tSinks);
+  if(isInList(list, "Projs")) opt.set("Projs", "List of the projectors to be used", verbosity, Projs);
 
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
