@@ -29,12 +29,8 @@ define(FILE_WRITE_FORMAT corr_file_format, HDF5_FORM);
 define(CORR_SPACE corr_space, MOMENTUM_SPACE);
 define(std::string twop_filename, "./twop");
 define(std::string threep_filename, "./threep");
-define(int numTSink,1);
-define(std::string pathListTSink);
-define(int* tSink);
-define(int numProj,1);
-define(std::string pathListProj);
-define(WHICHPROJECTOR* proj);
+define(std::vector<int> tSinks, {});
+define(std::vector<std::string> Projs, {});
 
 define(int Eig_NeV, 10);
 define(bool Eig_isACC, true);
