@@ -3,6 +3,7 @@
 #include <utils/PLEGMA_params.h>
 #include <utils/PLEGMA_types.h>
 #include <utils/PLEGMA_readList.h>
+#include <utils/PLEGMA_auxiliary.h>
 #include <utils/PLEGMA_eigSolver.h>
 #include <utils/QUDA_params.h>
 #include <utils/QUDA_types.h>
