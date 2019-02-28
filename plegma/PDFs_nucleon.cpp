@@ -6,12 +6,17 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
+    
+  initializeOptions(argc, argv); // Put list of Options later
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+
+  //=========================================================================================================//
+  initializePLEGMA();
+
   //  int nsmearAPE = 20;
   // double alphaAPE = 0.5;
   double xiMomSm = 0.6; //remember the sign later
   std::vector<int> moms = {0,0,1,0};
-    
-  initialize(argc, argv);
 
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;

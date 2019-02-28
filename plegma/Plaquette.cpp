@@ -6,7 +6,11 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
-  initialize(argc, argv);
+  initializeOptions(argc, argv); // Put list of options later
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+
+  //=========================================================================================================//
+  initializePLEGMA();
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> gauge(BOTH);

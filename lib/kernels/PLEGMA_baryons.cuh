@@ -104,7 +104,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   size_t size = corr.getTotalSize()/HGC_localL[3]/N_BARYONS;
   int3 source = corr.getSource3();
   
-  if(corr.getSiteSize() != site_size)
+  if(corr.getSiteSize()/N_BARYONS != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
   int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;

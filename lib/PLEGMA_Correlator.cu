@@ -64,8 +64,8 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   n_groups = N_MESONS;
   shape = {};
   datasets =  {"twop_meson_1", "twop_meson_2"};
-  groups =  {"pion/pseudoscalar", "pion/scalar", "pion/g5g1", "pion/g5g2",
-	     "pion/g5g3", "pion/g5g4", "pion/g1", "pion/g2", "pion/g3", "pion/g4"};
+  groups =  {"mesons/pseudoscalar", "mesons/scalar", "mesons/g5g1", "mesons/g5g2",
+	     "mesons/g5g3", "mesons/g5g4", "mesons/g1", "mesons/g2", "mesons/g3", "mesons/g4"};
   description = "";
   
   initialize();

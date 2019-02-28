@@ -3,6 +3,7 @@
 #include <utils/PLEGMA_params.h>
 #include <utils/PLEGMA_types.h>
 #include <utils/PLEGMA_readList.h>
+#include <utils/PLEGMA_auxiliary.h>
 #include <utils/PLEGMA_eigSolver.h>
 #include <utils/QUDA_params.h>
 #include <utils/QUDA_types.h>
@@ -26,7 +27,9 @@ void setInvertParam(QudaInvertParam &inv_param);
 
 //============== PLEGMA_utils.cpp =======================================//
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
-void initialize(int argc, char** argv, bool withQuda=true);
+extern const std::vector<std::string> listAvailOptPLEGMA;
+void initializeOptions(int argc, char **argv, bool withQuda=true, std::vector<std::string> listOptPLEGMA = listAvailOptPLEGMA);
+void initializePLEGMA();
 void finalize();
 template<typename FloatOut, typename FloatIn> void unpackGaugeToEvenOdd(FloatOut *buf[4], PLEGMA_Gauge<FloatIn> &gauge);
 template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gauge<FloatOut> &gauge, FloatIn *buf[4]);
@@ -34,6 +37,6 @@ template<typename Float> void applyAntiperiodicBoundary(Float **buf);
 template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic);
 
 //=================== PLEGMA_Options.cpp ==========================//
-void plegmaOptions(Options &opt);
+void plegmaOptions(Options &opt, std::vector<std::string> list);
 void qudaOptions(Options &opt);
 

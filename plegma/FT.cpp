@@ -5,14 +5,17 @@ using namespace plegma;
 using namespace quda;
 
 extern int device;
-extern char latfile[];
 
 int main(int argc, char **argv)
 {
-  PLEGMA_params params;
-  initialize(argc, argv, &params);
+  initializeOptions(argc, argv, false); // Add list of options
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
 
-  PLEGMA_Field<double> f(BOTH,FIELD);
+  //=========================================================================================================//
+  initializePLEGMA();
+
+
+  PLEGMA_Field<double> f(BOTH,SCALAR);
   f.setUnit((std::vector<int>) {0});
 
   PLEGMA_Propagator3D<double> prop3D;

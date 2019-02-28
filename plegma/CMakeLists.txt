@@ -55,8 +55,8 @@ target_link_libraries(Random ${PLEGMA_LIBS})
 cuda_add_executable(Dilution EXCLUDE_FROM_ALL Dilution.cpp)
 target_link_libraries(Dilution ${PLEGMA_LIBS})
 
-cuda_add_executable(testSmearings EXCLUDE_FROM_ALL testSmearings.cpp)
-target_link_libraries(testSmearings ${PLEGMA_LIBS})
+cuda_add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
+target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 
 cuda_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})

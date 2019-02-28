@@ -3,11 +3,16 @@
 
 using namespace plegma;
 using namespace quda;
-
+static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
+					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space"};
+  
 int main(int argc, char **argv)
 {
-  initialize(argc, argv);
+  initializeOptions(argc, argv, true, listOpt);
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
 
+  //=========================================================================================================//
+  initializePLEGMA();
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFromLime(latfile.c_str());

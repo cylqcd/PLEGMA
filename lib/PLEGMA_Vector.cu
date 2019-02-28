@@ -212,6 +212,8 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
 
 template<typename Float>
 void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color, ALLOCATION_FLAG where){
+  for(int i = 0; i < N_DIMS; i++)
+    if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
   
   this->zero_where(where);
   int my_src[N_DIMS];
