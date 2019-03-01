@@ -45,6 +45,7 @@ include_directories(${QUDA_HOME}/lib/)
 #PLEGMA: 
 include_directories(code_pieces)
 include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)
+include_directories(SYSTEM ${PLEGMA_HDF5HOME}/include)
 include_directories(SYSTEM ${PLEGMA_HDF5HOME}/src)
 include_directories(SYSTEM ${PLEGMA_LIMEHOME}/include)
 if(PLEGMA_ARPACK)

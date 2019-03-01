@@ -262,8 +262,13 @@ LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY})
 
 add_definitions(-DMULTI_GPU)
 find_package(MPI)
-add_definitions(-DMPI_COMMS)
-include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+# add possibility to insert the include paths manually
+if( MPI_FOUND )
+  add_definitions(-DMPI_COMMS)
+  include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+else()
+  message(WARNING "MPI package could not be located, consider inserting it manually")
+endif()
 
 # COMPILER OPTIONS and BUILD types
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
