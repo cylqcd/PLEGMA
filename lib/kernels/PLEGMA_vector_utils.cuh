@@ -3,7 +3,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
-
+#include <PLEGMA_Thrust.h>
 using namespace plegma;
 using namespace quda;
 
@@ -239,4 +239,85 @@ static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven
     PLEGMA_error("Precision %d not supported", qudaVec.Precision());
   
   checkCudaError();
+}
+
+template<typename Float>
+struct computeRMS{
+  int s[3];
+  int Nr2;
+  int *list_comp_R2;
+  Float *output;
+  computeRMS(int source_x, int source_y, int source_z, int Nr2_size, int *listR2, Float *psiSq){
+    s[0] = source_x; s[1] = source_y;  s[2] = source_z;
+    Nr2=Nr2_size;
+    list_comp_R2 = listR2;
+    output = psiSq;
+  }  
+  inline __device__ int getIndexElem(int val, int *list, int size){
+    int res = -1;
+    for(int i = 0 ; i < size; i++)
+      if(val == list[i]){
+	res = i;
+	break;
+      }
+    return res;
+  }
+  template<typename Tuple>
+  __device__ void operator()(Tuple t){
+    int id = thrust::get<0>(t);
+    int x[3] = GET_ID_ZYX(id);
+#pragma unroll
+    for(int i = 0 ; i < 3 ; i++){
+      x[i] += DGC_procPosition[i] * DGC_localL[i];
+      x[i] = x[i] >= s[i] ? x[i]-s[i] : s[i] - x[i];
+      if(x[i] > DGC_totalL[i]/2) x[i] = DGC_totalL[i] - x[i];
+    }
+    int r2 = x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
+    int index_r2 = getIndexElem(r2,list_comp_R2,Nr2);
+    if(index_r2 < 0) return;
+    Float2<Float> e[N_SPINS*N_COLS];
+    Float2<Float> *w = &(thrust::get<1>(t));
+#pragma unroll
+    for(int i = 0 ; i < N_SPINS*N_COLS; i++) e[i] = *(w+i*DGC_localVolume);
+    Float val =0;
+#pragma unroll
+    for(int i = 0 ; i < N_SPINS*N_COLS ; i++) val += e[i].x*e[i].x  + e[i].y*e[i].y; 
+    atomicAdd(&output[index_r2],val);
+  }
+};
+
+template<typename Float>
+static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std::vector<Float> &absPsi, int my_it, int *sourceposition){
+  int *d_listR2 = nullptr;
+  Float *d_absPsi = nullptr;
+  if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");
+  cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int)); checkCudaError();
+  cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); checkCudaError();
+  cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkCudaError();
+  int V = HGC_localVolume;
+  int V3 = V/HGC_localL[3];
+  thrust::counting_iterator<int> first(0);
+  thrust::counting_iterator<int> last = first + V3;
+  typedef thrust::device_ptr<Float2<Float> > DpF2;
+  DpF2 y( (Float2<Float>*) (vec.D_elem() + my_it*V3*2) );
+  typedef thrust::tuple<thrust::counting_iterator<int>,DpF2> tplIntDev2;
+  typedef thrust::zip_iterator<tplIntDev2> zipTplIntDev2;
+  zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
+  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+V3));
+  thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
+  
+  // DpF2 y1[N_SPINS*N_COLS];
+  // DpF2 y2[N_SPINS*N_COLS];
+  // y1[0] = y;
+  // y2[0] = y + V3;
+  // for(int i = 1; i < N_SPINS*N_COLS; i++){ y1[i] = y1[i-1] + V; y2[i] = y2[i-1] + V;}
+  // typedef thrust::tuple<thrust::counting_iterator<int>,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2> tplIntDev12;
+  // typedef thrust::zip_iterator<tplIntDev12> zipTplIntDev12;
+  // zipTplIntDev12 z1 =  thrust::make_zip_iterator(thrust::make_tuple(first,y1[0],y1[1],y1[2],y1[3],y1[4],y1[5],y1[6],y1[7],y1[8],y1[9],y1[10],y1[11]));
+  // zipTplIntDev12 z2 =  thrust::make_zip_iterator(thrust::make_tuple(last,y2[0],y2[1],y2[2],y2[3],y2[4],y2[5],y2[6],y2[7],y2[8],y2[9],y2[10],y2[11]));
+  // thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
+
+  cudaMemcpy(listR2.data(), d_listR2, listR2.size() * sizeof(int), cudaMemcpyDeviceToHost); checkCudaError();
+  cudaFree(d_listR2);
+  cudaFree(d_absPsi);
 }
