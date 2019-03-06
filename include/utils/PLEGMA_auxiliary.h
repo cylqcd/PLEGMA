@@ -20,3 +20,11 @@ std::string convNumToStr(T num){
   std::string s2 = s.substr(0,s.find_last_not_of('0')+1);
   return s2;
 }
+
+template<typename T>
+void clearDuplicates(std::vector<T> &vec){
+  if(std::is_pointer<T>::value) PLEGMA_error("Do not know how to remove duplicates from pointer containers");
+  std::sort(vec.begin(), vec.end());
+  vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+}
+
