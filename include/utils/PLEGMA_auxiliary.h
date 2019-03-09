@@ -13,7 +13,7 @@ std::string convNumToStr(T num){
   if(!std::is_floating_point<T>::value) PLEGMA_error("Only floating point types are allowed");
   std::stringstream ss;
   ss <<	std::fixed;
-  ss <<	std::setprecision(16);
+  ss <<	std::setprecision(12);
   ss <<	num;
   std::string s = ss.str();
   std::replace(s.begin(), s.end(), '.', 'p');
@@ -28,3 +28,26 @@ void clearDuplicates(std::vector<T> &vec){
   vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
 }
 
+template<typename T1>
+std::string write_std_vecs_unpacker(int i, const std::vector<T1> vec){
+  std::stringstream ss;
+  if(i>= vec.size())  ss << "NA" << std::endl;
+  else   ss << vec[i] << std::endl;
+  return ss.str();
+}
+
+template<typename T1, typename ...T2>
+std::string write_std_vecs_unpacker(int i, const std::vector<T1>& vec,const std::vector<T2>& ...vecs){
+  std::stringstream ss;
+  if(i>= vec.size())  ss << "NA" << "\t" << write_std_vecs_unpacker(i,vecs...);
+  else ss << vec[i] << "\t" << write_std_vecs_unpacker(i,vecs...);
+  return ss.str();
+}
+
+template<typename T1, typename ...T2>
+void write_std_vecs(std::string filename,const std::vector<T1>& vec,const std::vector<T2>& ...vecs){
+  std::ofstream file(filename);
+  if(!file) PLEGMA_error("Cannot open file %s\n", filename.c_str());
+  for(int i = 0; i < vec.size(); i++)
+    file << write_std_vecs_unpacker(i,vec,vecs...);
+}
