@@ -293,6 +293,7 @@ static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std
   if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");
   cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int)); checkCudaError();
   cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); checkCudaError();
+  cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkCudaError();
   cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkCudaError();
   int V = HGC_localVolume;
   int V3 = V/HGC_localL[3];
@@ -305,19 +306,7 @@ static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std
   zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
   zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+V3));
   thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
-  
-  // DpF2 y1[N_SPINS*N_COLS];
-  // DpF2 y2[N_SPINS*N_COLS];
-  // y1[0] = y;
-  // y2[0] = y + V3;
-  // for(int i = 1; i < N_SPINS*N_COLS; i++){ y1[i] = y1[i-1] + V; y2[i] = y2[i-1] + V;}
-  // typedef thrust::tuple<thrust::counting_iterator<int>,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2,DpF2> tplIntDev12;
-  // typedef thrust::zip_iterator<tplIntDev12> zipTplIntDev12;
-  // zipTplIntDev12 z1 =  thrust::make_zip_iterator(thrust::make_tuple(first,y1[0],y1[1],y1[2],y1[3],y1[4],y1[5],y1[6],y1[7],y1[8],y1[9],y1[10],y1[11]));
-  // zipTplIntDev12 z2 =  thrust::make_zip_iterator(thrust::make_tuple(last,y2[0],y2[1],y2[2],y2[3],y2[4],y2[5],y2[6],y2[7],y2[8],y2[9],y2[10],y2[11]));
-  // thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
-
-  cudaMemcpy(listR2.data(), d_listR2, listR2.size() * sizeof(int), cudaMemcpyDeviceToHost); checkCudaError();
+  cudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), cudaMemcpyDeviceToHost); checkCudaError();
   cudaFree(d_listR2);
   cudaFree(d_absPsi);
 }
