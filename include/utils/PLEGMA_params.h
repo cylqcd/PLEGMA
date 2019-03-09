@@ -20,6 +20,11 @@ define(int nsmearGauss, 50);
 define(double alphaGauss, 0.2);
 define(int nsmearStout, 5);
 define(double alphaStout, 0.2);
+define(double xiMomSm,0.6); 
+define(std::vector<int> moms, {0,0,0,0}); 
+define(WHICHPARTICLE which_particle, PROTON); 
+define(int tsinkMtsource, 10); 
+define(std::vector<GAMMAS> gammas, {}); 
 
 define(int numSourcePositions, 1);
 define(std::string pathListSourcePositions);

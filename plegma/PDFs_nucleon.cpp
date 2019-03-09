@@ -6,18 +6,14 @@ using namespace quda;
 
 int main(int argc, char **argv)
 {
-    
-  initializeOptions(argc, argv); // Put list of Options later
-  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
 
-  //=========================================================================================================//
+  static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
+					     "nsrc", "src-filename", "maxQsq", "twop-filename","threep-filename",  "corr-file-format",
+					     "corr-space", "tSinks","Projs","xiMomSm","moms","which_particle","source-sink","gammas"};
+
+  initializeOptions(argc, argv, true, listOpt);
   initializePLEGMA();
-
-  //  int nsmearAPE = 20;
-  // double alphaAPE = 0.5;
-  double xiMomSm = 0.6; //remember the sign later
-  std::vector<int> moms = {0,0,1,0};
-
+  
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFromLime(latfile.c_str());
@@ -48,7 +44,6 @@ int main(int argc, char **argv)
   QUDA_solver *solverUP = new QUDA_solver(mu);
   mu*=-1.;
   QUDA_solver *solverDN = new QUDA_solver(mu);
-
   PLEGMA_Vector<double> vectorIn;
   PLEGMA_Vector<double> vectorOut;
   PLEGMA_Vector<double> vectorAuxD;
@@ -62,7 +57,7 @@ int main(int argc, char **argv)
   PLEGMA_Propagator3D<float> propUP3D;
   PLEGMA_Propagator3D<float> propDN3D;
 
-  PLEGMA_Correlator<float> corrThrpWL(MOMENTUM_SPACE,0);
+  PLEGMA_Correlator<float> corrThrpWL(corr_space,0); ///F0
   
   // PLEGMA_Correlator<float> *nucleonThrpWLP_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]]; // if is the z direction
   // PLEGMA_Correlator<float> *nucleonThrpWLP_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
@@ -82,7 +77,6 @@ int main(int argc, char **argv)
     // for the test use sinkSourceSep = 10;
   int  isource=0;
 
-  int tsinkMtsource = 10;//test with tsink 10
   int signPer = (tsinkMtsource + sourcePositions[isource][3]) >= HGC_totalL[3] ? -1 : +1;
   int global_fixSinkTime = (tsinkMtsource + sourcePositions[isource][3])%HGC_totalL[3]; 
   int my_fixSinkTime = global_fixSinkTime - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
@@ -110,7 +104,8 @@ int main(int argc, char **argv)
     propDN3D.absorb(vectorAuxF,global_fixSinkTime, isc/3, isc%3);
   }
 
-  WHICHPARTICLE nucleon = NEUTRON; // for the test is NEUTRON, later we can provide an option
+  WHICHPARTICLE nucleon = which_particle; ///F1 // for the test is NEUTRON, later we can provide an option
+ 
 
   PLEGMA_Su3field<float> su3;
   PLEGMA_Su3field<float> WL;
@@ -148,28 +143,29 @@ int main(int argc, char **argv)
     int signProps = (nucleon == PROTON) ? +1: -1;
 
     PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
-    std::vector<GAMMAS> gammas = {G3};
+    //std::vector<GAMMAS> gammas = {G3};
 
     //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
-    
+    std::string suff = "_CP2_Plus_new_";
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
       corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
       if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP2_Plus_new" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 4+2); // build Wilson line in the +z direction
       propF->shift(*propIn, 4+2);
     }
-    
+
+    suff="_CP2_Minus_new_";
     propF->load();
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
       corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
       if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP2_Minus_new" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 2); // build Wilson line in the +z direction
       propF->shift(*propIn, 2);
@@ -208,28 +204,29 @@ int main(int argc, char **argv)
     int signProps = (nucleon == PROTON) ? -1: +1;
 
     PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
-    std::vector<GAMMAS> gammas = {G3};
+    //std::vector<GAMMAS> gammas = {G3};
 
     //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
-    
+    std::string suff="_CP1_Plus_new_";
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
       corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
       if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Plus_new" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 4+2); // build Wilson line in the +z direction
       propF->shift(*propIn, 4+2);
     }
     
     propF->load();
+    suff="_CP1_Minus_new_";
     su3.absorbDir_device(gaugeWL, 2); // only for z direction
     WL.setUnit( (std::vector<int>) {0,4,8});
     for(int i = 0 ; i < HGC_totalL[2]/2;i++){ // HGC_totalL[2] only for z direction
       corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
       if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-      corrThrpWL.writeASCII( ("/onyx/noether/h/khadjiyiannakou/runs/threep_PDFs_CP1_Minus_new" + std::to_string(i) + ".dat").c_str() );
+      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + ".dat").c_str() );
       propExchange = propIn; propIn = propF; propF = propExchange;
       WL.wilsonLineUpdate(su3, tmp, 2); // build Wilson line in the +z direction
       propF->shift(*propIn, 2);
