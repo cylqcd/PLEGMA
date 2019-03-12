@@ -45,7 +45,7 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list,"alpha-gauss")) opt.set("alpha-gauss", "Coefficient for the Gaussian smearing", verbosity, alphaGauss);
   if(isInList(list,"nsmear-stout")) opt.set("nsmear-stout", "Number of stout smearing step", verbosity, nsmearStout);
   if(isInList(list,"alpha-stout")) opt.set("alpha-stout", "Coefficient for the stout smearing", verbosity, alphaStout);
-  if(isInList(list, "xiMomSm")) opt.set("xiMomSm", "Momentum smearing parameter", verbosity, xiMomSm);
+  if(isInList(list, "xiMomSm")) opt.set("xiMomSm", "Momentum smearing parameter defined as e^{-i xiMomSm p}", verbosity, xiMomSm);
   // sources----------------------------------------------------------------------------------------------
   if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions", verbosity, numSourcePositions);
   if(isInList(list,"src-filename")){
@@ -86,8 +86,7 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
 
   if(isInList(list, "tSinks")) opt.set("tSinks", "List with the source-sink time separations to do", verbosity, tSinks);
   if(isInList(list, "Projs")) opt.set("Projs", "List of the projectors to be used", verbosity, Projs);
-  if(isInList(list, "moms")) opt.set("moms", "Momentum boosted nucleon", verbosity, moms);
-  if(isInList(list, "source-sink")) opt.set("source-sink", "Source-sink sepration", verbosity,  tsinkMtsource);
+  if(isInList(list, "sinkMom")) opt.set("sinkMom", "Sink momentum boosted nucleon", verbosity, sinkMom);
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
 #ifdef HAVE_ARPACK

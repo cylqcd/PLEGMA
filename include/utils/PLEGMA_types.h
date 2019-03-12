@@ -112,7 +112,7 @@ inline std::vector<GAMMAS> get_gammas(std::vector<std::string> s){
       else if (s[i] == "s41") g.push_back(S41);
       else if (s[i] == "s42") g.push_back(S42);
       else if (s[i] == "s43") g.push_back(S43);
-      else PLEGMA_error("Particle %s is not implemented", s[i].c_str());
+      else PLEGMA_error("Gamma matrix %s is not implemented", s[i].c_str());
     }
   return g;
 }
