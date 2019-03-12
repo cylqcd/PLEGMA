@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   for(double a = 0.1; a<=4.; a+=0.1) alphaGaussList.push_back(a);
   int src[] = {0,0,0,0};
   std::string outPrefix = "./output";
-  HGC_options->set("src-xyzt", "Source position in order (x,y,z,t)",src[0],src[1],src[2],src[3]);
+  HGC_options->set("src-xyzt", "Source position in order (x,y,z,t)",verbosity,src[0],src[1],src[2],src[3]);
   HGC_options->set("list-nsmear-gauss", "List for the number of the Gaussian smearing steps", verbosity, nsmearGaussList);
   HGC_options->set("list-alpha-gaussian", "List of the alpha for Gaussian smearing", verbosity, alphaGaussList);
   HGC_options->set("outPrefix", "Path to the prefix output file", verbosity, outPrefix);
