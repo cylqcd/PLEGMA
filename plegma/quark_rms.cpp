@@ -38,7 +38,7 @@ int main(int argc, char **argv)
   smearedGauge.calculatePlaq();
 
   std::vector<int> list_R2;
-  createR2(list_R2);
+  std::vector<int> counter = createR2(list_R2);
   
   PLEGMA_Vector<double> v1,v2;
   v1.pointSource(src,0,0,DEVICE);
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
       v2.gaussianSmearing(v1,smearedGauge, nsmear, alpha);
       std::vector<double> rms = v2.rms(list_R2,src);
       std::string filename = outPrefix + "_nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(nsmear) + "aGau" + convNumToStr(alpha);
-      if(comm_rank() == 0) write_std_vecs( filename,list_R2,rms);
+      if(comm_rank() == 0) write_std_vecs( filename,list_R2, counter,rms);
     }
   
   

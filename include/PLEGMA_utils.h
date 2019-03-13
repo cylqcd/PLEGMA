@@ -35,7 +35,7 @@ template<typename FloatOut, typename FloatIn> void unpackGaugeToEvenOdd(FloatOut
 template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gauge<FloatOut> &gauge, FloatIn *buf[4]);
 template<typename Float> void applyAntiperiodicBoundary(Float **buf);
 template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic);
-void createR2(std::vector<int> &vec);
+std::vector<int> createR2(std::vector<int> &vec);
 
 //=================== PLEGMA_Options.cpp ==========================//
 void plegmaOptions(Options &opt, std::vector<std::string> list);

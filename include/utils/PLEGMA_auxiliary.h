@@ -22,10 +22,15 @@ std::string convNumToStr(T num){
 }
 
 template<typename T>
-void clearDuplicates(std::vector<T> &vec){
+std::vector<int> clearDuplicates(std::vector<T> &vec){
   if(std::is_pointer<T>::value) PLEGMA_error("Do not know how to remove duplicates from pointer containers");
   std::sort(vec.begin(), vec.end());
+  std::map<T,int> counter;
+  std::vector<int> res;
+  for(auto const &f: vec) counter[f]++;
   vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+  for(auto const &b: counter) res.push_back(b.second);
+  return res;
 }
 
 template<typename T1>
