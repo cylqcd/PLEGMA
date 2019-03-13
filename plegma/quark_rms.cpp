@@ -33,15 +33,29 @@ int main(int argc, char **argv)
   gauge.calculatePlaq();
 
   PLEGMA_Gauge<double> smearedGauge;
-  smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
-  PLEGMA_printf("Plaquette using APE is:");
+  smearedGauge.setUnit((std::vector<int>) {0,4,8,9,13,17,18,22,26,27,31,35});
+  PLEGMA_printf("Plaquette for Unit links is:");
   smearedGauge.calculatePlaq();
 
   std::vector<int> list_R2;
   std::vector<int> counter = createR2(list_R2);
-  
   PLEGMA_Vector<double> v1,v2;
   v1.pointSource(src,0,0,DEVICE);
+  for(auto nsmear : nsmearGaussList)
+    for(auto alpha : alphaGaussList){
+      PLEGMA_printf("%d %f\n",nsmear, alpha);
+      v2.gaussianSmearing(v1,smearedGauge, nsmear, alpha);
+      std::vector<double> rms = v2.rms(list_R2,src);
+      std::string filename = outPrefix + "_UnitLinks" + "_nGau" + std::to_string(nsmear) + "aGau" + convNumToStr(alpha);
+      if(comm_rank() == 0) write_std_vecs( filename,list_R2, counter,rms);
+    }
+  
+
+  smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
+  PLEGMA_printf("Plaquette using APE is:");
+  smearedGauge.calculatePlaq();
+
+  
   for(auto nsmear : nsmearGaussList)
     for(auto alpha : alphaGaussList){
       PLEGMA_printf("%d %f\n",nsmear, alpha);
