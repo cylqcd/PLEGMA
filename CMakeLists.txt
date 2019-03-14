@@ -6,6 +6,8 @@ set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 11)
+include(CheckIncludeFileCXX)
+
 
 if(${CMAKE_VERSION} VERSION_GREATER "3.12.0") 
   cmake_policy(SET CMP0074 NEW)
@@ -261,9 +263,35 @@ LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} ${CUDA_curand_LIBRARY})
 LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY})
 
 add_definitions(-DMULTI_GPU)
+
 find_package(MPI)
-add_definitions(-DMPI_COMMS)
-include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+
+set(MPI_HOME_MANUAL "" CACHE PATH "Path to MPI for manual setting")
+mark_as_advanced(MPI_HOME_MANUAL)
+
+# add possibility to insert the include paths manually
+if( MPI_FOUND )
+  add_definitions(-DMPI_COMMS)
+  if("${MPI_HOME_MANUAL}" STREQUAL "") 
+    include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+    if("${MPI_CXX_INCLUDE_PATH}" STREQUAL "")
+      message(FATAL_ERROR "MPI_CXX_INCLUDE_PATH could not be specified, please specify MPI_HOME_MANUAL manually")
+    endif()
+  else()
+    include_directories(SYSTEM ${MPI_HOME_MANUAL}/include) 
+    FIND_LIBRARY(MPICH_LIBRARY_MANUAL mpich ${MPI_HOME_MANUAL}/lib)
+    FIND_LIBRARY(MPI_LIBRARY_MANUAL mpi ${MPI_HOME_MANUAL}/lib)
+    if( NOT ( "${MPI_LIBRARY_MANUAL}" STREQUAL "") )
+      #message(FATAL_ERROR "${MPI_LIBRARY_MANUAL}")
+      set(MPI_CXX_LIBRARIES ${MPI_LIBRARY_MANUAL}) 
+    elseif( NOT ( "${MPICH_LIBRARY_MANUAL}" STREQUAL "" ) )
+      #message(FATAL_ERROR "2")
+      set(MPI_CXX_LIBRARIES ${MPICH_LIBRARY_MANUAL})
+    else()
+      message(FATAL_ERROR "Could not locate any MPI library")
+    endif()
+  endif()
+endif()
 
 # COMPILER OPTIONS and BUILD types
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
