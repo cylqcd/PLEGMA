@@ -69,3 +69,6 @@ target_link_libraries(FT ${PLEGMA_LIBS})
 
 cuda_add_executable(LowModesCalc LowModesCalc.cpp)
 target_link_libraries(LowModesCalc ${PLEGMA_LIBS})
+
+cuda_add_executable(benchmark benchmark.cpp)
+target_link_libraries(benchmark ${PLEGMA_LIBS})
