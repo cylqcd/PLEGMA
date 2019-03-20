@@ -69,3 +69,6 @@ target_link_libraries(FT ${PLEGMA_LIBS})
 
 cuda_add_executable(LowModesCalc LowModesCalc.cpp)
 target_link_libraries(LowModesCalc ${PLEGMA_LIBS})
+
+cuda_add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
+target_link_libraries(quark_rms ${PLEGMA_LIBS})

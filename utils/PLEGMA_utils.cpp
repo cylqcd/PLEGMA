@@ -188,3 +188,13 @@ void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic){
 
 template void applyBoundaryConditions<double>(PLEGMA_Gauge<double> &gauge, bool antiperiodic);
 template void applyBoundaryConditions<float>(PLEGMA_Gauge<float> &gauge, bool antiperiodic);
+
+std::vector<int> createR2(std::vector<int> &vec){
+  if(!HGC_init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
+  if(vec.size() != 0) PLEGMA_error("The vector provided is not empty");
+  for(int xx = -HGC_totalL[0]/2; xx < HGC_totalL[0]/2; xx++)
+    for(int yy = -HGC_totalL[1]/2; yy < HGC_totalL[1]/2; yy++)
+      for(int zz = -HGC_totalL[2]/2; zz < HGC_totalL[2]/2; zz++)
+	vec.push_back(xx*xx + yy*yy + zz*zz);
+  return clearDuplicates(vec);
+}
