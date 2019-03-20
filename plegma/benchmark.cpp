@@ -110,7 +110,7 @@ int main(int argc, char **argv)
   PLEGMA_Propagator<float> prop_f(BOTH);
   PLEGMA_Propagator<float> prop_g(BOTH);
   PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_f, prop_g, sources);
-  free(sources);
+  hostFree(sources);
 
   finalize();
   exit(0);
