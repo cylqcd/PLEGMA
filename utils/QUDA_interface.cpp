@@ -2,7 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <invert_quda.h>
 #include <PLEGMA_BLAS.h>
-
+#include <multigrid.h>
 using namespace std;
 using namespace quda;
 
@@ -146,7 +146,7 @@ QUDA_solver::QUDA_solver(double mu) {
   inv_param.mu = mu;
   mg_param.invert_param->mu = mu;
   mg_preconditioner = newMultigridQuda(&mg_param);
-
+  
   bool pc_solution = false;
   bool pc_solve = true;
   bool mat_solution = ((inv_param.solution_type == QUDA_MAT_SOLUTION) || 
@@ -205,6 +205,90 @@ cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
   D->reconstruct(*x,*rhs,inv_param.solution_type);
   return x;
 }
+
+struct MG_MGParam{
+  typedef MGParam* MG::*type;
+  friend type get(MG_MGParam);
+};
+
+struct MG_Coarse{
+  typedef MG* MG::*type;
+  friend type get(MG_Coarse);
+};
+
+template<typename Tag,typename Tag::type M>
+struct Rob {
+  friend typename Tag::type get(Tag){ return M;}
+};
+  
+template struct Rob<MG_MGParam,&MG::param_coarse>;
+template struct Rob<MG_Coarse,&MG::coarse>;
+
+static void updateMultigridParam(MG* mg, MGParam &current, QudaMultigridParam param, int level = 0)
+{
+  current.nu_pre = param.nu_pre[level];
+  current.nu_post = param.nu_post[level];
+  current.smoother_tol = param.smoother_tol[level];
+  current.cycle_type = param.cycle_type[level];
+  current.global_reduction = param.global_reduction[level];
+  current.omega = param.omega[level];
+  current.smoother = param.smoother[level];
+  current.mg_global.mu_factor[level] = param.mu_factor[level];
+  
+  if(level < mg_levels-1){
+    current.mg_global.mu_factor[level+1] = param.mu_factor[level+1];
+    updateMultigridParam(mg->*get(MG_Coarse()),*(mg->*get(MG_MGParam())),param,level+1);} 
+}
+
+void QUDA_solver::UpdateSolver()
+{
+  PLEGMA_printf("Updating multigrid parameters\n");
+  setMultigridParam(mg_param);
+ 
+  setInvertParam(inv_param);
+  checkInvertParam(&inv_param);
+
+  updateMultigridParam(((multigrid_solver*) mg_preconditioner)->mg,*(((multigrid_solver*) mg_preconditioner)->mgParam),mg_param);
+  updateMultigridQuda(mg_preconditioner,&mg_param);
+ 
+
+  bool pc_solution = false;
+  bool pc_solve = true;
+
+  delete D;
+  delete DSloppy;
+  delete DPre;
+
+  D = NULL;
+  DSloppy = NULL;
+  DPre = NULL;
+  
+  createDirac(D, DSloppy, DPre, inv_param, pc_solve);
+
+  delete solver;
+  delete M;
+  delete MSloppy;
+  delete MPre;
+
+  solver = NULL;
+  M = NULL;
+  MSloppy = NULL;
+  MPre = NULL;
+  
+  // Create Operators
+  M = new DiracM(*D);
+  MSloppy = new DiracM(*DSloppy);
+  MPre = new DiracM(*DPre);
+
+  // Create Solvers
+  delete solverParam;
+  solverParam = NULL;
+  solverParam = new SolverParam(inv_param);
+  
+  solver = Solver::create(*solverParam, *M, *MSloppy, 
+  			 *MPre, *profiler);
+
+ }
 
 template<typename Float>
 cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
