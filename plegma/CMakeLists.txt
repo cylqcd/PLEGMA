@@ -37,6 +37,9 @@ endif(PLEGMA_MKL)
 cuda_add_executable(Plaquette Plaquette.cpp)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
+cuda_add_executable(Topo Topo.cpp)
+target_link_libraries(Topo ${PLEGMA_LIBS})
+
 cuda_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
