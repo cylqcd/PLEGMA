@@ -62,7 +62,7 @@ namespace plegma {
       std::vector<int> lu = {Lu,Lu,Lu,Lu};
       std::vector<int> bx(d);
       std::vector<int> lx(d);
-      for(int i=0; i < HGC_localVolume; i++){
+      for(size_t i=0; i < HGC_localVolume; i++){
 	std::vector<int> x = getIndToVec(i,lL);
 	for(int j = 0 ; j < d; j++) bx[j] = x[j]/lu[j];
 	int eo=0;

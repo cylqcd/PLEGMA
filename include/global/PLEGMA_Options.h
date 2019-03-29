@@ -83,12 +83,12 @@ public:
       arg_cmd.push_back(av);
     }
     if(argc==1){ noOptions=true;}
-    for(int i = 0; i < arg_cmd.size(); i++)
+    for(size_t i = 0; i < arg_cmd.size(); i++)
       if(arg_cmd[i] == prefixOpt+"help") isHelp=true;
     if(noOptions || isHelp) return;
 
     argument arg;
-    for(int i = 0; i < arg_cmd.size(); i++){
+    for(size_t i = 0; i < arg_cmd.size(); i++){
       checkPrefix(arg_cmd[i]);
       if(arg_cmd[i] == forInput){
 	processInputFile(arg_cmd.at(i+1));
@@ -120,7 +120,7 @@ public:
   bool getIsHelp() const{return isHelp;}
   
   std::string get_value(std::string name) const{
-    for(int i = 0 ; i < args.size(); i++)
+    for(size_t i = 0 ; i < args.size(); i++)
       if(args[i].name == name)
 	return args[i].value;
     return "";
@@ -128,14 +128,14 @@ public:
   std::vector<argument> get_args() const {return args;}
 
   void showArgsList() const{
-    for(int i = 0 ; i < args.size(); i++)
+    for(size_t i = 0 ; i < args.size(); i++)
       PLEGMA_printf("%s %s\n",args[i].name.c_str(), args[i].value.c_str());
   }
     
   void areDuplications() {
-    for(int i = 0 ; i < args.size(); i++){
+    for(size_t i = 0 ; i < args.size(); i++){
       std::string check_name = args[i].name;
-      for(int j = 0 ; j < args.size(); j++)
+      for(size_t j = 0 ; j < args.size(); j++)
 	if(i!=j)
 	  if(check_name == args[j].name)
 	    errorCollection.push_back("Error: Duplication of parameter ["+check_name+"] found\n");
@@ -153,12 +153,12 @@ private:
   void usage(){
     PLEGMA_printf("\n\n USAGE FOR %s\n",nameExec.c_str());
     int maxPos=0;
-    for(int i = 0 ; i < descOpt.size(); i++){
+    for(size_t i = 0 ; i < descOpt.size(); i++){
       int pos = descOpt[i].find(dressDesc);
       if(pos > maxPos)maxPos=pos;
     }
 
-    for(int i = 0 ; i < descOpt.size(); i++){
+    for(size_t i = 0 ; i < descOpt.size(); i++){
       std::replace(descOpt[i].begin(), descOpt[i].end(), '\t',' ');
       int pos = descOpt[i].find(dressDesc);
       std::string firstP = descOpt[i].substr(0,pos-1);
@@ -166,7 +166,7 @@ private:
       std::string spaces(maxPos-pos+1,' ');
       descOpt[i] = firstP + spaces + secondP;
     }
-    for(int i = 0 ; i < descOpt.size(); i++) PLEGMA_printf("%s\n",descOpt[i].c_str());
+    for(size_t i = 0 ; i < descOpt.size(); i++) PLEGMA_printf("%s\n",descOpt[i].c_str());
   }
   template<typename T>
   void set(std::string name,std::stringstream &cs, T &v){
@@ -266,7 +266,7 @@ private:
   }
 
   void checkIfSet(std::string name){
-    for(int i = 0; i < listSetOpt.size(); i++)
+    for(size_t i = 0; i < listSetOpt.size(); i++)
       if(name == listSetOpt[i]) errorCollection.push_back("Error: Option ["+name+"] already set\n");
   }
 public:
@@ -283,7 +283,7 @@ public:
     checkIfSet(name);
     std::stringstream cs;
     int countF=0;
-    for(int i = 0 ; i < args.size(); i++)
+    for(size_t i = 0 ; i < args.size(); i++)
       if(args[i].name == name){
 	cs.clear();
 	cs.str(args[i].value);
@@ -310,7 +310,7 @@ public:
 
   
   template<typename T>
-  bool set(std::string name, std::string desc, int visualize, std::vector<T> &vec, int n=-1){
+  bool set(std::string name, std::string desc, int visualize, std::vector<T> &vec, size_t n=-1){
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,vec);
     descOpt.push_back(fullDesc);
@@ -318,7 +318,7 @@ public:
     checkIfSet(name);
     std::stringstream cs;
     int countF = 0;
-    for(int i = 0 ; i < args.size(); i++)
+    for(size_t i = 0 ; i < args.size(); i++)
       if(args[i].name == name){
 	cs.clear();
 	cs.str(args[i].value);
@@ -351,7 +351,7 @@ public:
   }
 
   template<typename T1, typename T2>
-  bool set(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, int n=-1){
+  bool set(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, size_t n=-1){
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,tpl);
     descOpt.push_back(fullDesc);
@@ -359,7 +359,7 @@ public:
     checkIfSet(name);
     std::stringstream cs;
     int countF=0;
-    for(int i = 0 ; i < args.size(); i++)
+    for(size_t i = 0 ; i < args.size(); i++)
       if(args[i].name == name){
 	cs.clear();
 	cs.str(args[i].value);
@@ -401,7 +401,7 @@ public:
 
   void checkErrors(){
     if(errorCollection.size() <= 0) return;
-    for(int i = 0 ; i < errorCollection.size(); i++) PLEGMA_printf("%s\n",errorCollection[i].c_str());
+    for(size_t i = 0 ; i < errorCollection.size(); i++) PLEGMA_printf("%s\n",errorCollection[i].c_str());
     PLEGMA_exit(-1);
   }
 
@@ -409,7 +409,7 @@ public:
     if(isHelp){usage(); PLEGMA_exit(-1);}
     checkErrors();
     if(args.size() != 0){
-      for(int i = 0; i<args.size(); i++)
+      for(size_t i = 0; i<args.size(); i++)
 	PLEGMA_printf("Error: What option is %s\n", args[i].name.c_str() );
       usage();
       PLEGMA_exit(-1);
