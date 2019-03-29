@@ -2,27 +2,22 @@
 #include <PLEGMA_utils.h>
 #include <numeric>
 #include <iostream>
-
-
-
+#include <string>
 
 using namespace plegma;
 using namespace quda;
 
-
-
-template<typename out,class T,class ...types,class ...types1>
-__inline__ void PLEGMA_benchmark(T* obj, out (T::*function)(types1...),std::string name, types... kArgs){
+template<typename out,class T,class T1,class ...types, class ...types1>
+static inline void PLEGMA_benchmark(T &obj, out (T1::*function)(types1...),std::string name, types... kArgs){
 
   double t1;
   std::vector<double> timing;
 
-  for(int t=0;t<n_benchmark;t++)
-    {
-      t1=MPI_Wtime();
-      (obj->*function)(kArgs...);
-      timing.push_back(MPI_Wtime()-t1);
-    }
+  for(int t=0;t<n_benchmark;t++) {
+    t1=MPI_Wtime();
+    (obj.*function)(kArgs...);
+    timing.push_back(MPI_Wtime()-t1);
+  }
 
   double sum = std::accumulate(timing.begin(), timing.end(), 0.0);
   double mean = sum / timing.size();
@@ -41,79 +36,106 @@ __inline__ void PLEGMA_benchmark(T* obj, out (T::*function)(types1...),std::stri
   PLEGMA_printf("Average time time:\t %.16f \n", mean);
   PLEGMA_printf("Standard deviation:\t %.16lf \n", stdev);
   PLEGMA_printf("Maximum time:\t %.16lf\n", timing[std::distance(std::begin(timing), max)]);
-  PLEGMA_printf("Minimum time:\t %.16lf",timing[std::distance(std::begin(timing), min)]);
-  PLEGMA_printf("\n#######################################################################\n");
+  PLEGMA_printf("Minimum time:\t %.16lf\n",timing[std::distance(std::begin(timing), min)]);
+  PLEGMA_printf("#######################################################################\n");
 }
 
+std::string kind = "all";
+static inline bool run(std::vector<std::string> run_for) {
+  if (kind.find("all") != std::string::npos)
+    return true;
+  
+  for(auto str : run_for)
+    if (kind.find(str) != std::string::npos)
+      return true;
+  
+  return false;
+}
 
-
-
-int main(int argc, char **argv)
-{
-
-  static std::vector<std::string> listOpt = {"load-gauge","n_benchmark"};
+int main(int argc, char **argv) {
+  
+  static std::vector<std::string> listOpt = {"verbosity", "n_benchmark", "corr-space", "maxQsq"};
 
   initializeOptions(argc, argv, true, listOpt);
+
+  HGC_options->set("kind", "Kind of application to benchmark. Multiple options allowed. Options (all, twop, threep, PDFs, qLoops, etc...)", verbosity, kind);
+  
   initializePLEGMA();  
 
-  
-  PLEGMA_Gauge<double> gauge_a;
-  gauge_a.zero_host();
-  gauge_a.zero_device();
+  if(run({"twop","threep","PDFs","smearing"})) {
+    PLEGMA_Gauge<double> gauge_a, gauge_b;
+    PLEGMA_Vector<double> vector_a, vector_b;
 
-  /* Benchmark of the APEsmearing function */
-  PLEGMA_Gauge<double> gauge_b;
-  PLEGMA_benchmark(&gauge_b,&PLEGMA_Gauge<double>::APEsmearing,"APEsmearing",gauge_a,nsmearAPE,alphaAPE,3);
-  
-  /* Benchmark of the momentum smearing */
-  std::complex<double> momSmScale[N_DIMS];
-  std::complex<double> I(0,1);
-  double xi=0.6;
-  std::vector<int> sinkM={1,0,0,0};
-  for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xi*2.*PI*sinkM[i]/HGC_totalL[i])*I);
-  PLEGMA_benchmark(&gauge_b,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing",momSmScale);
-  
-  /* Benchmark gaussian smearing */
-  PLEGMA_Vector<double> vector_a;
-  PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing",vector_a,gauge_b, nsmearGauss, alphaGauss);
+    /* Benchmark of the APEsmearing function */
+    PLEGMA_benchmark(gauge_b,&PLEGMA_Gauge<double>::APEsmearing, "APEsmearing (1 iter)", gauge_a, 1, 0.5, 3);
+
+    /* Benchmark gaussian smearing */
+    PLEGMA_benchmark(vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing (1 iter)",vector_b, gauge_a, 1, alphaGauss);
+  }
+
+  if(run({"twop","threep","PDFs"})) {
+    PLEGMA_Propagator<float> prop;
+    PLEGMA_Correlator<float> corr(corr_space,maxQsq);
+    int sources[4] = {1,0,1,0};
     
-  /* Benchmark contraction  3pt*/
-  PLEGMA_Correlator<float> corr(corr_space,0); 
-  PLEGMA_Propagator<float> prop_a(BOTH);
-  PLEGMA_Propagator<float> prop_b(BOTH);
-  PLEGMA_Su3field<float> su3_a;
-  std::vector<GAMMAS> gammas = {G3,};
-  int (*sources);
-  hostMalloc(sources, N_DIMS*sizeof(int));
-  sources[0]=0;
-  sources[1]=1;
-  sources[2]=0;
-  sources[3]=0;
-  PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3_a, +1, gammas, sources);
+    /* Benchmark Meson contration */
+    PLEGMA_benchmark(corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop, prop, sources);
 
-  /* Benchmark Wilson line update */
-  PLEGMA_Su3field<float> su3_b;
-  PLEGMA_Su3field<float> su3_c;
-  PLEGMA_Su3field<float> su3_d;
-  PLEGMA_benchmark(&su3_d,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_b,su3_c,4+2);
+    /* Benchmark Baryons contractions */
+    PLEGMA_benchmark(corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop, prop, sources);
+  }
 
-  /* Benchmark shift routine */
-  PLEGMA_Propagator<float> prop_c(BOTH);
-  PLEGMA_benchmark<void,PLEGMA_Field<float>>(&prop_a,&PLEGMA_Field<float>::shift,"Shift routine",prop_c,4+2);
+  if(run({"threep","PDFs"})) {
+    PLEGMA_Propagator3D<float> prop;
+    PLEGMA_Vector<float> vector;
 
-  /* Benchmark Meson contration */
-  PLEGMA_Propagator<float> prop_d(BOTH);
-  PLEGMA_Propagator<float> prop_e(BOTH);
-  PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_d, prop_e, sources);
+    // Since seqSourceNucleon is overloaded we need to select one version of it
+    void (PLEGMA_Vector<float>::*seqSourceNucleon)(PLEGMA_Propagator3D<float> &, PLEGMA_Propagator3D<float> &, WHICHPROJECTOR, WHICHPARTICLE, int, int, int) = &PLEGMA_Vector<float>::seqSourceNucleon;
+    /* Benchmark Sequential source */
+    for(int i=0; i<(int) N_PROJS; i++) {
+      PLEGMA_benchmark(vector, seqSourceNucleon, "Sequential source proton P=" + std::to_string(i), prop, prop, (WHICHPROJECTOR) i, PROTON, 1, 0, 0);
+      PLEGMA_benchmark(vector, seqSourceNucleon, "Sequential source neutron P=" + std::to_string(i), prop, prop, (WHICHPROJECTOR) i, NEUTRON, 1, 0, 0);
+    }
+  }
 
-  /* Benchmark Baryons contractions */
-  PLEGMA_Propagator<float> prop_f(BOTH);
-  PLEGMA_Propagator<float> prop_g(BOTH);
-  PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_f, prop_g, sources);
-  hostFree(sources);
+  if(run({"threep"})) {
+    PLEGMA_Gauge<float> gauge;
+    PLEGMA_Propagator<float> prop;
+    PLEGMA_Correlator<float> corr(corr_space,maxQsq);
+    std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
+    int sources[4] = {1,0,1,0};
+    
+    /* Benchmark three point functions */
+    PLEGMA_benchmark(corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop, prop, +1, gammas, sources);
+    PLEGMA_benchmark(corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop, prop, gauge, +1, gammas, sources);
+    PLEGMA_benchmark(corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop, prop, gauge, +1, sources);
+  }
+  
+  if(run({"PDFs"})) {
+    PLEGMA_Gauge<double> gauge;
+    PLEGMA_Su3field<float> su3,su3_a,su3_b;
+    PLEGMA_Propagator<float> prop;
+    PLEGMA_Correlator<float> corr(MOMENTUM_SPACE,0);
+    std::complex<double> momSmScale[N_DIMS] = {1,1,1,1};
+    momSmScale[0] = {0.7071, 0.7071};
+    std::vector<GAMMAS> gammas = {G3,};
+    int sources[4] = {1,0,1,0};
+    
+    /* Benchmark of the momentum smearing */
+    PLEGMA_benchmark(gauge,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing (scale 1 dir)",momSmScale);
 
+    /* Benchmark contraction  3pt*/
+    PLEGMA_benchmark(corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop, prop, su3, +1, gammas, sources);
+
+    /* Benchmark Wilson line update */
+    PLEGMA_benchmark(su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a,su3_b,4+2);
+
+    /* Benchmark shift routine */
+    PLEGMA_benchmark(prop,&PLEGMA_Field<float>::shift,"Shift routine",prop,2);
+  }
+    
   finalize();
-  exit(0);
+  return 0;
 }
 
 
