@@ -28,6 +28,8 @@ namespace plegma {
     void calculatePlaqCorners();
     void calculatePlaqShifts();
 
+    Float calculateTopo(TOPO_CHARGE_DEF charge_def);
+
     void scaleDirWise(std::complex<Float> scale[N_DIMS]);
     void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
   };

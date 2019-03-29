@@ -6,6 +6,7 @@
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_io.h>
+#include <PLEGMA_topocharge.cuh>
 
 using namespace plegma;
 
@@ -116,6 +117,18 @@ Float PLEGMA_Gauge<Float>::calculatePlaq(){
   if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
   this->destroyTexObject(tex.tex);
   return plaq;
+}
+
+template<typename Float>
+Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_SIDE);
+
+  tex.tex = this->createTexObject();
+  Float Q = calcTopoCharge<Float>(tex, charge_def);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated topological charge is %f\n",Q);
+  this->destroyTexObject(tex.tex);
+  return Q;
 }
 
 template<typename Float>
