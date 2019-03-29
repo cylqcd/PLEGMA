@@ -36,7 +36,7 @@ inline std::string get_file_format_suffix(FILE_WRITE_FORMAT s) {
   if(s==ASCII_FORM) res = ".dat";
   else if(s==HDF5_FORM) res =  ".h5";
   else if(s==LIME_FORM) res = "";
-  else PLEGMA_error("invalid file format %s\n", get_file_format_str(s));
+  else PLEGMA_error("invalid file format %s\n", get_file_format_str(s).c_str());
   return res;
 }
 
