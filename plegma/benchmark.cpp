@@ -10,14 +10,18 @@ using namespace quda;
 template<typename out,class T,class T1,class ...types, class ...types1>
 void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, types&&... kArgs){
 
-  double t1;
   std::vector<double> timing;
 
-  (obj->*function)(kArgs...);  // Calling once outside for performing tuning
-  for(int t=0;t<n_benchmark;t++) {
-    t1=MPI_Wtime();
+  // Calling once outside for performing tuning
+  (obj->*function)(kArgs...);  
+  
+  double t0 = MPI_Wtime();
+  for(int i=0; i<n_benchmark; i++) {
+    double t1 = MPI_Wtime();
     (obj->*function)(kArgs...);
     timing.push_back(MPI_Wtime()-t1);
+    // Setting an hard break after 10 sec
+    if(i > 1 && MPI_Wtime()-t0 > 10) break;
   }
 
   double sum = std::accumulate(timing.begin(), timing.end(), 0.0);
@@ -33,11 +37,11 @@ void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, t
  
   PLEGMA_printf("############################## BENCHMARK ##############################\n");
   PLEGMA_printf("Function name: \t %s \n", name.c_str());
-  PLEGMA_printf("Total number of repetitions:\t %d \n",n_benchmark);
-  PLEGMA_printf("Average time time:\t %.16f \n", mean);
-  PLEGMA_printf("Standard deviation:\t %.16lf \n", stdev);
-  PLEGMA_printf("Maximum time:\t %.16lf\n", timing[std::distance(std::begin(timing), max)]);
-  PLEGMA_printf("Minimum time:\t %.16lf\n",timing[std::distance(std::begin(timing), min)]);
+  PLEGMA_printf("Total number of repetitions:\t %d \n", (int) timing.size());
+  PLEGMA_printf("Average time time [s]:\t %.16f \n", mean);
+  PLEGMA_printf("Standard deviation [s]:\t %.16lf \n", stdev);
+  PLEGMA_printf("Maximum time [s]:\t %.16lf\n", timing[std::distance(std::begin(timing), max)]);
+  PLEGMA_printf("Minimum time [s]:\t %.16lf\n",timing[std::distance(std::begin(timing), min)]);
   PLEGMA_printf("#######################################################################\n");
 }
 
@@ -61,7 +65,7 @@ int main(int argc, char **argv) {
 
   HGC_options->set("kind", "Kind of application to benchmark. Multiple options allowed. Options (all, twop, threep, PDFs, qLoops, etc...)", verbosity, kind);
   
-  initializePLEGMA();  
+  initializePLEGMA();
 
   if(run({"twop","threep","PDFs","smearing"})) {
     PLEGMA_Gauge<double> gauge_a, gauge_b;
@@ -74,7 +78,7 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing (1 iter)",vector_b, gauge_a, 1, 0.2);
   }
 
-  if(run({"twop","threep","PDFs"})) {
+  if(run({"twop"})) {
     PLEGMA_Propagator<float> prop;
     PLEGMA_Correlator<float> corr(corr_space,maxQsq);
     int sources[4] = {1,0,1,0};
@@ -86,6 +90,7 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop, prop, sources);
   }
 
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(run({"threep","PDFs"})) {
     PLEGMA_Propagator3D<float> prop;
     PLEGMA_Vector<float> vector;
@@ -134,7 +139,24 @@ int main(int argc, char **argv) {
     // Benchmark shift routine 
     PLEGMA_benchmark(&prop,&PLEGMA_Field<float>::shift,"Shift routine",prop,2);
   }
+#endif
 
+  if(run({"qLoops"})) {
+    PLEGMA_QLoops<double> loops;
+    PLEGMA_Vector<double> vector;
+    PLEGMA_Gauge<double> gauge;
+    PLEGMA_FT<double> ft(1, 3);
+
+    // Benchmark standard one-end trick
+    // Since the function is overloaded we need to select one version of it
+    void (PLEGMA_QLoops<double>::*oneEnd_trick)(PLEGMA_Vector<double> &, PLEGMA_Vector<double>&, PLEGMA_Vector<double> &,
+						PLEGMA_Gauge<double> &, double, bool) = &PLEGMA_QLoops<double>::oneEnd_trick;
+    PLEGMA_benchmark(&loops,oneEnd_trick,"Loops one-end trick",vector,vector,vector,gauge,-1.,true);
+
+    // Benchmark standard one-end trick
+    PLEGMA_benchmark(&ft,&PLEGMA_FT<double>::apply,"Loops FT",loops,-1);
+  }
+  
   finalize();
   return 0;
 }
