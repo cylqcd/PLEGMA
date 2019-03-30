@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 #endif
 
   if(run({"qLoops"})) {
-    PLEGMA_QLoops<double> loops;
+    PLEGMA_QLoops<double> loops(BOTH, true);
     PLEGMA_Vector<double> vector;
     PLEGMA_Gauge<double> gauge;
     PLEGMA_FT<double> ft(1, 3);
