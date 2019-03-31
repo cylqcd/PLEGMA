@@ -310,7 +310,7 @@ public:
 
   
   template<typename T>
-  bool set(std::string name, std::string desc, int visualize, std::vector<T> &vec, size_t n=-1){
+  bool set(std::string name, std::string desc, int visualize, std::vector<T> &vec, int n=-1){
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,vec);
     descOpt.push_back(fullDesc);
@@ -330,7 +330,7 @@ public:
 	}
 	args.erase(args.begin()+i);
 	countF++;
-	if( (n>0) && (vec.size() != n) )
+	if( (n>0) && ((int) vec.size() != n) )
 	  errorCollection.push_back("Error: " + name + " got wrong number of elements");
       }
 
@@ -351,7 +351,7 @@ public:
   }
 
   template<typename T1, typename T2>
-  bool set(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, size_t n=-1){
+  bool set(std::string name, std::string desc, int visualize, std::map<T1,T2> &tpl, int n=-1){
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,tpl);
     descOpt.push_back(fullDesc);
@@ -377,7 +377,7 @@ public:
 	}
 	args.erase(args.begin()+i);
 	countF++;
-	if( (n>0) && (tpl.size() != n) ){
+	if( (n>0) && ((int) tpl.size() != n) ){
 	  errorCollection.push_back("Error: " + name + " got wrong number of elements");
 	}
       }
