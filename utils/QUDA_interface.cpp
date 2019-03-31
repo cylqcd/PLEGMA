@@ -149,9 +149,6 @@ QUDA_solver::QUDA_solver(double mu) {
   
   bool pc_solution = false;
   bool pc_solve = true;
-  bool mat_solution = ((inv_param.solution_type == QUDA_MAT_SOLUTION) || 
-		       (inv_param.solution_type == QUDA_MATPC_SOLUTION));
-  bool direct_solve = true;
 
   inv_param.secs = 0;
   inv_param.gflops = 0;
@@ -292,11 +289,9 @@ void QUDA_solver::UpdateSolver()
 
 template<typename Float>
 cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
-  bool flag_eo;
+  bool flag_eo=false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
-  else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
-    flag_eo = false;
 
   vectorIn.copyToQUDA(b,flag_eo);
   return solve(b);
@@ -304,11 +299,9 @@ cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
 
 template<typename Float>
 void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &vectorIn){
-  bool flag_eo;
+  bool flag_eo = false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
-  else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
-    flag_eo = false;
 
   x = solve(vectorIn); 
   vectorOut.copyFromQUDA( x, flag_eo);

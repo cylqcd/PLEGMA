@@ -17,6 +17,31 @@
 #define THREADS_PER_BLOCK 64
 //#define TIMING_REPORT
 
+
+/* 
+ * From https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+ * Note that any atomic operation can be implemented based on atomicCAS() (Compare And Swap). 
+ * For example, atomicAdd() for double-precision floating-point numbers is not available 
+ * on devices with compute capability lower than 6.0 but it can be implemented as follows:
+ */
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 600)
+__device__ double atomicAdd(double* address, double val) {
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull, assumed;
+  
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+		    __double_as_longlong(val +
+					 __longlong_as_double(assumed)));
+    
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+  } while (assumed != old);
+  
+  return __longlong_as_double(old);
+}
+#endif
+
 using namespace plegma;
 
 namespace plegma {

@@ -45,14 +45,14 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list,"alpha-gauss")) opt.set("alpha-gauss", "Coefficient for the Gaussian smearing", verbosity, alphaGauss);
   if(isInList(list,"nsmear-stout")) opt.set("nsmear-stout", "Number of stout smearing step", verbosity, nsmearStout);
   if(isInList(list,"alpha-stout")) opt.set("alpha-stout", "Coefficient for the stout smearing", verbosity, alphaStout);
-
   // sources----------------------------------------------------------------------------------------------
   if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions", verbosity, numSourcePositions);
   if(isInList(list,"src-filename")){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
-
+  // benchmark --------------------------------------------------------------------------------------------
+  if(isInList(list,"n_benchmark")) opt.set("n_benchmark", "how many time run a function during benchmark", verbosity, n_benchmark);
   // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);
@@ -72,7 +72,6 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
 
   if(isInList(list, "tSinks")) opt.set("tSinks", "List with the source-sink time separations to do", verbosity, tSinks);
   if(isInList(list, "Projs")) opt.set("Projs", "List of the projectors to be used", verbosity, Projs);
-
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
 #ifdef HAVE_ARPACK

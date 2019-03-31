@@ -20,7 +20,7 @@ define(int nsmearGauss, 50);
 define(double alphaGauss, 0.2);
 define(int nsmearStout, 5);
 define(double alphaStout, 0.2);
-
+define(int n_benchmark,100);
 define(int numSourcePositions, 1);
 define(std::string pathListSourcePositions);
 define(int (*sourcePositions)[N_DIMS], NULL);

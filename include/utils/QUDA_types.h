@@ -13,7 +13,7 @@ inline QudaVerbosity get_verbosity_type(std::string s) {
   else if(s=="debug")
     return QUDA_DEBUG_VERBOSE;
   else {
-    PLEGMA_warning("invalid verbosity type %s\n", s);
+    PLEGMA_warning("invalid verbosity type %s\n", s.c_str());
     return QUDA_INVALID_VERBOSITY;
   }
 }
@@ -46,7 +46,7 @@ inline QudaReconstructType get_recon(std::string s) {
   else if(s=="18")
     return  QUDA_RECONSTRUCT_NO;
   else {
-    PLEGMA_warning( "Error: invalid reconstruct type %s\n", s);
+    PLEGMA_warning( "Error: invalid reconstruct type %s\n", s.c_str());
     return QUDA_RECONSTRUCT_INVALID;
   }
 }
@@ -81,7 +81,7 @@ inline QudaPrecision get_prec(std::string s) {
   else if(s=="quarter")
     return QUDA_QUARTER_PRECISION;
   else {
-    PLEGMA_warning( "invalid precision type %s\n",s);
+    PLEGMA_warning( "invalid precision type %s\n",s.c_str());
     return QUDA_INVALID_PRECISION;
   }
 }
@@ -138,7 +138,7 @@ inline QudaDslashType get_dslash_type(std::string s) {
   else if(s=="laplace")
     return  QUDA_LAPLACE_DSLASH;
   else {
-    PLEGMA_warning( "invalid dslash type\n");	
+    PLEGMA_warning( "invalid dslash type %s\n", s.c_str());	
     return QUDA_INVALID_DSLASH;
   }
 }
@@ -179,7 +179,7 @@ inline QudaMassNormalization get_mass_normalization_type(std::string s) {
   else if(s=="asym-mass")
     return QUDA_ASYMMETRIC_MASS_NORMALIZATION;
   else {
-    PLEGMA_warning( "invalid mass normalization %s\n", s);
+    PLEGMA_warning( "invalid mass normalization %s\n", s.c_str());
     return QUDA_INVALID_NORMALIZATION;
   }
 }
@@ -208,7 +208,7 @@ inline QudaMatPCType get_matpc_type(std::string s) {
   else if(s=="odd-odd-asym")
     return QUDA_MATPC_ODD_ODD_ASYMMETRIC;
   else {
-    PLEGMA_warning( "invalid matpc type %s\n", s);
+    PLEGMA_warning( "invalid matpc type %s\n", s.c_str());
     return QUDA_MATPC_INVALID;
   }
 }
@@ -243,7 +243,7 @@ inline QudaSolveType get_solve_type(std::string s) {
   else if(s=="normerr-pc")
     return QUDA_NORMERR_PC_SOLVE;
   else {
-    PLEGMA_warning( "invalid matpc type %s\n", s);
+    PLEGMA_warning( "invalid matpc type %s\n", s.c_str());
     return QUDA_INVALID_SOLVE;
   }
 }
@@ -276,7 +276,7 @@ inline QudaSchwarzType get_schwarz_type(std::string s) {
   else if(s=="mul")
     return QUDA_MULTIPLICATIVE_SCHWARZ;
   else {
-    PLEGMA_warning( "invalid Schwarz type %s\n", s);
+    PLEGMA_warning( "invalid Schwarz type %s\n", s.c_str());
     return QUDA_INVALID_SCHWARZ;
   }
 }
@@ -291,7 +291,7 @@ inline QudaTwistFlavorType get_flavor_type(std::string s) {
   else if(s=="no")
     return  QUDA_TWIST_NO;
   else {
-    PLEGMA_warning( "invalid flavor type %s\n", s);	
+    PLEGMA_warning( "invalid flavor type %s\n", s.c_str());	
     return QUDA_TWIST_INVALID;
   }
 }
@@ -362,7 +362,7 @@ inline QudaInverterType get_solver_type(std::string s) {
   else if(s=="none")
     return QUDA_INVALID_INVERTER;
   else {
-    PLEGMA_warning( "invalid solver type %s\n", s);
+    PLEGMA_warning( "invalid solver type %s\n", s.c_str());
     return QUDA_INVALID_INVERTER;
   }
 }
@@ -419,5 +419,6 @@ inline std::string get_solver_str(QudaInverterType type) {
     return "none";
   default:
     PLEGMA_error("invalid solver type %d\n", type);
+    return "";
   }
 }
