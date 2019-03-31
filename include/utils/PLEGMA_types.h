@@ -96,16 +96,14 @@ inline WHICHPROJECTOR get_projector(std::string s){
 
 inline std::string get_projector_str(WHICHPROJECTOR proj){
   std::string res="";
-  switch(proj){
-  case(P4_P): res = "P4_P"; break;
-  case(P4G5G1_P): res = "P4G5G1_P"; break;
-  case(P4G5G2_P): res = "P4G5G2_P"; break;
-  case(P4G5G3_P): res = "P4G5G3_P"; break;
-  case(P4_M): res = "P4_M"; break;
-  case(P4G5G1_M): res = "P4G5G1_M"; break;
-  case(P4G5G2_M): res = "P4G5G2_M"; break;
-  case(P4G5G3_M): res = "P4G5G3_M"; break;
-  }
-  if(res.empty()) PLEGMA_error("Projector not identified");
+  if(proj==P4_P) res = "P4_P";
+  else if(proj==P4G5G1_P) res = "P4G5G1_P";
+  else if(proj==P4G5G2_P) res = "P4G5G2_P";
+  else if(proj==P4G5G3_P) res = "P4G5G3_P";
+  else if(proj==P4_M) res = "P4_M";
+  else if(proj==P4G5G1_M) res = "P4G5G1_M";
+  else if(proj==P4G5G2_M) res = "P4G5G2_M";
+  else if(proj==P4G5G3_M) res = "P4G5G3_M";
+  else PLEGMA_error("Projector not identified");
   return res;
 }
