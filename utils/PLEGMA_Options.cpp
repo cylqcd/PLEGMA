@@ -51,8 +51,6 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
-  // benchmark --------------------------------------------------------------------------------------------
-  if(isInList(list,"n_benchmark")) opt.set("n_benchmark", "how many time run a function during benchmark", verbosity, n_benchmark);
   // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);

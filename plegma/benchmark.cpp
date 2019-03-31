@@ -7,6 +7,8 @@
 using namespace plegma;
 using namespace quda;
 
+int n_benchmark = 100;
+double t_max = 10;
 template<typename out,class T,class T1,class ...types, class ...types1>
 void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, types&&... kArgs){
 
@@ -20,8 +22,8 @@ void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, t
     double t1 = MPI_Wtime();
     (obj->*function)(kArgs...);
     timing.push_back(MPI_Wtime()-t1);
-    // Setting an hard break after 10 sec
-    if(i > 1 && MPI_Wtime()-t0 > 10) break;
+    // Setting an hard break after t_max sec
+    if(i > 1 && MPI_Wtime()-t0 > t_max) break;
   }
 
   double sum = std::accumulate(timing.begin(), timing.end(), 0.0);
@@ -59,10 +61,12 @@ inline bool run(std::vector<std::string> run_for) {
 
 int main(int argc, char **argv) {
   
-  static std::vector<std::string> listOpt = {"verbosity", "n_benchmark", "corr-space", "maxQsq"};
+  static std::vector<std::string> listOpt = {"verbosity", "corr-space", "maxQsq"};
 
   initializeOptions(argc, argv, true, listOpt);
 
+  HGC_options->set("t_max", "Time out for single benchmark total time", verbosity, t_max);
+  HGC_options->set("n_benchmark", "how many time run a function during benchmark", verbosity, n_benchmark);
   HGC_options->set("kind", "Kind of application to benchmark. Multiple options allowed. Options (all, twop, threep, PDFs, qLoops, etc...)", verbosity, kind);
   
   initializePLEGMA();
