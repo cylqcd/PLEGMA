@@ -232,7 +232,7 @@ static void updateMultigridParam(MG* mg, MGParam &current, QudaMultigridParam pa
   current.smoother = param.smoother[level];
   current.mg_global.mu_factor[level] = param.mu_factor[level];
   
-  if(level < mg_levels-1){
+  if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
     current.mg_global.mu_factor[level+1] = param.mu_factor[level+1];
     updateMultigridParam(mg->*get(MG_Coarse()),*(mg->*get(MG_MGParam())),param,level+1);} 
 }
@@ -247,11 +247,7 @@ void QUDA_solver::UpdateSolver()
 
   updateMultigridParam(((multigrid_solver*) mg_preconditioner)->mg,*(((multigrid_solver*) mg_preconditioner)->mgParam),mg_param);
   updateMultigridQuda(mg_preconditioner,&mg_param);
- 
-
-  bool pc_solution = false;
-  bool pc_solve = true;
-
+  
   delete D;
   delete DSloppy;
   delete DPre;
@@ -259,7 +255,8 @@ void QUDA_solver::UpdateSolver()
   D = NULL;
   DSloppy = NULL;
   DPre = NULL;
-  
+
+  bool pc_solve = true;
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
 
   delete solver;
