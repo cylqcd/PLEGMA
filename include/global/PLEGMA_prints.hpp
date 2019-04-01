@@ -65,7 +65,7 @@ extern class Options * HGC_options;
       MPI_Initialized(&rank);						\
       if(rank) {							\
 	MPI_Comm_rank(MPI_COMM_WORLD,&rank);				\
-	printf( "ERROR: ", rank);					\
+	printf( "ERROR: ");						\
 	printf(__VA_ARGS__);						\
 	printf(" (rank %d, " __FILE__ ":%d in %s())\n",			\
 	       rank, __LINE__, __func__);				\

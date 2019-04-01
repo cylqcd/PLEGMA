@@ -73,6 +73,7 @@ namespace plegma {
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
+    std::vector<Float> rms(std::vector<int> listR2, int *sourceposition);
   };
 
   template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer

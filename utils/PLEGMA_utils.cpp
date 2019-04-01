@@ -159,7 +159,7 @@ void applyAntiperiodicBoundary(Float **buf)
   if (last_node_in_t) {
     int gSize = N_COLS*N_COLS*2;
     size_t Vh = dims[0]*dims[1]*dims[2]*dims[3]/2;
-    for (int j = Vh-dims[0]*dims[1]*dims[2]/2; j < Vh; j++) {
+    for (size_t j = Vh-Vh/dims[3]; j < Vh; j++) {
       for (int i = 0; i < gSize; i++) {
 	buf[3][j*gSize+i] *= -1.0;
 	buf[3][(Vh+j)*gSize+i] *= -1.0;
@@ -188,3 +188,13 @@ void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic){
 
 template void applyBoundaryConditions<double>(PLEGMA_Gauge<double> &gauge, bool antiperiodic);
 template void applyBoundaryConditions<float>(PLEGMA_Gauge<float> &gauge, bool antiperiodic);
+
+std::vector<int> createR2(std::vector<int> &vec){
+  if(!HGC_init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
+  if(vec.size() != 0) PLEGMA_error("The vector provided is not empty");
+  for(int xx = -HGC_totalL[0]/2; xx < HGC_totalL[0]/2; xx++)
+    for(int yy = -HGC_totalL[1]/2; yy < HGC_totalL[1]/2; yy++)
+      for(int zz = -HGC_totalL[2]/2; zz < HGC_totalL[2]/2; zz++)
+	vec.push_back(xx*xx + yy*yy + zz*zz);
+  return clearDuplicates(vec);
+}

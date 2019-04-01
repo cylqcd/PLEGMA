@@ -106,7 +106,7 @@ protected:
   }
   inline hsize_t to_id(std::vector<hsize_t> ids, std::vector<hsize_t> shape){
     hsize_t id = ids[0];
-    for(int i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i];
+    for(size_t i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i];
     return id;
   }
   inline std::vector<hsize_t> from_id(hsize_t id, std::vector<hsize_t> shape){
@@ -120,17 +120,17 @@ protected:
   }
   inline std::vector<hsize_t> add(std::vector<hsize_t> shape1, std::vector<hsize_t> shape2){
     std::vector<hsize_t> res;
-    for(int i=0; i < shape1.size(); i++) res.push_back(shape1[i] + shape2[i]);
+    for(size_t i=0; i < shape1.size(); i++) res.push_back(shape1[i] + shape2[i]);
     return res;
   }
   inline std::vector<hsize_t> zero_like(std::vector<hsize_t> shape){
     std::vector<hsize_t> res;
-    for(int i=0; i < shape.size(); i++) res.push_back(0);
+    for(size_t i=0; i < shape.size(); i++) res.push_back(0);
     return res;
   }
   inline std::vector<hsize_t> ones_like(std::vector<hsize_t> shape){
     std::vector<hsize_t> res;
-    for(int i=0; i < shape.size(); i++) res.push_back(1);
+    for(size_t i=0; i < shape.size(); i++) res.push_back(1);
     return res;
   }
 
@@ -192,7 +192,7 @@ protected:
   inline std::vector<std::string> prepare_path(std::string path) {
     if(HGC_verbosity > 2) PLEGMA_printf("Path before cleaning %s\n", path.c_str());
     std::vector<std::string> vp = clean_path(split_path(path));
-    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", join_path(vp).c_str(), path[0]=='/');
+    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", (path[0]=='/' ? "/" : "" + join_path(vp)).c_str());
     // checking if starts with '/'
     if(!path_id.empty() && path[0]=='/') {
       if(vp.empty() || vp[0] != path_str[0]) go_top();
@@ -223,7 +223,7 @@ protected:
       PLEGMA_warning("HDF5 open called with '%s'. This should have been clean\n", dir.c_str());
       return;
     } else if(dir == "..") {
-      PLEGMA_warning("HDF5 open called with '..'. Calling go_back instead\n", dir.c_str());
+      PLEGMA_warning("HDF5 open called with '..'. Calling go_back instead\n");
       go_back();
       return;      
     }
@@ -329,7 +329,7 @@ protected:
     size_t my_n_writings = 1, n_writings = 1;
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
-    for(int i=0; i<shape.size(); i++) {
+    for(size_t i=0; i<shape.size(); i++) {
       int exceeding = start[i] + lshape[i] - shape[i];
       if(exceeding > 0) { // then i it's exceeding
 	if(HGC_verbosity > 2)
@@ -355,7 +355,7 @@ protected:
 	// creating the shifted case
 	if(!exceeding_id.empty() && i < my_n_writings) {
 	  std::vector<hsize_t> shift = zero_like(start);
-	  for(int j=0; j<lshape.size(); j++)
+	  for(size_t j=0; j<lshape.size(); j++)
 	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
 
 	  // checking which direction we shift in this iteration
