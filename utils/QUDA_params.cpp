@@ -34,9 +34,11 @@ infoQuda()
 
   PLEGMA_printf("MG parameters\n");
   PLEGMA_printf(" - number of levels %d\n", mg_levels);
-  for (int i=0; i<mg_levels-1; i++) PLEGMA_printf(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
-  PLEGMA_printf(" - number of pre-smoother applications %d\n", nu_pre);
-  PLEGMA_printf(" - number of post-smoother applications %d\n", nu_post);
+  for (int i=0; i<mg_levels-1; i++) {
+    PLEGMA_printf(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
+    PLEGMA_printf(" - level %d number of pre-smoother applications %d\n", i+1, nu_pre[i]);
+    PLEGMA_printf(" - level %d number of post-smoother applications %d\n", i+1, nu_post[i]);
+  }
 
   PLEGMA_printf("Outer solver paramers\n");
   PLEGMA_printf(" - pipeline = %d\n", pipeline);
@@ -171,8 +173,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.spin_block_size[i] = 1;
     mg_param.n_vec[i] = nvec[i] == 0 ? 24 : nvec[i]; // default to 24 vectors if not set
     mg_param.precision_null[i] = prec_null; // precision to store the null-space basis
-    mg_param.nu_pre[i] = nu_pre;
-    mg_param.nu_post[i] = nu_post;
+    mg_param.nu_pre[i] = nu_pre[i];
+    mg_param.nu_post[i] = nu_post[i];
     mg_param.mu_factor[i] = mu_factor[i];
     
     mg_param.cycle_type[i] = QUDA_MG_CYCLE_RECURSIVE;

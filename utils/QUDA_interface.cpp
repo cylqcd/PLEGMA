@@ -251,8 +251,8 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   PLEGMA_printf("CHECK %d mu %f\n", level, current->mg_global.mu_factor[level]);
   
   if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
-    //current.mg_global.mu_factor[level+1] = param.mu_factor[level+1];
-    if(changeBlock(current.geoBlockSize, param.geo_block_size[level])) {
+    //current->mg_global.mu_factor[level+1] = param.mu_factor[level+1];
+    if(changeBlock(current->geoBlockSize, param->geo_block_size[level])) {
       delete (mg->*get(MG_Coarse()));
       mg->*get(MG_Coarse())=nullptr;
       delete (mg->*get(MG_CoarseParam()));
@@ -261,7 +261,7 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
       mg->*get(MG_Transfer())=nullptr;
       return;
     }
-    if((mg->*get(MG_CoarseParam()))->Nvec != param.n_vec[level]) {
+    if((mg->*get(MG_CoarseParam()))->Nvec != param->n_vec[level]) {
       delete (mg->*get(MG_Coarse()));
       mg->*get(MG_Coarse())=nullptr;
       delete (mg->*get(MG_CoarseParam()));
