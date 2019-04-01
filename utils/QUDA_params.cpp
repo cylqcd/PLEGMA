@@ -335,6 +335,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
     static_cast<QudaResidualType>(QUDA_L2_RELATIVE_RESIDUAL);
   // specify a tolerance for the residual for heavy quark residual
   inv_param.tol_hq = tol_hq; 
+  inv_param.compute_true_res = true;
   
   // these can be set individually
   for (int i=0; i<inv_param.num_offset; i++) {

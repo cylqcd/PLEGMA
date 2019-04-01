@@ -194,15 +194,6 @@ QUDA_solver::~QUDA_solver(){
   delete DPre;
 }
 
-cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
-  ColorSpinorField *in = NULL;
-  ColorSpinorField *out = NULL;
-  D->prepare(in,out,*x,*rhs,inv_param.solution_type);
-  (*solver)(*out, *in);
-  D->reconstruct(*x,*rhs,inv_param.solution_type);
-  return x;
-}
-
 struct MG_Transfer{
   typedef Transfer* MG::*type;
   friend type get(MG_Transfer);
@@ -313,7 +304,17 @@ void QUDA_solver::UpdateSolver()
   solver = Solver::create(*solverParam, *M, *MSloppy, 
   			 *MPre, *profiler);
 
- }
+}
+
+cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
+  ColorSpinorField *in = NULL;
+  ColorSpinorField *out = NULL;
+  D->prepare(in,out,*x,*rhs,inv_param.solution_type);
+  (*solver)(*out, *in);
+  D->reconstruct(*x,*rhs,inv_param.solution_type);
+  return x;
+}
+
 
 template<typename Float>
 cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
