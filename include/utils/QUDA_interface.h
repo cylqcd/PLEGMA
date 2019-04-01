@@ -21,6 +21,7 @@ namespace quda {
     
   public:
     QudaInvertParam getInvParams() const{return inv_param;}
+    SolverParam* getSolverParam() const{return solverParam;}
     void UpdateSolver();
     QUDA_solver(double mu);
     virtual ~QUDA_solver();

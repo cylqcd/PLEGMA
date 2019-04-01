@@ -83,7 +83,8 @@ protected:
       solver.solve(vectorInOut, vectorInOut);
       t0 = MPI_Wtime()-t1;
       MPI_Allreduce(&t0, &t1, 1, MPI_Type(t0), MPI_MAX, MPI_COMM_WORLD);
-      call_set_data(t1);
+      // Rescaling the time with the residual
+      call_set_data(t1*log(tol)/log(solver.getSolverParam()->true_res));
       PLEGMA_printf("NewParamSet: ");
       print(Timings[Timings.size()-1]);
       PLEGMA_printf("\n");
@@ -238,11 +239,18 @@ public:
   inline typename std::enable_if<I == sizeof...(Tp), void>::type
   print(std::tuple<Tp...>& t) {
   }
-
   template<std::size_t I = 0, typename ...Tp>
-  inline typename std::enable_if<I < sizeof...(Tp), void>::type
+  inline typename std::enable_if< (I > 0 & I < sizeof...(Tp)), void>::type
   print(std::tuple<Tp...>& t) {
-    PLEGMA_printf("%s ", std::to_string(std::get<I>(t)).c_str());
+    std::string name = (std::get<I-1>(Variables)->name);
+    PLEGMA_printf((name + ": " + std::to_string(std::get<I>(t))+", ").c_str());
+    print<I + 1, Tp...>(t);
+  }
+  template<std::size_t I = 0, typename ...Tp>
+  inline typename std::enable_if<I == 0, void>::type
+  print(std::tuple<Tp...>& t) {
+    std::string name = "time: ";
+    PLEGMA_printf((name + std::to_string(std::get<I>(t))+", ").c_str());
     print<I + 1, Tp...>(t);
   }
     
@@ -261,57 +269,50 @@ int main(int argc, char **argv)
   initializeOptions(argc, argv, true, listOpt);
   initializePLEGMA();
 
-  PLEGMA_Gauge<double> gauge;
-  gauge.readFromLime(latfile.c_str());
-  gauge.load();
-  initGaugeQuda(gauge, true);
-
-  // Setting the input vector field once
-  
-
-  // Setting the Multigrid parameters one wants to test
-  InVar<double> mu_factor_t(&mu_factor[mg_levels-1],"mu_factor_level",10.,70.,10.,true);
-  InVar<double> coarse_solver_tol_t(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.04,0.1,0.4});
-  InVar<QudaInverterType> coarse_type(&coarse_solver[mg_levels-1],"Coarse solver",{ QUDA_CGNE_INVERTER,
-										    QUDA_BICGSTAB_INVERTER,
-										    QUDA_GCR_INVERTER},false);
-  
-  InVar<int> nu_pre_t(&nu_pre,"nu_pre",0,6,2, true);
-  InVar<int> nu_post_t(&nu_post,"nu_post",0,6,2, true);
-  InVar<double> smoother_tol_0(&smoother_tol[0],"smoother tolerance 0",{0.01,0.04,0.1,0.4}, true);
-  InVar<QudaInverterType> smoother_type_0(&smoother_type[0],"Smoother solver level 0",{ QUDA_BICGSTAB_INVERTER,
-											QUDA_GCR_INVERTER,
-											QUDA_CGNE_INVERTER,
-											QUDA_MR_INVERTER}, false);
-  
-
-
- 
+  {
+    PLEGMA_Gauge<double> gauge;
+    gauge.readFromLime(latfile.c_str());
+    gauge.load();
+    initGaugeQuda(gauge, true);
+  }
+    
 
   
-
-  InVar<double> smoother_tol_1(&smoother_tol[1],"smoother tolerance 1",{0.01,0.04,0.1,0.4},true);
-  InVar<QudaInverterType> smoother_type_1(&smoother_type[1],"Smoother solver level 1",{ QUDA_CGNE_INVERTER,
-											QUDA_BICGSTAB_INVERTER,
-											QUDA_GCR_INVERTER,
-											QUDA_MR_INVERTER},false);
-      
-  
-
-
-
-
-  
-					
-			   
+  			   
   //Defining the QUDA_solver and executing the tuning with the "MtgTune" function
   {  
-    
     PLEGMA_Vector<double> vectorIn;
     if(mu<0) mu*=-1.;
     QUDA_solver solver(mu);
-    auto smoother0=make_InvTuner(solver,vectorIn,&nu_pre_t,&nu_post_t,&coarse_type,&smoother_tol_0,&smoother_type_0); 
-    smoother0.minimize();
+
+    // tuning of coarsest level paramters
+    {
+      InVar<double> mu_factor_t(&mu_factor[mg_levels-1],"mu_factor_level",1.,70.,10.,true);
+      InVar<double> coarse_solver_tol_t(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.04,0.1,0.4}, true);
+      InVar<QudaInverterType> coarse_type(&coarse_solver[mg_levels-1],"Coarse solver",{ QUDA_BICGSTAB_INVERTER,
+											QUDA_GCR_INVERTER},false);
+      auto coarse=make_InvTuner(solver,vectorIn,
+				&mu_factor_t, &coarse_solver_tol_t, &coarse_type);
+      coarse.minimize();
+    }
+
+    // tuning of smoother paramters
+    for(int level=0; level < mg_levels-1; level++) {
+      InVar<int> nu_pre_t(&nu_pre[level],"nu_pre_"+std::to_string(level),0,10,2, true);
+      InVar<int> nu_post_t(&nu_post[level],"nu_post_"+std::to_string(level),0,10,2, true);
+      InVar<QudaSchwarzType> schwarz_t(&schwarz_type[level],"schwarz_"+std::to_string(level),{QUDA_INVALID_SCHWARZ,
+											      QUDA_ADDITIVE_SCHWARZ}, false);
+      InVar<int> schwarz_cycle_t(&schwarz_cycle[level],"schwarz_cycle"+std::to_string(level),1,4,1, true);
+      InVar<double> smoother_tol_t(&smoother_tol[level],"smoother_tol_"+std::to_string(level),{0.01,0.04,0.1,0.4}, true);
+      InVar<QudaInverterType> smoother_type_t(&smoother_type[level],"smoother_type_"+std::to_string(level),{ QUDA_BICGSTAB_INVERTER,
+													     QUDA_GCR_INVERTER,
+													     QUDA_MR_INVERTER }, false);
+      auto smoother=make_InvTuner(solver,vectorIn,
+				  &nu_pre_t,&nu_post_t,
+				  &schwarz_t, &schwarz_cycle_t,
+				  &smoother_tol_t,&smoother_type_t);      
+      smoother.minimize();
+    }
   }
 
   finalize();

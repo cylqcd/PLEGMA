@@ -238,11 +238,8 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   current->global_reduction = param->global_reduction[level];
   current->omega = param->omega[level];
   current->smoother = param->smoother[level];
-  //current->mg_global.mu_factor[level] = param->mu_factor[level];
-  PLEGMA_printf("CHECK %d mu %f\n", level, current->mg_global.mu_factor[level]);
   
   if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
-    //current->mg_global.mu_factor[level+1] = param.mu_factor[level+1];
     if(changeBlock(current->geoBlockSize, param->geo_block_size[level])) {
       delete (mg->*get(MG_Coarse()));
       mg->*get(MG_Coarse())=nullptr;
