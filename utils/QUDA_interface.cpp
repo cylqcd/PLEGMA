@@ -242,6 +242,15 @@ static void updateMultigridParam(MG* mg, MGParam &current, QudaMultigridParam pa
 
 void QUDA_solver::UpdateSolver()
 {
+  delete solver;
+  delete solverParam;
+  delete M;
+  delete MSloppy;
+  delete MPre;
+  delete D; D = NULL;
+  delete DSloppy; DSloppy = NULL;
+  delete DPre; DPre = NULL;
+
   PLEGMA_printf("Updating multigrid parameters\n");
   setMultigridParam(mg_param);
  
@@ -250,39 +259,17 @@ void QUDA_solver::UpdateSolver()
 
   updateMultigridParam(((multigrid_solver*) mg_preconditioner)->mg,*(((multigrid_solver*) mg_preconditioner)->mgParam),mg_param);
   updateMultigridQuda(mg_preconditioner,&mg_param);
- 
 
-  bool pc_solution = false;
   bool pc_solve = true;
-
-  delete D;
-  delete DSloppy;
-  delete DPre;
-
-  D = NULL;
-  DSloppy = NULL;
-  DPre = NULL;
   
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
 
-  delete solver;
-  delete M;
-  delete MSloppy;
-  delete MPre;
-
-  solver = NULL;
-  M = NULL;
-  MSloppy = NULL;
-  MPre = NULL;
-  
   // Create Operators
   M = new DiracM(*D);
   MSloppy = new DiracM(*DSloppy);
   MPre = new DiracM(*DPre);
 
   // Create Solvers
-  delete solverParam;
-  solverParam = NULL;
   solverParam = new SolverParam(inv_param);
   
   solver = Solver::create(*solverParam, *M, *MSloppy, 
