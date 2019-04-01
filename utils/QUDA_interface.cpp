@@ -221,20 +221,21 @@ struct Rob {
 template struct Rob<MG_MGParam,&MG::param_coarse>;
 template struct Rob<MG_Coarse,&MG::coarse>;
 
-static void updateMultigridParam(MG* mg, MGParam &current, QudaMultigridParam param, int level = 0)
+static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* param, int level = 0)
 {
-  current.nu_pre = param.nu_pre[level];
-  current.nu_post = param.nu_post[level];
-  current.smoother_tol = param.smoother_tol[level];
-  current.cycle_type = param.cycle_type[level];
-  current.global_reduction = param.global_reduction[level];
-  current.omega = param.omega[level];
-  current.smoother = param.smoother[level];
-  current.mg_global.mu_factor[level] = param.mu_factor[level];
-  
+  current->nu_pre = param->nu_pre[level];
+  current->nu_post = param->nu_post[level];
+  current->smoother_tol = param->smoother_tol[level];
+  current->cycle_type = param->cycle_type[level];
+  current->global_reduction = param->global_reduction[level];
+  current->omega = param->omega[level];
+  current->smoother = param->smoother[level];
+  //current->mg_global.mu_factor[level] = param->mu_factor[level];
+  PLEGMA_printf("CHECK %d mu %f\n", level, current->mg_global.mu_factor[level]);
   if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
-    current.mg_global.mu_factor[level+1] = param.mu_factor[level+1];
-    updateMultigridParam(mg->*get(MG_Coarse()),*(mg->*get(MG_MGParam())),param,level+1);} 
+    //current->mg_global.mu_factor[level+1] = param->mu_factor[level+1];
+    updateMultigridParam(mg->*get(MG_Coarse()), mg->*get(MG_MGParam()), param, level+1);
+  } 
 }
 
 void QUDA_solver::UpdateSolver()
@@ -254,8 +255,9 @@ void QUDA_solver::UpdateSolver()
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
 
-  updateMultigridParam(((multigrid_solver*) mg_preconditioner)->mg,*(((multigrid_solver*) mg_preconditioner)->mgParam),mg_param);
-  updateMultigridQuda(mg_preconditioner,&mg_param);
+  auto *mg = static_cast<multigrid_solver*>(mg_preconditioner);
+  updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
+  updateMultigridQuda(mg_preconditioner, &mg_param);
 
   bool pc_solve = true;
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
