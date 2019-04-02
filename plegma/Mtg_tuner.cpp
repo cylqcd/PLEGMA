@@ -18,12 +18,28 @@ struct InVar{
   std::vector<T> values;
   std::string name;
   bool continuous;
+
+  void add_value(T value) {
+    auto it = std::find(values.begin(), values.end(), value);
+    if (it >= values.end()) {
+      if(!continuous) {
+	values.push_back(value);
+      } else {
+	auto it = values.begin()+1;
+	while(*it < value && it<values.end()){it++;}
+	values.insert(it-1, value);
+      }
+    }
+  }
   
   InVar( T* variable, std::string name, T min =(T) 0, T max =(T) 0, T step =(T) 1 , bool continuous = true): variable(variable), name(name),continuous(continuous){ 
     for(int i=0;i<=(int)((max-min)/step);i++) values.push_back((T)(min+step*i));
+    add_value(*variable); // adding current value
   }
 
-  InVar( T* variable, std::string name, std::vector<T> values, bool continuous = false): variable(variable), name(name), values(values), continuous(continuous){ }
+  InVar( T* variable, std::string name, std::vector<T> values, bool continuous = false): variable(variable), name(name), values(values), continuous(continuous){
+    add_value(*variable); // adding current value
+  }
 };
 
 //Useful for unpacking tuple
@@ -84,7 +100,8 @@ protected:
       t0 = MPI_Wtime()-t1;
       MPI_Allreduce(&t0, &t1, 1, MPI_Type(t0), MPI_MAX, MPI_COMM_WORLD);
       // Rescaling the time with the residual
-      call_set_data(t1*log(tol)/log(solver.getSolverParam()->true_res));
+      t1=t1*log(tol)/log(solver.getSolverParam()->true_res);
+      call_set_data(t1);
       PLEGMA_printf("NewParamSet: ");
       print(Timings[Timings.size()-1]);
       PLEGMA_printf("\n");
@@ -207,14 +224,12 @@ public:
     size_t nCombinations = 1;
     for(auto a : discrete) nCombinations*=a[1];
     
-    int count = 0;
     PLEGMA_printf("NewParam: Set best discrete parameter\n");
     for(size_t i=0; i < nCombinations; i++){
+      PLEGMA_printf("NewParam: iteration %d/%d\n",i,nCombinations);
       tuple_iterator(discrete, i);
       bool changed = true;
       while(changed == true){
-	PLEGMA_printf("NewParam: iteration %d\n",count);
-	count++;
 	changed=false;
 	find_min(changed);
       }
@@ -276,10 +291,7 @@ int main(int argc, char **argv)
     initGaugeQuda(gauge, true);
   }
     
-
-  
-  			   
-  //Defining the QUDA_solver and executing the tuning with the "MtgTune" function
+  //Defining the QUDA_solver and executing the tuning with the "minimize" function
   {  
     PLEGMA_Vector<double> vectorIn;
     if(mu<0) mu*=-1.;
@@ -287,7 +299,7 @@ int main(int argc, char **argv)
 
     // tuning of coarsest level paramters
     {
-      InVar<double> mu_factor_t(&mu_factor[mg_levels-1],"mu_factor_level",1.,70.,10.,true);
+      InVar<double> mu_factor_t(&mu_factor[mg_levels-1],"mu_factor_level",1.,101.,10.,true);
       InVar<double> coarse_solver_tol_t(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.04,0.1,0.4}, true);
       InVar<QudaInverterType> coarse_type(&coarse_solver[mg_levels-1],"Coarse solver",{ QUDA_BICGSTAB_INVERTER,
 											QUDA_GCR_INVERTER},false);
@@ -304,9 +316,7 @@ int main(int argc, char **argv)
 											      QUDA_ADDITIVE_SCHWARZ}, false);
       InVar<int> schwarz_cycle_t(&schwarz_cycle[level],"schwarz_cycle"+std::to_string(level),1,4,1, true);
       InVar<double> smoother_tol_t(&smoother_tol[level],"smoother_tol_"+std::to_string(level),{0.01,0.04,0.1,0.4}, true);
-      InVar<QudaInverterType> smoother_type_t(&smoother_type[level],"smoother_type_"+std::to_string(level),{ QUDA_BICGSTAB_INVERTER,
-													     QUDA_GCR_INVERTER,
-													     QUDA_MR_INVERTER }, false);
+      InVar<QudaInverterType> smoother_type_t(&smoother_type[level],"smoother_type_"+std::to_string(level),{ QUDA_MR_INVERTER }, false);
       auto smoother=make_InvTuner(solver,vectorIn,
 				  &nu_pre_t,&nu_post_t,
 				  &schwarz_t, &schwarz_cycle_t,
