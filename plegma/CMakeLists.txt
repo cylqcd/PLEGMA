@@ -70,7 +70,7 @@ target_link_libraries(FT ${PLEGMA_LIBS})
 cuda_add_executable(LowModesCalc LowModesCalc.cpp)
 target_link_libraries(LowModesCalc ${PLEGMA_LIBS})
 
-cuda_add_executable(Mtg_tuner Mtg_tuner.cpp)
+cuda_add_executable(Mtg_tuner MG_tuner.cpp)
 target_link_libraries(Mtg_tuner ${PLEGMA_LIBS})
 
 cuda_add_executable(benchmark benchmark.cpp)
