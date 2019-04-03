@@ -261,6 +261,10 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   }
 }
 
+
+// void applyP()
+
+
 void QUDA_solver::UpdateSolver()
 {
   delete solver;
@@ -340,9 +344,20 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
 template void QUDA_solver::solve(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
 
-
 template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
 template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
+
+template<typename Float>
+void QUDA_solver::runOneIter(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &vectorIn){
+  int maxiter = solverParam->maxiter;
+  solverParam->maxiter = 1;
+  solve(vectorOut, vectorIn);
+  solverParam->maxiter = maxiter;
+}
+
+template void QUDA_solver::runOneIter(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
+template void QUDA_solver::runOneIter(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
+
 
 //######################### Quda Dirac operator class ################################
 
