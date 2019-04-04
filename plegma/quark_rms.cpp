@@ -40,16 +40,24 @@ int main(int argc, char **argv)
   std::vector<int> list_R2;
   std::vector<int> counter = createR2(list_R2);
   PLEGMA_Vector<double> v1,v2;
-  v1.pointSource(src,0,0,DEVICE);
+
+  smearedGauge.communicateSideGhost();
   
-  for(auto nsmear : nsmearGaussList)
-    for(auto alpha : alphaGaussList){
-      PLEGMA_printf("%d %f\n",nsmear, alpha);
-      v2.gaussianSmearing(v1,smearedGauge, nsmear, alpha);
-      std::vector<double> rms = v2.rms(list_R2,src);
-      std::string filename = outPrefix + "_nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(nsmear) + "aGau" + convNumToStr(alpha);
-      if(comm_rank() == 0) write_std_vecs( filename,list_R2, counter,rms);
+  for(auto alpha : alphaGaussList){
+    v1.pointSource(src,0,0,DEVICE);
+    for(int n = 0; n < *std::max_element(nsmearGaussList.begin(), nsmearGaussList.end()); n++ ){
+      if(n%2 == 0) v2.gaussianSmearingStep(v1,smearedGauge, alpha);
+      else v1.gaussianSmearingStep(v2,smearedGauge, alpha);
+      
+      if(std::find(nsmearGaussList.begin(), nsmearGaussList.end(),n+1) != nsmearGaussList.end()){
+	PLEGMA_printf("%d %f\n",n+1, alpha);
+	std::vector<double> rms = (n%2 == 0) ? v2.rms(list_R2,src) : v1.rms(list_R2,src);	  
+	std::string filename = outPrefix + "_nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(n+1)
+	  + "aGau" + convNumToStr(alpha);
+	if(comm_rank() == 0) write_std_vecs( filename,list_R2, counter,rms);
+      }
     }
+  }
   
   
   finalize();
