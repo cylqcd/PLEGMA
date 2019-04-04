@@ -8,13 +8,10 @@
 using namespace plegma;
 using namespace quda;
 
-
-int PLEGMA_printInvParams(QUDA_solver* solver);
-
 template <typename T>
 struct InVar{
 
-  T *variable;
+  T* variable;
   std::vector<T> values;
   std::string name;
   bool continuous;
@@ -25,9 +22,9 @@ struct InVar{
       if(!continuous) {
 	values.push_back(value);
       } else {
-	auto it = values.begin()+1;
+	auto it = values.begin();
 	while(*it < value && it<values.end()){it++;}
-	values.insert(it-1, value);
+	values.insert(it, value);
       }
     }
   }
@@ -40,6 +37,18 @@ struct InVar{
   InVar( T* variable, std::string name, std::vector<T> values, bool continuous = false): variable(variable), name(name), values(values), continuous(continuous){
     add_value(*variable); // adding current value
   }
+
+  void set(T value) {
+    if(*variable != value) {
+      add_value(value);
+      *variable = value;
+      PLEGMA_printf(("MG_Tuner: Set "+name+" to "+std::to_string(value)+"\n").c_str());
+    }
+  }
+  T get() {
+    return *variable;
+  }
+
 };
 
 //Useful for unpacking tuple
@@ -51,31 +60,33 @@ template<int N, int ...S> struct gens : gens<N-1, N-1, S...> {};
 template<int ...S> struct gens<0, S...>{ typedef seq<S...> type; };
 
 template<class ...types>
-class InvTuning{
-
-protected:
+struct SolverTimings{
 
   QUDA_solver &solver;
   PLEGMA_Vector<double> &vectorInOut;
-  std::tuple<InVar<types>*...> Variables;
-  std::vector<std::tuple<double,types...>> Timings;
+  std::tuple<InVar<types>*...> variables;
+  std::vector<std::tuple<double,types...>> timings;
+
+  SolverTimings(QUDA_solver &solver, PLEGMA_Vector<double> &vectorInOut, InVar<types>*... var) : solver(solver), vectorInOut(vectorInOut) {
+    this->variables = std::make_tuple(var...);
+  }
 
   template<int...S>
-  void set_data(double time,seq<S...>){
-    Timings.push_back(std::make_tuple(time,*(std::get<S>(Variables)->variable)...));
+  void _append(double time,seq<S...>){
+    timings.push_back(std::make_tuple(time,std::get<S>(variables)->get()...));
   }
-  void call_set_data(double time){
-    set_data(time,typename gens<sizeof...(types)>::type());
+  void append(double time){
+    _append(time,typename gens<sizeof...(types)>::type());
   }
-
+  
   template<std::size_t I = 0, typename time_t>
   inline typename std::enable_if<I == sizeof...(types), void>::type
-  find_time(time_t &) {
+  remove_not_mathing(time_t &) {
   }
   template<std::size_t I = 0, typename time_t>
   inline typename std::enable_if<I < sizeof...(types), void>::type
-  find_time(time_t &time) {
-    auto value = *(std::get<I>(Variables)->variable);
+  remove_not_mathing(time_t &time) {
+    auto value = std::get<I>(variables)->get();
     for (auto it = time.begin(); it < time.end(); ) {
       auto it_value = std::get<I+1>(*it);
       if(it_value != value)
@@ -83,174 +94,9 @@ protected:
       else
 	it++;
     }
-    find_time<I+1>(time);
-  }
-    
-  double solve(){
-    auto time_copy = Timings;
-    find_time(time_copy);
-    if(time_copy.empty()) {
-      double t0, t1;
-      int sources[4]={0};
-      sources[1]=1;
-      solver.UpdateSolver();
-      // Doing one iter for performinf tuning where needed
-      solver.runOneIter(vectorInOut, vectorInOut);
-      vectorInOut.pointSource(sources, 0, 0, DEVICE);
-      t1=MPI_Wtime();
-      solver.solve(vectorInOut, vectorInOut);
-      t0 = MPI_Wtime()-t1;
-      MPI_Allreduce(&t0, &t1, 1, MPI_Type(t0), MPI_MAX, MPI_COMM_WORLD);
-      // Rescaling the time with the residual
-      t1=t1*log(tol)/log(solver.getSolverParam()->true_res);
-      call_set_data(t1);
-      PLEGMA_printf("NewParamSet: ");
-      print(Timings[Timings.size()-1]);
-      PLEGMA_printf("\n");
-      return t1;
-    } else {
-      return std::get<0>(time_copy[0]);
-    }
-  }
-  
-    
-  template<std::size_t I = 0, typename disc_t>
-  inline typename std::enable_if<I == sizeof...(types), void>::type
-  select_discrete(disc_t& ) {
-  }
-  template<std::size_t I = 0, typename disc_t>
-  inline typename std::enable_if<I < sizeof...(types), void>::type
-  select_discrete(disc_t& discrete) {
-    if (std::get<I>(Variables)->continuous == false) discrete.push_back({I, std::get<I>(Variables)->values.size()});
-    select_discrete<I + 1>(discrete);
+    remove_not_mathing<I+1>(time);
   }
 
-  
-  template<std::size_t I = 0, typename disc_t>
-  inline typename std::enable_if<I == sizeof...(types), void>::type
-  tuple_iterator(disc_t, size_t) {
-  }
-  template<std::size_t I = 0, typename disc_t>
-  inline typename std::enable_if<I < sizeof...(types), void>::type
-  tuple_iterator(disc_t discr, size_t i) {
-    if(I == discr[0][0]) {
-      auto elem=std::get<I>(Variables);
-      *(elem->variable)= elem->values[i%discr[0][1]];
-      i/=discr[0][1];
-      discr.erase(discr.begin());
-    }
-    tuple_iterator<I+1>(discr,i);
-  }
-
-
-  template<std::size_t I = 0>
-  inline typename std::enable_if<I == sizeof...(types), void>::type
-  set_from_timings( size_t) {
-  }
-  template<std::size_t I = 0>
-  inline typename std::enable_if<I < sizeof...(types), void>::type
-  set_from_timings(size_t i) {
-      auto elem=std::get<I>(Variables);
-      *(elem->variable)= std::get<I+1>(Timings[i]);
-      set_from_timings<I+1>(i);
-  }
-
-  
-  template<std::size_t I = 0>
-  inline typename std::enable_if<I == sizeof...(types), void>::type
-  find_min(bool&) {
-  }
-  template<std::size_t I = 0>
-  inline typename std::enable_if<I < sizeof...(types), void>::type
-  find_min(bool &changed) {
-    auto elem = std::get<I>(Variables);
-    if(elem->continuous == true) {
-      auto it = std::find(elem->values.begin(), elem->values.end(), *(elem->variable));
-      if (it >= elem->values.end()) {
-	it = elem->values.begin();
-	*(elem->variable) = *it;
-      }
-      
-      double t0 = solve();
-      
-      bool do_it=true;
-      bool Ichanged=false;
-      while (do_it && it+1 < elem->values.end()) {
-	it++;
-	*(elem->variable) = *it;
-	double tp = solve();
-	if(tp<t0) {
-	  Ichanged=true;
-	  changed=true;
-	  t0=tp;
-	} else {
-	  do_it=false;
-	  it--;
-	  *(elem->variable) = *it;
-	}
-      }
-      if(!Ichanged) {
-	do_it=true;
-	while (do_it && it-1 >= elem->values.begin()) {
-	  it--;
-	  *(elem->variable) = *it;
-	  double tm = solve();
-	  if(tm<t0) {
-	    Ichanged=true;
-	    changed=true;
-	    t0=tm;
-	  } else {
-	    do_it=false;
-	    it++;
-	    *(elem->variable) = *it;
-	  }
-	}
-      }
-    }
-
-    find_min<I+1>(changed);
-  }
-
- 
-public:
-
-  InvTuning(QUDA_solver &solver, PLEGMA_Vector<double> &vectorInOut, InVar<types>*... var) : solver(solver), vectorInOut(vectorInOut) {
-    this->Variables = std::make_tuple(var...);
-  }
-
-  void minimize(){
-
-    std::vector<std::array<size_t,2>> discrete;
-    select_discrete(discrete);
-    
-    size_t nCombinations = 1;
-    for(auto a : discrete) nCombinations*=a[1];
-    
-    PLEGMA_printf("NewParam: Set best discrete parameter\n");
-    for(size_t i=0; i < nCombinations; i++){
-      PLEGMA_printf("NewParam: iteration %d/%d\n",i,nCombinations);
-      tuple_iterator(discrete, i);
-      bool changed = true;
-      while(changed == true){
-	changed=false;
-	find_min(changed);
-      }
-    }
-    
-    int best_index = 0;
-    double best_time = std::get<0>(Timings[0]);
-    for(size_t i=1; i<Timings.size(); i++) {
-      if(best_time > std::get<0>(Timings[i])){ best_index = i; best_time = std::get<0>(Timings[i]);}
-    }
-    if(best_index != Timings.size()-1){
-      set_from_timings(best_index);
-      solver.UpdateSolver();
-    }
-    PLEGMA_printf("Set best set of discrete parameters: ");
-    print(Timings[best_index]);
-    PLEGMA_printf("\n");
-  }
-  
   //Method for printing the tuple elements
   template<std::size_t I = 0, typename ...Tp>
   inline typename std::enable_if<I == sizeof...(Tp), void>::type
@@ -259,7 +105,7 @@ public:
   template<std::size_t I = 0, typename ...Tp>
   inline typename std::enable_if< (I > 0 & I < sizeof...(Tp)), void>::type
   print(std::tuple<Tp...>& t) {
-    std::string name = (std::get<I-1>(Variables)->name);
+    std::string name = (std::get<I-1>(variables)->name);
     PLEGMA_printf((name + ": " + std::to_string(std::get<I>(t))+", ").c_str());
     print<I + 1, Tp...>(t);
   }
@@ -270,14 +116,232 @@ public:
     PLEGMA_printf((name + std::to_string(std::get<I>(t))+", ").c_str());
     print<I + 1, Tp...>(t);
   }
+  template<std::size_t I = 0>
+  inline typename std::enable_if<I == sizeof...(types), void>::type
+  printVars() {
+  }
+  template<std::size_t I = 0>
+  inline typename std::enable_if< I < sizeof...(types), void>::type
+  printVars() {
+    std::string name = (std::get<I>(variables)->name);
+    PLEGMA_printf((name + ": " + std::to_string(std::get<I>(variables)->get())+", ").c_str());
+    printVars<I + 1>();
+  }
     
+  double apply(){
+    auto time_copy = timings;
+    remove_not_mathing(time_copy);
+    if(time_copy.empty()) {
+      double t0, t1;
+      int sources[4]={0};
+      sources[1]=1;
+      solver.UpdateSolver();
+      // Doing one iter for performing tuning where needed
+      vectorInOut.pointSource(sources, 0, 0, DEVICE);
+      solver.runOneIter(vectorInOut, vectorInOut);
+      vectorInOut.pointSource(sources, 0, 0, DEVICE);
+      t1=MPI_Wtime();
+      solver.solve(vectorInOut, vectorInOut);
+      t0 = MPI_Wtime()-t1;
+      MPI_Allreduce(&t0, &t1, 1, MPI_Type(t0), MPI_MAX, MPI_COMM_WORLD);
+      // Rescaling the time with the residual
+      t1=t1*log(tol)/log(solver.getSolverParam()->true_res);
+      append(t1);
+      PLEGMA_printf("MG_Tuner: new ");
+      print(timings[timings.size()-1]);
+      PLEGMA_printf("\n");
+      return t1;
+    } else {
+      return std::get<0>(time_copy[0]);
+    }
+  }
+
+  void printBest(){
+    int best_index = 0;
+    double best_time = std::get<0>(timings[0]);
+    for(size_t i=1; i<timings.size(); i++) {
+      if(best_time > std::get<0>(timings[i])) {
+	best_index = i;
+	best_time = std::get<0>(timings[i]);
+      }
+    }
+    PLEGMA_printf("MG_Tuner: set of best parameters \n MG_Tuner: ");
+    print(timings[best_index]);
+    PLEGMA_printf("\n");
+  }
+};
+  
+template<class T, class ...types>
+struct Minimizer{
+
+  T* call;
+  std::tuple<InVar<types>*...> variables;
+  bool enabled;
+  
+  Minimizer(T* call, bool enabled, InVar<types>*... var) : call(call), enabled(enabled) {
+    this->variables = std::make_tuple(var...);
+  }
+
+  template<class T1>
+  double call_back(T1* c){
+    return c->apply();
+  }
+  template<std::size_t I = 0, class... Args>
+  inline typename std::enable_if<I == sizeof...(Args), void>::type
+  _call_back(std::tuple<Args...>* c, double& time ) {
+  }
+  template<std::size_t I = 0, class... Args>
+  inline typename std::enable_if<I < sizeof...(Args), void>::type
+  _call_back(std::tuple<Args...>* c, double& time )  {
+    time = std::get<I>(*c)->apply();
+    _call_back<I+1, Args...>(c, time);
+  }
+  template<class... Args>
+  double call_back(std::tuple<Args...>* c){
+    double time;
+    _call_back(c, time);
+    return time;
+  }
+
+  template<std::size_t I = 0, typename disc_t>
+  inline typename std::enable_if<I == sizeof...(types), void>::type
+  select_discrete(disc_t& ) {
+  }
+  template<std::size_t I = 0, typename disc_t>
+  inline typename std::enable_if<I < sizeof...(types), void>::type
+  select_discrete(disc_t& discrete) {
+    if (std::get<I>(variables)->continuous == false) discrete.push_back({I, std::get<I>(variables)->values.size()});
+    select_discrete<I + 1>(discrete);
+  }
+  
+  template<std::size_t I = 0, typename disc_t>
+  inline typename std::enable_if<I == sizeof...(types), void>::type
+  tuple_iterator(disc_t, size_t) {
+  }
+  template<std::size_t I = 0, typename disc_t>
+  inline typename std::enable_if<I < sizeof...(types), void>::type
+  tuple_iterator(disc_t discr, size_t i) {
+    if(I == discr[0][0]) {
+      auto elem=std::get<I>(variables);
+      elem->set(elem->values[i%discr[0][1]]);
+      i/=discr[0][1];
+      discr.erase(discr.begin());
+    }
+    tuple_iterator<I+1>(discr,i);
+  }
+
+  template<std::size_t I = 0>
+  inline typename std::enable_if<I == sizeof...(types), void>::type
+  find_min(bool&, double &best_time) {
+  }
+  template<std::size_t I = 0>
+  inline typename std::enable_if<I < sizeof...(types), void>::type
+  find_min(bool &changed, double &best_time) {
+    auto elem = std::get<I>(variables);
+    if(elem->continuous == true) {
+      auto it = std::find(elem->values.begin(), elem->values.end(), elem->get());
+      if (it >= elem->values.end()) {
+	it = elem->values.begin();
+	elem->set(*it);
+      }
+      
+      double t0 = call_back(call);
+      
+      bool do_it=true;
+      bool Ichanged=false;
+      while (do_it && it+1 < elem->values.end()) {
+	it++;
+	elem->set(*it);
+	double tp = call_back(call);
+	if(tp<t0) {
+	  Ichanged=true;
+	  changed=true;
+	  t0=tp;
+	} else {
+	  do_it=false;
+	  it--;
+	  elem->set(*it);
+	}
+      }
+      if(!Ichanged) {
+	do_it=true;
+	while (do_it && it-1 >= elem->values.begin()) {
+	  it--;
+	  elem->set(*it);
+	  double tm = call_back(call);
+	  if(tm<t0) {
+	    Ichanged=true;
+	    changed=true;
+	    t0=tm;
+	  } else {
+	    do_it=false;
+	    it++;
+	    elem->set(*it);
+	  }
+	}
+      }
+      if(best_time < 0 || t0 < best_time)
+	best_time = t0;
+    }
+
+    find_min<I+1>(changed, best_time);
+  }
+
+
+  double apply(){
+    if(enabled) {
+      std::vector<std::array<size_t,2>> discrete;
+      select_discrete(discrete);
+    
+      size_t nCombinations = 1;
+      for(auto a : discrete) nCombinations*=a[1];
+
+      int best_index = 0;
+      int best_time = -1;
+      for(size_t i=0; i < nCombinations; i++){
+	PLEGMA_printf("MG_Tuner: iteration on discrete values %d/%d\n",i+1,nCombinations);
+	tuple_iterator(discrete, i);
+	bool changed = true;
+	double time = -1;
+	while(changed == true){
+	  changed=false;
+	  find_min(changed, time);
+	}
+	if(best_time < 0 || time < best_time) {
+	  best_time = time;
+	  best_index = i;
+	}
+      }
+
+      // setting the best discrete index
+      tuple_iterator(discrete, best_index);
+      return best_time;
+    } else {
+      return call_back(call);
+    }
+  } 
 }; 
 
-template<class...types>
-InvTuning<types...> make_InvTuner(QUDA_solver& solver, PLEGMA_Vector<double>& vectorInOut, InVar<types>*... instance) {
-  return InvTuning<types...>(solver,vectorInOut,instance...);
+template<class T, class...Targs>
+InVar<T>* variable(T* var, std::string name, T min =(T) 0, T max =(T) 0, T step =(T) 1, bool continuous = true) {
+  return new InVar<T>(var, name, min, max, step, continuous);
 }
-
+template<class T, class...Targs>
+InVar<T>* variable(T* var, std::string name, std::vector<T> values, bool continuous = true) {
+  return new InVar<T>(var, name, values, continuous);
+}
+template<class...types>
+SolverTimings<types...>* solverTimings(QUDA_solver& solver, PLEGMA_Vector<double>& vectorInOut, InVar<types>*... instance) {
+  return new SolverTimings<types...>(solver,vectorInOut, instance...);
+}
+template<class T,class...types>
+Minimizer<T,types...>* minimizer(T* call_back, bool enabled, InVar<types>*... instance) {
+  return new Minimizer<T,types...>(call_back, enabled, instance...);
+}
+template<class T,class...types>
+Minimizer<T,types...>* minimizer(T* call_back, InVar<types>*... instance) {
+  return new Minimizer<T,types...>(call_back, true, instance...);
+}
 
 static std::vector<std::string> listOpt = {"load-gauge"};
 
@@ -298,33 +362,41 @@ int main(int argc, char **argv)
     PLEGMA_Vector<double> vectorIn;
     if(mu<0) mu*=-1.;
     QUDA_solver solver(mu);
+    
+    // set of parameters to tune with options
+    auto mu_factor_ = variable(&mu_factor[mg_levels-1],"mu_factor",1.,101.,5.,true);
+    auto coarse_solver_tol_ = variable(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
+    auto coarse_solver_ = variable(&coarse_solver[mg_levels-1],"Coarse solver", { QUDA_BICGSTAB_INVERTER, QUDA_GCR_INVERTER}, false);
 
-    // tuning of coarsest level paramters
-    {
-      InVar<double> mu_factor_t(&mu_factor[mg_levels-1],"mu_factor_level",1.,101.,10.,true);
-      InVar<double> coarse_solver_tol_t(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.04,0.1,0.4}, true);
-      InVar<QudaInverterType> coarse_type(&coarse_solver[mg_levels-1],"Coarse solver",{ QUDA_BICGSTAB_INVERTER,
-											QUDA_GCR_INVERTER},false);
-      auto coarse=make_InvTuner(solver,vectorIn,
-				&mu_factor_t, &coarse_solver_tol_t, &coarse_type);
-      coarse.minimize();
-    }
+    auto nu_pre_0 = variable(&nu_pre[0],"nu_pre_0",0,10,2, true);
+    auto nu_post_0 = variable(&nu_post[0],"nu_post_0",1,10,1, true);
+    auto schwarz_0 = variable(&schwarz_type[0],"schwarz_type_0",{QUDA_INVALID_SCHWARZ}, false);
+    auto schwarz_cycle_0 = variable(&schwarz_cycle[0],"schwarz_cycle_0",1,4,1, true);
+    auto smoother_tol_0 = variable(&smoother_tol[0],"smoother_tol_0",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
+    auto smoother_type_0 = variable(&smoother_type[0],"smoother_type_0", { QUDA_MR_INVERTER}, false);
 
-    // tuning of smoother paramters
-    for(int level=0; level < mg_levels-1; level++) {
-      InVar<int> nu_pre_t(&nu_pre[level],"nu_pre_"+std::to_string(level),0,10,2, true);
-      InVar<int> nu_post_t(&nu_post[level],"nu_post_"+std::to_string(level),0,10,2, true);
-      InVar<QudaSchwarzType> schwarz_t(&schwarz_type[level],"schwarz_"+std::to_string(level),{QUDA_INVALID_SCHWARZ,
-											      QUDA_ADDITIVE_SCHWARZ}, false);
-      InVar<int> schwarz_cycle_t(&schwarz_cycle[level],"schwarz_cycle"+std::to_string(level),1,4,1, true);
-      InVar<double> smoother_tol_t(&smoother_tol[level],"smoother_tol_"+std::to_string(level),{0.01,0.04,0.1,0.4}, true);
-      InVar<QudaInverterType> smoother_type_t(&smoother_type[level],"smoother_type_"+std::to_string(level),{ QUDA_MR_INVERTER }, false);
-      auto smoother=make_InvTuner(solver,vectorIn,
-				  &nu_pre_t,&nu_post_t,
-				  &schwarz_t, &schwarz_cycle_t,
-				  &smoother_tol_t,&smoother_type_t);      
-      smoother.minimize();
-    }
+    auto nu_pre_1 = variable(&nu_pre[1],"nu_pre_1",0,10,2, true);
+    auto nu_post_1 = variable(&nu_post[1],"nu_post_1",1,10,1, true);
+    auto schwarz_1 = variable(&schwarz_type[1],"schwarz_type_1",{QUDA_INVALID_SCHWARZ}, false);
+    auto schwarz_cycle_1 = variable(&schwarz_cycle[1],"schwarz_cycle_1",1,4,1, true);
+    auto smoother_tol_1 = variable(&smoother_tol[1],"smoother_tol_1", {0.01,0.022,0.046,0.1,0.22,0.46}, true);
+    auto smoother_type_1 = variable(&smoother_type[1],"smoother_type_1", { QUDA_MR_INVERTER}, false);
+
+    // Solver which control the set of parameters
+    auto solverT = solverTimings(solver, vectorIn, mu_factor_, coarse_solver_tol_, coarse_solver_,
+				 nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0,
+				 nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1);
+
+    // Splitting the paramters in smaller set and running nested minimizers
+    auto coarse = minimizer(solverT, mu_factor_, coarse_solver_tol_, coarse_solver_);
+    
+    auto smoother_0 = minimizer(solverT, nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0);
+    auto joint = std::make_tuple(coarse,smoother_0);
+    auto smoother_1 = minimizer(&joint, (1 < mg_levels-1)? true : false, //enabled only if needed
+				nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1);
+
+    smoother_1->apply();
+    solverT->printBest();
   }
 
   finalize();
