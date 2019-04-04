@@ -183,6 +183,7 @@ QUDA_solver::QUDA_solver(double mu) {
 QUDA_solver::~QUDA_solver(){
   destroyMultigridQuda(mg_preconditioner);
   delete solver;
+  delete solverParam;
   delete profiler;
   delete b;
   delete x;
@@ -286,7 +287,7 @@ void QUDA_solver::UpdateSolver()
     destroyMultigridQuda(mg_preconditioner);
     mg_preconditioner = newMultigridQuda(&mg_param);
   } else {
-    auto *mg = static_cast<multigrid_solver*>(mg_preconditioner);
+    multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
     updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
     updateMultigridQuda(mg_preconditioner, &mg_param);
   }
