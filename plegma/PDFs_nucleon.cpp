@@ -17,6 +17,17 @@ int main(int argc, char **argv)
   HGC_options->set("wilson_direction", "Direction of the wilson line", verbosity, WilsDir);
   if(WilsDir>N_DIMS) PLEGMA_error("The direction of the WIlson line has to be smaller than 3");
 
+  double rhoStout;
+  HGC_options->set("rho_stout", "Rho parameter stout smearing", verbosity, rhoStout);
+
+  size_t maxStout;
+  HGC_options->set("max_stout", "Maximum number of stout smearing steps", verbosity, maxStout);
+
+  size_t stepStout;
+  HGC_options->set("step_stout", "Save the PDFs every step_stout stout smearing step", verbosity, stepStout);
+  
+
+  
   initializePLEGMA();
   
   // Reading from Lime file and loading to device
@@ -31,8 +42,7 @@ int main(int argc, char **argv)
   
   WHICHPARTICLE nucleon = which_particle;
   if(nucleon!=NEUTRON && nucleon!=PROTON) PLEGMA_error("Only nucleon PDFs have been implemented so far\n");
-
-
+  
   // Smearing
   PLEGMA_Gauge<double> smearedGauge;
   smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
@@ -155,34 +165,37 @@ int main(int argc, char **argv)
 
 	PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
 
+
 	//!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
-	std::string suff = "_CP2_Plus_";
-	su3.absorbDir_device(gaugeWL, WilsDir);
-	WL.setUnit( (std::vector<int>) {0,4,8});
-	for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
-	  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	  corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
-	  propExchange = propIn; propIn = propF; propF = propExchange;
-	  WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
-	  propF->shift(*propIn, 4+WilsDir);
-	}
+	for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
+	  std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	  if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
+	  su3.absorbDir_device(gaugeWL, WilsDir);
+	  WL.setUnit( (std::vector<int>) {0,4,8});
+	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
+	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	    corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
+	    propExchange = propIn; propIn = propF; propF = propExchange;
+	    WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
+	    propF->shift(*propIn, 4+WilsDir);
+	  }
 
-	suff="_CP2_Minus_";
-	propF->load();
-	su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
-	WL.setUnit( (std::vector<int>) {0,4,8});
-	for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	  corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
-	  propExchange = propIn; propIn = propF; propF = propExchange;
-	  WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
-	  propF->shift(*propIn, WilsDir);
+	  suff="_CP2_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	  propF->load();
+	  su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
+	  WL.setUnit( (std::vector<int>) {0,4,8});
+	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	    corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	    propExchange = propIn; propIn = propF; propF = propExchange;
+	    WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
+	    propF->shift(*propIn, WilsDir);
+	  }
+	  propF->load();
 	}
-	propF->load();
       }
-
 
       //seq source part 1Props and contraction block
       {
@@ -214,33 +227,37 @@ int main(int argc, char **argv)
 	int signProps = (nucleon == PROTON) ? -1: +1;
 
 	PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
+	gaugeWL.copy(gauge);
 
 	//!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
-	std::string suff="_CP1_Plus_";
-	su3.absorbDir_device(gaugeWL, WilsDir); 
-	WL.setUnit( (std::vector<int>) {0,4,8});
-	for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	  corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
-	  propExchange = propIn; propIn = propF; propF = propExchange;
-	  WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
-	  propF->shift(*propIn, 4+WilsDir);
-	}
+	for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
+	  if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
+	  std::string suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	  su3.absorbDir_device(gaugeWL, WilsDir); 
+	  WL.setUnit( (std::vector<int>) {0,4,8});
+	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	    corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	    propExchange = propIn; propIn = propF; propF = propExchange;
+	    WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
+	    propF->shift(*propIn, 4+WilsDir);
+	  }
     
-	propF->load();
-	suff="_CP1_Minus_";
-	su3.absorbDir_device(gaugeWL, WilsDir); 
-	WL.setUnit( (std::vector<int>) {0,4,8});
-	for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	  corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
-	  propExchange = propIn; propIn = propF; propF = propExchange;
-	  WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
-	  propF->shift(*propIn, WilsDir);
+	  propF->load();
+	  suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	  su3.absorbDir_device(gaugeWL, WilsDir); 
+	  WL.setUnit( (std::vector<int>) {0,4,8});
+	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	    corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	    propExchange = propIn; propIn = propF; propF = propExchange;
+	    WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
+	    propF->shift(*propIn, WilsDir);
+	  }
+	  propF->load();
 	}
-	propF->load();
       }
     }
 
