@@ -26,8 +26,10 @@ int main(int argc, char **argv)
   size_t stepStout;
   HGC_options->set("step_stout", "Save the PDFs every step_stout stout smearing step", verbosity, stepStout);
   
+  std::string proj ;
+  HGC_options->set("which_projector", "Which projector to use for 3pt function", verbosity, proj);
+  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
 
-  
   initializePLEGMA();
   
   // Reading from Lime file and loading to device
@@ -139,9 +141,9 @@ int main(int argc, char **argv)
 	for(int nu = 0 ; nu < 4 ; nu++)
 	  for(int c2 = 0 ; c2 < 3 ; c2++){
 	    if(nucleon == PROTON)
-	      vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, P4_P, nucleon, global_fixSinkTime, nu, c2); //test case unpolarized proj
+	      vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
 	    else
-	      vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, P4_P, nucleon, global_fixSinkTime, nu, c2);
+	      vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
 	    vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
 	    std::complex<float> Isingle(0,1);
 	    float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
@@ -202,9 +204,9 @@ int main(int argc, char **argv)
 	for(int nu = 0 ; nu < 4 ; nu++)
 	  for(int c2 = 0 ; c2 < 3 ; c2++){
 	    if(nucleon == PROTON)
-	      vectorAuxF.seqSourceNucleon(propUP3D, P4_P, nucleon, global_fixSinkTime, nu, c2); //test case unpolarized proj
+	      vectorAuxF.seqSourceNucleon(propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
 	    else
-	      vectorAuxF.seqSourceNucleon(propDN3D, P4_P, nucleon, global_fixSinkTime, nu, c2);
+	      vectorAuxF.seqSourceNucleon(propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
 	    vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
 	    std::complex<float> Isingle(0,1);
 	    float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
