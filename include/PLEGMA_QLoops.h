@@ -23,7 +23,8 @@ namespace plegma{
     Float* H_loc() const{return h_loc;}
     Float** H_oneD() const{if(!isOneD) PLEGMA_error("oneD is not enabled");  return (Float**)h_oneD;}
     Float** H_oneDC() const{if(!isOneD) PLEGMA_error("oneD is not enabled");  return (Float**)h_oneDC;}
-
+    bool IsOneD() const{return isOneD;}
+    
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 		      Float val , bool accum );
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
@@ -35,6 +36,7 @@ namespace plegma{
     void write_ASCII(std::string filename_local, std::string filename_oneD, std::string filename_oneDC);
     
     void load(Float* h_ptr);
+    void clearAccumBuffs();
   };
 
 }

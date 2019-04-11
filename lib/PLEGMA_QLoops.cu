@@ -35,6 +35,16 @@ PLEGMA_QLoops<Float>::~PLEGMA_QLoops(){
 }
 
 template<typename Float>
+void PLEGMA_QLoops<Float>::clearAccumBuffs(){
+  memset(h_loc,0,this->Bytes_total());
+  if(isOneD)
+    for(int idir = 0 ; idir < N_DIMS ; idir++){
+      memset(h_oneD[idir],0,this->Bytes_total());
+      memset(h_oneDC[idir],0,this->Bytes_total());
+    }
+}
+
+template<typename Float>
 void PLEGMA_QLoops<Float>::contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, ACCUM_TYPE acc_type){
   Float accum_sign;
   switch (acc_type){
