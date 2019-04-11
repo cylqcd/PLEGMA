@@ -11,6 +11,7 @@ const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", 
 						     ,"Eig-printLevel", "Eig-method-PRIMME"
 #endif
 						     ,"Eig-isACC", "Eig-PolyDeg", "Eig-amin", "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters"
+						     , "rng-seed"
 };
 
 static inline bool isInList(std::vector<std::string> list,std::string str){
@@ -46,11 +47,12 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list,"nsmear-stout")) opt.set("nsmear-stout", "Number of stout smearing step", verbosity, nsmearStout);
   if(isInList(list,"alpha-stout")) opt.set("alpha-stout", "Coefficient for the stout smearing", verbosity, alphaStout);
   // sources----------------------------------------------------------------------------------------------
-  if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions", verbosity, numSourcePositions);
+  if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions or stochastic vectors", verbosity, numSourcePositions);
   if(isInList(list,"src-filename")){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
+  if(isInList(list,"rng-seed")) opt.set("rng-seed", "A seed for the random number generator", verbosity, rng_seed);
   // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);
