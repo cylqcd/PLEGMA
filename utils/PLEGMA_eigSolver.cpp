@@ -17,39 +17,6 @@ static bool G_isACC;
 static double G_amin;
 static double G_amax;
 
-template <typename Float>
-static void mapEvenOddToNormal(Float *spinor) {
-  size_t VOLUME = HGC_localVolume;
-  size_t VOLUMEh = VOLUME / 2;
-  int sSize = N_COLS*N_SPINS;
-  Float *tmp = (Float*)malloc(VOLUME * sSize * 2 * sizeof(Float));
-  for(int even = 0; even < VOLUMEh; even++) {
-    int norm_coord = 2 * even;
-    int odd = even+VOLUMEh;
-    
-    int evenSiteBit = 0;
-    int tmp2 = norm_coord/dims[0];
-    for(int i=1; i<N_DIMS; i++) {
-      evenSiteBit += tmp2%dims[i];
-      tmp2 /= dims[i];
-    }
-    evenSiteBit = evenSiteBit % 2;
-    int oddSiteBit  = evenSiteBit ^ 1;
-
-    for(int sc = 0; sc < sSize; sc++) {
-      // load even site spinor:
-      tmp[sc*VOLUME*2 + (norm_coord + evenSiteBit)*2 + 0] = spinor[sc*VOLUME*2 + even*2 + 0] ;
-      tmp[sc*VOLUME*2 + (norm_coord + evenSiteBit)*2 + 1] = spinor[sc*VOLUME*2 + even*2 + 1] ;
-
-      //load odd site spinor:
-      tmp[sc*VOLUME*2 + (norm_coord + oddSiteBit)*2 + 0] = spinor[sc*VOLUME*2 + odd*2 + sc*2 + 0] ;
-      tmp[sc*VOLUME*2 + (norm_coord + oddSiteBit)*2 + 1] = spinor[sc*VOLUME*2 + odd*2 + sc*2 + 1] ;
-    }
-  }
-  memcpy(spinor,tmp,VOLUME * sSize * 2 * sizeof(Float));
-  free(tmp);
-}
-
 EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose):verbose(verbose),p(params),
 												    h_eigVecs(nullptr),h_eigVals(nullptr)
 {
@@ -108,7 +75,6 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool ver
   if(verbose) print();
   computeEigVecs();
   computeEigVals();
-  for (int j = 0; j < p.NeV; ++j)  mapEvenOddToNormal(h_eigVecs+j*size_per_Vec*2);
   delete[] h_eigVals;
   delete d_in;
   delete d_out;
@@ -136,6 +102,7 @@ void EigSolver::applyOperator(double *out, double *in){
 #endif
   cudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,cudaMemcpyHostToDevice);
   checkCudaError();
+  
   if(!G_isACC) dOp->apply<MdagM>(*d_out,*d_in);
   else{
     if(G_PolyDeg < 1) PLEGMA_error("Degree of the Polynomial shoud be >= 1");
@@ -378,6 +345,21 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<doubl
   cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, b, vecOut.H_elem());
   cBLAS::axpy(size_per_Vec, aP, vecIn.H_elem(), vecOut.H_elem());
   vecOut.load();
+  delete[] tmpArr;
+}
+
+
+ // vecOut = (1 - U * U^\dag) vecIn
+void EigSolver::projectVector(PLEGMA_Vector<double> &vec){
+  if(!vec.IsAllocHost()) PLEGMA_error("This functions needs vec to have also Host allocation");
+  vec.unload();
+  double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
+  double *tmpArr = nullptr;
+  try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
+  memset(tmpArr,0,p.NeV*2*sizeof(double));
+  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, MPI_COMM_WORLD);
+  cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
+  vec.load();
   delete[] tmpArr;
 }
 
