@@ -117,9 +117,7 @@ void plaqQuda() {
 }
 
 QUDA_solver::QUDA_solver(double mu) {
-  char *profiler_name;
-  asprintf(&profiler_name, "Solver profiler mu=%f", mu);
-  profiler = new TimeProfile(profiler_name);
+  profiler = new TimeProfile(("Solver profiler mu="+to_string(mu)).c_str());
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
   
   mg_inv_param = newQudaInvertParam();
@@ -178,6 +176,9 @@ QUDA_solver::QUDA_solver(double mu) {
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
   b = new cudaColorSpinorField(cudaParam);
   x = new cudaColorSpinorField(cudaParam);
+  profiler->TPSTOP(QUDA_PROFILE_TOTAL);
+  profiler->Print();
+  profiler->TPRESET();
 }
 
 QUDA_solver::~QUDA_solver(){
@@ -263,6 +264,7 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
 
 void QUDA_solver::UpdateSolver()
 {
+  profiler->TPSTART(QUDA_PROFILE_TOTAL);
   delete solver;
   delete solverParam;
   delete M;
@@ -301,14 +303,21 @@ void QUDA_solver::UpdateSolver()
   solver = Solver::create(*solverParam, *M, *MSloppy, 
   			 *MPre, *profiler);
 
+  profiler->TPSTOP(QUDA_PROFILE_TOTAL);
+  profiler->Print();
+  profiler->TPRESET();
 }
 
 cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
+  profiler->TPSTART(QUDA_PROFILE_TOTAL);
   ColorSpinorField *in = NULL;
   ColorSpinorField *out = NULL;
   D->prepare(in,out,*x,*rhs,inv_param.solution_type);
   (*solver)(*out, *in);
   D->reconstruct(*x,*rhs,inv_param.solution_type);
+  profiler->TPSTOP(QUDA_PROFILE_TOTAL);
+  profiler->Print();
+  profiler->TPRESET();
   return x;
 }
 
