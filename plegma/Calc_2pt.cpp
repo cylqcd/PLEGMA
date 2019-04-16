@@ -15,22 +15,23 @@ int main(int argc, char **argv)
   initializePLEGMA();
 
   {
-    // Reading from Lime file and loading to device
-    PLEGMA_Gauge<double> gauge;
-    gauge.readFromLime(latfile.c_str());
-    gauge.load();
-    gauge.calculatePlaq();
-    
-    // Loading to QUDA and computing plaquette also there
-    initGaugeQuda(gauge, true);
-    plaqQuda();
-    
-    // Smearing
     PLEGMA_Gauge<double> smearedGauge(BOTH);
-    smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
-    PLEGMA_printf("Plaquette after smearing:\n");
-    smearedGauge.calculatePlaq();
-    
+    {
+      // Reading from Lime file and loading to device
+      PLEGMA_Gauge<double> gauge;
+      gauge.readFromLime(latfile.c_str());
+      gauge.load();
+      gauge.calculatePlaq();
+      
+      // Loading to QUDA and computing plaquette also there
+      initGaugeQuda(gauge, true);
+      plaqQuda();
+      
+      // Smearing
+      smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
+      PLEGMA_printf("Plaquette after smearing:\n");
+      smearedGauge.calculatePlaq();
+    }
     QUDA_solver solver(mu);
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
