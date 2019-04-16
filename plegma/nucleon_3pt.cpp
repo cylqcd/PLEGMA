@@ -141,9 +141,10 @@ int main(int argc, char **argv)
 		vectorAux1.apply_gamma(G5);
 		vectorAux2.gaussianSmearing(vectorAux1,smearedGauge, nsmearGauss, alphaGauss);
 		vectorInOut.copy(vectorAux2);
-		// check if we need to normalize the seqsource for mix precision solver
+		double norm = vectorInOut.norm();
+		vectorInOut.cscale(1/norm);
 		solver.solve(vectorInOut, vectorInOut);
-		// if we normalize the seqsource we have to take it out here
+		vectorInOut.cscale(norm);
 		vectorAux1.copy(vectorInOut);
 		seqProp.absorb(vectorAux1, nu, c2);
 	      }
@@ -195,9 +196,11 @@ int main(int argc, char **argv)
 		vectorAux1.conjugate();
 		vectorAux1.apply_gamma(G5);
 		vectorAux2.gaussianSmearing(vectorAux1,smearedGauge, nsmearGauss, alphaGauss);
-		// check if we need to normalize the seqsource for mix precision solver
+		vectorInOut.copy(vectorAux2);
+		double norm = vectorInOut.norm();
+		vectorInOut.cscale(1/norm);
 		solver.solve(vectorInOut, vectorInOut);
-		// if we normalize the seqsource we have to take it out here
+		vectorInOut.cscale(norm);
 		vectorAux1.copy(vectorInOut);
 		seqProp.absorb(vectorAux1, nu, c2);
 	      }
