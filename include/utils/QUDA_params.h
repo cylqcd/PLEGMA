@@ -60,6 +60,7 @@ define(bool generate_all_levels, true);
 define(int nu_pre[QUDA_MAX_MG_LEVEL], {});
 define(int nu_post[QUDA_MAX_MG_LEVEL], {});
 define(int mg_block_size[QUDA_MAX_MG_LEVEL][QUDA_MAX_DIM], {});
+define(int mg_block_volume[QUDA_MAX_MG_LEVEL], {});
 define(double mu_factor[QUDA_MAX_MG_LEVEL], {});
 define(QudaVerbosity mg_verbosity[QUDA_MAX_MG_LEVEL], {});
 define(QudaInverterType setup_inv[QUDA_MAX_MG_LEVEL],{});

@@ -262,10 +262,12 @@ void qudaOptions(Options &opt){
     auto it = tpl_int_site.begin();
     while(it != tpl_int_site.end()){
       int lvl=it->first;
+      mg_block_volume[lvl] = 1;
       site val = it->second;
       if(lvl < 0 || lvl >= QUDA_MAX_MG_LEVEL) PLEGMA_error("ERROR: invalid multigrid level %d", lvl);
       for(int j=0; j<N_DIMS; j++) {
 	mg_block_size[lvl][j]=val.x[j];
+	mg_block_volume[lvl]*=val.x[j];
       }
       it++;
     }

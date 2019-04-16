@@ -382,20 +382,36 @@ int main(int argc, char **argv)
     auto smoother_tol_1 = variable(&smoother_tol[1],"smoother_tol_1", {0.01,0.022,0.046,0.1,0.22,0.46}, true);
     auto smoother_type_1 = variable(&smoother_type[1],"smoother_type_1", { QUDA_MR_INVERTER}, false);
 
+    auto nvec_0 = variable(&nvec[0],"nvec_0",{24,32}, true);
+    auto nvec_1 = variable(&nvec[1],"nvec_1",{24,32}, true);
+    // block_0 and block_1 are not available yet
+    auto block_0 = variable(&mg_block_volume[0],"block_0",{mg_block_volume[0]}, true);
+    auto block_1 = variable(&mg_block_volume[1],"block_1",{mg_block_volume[1]}, true);
+
     // Solver which control the set of parameters
     auto solverT = solverTimings(solver, vectorIn, mu_factor_, coarse_solver_tol_, coarse_solver_,
 				 nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0,
-				 nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1);
+				 nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1,
+				 nvec_0, nvec_1);
 
     // Splitting the paramters in smaller set and running nested minimizers
+    // coarse, smoother_0, smoother_1 are indipendent minimizers calling solverT
     auto coarse = minimizer(solverT, mu_factor_, coarse_solver_tol_, coarse_solver_);
     
     auto smoother_0 = minimizer(solverT, nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0);
-    auto joint = std::make_tuple(coarse,smoother_0);
-    auto smoother_1 = minimizer(&joint, (1 < mg_levels-1)? true : false, //enabled only if needed
+    auto smoother_1 = minimizer(solverT, (1 < mg_levels-1)? true : false, //enabled only if needed
 				nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1);
 
-    smoother_1->apply();
+    auto inner_params = std::make_tuple(coarse,smoother_0,smoother_1);
+
+    // setup_1 minimizes coarse, smoother_0, smoother_1
+    auto setup_1 = minimizer(&inner_params, (1 < mg_levels-1)? true : false, //enabled only if needed
+			     block_1, nvec_1);
+
+    // setup_0 minimizes setup_1
+    auto setup_0 = minimizer(setup_1, block_0, nvec_0);
+
+    setup_0->apply();
     solverT->printBest();
   }
 
