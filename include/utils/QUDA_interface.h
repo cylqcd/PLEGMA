@@ -30,6 +30,8 @@ namespace quda {
     cudaColorSpinorField* solve(PLEGMA_Vector<Float> &vectorIn);
     template<typename Float>
     void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+    template<typename Float>
+    void runOneIter(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
   };
 
   enum APP_TYPE {M,Mdag,MdagM,MMdag};
