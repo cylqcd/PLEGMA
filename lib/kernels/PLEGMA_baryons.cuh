@@ -1,5 +1,13 @@
 #include <PLEGMA_kernel_utils.cuh>
 
+enum BARYONS_TYPE{NtoN,		
+#ifdef PLEGMA_ALL_BARYONS		
+		  NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,		
+		  DELTA_3O2_1, DELTA_3O2_2, DELTA_3O2_3,		
+#endif		
+		  // add here		
+		  N_BARYONS}; // N_BARYONS must be last 
+
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
