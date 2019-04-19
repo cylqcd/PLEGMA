@@ -13,7 +13,8 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_contractPropOpProp_noe.cu
   kernels/PLEGMA_contractPropOpProp_oneD.cu
   kernels/PLEGMA_contractPropOpProp_wilsonLine.cu
-  kernels/PLEGMA_all_baryons.cu
+  kernels/PLEGMA_baryons_proj.cu
+  kernels/PLEGMA_baryons_proj_arrays.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu

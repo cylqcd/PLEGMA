@@ -1,6 +1,5 @@
 #pragma once
 
-#include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_baryons_proj_arrays.cuh>
 
 template<typename FloatA, typename FloatC>

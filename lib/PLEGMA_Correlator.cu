@@ -4,6 +4,7 @@
 #include <PLEGMA_baryons.cuh>
 #include <functional>
 #include <PLEGMA_baryons_proj.cuh>
+//#include <PLEGMA_baryons_proj.h>
  
 using namespace plegma;
 
@@ -125,11 +126,11 @@ contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
   groups = {};
 
   std::vector<int> todo;
-  for(auto it=BP_prop_prods.begin(); it<BP_prop_prods.end(); it++) {
+  for(int i=0; i<BP_prop_prods.size(); i++) {
     // check if we run it using only_ch and only_st
     if(true) {
-      todo.push_back(it-BP_prop_prods.begin());
-      for(auto name: BP_prop_prods_names[it])
+      todo.push_back(i);
+      for(auto name: BP_prop_prods_names[i])
 	groups.push_back(name);
     }
   }
