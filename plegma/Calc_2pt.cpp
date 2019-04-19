@@ -88,6 +88,9 @@ int main(int argc, char **argv)
       
       corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
       corr.writeFile(twop_filename.c_str(), corr_file_format);
+
+      corr.contractBaryonsProj(propUP, propDN, propUP, propDN, sourcePositions[isource]);
+      corr.writeFile(twop_filename.c_str(), corr_file_format);
     }
   }
   
