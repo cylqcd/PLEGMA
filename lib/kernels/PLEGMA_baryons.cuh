@@ -84,8 +84,9 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
     int source_pos[3] = {source.x, source.y, source.z}; 
     fourier_transform_3D(block2, accum, shared_cache, 2*N_SPINS*N_SPINS, sid, source_pos);
   } else {
-    for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
-      block2[sid*2*N_SPINS*N_SPINS + i] = accum[i];
+    if(block2!=NULL)
+      for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
+	block2[sid*2*N_SPINS*N_SPINS + i] = accum[i];
     }
   }
 }
