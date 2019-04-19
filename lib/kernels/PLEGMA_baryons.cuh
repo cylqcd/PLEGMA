@@ -1,3 +1,5 @@
+#pragma once
+
 #include <PLEGMA_kernel_utils.cuh>
 
 enum BARYONS_TYPE{NtoN,		
@@ -91,7 +93,7 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
 template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
 static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
 
-  int SpVol = HGC_localVolume/HGC_localL[3];
+  int SpVol = HGC_localVolume3D;
 
   FloatC *h_partial_block = NULL;
   FloatC *d_partial_block = NULL;
