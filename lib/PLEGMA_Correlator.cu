@@ -3,8 +3,7 @@
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <functional>
-#include <PLEGMA_all_baryons.h>
-#include <PLEGMA_all_baryons.cuh>
+#include <PLEGMA_baryons_proj.cuh>
  
 using namespace plegma;
 
@@ -63,8 +62,6 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       int source[4]){
 
   setSource(source);
-  n_datasets = 2;
-  n_groups = N_MESONS;
   shape = {};
   datasets =  {"twop_meson_1", "twop_meson_2"};
   groups =  {"mesons/pseudoscalar", "mesons/scalar", "mesons/g5g1", "mesons/g5g2",
@@ -91,8 +88,6 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 		int source[4]){
 
   setSource(source);
-  n_datasets = 2;
-  n_groups = N_BARYONS;
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"nucl_nucl",
@@ -117,53 +112,28 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-contractBaryons1o2(PLEGMA_Propagator<Float> &propUP,
-		   PLEGMA_Propagator<Float> &propDN, 
-		   PLEGMA_Propagator<Float> &propST, 
-		   PLEGMA_Propagator<Float> &propCH, 
-		   int source[4]){
+contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
+		    PLEGMA_Propagator<Float> &propDN, 
+		    PLEGMA_Propagator<Float> &propST, 
+		    PLEGMA_Propagator<Float> &propCH, 
+		    int source[4], bool only_ch, bool only_st){
 
   setSource(source);
-  n_datasets = 1;
-  n_groups = baryons_1o2_combs;
-  shape = {gamma_1o2_combs};
-  datasets = {"twop_baryon_1o2"};
-  groups =  baryon_1o2_names;
-  description = gamma_1o2_names;
+  shape = {};
+  description = "";
+  datasets = {};
+  groups = {};
 
-  initialize();
-  propTex<Float> propUPTex, propDNTex, propSTTex, propCHTex;
-  propUPTex.tex = propUP.createTexObject();
-  propDNTex.tex = propDN.createTexObject();
-  propSTTex.tex = propST.createTexObject();
-  propCHTex.tex = propCH.createTexObject();
-
-  for(int it = 0; it < GK_localL[3]; it++) {
-    contract_baryons_1o2(propUPTex,propDNTex,propSTTex,propCHTex,*this,it);
+  std::vector<int> todo;
+  for(auto it=BP_prop_prods.begin(); it<BP_prop_prods.end(); it++) {
+    // check if we run it using only_ch and only_st
+    if(true) {
+      todo.push_back(it-BP_prop_prods.begin());
+      for(auto name: BP_prop_prods_names[it])
+	groups.push_back(name);
+    }
   }
 
-  propUP.destroyTexObject(propUPTex.tex);
-  propDN.destroyTexObject(propDNTex.tex);
-  propST.destroyTexObject(propSTTex.tex);
-  propCH.destroyTexObject(propCHTex.tex);
-}
-
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-contractBaryons3o2(PLEGMA_Propagator<Float> &propUP,
-		   PLEGMA_Propagator<Float> &propDN, 
-		   PLEGMA_Propagator<Float> &propST, 
-		   PLEGMA_Propagator<Float> &propCH, 
-		   int source[4]){
-
-  setSource(source);
-  n_datasets = 1;
-  n_groups = baryons_3o2_combs;
-  shape = {gamma_3o2_combs};
-  datasets = {"twop_baryon_3o2"};
-  groups =  baryon_3o2_names;
-  description = gamma_3o2_names;
-
   initialize();
   propTex<Float> propUPTex, propDNTex, propSTTex, propCHTex;
   propUPTex.tex = propUP.createTexObject();
@@ -171,8 +141,8 @@ contractBaryons3o2(PLEGMA_Propagator<Float> &propUP,
   propSTTex.tex = propST.createTexObject();
   propCHTex.tex = propCH.createTexObject();
 
-  for(int it = 0; it < GK_localL[3]; it++) {
-    contract_baryons_3o2(propUPTex,propDNTex,propSTTex,propCHTex,*this,it);
+  for(int it = 0; it < HGC_localL[3]; it++) {
+    contract_baryons_proj(propUPTex, propDNTex, propSTTex, propCHTex, *this, it, todo);
   }
 
   propUP.destroyTexObject(propUPTex.tex);
@@ -191,8 +161,6 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
 			  int signProps, std::vector<GAMMAS> gammas,
 			  int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
   datasets = {"threep"};
@@ -253,8 +221,6 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas,
 			 int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {N_DIMS, (int) gammas.size()};
   setSource(source);
   datasets = {"threep"};
@@ -273,8 +239,6 @@ contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Gauge<Float> &gauge,
 			int signProps, int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {N_DIMS};
   setSource(source);
   datasets = {"threep"};
@@ -298,8 +262,6 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Su3field<Float> &su3,
 			       int signProps, std::vector<GAMMAS> gammas,
 			       int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
   datasets = {"threep"};
@@ -473,13 +435,13 @@ writeHDF5(std::string filename, std::string top) {
   
   hsize_t writeSize = 1;
   for(auto l: lshape) writeSize*=l;
-  for(int g=0; g<n_groups; g++){
+  for(size_t g=0; g<n_groups(); g++){
     writer.cd(top+groups[g]);
     if(corr_space == MOMENTUM_SPACE) {
       writer.write_dataset("mvec", mvec, momShape);
     }
-    for(int d=0; d<n_datasets; d++) {
-      Float *writeBuf = corr + (g*n_datasets+d)*writeSize;
+    for(size_t d=0; d<n_datasets(); d++) {
+      Float *writeBuf = corr + (g*n_datasets()+d)*writeSize;
       writer.write_dataset(datasets[d], writeBuf, shape, lshape, start);
       writer.write_attribute(datasets[d], "description", descr);
     }
