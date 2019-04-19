@@ -48,7 +48,7 @@ namespace plegma {
 		    size_t vol_l, GHOST_FLAG ghost_flag);
   public:
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS);
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool D3 = false);
     virtual ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();

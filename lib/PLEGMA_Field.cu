@@ -68,11 +68,11 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG gho
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag, bool D3):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
 {
-  initialize(alloc_flag, site_size, HGC_localVolume, ghost_flag);
+  initialize(alloc_flag, site_size, D3? HGC_localVolume3D : HGC_localVolume, ghost_flag);
 }
 
 template<typename Float>
@@ -100,10 +100,10 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
       initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume, ghost_flag);
       break;
     case PROPAGATOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume3D, ghost_flag);
       break;
     case VECTOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume3D, ghost_flag);
       break;
     case QLOOPS:
       initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume, ghost_flag);
@@ -516,9 +516,9 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
   if(total_length == HGC_localVolume && mom.size() != 4 ) PLEGMA_error("A 4D field needs a 4D momentum vector\n");
-  if( (total_length == HGC_localVolume/HGC_localL[3]) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
+  if( (total_length == HGC_localVolume3D) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
   int D3D4 = mom.size();
-  int V = D3D4 == 3 ? HGC_localVolume/HGC_localL[3] : HGC_localVolume;
+  int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
   Float2<Float> *x;
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
