@@ -721,11 +721,11 @@ for prop in prop_prods.values():
         file1.write(string)
 
 props=["\""+"".join([p[0] for p in key_prop.split("-")])+"\"" for key_prop in prop_prods.keys()]
-string = "const "+vec("sdt::string")+" BP_prop_prods = {" + ", ".join(props) + "};\n"
+string = "const "+vec("std::string")+" BP_prop_prods = {" + ", ".join(props) + "};\n"
 file1.write(string)
 
 datasets=["{" + ", ".join(["\""+remove_symbols(baryon[0])+"/"+gamma.replace('-','_')+"\"" for baryon in prop for gamma in baryon[1].keys()])+"}" for prop in prop_prods.values()]
-string = "const "+vec(vec("sdt::string"))+" BP_prop_prods_names = {" + ", ".join(datasets) + "};\n"
+string = "const "+vec(vec("std::string"))+" BP_prop_prods_names = {" + ", ".join(datasets) + "};\n"
 file1.write(string)
 
 datasets=["{" + ", ".join([repr(len(gamma)) for baryon in prop for gamma in baryon[1].values()])+"}" for prop in prop_prods.values()]
@@ -733,7 +733,7 @@ string = "const "+vec(vec("int"))+" BP_prop_prods_count = {" + ", ".join(dataset
 file1.write(string)
 
 datasets=["{" + ", ".join([remove_symbols(baryon[0])+"_"+gamma.replace('-','_')+"_idxs" for baryon in prop for gamma in baryon[1].keys()])+"}" for prop in prop_prods.values()]
-string = "const "+vec(vec("(int [6])*"))+" BP_prop_prods_idxs = {" + ", ".join(datasets) + "};\n"
+string = "const "+vec(vec("short int (*)[6]"))+" BP_prop_prods_idxs = {" + ", ".join(datasets) + "};\n"
 file1.write(string)
 
 datasets=["{" + ", ".join([remove_symbols(baryon[0])+"_"+gamma.replace('-','_')+"_vals" for baryon in prop for gamma in baryon[1].keys()])+"}" for prop in prop_prods.values()]
