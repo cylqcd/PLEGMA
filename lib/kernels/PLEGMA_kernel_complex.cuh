@@ -89,11 +89,11 @@ namespace plegma {
 
   template<typename Float>
   inline __host__ __device__ Float2<Float> operator/(const Float2<Float> x, const Float2<Float> y){
-  Float2<Float> res;
-  res.x = (x.x * y.x + x.y * y.y) / (y.x * y.x + y.y * y.y);
-  res.y = (x.y * y.x - x.x * y.y) / (y.x * y.x + y.y * y.y);
-  return res;
-}
+    Float2<Float> res;
+    res.x = (x.x * y.x + x.y * y.y) / (y.x * y.x + y.y * y.y);
+    res.y = (x.y * y.x - x.x * y.y) / (y.x * y.x + y.y * y.y);
+    return res;
+  }
 
   template<typename Float>
   inline __host__ __device__ Float2<Float> operator/(const Float2<Float> a, const Float b){

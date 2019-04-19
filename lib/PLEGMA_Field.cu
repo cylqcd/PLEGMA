@@ -72,7 +72,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHO
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
 {
-  initialize(alloc_flag, site_size, D3? HGC_localVolume3D : HGC_localVolume, ghost_flag);
+  initialize(alloc_flag, site_size, D3 ? HGC_localVolume3D : HGC_localVolume, ghost_flag);
 }
 
 template<typename Float>
