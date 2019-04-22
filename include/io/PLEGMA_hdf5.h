@@ -20,6 +20,7 @@ protected:
   std::string filename;
   std::vector<hid_t> path_id;
   std::vector<std::string> path_str;
+  std::string prev_path;
 
   inline std::string join_path(std::vector<std::string> vp, bool fromTop = true) {
     std::string ret = fromTop ? "" : "." ;
@@ -192,7 +193,7 @@ protected:
   inline std::vector<std::string> prepare_path(std::string path) {
     if(HGC_verbosity > 2) PLEGMA_printf("Path before cleaning %s\n", path.c_str());
     std::vector<std::string> vp = clean_path(split_path(path));
-    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", (path[0]=='/' ? "/" : "" + join_path(vp)).c_str());
+    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", join_path(vp, path[0]=='/').c_str());
     // checking if starts with '/'
     if(!path_id.empty() && path[0]=='/') {
       if(vp.empty() || vp[0] != path_str[0]) go_top();
@@ -401,6 +402,8 @@ public:
    * Similar rules to bash cd are used (i.e. ../ ./ are implemented).
    */
   void cd(std::string path) {
+    if(path=="-") return cd(prev_path);
+    prev_path = pwd();
     if(path=="") return;
     if(path==".") return;
     else if(path=="/") go_top();
@@ -501,7 +504,9 @@ public:
     size_t check = name.rfind("/");
     if(check != std::string::npos)
       return write_dataset(name.substr(check+1), buf, shape, lshape, start,
-			   path+"/"+name.substr(0,check));
+			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
+    if(HGC_verbosity > 2) PLEGMA_printf("Going to written dataset %s in path %s \n", name.c_str(),
+					path.c_str());
     cd(path);
 
     // Sanity check
@@ -523,6 +528,7 @@ public:
 
     if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
 					(lshape.empty() || comm_size == 1) ? "single" : "parallel");
+    cd("-");
   }
 
   template<typename T>
