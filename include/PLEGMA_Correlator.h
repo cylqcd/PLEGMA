@@ -99,6 +99,10 @@ namespace plegma {
     Float* getCorr() {
       return corr;
     }
+    void setGroups(std::string s) {
+      std::vector<std::string> d = {s};
+      setGroups(d);
+    }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2, 
 			int source[4]);
