@@ -218,6 +218,10 @@ protected:
     else return path_id.back();
   }
 
+  inline bool exists(std::string s) {
+    return H5Lexists(current(), s.c_str(), H5P_DEFAULT);
+  }
+
   // Creates or open a group. Replaces also spaces with underscore.
   inline void open(std::string dir) {
     if(dir == "" || dir == ".") {
@@ -231,7 +235,7 @@ protected:
     // replacing " " with "_"
     while(replace(dir, " ", "_")) {}
     // Opening or creating dir
-    if(H5Lexists(current(), dir.c_str(), H5P_DEFAULT)){
+    if(exists(dir)){
       if(H5Oexists_by_name(current(), dir.c_str(), H5P_DEFAULT)) {
 	path_id.push_back(H5Gopen(current(), dir.c_str(), H5P_DEFAULT));
 	if(HGC_verbosity > 2) PLEGMA_printf("Opened group %s\n", dir.c_str());
@@ -485,9 +489,12 @@ public:
     if(check != std::string::npos)
       return write_attribute(object.substr(check+1), attr_name, attr_value,
 			     path+"/"+object.substr(0,check));
+    if(HGC_verbosity > 2) PLEGMA_printf("Going to writte attribute %s in path %s \n", attr_name.c_str(),
+					path.c_str());
     cd(path);
     _write_attribute(object, attr_name, attr_value);
     if(HGC_verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
+    cd("-");
   }
 
   /*
@@ -505,7 +512,7 @@ public:
     if(check != std::string::npos)
       return write_dataset(name.substr(check+1), buf, shape, lshape, start,
 			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
-    if(HGC_verbosity > 2) PLEGMA_printf("Going to written dataset %s in path %s \n", name.c_str(),
+    if(HGC_verbosity > 2) PLEGMA_printf("Going to writte dataset %s in path %s \n", name.c_str(),
 					path.c_str());
     cd(path);
 
@@ -517,17 +524,22 @@ public:
     if( !start.empty() && start.size() != shape.size())
       PLEGMA_error("start has wrong size\n");
 
-    int comm_size;
-    MPI_Comm_size(comm, &comm_size);
-    if(lshape.empty() || comm_size == 1)
-      _write_dataset_single(name,buf,shape,start);
-    else if(comm_size == product(shape)/product(lshape) )
-      _write_dataset_parallel(name,buf,shape,lshape,start);
-    else
-      PLEGMA_error("lshape is not appropriate for the given communicator\n");
-
-    if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
-					(lshape.empty() || comm_size == 1) ? "single" : "parallel");
+    if(exists(name)) {
+      PLEGMA_warning("An object with name %s already exists in %s. Skipping...", name.c_str(),
+		     pwd().c_str());
+    } else {    
+      int comm_size;
+      MPI_Comm_size(comm, &comm_size);
+      if(lshape.empty() || comm_size == 1)
+	_write_dataset_single(name,buf,shape,start);
+      else if(comm_size == product(shape)/product(lshape) )
+	_write_dataset_parallel(name,buf,shape,lshape,start);
+      else
+	PLEGMA_error("lshape is not appropriate for the given communicator\n");
+      
+      if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
+					  (lshape.empty() || comm_size == 1) ? "single" : "parallel");
+    }
     cd("-");
   }
 

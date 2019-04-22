@@ -111,7 +111,8 @@ namespace plegma {
       }
     }
     void setGroups(std::string s) {
-      return setGroups({s});
+      std::vector<std::string> d = {s};
+      setGroups(d);
     }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2, 
