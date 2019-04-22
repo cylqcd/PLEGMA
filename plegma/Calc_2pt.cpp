@@ -10,7 +10,15 @@ int main(int argc, char **argv)
 {
   initializeOptions(argc, argv, true, listOpt);
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
-
+  std::vector<double> mu_s;
+  std::vector<double> mu_c;
+  double mu_ud = mu;
+  int nsmearGauss_s = nsmearGauss/2;
+  int nsmearGauss_c = 0;
+  HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
+  HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
+  HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, mu_s);
+  HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, mu_c);
   //=========================================================================================================//
   initializePLEGMA();
 
@@ -41,8 +49,8 @@ int main(int argc, char **argv)
 
       PLEGMA_Propagator<float> propUP;
       // ensuring mu positive
-      if(mu<0) {
-	mu*=-1.;
+      if(mu != mu_ud) {
+	mu = mu_ud;
 	solver.UpdateSolver();
       }
       for(int isc = 0 ; isc < 12 ; isc++){
@@ -60,8 +68,8 @@ int main(int argc, char **argv)
 
       PLEGMA_Propagator<float> propDN;
       // ensuring mu negative
-      if(mu>0) {
-	mu*=-1.;
+      if(mu != -1*mu_ud) {
+	mu = -1*mu_ud;
 	solver.UpdateSolver();
       }
       for(int isc = 0 ; isc < 12 ; isc++){
@@ -81,16 +89,128 @@ int main(int argc, char **argv)
       propDN.rotateToPhysicalBase_device(-1);
       propUP.applyBoundaries_device(sourcePositions[isource][3]);
       propDN.applyBoundaries_device(sourcePositions[isource][3]);
-      
-      PLEGMA_Correlator<float> corr(corr_space, maxQsq);
-      corr.contractMesons(propUP, propDN, sourcePositions[isource]);
-      corr.writeFile(twop_filename.c_str(), corr_file_format);
-      
-      corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
-      corr.writeFile(twop_filename.c_str(), corr_file_format);
 
-      corr.contractBaryonsProj(propUP, propDN, propUP, propDN, sourcePositions[isource]);
-      corr.writeFile(twop_filename.c_str(), corr_file_format);
+      {
+	PLEGMA_Correlator<float> corr(corr_space, maxQsq);
+	corr.contractMesons(propUP, propDN, sourcePositions[isource]);
+	
+	char *dset1, *dset2;
+	asprintf(&dset1, "u(%f)d(%f)", mu_ud, -1*mu_ud);
+	asprintf(&dset2, "d(%f)u(%f)", -1*mu_ud, mu_ud);
+	corr.setDatasets((std::vector<std::string>) {dset1, dset2});
+	free(dset1); free(dset2);
+	corr.writeFile(twop_filename.c_str(), corr_file_format);
+	
+	corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
+	corr.writeFile(twop_filename.c_str(), corr_file_format);
+      }
+      
+      // Storing only the smaller and then computing on the fly the other
+      int nSmaller = MIN(mu_s.size(),mu_c.size());
+      char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
+      if(nSmaller>0) {
+	PLEGMA_Propagator<float> propS[nSmaller];
+	for(int ismall=0; ismall < nSmaller; ismall++) {
+	  mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
+	  int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
+	  solver.UpdateSolver();
+	  
+	  for(int isc = 0 ; isc < 12 ; isc++){
+	    PLEGMA_Vector<double> vectorInOut, vectorAuxD;
+	    PLEGMA_Vector<float> vectorAuxF;
+	    vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	    vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss);
+	    
+	    PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
+	    solver.solve(vectorInOut, vectorInOut);
+	    vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss);
+	    vectorAuxF.copy(vectorAuxD);
+	    propS[ismall].absorb(vectorAuxF, isc/3, isc%3);
+	  }
+	  propS[ismall].rotateToPhysicalBase_device(mu/abs(mu));
+	  propS[ismall].applyBoundaries_device(sourcePositions[isource][3]);
+	}
+      
+	int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
+	PLEGMA_Propagator<float> propL;
+	for(int ilarge=0; ilarge < nLarger; ilarge++) {
+	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
+	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
+	  solver.UpdateSolver();
+	  
+	  for(int isc = 0 ; isc < 12 ; isc++){
+	    PLEGMA_Vector<double> vectorInOut, vectorAuxD;
+	    PLEGMA_Vector<float> vectorAuxF;
+	    vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	    vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss);
+	    
+	    PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
+	    solver.solve(vectorInOut, vectorInOut);
+	    vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss);
+	    vectorAuxF.copy(vectorAuxD);
+	    propL.absorb(vectorAuxF, isc/3, isc%3);
+	  }
+	  propL.rotateToPhysicalBase_device(mu/abs(mu));
+	  propL.applyBoundaries_device(sourcePositions[isource][3]);
+
+	  for(int ismall=0; ismall < nSmaller; ismall++) {
+	    PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
+	    PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
+	    PLEGMA_Correlator<float> corr(corr_space, maxQsq);
+	    bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
+	    bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
+	    corr.contractBaryonsProj(propUP, propDN, propST, propCH, sourcePositions[isource], only_st, only_ch);
+	    char * group;
+	    
+	    asprintf(&group, "u(%f)d(%f)s(%f)c(%f)%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],
+		     only_st ? "_only-s" : "", only_ch ? "_only-c" : "");
+	    corr.setGroups(group);
+	    free(group);
+	    corr.writeFile(twop_filename.c_str(), corr_file_format);
+
+	    corr.contractMesons(propST, propCH, sourcePositions[isource]);
+	    char *dset1, *dset2;
+	    asprintf(&dset1, "s(%f)c(%f)", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
+	    asprintf(&dset2, "c(%f)s(%f)", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
+	    corr.setDatasets((std::vector<std::string>) {dset1, dset2});
+	    free(dset1); free(dset2);
+	    corr.writeFile(twop_filename.c_str(), corr_file_format);
+
+	    if(!only_ch) {
+	      corr.contractMesons(propUP, propST, sourcePositions[isource]);
+	      asprintf(&dset1, "u(%f)s(%f)", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
+	      asprintf(&dset2, "s(%f)u(%f)", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
+	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
+	      free(dset1); free(dset2);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	      
+	      corr.contractMesons(propDN, propST, sourcePositions[isource]);
+	      asprintf(&dset1, "d(%f)s(%f)", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
+	      asprintf(&dset2, "s(%f)d(%f)", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
+	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
+	      free(dset1); free(dset2);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	    }
+
+	    if(!only_st) {
+	      corr.contractMesons(propUP, propCH, sourcePositions[isource]);
+	      asprintf(&dset1, "u(%f)c(%f)", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
+	      asprintf(&dset2, "c(%f)u(%f)", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
+	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
+	      free(dset1); free(dset2);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	      
+	      corr.contractMesons(propDN, propCH, sourcePositions[isource]);
+	      asprintf(&dset1, "d(%f)c(%f)", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
+	      asprintf(&dset2, "c(%f)d(%f)", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
+	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
+	      free(dset1); free(dset2);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	    }
+	    
+	  }
+	}
+      }
     }
   }
   
