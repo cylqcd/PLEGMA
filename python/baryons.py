@@ -69,24 +69,26 @@ Cgy= C.dot(gy)
 Cgz= C.dot(gz)
 
 gxgy = gx.dot(gy)
+gygx = gy.dot(gx)
 gygz = gy.dot(gz)
+gzgy = gz.dot(gy)
 gxgz = gx.dot(gz)
-
-gigj = gxgy+gygz+gxgz
+gzgx = gz.dot(gx)
 
 all_gammas={}
 
 all_gammas[1/2] = {"Pp-Cg5-Cg5": (Pplus,Cg5,Cg5),
-                   "Pm-Cg5-Cg5":(Pminus,Cg5,Cg5)}
-all_gammas[3/2] = {"Pp-Cgx-Cgx":(Pplus,Cgx,Cgx)  ,
-                   "Pm-Cgx-Cgx":(Pminus,Cgx,Cgx) ,
-                   "gigj-Cgx-Cgx":(gigj,Cgx,Cgx) ,
-                   "Pp-Cgy-Cgy":(Pplus,Cgy,Cgy)  ,
-                   "Pm-Cgy-Cgy":(Pminus,Cgy,Cgy) ,
-                   "gigj-Cgy-Cgy":(gigj,Cgy,Cgy) ,
-                   "Pp-Cgz-Cgz":(Pplus,Cgz,Cgz)  ,
-                   "Pm-Cgz-Cgz":(Pminus,Cgz,Cgz) ,
-                   "gigj-Cgz-Cgz":(gigj,Cgz,Cgz)}
+                   "Pm-Cg5-Cg5":(Pminus,Cg5,Cg5),
+                   "Pp-igtCg5-igtCg5": (Pplus,igtCg5,igtCg5),
+                   "Pm-igtCg5-igtCg5":(Pminus,igtCg5,igtCg5),
+                   "Pp-C-C": (Pplus,C,C),
+                   "Pm-C-C":(Pminus,C,C)}
+all_gammas[3/2] = {"Pp-Cgi-Cgi":[(Pplus,Cgx,Cgx), (Pplus,Cgy,Cgy), (Pplus,Cgz,Cgz)],
+                   "Pm-Cgi-Cgi":[(Pminus,Cgx,Cgx), (Pminus,Cgy,Cgy), (Pminus,Cgz,Cgz)],
+                   "Ppgigj-Cgi-Cgj":[(Pplus.dot(gxgy),Cgx,Cgy),(Pplus.dot(gxgz),Cgx,Cgz),(Pplus.dot(gygz),Cgy,Cgz),
+                                     (Pplus.dot(gygx),Cgy,Cgx),(Pplus.dot(gzgx),Cgz,Cgx),(Pplus.dot(gzgy),Cgz,Cgy)],
+                   "Pmgigj-Cgi-Cgj":[(Pminus.dot(gxgy),Cgx,Cgy),(Pminus.dot(gxgz),Cgx,Cgz),(Pminus.dot(gygz),Cgy,Cgz),
+                                     (Pminus.dot(gygx),Cgy,Cgx),(Pminus.dot(gzgx),Cgz,Cgx),(Pminus.dot(gzgy),Cgz,Cgy)]}
 
 #***********************Baryon list***************************************
 
@@ -602,7 +604,6 @@ class Non_zero_gamma(object):
     
     final_list={}
     for name in gammas.keys():
-      gammaA,gammaB,gammaC = gammas[name]
       save_indices = {}
       for (sign,indices) in zip(sign_gamma_final,o_o_bar_gamma_indexlist):
         for ap in range(4):
@@ -613,16 +614,28 @@ class Non_zero_gamma(object):
                   for c in range(4):
                     di = {'ap':ap,'bp':bp,'cp':cp,'a':a,'b':b,'c':c}
                     indxcp,indxa,indxap,indxbp,indxb,indxc = indices
-                    quantity = sign * gammaA[di[indxcp],di[indxa]]*gammaB[di[indxap],di[indxbp]]*gammaC[di[indxb],di[indxc]]
-                    if quantity != complex(0) :
-                      key=(di[indxap],di[indxa],di[indxbp],di[indxb],di[indxcp],di[indxc])
-                      if key in save_indices.keys():
-                        save_indices[key] += quantity
-                      else:
-                        save_indices[key] = quantity
-      for key,value in save_indices.items():
+                    if type(gammas[name]) is list:
+                      for g in gammas[name]:
+                        gammaA,gammaB,gammaC = g
+                        quantity = sign * gammaA[di[indxcp],di[indxa]]*gammaB[di[indxap],di[indxbp]]*gammaC[di[indxb],di[indxc]]
+                        if quantity != complex(0) :
+                          key=(di[indxap],di[indxa],di[indxbp],di[indxb],di[indxcp],di[indxc])
+                          if key in save_indices.keys():
+                            save_indices[key] += quantity
+                          else:
+                            save_indices[key] = quantity
+                    else:
+                      gammaA,gammaB,gammaC = gammas[name]
+                      quantity = sign * gammaA[di[indxcp],di[indxa]]*gammaB[di[indxap],di[indxbp]]*gammaC[di[indxb],di[indxc]]
+                      if quantity != complex(0) :
+                        key=(di[indxap],di[indxa],di[indxbp],di[indxb],di[indxcp],di[indxc])
+                        if key in save_indices.keys():
+                          save_indices[key] += quantity
+                        else:
+                          save_indices[key] = quantity
+      for key,value in list(save_indices.items()):
         if value == complex(0):
-          save_indices.popitem(key)
+          save_indices.pop(key)
 
       final_list[name] = save_indices
     
