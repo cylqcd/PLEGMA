@@ -78,6 +78,11 @@ void contract_baryons_proj(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
   int SpVol = HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int3 source = corr.getSource3();
+  size_t volume = corr.getVolSize()/HGC_localL[3];
+  size_t shift = 0;
+  Float2<FloatC> *h_partial_block = NULL;        
+  Float2<FloatC> *d_partial_block = NULL;
+  
   PLEGMA_Field<FloatC> propProd(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, NO_GHOSTS, true);
   genericTex<FloatC> texPropProd;
   texPropProd.tex = propProd.createTexObject();
@@ -110,20 +115,47 @@ void contract_baryons_proj(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
       cudaMemcpy(idxs, BP_prop_prods_idxs[i][j], 6*size*sizeof(int), cudaMemcpyHostToDevice);
       cudaMemcpy(vals, BP_prop_prods_vals[i][j], size*sizeof(Float2<float>), cudaMemcpyHostToDevice);
       checkCudaError();
-      tune(ps2, "contract_prop_prod_"+std::to_string(size), contract_prop_prod<FloatC>, texPropProd, (Float2<FloatC>*) NULL,
+      tune(ps2, "contract_prop_prod_"+std::to_string(size), contract_prop_prod<FloatC>, texPropProd, d_partial_block,
 	   size, idxs, vals, source, runFT);
 
-      //TODO
+      size_t alloc_size = (runFT==true) ? (volume * ps2.tp.grid.x * 2):(volume * 2);
+      hostMalloc(h_partial_block, alloc_size*sizeof(FloatC));
+      cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(FloatC) );
+      checkCudaError();
+
+      run(ps2, "contract_prop_prod_"+std::to_string(size), contract_prop_prod<FloatC>, texPropProd, d_partial_block,
+	  size, idxs, vals, source, runFT);
+      cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
+      checkCudaError();
+      if(runFT==true){
+	int gridDimX = ps2.tp.grid.x;
+	Float2<FloatC> *reduction;
+	hostMalloc(reduction, volume*2*sizeof(FloatC));
+	for(size_t k = 0 ; k < volume; k++) {
+	  reduction[k] = 0;
+	  for(int l = 0 ; l < gridDimX; l++) {
+	    reduction[k] += h_partial_block[k*gridDimX + l];
+	  }
+	}
+	MPI_Allreduce(reduction, h_partial_block, volume*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);
+	hostFree(reduction, volume*2*sizeof(FloatC));
+      }
+      
+      Float2<FloatC> *corr2 = (Float2<FloatC> *) corr.getCorr() + shift + it*volume;
+      for(size_t v = 0 ; v < volume; v++)
+	corr2[v] = h_partial_block[v];
+      
+      shift += HGC_localL[3]*volume;
+      
+      hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+      cudaFree(d_partial_block); d_partial_block=NULL;
       cudaFree(idxs);
       cudaFree(vals);
+      checkCudaError();
     }
-    
-    
-    
   }
   propProd.destroyTexObject(texPropProd.tex);
 }
-
 
 template
 void contract_baryons_proj<float,float>(propTex<float> texPropUP, propTex<float> texPropDN,
