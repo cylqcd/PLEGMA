@@ -54,10 +54,10 @@ namespace plegma {
       return corr_space;
     }
     inline size_t n_datasets() {
-      return datasets.size();
+      return MAX(1,datasets.size());
     }
     inline size_t n_groups() {
-      return groups.size();
+      return MAX(1,groups.size());
     }
     size_t getSiteSize() {
       size_t size=n_datasets()*n_groups();
@@ -87,6 +87,32 @@ namespace plegma {
     Float* getCorr() {
       return corr;
     }
+    std::vector<std::string> getDatasets() {
+      return datasets;
+    }
+    void setDatasets(std::vector<std::string> d) {
+      if (datasets.size() == d.size() || datasets.size() == 0) {
+	datasets = d;
+      } else {
+	PLEGMA_error("Given vector size do not match. This would change the correlator size.");
+      }
+    }
+    void setDatasets(std::string s) {
+      return setDatasets({s});
+    }
+    std::vector<std::string> getGroups() {
+      return groups;
+    }
+    void setGroups(std::vector<std::string> d) {
+      if (groups.size() == d.size() || groups.size() == 0) {
+	groups = d;
+      } else {
+	PLEGMA_error("Given vector size do not match. This would change the correlator size.");
+      }
+    }
+    void setGroups(std::string s) {
+      return setGroups({s});
+    }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2, 
 			int source[4]);
@@ -99,7 +125,7 @@ namespace plegma {
 			     PLEGMA_Propagator<Float> &propDN, 
 			     PLEGMA_Propagator<Float> &propST, 
 			     PLEGMA_Propagator<Float> &propCH, 
-			     int source[4], bool only_ch=false, bool only_st=false);
+			     int source[4], bool only_st=false, bool only_ch=false);
     
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,

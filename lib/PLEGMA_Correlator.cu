@@ -117,7 +117,7 @@ contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
 		    PLEGMA_Propagator<Float> &propCH, 
-		    int source[4], bool only_ch, bool only_st){
+		    int source[4], bool only_st, bool only_ch){
 
   setSource(source);
   shape = {};
@@ -127,12 +127,22 @@ contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
 
   std::vector<int> todo;
   for(int i=0; i<BP_prop_prods.size(); i++) {
-    // check if we run it using only_ch and only_st
+    if(only_st && BP_prop_prods[i].find('s')==std::string::npos)
+      continue;
+    if(only_ch && BP_prop_prods[i].find('c')==std::string::npos)
+      continue;
     if(true) {
       todo.push_back(i);
       for(auto name: BP_prop_prods_names[i])
-	groups.push_back(name);
+	datasets.push_back(name);
     }
+  }
+
+  if(HGC_verbosity > 2) {
+    PLEGMA_printf("contractBaryonsProj is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
   }
 
   initialize();
@@ -437,14 +447,16 @@ writeHDF5(std::string filename, std::string top) {
   hsize_t writeSize = 1;
   for(auto l: lshape) writeSize*=l;
   for(size_t g=0; g<n_groups(); g++){
-    writer.cd(top+groups[g]);
+    writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
     if(corr_space == MOMENTUM_SPACE) {
       writer.write_dataset("mvec", mvec, momShape);
     }
     for(size_t d=0; d<n_datasets(); d++) {
       Float *writeBuf = corr + (g*n_datasets()+d)*writeSize;
-      writer.write_dataset(datasets[d], writeBuf, shape, lshape, start);
-      writer.write_attribute(datasets[d], "description", descr);
+      std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
+      writer.write_dataset(dataset, writeBuf, shape, lshape, start);
+      if(descr != "")
+	writer.write_attribute(dataset, "description", descr);
     }
   }
 }
