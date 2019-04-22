@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 
     PLEGMA_Propagator<float> prop_c, prop_d;
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsProj,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, sources, false, false);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsUDSC,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, sources, false, false);
   }
 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK

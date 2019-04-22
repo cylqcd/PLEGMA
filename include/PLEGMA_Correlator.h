@@ -122,7 +122,7 @@ namespace plegma {
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int source[4]);
     
-    void contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
+    void contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 			     PLEGMA_Propagator<Float> &propDN, 
 			     PLEGMA_Propagator<Float> &propST, 
 			     PLEGMA_Propagator<Float> &propCH, 

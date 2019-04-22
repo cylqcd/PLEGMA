@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 	    PLEGMA_Correlator<float> corr(corr_space, maxQsq);
 	    bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
-	    corr.contractBaryonsProj(propUP, propDN, propST, propCH, sourcePositions[isource], only_st, only_ch);
+	    corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], only_st, only_ch);
 	    char * group;
 	    
 	    asprintf(&group, "u(%f)d(%f)s(%f)c(%f)%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],

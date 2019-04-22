@@ -1,5 +1,5 @@
 #include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_baryons_proj.cuh>
+#include <PLEGMA_baryons_udsc.cuh>
 
 template<typename FloatA, typename FloatC>
 __global__ void create_prop_product(Float2<FloatC> *propProd,
@@ -71,7 +71,7 @@ __global__ void contract_prop_prod(genericTex<FloatC> texPropProd, Float2<FloatC
 }
 
 template<typename FloatA, typename FloatC>
-void contract_baryons_proj(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
+void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
 			   propTex<FloatA> texPropST, propTex<FloatA> texPropCH,
 			   PLEGMA_Correlator<FloatC> &corr, int it, std::vector<int> &todo){
 
@@ -158,11 +158,11 @@ void contract_baryons_proj(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
 }
 
 template
-void contract_baryons_proj<float,float>(propTex<float> texPropUP, propTex<float> texPropDN,
+void contract_baryons_udsc<float,float>(propTex<float> texPropUP, propTex<float> texPropDN,
 					propTex<float> texPropST, propTex<float> texPropCH,
 					PLEGMA_Correlator<float> &corr, int it, std::vector<int> &todo);
 
 template
-void contract_baryons_proj<double,double>(propTex<double> texPropUP, propTex<double> texPropDN,
+void contract_baryons_udsc<double,double>(propTex<double> texPropUP, propTex<double> texPropDN,
 					  propTex<double> texPropST, propTex<double> texPropCH,
 					  PLEGMA_Correlator<double> &corr, int it, std::vector<int> &todo);

@@ -3,8 +3,7 @@
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <functional>
-#include <PLEGMA_baryons_proj.cuh>
-//#include <PLEGMA_baryons_proj.h>
+#include <PLEGMA_baryons_udsc.cuh>
  
 using namespace plegma;
 
@@ -113,7 +112,7 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
+contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
 		    PLEGMA_Propagator<Float> &propCH, 
@@ -139,7 +138,7 @@ contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
   }
 
   if(HGC_verbosity > 2) {
-    PLEGMA_printf("contractBaryonsProj is going to run: ");
+    PLEGMA_printf("contractBaryonsUDSC is going to run: ");
     for(auto name: datasets)
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
@@ -153,7 +152,7 @@ contractBaryonsProj(PLEGMA_Propagator<Float> &propUP,
   propCHTex.tex = propCH.createTexObject();
 
   for(int it = 0; it < HGC_localL[3]; it++) {
-    contract_baryons_proj(propUPTex, propDNTex, propSTTex, propCHTex, *this, it, todo);
+    contract_baryons_udsc(propUPTex, propDNTex, propSTTex, propCHTex, *this, it, todo);
   }
 
   propUP.destroyTexObject(propUPTex.tex);
