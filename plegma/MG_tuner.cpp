@@ -11,16 +11,16 @@ using namespace quda;
 template <typename T>
 struct InVar{
 
-  T* variable;
-  std::vector<T> values;
+  T* variable; 
   std::string name;
+  std::vector<T> values;
   bool continuous;
 
   void add_value(T value) {
     auto it = std::find(values.begin(), values.end(), value);
     if (it >= values.end()) {
       if(!continuous) {
-	values.push_back(value);
+	values.insert(values.begin(),value);
       } else {
 	auto it = values.begin();
 	while(*it < value && it<values.end()){it++;}
@@ -28,25 +28,29 @@ struct InVar{
       }
     }
   }
-  
-  InVar( T* variable, std::string name, T min =(T) 0, T max =(T) 0, T step =(T) 1 , bool continuous = true): variable(variable), name(name),continuous(continuous){ 
-    for(int i=0;i<=(int)((max-min)/step);i++) values.push_back((T)(min+step*i));
-    add_value(*variable); // adding current value
+
+  T get() {
+    return *variable;
+  }
+  void set(T value) {
+    if(get() != value) {
+      add_value(value);
+      *variable = value;
+      if(HGC_verbosity>1) PLEGMA_printf(("MG_Tuner: Set "+name+" to "+std::to_string(value)+"\n").c_str());
+    }
+  }
+
+  std::string get_info() {
+    std::string info = "Variable: "+name+", current value: "+std::to_string(get())+", values to test: ";
+    for(auto v: values)
+      info+=std::to_string(v)+", ";
+    info += "\n";
+    return info;      
   }
 
   InVar( T* variable, std::string name, std::vector<T> values, bool continuous = false): variable(variable), name(name), values(values), continuous(continuous){
     add_value(*variable); // adding current value
-  }
-
-  void set(T value) {
-    if(*variable != value) {
-      add_value(value);
-      *variable = value;
-      PLEGMA_printf(("MG_Tuner: Set "+name+" to "+std::to_string(value)+"\n").c_str());
-    }
-  }
-  T get() {
-    return *variable;
+    if(HGC_verbosity>1) PLEGMA_printf(get_info().c_str());
   }
 
 };
@@ -86,6 +90,7 @@ struct SolverTimings{
   template<std::size_t I = 0, typename time_t>
   inline typename std::enable_if<I < sizeof...(types), void>::type
   remove_not_mathing(time_t &time) {
+    if(time.empty()) return;
     auto value = std::get<I>(variables)->get();
     for (auto it = time.begin(); it < time.end(); ) {
       auto it_value = std::get<I+1>(*it);
@@ -293,16 +298,20 @@ struct Minimizer{
       std::vector<std::array<size_t,2>> discrete;
       select_discrete(discrete);
     
-      size_t nCombinations = 1;
+      int nCombinations = 1;
       for(auto a : discrete) nCombinations*=a[1];
 
       int best_index = 0;
       int best_time = -1;
-      for(size_t i=0; i < nCombinations; i++){
-	PLEGMA_printf("MG_Tuner: iteration on discrete values %d/%d\n",i+1,nCombinations);
-	tuple_iterator(discrete, i);
+      // running over all the possible combinations of discrete parameters
+      for(int i=0; i < nCombinations; i++){
+	if(!discrete.empty()) {
+	  if(HGC_verbosity>1) PLEGMA_printf("MG_Tuner: iteration on discrete values %d/%d\n",i+1,nCombinations);
+	  tuple_iterator(discrete, i);
+	}
 	bool changed = true;
 	double time = -1;
+	// choosing the optimal continuous values
 	while(changed == true){
 	  changed=false;
 	  find_min(changed, time);
@@ -314,7 +323,8 @@ struct Minimizer{
       }
 
       // setting the best discrete index
-      tuple_iterator(discrete, best_index);
+      if(!discrete.empty())
+	tuple_iterator(discrete, best_index);
       return best_time;
     } else {
       return call_back(call);
@@ -323,12 +333,14 @@ struct Minimizer{
 }; 
 
 template<class T, class...Targs>
-InVar<T>* variable(T* var, std::string name, T min =(T) 0, T max =(T) 0, T step =(T) 1, bool continuous = true) {
-  return new InVar<T>(var, name, min, max, step, continuous);
-}
-template<class T, class...Targs>
 InVar<T>* variable(T* var, std::string name, std::vector<T> values, bool continuous = true) {
   return new InVar<T>(var, name, values, continuous);
+}
+template<class T, class...Targs>
+InVar<T>* variable(T* var, std::string name, T min =(T) 0, T max =(T) 0, T step =(T) 1, bool continuous = true) {
+  std::vector<T> values;
+  for(int i=0;i<=(int)((max-min)/step);i++) values.push_back((T)(min+step*i));
+  return variable(var, name, values, continuous);
 }
 template<class...types>
 SolverTimings<types...>* solverTimings(QUDA_solver& solver, PLEGMA_Vector<double>& vectorInOut, InVar<types>*... instance) {
@@ -343,10 +355,8 @@ Minimizer<T,types...>* minimizer(T* call_back, InVar<types>*... instance) {
   return new Minimizer<T,types...>(call_back, true, instance...);
 }
 
-static std::vector<std::string> listOpt = {"load-gauge"};
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
+  std::vector<std::string> listOpt = {"load-gauge", "verbosity"};
   initializeOptions(argc, argv, true, listOpt);
   initializePLEGMA();
 
@@ -394,7 +404,7 @@ int main(int argc, char **argv)
 				 nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1,
 				 nvec_0, nvec_1);
 
-    // Splitting the paramters in smaller set and running nested minimizers
+    // Splitting the parameters in smaller set and running nested minimizers
     // coarse, smoother_0, smoother_1 are indipendent minimizers calling solverT
     auto coarse = minimizer(solverT, mu_factor_, coarse_solver_tol_, coarse_solver_);
     
@@ -418,6 +428,3 @@ int main(int argc, char **argv)
   finalize();
   return 0;
 }
-
-
-
