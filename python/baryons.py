@@ -83,8 +83,8 @@ all_gammas[1/2] = {"Pp-Cg5-Cg5": [(Pplus,Cg5,Cg5)],
                    "Pm-Cg5-Cg5": [(Pminus,Cg5,Cg5)],
                    "Pp-igtCg5-igtCg5": [(Pplus,igtCg5,igtCg5)],
                    "Pm-igtCg5-igtCg5": [(Pminus,igtCg5,igtCg5)],
-                   "Pp-C-C": [(Pplus,C,C)],
-                   "Pm-C-C": [(Pminus,C,C)]}
+                   "g5Ppg5-C-C": [(g5.dot(Pplus).dot(g5),C,C)],
+                   "g5Pmg5-C-C": [(g5.dot(Pminus).dot(g5),C,C)]}
 all_gammas[3/2] = {"Pp-Cgi-Cgi": [(Pplus,Cgx,Cgx), (Pplus,Cgy,Cgy), (Pplus,Cgz,Cgz)],
                    "Pm-Cgi-Cgi": [(Pminus,Cgx,Cgx), (Pminus,Cgy,Cgy), (Pminus,Cgz,Cgz)],
                    "Ppgigj-Cgi-Cgj": [(Pplus.dot(gxgy),Cgx,Cgy),(Pplus.dot(gxgz),Cgx,Cgz),(Pplus.dot(gygz),Cgy,Cgz),
@@ -491,6 +491,19 @@ def remap(arr,map_s):
 # Here we perform the contractions
 prop_prods =  defaultdict(list)
 for baryon,info in baryons.items():
+  if info["spin"] == 3/2:
+    # To match normalization of spin baryons as in table VI
+    # of https://arxiv.org/pdf/1704.02647.pdf
+    # SB: I didn't understand the origin of those coefficients
+    # NOTE: here norm is coeff^2/3
+    if len(info['coeffs']) == 3:
+      norm = 1/2
+    elif len(info['coeffs']) == 2:
+      norm = 1
+    else:
+      norm = 1/3
+  else:
+    norm = (np.array(info['coeffs'])**2).sum()
   J=[interpolating_field(flavs, coeff) for flavs, coeff in zip(info['flavs'],info['coeffs'])]
   J_bar=[interpolating_field(baryon_bar(flavs), coeff) for flavs, coeff in zip(info['flavs'],info['coeffs'])]
   exps=[expectation_value(j,j_bar) for j in J for j_bar in J_bar]
@@ -520,8 +533,10 @@ for baryon,info in baryons.items():
           else:
             final_list[gamma][m]=v*coeffs[i]
     for m,v in list(final_list[gamma].items()):
-      if np.abs(v) == 0:
+      if np.isclose(v,0):
         del final_list[gamma][m]
+      else:
+        final_list[gamma][m]/=norm
     
 
   flv_key = "-".join([p.fl for p in ordered])
