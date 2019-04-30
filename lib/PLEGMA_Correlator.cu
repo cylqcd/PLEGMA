@@ -90,10 +90,11 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   setSource(source);
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
-  groups =  {"nucl_nucl",
-#ifdef ALL_BARYONS
-	     "nucl_nucl2","nucl2_nucl","nucl2_nucl2","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
-	     "deltapp_deltamm_11","deltapp_deltamm_22","deltapp_deltamm_33"
+  groups =  {"baryons/nucl_nucl",
+#ifdef PLEGMA_ALL_BARYONS
+	     "baryons/nucl_nucl2","baryons/nucl2_nucl","baryons/nucl2_nucl2",
+	     "baryons/deltap_deltaz_11","baryons/deltap_deltaz_22","baryons/deltap_deltaz_33",
+	     "baryons/deltapp_deltamm_11","baryons/deltapp_deltamm_22","baryons/deltapp_deltamm_33"
 #endif
   };
   description = "1,g1,g2,g3,g4,g5,g5g1,g5g2,g5g3,g5g4,s12,s13,s23,s41,s42,s43";

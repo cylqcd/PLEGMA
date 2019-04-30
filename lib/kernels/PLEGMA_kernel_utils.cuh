@@ -1,4 +1,3 @@
-#include <PLEGMA.h>
 #include <errno.h>
 #include <mpi.h>  
 #include <limits>

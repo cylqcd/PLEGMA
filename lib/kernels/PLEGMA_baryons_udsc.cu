@@ -2,10 +2,11 @@
 #include <PLEGMA_baryons_udsc.cuh>
 
 template<typename FloatA, typename FloatC>
-__global__ void create_prop_product(Float2<FloatC> *propProd,
+__global__ void create_prop_product(generic2<FloatC> propProd,
 				    propTex<FloatA> texProp1, propTex<FloatA> texProp2, propTex<FloatA> texProp3, int it){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   size_t vid = sid + it*DGC_localVolume3D;
+  sidStride ss(sid, DGC_localVolume3D);
   
   if (sid < DGC_localVolume3D){ // I work only on the spatial volume
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -14,12 +15,13 @@ __global__ void create_prop_product(Float2<FloatC> *propProd,
     texProp1.get(prop1,vid);
     texProp2.get(prop2,vid);
     texProp3.get(prop3,vid);
-    for(int mu1 = 0 ; mu1 < N_SPINS ; mu1++)
-      for(int mu2 = 0 ; mu2 < N_SPINS ; mu2++)
-	for(int mu3 = 0 ; mu3 < N_SPINS ; mu3++)
-	  for(int mu4 = 0 ; mu4 < N_SPINS ; mu4++)
-	    for(int mu5 = 0 ; mu5 < N_SPINS ; mu5++)
-	      for(int mu6 = 0 ; mu6 < N_SPINS ; mu6++) {
+    int mu[6];
+    for(mu[0] = 0 ; mu[0] < N_SPINS ; mu[0]++)
+      for(mu[1] = 0 ; mu[1] < N_SPINS ; mu[1]++)
+	for(mu[2] = 0 ; mu[2] < N_SPINS ; mu[2]++)
+	  for(mu[3] = 0 ; mu[3] < N_SPINS ; mu[3]++)
+	    for(mu[4] = 0 ; mu[4] < N_SPINS ; mu[4]++)
+	      for(mu[5] = 0 ; mu[5] < N_SPINS ; mu[5]++) {
 		Float2<FloatC> accum = 0;
 #pragma unroll
 		for(int cc1 = 0 ; cc1 < 6 ; cc1++){
@@ -33,10 +35,14 @@ __global__ void create_prop_product(Float2<FloatC> *propProd,
 		    int c1 = eps[cc2][2];
 		    FloatC factor = sgn_eps[cc1] * sgn_eps[cc2];
 		    accum += factor *
-		      (prop1[mu1][mu2][a][a1] + prop2[mu3][mu4][b][b1] + prop3[mu5][mu6][c][c1]);
+		      prop1[mu[0]][mu[1]][a][a1] * prop2[mu[2]][mu[3]][b][b1] * prop3[mu[4]][mu[5]][c][c1];
 		  }
 		}
-		propProd[(((((mu1*N_SPINS+mu2)*N_SPINS+mu3)*N_SPINS+mu4)*N_SPINS+mu5)*N_SPINS+mu6)*DGC_localVolume3D + sid] = accum;		
+		int i = 0;
+#pragma unroll
+		for(int j = 0; j < 6; j++)
+		  i=i*N_SPINS+mu[j];
+		propProd.set(i,ss,accum);
 	      }
   }
 }
@@ -53,8 +59,8 @@ __global__ void contract_prop_prod(genericTex<FloatC> texPropProd, Float2<FloatC
     for(int i = 0; i < size; i++) {
       int mu = 0;
 #pragma unroll
-	for(int j = 0; j < 6; j++)
-	  mu=mu*N_SPINS+idxs[i*6+j];
+      for(int j = 0; j < 6; j++)
+	mu=mu*N_SPINS+idxs[i*6+j];
       sidStride ss(sid, DGC_localVolume3D);
       accum += texPropProd.get(mu, ss)*((Float2<FloatC>) vals[i]);
     }
@@ -84,9 +90,9 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
   Float2<FloatC> *d_partial_block = NULL;
   
   PLEGMA_Field<FloatC> propProd(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, NO_GHOSTS, true);
-  genericTex<FloatC> texPropProd;
-  texPropProd.tex = propProd.createTexObject();
-  
+  genericTex<FloatC> texPropProd(propProd.createTexObject());
+  generic2<FloatC> propProd2(propProd.D_elem());
+
   for(auto i: todo) {
     propTex<FloatA> props[3];
     for (int j=0; j<3; j++) {
@@ -103,7 +109,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     }
     ProfileStruct ps(SpVol,0);
     if(HGC_verbosity>2) PLEGMA_printf("Running for %s\n", BP_prop_prods[i].c_str());
-    tuneAndRun(ps, "create_prop_product", create_prop_product<FloatA,FloatC>, (Float2<FloatC>*) propProd.D_elem(), props[0], props[1], props[2], it);
+    tuneAndRun(ps, "create_prop_product", create_prop_product<FloatA,FloatC>, propProd2, props[0], props[1], props[2], it);
     
     for(int j=0; j<BP_prop_prods_count[i].size(); j++) {
       int size = BP_prop_prods_count[i][j];

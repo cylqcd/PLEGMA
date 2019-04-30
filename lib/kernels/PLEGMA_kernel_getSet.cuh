@@ -157,8 +157,8 @@ namespace plegma {
   template<typename Float>
   struct texture {
     cudaTextureObject_t tex;
-    inline __device__ texture() = default; 
-    inline __device__ texture(cudaTextureObject_t t) {
+    inline __host__ __device__ texture() = default; 
+    inline __host__ __device__ texture(cudaTextureObject_t t) {
       tex = t;
     }
     // Fetch is going to be specialized after
@@ -181,13 +181,14 @@ namespace plegma {
   template<typename Float>
   struct pFloat2 {
     Float2<Float>* p;
-    inline __device__ pFloat2(Float* pointer) {
+    inline __host__ __device__ pFloat2() = default; 
+    inline __host__ __device__ pFloat2(Float* pointer) {
       p = (Float2<Float> *) pointer;
     }
-    inline __device__ Float2<Float> get(int i, sidStride &ss) {
+    inline __host__ __device__ Float2<Float> get(int i, sidStride &ss) {
       return p[i*ss.stride + ss.sid];
     }
-    inline __device__ void set(int i, sidStride &ss, Float2<Float> v){
+    inline __host__ __device__ void set(int i, sidStride &ss, Float2<Float> v){
       p[i*ss.stride + ss.sid] = v;
     }
   };
