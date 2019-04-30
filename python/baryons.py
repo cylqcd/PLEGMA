@@ -9,8 +9,10 @@
 # - Return the list of gammas indices and its sizes
 #   for each flavor combination in the appropriate c++ code format.
 #
-# Run is as 'python baryons.py > FILENAME.h'
-# Authors: E. Papadiofantous, S. Bacchio
+# Run this as 'python baryons.py file1 file2'
+# file1 will be the header file
+# file2 will be a compilable file
+# Authors: S.bacchio, E. Papadiofantous
 
 
 #*************Imports*********************************
@@ -77,22 +79,29 @@ gzgx = gz.dot(gx)
 
 all_gammas={}
 
-all_gammas[1/2] = {"Pp-Cg5-Cg5": (Pplus,Cg5,Cg5),
-                   "Pm-Cg5-Cg5":(Pminus,Cg5,Cg5),
-                   "Pp-igtCg5-igtCg5": (Pplus,igtCg5,igtCg5),
-                   "Pm-igtCg5-igtCg5":(Pminus,igtCg5,igtCg5),
-                   "Pp-C-C": (Pplus,C,C),
-                   "Pm-C-C":(Pminus,C,C)}
-all_gammas[3/2] = {"Pp-Cgi-Cgi":[(Pplus,Cgx,Cgx), (Pplus,Cgy,Cgy), (Pplus,Cgz,Cgz)],
-                   "Pm-Cgi-Cgi":[(Pminus,Cgx,Cgx), (Pminus,Cgy,Cgy), (Pminus,Cgz,Cgz)],
-                   "Ppgigj-Cgi-Cgj":[(Pplus.dot(gxgy),Cgx,Cgy),(Pplus.dot(gxgz),Cgx,Cgz),(Pplus.dot(gygz),Cgy,Cgz),
-                                     (Pplus.dot(gygx),Cgy,Cgx),(Pplus.dot(gzgx),Cgz,Cgx),(Pplus.dot(gzgy),Cgz,Cgy)],
-                   "Pmgigj-Cgi-Cgj":[(Pminus.dot(gxgy),Cgx,Cgy),(Pminus.dot(gxgz),Cgx,Cgz),(Pminus.dot(gygz),Cgy,Cgz),
-                                     (Pminus.dot(gygx),Cgy,Cgx),(Pminus.dot(gzgx),Cgz,Cgx),(Pminus.dot(gzgy),Cgz,Cgy)]}
+all_gammas[1/2] = {"Pp-Cg5-Cg5": [(Pplus,Cg5,Cg5)],
+                   "Pm-Cg5-Cg5": [(Pminus,Cg5,Cg5)],
+                   "Pp-igtCg5-igtCg5": [(Pplus,igtCg5,igtCg5)],
+                   "Pm-igtCg5-igtCg5": [(Pminus,igtCg5,igtCg5)],
+                   "Pp-C-C": [(Pplus,C,C)],
+                   "Pm-C-C": [(Pminus,C,C)]}
+all_gammas[3/2] = {"Pp-Cgi-Cgi": [(Pplus,Cgx,Cgx), (Pplus,Cgy,Cgy), (Pplus,Cgz,Cgz)],
+                   "Pm-Cgi-Cgi": [(Pminus,Cgx,Cgx), (Pminus,Cgy,Cgy), (Pminus,Cgz,Cgz)],
+                   "Ppgigj-Cgi-Cgj": [(Pplus.dot(gxgy),Cgx,Cgy),(Pplus.dot(gxgz),Cgx,Cgz),(Pplus.dot(gygz),Cgy,Cgz),
+                                      (Pplus.dot(gygx),Cgy,Cgx),(Pplus.dot(gzgx),Cgz,Cgx),(Pplus.dot(gzgy),Cgz,Cgy)],
+                   "Pmgigj-Cgi-Cgj": [(Pminus.dot(gxgy),Cgx,Cgy),(Pminus.dot(gxgz),Cgx,Cgz),(Pminus.dot(gygz),Cgy,Cgz),
+                                      (Pminus.dot(gygx),Cgy,Cgx),(Pminus.dot(gzgx),Cgz,Cgx),(Pminus.dot(gzgy),Cgz,Cgy)]}
 
 #***********************Baryon list***************************************
+# List of interpolating fields.
+# The quark flavors (flavs) "f1-f2-f3" are used as
+#    J = ε^abc (f1_a GAMMA f2_b) f3_c
+#                                _
+# The expectation value O = <J(x)J(y)> is constructed as
+#                                                       __       __           __
+#  O = ε^abc ε^def <(f1^m_a gB_mn f2^n_b) (f3^m_c gA_mn f3^n_d) (f1^m_e gC_mn f2^n_f)>
 
-flav_dict = {
+baryons = {
       "Xicc++" :  {"flavs"  : ["ch-up-ch"],
                    "coeffs" : [1],
                    "spin"   : 1/2
@@ -254,392 +263,271 @@ flav_dict = {
                    "spin"   : 3/2
                      }
     }
+
 #**********************Interpolation field*************************************
-# The methods return the selected baryon flavs, spin
-#and the coefficient of the interpoalting field terms
+# The methods return the interpolating field for the given baryon
+class quark(object):
+  '''
+  Quark class. Store information about color and spin indeces, flavor and conjugation.
+  '''
+  def __init__(self,fl,anti=False,s=0,c=0):
+    self.fl = fl
+    self.c = c
+    self.s = s
+    self.anti = anti
+  def __repr__(self) :
+    if self.anti:
+      return "\\bar{%s}_{c_%d, s_%d}" % (self.fl,self.c,self.s)
+    else:
+      return "%s_{c_%d, s_%d}" % (self.fl,self.c,self.s)
 
-class Construct_interpolation_field(object):
-  def __init__(self,baryon,flav_dict):
-    self.baryon = baryon
-    self.flav_dict = flav_dict
-    
-  def build_baryon(self):
-    flavors = self.flav_dict[self.baryon]['flavs']
-    spin = self.flav_dict[self.baryon]['spin']
-    self.coeffs = flav_dict[self.baryon]["coeffs"]
-    return flavors, spin
+class interpolating_field(object):
+  '''
+  Interpolating field class. List of quarks and multiplicative coefficient
+  '''
+  def __init__(self,flavs,coeff=1):
+    self.quarks=[]
+    self.coeff=coeff
+    for i,fl in enumerate(flavs.split("-")):
+      if fl[-1] == "^":
+        self.quarks.append(quark(fl[:-1],True,i,i))
+      else:
+        self.quarks.append(quark(fl,False,i,i))
+  def __repr__(self) :
+    s=""
+    if self.coeff != 1:
+      s+=repr(self.coeff)+" "
+    s+=" ".join([repr(q) for q in self.quarks])
+    return s
+
+class propagator(object):
+  '''
+  Propagator class. Store infarmation about in/out color and spin indeces and flavor
+  '''
+  def __init__(self,quark1,quark2):
+    if quark1.fl != quark2.fl:
+      error()
+    if not quark1.anti and quark2.anti:
+      self.fl = quark1.fl
+      self.c = (quark1.c, quark2.c)
+      self.s = (quark1.s, quark2.s)
+    else:
+      error()
+  def __repr__(self) :
+    return "<%s\\bar{%s}>_{c_{%d,%d}, s_{%d,%d}}" % (self.fl,self.fl,self.c[0],self.c[1],self.s[0],self.s[1])
+
+def incr_s_c(quarks):
+  '''
+  Set increasing value for spin and color indeces in list of quarks
+  '''
+  for i,q in enumerate(quarks):
+    q.s=i
+    q.c=i
+  return quarks
   
-  def term_coeff(self):
-    #they are the coefficients inside the interpolating field parenthesis
-    self.build_baryon()
-    return self.coeffs
+def wick(quarks):
+  '''
+  Perform wick contraction of list of quarks returning list of propagators and signs
+  '''
+  q0=quarks.pop(0)
+  match=[]
+  others=[]
+  signs=[]
+  for i,q in enumerate(quarks):
+    if q.fl == q0.fl and q.anti != q0.anti:
+      match.append(propagator(q0,q) if q.anti else propagator(q,q0))
+      others.append(quarks[:i]+quarks[i+1:])
+      signs.append((+1 if i%2==0 else -1) * (+1 if q.anti else -1))
   
-  def baryon_interpolating_field_coeff(self):
-    #they are the coefficients inside the interpolating field parenthesis
-    self.term_coeff()
-    coeffs = self.coeffs
-    term_sum = 0
+  if match == []:
+    error()
     
-    for coeff in coeffs:
-      term_sum += coeff
-    term = 1/np.sqrt(term_sum)
-    if len(coeffs) == 3:
-      if coeffs[2] == -1 :
-        term *= 1/np.sqrt(3)
-      if coeffs[2] == 1 :
-        term *= np.sqrt(2)
-    return term
-
-#*******************************************************************************************************
-#Returns O and O_bar lists numbered
- 
-class Construct_o_o_bar_list(object):
-  def __init__(self,baryon):
-    self.flavors, self.spin = Construct_interpolation_field(baryon,flav_dict).build_baryon()
-    
-  def produce_o_lists(self):
-    flavors =self.flavors
-    O = []
-    O_bar = []
-    for num,flv in enumerate(flavors):
-      O_bar.append(flv.split('-'))
-     
-    O = copy.deepcopy(O_bar)
-    for element in O:
-      element.insert(0,element.pop())
-    
-    return O,O_bar
-  
-  def num_o_obar(self,O,O_bar):
-    for num,item in enumerate(O_bar) :
-      if not item[-1].isnumeric() :
-        if O_bar[num][-1] == '^':
-          O_bar[num] = O_bar[num][:-1] + str(num)
-        else:
-          O_bar[num] += '^'+str(num)
-      if not O[num][-1].isnumeric():
-        O[num] += str(num+3)
-
-    return O,O_bar
-
-#***************************Frequency count*******************************************************
-
-#Returns the max and min appearence frequency and the flavors related to these freqs.
-
-class Count_appear_freq(object):
-  def __init__(self,alist):
-    counter = collections.Counter(alist)
-    self.counter_values = list(counter.values())
-    self.counter_keys = list(counter.keys())
-    
-  def min_freq_method(self):
-    counter_values = self.counter_values
-    counter_keys = self.counter_keys
-    index_min = np.argmin(counter_values)
-    min_freq = counter_values[index_min]
-    min_freq_key = counter_keys[index_min]
-    return min_freq,min_freq_key
-  
-  def max_freq_method(self):
-    counter_values = self.counter_values
-    counter_keys = self.counter_keys
-    index_max =np.argmax(counter_values)
-    max_freq = counter_values[index_max]
-    max_freq_key = counter_keys[index_max]
-    return max_freq,max_freq_key
-
-#*****************Propagator products*************************************************************
-
-#Returns thr propagator products
-
-class Make_propagator_products(object):
-  def __init__(self,O,O_bar):
-    self.O = O
-    self.O_bar = O_bar
-    self.templist = []
-    for k,itm in enumerate(O):
-      self.templist.append(itm[0])
-    self.min_freq, self.min_freq_key = Count_appear_freq(self.templist).min_freq_method()
-    self.max_freq, self.max_freq_key = Count_appear_freq(self.templist).max_freq_method()
-    
-  def products(self):
-    O = self.O
-    O_bar = self.O_bar
-    min_freq, min_freq_key = self.min_freq, self.min_freq_key
-    max_freq, max_freq_key = self.max_freq, self.max_freq_key
-    prop_list = []
-    newlist= [[]]
-    templist2= []
-    dd = []
-    sum_indx_O = 0
-    sum_indx_O_bar = 0
-    sum1 = 0
-    sum2 = 0
-    
-    for item in O_bar:
-      sum_indx_O_bar += int(item[-1])
-      
-    for item in O:
-      sum_indx_O += int(item[-1])
-    
-    for i,item2 in enumerate(O_bar):
-      for j,item in enumerate(O):
-        if item[0] == item2[0]:
-          prop_list.append([item2,item])
-          if min_freq_key == item[0:1] and max_freq ==2:
-            dd = [item2,item]
-            
-    start = 0
-    end = 3 
-    while(len(prop_list) != 0):
-      sum1 =0
-      sum2 =0
-      for item in prop_list[start:end]:
-        templist2.append(item)
-      if len(templist2) == 4:
-        if templist2[0][0][-1] == templist2[1][0][-1] or templist2[0][1][-1] == templist2[1][1][-1]: 
-          templist2.remove(templist2[1])
-        if len(templist2) == 2:
-          continue
-        if templist2[0][0][-1] == templist2[2][0][-1] or templist2[1][0][-1] == templist2[2][0][-1]:
-          templist2.remove(templist2[2])
-        if len(templist2) == 2:
-          continue
-        if templist2[0][1][-1] == templist2[2][1][-1] or templist2[1][1][-1] == templist2[2][1][-1]:
-          templist2.remove(templist2[2])
-        if len(templist2) == 2:
-          continue
-          
-      if len(prop_list)== 2:
-        newlist.append(prop_list)
-        newlist[-1].append(dd)
-        prop_list = []
-        continue
+  result_props=[]
+  result_signs=[]
+  for i,qs in enumerate(others):
+    if qs == []:
+      result_props.append([match[i],])
+      result_signs.append(signs[i])
+    else:
+      w_props, w_signs = wick(qs)
+      for w_p,w_s in zip(w_props, w_signs):
+        result_props.append([match[i],]+w_p)
+        result_signs.append(signs[i]*w_s)
         
-      if sum1 != sum_indx_O_bar :
-        for item2 in templist2:
-          sum1 += int(item2[0][-1])
-      if sum2 != sum_indx_O :
-        for item2 in templist2:
-          sum2 += int(item2[1][-1])
-          
-      if sum1 == sum_indx_O_bar and sum2 == sum_indx_O :
-        templist2.sort(key= lambda x: x[0][-1])
-        for i in templist2:
-          prop_list.remove(i)
-        if templist2 not in newlist:
-          newlist.append(templist2)
-        
-        if max_freq == 2 or max_freq ==1 :
-          continue
-        else:
-          templist3 = copy.deepcopy(templist2)
-          save_var_temp = templist3[1][1][-1]
-          templist3[1][1] = templist3[1][1].replace(templist3[1][1][-1],templist3[2][1][-1])
-          templist3[2][1] = templist3[2][1].replace(templist3[2][1][-1],save_var_temp)
-          newlist.append(templist3) 
-     
-        templist2 = []
-        start =0 
-        end=3
-        sum1 = 0
-        sum2 = 0
-      start = end
-      end += 1 
-      if end ==len(prop_list)+1:
-        start = 0
-        end = 1
-    newlist.remove(newlist[0])
-    return newlist
+  return result_props, result_signs
 
-#*******************************************************************************************
-#Returns the correct sign, taking into account the prop prods formation
-#and levi-civita permutations
-
-class Get_sign_for_single_o_obar(object):
-  def __init__(self,prop_prod_num,items,sign_from_indx_list):
-    self.items = items
-    self.sign_from_indx_list = sign_from_indx_list
-    self.prop_prod_num = prop_prod_num
-    
-  def get_sign(self):
-    items = self.items
-    sign = 1
-    
-    for enumi,item in enumerate(items[:2]):  
-      diff = abs(int(item[1][-1]) - int(item[0][-1])-1)
-      if enumi == 0:
-        tmp_save = item[1][-1]
-      if tmp_save < item[1][-1]:
-        for q in range(enumi):
-          diff -= 1
-      mod = np.mod(diff,2) 
-      if mod != 0 :
-        sign *= -1
-    return sign
   
-  def get_correct_sign(self):
-    sign =self.get_sign()   
-    diff = 0
-    sign_from_indx_list = self.sign_from_indx_list
-    
-    for num ,ilist in enumerate(sign_from_indx_list):
-      if num == 0:
-        tmp = int(ilist)
-      diff += tmp - int(ilist)
-      tmp = int(ilist)
+class expectation_value(object):
+  '''
+  Expectation value class. List of propagators with coefficients
+  '''
+  def __init__(self,J,J_bar):
+    self.propagators, signs = wick(incr_s_c(J.quarks + J_bar.quarks))
+    coeff = J.coeff*J_bar.coeff
+    self.coeffs = []
+    for sign in signs:
+      self.coeffs.append(coeff*sign)
 
-    if diff ==-1 or diff ==2:
-      sign *= -1
-    return sign
+  def default_view(self):
+    '''
+    Gets the default view of the propagators in the class,
+    giving a specific order for flavor, spin and color indeces
+    '''
+    fls=[p.fl for p in self.propagators[0]]
+    fls.sort(key= lambda val : SORT_ORDER[val])
+    default=[]
+    for i,fl in enumerate(fls):
+      q1=quark(fl,False,2*i,i)
+      q2=quark(fl,True,2*i+1,len(fls)+i)
+      default.append(propagator(q1,q2))
+    return default
 
-#*************************Change indices**************************************************************
-#Returns a list with the correct order of gamma indices
+  def map_to_default_view(self):
+    '''
+    Returns the map of spin and color indeces to
+    obtain the default view of the class
+    '''
+    map_c = []
+    map_s = []
+    for props in self.propagators:
+      my_map_c=[]
+      my_map_s=[]
+      default=self.default_view()
+      for prop in props:
+        fl = prop.fl
+        dprop = None
+        for i,p in enumerate(default):
+          if p.fl==fl:
+            dprop = default.pop(i)
+            break
+        if dprop is None:
+          error()
+        my_map_c += list(zip(prop.c,dprop.c))
+        my_map_s += list(zip(prop.s,dprop.s))
+      map_c.append(my_map_c)
+      map_s.append(my_map_s)
+    return map_c,map_s
 
-class Change_indx(object):
-  def __init__(self,indx_list1,o,item):
-    self.indx_list1 = indx_list1
-    self.o = o
-    self.item = item
-    
-  def change_indx_to_gamma(self):
-    indx_list1 = self.indx_list1
-    o = self.o
-    tmp = []
-    hold_exchange = []
-    item = self.item
+  def __repr__(self) :
+    ls=[]
+    for coeff, props in zip(self.coeffs, self.propagators):
+      s=""
+      if coeff != 1:
+        s=repr(coeff)+" "
+      s+=" * ".join([repr(p) for p in props])
+      ls.append(s)
+    return " + ".join(ls)
 
-    for num,it in enumerate(item):
-      if it[1][-1] != o[num][-1] :
-        hold_exchange.append([it[1][-1],o[num][-1]])
- 
-    if not hold_exchange :
-      return indx_list1
-    for num,it in enumerate(indx_list1):
-      for tmp in hold_exchange:
-        if it == tmp[0]:
-          indx_list1[num] = tmp[1]
-    return indx_list1
+def baryon_bar(flavs):
+  '''
+  Rule to bar the string of a baryon interpolating field
+  '''
+  flavs=flavs.split("-")
+  if len(flavs)!=3:
+    error()
+  new=[flavs[2],] + flavs[:2]
+  for i,fl in enumerate(new):
+    new[i]+="^"
+  return "-".join(new)
 
-#***********************Gamma coefs and sign********************************************************************************
-#This is where we call some of the previous classes
-#Combine them and as a result we have
-#the gamma coeff and sign for each o-o_bar combination.
-
-class Return_gamma_coeff_and_gamma_sign(object):
-  def __init__(self,O,O_bar,baryon):
-    self.O = O
-    self.O_bar = O_bar
-    self.baryon = baryon
-    
-  def combine_all(self):
-    O = self.O
-    O_bar = self.O_bar 
-    baryon =self.baryon
-    sign_o_o_bar_gamma_ilist = []
-    interpol_sign_o_o_bar = []
-    sign = []
-    new_o = []
-    new_o_bar = []
-    o_o_bar_gamma_ilist = []
-    prop_prod_general = []
-    
-    indxap = 'ap'
-    indxbp = 'bp'
-    indxcp = 'cp'
-
-    interp_field_sign = Construct_interpolation_field(baryon,flav_dict).term_coeff()
-    
-    for i,o in enumerate(O):
-      for j,o_bar in enumerate(O_bar):
-        new_o,new_o_bar = Construct_o_o_bar_list(baryon).num_o_obar(o,o_bar)
-       # print("***************NEW O - O_bar combination*************************")
-        
-        interpolatingf_sign_o = interp_field_sign[i]
-        interpolatingf_sign_o_bar = interp_field_sign[j]
-        interpol_sign_o_o_bar = interpolatingf_sign_o * interpolatingf_sign_o_bar
+def perm_parity(lst):
+  '''
+  Given a permutation of the digits 0..N in order as a list, 
+  returns its parity (or sign): +1 for even parity; -1 for odd.
+  '''
+  parity = 1
+  for i in range(0,len(lst)-1):
+    if lst[i] != i:
+      parity *= -1
+      mn = min(range(i,len(lst)), key=lst.__getitem__)
+      lst[i],lst[mn] = lst[mn],lst[i]
+  return parity
   
-        propagator_prod = Make_propagator_products(new_o,new_o_bar).products()
-        for item in propagator_prod:
-          item.sort(key= lambda x: x[0][-1]) 
-      
-        #print("Gamma indices:")
-        for enumer,item in enumerate(propagator_prod):
-          indx_list = ['3','4','5']
-          indxa,indxb,indxc = Change_indx(indx_list,new_o,item).change_indx_to_gamma()
-          sign_o_o_bar_gamma_ilist = [indxa,indxb,indxc]
-          
-          index_dict = {'3':'a','4':'b','5':'c'}
-          indxa = index_dict[indxa]
-          indxb = index_dict[indxb]
-          indxc = index_dict[indxc]
-          
-          sign_value = Get_sign_for_single_o_obar(enumer,item,sign_o_o_bar_gamma_ilist).get_correct_sign()
-          sign.append(sign_value*interpol_sign_o_o_bar)
-                    
-          o_o_bar_gamma_ilist.append([indxcp,indxa,indxap,indxbp,indxb,indxc])
-          
-          item.sort(key=lambda val: SORT_ORDER[val[0][:2]])
-        prop_prod_general.append(propagator_prod)  
-   
-    return prop_prod_general,sign,o_o_bar_gamma_ilist
-  
-#*************************************Call Save Indices**************************************************
-#Returns  the non zero gamma elements
-class Non_zero_gamma(object):
-  def __init__(self,baryon,gammas,sign_gamma_final,o_o_bar_gamma_indexlist):
-    self.gammas = gammas
-    self.sign_gamma_final = sign_gamma_final
-    self.o_o_bar_gamma_indexlist = o_o_bar_gamma_indexlist
-    self.baryon = baryon
-    
-  def give_non_zero_gamma(self):
-    gammas = self.gammas
-    sign_gamma_final = self.sign_gamma_final
-    o_o_bar_gamma_indexlist = self.o_o_bar_gamma_indexlist
+def sign_from_map_c(map_c):
+  '''
+  Takes into account the sign produced by remapping of color indeces in the epsilon
+  '''
+  e=[0]*len(map_c)
+  for m in map_c:
+    e[m[0]] = m[1]
+  return perm_parity(e)
 
-    #To find the interpolating field coefficient
-    i_field_general_coeff = Construct_interpolation_field(self.baryon,flav_dict).baryon_interpolating_field_coeff()
-    i_field_general_coeff = i_field_general_coeff * i_field_general_coeff
-    
-    final_list={}
-    for name in gammas.keys():
-      save_indices = {}
-      for (sign,indices) in zip(sign_gamma_final,o_o_bar_gamma_indexlist):
-        for ap in range(4):
-          for a in range(4):
-            for bp in range(4):
-              for b in range(4):
-                for cp in range(4):
-                  for c in range(4):
-                    di = {'ap':ap,'bp':bp,'cp':cp,'a':a,'b':b,'c':c}
-                    indxcp,indxa,indxap,indxbp,indxb,indxc = indices
-                    if type(gammas[name]) is list:
-                      for g in gammas[name]:
-                        gammaA,gammaB,gammaC = g
-                        quantity = sign * gammaA[di[indxcp],di[indxa]]*gammaB[di[indxap],di[indxbp]]*gammaC[di[indxb],di[indxc]]
-                        if quantity != complex(0) :
-                          key=(di[indxap],di[indxa],di[indxbp],di[indxb],di[indxcp],di[indxc])
-                          if key in save_indices.keys():
-                            save_indices[key] += quantity
-                          else:
-                            save_indices[key] = quantity
-                    else:
-                      gammaA,gammaB,gammaC = gammas[name]
-                      quantity = sign * gammaA[di[indxcp],di[indxa]]*gammaB[di[indxap],di[indxbp]]*gammaC[di[indxb],di[indxc]]
-                      if quantity != complex(0) :
-                        key=(di[indxap],di[indxa],di[indxbp],di[indxb],di[indxcp],di[indxc])
-                        if key in save_indices.keys():
-                          save_indices[key] += quantity
-                        else:
-                          save_indices[key] = quantity
-      for key,value in list(save_indices.items()):
-        if value == complex(0):
-          save_indices.pop(key)
+def non_zero_combinations(matrices):
+  '''
+  Return the non-zero indeces of the outer product of matrices
+  '''
+  all_s1=[[]]
+  all_s2=[[]]
+  all_val=[1]
+  for m in matrices:
+    s1,s2=np.nonzero(m)
+    val=m[np.nonzero(m)]
+    tmp_s1=[]
+    tmp_s2=[]
+    tmp_val=[]
+    for i1,i2,i in zip(all_s1,all_s2,all_val):
+      for j1,j2,j in zip(s1,s2,val):
+        tmp_s1.append(i1+[j1,])
+        tmp_s2.append(i2+[j2,])
+        tmp_val.append(i*j)
+    all_s1=tmp_s1
+    all_s2=tmp_s2
+    all_val=tmp_val
+  arr=np.array(list(zip(all_s1,all_s2))).transpose(0,2,1).reshape((-1,6))
+  return arr, all_val
 
-      final_list[name] = save_indices
+def remap(arr,map_s):
+  '''
+  Remap the list of indeces in arr with the map in map_s
+  '''
+  new=[]
+  for a in arr:
+    n=[0]*len(a)
+    for ms in map_s:
+      n[ms[1]]=a[ms[0]]
+    new.append(n)
+  return new
+
+# Here we perform the contractions
+prop_prods =  defaultdict(list)
+for baryon,info in baryons.items():
+  J=[interpolating_field(flavs, coeff) for flavs, coeff in zip(info['flavs'],info['coeffs'])]
+  J_bar=[interpolating_field(baryon_bar(flavs), coeff) for flavs, coeff in zip(info['flavs'],info['coeffs'])]
+  exps=[expectation_value(j,j_bar) for j in J for j_bar in J_bar]
+  ordered = exps[0].default_view()
+  coeffs = []
+  map_c = []
+  map_s = []
+  for exp in exps:
+    coeffs += exp.coeffs
+    mc,ms = exp.map_to_default_view()
+    map_c += mc
+    map_s += ms
+  for i,mc in enumerate(map_c):
+    coeffs[i]*=sign_from_map_c(mc)
+
+  final_list={}
+  for gamma,matrices in all_gammas[info["spin"]].items():
+    final_list[gamma]={}
+    for gammas in matrices:
+      non_zero,vals = non_zero_combinations([gammas[1],gammas[0],gammas[2]])
+      for i,ms in enumerate(map_s):
+        mapped=remap(non_zero,ms)
+        for m,v in zip(mapped,vals):
+          m=repr(m)
+          if m in final_list[gamma]:
+            final_list[gamma][m]+=v*coeffs[i]
+          else:
+            final_list[gamma][m]=v*coeffs[i]
+    for m,v in list(final_list[gamma].items()):
+      if np.abs(v) == 0:
+        del final_list[gamma][m]
     
-    return final_list
+
+  flv_key = "-".join([p.fl for p in ordered])
+  prop_prods[flv_key].append([baryon,final_list])
+
+
 
 #************************************Tools**************************************************************
 def write_gamma_line(line):
@@ -663,24 +551,6 @@ def remove_symbols(name):
   name = name.replace('*','St')
   name = name.replace('\'','Pr')
   return name
-
-#************************************Baryons saved all together*************************************************
-    
-prop_prods =  defaultdict(list)
-for enumb,baryon in enumerate(flav_dict.keys()):
-  flavor ,spin = Construct_interpolation_field(baryon,flav_dict).build_baryon()
-  gammas = all_gammas[spin]  
-  
-  flv_list1,flv_list2 = Construct_o_o_bar_list(baryon).produce_o_lists()
-  O = copy.deepcopy(flv_list1)
-  O_bar = copy.deepcopy(flv_list2)
-  flv_list1[0].sort(key= lambda val : SORT_ORDER[val])
-
-  prop_prod_general,sign_gamma_final,o_o_bar_gamma_indexlist = Return_gamma_coeff_and_gamma_sign(O,O_bar,baryon).combine_all()
-  final_list = Non_zero_gamma(baryon,gammas,sign_gamma_final,o_o_bar_gamma_indexlist).give_non_zero_gamma()
-  
-  flv_key = "-".join(flv_list1[0])
-  prop_prods[flv_key].append([baryon,final_list])
 
 
 file1 = open(sys.argv[1],"w")
@@ -711,8 +581,8 @@ for f in file1,file2:
   f.write(" *        " +  write_gamma_line(gt[2]) + "\n")
   f.write(" *        " +  write_gamma_line(gt[3]) + " ] \n")
   f.write(" *\n")
-  for fl_keys in flav_dict.keys(): 
-    f.write(" * " + fl_keys + " : " + repr(flav_dict[fl_keys]) + "\n")
+  for fl_keys in baryons.keys(): 
+    f.write(" * " + fl_keys + " : " + repr(baryons[fl_keys]) + "\n")
   f.write(" */\n")
   
 # Printing the data
@@ -734,7 +604,7 @@ for prop in prop_prods.values():
         file1.write("extern float2 "+ remove_symbols(baryon[0])+"_"+gamma.replace('-','_')+"_vals" + "[" + repr(len(vals)) + "];\n")
         string = "int "+ remove_symbols(baryon[0])+"_"+gamma.replace('-','_')+"_idxs" + "[" + repr(len(vals)) + "*6] = { "
         for x in  vals.keys():
-          string += repr(x).replace('(','').replace(')',', ')
+          string += repr(x).replace('\'[','').replace(']\'',', ')
         string += "};\n"
         file2.write(string)
         file1.write("extern int "+ remove_symbols(baryon[0])+"_"+gamma.replace('-','_')+"_idxs" + "[" + repr(len(vals)) + "*6];\n")
