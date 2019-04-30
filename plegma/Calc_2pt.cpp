@@ -95,8 +95,8 @@ int main(int argc, char **argv)
 	corr.contractMesons(propUP, propDN, sourcePositions[isource]);
 	
 	char *dset1, *dset2;
-	asprintf(&dset1, "u(%f)d(%f)", mu_ud, -1*mu_ud);
-	asprintf(&dset2, "d(%f)u(%f)", -1*mu_ud, mu_ud);
+	asprintf(&dset1, "twop_mesons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
+	asprintf(&dset2, "twop_mesons_d[%+1.1e]u[%+1.1e]", -1*mu_ud, mu_ud);
 	corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	free(dset1); free(dset2);
 	corr.writeFile(twop_filename.c_str(), corr_file_format);
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 	    corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], only_st, only_ch);
 	    char * group;
 	    
-	    asprintf(&group, "u(%f)d(%f)s(%f)c(%f)%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],
+	    asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]s[%+1.1e]c[%+1.1e]%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],
 		     only_st ? "_only-s" : "", only_ch ? "_only-c" : "");
 	    corr.setGroups(group);
 	    free(group);
@@ -170,23 +170,23 @@ int main(int argc, char **argv)
 
 	    corr.contractMesons(propST, propCH, sourcePositions[isource]);
 	    char *dset1, *dset2;
-	    asprintf(&dset1, "s(%f)c(%f)", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
-	    asprintf(&dset2, "c(%f)s(%f)", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
+	    asprintf(&dset1, "twop_mesons_s[%+1.1e]c[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
+	    asprintf(&dset2, "twop_mesons_c[%+1.1e]s[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
 	    corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	    free(dset1); free(dset2);
 	    corr.writeFile(twop_filename.c_str(), corr_file_format);
 
 	    if(!only_ch) {
 	      corr.contractMesons(propUP, propST, sourcePositions[isource]);
-	      asprintf(&dset1, "u(%f)s(%f)", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
-	      asprintf(&dset2, "s(%f)u(%f)", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
+	      asprintf(&dset1, "twop_mesons_u[%+1.1e]s[%+1.1e]", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
+	      asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
 	      corr.writeFile(twop_filename.c_str(), corr_file_format);
 	      
 	      corr.contractMesons(propDN, propST, sourcePositions[isource]);
-	      asprintf(&dset1, "d(%f)s(%f)", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
-	      asprintf(&dset2, "s(%f)d(%f)", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
+	      asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
+	      asprintf(&dset2, "twop_mesons_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
 	      corr.writeFile(twop_filename.c_str(), corr_file_format);
@@ -194,15 +194,15 @@ int main(int argc, char **argv)
 
 	    if(!only_st) {
 	      corr.contractMesons(propUP, propCH, sourcePositions[isource]);
-	      asprintf(&dset1, "u(%f)c(%f)", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
-	      asprintf(&dset2, "c(%f)u(%f)", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
+	      asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
+	      asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
 	      corr.writeFile(twop_filename.c_str(), corr_file_format);
 	      
 	      corr.contractMesons(propDN, propCH, sourcePositions[isource]);
-	      asprintf(&dset1, "d(%f)c(%f)", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
-	      asprintf(&dset2, "c(%f)d(%f)", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
+	      asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
+	      asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
 	      corr.writeFile(twop_filename.c_str(), corr_file_format);
