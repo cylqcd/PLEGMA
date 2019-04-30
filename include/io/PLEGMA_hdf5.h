@@ -99,6 +99,11 @@ protected:
     return rank;
   }
 
+  inline void wait(){
+    if(HGC_verbosity > 2) PLEGMA_printf("Waiting...\n");
+    MPI_Barrier(comm);
+  }
+
   // Some tools for hsize_t
   inline hsize_t product(std::vector<hsize_t> dims){
     hsize_t product = 1;
@@ -124,7 +129,7 @@ protected:
     for(size_t i=0; i < shape1.size(); i++) res.push_back(shape1[i] + shape2[i]);
     return res;
   }
-  inline std::vector<hsize_t> zero_like(std::vector<hsize_t> shape){
+  inline std::vector<hsize_t> zeros_like(std::vector<hsize_t> shape){
     std::vector<hsize_t> res;
     for(size_t i=0; i < shape.size(); i++) res.push_back(0);
     return res;
@@ -254,16 +259,14 @@ protected:
 
   //TODO: This function should be overloaded for different type of attr_value
   inline void _write_attribute(std::string object, std::string attr_name, std::string attr_value) {
-    // In this function only one processor writes
-    if(getRank() > 0) return;
-
     hid_t obj_id = H5Oopen(current(), object.c_str(), H5P_DEFAULT);
     hid_t attrdat_id = H5Screate(H5S_SCALAR);
     hid_t type_id = H5Tcopy(H5T_C_S1);
     H5Tset_size(type_id, attr_value.length());
     hid_t attr_id = H5Acreate2(obj_id, attr_name.c_str(), type_id, 
 			       attrdat_id, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr_id, type_id, attr_value.c_str());
+    if(getRank() == 0)
+      H5Awrite(attr_id, type_id, attr_value.c_str());
     H5Aclose(attr_id);
     H5Tclose(type_id);
     H5Sclose(attrdat_id);
@@ -279,6 +282,20 @@ protected:
 				 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Sclose(filespace);
     return dataset_id;
+  }
+
+  template<typename T>
+  inline void _write_dataset_parallel(hid_t dataset_id, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start, bool serial=false) {
+    hid_t filespace = H5Dget_space(dataset_id);
+    hid_t subspace   = H5Screate_simple(lshape.size(), lshape.data(), NULL);
+    H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start.data(), NULL, lshape.data(), NULL);
+    hid_t plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, serial ? H5FD_MPIO_INDEPENDENT : H5FD_MPIO_COLLECTIVE);
+    
+    herr_t status = H5Dwrite(dataset_id, datatype<T>(), subspace, filespace, plist_id, buf);
+    if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
+    H5Sclose(subspace);
+    H5Pclose(plist_id);
   }
 
   template<typename T>
@@ -300,29 +317,16 @@ protected:
 	  tmp[i] = buf[j];
 	}
       }
-      
-      herr_t status = H5Dwrite(dataset_id, datatype<T>(), H5S_ALL, H5S_ALL, H5P_DEFAULT, tmp);
-      if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
+
+      _write_dataset_parallel(dataset_id, tmp, shape, shape, zeros_like(shape), true);
 
       if(needs_shift) {
 	hostFree(tmp, product(shape)*sizeof(T));
       }
+    } else {
+      _write_dataset_parallel(dataset_id, buf, shape, ones_like(shape), start.empty() ? zeros_like(shape) : start, true);
     }
     H5Dclose(dataset_id);
-  }
-
-  template<typename T>
-  inline void _write_dataset_parallel(hid_t dataset_id, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start) {
-    hid_t filespace = H5Dget_space(dataset_id);
-    hid_t subspace   = H5Screate_simple(lshape.size(), lshape.data(), NULL);
-    H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start.data(), NULL, lshape.data(), NULL);
-    hid_t plist_id = H5Pcreate(H5P_DATASET_XFER);
-    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-    
-    herr_t status = H5Dwrite(dataset_id, datatype<T>(), subspace, filespace, plist_id, buf);
-    if(status<0) PLEGMA_error("write_dataset: Unsuccessful writing of the dataset. Exiting\n");
-    H5Sclose(subspace);
-    H5Pclose(plist_id);
   }
   
   template<typename T>
@@ -359,7 +363,7 @@ protected:
 	std::vector<hsize_t> tmp_start = start;
 	// creating the shifted case
 	if(!exceeding_id.empty() && i < my_n_writings) {
-	  std::vector<hsize_t> shift = zero_like(start);
+	  std::vector<hsize_t> shift = zeros_like(start);
 	  for(size_t j=0; j<lshape.size(); j++)
 	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
 
@@ -489,7 +493,7 @@ public:
     if(check != std::string::npos)
       return write_attribute(object.substr(check+1), attr_name, attr_value,
 			     path+"/"+object.substr(0,check));
-    if(HGC_verbosity > 2) PLEGMA_printf("Going to writte attribute %s in path %s \n", attr_name.c_str(),
+    if(HGC_verbosity > 2) PLEGMA_printf("Going to write attribute %s in path %s \n", attr_name.c_str(),
 					path.c_str());
     cd(path);
     _write_attribute(object, attr_name, attr_value);
@@ -512,7 +516,7 @@ public:
     if(check != std::string::npos)
       return write_dataset(name.substr(check+1), buf, shape, lshape, start,
 			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
-    if(HGC_verbosity > 2) PLEGMA_printf("Going to writte dataset %s in path %s \n", name.c_str(),
+    if(HGC_verbosity > 2) PLEGMA_printf("Going to write dataset %s in path %s \n", name.c_str(),
 					path.c_str());
     cd(path);
 
