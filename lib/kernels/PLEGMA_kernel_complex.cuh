@@ -1,4 +1,3 @@
-#include <PLEGMA.h>
 #include <errno.h>
 #include <mpi.h>  
 #include <limits>
@@ -6,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
+#include <PLEGMA_global.h>
 
 #ifndef PLEGMA_KERNEL_COMPLEX_CUH
 #define PLEGMA_KERNEL_COMPLEX_CUH

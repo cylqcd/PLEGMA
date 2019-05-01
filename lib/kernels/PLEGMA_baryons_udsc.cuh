@@ -1,5 +1,5 @@
 #pragma once
-
+#include <PLEGMA_Correlator.h>
 #include <PLEGMA_baryons_udsc_arrays.cuh>
 
 template<typename FloatA, typename FloatC>

@@ -1,4 +1,5 @@
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
