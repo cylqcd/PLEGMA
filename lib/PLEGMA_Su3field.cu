@@ -106,14 +106,14 @@ void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA
       int spath1[] = {i,dir,4+i};
       std::vector<int> vspath1(spath1,spath1+3);
       tmp2.path(vspath1,u,tmp1);
-      xpby(*this,*this,tmp2,rho);
+      this->add(tmp2,rho);
     }
   for(int i = 0 ; i < D3D4 ; i++)
     if (i != dir){
       int spath2[] = {4+i,dir,i};
       std::vector<int> vspath2(spath2,spath2+3);
       tmp2.path(vspath2,u,tmp1);
-      xpby(*this,*this,tmp2,rho);
+      this->add(tmp2,rho);
     }
   tmp1.shift(*this,4+dir);
   cudaMemcpy(this->D_elem(), tmp1.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);

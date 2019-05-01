@@ -104,7 +104,8 @@ namespace plegma {
     
     void mulMomentumPhases(std::vector<int> mom, int sign=-1);
 
-    void axpy(PLEGMA_Field &Fin, std::complex<Float> alpha);
+    // F += a*Fin
+    void add(PLEGMA_Field &Fin, std::complex<Float> alpha = 1.);
     std::complex<Float> dot(PLEGMA_Field<Float> &FieldIn);    
     Float norm();
     void cscale(std::complex<Float> val);

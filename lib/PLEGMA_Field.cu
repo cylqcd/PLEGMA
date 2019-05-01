@@ -529,10 +529,11 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   cudaFree(x);
 }
 
+// y=a*x+y
 template<typename Float>
 void PLEGMA_Field<Float>::axpy(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
   Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
-  cuBLAS::axpy(total_length*field_length, a, d_elem, fieldIn.D_elem());
+  cuBLAS::axpy(total_length*field_length, a, fieldIn.D_elem(), d_elem);
 }
 
 
