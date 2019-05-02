@@ -142,6 +142,9 @@ int main(int argc, char **argv) {
 
     // Benchmark shift routine 
     PLEGMA_benchmark(&prop_b,&PLEGMA_Field<float>::shift,"Shift routine", prop_a, 2);
+
+    // Benchmark stout smearing
+    PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::stoutSmearing,"Stout smearing (1 step)",gauge, 1,0.4,3);
   }
 #endif
 
