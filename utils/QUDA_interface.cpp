@@ -2,7 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <invert_quda.h>
 #include <PLEGMA_BLAS.h>
-
+#include <multigrid.h>
 using namespace std;
 using namespace quda;
 
@@ -146,12 +146,9 @@ QUDA_solver::QUDA_solver(double mu) {
   inv_param.mu = mu;
   mg_param.invert_param->mu = mu;
   mg_preconditioner = newMultigridQuda(&mg_param);
-
+  
   bool pc_solution = false;
   bool pc_solve = true;
-  bool mat_solution = ((inv_param.solution_type == QUDA_MAT_SOLUTION) || 
-		       (inv_param.solution_type == QUDA_MATPC_SOLUTION));
-  bool direct_solve = true;
 
   inv_param.secs = 0;
   inv_param.gflops = 0;
@@ -197,6 +194,115 @@ QUDA_solver::~QUDA_solver(){
   delete DPre;
 }
 
+struct MG_Transfer{
+  typedef Transfer* MG::*type;
+  friend type get(MG_Transfer);
+};
+
+struct MG_CoarseParam{
+  typedef MGParam* MG::*type;
+  friend type get(MG_CoarseParam);
+};
+
+struct MG_Coarse{
+  typedef MG* MG::*type;
+  friend type get(MG_Coarse);
+};
+
+template<typename Tag,typename Tag::type M>
+struct Rob {
+  friend typename Tag::type get(Tag){ return M;}
+};
+  
+template struct Rob<MG_Transfer,&MG::transfer>;
+template struct Rob<MG_CoarseParam,&MG::param_coarse>;
+template struct Rob<MG_Coarse,&MG::coarse>;
+
+inline bool changeBlock(int* blockOut, int* blockIn) {
+  bool changed = false;
+  for (int i=0; i<QUDA_MAX_DIM; i++) {
+    if(blockIn[i]!=blockOut[i]) {
+      changed=true;
+      blockOut[i]=blockIn[i];
+    }
+  }
+  return changed;
+}
+
+static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* param, int level = 0)
+{
+  current->nu_pre = param->nu_pre[level];
+  current->nu_post = param->nu_post[level];
+  current->smoother_tol = param->smoother_tol[level];
+  current->cycle_type = param->cycle_type[level];
+  current->global_reduction = param->global_reduction[level];
+  current->omega = param->omega[level];
+  current->smoother = param->smoother[level];
+  
+  if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
+    if(changeBlock(current->geoBlockSize, param->geo_block_size[level])) {
+      delete (mg->*get(MG_Coarse()));
+      mg->*get(MG_Coarse())=nullptr;
+      delete (mg->*get(MG_CoarseParam()));
+      mg->*get(MG_CoarseParam())=nullptr;
+      delete (mg->*get(MG_Transfer()));
+      mg->*get(MG_Transfer())=nullptr;
+      return;
+    }
+    if((mg->*get(MG_CoarseParam()))->Nvec != param->n_vec[level]) {
+      delete (mg->*get(MG_Coarse()));
+      mg->*get(MG_Coarse())=nullptr;
+      delete (mg->*get(MG_CoarseParam()));
+      mg->*get(MG_CoarseParam())=nullptr;
+      return;
+    }
+    
+    updateMultigridParam(mg->*get(MG_Coarse()), mg->*get(MG_CoarseParam()), param, level+1);
+  }
+}
+
+void QUDA_solver::UpdateSolver()
+{
+  delete solver;
+  delete solverParam;
+  delete M;
+  delete MSloppy;
+  delete MPre;
+  delete D; D = NULL;
+  delete DSloppy; DSloppy = NULL;
+  delete DPre; DPre = NULL;
+
+  PLEGMA_printf("Updating multigrid parameters\n");
+  setMultigridParam(mg_param);
+ 
+  setInvertParam(inv_param);
+  checkInvertParam(&inv_param);
+
+  if(((multigrid_solver*) mg_preconditioner)->mgParam->Nvec != mg_param.n_vec[0]) {
+    destroyMultigridQuda(mg_preconditioner);
+    mg_preconditioner = newMultigridQuda(&mg_param);
+  } else {
+    auto *mg = static_cast<multigrid_solver*>(mg_preconditioner);
+    updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
+    updateMultigridQuda(mg_preconditioner, &mg_param);
+  }
+  
+  bool pc_solve = true;
+  createDirac(D, DSloppy, DPre, inv_param, pc_solve);
+
+  // Create Operators
+  M = new DiracM(*D);
+  MSloppy = new DiracM(*DSloppy);
+  MPre = new DiracM(*DPre);
+
+  // Create Solvers
+  solverParam = new SolverParam(inv_param);
+  
+  solver = Solver::create(*solverParam, *M, *MSloppy, 
+  			 *MPre, *profiler);
+
+}
+
 cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
   ColorSpinorField *in = NULL;
   ColorSpinorField *out = NULL;
@@ -206,13 +312,12 @@ cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
   return x;
 }
 
+
 template<typename Float>
 cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
-  bool flag_eo;
+  bool flag_eo=false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
-  else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
-    flag_eo = false;
 
   vectorIn.copyToQUDA(b,flag_eo);
   return solve(b);
@@ -220,11 +325,9 @@ cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
 
 template<typename Float>
 void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &vectorIn){
-  bool flag_eo;
+  bool flag_eo = false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
-  else if(inv_param.matpc_type == QUDA_MATPC_ODD_ODD )
-    flag_eo = false;
 
   x = solve(vectorIn); 
   vectorOut.copyFromQUDA( x, flag_eo);

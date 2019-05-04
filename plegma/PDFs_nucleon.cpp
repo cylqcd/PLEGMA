@@ -61,10 +61,9 @@ int main(int argc, char **argv)
   gaugeWL.copy(gauge);
   
   // ensuring mu positive
-  if(mu<0) mu*=-1.;
-  QUDA_solver *solverUP = new QUDA_solver(mu);
-  mu*=-1.;
-  QUDA_solver *solverDN = new QUDA_solver(mu);
+  if(mu<0)  mu*=-1.;
+  QUDA_solver *solver = new QUDA_solver(mu);
+
   PLEGMA_Vector<double> vectorIn;
   PLEGMA_Vector<double> vectorOut;
   PLEGMA_Vector<double> vectorAuxD;
@@ -110,16 +109,25 @@ int main(int argc, char **argv)
 	vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
     
 	PLEGMA_printf("Going to invert UP for component %d\n", isc);
-	solverUP->solve(vectorOut, vectorIn);
+	solver->solve(vectorOut, vectorIn);
 	vectorAuxF.copy(vectorOut);
 	propUP->absorb(vectorAuxF, isc/3, isc%3);
 	vectorAuxD.gaussianSmearing(vectorOut, smearedGauge , nsmearGauss, alphaGauss);
 	vectorAuxF.copy(vectorAuxD);
 	propUP3D.absorb(vectorAuxF,global_fixSinkTime, isc/3, isc%3);
-    
+      }
+	
+
+      if(mu>0) {
+	mu*=-1.;
+	solver->UpdateSolver();
+      }
+      for(int isc = 0 ; isc < 12 ; isc++){
+	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
     
 	PLEGMA_printf("Going to invert DN for component %d\n", isc);
-	solverDN->solve(vectorOut, vectorIn);
+	solver->solve(vectorOut, vectorIn);
 	vectorAuxF.copy(vectorOut);
 	propDN->absorb(vectorAuxF, isc/3, isc%3);
 	vectorAuxD.gaussianSmearing(vectorOut, smearedGauge , nsmearGauss, alphaGauss);
@@ -155,7 +163,19 @@ int main(int argc, char **argv)
 	    vectorAuxD.copy(vectorAuxF);
 	    vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 	    // check if we need to normalize the seqsource for mix precision solver
-	    if(nucleon == PROTON) solverDN->solve(vectorOut, vectorIn); else solverUP->solve(vectorOut, vectorIn);
+	    if(nucleon == PROTON){
+	      if(mu<0) {
+		mu*=-1.;
+		solver->UpdateSolver();
+	      }
+	    }
+	    else{
+	      if(mu>0) {
+		mu*=-1.;
+		solver->UpdateSolver();
+	      }
+	    }
+	    solver->solve(vectorOut, vectorIn);
 	    // if we normalize the seqsource we have to take it out here
 	    vectorAuxF.copy(vectorOut);
 	    seqPropOut->absorb(vectorAuxF, nu, c2);
@@ -218,7 +238,19 @@ int main(int argc, char **argv)
 	    vectorAuxD.copy(vectorAuxF);
 	    vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 	    // check if we need to normalize the seqsource for mix precision solver
-	    if(nucleon == PROTON) solverUP->solve(vectorOut, vectorIn); else solverDN->solve(vectorOut, vectorIn);
+	    if(nucleon == PROTON){
+	      if(mu<0) {
+		mu*=-1.;
+		solver->UpdateSolver();
+	      }
+	    }
+	    else{
+	      if(mu>0) {
+		mu*=-1.;
+		solver->UpdateSolver();
+	      }
+	    }
+	    solver->solve(vectorOut, vectorIn);
 	    // if we normalize the seqsource we have to take it out here
 	    vectorAuxF.copy(vectorOut);
 	    seqPropOut->absorb(vectorAuxF, nu, c2);
@@ -302,8 +334,7 @@ int main(int argc, char **argv)
   // delete[] nucleonThrpWLM_CP1;
   // delete[] nucleonThrpWLM_CP2;
 
-  delete solverUP;
-  delete solverDN;
+  delete solver;
   
   finalize();
   return 0;
