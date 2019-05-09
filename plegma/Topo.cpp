@@ -1,0 +1,30 @@
+#include <PLEGMA.h>
+#include <PLEGMA_utils.h>
+
+using namespace plegma;
+using namespace quda;
+
+int main(int argc, char **argv)
+{
+  initializeOptions(argc, argv); // Put list of options later
+  //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+
+  //=========================================================================================================//
+  initializePLEGMA();
+
+  // Allocation done on BOTH, DEVICE and HOST
+  PLEGMA_Gauge<double> gauge(BOTH);
+
+  // Reading from Lime file and loading to device
+  gauge.readFromLime( latfile.c_str() );
+  gauge.load();
+  
+  // Compuiting plaquette on device in three different way for crosschecking
+  gauge.calculateTopo( PLAQUETTE );
+
+  // Loading to QUDA and computing plaquette also there
+  
+  finalize();
+ 
+  return 0;
+}
