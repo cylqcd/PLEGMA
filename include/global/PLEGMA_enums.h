@@ -29,4 +29,4 @@ static inline std::string getGammasString(std::vector<GAMMAS> gammas) {
 
 enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
 enum LEFTRIGHT {LEFT, RIGHT};
-enum TOPO_CHARGE_DEF {PLAQUETTE,CLOVER};
+enum TOPO_CHARGE_DEF {PLAQUETTE,CLOVER,IMP_CLOVER};

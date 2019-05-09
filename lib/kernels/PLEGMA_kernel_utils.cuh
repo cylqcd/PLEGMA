@@ -645,4 +645,32 @@ namespace plegma {
   }
 
 }
+
+//Used in Plegma_topocharge
+template<typename Float>
+__inline__ __device__ void init_to_zero(Float2<Float> a[N_COLS][N_COLS]){
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++){
+    #pragma unroll
+    for(int j=0; j<N_COLS; j++) {
+      a[i][j].x = (Float) 0.;
+      a[i][j].y = (Float) 0.;
+    }
+  }
+}
+
+template<typename FloatA, typename FloatB>
+__inline__ __device__ FloatA trace_mul_ImG_ImG(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
+  FloatA tr=0.;
+
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++){
+    #pragma unroll
+    for(int j=0; j<N_COLS; j++) {
+      tr+=((a[i][j]-conj(a[j][i]))*(b[j][i]-conj(b[i][j]))).x;
+    }
+  }
+  return -tr/4.;
+}
+
 #endif
