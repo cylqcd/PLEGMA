@@ -190,45 +190,45 @@ int main(int argc, char **argv)
 
 
 
-//   qloops_std.clearAccumBuffs();
-//   qloops_gen.clearAccumBuffs();
-//   std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
-//   for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
-//     if(debugMode) source.setUnit(indDof);
-//     else source.stochastic_Z(4); // hardcoded 4 roots of one
-//     for(int ih = hadamLow; ih < hadamHgh; ih++){
-// 	for(int isc = 0; isc < Nsc; isc++){
-// 	  if(spinColorDil){ sourceDil->dilutespincolor(source,isc/N_COLS,isc%N_COLS);}
-// 	  if(spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(*sourceDil,*hprop,ih,indDof);}
-// 	  else if(!spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(source,*hprop,ih,indDof);}
+  qloops_std.clearAccumBuffs();
+  qloops_gen.clearAccumBuffs();
+  std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
+  for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
+    if(debugMode) source.setUnit(indDof);
+    else source.stochastic_Z(4); // hardcoded 4 roots of one
+    for(int ih = hadamLow; ih < hadamHgh; ih++){
+	for(int isc = 0; isc < Nsc; isc++){
+	  if(spinColorDil){ sourceDil->dilutespincolor(source,isc/N_COLS,isc%N_COLS);}
+	  if(spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(*sourceDil,*hprop,ih,indDof);}
+	  else if(!spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(source,*hprop,ih,indDof);}
 	  
-// 	  if(spinColorDil || k_probing>0) solverDN->solve(phi,*sourceDil); else solverDN->solve(phi,source);
-// 	  // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
-// 	  phi.scaleVector(1./(2.*inv_params.kappa));
-// 	  // !!!!!!!!!!!!!!!!!!!! if we use deflation here I think we need to project solution vector but check
-// #if defined(HAVE_EIGENSOLVER)
-// 	  if(lowModesRecon) eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
-// #endif
-// 	  if(oneDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,gauge,-1.,true); //standard one-end trick
-// 	  else qloops_std.oneEnd_trick(phi,phi,-1.,true); //standard one-end trick
+	  if(spinColorDil || k_probing>0) solverDN->solve(phi,*sourceDil); else solverDN->solve(phi,source);
+	  // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
+	  phi.scaleVector(1./(2.*inv_params.kappa));
+	  // !!!!!!!!!!!!!!!!!!!! if we use deflation here I think we need to project solution vector but check
+#if defined(HAVE_EIGENSOLVER)
+	  if(lowModesRecon) eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
+#endif
+	  if(oneDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,gauge,-1.,true); //standard one-end trick
+	  else qloops_std.oneEnd_trick(phi,phi,-1.,true); //standard one-end trick
 
-// 	  D->apply<M>(phi_r,phi);
-// 	  phi_r.apply_gamma5();
-// 	  if(oneDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp, gauge, +1., true); //generalized one-end trick
-// 	  else qloops_gen.oneEnd_trick(phi, phi_r, +1., true); //generalized one-end trick	  
-// 	} // for loop isc
-//       } // for loop ih
+	  D->apply<M>(phi_r,phi);
+	  phi_r.apply_gamma5();
+	  if(oneDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp, gauge, +1., true); //generalized one-end trick
+	  else qloops_gen.oneEnd_trick(phi, phi_r, +1., true); //generalized one-end trick	  
+	} // for loop isc
+      } // for loop ih
 
-//     if((isrc+1)%NdumpStep == 0){
-//       dumpLoops(qloops_std, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
-//       dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
-//     }
+    if((isrc+1)%NdumpStep == 0){
+      dumpLoops(qloops_std, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
+      dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
+    }
     
-//     if(accumFlag){
-//       qloops_std.clearAccumBuffs();
-//       qloops_gen.clearAccumBuffs();
-//     }
-//   } // for loop isrc
+    if(accumFlag){
+      qloops_std.clearAccumBuffs();
+      qloops_gen.clearAccumBuffs();
+    }
+  } // for loop isrc
 
   if(k_probing>0) delete hprop;
   if(k_probing>0 || spinColorDil) delete sourceDil;
