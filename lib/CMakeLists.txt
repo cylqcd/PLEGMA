@@ -107,10 +107,10 @@ endif(PLEGMA_MKL)
 
 
 # add dependencies for linking
-# if CUDA_CUDA_LIBRARY (driver api) is not found look for stubs
-FIND_LIBRARY(CUDA_CUDA_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
+# if CUDA_cuda_LIBRARY (driver api) is not found look for stubs
+FIND_LIBRARY(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
 
-target_link_libraries(PLEGMA ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${QUDA_LIBS} ${CUDA_CUDA_LIBRARY})
+target_link_libraries(PLEGMA ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${QUDA_LIBS} ${CUDA_cuda_LIBRARY})
 add_dependencies(PLEGMA BoostPP)
 
 if(QUDA_QMP)
@@ -130,9 +130,9 @@ if(QUDA_ARPACK)
 endif()
 
 # malloc.cpp uses both the driver and runtime api
-# So we need to find the CUDA_CUDA_LIBRARY (driver api) or the stub version
-find_library(CUDA_CUDA_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
-target_link_libraries(PLEGMA ${CUDA_CUDA_LIBRARY})
+# So we need to find the CUDA_cuda_LIBRARY (driver api) or the stub version
+find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
+target_link_libraries(PLEGMA ${CUDA_cuda_LIBRARY})
 
 # until we define an install step copy the include directory to the build directory
 ADD_CUSTOM_COMMAND(TARGET PLEGMA POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)

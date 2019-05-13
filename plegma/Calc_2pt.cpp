@@ -13,54 +13,66 @@ int main(int argc, char **argv)
 
   //=========================================================================================================//
   initializePLEGMA();
-  // Reading from Lime file and loading to device
-  PLEGMA_Gauge<double> gauge;
-  gauge.readFromLime(latfile.c_str());
-  gauge.load();
-  gauge.calculatePlaq();
-
-  // Loading to QUDA and computing plaquette also there
-  initGaugeQuda(gauge, true);
-  plaqQuda();
 
   {
-    // Smearing
     PLEGMA_Gauge<double> smearedGauge(BOTH);
-    smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
-    PLEGMA_printf("Plaquette after smearing:\n");
-    smearedGauge.calculatePlaq();
-    
-    // ensuring mu positive
-    if(mu<0) mu*=-1.;
-    QUDA_solver solverUP(mu);
-    mu*=-1.;
-    QUDA_solver solverDN(mu);
-    
-    PLEGMA_Vector<double> vectorIn;
-    PLEGMA_Vector<double> vectorOut;
-    PLEGMA_Vector<double> vectorAuxD;
-    PLEGMA_Vector<float> vectorAuxF;
-    PLEGMA_Propagator<float> propUP;
-    PLEGMA_Propagator<float> propDN;
+    {
+      // Reading from Lime file and loading to device
+      PLEGMA_Gauge<double> gauge;
+      gauge.readFromLime(latfile.c_str());
+      gauge.load();
+      gauge.calculatePlaq();
+      
+      // Loading to QUDA and computing plaquette also there
+      initGaugeQuda(gauge, true);
+      plaqQuda();
+      
+      // Smearing
+      smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
+      PLEGMA_printf("Plaquette after smearing:\n");
+      smearedGauge.calculatePlaq();
+    }
+    QUDA_solver solver(mu);
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
-      
+
+      PLEGMA_Propagator<float> propUP;
+      // ensuring mu positive
+      if(mu<0) {
+	mu*=-1.;
+	solver.UpdateSolver();
+      }
       for(int isc = 0 ; isc < 12 ; isc++){
+	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
+	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
 	
 	PLEGMA_printf("Going to invert UP for component %d\n", isc);
-	solverUP.solve(vectorOut, vectorIn);
-	vectorAuxD.gaussianSmearing(vectorOut, smearedGauge, nsmearGauss, alphaGauss);
+	solver.solve(vectorInOut, vectorInOut);
+	vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
 	vectorAuxF.copy(vectorAuxD);
 	propUP.absorb(vectorAuxF, isc/3, isc%3);
+      }	
+
+      PLEGMA_Propagator<float> propDN;
+      // ensuring mu negative
+      if(mu>0) {
+	mu*=-1.;
+	solver.UpdateSolver();
+      }
+      for(int isc = 0 ; isc < 12 ; isc++){
+	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
+	PLEGMA_Vector<float> vectorAuxF;
+	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
 	
 	PLEGMA_printf("Going to invert DN for component %d\n", isc);
-	solverDN.solve(vectorOut, vectorIn);
-	vectorAuxD.gaussianSmearing(vectorOut,smearedGauge, nsmearGauss, alphaGauss);
+	solver.solve(vectorInOut, vectorInOut);
+	vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss);
 	vectorAuxF.copy(vectorAuxD);
 	propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
@@ -78,7 +90,7 @@ int main(int argc, char **argv)
       corr.writeFile(twop_filename.c_str(), corr_file_format);
     }
   }
-
+  
   finalize();
   return 0;
 }
