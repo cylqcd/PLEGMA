@@ -238,11 +238,13 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-nvec", "Number of null-space vectors for multigrid, usage (level,nvec)", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, nvec, 1, 128, "ERROR: invalid number of vectors");
 
-  isFound=opt.set("Q-mg-nu-pre", "Number of pre-smoother applications, 0-20", verbosity, nu_pre);
-  if(isFound) if (nu_pre < 0 || nu_pre > 20) PLEGMA_error("ERROR: invalid pre-smoother applications value (nu_pre=%d)\n", nu_pre);
+  default_map_MG(tpl_int_int, 0);
+  isFound=opt.set("Q-mg-nu-pre", "Number of pre-smoother applications, 0-20", verbosity, tpl_int_int);
+  map_to_array_MG<int>(tpl_int_int, nu_pre, 0, 128, "ERROR: invalid pre-smoother applications");
 
-  isFound=opt.set("Q-mg-nu-post", "Number of post-smoother applications, 0-20", verbosity, nu_post);
-  if(isFound) if (nu_post < 0 || nu_post > 20) PLEGMA_error("ERROR: invalid post-smoother applications value (nu_post=%d)\n", nu_post);
+  default_map_MG(tpl_int_int, 4);
+  isFound=opt.set("Q-mg-nu-post", "Number of post-smoother applications, 0-20", verbosity, tpl_int_int);
+  map_to_array_MG<int>(tpl_int_int, nu_post, 0, 128, "ERROR: invalid post-smoother applications");
   
   default_map_MG(tpl_int_string, (std::string) "cg");
   isFound=opt.set("Q-mg-setup-inv", "The inverter to use for the setup of multigrid, usage(level,inv)", verbosity, tpl_int_string);
@@ -262,10 +264,12 @@ void qudaOptions(Options &opt){
     auto it = tpl_int_site.begin();
     while(it != tpl_int_site.end()){
       int lvl=it->first;
+      mg_block_volume[lvl] = 1;
       site val = it->second;
       if(lvl < 0 || lvl >= QUDA_MAX_MG_LEVEL) PLEGMA_error("ERROR: invalid multigrid level %d", lvl);
       for(int j=0; j<N_DIMS; j++) {
 	mg_block_size[lvl][j]=val.x[j];
+	mg_block_volume[lvl]*=val.x[j];
       }
       it++;
     }

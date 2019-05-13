@@ -20,7 +20,7 @@ PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
 
 template<typename Float>
 PLEGMA_FT<Float>::~PLEGMA_FT(){
-  if(isAllocated) delete[] h_elem;
+  if(isAllocated) hostFree(h_elem, sizeN*sizeof(Float));
 }
 
 template<typename Float>
@@ -56,13 +56,13 @@ template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
   if(isAllocated && dof == newDof) return;
   try{
-    if(!isAllocated){dof = newDof; sizeN = Nmoms()*dimT*dof*2; h_elem = new Float[sizeN];}
+    if(!isAllocated){dof = newDof; sizeN = Nmoms()*dimT*dof*2; hostMalloc(h_elem, sizeN*sizeof(Float));}
     else{
       if(dof != newDof){
 	dof = newDof;
-	delete[] h_elem;
+	hostFree(h_elem, sizeN*sizeof(Float));
 	sizeN = Nmoms()*dimT*dof*2;
-	h_elem = new Float[sizeN];
+	hostMalloc(h_elem, sizeN*sizeof(Float));
       }
     }
   }

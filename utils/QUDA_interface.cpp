@@ -2,7 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <invert_quda.h>
 #include <PLEGMA_BLAS.h>
-
+#include <multigrid.h>
 using namespace std;
 using namespace quda;
 
@@ -40,21 +40,14 @@ static void initRand()
 
 void initComms(int argc, char **argv, const int *commDims)
 {
+  // TODO: QMP not supported right now
 #if defined(QMP_COMMS)
   QMP_thread_level_t tl;
   QMP_init_msg_passing(&argc, &argv, QMP_THREAD_SINGLE, &tl);
 
-  // FIXME? - tests crash without this
   QMP_declare_logical_topology(commDims, 4);
-
 #elif defined(MPI_COMMS)
-#ifdef PTHREADS
-  int provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-#else
   MPI_Init(&argc, &argv);
-#endif
-
 #endif
   initCommsGridQuda(4, commDims, NULL, NULL);
   initRand();
@@ -117,9 +110,7 @@ void plaqQuda() {
 }
 
 QUDA_solver::QUDA_solver(double mu) {
-  char *profiler_name;
-  asprintf(&profiler_name, "Solver profiler mu=%f", mu);
-  profiler = new TimeProfile(profiler_name);
+  profiler = new TimeProfile(("Solver profiler mu="+to_string(mu)).c_str());
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
   
   mg_inv_param = newQudaInvertParam();
@@ -146,7 +137,7 @@ QUDA_solver::QUDA_solver(double mu) {
   inv_param.mu = mu;
   mg_param.invert_param->mu = mu;
   mg_preconditioner = newMultigridQuda(&mg_param);
-
+  
   bool pc_solution = false;
   bool pc_solve = true;
 
@@ -178,11 +169,15 @@ QUDA_solver::QUDA_solver(double mu) {
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
   b = new cudaColorSpinorField(cudaParam);
   x = new cudaColorSpinorField(cudaParam);
+  profiler->TPSTOP(QUDA_PROFILE_TOTAL);
+  profiler->Print();
+  profiler->TPRESET();
 }
 
 QUDA_solver::~QUDA_solver(){
   destroyMultigridQuda(mg_preconditioner);
   delete solver;
+  delete solverParam;
   delete profiler;
   delete b;
   delete x;
@@ -194,14 +189,136 @@ QUDA_solver::~QUDA_solver(){
   delete DPre;
 }
 
+struct MG_Transfer{
+  typedef Transfer* MG::*type;
+  friend type get(MG_Transfer);
+};
+
+struct MG_CoarseParam{
+  typedef MGParam* MG::*type;
+  friend type get(MG_CoarseParam);
+};
+
+struct MG_Coarse{
+  typedef MG* MG::*type;
+  friend type get(MG_Coarse);
+};
+
+template<typename Tag,typename Tag::type M>
+struct Rob {
+  friend typename Tag::type get(Tag){ return M;}
+};
+  
+template struct Rob<MG_Transfer,&MG::transfer>;
+template struct Rob<MG_CoarseParam,&MG::param_coarse>;
+template struct Rob<MG_Coarse,&MG::coarse>;
+
+inline bool changeBlock(int* blockOut, int* blockIn) {
+  bool changed = false;
+  for (int i=0; i<QUDA_MAX_DIM; i++) {
+    if(blockIn[i]!=blockOut[i]) {
+      changed=true;
+      blockOut[i]=blockIn[i];
+    }
+  }
+  return changed;
+}
+
+static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* param, int level = 0)
+{
+  current->nu_pre = param->nu_pre[level];
+  current->nu_post = param->nu_post[level];
+  current->smoother_tol = param->smoother_tol[level];
+  current->cycle_type = param->cycle_type[level];
+  current->global_reduction = param->global_reduction[level];
+  current->omega = param->omega[level];
+  current->smoother = param->smoother[level];
+  
+  if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
+    if(changeBlock(current->geoBlockSize, param->geo_block_size[level])) {
+      delete (mg->*get(MG_Coarse()));
+      mg->*get(MG_Coarse())=nullptr;
+      delete (mg->*get(MG_CoarseParam()));
+      mg->*get(MG_CoarseParam())=nullptr;
+      delete (mg->*get(MG_Transfer()));
+      mg->*get(MG_Transfer())=nullptr;
+      return;
+    }
+    if((mg->*get(MG_CoarseParam()))->Nvec != param->n_vec[level]) {
+      delete (mg->*get(MG_Coarse()));
+      mg->*get(MG_Coarse())=nullptr;
+      delete (mg->*get(MG_CoarseParam()));
+      mg->*get(MG_CoarseParam())=nullptr;
+      return;
+    }
+    
+    updateMultigridParam(mg->*get(MG_Coarse()), mg->*get(MG_CoarseParam()), param, level+1);
+  }
+}
+
+
+// void applyP()
+
+
+void QUDA_solver::UpdateSolver()
+{
+  profiler->TPSTART(QUDA_PROFILE_TOTAL);
+  delete solver;
+  delete solverParam;
+  delete M;
+  delete MSloppy;
+  delete MPre;
+  delete D; D = NULL;
+  delete DSloppy; DSloppy = NULL;
+  delete DPre; DPre = NULL;
+
+  PLEGMA_printf("Updating multigrid parameters\n");
+  setMultigridParam(mg_param);
+ 
+  setInvertParam(inv_param);
+  checkInvertParam(&inv_param);
+
+  if(((multigrid_solver*) mg_preconditioner)->mgParam->Nvec != mg_param.n_vec[0]) {
+    destroyMultigridQuda(mg_preconditioner);
+    mg_preconditioner = newMultigridQuda(&mg_param);
+  } else {
+    multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
+    updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
+    updateMultigridQuda(mg_preconditioner, &mg_param);
+  }
+  
+  bool pc_solve = true;
+  createDirac(D, DSloppy, DPre, inv_param, pc_solve);
+
+  // Create Operators
+  M = new DiracM(*D);
+  MSloppy = new DiracM(*DSloppy);
+  MPre = new DiracM(*DPre);
+
+  // Create Solvers
+  solverParam = new SolverParam(inv_param);
+  
+  solver = Solver::create(*solverParam, *M, *MSloppy, 
+  			 *MPre, *profiler);
+
+  profiler->TPSTOP(QUDA_PROFILE_TOTAL);
+  profiler->Print();
+  profiler->TPRESET();
+}
+
 cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
+  profiler->TPSTART(QUDA_PROFILE_TOTAL);
   ColorSpinorField *in = NULL;
   ColorSpinorField *out = NULL;
   D->prepare(in,out,*x,*rhs,inv_param.solution_type);
   (*solver)(*out, *in);
   D->reconstruct(*x,*rhs,inv_param.solution_type);
+  profiler->TPSTOP(QUDA_PROFILE_TOTAL);
+  profiler->Print();
+  profiler->TPRESET();
   return x;
 }
+
 
 template<typename Float>
 cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
@@ -230,9 +347,20 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
 template void QUDA_solver::solve(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
 
-
 template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
 template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
+
+template<typename Float>
+void QUDA_solver::runOneIter(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &vectorIn){
+  int maxiter = solverParam->maxiter;
+  solverParam->maxiter = 1;
+  solve(vectorOut, vectorIn);
+  solverParam->maxiter = maxiter;
+}
+
+template void QUDA_solver::runOneIter(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
+template void QUDA_solver::runOneIter(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
+
 
 //######################### Quda Dirac operator class ################################
 
