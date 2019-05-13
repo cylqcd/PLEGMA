@@ -33,14 +33,6 @@ namespace plegma {
      **/
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss);
 
-    /**
-       @brief Applies 1 time Gaussian(Wuppertal) smearing operator on all time-slices of a vector. 
-       @param PLEGMA_Vector<Float> &vecIn, The 4D input vector (Exchange of boundaries happens inside the function)
-       @param PLEGMA_Gauge<Float> &gauge, The gauge field that will be used in the Gaussian smearing operator (Warning: Exchange of boundaries should be done before to avoid overheads)
-       @param Float alphaGauss, alpha parameter of the Gaussian smearing
-     **/
-    void gaussianSmearingStep(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, Float alphaGauss);
-
     
     void scaleVector(Float a);
     void norm2Host();

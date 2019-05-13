@@ -41,13 +41,13 @@ int main(int argc, char **argv)
   std::vector<int> counter = createR2(list_R2);
   PLEGMA_Vector<double> v1,v2;
 
-  smearedGauge.communicateSideGhost();
+  //  smearedGauge.communicateSideGhost();
   
   for(auto alpha : alphaGaussList){
     v1.pointSource(src,0,0,DEVICE);
     for(int n = 0; n < *std::max_element(nsmearGaussList.begin(), nsmearGaussList.end()); n++ ){
-      if(n%2 == 0) v2.gaussianSmearingStep(v1,smearedGauge, alpha);
-      else v1.gaussianSmearingStep(v2,smearedGauge, alpha);
+      if(n%2 == 0) v2.gaussianSmearing(v1,smearedGauge,1, alpha);
+      else v1.gaussianSmearing(v2,smearedGauge,1, alpha);
       
       if(std::find(nsmearGaussList.begin(), nsmearGaussList.end(),n+1) != nsmearGaussList.end()){
 	PLEGMA_printf("%d %f\n",n+1, alpha);
