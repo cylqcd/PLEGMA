@@ -165,7 +165,6 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
   fwdProp.communicateGhost();
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
-  PLEGMA_printf("contractNucleonThrp: Will perform in %s precision\n", typeid(Float) == typeid(float) ? "single" :  "double");
   for(int idir = 0; idir < N_DIMS; idir++){
     gsu3.absorbDir_device(gauge,idir);
     gsu3.communicateGhost(idir+N_DIMS);

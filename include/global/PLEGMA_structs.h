@@ -48,8 +48,8 @@ struct tex_mom_list {
 struct pointer_holder {
   void * hostPointer;
   void * devPointer;
-  int size;
-  int bytes;
+  size_t size;
+  size_t bytes;
   std::string var_name;
   std::string type_name;
   char type_char;
@@ -113,7 +113,7 @@ struct pointer_holder {
   std::string get_value() {
     std::string line = var_name + " = (type: " + type_name + ", size: " + std::to_string(size) + (size==1 ? ", value:" : ", values:");
     char* tmp = (char*) hostPointer;
-    for(int i = 0; i<size; i++) {
+    for(size_t i = 0; i<size; i++) {
       line+= " " + type_print((void*)(tmp + bytes*i), type_char, bytes);
     }
     line += ");\n";
@@ -134,19 +134,19 @@ struct global_vars {
     globals.push_back(pointer_holder(name,&host,&device, size));
   }
   void copyToDevice() {
-    for(int i = 0; i != globals.size(); i++) {
+    for(size_t i = 0; i != globals.size(); i++) {
       globals[i].copyToDeviceConstant();
     }
   }
   bool check() {
-    for(int i = 0; i < globals.size(); i++) {
+    for(size_t i = 0; i < globals.size(); i++) {
       if(globals[i].checkDeviceConstant() == false) return false;
     }
     return true;
   }
   void print() {
     PLEGMA_printf("\nGlobal constants available only on host:\n");
-    for(int i = 0; i < globals.size(); i++) {
+    for(size_t i = 0; i < globals.size(); i++) {
 #ifdef __NVCC__
       if(globals[i].devPointer != NULL) continue;
 #endif

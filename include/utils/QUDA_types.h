@@ -419,5 +419,6 @@ inline std::string get_solver_str(QudaInverterType type) {
     return "none";
   default:
     PLEGMA_error("invalid solver type %d\n", type);
+    return "";
   }
 }

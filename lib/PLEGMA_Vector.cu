@@ -14,7 +14,6 @@ template<typename Float>
 PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, VECTOR, ghost_flag){ ; }
 
-
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
@@ -56,6 +55,23 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
     vecIn.load(); // restoring vecIn
   }
 }
+
+template<typename Float>
+void PLEGMA_Vector<Float>::gaussianSmearingStep(PLEGMA_Vector<Float> &vecIn,
+						PLEGMA_Gauge<Float> &gauge,
+						Float alphaGauss){
+  vecIn.communicateSideGhost();
+  gaugeTex<Float> texGauge;
+  vectorTex<Float> texVecIn;
+  texVecIn.tex = vecIn.createTexObject();
+  texGauge.tex = gauge.createTexObject();
+  gaussian_smearing(this->D_elem(),texVecIn,texGauge, alphaGauss);
+  checkCudaError();
+  vecIn.destroyTexObject(texVecIn.tex);
+  gauge.destroyTexObject(texGauge.tex);
+  checkCudaError();
+}
+
 
 template<typename Float>
 void PLEGMA_Vector<Float>::copyToQUDA(ColorSpinorField *qudaVector, bool isEv){

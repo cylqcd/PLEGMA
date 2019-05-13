@@ -159,7 +159,7 @@ void applyAntiperiodicBoundary(Float **buf)
   if (last_node_in_t) {
     int gSize = N_COLS*N_COLS*2;
     size_t Vh = dims[0]*dims[1]*dims[2]*dims[3]/2;
-    for (int j = Vh-dims[0]*dims[1]*dims[2]/2; j < Vh; j++) {
+    for (size_t j = Vh-Vh/dims[3]; j < Vh; j++) {
       for (int i = 0; i < gSize; i++) {
 	buf[3][j*gSize+i] *= -1.0;
 	buf[3][(Vh+j)*gSize+i] *= -1.0;
