@@ -70,14 +70,6 @@ int main(int argc, char **argv)
   if(accumFlag && (NdumpStep<1)) PLEGMA_error("dump-step should be >= 1");
   bool debugMode = false;
   HGC_options->set("debug-mode", "If debug mode is enabled, run 1 source with units everywhere for check", verbosity, debugMode);
-  if(debugMode){
-    numSourcePositions = 1;
-    k_probing = 0;
-    hadamLow = 0;
-    hadamHgh = 1;
-    spinColorDil = false;
-    Nsc=1;
-  }
   //=========================================================================================================//
   initializePLEGMA();
 
@@ -187,9 +179,6 @@ int main(int argc, char **argv)
   PLEGMA_Hprobing *hprop = nullptr;
   if(k_probing>0) hprop = new PLEGMA_Hprobing(k_probing);
 
-
-
-
   qloops_std.clearAccumBuffs();
   qloops_gen.clearAccumBuffs();
   std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
@@ -224,7 +213,7 @@ int main(int argc, char **argv)
       dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
     }
     
-    if(accumFlag){
+    if(!accumFlag){ // In case we do not accumulate we clear the buffers
       qloops_std.clearAccumBuffs();
       qloops_gen.clearAccumBuffs();
     }
