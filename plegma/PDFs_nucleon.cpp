@@ -175,8 +175,10 @@ int main(int argc, char **argv)
 		solver->UpdateSolver();
 	      }
 	    }
+	    double norm = vectorIn.norm();
+	    vectorIn.cscale(1/norm);
 	    solver->solve(vectorOut, vectorIn);
-	    // if we normalize the seqsource we have to take it out here
+	    vectorIn.cscale(norm);    
 	    vectorAuxF.copy(vectorOut);
 	    seqPropOut->absorb(vectorAuxF, nu, c2);
 	  }
@@ -237,7 +239,7 @@ int main(int argc, char **argv)
 	    vectorAuxF.apply_gamma(G5);
 	    vectorAuxD.copy(vectorAuxF);
 	    vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
-	    // check if we need to normalize the seqsource for mix precision solver
+	    
 	    if(nucleon == PROTON){
 	      if(mu<0) {
 		mu*=-1.;
@@ -250,8 +252,10 @@ int main(int argc, char **argv)
 		solver->UpdateSolver();
 	      }
 	    }
+	    double norm = vectorIn.norm();
+	    vectorIn.cscale(1/norm);
 	    solver->solve(vectorOut, vectorIn);
-	    // if we normalize the seqsource we have to take it out here
+	    vectorIn.cscale(norm);
 	    vectorAuxF.copy(vectorOut);
 	    seqPropOut->absorb(vectorAuxF, nu, c2);
 	  }
