@@ -25,6 +25,10 @@ int main(int argc, char **argv)
 
   size_t stepStout;
   HGC_options->set("step_stout", "Save the PDFs every step_stout stout smearing step", verbosity, stepStout);
+
+  bool calc3pt = true ;
+  HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
+
   
   std::string proj ;
   HGC_options->set("which_projector", "Which projector to use for 3pt function", verbosity, proj);
@@ -136,165 +140,166 @@ int main(int argc, char **argv)
       }
 
       
- 
+      if(calc3pt){
 
-      PLEGMA_Su3field<float> su3;
-      PLEGMA_Su3field<float> WL;
-      PLEGMA_Su3field<float> tmp;
+	PLEGMA_Su3field<float> su3;
+	PLEGMA_Su3field<float> WL;
+	PLEGMA_Su3field<float> tmp;
 
-      propUP->unload();
-      propDN->unload();
-      //seq source part 2Props and contraction block
-      {
-	for(int nu = 0 ; nu < 4 ; nu++)
-	  for(int c2 = 0 ; c2 < 3 ; c2++){
-	    if(nucleon == PROTON)
-	      vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
-	    else
-	      vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
-	    vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
-	    std::complex<float> Isingle(0,1);
-	    float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
-				 + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				 + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-	    vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
-	    vectorAuxF.conjugate();
-	    vectorAuxF.apply_gamma(G5);
-	    vectorAuxD.copy(vectorAuxF);
-	    vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
-	    // check if we need to normalize the seqsource for mix precision solver
-	    if(nucleon == PROTON){
-	      if(mu<0) {
-		mu*=-1.;
-		solver->UpdateSolver();
+	propUP->unload();
+	propDN->unload();
+	//seq source part 2Props and contraction block
+	{
+	  for(int nu = 0 ; nu < 4 ; nu++)
+	    for(int c2 = 0 ; c2 < 3 ; c2++){
+	      if(nucleon == PROTON)
+		vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
+	      else
+		vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
+	      vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
+	      std::complex<float> Isingle(0,1);
+	      float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
+				   + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
+				   + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
+	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
+	      vectorAuxF.conjugate();
+	      vectorAuxF.apply_gamma(G5);
+	      vectorAuxD.copy(vectorAuxF);
+	      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
+	      // check if we need to normalize the seqsource for mix precision solver
+	      if(nucleon == PROTON){
+		if(mu<0) {
+		  mu*=-1.;
+		  solver->UpdateSolver();
+		}
 	      }
-	    }
-	    else{
-	      if(mu>0) {
-		mu*=-1.;
-		solver->UpdateSolver();
+	      else{
+		if(mu>0) {
+		  mu*=-1.;
+		  solver->UpdateSolver();
+		}
 	      }
+	      double norm = vectorIn.norm();
+	      vectorIn.cscale(1/norm);
+	      solver->solve(vectorOut, vectorIn);
+	      vectorOut.cscale(norm);    
+	      vectorAuxF.copy(vectorOut);
+	      seqPropOut->absorb(vectorAuxF, nu, c2);
 	    }
-	    double norm = vectorIn.norm();
-	    vectorIn.cscale(1/norm);
-	    solver->solve(vectorOut, vectorIn);
-	    vectorOut.cscale(norm);    
-	    vectorAuxF.copy(vectorOut);
-	    seqPropOut->absorb(vectorAuxF, nu, c2);
-	  }
-	seqPropOut->apply_gamma(G5);
-	seqPropOut->conjugate();
+	  seqPropOut->apply_gamma(G5);
+	  seqPropOut->conjugate();
     
-	int signProps = (nucleon == PROTON) ? +1: -1;
+	  int signProps = (nucleon == PROTON) ? +1: -1;
 
-	PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
 
 
-	//!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
-	for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
-	  std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
-	  if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
-	  su3.absorbDir_device(gaugeWL, WilsDir);
-	  WL.setUnit( (std::vector<int>) {0,4,8});
-	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
-	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	    corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
-	    propExchange = propIn; propIn = propF; propF = propExchange;
-	    WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
-	    propF->shift(*propIn, 4+WilsDir);
+	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
+	  for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
+	    std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	    if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
+	    su3.absorbDir_device(gaugeWL, WilsDir);
+	    WL.setUnit( (std::vector<int>) {0,4,8});
+	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
+	      propExchange = propIn; propIn = propF; propF = propExchange;
+	      WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
+	      propF->shift(*propIn, 4+WilsDir);
+	    }
+
+	    suff="_CP2_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	    propF->load();
+	    su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
+	    WL.setUnit( (std::vector<int>) {0,4,8});
+	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	      propExchange = propIn; propIn = propF; propF = propExchange;
+	      WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
+	      propF->shift(*propIn, WilsDir);
+	    }
+	    propF->load();
 	  }
-
-	  suff="_CP2_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
-	  propF->load();
-	  su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
-	  WL.setUnit( (std::vector<int>) {0,4,8});
-	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	    corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
-	    propExchange = propIn; propIn = propF; propF = propExchange;
-	    WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
-	    propF->shift(*propIn, WilsDir);
-	  }
-	  propF->load();
 	}
-      }
 
-      //seq source part 1Props and contraction block
-      {
-	for(int nu = 0 ; nu < 4 ; nu++)
-	  for(int c2 = 0 ; c2 < 3 ; c2++){
-	    if(nucleon == PROTON)
-	      vectorAuxF.seqSourceNucleon(propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
-	    else
-	      vectorAuxF.seqSourceNucleon(propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
-	    vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
-	    std::complex<float> Isingle(0,1);
-	    float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
-				 + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				 + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-	    vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
-	    vectorAuxF.conjugate();
-	    vectorAuxF.apply_gamma(G5);
-	    vectorAuxD.copy(vectorAuxF);
-	    vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
+	//seq source part 1Props and contraction block
+	{
+	  for(int nu = 0 ; nu < 4 ; nu++)
+	    for(int c2 = 0 ; c2 < 3 ; c2++){
+	      if(nucleon == PROTON)
+		vectorAuxF.seqSourceNucleon(propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
+	      else
+		vectorAuxF.seqSourceNucleon(propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
+	      vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
+	      std::complex<float> Isingle(0,1);
+	      float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
+				   + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
+				   + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
+	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
+	      vectorAuxF.conjugate();
+	      vectorAuxF.apply_gamma(G5);
+	      vectorAuxD.copy(vectorAuxF);
+	      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 	    
-	    if(nucleon == PROTON){
-	      if(mu<0) {
-		mu*=-1.;
-		solver->UpdateSolver();
+	      if(nucleon == PROTON){
+		if(mu<0) {
+		  mu*=-1.;
+		  solver->UpdateSolver();
+		}
 	      }
-	    }
-	    else{
-	      if(mu>0) {
-		mu*=-1.;
-		solver->UpdateSolver();
+	      else{
+		if(mu>0) {
+		  mu*=-1.;
+		  solver->UpdateSolver();
+		}
 	      }
+	      double norm = vectorIn.norm();
+	      vectorIn.cscale(1/norm);
+	      solver->solve(vectorOut, vectorIn);
+	      vectorOut.cscale(norm);
+	      vectorAuxF.copy(vectorOut);
+	      seqPropOut->absorb(vectorAuxF, nu, c2);
 	    }
-	    double norm = vectorIn.norm();
-	    vectorIn.cscale(1/norm);
-	    solver->solve(vectorOut, vectorIn);
-	    vectorOut.cscale(norm);
-	    vectorAuxF.copy(vectorOut);
-	    seqPropOut->absorb(vectorAuxF, nu, c2);
-	  }
-	seqPropOut->apply_gamma(G5);
-	seqPropOut->conjugate();
+	  seqPropOut->apply_gamma(G5);
+	  seqPropOut->conjugate();
     
-	int signProps = (nucleon == PROTON) ? -1: +1;
+	  int signProps = (nucleon == PROTON) ? -1: +1;
 
-	PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
-	gaugeWL.copy(gauge);
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
+	  gaugeWL.copy(gauge);
 
-	//!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
-	for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
-	  if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
-	  std::string suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
-	  su3.absorbDir_device(gaugeWL, WilsDir); 
-	  WL.setUnit( (std::vector<int>) {0,4,8});
-	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	    corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
-	    propExchange = propIn; propIn = propF; propF = propExchange;
-	    WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
-	    propF->shift(*propIn, 4+WilsDir);
-	  }
+	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
+	  for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
+	    if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
+	    std::string suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	    su3.absorbDir_device(gaugeWL, WilsDir); 
+	    WL.setUnit( (std::vector<int>) {0,4,8});
+	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	      propExchange = propIn; propIn = propF; propF = propExchange;
+	      WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
+	      propF->shift(*propIn, 4+WilsDir);
+	    }
     
-	  propF->load();
-	  suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
-	  su3.absorbDir_device(gaugeWL, WilsDir); 
-	  WL.setUnit( (std::vector<int>) {0,4,8});
-	  for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	    corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	    if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-	    corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
-	    propExchange = propIn; propIn = propF; propF = propExchange;
-	    WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
-	    propF->shift(*propIn, WilsDir);
+	    propF->load();
+	    suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	    su3.absorbDir_device(gaugeWL, WilsDir); 
+	    WL.setUnit( (std::vector<int>) {0,4,8});
+	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	      propExchange = propIn; propIn = propF; propF = propExchange;
+	      WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
+	      propF->shift(*propIn, WilsDir);
+	    }
+	    propF->load();
 	  }
-	  propF->load();
 	}
       }
     }
