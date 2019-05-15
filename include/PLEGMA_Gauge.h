@@ -28,6 +28,10 @@ namespace plegma {
     void calculatePlaqCorners();
     void calculatePlaqShifts();
 
+    //for checks
+    Float calculatePlaqClovDef();
+    Float calculatePlaqShiftDef();
+    
     Float calculateTopo(TOPO_CHARGE_DEF charge_def);
 
     void scaleDirWise(std::complex<Float> scale[N_DIMS]);

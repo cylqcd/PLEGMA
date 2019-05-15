@@ -1,6 +1,5 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-
 using namespace plegma;
 using namespace quda;
 
@@ -20,7 +19,9 @@ int main(int argc, char **argv)
   gauge.load();
   
   // Compuiting plaquette on device in three different way for crosschecking
+  gauge.calculatePlaqClovDef( );
   gauge.calculateTopo( PLAQUETTE );
+  gauge.calculateTopo( CLOVER );
 
   // Loading to QUDA and computing plaquette also there
   

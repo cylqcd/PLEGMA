@@ -3,7 +3,6 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_SU3_projection.cuh>
-
 using namespace plegma;
 
 //--------------------------//
@@ -40,6 +39,11 @@ void PLEGMA_Su3field<Float>::UxU(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<Floa
 template<typename Float>
 void PLEGMA_Su3field<Float>::UxUdag(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<Float> &C){
   UxUdag_k(*this,B,C);
+}
+
+template<typename Float>
+void PLEGMA_Su3field<Float>::U_plus_eq_aU(PLEGMA_Su3field<Float> &B, Float c){
+  U_plus_eq_aU_k<Float,Float,Float>(*this,B,c);
 }
 
 template<typename Float>

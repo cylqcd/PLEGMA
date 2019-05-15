@@ -20,6 +20,27 @@ static __global__ void Udag_kernel(FloatA *A, FloatB *B){
 }
 
 template<typename FloatA,typename FloatB, typename FloatC>
+static __global__ void U_plus_eq_aU_kernel(FloatA *A, FloatB *B, FloatC c){
+  
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= DGC_localVolume) return;
+
+  Float2<FloatA> lA[N_COLS][N_COLS];
+  Float2<FloatB> lB[N_COLS][N_COLS];
+  Float2<FloatA> lR[N_COLS][N_COLS];
+
+  su3_2<FloatA> RA(A);
+  su3_2<FloatB> RB(B);
+
+  RA.get(lA,sid);
+  RB.get(lB,sid);
+  
+  G_plus_aG( lR, lA, lB, c);
+
+  RA.set(lR,sid);
+}
+
+template<typename FloatA,typename FloatB, typename FloatC>
 static __global__ void UxU_kernel(FloatA *A, FloatB *B, FloatC *C){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -106,6 +127,13 @@ static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
   scaleG(lA,I);
   exponentiate_iQ(lA);
   RA.set(lA,sid);
+}
+
+template<typename FloatA, typename FloatB, typename FloatC>
+static void U_plus_eq_aU_k( PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, FloatC c){
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps, "U_plus_eq_aU_kernel", U_plus_eq_aU_kernel<FloatA,FloatB,FloatC>, A.D_elem(), B.D_elem(), c);
+  checkCudaError();
 }
 
 template<typename FloatA, typename FloatB>

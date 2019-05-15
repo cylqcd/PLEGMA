@@ -8,17 +8,19 @@ using namespace plegma;
 //####################################################################################
 
 //device function that computes the clover term! save a clover extracted from gaugetex (dir1,dir2,sid) into a C matrix
+//COMMENTS: check with clover-definded plaquette OK!
 template<typename FloatG>
 __device__ void clover( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> &gaugeTex, int dir1, int dir2, int sid ) {
 
   Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
     G3[N_COLS][N_COLS], G4[N_COLS][N_COLS], P[N_COLS][N_COLS];
 
-  init_to_zero( C );
+  init_to_zero( C );//C=0
   
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
   gaugeTex.get(G1,dir1,sid);
   gaugeTex.get<Plus>(G2,dir2,sid,dir1);
+
   mul_G_G(G3,G1,G2);
 
   gaugeTex.get<Plus>(G1,dir1,sid,dir2);
@@ -27,79 +29,53 @@ __device__ void clover( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> &gaug
   mul_Gdag_Gdag(G4,G1,G2);
 
   mul_G_G( P, G3, G4);
-  G_plus_aG( C, P, 1.);
+  G_plus_aG( C, P, 1.);//C=C+P
 	
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-  gaugeTex.get<Minus>(G1,dir1,sid,dir1);
-  gaugeTex.get(G2,dir2,sid);
+  gaugeTex.get(G1,dir2,sid);
+  gaugeTex.get<MinusPlus>(G2,dir1,sid,dir1,dir2);
       
-  mul_G_G(G3,G1,G2);
+  mul_G_Gdag(G3,G1,G2);
       
-  gaugeTex.get<MinusPlus>(G1,dir1,sid,dir1,dir2);
-  gaugeTex.get<Minus>(G2,dir2,sid,dir1);
+  gaugeTex.get<Minus>(G1,dir2,sid,dir1);
+  gaugeTex.get<Minus>(G2,dir1,sid,dir1);
       
-  mul_Gdag_Gdag(G4,G1,G2);
+  mul_Gdag_G(G4,G1,G2);
 
   mul_G_G( P, G3, G4);
   G_plus_aG( C, P, 1.);
 
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-  gaugeTex.get<MinusMinus>(G1,dir1,sid,dir1,dir2);
-  gaugeTex.get<Minus>(G2,dir2,sid,dir2);
-     
-  mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
-      
   gaugeTex.get<Minus>(G1,dir1,sid,dir1);
   gaugeTex.get<MinusMinus>(G2,dir2,sid,dir1,dir2);
+
+  mul_Gdag_Gdag(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+  
+  gaugeTex.get<MinusMinus>(G1,dir1,sid,dir1,dir2);
+  gaugeTex.get<Minus>(G2,dir2,sid,dir2);
       
-  mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+  mul_G_G(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
   mul_G_G( P, G3, G4);
   G_plus_aG( C, P, 1.);
   
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-  gaugeTex.get<Minus>(G1,dir1,sid,dir2);
-  gaugeTex.get<PlusMinus>(G2,dir2,sid,dir1,dir2);
+  gaugeTex.get<Minus>(G1,dir2,sid,dir2);
+  gaugeTex.get<Minus>(G2,dir1,sid,dir2);
     
-  mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+  mul_Gdag_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+
+  gaugeTex.get<PlusMinus>(G1,dir2,sid,dir1,dir2);
+  gaugeTex.get(G2,dir1,sid);
       
-  gaugeTex.get(G1,dir1,sid);
-  gaugeTex.get<Minus>(G2,dir2,sid,dir2);
-      
-  mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
+  mul_G_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
   mul_G_G( P, G3, G4);
   G_plus_aG( C, P, 1.);
   
 }
 
-//kernel for filling an Su3field with clovers
-template< typename FloatG>
-static __global__ void extract_clover_kernel( FloatG *res_dvc_pointer, gaugeTex<FloatG> gaugeTex, int dir0, int dir1) {
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  Float2<FloatG> clov[N_COLS][N_COLS];
-  su3_2<FloatG> result(res_dvc_pointer);
-  
-  if (sid < DGC_localVolume) {
-    clover( clov, gaugeTex, dir0, dir1, sid );
-    result.set( clov, sid);
-  }
-}
 
-//function for calling the above kernel
-template< typename FloatG>
-static void extract_clover( PLEGMA_Su3field<FloatG> &res, PLEGMA_Gauge<FloatG> &U, int dir0, int dir1) {
-  gaugeTex<FloatG> tex;
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  
-  tex.tex = U.createTexObject();
-  extract_clover_kernel<FloatG><<<gridDim,blockDim>>>( res.D_elem(), tex, dir0, dir1);
-  U.destroyTexObject(tex.tex);
-
-}
-
-  
 //kernel for computing top_charge based on clover definition
 template< typename FloatG,  typename Float >
 static __global__ void calcTopChClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float *partial_Q) {
@@ -107,18 +83,20 @@ static __global__ void calcTopChClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
 
-  int dir0=3, dir1[3]={0,1,2}, dir2[3]={1,2,0}, dir3[3]={2,0,1};
-  Float2<FloatG> clov1[N_COLS][N_COLS], clov2[N_COLS][N_COLS];
-
-  FloatG trace = 0. ;
-
   if (sid < DGC_localVolume) {
+    int dir0[3]={0,0,0}, dir1[3]={1,2,3}, dir2[3]={2,3,1}, dir3[3]={3,1,2};
+    Float2<FloatG> clov1[N_COLS][N_COLS], clov2[N_COLS][N_COLS];
+   
+    FloatG trace = 0. ;
+    FloatG tr_aux = 0. ;
     #pragma unroll
-    for(int i=1; i<4; i++) {
-      clover( clov1, gaugeTex, dir0, dir1[i], sid );
+    for(int i=0; i<3; i++) {
+      clover( clov1, gaugeTex, dir0[i], dir1[i], sid );
       clover( clov2, gaugeTex, dir2[i], dir3[i], sid );
 
-      trace += trace_mul_ImG_ImG<FloatG,FloatG>( clov1, clov2 );
+      tr_aux = trace_mul_ImG_ImG<FloatG,FloatG>( clov1, clov2 );
+      
+      trace += tr_aux;
     }
     shared_cache[cacheIndex] = trace/16.; //Because the clover is defined as 1/4 Im( clover_path )
   }
@@ -129,9 +107,10 @@ static __global__ void calcTopChClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float 
   reduce(shared_cache, 1);
 
   if(cacheIndex == 0 && partial_Q!=NULL){
-    partial_Q[blockIdx.x] = shared_cache[0];   // write result back to global memory  
+    partial_Q[blockIdx.x] = shared_cache[0];   // write result back to global memory
   }
 }
+
 
 //####################################################################################
 //###############                 Plaquette definition                 ###############
@@ -158,107 +137,39 @@ __device__ void plaquette( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> &g
 }
 
 
-//kernel for extracting an Su3field with plaquette
-template< typename FloatG>
-static __global__ void extract_plaquette_kernel( FloatG *res_dvc_pointer, gaugeTex<FloatG> gaugeTex, int dir0, int dir1) {
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  Float2<FloatG> plaq[N_COLS][N_COLS];
-  su3_2<FloatG> result(res_dvc_pointer);
-  
-  if (sid < DGC_localVolume) {
-    plaquette( plaq, gaugeTex, dir0, dir1, sid );
-    result.set( plaq, sid);
-  }
-}
-
-//function for calling the above kernel
-template< typename FloatG>
-static void extract_plaquette( PLEGMA_Su3field<FloatG> &res, PLEGMA_Gauge<FloatG> &U, int dir0, int dir1) {
-  gaugeTex<FloatG> tex;
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  
-  tex.tex = U.createTexObject();
-  extract_plaquette_kernel<FloatG><<<gridDim,blockDim>>>( res.D_elem(), tex, dir0, dir1);
-  U.destroyTexObject(tex.tex);
-}
-
-//old version, could be replaced
+//kernel for computing top_charge based on plaquette definition
 template< typename FloatG,  typename Float >
 static __global__ void calcTopChPlaqDef_kernel(gaugeTex<FloatG> gaugeTex, Float *partial_Q) {
   __shared__ Float shared_cache[THREADS_PER_BLOCK];
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
 
-  if (N_DIMS != 4){
-    printf("Is topological charge well defined on an arbitrary number of dim?\n");
+  int dir0=3, dir1[3]={0,1,2}, dir2[3]={1,2,0}, dir3[3]={2,0,1};
+  Float2<FloatG> plaq1[N_COLS][N_COLS], plaq2[N_COLS][N_COLS];
+
+  FloatG trace = 0. ;
+
+  if (sid < DGC_localVolume) {
+    #pragma unroll
+    for(int i=0; i<3; i++) {
+      plaquette( plaq1, gaugeTex, dir0, dir1[i], sid );
+      plaquette( plaq2, gaugeTex, dir2[i], dir3[i], sid );
+
+      trace += trace_mul_ImG_ImG<FloatG,FloatG>( plaq1, plaq2 );
+    }
+    shared_cache[cacheIndex] = trace; //Plaquette is Im( plaquette_path )
   }
   else {
-    if (sid < DGC_localVolume) {
-      Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
-	G3[N_COLS][N_COLS], G4[N_COLS][N_COLS],
-	P1[N_COLS][N_COLS], P2[N_COLS][N_COLS];
-      Float trace = 0.;
-      int dir0=3, dir1[3]={0,1,2}, dir2[3]={1,2,0}, dir3[3]={2,0,1};
-      
-      // Loop over xy, xz, xt, yz, yt, zt
-#pragma unroll
-      for(int i=0; i<3; i++) {
-	
-	//dir0dir1 
-	//G3 = U^{dir0}(id) * U^{dir1}(id+dir0)
-	gaugeTex.get(G1,dir0,sid);
-	gaugeTex.get<Plus>(G2,dir1[i],sid,dir0);
-	  
-	mul_G_G(G3,G1,G2);
+    shared_cache[cacheIndex] = 0.;
+  }
 
-	//G4 = U^{dir0+}(id+dir1) * U^{dir1+}(id)
-	gaugeTex.get<Plus>(G1,dir0,sid,dir1[i]);
-	gaugeTex.get(G2,dir1[i],sid);
-	  
-	mul_Gdag_Gdag(G4,G1,G2);
-	mul_G_G(P1,G3,G4);
-	  
-	//dir2dir3
-	//G3 = U^{dir2}(id) * U^{dir3}(id+dir2)
-	gaugeTex.get(G1,dir2[i],sid);
-	gaugeTex.get<Plus>(G2,dir3[i],sid,dir2[i]);
-	  
-	mul_G_G(G3,G1,G2);
-	  
-	//G4 = U^{dir2+}(id+dir3) * U^{dir2+}(id)
-	gaugeTex.get<Plus>(G1,dir2[i],sid,dir3[i]);
-	gaugeTex.get(G2,dir3[i],sid);
-	  
-	mul_Gdag_Gdag(G4,G1,G2);
-	  
-	mul_G_G(P2,G3,G4);
-	  
-	trace += trace_mul_ImG_ImG<FloatG,FloatG>(P1,P2);
-	//trace += real_trace_mul_G_G<Float>(G3,G4);
-      } 
-    
-      shared_cache[cacheIndex] = trace;
-    } else {
-      shared_cache[cacheIndex] = 0.;
-    }
-    __syncthreads(); // synchronize threads to be sure that all have written their register trace to share memory
-    // for reduction threads per block must be power of 2 ( this is always my case)
-    int i = blockDim.x/2;
-      
-    while (i != 0){
-      if(cacheIndex < i)
-	shared_cache[cacheIndex] += shared_cache[cacheIndex + i];
-      __syncthreads();
-      i /= 2;
-    }
-    
-    // now on the first element of the shared memory we have the reduction of block threads
-    if(cacheIndex == 0){
-      partial_Q[blockIdx.x] = shared_cache[0];   // write result back to global memory  
-    }
+  reduce(shared_cache, 1);
+
+  if(cacheIndex == 0 && partial_Q!=NULL){
+    partial_Q[blockIdx.x] = shared_cache[0];   // write result back to global memory  
   }
 }
+
 
 //####################################################################################
 //###############                 Calculate TopoCharge                 ###############
@@ -292,6 +203,7 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
     calcTopChClovDef_kernel<FloatG,Float><<<gridDim,blockDim>>>( gaugeTex, d_partial_Q );
     break;
     }
+  checkCudaError();
 
 #ifdef TIMING_REPORT
   cudaEventRecord(stop,0);
@@ -306,18 +218,129 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
   cudaFree(d_partial_Q);
   checkCudaError();
 
-  for(int i = 0 ; i < gridDim.x ; i++)
+  for(int i = 0 ; i < gridDim.x ; i++){
     Q += h_partial_Q[i];
+  }
   free(h_partial_Q);
 
   MPI_Allreduce(&Q , &globalQ , 1 , MPI_Type(Q) , MPI_SUM , MPI_COMM_WORLD);  
-  return globalQ/PI/PI/4; // 8*( 3 indipendent ijkt index order ) /( 32 pi**2)
+  return globalQ/PI/PI/4.; // 8*( 3 indipendent ijkt index order ) /( 32 pi**2)
 }
 
 
 //####################################################################################
 //###############                Calc TopoChargeDensity                ###############
 //####################################################################################
+// Functions needing crosschecks
+
+//kernel for extracting an Su3field with plaquette along given directions NO SHIFTS
+template< typename FloatG>
+static __global__ void extract_plaquette_kernel( FloatG *res_dvc_pointer, gaugeTex<FloatG> gaugeTex, int dir0, int dir1) {
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<FloatG> plaq[N_COLS][N_COLS];
+  su3_2<FloatG> result(res_dvc_pointer);
+  
+  if (sid < DGC_localVolume) {
+    plaquette( plaq, gaugeTex, dir0, dir1, sid );
+    result.set( plaq, sid);
+  }
+}
+
+
+//function for calling the above kernel
+template< typename FloatG>
+static void extract_plaquette( PLEGMA_Su3field<FloatG> &res, PLEGMA_Gauge<FloatG> &U, int dir0, int dir1) {
+  gaugeTex<FloatG> tex;
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  
+  tex.tex = U.createTexObject();
+  extract_plaquette_kernel<FloatG><<<gridDim,blockDim>>>( res.D_elem(), tex, dir0, dir1);
+  checkCudaError();
+  U.destroyTexObject(tex.tex);
+}
+
+//kernel for filling an Su3field with clovers NO SHIFTS
+template< typename FloatG>
+static __global__ void extract_clover_kernel( FloatG *res_dvc_pointer, gaugeTex<FloatG> gaugeTex, int dir0, int dir1) {
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<FloatG> clov[N_COLS][N_COLS];
+  su3_2<FloatG> result(res_dvc_pointer);
+  
+  if (sid < DGC_localVolume) {
+    clover( clov, gaugeTex, dir0, dir1, sid );
+    result.set( clov, sid);
+  }
+}
+
+//function for calling the above kernel
+template< typename FloatG>
+static void extract_clover(  PLEGMA_Su3field<FloatG> &clover, PLEGMA_Gauge<FloatG> &U, int dir0, int dir1) {
+  gaugeTex<FloatG> tex;
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  
+  tex.tex = U.createTexObject();
+  extract_clover_kernel<FloatG><<<gridDim,blockDim>>>( clover.D_elem(), tex, dir0, dir1);
+  checkCudaError();
+  U.destroyTexObject(tex.tex);
+}
+
+
+template<typename Float>
+void plaquette_path( PLEGMA_Su3field<Float> &res, PLEGMA_Su3field<Float> *U[4], int dir_1, int dir_2) {
+  int spath[] = {dir_1, dir_2, (dir_1+4)%8, (dir_2+4)%8};
+  std::vector<int> vspath(spath,spath+4);
+
+  res.path(vspath, U);
+}
+
+//sum over all 2x1 and 1x2 rectangles; N.B.: the function return the whole product (not only the Im part)  
+template<typename Float, typename FloatG>
+void plaquette_s( PLEGMA_Su3field<Float> &res, PLEGMA_Gauge<FloatG> &U_in, int dir1, int dir2) {
+  PLEGMA_Su3field<Float> aux1(BOTH);
+  PLEGMA_Su3field<Float> aux2(BOTH);
+  PLEGMA_Su3field<Float> *U[4];
+
+  for(int idir = 0; idir < 4 ; idir++){
+    U[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    U[idir]->absorbDir_device( U_in, idir);
+  }
+
+  //longest side along dir1
+  plaquette_path( res, U, dir1, dir2);//++
+  for(int idir = 0; idir < 4 ; idir++)
+    delete U[idir];
+}
+
+//conceptually wrong
+template<typename Float, typename FloatG>
+void clover_s( PLEGMA_Su3field<Float> &res, PLEGMA_Gauge<FloatG> &U_in, int dir1, int dir2) {
+  PLEGMA_Su3field<Float> aux1(BOTH);
+  PLEGMA_Su3field<Float> aux2(BOTH);
+  PLEGMA_Su3field<Float> *U[4];
+
+  for(int idir = 0; idir < 4 ; idir++){
+    U[idir] = new PLEGMA_Su3field<Float>(BOTH);
+    U[idir]->absorbDir_device( U_in, idir);
+  }
+
+  //longest side along dir1
+  plaquette_path( res, U, dir1, dir2);//++
+
+  res.shift( aux1, dir2 );        //+-
+  res.U_plus_eq_aU(aux1, 1.);
+  
+  aux1.shift( aux2, dir1);        //--
+  res.U_plus_eq_aU( aux2, 1.);
+  
+  aux2.shift( aux1, dir2+4 );     //-+
+  res.U_plus_eq_aU( aux1, 1.);
+  
+  for(int idir = 0; idir < 4 ; idir++)
+    delete U[idir];
+}
+
 //
 //dir_min
 //|
@@ -343,6 +366,7 @@ void rectangles( PLEGMA_Su3field<Float> &res, PLEGMA_Su3field<Float> *U[4], int 
   res.path(vspath, U);
 }
 
+//conceptually wrong
 //sum over all 2x1 and 1x2 rectangles; N.B.: the function return the whole product (not only the Im part)  
 template<typename Float, typename FloatG>
 void extract_improved_clover( PLEGMA_Su3field<Float> &res, PLEGMA_Gauge<FloatG> &U_in, int dir1, int dir2) {
@@ -432,3 +456,82 @@ static Float calcTopoChargeDensity( PLEGMA_Field<Float> &q, PLEGMA_Gauge<FloatG>
   q.unload();
 }
 */
+
+//####################################################################################
+//###############                  Xcheck Functions                    ###############
+//####################################################################################
+
+//kernel for computing the mean plaquette based on clover definition (for xchecks)
+template< typename FloatG,  typename Float >
+static __global__ void calcPlaqClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float *partial_plaq) {
+  __shared__ Float shared_cache[THREADS_PER_BLOCK];
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  int cacheIndex = threadIdx.x;
+
+  if (sid < DGC_localVolume) {
+    Float2<FloatG> clov_tmp[N_COLS][N_COLS];
+    Float trace = 0. ;
+
+    #pragma unroll
+    for(int dir1=0; dir1<N_DIMS-1; dir1++) {
+      #pragma unroll
+      for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
+	clover( clov_tmp, gaugeTex, dir1, dir2, sid);
+	trace += real_trace<Float,FloatG>( clov_tmp );
+      }
+    }
+    shared_cache[cacheIndex] = trace/4.;
+  }
+  else {
+    shared_cache[cacheIndex] = 0.;
+  }
+  reduce(shared_cache, 1);
+
+  if(cacheIndex == 0 && partial_plaq!=NULL){
+    partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory  
+  }
+
+}
+
+template<typename Float, typename FloatG>
+static Float calcPlaqClovDef(gaugeTex<FloatG> gaugeTex){
+  Float Plaq = 0.;
+  Float globalPlaq = 0.;
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  Float *h_partial_Plaq = NULL;
+  Float *d_partial_Plaq = NULL;
+  h_partial_Plaq = (Float*) malloc(gridDim.x * sizeof(Float) );
+  if(h_partial_Plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
+  cudaMalloc((void**)&d_partial_Plaq, gridDim.x * sizeof(Float));
+
+#ifdef TIMING_REPORT
+  cudaEvent_t start,stop;
+  float elapsedTime;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start,0);
+#endif
+
+  calcPlaqClovDef_kernel<FloatG,Float><<<gridDim,blockDim>>>( gaugeTex, d_partial_Plaq );
+
+#ifdef TIMING_REPORT
+  cudaEventRecord(stop,0);
+  cudaEventSynchronize(stop);
+  cudaEventElapsedTime(&elapsedTime,start,stop);
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+  printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
+#endif
+
+  cudaMemcpy(h_partial_Plaq, d_partial_Plaq , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
+  cudaFree(d_partial_Plaq);
+  checkCudaError();
+
+  for(int i = 0 ; i < gridDim.x ; i++)
+    Plaq += h_partial_Plaq[i];
+  free(h_partial_Plaq);
+
+  MPI_Allreduce(&Plaq , &globalPlaq , 1 , MPI_Type(Plaq) , MPI_SUM , MPI_COMM_WORLD);  
+  return globalPlaq/(HGC_totalVolume*N_COLS*6); // 6*N_sites Plaquettes(+ 3 colors to normalize the trace )
+}

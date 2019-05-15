@@ -120,9 +120,44 @@ Float PLEGMA_Gauge<Float>::calculatePlaq(){
 }
 
 template<typename Float>
-Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
+Float PLEGMA_Gauge<Float>::calculatePlaqClovDef(){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
+  tex.tex = this->createTexObject();
+  Float plaq = calcPlaqClovDef<Float,Float>(tex);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette with clover is %f\n",plaq);
+  this->destroyTexObject(tex.tex);
+  return plaq;
+}
+
+template<typename Float>
+Float PLEGMA_Gauge<Float>::calculatePlaqShiftDef(){
+  Float resV=0;
+  PLEGMA_Su3field<Float> Plaq(BOTH);
+  PLEGMA_Su3field<Float> Plaq1(BOTH);
+  
+  for(int dir1 = 0; dir1 < 4; dir1++)
+    for(int dir2 = dir1+1; dir2 < 4; dir2++){
+      plaquette_s( Plaq, *this, dir1, dir2);
+      
+      resV += sumRtraceU<Float,Float>( Plaq );
+    }
+  
+  Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_SIDE);
+  tex.tex = this->createTexObject();
+  Float plaqRef = calculatePlaquette<Float>(tex);
+  this->destroyTexObject(tex.tex);
+  PLEGMA_printf("TEST: Calculated plaquette with shifts is %f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
+
+  return plaqShifts;
+}
+
+template<typename Float>
+Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
 
   tex.tex = this->createTexObject();
   Float Q = calcTopoCharge<Float>(tex, charge_def);
@@ -130,6 +165,7 @@ Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
   this->destroyTexObject(tex.tex);
   return Q;
 }
+
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
@@ -298,7 +334,6 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
     delete u_s2[idir];
   }
 }
-
 
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;
