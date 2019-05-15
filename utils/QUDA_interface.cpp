@@ -261,10 +261,6 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   }
 }
 
-
-// void applyP()
-
-
 void QUDA_solver::UpdateSolver()
 {
   delete solver;
