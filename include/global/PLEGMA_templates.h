@@ -43,6 +43,25 @@ template<typename T> inline void hostFree(T &ptr) {
   PLEGMA_warning("Freeing without providing the size. This will create a mismatch in HGC_used_memory.\n");
 }
 
+// Pinned memory allocation
+template<typename T> inline void hostMallocPinned(T &ptr, size_t size){
+  cudaMallocHost((void**)&ptr, size);
+  checkCudaError();
+  HGC_used_memory += size;
+}
+
+template<typename T> inline void hostFreePinned(T &ptr, size_t size) {
+  cudaFreeHost(ptr);
+  checkCudaError();
+  ptr=NULL;
+  HGC_used_memory -= size;
+}
+template<typename T> inline void hostFreePinned(T &ptr) {
+  hostFreePinned(ptr,0);
+  PLEGMA_warning("Freeing without providing the size. This will create a mismatch in HGC_used_memory.\n");
+}
+
+
 // type_char(): identifying char for the variable. It is later used in type_print()
 template<typename T> inline char type_char(){ return 'B';};
 template<typename T> inline char type_char(T a){ return type_char<T>();};
