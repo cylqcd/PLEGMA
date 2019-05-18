@@ -10,12 +10,13 @@
 using namespace plegma;
 
 template<typename Float>
-PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
-  Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum, std::vector<int> sink_mom):
+Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum), sink_mom(sink_mom){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
-  createMom();
+  if(std::equal(sink_mom.begin(),sink_mom.end(), (std::vector<int>){0,0,0}.begin())) createMom();
+  else momList.push_back(sink_mom);
 }
 
 template<typename Float>

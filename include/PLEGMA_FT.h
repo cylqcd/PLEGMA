@@ -13,6 +13,7 @@ namespace plegma {
     using VVint = std::vector<Vint>;
   private:
     int Q2_max;
+    std::vector<int> sink_mom;
     VVint momList;
     bool isAllocated;
     int dof; // degrees of freedom the field has
@@ -24,7 +25,7 @@ namespace plegma {
     void createMom();
     void zero();
   public:
-    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); // allow also for a transformation in 4D
+    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false, std::vector<int> sink_mom = {0,0,0}); // allow also for a transformation in 4D
     ~PLEGMA_FT();
     void checkAllocation(int newDof);
 
@@ -35,6 +36,9 @@ namespace plegma {
     
     Float* H_elem() const{return h_elem;}
     tex_mom_list getTexMomList();
+
+    void setMom(std::vector<int> mom) {this->sink_mom=mom;}
+    std::vector<int> getMom(){return this->sink_mom;}
     
     void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
     void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction

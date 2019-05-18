@@ -63,6 +63,11 @@ int main(int argc, char **argv)
 
   PLEGMA_Gauge<float> gaugeWL;
   gaugeWL.copy(gauge);
+
+  // Extracting the spacial sink momentum from the sink 4-momentum  
+  std::vector<int> sinkMom_3D(3);
+  std::copy(sinkMom.begin(),sinkMom.begin()+3,sinkMom_3D.begin());
+  
   
   // ensuring mu positive
   if(mu<0)  mu*=-1.;
@@ -325,6 +330,7 @@ int main(int argc, char **argv)
   propDN->applyBoundaries_device(sourcePositions[isource][3]);
 
   PLEGMA_Correlator<float> corr(corr_space, maxQsq);
+  corr.setMom(sinkMom_3D);
   corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
   corr.writeFile(twop_filename.c_str(), corr_file_format);
 

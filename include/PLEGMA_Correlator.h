@@ -27,6 +27,7 @@ namespace plegma {
     // Correlator info
     CORR_SPACE corr_space;
     int Q2_max;
+    std::vector<int> sink_mom = {0,0,0};
     size_t vol_size;
     int n_datasets;
     int n_groups;
@@ -80,6 +81,10 @@ namespace plegma {
       for ( int i = 0; i < 4; i++ )
 	source_position[i] = source[i];
     }
+
+    void setMom(std::vector<int> mom) {this->sink_mom=mom;}
+    std::vector<int> getMom() {return this->sink_mom;}
+    
     Float* getCorr() {
       return corr;
     }
@@ -87,6 +92,7 @@ namespace plegma {
 			PLEGMA_Propagator<Float> &prop2, 
 			int source[4]);
 
+    
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int source[4]);

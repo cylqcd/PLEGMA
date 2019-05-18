@@ -17,7 +17,7 @@ initialize() {
   finalize();
   site_size = getSiteSize();
   if(corr_space == MOMENTUM_SPACE) {
-    corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    corr_mom_space = new PLEGMA_FT<Float>(Q2_max,3,false,this->sink_mom);
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();
@@ -80,6 +80,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
 }
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
