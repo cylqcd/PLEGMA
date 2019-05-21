@@ -13,6 +13,7 @@ extern __device__ cudaDeviceProp devProp;
 //  necessary for the tuning evaluation
 struct ProfileStruct{
   bool measured;
+  bool tuned;
   long unsigned int flops; 
   long unsigned int outBytes; 
   long unsigned int inpBytes;
