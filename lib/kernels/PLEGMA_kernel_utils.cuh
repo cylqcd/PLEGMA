@@ -479,18 +479,18 @@ namespace plegma {
     mul_G_G(M2,a,a);
     mul_G_G(M3,M2,a);
     t2=real_trace_mul_G_G(M2,a);
-    t1/=2;
-    t2/=3;
+    t1/=(Float)2.;
+    t2/=(Float)3.;
 
     if(t2<0)
       {
 	sign=1;
 	t2=-t2;
       }
-    c0max=2.0*pow(t1/3.0,1.5);
+    c0max=2.0*pow(t1/((Float)3.0),1.5);
     theta=acos(t2/c0max);
-    u=sqrt(t1/3.0)*cos(theta/3.0);
-    w=sqrt(t1)*sin(theta/3.0);
+    u=sqrt(t1/((Float)3.0))*cos(theta/((Float)3.0));
+    w=sqrt(t1)*sin(theta/((Float)3.0));
 
     C.x=cos(2.0*u);   C.y=sin(2.0*u);
     C1.x=cos(u);   C1.y=-sin(u);
@@ -646,7 +646,10 @@ namespace plegma {
 
 }
 
-//Used in Plegma_topocharge
+//---------------------------//
+// Used in Plegma_topocharge |
+//---------------------------\\
+
 template<typename Float>
 __inline__ __device__ void init_to_zero(Float2<Float> a[N_COLS][N_COLS]){
   #pragma unroll
@@ -673,49 +676,210 @@ __inline__ __device__ FloatA trace_mul_ImG_ImG(Float2<FloatA> a[N_COLS][N_COLS],
   return -tr/4.;
 }
 
-template<typename FloatA, typename FloatB>
-__inline__ __device__ FloatA trace_mul_G_ImG(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
-  FloatA tr=0.;
+//-------------------------//
+//  Used in Plegma_WFlow   |
+//-------------------------\\
 
+template<typename FloatG>
+__inline__ __device__ void print_SuN( Float2<FloatG> U[N_COLS][N_COLS] ){
+
+  for(int i=0; i<N_COLS; i++){
+    for(int j=0; j< N_COLS; j++){
+      printf("%.14f +j %.14f\t", U[i][j].x, U[i][j].y );
+    }
+    printf("\n");
+  }
+  printf("---\n");
+
+}
+
+template<typename FloatA>
+__inline__ __device__ void A_equal_B( Float2<FloatA> A[N_COLS][N_COLS], Float2<FloatA> B[N_COLS][N_COLS] ){
   #pragma unroll
   for(int i=0; i<N_COLS; i++){
     #pragma unroll
-    for(int j=0; j<N_COLS; j++) {
-      tr+=( ( a[i][j] )*( b[j][i]-conj(b[i][j]) ) ).x;
+    for(int j=0; j<N_COLS; j++){
+      A[i][j] = B[i][j];
     }
   }
-  return -tr/2.;
 }
 
-//i*Im(A)
-template<typename FloatA, typename FloatB>
-__inline__ __device__ void ImG(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
-  Float2<FloatB> b_dag[N_COLS][N_COLS];
+//From Claudio's code. Works
+template<typename FloatA>
+__inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS]){  
+  Float2<FloatA> M[N_COLS][N_COLS];
+  Float2<FloatA> aux, trace;
   
-  Gdag( b_dag, b);
+  trace.x = 0.0;
+  trace.y = 0.0;
+  //M=a
+  
+  A_equal_B( M, a);
   
   #pragma unroll
   for(int i=0; i<N_COLS; i++){
     #pragma unroll
-    for(int j=0; j<N_COLS; j++) {
-      a[i][j] = ( b[i][j]-b_dag[i][j] )*0.5;
+    for(int j=0; j<N_COLS; j++){
+      aux = M[i][j]-conj(M[j][i]);
+      aux = aux/((FloatA)2.);
+      a[i][j] = aux;
+    }
+    trace += a[i][i];
+  }
+
+  trace = trace/((FloatA) N_COLS);
+
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++){
+    a[i][i] -= trace;
+  }
+  
+}
+
+//From Claudio's code.
+template<typename FloatA>
+__inline__ __device__ void exp_G(Float2<FloatA> a[N_COLS][N_COLS]){  
+  const int maxdeg = 10;
+  Float2<FloatA> A[N_COLS][N_COLS];
+  Float2<FloatA> tmp[N_COLS][N_COLS];
+  
+  A_equal_B(A, a);
+  scaleG(A, 1.0/((FloatA)maxdeg));
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++){
+    A[i][i] = A[i][i] + 1.0;
+  }
+  // now A=1+aux/maxdeg                                                                      
+
+  #pragma unroll
+  for(int j=maxdeg-1; j>0; j--){
+    mul_G_G(tmp, A, a);
+    scaleG(tmp, 1.0/((FloatA)j) );
+    A_equal_B(A, tmp);
+    #pragma unroll
+    for(int i=0; i<N_COLS; i++){
+      A[i][i] = A[i][i] + 1.0;
+    }
+  }
+  A_equal_B(a, A);
+}
+
+// template<typename FloatA, typename FloatB>
+// __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
+//   Float2<FloatA> tr;
+//  for(int i=0; i<N_COLS; i++){
+//     for(int j=0; j<N_COLS; j++){
+//        b[i][j] = a[i][j]-conj(a[j][i]);
+//        b[i][j] = b[i][j]/((double) 2.);
+//     }
+//  }
+
+//   tr = trace<FloatA,FloatA>( a );
+
+//   #pragma unroll
+//   for(int i=0; i<N_COLS; i++){
+//     a[i][i] -= tr/((double)N_COLS);
+//   }
+// }
+
+// template<typename FloatA>
+// __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS]){
+//   Float2<FloatA> tr;
+//   for(int i=0; i<N_COLS; i++){
+//     for(int j=i; j<N_COLS; j++){
+//       a[i][j] = (a[i][j]-conj(a[j][i]))/((double)2.);
+//     }
+//   }
+//   for(int i=0; i<N_COLS-1; i++){
+//     for(int j=i+1; j<N_COLS; j++){
+//       a[j][i] = (-1.)*conj(a[i][j]);
+//     }
+//   }
+//   tr = trace<FloatA,FloatA>( a );
+  
+//   #pragma unroll
+//   for(int i=0; i<N_COLS; i++){
+//     a[i][i] -= tr/((double)N_COLS);
+//   }
+// }
+
+
+template<typename FloatG>
+__inline__ __device__ int check_unitarity( Float2<FloatG> U[3][3] ){
+  Float2<FloatG> aux[3][3];
+  int ris=0;
+
+  mul_G_Gdag( aux, U, U );  
+  #pragma unroll
+  for(int i=0; i<N_COLS; i++){
+    #pragma unroll
+    for(int j=0; j<N_COLS; j++){
+      if(i==j){
+	aux[i][j] = aux[i][j] - (double)1.0;
+      }
+      if( norm( aux[i][j] ) > 1e-10 ){
+	ris = 1;
+      }
+    }
+  }
+  
+  if(ris==0){
+    if( det(U).x < -0.5 ){
+      ris=1;
+    }
+  }
+  
+  return ris;
+}
+
+template<typename FloatG>
+__inline__ __device__ void unitarize_G( Float2<FloatG> U[3][3]){
+  Float2<FloatG> c[N_COLS];
+  FloatG norm;
+  
+  for( int i=0; i<N_COLS; i++ ){                                                                 
+    for( int j=0; j<i; j++ ){
+      c[j].x = 0.0;
+      c[j].y = 0.0;
+      for( int k=0; k<N_COLS; k++){
+	c[j] += U[i][k]*conj(U[j][k]);
+      }
+    }
+
+    // orthogonalize with respect to previous lines                                                       
+    for( int j=0; j<i; j++ ){
+      for( int k=0; k<N_COLS; k++ ){
+	U[i][k] -= c[j]*U[j][k];
+      }
+    }
+
+    // normalize the line                                                                                
+    norm = 0.0;
+    for( int k=0; k<N_COLS; k++){
+        norm += norm2(U[i][k]);
+    }
+    norm = 1.0/sqrt(norm);
+    for(int k=0; k<N_COLS; k++){
+      U[i][k] =  U[i][k]*norm;
+    }
+  }
+
+  norm = det(U).x;
+  if( norm <= -0.5 ){
+    for(int i=0; i<N_COLS; i++){
+      U[N_COLS-1][i] = -1.0*U[N_COLS-1][i];
     }
   }
 }
 
-template<typename FloatA, typename FloatB>
-__inline__ __device__ FloatA trace_mul_ImG_ImG_1(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
-
-  Float2<FloatA> Ima[N_COLS][N_COLS];
-  Float2<FloatB> Imb[N_COLS][N_COLS];
-  Float2<FloatA> res[N_COLS][N_COLS];
-
-  ImG( Ima, a);
-  ImG( Imb, b);
-  mul_G_G( res, Ima, Imb);
-  return -real_trace<FloatA,FloatA>( res );
+template<typename FloatG>
+__inline__ __device__ void enforce_unitarity( Float2<FloatG> U[3][3]){
+  int cc=0;
+  while( check_unitarity(U)==1&&(cc<10000) ){
+    unitarize_G( U );
+    cc++;
+  }
 }
 
 
-  
 #endif

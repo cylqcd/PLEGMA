@@ -7,6 +7,7 @@
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_io.h>
 #include <PLEGMA_topocharge.cuh>
+#include <PLEGMA_WFlow.cuh>
 
 using namespace plegma;
 
@@ -109,6 +110,18 @@ void PLEGMA_Gauge<Float>::readFromLime(std::string filename) {
 }
 
 template<typename Float>
+Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
+
+  tex.tex = this->createTexObject();
+  Float Q = calcTopoCharge<Float>(tex, charge_def);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated topological charge is %.14f\n",Q);
+  this->destroyTexObject(tex.tex);
+  return Q;
+}
+
+template<typename Float>
 Float PLEGMA_Gauge<Float>::calculatePlaq(){
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_SIDE);
@@ -125,7 +138,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaqClovDef(){
   this->communicateGhost(-1,FIRST_CORNER);
   tex.tex = this->createTexObject();
   Float plaq = calcPlaqClovDef<Float,Float>(tex);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette with clover is %f\n",plaq);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette with clover is %.14f\n",plaq);
   this->destroyTexObject(tex.tex);
   return plaq;
 }
@@ -149,23 +162,21 @@ Float PLEGMA_Gauge<Float>::calculatePlaqShiftDef(){
   tex.tex = this->createTexObject();
   Float plaqRef = calculatePlaquette<Float>(tex);
   this->destroyTexObject(tex.tex);
-  PLEGMA_printf("TEST: Calculated plaquette with shifts is %f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
+  PLEGMA_printf("TEST: Calculated plaquette with shifts is %.14f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
 
   return plaqShifts;
 }
 
 template<typename Float>
-Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
-  gaugeTex<Float> tex;
+Float PLEGMA_Gauge<Float>::calculatePlaqStaplesDef(){
+  
   this->communicateGhost(-1,FIRST_CORNER);
 
-  tex.tex = this->createTexObject();
-  Float Q = calcTopoCharge<Float>(tex, charge_def);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated topological charge is %f\n",Q);
-  this->destroyTexObject(tex.tex);
-  return Q;
-}
+  Float plaq = calcPlaqStaplesDef<Float>( this->D_elem() );
 
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette using staples is %f\n",plaq);
+  return plaq;
+}
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
@@ -333,6 +344,47 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
     delete u_s1[idir];
     delete u_s2[idir];
   }
+}
+
+template<typename FloatG>
+void PLEGMA_Gauge<FloatG>::GFlow_step( PLEGMA_Gauge<FloatG> &Z, double eps )
+{
+
+  //1step RK
+  GFlow_substep<FloatG,double>( this->D_elem(), Z.D_elem(), eps/(4.0), 0.0 );// 1/4epsZ_0, W1
+  //communicate ghost W1
+  this->communicateGhost();
+  
+  //2step RK
+  GFlow_substep<FloatG,double>( this->D_elem(), Z.D_elem(), eps*(8.0/9.0), -(17.0/9.0) );// 8/9epsZ_1-17/36epsZ_0, W2
+  //communicate ghost W2
+  this->communicateGhost();
+
+  //3step RK
+  GFlow_substep<FloatG,double>( this->D_elem(), Z.D_elem(), eps*(3.0/4.0), (-1.0) );// Z_2=8/9epsZ_1-17/36epsZ_0, W3
+  //communicate ghost W3
+  this->communicateGhost();
+
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::applyGradientFlow( PLEGMA_Gauge<Float> &Z, int N, double eps ){
+  this->communicateGhost();
+  for(int i=0; i<N; i++){
+    this->GFlow_step( Z, eps );
+  }
+  this->unload();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::unitarize(){
+  unitarize_dev( this->D_elem() );
+  this->communicateGhost();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::print_fields( int sid ){
+  print_fields_k( this->D_elem(), sid );
 }
 
 template class PLEGMA_Gauge<float>;
