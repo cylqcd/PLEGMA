@@ -349,8 +349,12 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<doubl
 }
 
 
- // vecOut = (1 - U * U^\dag) vecIn
+ // vecOut = (1 - U * U^\dag) vecIn where out and in are the same
 void EigSolver::projectVector(PLEGMA_Vector<double> &vec){
+  if(p.NeV <= 0){
+    if(verbose) PLEGMA_printf("Skipping deflation of source vector since NeV=%d\n",p.NeV);
+    return;
+  }
   if(!vec.IsAllocHost()) PLEGMA_error("This functions needs vec to have also Host allocation");
   vec.unload();
   double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
