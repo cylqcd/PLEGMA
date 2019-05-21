@@ -26,12 +26,12 @@ static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
   if(qLoops.IsOneD())
     for(int mu = 0 ; mu < N_DIMS ; mu++){
       qLoops.load(qLoops.H_oneD()[mu]);
-      ft[0]->apply(qLoops);
+      ft[0]->apply(qLoops,FT_NAIVE);
       ft[0]->scale(0.25); // put the 1/4 of the symmetric covariant derivative
       ft[0]->writeToFile(filenamePrefix + "oneD_" + std::to_string(mu) + "_loops." + confID + ".dat", format);
 
       qLoops.load(qLoops.H_oneDC()[mu]);
-      ft[0]->apply(qLoops);
+      ft[0]->apply(qLoops,FT_NAIVE);
       ft[0]->scale(0.25);
       ft[0]->writeToFile(filenamePrefix + "oneDC_" + std::to_string(mu) + "_loops." + confID + ".dat", format);      
     }
@@ -41,7 +41,7 @@ static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
     for(auto munu : qLoops.get_twoD_index()){
       int mu=std::get<0>(munu), nu=std::get<1>(munu);
       qLoops.load(qLoops.H_twoD()[count]);
-      ft[1]->apply(qLoops);
+      ft[1]->apply(qLoops,FT_NAIVE);
       if(mu != 3 && nu != 3) ft[1]->scale(0.25);
       else ft[1]->scale(0.125);
       ft[1]->writeToFile(filenamePrefix + "twoD_" + std::to_string(mu) + std::to_string(nu) + "_loops." + confID + ".dat", format);
@@ -246,12 +246,14 @@ int main(int argc, char **argv)
 	} // for loop isc
       } // for loop ih
 
-
+    double t1=MPI_Wtime();
     if((isrc+1)%NdumpStep == 0){
       dumpLoops(qloops_std, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
       dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
     }
-
+    double t2=MPI_Wtime();
+    PLEGMA_printf("Time is %f\n",t2-t1);
+    
     if(!accumFlag){ // In case we do not accumulate we clear the buffers
       qloops_std.clearAccumBuffs();
       qloops_gen.clearAccumBuffs();
