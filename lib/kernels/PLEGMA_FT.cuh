@@ -100,74 +100,6 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   hostFree(h_res,f.Field_length() * ft.DimT() * 2*sizeof(Float));
 }
 
-// template<typename Float, int Flength>
-// __global__ void fourier_transform_3D_kernel(Float* block, Float* in,int it, int sign){
-//   int vid = blockIdx.x*blockDim.x + threadIdx.x;
-//   int sid = vid + it*DGC_localVolume3D;
-//   Float2<Float> *block2 = (Float2<Float> *)block;
-//   if(vid >= DGC_localVolume3D) return;
-//   generic2<Float> R(in);
-//   Float2<Float> inBuff[Flength];
-// #pragma unroll
-//   for(int i = 0; i < Flength; i++)
-//     inBuff[i] = R.get(i,sid);
-//   extern __shared__ int ext_shared_cache[];
-//   Float2<Float> *shared_cache = (Float2<Float> *) ext_shared_cache;
-//   int source_pos[3] = {0,0,0};
-//   fourier_transform_3D(block2,inBuff,shared_cache,Flength,vid,source_pos,0,sign);      
-// }
-
-// template<typename Float>
-// static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft,const PLEGMA_Field<Float> &field, int it, int sign){
-//   void (* kernelMap)(Float*,Float*,int,int);
-//   switch(field.Field_length()){
-//   case 1:  kernelMap = fourier_transform_3D_kernel<Float,1>; break;
-//   case N_COLS * N_COLS:  kernelMap = fourier_transform_3D_kernel<Float,N_COLS * N_COLS>; break;
-//   case N_DIMS * N_COLS * N_COLS: kernelMap = fourier_transform_3D_kernel<Float,N_DIMS * N_COLS * N_COLS>; break;
-//   case N_SPINS * N_COLS: kernelMap = fourier_transform_3D_kernel<Float,N_SPINS * N_COLS>; break;
-//   case N_SPINS * N_COLS * N_SPINS * N_COLS: kernelMap = fourier_transform_3D_kernel<Float,N_SPINS * N_COLS * N_SPINS * N_COLS>; break;
-//   case N_SPINS * N_SPINS: kernelMap = fourier_transform_3D_kernel<Float,N_SPINS * N_SPINS>; break;
-//   default: PLEGMA_error("Template not instantiated");
-//   }
-
-//   int SpVol = HGC_localVolume/HGC_localL[3];
-//   Float *d_partial_block = NULL;
-//   int site_size = field.Field_length();
-//   int shared_size = site_size*2*sizeof(Float);
-//   ProfileStruct ps(SpVol, shared_size);
-//   tune(ps, "fourier_transform_3D_kernel", kernelMap, d_partial_block, field.D_elem(), it, sign);
-//   size_t alloc_size=ft.Nmoms()*site_size*ps.tp.grid.x*2*sizeof(Float);
-//   PLEGMA_printf("%d\n",ps.tp.grid.x);
-//   cudaMalloc((void**)&d_partial_block, alloc_size);
-//   checkCudaError();
-//   run(ps, "fourier_transform_3D_kernel", kernelMap, d_partial_block, field.D_elem(), it, sign);
-//   PLEGMA_printf("%d\n",ps.tp.grid.x);
-//   Float *h_partial_block = NULL;
-//   hostMalloc(h_partial_block,alloc_size);
-//   cudaMemcpy(h_partial_block,d_partial_block,alloc_size,cudaMemcpyDeviceToHost);
-//   checkCudaError();
-//   cudaFree(d_partial_block);
-//   int gridDimX = ps.tp.grid.x;
-//   Float *reduction;
-//   hostMalloc(reduction,ft.Nmoms()*site_size*2*sizeof(Float));
-//   for(int i = 0 ; i < ft.Nmoms()*site_size; i++){
-//     reduction[i*2+0] = 0;
-//     reduction[i*2+1] = 0;
-//     for(int j = 0 ; j < gridDimX; j++) {
-//       reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
-//       reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
-//     }
-//   }
-//   MPI_Allreduce(MPI_IN_PLACE,reduction, ft.Nmoms()*site_size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
-//   for(int imom = 0; imom < ft.Nmoms(); imom++)
-//     for(int idf = 0 ; idf < field.Field_length(); idf++)
-//       for(int ir = 0 ; ir < 2 ; ir++)
-// 	ft.H_elem()[it*field.Field_length()*ft.Nmoms()*2 + idf*ft.Nmoms()*2 + imom*2 + ir] += reduction[imom*field.Field_length()*2+idf*2+ir];
-//   hostFree(reduction,ft.Nmoms()*site_size*2*sizeof(Float));
-//   hostFree(h_partial_block,alloc_size);
-// }
-
-
 
 
 template<typename Float>
@@ -188,35 +120,32 @@ __global__ void fourier_transform_3D_kernel(Float* block, Float* in, int field_l
 }
 
 
-
 template<typename Float>
 static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft,const PLEGMA_Field<Float> &field, int it, int sign){
   int SpVol = HGC_localVolume/HGC_localL[3];
   Float *d_partial_block = NULL;
   int site_size = field.Field_length();
-
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (SpVol + blockDim.x -1)/blockDim.x , 1 , 1); // spawn threads only for the spatial volume
-  
-  size_t alloc_size=ft.Nmoms()*site_size*gridDim.x*2*sizeof(Float);
-
+  int shared_size = site_size*2*sizeof(Float);
+  ProfileStruct ps(SpVol, shared_size);
+  tune(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, field.D_elem(), field.Field_length(), it, sign);
+  size_t alloc_size=ft.Nmoms()*site_size*ps.tp.grid.x*2*sizeof(Float);
   cudaMalloc((void**)&d_partial_block, alloc_size);
   checkCudaError();
-  fourier_transform_3D_kernel<Float><<<gridDim,blockDim,THREADS_PER_BLOCK*2*sizeof(Float)>>>(d_partial_block, field.D_elem(),field.Field_length(), it, sign);
-
+  run(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, field.D_elem(), field.Field_length(), it, sign);
   Float *h_partial_block = NULL;
   hostMalloc(h_partial_block,alloc_size);
   cudaMemcpy(h_partial_block,d_partial_block,alloc_size,cudaMemcpyDeviceToHost);
   checkCudaError();
   cudaFree(d_partial_block);
+  int gridDimX = ps.tp.grid.x;
   Float *reduction;
   hostMalloc(reduction,ft.Nmoms()*site_size*2*sizeof(Float));
   for(int i = 0 ; i < ft.Nmoms()*site_size; i++){
     reduction[i*2+0] = 0;
     reduction[i*2+1] = 0;
-    for(int j = 0 ; j < gridDim.x; j++) {
-      reduction[i*2+0] += h_partial_block[(i*gridDim.x + j)*2+0];
-      reduction[i*2+1] += h_partial_block[(i*gridDim.x + j)*2+1];
+    for(int j = 0 ; j < gridDimX; j++) {
+      reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
+      reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
     }
   }
   MPI_Allreduce(MPI_IN_PLACE,reduction, ft.Nmoms()*site_size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
