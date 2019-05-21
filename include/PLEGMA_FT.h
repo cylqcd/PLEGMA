@@ -6,7 +6,7 @@ namespace plegma {
   // This Class will be reponsible to momentum transfer fields
   //and write data in ASCII and HDF5 
   ////////////////
-
+  enum FT_TYPE{FT_NAIVE,FT_GEMV,FT_FFT};
   template<typename Float>
   class PLEGMA_FT {
     using Vint = std::vector<int>;
@@ -23,6 +23,9 @@ namespace plegma {
     bool accum;
     void createMom();
     void zero();
+    void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
+    void applyGEMV(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS gemv for reduction
+    void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
   public:
     PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); // allow also for a transformation in 4D
     ~PLEGMA_FT();
@@ -36,9 +39,7 @@ namespace plegma {
     Float* H_elem() const{return h_elem;}
     tex_mom_list getTexMomList();
     
-    void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
-    void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction
-    void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
+    void apply(const PLEGMA_Field<Float> &f, FT_TYPE type = FT_GEMV, int sign = -1);
     
     void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
     void scale(Float a);

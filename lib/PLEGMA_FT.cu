@@ -9,6 +9,8 @@
 #include <cmath>
 using namespace plegma;
 
+
+
 template<typename Float>
 PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
   Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
@@ -118,7 +120,11 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
-  PLEGMA_error("Not implemented yet");
+  if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation anly");
+  checkAllocation(f.Field_length());
+  if(!accum) zero();
+  for(int it =0 ; it < dimT; it++)
+    fourier_transform_3D_k(*this,f,it,sign);
 }
 
 template<typename Float>
@@ -127,12 +133,21 @@ void PLEGMA_FT<Float>::applyFFT(const PLEGMA_Field<Float> &f, int sign){
 }
 
 template<typename Float>
-void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, int sign){
+void PLEGMA_FT<Float>::applyGEMV(const PLEGMA_Field<Float> &f, int sign){
   if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
   if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
   if(!accum) zero();
-  FT<Float>(*this,f,momList,sign);
+  FT_gemv<Float>(*this,f,momList,sign);
+}
+
+template<typename Float>
+void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, FT_TYPE type, int sign){
+  switch(type){
+  case FT_NAIVE: applyNaive(f,sign); break;
+  case FT_GEMV: applyGEMV(f,sign); break;
+  case FT_FFT: applyFFT(f,sign); break;
+  }
 }
 
 template<typename Float>
