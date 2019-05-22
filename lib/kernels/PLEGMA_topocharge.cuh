@@ -84,7 +84,7 @@ static __global__ void calcTopChClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float 
   int cacheIndex = threadIdx.x;
 
   if (sid < DGC_localVolume) {
-    int dir0[3]={0,0,0}, dir1[3]={1,2,3}, dir2[3]={2,3,1}, dir3[3]={3,1,2};
+    int dir0[3]={3,3,3}, dir1[3]={0,1,2}, dir2[3]={1,2,0}, dir3[3]={2,0,1};
     Float2<FloatG> clov1[N_COLS][N_COLS], clov2[N_COLS][N_COLS];
    
     FloatG trace = 0. ;

@@ -704,7 +704,6 @@ __inline__ __device__ void A_equal_B( Float2<FloatA> A[N_COLS][N_COLS], Float2<F
   }
 }
 
-//From Claudio's code. Works
 template<typename FloatA>
 __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS]){  
   Float2<FloatA> M[N_COLS][N_COLS];
@@ -736,7 +735,6 @@ __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS]){
   
 }
 
-//From Claudio's code.
 template<typename FloatA>
 __inline__ __device__ void exp_G(Float2<FloatA> a[N_COLS][N_COLS]){  
   const int maxdeg = 10;
