@@ -18,11 +18,13 @@ PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
   createMom();
+  texMomList=getTexMomList();
 }
 
 template<typename Float>
 PLEGMA_FT<Float>::~PLEGMA_FT(){
   if(isAllocated) hostFree(h_elem, sizeN*sizeof(Float));
+  texMomList.free();
 }
 
 template<typename Float>
@@ -124,7 +126,7 @@ void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   checkAllocation(f.Field_length());
   if(!accum) zero();
   for(int it =0 ; it < dimT; it++)
-    fourier_transform_3D_k(*this,f,it,sign);
+    fourier_transform_3D_k(*this,f,texMomList,it,sign);
 }
 
 template<typename Float>
