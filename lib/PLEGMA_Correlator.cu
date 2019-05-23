@@ -17,7 +17,8 @@ initialize() {
   finalize();
   site_size = getSiteSize();
   if(corr_space == MOMENTUM_SPACE) {
-    corr_mom_space = new PLEGMA_FT<Float>(Q2_max,3,false,this->sink_mom);
+    if(std::equal(this->sink_mom.begin(),this->sink_mom.end(), (std::vector<int>){0,0,0}.begin())) corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    else corr_mom_space = new PLEGMA_FT<Float>(this->sink_mom);
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();

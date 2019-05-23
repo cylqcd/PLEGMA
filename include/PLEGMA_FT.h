@@ -25,7 +25,22 @@ namespace plegma {
     void createMom();
     void zero();
   public:
-    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false, std::vector<int> sink_mom = {0,0,0}); // allow also for a transformation in 4D
+    /**
+       @brief Constructor of the FT class with max momentum value
+       @params int Q2_max: Up to which momentum square we want to do the transformation
+       @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
+       @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
+     **/
+    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); 
+    /**
+       @brief Constructor of the FT class with specific momentum vector
+       @params std::vector<int> mom: Momentum vector, either 3 or 4 components based on the choice of D3D4
+       @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
+       @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
+     **/
+    PLEGMA_FT(std::vector<int> mom, int D3D4 = 3, bool accum = false);
+    
+
     ~PLEGMA_FT();
     void checkAllocation(int newDof);
 

@@ -52,6 +52,11 @@ namespace plegma {
       isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
       Q2_max(Q2_max)
     {}
+    PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, std::vector<int> sink_mom={0,0,0}):
+      isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
+      sink_mom(sink_mom)
+    {}
+
     ~PLEGMA_Correlator(){finalize();}
     CORR_SPACE getCorrSpace() {
       return corr_space;

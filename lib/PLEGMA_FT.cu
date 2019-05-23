@@ -10,14 +10,25 @@
 using namespace plegma;
 
 template<typename Float>
-PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum, std::vector<int> sink_mom):
-Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum), sink_mom(sink_mom){
+PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
+Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
-  if(std::equal(sink_mom.begin(),sink_mom.end(), (std::vector<int>){0,0,0}.begin())) createMom();
-  else momList.push_back(sink_mom);
+  createMom();
+  
 }
+
+template<typename Float>
+PLEGMA_FT<Float>::PLEGMA_FT(std::vector<int> mom, int D3D4, bool accum):
+  isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+  if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
+  dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
+  if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
+  momList.push_back(mom);
+  
+}
+
 
 template<typename Float>
 PLEGMA_FT<Float>::~PLEGMA_FT(){

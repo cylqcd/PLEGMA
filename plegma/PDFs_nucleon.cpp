@@ -329,8 +329,7 @@ int main(int argc, char **argv)
   propUP->applyBoundaries_device(sourcePositions[isource][3]);
   propDN->applyBoundaries_device(sourcePositions[isource][3]);
 
-  PLEGMA_Correlator<float> corr(corr_space, maxQsq);
-  corr.setMom(sinkMom_3D);
+  PLEGMA_Correlator<float> corr(corr_space, sinkMom_3D);
   corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
   corr.writeFile(twop_filename.c_str(), corr_file_format);
 
