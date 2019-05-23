@@ -19,19 +19,19 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
 		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
   qLoops.load(qLoops.H_loc());
-  ft[0]->apply(qLoops);
+  ft[0]->apply(qLoops,FT_GEMV);
 
   ft[0]->writeToFile(filenamePrefix + "local_loops." + confID + ".dat", format);
 
   if(qLoops.IsOneD())
     for(int mu = 0 ; mu < N_DIMS ; mu++){
       qLoops.load(qLoops.H_oneD()[mu]);
-      ft[0]->apply(qLoops,FT_NAIVE);
+      ft[0]->apply(qLoops,FT_GEMV);
       ft[0]->scale(0.25); // put the 1/4 of the symmetric covariant derivative
       ft[0]->writeToFile(filenamePrefix + "oneD_" + std::to_string(mu) + "_loops." + confID + ".dat", format);
 
       qLoops.load(qLoops.H_oneDC()[mu]);
-      ft[0]->apply(qLoops,FT_NAIVE);
+      ft[0]->apply(qLoops,FT_GEMV);
       ft[0]->scale(0.25);
       ft[0]->writeToFile(filenamePrefix + "oneDC_" + std::to_string(mu) + "_loops." + confID + ".dat", format);      
     }
@@ -41,7 +41,7 @@ static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
     for(auto munu : qLoops.get_twoD_index()){
       int mu=std::get<0>(munu), nu=std::get<1>(munu);
       qLoops.load(qLoops.H_twoD()[count]);
-      ft[1]->apply(qLoops,FT_NAIVE);
+      ft[1]->apply(qLoops,FT_GEMV);
       if(mu != 3 && nu != 3) ft[1]->scale(0.25);
       else ft[1]->scale(0.125);
       ft[1]->writeToFile(filenamePrefix + "twoD_" + std::to_string(mu) + std::to_string(nu) + "_loops." + confID + ".dat", format);
