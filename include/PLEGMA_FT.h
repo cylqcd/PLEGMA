@@ -50,12 +50,20 @@ namespace plegma {
     void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
   public:
     /**
-       @brief The constructor of the FT class
+       @brief Constructor of the FT class with max momentum value
        @params int Q2_max: Up to which momentum square we want to do the transformation
        @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
        @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
      **/
-    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); // allow also for a transformation in 4D
+    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); 
+    /**
+       @brief Constructor of the FT class with specific momentum vector
+       @params std::vector<int> mom: Momentum vector, either 3 or 4 components based on the choice of D3D4
+       @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
+       @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
+     **/
+    PLEGMA_FT(std::vector<int> mom, int D3D4 = 3, bool accum = false);
+    
     ~PLEGMA_FT();
     /**
        @brief First time a field is provided for transformation the FT object allocates memory. If field with same dof is provided then uses the same buffer otherwise has to reallocate memory for the new field.
