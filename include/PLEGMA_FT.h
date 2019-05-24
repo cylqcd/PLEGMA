@@ -86,6 +86,8 @@ namespace plegma {
        @brief Accessor. If field is 3D field dimT=1. If is 4D and the transformation is on 3D then dimT=localL[3], if it is a 4D transformation dimT=1
      **/
     int DimT() const{return dimT;}
+
+    bool IsAccum() const{return accum;}
     
     Float* H_elem() const{return h_elem;}
     tex_mom_list getTexMomList();
