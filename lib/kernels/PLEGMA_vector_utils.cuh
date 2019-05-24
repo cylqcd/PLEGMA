@@ -310,3 +310,28 @@ static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std
   cudaFree(d_listR2);
   cudaFree(d_absPsi);
 }
+
+template<typename FloatVo, typename FloatS, typename FloatVi>
+static __global__ void mulGV_kernel(FloatVo *Vo, FloatS *u, FloatVi *Vi){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= DGC_localVolume) return;
+  Float2<FloatVo> lVo[N_SPINS][N_COLS];
+  Float2<FloatVi> lVi[N_SPINS][N_COLS];
+  Float2<FloatS> lu[N_COLS][N_COLS];
+
+  vector2<FloatVo> RVo(Vo);
+  vector2<FloatVi> RVi(Vi);
+  su3_2<FloatS> Ru(u);
+
+  RVi.get(lVi,sid);
+  Ru.get(lu,sid);
+  mul_G_V(lVo,lu,lVi);
+  RVo.set(lVo,sid);
+}
+
+template<typename FloatVo, typename FloatS, typename FloatVi>
+static void mulGV_k(PLEGMA_Vector<FloatVo> &Vo, PLEGMA_Su3field<FloatS> &u, PLEGMA_Vector<FloatVi> &Vi){
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps,"mulGV_kernel", mulGV_kernel<FloatVo,FloatS,FloatVi>, Vo.D_elem(), u.D_elem(), Vi.D_elem());
+  checkCudaError();
+}

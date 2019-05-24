@@ -430,7 +430,6 @@ void PLEGMA_Vector<Float>::write(char *filename){
   MPI_Type_free(&subblock);
 }
 
-
 template<typename Float>
 void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr){
   // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
@@ -568,6 +567,11 @@ namespace plegma{
 	  cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
       }
     checkCudaError();
+  }
+
+  template<typename Float>
+  void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u){
+    mulGV_k(*this, u, vecIn);
   }
 
   
