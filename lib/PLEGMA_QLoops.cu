@@ -221,6 +221,59 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 }
 
 
+template<typename Float>
+void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
+						   PLEGMA_FT<Float> *FTs){
+  if(isOneD || isTwoD) PLEGMA_error("oneD or twoD cannot be computed with this function");
+  if(!x_r.IsAllocHost())PLEGMA_error("You need to allocate also host memory for the x_r");
+  x_r.unload();
+  PLEGMA_Su3field<Float> su3;
+  PLEGMA_Su3field<Float> WL;
+  PLEGMA_Su3field<Float> tmp;
+  PLEGMA_Vector<Float> *vecExchange = nullptr;
+  PLEGMA_Vector<Float> *vecIn = new PLEGMA_Vector<Float>(DEVICE);
+  PLEGMA_Vector<Float> *vec_ptr = nullptr;
+  PLEGMA_Vector<Float> vecTmp(DEVICE);
+
+  std::complex<Float> cr;
+  cr.real(val);
+  cr.imag(0.);
+  if(!(HGC_totalL[0] == HGC_totalL[1] && HGC_totalL[1] == HGC_totalL[2])) PLEGMA_error("Spatial total volume should be symmetric for this to work");
+  int L=HGC_totalL[0];
+  if(L%2 != 0) PLEGMA_error("If spatial extent is not multiple of 2 then it will not work");
+  int Lo2 = L/2;
+  for(int wilsDir = 0 ; wilsDir < 3; wilsDir++){
+    su3.absorbDir_device(gauge,wilsDir);
+    WL.setUnit((std::vector<int>) {0,4,8});
+    vec_ptr = &x_r;
+    for(int i = 0 ; i < Lo2;i++){
+      vecTmp.mulGV(*vec_ptr,WL);
+      contractG5(x_l,vecTmp);
+      this->cscale(cr);
+      if(!FTs[wilsDir*L+i].IsAccum()) PLEGMA_error("We need accumulation on here");
+      FTs[wilsDir*L+i].apply(*this,FT_GEMV);
+      vecExchange=vecIn; vecIn=vec_ptr; vec_ptr = vecExchange; 
+      WL.wilsonLineUpdate(su3,tmp,4+wilsDir);
+      vec_ptr->shift(*vecIn,4+wilsDir);
+    }
+
+    vec_ptr->load();
+    su3.absorbDir_device(gauge,wilsDir);
+    WL.setUnit((std::vector<int>) {0,4,8});
+    for(int i = 0 ; i < Lo2;i++){
+      vecTmp.mulGV(*vec_ptr,WL);
+      contractG5(x_l,vecTmp);
+      this->cscale(cr);
+      if(!FTs[wilsDir*L+i+Lo2].IsAccum()) PLEGMA_error("We need accumulation on here");
+      FTs[wilsDir*L+i+Lo2].apply(*this,FT_GEMV);
+      vecExchange=vecIn; vecIn=vec_ptr; vec_ptr = vecExchange;
+      WL.wilsonLineUpdate(su3,tmp,wilsDir);
+      vec_ptr->shift(*vecIn,wilsDir);
+    }
+    vec_ptr->load();
+  }
+  delete vecIn;
+}
 
 
 template<typename Float>
