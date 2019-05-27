@@ -27,10 +27,6 @@ namespace plegma {
      **/
     void createMom();
     /**
-       @brief Clean the buffer of the class
-     **/
-    void zero();
-    /**
        @brief performs the discrete fourier transform in the naive way using a simple custom kernel for reduction
        @param const PLEGMA_Field<Float> &f: the field we want to tranform in the momentum space
        @param int sign=-1: The sign of the FT, with default value the forward transformation
@@ -78,6 +74,10 @@ namespace plegma {
        @brief Accessor to the list where the components of each momentun are stored
      **/
     VVint MomList() const{ return momList;}
+    /**
+       @brief Clean the buffer of the class
+     **/
+    void zero();
     /**
        @brief Accessor to the dimensionality of the FT
      **/
