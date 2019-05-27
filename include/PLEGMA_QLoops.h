@@ -52,7 +52,7 @@ namespace plegma{
        @param PLEGMA_FT<Float> *FTs, An array of FTs to store data after FT. The size of the should be 3*Ls where Ls is the spatial extend
      **/
     void oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
-				 PLEGMA_FT<Float> *FTs);
+				 PLEGMA_FT<Float> **FTs);
     
     /**
        @brief Computes the one-end trick (can do up to two derivatives) for disconnected quark loops as x_l^dag \gamma_5 \Gamma c_r.
