@@ -223,7 +223,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
-						   PLEGMA_FT<Float> *FTs){
+						   PLEGMA_FT<Float> **FTs){
   if(isOneD || isTwoD) PLEGMA_error("oneD or twoD cannot be computed with this function");
   if(!x_r.IsAllocHost())PLEGMA_error("You need to allocate also host memory for the x_r");
   x_r.unload();
@@ -250,8 +250,8 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
       vecTmp.mulGV(*vec_ptr,WL);
       contractG5(x_l,vecTmp);
       this->cscale(cr);
-      if(!FTs[wilsDir*L+i].IsAccum()) PLEGMA_error("We need accumulation on here");
-      FTs[wilsDir*L+i].apply(*this,FT_GEMV);
+      if(!FTs[wilsDir*L+i]->IsAccum()) PLEGMA_error("We need accumulation on here");
+      FTs[wilsDir*L+i]->apply(*this,FT_GEMV);
       vecExchange=vecIn; vecIn=vec_ptr; vec_ptr = vecExchange; 
       WL.wilsonLineUpdate(su3,tmp,4+wilsDir);
       vec_ptr->shift(*vecIn,4+wilsDir);
@@ -264,8 +264,8 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
       vecTmp.mulGV(*vec_ptr,WL);
       contractG5(x_l,vecTmp);
       this->cscale(cr);
-      if(!FTs[wilsDir*L+i+Lo2].IsAccum()) PLEGMA_error("We need accumulation on here");
-      FTs[wilsDir*L+i+Lo2].apply(*this,FT_GEMV);
+      if(!FTs[wilsDir*L+i+Lo2]->IsAccum()) PLEGMA_error("We need accumulation on here");
+      FTs[wilsDir*L+i+Lo2]->apply(*this,FT_GEMV);
       vecExchange=vecIn; vecIn=vec_ptr; vec_ptr = vecExchange;
       WL.wilsonLineUpdate(su3,tmp,wilsDir);
       vec_ptr->shift(*vecIn,wilsDir);
