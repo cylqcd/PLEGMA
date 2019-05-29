@@ -150,7 +150,7 @@ int main(int argc, char **argv)
   if(lowModesRecon)
     for(int i=0; i< eigSol->getEigVals().size(); i++){
       double eigVal = std::get<0>(eigSol->getEigVals()[i]);
-      int iorder = std::get<3>(eigSol->getEigVals()[i]);
+      long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
       checkCudaError();      
