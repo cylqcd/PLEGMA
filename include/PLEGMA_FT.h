@@ -13,7 +13,6 @@ namespace plegma {
     using VVint = std::vector<Vint>;
   private:
     int Q2_max;
-    std::vector<int> fixMomVec;
     VVint momList;
     bool isAllocated;
     int dof; // degrees of freedom the field has
