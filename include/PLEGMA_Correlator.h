@@ -27,7 +27,7 @@ namespace plegma {
     // Correlator info
     CORR_SPACE corr_space;
     int Q2_max;
-    std::vector<int> sink_mom = {0,0,0};
+    std::vector<int> fixMomVec ;
     size_t vol_size;
     int n_datasets;
     int n_groups;
@@ -52,9 +52,9 @@ namespace plegma {
       isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
       Q2_max(Q2_max)
     {}
-    PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, std::vector<int> sink_mom={0,0,0}):
+    PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, std::vector<int> fixMomVec={0,0,0}):
       isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
-      sink_mom(sink_mom)
+      fixMomVec(fixMomVec)
     {}
 
     ~PLEGMA_Correlator(){finalize();}
@@ -87,9 +87,6 @@ namespace plegma {
 	source_position[i] = source[i];
     }
 
-    void setMom(std::vector<int> mom) {this->sink_mom=mom;}
-    std::vector<int> getMom() {return this->sink_mom;}
-    
     Float* getCorr() {
       return corr;
     }
