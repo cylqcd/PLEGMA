@@ -75,9 +75,9 @@ namespace plegma{
     bool verbose;
     int field_length;
     int size_per_Vec;
-    int size_NeV;
+    size_t size_NeV;
 #if defined(HAVE_ARPACK)
-    int size_NkV;
+    size_t size_NkV;
 #endif
     size_t bytes_per_Vec;
     size_t bytes_NeV;

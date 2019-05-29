@@ -33,12 +33,12 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool ver
   
   field_length = N_SPINS * N_COLS;
   size_per_Vec = HGC_localVolume * field_length;
-  size_NeV = p.NeV * size_per_Vec;
+  size_NeV = ((size_t) p.NeV) * size_per_Vec;
   bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
   bytes_NeV = size_NeV * 2 * sizeof(double);
 #if defined(HAVE_ARPACK)
   if(p.NkV < p.NeV) PLEGMA_error("The NkV should be larger than NeV");
-  size_NkV = p.NkV * size_per_Vec;
+  size_NkV = ((size_t) p.NkV) * size_per_Vec;
   bytes_NkV = size_NkV * 2 * sizeof(double);
 #endif
   try{
@@ -284,7 +284,6 @@ void EigSolver::computeEigVecs(){
   pzneupd_(&mpi_comm_f,&rvec,howmany, select, (std::complex<double>*) h_eigVals,(std::complex<double>*) h_eigVecs, &size_per_Vec,&sigma, 
 	   workev,bmat,&size_per_Vec,which_evals,&p.NeV,&p.tol, resid,&p.NkV, 
 	   (std::complex<double>*) h_eigVecs,&size_per_Vec,iparam,ipntr,workd,workl,&lworkl,rwork,&info,1,1,2);
-
   if(info == 1) PLEGMA_printf("Warning: Maximum number of iterations reached.\n");
   if(info == 3) PLEGMA_error("No shifts could be applied during implicit, Arnoldi update, try increasing NkV\n");
   int arpack_log_u = 9999;
@@ -310,9 +309,10 @@ void EigSolver::computeEigVecs(){
 }
 
 void EigSolver::computeEigVals(){
+  double* ptr_tmp = h_eigVecs;
   for(int j = 0 ; j < p.NeV; j++){
     double one[2] = {1.,0.};
-    cudaMemcpy(tmp1->D_elem(),h_eigVecs+j*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
+    cudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
     checkCudaError();
     dOp->apply<MdagM>(*tmp2,*tmp1);
     std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), MPI_COMM_WORLD);
@@ -320,6 +320,7 @@ void EigSolver::computeEigVals(){
     cuBLAS::axpy(size_per_Vec,one,tmp2->D_elem(),tmp1->D_elem());
     std::complex<double> res = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), MPI_COMM_WORLD);
     evalsOrdered.push_back(std::make_tuple(eval.real(), eval.imag(), std::sqrt(res.real()), j));
+    ptr_tmp += size_per_Vec*2;
   }
   std::sort(evalsOrdered.begin(), evalsOrdered.end());
   if(verbose)
@@ -372,13 +373,15 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
   PLEGMA_Vector<double> g5V(DEVICE);
   PLEGMA_Vector<double> V(DEVICE);
   std::vector<double> VdagG5V;
+  double* ptr_tmp = h_eigVecs;
   for (int j = 0; j < p.NeV; ++j) {
-    cudaMemcpy(g5V.D_elem(),h_eigVecs+j*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
+    cudaMemcpy(g5V.D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
     checkCudaError();
     V.copy(g5V);
     g5V.apply_gamma(G5);
     std::complex<double> res = cuBLAS::dot(size_per_Vec, V.D_elem(), g5V.D_elem(),MPI_COMM_WORLD);
     VdagG5V.push_back(res.real());
+    ptr_tmp += size_per_Vec*2;
   }
   if(comm_rank() == 0){
     FILE *ptr = fopen(filename.c_str(), "w");
