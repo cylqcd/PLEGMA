@@ -606,6 +606,23 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
   }
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::readFromLime(std::string filename){
+  FILE *fid;
+  LimeReader *limereader;
+  fid=fopen(filename.c_str(),"r");
+  if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
+  if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
+  int prec = get_lime_header(limereader);
+  if(prec != Precision()) PLEGMA_error("PLEGMA field precision %d != %d precision read from lime",Precision(),prec);
+  if(!IsAllocHost) PLEGMA_error("Host memory should be allocated to read data from lime");
+  read_from_lime(fid,limereader,h_elem,field_length);
+  limeDestroyReader(limereader);
+  fclose(fid);
+  load();
+}
+
+
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
 // Forcing initialization of the following cases

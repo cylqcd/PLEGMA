@@ -110,6 +110,8 @@ namespace plegma {
     void cscale(std::complex<Float> val);
     
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
+
+    virtual void readFromLIME(std::string filename);
   };
 }
 #endif
