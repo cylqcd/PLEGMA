@@ -48,11 +48,11 @@ namespace plegma {
     std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
     
   public:
-    PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, int Q2_max = 64):
+    PLEGMA_Correlator(CORR_SPACE CorrSpace, int Q2_max):
       isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
       Q2_max(Q2_max)
     {}
-    PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, std::vector<int> fixMomVec={0,0,0}):
+    PLEGMA_Correlator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec):
       isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
       fixMomVec(fixMomVec)
     {}
