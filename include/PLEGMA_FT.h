@@ -89,6 +89,7 @@ namespace plegma {
     
     Float* H_elem() const{return h_elem;}
     tex_mom_list getTexMomList();
+
     
     void apply(const PLEGMA_Field<Float> &f, FT_TYPE type = FT_GEMV, int sign = -1);
     

@@ -46,13 +46,32 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list,"alpha-gauss")) opt.set("alpha-gauss", "Coefficient for the Gaussian smearing", verbosity, alphaGauss);
   if(isInList(list,"nsmear-stout")) opt.set("nsmear-stout", "Number of stout smearing step", verbosity, nsmearStout);
   if(isInList(list,"alpha-stout")) opt.set("alpha-stout", "Coefficient for the stout smearing", verbosity, alphaStout);
+  if(isInList(list, "xiMomSm")) opt.set("xiMomSm", "Momentum smearing parameter defined as e^{-i xiMomSm p}", verbosity, xiMomSm);
   // sources----------------------------------------------------------------------------------------------
   if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions or stochastic vectors", verbosity, numSourcePositions);
   if(isInList(list,"src-filename")){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
+
   if(isInList(list,"rng-seed")) opt.set("rng-seed", "A seed for the random number generator", verbosity, rng_seed);
+
+  //3pt Functions -----------------------------------------------------------------------------------------
+  if(isInList(list,"which_particle")){
+    tmpString=get_particle_str(which_particle);
+    isFound=opt.set("which_particle", "Hadron to insert in the three point function", verbosity, tmpString);
+    if(isFound) which_particle=get_particle(tmpString.c_str());
+  }
+ 
+  if(isInList(list,"gammas")){
+    std::vector<std::string> tmpString;
+    get_gammas_str(gammas,&tmpString);
+    isFound=opt.set("gammas", "Gamma matrices to insert in the 3pt function", verbosity, tmpString);
+    std::vector<std::string> tmpString1;
+    for(int i=0;i<tmpString.size();i++) tmpString1.push_back(tmpString[i].c_str());
+    if(isFound) gammas=get_gammas(tmpString1);
+  }
+
   // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);
@@ -72,6 +91,7 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
 
   if(isInList(list, "tSinks")) opt.set("tSinks", "List with the source-sink time separations to do", verbosity, tSinks);
   if(isInList(list, "Projs")) opt.set("Projs", "List of the projectors to be used", verbosity, Projs);
+  if(isInList(list, "sinkMom")) opt.set("sinkMom", "Sink momentum boosted nucleon", verbosity, sinkMom);
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
 #ifdef HAVE_ARPACK
