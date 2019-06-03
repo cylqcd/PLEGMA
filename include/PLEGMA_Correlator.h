@@ -27,6 +27,7 @@ namespace plegma {
     // Correlator info
     CORR_SPACE corr_space;
     int Q2_max;
+    std::vector<int> fixMomVec ;
     size_t vol_size;
     int n_datasets;
     int n_groups;
@@ -47,10 +48,15 @@ namespace plegma {
     std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
     
   public:
-    PLEGMA_Correlator(CORR_SPACE CorrSpace = MOMENTUM_SPACE, int Q2_max = 64):
+    PLEGMA_Correlator(CORR_SPACE CorrSpace, int Q2_max):
       isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
       Q2_max(Q2_max)
     {}
+    PLEGMA_Correlator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec):
+      isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
+      fixMomVec(fixMomVec)
+    {}
+
     ~PLEGMA_Correlator(){finalize();}
     CORR_SPACE getCorrSpace() {
       return corr_space;
@@ -80,6 +86,7 @@ namespace plegma {
       for ( int i = 0; i < 4; i++ )
 	source_position[i] = source[i];
     }
+
     Float* getCorr() {
       return corr;
     }
@@ -87,6 +94,7 @@ namespace plegma {
 			PLEGMA_Propagator<Float> &prop2, 
 			int source[4]);
 
+    
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int source[4]);
