@@ -50,7 +50,7 @@ __global__ void create_prop_product(generic2<FloatC> propProd,
 template<typename FloatC>
 __global__ void contract_prop_prod(genericTex<FloatC> texPropProd, Float2<FloatC>* block,
 				   int size, int *idxs, Float2<float>*vals,
-				   int3 source, bool runFT){
+				   int3 source, bool runFT, tex_mom_list moms){
 
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<FloatC> accum=0;
@@ -69,7 +69,7 @@ __global__ void contract_prop_prod(genericTex<FloatC> texPropProd, Float2<FloatC
     extern __shared__ int ext_shared_cache[];
     Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
     int source_pos[3] = {source.x, source.y, source.z};
-    fourier_transform_3D(block, &accum, shared_cache, 1, sid, source_pos);
+    fourier_transform_3D(block, &accum, shared_cache, 1, sid, source_pos, moms);
   } else {
     if(block!=NULL)
       block[sid] = accum;
@@ -85,6 +85,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int3 source = corr.getSource3();
   size_t volume = corr.getVolSize()/HGC_localL[3];
+  tex_mom_list moms = corr.getTexMomList();
   size_t shift = 0;
   Float2<FloatC> *h_partial_block = NULL;        
   Float2<FloatC> *d_partial_block = NULL;
@@ -122,7 +123,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
       cudaMemcpy(vals, BP_prop_prods_vals[i][j], size*sizeof(Float2<float>), cudaMemcpyHostToDevice);
       checkCudaError();
       tune(ps2, "contract_prop_prod_"+std::to_string(size), contract_prop_prod<FloatC>, texPropProd, d_partial_block,
-	   size, idxs, vals, source, runFT);
+	   size, idxs, vals, source, runFT, moms);
 
       size_t alloc_size = (runFT==true) ? (volume * ps2.tp.grid.x * 2):(volume * 2);
       hostMalloc(h_partial_block, alloc_size*sizeof(FloatC));
@@ -130,7 +131,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
       checkCudaError();
 
       run(ps2, "contract_prop_prod_"+std::to_string(size), contract_prop_prod<FloatC>, texPropProd, d_partial_block,
-	  size, idxs, vals, source, runFT);
+	  size, idxs, vals, source, runFT, moms);
       cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
       checkCudaError();
       if(runFT==true){

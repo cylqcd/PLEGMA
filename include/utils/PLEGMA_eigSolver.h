@@ -103,9 +103,12 @@ namespace plegma{
     EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose=false);
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
+    void projectVector(PLEGMA_Vector<double> &vec);
     void dumpEvalsVdagG5V(std::string filename);
     double* getEigVecs() const{return h_eigVecs;}
     std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
+    int getSize_per_Vec() const{return size_per_Vec;}
+    size_t getBytes_per_Vec() const{return bytes_per_Vec;}
   };
 }
 #endif /* HAVE_EIGENSOLVER */
