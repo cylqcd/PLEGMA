@@ -4,8 +4,10 @@
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <functional>
+#ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
- 
+#endif
+
 using namespace plegma;
 
 //--------------------------------//
@@ -88,7 +90,7 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"baryons/nucl_nucl",
-#ifdef PLEGMA_ALL_BARYONS
+#ifdef PLEGMA_LIGHT_BARYONS
 	     "baryons/nucl_nucl2","baryons/nucl2_nucl","baryons/nucl2_nucl2",
 	     "baryons/deltap_deltaz_11","baryons/deltap_deltaz_22","baryons/deltap_deltaz_33",
 	     "baryons/deltapp_deltamm_11","baryons/deltapp_deltamm_22","baryons/deltapp_deltamm_33"
@@ -116,6 +118,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propCH, 
 		    int source[4], bool only_st, bool only_ch){
 
+#ifdef PLEGMA_UDSC_BARYONS
   setSource(source);
   shape = {};
   description = "";
@@ -157,6 +160,9 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
   propDN.destroyTexObject(propDNTex.tex);
   propST.destroyTexObject(propSTTex.tex);
   propCH.destroyTexObject(propCHTex.tex);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
 }
 
 
