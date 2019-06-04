@@ -18,7 +18,7 @@ Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
   createMom();
-  texMomList=getTexMomList();
+  texMomList.Nmoms=0;
 }
 
 template<typename Float>
@@ -28,14 +28,15 @@ PLEGMA_FT<Float>::PLEGMA_FT(std::vector<int> mom, int D3D4, bool accum):
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
   momList.push_back(mom);
-  texMomList=getTexMomList();
+  texMomList.Nmoms=0;
 }
 
 
 template<typename Float>
 PLEGMA_FT<Float>::~PLEGMA_FT(){
   if(isAllocated) hostFree(h_elem, sizeN*sizeof(Float));
-  texMomList.free();
+  if(texMomList.Nmoms>0)
+    texMomList.free();
 }
 
 template<typename Float>
@@ -90,44 +91,45 @@ void PLEGMA_FT<Float>::checkAllocation(int newDof){
 
 template<typename Float>
 tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
-  tex_mom_list tex_mom;
-  tex_mom.Nmoms=Nmoms();
-  cudaChannelFormatDesc desc;
-  memset(&desc, 0, sizeof(cudaChannelFormatDesc));
-  desc.f = cudaChannelFormatKindSigned;
-  desc.x = 8*4;
-  desc.y = 8*4;
-  desc.z = 8*4;
-  desc.w = 8*4;
+  if(texMomList.Nmoms==0) {
+    texMomList.Nmoms=Nmoms();
+    cudaChannelFormatDesc desc;
+    memset(&desc, 0, sizeof(cudaChannelFormatDesc));
+    desc.f = cudaChannelFormatKindSigned;
+    desc.x = 8*4;
+    desc.y = 8*4;
+    desc.z = 8*4;
+    desc.w = 8*4;
 
-  cudaResourceDesc resDesc;
-  memset(&resDesc, 0, sizeof(resDesc));
-  resDesc.resType = cudaResourceTypeLinear;
-  resDesc.res.linear.desc = desc;
+    cudaResourceDesc resDesc;
+    memset(&resDesc, 0, sizeof(resDesc));
+    resDesc.resType = cudaResourceTypeLinear;
+    resDesc.res.linear.desc = desc;
 
-  size_t bytes = tex_mom.Nmoms*4*sizeof(int);
-  void * devPtr;
-  int * hostPtr;
-  hostMalloc(hostPtr, bytes);
-  memset(hostPtr, 0, sizeof(bytes));
-  cudaMalloc(&devPtr, bytes);
-  for(int i=0; i<tex_mom.Nmoms; i++) {
-    for(int j=0; j<dims; j++) {
-      hostPtr[i*4+j]=momList[i][j];
+    size_t bytes = texMomList.Nmoms*4*sizeof(int);
+    void * devPtr;
+    int * hostPtr;
+    hostMalloc(hostPtr, bytes);
+    memset(hostPtr, 0, sizeof(bytes));
+    cudaMalloc(&devPtr, bytes);
+    for(int i=0; i<texMomList.Nmoms; i++) {
+      for(int j=0; j<dims; j++) {
+	hostPtr[i*4+j]=momList[i][j];
+      }
     }
+    cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
+    hostFree(hostPtr, bytes);
+    resDesc.res.linear.devPtr = devPtr;
+    resDesc.res.linear.sizeInBytes = bytes;
+
+    cudaTextureDesc texDesc;
+    memset(&texDesc, 0, sizeof(texDesc));
+    texDesc.readMode = cudaReadModeElementType;
+
+    cudaCreateTextureObject(&texMomList.tex, &resDesc, &texDesc, NULL);
+    checkCudaError();
   }
-  cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
-  hostFree(hostPtr, bytes);
-  resDesc.res.linear.devPtr = devPtr;
-  resDesc.res.linear.sizeInBytes = bytes;
-
-  cudaTextureDesc texDesc;
-  memset(&texDesc, 0, sizeof(texDesc));
-  texDesc.readMode = cudaReadModeElementType;
-
-  cudaCreateTextureObject(&tex_mom.tex, &resDesc, &texDesc, NULL);
-  checkCudaError();
-  return tex_mom;
+  return texMomList;
 }
     
 
@@ -137,7 +139,7 @@ void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   checkAllocation(f.Field_length());
   if(!accum) zero();
   for(int it =0 ; it < dimT; it++)
-    fourier_transform_3D_k(*this,f,texMomList,it,sign);
+    fourier_transform_3D_k(*this,f,getTexMomList,it,sign);
 }
 
 template<typename Float>
