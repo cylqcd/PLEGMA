@@ -68,7 +68,7 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     get_gammas_str(gammas,&tmpString);
     isFound=opt.set("gammas", "Gamma matrices to insert in the 3pt function", verbosity, tmpString);
     std::vector<std::string> tmpString1;
-    for(int i=0;i<tmpString.size();i++) tmpString1.push_back(tmpString[i].c_str());
+    for(size_t i=0;i<tmpString.size();i++) tmpString1.push_back(tmpString[i].c_str());
     if(isFound) gammas=get_gammas(tmpString1);
   }
 

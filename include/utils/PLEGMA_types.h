@@ -94,7 +94,7 @@ inline std::string get_particle_str(WHICHPARTICLE par) {
 
 inline std::vector<GAMMAS> get_gammas(std::vector<std::string> s){
   std::vector<GAMMAS> g;
-  for(int i=0;i<s.size();i++)
+  for(size_t i=0;i<s.size();i++)
     {
       if(s[i] == "one") g.push_back(ONE); 
       else if (s[i] == "g1") g.push_back(G1);
@@ -118,7 +118,7 @@ inline std::vector<GAMMAS> get_gammas(std::vector<std::string> s){
 }
 
 inline std::vector<std::string> get_gammas_str(std::vector<GAMMAS> g, std::vector<std::string> *s) {
-  for(int i=0;i<g.size();i++)
+  for(size_t i=0;i<g.size();i++)
     {
       if(g[i] == ONE) s->push_back("one"); 
       else if (g[i] == G1) s->push_back("g1");
