@@ -137,9 +137,10 @@ template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation anly");
   checkAllocation(f.Field_length());
+  tex_mom_list moms = this->getTexMomList();
   if(!accum) zero();
   for(int it =0 ; it < dimT; it++)
-    fourier_transform_3D_k(*this,f,getTexMomList,it,sign);
+    fourier_transform_3D_k(*this,f,moms,it,sign);
 }
 
 template<typename Float>
