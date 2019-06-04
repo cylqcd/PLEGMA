@@ -87,6 +87,15 @@ namespace plegma {
 	source_position[i] = source[i];
     }
 
+    tex_mom_list getTexMomList() {
+      if(corr_space == MOMENTUM_SPACE) {
+	return corr_mom_space->getTexMomList();
+      } else {
+	tex_mom_list dummy;
+	dummy.Nmoms=0;
+	return dummy;
+      }
+    }
     Float* getCorr() {
       return corr;
     }

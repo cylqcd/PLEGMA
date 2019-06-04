@@ -35,6 +35,7 @@ namespace plegma {
     
     GHOST_FLAG ghost_flag;
     ALLOCATION_FLAG allocation;
+    bool isPinnedHost;
     bool isAllocHost;
     bool isAllocDevice;
 
@@ -44,11 +45,10 @@ namespace plegma {
     void destroy_host();
     void create_device();
     void destroy_device();
-    void initialize(ALLOCATION_FLAG alloc_flag, int field_l,
-		    size_t vol_l, GHOST_FLAG ghost_flag);
+    void initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l);
   public:
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS);
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false);
     virtual ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();

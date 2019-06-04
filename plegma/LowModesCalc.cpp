@@ -24,7 +24,7 @@ static primme_preset_method getMethod(std::string str){
 #endif
 
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC", "Eig-PolyDeg", "Eig-amin",
-					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters"
+					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV"
 #ifdef HAVE_ARPACK
 					   ,"Eig-NkV", "Eig-logFile"
 #elif HAVE_PRIMME
