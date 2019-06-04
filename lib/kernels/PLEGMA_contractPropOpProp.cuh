@@ -6,8 +6,10 @@ using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink, int dir, bool isCons>
-__global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex, su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas, int it, int x0, int y0, int z0, int signProps){
+template<typename FloatC, typename FloatA, typename FloatB, typename FloatS, bool isLink, int dir, bool isCons>
+__global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
+					  su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas,
+					  int it, int x0, int y0, int z0, int signProps, bool runFT, tex_mom_list moms){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int vid = sid + it*DGC_localVolume3D;
   Float2<FloatC> *block2 = (Float2<FloatC> *)block;
@@ -69,7 +71,7 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
       //    extern __shared__ int ext_shared_cache[];
       __shared__ Float2<FloatC> ext_shared_cache[THREADS_PER_BLOCK];
       Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
-      fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos,listGammas.size-1,+1);
+      fourier_transform_3D(block2+iop*gridDim.x, &accum, shared_cache, 1, sid, source_pos, moms, listGammas.size-1,+1);
     }
     else{
       if (sid < DGC_localVolume3D)
@@ -79,19 +81,25 @@ __global__ void contractPropOpProp_kernel(FloatC* block, propTex<FloatA> prop1Te
   }
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool runFT, bool isLink, int dir, bool isCons>
-static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatA> prop2,
-				 int signProps, su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool isLink, int dir, bool isCons>
+static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatA> prop2,
+			       int signProps, su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
+  if(!isLink && dir>=0) PLEGMA_error("Does not make sence to do not have links and have directions");
+  if(isCons && !isLink) PLEGMA_error("Does not make sence to do noether current without links");
   if(gammas.size() <= 0)
     PLEGMA_error("Error the container of gamma matrices cannot be zero");
   if(gammas.size() > 16)
     PLEGMA_error("Error maximum number of gamma matrices is 16");
   int SpVol = HGC_localVolume/HGC_localL[3];
   FloatC *d_partial_block = NULL;
-  int site_size=gammas.size();
+
+  bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
+  int site_size = gammas.size();
   size_t volume = corr.getVolSize()/HGC_localL[3];
   size_t size = corr.getTotalSize()/HGC_localL[3];
   int3 source = corr.getSource3();
+  tex_mom_list moms = corr.getTexMomList();
 
   int shift = (dir<0) ? 0 : dir*gammas.size()*2;
   int Mshift = (dir<0) ? 1 : N_DIMS;
@@ -124,10 +132,9 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
   }
   cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(FloatC));
   checkCudaError();
-  contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, runFT,
-			    isLink, dir,isCons>
+  contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, isLink, dir,isCons>
     <<<gridDim,blockDim>>>(d_partial_block, prop1, prop2, su3, listGammas, it,
-			   source.x,source.y,source.z, signProps);
+			   source.x,source.y,source.z, signProps, runFT, moms);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
@@ -161,21 +168,6 @@ static void contractPropOpProp_k(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA
 	h_partial_block[(v*gammas.size()+i)*2+1];
     }
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-}
-
-
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS, bool isLink, int dir, bool isCons>
-static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps,
-			       su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas){
-  if(!isLink && dir>=0) PLEGMA_error("Does not make sence to do not have links and have directions");
-  if(isCons && !isLink) PLEGMA_error("Does not make sence to do noether current without links");
-#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
-  if(corr.getCorrSpace() == POSITION_SPACE)
-    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,false,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
-  else if(corr.getCorrSpace() == MOMENTUM_SPACE)
-    contractPropOpProp_k<FloatC,FloatA,FloatB,FloatS,true,isLink,dir,isCons>(corr,prop1,prop2,signProps,su3,it,gammas);
-  else
-    PLEGMA_error("Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
 #else
   PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
 #endif
