@@ -14,12 +14,10 @@ int main(int argc, char **argv)
 
   // Allocation done on BOTH, DEVICE and HOST
   PLEGMA_Gauge<double> gauge(BOTH);
-
   // Reading from Lime file and loading to device
   gauge.readFromLime(latfile.c_str());
-  gauge.load();
-  
-  // Compuiting plaquette on device in three different way for crosschecking
+
+  // Computing plaquette on device in three different way for crosschecking
   gauge.calculatePlaq();
   gauge.calculatePlaqCorners();
   gauge.calculatePlaqShifts();
