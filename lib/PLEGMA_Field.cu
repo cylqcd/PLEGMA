@@ -29,7 +29,7 @@ using namespace plegma;
 
 template<typename Float>
 void PLEGMA_Field<Float>::
-initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG ghost_flag) {
+initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
 
@@ -68,52 +68,52 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG gho
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag,bool isPinnedHost):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
+  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
 {
-  initialize(alloc_flag, site_size, HGC_localVolume, ghost_flag);
+  initialize(alloc_flag, site_size, HGC_localVolume);
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag, bool isPinnedHost):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(classT)
+  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(classT)
 {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
 
   switch(classT){
     case SCALAR:
-      initialize(alloc_flag, 1, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, 1, HGC_localVolume);
       field_name = "PLEGMA_SCALAR";
       break;
     case SU3FIELD:
-      initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
       field_name = "PLEGMA_SU3FIELD";
       break;
     case GAUGE:
-      initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
       field_name = "PLEGMA_GAUGE";
       break;    
     case VECTOR:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
       field_name = "PLEGMA_VECTOR";
       break;
     case PROPAGATOR:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
       field_name = "PLEGMA_PROPAGATOR";
       break;
     case PROPAGATOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
       field_name = "PLEGMA_PROPAGATOR3D";
       break;
     case VECTOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
       field_name = "PLEGMA_VECTOR3D";
       break;
     case QLOOPS:
-      initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
       field_name = "PLEGMA_QLOOPS";
       break;
   }
@@ -163,7 +163,8 @@ void PLEGMA_Field<Float>::unload(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
-  hostMalloc(h_elem, bytes_total_plus_ghost_length);
+  if(!isPinnedHost)hostMalloc(h_elem, bytes_total_plus_ghost_length);
+  else hostMallocPinned(h_elem, bytes_total_plus_ghost_length);
   isAllocHost = true;
   zero_host();
 }
@@ -192,7 +193,8 @@ void PLEGMA_Field<Float>::create_device(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_host(){
-  hostFree(h_elem, bytes_total_plus_ghost_length);
+  if(!isPinnedHost)hostFree(h_elem, bytes_total_plus_ghost_length);
+  else hostFreePinned(h_elem, bytes_total_plus_ghost_length);
   isAllocHost=false;
 }
 
@@ -540,7 +542,7 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
 template<typename Float>
 void PLEGMA_Field<Float>::axpy(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
   Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
-  cuBLAS::axpy(total_length*field_length, a, d_elem, fieldIn.D_elem());
+  cuBLAS::axpy(total_length*field_length, a, fieldIn.D_elem(), d_elem);
 }
 
 

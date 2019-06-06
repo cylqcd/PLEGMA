@@ -6,7 +6,7 @@ namespace plegma {
   // This Class will be reponsible to momentum transfer fields
   //and write data in ASCII and HDF5 
   ////////////////
-
+  enum FT_TYPE{FT_NAIVE,FT_GEMV,FT_FFT};
   template<typename Float>
   class PLEGMA_FT {
     using Vint = std::vector<int>;
@@ -21,8 +21,33 @@ namespace plegma {
     int dims; // the dimensionality of the transformation either 3 or 4
     int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[3] : 1; 
     bool accum;
+    tex_mom_list texMomList;
+    /**
+       @brief Creates a list momenta which have the p^2 up to a specific value 
+     **/
     void createMom();
+    /**
+       @brief Clean the buffer of the class
+     **/
     void zero();
+    /**
+       @brief performs the discrete fourier transform in the naive way using a simple custom kernel for reduction
+       @param const PLEGMA_Field<Float> &f: the field we want to tranform in the momentum space
+       @param int sign=-1: The sign of the FT, with default value the forward transformation
+     **/
+    void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1);
+    /**
+       @brief performs the discrete fourier transform using Thrust to build a scalar field with momentum phases and then use cuBLAS to multiply the input field with field with the momentum phases.
+       @param const PLEGMA_Field<Float> &f: the field we want to tranform in the momentum space
+       @param int sign=-1: The sign of the FT, with default value the forward transformation
+     **/
+    void applyGEMV(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS gemv for reduction
+    /**
+       @brief performs the Fast Fourier Transform. Not implemented yet but one must check if http://accfft.org/about/ can be used as external library
+       @param const PLEGMA_Field<Float> &f: the field we want to tranform in the momentum space
+       @param int sign=-1: The sign of the FT, with default value the forward transformation
+     **/
+    void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
   public:
     /**
        @brief Constructor of the FT class with max momentum value
@@ -39,22 +64,34 @@ namespace plegma {
      **/
     PLEGMA_FT(std::vector<int> mom, int D3D4 = 3, bool accum = false);
     
-
     ~PLEGMA_FT();
+    /**
+       @brief First time a field is provided for transformation the FT object allocates memory. If field with same dof is provided then uses the same buffer otherwise has to reallocate memory for the new field.
+       @params int newDof: The dof of the field we want to transform
+     **/
     void checkAllocation(int newDof);
-
+    /**
+       @brief Accessor to the number of momenta the FT will do
+     **/
     int Nmoms() const{ return momList.size();}
+    /**
+       @brief Accessor to the list where the components of each momentun are stored
+     **/
     VVint MomList() const{ return momList;}
+    /**
+       @brief Accessor to the dimensionality of the FT
+     **/
     int Dims() const{return dims;}
+    /**
+       @brief Accessor. If field is 3D field dimT=1. If is 4D and the transformation is on 3D then dimT=localL[3], if it is a 4D transformation dimT=1
+     **/
     int DimT() const{return dimT;}
     
     Float* H_elem() const{return h_elem;}
     tex_mom_list getTexMomList();
 
     
-    void applyNaive(const PLEGMA_Field<Float> &f, int sign=-1); // naive transformation using a simple custom kernel for reduction
-    void apply(const PLEGMA_Field<Float> &f, int sign=-1);      // transformation using THRUST for the momentum field and cuBLAS for reduction
-    void applyFFT(const PLEGMA_Field<Float> &f, int sign=-1);  // use FFT in case in the future is implemented
+    void apply(const PLEGMA_Field<Float> &f, FT_TYPE type = FT_GEMV, int sign = -1);
     
     void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
     void scale(Float a);
