@@ -17,11 +17,12 @@ static bool G_isACC;
 static double G_amin;
 static double G_amax;
 
-EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose):verbose(verbose),p(params),
-												    h_eigVecs(nullptr),h_eigVals(nullptr)
+EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isReadEigenVectors,bool isWriteEigenVectors,std::string filenamePrefix,
+		     bool verbose):verbose(verbose),p(params),
+				   h_eigVecs(nullptr),h_eigVals(nullptr)
 {
   if(!HGC_init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
-    
+  if(isReadEigenVectors && isWriteEigenVectors) PLEGMA_warning("Read and write eigenvectors is a strange choice...");
   if(p.NeV <=0 ){
     PLEGMA_printf("Warning: Eigensolver instructed to use NeV=%d, skipping eigenvectors calculation\n",p.NeV);
     return;
@@ -44,11 +45,11 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool ver
   try{
 #if defined(HAVE_ARPACK)
     h_eigVecs = new double[size_NkV*2];
-    h_eigVals = new double[p.NkV*2];
+    if(!isReadEigenVectors) h_eigVals = new double[p.NkV*2];
 #elif defined(HAVE_PRIMME)
     h_eigVecs = new double[size_NeV*2];
-    h_eigVals = new double[p.NeV];
-    h_rnorms = new double[p.NeV];
+    if(!isReadEigenVectors) h_eigVals = new double[p.NeV];
+    if(!isReadEigenVectors) h_rnorms = new double[p.NeV];
 #else
     PLEGMA_error("Not implemented");
 #endif
@@ -57,12 +58,13 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool ver
     PLEGMA_error(err.what());
   }
 
-  dOp = new QUDA_dirac(dslashType);
-  d_in = new PLEGMA_Vector<double>(DEVICE);
-  d_out = new PLEGMA_Vector<double>(DEVICE);
-  tmp1 = new PLEGMA_Vector<double>(DEVICE);
-  tmp2 = new PLEGMA_Vector<double>(DEVICE);
-
+  if(!isReadEigenVectors){
+    dOp = new QUDA_dirac(dslashType);
+    d_in = new PLEGMA_Vector<double>(DEVICE);
+    d_out = new PLEGMA_Vector<double>(DEVICE);
+    tmp1 = new PLEGMA_Vector<double>(DEVICE);
+    tmp2 = new PLEGMA_Vector<double>(DEVICE);
+  }
   // check the spectrumPart
   if(p.spectrumPart != "SR" && p.spectrumPart != "LR") PLEGMA_error("Allowed values for spectrum part are SR or LR");
   if(p.isACC){
@@ -71,20 +73,30 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType, bool ver
     else PLEGMA_error("Not implemented");
   }
   
-  initEigSolver();
-  if(verbose) print();
-  computeEigVecs();
+  if(!isReadEigenVectors){
+    initEigSolver();
+    if(verbose) print();
+    computeEigVecs();
+  }
+  else readEigenVectors(readEigenVectors);
+    
+  if(isWriteEigenVectors) writeEigenVectors(filenamePrefix);
+  
   computeEigVals();
-  delete[] h_eigVals;
-  delete d_in;
-  delete d_out;
-  delete tmp1;
-  delete tmp2;
-  delete dOp;
-  d_in = nullptr; d_out = nullptr; tmp1 = nullptr; tmp2 = nullptr; dOp = nullptr;
+  if(!isReadEigenVectors){
+    delete[] h_eigVals;
+    delete d_in;
+    delete d_out;
+    delete tmp1;
+    delete tmp2;
+    delete dOp;
+    d_in = nullptr; d_out = nullptr; tmp1 = nullptr; tmp2 = nullptr; dOp = nullptr;
+  }
 #if defined(HAVE_PRIMME)
-  delete[] h_rnorms;
-  primme_free(&primme_pars);
+  if(!isReadEigenVectors){
+    delete[] h_rnorms;
+    primme_free(&primme_pars);
+  }
 #endif
 }
 
@@ -388,4 +400,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
   }
 }
 
+ void EigSolver::readEigenVectors(std::string filenamePrefix){
+   
+ }
 #endif

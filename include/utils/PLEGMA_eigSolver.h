@@ -99,8 +99,11 @@ namespace plegma{
     void computeEigVecs();
     void computeEigVals();
     void print();
+    void writeEigenVectors(std::string filenamePrefix);
+    void readEigenVectors(std::string filenamePrefix);
   public:
-    EigSolver(EigSolverParams params, QudaDslashType dslashType, bool verbose=false);
+    EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isReadEigenVectors = false,
+	      bool isWriteEigenVectors = false, std::string filenamePrefix = "", bool verbose=false);
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
     void projectVector(PLEGMA_Vector<double> &vec);
