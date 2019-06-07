@@ -393,6 +393,11 @@ namespace plegma{
     checkCudaError();
   }
 
+  template<typename Float>
+  void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u){
+    mulGV_k(*this, u, vecIn);
+  }
+
   
   template class PLEGMA_Vector3D<float>;
   template class PLEGMA_Vector3D<double>;

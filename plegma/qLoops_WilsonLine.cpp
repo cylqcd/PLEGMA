@@ -16,38 +16,11 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 };
 
 
-static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
-		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
-  qLoops.load(qLoops.H_loc());
-  ft[0]->apply(qLoops,FT_GEMV);
-
-  ft[0]->writeToFile(filenamePrefix + "local_loops." + confID + ".dat", format);
-
-  if(qLoops.IsOneD())
-    for(int mu = 0 ; mu < N_DIMS ; mu++){
-      qLoops.load(qLoops.H_oneD()[mu]);
-      ft[0]->apply(qLoops,FT_GEMV);
-      ft[0]->scale(0.25); // put the 1/4 of the symmetric covariant derivative
-      ft[0]->writeToFile(filenamePrefix + "oneD_" + std::to_string(mu) + "_loops." + confID + ".dat", format);
-
-      qLoops.load(qLoops.H_oneDC()[mu]);
-      ft[0]->apply(qLoops,FT_GEMV);
-      ft[0]->scale(0.25);
-      ft[0]->writeToFile(filenamePrefix + "oneDC_" + std::to_string(mu) + "_loops." + confID + ".dat", format);      
-    }
-
-  int count=0;
-  if(qLoops.IsTwoD()){
-    for(auto munu : qLoops.get_twoD_index()){
-      int mu=std::get<0>(munu), nu=std::get<1>(munu);
-      qLoops.load(qLoops.H_twoD()[count]);
-      ft[1]->apply(qLoops,FT_GEMV);
-      if(mu != 3 && nu != 3) ft[1]->scale(0.25);
-      else ft[1]->scale(0.125);
-      ft[1]->writeToFile(filenamePrefix + "twoD_" + std::to_string(mu) + std::to_string(nu) + "_loops." + confID + ".dat", format);
-      count++;
-    }
-  }
+static void dumpLoops(PLEGMA_FT<double> **ft,
+ 		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
+  for(int idir=0; idir < 3; idir++)
+    for(int i =0; i < HGC_totalL[0]; i++)
+      ft[idir*HGC_totalL[0]+i]->writeToFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
 }
 
 int main(int argc, char **argv)
@@ -75,16 +48,9 @@ int main(int argc, char **argv)
   if(!lowModesRecon) Eig_NeV=0;
   std::string Eig_outputFile = "./eigsVdagG5V.dat";
   HGC_options->set("Eig-outputFile", "Path to dump the eigenvalues and vdag g5 v if low-modes-recon is enabled",verbosity, Eig_outputFile);
-  bool oneDLoops = true;
-  bool accumFlag = true;
-  bool twoDLoops = false;
   int NdumpStep = 1;
-  HGC_options->set("oneD-loops", "Whether we want to use covariant derivative for the quark loops calculation", verbosity, oneDLoops);
-  HGC_options->set("twoD-loops", "Whether we want to use two covariant derivative for the quark loops calculation", verbosity, twoDLoops);
-  HGC_options->set("accum-loops", "Accumulate loops over the stochastic source vectors", verbosity, accumFlag);
   HGC_options->set("dump-step", "If accumulation is ON, Every how many stochastic vector to dump results", verbosity, NdumpStep);
-  if(!accumFlag) NdumpStep =1;
-  if(accumFlag && (NdumpStep<1)) PLEGMA_error("dump-step should be >= 1");
+  if(NdumpStep<1) PLEGMA_error("dump-step should be >= 1");
   bool debugMode = false;
   HGC_options->set("debug-mode", "If debug mode is enabled, run 1 source with units everywhere for check", verbosity, debugMode);
 
@@ -145,13 +111,18 @@ int main(int argc, char **argv)
     PLEGMA_error("No eigenSolver is compiled");
 #endif
   }
+  if(!(HGC_totalL[0] == HGC_totalL[1] && HGC_totalL[1] == HGC_totalL[2])) PLEGMA_error("Spatial total volume should be symmetric for this to work");
 
-  PLEGMA_FT<double> *ft[2]={nullptr,nullptr};
-  ft[0] = new PLEGMA_FT<double>(maxQsq, 3);
-  if(twoDLoops) ft[1] = new PLEGMA_FT<double>(0, 3);
+  int sizeFT=3*HGC_totalL[0]; 
+  PLEGMA_FT<double> **ft_std = new PLEGMA_FT<double>*[sizeFT];
+  PLEGMA_FT<double> **ft_gen = new PLEGMA_FT<double>*[sizeFT];
+  for(int i = 0 ; i< sizeFT; i++){
+    ft_std[i] = new PLEGMA_FT<double>(maxQsq,3,true);
+    ft_gen[i] = new PLEGMA_FT<double>(maxQsq,3,true);
+  }
   
-  PLEGMA_QLoops<double> qloops_std(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
-  PLEGMA_QLoops<double> qloops_gen(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
+  PLEGMA_QLoops<double> qloops_std(BOTH,NO_GHOSTS,true);
+  PLEGMA_QLoops<double> qloops_gen(BOTH,NO_GHOSTS,true);
   
   // // ensuring mu negative
   if(mu>0) mu*=-1.;
@@ -168,21 +139,11 @@ int main(int argc, char **argv)
 
   PLEGMA_Vector<double> phi;
   PLEGMA_Vector<double> phi_r;
-  PLEGMA_Vector<double> *tmp[16] = {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
-				    nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr};
-  PLEGMA_QLoops<double> *qLtmp = nullptr;
-  if(oneDLoops) tmp[0] = new PLEGMA_Vector<double>(DEVICE);
-  if(twoDLoops){
-    for(int i = 1 ; i < 16; i++) tmp[i] = new PLEGMA_Vector<double>(DEVICE);
-    qLtmp = new PLEGMA_QLoops<double>(DEVICE,FIRST_SIDE,true); // this we need to do the shifts where needed
-  }
     
   PLEGMA_Vector<double> source(DEVICE);
   if(!debugMode) source.randInit(rng_seed);
   PLEGMA_Vector<double> *sourceDil = nullptr;
   if(k_probing>0 || spinColorDil) sourceDil = new PLEGMA_Vector<double>(DEVICE);
-    
-  if(oneDLoops) gauge.communicateGhost();
 
   // if LMR is enabled do the exact part
 #if defined(HAVE_EIGENSOLVER)
@@ -192,14 +153,11 @@ int main(int argc, char **argv)
       long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
-      checkCudaError();
-      if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1./eigVal,true); //standard one-end trick
-      else qloops_std.oneEnd_trick(phi,phi,-1./eigVal,true); //standard one-end trick
-
+      checkCudaError();      
+      qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1./eigVal,gauge,ft_std);
       D->apply<M>(phi_r,phi);
       phi_r.apply_gamma5();
-      if(oneDLoops || twoDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp,qLtmp, gauge, +1./eigVal, true); //generalized one-end trick
-      else qloops_gen.oneEnd_trick(phi, phi_r, +1./eigVal, true); //generalized one-end trick
+      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gauge,ft_gen);
     }
 #endif
 
@@ -209,16 +167,19 @@ int main(int argc, char **argv)
 
 #if defined(HAVE_EIGENSOLVER)
   if(lowModesRecon){
-    dumpLoops(qloops_std, ft, loopsPrefix + "/exact_part_std_", confID, corr_file_format);
-    dumpLoops(qloops_gen, ft, loopsPrefix + "/exact_part_gen_", confID, corr_file_format);
+    dumpLoops(ft_std, loopsPrefix + "/exact_part_std_", confID, corr_file_format);
+    dumpLoops(ft_gen, loopsPrefix + "/exact_part_gen_", confID, corr_file_format);
+
+    for(int i = 0 ; i < sizeFT; i++){
+      ft_std[i]->zero();
+      ft_gen[i]->zero();
+    }
   }
 #endif
 
   PLEGMA_Hprobing *hprop = nullptr;
   if(k_probing>0) hprop = new PLEGMA_Hprobing(k_probing);
 
-  qloops_std.clearAccumBuffs();
-  qloops_gen.clearAccumBuffs();
   std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
   for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
     if(debugMode) source.setUnit(indDof);
@@ -231,33 +192,26 @@ int main(int argc, char **argv)
 	  if(spinColorDil || k_probing>0) solverDN->solve(phi,*sourceDil); else solverDN->solve(phi,source);
 	  // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
 	  phi.scaleVector(1./(2.*inv_params.kappa));
-	  // !!!!!!!!!!!!!!!!!!!! if we use deflation here I think we need to project solution vector but check
 #if defined(HAVE_EIGENSOLVER)
 	  if(lowModesRecon)
 	    eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
 #endif
-	  if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1.,true); //standard one-end trick
-	  else qloops_std.oneEnd_trick(phi,phi,-1.,true); //standard one-end trick
-
+	  qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1,gauge,ft_std);
+	  
 	  D->apply<M>(phi_r,phi);
 	  phi_r.apply_gamma5();
-	  if(oneDLoops || twoDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp,qLtmp, gauge, +1., true); //generalized one-end trick
-	  else qloops_gen.oneEnd_trick(phi, phi_r, +1., true); //generalized one-end trick	  
+	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gauge,ft_gen);
 	} // for loop isc
       } // for loop ih
 
     double t1=MPI_Wtime();
     if((isrc+1)%NdumpStep == 0){
-      dumpLoops(qloops_std, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
-      dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
+      dumpLoops(ft_std, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
+      dumpLoops(ft_gen, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
     }
     double t2=MPI_Wtime();
     PLEGMA_printf("Time is %f\n",t2-t1);
     
-    if(!accumFlag){ // In case we do not accumulate we clear the buffers
-      qloops_std.clearAccumBuffs();
-      qloops_gen.clearAccumBuffs();
-    }
   } // for loop isrc
 
   if(k_probing>0) delete hprop;
@@ -266,14 +220,13 @@ int main(int argc, char **argv)
   if(lowModesRecon) delete eigSol;
 #endif
 
-  delete ft[0];
-  if(oneDLoops) delete tmp[0];
-  if(twoDLoops){
-    for(int i = 1 ; i < 16; i++) delete tmp[i];
-    delete qLtmp;
-    delete ft[1];
+  for(int i = 0 ; i< sizeFT; i++){
+    delete ft_std[i];
+    delete ft_gen[i];
   }
-  
+  delete[] ft_std;
+  delete[] ft_gen;
+    
   delete D;
   delete solverDN;
   finalize();

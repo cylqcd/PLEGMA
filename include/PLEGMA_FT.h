@@ -27,10 +27,6 @@ namespace plegma {
      **/
     void createMom();
     /**
-       @brief Clean the buffer of the class
-     **/
-    void zero();
-    /**
        @brief performs the discrete fourier transform in the naive way using a simple custom kernel for reduction
        @param const PLEGMA_Field<Float> &f: the field we want to tranform in the momentum space
        @param int sign=-1: The sign of the FT, with default value the forward transformation
@@ -79,6 +75,10 @@ namespace plegma {
      **/
     VVint MomList() const{ return momList;}
     /**
+       @brief Clean the buffer of the class
+     **/
+    void zero();
+    /**
        @brief Accessor to the dimensionality of the FT
      **/
     int Dims() const{return dims;}
@@ -86,6 +86,8 @@ namespace plegma {
        @brief Accessor. If field is 3D field dimT=1. If is 4D and the transformation is on 3D then dimT=localL[3], if it is a 4D transformation dimT=1
      **/
     int DimT() const{return dimT;}
+
+    bool IsAccum() const{return accum;}
     
     Float* H_elem() const{return h_elem;}
     tex_mom_list getTexMomList();
