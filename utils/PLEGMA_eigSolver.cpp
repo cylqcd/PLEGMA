@@ -78,7 +78,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     if(verbose) print();
     computeEigVecs();
   }
-  else readEigenVectors(readEigenVectors);
+  else readEigenVectors(filenamePrefix);
     
   if(isWriteEigenVectors) writeEigenVectors(filenamePrefix);
   
@@ -404,6 +404,22 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
 }
 
  void EigSolver::readEigenVectors(std::string filenamePrefix){
-   
+   if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
+   PLEGMA_Vector<double> tmp(HOST);
+   for(int i = 0 ; i < p.NeV; i++){
+     double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
+     tmp.readFromLime(filenamePrefix + "_eV" + std::to_string(i));
+     memcpy(eigVec,tmp.H_elem(),bytes_per_Vec);
+   }
+ }
+
+ void EigSolver::writeEigenVectors(std::string filenamePrefix){
+   if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
+   PLEGMA_Vector<double> tmp(HOST);
+   for(int i = 0 ; i < p.NeV; i++){
+     double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
+     memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
+     tmp.writeToLime(filenamePrefix + "_eV" + std::to_string(i));
+   }   
  }
 #endif
