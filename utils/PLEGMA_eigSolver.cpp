@@ -38,33 +38,30 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
   bytes_NeV = size_NeV * 2 * sizeof(double);
 #if defined(HAVE_ARPACK)
-  if(p.NkV < p.NeV) PLEGMA_error("The NkV should be larger than NeV");
+  if(isReadEigenVectors) p.NkV = p.NeV;
+  if(p.NkV < p.NeV) PLEGMA_error("The NkV should be larger equal than NeV");
   size_NkV = ((size_t) p.NkV) * size_per_Vec;
   bytes_NkV = size_NkV * 2 * sizeof(double);
 #endif
-  try{
+
 #if defined(HAVE_ARPACK)
-    h_eigVecs = new double[size_NkV*2];
-    if(!isReadEigenVectors) h_eigVals = new double[p.NkV*2];
+  hostMalloc(h_eigVecs,size_NkV*2*sizeof(double));
+  if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NkV*2*sizeof(double));
 #elif defined(HAVE_PRIMME)
-    h_eigVecs = new double[size_NeV*2];
-    if(!isReadEigenVectors) h_eigVals = new double[p.NeV];
-    if(!isReadEigenVectors) h_rnorms = new double[p.NeV];
+  hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
+  if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
+  if(!isReadEigenVectors) hostMalloc(h_rnorms,p.NeV*2*sizeof(double));
 #else
-    PLEGMA_error("Not implemented");
+  PLEGMA_error("Not implemented");
 #endif
-  }
-  catch (std::bad_alloc& err){
-    PLEGMA_error(err.what());
-  }
 
   if(!isReadEigenVectors){
-    dOp = new QUDA_dirac(dslashType);
     d_in = new PLEGMA_Vector<double>(DEVICE);
     d_out = new PLEGMA_Vector<double>(DEVICE);
-    tmp1 = new PLEGMA_Vector<double>(DEVICE);
-    tmp2 = new PLEGMA_Vector<double>(DEVICE);
   }
+  dOp = new QUDA_dirac(dslashType);
+  tmp1 = new PLEGMA_Vector<double>(DEVICE);
+  tmp2 = new PLEGMA_Vector<double>(DEVICE);
   // check the spectrumPart
   if(p.spectrumPart != "SR" && p.spectrumPart != "LR") PLEGMA_error("Allowed values for spectrum part are SR or LR");
   if(p.isACC){
@@ -84,23 +81,38 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   
   computeEigVals();
   if(!isReadEigenVectors){
-    delete[] h_eigVals;
+#if defined(HAVE_ARPACK)
+    hostFree(h_eigVals,p.NkV*2*sizeof(double));
+#elif defined(HAVE_PRIMME)
+    hostFree(h_eigVals,p.NeV*2*sizeof(double));
+#else
+  PLEGMA_error("Not implemented");
+#endif    
     delete d_in;
     delete d_out;
-    delete tmp1;
-    delete tmp2;
-    delete dOp;
-    d_in = nullptr; d_out = nullptr; tmp1 = nullptr; tmp2 = nullptr; dOp = nullptr;
+    d_in = nullptr; d_out = nullptr;
   }
+  delete dOp;
+  delete tmp1;
+  delete tmp2;
+  tmp1 = nullptr; tmp2 = nullptr; dOp = nullptr;
 #if defined(HAVE_PRIMME)
   if(!isReadEigenVectors){
-    delete[] h_rnorms;
+    hostFree(h_rnorms,p.NeV*2*sizeof(double));
     primme_free(&primme_pars);
   }
 #endif
+  
 }
 
 EigSolver::~EigSolver(){
+#if defined(HAVE_ARPACK)
+    hostFree(h_eigVecs,size_NkV*2*sizeof(double));
+#elif defined(HAVE_PRIMME)
+    hostFree(h_eigVecs,size_NeV*2*sizeof(double));
+#else
+  PLEGMA_error("Not implemented");
+#endif    
   delete[] h_eigVecs;
 }
 
@@ -410,6 +422,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
      double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
      tmp.readFromLime(filenamePrefix + "_eV" + std::to_string(i));
      memcpy(eigVec,tmp.H_elem(),bytes_per_Vec);
+     if(verbose) PLEGMA_printf("Eigenvector %d loaded\n", i);
    }
  }
 
@@ -420,6 +433,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
      double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
      memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
      tmp.writeToLime(filenamePrefix + "_eV" + std::to_string(i));
+     if(verbose) PLEGMA_printf("Eigenvector %d writen\n", i);
    }   
  }
 #endif
