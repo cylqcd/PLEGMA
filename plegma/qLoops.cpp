@@ -75,6 +75,11 @@ int main(int argc, char **argv)
   if(!lowModesRecon) Eig_NeV=0;
   std::string Eig_outputFile = "./eigsVdagG5V.dat";
   HGC_options->set("Eig-outputFile", "Path to dump the eigenvalues and vdag g5 v if low-modes-recon is enabled",verbosity, Eig_outputFile);
+  bool isReadEigenVecs = false, isWriteEigenVecs = false;
+  std::string fnameEigenVecsPrefix="";
+  HGC_options->set("readEigenVectors", "Where we want to read EigenVectors from file", verbosity, isReadEigenVecs);
+  HGC_options->set("writeEigenVectors", "Where we want to read EigenVectors from file", verbosity, isWriteEigenVecs);
+  HGC_options->set("prefixEigenVecsFile", "Path with prefix for the filenames of the eigenvectors", verbosity, fnameEigenVecsPrefix);
   bool oneDLoops = true;
   bool accumFlag = true;
   bool twoDLoops = false;
@@ -139,7 +144,7 @@ int main(int argc, char **argv)
 #else
     PLEGMA_error("No arpack or primme is compiled");
 #endif
-    eigSol = new EigSolver(eigParam, dslash_type , true);
+    eigSol = new EigSolver(eigParam, dslash_type, isReadEigenVecs, isWriteEigenVecs, fnameEigenVecsPrefix, true);
     eigSol->dumpEvalsVdagG5V(Eig_outputFile);
 #else
     PLEGMA_error("No eigenSolver is compiled");
