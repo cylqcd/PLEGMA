@@ -192,6 +192,7 @@ int main(int argc, char **argv)
 	  if(spinColorDil || k_probing>0) solverDN->solve(phi,*sourceDil); else solverDN->solve(phi,source);
 	  // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
 	  phi.scaleVector(1./(2.*inv_params.kappa));
+	  double t1=MPI_Wtime();
 #if defined(HAVE_EIGENSOLVER)
 	  if(lowModesRecon)
 	    eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
@@ -201,6 +202,8 @@ int main(int argc, char **argv)
 	  D->apply<M>(phi_r,phi);
 	  phi_r.apply_gamma5();
 	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gauge,ft_gen);
+	  double t2=MPI_Wtime();
+	  PLEGMA_printf("Contraction time is %f\n",t2-t1);
 	} // for loop isc
       } // for loop ih
 
@@ -210,7 +213,7 @@ int main(int argc, char **argv)
       dumpLoops(ft_gen, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
     }
     double t2=MPI_Wtime();
-    PLEGMA_printf("Time is %f\n",t2-t1);
+    PLEGMA_printf("FT and dump data time is %f\n",t2-t1);
     
   } // for loop isrc
 
