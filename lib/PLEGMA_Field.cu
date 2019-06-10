@@ -636,7 +636,7 @@ void PLEGMA_Field<Float>::writeToLime(std::string filename){
     oss << "</ildgFormat>";
     write_lime_header(limewriter,"ildg-format",oss.str(),1,0);
   }
-  unload();
+  if(isAllocDevice) unload();
   write_binary_to_lime(filename,fid,limewriter,h_elem,field_length);
   limeDestroyWriter(limewriter);
 }
@@ -656,7 +656,7 @@ void PLEGMA_Field<Float>::readFromLime(std::string filename){
   read_binary_from_lime(filename,fid,limereader,h_elem,field_length);
   limeDestroyReader(limereader);
   fclose(fid);
-  load();
+  if(isAllocDevice) load();
 }
 
 
