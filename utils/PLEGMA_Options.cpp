@@ -1,6 +1,7 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 #include <comm_quda.h>
+#include <functional>
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
