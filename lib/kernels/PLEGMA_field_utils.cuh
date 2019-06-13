@@ -21,7 +21,7 @@ static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<
   if(Fz.Field_length() != Fx.Field_length()) PLEGMA_error("Error input, output fields do not match");
   if(Fz.Field_length() != Fy.Field_length()) PLEGMA_error("Error input, output fields do not match");
   ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
+  run(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
 	     Fy.D_elem(),beta,Fz.Field_length());
   checkCudaError();
 }
@@ -256,4 +256,33 @@ static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   zipTplDIntDFl2 z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c,th_e));
   zipTplDIntDFl2 z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c+V,th_e+V));
   thrust::for_each(z1,z2,HadCol<Float>(ih));
+}
+
+template<typename Float, typename FloatA, typename FloatB, typename FloatC>
+static __global__ void traceMulFmunuSu3Fmunu_kernel(Float *F, FloatA *A, FloatB *B, FloatC *C){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<Float> *F2 = (Float2<Float> *) F;
+  if (sid >= DGC_localVolume) return;
+  Float2<FloatA> lA[N_COLS][N_COLS];
+  Float2<FloatB> lB[N_COLS][N_COLS];
+  Float2<FloatC> lC[N_COLS][N_COLS];
+  su3_2<FloatA> RA(A);
+  su3_2<FloatB> RB(B);
+  su3_2<FloatC> RC(C);
+  RA.get(lA,sid);
+  RB.get(lB,sid);
+  RC.get(lC,sid);
+  Float2<Float> res = trace_mul_G_G_G<Float,Float,Float,Float>(lA,lB,lC);
+  F2[sid] = res;
+}
+
+template<typename Float, typename FloatA, typename FloatB, typename FloatC>
+static void traceMulFmunuSu3Fmunu_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<FloatA> &A, std::pair<int,int> munu_l,
+				    PLEGMA_Su3field<FloatB> &B, PLEGMA_Fmunu<FloatC> &C,  std::pair<int,int> munu_r){
+  ProfileStruct ps(HGC_localVolume);
+  long int lshift = ((long int) A.munuToIndx(munu_l)) * N_COLS * N_COLS * HGC_localVolume * 2;
+  long int rshift = ((long int) C.munuToIndx(munu_r)) * N_COLS * N_COLS * HGC_localVolume * 2;
+  tuneAndRun(ps, "traceMulFmunuSu3Fmunu_kernel", traceMulFmunuSu3Fmunu_kernel<Float,FloatA,FloatB,FloatC>,
+	     F.D_elem(), A.D_elem()+lshift, B.D_elem(),C.D_elem()+rshift);
+  checkCudaError();
 }
