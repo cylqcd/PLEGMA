@@ -82,40 +82,44 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
 {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
-
+  
   switch(classT){
-    case SCALAR:
-      initialize(alloc_flag, 1, HGC_localVolume);
-      field_name = "PLEGMA_SCALAR";
-      break;
-    case SU3FIELD:
-      initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_SU3FIELD";
-      break;
-    case GAUGE:
-      initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_GAUGE";
-      break;    
-    case VECTOR:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_VECTOR";
-      break;
-    case PROPAGATOR:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_PROPAGATOR";
-      break;
-    case PROPAGATOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
-      field_name = "PLEGMA_PROPAGATOR3D";
-      break;
-    case VECTOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
-      field_name = "PLEGMA_VECTOR3D";
-      break;
-    case QLOOPS:
-      initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
-      field_name = "PLEGMA_QLOOPS";
-      break;
+  case SCALAR:
+    initialize(alloc_flag, 1, HGC_localVolume);
+    field_name = "PLEGMA_SCALAR";
+    break;
+  case SU3FIELD:
+    initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_SU3FIELD";
+    break;
+  case GAUGE:
+    initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_GAUGE";
+    break;    
+  case VECTOR:
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_VECTOR";
+    break;
+  case PROPAGATOR:
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_PROPAGATOR";
+    break;
+  case PROPAGATOR3D:
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    field_name = "PLEGMA_PROPAGATOR3D";
+    break;
+  case VECTOR3D:
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    field_name = "PLEGMA_VECTOR3D";
+    break;
+  case QLOOPS:
+    initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
+    field_name = "PLEGMA_QLOOPS";
+    break;
+  case FMUNU:
+    initialize(alloc_flag, ((N_DIMS * (N_DIMS-1))/2) * N_COLS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_FMUNU";
+    break;
   }
 }
 
@@ -180,12 +184,13 @@ void PLEGMA_Field<Float>::create_device(){
 #endif
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
-    cudaMallocHost((void**)&h_ext_ghost_r, bytes_ghost_length);
-    cudaMallocHost((void**)&h_ext_ghost_s, bytes_ghost_length);
+    hostMalloc(h_ext_ghost_r, bytes_ghost_length);
+    hostMalloc(h_ext_ghost_s, bytes_ghost_length);
+
   }
   if(ghost_flag == FIRST_CORNER){
-    cudaMallocHost((void**)&h_ext_ghost_corner_r, bytes_ghost_corner_length);
-    cudaMallocHost((void**)&h_ext_ghost_corner_s, bytes_ghost_corner_length);
+    hostMalloc(h_ext_ghost_corner_r, bytes_ghost_corner_length);
+    hostMalloc(h_ext_ghost_corner_s, bytes_ghost_corner_length);
   }
   checkCudaError();
   isAllocDevice = true;
@@ -208,12 +213,13 @@ void PLEGMA_Field<Float>::destroy_device(){
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
 #endif
   if(ghost_flag >= FIRST_SIDE){
-    cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
-    cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
+    hostFree(h_ext_ghost_r,bytes_ghost_length); h_ext_ghost_r=NULL;
+    hostFree(h_ext_ghost_s,bytes_ghost_length); h_ext_ghost_s=NULL;
+
   }
   if(ghost_flag == FIRST_CORNER){
-    cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
-    cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
+    hostFree(h_ext_ghost_corner_r,bytes_ghost_corner_length); h_ext_ghost_corner_r=NULL;
+    hostFree(h_ext_ghost_corner_s,bytes_ghost_corner_length); h_ext_ghost_corner_s=NULL;
   }
   checkCudaError();
   isAllocDevice=false;
@@ -319,20 +325,18 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
         Float *pointer_receive = h_ext_ghost_r + (HGC_sideGhost[i]-total_length)*field_length*2;
         Float *pointer_send = h_ext_ghost_s + (HGC_sideGhost[i]-total_length)*field_length*2;
         Float *pointer_device = d_elem + HGC_sideGhost[i]*field_length*2;
-        int disp[N_DIMS] = {0};
+	int disp;
         size_t nbytes = HGC_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
 
         // collecting elements from device
         copy_side_to_ghost(*this, i);
         cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
         checkCudaError();
-
-        // communicating
-        disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
-        mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
-        disp[i%N_DIMS] *= -1;
-        mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
-        disp[i%N_DIMS] = 0;
+	
+	disp = (i<N_DIMS) ? +1 : -1;
+        mh_recv.push_back(comm_declare_receive_relative(pointer_receive,i%N_DIMS,disp,nbytes)); 
+	disp *= -1;
+        mh_send.push_back(comm_declare_send_relative(pointer_send,i%N_DIMS,disp,nbytes));
         comm_start(mh_recv.back());
         comm_start(mh_send.back());
       }
@@ -639,6 +643,12 @@ void PLEGMA_Field<Float>::writeToLime(std::string filename){
   if(isAllocDevice) unload();
   write_binary_to_lime(filename,fid,limewriter,h_elem,field_length);
   limeDestroyWriter(limewriter);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::fmunuSu3Fmunu(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &W,
+					PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r){
+  traceMulFmunuSu3Fmunu_k(*this,Fl,munu_l,W,Fr,munu_r);
 }
 
 template<typename Float>
