@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 
   //=========================================================================================================//
   initializePLEGMA();
-
+  double start_time, tmp_time;
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
     {
@@ -40,6 +40,7 @@ int main(int argc, char **argv)
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
 
       PLEGMA_Propagator<float> propUP;
+      tmp_time = 0;
       // ensuring mu positive
       if(mu<0) {
 	mu*=-1.;
@@ -49,11 +50,14 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	start_time = std::time(NULL);
 	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-	
+	tmp_time += std::time(NULL)-start_time;
 	PLEGMA_printf("Going to invert UP for component %d\n", isc);
 	solver.solve(vectorInOut, vectorInOut);
+	start_time = std::time(NULL);
 	vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+	tmp_time += std::time(NULL)-start_time;
 	vectorAuxF.copy(vectorAuxD);
 	propUP.absorb(vectorAuxF, isc/3, isc%3);
       }	
@@ -68,26 +72,34 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	start_time = std::time(NULL);
 	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-	
+	tmp_time += std::time(NULL)-start_time;
 	PLEGMA_printf("Going to invert DN for component %d\n", isc);
 	solver.solve(vectorInOut, vectorInOut);
+	start_time = std::time(NULL);
 	vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss);
+	tmp_time += std::time(NULL)-start_time;
 	vectorAuxF.copy(vectorAuxD);
 	propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
-      
+      PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
       propUP.rotateToPhysicalBase_device(+1);
       propDN.rotateToPhysicalBase_device(-1);
       propUP.applyBoundaries_device(sourcePositions[isource][3]);
       propDN.applyBoundaries_device(sourcePositions[isource][3]);
       
       PLEGMA_Correlator<float> corr(corr_space, maxQsq);
+      start_time = std::time(NULL);
       corr.contractMesons(propUP, propDN, sourcePositions[isource]);
+      tmp_time = std::time(NULL)-start_time;
       corr.writeFile(twop_filename.c_str(), corr_file_format);
-      
+
+      start_time = std::time(NULL);
       corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
+      tmp_time += std::time(NULL)-start_time;
       corr.writeFile(twop_filename.c_str(), corr_file_format);
+      PLEGMA_printf("Contraction time %lf sec\n",tmp_time);
     }
   }
   
