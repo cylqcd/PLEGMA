@@ -84,10 +84,12 @@ int main(int argc, char **argv)
       
       PLEGMA_Correlator<float> corr(corr_space, maxQsq);
       corr.contractMesons(propUP, propDN, sourcePositions[isource]);
-      corr.writeFile(twop_filename.c_str(), corr_file_format);
+      corr.writeFile(corr_file_format == ASCII_FORM ? (twop_filename + "_mesons_").c_str(): 
+		     twop_filename.c_str(),corr_file_format);
       
       corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
-      corr.writeFile(twop_filename.c_str(), corr_file_format);
+      corr.writeFile(corr_file_format == ASCII_FORM ? (twop_filename + "_baryons_").c_str():
+		     twop_filename.c_str(), corr_file_format);
     }
   }
   

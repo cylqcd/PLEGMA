@@ -131,7 +131,7 @@ namespace plegma {
 					int source[4]);
 
     void writeFile(const char *filename, FILE_WRITE_FORMAT format);
-    void writeASCII(const char *filename);
+    void writeASCII(std::string filename);
     void writeHDF5(std::string filename, std::string top = "/");
   };
 }
