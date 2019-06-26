@@ -184,13 +184,23 @@ void PLEGMA_Field<Float>::create_device(){
 #endif
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
+#ifdef HAVE_PINNED_GHOST
+    cudaMallocHost((void**)&h_ext_ghost_r, bytes_ghost_length);
+    cudaMallocHost((void**)&h_ext_ghost_s, bytes_ghost_length);
+#else
     hostMalloc(h_ext_ghost_r, bytes_ghost_length);
     hostMalloc(h_ext_ghost_s, bytes_ghost_length);
-
+#endif
   }
   if(ghost_flag == FIRST_CORNER){
+#ifdef HAVE_PINNED_GHOST
+    cudaMallocHost((void**)&h_ext_ghost_corner_r, bytes_ghost_corner_length);
+    cudaMallocHost((void**)&h_ext_ghost_corner_s, bytes_ghost_corner_length);
+#else    
     hostMalloc(h_ext_ghost_corner_r, bytes_ghost_corner_length);
     hostMalloc(h_ext_ghost_corner_s, bytes_ghost_corner_length);
+#endif
+
   }
   checkCudaError();
   isAllocDevice = true;
@@ -213,13 +223,23 @@ void PLEGMA_Field<Float>::destroy_device(){
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
 #endif
   if(ghost_flag >= FIRST_SIDE){
+#ifdef HAVE_PINNED_GHOST
+    cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
+    cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
+#else
     hostFree(h_ext_ghost_r,bytes_ghost_length); h_ext_ghost_r=NULL;
     hostFree(h_ext_ghost_s,bytes_ghost_length); h_ext_ghost_s=NULL;
-
+#endif
   }
   if(ghost_flag == FIRST_CORNER){
+#ifdef HAVE_PINNED_GHOST
+    cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
+    cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
+#else
     hostFree(h_ext_ghost_corner_r,bytes_ghost_corner_length); h_ext_ghost_corner_r=NULL;
     hostFree(h_ext_ghost_corner_s,bytes_ghost_corner_length); h_ext_ghost_corner_s=NULL;
+#endif
+
   }
   checkCudaError();
   isAllocDevice=false;
