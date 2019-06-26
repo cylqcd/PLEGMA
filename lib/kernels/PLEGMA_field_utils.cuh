@@ -286,3 +286,31 @@ static void traceMulFmunuSu3Fmunu_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<FloatA>
 	     F.D_elem(), A.D_elem()+lshift, B.D_elem(),C.D_elem()+rshift);
   checkCudaError();
 }
+
+template<typename FloatA, typename FloatB>
+static void __global__ trPmunu_kernel(FloatA *out, FloatB *gauge, int mu, int nu){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= DGC_localVolume) return;
+  Float2<FloatA> *out2 = (Float2<FloatA> *) out;
+  gauge2<FloatA> u(gauge);
+  Float2<FloatB> U1[N_COLS][N_COLS], U2[N_COLS][N_COLS], U3[N_COLS][N_COLS];
+    /**
+      --<-- 
+     |     |
+     v     ^
+    x|-->--|
+   **/
+  // U_\mu(x) * U_\nu(x+\mu) * U^dag_\mu(x+nu) * U^\dag_\nu(x)
+  u.get(U1,mu,sid); u.get<Plus>(U2,nu,sid,mu); mul_G_G(U3,U1,U2);
+  u.get<Plus>(U2,mu,sid,nu); mul_G_Gdag(U1,U3,U2);
+  u.get(U2,nu,sid); mul_G_Gdag(U3,U1,U2);
+  out2[sid]= U3[0][0] + U3[1][1] + U3[2][2];
+}
+
+template<typename FloatA, typename FloatB>
+static void trPmunu_k(PLEGMA_Field<FloatA> &f,PLEGMA_Gauge<FloatB> &gauge, std::pair<int,int> munu){
+  ProfileStruct ps(HGC_localVolume);
+  if(std::get<0>(munu) == std::get<1>(munu)) PLEGMA_error("For Pmunu cannot have mu == nu");
+  tuneAndRun(ps,"trPmunu_kernel",trPmunu_kernel<FloatA,FloatB>,f.D_elem(),gauge.D_elem(),std::get<0>(munu),std::get<1>(munu));
+  checkCudaError();
+}

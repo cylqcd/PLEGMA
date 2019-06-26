@@ -646,29 +646,41 @@ void PLEGMA_Field<Float>::writeToLime(std::string filename){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::readFromLime(std::string filename){
+  int precRead=0, dofRead=0;
+
+  FILE *fid = NULL;
+  LimeReader *limereader = NULL;
+  if(comm_rank() == 0){
+    fid=fopen(filename.c_str(),"r");
+    if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
+    if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
+    read_lime_header(limereader,precRead,dofRead);
+  }
+  comm_broadcast(&precRead,sizeof(int));
+  comm_broadcast(&dofRead,sizeof(int));
+  if(precRead != Precision()) PLEGMA_error("PLEGMA field precision %d != %d precision read from LIME",Precision(),precRead);
+  if(!isAllocHost) PLEGMA_error("Host memory should be allocated to read data from lime");
+  if(dofRead > 0 && dofRead != field_length) PLEGMA_error("PLEGMA field dof %d != %d dof read from LIME", field_length, dofRead);
+  read_binary_from_lime(filename,fid,limereader,h_elem,field_length);
+  if(comm_rank() == 0){
+    limeDestroyReader(limereader);
+    fclose(fid);
+  }
+  if(isAllocDevice) load();
+}
+
+template<typename Float>
 void PLEGMA_Field<Float>::fmunuSu3Fmunu(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &W,
 					PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r){
   traceMulFmunuSu3Fmunu_k(*this,Fl,munu_l,W,Fr,munu_r);
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::readFromLime(std::string filename){
-  FILE *fid;
-  LimeReader *limereader;
-  int precRead=0, dofRead=0;
-  fid=fopen(filename.c_str(),"r");
-  if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
-  if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
-  read_lime_header(limereader,precRead,dofRead);
-  if(precRead != Precision()) PLEGMA_error("PLEGMA field precision %d != %d precision read from LIME",Precision(),precRead);
-  if(!isAllocHost) PLEGMA_error("Host memory should be allocated to read data from lime");
-  if(dofRead > 0 && dofRead != field_length) PLEGMA_error("PLEGMA field dof %d != %d dof read from LIME", field_length, dofRead);
-  read_binary_from_lime(filename,fid,limereader,h_elem,field_length);
-  limeDestroyReader(limereader);
-  fclose(fid);
-  if(isAllocDevice) load();
+void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu){
+  gauge.communicateSideGhost();
+  trPmunu_k(*this,gauge,munu);
 }
-
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;

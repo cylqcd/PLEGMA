@@ -8,6 +8,7 @@
 namespace plegma {
   template<typename Float>  class PLEGMA_Fmunu;
   template<typename Float>  class PLEGMA_Su3field;
+  template<typename Float>  class PLEGMA_Gauge;
   ////////////////////////
   // CLASS: PLEGMA_Field //
   ////////////////////////
@@ -120,6 +121,8 @@ namespace plegma {
 
     void fmunuSu3Fmunu(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &W,
 		       PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r);
+
+    void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
   };
 }
 #endif
