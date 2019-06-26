@@ -217,7 +217,7 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
 	for(int it = 0 ; it < T; it++){
 	  int its = (it + timeshift)%HGC_totalL[3];
 	  for(int imom = 0; imom < Nmoms(); imom++)
-	    fprintf(ptr, "%d %d  %+d %+d %+d \t %+e %+e\n", idf,it, momList[imom][0], momList[imom][1], momList[imom][2],
+	    fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it, momList[imom][0], momList[imom][1], momList[imom][2],
 		    helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
 	}
       fclose(ptr);
