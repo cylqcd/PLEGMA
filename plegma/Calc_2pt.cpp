@@ -94,12 +94,13 @@ int main(int argc, char **argv)
       corr.contractMesons(propUP, propDN, sourcePositions[isource]);
       tmp_time = MPI_Wtime()-start_time;
       corr.writeFile(twop_filename.c_str(), corr_file_format);
-
+      PLEGMA_printf("Contraction time for mesons %lf sec\n",tmp_time);
+      
       start_time = MPI_Wtime();
       corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
-      tmp_time += MPI_Wtime()-start_time;
+      tmp_time = MPI_Wtime()-start_time;
       corr.writeFile(twop_filename.c_str(), corr_file_format);
-      PLEGMA_printf("Contraction time %lf sec\n",tmp_time);
+      PLEGMA_printf("Contraction time for baryons %lf sec\n",tmp_time);
     }
   }
   
