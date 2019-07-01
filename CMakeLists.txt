@@ -98,7 +98,7 @@ endif()
 # flag to allow for pinned memory ghost buffers
 set(PLEGMA_PINNED_GHOST_BUFFERS FALSE CACHE BOOL "Enable pinned ghost buffer exchanged. Experimental use it if you are fully aware about the issues")
 if(PLEGMA_PINNED_GHOST_BUFFERS)
-  add_definitions(-HAVE_PINNED_GHOST)
+  add_definitions(-DHAVE_PINNED_GHOST)
 endif()
 
 set(PLEGMA_EIGENSOLVER FALSE CACHE BOOL "build eigensolver")
