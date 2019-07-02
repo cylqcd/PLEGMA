@@ -10,7 +10,7 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Gauge;
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
-
+  template<typename Float>  class PLEGMA_Su3field;
   /////////////////////////
   // Class: PLEGMA_Vector //
   /////////////////////////
@@ -76,7 +76,6 @@ namespace plegma {
     void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);
     void pointSource(int *sourceposition, int spin, int color);
-    void write(char* filename);
     void conjugate();
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
@@ -84,6 +83,7 @@ namespace plegma {
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     std::vector<Float> rms(std::vector<int> listR2, int *sourceposition);
+    void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };
 
   template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer

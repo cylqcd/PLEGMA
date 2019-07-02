@@ -68,7 +68,7 @@ __constant__ __device__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);
 global_host(bool, init_PLEGMA_flag);
 global_host(float, deviceMemory);
 global_host(int, verbosity);
-global_host(size_t, used_memory);
+global_host(long int, used_memory);
 global_host(global_vars, global_vars);
 global_host(Options *, options);
 global_host(bool, hold_exit);

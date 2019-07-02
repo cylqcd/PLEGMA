@@ -40,7 +40,7 @@ namespace plegma {
     bool isAllocDevice;
 
     CLASS_ENUM field_type;
-    
+    std::string field_name;
     void create_host();
     void destroy_host();
     void create_device();
@@ -71,6 +71,8 @@ namespace plegma {
     int Total_length() const { return total_length;} // the length of the field (local)
     int Ghost_length() const { return ghost_length;} // the length of the ghost
     int TotalGhost_length() const { return total_plus_ghost_length;} // total + ghost
+
+    std::string Field_name() const {return field_name;}
     
     int Precision() const{
       if( typeid(Float) == typeid(float) )
@@ -110,6 +112,9 @@ namespace plegma {
     void cscale(std::complex<Float> val);
     
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
+
+    virtual void readFromLime(std::string filename);
+    virtual void writeToLime(std::string filename);
   };
 }
 #endif
