@@ -56,3 +56,10 @@ void write_std_vecs(std::string filename,const std::vector<T1>& vec,const std::v
   for(int i = 0; i < vec.size(); i++)
     file << write_std_vecs_unpacker(i,vec,vecs...);
 }
+
+inline std::string getDateAndTime(){
+  auto time = std::time(nullptr);
+  std::stringstream ss;
+  ss << std::put_time(std::gmtime(&time), "%F %T%z");
+  return "Date: " + ss.str();
+}

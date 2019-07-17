@@ -1,6 +1,7 @@
 #include <PLEGMA_Field.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Gauge.h>
+#include <PLEGMA_FT.h>
 #include <string>
 
 #ifndef _PLEGMA_QLOOPS
@@ -42,6 +43,17 @@ namespace plegma{
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 		      Float val , bool accum );
 
+    /**
+       @brief Computes the one-end trick with Wilson line where fields is shifted to appear ultralocal
+       @param PLEGMA_Vector<Float> &x_l, left solution vector
+       @param PLEGMA_Vector<Float> &x_r, right solution vector
+       @param Float val, Used to scale the results
+       @param PLEGMA_Gauge<Float> &gauge, Gauge field to be used for the Wilson line
+       @param PLEGMA_FT<Float> *FTs, An array of FTs to store data after FT. The size of the should be 3*Ls where Ls is the spatial extend
+     **/
+    void oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
+				 PLEGMA_FT<Float> **FTs);
+    
     /**
        @brief Computes the one-end trick (can do up to two derivatives) for disconnected quark loops as x_l^dag \gamma_5 \Gamma c_r.
        In case of standard one-end trick x_l = x_r = x while for generalized one-end trick x_l = x and x_r = \gamma_5 D_C x
