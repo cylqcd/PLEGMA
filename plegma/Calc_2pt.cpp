@@ -13,12 +13,14 @@ int main(int argc, char **argv)
   std::vector<double> mu_s;
   std::vector<double> mu_c;
   double mu_ud = mu;
+  double mu_ud_factor[QUDA_MAX_MG_LEVEL];
+  for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
   HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
   HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
-  HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, mu_s);
-  HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, mu_c);
+  HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
+  HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
   //=========================================================================================================//
   initializePLEGMA();
 
@@ -50,6 +52,7 @@ int main(int argc, char **argv)
       PLEGMA_Propagator<float> propUP;
       // ensuring mu positive
       if(mu != mu_ud) {
+	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = mu_ud_factor[i];
 	mu = mu_ud;
 	solver.UpdateSolver();
       }
@@ -111,6 +114,7 @@ int main(int argc, char **argv)
       if(nSmaller>0) {
 	PLEGMA_Propagator<float> propS[nSmaller];
 	for(int ismall=0; ismall < nSmaller; ismall++) {
+	  for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
 	  mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	  int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
 	  solver.UpdateSolver();
