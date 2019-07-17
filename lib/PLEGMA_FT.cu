@@ -9,18 +9,34 @@
 #include <cmath>
 using namespace plegma;
 
+
+
 template<typename Float>
 PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
-  Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
   createMom();
+  texMomList.Nmoms=0;
 }
+
+template<typename Float>
+PLEGMA_FT<Float>::PLEGMA_FT(std::vector<int> mom, int D3D4, bool accum):
+  isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+  if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
+  dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
+  if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
+  momList.push_back(mom);
+  texMomList.Nmoms=0;
+}
+
 
 template<typename Float>
 PLEGMA_FT<Float>::~PLEGMA_FT(){
   if(isAllocated) hostFree(h_elem, sizeN*sizeof(Float));
+  if(texMomList.Nmoms>0)
+    texMomList.free();
 }
 
 template<typename Float>
@@ -75,50 +91,56 @@ void PLEGMA_FT<Float>::checkAllocation(int newDof){
 
 template<typename Float>
 tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
-  tex_mom_list tex_mom;
-  tex_mom.Nmoms=Nmoms();
-  cudaChannelFormatDesc desc;
-  memset(&desc, 0, sizeof(cudaChannelFormatDesc));
-  desc.f = cudaChannelFormatKindSigned;
-  desc.x = 8*4;
-  desc.y = 8*4;
-  desc.z = 8*4;
-  desc.w = 8*4;
+  if(texMomList.Nmoms==0) {
+    texMomList.Nmoms=Nmoms();
+    cudaChannelFormatDesc desc;
+    memset(&desc, 0, sizeof(cudaChannelFormatDesc));
+    desc.f = cudaChannelFormatKindSigned;
+    desc.x = 8*4;
+    desc.y = 8*4;
+    desc.z = 8*4;
+    desc.w = 8*4;
 
-  cudaResourceDesc resDesc;
-  memset(&resDesc, 0, sizeof(resDesc));
-  resDesc.resType = cudaResourceTypeLinear;
-  resDesc.res.linear.desc = desc;
+    cudaResourceDesc resDesc;
+    memset(&resDesc, 0, sizeof(resDesc));
+    resDesc.resType = cudaResourceTypeLinear;
+    resDesc.res.linear.desc = desc;
 
-  size_t bytes = tex_mom.Nmoms*4*sizeof(int);
-  void * devPtr;
-  int * hostPtr;
-  hostMalloc(hostPtr, bytes);
-  memset(hostPtr, 0, sizeof(bytes));
-  cudaMalloc(&devPtr, bytes);
-  for(int i=0; i<tex_mom.Nmoms; i++) {
-    for(int j=0; j<dims; j++) {
-      hostPtr[i*4+j]=momList[i][j];
+    size_t bytes = texMomList.Nmoms*4*sizeof(int);
+    void * devPtr;
+    int * hostPtr;
+    hostMalloc(hostPtr, bytes);
+    memset(hostPtr, 0, sizeof(bytes));
+    cudaMalloc(&devPtr, bytes);
+    for(int i=0; i<texMomList.Nmoms; i++) {
+      for(int j=0; j<dims; j++) {
+	hostPtr[i*4+j]=momList[i][j];
+      }
     }
+    cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
+    hostFree(hostPtr, bytes);
+    resDesc.res.linear.devPtr = devPtr;
+    resDesc.res.linear.sizeInBytes = bytes;
+
+    cudaTextureDesc texDesc;
+    memset(&texDesc, 0, sizeof(texDesc));
+    texDesc.readMode = cudaReadModeElementType;
+
+    cudaCreateTextureObject(&texMomList.tex, &resDesc, &texDesc, NULL);
+    checkCudaError();
   }
-  cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
-  hostFree(hostPtr, bytes);
-  resDesc.res.linear.devPtr = devPtr;
-  resDesc.res.linear.sizeInBytes = bytes;
-
-  cudaTextureDesc texDesc;
-  memset(&texDesc, 0, sizeof(texDesc));
-  texDesc.readMode = cudaReadModeElementType;
-
-  cudaCreateTextureObject(&tex_mom.tex, &resDesc, &texDesc, NULL);
-  checkCudaError();
-  return tex_mom;
+  return texMomList;
 }
     
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
-  PLEGMA_error("Not implemented yet");
+  if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation anly");
+  checkAllocation(f.Field_length());
+  tex_mom_list moms = this->getTexMomList();
+  if(!accum) zero();
+  for(int it =0 ; it < dimT; it++)
+    fourier_transform_3D_k(*this,f,moms,it,sign);
 }
 
 template<typename Float>
@@ -127,12 +149,21 @@ void PLEGMA_FT<Float>::applyFFT(const PLEGMA_Field<Float> &f, int sign){
 }
 
 template<typename Float>
-void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, int sign){
+void PLEGMA_FT<Float>::applyGEMV(const PLEGMA_Field<Float> &f, int sign){
   if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
   if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
   if(!accum) zero();
-  FT<Float>(*this,f,momList,sign);
+  FT_gemv<Float>(*this,f,momList,sign);
+}
+
+template<typename Float>
+void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, FT_TYPE type, int sign){
+  switch(type){
+  case FT_NAIVE: applyNaive(f,sign); break;
+  case FT_GEMV: applyGEMV(f,sign); break;
+  case FT_FFT: applyFFT(f,sign); break;
+  }
 }
 
 template<typename Float>

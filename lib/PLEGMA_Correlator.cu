@@ -4,8 +4,10 @@
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <functional>
+#ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
- 
+#endif
+
 using namespace plegma;
 
 //--------------------------------//
@@ -20,16 +22,11 @@ initialize() {
   finalize();
   site_size = getSiteSize();
   if(corr_space == MOMENTUM_SPACE) {
-    corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    if(fixMomVec.empty()) corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    else corr_mom_space = new PLEGMA_FT<Float>(this->fixMomVec);
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();
-    if(HGC_moms.Nmoms>0) {
-      HGC_moms.free();
-    }
-    HGC_moms = corr_mom_space->getTexMomList();
-    cudaMemcpyToSymbol(DGC_moms, (void*) &HGC_moms, sizeof(tex_mom_list));
-    checkCudaError();
   }
   else if(corr_space == POSITION_SPACE) {
     corr_pos_space = new PLEGMA_Field<Float>(HOST, site_size, NO_GHOSTS);
@@ -82,6 +79,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   prop2.destroyTexObject(prop2Tex.tex);
 }
 
+
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractBaryons(PLEGMA_Propagator<Float> &prop1,
@@ -92,7 +90,7 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"baryons/nucl_nucl",
-#ifdef PLEGMA_ALL_BARYONS
+#ifdef PLEGMA_LIGHT_BARYONS
 	     "baryons/nucl_nucl2","baryons/nucl2_nucl","baryons/nucl2_nucl2",
 	     "baryons/deltap_deltaz_11","baryons/deltap_deltaz_22","baryons/deltap_deltaz_33",
 	     "baryons/deltapp_deltamm_11","baryons/deltapp_deltamm_22","baryons/deltapp_deltamm_33"
@@ -120,6 +118,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propCH, 
 		    int source[4], bool only_st, bool only_ch){
 
+#ifdef PLEGMA_UDSC_BARYONS
   setSource(source);
   shape = {};
   description = "";
@@ -161,6 +160,9 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
   propDN.destroyTexObject(propDNTex.tex);
   propST.destroyTexObject(propSTTex.tex);
   propCH.destroyTexObject(propCHTex.tex);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
 }
 
 

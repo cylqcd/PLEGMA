@@ -13,14 +13,19 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_contractPropOpProp_noe.cu
   kernels/PLEGMA_contractPropOpProp_oneD.cu
   kernels/PLEGMA_contractPropOpProp_wilsonLine.cu
-  kernels/PLEGMA_baryons_udsc.cu
-  kernels/PLEGMA_baryons_udsc_arrays.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
 )
 
-if(PLEGMA_ALL_BARYONS)
+if(PLEGMA_UDSC_BARYONS)
+  LIST(APPEND PLEGMA_OBJS
+    kernels/PLEGMA_baryons_udsc.cu
+    kernels/PLEGMA_baryons_udsc_arrays.cu
+  )
+endif()
+
+if(PLEGMA_LIGHT_BARYONS)
   LIST(APPEND PLEGMA_OBJS
     kernels/PLEGMA_baryons_NtoR.cu
     kernels/PLEGMA_baryons_RtoN.cu
@@ -50,7 +55,6 @@ include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)
 include_directories(SYSTEM ${PLEGMA_HDF5HOME}/include)
 
 include_directories(SYSTEM ${PLEGMA_HDF5HOME}/src)
-
 include_directories(SYSTEM ${PLEGMA_LIMEHOME}/include)
 if(PLEGMA_ARPACK)
   include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/PARPACK/SRC/MPI)
