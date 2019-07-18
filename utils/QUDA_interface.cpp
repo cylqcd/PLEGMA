@@ -117,10 +117,17 @@ QUDA_solver::QUDA_solver(double mu) {
   mg_param = newQudaMultigridParam();
   mg_param.invert_param = &mg_inv_param;
   setMultigridParam(mg_param);
+  checkMultigridParam(&mg_param);
+  if(HGC_verbosity > 2) {
+    printQudaMultigridParam(&mg_param);
+  }
   
   inv_param = newQudaInvertParam();
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
+  if(HGC_verbosity > 2) {
+    printQudaInvertParam(&inv_param);
+  }
   
   // TODO: add support for other solvers
   if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 

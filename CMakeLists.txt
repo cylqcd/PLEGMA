@@ -38,6 +38,32 @@ if("${QUDA_SRC}" STREQUAL "")
   message( FATAL_ERROR "QUDA_SRC must be defined" )
 endif()
 
+find_package(Git)
+if(GIT_FOUND)
+  execute_process(COMMAND ${GIT_EXECUTABLE} show
+                  WORKING_DIRECTORY ${QUDA_SRC}
+                  RESULT_VARIABLE IS_GIT_REPOSIITORY
+                  OUTPUT_QUIET ERROR_QUIET)
+  if(${IS_GIT_REPOSIITORY} EQUAL 0)
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor b08233a7d1cee0145e56751ae04c5542ce98b3b5 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+		    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+		    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_b08233a)
+    endif()
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 1dec1db7a57e4fe00b14e04ba2088ca5039f8760 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+		    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+		    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_1dec1db)
+    endif()
+  endif()
+endif(GIT_FOUND)
+
 include(ExternalProject)
 
 find_package(Boost)
