@@ -1,3 +1,4 @@
+//-----------------//
 // QUDA Parameters //
 //-----------------//
 #ifdef ALLOCATE
