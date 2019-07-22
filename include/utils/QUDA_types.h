@@ -422,3 +422,9 @@ inline std::string get_solver_str(QudaInverterType type) {
     return "";
   }
 }
+
+inline QudaBoolean get_boolean(std::string s){
+  if(s.compare("true")==0) return QUDA_BOOLEAN_YES;
+  else if (s.compare("false")==0) return QUDA_BOOLEAN_NO;
+  else PLEGMA_error("Boolean not recognized");
+}
