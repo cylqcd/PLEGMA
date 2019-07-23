@@ -93,6 +93,38 @@ void setGaugeParam(QudaGaugeParam &gauge_param) {
 #endif
 }
 
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+void setEigParam(QudaEigParam &mg_eig_param, int level)
+{
+  mg_eig_param.eig_type = mg_eig_type[level];
+  mg_eig_param.spectrum = mg_eig_spectrum[level];
+  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS || mg_eig_type[level] == QUDA_EIG_IR_LANCZOS)
+      && !(mg_eig_spectrum[level] == QUDA_SPECTRUM_LR_EIG || mg_eig_spectrum[level] == QUDA_SPECTRUM_SR_EIG)) {
+    PLEGMA_error("Only real spectrum type (LR or SR) can be passed to the a Lanczos type solver");
+  }
+
+  mg_eig_param.nEv = mg_eig_nEv[level];
+  mg_eig_param.nKr = mg_eig_nKr[level];
+  mg_eig_param.nConv = nvec[level];
+  mg_eig_param.require_convergence = mg_eig_require_convergence[level];
+
+  mg_eig_param.tol = mg_eig_tol[level];
+  mg_eig_param.check_interval = mg_eig_check_interval[level];
+  mg_eig_param.max_restarts = mg_eig_max_restarts[level];
+  mg_eig_param.cuda_prec_ritz = cuda_prec;
+
+  mg_eig_param.compute_svd = QUDA_BOOLEAN_NO;
+  mg_eig_param.use_norm_op = mg_eig_use_normop[level];
+  mg_eig_param.use_dagger = mg_eig_use_dagger[level] ;
+
+  mg_eig_param.use_poly_acc = mg_eig_use_poly_acc[level];
+  mg_eig_param.poly_deg = mg_eig_poly_deg[level];
+  mg_eig_param.a_min = mg_eig_amin[level];
+  mg_eig_param.a_max = mg_eig_amax[level];
+
+}
+#endif
+
 void setMultigridParam(QudaMultigridParam &mg_param) {
   QudaInvertParam &inv_param = *mg_param.invert_param;
 
@@ -158,11 +190,13 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
   inv_param.solve_type = QUDA_DIRECT_SOLVE;
 
+
+  
   mg_param.invert_param = &inv_param;
   mg_param.n_level = mg_levels;
   for (int i=0; i<mg_param.n_level; i++) {
     for (int j=0; j<QUDA_MAX_DIM; j++) {
-	// if not defined use 4
+      // if not defined use 4
       mg_param.geo_block_size[i][j] = mg_block_size[i][j] ? 
 	mg_block_size[i][j] : 4;      
     }
@@ -231,11 +265,17 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
   mg_param.run_verify = verify_results ? QUDA_BOOLEAN_YES : QUDA_BOOLEAN_NO;
 
+  
 #ifdef QUDA_INCLUDES_COMMIT_b08233a
   mg_param.run_low_mode_check = QUDA_BOOLEAN_NO; 
   mg_param.run_oblique_proj_check = QUDA_BOOLEAN_NO;
 #endif
 
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  for(size_t level=0;level<mg_levels; level++)
+    mg_param.use_eig_solver[level]=mg_eig[level];
+#endif
+ 
   // set file i/o parameters
 #ifdef QUDA_INCLUDES_COMMIT_1dec1db
   for (int i=0; i<mg_param.n_level; i++) {
@@ -366,3 +406,19 @@ void setInvertParam(QudaInvertParam &inv_param) {
 
   inv_param.verbosity = verbosity_level;
 }
+
+
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+void setEigMultigridParam(QudaMultigridParam &mg_param, QudaEigParam *mg_eig_param){
+  for (size_t level=0; level<mg_param.n_level; level++) {
+    if (mg_eig[level]==QUDA_BOOLEAN_YES) {
+      mg_eig_param[level] = newQudaEigParam();
+      setEigParam(mg_eig_param[level], level);
+      mg_param.eig_param[level] = &mg_eig_param[level];
+    } else {
+      mg_param.eig_param[level] = nullptr;
+    }
+  }
+}
+#endif
+  
