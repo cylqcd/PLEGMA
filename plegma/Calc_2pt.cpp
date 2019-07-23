@@ -23,7 +23,7 @@ int main(int argc, char **argv)
   HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
   //=========================================================================================================//
   initializePLEGMA();
-
+  double start_time, tmp_time;
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
     {
@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
 
       PLEGMA_Propagator<float> propUP;
+      tmp_time = 0;
       // ensuring mu positive
       if(mu != mu_ud) {
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = mu_ud_factor[i];
@@ -60,11 +61,14 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	start_time = MPI_Wtime();
 	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-	
+	tmp_time += MPI_Wtime()-start_time;
 	PLEGMA_printf("Going to invert UP for component %d\n", isc);
 	solver.solve(vectorInOut, vectorInOut);
+	start_time = MPI_Wtime();
 	vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+	tmp_time += MPI_Wtime()-start_time;
 	vectorAuxF.copy(vectorAuxD);
 	propUP.absorb(vectorAuxF, isc/3, isc%3);
       }	
@@ -79,15 +83,18 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	start_time = MPI_Wtime();
 	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-	
+	tmp_time += MPI_Wtime()-start_time;
 	PLEGMA_printf("Going to invert DN for component %d\n", isc);
 	solver.solve(vectorInOut, vectorInOut);
+	start_time = MPI_Wtime();
 	vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss);
+	tmp_time += MPI_Wtime()-start_time;
 	vectorAuxF.copy(vectorAuxD);
 	propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
-      
+      PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
       propUP.rotateToPhysicalBase_device(+1);
       propDN.rotateToPhysicalBase_device(-1);
       propUP.applyBoundaries_device(sourcePositions[isource][3]);
@@ -95,7 +102,10 @@ int main(int argc, char **argv)
 
       {
 	PLEGMA_Correlator<float> corr(corr_space, maxQsq);
+	start_time = MPI_Wtime();
 	corr.contractMesons(propUP, propDN, sourcePositions[isource]);
+	tmp_time = MPI_Wtime()-start_time;
+	PLEGMA_printf("Contraction time for mesons %lf sec\n",tmp_time);
 	
 	char *dset1, *dset2;
 	asprintf(&dset1, "twop_mesons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
@@ -104,7 +114,10 @@ int main(int argc, char **argv)
 	free(dset1); free(dset2);
 	corr.writeFile(twop_filename.c_str(), corr_file_format);
 	
+	start_time = MPI_Wtime();
 	corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
+	tmp_time = MPI_Wtime()-start_time;
+	PLEGMA_printf("Contraction time for baryons %lf sec\n",tmp_time);
 	corr.writeFile(twop_filename.c_str(), corr_file_format);
       }
       
