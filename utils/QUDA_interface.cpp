@@ -112,7 +112,7 @@ void plaqQuda() {
 QUDA_solver::QUDA_solver(double mu) {
   profiler = new TimeProfile(("Solver profiler mu="+to_string(mu)).c_str());
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
-  
+
   mg_inv_param = newQudaInvertParam();
   mg_param = newQudaMultigridParam();
   mg_param.invert_param = &mg_inv_param;
@@ -128,7 +128,10 @@ QUDA_solver::QUDA_solver(double mu) {
   if(HGC_verbosity > 2) {
     printQudaInvertParam(&inv_param);
   }
-  
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  mg_eig_param = new QudaEigParam[mg_param.n_level];
+  setEigMultigridParam(mg_param,mg_eig_param);
+#endif
   // TODO: add support for other solvers
   if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 
     PLEGMA_error("initSolver: This function works only with Direct solve and even odd preconditioning");
@@ -194,6 +197,9 @@ QUDA_solver::~QUDA_solver(){
   delete D;
   delete DSloppy;
   delete DPre;
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  delete mg_eig_param;
+#endif
 }
 
 struct MG_Transfer{
