@@ -8,6 +8,7 @@
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_FT.cuh>
 #include <utils/PLEGMA_auxiliary.h>
+#include <io/PLEGMA_lime.h>
 using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT

@@ -1,4 +1,8 @@
 #include <PLEGMA_QLoops.h>
+#include <PLEGMA_Vector.h>
+#include <PLEGMA_Gauge.h>
+#include <PLEGMA_Su3field.h>
+#include <PLEGMA_FT.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_contractG5_bilinear.cuh>
 #include <functional>
