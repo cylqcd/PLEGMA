@@ -122,6 +122,9 @@ void setEigParam(QudaEigParam &mg_eig_param, int level)
   mg_eig_param.a_min = mg_eig_amin[level];
   mg_eig_param.a_max = mg_eig_amax[level];
 
+  strcpy(mg_eig_param.vec_infile, (eig_vec_infile+(eig_vec_infile!=""?("_"+std::to_string(level)):"")).c_str());
+  strcpy(mg_eig_param.vec_outfile, (eig_vec_outfile+(eig_vec_outfile!=""?("_"+std::to_string(level)):"")).c_str());
+
 }
 #endif
 

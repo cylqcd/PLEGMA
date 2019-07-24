@@ -248,6 +248,11 @@ void qudaOptions(Options &opt){
 
   //=================================== Multigrid related =======================//
   opt.set("Q-mg-levels", "The number of multigrid levels to do. One level has no meaning", verbosity, mg_levels);
+
+  isFound=opt.set("Q-mg-vec-outfile", "Name of the output file containing the multigrid vectors", verbosity, vec_outfile);
+
+  isFound=opt.set("Q-mg-vec-infile", "Name of the input file containing the multigrid vectors", verbosity, vec_infile);
+
   
   std::map<int,int> tpl_int_int;
   std::map<int,site> tpl_int_site;
@@ -396,7 +401,12 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-eig-spectrum", "The spectrum part to be calulated. S=smallest L=largest R=real M=modulus I=imaginary, usage (level,SR/LR/SM/LM/SI/LI)", verbosity, tpl_int_string);
   map_to_array_MG<QudaEigSpectrumType>(tpl_int_string, mg_eig_spectrum, get_eigensolution_type );
   
+
+  isFound=opt.set("Q-mg-eig-vec-outfile", "Name of the output file containing the multigrid exact deflation eigenvectors", verbosity, eig_vec_outfile);
+
+  isFound=opt.set("Q-mg-eig-vec-infile", "Name of the input file containing the multigrid exact deflation eigenvectors", verbosity, eig_vec_infile);
+
   
-  opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
+    opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
 }

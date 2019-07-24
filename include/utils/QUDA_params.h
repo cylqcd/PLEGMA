@@ -97,5 +97,8 @@ define(QudaEigType mg_eig_type[QUDA_MAX_MG_LEVEL], {});
 
 define(std::string vec_infile, "");
 define(std::string vec_outfile, "");
+define(std::string eig_vec_infile, "");
+define(std::string eig_vec_outfile, "");
+
 
 #undef define
