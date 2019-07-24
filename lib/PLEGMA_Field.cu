@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_FT.cuh>
-
+#include <utils/PLEGMA_auxiliary.h>
 using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT
@@ -29,7 +29,7 @@ using namespace plegma;
 
 template<typename Float>
 void PLEGMA_Field<Float>::
-initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG ghost_flag) {
+initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
 
@@ -68,45 +68,53 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l, GHOST_FLAG gho
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag,bool isPinnedHost):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
+  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
 {
-  initialize(alloc_flag, site_size, HGC_localVolume, ghost_flag);
+  initialize(alloc_flag, site_size, HGC_localVolume);
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag, bool isPinnedHost):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag), isAllocHost(false), isAllocDevice(false), field_type(classT)
+  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(classT)
 {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
 
   switch(classT){
     case SCALAR:
-      initialize(alloc_flag, 1, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, 1, HGC_localVolume);
+      field_name = "PLEGMA_SCALAR";
       break;
     case SU3FIELD:
-      initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
+      field_name = "PLEGMA_SU3FIELD";
       break;
     case GAUGE:
-      initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
+      field_name = "PLEGMA_GAUGE";
       break;    
     case VECTOR:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
+      field_name = "PLEGMA_VECTOR";
       break;
     case PROPAGATOR:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
+      field_name = "PLEGMA_PROPAGATOR";
       break;
     case PROPAGATOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+      field_name = "PLEGMA_PROPAGATOR3D";
       break;
     case VECTOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3], ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+      field_name = "PLEGMA_VECTOR3D";
       break;
     case QLOOPS:
-      initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume, ghost_flag);
+      initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
+      field_name = "PLEGMA_QLOOPS";
       break;
   }
 }
@@ -155,7 +163,8 @@ void PLEGMA_Field<Float>::unload(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
-  hostMalloc(h_elem, bytes_total_plus_ghost_length);
+  if(!isPinnedHost)hostMalloc(h_elem, bytes_total_plus_ghost_length);
+  else hostMallocPinned(h_elem, bytes_total_plus_ghost_length);
   isAllocHost = true;
   zero_host();
 }
@@ -171,12 +180,22 @@ void PLEGMA_Field<Float>::create_device(){
 #endif
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
+#ifdef HAVE_PINNED_GHOST
     cudaMallocHost((void**)&h_ext_ghost_r, bytes_ghost_length);
     cudaMallocHost((void**)&h_ext_ghost_s, bytes_ghost_length);
+#else
+    hostMalloc(h_ext_ghost_r, bytes_ghost_length);
+    hostMalloc(h_ext_ghost_s, bytes_ghost_length);
+#endif
   }
   if(ghost_flag == FIRST_CORNER){
+#ifdef HAVE_PINNED_GHOST
     cudaMallocHost((void**)&h_ext_ghost_corner_r, bytes_ghost_corner_length);
     cudaMallocHost((void**)&h_ext_ghost_corner_s, bytes_ghost_corner_length);
+#else    
+    hostMalloc(h_ext_ghost_corner_r, bytes_ghost_corner_length);
+    hostMalloc(h_ext_ghost_corner_s, bytes_ghost_corner_length);
+#endif
   }
   checkCudaError();
   isAllocDevice = true;
@@ -184,7 +203,8 @@ void PLEGMA_Field<Float>::create_device(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_host(){
-  hostFree(h_elem, bytes_total_plus_ghost_length);
+  if(!isPinnedHost)hostFree(h_elem, bytes_total_plus_ghost_length);
+  else hostFreePinned(h_elem, bytes_total_plus_ghost_length);
   isAllocHost=false;
 }
 
@@ -198,12 +218,22 @@ void PLEGMA_Field<Float>::destroy_device(){
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
 #endif
   if(ghost_flag >= FIRST_SIDE){
+#ifdef HAVE_PINNED_GHOST
     cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
     cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
+#else
+    hostFree(h_ext_ghost_r,bytes_ghost_length); h_ext_ghost_r=NULL;
+    hostFree(h_ext_ghost_s,bytes_ghost_length); h_ext_ghost_s=NULL;
+#endif
   }
   if(ghost_flag == FIRST_CORNER){
+#ifdef HAVE_PINNED_GHOST
     cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
     cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
+#else
+    hostFree(h_ext_ghost_corner_r,bytes_ghost_corner_length); h_ext_ghost_corner_r=NULL;
+    hostFree(h_ext_ghost_corner_s,bytes_ghost_corner_length); h_ext_ghost_corner_s=NULL;
+#endif
   }
   checkCudaError();
   isAllocDevice=false;
@@ -532,7 +562,7 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
 template<typename Float>
 void PLEGMA_Field<Float>::axpy(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
   Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
-  cuBLAS::axpy(total_length*field_length, a, d_elem, fieldIn.D_elem());
+  cuBLAS::axpy(total_length*field_length, a, fieldIn.D_elem(), d_elem);
 }
 
 
@@ -605,6 +635,50 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
     }
   }
 }
+
+template<typename Float>
+void PLEGMA_Field<Float>::writeToLime(std::string filename){
+  if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
+  FILE *fid;
+  LimeWriter *limewriter = (LimeWriter*)NULL;
+  if(comm_rank() == 0){
+    fid=fopen(filename.c_str(),"w");
+    if(fid==NULL) PLEGMA_error("Error opening file for writing: %s\n", filename.c_str());
+    limewriter = limeCreateWriter(fid);
+    if(limewriter==(LimeWriter*)NULL) PLEGMA_error("Could not create limeWriter");
+    std::string xlf_message = getDateAndTime(); // More xlf-info can be added
+    write_lime_header(limewriter,"xlf-info",xlf_message,1,1);
+    std::ostringstream oss;
+    oss << lime_version_header() << "<field>" << Field_name() << "</field>\n" << "<precision>" <<  Precision()*8 << "</precision>\n";
+    oss << "<dof>" << field_length << "</dof>\n";
+    std::vector<std::string> xyzt = {"x","y","z","t"};
+    for(int i = 0 ; i < N_DIMS; i++) oss << "<l" << xyzt[i] << ">" << HGC_totalL[i] << "</l" << xyzt[i] << ">\n";
+    oss << "</ildgFormat>";
+    write_lime_header(limewriter,"ildg-format",oss.str(),1,0);
+  }
+  if(isAllocDevice) unload();
+  write_binary_to_lime(filename,fid,limewriter,h_elem,field_length);
+  limeDestroyWriter(limewriter);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::readFromLime(std::string filename){
+  FILE *fid;
+  LimeReader *limereader;
+  int precRead=0, dofRead=0;
+  fid=fopen(filename.c_str(),"r");
+  if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
+  if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
+  read_lime_header(limereader,precRead,dofRead);
+  if(precRead != Precision()) PLEGMA_error("PLEGMA field precision %d != %d precision read from LIME",Precision(),precRead);
+  if(!isAllocHost) PLEGMA_error("Host memory should be allocated to read data from lime");
+  if(dofRead > 0 && dofRead != field_length) PLEGMA_error("PLEGMA field dof %d != %d dof read from LIME", field_length, dofRead);
+  read_binary_from_lime(filename,fid,limereader,h_elem,field_length);
+  limeDestroyReader(limereader);
+  fclose(fid);
+  if(isAllocDevice) load();
+}
+
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;

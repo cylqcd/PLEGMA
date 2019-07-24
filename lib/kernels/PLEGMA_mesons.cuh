@@ -6,11 +6,11 @@ const __device__ short int mesons_indices[N_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,
 
 const __device__ float mesons_values[N_MESONS][16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1};
 
-template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
+template<typename FloatA, typename FloatB, typename FloatC>
 __global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
 					propTex<FloatB> texProp2,
-					FloatC* block,
-					int it, int3 source){
+					FloatC* block, int it, int3 source,
+					bool runFT, tex_mom_list moms){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int vid = sid + it*DGC_localVolume3D;
@@ -49,7 +49,7 @@ __global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
       extern __shared__ int ext_shared_cache[];
       Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
       int source_pos[3] = {source.x, source.y, source.z}; 
-      fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid, source_pos);
+      fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid, source_pos, moms);
     } else {
       if(block2 != NULL)
 	for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
@@ -59,15 +59,18 @@ __global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
   }
 }
 
-template<typename FloatA, typename FloatB, typename FloatC, bool runFT>
+template<typename FloatA, typename FloatB, typename FloatC>
 static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 			    PLEGMA_Correlator<FloatC> &corr, int it){
   int SpVol = HGC_localVolume/HGC_localL[3];
   FloatC *d_partial_block = NULL;
-  int site_size=2*N_MESONS;
+
+  bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
+  int site_size = 2*N_MESONS;
   size_t volume = corr.getVolSize()/HGC_localL[3];
   size_t size = corr.getTotalSize()/HGC_localL[3];
   int3 source = corr.getSource3();
+  tex_mom_list moms = corr.getTexMomList();
   
   if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
@@ -75,8 +78,8 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
   
   ProfileStruct ps(SpVol, shared_size);
-  tune( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>,
-	texProp1, texProp2, d_partial_block, it, source);
+  tune( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC>,
+	texProp1, texProp2, d_partial_block, it, source, runFT, moms);
   
   size_t alloc_size;
   if(runFT==true){
@@ -85,8 +88,8 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     alloc_size = size * 2;
   }
   cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(FloatC));
-  run( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC,runFT>,
-       texProp1, texProp2, d_partial_block, it, source);
+  run( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC>,
+       texProp1, texProp2, d_partial_block, it, source, runFT, moms);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
@@ -119,18 +122,4 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     }
   
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-}
-  
-template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
-			    PLEGMA_Correlator<FloatC> &corr, int it){
-  if (corr.getCorrSpace()==POSITION_SPACE){
-    contract_mesons<FloatA,FloatB,FloatC,false>(texProp1,texProp2,corr,it);
-  }
-  else if(corr.getCorrSpace()==MOMENTUM_SPACE) {
-    contract_mesons<FloatA,FloatB,FloatC,true>(texProp1,texProp2,corr,it);
-  }
-  else
-    PLEGMA_error("run_contract_mesons: Supports only POSITION_SPACE and MOMENTUM_SPACE!\n");
-  checkCudaError();
 }

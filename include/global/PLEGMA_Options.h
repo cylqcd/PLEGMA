@@ -279,7 +279,7 @@ public:
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,p1,par...);
     descOpt.push_back(fullDesc);
-    if(noOptions || isHelp) return false;
+    if(noOptions) return false;
     checkIfSet(name);
     std::stringstream cs;
     int countF=0;
@@ -314,7 +314,7 @@ public:
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,vec);
     descOpt.push_back(fullDesc);
-    if(noOptions || isHelp) return false;
+    if(noOptions) return false;
     checkIfSet(name);
     std::stringstream cs;
     int countF = 0;
@@ -355,7 +355,7 @@ public:
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
     std::string fullDesc = getfullDesc(name,desc,tpl);
     descOpt.push_back(fullDesc);
-    if(noOptions || isHelp) return false;
+    if(noOptions) return false;
     checkIfSet(name);
     std::stringstream cs;
     int countF=0;

@@ -16,8 +16,6 @@ namespace plegma {
     PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_CORNER);
     ~PLEGMA_Gauge(){;}
     
-    void readFromLime(std::string filename);
-
     void absorbDir_device(PLEGMA_Su3field<Float> &su,int dir);
     void absorbDir_host(PLEGMA_Su3field<Float> &su,int dir);
     void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4);

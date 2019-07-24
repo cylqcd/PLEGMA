@@ -15,7 +15,7 @@ template<> inline MPI_Datatype MPI_Type<unsigned long>() { return MPI_UNSIGNED_L
 template<> inline MPI_Datatype MPI_Type<long long>() { return MPI_LONG_LONG_INT; }
 
 // hostMalloc and hostFree: functions to use in replace of malloc and free
-extern size_t HGC_used_memory;
+extern long int HGC_used_memory;
 template<typename T> inline void hostMalloc(T &ptr, size_t size) {
 #ifdef PLEGMA_HAVE_MEMALIGN
   ptr = static_cast<T>(memalign(PLEGMA_ALIGNMENT, size));
@@ -41,6 +41,34 @@ template<typename T> inline void hostFree(T &ptr, size_t size) {
 template<typename T> inline void hostFree(T &ptr) {
   hostFree(ptr,0);
   PLEGMA_warning("Freeing without providing the size. This will create a mismatch in HGC_used_memory.\n");
+}
+
+// Pinned memory allocation
+template<typename T> inline void hostMallocPinned(T &ptr, size_t size){
+  cudaMallocHost((void**)&ptr, size);
+  checkCudaError();
+  HGC_used_memory += size;
+}
+
+template<typename T> inline void hostFreePinned(T &ptr, size_t size) {
+  cudaFreeHost(ptr);
+  checkCudaError();
+  ptr=NULL;
+  HGC_used_memory -= size;
+}
+template<typename T> inline void hostFreePinned(T &ptr) {
+  hostFreePinned(ptr,0);
+  PLEGMA_warning("Freeing without providing the size. This will create a mismatch in HGC_used_memory.\n");
+}
+
+template<typename T> inline void hostReAlloc(T &ptr_new, size_t size_new, T &ptr_old, size_t size_old){
+  if(size_new == size_old) PLEGMA_warning("Reallocation of memory when old size is the same as the new is strange");
+  ptr_new = static_cast<T>(realloc(ptr_old, size_new));
+  if(ptr_new == static_cast<T>(NULL) ){
+    fprintf(stderr,"Cannot reallocate memory of size %lu\n",size_new);
+    exit(-1);
+  }
+  HGC_used_memory += size_new-size_old;  
 }
 
 // type_char(): identifying char for the variable. It is later used in type_print()

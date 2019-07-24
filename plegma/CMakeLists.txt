@@ -67,12 +67,17 @@ target_link_libraries(testHDF5 ${PLEGMA_LIBS})
 cuda_add_executable(qLoops qLoops.cpp)
 target_link_libraries(qLoops ${PLEGMA_LIBS})
 
+cuda_add_executable(qLoops_WilsonLine qLoops_WilsonLine.cpp)
+target_link_libraries(qLoops_WilsonLine ${PLEGMA_LIBS})
+
 cuda_add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
 target_link_libraries(FT ${PLEGMA_LIBS})
 
 cuda_add_executable(LowModesCalc LowModesCalc.cpp)
 target_link_libraries(LowModesCalc ${PLEGMA_LIBS})
 
+cuda_add_executable(MG_tuner MG_tuner.cpp)
+target_link_libraries(MG_tuner ${PLEGMA_LIBS})
 
 cuda_add_executable(benchmark benchmark.cpp)
 target_link_libraries(benchmark ${PLEGMA_LIBS})

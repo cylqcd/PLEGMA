@@ -85,7 +85,7 @@ namespace cBLAS{
     if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
     Float *yr = nullptr;
     try{yr = new Float[n*2];} catch (std::bad_alloc& err){ PLEGMA_error(err.what());}
-    gemv_(trans, m, n, alpha, A, x, beta, y);
+    cBLAS::gemv_(trans, m, n, alpha, A, x, beta, y);
     int mpiErr = MPI_Allreduce(y,yr,n*2,MPI_Type(yr),MPI_SUM,comm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
     memcpy(y,yr,n*2*sizeof(Float));
@@ -188,10 +188,66 @@ namespace cuBLAS{
   inline Float norm(int NN, const Float *x, MPI_Comm comm) {
     if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
     Float result, loc_res = cuBLAS::norm(NN, x);
-    int mpiErr = MPI_Allreduce(&result, &loc_res, 1, MPI_Type<Float>(), MPI_SUM,
+    int mpiErr = MPI_Allreduce(&loc_res, &result, 1, MPI_Type<Float>(), MPI_SUM,
 			       comm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
     return result;
+  }
+
+
+  //---------------------------------------------------------
+  template<typename Float>
+  inline void gemv_(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y){}
+
+  template<>
+  inline void gemv_<float>(OPER_MATR_BLAS trans, int m, int n, float alpha[2], float* A, float* x, float beta[2], float* y){
+    cublasOperation_t Oper;
+    cuComplex cu_alpha = make_cuComplex(alpha[0],alpha[1]);
+    cuComplex cu_beta = make_cuComplex(beta[0],beta[1]);
+    switch(trans){case(NOTRANS): Oper=CUBLAS_OP_N; break; case(TRANS): Oper=CUBLAS_OP_T; break; case(DAGGER): Oper=CUBLAS_OP_C; break;}
+    cublasStatus_t error = cublasCgemv(HGC_cublas_handle, Oper, m, n, &cu_alpha, (cuComplex*) A, m, (cuComplex*) x, 1, &cu_beta, (cuComplex*) y, 1);
+    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCgemv failed with error %d", error);
+  }
+
+  template<>
+  inline void gemv_<double>(OPER_MATR_BLAS trans, int m, int n, double alpha[2], double* A, double* x, double beta[2], double* y){
+    cublasOperation_t Oper;
+    cuDoubleComplex cu_alpha = make_cuDoubleComplex(alpha[0],alpha[1]);
+    cuDoubleComplex cu_beta = make_cuDoubleComplex(beta[0],beta[1]);
+    switch(trans){case(NOTRANS): Oper=CUBLAS_OP_N; break; case(TRANS): Oper=CUBLAS_OP_T; break; case(DAGGER): Oper=CUBLAS_OP_C; break;}
+    cublasStatus_t error = cublasZgemv(HGC_cublas_handle, Oper, m, n, &cu_alpha, (cuDoubleComplex*) A, m,(cuDoubleComplex*) x, 1, &cu_beta,(cuDoubleComplex*) y, 1);
+    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasZgemv failed with error %d", error);
+  }
+
+  // In case of m is partitioned and trans=NOTRANS OR m is not partitioned one can use whatever trans
+  // Cannot work if n is partitioned
+  template<typename Float>
+  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y){
+    gemv_(trans, m, n, alpha, A, x, beta, y);
+  }
+  // In case that m is partitioned and we take trans of dagger then reduction is needed
+  // Cannot work if n is partitioned
+template<typename Float>
+inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, Float *yHost, MPI_Comm comm){
+    if(trans == NOTRANS) PLEGMA_error("Use gemv without MPI comm");
+    if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
+    cuBLAS::gemv_(trans, m, n, alpha, A, x, beta, y);
+    cudaMemcpy(yHost,y,n*2*sizeof(Float),cudaMemcpyDeviceToHost);
+    checkCudaError();
+    int mpiErr = MPI_Allreduce(MPI_IN_PLACE,yHost,n*2,MPI_Type(yHost),MPI_SUM,comm);
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
+  }
+
+  // In case that m is partitioned and we take trans of dagger then reduction is needed
+  // Cannot work if n is partitioned
+template<typename Float>
+  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, MPI_Comm comm){
+    Float *yHost = nullptr;
+    hostMalloc(yHost,n*2*sizeof(Float));
+    cuBLAS::gemv(trans,m, n, alpha, A, x, beta, y,yHost,comm);
+    cudaMemcpy(y,yHost,n*2*sizeof(Float));
+    checkCudaError();
+    hostFree(yHost,n*2*sizeof(Float));
   }
 }
 //=================================================================//

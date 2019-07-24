@@ -34,9 +34,11 @@ infoQuda()
 
   PLEGMA_printf("MG parameters\n");
   PLEGMA_printf(" - number of levels %d\n", mg_levels);
-  for (int i=0; i<mg_levels-1; i++) PLEGMA_printf(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
-  PLEGMA_printf(" - number of pre-smoother applications %d\n", nu_pre);
-  PLEGMA_printf(" - number of post-smoother applications %d\n", nu_post);
+  for (int i=0; i<mg_levels-1; i++) {
+    PLEGMA_printf(" - level %d number of null-space vectors %d\n", i+1, nvec[i]);
+    PLEGMA_printf(" - level %d number of pre-smoother applications %d\n", i+1, nu_pre[i]);
+    PLEGMA_printf(" - level %d number of post-smoother applications %d\n", i+1, nu_post[i]);
+  }
 
   PLEGMA_printf("Outer solver paramers\n");
   PLEGMA_printf(" - pipeline = %d\n", pipeline);
@@ -171,8 +173,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.spin_block_size[i] = 1;
     mg_param.n_vec[i] = nvec[i] == 0 ? 24 : nvec[i]; // default to 24 vectors if not set
     mg_param.precision_null[i] = prec_null; // precision to store the null-space basis
-    mg_param.nu_pre[i] = nu_pre;
-    mg_param.nu_post[i] = nu_post;
+    mg_param.nu_pre[i] = nu_pre[i];
+    mg_param.nu_post[i] = nu_post[i];
     mg_param.mu_factor[i] = mu_factor[i];
     
     mg_param.cycle_type[i] = QUDA_MG_CYCLE_RECURSIVE;
@@ -229,10 +231,22 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
   mg_param.run_verify = verify_results ? QUDA_BOOLEAN_YES : QUDA_BOOLEAN_NO;
 
+#ifdef QUDA_INCLUDES_COMMIT_b08233a
+  mg_param.run_low_mode_check = QUDA_BOOLEAN_NO; 
+  mg_param.run_oblique_proj_check = QUDA_BOOLEAN_NO;
+#endif
+
   // set file i/o parameters
+#ifdef QUDA_INCLUDES_COMMIT_1dec1db
+  for (int i=0; i<mg_param.n_level; i++) {
+    strcpy(mg_param.vec_infile[i], (vec_infile+(vec_infile!=""?("_"+std::to_string(i)):"")).c_str());
+    strcpy(mg_param.vec_outfile[i], (vec_outfile+(vec_outfile!=""?("_"+std::to_string(i)):"")).c_str());
+  }
+#else
   strcpy(mg_param.vec_infile, vec_infile.c_str());
   strcpy(mg_param.vec_outfile, vec_outfile.c_str());
-
+#endif
+  
   // these need to be set for now but are actually ignored by the MG setup
   // needed to make it pass the initialization test
   inv_param.inv_type = QUDA_GCR_INVERTER;
@@ -333,6 +347,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
     static_cast<QudaResidualType>(QUDA_L2_RELATIVE_RESIDUAL);
   // specify a tolerance for the residual for heavy quark residual
   inv_param.tol_hq = tol_hq; 
+  inv_param.compute_true_res = true;
   
   // these can be set individually
   for (int i=0; i<inv_param.num_offset; i++) {

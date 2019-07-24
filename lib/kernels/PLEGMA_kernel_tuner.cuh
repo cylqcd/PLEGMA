@@ -13,6 +13,7 @@ extern __device__ cudaDeviceProp devProp;
 //  necessary for the tuning evaluation
 struct ProfileStruct{
   bool measured;
+  bool tuned;
   long unsigned int flops; 
   long unsigned int outBytes; 
   long unsigned int inpBytes;
@@ -28,6 +29,7 @@ struct ProfileStruct{
   ProfileStruct()=default;
   ProfileStruct(long long vol, unsigned int shBPT=0, bool tY=false){
     measured = false;
+    tuned = false;
     flops = 0;
     outBytes = 0;
     inpBytes = 0;
@@ -106,6 +108,7 @@ public:
   // ctor
   PLEGMA_kernel_tuner( ProfileStruct &myps, std::string kname, void(* mykernel)(types...), types... kArgs ) : ps(myps) {
     kernel = mykernel;
+    ps = myps;
     args = std::tuple<types...>(kArgs...);
     sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
     sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
@@ -140,6 +143,7 @@ void PLEGMA_kernel_tuner<types...>::tune(){
   ps.tp.grid = gridDim;
   ps.tp.shared_bytes = THREADS_PER_BLOCK*ps.sharedBytesPerThread;
   tuned = true;
+  ps.tuned = true;
 #else
   onlyTuning = true;
   apply();
@@ -159,6 +163,7 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   // tune
   ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
   tuned = true;
+  ps.tuned = true;
   if( onlyTuning && !activeTuning() ) return;
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,stream);
 #endif
@@ -173,7 +178,7 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!tuned) tune();
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
+  if(!tuned && !ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #endif
 }

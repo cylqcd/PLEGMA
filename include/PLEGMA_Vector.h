@@ -10,7 +10,7 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Gauge;
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
-
+  template<typename Float>  class PLEGMA_Su3field;
   /////////////////////////
   // Class: PLEGMA_Vector //
   /////////////////////////
@@ -23,11 +23,21 @@ namespace plegma {
     
     void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
     void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
-    void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge,
-			  int nsmearGauss, Float alphaGauss);
+
+    /**
+       @brief Applies N times Gaussian(Wuppertal) smearing operator on all time-slices of a vector
+       @param PLEGMA_Vector<Float> &vecIn, The 4D input vector (Exchange of boundaries happens inside the function)
+       @param PLEGMA_Gauge<Float> &gauge, The gauge field that will be used in the Gaussian smearing operator (Exchange of boundaries happens inside the function)
+       @param int nsmearGauss, The number of times to apply the operator (if zero copies inVec to outVec)
+       @param Float alphaGauss, alpha parameter of the Gaussian smearing
+     **/
+    void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss);
+
+    
     void scaleVector(Float a);
     void norm2Host();
     void norm2Device();
+
     /**
        @brief Absorbs elements nu, c2 from a 4D propagator at specific global time and puts it in a 4D vector
        @param PLEGMA_Propagator<Float> prop, The 4D propagator
@@ -66,7 +76,6 @@ namespace plegma {
     void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);
     void pointSource(int *sourceposition, int spin, int color);
-    void write(char* filename);
     void conjugate();
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
@@ -74,6 +83,7 @@ namespace plegma {
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     std::vector<Float> rms(std::vector<int> listR2, int *sourceposition);
+    void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };
 
   template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer

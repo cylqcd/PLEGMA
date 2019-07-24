@@ -9,7 +9,7 @@ using namespace quda;
 
 int n_benchmark = 100;
 double t_max = 10;
-template<typename out,class T,class T1,class ...types, class ...types1>
+template<typename out,class T,class T1,class ...types1, class ...types>
 void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, types&&... kArgs){
 
   std::vector<double> timing;
@@ -83,48 +83,48 @@ int main(int argc, char **argv) {
   }
 
   if(run({"twop"})) {
-    PLEGMA_Propagator<float> prop;
+    PLEGMA_Propagator<float> prop_a,  prop_b;
     PLEGMA_Correlator<float> corr(corr_space,maxQsq);
     int sources[4] = {1,0,1,0};
     
     // Benchmark Meson contration 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop, prop, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_a, prop_b, sources);
 
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop, prop, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b, sources);
   }
 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(run({"threep","PDFs"})) {
-    PLEGMA_Propagator3D<float> prop;
+    PLEGMA_Propagator3D<float> prop_a,  prop_b;
     PLEGMA_Vector<float> vector;
 
     // Since seqSourceNucleon is overloaded we need to select one version of it
     void (PLEGMA_Vector<float>::*seqSourceNucleon)(PLEGMA_Propagator3D<float> &, PLEGMA_Propagator3D<float> &, WHICHPROJECTOR, WHICHPARTICLE, int, int, int) = &PLEGMA_Vector<float>::seqSourceNucleon;
     // Benchmark Sequential source 
     for(int i=0; i<(int) N_PROJS; i++) {
-      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source proton P=" + std::to_string(i), prop, prop, (WHICHPROJECTOR) i, PROTON, 1, 0, 0);
-      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source neutron P=" + std::to_string(i), prop, prop, (WHICHPROJECTOR) i, NEUTRON, 1, 0, 0);
+      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source proton P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, PROTON, 1, 0, 0);
+      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source neutron P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, NEUTRON, 1, 0, 0);
     }
   }
 
   if(run({"threep"})) {
     PLEGMA_Gauge<float> gauge;
-    PLEGMA_Propagator<float> prop;
+    PLEGMA_Propagator<float> prop_a,  prop_b;
     PLEGMA_Correlator<float> corr(corr_space,maxQsq);
     std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
     int sources[4] = {1,0,1,0};
     
     // Benchmark three point functions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop, prop, +1, gammas, sources);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop, prop, gauge, +1, gammas, sources);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop, prop, gauge, +1, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1, sources);
   }
   
   if(run({"PDFs"})) {
     PLEGMA_Gauge<double> gauge;
     PLEGMA_Su3field<float> su3,su3_a,su3_b;
-    PLEGMA_Propagator<float> prop;
+    PLEGMA_Propagator<float> prop_a,  prop_b;
     PLEGMA_Correlator<float> corr(MOMENTUM_SPACE,0);
     std::complex<double> momSmScale[N_DIMS] = {1,1,1,1};
     momSmScale[0] = {0.7071, 0.7071};
@@ -135,30 +135,36 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing (scale 1 dir)",momSmScale);
 
     // Benchmark contraction  3pt
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop, prop, su3, +1, gammas, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, sources);
 
     // Benchmark Wilson line update 
-    PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a,su3_b,4+2);
+    PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2);
 
     // Benchmark shift routine 
-    PLEGMA_benchmark(&prop,&PLEGMA_Field<float>::shift,"Shift routine",prop,2);
+    PLEGMA_benchmark(&prop_b,&PLEGMA_Field<float>::shift,"Shift routine", prop_a, 2);
+
+    // Benchmark stout smearing
+    PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::stoutSmearing,"Stout smearing (1 step)",gauge, 1,0.4,3);
   }
 #endif
 
   if(run({"qLoops"})) {
-    PLEGMA_QLoops<double> loops(BOTH, true);
-    PLEGMA_Vector<double> vector;
+    PLEGMA_QLoops<double> loops;
+    PLEGMA_Vector<double> vector_a,vector_b,vector_c;
     PLEGMA_Gauge<double> gauge;
+    PLEGMA_Vector<double>* tmp[16]={};
+    for(size_t i=0;i<16;i++) tmp[i] = new PLEGMA_Vector<double>;
     PLEGMA_FT<double> ft(1, 3);
 
     // Benchmark standard one-end trick
     // Since the function is overloaded we need to select one version of it
-    void (PLEGMA_QLoops<double>::*oneEnd_trick)(PLEGMA_Vector<double> &, PLEGMA_Vector<double>&, PLEGMA_Vector<double> &,
-						PLEGMA_Gauge<double> &, double, bool) = &PLEGMA_QLoops<double>::oneEnd_trick;
-    PLEGMA_benchmark(&loops,oneEnd_trick,"Loops one-end trick",vector,vector,vector,gauge,-1.,true);
+    PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, PLEGMA_Vector<double> **,
+									PLEGMA_QLoops<double> *, PLEGMA_Gauge<double> &, double , bool  )>
+		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,tmp,&loops,gauge,-1.,true);
 
+    
     // Benchmark standard one-end trick
-    PLEGMA_benchmark(&ft,&PLEGMA_FT<double>::apply,"Loops FT",loops,-1);
+    PLEGMA_benchmark(&ft,&PLEGMA_FT<double>::apply,"Loops FT",loops,FT_GEMV,-1);
   }
   
   finalize();

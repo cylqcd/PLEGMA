@@ -1,7 +1,7 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 #include <comm_quda.h>
-
+#include <functional>
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
 						     "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
@@ -11,6 +11,7 @@ const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", 
 						     ,"Eig-printLevel", "Eig-method-PRIMME"
 #endif
 						     ,"Eig-isACC", "Eig-PolyDeg", "Eig-amin", "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters"
+						     , "rng-seed"
 };
 
 static inline bool isInList(std::vector<std::string> list,std::string str){
@@ -45,12 +46,32 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list,"alpha-gauss")) opt.set("alpha-gauss", "Coefficient for the Gaussian smearing", verbosity, alphaGauss);
   if(isInList(list,"nsmear-stout")) opt.set("nsmear-stout", "Number of stout smearing step", verbosity, nsmearStout);
   if(isInList(list,"alpha-stout")) opt.set("alpha-stout", "Coefficient for the stout smearing", verbosity, alphaStout);
+  if(isInList(list, "xiMomSm")) opt.set("xiMomSm", "Momentum smearing parameter defined as e^{-i xiMomSm p}", verbosity, xiMomSm);
   // sources----------------------------------------------------------------------------------------------
-  if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions", verbosity, numSourcePositions);
+  if(isInList(list,"nsrc")) opt.set("nsrc", "Number of source positions or stochastic vectors", verbosity, numSourcePositions);
   if(isInList(list,"src-filename")){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
+
+  if(isInList(list,"rng-seed")) opt.set("rng-seed", "A seed for the random number generator", verbosity, rng_seed);
+
+  //3pt Functions -----------------------------------------------------------------------------------------
+  if(isInList(list,"which_particle")){
+    tmpString=get_particle_str(which_particle);
+    isFound=opt.set("which_particle", "Hadron to insert in the three point function", verbosity, tmpString);
+    if(isFound) which_particle=get_particle(tmpString.c_str());
+  }
+ 
+  if(isInList(list,"gammas")){
+    std::vector<std::string> tmpString;
+    get_gammas_str(gammas,&tmpString);
+    isFound=opt.set("gammas", "Gamma matrices to insert in the 3pt function", verbosity, tmpString);
+    std::vector<std::string> tmpString1;
+    for(size_t i=0;i<tmpString.size();i++) tmpString1.push_back(tmpString[i].c_str());
+    if(isFound) gammas=get_gammas(tmpString1);
+  }
+
   // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);
@@ -70,6 +91,7 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
 
   if(isInList(list, "tSinks")) opt.set("tSinks", "List with the source-sink time separations to do", verbosity, tSinks);
   if(isInList(list, "Projs")) opt.set("Projs", "List of the projectors to be used", verbosity, Projs);
+  if(isInList(list, "sinkMom")) opt.set("sinkMom", "Sink momentum boosted nucleon", verbosity, sinkMom);
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
 #ifdef HAVE_ARPACK
@@ -236,11 +258,13 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-nvec", "Number of null-space vectors for multigrid, usage (level,nvec)", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, nvec, 1, 128, "ERROR: invalid number of vectors");
 
-  isFound=opt.set("Q-mg-nu-pre", "Number of pre-smoother applications, 0-20", verbosity, nu_pre);
-  if(isFound) if (nu_pre < 0 || nu_pre > 20) PLEGMA_error("ERROR: invalid pre-smoother applications value (nu_pre=%d)\n", nu_pre);
+  default_map_MG(tpl_int_int, 0);
+  isFound=opt.set("Q-mg-nu-pre", "Number of pre-smoother applications, 0-20", verbosity, tpl_int_int);
+  map_to_array_MG<int>(tpl_int_int, nu_pre, 0, 128, "ERROR: invalid pre-smoother applications");
 
-  isFound=opt.set("Q-mg-nu-post", "Number of post-smoother applications, 0-20", verbosity, nu_post);
-  if(isFound) if (nu_post < 0 || nu_post > 20) PLEGMA_error("ERROR: invalid post-smoother applications value (nu_post=%d)\n", nu_post);
+  default_map_MG(tpl_int_int, 4);
+  isFound=opt.set("Q-mg-nu-post", "Number of post-smoother applications, 0-20", verbosity, tpl_int_int);
+  map_to_array_MG<int>(tpl_int_int, nu_post, 0, 128, "ERROR: invalid post-smoother applications");
   
   default_map_MG(tpl_int_string, (std::string) "cg");
   isFound=opt.set("Q-mg-setup-inv", "The inverter to use for the setup of multigrid, usage(level,inv)", verbosity, tpl_int_string);
@@ -260,10 +284,12 @@ void qudaOptions(Options &opt){
     auto it = tpl_int_site.begin();
     while(it != tpl_int_site.end()){
       int lvl=it->first;
+      mg_block_volume[lvl] = 1;
       site val = it->second;
       if(lvl < 0 || lvl >= QUDA_MAX_MG_LEVEL) PLEGMA_error("ERROR: invalid multigrid level %d", lvl);
       for(int j=0; j<N_DIMS; j++) {
 	mg_block_size[lvl][j]=val.x[j];
+	mg_block_volume[lvl]*=val.x[j];
       }
       it++;
     }

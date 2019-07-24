@@ -17,16 +17,11 @@ initialize() {
   finalize();
   site_size = getSiteSize();
   if(corr_space == MOMENTUM_SPACE) {
-    corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    if(fixMomVec.empty()) corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    else corr_mom_space = new PLEGMA_FT<Float>(this->fixMomVec);
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();
-    if(HGC_moms.Nmoms>0) {
-      HGC_moms.free();
-    }
-    HGC_moms = corr_mom_space->getTexMomList();
-    cudaMemcpyToSymbol(DGC_moms, (void*) &HGC_moms, sizeof(tex_mom_list));
-    checkCudaError();
   }
   else if(corr_space == POSITION_SPACE) {
     corr_pos_space = new PLEGMA_Field<Float>(HOST, site_size, NO_GHOSTS);
@@ -80,6 +75,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
 }
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
