@@ -1,5 +1,6 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <cuda_profiler_api.h>
 
 using namespace plegma;
 using namespace quda;
@@ -13,19 +14,22 @@ int main(int argc, char **argv)
   initializePLEGMA();
 
   // Allocation done on BOTH, DEVICE and HOST
-  PLEGMA_Gauge<double> gauge(BOTH);
-  // Reading from Lime file and loading to device
-  gauge.readFromLime(latfile.c_str());
+  {
+    cudaProfilerStart();
+    PLEGMA_Gauge<double> gauge(BOTH);
+    // Reading from Lime file and loading to device
+    gauge.readFromLime(latfile.c_str());
 
-  // Computing plaquette on device in three different way for crosschecking
-  gauge.calculatePlaq();
-  gauge.calculatePlaqCorners();
-  gauge.calculatePlaqShifts();
+    // Computing plaquette on device in three different way for crosschecking
+    gauge.calculatePlaq();
+    gauge.calculatePlaqCorners();
+    gauge.calculatePlaqShifts();
 
-  // Loading to QUDA and computing plaquette also there
-  initGaugeQuda(gauge, false, QUDA_SU3_LINKS);
-  plaqQuda();
-  
+    // Loading to QUDA and computing plaquette also there
+    initGaugeQuda(gauge, false, QUDA_SU3_LINKS);
+    plaqQuda();
+    cudaProfilerStop();
+  }
   finalize();
  
   return 0;
