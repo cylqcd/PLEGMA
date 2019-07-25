@@ -299,20 +299,10 @@ LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
 
 add_definitions(-DMULTI_GPU)
 
-find_package(MPI)
-
 set(MPI_HOME_MANUAL "" CACHE PATH "Path to MPI for manual setting")
 mark_as_advanced(MPI_HOME_MANUAL)
 
-# add possibility to insert the include paths manually
-if( MPI_FOUND )
-  add_definitions(-DMPI_COMMS)
-  if("${MPI_HOME_MANUAL}" STREQUAL "") 
-    include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
-    if("${MPI_CXX_INCLUDE_PATH}" STREQUAL "")
-      message(FATAL_ERROR "MPI_CXX_INCLUDE_PATH could not be specified, please specify MPI_HOME_MANUAL manually")
-    endif()
-  else()
+if(NOT "${MPI_HOME_MANUAL}" STREQUAL "")
     include_directories(SYSTEM ${MPI_HOME_MANUAL}/include) 
     FIND_LIBRARY(MPICH_LIBRARY_MANUAL mpich ${MPI_HOME_MANUAL}/lib)
     FIND_LIBRARY(MPI_LIBRARY_MANUAL mpi ${MPI_HOME_MANUAL}/lib)
@@ -325,8 +315,20 @@ if( MPI_FOUND )
     else()
       message(FATAL_ERROR "Could not locate any MPI library")
     endif()
-  endif()
+else()
+    find_package(MPI)
+    if( MPI_FOUND )
+      include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+      if("${MPI_CXX_INCLUDE_PATH}" STREQUAL "")
+        message(FATAL_ERROR "MPI_CXX_INCLUDE_PATH could not be specified, please specify MPI_HOME_MANUAL manually")
+      endif()
+   else()
+      message(FATAL_ERROR "Could not locate any MPI library")
+    endif()
 endif()
+
+add_definitions(-DMPI_COMMS)
+
 
 # COMPILER OPTIONS and BUILD types
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
