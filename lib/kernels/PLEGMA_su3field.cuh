@@ -137,14 +137,9 @@ static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLE
 }
 
 template<typename Float, typename FloatS>
-static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
-  Float sum = 0.;
-  Float globalSum = 0.;
+static void sum_real_trace_host(ProfileStruct& ps, PLEGMA_Su3field<FloatS> &su3M, Float& sum){
   Float *h_partial_sum = NULL;
   Float *d_partial_sum = NULL;
-
-  ProfileStruct ps(HGC_localVolume,sizeof(FloatS));
-  tune(ps, "sum_real_trace_kernel", sum_real_trace_kernel<Float,FloatS>,su3M.D_elem(), d_partial_sum);
 
   int gridDimX = ps.tp.grid.x;
   
@@ -160,7 +155,16 @@ static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
   for(int i = 0 ; i < gridDimX ; i++)
     sum += h_partial_sum[i];
   hostFree(h_partial_sum, gridDimX * sizeof(Float) );
+}
 
+template<typename Float, typename FloatS>
+static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
+  Float sum = 0.;
+
+  ProfileStruct ps(HGC_localVolume,sizeof(FloatS));
+  tuneAndRun(ps, "sumRtraceU", sum_real_trace_host<Float,FloatS>, ps, su3M, sum);
+
+  Float globalSum = 0.;
   MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , MPI_COMM_WORLD);  
   return globalSum;
 }
