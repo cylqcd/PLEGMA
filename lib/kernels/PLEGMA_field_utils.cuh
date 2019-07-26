@@ -258,32 +258,36 @@ static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   thrust::for_each(z1,z2,HadCol<Float>(ih));
 }
 
-template<typename Float, typename FloatA, typename FloatB, typename FloatC>
-static __global__ void traceMulFmunuSu3Fmunu_kernel(Float *F, FloatA *A, FloatB *B, FloatC *C){
+template<typename Float, typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+static __global__ void traceMulFmunuSu3FmunuSu3_kernel(Float *F, FloatA *A, FloatB *B, FloatC *C, FloatD *D){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> *F2 = (Float2<Float> *) F;
   if (sid >= DGC_localVolume) return;
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatB> lB[N_COLS][N_COLS];
   Float2<FloatC> lC[N_COLS][N_COLS];
+  Float2<FloatD> lD[N_COLS][N_COLS];
   su3_2<FloatA> RA(A);
   su3_2<FloatB> RB(B);
   su3_2<FloatC> RC(C);
+  su3_2<FloatD> RD(D);
   RA.get(lA,sid);
   RB.get(lB,sid);
   RC.get(lC,sid);
-  Float2<Float> res = trace_mul_G_G_G<Float,Float,Float,Float>(lA,lB,lC);
+  RD.get(lD,sid);
+  Float2<Float> res = trace_mul_G_G_G_G<FloatA,FloatB,FloatC,FloatD>(lA,lB,lC,lD);
   F2[sid] = res;
 }
 
-template<typename Float, typename FloatA, typename FloatB, typename FloatC>
-static void traceMulFmunuSu3Fmunu_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<FloatA> &A, std::pair<int,int> munu_l,
-				    PLEGMA_Su3field<FloatB> &B, PLEGMA_Fmunu<FloatC> &C,  std::pair<int,int> munu_r){
+template<typename Float, typename FloatA, typename FloatB, typename FloatC,typename FloatD>
+static void traceMulFmunuSu3FmunuSu3_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<FloatA> &A, std::pair<int,int> munu_l,
+				       PLEGMA_Su3field<FloatB> &B, PLEGMA_Fmunu<FloatC> &C,  std::pair<int,int> munu_r,
+				       PLEGMA_Su3field<FloatD> &D){
   ProfileStruct ps(HGC_localVolume);
   long int lshift = ((long int) A.munuToIndx(munu_l)) * N_COLS * N_COLS * HGC_localVolume * 2;
   long int rshift = ((long int) C.munuToIndx(munu_r)) * N_COLS * N_COLS * HGC_localVolume * 2;
-  tuneAndRun(ps, "traceMulFmunuSu3Fmunu_kernel", traceMulFmunuSu3Fmunu_kernel<Float,FloatA,FloatB,FloatC>,
-	     F.D_elem(), A.D_elem()+lshift, B.D_elem(),C.D_elem()+rshift);
+  tuneAndRun(ps, "traceMulFmunuSu3FmunuSu3_kernel", traceMulFmunuSu3FmunuSu3_kernel<Float,FloatA,FloatB,FloatC,FloatD>,
+	     F.D_elem(), A.D_elem()+lshift, B.D_elem(),C.D_elem()+rshift, D.D_elem());
   checkCudaError();
 }
 

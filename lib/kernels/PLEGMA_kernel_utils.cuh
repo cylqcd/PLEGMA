@@ -257,6 +257,26 @@ namespace plegma {
     return res;
   }
 
+  template<typename Float,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ Float2<Float> trace_mul_G_G_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS],
+							Float2<FloatC> c[N_COLS][N_COLS], Float2<FloatD> d[N_COLS][N_COLS]){
+    Float2<Float> res = 0.;
+#pragma unroll
+    for(int i=0; i<N_COLS; i++){
+#pragma unroll
+      for(int j=0; j<N_COLS; j++) {
+#pragma unroll
+	for(int k=0; k<N_COLS; k++) {
+#pragma unroll
+	  for(int l=0; l<N_COLS; l++){
+	    res += a[i][j]*b[j][k]*c[k][l]*d[l][i];
+	  }
+	}
+      }
+    }
+    return res;
+  }
+
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_G_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
   #pragma unroll

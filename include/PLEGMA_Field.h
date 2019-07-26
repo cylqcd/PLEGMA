@@ -119,8 +119,8 @@ namespace plegma {
     virtual void readFromLime(std::string filename);
     virtual void writeToLime(std::string filename);
 
-    void fmunuSu3Fmunu(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &W,
-		       PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r);
+    void TrfmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
+			    PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r, PLEGMA_Su3field<Float> &Wr);
 
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
   };

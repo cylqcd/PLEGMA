@@ -691,9 +691,10 @@ void PLEGMA_Field<Float>::readFromLime(std::string filename){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::fmunuSu3Fmunu(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &W,
-					PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r){
-  traceMulFmunuSu3Fmunu_k(*this,Fl,munu_l,W,Fr,munu_r);
+void PLEGMA_Field<Float>::TrfmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
+					PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r,
+					PLEGMA_Su3field<Float> &Wr){
+  traceMulFmunuSu3FmunuSu3_k(*this,Fl,munu_l,Wl,Fr,munu_r,Wr);
 }
 
 template<typename Float>
