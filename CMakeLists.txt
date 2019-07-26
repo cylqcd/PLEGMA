@@ -38,6 +38,32 @@ if("${QUDA_SRC}" STREQUAL "")
   message( FATAL_ERROR "QUDA_SRC must be defined" )
 endif()
 
+find_package(Git)
+if(GIT_FOUND)
+  execute_process(COMMAND ${GIT_EXECUTABLE} show
+                  WORKING_DIRECTORY ${QUDA_SRC}
+                  RESULT_VARIABLE IS_GIT_REPOSIITORY
+                  OUTPUT_QUIET ERROR_QUIET)
+  if(${IS_GIT_REPOSIITORY} EQUAL 0)
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor b08233a7d1cee0145e56751ae04c5542ce98b3b5 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+		    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+		    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_b08233a)
+    endif()
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 1dec1db7a57e4fe00b14e04ba2088ca5039f8760 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+		    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+		    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_1dec1db)
+    endif()
+  endif()
+endif(GIT_FOUND)
+
 include(ExternalProject)
 
 find_package(Boost)
@@ -98,7 +124,7 @@ endif()
 # flag to allow for pinned memory ghost buffers
 set(PLEGMA_PINNED_GHOST_BUFFERS FALSE CACHE BOOL "Enable pinned ghost buffer exchanged. Experimental use it if you are fully aware about the issues")
 if(PLEGMA_PINNED_GHOST_BUFFERS)
-  add_definitions(-HAVE_PINNED_GHOST)
+  add_definitions(-DHAVE_PINNED_GHOST)
 endif()
 
 set(PLEGMA_EIGENSOLVER FALSE CACHE BOOL "build eigensolver")
@@ -273,20 +299,10 @@ LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
 
 add_definitions(-DMULTI_GPU)
 
-find_package(MPI)
-
 set(MPI_HOME_MANUAL "" CACHE PATH "Path to MPI for manual setting")
 mark_as_advanced(MPI_HOME_MANUAL)
 
-# add possibility to insert the include paths manually
-if( MPI_FOUND )
-  add_definitions(-DMPI_COMMS)
-  if("${MPI_HOME_MANUAL}" STREQUAL "") 
-    include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
-    if("${MPI_CXX_INCLUDE_PATH}" STREQUAL "")
-      message(FATAL_ERROR "MPI_CXX_INCLUDE_PATH could not be specified, please specify MPI_HOME_MANUAL manually")
-    endif()
-  else()
+if(NOT "${MPI_HOME_MANUAL}" STREQUAL "")
     include_directories(SYSTEM ${MPI_HOME_MANUAL}/include) 
     FIND_LIBRARY(MPICH_LIBRARY_MANUAL mpich ${MPI_HOME_MANUAL}/lib)
     FIND_LIBRARY(MPI_LIBRARY_MANUAL mpi ${MPI_HOME_MANUAL}/lib)
@@ -299,8 +315,20 @@ if( MPI_FOUND )
     else()
       message(FATAL_ERROR "Could not locate any MPI library")
     endif()
-  endif()
+else()
+    find_package(MPI)
+    if( MPI_FOUND )
+      include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+      if("${MPI_CXX_INCLUDE_PATH}" STREQUAL "")
+        message(FATAL_ERROR "MPI_CXX_INCLUDE_PATH could not be specified, please specify MPI_HOME_MANUAL manually")
+      endif()
+   else()
+      message(FATAL_ERROR "Could not locate any MPI library")
+    endif()
 endif()
+
+add_definitions(-DMPI_COMMS)
+
 
 # COMPILER OPTIONS and BUILD types
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

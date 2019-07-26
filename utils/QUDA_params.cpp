@@ -231,10 +231,22 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
   mg_param.run_verify = verify_results ? QUDA_BOOLEAN_YES : QUDA_BOOLEAN_NO;
 
+#ifdef QUDA_INCLUDES_COMMIT_b08233a
+  mg_param.run_low_mode_check = QUDA_BOOLEAN_NO; 
+  mg_param.run_oblique_proj_check = QUDA_BOOLEAN_NO;
+#endif
+
   // set file i/o parameters
+#ifdef QUDA_INCLUDES_COMMIT_1dec1db
+  for (int i=0; i<mg_param.n_level; i++) {
+    strcpy(mg_param.vec_infile[i], (vec_infile+(vec_infile!=""?("_"+std::to_string(i)):"")).c_str());
+    strcpy(mg_param.vec_outfile[i], (vec_outfile+(vec_outfile!=""?("_"+std::to_string(i)):"")).c_str());
+  }
+#else
   strcpy(mg_param.vec_infile, vec_infile.c_str());
   strcpy(mg_param.vec_outfile, vec_outfile.c_str());
-
+#endif
+  
   // these need to be set for now but are actually ignored by the MG setup
   // needed to make it pass the initialization test
   inv_param.inv_type = QUDA_GCR_INVERTER;
