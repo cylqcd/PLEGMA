@@ -2,6 +2,18 @@
 #include <PLEGMA_kernel_tuner.cuh>
 using namespace plegma;
 
+template<typename FloatA>
+static __global__ void Udag_kernel(FloatA *A){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= DGC_localVolume) return;
+  Float2<FloatA> lA[N_COLS][N_COLS];
+  su3_2<FloatA> RA(A);
+  RA.get(lA,sid);
+  Gdag(lA);
+  RA.set(lA,sid);
+}
+
+
 template<typename FloatA,typename FloatB>
 static __global__ void Udag_kernel(FloatA *A, FloatB *B){
   
@@ -119,6 +131,13 @@ template<typename FloatA, typename FloatB>
 static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   ProfileStruct ps(HGC_localVolume);
   tuneAndRun(ps, "Udag_kernel", Udag_kernel<FloatA,FloatB>,A.D_elem(), B.D_elem());
+  checkCudaError();
+}
+
+template<typename Float>
+static void Udag_k(PLEGMA_Su3field<Float> &A){
+  ProfileStruct ps(HGC_localVolume);
+  run(ps, "Udag_kernel", Udag_kernel<Float>,A.D_elem());
   checkCudaError();
 }
 
