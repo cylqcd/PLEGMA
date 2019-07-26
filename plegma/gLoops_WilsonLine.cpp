@@ -36,8 +36,8 @@ static pairedSinged makePairCheck(int mu, int nu){
 }
     
 static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp, int wilsDir, PLEGMA_Fmunu<double> &fmunu_l,
-			    PLEGMA_Su3field<double> &WL,
-			    PLEGMA_Fmunu<double> &fmunu_r, int type){
+			    PLEGMA_Su3field<double> &Wl,
+			    PLEGMA_Fmunu<double> &fmunu_r, PLEGMA_Su3field<double> &Wr, int type){
   if(type <0 || type > 3) PLEGMA_error("Type not implemented");
   std::vector<pairedSinged> munu_l;
   std::vector<pairedSinged> munu_r;
@@ -58,9 +58,9 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
   }
 
   if(type != 0){
-    out.fmunuSu3Fmunu(fmunu_l,munu_l[0].munu,WL,fmunu_r,munu_r[0].munu);
+    out.TrfmunuSu3FmunuSu3(fmunu_l,munu_l[0].munu,Wl,fmunu_r,munu_r[0].munu,Wr);
     if(munu_l[0].sign * munu_r[0].sign == -1) out.cscale(signC);
-    tmp.fmunuSu3Fmunu(fmunu_l,munu_l[1].munu,WL,fmunu_r,munu_r[1].munu);
+    tmp.TrfmunuSu3FmunuSu3(fmunu_l,munu_l[1].munu,Wl,fmunu_r,munu_r[1].munu,Wr);
     if(munu_l[1].sign * munu_r[1].sign == -1) tmp.cscale(signC);
     out.axpy(tmp,(std::complex<double>) {1.,0.});
     out.cscale((std::complex<double>) {0.5,0.}); //average the two contributions
@@ -69,11 +69,11 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
     out.zero_device();
     for(int i = 0 ; i < N_DIMS-1; i++)
       for(int j = i+1 ; j < N_DIMS-1; j++){
-	tmp.fmunuSu3Fmunu(fmunu_l, std::make_pair(i,j), WL,fmunu_l, std::make_pair(i,j));
+	tmp.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_r, std::make_pair(i,j), Wr);
 	out.axpy(tmp,(std::complex<double>) {1.,0.});
       }
     for(int i = 0 ; i < N_DIMS-1; i++){
-      tmp.fmunuSu3Fmunu(fmunu_l, std::make_pair(i,3), WL,fmunu_l, std::make_pair(i,3));
+      tmp.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3), Wl,fmunu_r, std::make_pair(i,3), Wr);
       out.axpy(tmp,(std::complex<double>) {-1.,0.});
     }
   }
@@ -92,17 +92,27 @@ int main(int argc, char **argv){
   HGC_options->set("alpha-stoutWL", "Coefficient for the stout smearing for the Wilson line if enabled",verbosity,alphaStoutWL);
   //===================================//
   initializePLEGMA();
-  PLEGMA_Gauge<double> gauge;
-  gauge.readFromLime(latfile.c_str());
+  PLEGMA_Gauge<double> *gauge = new PLEGMA_Gauge<double>();
+  gauge->readFromLime(latfile.c_str());
   PLEGMA_printf("Unsmeared Plaquette is:");
-  gauge.calculatePlaq();
+  gauge->calculatePlaq();
 
 
-  PLEGMA_Gauge<double> smearedGaugeOp;
-  smearedGaugeOp.stoutSmearing(gauge, nsmearStout, alphaStout, 4);
+  PLEGMA_Gauge<double> *smearedGaugeOp = new PLEGMA_Gauge<double>();
+  smearedGaugeOp->stoutSmearing(*gauge, nsmearStout, alphaStout, 4);
   PLEGMA_printf("Smeared Plaquette with stout 4D for the field strength tensor:");
-  smearedGaugeOp.calculatePlaq();
+  smearedGaugeOp->calculatePlaq();
 
+  PLEGMA_Gauge<double> *smearedGaugeWL = nullptr;
+  if(IsGloopsWline){
+    smearedGaugeWL = new PLEGMA_Gauge<double>();
+    smearedGaugeWL->stoutSmearing(*gauge, nsmearStoutWL, alphaStoutWL, 3);
+    PLEGMA_printf("Smeared Plaquette with stout 3D for Wilson Line:");
+    smearedGaugeWL->calculatePlaq();
+  }
+  
+  delete gauge;
+  
   PLEGMA_Field<double> traceO1(BOTH,SCALAR);
   PLEGMA_Field<double> traceO2(BOTH,SCALAR);
   PLEGMA_FT<double> ftUL(maxQsq,3);
@@ -119,7 +129,7 @@ int main(int argc, char **argv){
    * Term2 = \Tr[sum_{i<j} P_{ij}]
    */
   for(int i = 0 ; i < N_DIMS-1; i++){
-    traceO1.trPmunu(smearedGaugeOp, std::make_pair(3,i));
+    traceO1.trPmunu(*smearedGaugeOp, std::make_pair(3,i));
     traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
   }
   ftUL.apply(traceO2);
@@ -128,7 +138,7 @@ int main(int argc, char **argv){
   traceO2.zero_device();
   for(int i = 0 ; i < N_DIMS-1; i++)
     for(int j = i+1 ; j < N_DIMS-1; j++){
-      traceO1.trPmunu(smearedGaugeOp, std::make_pair(i,j));
+      traceO1.trPmunu(*smearedGaugeOp, std::make_pair(i,j));
       traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
     }
   ftUL.apply(traceO2);
@@ -144,13 +154,17 @@ int main(int argc, char **argv){
    * Term2 = \Tr[ \sum_i F^2_{i3} ]
    */
   PLEGMA_Fmunu<double> fmunu_l;
-  PLEGMA_Su3field<double> WL;
-  WL.setUnit((std::vector<int>) {0,4,8});
+  PLEGMA_Su3field<double> Wl;
+  PLEGMA_Su3field<double> Wr;
   
-  fmunu_l.compute_leaves(smearedGaugeOp);
-
+  Wl.setUnit((std::vector<int>) {0,4,8});
+  Wr.setUnit((std::vector<int>) {0,4,8});
+  
+  fmunu_l.compute_leaves(*smearedGaugeOp);
+  delete smearedGaugeOp;
+  
   for(int i = 0 ; i < N_DIMS-1; i++){
-    traceO1.fmunuSu3Fmunu(fmunu_l, std::make_pair(i,3),WL,fmunu_l,std::make_pair(i,3));
+    traceO1.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3),Wl,fmunu_l,std::make_pair(i,3),Wr);
     traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
   }
   ftUL.apply(traceO2);
@@ -159,7 +173,7 @@ int main(int argc, char **argv){
   traceO2.zero_device();
   for(int i = 0 ; i < N_DIMS-1; i++)
     for(int j = i+1 ; j < N_DIMS-1; j++){
-      traceO1.fmunuSu3Fmunu(fmunu_l, std::make_pair(i,j), WL,fmunu_l, std::make_pair(i,j));
+      traceO1.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_l, std::make_pair(i,j), Wr);
       traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
     }
   ftUL.apply(traceO2);
@@ -178,7 +192,8 @@ int main(int argc, char **argv){
    */
   if(IsGloopsWline){
 
-    PLEGMA_Su3field<double> su3;
+    PLEGMA_Su3field<double> su3l;
+    PLEGMA_Su3field<double> su3r;
     PLEGMA_Su3field<double> tmp;
 
     PLEGMA_Fmunu<double> fmunu_r;
@@ -187,10 +202,6 @@ int main(int argc, char **argv){
     PLEGMA_Fmunu<double> *fmunu_In = new PLEGMA_Fmunu<double>(DEVICE);
   
 
-    PLEGMA_Gauge<double> smearedGaugeWL;
-    smearedGaugeWL.stoutSmearing(gauge, nsmearStoutWL, alphaStoutWL, 3);
-    PLEGMA_printf("Smeared Plaquette with stout 3D for Wilson Line:");
-    smearedGaugeWL.calculatePlaq();
 
     fmunu_r.copy(fmunu_l);
 
@@ -205,34 +216,40 @@ int main(int argc, char **argv){
     for(int i = 0 ; i< sizeFT; i++) FTs[i] = new PLEGMA_FT<double>(maxQsq,3);
   
     for(int wilsDir = 0 ; wilsDir < 3; wilsDir++){
-      su3.absorbDir_device(smearedGaugeWL,wilsDir);
-      WL.setUnit((std::vector<int>) {0,4,8});
+      su3l.absorbDir_device(*smearedGaugeWL,wilsDir);
+      su3r.absorbDir_device(*smearedGaugeWL,wilsDir);
+      Wl.setUnit((std::vector<int>) {0,4,8});
+      Wr.setUnit((std::vector<int>) {0,4,8});
       fmunu_ptr = &fmunu_r;
       for(int i = 0 ; i < Lo2;i++){
-	for(int itype = 0 ; itype < 4 ; itype++){
-	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,WL,*fmunu_ptr,itype);
-	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i;
-	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
-	  FTs[index]->apply(traceO1);
-	}
-	fmunuExchange = fmunu_In; fmunu_In = fmunu_ptr; fmunu_ptr = fmunuExchange;
-	WL.wilsonLineUpdate(su3,tmp,4+wilsDir);
-	fmunu_ptr->shift(*fmunu_In,4+wilsDir);
+    	for(int itype = 0 ; itype < 4 ; itype++){
+    	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,Wl,*fmunu_ptr,Wr,itype);
+    	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i;
+    	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
+    	  FTs[index]->apply(traceO1);
+    	}
+    	fmunuExchange = fmunu_In; fmunu_In = fmunu_ptr; fmunu_ptr = fmunuExchange;
+    	Wl.wilsonLineUpdate(su3l,tmp,4+wilsDir);
+	Wr.wilsonLineUpdate(su3r,tmp,4+wilsDir,true);
+    	fmunu_ptr->shift(*fmunu_In,4+wilsDir);
       }
 
-      su3.absorbDir_device(smearedGaugeWL,wilsDir);
-      WL.setUnit((std::vector<int>) {0,4,8});
+      su3l.absorbDir_device(*smearedGaugeWL,wilsDir);
+      su3r.absorbDir_device(*smearedGaugeWL,wilsDir);
+      Wl.setUnit((std::vector<int>) {0,4,8});
+      Wr.setUnit((std::vector<int>) {0,4,8});
       fmunu_ptr->copy(fmunu_l);
       for(int i = 0 ; i < Lo2;i++){
-	for(int itype = 0 ; itype < 4 ; itype++){
-	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,WL,*fmunu_ptr,itype);
-	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i+Lo2;
-	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
-	  FTs[index]->apply(traceO1);
-	}
-	fmunuExchange = fmunu_In; fmunu_In = fmunu_ptr; fmunu_ptr = fmunuExchange;
-	WL.wilsonLineUpdate(su3,tmp,wilsDir);
-	fmunu_ptr->shift(*fmunu_In,wilsDir);
+    	for(int itype = 0 ; itype < 4 ; itype++){
+    	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,Wl,*fmunu_ptr,Wr,itype);
+    	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i+Lo2;
+    	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
+    	  FTs[index]->apply(traceO1);
+    	}
+    	fmunuExchange = fmunu_In; fmunu_In = fmunu_ptr; fmunu_ptr = fmunuExchange;
+    	Wl.wilsonLineUpdate(su3l,tmp,wilsDir);
+	Wr.wilsonLineUpdate(su3r,tmp,wilsDir,true);
+    	fmunu_ptr->shift(*fmunu_In,wilsDir);
       }
       fmunu_ptr->copy(fmunu_l);
     }
@@ -242,6 +259,7 @@ int main(int argc, char **argv){
     delete fmunu_In;
     for(int i = 0 ; i< sizeFT; i++) delete FTs[i];
     delete[] FTs;
+    delete smearedGaugeWL;
   }
 
   
