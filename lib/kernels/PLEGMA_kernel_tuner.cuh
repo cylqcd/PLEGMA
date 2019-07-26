@@ -25,6 +25,7 @@ struct ProfileStruct{
   unsigned int sharedBytesPerThread;
 
   TuneParam tp;
+  int4 aux_range;
   
   ProfileStruct()=default;
   ProfileStruct(long long vol, unsigned int shBPT=0, bool tY=false){
@@ -39,6 +40,7 @@ struct ProfileStruct{
     tuneY = tY;
     sharedMemory = (shBPT>0) ? true : false;
     sharedBytesPerThread = shBPT;
+    aux_range=make_int4(1,1,1,1);
   };
 };
 
@@ -90,6 +92,33 @@ protected:
     else return 0;
   }
   TuneKey tuneKey() const { return TuneKey(volString, kernelName.c_str(), aux); }
+
+  bool tuneAuxDim() const { if(ps.aux_range.x!=1 || ps.aux_range.y!=1 || ps.aux_range.z!=1 || ps.aux_range.w!=1) return true; else return false; }
+  bool advanceAux(TuneParam &param) const {
+    if(tuneAuxDim()) {
+      int max = ps.aux_range.x*ps.aux_range.y*ps.aux_range.z*ps.aux_range.w;
+      int4 aux = param.aux; // starting from 0
+      int current = (((aux.w-1)*ps.aux_range.z + aux.z - 1)*ps.aux_range.y + aux.y - 1)*ps.aux_range.x + aux.x - 1;
+      if(current < max) {
+	current++;
+
+	param.aux.x = current%ps.aux_range.x + 1;
+	current/=ps.aux_range.x;
+	param.aux.y = current%ps.aux_range.y + 1;
+	current/=ps.aux_range.y;
+	param.aux.z = current%ps.aux_range.z + 1;
+	current/=ps.aux_range.z;
+	param.aux.w = current%ps.aux_range.w + 1;
+
+	return true;
+      } else {
+	param.aux = make_int4(1,1,1,1);
+	return false;
+      }
+    } else {
+      return false;
+    }}
+
 
   unsigned int maxBlockSize(const TuneParam &param) const { return MAX_THREADS / (param.block.y*param.block.z); }
 
