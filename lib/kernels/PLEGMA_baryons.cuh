@@ -30,7 +30,7 @@ template<typename FloatA, typename FloatB, typename FloatC, int gamma>
 __device__ void contract_deltas_iso3o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, FloatC* block,
+__global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB> texProp2, FloatC* block,
 					int it, int3 source, BARYONS_TYPE ip, bool runFT, tex_mom_list mom_list){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -92,67 +92,77 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
-
-  int SpVol = HGC_localVolume/HGC_localL[3];
+static void contract_baryons_host( ProfileStruct &ps,
+				   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+				   PLEGMA_Correlator<FloatC> &corr, int it, int ip){
 
   FloatC *h_partial_block = NULL;
   FloatC *d_partial_block = NULL;
 
   bool runFT = corr.getCorrSpace()==MOMENTUM_SPACE;
-  int site_size=2*N_SPINS*N_SPINS;
   size_t volume = corr.getVolSize()/HGC_localL[3];
   size_t size = corr.getTotalSize()/HGC_localL[3]/N_BARYONS;
+  int site_size=2*N_SPINS*N_SPINS;
   int3 source = corr.getSource3();
   tex_mom_list mom_list = corr.getTexMomList();
   
-  if(corr.getSiteSize()/N_BARYONS != site_size)
-    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
-
-  int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
-  ProfileStruct ps(SpVol, shared_size);
-  // tuning done for first baryon
-  tune( ps, "contract_baryons_kernel", contract_baryons_kernel<FloatA,FloatB,FloatC>,
-	texProp1, texProp2, d_partial_block, it, source,  (BARYONS_TYPE) 0, runFT, mom_list);
-  
   size_t alloc_size = (runFT==true)? (size * ps.tp.grid.x * 2) : (size * 2);
-  hostMalloc(h_partial_block, alloc_size * sizeof(FloatC));
   cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(FloatC) );
   checkCudaError();
 
-  if(runFT) cudaFuncSetCacheConfig(contract_baryons_kernel<FloatA,FloatB,FloatC>, cudaFuncCachePreferShared);
+  contract_baryons_device
+    <<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>
+    (texProp1, texProp2, d_partial_block, it, source, (BARYONS_TYPE) ip, runFT, mom_list);
+  checkCudaError();    
 
-  for(int ip=0; ip<N_BARYONS; ip++) {
-    run( ps, "contract_baryons_kernel", contract_baryons_kernel<FloatA,FloatB,FloatC>,
-	 texProp1, texProp2, d_partial_block, it, source, (BARYONS_TYPE) ip, runFT, mom_list);
-    checkCudaError();    
-    cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
-    checkCudaError();
-    if(runFT==true){
-      int gridDimX = ps.tp.grid.x;
-      FloatC *reduction;
-      hostMalloc(reduction, size*2*sizeof(FloatC));
-      for(size_t i = 0 ; i < size; i++) {
-	reduction[i*2+0] = 0;
-	reduction[i*2+1] = 0;
-	for(int j = 0 ; j < gridDimX; j++) {
-	  reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
-	  reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
-	}
-      }
-      MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
-      hostFree(reduction, size*2*sizeof(FloatC));
-    }
-
-    // Reordering accordingly to the wanted data layout
-    FloatC *corr_ip = corr.getCorr() + ip*HGC_localL[3]*size*2;
-    for(size_t v = 0 ; v < volume; v++)
-      for(int f = 0 ; f < 2; f++)
-	for(int i = 0 ; i < site_size; i++)
-	  corr_ip[((f*HGC_localL[3] + it)*volume +v)*site_size+i] = h_partial_block[(v*2+f)*site_size+i];
-    
-  }
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  hostMalloc(h_partial_block, alloc_size * sizeof(FloatC));
+  cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_block);
   checkCudaError();
+
+  if(runFT==true){
+    int gridDimX = ps.tp.grid.x;
+    FloatC *reduction;
+    hostMalloc(reduction, size*2*sizeof(FloatC));
+    for(size_t i = 0 ; i < size; i++) {
+      reduction[i*2+0] = 0;
+      reduction[i*2+1] = 0;
+      for(int j = 0 ; j < gridDimX; j++) {
+	reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
+	reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
+      }
+    }
+    MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
+    hostFree(reduction, size*2*sizeof(FloatC));
+  }
+  
+  // Reordering accordingly to the wanted data layout
+  FloatC *corr_ip = corr.getCorr() + ip*HGC_localL[3]*size*2;
+  for(size_t v = 0 ; v < volume; v++)
+    for(int f = 0 ; f < 2; f++)
+      for(int i = 0 ; i < site_size; i++)
+	corr_ip[((f*HGC_localL[3] + it)*volume +v)*site_size+i] = h_partial_block[(v*2+f)*site_size+i];
+  
+  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+}
+
+template<typename FloatA, typename FloatB, typename FloatC>
+static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
+  int SpVol = HGC_localVolume/HGC_localL[3];
+  bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
+  int site_size=2*N_SPINS*N_SPINS;
+  
+  if(corr.getSiteSize()/N_BARYONS != site_size)
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize()/N_BARYONS, site_size);
+
+  if(runFT) cudaFuncSetCacheConfig(contract_baryons_device<FloatA,FloatB,FloatC>, cudaFuncCachePreferShared);
+
+  int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
+  ProfileStruct ps(SpVol, shared_size);
+  for(int ip=0; ip<N_BARYONS; ip++) {
+    std::string name = "contract_baryons_"+std::to_string(ip);
+    tuneAndRun( ps, name, contract_baryons_host<FloatA,FloatB,FloatC>,
+		ps, texProp1, texProp2, corr, it, ip);
+  }
+  
 }
