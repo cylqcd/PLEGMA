@@ -33,6 +33,11 @@ void PLEGMA_Su3field<Float>::Udag(PLEGMA_Su3field<Float> &B){
 }
 
 template<typename Float>
+void PLEGMA_Su3field<Float>::Udag(){
+  Udag_k(*this);
+}
+
+template<typename Float>
 void PLEGMA_Su3field<Float>::UxU(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<Float> &C){
   UxU_k(*this,B,C);
 }
@@ -122,7 +127,7 @@ void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA
 
 
 template<typename Float>
-void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLEGMA_Su3field<Float> &tmp,  int dirOr){
+void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLEGMA_Su3field<Float> &tmp,  int dirOr, bool reverse){
   /* This function updates the wilson line with the provided input field
    * The input field is also output in the sense that is shifted in order to
    * continue building the Wilson line. The option dirOr is the direction and
@@ -133,13 +138,20 @@ void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLE
   cudaMemcpy(tmp.D_elem(), inOut.D_elem(), tmp.Bytes_total(), cudaMemcpyDeviceToDevice);
   checkCudaError();
   if(dirOr > 3){
+    //          x->->->->
+    if(reverse) this->Udag();
     UxU(*this, inOut);
+    if(reverse) this->Udag();
     inOut.shift(tmp,dirOr);
   }
   else{
+    // <-<-<-<-x
     inOut.shift(tmp,dirOr);
+    if(reverse) this->Udag();
     UxUdag(*this, inOut);
+    if(reverse) this->Udag();
   }
+  
 }
 
 template class PLEGMA_Su3field<float>;

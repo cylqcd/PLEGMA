@@ -9,6 +9,7 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_QLoops.h>
 #include <PLEGMA_FT.h>
+#include <PLEGMA_Fmunu.h>
 
 namespace plegma {
   

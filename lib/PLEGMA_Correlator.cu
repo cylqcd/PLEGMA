@@ -310,7 +310,7 @@ writeFile(PLEGMA_params &params) {
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeASCII(const char *filename_out) {
+writeASCII(std::string filename_out) {
   MPI_Comm comm;
   size_t g_vol_size;
   int rank;
@@ -328,23 +328,53 @@ writeASCII(const char *filename_out) {
     g_vol_size = vol_size*HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
     comm = MPI_COMM_WORLD;
     rank = comm_rank();
+    PLEGMA_error("WriteASCII do not support writing in position space.\n");
     break;
   default:
     PLEGMA_error("Corralator: corrSpace not supported: %d\n", corr_space);
   }
 
-  Float *corrGlobal;
-  if(rank == 0) hostMalloc(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
+  Float *corrGlobal = NULL;
+  if(corr_space == MOMENTUM_SPACE) {
+    int Nmoms = corr_mom_space->Nmoms();
+    // ===============================================================================
+    // reorder data to have time running latest
+    Float *corrReorder;
+    hostMalloc(corrReorder, vol_size*site_size*2*sizeof(Float));
+    memcpy(corrReorder,corr,vol_size*site_size*2*sizeof(Float));
 
-  // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
-  // in the second case requires reordering of the memory
-  MPI_Gather(corr,site_size*vol_size*2,MPI_Type(corr),
-	     corrGlobal,site_size*vol_size*2,MPI_Type(corr),
-	     0,comm);
+    int site_sizeR=site_size/(n_datasets*n_groups);
+
+    for(int it=0; it<HGC_localL[3]; it++)
+      for(int imom=0; imom<Nmoms; imom++)
+	for(int id=0; id < n_datasets; id++)
+	  for(int ig=0; ig < n_groups; ig++)
+	    for(int is=0; is < site_sizeR; is++)
+	      for(int ri =0 ; ri < 2 ; ri++)
+		corr[it*Nmoms*site_size*2+imom*site_size*2+id*n_groups*site_sizeR*2+ig*site_sizeR*2+is*2+ri]=
+		  corrReorder[ig*n_datasets*HGC_localL[3]*Nmoms*site_sizeR*2 + id*HGC_localL[3]*Nmoms*site_sizeR*2 + it*Nmoms*site_sizeR*2 + imom*site_sizeR*2 + is*2+ri];
+    hostFree(corrReorder, vol_size*site_size*2*sizeof(Float));
+    if(rank == 0) hostMalloc(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
+    //=============================================================================
+
+    // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
+    // in the second case requires reordering of the memory
+    MPI_Gather(corr,site_size*vol_size*2,MPI_Type(corr),
+	       corrGlobal,site_size*vol_size*2,MPI_Type(corr),
+	       0,comm);
+  }
 
   FILE *ptr_out = NULL;
   if(rank == 0){
-    ptr_out = fopen(filename_out,"w");
+    std::string fout,tmpS;
+    char *conv;
+    asprintf(&conv,"_sx%02dsy%02dsz%02dst%02d.dat", source_position[0], source_position[1], source_position[2],
+	     source_position[3]);
+    tmpS=conv;
+    free(conv);
+    fout = filename_out + tmpS;
+
+    ptr_out = fopen(fout.c_str(),"w");
     if(ptr_out == NULL) PLEGMA_error("Error opening file for writing\n");
 
     if(corr_space == MOMENTUM_SPACE) {
@@ -366,7 +396,7 @@ writeASCII(const char *filename_out) {
       PLEGMA_error("WriteASCII do not support writing in position space.\n");
     }
     fclose(ptr_out);
-    hostFree(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
+    if(corr_space == MOMENTUM_SPACE)hostFree(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
   }  
 }
 
