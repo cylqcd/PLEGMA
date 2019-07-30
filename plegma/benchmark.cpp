@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 #include <cuda_profiler_api.h>
-#include "nvtx3/nvToolsExt.h"
+#include "nvToolsExt.h"
 
 using namespace plegma;
 using namespace quda;
