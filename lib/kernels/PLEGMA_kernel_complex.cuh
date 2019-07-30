@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
-#include <thrust/device_vector.h>
+
 
 #ifndef PLEGMA_KERNEL_COMPLEX_CUH
 #define PLEGMA_KERNEL_COMPLEX_CUH
@@ -28,12 +28,6 @@ namespace plegma {
     inline __host__ __device__ Float2( Float2<FloatIn> arg) {
       this->x = arg.x;
       this->y = arg.y;
-    } 
-    template<typename FloatIn>
-    inline __host__ __device__ Float2( thrust::device_reference<Float2<FloatIn>> arg) {
-      Float2<FloatIn> arg2 = thrust::raw_pointer_cast(&arg)[0];
-      this->x = arg2.x;
-      this->y = arg2.y;
     } 
     // supposing FloatIn Real
     template<typename FloatIn>
