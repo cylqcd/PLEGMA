@@ -339,11 +339,11 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-eig", "Use the eigensolver on this level, usage (level,int)", verbosity, tpl_int_string);
   map_to_array_MG<QudaBoolean>(tpl_int_string, mg_eig,get_boolean );
 
-  default_map_MG(tpl_int_int, 1024);
+  default_map_MG(tpl_int_int, 2048);
   isFound=opt.set("Q-mg-eig-nEv", "The size of eigenvector search space in the eigensolver, usage (level,int)", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, mg_eig_nEv, 10, 1e4, "Invalid size of eigenvector search space" );
 
-  default_map_MG(tpl_int_int, 1536);
+  default_map_MG(tpl_int_int, 3072);
   isFound=opt.set("Q-mg-eig-nKr", "The size of the Krylov subspace to use in the eigensolver, usage (level,int)", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, mg_eig_nKr, 10, 1e4, "Invalid size of Krylov subspace" );
 
@@ -355,11 +355,11 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-eig-check-interval", "Perform a convergence check every nth restart/iteration (only used in Implicit Restart types), usage (level,int)", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, mg_eig_check_interval, 1, 1e4, "Invalid convergence-check period" );
 
-  default_map_MG(tpl_int_int, 100);
+  default_map_MG(tpl_int_int, 25);
   isFound=opt.set("Q-mg-eig-max-restarts", "Perform a maximun of n restarts in eigensolver , usage (level,int)", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, mg_eig_max_restarts, 1, 1e4, "Invalid maximum number of restarts" );
 
-  default_map_MG(tpl_int_string, (std::string) "false");
+  default_map_MG(tpl_int_string, (std::string) "true");
   isFound=opt.set("Q-mg-eig-use-normop", "Solve the MdagM problem instead of M (MMdag if eig-use-dagger == true), usage (level,bool)", verbosity, tpl_int_string);
   map_to_array_MG<QudaBoolean>(tpl_int_string, mg_eig_use_normop, get_boolean );
   
@@ -367,7 +367,7 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-eig-use-dagger", "Solve the MMdag problem instead of M (MMdag if eig-use-normop == true), usage (level,bool)", verbosity, tpl_int_string);
   map_to_array_MG<QudaBoolean>(tpl_int_string, mg_eig_use_dagger, get_boolean );
 
-  default_map_MG(tpl_int_double, 1e-3);
+  default_map_MG(tpl_int_double, 1e-4);
   isFound=opt.set("Q-mg-eig-tol", "The tolerance to use in the eigensolver, usage(level,float)", verbosity, tpl_int_double);
   map_to_array_MG<double>(tpl_int_double, mg_eig_tol, 0, 1, "ERROR: invalid tolerance for the multigrid eigensolver");
   
@@ -380,11 +380,11 @@ void qudaOptions(Options &opt){
   map_to_array_MG<int>(tpl_int_int, mg_eig_poly_deg, 10, 1e3, "Invalid defree of Chebyshev polynomial" );
 
   
-  default_map_MG(tpl_int_double, 0.1);
+  default_map_MG(tpl_int_double, 8e-1);
   isFound=opt.set("Q-mg-eig-amin", "The minimum in the polynomial acceleration, usage(level,float)", verbosity, tpl_int_double);
   map_to_array_MG<double>(tpl_int_double, mg_eig_amin, 0, 100, "ERROR: invalid minimum for polynomial acceleration");
 
-  default_map_MG(tpl_int_double, 5.0);
+  default_map_MG(tpl_int_double, 8.0);
   isFound=opt.set("Q-mg-eig-amax", "The maximum in the polynomial acceleration, usage(level,float)", verbosity, tpl_int_double);
   map_to_array_MG<double>(tpl_int_double, mg_eig_amax, 0, 100, "ERROR: invalid maximum for polynomial acceleration");
 
