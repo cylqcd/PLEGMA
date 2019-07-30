@@ -209,7 +209,6 @@ void qudaOptions(Options &opt){
   if(gcrNkrylov<1 || gcrNkrylov>1e6) PLEGMA_error("Error: Invalid number [%d] for gcrNkrylov iterations\n",gcrNkrylov);
 
   opt.set("Q-pipeline", "The pipeline length for fused operations in GCR or BiCGstab-l, options(0,...,8)", verbosity, pipeline);
-  if(pipeline < 0 || pipeline > 8) PLEGMA_error("Error: Invalid number [%d] for pipeline length\n",pipeline);
 
   opt.set("Q-solution-pipeline", "The pipeline length for fused solution accumulation, options (0,..,16)", verbosity, solution_accumulator_pipeline);
   if (solution_accumulator_pipeline < 0 || solution_accumulator_pipeline > 16)  PLEGMA_error("Error: Invalid number [%d] for solution pipeline length\n",solution_accumulator_pipeline);
