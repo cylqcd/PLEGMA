@@ -58,9 +58,9 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
   }
 
   if(type != 0){
-    out.TrfmunuSu3FmunuSu3(fmunu_l,munu_l[0].munu,Wl,fmunu_r,munu_r[0].munu,Wr);
+    out.TrFmunuSu3FmunuSu3(fmunu_l,munu_l[0].munu,Wl,fmunu_r,munu_r[0].munu,Wr);
     if(munu_l[0].sign * munu_r[0].sign == -1) out.cscale(signC);
-    tmp.TrfmunuSu3FmunuSu3(fmunu_l,munu_l[1].munu,Wl,fmunu_r,munu_r[1].munu,Wr);
+    tmp.TrFmunuSu3FmunuSu3(fmunu_l,munu_l[1].munu,Wl,fmunu_r,munu_r[1].munu,Wr);
     if(munu_l[1].sign * munu_r[1].sign == -1) tmp.cscale(signC);
     out.axpy(tmp,(std::complex<double>) {1.,0.});
     out.cscale((std::complex<double>) {0.5,0.}); //average the two contributions
@@ -69,11 +69,11 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
     out.zero_device();
     for(int i = 0 ; i < N_DIMS-1; i++)
       for(int j = i+1 ; j < N_DIMS-1; j++){
-	tmp.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_r, std::make_pair(i,j), Wr);
+	tmp.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_r, std::make_pair(i,j), Wr);
 	out.axpy(tmp,(std::complex<double>) {1.,0.});
       }
     for(int i = 0 ; i < N_DIMS-1; i++){
-      tmp.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3), Wl,fmunu_r, std::make_pair(i,3), Wr);
+      tmp.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3), Wl,fmunu_r, std::make_pair(i,3), Wr);
       out.axpy(tmp,(std::complex<double>) {-1.,0.});
     }
   }
@@ -164,7 +164,7 @@ int main(int argc, char **argv){
   delete smearedGaugeOp;
   
   for(int i = 0 ; i < N_DIMS-1; i++){
-    traceO1.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3),Wl,fmunu_l,std::make_pair(i,3),Wr);
+    traceO1.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3),Wl,fmunu_l,std::make_pair(i,3),Wr);
     traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
   }
   ftUL.apply(traceO2);
@@ -173,7 +173,7 @@ int main(int argc, char **argv){
   traceO2.zero_device();
   for(int i = 0 ; i < N_DIMS-1; i++)
     for(int j = i+1 ; j < N_DIMS-1; j++){
-      traceO1.TrfmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_l, std::make_pair(i,j), Wr);
+      traceO1.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_l, std::make_pair(i,j), Wr);
       traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
     }
   ftUL.apply(traceO2);
