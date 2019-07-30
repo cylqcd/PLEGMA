@@ -459,3 +459,12 @@ inline  QudaEigType get_eigensolver(std::string s){
   else
     PLEGMA_error("Invalid eigensolver for multigrid exact deflation\n");
 }
+
+inline int get_rank_order(std::string s){
+  if (s=="col") 
+    return 0;
+  else if (s=="row") 
+    return 1;
+  else 
+    PLEGMA_error("Error: invalid rank order type\n");
+}
