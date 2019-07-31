@@ -3,6 +3,8 @@
 #include <numeric>
 #include <iostream>
 #include <string>
+#include <cuda_profiler_api.h>
+#include "nvToolsExt.h"
 
 using namespace plegma;
 using namespace quda;
@@ -20,7 +22,11 @@ void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, t
   double t0 = MPI_Wtime();
   for(int i=0; i<n_benchmark; i++) {
     double t1 = MPI_Wtime();
+    cudaProfilerStart();
+    nvtxRangePushA((name+" - call "+std::to_string(i)).c_str());
     (obj->*function)(kArgs...);
+    nvtxRangePop();
+    cudaProfilerStop();
     timing.push_back(MPI_Wtime()-t1);
     // Setting an hard break after t_max sec
     if(i > 1 && MPI_Wtime()-t0 > t_max) break;
@@ -154,17 +160,13 @@ int main(int argc, char **argv) {
 
   if(run({"qLoops"})) {
     PLEGMA_QLoops<double> loops;
-    PLEGMA_Vector<double> vector_a,vector_b,vector_c;
-    PLEGMA_Gauge<double> gauge;
-    PLEGMA_Vector<double>* tmp[16]={};
-    for(size_t i=0;i<16;i++) tmp[i] = new PLEGMA_Vector<double>;
+    PLEGMA_Vector<double> vector_a,vector_b;
     PLEGMA_FT<double> ft(1, 3);
 
     // Benchmark standard one-end trick
     // Since the function is overloaded we need to select one version of it
-    PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, PLEGMA_Vector<double> **,
-									PLEGMA_QLoops<double> *, PLEGMA_Gauge<double> &, double , bool  )>
-		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,tmp,&loops,gauge,-1.,true);
+    PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, double , bool  )>
+		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
 
     
     // Benchmark standard one-end trick

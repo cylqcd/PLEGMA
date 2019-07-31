@@ -16,6 +16,7 @@ set (PLEGMA_OBJS
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
+  PLEGMA_Fmunu.cu
 )
 
 if(PLEGMA_UDSC_BARYONS)

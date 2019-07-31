@@ -241,6 +241,49 @@ namespace plegma {
         }
     }
 
+  template<typename Float,typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ Float2<Float> trace_mul_G_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
+    Float2<Float> res = 0.;
+#pragma unroll
+    for(int i=0; i<N_COLS; i++)
+#pragma unroll
+      for(int j=0; j<N_COLS; j++) {
+#pragma unroll
+	for(int k=0; k<N_COLS; k++) {
+	  res += a[i][j]*b[j][k]*c[k][i];
+	}
+      }
+    return res;
+  }
+
+
+  template<typename Float,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ Float2<Float> trace_mul_G_G_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS],
+							Float2<FloatC> c[N_COLS][N_COLS], Float2<FloatD> d[N_COLS][N_COLS]){
+    Float2<FloatA> tmp1[N_COLS][N_COLS], tmp2[N_COLS][N_COLS];
+    Float2<FloatA> res=0;
+    
+#pragma unroll
+    for(int i = 0; i < N_COLS; i++)
+#pragma unroll
+      for(int j = 0; j < N_COLS; j++){
+	tmp1[i][j]=0.; tmp2[i][j]=0.;
+#pragma unroll
+	for(int k = 0; k < N_COLS; k++){
+	  tmp1[i][j] += a[i][k]*b[k][j];
+	  tmp2[i][j] += c[i][k]*d[k][j];
+	}
+      }
+
+#pragma unroll
+    for(int i = 0; i < N_COLS; i++)
+#pragma unroll
+      for(int j = 0; j < N_COLS; j++){
+	res += tmp1[i][j]*tmp2[j][i];
+      }
+    return res;
+  }
+  
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_G_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
   #pragma unroll

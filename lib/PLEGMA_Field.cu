@@ -83,7 +83,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
 {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
-
+  
   switch(classT){
     case SCALAR:
       initialize(alloc_flag, 1, HGC_localVolume);
@@ -117,6 +117,10 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
       initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
       field_name = "PLEGMA_QLOOPS";
       break;
+  case FMUNU:
+    initialize(alloc_flag, ((N_DIMS * (N_DIMS-1))/2) * N_COLS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_FMUNU";
+    break;
   }
 }
 
@@ -197,6 +201,7 @@ void PLEGMA_Field<Float>::create_device(){
     hostMalloc(h_ext_ghost_corner_r, bytes_ghost_corner_length);
     hostMalloc(h_ext_ghost_corner_s, bytes_ghost_corner_length);
 #endif
+
   }
   checkCudaError();
   isAllocDevice = true;
@@ -235,6 +240,7 @@ void PLEGMA_Field<Float>::destroy_device(){
     hostFree(h_ext_ghost_corner_r,bytes_ghost_corner_length); h_ext_ghost_corner_r=NULL;
     hostFree(h_ext_ghost_corner_s,bytes_ghost_corner_length); h_ext_ghost_corner_s=NULL;
 #endif
+
   }
   checkCudaError();
   isAllocDevice=false;
@@ -340,20 +346,18 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
         Float *pointer_receive = h_ext_ghost_r + (HGC_sideGhost[i]-total_length)*field_length*2;
         Float *pointer_send = h_ext_ghost_s + (HGC_sideGhost[i]-total_length)*field_length*2;
         Float *pointer_device = d_elem + HGC_sideGhost[i]*field_length*2;
-        int disp[N_DIMS] = {0};
+	int disp;
         size_t nbytes = HGC_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
 
         // collecting elements from device
         copy_side_to_ghost(*this, i);
         cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
         checkCudaError();
-
-        // communicating
-        disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
-        mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
-        disp[i%N_DIMS] *= -1;
-        mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
-        disp[i%N_DIMS] = 0;
+	
+	disp = (i<N_DIMS) ? +1 : -1;
+        mh_recv.push_back(comm_declare_receive_relative(pointer_receive,i%N_DIMS,disp,nbytes)); 
+	disp *= -1;
+        mh_send.push_back(comm_declare_send_relative(pointer_send,i%N_DIMS,disp,nbytes));
         comm_start(mh_recv.back());
         comm_start(mh_send.back());
       }
@@ -665,22 +669,41 @@ void PLEGMA_Field<Float>::writeToLime(std::string filename){
 
 template<typename Float>
 void PLEGMA_Field<Float>::readFromLime(std::string filename){
-  FILE *fid;
-  LimeReader *limereader;
   int precRead=0, dofRead=0;
-  fid=fopen(filename.c_str(),"r");
-  if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
-  if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
-  read_lime_header(limereader,precRead,dofRead);
+
+  FILE *fid = NULL;
+  LimeReader *limereader = NULL;
+  if(comm_rank() == 0){
+    fid=fopen(filename.c_str(),"r");
+    if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
+    if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
+    read_lime_header(limereader,precRead,dofRead);
+  }
+  comm_broadcast(&precRead,sizeof(int));
+  comm_broadcast(&dofRead,sizeof(int));
   if(precRead != Precision()) PLEGMA_error("PLEGMA field precision %d != %d precision read from LIME",Precision(),precRead);
   if(!isAllocHost) PLEGMA_error("Host memory should be allocated to read data from lime");
   if(dofRead > 0 && dofRead != field_length) PLEGMA_error("PLEGMA field dof %d != %d dof read from LIME", field_length, dofRead);
   read_binary_from_lime(filename,fid,limereader,h_elem,field_length);
-  limeDestroyReader(limereader);
-  fclose(fid);
+  if(comm_rank() == 0){
+    limeDestroyReader(limereader);
+    fclose(fid);
+  }
   if(isAllocDevice) load();
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
+					PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r,
+					PLEGMA_Su3field<Float> &Wr){
+  traceMulFmunuSu3FmunuSu3_k(*this,Fl,munu_l,Wl,Fr,munu_r,Wr);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu){
+  gauge.communicateSideGhost();
+  trPmunu_k(*this,gauge,munu);
+}
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;

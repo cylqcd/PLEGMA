@@ -3,7 +3,7 @@
 using namespace plegma;
 
 template<typename Float, typename FloatG>
-static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Float *partial_plaq) {
+static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gaugeTex, Float *partial_plaq) {
   extern __shared__ int ext_shared_cache[];
   Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -45,35 +45,12 @@ static __global__ void calculatePlaquette_kernel(gaugeTex<FloatG> gaugeTex, Floa
 }
 
 template<typename Float, typename FloatG>
-static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
-  Float plaquette = 0.;
-  Float globalPlaquette = 0.;
+static void calculatePlaquette_host(ProfileStruct& ps, gaugeTex<FloatG> gaugeTex, Float& plaquette){
+
   Float *d_partial_plaq = NULL;
-
-  ProfileStruct ps(HGC_localVolume,sizeof(Float));
-
-  tune(ps, "calculatePlaquette_kernel", calculatePlaquette_kernel<Float,FloatG>, gaugeTex, d_partial_plaq);
-  
-#ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-#endif
-
   int gridDimX = ps.tp.grid.x;
   cudaMalloc((void**)&d_partial_plaq, gridDimX * sizeof(Float));
-  calculatePlaquette_kernel<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gaugeTex, d_partial_plaq);
-  
-#ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  PLEGMA_printf("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
-#endif
+  calculatePlaquette_device<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gaugeTex, d_partial_plaq);
 
   Float *h_partial_plaq = NULL;
   hostMalloc(h_partial_plaq, gridDimX * sizeof(Float) );
@@ -82,10 +59,20 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   cudaFree(d_partial_plaq);
   checkCudaError();
 
+  plaquette = 0.;
   for(int i = 0 ; i < gridDimX ; i++)
     plaquette += h_partial_plaq[i];
   hostFree(h_partial_plaq, gridDimX * sizeof(Float) );
+}
 
+template<typename Float, typename FloatG>
+static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
+  
+  ProfileStruct ps(HGC_localVolume,sizeof(Float));
+  Float plaquette;
+  tuneAndRun(ps, "calculatePlaquette", calculatePlaquette_host<Float,FloatG>, ps, gaugeTex, plaquette);
+
+  Float globalPlaquette = 0.;
   MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
   return globalPlaquette/(HGC_totalVolume*N_COLS*6);
 }

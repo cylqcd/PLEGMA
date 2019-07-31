@@ -7,7 +7,7 @@ const __device__ short int mesons_indices[N_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,
 const __device__ float mesons_values[N_MESONS][16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
+__global__ void contract_mesons_device( propTex<FloatA> texProp1,
 					propTex<FloatB> texProp2,
 					FloatC* block, int it, int3 source,
 					bool runFT, tex_mom_list moms){
@@ -60,26 +60,16 @@ __global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
-			    PLEGMA_Correlator<FloatC> &corr, int it){
-  int SpVol = HGC_localVolume/HGC_localL[3];
-  FloatC *d_partial_block = NULL;
+void contract_mesons_host( ProfileStruct &ps,
+			   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+			   PLEGMA_Correlator<FloatC> &corr, int it){
 
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
-  int site_size = 2*N_MESONS;
   size_t volume = corr.getVolSize()/HGC_localL[3];
   size_t size = corr.getTotalSize()/HGC_localL[3];
   int3 source = corr.getSource3();
   tex_mom_list moms = corr.getTexMomList();
-  
-  if(corr.getSiteSize() != site_size)
-    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
-
-  int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
-  
-  ProfileStruct ps(SpVol, shared_size);
-  tune( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC>,
-	texProp1, texProp2, d_partial_block, it, source, runFT, moms);
+  int site_size = 2*N_MESONS;
   
   size_t alloc_size;
   if(runFT==true){
@@ -87,9 +77,11 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   } else {
     alloc_size = size * 2;
   }
+  FloatC *d_partial_block = NULL;
   cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(FloatC));
-  run( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC>,
-       texProp1, texProp2, d_partial_block, it, source, runFT, moms);
+  contract_mesons_device
+    <<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>
+    (texProp1, texProp2, d_partial_block, it, source, runFT, moms);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;
@@ -122,4 +114,23 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     }
   
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+
+}
+
+template<typename FloatA, typename FloatB, typename FloatC>
+static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+			    PLEGMA_Correlator<FloatC> &corr, int it){
+  int SpVol = HGC_localVolume/HGC_localL[3];
+  bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
+  int site_size = 2*N_MESONS;
+  
+  if(corr.getSiteSize() != site_size)
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+
+  int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
+  
+  ProfileStruct ps(SpVol, shared_size);
+  tuneAndRun( ps, "contract_mesons", contract_mesons_host<FloatA,FloatB,FloatC>,
+	      ps, texProp1, texProp2, corr, it);
+  
 }

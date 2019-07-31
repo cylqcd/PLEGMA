@@ -1,3 +1,4 @@
+#undef SIZE
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>
 #include <thrust/for_each.h>

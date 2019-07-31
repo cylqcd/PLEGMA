@@ -6,6 +6,9 @@
 #define _PLEGMA_FIELD_H
 
 namespace plegma {
+  template<typename Float>  class PLEGMA_Fmunu;
+  template<typename Float>  class PLEGMA_Su3field;
+  template<typename Float>  class PLEGMA_Gauge;
   ////////////////////////
   // CLASS: PLEGMA_Field //
   ////////////////////////
@@ -73,7 +76,7 @@ namespace plegma {
     int TotalGhost_length() const { return total_plus_ghost_length;} // total + ghost
 
     std::string Field_name() const {return field_name;}
-    
+    GHOST_FLAG Ghost_flag() const {return ghost_flag;}
     int Precision() const{
       if( typeid(Float) == typeid(float) )
 	return 4;
@@ -116,6 +119,11 @@ namespace plegma {
 
     virtual void readFromLime(std::string filename);
     virtual void writeToLime(std::string filename);
+
+    void TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
+			    PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r, PLEGMA_Su3field<Float> &Wr);
+
+    void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
   };
 }
 #endif
