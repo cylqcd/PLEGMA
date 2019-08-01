@@ -75,6 +75,7 @@ define(QudaInverterType smoother_type[QUDA_MAX_MG_LEVEL], {});
 define(double coarse_solver_tol[QUDA_MAX_MG_LEVEL], {});
 define(double smoother_tol[QUDA_MAX_MG_LEVEL], {});
 define(int coarse_solver_maxiter[QUDA_MAX_MG_LEVEL], {});
+define(int mg_coarse_solver_ca_basis_size[QUDA_MAX_MG_LEVEL], {});
 define(QudaSchwarzType schwarz_type[QUDA_MAX_MG_LEVEL], {});
 define(int schwarz_cycle[QUDA_MAX_MG_LEVEL], {});
 define(QudaBoolean mg_eig[QUDA_MAX_MG_LEVEL], {});

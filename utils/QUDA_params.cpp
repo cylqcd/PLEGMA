@@ -220,7 +220,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.coarse_solver[i] = coarse_solver[i];
     mg_param.coarse_solver_tol[i] = coarse_solver_tol[i];
     mg_param.coarse_solver_maxiter[i] = coarse_solver_maxiter[i];
-   
+    mg_param.coarse_solver_ca_basis_size[i] = mg_coarse_solver_ca_basis_size[i];
     mg_param.smoother[i] = smoother_type[i];
 
     // set the smoother / bottom solver tolerance (for MR smoothing this will be ignored)
