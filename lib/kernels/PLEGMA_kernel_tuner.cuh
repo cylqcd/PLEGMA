@@ -18,9 +18,9 @@ struct ProfileStruct{
   long unsigned int outBytes; 
   long unsigned int inpBytes;
   long long texBytes;
+  long long min_volume;
   long long volume;
-  long long stride;
-  bool tuneY; // tune for the second dimension of thread blocks
+  long long max_volume;
   bool sharedMemory;
   unsigned int sharedBytesPerThread;
 
@@ -28,16 +28,16 @@ struct ProfileStruct{
   int4 aux_range;
   
   ProfileStruct()=default;
-  ProfileStruct(long long vol, unsigned int shBPT=0, bool tY=false){
+  ProfileStruct(long long vol, unsigned int shBPT=0){
     measured = false;
     tuned = false;
     flops = 0;
     outBytes = 0;
     inpBytes = 0;
     texBytes = 0;
+    min_volume = vol;
     volume = vol;
-    stride = vol;
-    tuneY = tY;
+    max_volume = vol;
     sharedMemory = (shBPT>0) ? true : false;
     sharedBytesPerThread = shBPT;
     aux_range=make_int4(1,1,1,1);
@@ -80,17 +80,61 @@ protected:
     return ps.inpBytes + ps.outBytes + ps.texBytes;
   }
 
-  bool tuneGridDim() const { return false; }
-  unsigned int minThreads() const { return ps.volume; }
+  std::string perfString(float time) const {
+    std::string s = Tunable::perfString(time);
+    std::stringstream ss;
+    ss << std::setiosflags(std::ios::fixed) << std::setprecision(2) << time << " s, " << s;
+    return ss.str();
+  }
 
+  bool tuneGridDim() const { return false; }
+  unsigned int minThreads() const { return ps.min_volume; }
+
+  bool tuneSharedBytes() const { return false; }
   unsigned int sharedBytesPerThread() const {
     if ( ps.sharedMemory ) return ps.sharedBytesPerThread;
     else return 0;
   }
   unsigned int sharedBytesPerBlock(const TuneParam &param) const {
-    if ( ps.sharedMemory ) return param.block.x;
+    if ( ps.sharedMemory ) return sharedBytesPerThread() * param.block.x;
     else return 0;
   }
+
+  bool tuneVolume() const { if(ps.max_volume > ps.min_volume) return true; else return false; }
+  // until possible increasing the volume at powers of 2 (i.e. adding ps.volume to itself),
+  // then touching max_volume and then exceeding of 1 to move on.
+  int volumeStep() const { return MAX(MIN(ps.max_volume - ps.volume, ps.volume), 1); }
+  bool advanceVolume(TuneParam &param) const {
+    bool ret;
+    ps.volume += volumeStep();
+    if (ps.volume > ps.max_volume) {
+      ps.volume = ps.min_volume;
+      ret = false;
+    } else {
+      ret = true;
+    }
+    resetBlockDim(param);
+    if (!tuneGridDim()) {
+      param.grid = dim3((minThreads()+param.block.x-1)/param.block.x, 1, 1);
+      param.grid.x *= ps.volume/ps.min_volume;
+    }
+    
+    return ret;
+  }
+
+  bool advanceBlockDim(TuneParam &param) const {
+    bool ret = Tunable::advanceBlockDim(param);
+    if(param.shared_bytes < sharedBytesPerBlock(param))
+      param.shared_bytes = sharedBytesPerBlock(param);
+    if(!tuneGridDim() && tuneVolume())
+      param.grid.x *= ps.volume/ps.min_volume;
+    return ret;
+  }
+  
+  bool advanceTuneParam(TuneParam &param) const {
+    return Tunable::advanceTuneParam(param) || advanceVolume(param);
+  }
+
   TuneKey tuneKey() const { return TuneKey(volString, kernelName.c_str(), aux); }
 
   bool tuneAuxDim() const { if(ps.aux_range.x!=1 || ps.aux_range.y!=1 || ps.aux_range.z!=1 || ps.aux_range.w!=1) return true; else return false; }
@@ -143,14 +187,13 @@ public:
  PLEGMA_kernel_tuner( ProfileStruct &ps, std::string kname, void (*kernel)(types...), types... kArgs ) :
   kernel(kernel), args(std::tuple<types...>(kArgs...)), ps(ps), onlyTuning(false), tuned(false) {
     sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
-    sprintf(aux, "volume=%lld,stride=%d,Ndims=%d,Ncols=%d", ps.volume, ps.stride, N_DIMS, N_COLS);
+    sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d", ps.volume, N_DIMS, N_COLS);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
   } 
     
   // initialisation
   void initTuneParam(TuneParam &param) const {
     Tunable::initTuneParam(param);
-    if( ps.tuneY ) param.block.y = 2; // not needed at the moment
   }
   
   // tuning functions
@@ -189,13 +232,17 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   tune();
   run();
 #else
-  // performing tuning if we need to
-  // tune
+  // performing tuning if we need to tune
   ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
   tuned = true;
   ps.tuned = true;
   if( onlyTuning && !activeTuning() ) return;
   launchKernel(ps.tp,stream);
+  // HACK: For unknown reason, the Out Of Memory error state is not seen in QUDA/lib/tune.cpp
+  // by error = cudaGetLastError(); (line 765). Looks like the error state gets clean before that.
+  // So here we use jitify_error to communicate to the tuner the failure of the kernel.
+  cudaError_t error = cudaPeekAtLastError();
+  if(error != cudaSuccess) jitify_error = (CUresult) error;
 #endif
 }
 
