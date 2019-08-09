@@ -68,9 +68,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   prop1Tex.tex = prop1.createTexObject();
   prop2Tex.tex = prop2.createTexObject();
 
-  for(int it = 0 ; it < HGC_localL[3] ; it++) {
-    contract_mesons(prop1Tex,prop2Tex,*this,it);
-  }
+  contract_mesons(prop1Tex,prop2Tex,*this);
 
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
@@ -101,9 +99,8 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop1Tex.tex = prop1.createTexObject();
   prop2Tex.tex = prop2.createTexObject();
 
-  for(int it = 0; it < HGC_localL[3]; it++) {
-    contract_baryons(prop1Tex,prop2Tex,*this,it);
-  }
+  contract_baryons(prop1Tex,prop2Tex,*this);
+
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
 }
