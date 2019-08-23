@@ -68,7 +68,6 @@ protected:
   
   char volString[TuneKey::aux_n];
   bool onlyTuning;
-  bool tuned;
 
   ProfileStruct &ps;
   
@@ -185,7 +184,7 @@ public:
 
   // ctor
  PLEGMA_kernel_tuner( ProfileStruct &ps, std::string kname, void (*kernel)(types...), types... kArgs ) :
-  kernel(kernel), args(std::tuple<types...>(kArgs...)), ps(ps), onlyTuning(false), tuned(false) {
+  kernel(kernel), args(std::tuple<types...>(kArgs...)), ps(ps), onlyTuning(false) {
     sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
     sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d", ps.volume, N_DIMS, N_COLS);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
@@ -215,7 +214,6 @@ void PLEGMA_kernel_tuner<types...>::tune(){
   dim3 gridDim( (ps.volume + blockDim.x -1)/blockDim.x , 1 , 1);
   ps.tp.grid = gridDim;
   ps.tp.shared_bytes = THREADS_PER_BLOCK*ps.sharedBytesPerThread;
-  tuned = true;
   ps.tuned = true;
 #else
   onlyTuning = true;
@@ -234,8 +232,8 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
 #else
   // performing tuning if we need to tune
   ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
-  tuned = true;
-  ps.tuned = true;
+  if( !activeTuning() && !ps.tuned ) cudaGetLastError(); // cleaning error state not cleaned by tuner
+  if( !activeTuning() ) ps.tuned = true;
   if( onlyTuning && !activeTuning() ) return;
   launchKernel(ps.tp,stream);
   // HACK: For unknown reason, the Out Of Memory error state is not seen in QUDA/lib/tune.cpp
@@ -243,6 +241,7 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   // So here we use jitify_error to communicate to the tuner the failure of the kernel.
   cudaError_t error = cudaPeekAtLastError();
   if(error != cudaSuccess) jitify_error = (CUresult) error;
+  if( !activeTuning() ) checkCudaError();
 #endif
 }
 
@@ -252,10 +251,10 @@ void PLEGMA_kernel_tuner<types...>::apply(){ apply(0); }
 template<class ...types>
 void PLEGMA_kernel_tuner<types...>::run(){
 #ifdef PLEGMA_NO_TUNING
-  if(!tuned) tune();
+  if(!ps.tuned) tune();
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!tuned && !ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
+  if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,0);
 #endif
 }
