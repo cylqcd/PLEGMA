@@ -12,7 +12,6 @@ extern __device__ cudaDeviceProp devProp;
 // struct that contains all variables
 //  necessary for the tuning evaluation
 struct ProfileStruct{
-  bool measured;
   bool tuned;
   long unsigned int flops; 
   long unsigned int outBytes; 
@@ -22,6 +21,7 @@ struct ProfileStruct{
   long long volume;
   long long max_volume;
   bool sharedMemory;
+  bool tune_globally;
   unsigned int sharedBytesPerThread;
 
   TuneParam tp;
@@ -29,7 +29,6 @@ struct ProfileStruct{
   
   ProfileStruct()=default;
   ProfileStruct(long long vol, unsigned int shBPT=0){
-    measured = false;
     tuned = false;
     flops = 0;
     outBytes = 0;
@@ -41,6 +40,7 @@ struct ProfileStruct{
     sharedMemory = (shBPT>0) ? true : false;
     sharedBytesPerThread = shBPT;
     aux_range=make_int4(1,1,1,1);
+    tune_globally=true;
   };
 };
 
@@ -68,6 +68,7 @@ protected:
   
   char volString[TuneKey::aux_n];
   bool onlyTuning;
+  bool commGlobalReduction_prev_value;
 
   ProfileStruct &ps;
   
@@ -188,7 +189,13 @@ public:
     sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
     sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d", ps.volume, N_DIMS, N_COLS);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
-  } 
+    commGlobalReduction_prev_value = commGlobalReduction();
+    commGlobalReductionSet(ps.tune_globally);
+  }
+
+  ~PLEGMA_kernel_tuner(){
+    commGlobalReductionSet(commGlobalReduction_prev_value);
+  }
     
   // initialisation
   void initTuneParam(TuneParam &param) const {
@@ -231,16 +238,24 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   run();
 #else
   // performing tuning if we need to tune
-  ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
-  if( !activeTuning() && !ps.tuned ) cudaGetLastError(); // cleaning error state not cleaned by tuner
+  if( !ps.tuned && !activeTuning() && commGlobalReduction() ) comm_barrier(); //syncronizing 
+  if( !ps.tuned ) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
+  if( !activeTuning() && !ps.tuned ) cudaGetLastError(); // ensuring that the error state has been clean
   if( !activeTuning() ) ps.tuned = true;
   if( onlyTuning && !activeTuning() ) return;
+
   launchKernel(ps.tp,stream);
+
   // HACK: For unknown reason, the Out Of Memory error state is not seen in QUDA/lib/tune.cpp
-  // by error = cudaGetLastError(); (line 765). Looks like the error state gets clean before that.
+  // by error = cudaGetLastError(); (line 765).
   // So here we use jitify_error to communicate to the tuner the failure of the kernel.
   cudaError_t error = cudaPeekAtLastError();
-  if(error != cudaSuccess) jitify_error = (CUresult) error;
+  if( activeTuning() && commGlobalReduction() ) {
+    double tmp = error;
+    comm_allreduce_max(&tmp);
+    error = (cudaError_t) tmp;
+  }
+  if( error != cudaSuccess ) jitify_error = (CUresult) error;
   if( !activeTuning() ) checkCudaError();
 #endif
 }
