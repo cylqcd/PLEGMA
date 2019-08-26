@@ -98,6 +98,6 @@ namespace plegma {
     void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
     void scale(Float a);
 
-    void writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift = 0);
+    void writeToFile(std::string filename, FILE_FORMAT outputFormat, int timeshift = 0);
 };
 }

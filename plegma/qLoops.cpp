@@ -17,7 +17,7 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 
 
 static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
-		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
+		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
   qLoops.load(qLoops.H_loc());
   ft[0]->apply(qLoops,FT_GEMV);
 
@@ -320,18 +320,18 @@ int main(int argc, char **argv)
   // // do the FT and write to File std trick
   // loops_std.load(loops_std.H_loc());
   // ft.apply(loops_std);
-  // ft.writeToFile(prefix + "std_local_loops_FT.0000.dat", ASCII_FORM);
+  // ft.writeToFile(prefix + "std_local_loops_FT.0000.dat", ASCII_FORMAT);
   // if(isOneD)
   //   for(int mu = 0 ; mu < 4 ; mu++){
   //     loops_std.load(loops_std.H_oneD()[mu]);
   //     ft.apply(loops_std);
   //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "std_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);
+  //     ft.writeToFile(prefix + "std_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);
 
   //     loops_std.load(loops_std.H_oneDC()[mu]);
   //     ft.apply(loops_std);
   //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "std_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);      
+  //     ft.writeToFile(prefix + "std_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);      
   //   }
   
 
@@ -352,18 +352,18 @@ int main(int argc, char **argv)
   // // do the FT and write to File std trick
   // loops_gen.load(loops_gen.H_loc());
   // ft.apply(loops_gen);
-  // ft.writeToFile(prefix + "gen_local_loops_FT.0000.dat", ASCII_FORM);
+  // ft.writeToFile(prefix + "gen_local_loops_FT.0000.dat", ASCII_FORMAT);
   // if(isOneD)
   //   for(int mu = 0 ; mu < 4 ; mu++){
   //     loops_gen.load(loops_gen.H_oneD()[mu]);
   //     ft.apply(loops_gen);
   //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "gen_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);
+  //     ft.writeToFile(prefix + "gen_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);
 
   //     loops_gen.load(loops_gen.H_oneDC()[mu]);
   //     ft.apply(loops_gen);
   //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "gen_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);      
+  //     ft.writeToFile(prefix + "gen_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);      
   //   }
 
 

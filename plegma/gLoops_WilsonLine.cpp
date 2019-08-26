@@ -6,7 +6,7 @@ using namespace plegma;
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-stout", "alpha-stout","corr-file-format","maxQsq"};
 
 static void dumpLoops(PLEGMA_FT<double> **ft,
- 		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
+ 		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
   for(int itype = 0 ; itype < 4; itype++)
     for(int idir=0; idir < 3; idir++)
       for(int i =0; i < HGC_totalL[0]; i++)

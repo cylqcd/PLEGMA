@@ -4,13 +4,13 @@
  * Functions for parsing and getting PLEGMA types, i.e. enums
  */
 
-inline std::string get_file_format_str(FILE_WRITE_FORMAT format) {
+inline std::string get_file_format_str(FILE_FORMAT format) {
   switch(format) {
-  case ASCII_FORM:
+  case ASCII_FORMAT:
     return "ascii";
-  case HDF5_FORM:
+  case HDF5_FORMAT:
     return "hdf5";
-  case LIME_FORM:
+  case LIME_FORMAT:
     return "lime";
   default:
     PLEGMA_error("File format not found.\n");
@@ -18,35 +18,30 @@ inline std::string get_file_format_str(FILE_WRITE_FORMAT format) {
   }
 }
 
-inline FILE_WRITE_FORMAT get_file_format(std::string s) {
+inline FILE_FORMAT get_file_format(std::string s) {
   if(s=="ascii")
-    return ASCII_FORM;
+    return ASCII_FORMAT;
   else if(s=="hdf5")
-    return HDF5_FORM;
+    return HDF5_FORMAT;
   else if(s=="lime")
-    return LIME_FORM;
+    return LIME_FORMAT;
   else {
     PLEGMA_error("invalid file format %s\n", s.c_str());
-    return ASCII_FORM;
+    return ASCII_FORMAT;
   }
 }
 
-inline std::string get_file_format_suffix(FILE_WRITE_FORMAT s) {
+inline std::string get_file_format_suffix(FILE_FORMAT s) {
   std::string res;
-  if(s==ASCII_FORM) res = ".dat";
-  else if(s==HDF5_FORM) res =  ".h5";
-  else if(s==LIME_FORM) res = "";
+  if(s==ASCII_FORMAT) res = ".dat";
+  else if(s==HDF5_FORMAT) res =  ".h5";
+  else if(s==LIME_FORMAT) res = ".lime";
   else PLEGMA_error("invalid file format %s\n", get_file_format_str(s).c_str());
   return res;
 }
 
 inline std::string get_file_format_suffix(std::string s) {
-  std::string res;
-  if(s=="ascii") res = ".dat";
-  else if(s=="hdf5") res =  ".h5";
-  else if(s=="lime") res = "";
-  else PLEGMA_error("invalid file format %s\n", s.c_str());
-  return res;
+  return get_file_format_suffix(get_file_format(s));
 }
 
 inline std::string get_space_str(CORR_SPACE s) {

@@ -194,10 +194,10 @@ void PLEGMA_FT<Float>::scale(Float a){
 
 
 template<typename Float>
-void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift){
+void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_FORMAT outputFormat, int timeshift){
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!isAllocated) PLEGMA_error("Memory not allocated cannot write data");
-  if(outputFormat == ASCII_FORM){
+  if(outputFormat == ASCII_FORMAT){
     Float *helem_global=NULL;
     bool gAlloc=false;
     if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
@@ -225,7 +225,7 @@ void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outpu
     if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
     comm_barrier();
   }
-  else if(outputFormat == HDF5_FORM){
+  else if(outputFormat == HDF5_FORMAT){
     PLEGMA_error("Not implemented yet");
   }
   else

@@ -250,63 +250,19 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeFile(const char*filename, FILE_WRITE_FORMAT format) {
-  if(format == ASCII_FORM) {
+writeFile(const char*filename, FILE_FORMAT format) {
+  if(format == ASCII_FORMAT) {
     if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename);
     writeASCII(filename);
   }
-  else if(format == HDF5_FORM) {
+  else if(format == HDF5_FORMAT) {
     if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in HDF5 format\n",filename);
     writeHDF5(filename);
   }
   else {
-    PLEGMA_error("FILE_WRITE_FORMAT not supported: %d\n", format);
+    PLEGMA_error("FILE_FORMAT not supported: %d\n", format);
   }
 }
-
-/*
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-writeFile(PLEGMA_params &params) {
-  const char*filename, *Qsq, *name2;
-  std::string ext="", name="";
-  if(params.corr_space==MOMENTUM_SPACE) asprintf(&Qsq,"Qsq%d_",params.Q_sq);
-  else asprintf(&Qsq,"");
-  if(params.CorrFileFormat == ASCII_FORM) ext = ".dat";
-  else if(params.CorrFileFormat == HDF5_FORM) ext = ".h5";
-  switch(corr_type) {
-  case MESONS:
-    name = "twop.%04d_mesons";
-    break;
-  case BARYONS:
-    name = "twop.%04d_baryons";
-    break;
-  case THRP_LOCAL:
-    name = "thrp.%04d_local";
-    break;
-  case THRP_NOETHER:
-    name = "thrp.%04d_noether";
-    break;
-  case THRP_ONED:
-    name = "thrp.%04d_oneD";
-    break;
-  default:
-    name = "unknown.%04d";
-  }
-  asprintf(&name2, name.c_str(), params.traj);
-  asprintf(&filename,"%s/%s_%sSS.%02d.%02d.%02d.%02d%s" ,
-	   params.corr_dir, name2, Qsq,
-	   params.sourcePosition[isource][0],
-	   params.sourcePosition[isource][1],
-	   params.sourcePosition[isource][2],
-	   params.sourcePosition[isource][3], ext.c_str());
-
-  writeFile(filename, params);
-  free(name2);
-  free(Qsq);
-  free(filename);
-}
-*/
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -356,7 +312,6 @@ writeASCII(std::string filename_out) {
     hostFree(corrReorder, vol_size*site_size*2*sizeof(Float));
     if(rank == 0) hostMalloc(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
     //=============================================================================
-
     // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
     // in the second case requires reordering of the memory
     MPI_Gather(corr,site_size*vol_size*2,MPI_Type(corr),
