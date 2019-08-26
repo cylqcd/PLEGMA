@@ -16,7 +16,7 @@ namespace plegma {
   ////////////////////////////// 
 
   template<typename Float>
-  class PLEGMA_Correlator {
+  class PLEGMA_Correlator : public IO<void> {
   protected:
     // Allocation
     bool isAlloc;
@@ -99,6 +99,13 @@ namespace plegma {
     Float* getCorr() {
       return corr;
     }
+    void setGroups(std::vector<std::string> d) {
+      if (groups.size() == d.size() || groups.size() == 0) {
+	groups = d;
+      } else {
+	PLEGMA_error("Given vector size do not match. This would change the correlator size.");
+      }
+    }
     void setGroups(std::string s) {
       std::vector<std::string> d = {s};
       setGroups(d);
@@ -134,8 +141,7 @@ namespace plegma {
 					int signProps, std::vector<GAMMAS> gammas,
 					int source[4]);
 
-    void writeFile(const char *filename, FILE_WRITE_FORMAT format);
-    void writeASCII(std::string filename);
-    void writeHDF5(std::string filename, std::string top = "/");
+    virtual void writeASCII(std::string filename);
+    virtual void writeHDF5(std::string filename);
   };
 }

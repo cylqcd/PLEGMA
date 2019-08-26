@@ -250,22 +250,6 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeFile(const char*filename, FILE_FORMAT format) {
-  if(format == ASCII_FORMAT) {
-    if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename);
-    writeASCII(filename);
-  }
-  else if(format == HDF5_FORMAT) {
-    if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in HDF5 format\n",filename);
-    writeHDF5(filename);
-  }
-  else {
-    PLEGMA_error("FILE_FORMAT not supported: %d\n", format);
-  }
-}
-
-template<typename Float>
-void PLEGMA_Correlator<Float>::
 writeASCII(std::string filename_out) {
   MPI_Comm comm;
   size_t g_vol_size;
@@ -405,7 +389,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename, std::string top) {
+writeHDF5(std::string filename) {
   // only one per time writes in momentum space
   if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 || HGC_timeRank == MPI_UNDEFINED ))
     return;
@@ -418,7 +402,7 @@ writeHDF5(std::string filename, std::string top) {
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
 	   source_position[3]);
-  top="/"+top+source; 
+  std::string top=(std::string) "/" + source; 
   free(source);
 
   
