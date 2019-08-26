@@ -68,7 +68,6 @@ protected:
   
   char volString[TuneKey::aux_n];
   bool onlyTuning;
-  bool commGlobalReduction_prev_value;
 
   ProfileStruct &ps;
   
@@ -189,12 +188,11 @@ public:
     sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
     sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d", ps.volume, N_DIMS, N_COLS);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
-    commGlobalReduction_prev_value = commGlobalReduction();
-    commGlobalReductionSet(ps.tune_globally);
+    setPolicyTuning(ps.tune_globally);
   }
 
   ~PLEGMA_kernel_tuner(){
-    commGlobalReductionSet(commGlobalReduction_prev_value);
+    setPolicyTuning(false);
   }
     
   // initialisation
