@@ -1,6 +1,7 @@
 #include <PLEGMA_global.h>
 #include <PLEGMA_Random.h>
 #include <PLEGMA_Hprobing.h>
+#include <PLEGMA_io.h>
 #include <vector>
 #ifndef _PLEGMA_FIELD_H
 #define _PLEGMA_FIELD_H
@@ -14,7 +15,7 @@ namespace plegma {
   ////////////////////////
   
   template<typename Float>
-  class PLEGMA_Field {
+  class PLEGMA_Field : public IO<void> {
   protected:
     
     int field_length;
@@ -116,13 +117,13 @@ namespace plegma {
     
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
 
-    virtual void readFromLime(std::string filename);
-    virtual void writeToLime(std::string filename);
-
     void TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
 			    PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r, PLEGMA_Su3field<Float> &Wr);
 
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
+
+    virtual void readLIME(std::string filename);
+    virtual void writeLIME(std::string filename);
   };
 }
 #endif

@@ -641,7 +641,7 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::writeToLime(std::string filename){
+void PLEGMA_Field<Float>::writeLIME(std::string filename){
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   FILE *fid;
   LimeWriter *limewriter = (LimeWriter*)NULL;
@@ -666,7 +666,7 @@ void PLEGMA_Field<Float>::writeToLime(std::string filename){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::readFromLime(std::string filename){
+void PLEGMA_Field<Float>::readLIME(std::string filename){
   int precRead=0, dofRead=0;
 
   FILE *fid = NULL;

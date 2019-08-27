@@ -108,7 +108,7 @@ int main(int argc, char **argv)
   
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
-  gauge.readFromLime(latfile.c_str());
+  gauge.readFile(latfile, LIME_FORMAT);
   gauge.load();
   gauge.calculatePlaq();
 

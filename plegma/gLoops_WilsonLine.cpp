@@ -93,7 +93,7 @@ int main(int argc, char **argv){
   //===================================//
   initializePLEGMA();
   PLEGMA_Gauge<double> *gauge = new PLEGMA_Gauge<double>();
-  gauge->readFromLime(latfile.c_str());
+  gauge->readFile(latfile, LIME_FORMAT);
   PLEGMA_printf("Unsmeared Plaquette is:");
   gauge->calculatePlaq();
 
