@@ -43,6 +43,12 @@ int main(int argc, char **argv)
   if((k_probing>0) && (hadamLow>hadamHgh))  PLEGMA_error("hadamard-high should be > hadamard-low");
   if((k_probing>0) && (hadamHgh>Nhadam)) PLEGMA_error("hadamard-high should be <= from max number of Hadamard vectors");
   HGC_options->set("spin-color-dil", "Whether we want spin color dilution",verbosity,spinColorDil);
+
+  int nsmearStoutWL = 30;
+  double alphaStoutWL = 0.129;
+  HGC_options->set("nsmear-stoutWL", "Number of stout smearing step for the Wilson line",verbosity,nsmearStoutWL);
+  HGC_options->set("alpha-stoutWL", "Coefficient for the stout smearing for the Wilson line",verbosity,alphaStoutWL);
+
   int Nsc = spinColorDil ? N_SPINS*N_COLS : 1;
   HGC_options->set("low-modes-recon", "Whether we want to use low modes of the operator to reconstruct part of the quark loop",verbosity,lowModesRecon);
   if(!lowModesRecon) Eig_NeV=0;
@@ -82,6 +88,12 @@ int main(int argc, char **argv)
   initGaugeQuda(gauge, true);
   plaqQuda();
 
+  // apply stout smearing
+  PLEGMA_Gauge<double> gaugeStout;
+  gaugeStout.stoutSmearing(gauge,nsmearStoutWL, alphaStoutWL, 3);
+  PLEGMA_printf("Smeared Plaquette with stout 3D for Wilson Line:");
+  gaugeStout.calculatePlaq();
+  
   // apply boundary conditions since is needed for the covariant derivative
   // this needs to be done after initGaugeQuda otherwise causes troubles
   applyBoundaryConditions(gauge,true);
@@ -159,10 +171,10 @@ int main(int argc, char **argv)
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
       checkCudaError();      
-      qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1./eigVal,gauge,ft_std);
+      qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1./eigVal,gaugeStout,ft_std);
       D->apply<M>(phi_r,phi);
       phi_r.apply_gamma5();
-      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gauge,ft_gen);
+      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gaugeStout,ft_gen);
     }
 #endif
 
@@ -202,11 +214,11 @@ int main(int argc, char **argv)
 	  if(lowModesRecon)
 	    eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
 #endif
-	  qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1,gauge,ft_std);
+	  qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1,gaugeStout,ft_std);
 	  
 	  D->apply<M>(phi_r,phi);
 	  phi_r.apply_gamma5();
-	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gauge,ft_gen);
+	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gaugeStout,ft_gen);
 	  double t2=MPI_Wtime();
 	  PLEGMA_printf("Contraction time is %f\n",t2-t1);
 	} // for loop isc
@@ -241,13 +253,6 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-
-
-
-
-
-
 
   // // ensuring mu negative
   // if(mu>0) mu*=-1.;
