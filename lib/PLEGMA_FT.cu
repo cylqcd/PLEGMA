@@ -194,42 +194,36 @@ void PLEGMA_FT<Float>::scale(Float a){
 
 
 template<typename Float>
-void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_FORMAT outputFormat, int timeshift){
+void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!isAllocated) PLEGMA_error("Memory not allocated cannot write data");
-  if(outputFormat == ASCII_FORMAT){
-    Float *helem_global=NULL;
-    bool gAlloc=false;
-    if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
-      hostMalloc(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
-      gAlloc=true;
-      if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
-      int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
-      if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
-    }
-    else
-      helem_global = h_elem;
-    if(comm_rank() == 0){
-      FILE *ptr = fopen(filename.c_str(), "w");
-      if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
-      int T = (dimT != 1)?HGC_totalL[3]:1;
-      for(int idf = 0 ; idf < dof; idf++)
-	for(int it = 0 ; it < T; it++){
-	  int its = (it + timeshift)%HGC_totalL[3];
-	  for(int imom = 0; imom < Nmoms(); imom++)
-	    fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it, momList[imom][0], momList[imom][1], momList[imom][2],
-		    helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
-	}
-      fclose(ptr);
-    }
-    if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
-    comm_barrier();
-  }
-  else if(outputFormat == HDF5_FORMAT){
-    PLEGMA_error("Not implemented yet");
+
+  Float *helem_global=NULL;
+  bool gAlloc=false;
+  if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
+    hostMalloc(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
+    gAlloc=true;
+    if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
+    int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
+    if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
   }
   else
-    PLEGMA_error("The output file format is unknown");
+    helem_global = h_elem;
+  if(comm_rank() == 0){
+    FILE *ptr = fopen(filename.c_str(), "w");
+    if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
+    int T = (dimT != 1)?HGC_totalL[3]:1;
+    for(int idf = 0 ; idf < dof; idf++)
+      for(int it = 0 ; it < T; it++){
+	int its = (it + timeshift)%HGC_totalL[3];
+	for(int imom = 0; imom < Nmoms(); imom++)
+	  fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it, momList[imom][0], momList[imom][1], momList[imom][2],
+		  helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
+      }
+    fclose(ptr);
+  }
+  if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
+  comm_barrier();
 }
 
 template class PLEGMA_FT<float>;

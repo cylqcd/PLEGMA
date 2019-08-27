@@ -3,7 +3,7 @@
 #include <io/PLEGMA_hdf5.h>
 
 namespace plegma {
-  template<typename returnT>
+  template<class returnT, class ...argsT>
   class IO {
     FILE_FORMAT deduce_type(std::string filename) {
       std::vector<std::string> hdf5{".h5", ".hdf5"};
@@ -34,79 +34,79 @@ namespace plegma {
     }
   public:
     
-    virtual returnT writeDEFAULT(std::string filename) {
+    virtual returnT writeDEFAULT(std::string filename, argsT ... args) {
       PLEGMA_error("No default writing defined\n");
       return returnT();
     }
-    virtual returnT writeASCII(std::string filename) {
+    virtual returnT writeASCII(std::string filename, argsT ... args) {
       PLEGMA_error("Writing in ASCII not supported. Trying default writing\n");
-      return writeDEFAULT(filename);
+      return writeDEFAULT(filename, args...);
     }
-    virtual returnT writeHDF5(std::string filename) {
+    virtual returnT writeHDF5(std::string filename, argsT ... args) {
       PLEGMA_error("Writing in ASCII not supported. Trying default writing\n");
-      return writeDEFAULT(filename);
+      return writeDEFAULT(filename, args...);
     }
-    virtual returnT writeLIME(std::string filename) {
+    virtual returnT writeLIME(std::string filename, argsT ... args) {
       PLEGMA_error("Writing in ASCII not supported. Trying default writing\n");
-      return writeDEFAULT(filename);
+      return writeDEFAULT(filename, args...);
     }
-    returnT writeFile(std::string filename, FILE_FORMAT format) {
+    returnT writeFile(std::string filename, FILE_FORMAT format, argsT ... args) {
       switch (format) {
       case ASCII_FORMAT:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename.c_str());
-	return writeASCII(filename);
+	return writeASCII(filename, args...);
       case HDF5_FORMAT:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in HDF5 format\n",filename.c_str());
-	return writeHDF5(filename);
+	return writeHDF5(filename, args...);
       case LIME_FORMAT:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in LIME format\n",filename.c_str());
-	return writeLIME(filename);
+	return writeLIME(filename, args...);
       case DEFAULT_FORMAT:
       default:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in DEFAULT format\n",filename.c_str());
-	return writeDEFAULT(filename);
+	return writeDEFAULT(filename, args...);
       }
     }
-    returnT writeFile(std::string filename) {
-      return writeFile(filename, deduce_type(filename));
+    returnT writeFile(std::string filename, argsT ... args) {
+      return writeFile(filename, deduce_type(filename), args...);
     }
 
 
-    virtual returnT readDEFAULT(std::string filename) {
+    virtual returnT readDEFAULT(std::string filename, argsT ... args) {
       PLEGMA_error("No default reading defined\n");
       return returnT();
     }
-    virtual returnT readASCII(std::string filename) {
+    virtual returnT readASCII(std::string filename, argsT ... args) {
       PLEGMA_error("Reading in ASCII not supported. Trying default reading\n");
-      return readDEFAULT(filename);
+      return readDEFAULT(filename, args...);
     }
-    virtual returnT readHDF5(std::string filename) {
+    virtual returnT readHDF5(std::string filename, argsT ... args) {
       PLEGMA_error("Reading in ASCII not supported. Trying default reading\n");
-      return readDEFAULT(filename);
+      return readDEFAULT(filename, args...);
     }
-    virtual returnT readLIME(std::string filename) {
+    virtual returnT readLIME(std::string filename, argsT ... args) {
       PLEGMA_error("Reading in ASCII not supported. Trying default reading\n");
-      return readDEFAULT(filename);
+      return readDEFAULT(filename, args...);
     }
-    returnT readFile(std::string filename, FILE_FORMAT format) {
+    returnT readFile(std::string filename, FILE_FORMAT format, argsT ... args) {
       switch (format) {
       case ASCII_FORMAT:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in ASCII format\n",filename.c_str());
-	return readASCII(filename);
+	return readASCII(filename, args...);
       case HDF5_FORMAT:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in HDF5 format\n",filename.c_str());
-	return readHDF5(filename);
+	return readHDF5(filename, args...);
       case LIME_FORMAT:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in LIME format\n",filename.c_str());
-	return readLIME(filename);
+	return readLIME(filename, args...);
       case DEFAULT_FORMAT:
       default:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in DEFAULT format\n",filename.c_str());
-	return readDEFAULT(filename);
+	return readDEFAULT(filename, args...);
       }
     }
-    returnT readFile(std::string filename) {
-      return readFile(filename, deduce_type(filename));
+    returnT readFile(std::string filename, argsT ... args) {
+      return readFile(filename, deduce_type(filename), args...);
     }
 
   };

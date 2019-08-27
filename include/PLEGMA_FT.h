@@ -8,7 +8,7 @@ namespace plegma {
   ////////////////
   enum FT_TYPE{FT_NAIVE,FT_GEMV,FT_FFT};
   template<typename Float>
-  class PLEGMA_FT {
+  class PLEGMA_FT : public IO<void,int>  {
     using Vint = std::vector<int>;
     using VVint = std::vector<Vint>;
   private:
@@ -98,6 +98,9 @@ namespace plegma {
     void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
     void scale(Float a);
 
-    void writeToFile(std::string filename, FILE_FORMAT outputFormat, int timeshift = 0);
+    void writeFile(std::string filename, FILE_FORMAT format, int timeshift = 0) {
+      return IO<void,int>::writeFile(filename,format,timeshift);
+    }
+    virtual void writeASCII(std::string filename, int timeshift = 0);
 };
 }

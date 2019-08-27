@@ -10,7 +10,7 @@ static void dumpLoops(PLEGMA_FT<double> **ft,
   for(int itype = 0 ; itype < 4; itype++)
     for(int idir=0; idir < 3; idir++)
       for(int i =0; i < HGC_totalL[0]; i++)
-	ft[itype*3*HGC_totalL[0]+idir*HGC_totalL[0]+i]->writeToFile(filenamePrefix + "/gLoops_WilsonLine_OperType" + std::to_string(itype)
+	ft[itype*3*HGC_totalL[0]+idir*HGC_totalL[0]+i]->writeFile(filenamePrefix + "/gLoops_WilsonLine_OperType" + std::to_string(itype)
 								    + "_dir" + std::to_string(idir) + "_z" +
 								    std::to_string(i) + "_" + confID + ".dat" ,format);
 }
@@ -133,7 +133,7 @@ int main(int argc, char **argv){
     traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
   }
   ftUL.apply(traceO2);
-  ftUL.writeToFile(filesPrefix + "/gLoops_ultralocal_Plq_def_Term1" +  "_" + confID + ".dat" ,corr_file_format);
+  ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Plq_def_Term1" +  "_" + confID + ".dat" ,corr_file_format);
 
   traceO2.zero_device();
   for(int i = 0 ; i < N_DIMS-1; i++)
@@ -142,7 +142,7 @@ int main(int argc, char **argv){
       traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
     }
   ftUL.apply(traceO2);
-  ftUL.writeToFile(filesPrefix + "/gLoops_ultralocal_Plq_def_Term2" +  "_" + confID + ".dat" ,corr_file_format);
+  ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Plq_def_Term2" +  "_" + confID + ".dat" ,corr_file_format);
 
   traceO1.zero_device();
   traceO2.zero_device();
@@ -168,7 +168,7 @@ int main(int argc, char **argv){
     traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
   }
   ftUL.apply(traceO2);
-  ftUL.writeToFile(filesPrefix + "/gLoops_ultralocal_Clv_def_Term2" +  "_" + confID + ".dat" ,corr_file_format);
+  ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Clv_def_Term2" +  "_" + confID + ".dat" ,corr_file_format);
 
   traceO2.zero_device();
   for(int i = 0 ; i < N_DIMS-1; i++)
@@ -177,7 +177,7 @@ int main(int argc, char **argv){
       traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
     }
   ftUL.apply(traceO2);
-  ftUL.writeToFile(filesPrefix + "/gLoops_ultralocal_Clv_def_Term1" +  "_" + confID + ".dat" ,corr_file_format);
+  ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Clv_def_Term1" +  "_" + confID + ".dat" ,corr_file_format);
 
   traceO1.zero_device();
   traceO2.zero_device();
