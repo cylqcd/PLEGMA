@@ -114,7 +114,7 @@ namespace plegma {
       assert(current_size==new_size);
       site_shape = new_shape;
     }
-    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift = 0);
 
     virtual void writeASCII(std::string filename, int timeshift = 0);
     virtual void writeHDF5(std::string filename, int timeshift = 0);

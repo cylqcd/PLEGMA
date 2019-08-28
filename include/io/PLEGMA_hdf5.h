@@ -536,11 +536,9 @@ public:
       MPI_Comm_size(comm, &comm_size);
       if(lshape.empty() || comm_size == 1)
 	_write_dataset_single(name,buf,shape,start);
-      else if(comm_size == product(shape)/product(lshape) )
-	_write_dataset_parallel(name,buf,shape,lshape,start);
       else
-	PLEGMA_error("lshape is not appropriate for the given communicator\n");
-      
+	_write_dataset_parallel(name,buf,shape,lshape,start);
+
       if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
 					  (lshape.empty() || comm_size == 1) ? "single" : "parallel");
     }

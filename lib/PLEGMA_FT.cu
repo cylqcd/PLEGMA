@@ -136,6 +136,8 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation anly");
+  if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
+  if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
   field_name = f.Field_name();
   site_shape = f.getSiteShape();
@@ -235,11 +237,11 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
 
 
 template<typename Float>
-std::string PLEGMA_Correlator<Float>::
-fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+std::string PLEGMA_FT<Float>::
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift) {
   std::string descr = "shape: ";
-  int comm_size = (dim==4) ? HGC_fullSize : HGC_spaceSize;
-  int comm_rank = (dim==4) ? HGC_fullRank : HGC_spaceRank;
+  int comm_size = (dims==4) ? HGC_fullSize : HGC_spaceSize;
+  int comm_rank = (dims==4) ? HGC_fullRank : HGC_spaceRank;
   
   // Using the full MPI_COMM_WORLD to write different parts of the correlator
   int sizeT = (dimT+comm_size-1)/comm_size; // writing size in T
@@ -260,20 +262,22 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
      Nmoms()-sizeM*(comm_rank/writersT) < sizeM)
     sizeM = Nmoms()-sizeM*(comm_rank/writersT); //reminder
 
-  if(dim==3) {
+  if(dims==3 && dimT == HGC_localL[3]) {
     // Time
     descr += "/time";
     shape.push_back(HGC_totalL[3]);
     lshape.push_back(sizeT);
-    start.push_back((HGC_timeRank*dimT + HGC_totalL[3] - source_position[3] +
+    start.push_back((HGC_timeRank*dimT + HGC_totalL[3] - timeshift +
 		     sizeT*(comm_rank % writersT)) % HGC_totalL[3]);
   } else {
-    assert(sizeT==1);
+    assert(dimT==1);
   }
-  // Moms
-  descr += "/moms";
-  lshape.push_back(sizeM);
-  start.push_back(sizeM*(comm_rank/writersT));
+
+  if(dims==3 && dimT != HGC_localL[3]) { // then it was a 3D Field. Using timeshift to determine the origin
+    int my_it = timeshift - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    if(!is_myIt) sizeM=0; // not writing
+  }
 
   // Field shape
   if(!this->site_shape.empty()) {
@@ -284,6 +288,13 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
       start.push_back(0);    
     }
   }
+
+  // Moms
+  descr += "/moms";
+  shape.push_back(Nmoms());
+  lshape.push_back(sizeM);
+  start.push_back(sizeM*(comm_rank/writersT));
+
   //re-im
   descr += "/re-im";
   shape.push_back(2);
@@ -294,10 +305,10 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 }
 
 template<typename Float>
-void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename) {
+void PLEGMA_FT<Float>::
+writeHDF5(std::string filename, int timeshift) {
   std::vector<hsize_t> shape, lshape, start;
-  std::string descr = fill_H5_shapes(shape, lshape, start);
+  std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);
 
   std::string dataset = "FT_data"; // default name
   
@@ -317,7 +328,7 @@ writeHDF5(std::string filename) {
   writer.write_dataset(dataset, h_elem, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);
 
-  std::vector<hsize_t> momShape = { dims };
+  std::vector<hsize_t> momShape = { (hsize_t) dims };
   std::vector<int> mvec;
   for(auto mv: MomList()) for(auto m: mv) mvec.push_back(m);
   writer.write_dataset("mvec", mvec, momShape);

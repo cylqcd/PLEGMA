@@ -707,13 +707,6 @@ template<typename Float>
 std::string PLEGMA_Field<Float>::
 fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
   std::string descr = "shape: ";
-  descr += "/x/y/z/t";
-  // Volume
-  for(int i=0; i<N_DIMS; i++) {
-    shape.push_back(HGC_totalL[i]);
-    lshape.push_back(HGC_localL[i]);
-    start.push_back(HGC_procPosition[i]*HGC_localL[i]);
-  }
 
   // Field shape
   if(!this->site_shape.empty()) {
@@ -724,6 +717,15 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
       start.push_back(0);    
     }
   }
+  
+  descr += "/x/y/z/t";
+  // Volume
+  for(int i=0; i<N_DIMS; i++) {
+    shape.push_back(HGC_totalL[i]);
+    lshape.push_back(HGC_localL[i]);
+    start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+  }
+
   //re-im
   descr += "/re-im";
   shape.push_back(2);
