@@ -357,8 +357,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
       if(HGC_spaceRank >= writersT*writersM) { // Then not writing
 	sizeT = 0;
 	sizeM = 0;
+      } else {
+	assert((sizeT>=1 && writersM == 1) || (sizeT==1 && writersM > 1));
       }
-      assert((sizeT>=1 && writersM == 1) || (sizeT==1 && writersM > 1));
       if(writersM == 1 && HGC_spaceRank < writersT && HGC_localL[3]-sizeT*HGC_spaceRank < sizeT)
 	sizeT = HGC_localL[3]-sizeT*HGC_spaceRank; //reminder
       if(writersM > 1  && HGC_spaceRank/writersT < writersM &&

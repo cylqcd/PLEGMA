@@ -715,7 +715,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     start.push_back(HGC_procPosition[i]*HGC_localL[i]);
   }
 
-  // Correlator shape
+  // Field shape
   if(!this->site_shape.empty()) {
     descr += "/" + field_name;
     for(auto s : this->site_shape) {

@@ -137,6 +137,8 @@ template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation anly");
   checkAllocation(f.Field_length());
+  field_name = f.Field_name();
+  site_shape = f.getSiteShape();
   tex_mom_list moms = this->getTexMomList();
   if(!accum) zero();
   for(int it =0 ; it < dimT; it++)
@@ -145,6 +147,9 @@ void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyFFT(const PLEGMA_Field<Float> &f, int sign){
+  checkAllocation(f.Field_length());
+  field_name = f.Field_name();
+  site_shape = f.getSiteShape();
   PLEGMA_error("Not implemented yet");
 }
 
@@ -153,6 +158,8 @@ void PLEGMA_FT<Float>::applyGEMV(const PLEGMA_Field<Float> &f, int sign){
   if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
   if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
+  field_name = f.Field_name();
+  site_shape = f.getSiteShape();
   if(!accum) zero();
   FT_gemv<Float>(*this,f,momList,sign);
 }
@@ -224,6 +231,96 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
   }
   if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
   comm_barrier();
+}
+
+
+template<typename Float>
+std::string PLEGMA_Correlator<Float>::
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+  std::string descr = "shape: ";
+  int comm_size = (dim==4) ? HGC_fullSize : HGC_spaceSize;
+  int comm_rank = (dim==4) ? HGC_fullRank : HGC_spaceRank;
+  
+  // Using the full MPI_COMM_WORLD to write different parts of the correlator
+  int sizeT = (dimT+comm_size-1)/comm_size; // writing size in T
+  int writersT = dimT/sizeT;                // how many writers needed
+  int writersM = comm_size/writersT;        // writers left for Mom direction
+  int sizeM = (Nmoms()+writersM-1)/writersM;// writing size in Mom
+  writersM = Nmoms()/sizeM;                 // actual number of writers needed
+    
+  if(comm_rank >= writersT*writersM) { // Then not writing
+    sizeT = 0;
+    sizeM = 0;
+  } else {
+    assert((sizeT>=1 && writersM == 1) || (sizeT==1 && writersM > 1));
+  }
+  if(writersM == 1 && comm_rank < writersT && dimT-sizeT*comm_rank < sizeT)
+    sizeT = dimT-sizeT*comm_rank; //reminder
+  if(writersM > 1  && comm_rank/writersT < writersM &&
+     Nmoms()-sizeM*(comm_rank/writersT) < sizeM)
+    sizeM = Nmoms()-sizeM*(comm_rank/writersT); //reminder
+
+  if(dim==3) {
+    // Time
+    descr += "/time";
+    shape.push_back(HGC_totalL[3]);
+    lshape.push_back(sizeT);
+    start.push_back((HGC_timeRank*dimT + HGC_totalL[3] - source_position[3] +
+		     sizeT*(comm_rank % writersT)) % HGC_totalL[3]);
+  } else {
+    assert(sizeT==1);
+  }
+  // Moms
+  descr += "/moms";
+  lshape.push_back(sizeM);
+  start.push_back(sizeM*(comm_rank/writersT));
+
+  // Field shape
+  if(!this->site_shape.empty()) {
+    descr += "/" + field_name;
+    for(auto s : this->site_shape) {
+      shape.push_back(s);
+      lshape.push_back(s);
+      start.push_back(0);    
+    }
+  }
+  //re-im
+  descr += "/re-im";
+  shape.push_back(2);
+  lshape.push_back(2);
+  start.push_back(0);
+
+  return descr;
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+writeHDF5(std::string filename) {
+  std::vector<hsize_t> shape, lshape, start;
+  std::string descr = fill_H5_shapes(shape, lshape, start);
+
+  std::string dataset = "FT_data"; // default name
+  
+  // checking if dataset name provided in filename
+  // NOTE: use '/' at the end of filename to use default name
+  size_t ext = filename.rfind(".h5");
+  if(ext + 3 < filename.length() && filename[ext+3] == '/') {
+    size_t last = filename.rfind("/");
+    if(last + 1 < filename.length()) {
+      dataset = filename.substr(last+1);
+      filename = filename.substr(0, last+1);
+    }
+  }
+
+  HDF5 writer(filename, MPI_COMM_WORLD);
+
+  writer.write_dataset(dataset, h_elem, shape, lshape, start);
+  writer.write_attribute(dataset, "description", descr);
+
+  std::vector<hsize_t> momShape = { dims };
+  std::vector<int> mvec;
+  for(auto mv: MomList()) for(auto m: mv) mvec.push_back(m);
+  writer.write_dataset("mvec", mvec, momShape);
 }
 
 template class PLEGMA_FT<float>;
