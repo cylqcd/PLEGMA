@@ -346,15 +346,35 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   std::string descr = "shape: ";
   switch(corr_space) {
   case MOMENTUM_SPACE:
-    descr += "/time/moms";
-    // Time
-    shape.push_back(HGC_totalL[3]);
-    lshape.push_back(HGC_localL[3]);
-    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
-    // Moms
-    shape.push_back((hsize_t)corr_mom_space->Nmoms());
-    lshape.push_back((hsize_t)corr_mom_space->Nmoms());
-    start.push_back(0);
+    {
+      // Using the full MPI_COMM_WORLD to write different parts of the correlator
+      int sizeT = (HGC_localL[3]+HGC_spaceSize-1)/HGC_spaceSize;// writing size in T
+      int writersT = HGC_localL[3]/sizeT;                       // how many writers needed
+      int writersM = HGC_spaceSize/writersT;                    // writers left for Mom direction
+      int sizeM = (corr_mom_space->Nmoms()+writersM-1)/writersM;// writing size in Mom
+      writersM = corr_mom_space->Nmoms()/sizeM;                 // actual number of writers needed
+    
+      if(HGC_spaceRank >= writersT*writersM) { // Then not writing
+	sizeT = 0;
+	sizeM = 0;
+      }
+      assert((sizeT>=1 && writersM == 1) || (sizeT==1 && writersM > 1));
+      if(writersM == 1 && HGC_spaceRank < writersT && HGC_localL[3]-sizeT*HGC_spaceRank < sizeT)
+	sizeT = HGC_localL[3]-sizeT*HGC_spaceRank; //reminder
+      if(writersM > 1  && HGC_spaceRank/writersT < writersM &&
+	 corr_mom_space->Nmoms()-sizeM*(HGC_spaceRank/writersT) < sizeM)
+	sizeM = corr_mom_space->Nmoms()-sizeM*(HGC_spaceRank/writersT); //reminder
+
+      descr += "/time/moms";
+      // Time
+      shape.push_back(HGC_totalL[3]);
+      lshape.push_back(sizeT);
+      start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3] +
+		       sizeT*(HGC_spaceRank % writersT)) % HGC_totalL[3]);
+      // Moms
+      lshape.push_back(sizeM);
+      start.push_back(sizeM*(HGC_spaceRank/writersT));
+    }
     break;
   case POSITION_SPACE:
     descr += "/x/y/z/t";
@@ -390,14 +410,10 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeHDF5(std::string filename) {
-  // only one per time writes in momentum space
-  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 || HGC_timeRank == MPI_UNDEFINED ))
-    return;
-
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
-  HDF5 writer(filename, corr_space==MOMENTUM_SPACE ? HGC_timeComm : MPI_COMM_WORLD);
+  HDF5 writer(filename, MPI_COMM_WORLD);
 
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
