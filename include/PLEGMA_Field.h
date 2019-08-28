@@ -94,7 +94,7 @@ namespace plegma {
     void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
     void communicateGhost(int dirOr=-1);
 
-    std::vector<int> getSiteShape() {return site_shape;}
+    std::vector<int> getSiteShape() const {return site_shape;}
     void setSiteShape(std::vector<int> new_shape) {
       int current_size=1, new_size = 1;
       std::for_each(site_shape.begin(), site_shape.end(), [&] (int n) {current_size *= n;});
@@ -137,6 +137,21 @@ namespace plegma {
     virtual void readLIME(std::string filename);
     virtual void writeLIME(std::string filename);
     virtual void writeHDF5(std::string filename);
+  };
+
+  template<typename Float>
+  class PLEGMA_Field3D : public PLEGMA_Field<Float> {
+  protected:
+    bool activeTimeSlice;
+  public:
+    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
+      PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost) {
+    }
+    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
+      PLEGMA_Field<Float>(alloc_flag, site_size, ghost_flag, isPinnedHost) {
+    }
+
+    bool includesActiveTimeSlice(){return activeTimeSlice;}
   };
 }
 #endif
