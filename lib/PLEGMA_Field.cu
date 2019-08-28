@@ -35,6 +35,7 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 
   field_length = field_l;
   total_length = vol_l;
+  site_shape = {field_l};
   
   ghost_length = 0;
   ghost_corner_length = 0;
@@ -73,6 +74,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHO
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
 {
   initialize(alloc_flag, site_size, HGC_localVolume);
+  field_name = "PLEGMA_CUSTOM";
 }
 
 template<typename Float>
@@ -87,39 +89,50 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   case SCALAR:
     initialize(alloc_flag, 1, HGC_localVolume);
     field_name = "PLEGMA_SCALAR";
+    setSiteShape({});
     break;
   case SU3FIELD:
     initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_SU3FIELD";
+    setSiteShape({N_COLS, N_COLS});
     break;
   case GAUGE:
     initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_GAUGE";
+    setSiteShape({N_DIMS, N_COLS, N_COLS});
     break;    
   case VECTOR:
     initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_VECTOR";
+    setSiteShape({N_SPINS, N_COLS});
     break;
   case PROPAGATOR:
     initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_PROPAGATOR";
+    setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case PROPAGATOR3D:
     initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
     field_name = "PLEGMA_PROPAGATOR3D";
+    setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case VECTOR3D:
     initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
     field_name = "PLEGMA_VECTOR3D";
+    setSiteShape({N_SPINS, N_COLS});
     break;
   case QLOOPS:
     initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
     field_name = "PLEGMA_QLOOPS";
+    setSiteShape({N_SPINS, N_SPINS});
     break;
   case FMUNU:
-    initialize(alloc_flag, ((N_DIMS * (N_DIMS-1))/2) * N_COLS * N_COLS, HGC_localVolume);
+    initialize(alloc_flag, ((N_SPINS * (N_SPINS-1))/2) * N_COLS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_FMUNU";
+    setSiteShape({((N_SPINS * (N_SPINS-1))/2), N_COLS, N_COLS});
     break;
+  default:
+    PLEGMA_error("Unknown field class %d\n", classT);
   }
 }
 
@@ -689,6 +702,63 @@ void PLEGMA_Field<Float>::readLIME(std::string filename){
   }
   if(isAllocDevice) load();
 }
+
+template<typename Float>
+std::string PLEGMA_Field<Float>::
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+  std::string descr = "shape: ";
+  descr += "/x/y/z/t";
+  // Volume
+  for(int i=0; i<N_DIMS; i++) {
+    shape.push_back(HGC_totalL[i]);
+    lshape.push_back(HGC_localL[i]);
+    start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+  }
+
+  // Correlator shape
+  if(!this->site_shape.empty()) {
+    descr += "/" + field_name;
+    for(auto s : this->site_shape) {
+      shape.push_back(s);
+      lshape.push_back(s);
+      start.push_back(0);    
+    }
+  }
+  //re-im
+  descr += "/re-im";
+  shape.push_back(2);
+  lshape.push_back(2);
+  start.push_back(0);
+
+  return descr;
+}
+
+
+template<typename Float>
+void PLEGMA_Field<Float>::writeHDF5(std::string filename){
+  if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
+  std::vector<hsize_t> shape, lshape, start;
+  std::string descr = fill_H5_shapes(shape, lshape, start);
+
+  std::string dataset = "data"; // default name
+  
+  // checking if dataset name provided in filename
+  // NOTE: use '/' at the end of filename to use default name
+  size_t ext = filename.rfind(".h5");
+  if(ext + 3 < filename.length() && filename[ext+3] == '/') {
+    size_t last = filename.rfind("/");
+    if(last + 1 < filename.length()) {
+      dataset = filename.substr(last+1);
+      filename = filename.substr(0, last+1);
+    }
+  }
+
+  HDF5 writer(filename, MPI_COMM_WORLD);
+
+  writer.write_dataset(dataset, h_elem, shape, lshape, start);
+  writer.write_attribute(dataset, "description", descr);
+}
+
 
 template<typename Float>
 void PLEGMA_Field<Float>::TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,

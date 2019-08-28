@@ -45,6 +45,8 @@ namespace plegma {
 
     CLASS_ENUM field_type;
     std::string field_name;
+    std::vector<int> site_shape;
+    
     void create_host();
     void destroy_host();
     void create_device();
@@ -92,6 +94,16 @@ namespace plegma {
     void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
     void communicateGhost(int dirOr=-1);
 
+    std::vector<int> getSiteShape() {return site_shape;}
+    void setSiteShape(std::vector<int> new_shape) {
+      int current_size=1, new_size = 1;
+      std::for_each(site_shape.begin(), site_shape.end(), [&] (int n) {current_size *= n;});
+      std::for_each(new_shape.begin(), new_shape.end(), [&] (int n) {new_size *= n;});
+      assert(current_size==new_size);
+      site_shape = new_shape;
+    }
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
+    
     void pack(Float *topack);
     void unpack(Float *out);
 
@@ -124,6 +136,7 @@ namespace plegma {
 
     virtual void readLIME(std::string filename);
     virtual void writeLIME(std::string filename);
+    virtual void writeHDF5(std::string filename);
   };
 }
 #endif
