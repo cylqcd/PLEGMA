@@ -247,66 +247,6 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeFile(const char*filename, FILE_WRITE_FORMAT format) {
-  if(format == ASCII_FORM) {
-    if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename);
-    writeASCII(filename);
-  }
-  else if(format == HDF5_FORM) {
-    if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in HDF5 format\n",filename);
-    writeHDF5(filename);
-  }
-  else {
-    PLEGMA_error("FILE_WRITE_FORMAT not supported: %d\n", format);
-  }
-}
-
-/*
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-writeFile(PLEGMA_params &params) {
-  const char*filename, *Qsq, *name2;
-  std::string ext="", name="";
-  if(params.corr_space==MOMENTUM_SPACE) asprintf(&Qsq,"Qsq%d_",params.Q_sq);
-  else asprintf(&Qsq,"");
-  if(params.CorrFileFormat == ASCII_FORM) ext = ".dat";
-  else if(params.CorrFileFormat == HDF5_FORM) ext = ".h5";
-  switch(corr_type) {
-  case MESONS:
-    name = "twop.%04d_mesons";
-    break;
-  case BARYONS:
-    name = "twop.%04d_baryons";
-    break;
-  case THRP_LOCAL:
-    name = "thrp.%04d_local";
-    break;
-  case THRP_NOETHER:
-    name = "thrp.%04d_noether";
-    break;
-  case THRP_ONED:
-    name = "thrp.%04d_oneD";
-    break;
-  default:
-    name = "unknown.%04d";
-  }
-  asprintf(&name2, name.c_str(), params.traj);
-  asprintf(&filename,"%s/%s_%sSS.%02d.%02d.%02d.%02d%s" ,
-	   params.corr_dir, name2, Qsq,
-	   params.sourcePosition[isource][0],
-	   params.sourcePosition[isource][1],
-	   params.sourcePosition[isource][2],
-	   params.sourcePosition[isource][3], ext.c_str());
-
-  writeFile(filename, params);
-  free(name2);
-  free(Qsq);
-  free(filename);
-}
-*/
-
-template<typename Float>
-void PLEGMA_Correlator<Float>::
 writeASCII(std::string filename_out) {
   MPI_Comm comm;
   size_t g_vol_size;
@@ -353,7 +293,6 @@ writeASCII(std::string filename_out) {
     hostFree(corrReorder, vol_size*site_size*2*sizeof(Float));
     if(rank == 0) hostMalloc(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
     //=============================================================================
-
     // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
     // in the second case requires reordering of the memory
     MPI_Gather(corr,site_size*vol_size*2,MPI_Type(corr),
@@ -404,15 +343,36 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   std::string descr = "shape: ";
   switch(corr_space) {
   case MOMENTUM_SPACE:
-    descr += "/time/moms";
-    // Time
-    shape.push_back(HGC_totalL[3]);
-    lshape.push_back(HGC_localL[3]);
-    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
-    // Moms
-    shape.push_back((hsize_t)corr_mom_space->Nmoms());
-    lshape.push_back((hsize_t)corr_mom_space->Nmoms());
-    start.push_back(0);
+    {
+      // Using the full MPI_COMM_WORLD to write different parts of the correlator
+      int sizeT = (HGC_localL[3]+HGC_spaceSize-1)/HGC_spaceSize;// writing size in T
+      int writersT = HGC_localL[3]/sizeT;                       // how many writers needed
+      int writersM = HGC_spaceSize/writersT;                    // writers left for Mom direction
+      int sizeM = (corr_mom_space->Nmoms()+writersM-1)/writersM;// writing size in Mom
+      writersM = corr_mom_space->Nmoms()/sizeM;                 // actual number of writers needed
+    
+      if(HGC_spaceRank >= writersT*writersM) { // Then not writing
+	sizeT = 0;
+	sizeM = 0;
+      } else {
+	assert((sizeT>=1 && writersM == 1) || (sizeT==1 && writersM > 1));
+      }
+      if(writersM == 1 && HGC_spaceRank < writersT && HGC_localL[3]-sizeT*HGC_spaceRank < sizeT)
+	sizeT = HGC_localL[3]-sizeT*HGC_spaceRank; //reminder
+      if(writersM > 1  && HGC_spaceRank/writersT < writersM &&
+	 corr_mom_space->Nmoms()-sizeM*(HGC_spaceRank/writersT) < sizeM)
+	sizeM = corr_mom_space->Nmoms()-sizeM*(HGC_spaceRank/writersT); //reminder
+
+      descr += "/time/moms";
+      // Time
+      shape.push_back(HGC_totalL[3]);
+      lshape.push_back(sizeT);
+      start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3] +
+		       sizeT*(HGC_spaceRank % writersT)) % HGC_totalL[3]);
+      // Moms
+      lshape.push_back(sizeM);
+      start.push_back(sizeM*(HGC_spaceRank/writersT));
+    }
     break;
   case POSITION_SPACE:
     descr += "/x/y/z/t";
@@ -447,20 +407,16 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename, std::string top) {
-  // only one per time writes in momentum space
-  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 || HGC_timeRank == MPI_UNDEFINED ))
-    return;
-
+writeHDF5(std::string filename) {
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
-  HDF5 writer(filename, corr_space==MOMENTUM_SPACE ? HGC_timeComm : MPI_COMM_WORLD);
+  HDF5 writer(filename, MPI_COMM_WORLD);
 
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
 	   source_position[3]);
-  top="/"+top+source; 
+  std::string top=(std::string) "/" + source; 
   free(source);
 
   

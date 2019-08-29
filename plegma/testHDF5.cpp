@@ -26,49 +26,37 @@ int main(int argc, char **argv)
     PLEGMA_printf("Now I'm here: %s\n",test.pwd().c_str());    
   }
   if (latfile != "") {
-    // This creates the file conf.h5
-    HDF5 test2("./conf");
-
+    // This writes a read config into conf.h5
     // Allocation done on BOTH, DEVICE and HOST
     PLEGMA_Gauge<double> gauge(BOTH);
       
     // Reading from Lime file and loading to device
-    gauge.readFromLime(latfile.c_str());
+    gauge.readFile(latfile, LIME_FORMAT);
     gauge.load();
       
     // Compuiting plaquette on device in three different way for crosschecking
     double plaq = gauge.calculatePlaq();
-
-    std::string descr = "shape: ";
-    std::vector<hsize_t> shape, lshape, start;
-    descr += "/dirs";
-    shape.push_back(4);
-    lshape.push_back(4);
-    start.push_back(0); 
-    descr += "/c1";
-    shape.push_back(3);
-    lshape.push_back(3);
-    start.push_back(0);
-    descr += "/c2";
-    shape.push_back(3);
-    lshape.push_back(3);
-    start.push_back(0);
-    descr += "/x/y/z/t";
-    // Volume
-    for(int i=0; i<N_DIMS; i++) {
-      shape.push_back(HGC_totalL[i]);
-      lshape.push_back(HGC_localL[i]);
-      start.push_back((HGC_procPosition[i]*HGC_localL[i]) % HGC_totalL[i]);
-    }
-    descr += "/re-im";
-    shape.push_back(2);
-    lshape.push_back(2);
-    start.push_back(0);
+    gauge.writeFile("./conf", HDF5_FORMAT);
+  }
+  {
+    // This does the same as FT.cpp and writes the result in HDF5 format
+    PLEGMA_Field<double> f(BOTH,SCALAR);
+    f.setUnit((std::vector<int>) {0});
     
-    test2.write_dataset("gauge", gauge.H_elem(), shape, lshape, start);
-    test2.write_attribute("gauge", "shape", descr);
-    test2.write_attribute("gauge", "latfile", latfile);
-    test2.write_attribute("gauge", "plaquette", std::to_string(plaq));
+    PLEGMA_Propagator3D<double> prop3D;
+    prop3D.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8});
+    
+    PLEGMA_FT<double> ft4(1,4,true);
+    ft4.apply(f);
+    ft4.apply(f); // apply twice to check accumulation
+    ft4.writeFile("./momTest_field_ft4", HDF5_FORMAT);
+    
+    f.mulMomentumPhases((std::vector<int>) {+1,0,0,0});
+    
+    PLEGMA_FT<double> ft3(1,3);
+    ft3.apply(prop3D);
+    ft3.mulConstMomentumPhases((std::vector<int>) {1,2,3}, +1 );
+    ft3.writeFile("./momTest_prop3D_ft3", HDF5_FORMAT);
   }
   
   finalize();

@@ -17,10 +17,10 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 
 
 static void dumpLoops(PLEGMA_FT<double> **ft,
- 		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
+ 		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
   for(int idir=0; idir < 3; idir++)
     for(int i =0; i < HGC_totalL[0]; i++)
-      ft[idir*HGC_totalL[0]+i]->writeToFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
+      ft[idir*HGC_totalL[0]+i]->writeFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
 }
 
 int main(int argc, char **argv)
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
   
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
-  gauge.readFromLime(latfile.c_str());
+  gauge.readFile(latfile, LIME_FORMAT);
   gauge.load();
   gauge.calculatePlaq();
 
@@ -253,3 +253,109 @@ int main(int argc, char **argv)
 
   return 0;
 }
+
+  // // ensuring mu negative
+  // if(mu>0) mu*=-1.;
+  // QUDA_solver *solverDN = new QUDA_solver(mu);
+  // PLEGMA_Vector<double> source(DEVICE);
+  // PLEGMA_Vector<double> phi;
+  // PLEGMA_Vector<double> tmp;
+  // //  bool isOneD = true;
+  // PLEGMA_QLoops<double> loops_std(BOTH,oneDLoops);
+  // QudaInvertParam inv_params = solverDN->getInvParams();
+  // // just put units to the whole for debugging
+  // source.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
+  // solverDN->solve(phi,source);
+  // // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
+  // phi.scaleVector(1./(2.*inv_params.kappa)); 
+
+  // gauge.communicateGhost();
+  // loops_std.oneEnd_trick(phi,phi,tmp,gauge,-1.,accumFlag); //standard one-end trick
+
+  // std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
+  // PLEGMA_FT<double> ft(1, 3);
+
+  // // do the FT and write to File std trick
+  // loops_std.load(loops_std.H_loc());
+  // ft.apply(loops_std);
+  // ft.writeFile(prefix + "std_local_loops_FT.0000.dat", ASCII_FORMAT);
+  // if(isOneD)
+  //   for(int mu = 0 ; mu < 4 ; mu++){
+  //     loops_std.load(loops_std.H_oneD()[mu]);
+  //     ft.apply(loops_std);
+  //     ft.scale(0.25);
+  //     ft.writeFile(prefix + "std_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);
+
+  //     loops_std.load(loops_std.H_oneDC()[mu]);
+  //     ft.apply(loops_std);
+  //     ft.scale(0.25);
+  //     ft.writeFile(prefix + "std_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);      
+  //   }
+  
+
+  // PLEGMA_QLoops<double> loops_gen(BOTH,oneDLoops);
+  // PLEGMA_Vector<double> phi_r;
+  // QUDA_dirac *D = nullptr;
+  // if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
+  //   D = new QUDA_dirac(QUDA_CLOVER_WILSON_DSLASH);
+  // else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
+  //   D = new QUDA_dirac(QUDA_WILSON_DSLASH);
+  // else
+  //   PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
+
+  // D->apply<M>(phi_r,phi);
+  // phi_r.apply_gamma5();
+  // loops_gen.oneEnd_trick(phi, phi_r, tmp, gauge, +1., accumFlag); //generalized one-end trick
+
+  // // do the FT and write to File std trick
+  // loops_gen.load(loops_gen.H_loc());
+  // ft.apply(loops_gen);
+  // ft.writeFile(prefix + "gen_local_loops_FT.0000.dat", ASCII_FORMAT);
+  // if(isOneD)
+  //   for(int mu = 0 ; mu < 4 ; mu++){
+  //     loops_gen.load(loops_gen.H_oneD()[mu]);
+  //     ft.apply(loops_gen);
+  //     ft.scale(0.25);
+  //     ft.writeFile(prefix + "gen_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);
+
+  //     loops_gen.load(loops_gen.H_oneDC()[mu]);
+  //     ft.apply(loops_gen);
+  //     ft.scale(0.25);
+  //     ft.writeFile(prefix + "gen_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);      
+  //   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// #ifdef CHECK_HPROP
+//   PLEGMA_Hprobing hprop(3);
+//   PLEGMA_Vector<double> vectorAuxD;
+//   PLEGMA_Vector<double> vectorAuxDD;
+//   vectorAuxD.setUnit((std::vector<int>) {0});
+//   FILE *ptr_test = NULL;
+//   std::string strM = "/onyx/noether/h/khadjiyiannakou/runs/Hhad";
+//   for(int ih = 0; ih < hprop.get_NHad(); ih++){
+//     ptr_test = fopen((strM+std::to_string(ih)).c_str(),"w");
+//     vectorAuxDD.applyHpropColoring4D(vectorAuxD,hprop,ih,(std::vector<int>) {0});
+//     vectorAuxDD.unload();
+//     for (int i = 0; i < vectorAuxDD.Total_length(); ++i) {
+//       fprintf(ptr_test,"%d %d\n",(int) vectorAuxDD.H_elem()[i*2],(int) vectorAuxDD.H_elem()[i*2+1] );
+//     }
+//     fclose(ptr_test);
+//   }
+//   exit(-1);
+// #endif // 
