@@ -410,6 +410,17 @@ use_multiple_writers(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, 
   return shift;
 }
 
+template<typename T>
+static std::string str(T begin, T end) {
+  std::stringstream ss;
+  bool first = true;
+  for (; begin != end; begin++) {
+    if (!first) ss << ", ";
+    ss << *begin;
+    first = false;
+  }
+  return ss.str();
+}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -436,7 +447,7 @@ writeHDF5(std::string filename) {
 	", shape: ("+str(shape.begin(), shape.end())+
 	"), lshape: ("+str(lshape.begin(), lshape.end())+
 	"), start: ("+str(start.begin(), start.end())+
-	"), shift: "+std::to_string(shift)+"\n";
+	"), shift: "+std::to_string(corrShift)+"\n";
       printf(out.c_str());
     }
   }
