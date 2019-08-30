@@ -24,14 +24,14 @@ int main(int argc, char **argv)
   PLEGMA_FT<double> ft4(1,4,true);
   ft4.apply(f);
   ft4.apply(f); // apply twice to check accumulation
-  ft4.writeFile("/onyx/noether/h/dnole/runs/momTest_field_ft4.dat", ASCII_FORMAT);
+  ft4.writeFile("./momTest_field_ft4.dat", ASCII_FORMAT);
 
   f.mulMomentumPhases((std::vector<int>) {+1,0,0,0});
   
   PLEGMA_FT<double> ft3(1,3);
   ft3.apply(prop3D);
   ft3.mulConstMomentumPhases((std::vector<int>) {1,2,3}, +1 );
-  ft3.writeFile("/onyx/noether/h/khadjiyiannakou/runs/momTest_prop3D_ft3.dat", ASCII_FORMAT);
+  ft3.writeFile("./momTest_prop3D_ft3.dat", ASCII_FORMAT);
   
   finalize();
 

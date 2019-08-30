@@ -39,24 +39,30 @@ int main(int argc, char **argv)
     gauge.writeFile("./conf", HDF5_FORMAT);
   }
   {
-    // This does the same as FT.cpp and writes the result in HDF5 format
-    PLEGMA_Field<double> f(BOTH,SCALAR);
-    f.setUnit((std::vector<int>) {0});
-    
-    PLEGMA_Propagator3D<double> prop3D;
-    prop3D.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8});
-    
-    PLEGMA_FT<double> ft4(1,4,true);
-    ft4.apply(f);
-    ft4.apply(f); // apply twice to check accumulation
-    ft4.writeFile("./momTest_field_ft4", HDF5_FORMAT);
-    
-    f.mulMomentumPhases((std::vector<int>) {+1,0,0,0});
-    
     PLEGMA_FT<double> ft3(1,3);
-    ft3.apply(prop3D);
-    ft3.mulConstMomentumPhases((std::vector<int>) {1,2,3}, +1 );
-    ft3.writeFile("./momTest_prop3D_ft3", HDF5_FORMAT);
+    PLEGMA_FT<double> ft4(1,4);
+    PLEGMA_Field<double> f(BOTH,SCALAR);
+    PLEGMA_Propagator3D<double> prop3D;
+
+    f.setUnit((std::vector<int>) {0});
+    prop3D.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8});
+     
+    ft3.apply(f, FT_GEMV);
+    ft3.writeFile("./momTest.h5/scalar/3D/gemv", HDF5_FORMAT);
+    ft3.zero();
+    ft3.apply(f, FT_NAIVE);
+    ft3.writeFile("./momTest.h5/scalar/3D/naive", HDF5_FORMAT);
+    ft3.zero();
+    ft4.apply(f, FT_GEMV);
+    ft4.writeFile("./momTest.h5/scalar/4D/gemv", HDF5_FORMAT);
+    ft4.zero();
+
+    ft3.apply(prop3D, FT_GEMV);
+    ft3.writeFile("./momTest.h5/prop3D/3D/gemv", HDF5_FORMAT);
+    ft3.zero();
+    ft3.apply(prop3D, FT_NAIVE);
+    ft3.writeFile("./momTest.h5/prop3D/3D/naive", HDF5_FORMAT);
+    ft3.zero();
   }
   
   finalize();
