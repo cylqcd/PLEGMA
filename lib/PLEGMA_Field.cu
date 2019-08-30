@@ -739,6 +739,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 template<typename Float>
 void PLEGMA_Field<Float>::writeHDF5(std::string filename){
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
+  assert(isAllocHost);
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
@@ -757,6 +758,7 @@ void PLEGMA_Field<Float>::writeHDF5(std::string filename){
 
   HDF5 writer(filename, MPI_COMM_WORLD);
 
+  if(isAllocDevice) unload();
   writer.write_dataset(dataset, h_elem, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);
 }
