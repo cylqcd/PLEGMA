@@ -352,8 +352,8 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     lshape.push_back(HGC_localL[3]);
     start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
     // Moms
-    shape.push_back(corr_mom_space->Nmoms());
-    lshape.push_back(corr_mom_space->Nmoms());
+    shape.push_back((hsize_t)corr_mom_space->Nmoms());
+    lshape.push_back((hsize_t)corr_mom_space->Nmoms());
     start.push_back(0);
     break;
   case POSITION_SPACE:
@@ -430,6 +430,16 @@ writeHDF5(std::string filename) {
   int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
   size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
   if(id >= nWriters) lshape[0] = 0; // not writing
+  if(nWriters>1) {
+    if(HGC_verbosity > 2) {
+      std::string out = "rank: "+std::to_string(id)+
+	", shape: ("+str(shape.begin(), shape.end())+
+	"), lshape: ("+str(lshape.begin(), lshape.end())+
+	"), start: ("+str(start.begin(), start.end())+
+	"), shift: "+std::to_string(shift)+"\n";
+      printf(out.c_str());
+    }
+  }
 
   HDF5 writer(filename, MPI_COMM_WORLD);
 
