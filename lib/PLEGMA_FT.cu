@@ -239,44 +239,16 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
 template<typename Float>
 std::string PLEGMA_FT<Float>::
 fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift) {
-  std::string descr = "shape: ";
-  int comm_size = (dims==4) ? HGC_fullSize : HGC_spaceSize;
-  int comm_rank = (dims==4) ? HGC_fullRank : HGC_spaceRank;
+  std::string descr;
   
-  // Using the full MPI_COMM_WORLD to write different parts of the correlator
-  int sizeT = (dimT+comm_size-1)/comm_size; // writing size in T
-  int writersT = dimT/sizeT;                // how many writers needed
-  int writersM = comm_size/writersT;        // writers left for Mom direction
-  int sizeM = (Nmoms()+writersM-1)/writersM;// writing size in Mom
-  writersM = Nmoms()/sizeM;                 // actual number of writers needed
-    
-  if(comm_rank >= writersT*writersM) { // Then not writing
-    sizeT = 0;
-    sizeM = 0;
-  } else {
-    assert((sizeT>=1 && writersM == 1) || (sizeT==1 && writersM > 1));
-  }
-  if(writersM == 1 && comm_rank < writersT && dimT-sizeT*comm_rank < sizeT)
-    sizeT = dimT-sizeT*comm_rank; //reminder
-  if(writersM > 1  && comm_rank/writersT < writersM &&
-     Nmoms()-sizeM*(comm_rank/writersT) < sizeM)
-    sizeM = Nmoms()-sizeM*(comm_rank/writersT); //reminder
-
+  // Time
   if(dims==3 && dimT == HGC_localL[3]) {
-    // Time
     descr += "/time";
     shape.push_back(HGC_totalL[3]);
-    lshape.push_back(sizeT);
-    start.push_back((HGC_timeRank*dimT + HGC_totalL[3] - timeshift +
-		     sizeT*(comm_rank % writersT)) % HGC_totalL[3]);
+    lshape.push_back(HGC_localL[3]);
+    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - timeshift) % HGC_totalL[3]);
   } else {
     assert(dimT==1);
-  }
-
-  if(dims==3 && dimT != HGC_localL[3]) { // then it was a 3D Field. Using timeshift to determine the origin
-    int my_it = timeshift - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-    if(!is_myIt) sizeM=0; // not writing
   }
 
   // Field shape
@@ -292,8 +264,8 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   // Moms
   descr += "/moms";
   shape.push_back(Nmoms());
-  lshape.push_back(sizeM);
-  start.push_back(sizeM*(comm_rank/writersT));
+  lshape.push_back(Nmoms());
+  start.push_back(0);
 
   //re-im
   descr += "/re-im";
@@ -304,12 +276,72 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   return descr;
 }
 
+static size_t
+use_multiple_writers(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int &nWriters, int id) {
+  if(nWriters==1) return 0;
+  int usedWriters = 1;
+  size_t shift = 0;
+  for(int i=0; i<lshape.size(); i++) {
+    int iSize = (lshape[i] + nWriters-1)/nWriters;
+    int iWriters = (lshape[i] + iSize-1)/iSize;
+    nWriters /= iWriters;
+    usedWriters *= iWriters;
+    int iId = id % iWriters;
+    id /= iWriters;
+    int iShift = iSize*iId;
+    shift = shift*lshape[i] + iShift;
+    if(iShift+iSize > lshape[i])
+      lshape[i] -= iShift;
+    else
+      lshape[i] = iSize;
+    start[i] = (start[i] + iShift) % shape[i];
+  }
+  nWriters = usedWriters;
+  return shift;
+}
+
+template<typename T>
+static std::string str(T begin, T end) {
+  std::stringstream ss;
+  bool first = true;
+  for (; begin != end; begin++) {
+    if (!first) ss << ", ";
+    ss << *begin;
+    first = false;
+  }
+  return ss.str();
+}
+
 template<typename Float>
 void PLEGMA_FT<Float>::
 writeHDF5(std::string filename, int timeshift) {
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);
+  
+  hsize_t writeSize = 1;
+  for(auto l: lshape) writeSize*=l;
+  assert(sizeN==writeSize);
 
+  size_t shift = 0;
+  if(dims==3 && dimT != HGC_localL[3]) { // then it was a 3D Field. Using timeshift to determine the origin
+    int my_it = timeshift - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    if(!is_myIt) lshape[0]=0; // not writing
+  } else {
+    int nWriters = (dims==4) ? HGC_fullSize : HGC_spaceSize;
+    int id = (dims==4) ? HGC_fullRank : HGC_spaceRank;
+    shift = use_multiple_writers(shape, lshape, start, nWriters, id);
+    if(id >= nWriters) lshape[0] = 0; // not writing
+    if(HGC_verbosity > 2) {
+      std::string out = "rank: "+std::to_string(id)+
+	", shape: ("+str(shape.begin(), shape.end())+
+	"), lshape: ("+str(lshape.begin(), lshape.end())+
+	"), start: ("+str(start.begin(), start.end())+
+	"), shift: "+std::to_string(shift)+"\n";
+      printf(out.c_str());
+    }
+  }
+  
   std::string dataset = "FT_data"; // default name
   
   // checking if dataset name provided in filename
@@ -325,7 +357,7 @@ writeHDF5(std::string filename, int timeshift) {
 
   HDF5 writer(filename, MPI_COMM_WORLD);
 
-  writer.write_dataset(dataset, h_elem, shape, lshape, start);
+  writer.write_dataset(dataset, h_elem+shift, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);
 
   std::vector<hsize_t> momShape = { (hsize_t) dims };

@@ -343,36 +343,15 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   std::string descr = "shape: ";
   switch(corr_space) {
   case MOMENTUM_SPACE:
-    {
-      // Using the full MPI_COMM_WORLD to write different parts of the correlator
-      int sizeT = (HGC_localL[3]+HGC_spaceSize-1)/HGC_spaceSize;// writing size in T
-      int writersT = HGC_localL[3]/sizeT;                       // how many writers needed
-      int writersM = HGC_spaceSize/writersT;                    // writers left for Mom direction
-      int sizeM = (corr_mom_space->Nmoms()+writersM-1)/writersM;// writing size in Mom
-      writersM = corr_mom_space->Nmoms()/sizeM;                 // actual number of writers needed
-    
-      if(HGC_spaceRank >= writersT*writersM) { // Then not writing
-	sizeT = 0;
-	sizeM = 0;
-      } else {
-	assert((sizeT>=1 && writersM == 1) || (sizeT==1 && writersM > 1));
-      }
-      if(writersM == 1 && HGC_spaceRank < writersT && HGC_localL[3]-sizeT*HGC_spaceRank < sizeT)
-	sizeT = HGC_localL[3]-sizeT*HGC_spaceRank; //reminder
-      if(writersM > 1  && HGC_spaceRank/writersT < writersM &&
-	 corr_mom_space->Nmoms()-sizeM*(HGC_spaceRank/writersT) < sizeM)
-	sizeM = corr_mom_space->Nmoms()-sizeM*(HGC_spaceRank/writersT); //reminder
-
-      descr += "/time/moms";
-      // Time
-      shape.push_back(HGC_totalL[3]);
-      lshape.push_back(sizeT);
-      start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3] +
-		       sizeT*(HGC_spaceRank % writersT)) % HGC_totalL[3]);
-      // Moms
-      lshape.push_back(sizeM);
-      start.push_back(sizeM*(HGC_spaceRank/writersT));
-    }
+    descr += "/time/moms";
+    // Time
+    shape.push_back(HGC_totalL[3]);
+    lshape.push_back(HGC_localL[3]);
+    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
+    // Moms
+    shape.push_back((hsize_t)corr_mom_space->Nmoms());
+    lshape.push_back((hsize_t)corr_mom_space->Nmoms());
+    start.push_back(0);
     break;
   case POSITION_SPACE:
     descr += "/x/y/z/t";
@@ -404,12 +383,71 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   return descr;
 }
 
+static size_t
+use_multiple_writers(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int &nWriters, int id) {
+  if(nWriters==1) return 0;
+  int usedWriters = 1;
+  size_t shift = 0;
+  for(int i=0; i<lshape.size(); i++) {
+    int iSize = (lshape[i] + nWriters-1)/nWriters;
+    int iWriters = (lshape[i] + iSize-1)/iSize;
+    nWriters /= iWriters;
+    usedWriters *= iWriters;
+    int iId = id % iWriters;
+    id /= iWriters;
+    int iShift = iSize*iId;
+    shift = shift*lshape[i] + iShift;
+    if(iShift+iSize > lshape[i])
+      lshape[i] -= iShift;
+    else
+      lshape[i] = iSize;
+    start[i] = (start[i] + iShift) % shape[i];
+  }
+  nWriters = usedWriters;
+  return shift;
+}
+
+template<typename T>
+static std::string str(T begin, T end) {
+  std::stringstream ss;
+  bool first = true;
+  for (; begin != end; begin++) {
+    if (!first) ss << ", ";
+    ss << *begin;
+    first = false;
+  }
+  return ss.str();
+}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeHDF5(std::string filename) {
+
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
+
+  hsize_t corrSize = 2*getVolSize();
+  hsize_t writeSize = 1;
+  for(auto l: this->shape) corrSize*=l;
+  for(auto l: lshape) writeSize*=l;
+  assert(corrSize==writeSize);
+
+  // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.
+  // All of them will write a different piece
+  int nWriters = (corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1;
+  int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
+  size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
+  if(id >= nWriters) lshape[0] = 0; // not writing
+  if(nWriters>1) {
+    if(HGC_verbosity > 2) {
+      std::string out = "rank: "+std::to_string(id)+
+	", shape: ("+str(shape.begin(), shape.end())+
+	"), lshape: ("+str(lshape.begin(), lshape.end())+
+	"), start: ("+str(start.begin(), start.end())+
+	"), shift: "+std::to_string(corrShift)+"\n";
+      printf(out.c_str());
+    }
+  }
 
   HDF5 writer(filename, MPI_COMM_WORLD);
 
@@ -424,15 +462,13 @@ writeHDF5(std::string filename) {
   std::vector<int> mvec;
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
   
-  hsize_t writeSize = 1;
-  for(auto l: lshape) writeSize*=l;
   for(int g=0; g<n_groups; g++){
     writer.cd(top+groups[g]);
     if(corr_space == MOMENTUM_SPACE) {
       writer.write_dataset("mvec", mvec, momShape);
     }
     for(int d=0; d<n_datasets; d++) {
-      Float *writeBuf = corr + (g*n_datasets+d)*writeSize;
+      Float *writeBuf = corr + (g*n_datasets+d)*writeSize + corrShift;
       writer.write_dataset(datasets[d], writeBuf, shape, lshape, start);
       writer.write_attribute(datasets[d], "description", descr);
     }
