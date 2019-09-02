@@ -71,9 +71,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   prop1Tex.tex = prop1.createTexObject();
   prop2Tex.tex = prop2.createTexObject();
 
-  for(int it = 0 ; it < HGC_localL[3] ; it++) {
-    contract_mesons(prop1Tex,prop2Tex,*this,it);
-  }
+  contract_mesons(prop1Tex,prop2Tex,*this);
 
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
@@ -103,9 +101,8 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop1Tex.tex = prop1.createTexObject();
   prop2Tex.tex = prop2.createTexObject();
 
-  for(int it = 0; it < HGC_localL[3]; it++) {
-    contract_baryons(prop1Tex,prop2Tex,*this,it);
-  }
+  contract_baryons(prop1Tex,prop2Tex,*this);
+
   prop1.destroyTexObject(prop1Tex.tex);
   prop2.destroyTexObject(prop2Tex.tex);
 }
@@ -300,22 +297,6 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeFile(const char*filename, FILE_WRITE_FORMAT format) {
-  if(format == ASCII_FORM) {
-    if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename);
-    writeASCII(filename);
-  }
-  else if(format == HDF5_FORM) {
-    if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in HDF5 format\n",filename);
-    writeHDF5(filename);
-  }
-  else {
-    PLEGMA_error("FILE_WRITE_FORMAT not supported: %d\n", format);
-  }
-}
-
-template<typename Float>
-void PLEGMA_Correlator<Float>::
 writeASCII(std::string filename_out) {
   MPI_Comm comm;
   size_t g_vol_size;
@@ -362,7 +343,6 @@ writeASCII(std::string filename_out) {
     hostFree(corrReorder, vol_size*site_size*2*sizeof(Float));
     if(rank == 0) hostMalloc(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
     //=============================================================================
-
     // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
     // in the second case requires reordering of the memory
     MPI_Gather(corr,site_size*vol_size*2,MPI_Type(corr),
@@ -417,7 +397,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     // Time
     shape.push_back(HGC_totalL[3]);
     lshape.push_back(HGC_localL[3]);
-    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
+    start.push_back((HGC_procPosition[3]*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
     // Moms
     shape.push_back((hsize_t)corr_mom_space->Nmoms());
     lshape.push_back((hsize_t)corr_mom_space->Nmoms());
@@ -453,23 +433,78 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   return descr;
 }
 
+static size_t
+use_multiple_writers(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int &nWriters, int id) {
+  if(nWriters==1) return 0;
+  int usedWriters = 1;
+  size_t shift = 0;
+  for(int i=0; i<lshape.size(); i++) {
+    int iSize = (lshape[i] + nWriters-1)/nWriters;
+    int iWriters = (lshape[i] + iSize-1)/iSize;
+    nWriters /= iWriters;
+    usedWriters *= iWriters;
+    int iId = id % iWriters;
+    id /= iWriters;
+    int iShift = iSize*iId;
+    shift = shift*lshape[i] + iShift;
+    if(iShift+iSize > lshape[i])
+      lshape[i] -= iShift;
+    else
+      lshape[i] = iSize;
+    start[i] = (start[i] + iShift) % shape[i];
+  }
+  nWriters = usedWriters;
+  return shift;
+}
+
+template<typename T>
+static std::string str(T begin, T end) {
+  std::stringstream ss;
+  bool first = true;
+  for (; begin != end; begin++) {
+    if (!first) ss << ", ";
+    ss << *begin;
+    first = false;
+  }
+  return ss.str();
+}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename, std::string top) {
-  // only one per time writes in momentum space
-  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 || HGC_timeRank == MPI_UNDEFINED ))
-    return;
+writeHDF5(std::string filename) {
 
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
-  HDF5 writer(filename, corr_space==MOMENTUM_SPACE ? HGC_timeComm : MPI_COMM_WORLD);
+  hsize_t corrSize = 2*getVolSize();
+  hsize_t writeSize = 1;
+  for(auto l: this->shape) corrSize*=l;
+  for(auto l: lshape) writeSize*=l;
+  assert(corrSize==writeSize);
+
+  // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.
+  // All of them will write a different piece
+  int nWriters = (corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1;
+  int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
+  size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
+  if(id >= nWriters) lshape[0] = 0; // not writing
+  if(nWriters>1) {
+    if(HGC_verbosity > 2) {
+      std::string out = "rank: "+std::to_string(id)+
+	", shape: ("+str(shape.begin(), shape.end())+
+	"), lshape: ("+str(lshape.begin(), lshape.end())+
+	"), start: ("+str(start.begin(), start.end())+
+	"), shift: "+std::to_string(corrShift)+"\n";
+      printf(out.c_str());
+    }
+  }
+
+  HDF5 writer(filename, MPI_COMM_WORLD);
 
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
 	   source_position[3]);
-  top="/"+top+source; 
+  std::string top=(std::string) "/" + source; 
   free(source);
 
   
@@ -477,19 +512,16 @@ writeHDF5(std::string filename, std::string top) {
   std::vector<int> mvec;
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
   
-  hsize_t writeSize = 1;
-  for(auto l: lshape) writeSize*=l;
   for(size_t g=0; g<n_groups(); g++){
     writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
     if(corr_space == MOMENTUM_SPACE) {
       writer.write_dataset("mvec", mvec, momShape);
     }
     for(size_t d=0; d<n_datasets(); d++) {
-      Float *writeBuf = corr + (g*n_datasets()+d)*writeSize;
+      Float *writeBuf = corr + (g*n_datasets()+d)*writeSize + corrShift;
       std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
       writer.write_dataset(dataset, writeBuf, shape, lshape, start);
-      if(descr != "")
-	writer.write_attribute(dataset, "description", descr);
+      writer.write_attribute(dataset, "description", descr);
     }
   }
 }

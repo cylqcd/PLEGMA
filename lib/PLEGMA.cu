@@ -120,7 +120,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     hostMalloc(ranks, space3D_proc*sizeof(int));
 
     for(int i= 0 ; i < space3D_proc ; i++)
-      ranks[i] = comm_coords(HGC_default_topo)[3] + HGC_nProc[3]*i;
+      ranks[i] = HGC_procPosition[3] + HGC_nProc[3]*i;
 
     MPI_Group_incl(HGC_fullGroup,space3D_proc,ranks,&HGC_spaceGroup);
     MPI_Group_rank(HGC_spaceGroup,&HGC_spaceRank);
@@ -131,8 +131,9 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     int *ranksTime;
     hostMalloc(ranksTime, HGC_nProc[3]*sizeof(int));
 
+    int spaceId = (HGC_procPosition[0] * HGC_nProc[1] + HGC_procPosition[1]) * HGC_nProc[2] + HGC_procPosition[2];
     for(int i=0 ; i < HGC_nProc[3] ; i++)
-      ranksTime[i] = i;
+      ranksTime[i] = spaceId+i;
     
     MPI_Group_incl(HGC_fullGroup,HGC_nProc[3], ranksTime, &HGC_timeGroup);
     MPI_Group_rank(HGC_timeGroup, &HGC_timeRank);

@@ -467,8 +467,10 @@ namespace plegma {
   __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in,
 						   Float2<Float> *shared_cache, int n_comp,
 						   int sid3D, int sp[3], tex_mom_list &texMomList,
-						   int padding = 0, int sign = -1){
+						   int padding = 0, int sign = -1, int nTime=1, int tId=0){
     int cacheIndex = threadIdx.x;
+    int leftToReduce = gridDim.x/nTime;
+    int nMoms = texMomList.Nmoms;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
     for(int i=0; i<3; i++) {
@@ -477,7 +479,7 @@ namespace plegma {
     
     Float phase;
     Float2<Float> expon;
-    for(size_t imom = 0 ; imom < texMomList.Nmoms ; imom++){
+    for(int imom = 0 ; imom < nMoms ; imom++){
       int4 momv = texMomList.get(imom);
       phase = momv.x*id[0]/((Float) DGC_totalL[0]) + momv.y*id[1]/((Float) DGC_totalL[1]) + momv.z*id[2]/((Float) DGC_totalL[2]);
       phase *=  2. * PI;
@@ -490,7 +492,8 @@ namespace plegma {
       
       if(cacheIndex == 0 && out!=NULL){
 	for(int ip = 0 ; ip < n_comp ; ip++){
-	  out[(imom*(n_comp+padding) + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
+	  out[((tId*nMoms + imom)*(n_comp+padding) + ip)*leftToReduce + (blockIdx.x%leftToReduce)] =
+	    shared_cache[ip*blockDim.x];
 	}
       }
     }    

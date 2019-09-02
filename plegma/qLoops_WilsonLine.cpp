@@ -17,10 +17,10 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 
 
 static void dumpLoops(PLEGMA_FT<double> **ft,
- 		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
+ 		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
   for(int idir=0; idir < 3; idir++)
     for(int i =0; i < HGC_totalL[0]; i++)
-      ft[idir*HGC_totalL[0]+i]->writeToFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
+      ft[idir*HGC_totalL[0]+i]->writeFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
 }
 
 int main(int argc, char **argv)
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
   
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
-  gauge.readFromLime(latfile.c_str());
+  gauge.readFile(latfile, LIME_FORMAT);
   gauge.load();
   gauge.calculatePlaq();
 

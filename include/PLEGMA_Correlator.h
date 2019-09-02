@@ -16,7 +16,7 @@ namespace plegma {
   ////////////////////////////// 
 
   template<typename Float>
-  class PLEGMA_Correlator {
+  class PLEGMA_Correlator : public IO<void> {
   protected:
     // Allocation
     bool isAlloc;
@@ -167,8 +167,7 @@ namespace plegma {
 					int signProps, std::vector<GAMMAS> gammas,
 					int source[4]);
 
-    void writeFile(const char *filename, FILE_WRITE_FORMAT format);
-    void writeASCII(std::string filename);
-    void writeHDF5(std::string filename, std::string top = "/");
+    virtual void writeASCII(std::string filename);
+    virtual void writeHDF5(std::string filename);
   };
 }
