@@ -108,7 +108,7 @@ static void contract_baryons_host( ProfileStruct &ps,
   if(HGC_verbosity > 2)
     PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
-  size_t alloc_size = (runFT==true)? (size * ps.tp.grid.x/time_step ) : size;
+  size_t alloc_size = (runFT==true)? (size * (ps.tp.grid.x/time_step) ) : size;
   
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;

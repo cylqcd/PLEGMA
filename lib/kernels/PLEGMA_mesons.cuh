@@ -104,7 +104,7 @@ void contract_mesons_host( ProfileStruct &ps,
 	for(int f = 0 ; f < site_size; f++) {
 	  result[(f*HGC_localL[3] + it)*volume+v] = 0;
 	  for(int j = 0 ; j < accumX; j++)
-	    result[(f*HGC_localL[3] + it)*volume+v] = h_partial_block[(v*site_size+f)*accumX+j];
+	    result[(f*HGC_localL[3] + it)*volume+v] += h_partial_block[(v*site_size+f)*accumX+j];
 	}
     } else {
       for(size_t v = 0 ; v < volume; v++)
