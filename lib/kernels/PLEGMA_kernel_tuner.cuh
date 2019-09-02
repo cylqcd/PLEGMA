@@ -236,9 +236,9 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   run();
 #else
   // performing tuning if we need to tune
-  if( !ps.tuned && !activeTuning() && commGlobalReduction() ) comm_barrier(); //syncronizing 
+  if( !ps.tuned && !activeTuning() && ps.tune_globally ) comm_barrier(); //syncronizing 
   if( !ps.tuned ) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
-  if( !activeTuning() && !ps.tuned ) cudaGetLastError(); // ensuring that the error state has been clean
+  if( !ps.tuned ) cudaGetLastError(); // ensuring that the error state has been clean
   if( !activeTuning() ) ps.tuned = true;
   if( onlyTuning && !activeTuning() ) return;
 
@@ -248,7 +248,7 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   // by error = cudaGetLastError(); (line 765).
   // So here we use jitify_error to communicate to the tuner the failure of the kernel.
   cudaError_t error = cudaPeekAtLastError();
-  if( activeTuning() && commGlobalReduction() ) {
+  if( activeTuning() && ps.tune_globally ) {
     double tmp = error;
     comm_allreduce_max(&tmp);
     error = (cudaError_t) tmp;

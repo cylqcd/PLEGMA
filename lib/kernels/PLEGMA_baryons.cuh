@@ -104,14 +104,21 @@ static void contract_baryons_host( ProfileStruct &ps,
   int site_size=2*N_SPINS*N_SPINS;
   int3 source = corr.getSource3();
   tex_mom_list mom_list = corr.getTexMomList();
-  
+
+  if(HGC_verbosity > 2)
+    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+
   size_t alloc_size = (runFT==true)? (size * ps.tp.grid.x/time_step ) : size;
   
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
   cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
   // Checking for allocation error. In case we return and let the tuner handle the error.
-  cudaError_t error=cudaPeekAtLastError(); if(error != cudaSuccess) return;
+  cudaError_t error=cudaPeekAtLastError();
+  if(error != cudaSuccess) {
+    cudaFree(d_partial_block);
+    return;
+  }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
