@@ -246,7 +246,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     descr += "/time";
     shape.push_back(HGC_totalL[3]);
     lshape.push_back(HGC_localL[3]);
-    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - timeshift) % HGC_totalL[3]);
+    start.push_back((HGC_procPosition[3]*HGC_localL[3] + HGC_totalL[3] - timeshift) % HGC_totalL[3]);
   } else {
     assert(dimT==1);
   }

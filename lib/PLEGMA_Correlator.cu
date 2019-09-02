@@ -347,7 +347,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     // Time
     shape.push_back(HGC_totalL[3]);
     lshape.push_back(HGC_localL[3]);
-    start.push_back((HGC_timeRank*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
+    start.push_back((HGC_procPosition[3]*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
     // Moms
     shape.push_back((hsize_t)corr_mom_space->Nmoms());
     lshape.push_back((hsize_t)corr_mom_space->Nmoms());
