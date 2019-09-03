@@ -28,7 +28,7 @@ define(int numSourcePositions, 1);
 define(std::string pathListSourcePositions);
 define(int (*sourcePositions)[N_DIMS], NULL);
 define(int maxQsq, 64);
-define(FILE_WRITE_FORMAT corr_file_format, HDF5_FORM);
+define(FILE_FORMAT corr_file_format, HDF5_FORMAT);
 define(CORR_SPACE corr_space, MOMENTUM_SPACE);
 define(std::string twop_filename, "./twop");
 define(std::string threep_filename, "./threep");

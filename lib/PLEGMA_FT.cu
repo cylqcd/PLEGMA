@@ -136,7 +136,11 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation anly");
+  if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
+  if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
+  field_name = f.Field_name();
+  site_shape = f.getSiteShape();
   tex_mom_list moms = this->getTexMomList();
   if(!accum) zero();
   for(int it =0 ; it < dimT; it++)
@@ -145,6 +149,9 @@ void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyFFT(const PLEGMA_Field<Float> &f, int sign){
+  checkAllocation(f.Field_length());
+  field_name = f.Field_name();
+  site_shape = f.getSiteShape();
   PLEGMA_error("Not implemented yet");
 }
 
@@ -153,6 +160,8 @@ void PLEGMA_FT<Float>::applyGEMV(const PLEGMA_Field<Float> &f, int sign){
   if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
   if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
+  field_name = f.Field_name();
+  site_shape = f.getSiteShape();
   if(!accum) zero();
   FT_gemv<Float>(*this,f,momList,sign);
 }
@@ -194,42 +203,167 @@ void PLEGMA_FT<Float>::scale(Float a){
 
 
 template<typename Float>
-void PLEGMA_FT<Float>::writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift){
+void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!isAllocated) PLEGMA_error("Memory not allocated cannot write data");
-  if(outputFormat == ASCII_FORM){
-    Float *helem_global=NULL;
-    bool gAlloc=false;
-    if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
-      hostMalloc(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
-      gAlloc=true;
-      if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
-      int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
-      if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
-    }
-    else
-      helem_global = h_elem;
-    if(comm_rank() == 0){
-      FILE *ptr = fopen(filename.c_str(), "w");
-      if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
-      int T = (dimT != 1)?HGC_totalL[3]:1;
-      for(int idf = 0 ; idf < dof; idf++)
-	for(int it = 0 ; it < T; it++){
-	  int its = (it + timeshift)%HGC_totalL[3];
-	  for(int imom = 0; imom < Nmoms(); imom++)
-	    fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it, momList[imom][0], momList[imom][1], momList[imom][2],
-		    helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
-	}
-      fclose(ptr);
-    }
-    if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
-    comm_barrier();
-  }
-  else if(outputFormat == HDF5_FORM){
-    PLEGMA_error("Not implemented yet");
+
+  Float *helem_global=NULL;
+  bool gAlloc=false;
+  if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
+    hostMalloc(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
+    gAlloc=true;
+    if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
+    int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
+    if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
   }
   else
-    PLEGMA_error("The output file format is unknown");
+    helem_global = h_elem;
+  if(comm_rank() == 0){
+    FILE *ptr = fopen(filename.c_str(), "w");
+    if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
+    int T = (dimT != 1)?HGC_totalL[3]:1;
+    for(int idf = 0 ; idf < dof; idf++)
+      for(int it = 0 ; it < T; it++){
+	int its = (it + timeshift)%HGC_totalL[3];
+	for(int imom = 0; imom < Nmoms(); imom++)
+	  fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it, momList[imom][0], momList[imom][1], momList[imom][2],
+		  helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
+      }
+    fclose(ptr);
+  }
+  if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
+  comm_barrier();
+}
+
+
+template<typename Float>
+std::string PLEGMA_FT<Float>::
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift) {
+  std::string descr;
+  
+  // Time
+  if(dims==3 && dimT == HGC_localL[3]) {
+    descr += "/time";
+    shape.push_back(HGC_totalL[3]);
+    lshape.push_back(HGC_localL[3]);
+    start.push_back((HGC_procPosition[3]*HGC_localL[3] + HGC_totalL[3] - timeshift) % HGC_totalL[3]);
+  } else {
+    assert(dimT==1);
+  }
+
+  // Field shape
+  if(!this->site_shape.empty()) {
+    descr += "/" + field_name;
+    for(auto s : this->site_shape) {
+      shape.push_back(s);
+      lshape.push_back(s);
+      start.push_back(0);    
+    }
+  }
+
+  // Moms
+  descr += "/moms";
+  shape.push_back(Nmoms());
+  lshape.push_back(Nmoms());
+  start.push_back(0);
+
+  //re-im
+  descr += "/re-im";
+  shape.push_back(2);
+  lshape.push_back(2);
+  start.push_back(0);
+
+  return descr;
+}
+
+static size_t
+use_multiple_writers(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int &nWriters, int id) {
+  if(nWriters==1) return 0;
+  int usedWriters = 1;
+  size_t shift = 0;
+  for(int i=0; i<lshape.size(); i++) {
+    int iSize = (lshape[i] + nWriters-1)/nWriters;
+    int iWriters = (lshape[i] + iSize-1)/iSize;
+    nWriters /= iWriters;
+    usedWriters *= iWriters;
+    int iId = id % iWriters;
+    id /= iWriters;
+    int iShift = iSize*iId;
+    shift = shift*lshape[i] + iShift;
+    if(iShift+iSize > lshape[i])
+      lshape[i] -= iShift;
+    else
+      lshape[i] = iSize;
+    start[i] = (start[i] + iShift) % shape[i];
+  }
+  nWriters = usedWriters;
+  return shift;
+}
+
+template<typename T>
+static std::string str(T begin, T end) {
+  std::stringstream ss;
+  bool first = true;
+  for (; begin != end; begin++) {
+    if (!first) ss << ", ";
+    ss << *begin;
+    first = false;
+  }
+  return ss.str();
+}
+
+template<typename Float>
+void PLEGMA_FT<Float>::
+writeHDF5(std::string filename, int timeshift) {
+  std::vector<hsize_t> shape, lshape, start;
+  std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);
+  
+  hsize_t writeSize = 1;
+  for(auto l: lshape) writeSize*=l;
+  assert(sizeN==writeSize);
+
+  size_t shift = 0;
+  if(dims==3 && dimT != HGC_localL[3]) { // then it was a 3D Field. Using timeshift to determine the origin
+    int my_it = timeshift - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    if(!is_myIt) lshape[0]=0; // not writing
+  } else {
+    int nWriters = (dims==4) ? HGC_fullSize : HGC_spaceSize;
+    int id = (dims==4) ? HGC_fullRank : HGC_spaceRank;
+    shift = use_multiple_writers(shape, lshape, start, nWriters, id);
+    if(id >= nWriters) lshape[0] = 0; // not writing
+    if(HGC_verbosity > 3) {
+      std::string out = "rank: "+std::to_string(id)+
+	", shape: ("+str(shape.begin(), shape.end())+
+	"), lshape: ("+str(lshape.begin(), lshape.end())+
+	"), start: ("+str(start.begin(), start.end())+
+	"), shift: "+std::to_string(shift)+"\n";
+      printf(out.c_str());
+    }
+  }
+  
+  std::string dataset = "FT_data"; // default name
+  
+  // checking if dataset name provided in filename
+  // NOTE: use '/' at the end of filename to use default name
+  size_t ext = filename.rfind(".h5");
+  if(ext + 3 < filename.length() && filename[ext+3] == '/') {
+    size_t last = filename.rfind("/");
+    if(last + 1 < filename.length()) {
+      dataset = filename.substr(last+1);
+      filename = filename.substr(0, last+1);
+    }
+  }
+
+  HDF5 writer(filename, MPI_COMM_WORLD);
+
+  writer.write_dataset(dataset, h_elem+shift, shape, lshape, start);
+  writer.write_attribute(dataset, "description", descr);
+
+  std::vector<hsize_t> momShape = { (hsize_t) dims };
+  std::vector<int> mvec;
+  for(auto mv: MomList()) for(auto m: mv) mvec.push_back(m);
+  writer.write_dataset("mvec", mvec, momShape);
 }
 
 template class PLEGMA_FT<float>;
