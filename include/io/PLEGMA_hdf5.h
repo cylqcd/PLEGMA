@@ -265,8 +265,7 @@ protected:
     H5Tset_size(type_id, attr_value.length());
     hid_t attr_id = H5Acreate2(obj_id, attr_name.c_str(), type_id, 
 			       attrdat_id, H5P_DEFAULT, H5P_DEFAULT);
-    if(getRank() == 0)
-      H5Awrite(attr_id, type_id, attr_value.c_str());
+    H5Awrite(attr_id, type_id, attr_value.c_str());
     H5Aclose(attr_id);
     H5Tclose(type_id);
     H5Sclose(attrdat_id);

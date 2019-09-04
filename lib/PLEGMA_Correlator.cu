@@ -489,7 +489,7 @@ writeHDF5(std::string filename) {
   size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
   if(id >= nWriters) lshape[0] = 0; // not writing
   if(nWriters>1) {
-    if(HGC_verbosity > 2) {
+    if(HGC_verbosity > 3) {
       std::string out = "rank: "+std::to_string(id)+
 	", shape: ("+str(shape.begin(), shape.end())+
 	"), lshape: ("+str(lshape.begin(), lshape.end())+
