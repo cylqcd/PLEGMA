@@ -763,46 +763,6 @@ __inline__ __device__ void exp_G(Float2<FloatA> a[N_COLS][N_COLS]){
   A_equal_B(a, A);
 }
 
-// template<typename FloatA, typename FloatB>
-// __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
-//   Float2<FloatA> tr;
-//  for(int i=0; i<N_COLS; i++){
-//     for(int j=0; j<N_COLS; j++){
-//        b[i][j] = a[i][j]-conj(a[j][i]);
-//        b[i][j] = b[i][j]/((double) 2.);
-//     }
-//  }
-
-//   tr = trace<FloatA,FloatA>( a );
-
-//   #pragma unroll
-//   for(int i=0; i<N_COLS; i++){
-//     a[i][i] -= tr/((double)N_COLS);
-//   }
-// }
-
-// template<typename FloatA>
-// __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS]){
-//   Float2<FloatA> tr;
-//   for(int i=0; i<N_COLS; i++){
-//     for(int j=i; j<N_COLS; j++){
-//       a[i][j] = (a[i][j]-conj(a[j][i]))/((double)2.);
-//     }
-//   }
-//   for(int i=0; i<N_COLS-1; i++){
-//     for(int j=i+1; j<N_COLS; j++){
-//       a[j][i] = (-1.)*conj(a[i][j]);
-//     }
-//   }
-//   tr = trace<FloatA,FloatA>( a );
-  
-//   #pragma unroll
-//   for(int i=0; i<N_COLS; i++){
-//     a[i][i] -= tr/((double)N_COLS);
-//   }
-// }
-
-
 template<typename FloatG>
 __inline__ __device__ int check_unitarity( Float2<FloatG> U[3][3] ){
   Float2<FloatG> aux[3][3];
