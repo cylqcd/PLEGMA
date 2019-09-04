@@ -420,7 +420,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    PLEGMA_Vector<double> tmp(HOST);
    for(int i = 0 ; i < p.NeV; i++){
      double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
-     tmp.readFromLime(filenamePrefix + "_eV" + std::to_string(i));
+     tmp.readFile(filenamePrefix + "_eV" + std::to_string(i),LIME_FORMAT);
      memcpy(eigVec,tmp.H_elem(),bytes_per_Vec);
      if(verbose) PLEGMA_printf("Eigenvector %d loaded\n", i);
    }
@@ -432,7 +432,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    for(int i = 0 ; i < p.NeV; i++){
      double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
      memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
-     tmp.writeToLime(filenamePrefix + "_eV" + std::to_string(i));
+     tmp.writeFile(filenamePrefix + "_eV" + std::to_string(i), LIME_FORMAT);
      if(verbose) PLEGMA_printf("Eigenvector %d writen\n", i);
    }   
  }
