@@ -98,17 +98,15 @@ public:
 	arg.name = arg_cmd[i];
 	trimPrefix(arg.name);
 	i++;
-	if(i >= arg_cmd.size()) errorCollection.push_back("Error: name ["+arg.name+"] does not have a value\n");
 	std::stringstream cs;
-	while(!checkPrefix(arg_cmd.at(i),false)){
+	while(i < arg_cmd.size() && !checkPrefix(arg_cmd.at(i),false)){
 	  cs << " " << arg_cmd.at(i);
 	  i++;
 	  if(i >= arg_cmd.size()) break;
 	}
-	i--;
 	std::string str = cs.str();
+	if(!str.empty()) i--;
 	trimSpaceTab(str);
-	if(str.empty()) errorCollection.push_back("Error: name ["+arg.name+"] does not have a value\n");
 	arg.value = str;
 	args.push_back(arg);
       }
@@ -167,6 +165,8 @@ private:
       descOpt[i] = firstP + spaces + secondP;
     }
     for(size_t i = 0 ; i < descOpt.size(); i++) PLEGMA_printf("%s\n",descOpt[i].c_str());
+  }
+  void set(std::string name,std::stringstream &cs){
   }
   template<typename T>
   void set(std::string name,std::stringstream &cs, T &v){
@@ -233,6 +233,9 @@ private:
     PLEGMA_printf("%s\n",(name+toString(pars...)).c_str());
   }
 
+  std::string getOptTypes(){
+    return "no params";
+  }
   
   template<typename T, typename... Pars>
   std::string getOptTypes(T &p1, Pars & ... par){
@@ -259,6 +262,9 @@ private:
     return res;
   }
 
+  std::string getfullDesc(std::string name,std::string desc){
+    return "[" + name + "] " + getOptTypes() + dressDesc + " " + desc;
+  }
 
   template<typename... Pars>
   std::string getfullDesc(std::string name,std::string desc, Pars & ... par){
@@ -274,10 +280,10 @@ public:
   }
   ~Options(){close();}
     
-  template<typename T, typename... Pars>
-  bool set(std::string name, std::string desc, int visualize, T &p1, Pars & ... par){
+  template<typename... Pars>
+  bool set(std::string name, std::string desc, int visualize, Pars & ... par){
     if(!isOpen){PLEGMA_error("Options are closed you cannot set");}
-    std::string fullDesc = getfullDesc(name,desc,p1,par...);
+    std::string fullDesc = getfullDesc(name,desc,par...);
     descOpt.push_back(fullDesc);
     if(noOptions) return false;
     checkIfSet(name);
@@ -287,14 +293,14 @@ public:
       if(args[i].name == name){
 	cs.clear();
 	cs.str(args[i].value);
-	set(name,cs,p1, par...);
-	if(!cs.eof()) errorCollection.push_back("Error: More arguments to unpack than expected for option [" + name + "]");
+	set(name,cs,par...);
+	if(!args[i].value.empty() && !cs.eof()) errorCollection.push_back("Error: More arguments to unpack than expected for option [" + name + "]");
 	args.erase(args.begin()+i);
 	countF++;
       }
-    if(countF == 0) { if(visualize>1) print(name,p1,par...); return false; }
+    if(countF == 0) { if(visualize>1) print(name,par...); return false; }
     else{
-      if(visualize)print(name,p1,par...);
+      if(visualize)print(name,par...);
       listSetOpt.push_back(name);
       if(countF>1) PLEGMA_printf("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);
       return true;
