@@ -23,13 +23,12 @@ namespace plegma {
     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
 
     Float calculatePlaq();
-    void calculatePlaqCorners();
-    void calculatePlaqShifts();
 
     //for checks
-    Float calculatePlaqClovDef();
-    Float calculatePlaqShiftDef();
-    Float calculatePlaqStaplesDef();
+    Float calculatePlaqCorners();
+    Float calculatePlaqShifts();
+    Float calculatePlaqClover();
+    Float calculatePlaqStaples();
 
     //PLEGMA_topocharge.cuh
     Float calculateTopo(TOPO_CHARGE_DEF charge_def);

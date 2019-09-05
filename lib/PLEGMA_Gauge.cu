@@ -44,64 +44,19 @@ Float PLEGMA_Gauge<Float>::calculatePlaq(){
 }
 
 template<typename Float>
-Float PLEGMA_Gauge<Float>::calculatePlaqClovDef(){
+Float PLEGMA_Gauge<Float>::calculatePlaqClover(){
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_CORNER);
   tex.tex = this->createTexObject();
-  Float plaq = calcPlaqClovDef<Float,Float>(tex);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette with clover is %.14f\n",plaq);
+  Float plaqClover = calcPlaqClovDef<Float,Float>(tex);
+  Float plaq = calculatePlaquette<Float>(tex);
+  if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette with clover is %f; diff with reference: %e\n",plaqClover, plaqClover-plaq);
   this->destroyTexObject(tex.tex);
-  return plaq;
+  return plaqClover;
 }
 
 template<typename Float>
-Float PLEGMA_Gauge<Float>::calculatePlaqShiftDef(){
-  Float resV=0;
-  PLEGMA_Su3field<Float> Plaq(BOTH);
-  PLEGMA_Su3field<Float> Plaq1(BOTH);
-  
-  for(int dir1 = 0; dir1 < 4; dir1++)
-    for(int dir2 = dir1+1; dir2 < 4; dir2++){
-      plaquette_s( Plaq, *this, dir1, dir2);
-      
-      resV += sumRtraceU<Float,Float>( Plaq );
-    }
-  
-  Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
-  gaugeTex<Float> tex;
-  this->communicateGhost(-1,FIRST_SIDE);
-  tex.tex = this->createTexObject();
-  Float plaqRef = calculatePlaquette<Float>(tex);
-  this->destroyTexObject(tex.tex);
-  PLEGMA_printf("TEST: Calculated plaquette with shifts is %.14f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
-
-  return plaqShifts;
-}
-
-template<typename Float>
-Float PLEGMA_Gauge<Float>::calculatePlaqStaplesDef(){
-  
-  this->communicateGhost(-1,FIRST_CORNER);
-
-  Float plaq = calcPlaqStaplesDef<Float>( this->D_elem() );
-
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette using staples is %f\n",plaq);
-  return plaq;
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
-  gaugeTex<Float> tex;
-  this->communicateGhost(-1,FIRST_CORNER);
-  tex.tex = this->createTexObject();
-  Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
-  Float plaqRef = calculatePlaquette<Float>(tex);
-  PLEGMA_printf("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
-  this->destroyTexObject(tex.tex);
-}
-
-template<typename Float>
-void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
+Float PLEGMA_Gauge<Float>::calculatePlaqShifts(){
   PLEGMA_Su3field<Float> res(BOTH);
   PLEGMA_Su3field<Float> tmp(BOTH);
   PLEGMA_Su3field<Float> *u_s[4];
@@ -130,6 +85,35 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
   for(int idir = 0; idir < 4 ; idir++)
     delete u_s[idir];
 
+  return plaqShifts;
+}
+
+template<typename Float>
+Float PLEGMA_Gauge<Float>::calculatePlaqStaples(){
+  
+  this->communicateGhost(-1,FIRST_CORNER);
+
+  Float plaqStaples = calcPlaqStaplesDef<Float>( this->D_elem() );
+
+  gaugeTex<Float> tex;
+  tex.tex = this->createTexObject();
+  Float plaq = calculatePlaquette<Float>(tex);
+  this->destroyTexObject(tex.tex);
+
+  if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette using staples is %f; diff with reference: %e\n", plaqStaples, plaqStaples-plaq);
+  return plaqStaples;
+}
+
+template<typename Float>
+Float PLEGMA_Gauge<Float>::calculatePlaqCorners(){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
+  tex.tex = this->createTexObject();
+  Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
+  Float plaqRef = calculatePlaquette<Float>(tex);
+  PLEGMA_printf("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
+  this->destroyTexObject(tex.tex);
+  return plaqCorners;
 }
 
 template<typename Float>
