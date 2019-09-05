@@ -277,10 +277,5 @@ void PLEGMA_Gauge<Float>::unitarize(){
   this->communicateGhost();
 }
 
-template<typename Float>
-void PLEGMA_Gauge<Float>::print_fields( int sid ){
-  print_fields_k( this->D_elem(), sid );
-}
-
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;

@@ -723,23 +723,6 @@ __inline__ __device__ FloatA trace_mul_ImG_ImG(Float2<FloatA> a[N_COLS][N_COLS],
   return -tr/4.;
 }
 
-//-------------------------//
-//  Used in Plegma_WFlow   |
-//-------------------------\\
-
-template<typename FloatG>
-__inline__ __device__ void print_SuN( Float2<FloatG> U[N_COLS][N_COLS] ){
-
-  for(int i=0; i<N_COLS; i++){
-    for(int j=0; j< N_COLS; j++){
-      printf("%.14f +j %.14f\t", U[i][j].x, U[i][j].y );
-    }
-    printf("\n");
-  }
-  printf("---\n");
-
-}
-
 template<typename FloatA>
 __inline__ __device__ void A_equal_B( Float2<FloatA> A[N_COLS][N_COLS], Float2<FloatA> B[N_COLS][N_COLS] ){
   #pragma unroll

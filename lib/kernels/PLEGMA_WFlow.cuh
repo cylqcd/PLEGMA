@@ -262,31 +262,3 @@ static FloatG calcPlaqStaplesDef( FloatG* d_pointer ){
   MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
   return globalPlaquette/(HGC_totalVolume*N_COLS*24);
 }
-
-template<typename FloatG>
-static __global__ void print_fields_kernel(  FloatG* dpointer, int sid_p ){
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  
-  if ( sid != sid_p ) {
-    return;
-  }
-
-  gauge2<FloatG> gaugep(dpointer);
-  Float2<FloatG> U[3][3];
-
-  for( int dir=0; dir<N_DIMS; dir++){
-    printf("dir = %d\n", dir);
-    gaugep.get( U, dir, sid );
-    print_SuN( U );      
-  }
-}
-
-template<typename FloatG>
-static void print_fields_k( FloatG* d_pointer, int sid ){
-
-  dim3 blockDim( THREADS_PER_BLOCK, 1, 1 );
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x, 1, 1);
-   
-  print_fields_kernel<FloatG><<<gridDim,blockDim>>>( d_pointer, sid );
-
-}

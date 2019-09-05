@@ -37,7 +37,6 @@ namespace plegma {
     void GFlow_step( PLEGMA_Gauge<Float> &Z, double eps );
     void applyGradientFlow( PLEGMA_Gauge<Float> &Z, int N, double eps);
     void unitarize();
-    void print_fields( int sid );
 
     void scaleDirWise(std::complex<Float> scale[N_DIMS]);
     void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);

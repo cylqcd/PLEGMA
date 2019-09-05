@@ -228,39 +228,6 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
 }
 
 
-
-//####################################################################################
-//###############                  Xcheck Functions                    ###############
-//####################################################################################
-
-//plaquette via field shifts
-template<typename Float>
-void plaquette_path( PLEGMA_Su3field<Float> &res, PLEGMA_Su3field<Float> *U[4], int dir_1, int dir_2) {
-  int spath[] = {dir_1, dir_2, (dir_1+4)%8, (dir_2+4)%8};
-  std::vector<int> vspath(spath,spath+4);
-
-  res.path(vspath, U);
-}
-
-//plaquette via shifts routines  
-template<typename Float, typename FloatG>
-void plaquette_s( PLEGMA_Su3field<Float> &res, PLEGMA_Gauge<FloatG> &U_in, int dir1, int dir2) {
-  PLEGMA_Su3field<Float> aux1(BOTH);
-  PLEGMA_Su3field<Float> aux2(BOTH);
-  PLEGMA_Su3field<Float> *U[4];
-
-  for(int idir = 0; idir < 4 ; idir++){
-    U[idir] = new PLEGMA_Su3field<Float>(BOTH);
-    U[idir]->absorbDir_device( U_in, idir);
-  }
-
-  //longest side along dir1
-  plaquette_path( res, U, dir1, dir2);//++
-  for(int idir = 0; idir < 4 ; idir++)
-    delete U[idir];
-}
-
-
 //kernel for computing the mean plaquette based on clover definition (for xchecks)
 template< typename FloatG,  typename Float >
 static __global__ void calcPlaqClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float *partial_plaq) {
