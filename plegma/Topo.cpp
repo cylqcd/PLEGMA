@@ -46,7 +46,7 @@ int main(int argc, char **argv)
   Z_aux.zero_where(DEVICE);
 
   // Reading from Lime file and loading to device
-  gauge.readFromLime( latfile.c_str() );
+  gauge.readFile( latfile, LIME_FORMAT );
   gauge.load();
   
   // Compuiting plaquette on device in three different way for crosschecking
