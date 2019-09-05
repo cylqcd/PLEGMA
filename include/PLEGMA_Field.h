@@ -68,7 +68,9 @@ namespace plegma {
 
     bool IsAllocHost() const { return isAllocHost;}
     bool IsAllocDevice() const { return isAllocDevice;}
-    
+
+    ALLOCATION_FLAG getAllocation() const { return allocation; }
+
     size_t Bytes_total() const { return bytes_total_length; }
     size_t Bytes_ghost() const { return bytes_ghost_length; }
     size_t Bytes_total_plus_ghost() const { return bytes_total_plus_ghost_length; }

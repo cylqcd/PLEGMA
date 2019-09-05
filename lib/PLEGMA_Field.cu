@@ -64,6 +64,8 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
   else if (alloc_flag == DEVICE){
     create_device();
   }
+  else if (alloc_flag == NONE){
+  }
   else{
     PLEGMA_error("Error not supported %d\n",alloc_flag);
   }
