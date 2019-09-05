@@ -122,8 +122,21 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
   datasets = {};
   groups = {};
 
+  bool not_up = propUP.getAllocation() == NONE;
+  bool not_dn = propDN.getAllocation() == NONE;
+  bool not_st = propST.getAllocation() == NONE;
+  bool not_ch = propCH.getAllocation() == NONE;
+
   std::vector<int> todo;
   for(int i=0; i<BP_prop_prods.size(); i++) {
+    if(not_up && BP_prop_prods[i].find('u')!=std::string::npos)
+      continue;
+    if(not_dn && BP_prop_prods[i].find('d')!=std::string::npos)
+      continue;
+    if(not_st && BP_prop_prods[i].find('s')!=std::string::npos)
+      continue;
+    if(not_ch && BP_prop_prods[i].find('c')!=std::string::npos)
+      continue;
     if(only_st && BP_prop_prods[i].find('s')==std::string::npos)
       continue;
     if(only_ch && BP_prop_prods[i].find('c')==std::string::npos)
@@ -144,19 +157,19 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 
   initialize();
   propTex<Float> propUPTex, propDNTex, propSTTex, propCHTex;
-  propUPTex.tex = propUP.createTexObject();
-  propDNTex.tex = propDN.createTexObject();
-  propSTTex.tex = propST.createTexObject();
-  propCHTex.tex = propCH.createTexObject();
+  if (!not_up) propUPTex.tex = propUP.createTexObject();
+  if (!not_dn) propDNTex.tex = propDN.createTexObject();
+  if (!not_st) propSTTex.tex = propST.createTexObject();
+  if (!not_ch) propCHTex.tex = propCH.createTexObject();
 
   for(int it = 0; it < HGC_localL[3]; it++) {
     contract_baryons_udsc(propUPTex, propDNTex, propSTTex, propCHTex, *this, it, todo);
   }
 
-  propUP.destroyTexObject(propUPTex.tex);
-  propDN.destroyTexObject(propDNTex.tex);
-  propST.destroyTexObject(propSTTex.tex);
-  propCH.destroyTexObject(propCHTex.tex);
+  if (!not_up) propUP.destroyTexObject(propUPTex.tex);
+  if (!not_dn) propDN.destroyTexObject(propDNTex.tex);
+  if (!not_st) propST.destroyTexObject(propSTTex.tex);
+  if (!not_ch) propCH.destroyTexObject(propCHTex.tex);
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
