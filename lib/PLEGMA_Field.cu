@@ -35,6 +35,7 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 
   field_length = field_l;
   total_length = vol_l;
+  site_shape = {field_l};
   
   ghost_length = 0;
   ghost_corner_length = 0;
@@ -73,6 +74,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHO
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
 {
   initialize(alloc_flag, site_size, HGC_localVolume);
+  field_name = "PLEGMA_CUSTOM";
 }
 
 template<typename Float>
@@ -82,40 +84,55 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
 {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
-
+  
   switch(classT){
-    case SCALAR:
-      initialize(alloc_flag, 1, HGC_localVolume);
-      field_name = "PLEGMA_SCALAR";
-      break;
-    case SU3FIELD:
-      initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_SU3FIELD";
-      break;
-    case GAUGE:
-      initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_GAUGE";
-      break;    
-    case VECTOR:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_VECTOR";
-      break;
-    case PROPAGATOR:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
-      field_name = "PLEGMA_PROPAGATOR";
-      break;
-    case PROPAGATOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
-      field_name = "PLEGMA_PROPAGATOR3D";
-      break;
-    case VECTOR3D:
-      initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
-      field_name = "PLEGMA_VECTOR3D";
-      break;
-    case QLOOPS:
-      initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
-      field_name = "PLEGMA_QLOOPS";
-      break;
+  case SCALAR:
+    initialize(alloc_flag, 1, HGC_localVolume);
+    field_name = "PLEGMA_SCALAR";
+    setSiteShape({});
+    break;
+  case SU3FIELD:
+    initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_SU3FIELD";
+    setSiteShape({N_COLS, N_COLS});
+    break;
+  case GAUGE:
+    initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_GAUGE";
+    setSiteShape({N_DIMS, N_COLS, N_COLS});
+    break;    
+  case VECTOR:
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_VECTOR";
+    setSiteShape({N_SPINS, N_COLS});
+    break;
+  case PROPAGATOR:
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_PROPAGATOR";
+    setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
+    break;
+  case PROPAGATOR3D:
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    field_name = "PLEGMA_PROPAGATOR3D";
+    setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
+    break;
+  case VECTOR3D:
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    field_name = "PLEGMA_VECTOR3D";
+    setSiteShape({N_SPINS, N_COLS});
+    break;
+  case QLOOPS:
+    initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
+    field_name = "PLEGMA_QLOOPS";
+    setSiteShape({N_SPINS, N_SPINS});
+    break;
+  case FMUNU:
+    initialize(alloc_flag, ((N_SPINS * (N_SPINS-1))/2) * N_COLS * N_COLS, HGC_localVolume);
+    field_name = "PLEGMA_FMUNU";
+    setSiteShape({((N_SPINS * (N_SPINS-1))/2), N_COLS, N_COLS});
+    break;
+  default:
+    PLEGMA_error("Unknown field class %d\n", classT);
   }
 }
 
@@ -196,6 +213,7 @@ void PLEGMA_Field<Float>::create_device(){
     hostMalloc(h_ext_ghost_corner_r, bytes_ghost_corner_length);
     hostMalloc(h_ext_ghost_corner_s, bytes_ghost_corner_length);
 #endif
+
   }
   checkCudaError();
   isAllocDevice = true;
@@ -234,6 +252,7 @@ void PLEGMA_Field<Float>::destroy_device(){
     hostFree(h_ext_ghost_corner_r,bytes_ghost_corner_length); h_ext_ghost_corner_r=NULL;
     hostFree(h_ext_ghost_corner_s,bytes_ghost_corner_length); h_ext_ghost_corner_s=NULL;
 #endif
+
   }
   checkCudaError();
   isAllocDevice=false;
@@ -339,20 +358,18 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
         Float *pointer_receive = h_ext_ghost_r + (HGC_sideGhost[i]-total_length)*field_length*2;
         Float *pointer_send = h_ext_ghost_s + (HGC_sideGhost[i]-total_length)*field_length*2;
         Float *pointer_device = d_elem + HGC_sideGhost[i]*field_length*2;
-        int disp[N_DIMS] = {0};
+	int disp;
         size_t nbytes = HGC_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
 
         // collecting elements from device
         copy_side_to_ghost(*this, i);
         cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
         checkCudaError();
-
-        // communicating
-        disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
-        mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
-        disp[i%N_DIMS] *= -1;
-        mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
-        disp[i%N_DIMS] = 0;
+	
+	disp = (i<N_DIMS) ? +1 : -1;
+        mh_recv.push_back(comm_declare_receive_relative(pointer_receive,i%N_DIMS,disp,nbytes)); 
+	disp *= -1;
+        mh_send.push_back(comm_declare_send_relative(pointer_send,i%N_DIMS,disp,nbytes));
         comm_start(mh_recv.back());
         comm_start(mh_send.back());
       }
@@ -637,7 +654,7 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::writeToLime(std::string filename){
+void PLEGMA_Field<Float>::writeLIME(std::string filename){
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   FILE *fid;
   LimeWriter *limewriter = (LimeWriter*)NULL;
@@ -662,23 +679,103 @@ void PLEGMA_Field<Float>::writeToLime(std::string filename){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::readFromLime(std::string filename){
-  FILE *fid;
-  LimeReader *limereader;
+void PLEGMA_Field<Float>::readLIME(std::string filename){
   int precRead=0, dofRead=0;
-  fid=fopen(filename.c_str(),"r");
-  if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
-  if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
-  read_lime_header(limereader,precRead,dofRead);
+
+  FILE *fid = NULL;
+  LimeReader *limereader = NULL;
+  if(comm_rank() == 0){
+    fid=fopen(filename.c_str(),"r");
+    if(fid==NULL) PLEGMA_error("Error opening file for reading: %s\n", filename.c_str());
+    if ((limereader = limeCreateReader(fid))==NULL) PLEGMA_error("Could not create limeReader");
+    read_lime_header(limereader,precRead,dofRead);
+  }
+  comm_broadcast(&precRead,sizeof(int));
+  comm_broadcast(&dofRead,sizeof(int));
   if(precRead != Precision()) PLEGMA_error("PLEGMA field precision %d != %d precision read from LIME",Precision(),precRead);
   if(!isAllocHost) PLEGMA_error("Host memory should be allocated to read data from lime");
   if(dofRead > 0 && dofRead != field_length) PLEGMA_error("PLEGMA field dof %d != %d dof read from LIME", field_length, dofRead);
   read_binary_from_lime(filename,fid,limereader,h_elem,field_length);
-  limeDestroyReader(limereader);
-  fclose(fid);
+  if(comm_rank() == 0){
+    limeDestroyReader(limereader);
+    fclose(fid);
+  }
   if(isAllocDevice) load();
 }
 
+template<typename Float>
+std::string PLEGMA_Field<Float>::
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+  std::string descr = "shape: ";
+
+  // Field shape
+  if(!this->site_shape.empty()) {
+    descr += "/" + field_name;
+    for(auto s : this->site_shape) {
+      shape.push_back(s);
+      lshape.push_back(s);
+      start.push_back(0);    
+    }
+  }
+  
+  descr += "/x/y/z/t";
+  // Volume
+  for(int i=0; i<N_DIMS; i++) {
+    shape.push_back(HGC_totalL[i]);
+    lshape.push_back(HGC_localL[i]);
+    start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+  }
+
+  //re-im
+  descr += "/re-im";
+  shape.push_back(2);
+  lshape.push_back(2);
+  start.push_back(0);
+
+  return descr;
+}
+
+
+template<typename Float>
+void PLEGMA_Field<Float>::writeHDF5(std::string filename){
+  if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
+  assert(isAllocHost);
+  std::vector<hsize_t> shape, lshape, start;
+  std::string descr = fill_H5_shapes(shape, lshape, start);
+
+  std::string dataset = "data"; // default name
+  
+  // checking if dataset name provided in filename
+  // NOTE: use '/' at the end of filename to use default name
+  size_t ext = filename.rfind(".h5");
+  if(ext + 3 < filename.length() && filename[ext+3] == '/') {
+    size_t last = filename.rfind("/");
+    if(last + 1 < filename.length()) {
+      dataset = filename.substr(last+1);
+      filename = filename.substr(0, last+1);
+    }
+  }
+
+  HDF5 writer(filename, MPI_COMM_WORLD);
+
+  if(isAllocDevice) unload();
+  writer.write_dataset(dataset, h_elem, shape, lshape, start);
+  writer.write_attribute(dataset, "description", descr);
+}
+
+
+template<typename Float>
+void PLEGMA_Field<Float>::TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
+					PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r,
+					PLEGMA_Su3field<Float> &Wr){
+  traceMulFmunuSu3FmunuSu3_k(*this,Fl,munu_l,Wl,Fr,munu_r,Wr);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu){
+  gauge.communicateSideGhost();
+  trPmunu_k(*this,gauge,munu);
+}
 
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;

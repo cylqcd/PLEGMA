@@ -64,8 +64,9 @@ static int isBigEndian()
 static void print_xlf_info(LimeReader *limereader) {
   n_uint64_t lime_data_size = limeReaderBytes(limereader);
   char * lime_data;
-  hostMalloc(lime_data, lime_data_size);
+  hostMalloc(lime_data, lime_data_size+1);
   limeReaderReadData((void *)lime_data, &lime_data_size, limereader);
+  lime_data[lime_data_size]='\0';
   std::string css = lime_data;
   if(css.empty()) return;
   std::stringstream ss(css);
@@ -77,7 +78,7 @@ static void print_xlf_info(LimeReader *limereader) {
   }
   if(HGC_verbosity>1) PLEGMA_printf("End LIME header.\n");
   
-  hostFree(lime_data, lime_data_size);
+  hostFree(lime_data, lime_data_size+1);
 }
 
 template<typename T>
@@ -87,6 +88,8 @@ bool getValueFromXML(std::string str, std::string toMatch, T &value){
   while(ss.good()){
     std::string line;
     getline(ss,line,'\n');
+    if(HGC_verbosity > 2) PLEGMA_printf("Extract line: %s\n",line.c_str());
+    if(line.empty()) PLEGMA_error("Problem with extracting from LIME XML\n Message:\n %s",str.c_str());
     line = line.substr(line.find_first_not_of(" \t"),line.find_last_not_of(" \t")-line.find_first_not_of(" \t")+1);
     if(line.find(toMatch) != std::string::npos){
       int left = line.find_first_of(">");
@@ -108,8 +111,10 @@ bool getValueFromXML(std::string str, std::string toMatch, T &value){
 static void get_ildg_info(LimeReader *limereader, int &prec, int &dof){
   n_uint64_t lime_data_size = limeReaderBytes(limereader);
   char * lime_data;
-  hostMalloc(lime_data, lime_data_size);
-  limeReaderReadData((void *)lime_data, &lime_data_size, limereader);
+  hostMalloc(lime_data, lime_data_size+1);
+  int status = limeReaderReadData((void *)lime_data, &lime_data_size, limereader);
+  if( status < 0 && status != LIME_EOR ) PLEGMA_error("Lime read error occured: status =%d",status);
+  lime_data[lime_data_size]='\0';
   std::string string_lime_data = lime_data;
   bool passCheck;
   
@@ -129,7 +134,7 @@ static void get_ildg_info(LimeReader *limereader, int &prec, int &dof){
     dof=-1;
     PLEGMA_warning("LIME: Cannot read d.o.f of field from ildg header. Switch to use the one provided");
   }
-  hostFree(lime_data, lime_data_size);
+  hostFree(lime_data, lime_data_size+1);
 }
 
 static void read_lime_header(LimeReader *limereader, int &prec, int &dof){
@@ -234,11 +239,15 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
 template<typename Float>
 static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *limereader, Float *data, int dof){
 #ifdef	MULTI_GPU
+  MPI_Offset offset;
   // Read 1 byte to set file-pointer to start of binary data
-  n_uint64_t one=1;
-  char dummy;
-  limeReaderReadData(&dummy,&one,limereader);
-  MPI_Offset offset = ftell(fid)-1;
+  if(comm_rank() == 0){
+    n_uint64_t one=1;
+    char dummy;
+    limeReaderReadData(&dummy,&one,limereader);
+    offset = ftell(fid)-1;
+  }
+  comm_broadcast(&offset,sizeof(MPI_Offset));
 #endif
 
   Float *ftmp;

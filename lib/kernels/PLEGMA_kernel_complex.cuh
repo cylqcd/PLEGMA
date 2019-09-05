@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <typeinfo>
 
+
 #ifndef PLEGMA_KERNEL_COMPLEX_CUH
 #define PLEGMA_KERNEL_COMPLEX_CUH
 

@@ -30,19 +30,20 @@ template<typename FloatA, typename FloatB, typename FloatC, int gamma>
 __device__ void contract_deltas_iso3o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, FloatC* block,
-					int it, int3 source, BARYONS_TYPE ip, bool runFT, tex_mom_list mom_list){
+__global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC>* block2,
+					int it, int time_step, int3 source, BARYONS_TYPE ip, bool runFT, tex_mom_list mom_list){
 
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*DGC_localVolume3D;
-  Float2<FloatC> *block2 = (Float2<FloatC> *)block;
-
+  int grid3D = gridDim.x/time_step;
+  int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
+  int tid = blockIdx.x/grid3D;
+  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  
   Float2<FloatC> accum[2*N_SPINS*N_SPINS];
   
   for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
     accum[i]=0;
   }
-  if (sid < DGC_localVolume3D){ // I work only on the spatial volume
+  if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
     switch(ip){
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
@@ -83,76 +84,105 @@ __global__ void contract_baryons_kernel(propTex<FloatA> texProp1, propTex<FloatB
     extern __shared__ int ext_shared_cache[];
     Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
     int source_pos[3] = {source.x, source.y, source.z}; 
-    fourier_transform_3D(block2, accum, shared_cache, 2*N_SPINS*N_SPINS, sid, source_pos, mom_list);
+    fourier_transform_3D(block2, accum, shared_cache, 2*N_SPINS*N_SPINS, sid3D, source_pos, mom_list, 0, -1, time_step, tid);
   } else {
     for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
-      block2[sid*2*N_SPINS*N_SPINS + i] = accum[i];
+      block2[(tid*DGC_localVolume3D + sid3D)*2*N_SPINS*N_SPINS + i] = accum[i];
     }
   }
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr, int it){
+static void contract_baryons_host( ProfileStruct &ps,
+				   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+				   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result, int ip){
 
-  int SpVol = HGC_localVolume/HGC_localL[3];
-
-  FloatC *h_partial_block = NULL;
-  FloatC *d_partial_block = NULL;
-
+  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = corr.getCorrSpace()==MOMENTUM_SPACE;
-  int site_size=2*N_SPINS*N_SPINS;
   size_t volume = corr.getVolSize()/HGC_localL[3];
-  size_t size = corr.getTotalSize()/HGC_localL[3]/N_BARYONS;
+  size_t size = corr.getTotalSize()/HGC_localL[3]/N_BARYONS*time_step;
+  int site_size=2*N_SPINS*N_SPINS;
   int3 source = corr.getSource3();
   tex_mom_list mom_list = corr.getTexMomList();
+
+  if(HGC_verbosity > 2)
+    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+
+  size_t alloc_size = (runFT==true)? (size * (ps.tp.grid.x/time_step) ) : size;
+  
+  Float2<FloatC> *h_partial_block = NULL;
+  Float2<FloatC> *d_partial_block = NULL;
+  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  // Checking for allocation error. In case we return and let the tuner handle the error.
+  cudaError_t error=cudaPeekAtLastError();
+  if(error != cudaSuccess) {
+    cudaFree(d_partial_block);
+    return;
+  }
+  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  
+  for(int it=0; it < HGC_localL[3]; it+=time_step) {
+    contract_baryons_device
+      <<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>
+      (texProp1, texProp2, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source,
+       (BARYONS_TYPE) ip, runFT, mom_list);
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+
+    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+
+    if(runFT==true){
+      int accumX = ps.tp.grid.x/time_step;
+      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+	for(int f = 0 ; f < 2; f++)
+	  for(int i = 0 ; i < site_size/2; i++) {
+	    result[((f*HGC_localL[3] + it)*volume +v)*site_size/2+i] = 0;
+	    for(int j = 0 ; j < accumX; j++)
+	      result[((f*HGC_localL[3] + it)*volume +v)*site_size/2+i] +=
+		h_partial_block[((v*2+f)*site_size/2+i)*accumX+j];
+	  }
+    } else {
+      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+	for(int f = 0 ; f < 2; f++)
+	  for(int i = 0 ; i < site_size/2; i++)
+	    result[((f*HGC_localL[3] + it)*volume +v)*site_size/2+i] = 
+	      h_partial_block[(v*2+f)*site_size/2+i];
+
+    }
+  }
+  hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  cudaFree(d_partial_block);
+}
+
+template<typename FloatA, typename FloatB, typename FloatC>
+static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr){
+  bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
+  int site_size=2*N_SPINS*N_SPINS;
   
   if(corr.getSiteSize()/N_BARYONS != site_size)
-    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize()/N_BARYONS, site_size);
 
-  int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
-  ProfileStruct ps(SpVol, shared_size);
-  // tuning done for first baryon
-  tune( ps, "contract_baryons_kernel", contract_baryons_kernel<FloatA,FloatB,FloatC>,
-	texProp1, texProp2, d_partial_block, it, source,  (BARYONS_TYPE) 0, runFT, mom_list);
-  
-  size_t alloc_size = (runFT==true)? (size * ps.tp.grid.x * 2) : (size * 2);
-  hostMalloc(h_partial_block, alloc_size * sizeof(FloatC));
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(FloatC) );
-  checkCudaError();
+  int shared_size = (runFT==true) ? (site_size*sizeof(Float2<FloatC>)) : 0;
 
-  if(runFT) cudaFuncSetCacheConfig(contract_baryons_kernel<FloatA,FloatB,FloatC>, cudaFuncCachePreferShared);
+  Float2<FloatC> *result = NULL;
+  if(runFT)
+    hostMalloc(result, (corr.getTotalSize()/N_BARYONS)*sizeof(Float2<FloatC>));
+  else
+    result = (Float2<FloatC> *) corr.getCorr();
+
+  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ps.max_volume = HGC_localVolume;
 
   for(int ip=0; ip<N_BARYONS; ip++) {
-    run( ps, "contract_baryons_kernel", contract_baryons_kernel<FloatA,FloatB,FloatC>,
-	 texProp1, texProp2, d_partial_block, it, source, (BARYONS_TYPE) ip, runFT, mom_list);
-    checkCudaError();    
-    cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
-    checkCudaError();
-    if(runFT==true){
-      int gridDimX = ps.tp.grid.x;
-      FloatC *reduction;
-      hostMalloc(reduction, size*2*sizeof(FloatC));
-      for(size_t i = 0 ; i < size; i++) {
-	reduction[i*2+0] = 0;
-	reduction[i*2+1] = 0;
-	for(int j = 0 ; j < gridDimX; j++) {
-	  reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
-	  reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
-	}
-      }
-      MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
-      hostFree(reduction, size*2*sizeof(FloatC));
+    std::string name = "contract_baryons_"+std::to_string(ip);
+    tuneAndRun( ps, name, contract_baryons_host<FloatA,FloatB,FloatC>,
+		ps, texProp1, texProp2, corr, result, ip);
+    if(runFT) {
+      FloatC *corr_ip = corr.getCorr() + ip*corr.getTotalSize()/N_BARYONS*2;
+      MPI_Allreduce(result, corr_ip, corr.getTotalSize()/N_BARYONS*2, MPI_Type(corr_ip),
+		    MPI_SUM, HGC_spaceComm);
+    } else {
+      result += corr.getTotalSize()/N_BARYONS;
     }
-
-    // Reordering accordingly to the wanted data layout
-    FloatC *corr_ip = corr.getCorr() + ip*HGC_localL[3]*size*2;
-    for(size_t v = 0 ; v < volume; v++)
-      for(int f = 0 ; f < 2; f++)
-	for(int i = 0 ; i < site_size; i++)
-	  corr_ip[((f*HGC_localL[3] + it)*volume +v)*site_size+i] = h_partial_block[(v*2+f)*site_size+i];
-    
-  }
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  checkCudaError();
+  } 
 }

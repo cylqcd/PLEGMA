@@ -2,6 +2,18 @@
 #include <PLEGMA_kernel_tuner.cuh>
 using namespace plegma;
 
+template<typename FloatA>
+static __global__ void Udag_kernel(FloatA *A){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= DGC_localVolume) return;
+  Float2<FloatA> lA[N_COLS][N_COLS];
+  su3_2<FloatA> RA(A);
+  RA.get(lA,sid);
+  Gdag(lA);
+  RA.set(lA,sid);
+}
+
+
 template<typename FloatA,typename FloatB>
 static __global__ void Udag_kernel(FloatA *A, FloatB *B){
   
@@ -150,6 +162,13 @@ static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   checkCudaError();
 }
 
+template<typename Float>
+static void Udag_k(PLEGMA_Su3field<Float> &A){
+  ProfileStruct ps(HGC_localVolume);
+  run(ps, "Udag_kernel", Udag_kernel<Float>,A.D_elem());
+  checkCudaError();
+}
+
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
   ProfileStruct ps(HGC_localVolume);
@@ -165,14 +184,9 @@ static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLE
 }
 
 template<typename Float, typename FloatS>
-static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
-  Float sum = 0.;
-  Float globalSum = 0.;
+static void sum_real_trace_host(ProfileStruct& ps, PLEGMA_Su3field<FloatS> &su3M, Float& sum){
   Float *h_partial_sum = NULL;
   Float *d_partial_sum = NULL;
-
-  ProfileStruct ps(HGC_localVolume,sizeof(FloatS));
-  tune(ps, "sum_real_trace_kernel", sum_real_trace_kernel<Float,FloatS>,su3M.D_elem(), d_partial_sum);
 
   int gridDimX = ps.tp.grid.x;
   
@@ -188,7 +202,16 @@ static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
   for(int i = 0 ; i < gridDimX ; i++)
     sum += h_partial_sum[i];
   hostFree(h_partial_sum, gridDimX * sizeof(Float) );
+}
 
+template<typename Float, typename FloatS>
+static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
+  Float sum = 0.;
+
+  ProfileStruct ps(HGC_localVolume,sizeof(FloatS));
+  tuneAndRun(ps, "sumRtraceU", sum_real_trace_host<Float,FloatS>, ps, su3M, sum);
+
+  Float globalSum = 0.;
   MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , MPI_COMM_WORLD);  
   return globalSum;
 }

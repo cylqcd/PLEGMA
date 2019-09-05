@@ -8,10 +8,10 @@ namespace plegma {
   ////////////////
   enum FT_TYPE{FT_NAIVE,FT_GEMV,FT_FFT};
   template<typename Float>
-  class PLEGMA_FT {
+  class PLEGMA_FT : public IO<void,int>  {
     using Vint = std::vector<int>;
     using VVint = std::vector<Vint>;
-  private:
+  protected:
     int Q2_max;
     VVint momList;
     bool isAllocated;
@@ -22,6 +22,9 @@ namespace plegma {
     int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[3] : 1; 
     bool accum;
     tex_mom_list texMomList;
+    std::string field_name;
+    std::vector<int> site_shape;
+
     /**
        @brief Creates a list momenta which have the p^2 up to a specific value 
      **/
@@ -98,6 +101,22 @@ namespace plegma {
     void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
     void scale(Float a);
 
-    void writeToFile(std::string filename, FILE_WRITE_FORMAT outputFormat, int timeshift = 0);
+    void writeFile(std::string filename, FILE_FORMAT format, int timeshift = 0) {
+      return IO<void,int>::writeFile(filename,format,timeshift);
+    }
+
+    std::string Field_name() const {return field_name;}
+    std::vector<int> getSiteShape() {return site_shape;}
+    void setSiteShape(std::vector<int> new_shape) {
+      int current_size=1, new_size = 1;
+      std::for_each(site_shape.begin(), site_shape.end(), [&] (int n) {current_size *= n;});
+      std::for_each(new_shape.begin(), new_shape.end(), [&] (int n) {new_size *= n;});
+      assert(current_size==new_size);
+      site_shape = new_shape;
+    }
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift = 0);
+
+    virtual void writeASCII(std::string filename, int timeshift = 0);
+    virtual void writeHDF5(std::string filename, int timeshift = 0);
 };
 }

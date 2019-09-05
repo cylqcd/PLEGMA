@@ -17,10 +17,10 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 
 
 static void dumpLoops(PLEGMA_FT<double> **ft,
- 		      std::string filenamePrefix, std::string confID, FILE_WRITE_FORMAT format){
+ 		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
   for(int idir=0; idir < 3; idir++)
     for(int i =0; i < HGC_totalL[0]; i++)
-      ft[idir*HGC_totalL[0]+i]->writeToFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
+      ft[idir*HGC_totalL[0]+i]->writeFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
 }
 
 int main(int argc, char **argv)
@@ -43,11 +43,22 @@ int main(int argc, char **argv)
   if((k_probing>0) && (hadamLow>hadamHgh))  PLEGMA_error("hadamard-high should be > hadamard-low");
   if((k_probing>0) && (hadamHgh>Nhadam)) PLEGMA_error("hadamard-high should be <= from max number of Hadamard vectors");
   HGC_options->set("spin-color-dil", "Whether we want spin color dilution",verbosity,spinColorDil);
+
+  int nsmearStoutWL = 30;
+  double alphaStoutWL = 0.129;
+  HGC_options->set("nsmear-stoutWL", "Number of stout smearing step for the Wilson line",verbosity,nsmearStoutWL);
+  HGC_options->set("alpha-stoutWL", "Coefficient for the stout smearing for the Wilson line",verbosity,alphaStoutWL);
+
   int Nsc = spinColorDil ? N_SPINS*N_COLS : 1;
   HGC_options->set("low-modes-recon", "Whether we want to use low modes of the operator to reconstruct part of the quark loop",verbosity,lowModesRecon);
   if(!lowModesRecon) Eig_NeV=0;
   std::string Eig_outputFile = "./eigsVdagG5V.dat";
   HGC_options->set("Eig-outputFile", "Path to dump the eigenvalues and vdag g5 v if low-modes-recon is enabled",verbosity, Eig_outputFile);
+  bool isReadEigenVecs = false, isWriteEigenVecs = false;
+  std::string fnameEigenVecsPrefix="";
+  HGC_options->set("readEigenVectors", "Where we want to read EigenVectors from file", verbosity, isReadEigenVecs);
+  HGC_options->set("writeEigenVectors", "Where we want to read EigenVectors from file", verbosity, isWriteEigenVecs);
+  HGC_options->set("prefixEigenVecsFile", "Path with prefix for the filenames of the eigenvectors", verbosity, fnameEigenVecsPrefix);
   int NdumpStep = 1;
   HGC_options->set("dump-step", "If accumulation is ON, Every how many stochastic vector to dump results", verbosity, NdumpStep);
   if(NdumpStep<1) PLEGMA_error("dump-step should be >= 1");
@@ -69,7 +80,7 @@ int main(int argc, char **argv)
   
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
-  gauge.readFromLime(latfile.c_str());
+  gauge.readFile(latfile, LIME_FORMAT);
   gauge.load();
   gauge.calculatePlaq();
 
@@ -77,6 +88,12 @@ int main(int argc, char **argv)
   initGaugeQuda(gauge, true);
   plaqQuda();
 
+  // apply stout smearing
+  PLEGMA_Gauge<double> gaugeStout;
+  gaugeStout.stoutSmearing(gauge,nsmearStoutWL, alphaStoutWL, 3);
+  PLEGMA_printf("Smeared Plaquette with stout 3D for Wilson Line:");
+  gaugeStout.calculatePlaq();
+  
   // apply boundary conditions since is needed for the covariant derivative
   // this needs to be done after initGaugeQuda otherwise causes troubles
   applyBoundaryConditions(gauge,true);
@@ -105,7 +122,7 @@ int main(int argc, char **argv)
 #else
     PLEGMA_error("No arpack or primme is compiled");
 #endif
-    eigSol = new EigSolver(eigParam, dslash_type , true);
+    eigSol = new EigSolver(eigParam, dslash_type , isReadEigenVecs, isWriteEigenVecs, fnameEigenVecsPrefix, true);
     eigSol->dumpEvalsVdagG5V(Eig_outputFile);
 #else
     PLEGMA_error("No eigenSolver is compiled");
@@ -154,10 +171,10 @@ int main(int argc, char **argv)
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
       checkCudaError();      
-      qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1./eigVal,gauge,ft_std);
+      qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1./eigVal,gaugeStout,ft_std);
       D->apply<M>(phi_r,phi);
       phi_r.apply_gamma5();
-      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gauge,ft_gen);
+      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gaugeStout,ft_gen);
     }
 #endif
 
@@ -197,11 +214,11 @@ int main(int argc, char **argv)
 	  if(lowModesRecon)
 	    eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
 #endif
-	  qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1,gauge,ft_std);
+	  qloops_std.oneEnd_trick_wilsonLine(phi,phi,-1,gaugeStout,ft_std);
 	  
 	  D->apply<M>(phi_r,phi);
 	  phi_r.apply_gamma5();
-	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gauge,ft_gen);
+	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gaugeStout,ft_gen);
 	  double t2=MPI_Wtime();
 	  PLEGMA_printf("Contraction time is %f\n",t2-t1);
 	} // for loop isc
@@ -236,116 +253,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-
-
-
-
-
-
-
-  // // ensuring mu negative
-  // if(mu>0) mu*=-1.;
-  // QUDA_solver *solverDN = new QUDA_solver(mu);
-  // PLEGMA_Vector<double> source(DEVICE);
-  // PLEGMA_Vector<double> phi;
-  // PLEGMA_Vector<double> tmp;
-  // //  bool isOneD = true;
-  // PLEGMA_QLoops<double> loops_std(BOTH,oneDLoops);
-  // QudaInvertParam inv_params = solverDN->getInvParams();
-  // // just put units to the whole for debugging
-  // source.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
-  // solverDN->solve(phi,source);
-  // // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
-  // phi.scaleVector(1./(2.*inv_params.kappa)); 
-
-  // gauge.communicateGhost();
-  // loops_std.oneEnd_trick(phi,phi,tmp,gauge,-1.,accumFlag); //standard one-end trick
-
-  // std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
-  // PLEGMA_FT<double> ft(1, 3);
-
-  // // do the FT and write to File std trick
-  // loops_std.load(loops_std.H_loc());
-  // ft.apply(loops_std);
-  // ft.writeToFile(prefix + "std_local_loops_FT.0000.dat", ASCII_FORM);
-  // if(isOneD)
-  //   for(int mu = 0 ; mu < 4 ; mu++){
-  //     loops_std.load(loops_std.H_oneD()[mu]);
-  //     ft.apply(loops_std);
-  //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "std_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);
-
-  //     loops_std.load(loops_std.H_oneDC()[mu]);
-  //     ft.apply(loops_std);
-  //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "std_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);      
-  //   }
-  
-
-  // PLEGMA_QLoops<double> loops_gen(BOTH,oneDLoops);
-  // PLEGMA_Vector<double> phi_r;
-  // QUDA_dirac *D = nullptr;
-  // if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
-  //   D = new QUDA_dirac(QUDA_CLOVER_WILSON_DSLASH);
-  // else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
-  //   D = new QUDA_dirac(QUDA_WILSON_DSLASH);
-  // else
-  //   PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
-
-  // D->apply<M>(phi_r,phi);
-  // phi_r.apply_gamma5();
-  // loops_gen.oneEnd_trick(phi, phi_r, tmp, gauge, +1., accumFlag); //generalized one-end trick
-
-  // // do the FT and write to File std trick
-  // loops_gen.load(loops_gen.H_loc());
-  // ft.apply(loops_gen);
-  // ft.writeToFile(prefix + "gen_local_loops_FT.0000.dat", ASCII_FORM);
-  // if(isOneD)
-  //   for(int mu = 0 ; mu < 4 ; mu++){
-  //     loops_gen.load(loops_gen.H_oneD()[mu]);
-  //     ft.apply(loops_gen);
-  //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "gen_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);
-
-  //     loops_gen.load(loops_gen.H_oneDC()[mu]);
-  //     ft.apply(loops_gen);
-  //     ft.scale(0.25);
-  //     ft.writeToFile(prefix + "gen_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORM);      
-  //   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// #ifdef CHECK_HPROP
-//   PLEGMA_Hprobing hprop(3);
-//   PLEGMA_Vector<double> vectorAuxD;
-//   PLEGMA_Vector<double> vectorAuxDD;
-//   vectorAuxD.setUnit((std::vector<int>) {0});
-//   FILE *ptr_test = NULL;
-//   std::string strM = "/onyx/noether/h/khadjiyiannakou/runs/Hhad";
-//   for(int ih = 0; ih < hprop.get_NHad(); ih++){
-//     ptr_test = fopen((strM+std::to_string(ih)).c_str(),"w");
-//     vectorAuxDD.applyHpropColoring4D(vectorAuxD,hprop,ih,(std::vector<int>) {0});
-//     vectorAuxDD.unload();
-//     for (int i = 0; i < vectorAuxDD.Total_length(); ++i) {
-//       fprintf(ptr_test,"%d %d\n",(int) vectorAuxDD.H_elem()[i*2],(int) vectorAuxDD.H_elem()[i*2+1] );
-//     }
-//     fclose(ptr_test);
-//   }
-//   exit(-1);
-// #endif // 

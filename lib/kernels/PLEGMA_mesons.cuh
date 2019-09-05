@@ -7,21 +7,22 @@ const __device__ short int mesons_indices[N_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,
 const __device__ float mesons_values[N_MESONS][16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
+__global__ void contract_mesons_device( propTex<FloatA> texProp1,
 					propTex<FloatB> texProp2,
-					FloatC* block, int it, int3 source,
+					Float2<FloatC> *block2, int it, int time_step, int3 source,
 					bool runFT, tex_mom_list moms){
 
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  int vid = sid + it*DGC_localVolume3D;
-  Float2<FloatC> *block2 = (Float2<FloatC> *)block;
+  int grid3D = gridDim.x/time_step;
+  int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
+  int tid = blockIdx.x/grid3D;
+  int vid = sid3D + (it+tid)*DGC_localVolume3D;
     
   register Float2<FloatC> accum[2*N_MESONS];
   for(int i = 0 ; i < 2*N_MESONS ; i++){
     accum[i] = 0.;
   }
 
-  if (sid < DGC_localVolume3D){ // run only on the spatial volume
+  if (sid3D < DGC_localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     texProp1.get(prop1,vid);
@@ -45,81 +46,100 @@ __global__ void contract_mesons_kernel( propTex<FloatA> texProp1,
 	}
       }
     }
-    if(runFT) {
-      extern __shared__ int ext_shared_cache[];
-      Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
-      int source_pos[3] = {source.x, source.y, source.z}; 
-      fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid, source_pos, moms);
-    } else {
-      if(block2 != NULL)
-	for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
-	  block2[sid*2*N_MESONS + ip] = accum[ip];
-	}
-    }
+  }
+  if(runFT) {
+    extern __shared__ int ext_shared_cache[];
+    Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
+    int source_pos[3] = {source.x, source.y, source.z}; 
+    fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid3D, source_pos, moms, 0, -1, time_step, tid);
+  } else {
+    if(block2 != NULL)
+      for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
+	block2[(tid*DGC_localVolume3D + sid3D)*2*N_MESONS + ip] = accum[ip];
+      }
   }
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
-			    PLEGMA_Correlator<FloatC> &corr, int it){
-  int SpVol = HGC_localVolume/HGC_localL[3];
-  FloatC *d_partial_block = NULL;
+void contract_mesons_host( ProfileStruct &ps,
+			   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+			   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result){
 
+  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
-  int site_size = 2*N_MESONS;
+  size_t size = corr.getTotalSize()/HGC_localL[3]*time_step;
   size_t volume = corr.getVolSize()/HGC_localL[3];
-  size_t size = corr.getTotalSize()/HGC_localL[3];
   int3 source = corr.getSource3();
   tex_mom_list moms = corr.getTexMomList();
+  int site_size = 2*N_MESONS;
+
+  if(HGC_verbosity > 2)
+    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+
+  size_t alloc_size = (runFT==true) ? (size * (ps.tp.grid.x/time_step)) : size;
+
+  Float2<FloatC> *h_partial_block = NULL;
+  Float2<FloatC> *d_partial_block = NULL;
+  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  // Checking for allocation error. In case we return and let the tuner handle the error.
+  cudaError_t error=cudaPeekAtLastError();
+  if(error != cudaSuccess) {
+    cudaFree(d_partial_block);
+    return;
+  }
+  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  
+  for(int it=0; it < HGC_localL[3]; it+=time_step) {
+    contract_mesons_device
+      <<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>
+      (texProp1, texProp2, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source, runFT, moms);
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+      
+    if(runFT==true) {
+      int accumX = ps.tp.grid.x/time_step;
+      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+	for(int f = 0 ; f < site_size; f++) {
+	  result[(f*HGC_localL[3] + it)*volume+v] = 0;
+	  for(int j = 0 ; j < accumX; j++)
+	    result[(f*HGC_localL[3] + it)*volume+v] += h_partial_block[(v*site_size+f)*accumX+j];
+	}
+    } else {
+      for(size_t v = 0 ; v < volume; v++)
+	for(int f = 0 ; f < site_size; f++) {
+	  result[(f*HGC_localL[3] + it)*volume+v] = h_partial_block[v*site_size+f];
+	}
+    }
+  }
+  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  cudaFree(d_partial_block);
+}
+
+template<typename FloatA, typename FloatB, typename FloatC>
+static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+			    PLEGMA_Correlator<FloatC> &corr){
+  bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
+  int site_size = 2*N_MESONS;
   
   if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
-  int shared_size = (runFT==true) ? site_size*2*sizeof(FloatC) : 0;
+  int shared_size = (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0;
+
+  Float2<FloatC> *result = NULL;
+  if(runFT)
+    hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
+  else
+    result = (Float2<FloatC> *) corr.getCorr();
+
+  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ps.max_volume = HGC_localVolume;
   
-  ProfileStruct ps(SpVol, shared_size);
-  tune( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC>,
-	texProp1, texProp2, d_partial_block, it, source, runFT, moms);
-  
-  size_t alloc_size;
-  if(runFT==true){
-    alloc_size = size * ps.tp.grid.x * 2;
-  } else {
-    alloc_size = size * 2;
-  }
-  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(FloatC));
-  run( ps, "contract_mesons_kernel", contract_mesons_kernel<FloatA,FloatB,FloatC>,
-       texProp1, texProp2, d_partial_block, it, source, runFT, moms);
-  checkCudaError();
-  
-  FloatC *h_partial_block = NULL;
-  hostMalloc(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(FloatC) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_block);
-  checkCudaError();
-  
-  if(runFT==true){
-    int gridDimX = ps.tp.grid.x;
-    FloatC *reduction;
-    hostMalloc(reduction, size*2*sizeof(FloatC));
-    for(size_t i = 0 ; i < size; i++) {
-      reduction[i*2+0] = 0;
-      reduction[i*2+1] = 0;
-      for(int j = 0 ; j < gridDimX; j++) {
-	reduction[i*2+0] += h_partial_block[(i*gridDimX + j)*2+0];
-	reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
-      }
-    }
-    MPI_Allreduce(reduction, h_partial_block, size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
-    hostFree(reduction, size*2*sizeof(FloatC));
-  }
-  
-  FloatC *corr_pt = corr.getCorr();
-  for(size_t v = 0 ; v < volume; v++)
-    for(int f = 0 ; f < site_size; f++) {
-      corr_pt[((f*HGC_localL[3] + it)*volume+v)*2+0] = h_partial_block[(v*site_size/2+f)*2+0];
-      corr_pt[((f*HGC_localL[3] + it)*volume+v)*2+1] = h_partial_block[(v*site_size/2+f)*2+1];
-    }
-  
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  tuneAndRun( ps, "contract_mesons", contract_mesons_host<FloatA,FloatB,FloatC>,
+	      ps, texProp1, texProp2, corr, result);
+
+  if(runFT)
+    MPI_Allreduce(result, corr.getCorr(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);
 }

@@ -242,6 +242,49 @@ namespace plegma {
         }
     }
 
+  template<typename Float,typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ Float2<Float> trace_mul_G_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
+    Float2<Float> res = 0.;
+#pragma unroll
+    for(int i=0; i<N_COLS; i++)
+#pragma unroll
+      for(int j=0; j<N_COLS; j++) {
+#pragma unroll
+	for(int k=0; k<N_COLS; k++) {
+	  res += a[i][j]*b[j][k]*c[k][i];
+	}
+      }
+    return res;
+  }
+
+
+  template<typename Float,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ Float2<Float> trace_mul_G_G_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS],
+							Float2<FloatC> c[N_COLS][N_COLS], Float2<FloatD> d[N_COLS][N_COLS]){
+    Float2<FloatA> tmp1[N_COLS][N_COLS], tmp2[N_COLS][N_COLS];
+    Float2<FloatA> res=0;
+    
+#pragma unroll
+    for(int i = 0; i < N_COLS; i++)
+#pragma unroll
+      for(int j = 0; j < N_COLS; j++){
+	tmp1[i][j]=0.; tmp2[i][j]=0.;
+#pragma unroll
+	for(int k = 0; k < N_COLS; k++){
+	  tmp1[i][j] += a[i][k]*b[k][j];
+	  tmp2[i][j] += c[i][k]*d[k][j];
+	}
+      }
+
+#pragma unroll
+    for(int i = 0; i < N_COLS; i++)
+#pragma unroll
+      for(int j = 0; j < N_COLS; j++){
+	res += tmp1[i][j]*tmp2[j][i];
+      }
+    return res;
+  }
+  
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_G_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
   #pragma unroll
@@ -425,8 +468,10 @@ namespace plegma {
   __inline__ __device__ void fourier_transform_3D( Float2<Float> *out, Float2<Float> *in,
 						   Float2<Float> *shared_cache, int n_comp,
 						   int sid3D, int sp[3], tex_mom_list &texMomList,
-						   int padding = 0, int sign = -1){
+						   int padding = 0, int sign = -1, int nTime=1, int tId=0){
     int cacheIndex = threadIdx.x;
+    int leftToReduce = gridDim.x/nTime;
+    int nMoms = texMomList.Nmoms;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
     for(int i=0; i<3; i++) {
@@ -435,7 +480,7 @@ namespace plegma {
     
     Float phase;
     Float2<Float> expon;
-    for(size_t imom = 0 ; imom < texMomList.Nmoms ; imom++){
+    for(int imom = 0 ; imom < nMoms ; imom++){
       int4 momv = texMomList.get(imom);
       phase = momv.x*id[0]/((Float) DGC_totalL[0]) + momv.y*id[1]/((Float) DGC_totalL[1]) + momv.z*id[2]/((Float) DGC_totalL[2]);
       phase *=  2. * PI;
@@ -448,7 +493,8 @@ namespace plegma {
       
       if(cacheIndex == 0 && out!=NULL){
 	for(int ip = 0 ; ip < n_comp ; ip++){
-	  out[(imom*(n_comp+padding) + ip)*gridDim.x + blockIdx.x] = shared_cache[ip*blockDim.x];
+	  out[((tId*nMoms + imom)*(n_comp+padding) + ip)*leftToReduce + (blockIdx.x%leftToReduce)] =
+	    shared_cache[ip*blockDim.x];
 	}
       }
     }    

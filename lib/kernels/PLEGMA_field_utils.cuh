@@ -21,7 +21,7 @@ static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<
   if(Fz.Field_length() != Fx.Field_length()) PLEGMA_error("Error input, output fields do not match");
   if(Fz.Field_length() != Fy.Field_length()) PLEGMA_error("Error input, output fields do not match");
   ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
+  run(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
 	     Fy.D_elem(),beta,Fz.Field_length());
   checkCudaError();
 }
@@ -256,4 +256,65 @@ static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   zipTplDIntDFl2 z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c,th_e));
   zipTplDIntDFl2 z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c+V,th_e+V));
   thrust::for_each(z1,z2,HadCol<Float>(ih));
+}
+
+template<typename Float, typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+static __global__ void traceMulFmunuSu3FmunuSu3_kernel(Float *F, FloatA *A, FloatB *B, FloatC *C, FloatD *D){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<Float> *F2 = (Float2<Float> *) F;
+  if (sid >= DGC_localVolume) return;
+  Float2<FloatA> lA[N_COLS][N_COLS];
+  Float2<FloatB> lB[N_COLS][N_COLS];
+  Float2<FloatC> lC[N_COLS][N_COLS];
+  Float2<FloatD> lD[N_COLS][N_COLS];
+  su3_2<FloatA> RA(A);
+  su3_2<FloatB> RB(B);
+  su3_2<FloatC> RC(C);
+  su3_2<FloatD> RD(D);
+  RA.get(lA,sid);
+  RB.get(lB,sid);
+  RC.get(lC,sid);
+  RD.get(lD,sid);
+  Float2<Float> res = trace_mul_G_G_G_G<FloatA,FloatB,FloatC,FloatD>(lA,lB,lC,lD);
+  F2[sid] = res;
+}
+
+template<typename Float, typename FloatA, typename FloatB, typename FloatC,typename FloatD>
+static void traceMulFmunuSu3FmunuSu3_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<FloatA> &A, std::pair<int,int> munu_l,
+				       PLEGMA_Su3field<FloatB> &B, PLEGMA_Fmunu<FloatC> &C,  std::pair<int,int> munu_r,
+				       PLEGMA_Su3field<FloatD> &D){
+  ProfileStruct ps(HGC_localVolume);
+  long int lshift = ((long int) A.munuToIndx(munu_l)) * N_COLS * N_COLS * HGC_localVolume * 2;
+  long int rshift = ((long int) C.munuToIndx(munu_r)) * N_COLS * N_COLS * HGC_localVolume * 2;
+  tuneAndRun(ps, "traceMulFmunuSu3FmunuSu3_kernel", traceMulFmunuSu3FmunuSu3_kernel<Float,FloatA,FloatB,FloatC,FloatD>,
+	     F.D_elem(), A.D_elem()+lshift, B.D_elem(),C.D_elem()+rshift, D.D_elem());
+  checkCudaError();
+}
+
+template<typename FloatA, typename FloatB>
+static void __global__ trPmunu_kernel(FloatA *out, FloatB *gauge, int mu, int nu){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= DGC_localVolume) return;
+  Float2<FloatA> *out2 = (Float2<FloatA> *) out;
+  gauge2<FloatA> u(gauge);
+  Float2<FloatB> U1[N_COLS][N_COLS], U2[N_COLS][N_COLS], U3[N_COLS][N_COLS];
+    /**
+      --<-- 
+     |     |
+     v     ^
+    x|-->--|
+   **/
+  // U_\mu(x) * U_\nu(x+\mu) * U^dag_\mu(x+nu) * U^\dag_\nu(x)
+  u.get(U1,mu,sid); u.get<Plus>(U2,nu,sid,mu); mul_G_G(U3,U1,U2);
+  u.get<Plus>(U2,mu,sid,nu); mul_G_Gdag(U1,U3,U2);
+  u.get(U2,nu,sid); mul_G_Gdag(U3,U1,U2);
+  out2[sid]= U3[0][0] + U3[1][1] + U3[2][2];
+}
+
+template<typename FloatA, typename FloatB>
+static void trPmunu_k(PLEGMA_Field<FloatA> &f,PLEGMA_Gauge<FloatB> &gauge, std::pair<int,int> munu){
+  ProfileStruct ps(HGC_localVolume);
+  if(std::get<0>(munu) == std::get<1>(munu)) PLEGMA_error("For Pmunu cannot have mu == nu");
+  tuneAndRun(ps,"trPmunu_kernel",trPmunu_kernel<FloatA,FloatB>,f.D_elem(),gauge.D_elem(),std::get<0>(munu),std::get<1>(munu));
+  checkCudaError();
 }

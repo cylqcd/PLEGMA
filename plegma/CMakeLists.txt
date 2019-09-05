@@ -70,6 +70,9 @@ target_link_libraries(qLoops ${PLEGMA_LIBS})
 cuda_add_executable(qLoops_WilsonLine qLoops_WilsonLine.cpp)
 target_link_libraries(qLoops_WilsonLine ${PLEGMA_LIBS})
 
+cuda_add_executable(gLoops_WilsonLine gLoops_WilsonLine.cpp)
+target_link_libraries(gLoops_WilsonLine ${PLEGMA_LIBS})
+
 cuda_add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
 target_link_libraries(FT ${PLEGMA_LIBS})
 
