@@ -691,5 +691,15 @@ namespace plegma {
     return globid;
   }
 
+  template<typename Float>
+  __inline__ __device__ void zero_G(Float2<Float> G[N_COLS][N_COLS]){
+#pragma unroll
+    for(int c1=0; c1<N_COLS; c1++)
+#pragma unroll
+      for(int c2=0; c2<N_COLS; c2++){
+	G[c1][c2]=0.;
+      }
+  }
+  
 }
 #endif
