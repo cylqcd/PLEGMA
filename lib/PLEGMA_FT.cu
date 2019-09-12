@@ -22,12 +22,14 @@ Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4
 }
 
 template<typename Float>
-PLEGMA_FT<Float>::PLEGMA_FT(std::vector<int> mom, int D3D4, bool accum):
+template<typename T>
+PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum):
   isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
-  momList.push_back(mom);
+  VFloat momF(mom.begin(),mom.end());
+  momList.push_back(momF);
   texMomList.Nmoms=0;
 }
 
@@ -46,8 +48,8 @@ void PLEGMA_FT<Float>::zero(){
 
 template<typename Float>
 void PLEGMA_FT<Float>::createMom(){
-  std::vector<int> v3 = {0,0,0};
-  std::vector<int> v4 = {0,0,0,0};
+  VFloat v3 = {0,0,0};
+  VFloat v4 = {0,0,0,0};
   for(int iQ = 0 ; iQ <= Q2_max ; iQ++)
     for(int nx = iQ ; nx >= -iQ ; nx--)
       for(int ny = iQ ; ny >= -iQ ; ny--)
@@ -112,8 +114,10 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
     hostMalloc(hostPtr, bytes);
     memset(hostPtr, 0, sizeof(bytes));
     cudaMalloc(&devPtr, bytes);
+    Float intp;
     for(int i=0; i<texMomList.Nmoms; i++) {
       for(int j=0; j<dims; j++) {
+	if(std::modf(momList[i][j],&intp) == 0.0) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
 	hostPtr[i*4+j]=momList[i][j];
       }
     }
@@ -177,8 +181,8 @@ void PLEGMA_FT<Float>::apply(const PLEGMA_Field<Float> &f, FT_TYPE type, int sig
 
 template<typename Float>
 void PLEGMA_FT<Float>::mulConstMomentumPhases(Vint src, int sign){
-  if(dims == 3 && src.size() != 3) PLEGMA_error("Src size is incompatible with the dimensionality of the FT");
-  if(dims == 4 && src.size() != 4) PLEGMA_error("Src size is incompatible with the dimensionality of the FT");
+  if(dims == 3 && src.size() != 3) PLEGMA_error("src size is incompatible with the dimensionality of the FT");
+  if(dims == 4 && src.size() != 4) PLEGMA_error("src size is incompatible with the dimensionality of the FT");
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   Float phase;
   std::complex<Float> expPhase;
@@ -368,3 +372,9 @@ writeHDF5(std::string filename, int timeshift) {
 
 template class PLEGMA_FT<float>;
 template class PLEGMA_FT<double>;
+template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool);
+template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool);
+template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool);
+template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool);
+template PLEGMA_FT<float>::PLEGMA_FT<double>(std::vector<double>,int,bool);
+template PLEGMA_FT<double>::PLEGMA_FT<double>(std::vector<double>,int,bool);
