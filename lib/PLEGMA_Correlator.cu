@@ -162,9 +162,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
   if (!not_st) propSTTex.tex = propST.createTexObject();
   if (!not_ch) propCHTex.tex = propCH.createTexObject();
 
-  for(int it = 0; it < HGC_localL[3]; it++) {
-    contract_baryons_udsc(propUPTex, propDNTex, propSTTex, propCHTex, *this, it, todo);
-  }
+  contract_baryons_udsc(propUPTex, propDNTex, propSTTex, propCHTex, *this, todo);
 
   if (!not_up) propUP.destroyTexObject(propUPTex.tex);
   if (!not_dn) propDN.destroyTexObject(propDNTex.tex);
