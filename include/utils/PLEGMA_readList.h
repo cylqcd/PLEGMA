@@ -1,8 +1,17 @@
 #pragma once
-
 /*
  * Functions that read from file the lists needed by PLEGMA_params.
  */
+
+inline void readConfsList() {
+  std::ifstream file(pathListGaugeConfs.c_str(),std::ifstream::in);
+  if(file.fail()) PLEGMA_error("Cannot open file to read confs list: %s\n",pathListGaugeConfs.c_str());
+  std::string str;
+  while(file >> str){
+    listGaugeConfs.push_back(str);
+  }
+  file.close();
+}
 
 inline void readSourceList() {
   hostMalloc(sourcePositions, N_DIMS*numSourcePositions*sizeof(int));

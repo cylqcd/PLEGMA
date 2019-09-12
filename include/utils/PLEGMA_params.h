@@ -25,6 +25,8 @@ define(std::vector<int> sinkMom, {0,0,0,0});
 define(WHICHPARTICLE which_particle, PROTON);  
 define(std::vector<GAMMAS> gammas, {}); 
 define(int numSourcePositions, 1);
+define(std::string pathListGaugeConfs);
+define(std::vector<std::string> listGaugeConfs);
 define(std::string pathListSourcePositions);
 define(int (*sourcePositions)[N_DIMS], NULL);
 define(int maxQsq, 64);
