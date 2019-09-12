@@ -42,6 +42,7 @@ namespace plegma {
     bool isPinnedHost;
     bool isAllocHost;
     bool isAllocDevice;
+    bool checkErr;
 
     CLASS_ENUM field_type;
     std::string field_name;
@@ -54,7 +55,7 @@ namespace plegma {
     void initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l);
   public:
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false);
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool D3 = false);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool D3 = false, bool checkErr = true);
     virtual ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();
