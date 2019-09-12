@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 	std::vector<double> rms = (n%2 == 0) ? v2.rms(list_R2,src) : v1.rms(list_R2,src);	  
 	std::string filename = outPrefix + "_nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(n+1)
 	  + "aGau" + convNumToStr(alpha);
-	if(comm_rank() == 0) write_std_vecs( filename,list_R2, counter,rms);
+	if(comm_rank() == 0) write_std_vecs( filename,false,list_R2, counter,rms);
       }
     }
   }
