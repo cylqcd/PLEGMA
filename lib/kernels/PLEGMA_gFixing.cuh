@@ -94,7 +94,7 @@ static void gFixingLandau_k(PLEGMA_Gauge<Float> &u_gFixed, PLEGMA_Gauge<Float> &
       tmp.absorbDir_device(u_gFixed,mu);
       tr+=tmp.sumRtraceU();
     }
-    prec = abs(trold-tr)/tr;
+    prec = abs(trold-tr)/abs(tr);
     if(HGC_verbosity>1) PLEGMA_printf("Landau Gauge Fixing iter=%d, prec=%+e and trace=%+e\n",iter,prec,tr);
     trold=tr;
     iter++; 
