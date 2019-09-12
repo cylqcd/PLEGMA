@@ -90,8 +90,10 @@ void contract_mesons_host( ProfileStruct &ps,
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
+    dim3 grid = ps.tp.grid;
+    grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
     contract_mesons_device
-      <<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>
+      <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (texProp1, texProp2, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source, runFT, moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
