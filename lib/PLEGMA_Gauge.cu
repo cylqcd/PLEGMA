@@ -96,7 +96,6 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
   }
   PLEGMA_Su3field<Float> tmp1(BOTH);
   PLEGMA_Su3field<Float> tmp2(BOTH);
-
   PLEGMA_Su3field<Float> *u_s1[D3D4];
   PLEGMA_Su3field<Float> *u_s2[D3D4];
 
@@ -128,7 +127,6 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
     cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
     checkCudaError();
   }
-  
   for(int idir = 0; idir < D3D4 ; idir++){
     delete u_s1[idir];
     delete u_s2[idir];
