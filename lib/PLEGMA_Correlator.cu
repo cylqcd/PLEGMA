@@ -320,7 +320,7 @@ writeASCII(std::string filename_out) {
 	int it_shift = (it + source_position[3])%HGC_totalL[3];
 	for(int imom=0; imom<Nmoms; imom++) {
 	  int ipos = (it_shift*Nmoms + imom)*site_size;
-	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, (int) momV[imom][0], (int) momV[imom][1], (int) momV[imom][2]);
+	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, (int) round(momV[imom][0]),(int) round(momV[imom][1]),(int) round(momV[imom][2]));
 	  for(int is = 0; is<site_size; is++)
 	    fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2+is*2], corrGlobal[ipos*2+is*2+1]);
 	  fprintf(ptr_out, "\n");
