@@ -7,10 +7,20 @@ using namespace plegma;
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge-list-filename","nsmear-stout","alpha-stout", 
 					   "nsrc","src-filename"}; // this will be used for the momenta
 
-static void computeAxA(std::vector<std::vector<std::complex<double>>> &AxA, PLEGMA_FT<double> &ftAl, PLEGMA_FT<double> &ftAr){
+static void computeGprop(std::vector<std::vector<std::complex<double>>> &AxA, PLEGMA_FT<double> &ftAl, PLEGMA_FT<double> &ftAr){
   std::vector<std::complex<double>> tmp(N_DIMS*N_DIMS*N_COLS*N_COLS,(std::complex<double>){0.,0.});
   std::complex<double> *Al = (std::complex<double> *) ftAl.H_elem();
   std::complex<double> *Ar = (std::complex<double> *) ftAr.H_elem();
+  // do traceless the gluon fields
+  for(int mu = 0; mu < N_DIMS; mu++){
+    std::complex<double> trl = (Al[(mu*N_COLS+0)*N_COLS+0] + Al[(mu*N_COLS+1)*N_COLS+1] + Al[(mu*N_COLS+2)*N_COLS+2])/3.;
+    std::complex<double> trr = (Ar[(mu*N_COLS+0)*N_COLS+0] + Ar[(mu*N_COLS+1)*N_COLS+1] + Ar[(mu*N_COLS+2)*N_COLS+2])/3.;
+    for(int c1 = 0; c1 < N_COLS; c1++){
+      Al[(mu*N_COLS+c1)*N_COLS+c1] -= trl;
+      Ar[(mu*N_COLS+c1)*N_COLS+c1] -= trr;
+    }
+  }
+  
   for(int mu = 0; mu < N_DIMS; mu++)
     for(int nu = 0; nu < N_DIMS; nu++)
       for(int c1 = 0; c1 < N_COLS; c1++)
@@ -33,6 +43,8 @@ int main(int argc, char **argv){
   HGC_options->set("isGFixed", "If this is true it means that the configuration provided is alread gauge fixed", verbosity,isGFixed);
   //==========================//
   initializePLEGMA();
+
+  
   if(numSourcePositions <=0) PLEGMA_error("No momenta have provided");
   PLEGMA_Gauge<double> gauge1,gauge2;
   PLEGMA_Field<double> trace1(BOTH,SCALAR),trace2(BOTH,SCALAR);
@@ -52,11 +64,11 @@ int main(int argc, char **argv){
   for(int mu = 0; mu < N_DIMS; mu++)
     for(int nu = 0; nu < N_DIMS; nu++)
       for(int c1 = 0; c1 < N_COLS; c1++)
-	for(int c2 = 0; c2 < N_COLS; c2++){
-	  muVec.push_back(mu); nuVec.push_back(nu); c1Vec.push_back(c1); c2Vec.push_back(c2);
-	}
+  	for(int c2 = 0; c2 < N_COLS; c2++){
+  	  muVec.push_back(mu); nuVec.push_back(nu); c1Vec.push_back(c1); c2Vec.push_back(c2);
+  	}
 
-
+  if(HGC_verbosity > 1) PLEGMA_printf("Will work on %d confs",listGaugeConfs.size());
   for(int iconf=0; iconf < listGaugeConfs.size(); iconf++){
     double t1=MPI_Wtime();
     std::string confStr=basename(listGaugeConfs[iconf],'.');
@@ -76,9 +88,9 @@ int main(int argc, char **argv){
     AxA.clear();    
     for(int im=0; im < numSourcePositions; im++){
       std::vector<double> mom=(std::vector<double>) {sourcePositions[im][0]+twistF[0],
-						     sourcePositions[im][1]+twistF[1],
-						     sourcePositions[im][2]+twistF[2],
-						     sourcePositions[im][3]+twistF[3]};
+  						     sourcePositions[im][1]+twistF[1],
+  						     sourcePositions[im][2]+twistF[2],
+  						     sourcePositions[im][3]+twistF[3]};
       std::vector<int> momVecX(N_DIMS*N_DIMS*N_COLS*N_COLS,mom[0]);
       std::vector<int> momVecY(N_DIMS*N_DIMS*N_COLS*N_COLS,mom[1]);
       std::vector<int> momVecZ(N_DIMS*N_DIMS*N_COLS*N_COLS,mom[2]);
@@ -88,7 +100,7 @@ int main(int argc, char **argv){
       ftAr = new PLEGMA_FT<double>(mom,4,false);
       ftAl->apply(gauge2,FT_GEMV,-1); // remember to put the twist in the temporal direction
       ftAr->apply(gauge2,FT_GEMV,+1); // remember to put the twist in the temporal direction
-      computeAxA(AxA,*ftAl,*ftAr);
+      computeGprop(AxA,*ftAl,*ftAr);
 
       if(comm_rank() == 0) write_std_vecs(filenameGprop,true,confVec,momVecX,momVecY,momVecZ,momVecT,muVec,nuVec,c1Vec,c2Vec,AxA[im]);
       delete ftAl,ftAr;
@@ -106,26 +118,26 @@ int main(int argc, char **argv){
     gLoop.clear();
     for(int n=0; n<=nsmearStout;n++){
       if(n%2 == 0){
-	if(n==0) gauge1.copy(gauge2);
-	else gauge1.stoutSmearing(gauge2,1,alphaStout,4);
+  	if(n==0) gauge1.copy(gauge2);
+  	else gauge1.stoutSmearing(gauge2,1,alphaStout,4);
       }
       else{
-	gauge2.stoutSmearing(gauge1,1,alphaStout,4);
+  	gauge2.stoutSmearing(gauge1,1,alphaStout,4);
       }
 
       trace2.zero_device();
       for(int i = 0 ; i < N_DIMS-1; i++){
-	trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(3,i));
-	trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+  	trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(3,i));
+  	trace2.axpy(trace1,(std::complex<double>) {1.,0.});
       }
       ftUL1.apply(trace2,FT_GEMV);
 
       trace2.zero_device();
       for(int i = 0 ; i < N_DIMS-1; i++)
-	for(int j = i+1 ; j < N_DIMS-1; j++){
-	  trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(i,j));
-	  trace2.axpy(trace1,(std::complex<double>) {1.,0.});
-	}
+  	for(int j = i+1 ; j < N_DIMS-1; j++){
+  	  trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(i,j));
+  	  trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+  	}
       ftUL2.apply(trace2,FT_GEMV);
       gLoop.push_back(ftUL1.H_elem()[0] - ftUL2.H_elem()[0]);
     }
