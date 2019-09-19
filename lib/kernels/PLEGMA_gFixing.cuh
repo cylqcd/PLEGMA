@@ -1,5 +1,35 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_SU3_projection.cuh>
+
+template<typename Float>
+static __global__ void gluonField_kernel(Float* out, Float* in){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  gauge2<Float> Rout(out);
+  gauge2<Float> Rin(in);
+  Float2<Float> Gout[N_COLS][N_COLS], Gin[N_COLS][N_COLS];
+#pragma unroll
+  for(int mu = 0; mu < N_DIMS; mu++){
+    Rin.get(Gin,mu,sid);
+    Float tr = (Gin[0][0].y + Gin[1][1].y + Gin[2][2].y)/3.;
+#pragma unroll
+    for(int c1 = 0; c1 < N_COLS; c1++)
+#pragma unroll
+      for(int c2 = 0; c2 < N_COLS; c2++){
+	Gout[c1][c2].x = (Gin[c2][c1].y + Gin[c1][c2].y)/2.;
+	Gout[c1][c2].y = (Gin[c2][c1].x - Gin[c1][c2].x)/2.;
+      }
+    Gout[0][0].x -= tr; Gout[1][1].x -= tr; Gout[2][2].x -= tr;
+    Rout.set(Gout,mu,sid);
+  }
+}
+
+
+template<typename Float>
+static void gluonField_k(PLEGMA_Gauge<Float> &u_out, PLEGMA_Gauge<Float> &u_in){
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps, "gluonField_kernel", gluonField_kernel<Float>, u_out.D_elem(), u_in.D_elem());
+  checkCudaError();
+}
 // Output is the gauge transformation
 // Input is the gauge field
 // This will be done in an iterative manner

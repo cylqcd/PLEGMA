@@ -203,5 +203,10 @@ void PLEGMA_Gauge<Float>::gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxP
   calculatePlaq();
 }
 
+template<typename Float>
+void PLEGMA_Gauge<Float>::gluonField(PLEGMA_Gauge<Float> &uIn){
+  gluonField_k(*this,uIn);
+}
+
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;
