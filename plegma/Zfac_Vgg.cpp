@@ -62,8 +62,8 @@ int main(int argc, char **argv){
   std::vector<double> twistF = {0.,0.,0.,0.}; // do not put any twist in the momentum
   std::string filenameGprop = filesPrefix + "/gProps_" + filesSuffix + ".txt";
   std::string filenameGLoops = filesPrefix + "/gLoops_" + filesSuffix +".txt";
-  if(doGLoops) if(comm_rank() == 0) cleanFile(filenameGprop);
-  if(comm_rank() == 0) cleanFile(filenameGLoops);
+  if(comm_rank()== 0) cleanFile(filenameGprop);
+  if(doGLoops) if(comm_rank() == 0) cleanFile(filenameGLoops);
   std::vector<int> muVec,nuVec, c1Vec, c2Vec;
   for(int mu = 0; mu < N_DIMS; mu++)
     for(int nu = 0; nu < N_DIMS; nu++)
