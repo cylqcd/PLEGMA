@@ -7,28 +7,28 @@ using namespace plegma;
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge-list-filename","nsmear-stout","alpha-stout", 
 					   "nsrc","src-filename"}; // this will be used for the momenta
 
-static void computeGprop(std::vector<std::vector<std::complex<double>>> &AxA, PLEGMA_FT<double> &ftAl, PLEGMA_FT<double> &ftAr){
+inline std::complex<double> middlePointPhase(int mu, std::vector<double> mom){
+  double arg = (PI/HGC_totalL[mu]) * mom[mu];
+  return (std::complex<double>) {cos(arg),-sin(arg)};
+}
+
+static void computeGprop(std::vector<std::vector<std::complex<double>>> &AxA, PLEGMA_FT<double> &ftAl, PLEGMA_FT<double> &ftAr,std::vector<double> mom){
   std::vector<std::complex<double>> tmp(N_DIMS*N_DIMS*N_COLS*N_COLS,(std::complex<double>){0.,0.});
   std::complex<double> *Al = (std::complex<double> *) ftAl.H_elem();
   std::complex<double> *Ar = (std::complex<double> *) ftAr.H_elem();
-  // do traceless the gluon fields
-  for(int mu = 0; mu < N_DIMS; mu++){
-    std::complex<double> trl = (Al[(mu*N_COLS+0)*N_COLS+0] + Al[(mu*N_COLS+1)*N_COLS+1] + Al[(mu*N_COLS+2)*N_COLS+2])/3.;
-    std::complex<double> trr = (Ar[(mu*N_COLS+0)*N_COLS+0] + Ar[(mu*N_COLS+1)*N_COLS+1] + Ar[(mu*N_COLS+2)*N_COLS+2])/3.;
-    for(int c1 = 0; c1 < N_COLS; c1++){
-      Al[(mu*N_COLS+c1)*N_COLS+c1] -= trl;
-      Ar[(mu*N_COLS+c1)*N_COLS+c1] -= trr;
-    }
-  }
   
-  for(int mu = 0; mu < N_DIMS; mu++)
-    for(int nu = 0; nu < N_DIMS; nu++)
+  for(int mu = 0; mu < N_DIMS; mu++){
+    std::complex<double> phl = middlePointPhase(mu,mom);
+    for(int nu = 0; nu < N_DIMS; nu++){
+      std::complex<double> phr = std::conj(middlePointPhase(mu,mom));
       for(int c1 = 0; c1 < N_COLS; c1++)
 	for(int c2 = 0; c2 < N_COLS; c2++){
 	  for(int cc = 0; cc < N_COLS; cc++)
-	    tmp[((mu*N_DIMS+nu)*N_COLS+c1)*N_COLS+c2] += Al[(mu*N_COLS+c1)*N_COLS+cc] * Ar[(nu*N_COLS+cc)*N_COLS+c2];
+	    tmp[((mu*N_DIMS+nu)*N_COLS+c1)*N_COLS+c2] += phl * Al[(mu*N_COLS+c1)*N_COLS+cc] * Ar[(nu*N_COLS+cc)*N_COLS+c2] * phr;
 	  tmp[((mu*N_DIMS+nu)*N_COLS+c1)*N_COLS+c2]  /= HGC_totalVolume;
 	}
+    }
+  }
   AxA.push_back(tmp);
 }
 
@@ -37,10 +37,14 @@ int main(int argc, char **argv){
   //==========================//
   std::string filesPrefix="./";
   HGC_options->set("output-path", "Path to the directory to dump results", verbosity, filesPrefix);
+  std::string filesSuffix="r0";
+  HGC_options->set("suffix", "Suffix of data filename to distiguish replicas", verbosity, filesSuffix);
   double overelaxPar = 0.2;
   HGC_options->set("overelax-param", "The value of the parameter will be used for the overelaxation",verbosity,overelaxPar);
   bool isGFixed = false;
   HGC_options->set("isGFixed", "If this is true it means that the configuration provided is alread gauge fixed", verbosity,isGFixed);
+  bool doGLoops = true;
+  HGC_options->set("doGLoops", "If you want to compute also gluon loops", verbosity,doGLoops);
   //==========================//
   initializePLEGMA();
 
@@ -55,10 +59,10 @@ int main(int argc, char **argv){
   for(int n=0; n<=nsmearStout;n++) nScount.push_back(n);
   std::vector<std::vector<std::complex<double>>> AxA;
   PLEGMA_FT<double> *ftAl=nullptr, *ftAr=nullptr;
-  std::vector<double> twistF = {0,0,0,0.5}; // twist in the temporal direction
-  std::string filenameGprop = filesPrefix + "/gProps.txt";
-  std::string filenameGLoops = filesPrefix + "/gLoops.txt";
-  if(comm_rank() == 0) cleanFile(filenameGprop);
+  std::vector<double> twistF = {0.,0.,0.,0.}; // do not put any twist in the momentum
+  std::string filenameGprop = filesPrefix + "/gProps_" + filesSuffix + ".txt";
+  std::string filenameGLoops = filesPrefix + "/gLoops_" + filesSuffix +".txt";
+  if(doGLoops) if(comm_rank() == 0) cleanFile(filenameGprop);
   if(comm_rank() == 0) cleanFile(filenameGLoops);
   std::vector<int> muVec,nuVec, c1Vec, c2Vec;
   for(int mu = 0; mu < N_DIMS; mu++)
@@ -80,10 +84,14 @@ int main(int argc, char **argv){
       gauge2.gFixingLandau(gauge1,overelaxPar);
       double t4=MPI_Wtime();
       PLEGMA_printf("Gauge fixing completed in %f secs\n",t4-t3);
+      gauge1.copy(gauge2);
+      gauge2.gluonField(gauge1);
     }
-    else gauge2.copy(gauge1);
+    else{
+      gauge2.gluonField(gauge1);
+    }
     
-    // Here we need to compute the gluon propagator
+    // Here we need to compute the gluon propagator which is located at gauge2 
     //std::vector<double> twistF = {0,0,0,0}; // twist in the temporal direction
     AxA.clear();    
     for(int im=0; im < numSourcePositions; im++){
@@ -100,7 +108,7 @@ int main(int argc, char **argv){
       ftAr = new PLEGMA_FT<double>(mom,4,false);
       ftAl->apply(gauge2,FT_GEMV,-1); // remember to put the twist in the temporal direction
       ftAr->apply(gauge2,FT_GEMV,+1); // remember to put the twist in the temporal direction
-      computeGprop(AxA,*ftAl,*ftAr);
+      computeGprop(AxA,*ftAl,*ftAr,mom);
 
       if(comm_rank() == 0) write_std_vecs(filenameGprop,true,confVec,momVecX,momVecY,momVecZ,momVecT,muVec,nuVec,c1Vec,c2Vec,AxA[im]);
       delete ftAl,ftAr;
@@ -113,40 +121,40 @@ int main(int argc, char **argv){
      * Term1 = \Tr[ \sum_i P_{i3} ]
      * Term2 = \Tr[sum_{i<j} P_{ij}]
      */
+    if(doGLoops){
+      // gauge1 holds the link variables in landau gauge (gluon field is not needed anymore and will be used for tmp)
+      gLoop.clear();
+      for(int n=0; n<=nsmearStout;n++){
+	if(n%2 == 0){
+	  if(n==0) gauge2.copy(gauge1);
+	  else gauge2.stoutSmearing(gauge1,1,alphaStout,4);
+	}
+	else{
+	  gauge1.stoutSmearing(gauge2,1,alphaStout,4);
+	}
 
-  
-    gLoop.clear();
-    for(int n=0; n<=nsmearStout;n++){
-      if(n%2 == 0){
-  	if(n==0) gauge1.copy(gauge2);
-  	else gauge1.stoutSmearing(gauge2,1,alphaStout,4);
-      }
-      else{
-  	gauge2.stoutSmearing(gauge1,1,alphaStout,4);
-      }
+	trace2.zero_device();
+	for(int i = 0 ; i < N_DIMS-1; i++){
+	  trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(3,i));
+	  trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+	}
+	ftUL1.apply(trace2,FT_GEMV);
 
-      trace2.zero_device();
-      for(int i = 0 ; i < N_DIMS-1; i++){
-  	trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(3,i));
-  	trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+	trace2.zero_device();
+	for(int i = 0 ; i < N_DIMS-1; i++)
+	  for(int j = i+1 ; j < N_DIMS-1; j++){
+	    trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(i,j));
+	    trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+	  }
+	ftUL2.apply(trace2,FT_GEMV);
+	gLoop.push_back(ftUL1.H_elem()[0] - ftUL2.H_elem()[0]);
       }
-      ftUL1.apply(trace2,FT_GEMV);
-
-      trace2.zero_device();
-      for(int i = 0 ; i < N_DIMS-1; i++)
-  	for(int j = i+1 ; j < N_DIMS-1; j++){
-  	  trace1.trPmunu((n%2==0)?gauge1:gauge2, std::make_pair(i,j));
-  	  trace2.axpy(trace1,(std::complex<double>) {1.,0.});
-  	}
-      ftUL2.apply(trace2,FT_GEMV);
-      gLoop.push_back(ftUL1.H_elem()[0] - ftUL2.H_elem()[0]);
+      std::vector<std::string> confVec(nsmearStout+1,confStr);
+      if(comm_rank() == 0) write_std_vecs(filenameGLoops,true,confVec,nScount,gLoop);
+      double t2=MPI_Wtime();
+      PLEGMA_printf("conf.%s completed in %f secs\n",confStr.c_str(),t2-t1);
     }
-    std::vector<std::string> confVec(nsmearStout+1,confStr);
-    if(comm_rank() == 0) write_std_vecs(filenameGLoops,true,confVec,nScount,gLoop);
-    double t2=MPI_Wtime();
-    PLEGMA_printf("conf.%s completed in %f secs\n",confStr.c_str(),t2-t1);
-  }
-  
+  }  
   // Vertex function will be create later from a multiplication of the gluon Loop with the gluon propagator
   
   finalize();
