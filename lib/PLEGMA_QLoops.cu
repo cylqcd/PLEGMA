@@ -224,6 +224,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
 						   PLEGMA_FT<Float> **FTs){
+  if(&x_l == &x_r) PLEGMA_error("The function with Wilson line needs different left from right locations");
   if(isOneD || isTwoD) PLEGMA_error("oneD or twoD cannot be computed with this function");
   if(!x_r.IsAllocHost())PLEGMA_error("You need to allocate also host memory for the x_r");
   x_r.unload();
