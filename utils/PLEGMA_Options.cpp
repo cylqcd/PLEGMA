@@ -260,7 +260,7 @@ void qudaOptions(Options &opt){
 
   default_map_MG(tpl_int_int, 24);
   isFound=opt.set("Q-mg-nvec", "Number of null-space vectors for multigrid, usage (level,nvec)", verbosity, tpl_int_int);
-  map_to_array_MG<int>(tpl_int_int, nvec, 1, 128, "ERROR: invalid number of vectors");
+  map_to_array_MG<int>(tpl_int_int, nvec, 1, 5000, "ERROR: invalid number of vectors");
 
   default_map_MG(tpl_int_int, 0);
   isFound=opt.set("Q-mg-nu-pre", "Number of pre-smoother applications, 0-20", verbosity, tpl_int_int);
@@ -318,6 +318,11 @@ void qudaOptions(Options &opt){
   default_map_MG(tpl_int_int, 100);
   isFound=opt.set("Q-mg-coarse-solver-maxiter", "The coarse solver maxiter for each level, usage(level,int)", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, coarse_solver_maxiter, 0, 10000, "ERROR: invalid max number of MG setup coarse solver max iter");
+
+  default_map_MG(tpl_int_int, 4);
+  isFound=opt.set("Q-mg-coarse-solver-ca-basis-size", "The basis size to use for CA-CG setup of multigrid, usage(level,int)", verbosity, tpl_int_int);
+  map_to_array_MG<int>(tpl_int_int, mg_coarse_solver_ca_basis_size, 0, 20, "ERROR: invalid size for CA-CG setup of multigrid");
+
 
   default_map_MG(tpl_int_string, (std::string) "false");
   isFound=opt.set("Q-mg-schwarz-type", "Whether to use Schwarz preconditioning (requires MR smoother and GCR setup solver), usage(level,add/mul)", verbosity,tpl_int_string);
