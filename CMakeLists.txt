@@ -31,7 +31,7 @@ if("${QUDA_HOME}" STREQUAL "")
   message( FATAL_ERROR "QUDA_HOME must be defined" )
 endif()
 FIND_LIBRARY(QUDA_LIB quda ${QUDA_HOME}/lib)
-include_directories(SYSTEM ${QUDA_HOME}/include ${QUDA_SRC}/lib)
+include_directories(SYSTEM ${QUDA_HOME}/include)
 
 set(QUDA_SRC "" CACHE PATH "path to QUDA src directory")
 if("${QUDA_SRC}" STREQUAL "")
