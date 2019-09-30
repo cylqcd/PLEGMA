@@ -405,7 +405,10 @@ void qudaOptions(Options &opt){
 
   isFound=opt.set("Q-mg-eig-vec-infile", "Name of the input file containing the multigrid exact deflation eigenvectors", verbosity, eig_vec_infile);
 
-  
-    opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
+  aux_str = (std::string) "false";
+  isFound=opt.set("Q-mg-preserve-deflation", "Preserve preserve the deflation space during MG update", verbosity, aux_str);
+  preserve_deflation = get_boolean(aux_str);
+
+  opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
 }

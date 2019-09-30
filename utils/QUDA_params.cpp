@@ -278,6 +278,10 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
   for(size_t level=0;level<mg_levels; level++)
     mg_param.use_eig_solver[level]=mg_eig[level];
 #endif
+
+#ifdef QUDA_INCLUDES_COMMIT_55782743
+  mg_param.preserve_deflation = preserve_deflation;
+#endif
  
   // set file i/o parameters
 #ifdef QUDA_INCLUDES_COMMIT_1dec1db
