@@ -24,7 +24,9 @@ void infoQuda();
 void setGaugeParam(QudaGaugeParam &gauge_param);
 void setMultigridParam(QudaMultigridParam &mg_param);
 void setInvertParam(QudaInvertParam &inv_param);
-
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+void setEigMultigridParam(QudaMultigridParam &mg_param, QudaEigParam *mg_eig_param);
+#endif
 //============== PLEGMA_utils.cpp =======================================//
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 extern const std::vector<std::string> listAvailOptPLEGMA;
