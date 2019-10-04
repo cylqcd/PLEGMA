@@ -56,7 +56,9 @@ int main(int argc, char **argv){
   PLEGMA_Field<double> trace1(BOTH,SCALAR),trace2(BOTH,SCALAR);
   PLEGMA_FT<double> ftUL1(0,4);
   PLEGMA_FT<double> ftUL2(0,4);
-  std::vector<double> gLoop;
+  std::vector<double> gLoopPlt; // gluon loops with Plaquette definition
+  std::vector<double> gLoopFST; // gluon loops diagonals with Field strength tensor
+  std::vector<double> gLoopFST_off[3]; // gluon loops off-diagonals with Field strength tensor
   std::vector<int> nScount;
   for(int n=0; n<=nsmearStout;n++) nScount.push_back(n);
   std::vector<std::vector<std::complex<double>>> AxA;
@@ -72,8 +74,17 @@ int main(int argc, char **argv){
     filenameGprop.push_back(filesPrefix + "/gProps" + momStr + filesSuffix + ".txt");
     if(comm_rank()== 0) cleanFile(filenameGprop[im]);
   }  
-  std::string filenameGLoops = filesPrefix + "/gLoops_" + filesSuffix +".txt";
-  if(doGLoops) if(comm_rank() == 0) cleanFile(filenameGLoops);
+  std::string filenameGLoopPlt = filesPrefix + "/gLoopPlt_" + filesSuffix +".txt";
+  std::string filenameGLoopFST = filesPrefix + "/gLoopFST_" + filesSuffix +".txt";
+  std::string filenameGLoopFST_off[3] = {filesPrefix + "/gLoopFST_off0_" + filesSuffix +".txt",
+					 filesPrefix + "/gLoopFST_off1_" + filesSuffix +".txt",
+					 filesPrefix + "/gLoopFST_off2_" + filesSuffix +".txt"};  
+
+  if(doGLoops) if(comm_rank() == 0) cleanFile(filenameGLoopPlt);
+  if(doGLoops) if(comm_rank() == 0) cleanFile(filenameGLoopFST);
+  if(doGLoops) if(comm_rank() == 0) for(int i=0;i < 3;i++) cleanFile(filenameGLoopFST_off[i]);
+  
+
   std::vector<int> muVec,nuVec, c1Vec, c2Vec;
   for(int mu = 0; mu < N_DIMS; mu++)
     for(int nu = 0; nu < N_DIMS; nu++)
@@ -122,17 +133,18 @@ int main(int argc, char **argv){
       if(comm_rank() == 0) write_std_vecs(filenameGprop[im],true,confVec,momVecX,momVecY,momVecZ,momVecT,muVec,nuVec,c1Vec,c2Vec,AxA[im]);
       delete ftAl,ftAr;
     }
+
+
+    PLEGMA_Fmunu<double> fmunu;
+    PLEGMA_Su3field<double> one3x3;
+    one3x3.setUnit((std::vector<int>) {0,4,8});
+    
     // Here we compute the gluon loops
-    /*
-     * Plaquete definition of the gluon loops
-     * Definition \mathcal{O} = \frac{-4*\beta}{9} Re{ \Tr[ \sum_i P_{3i} - sum_{i<j} P_{ij} ]}
-     * We will not include the factor \frac{-4*\beta}{9} now
-     * Term1 = \Tr[ \sum_i P_{i3} ]
-     * Term2 = \Tr[sum_{i<j} P_{ij}]
-     */
     if(doGLoops){
       // gauge1 holds the link variables in landau gauge (gluon field is not needed anymore and will be used for tmp)
-      gLoop.clear();
+      gLoopPlt.clear();
+      gLoopFST.clear();
+      gLoopFST_off[0].clear();      gLoopFST_off[1].clear();      gLoopFST_off[2].clear();
       for(int n=0; n<=nsmearStout;n++){
   	if(n%2 == 0){
   	  if(n==0) gauge2.copy(gauge1);
@@ -142,6 +154,15 @@ int main(int argc, char **argv){
   	  gauge1.stoutSmearing(gauge2,1,alphaStout,4);
   	}
 
+
+	// gLoops diagonal Plq definition
+	/*
+	 * Plaquete definition of the gluon loops
+	 * Definition \mathcal{O} = \frac{-4*\beta}{9} Re{ \Tr[ \sum_i P_{3i} - sum_{i<j} P_{ij} ]}
+	 * We will not include the factor \frac{-4*\beta}{9} now
+	 * Term1 = \Tr[ \sum_i P_{i3} ]
+	 * Term2 = \Tr[sum_{i<j} P_{ij}]
+	 */
   	trace2.zero_device();
   	for(int i = 0 ; i < N_DIMS-1; i++){
   	  trace1.trPmunu((n%2==0)?gauge2:gauge1, std::make_pair(3,i));
@@ -156,14 +177,66 @@ int main(int argc, char **argv){
   	    trace2.axpy(trace1,(std::complex<double>) {1.,0.});
   	  }
   	ftUL2.apply(trace2,FT_GEMV);
-  	gLoop.push_back(ftUL1.H_elem()[0] - ftUL2.H_elem()[0]);
+  	gLoopPlt.push_back(ftUL1.H_elem()[0] - ftUL2.H_elem()[0]);
+   
+
+      
+	// gLoops diagonal FST definition
+	/* Clover definition of gluon loops
+	 * Definition \mathcal{O} = \frac{-4*\beta}{18} \Tr[ \sum_{i<j} F^2_{ij} - \sum_i F^2_{i3} ]
+	 * Term1 = \Tr[ \sum_{i<j} F^2_{ij}]
+	 * Term2 = \Tr[ \sum_i F^2_{i3} ]
+	 */
+	fmunu.compute_leaves((n%2==0)?gauge2:gauge1);
+	trace2.zero_device();
+	for(int i = 0 ; i < N_DIMS-1; i++){
+	  trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(i,3),one3x3,fmunu,std::make_pair(i,3),one3x3);
+	  trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+	}
+	ftUL1.apply(trace2,FT_GEMV);
+	trace2.zero_device();
+	for(int i = 0 ; i < N_DIMS-1; i++)
+	  for(int j = i+1 ; j < N_DIMS-1; j++){
+	    trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(i,j), one3x3,fmunu,
+				      std::make_pair(i,j), one3x3);
+	    trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+	  }
+	ftUL2.apply(trace2,FT_GEMV);
+	gLoopFST.push_back(ftUL2.H_elem()[0] - ftUL1.H_elem()[0]);
+
+	// gLoops off diagonal elements with FST definition
+	/* Clover definition of gluon loops off diagonals
+	 * Definition \mathcal{O}_i = unknown * \Tr[\sum_\mu F_{i,\mu} * F_{3,\mu}]
+	 * FST indices cannot be same
+	 * unknow is a factor which will be figured out later
+	 */
+	for(int i =0 ; i< N_DIMS-1;i++){
+	  int sign;
+	  trace2.zero_device();
+	  for(int mu =0; mu< N_DIMS;mu++){
+	    if((i!=mu) && (mu!=3)){
+	      if(i<mu){ trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(i,mu), one3x3,fmunu,std::make_pair(mu,3), one3x3); sign=-1;}
+	      else{trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(mu,i), one3x3,fmunu,std::make_pair(mu,3), one3x3); sign=+1;}
+	      trace2.axpy(trace1,(std::complex<double>) {1.,0.});	      
+	    }
+	  }
+	  ftUL1.apply(trace2,FT_GEMV);
+	  gLoopFST_off[i].push_back(ftUL1.H_elem()[0]*sign);
+	}
+	
+	double t2=MPI_Wtime();
+	PLEGMA_printf("conf.%s completed in %f secs\n",confStr.c_str(),t2-t1);
       }
+      
       std::vector<std::string> confVec(nsmearStout+1,confStr);
-      if(comm_rank() == 0) write_std_vecs(filenameGLoops,true,confVec,nScount,gLoop);
-      double t2=MPI_Wtime();
-      PLEGMA_printf("conf.%s completed in %f secs\n",confStr.c_str(),t2-t1);
+      if(comm_rank() == 0){
+	write_std_vecs(filenameGLoopPlt,true,confVec,nScount,gLoopPlt);
+	write_std_vecs(filenameGLoopFST,true,confVec,nScount,gLoopFST);
+	for(int i =0 ; i< N_DIMS-1;i++)
+	  write_std_vecs(filenameGLoopFST_off[i],true,confVec,nScount,gLoopFST_off[i]);
+      }
     }
-  }  
+  }
   // Vertex function will be create later from a multiplication of the gluon Loop with the gluon propagator    
   finalize();
 }
