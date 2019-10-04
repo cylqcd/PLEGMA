@@ -282,7 +282,9 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 #ifdef QUDA_INCLUDES_COMMIT_55782743
   mg_param.preserve_deflation = preserve_deflation;
 #endif
- 
+#ifndef QUDA_INCLUDES_COMMIT_55782743
+  if(preserve_deflation) PLEGMA_error("The current version of QUDA does not include the preserve_deflation feature");
+#endif
   // set file i/o parameters
 #ifdef QUDA_INCLUDES_COMMIT_1dec1db
   for (int i=0; i<mg_param.n_level; i++) {
