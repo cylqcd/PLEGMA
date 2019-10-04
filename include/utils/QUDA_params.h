@@ -81,6 +81,7 @@ define(int schwarz_cycle[QUDA_MAX_MG_LEVEL], {});
 define(QudaBoolean mg_eig[QUDA_MAX_MG_LEVEL], {});
 define(int mg_eig_nEv[QUDA_MAX_MG_LEVEL], {});
 define(int mg_eig_nKr[QUDA_MAX_MG_LEVEL], {});
+define(int mg_eig_nConv[QUDA_MAX_MG_LEVEL], {});
 define(QudaBoolean  mg_eig_require_convergence[QUDA_MAX_MG_LEVEL], {});
 define(int mg_eig_check_interval[QUDA_MAX_MG_LEVEL], {});
 define(int mg_eig_max_restarts[QUDA_MAX_MG_LEVEL], {}); 

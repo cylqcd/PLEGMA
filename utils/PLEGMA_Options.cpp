@@ -393,6 +393,10 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-eig-amax", "The maximum in the polynomial acceleration, usage(level,float)", verbosity, tpl_int_double);
   map_to_array_MG<double>(tpl_int_double, mg_eig_amax, 0, 100, "ERROR: invalid maximum for polynomial acceleration");
 
+  default_map_MG(tpl_int_int, 100);
+  isFound=opt.set("Q-mg-eig-nConv", "Number of converged eigenvalues requested , usage (level,int)", verbosity, tpl_int_int);
+  map_to_array_MG<int>(tpl_int_int, mg_eig_nConv, 1, 1e4, "Invalid number of converged eigenvalues requested" );
+
   std::string aux_str="false";
   opt.set("Q-mg-eig-coarse-guess", "If deflating on the coarse grid, optionaly use an initial guess", verbosity, aux_str);
   mg_eig_coarse_guess=get_boolean(aux_str);
