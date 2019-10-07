@@ -144,7 +144,7 @@ static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
 template<typename FloatA, typename FloatB, typename FloatC>
 static void U_plus_eq_aU_k( PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, FloatC c){
   ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps, "U_plus_eq_aU_kernel", U_plus_eq_aU_kernel<FloatA,FloatB,FloatC>, A.D_elem(), B.D_elem(), c);
+  run(ps, "U_plus_eq_aU_kernel", U_plus_eq_aU_kernel<FloatA,FloatB,FloatC>, A.D_elem(), B.D_elem(), c);
   checkCudaError();
 }
 
