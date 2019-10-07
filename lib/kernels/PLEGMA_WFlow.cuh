@@ -92,7 +92,7 @@ __global__ void WUpdate( FloatG* w_dpointer, FloatG* z_dpointer ){
     for( int dir=0; dir<N_DIMS; dir++)
       {
 	Z.get(Z_i, dir, sid);
-	exp_G( Z_i );
+	exp_G_Taylor( Z_i );
 	
 	W.get(W_i, dir, sid);
 

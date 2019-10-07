@@ -724,7 +724,7 @@ __inline__ __device__ FloatA trace_mul_ImG_ImG(Float2<FloatA> a[N_COLS][N_COLS],
 }
 
 template<typename FloatA>
-__inline__ __device__ void A_equal_B( Float2<FloatA> A[N_COLS][N_COLS], Float2<FloatA> B[N_COLS][N_COLS] ){
+__inline__ __device__ void A_copyB( Float2<FloatA> A[N_COLS][N_COLS], Float2<FloatA> B[N_COLS][N_COLS] ){
   #pragma unroll
   for(int i=0; i<N_COLS; i++){
     #pragma unroll
@@ -743,7 +743,7 @@ __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS]){
   trace.y = 0.0;
   //M=a
   
-  A_equal_B( M, a);
+  A_copyB( M, a);
   
   #pragma unroll
   for(int i=0; i<N_COLS; i++){
@@ -765,13 +765,14 @@ __inline__ __device__ void AntiHermTrless_G(Float2<FloatA> a[N_COLS][N_COLS]){
   
 }
 
+// Exponentiate a matrix G by Taylor expanding the exponential up to maxdeg=10
 template<typename FloatA>
-__inline__ __device__ void exp_G(Float2<FloatA> a[N_COLS][N_COLS]){  
+__inline__ __device__ void exp_G_Taylor(Float2<FloatA> a[N_COLS][N_COLS]){  
   const int maxdeg = 10;
   Float2<FloatA> A[N_COLS][N_COLS];
   Float2<FloatA> tmp[N_COLS][N_COLS];
   
-  A_equal_B(A, a);
+  A_copyB(A, a);
   scaleG(A, 1.0/((FloatA)maxdeg));
   #pragma unroll
   for(int i=0; i<N_COLS; i++){
@@ -783,13 +784,13 @@ __inline__ __device__ void exp_G(Float2<FloatA> a[N_COLS][N_COLS]){
   for(int j=maxdeg-1; j>0; j--){
     mul_G_G(tmp, A, a);
     scaleG(tmp, 1.0/((FloatA)j) );
-    A_equal_B(A, tmp);
+    A_copyB(A, tmp);
     #pragma unroll
     for(int i=0; i<N_COLS; i++){
       A[i][i] = A[i][i] + 1.0;
     }
   }
-  A_equal_B(a, A);
+  A_copyB(a, A);
 }
 
 template<typename FloatG>
