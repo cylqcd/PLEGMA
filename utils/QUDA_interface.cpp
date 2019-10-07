@@ -38,6 +38,27 @@ static void initRand()
   srand(17*rank + 137);
 }
 
+
+static int lex_rank_from_coords_t(const int *coords, void *fdata)
+{
+  int rank = coords[0];
+  for (int i = 1; i < 4; i++) {
+    rank = procs[i] * rank + coords[i];
+  }
+  return rank;
+}
+
+static int lex_rank_from_coords_x(const int *coords, void *fdata)
+{
+  int rank = coords[3];
+  for (int i = 2; i >= 0; i--) {
+    rank = procs[i] * rank + coords[i];
+  }
+  return rank;
+}
+
+
+
 void initComms(int argc, char **argv, const int *commDims)
 {
   // TODO: QMP not supported right now
@@ -49,8 +70,15 @@ void initComms(int argc, char **argv, const int *commDims)
 #elif defined(MPI_COMMS)
   MPI_Init(&argc, &argv);
 #endif
-  initCommsGridQuda(4, commDims, NULL, NULL);
+
+  QudaCommsMap func = rank_order == 0 ? lex_rank_from_coords_t : lex_rank_from_coords_x;
+
+  initCommsGridQuda(4, commDims,func, NULL);
   initRand();
+
+  PLEGMA_printf("Rank order is %s major (%s running fastest)\n",
+	     rank_order == 0 ? "column" : "row", rank_order == 0 ? "t" : "x");
+
 }
 
 void finalizeComms()
@@ -112,7 +140,7 @@ void plaqQuda() {
 QUDA_solver::QUDA_solver(double mu) {
   profiler = new TimeProfile(("Solver profiler mu="+to_string(mu)).c_str());
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
-  
+
   mg_inv_param = newQudaInvertParam();
   mg_param = newQudaMultigridParam();
   mg_param.invert_param = &mg_inv_param;
@@ -128,7 +156,10 @@ QUDA_solver::QUDA_solver(double mu) {
   if(HGC_verbosity > 2) {
     printQudaInvertParam(&inv_param);
   }
-  
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  mg_eig_param = new QudaEigParam[mg_param.n_level];
+  setEigMultigridParam(mg_param,mg_eig_param);
+#endif
   // TODO: add support for other solvers
   if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 
     PLEGMA_error("initSolver: This function works only with Direct solve and even odd preconditioning");
@@ -194,6 +225,9 @@ QUDA_solver::~QUDA_solver(){
   delete D;
   delete DSloppy;
   delete DPre;
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  delete mg_eig_param;
+#endif
 }
 
 struct MG_Transfer{

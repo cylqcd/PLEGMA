@@ -29,6 +29,7 @@ namespace plegma {
     void UxUdag(PLEGMA_Su3field<Float> &x, PLEGMA_Su3field<Float> &y);
     void staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA_Su3field<Float> &tmp1, PLEGMA_Su3field<Float> &tmp2, Float rho, int D3D4);
     void traceHerExpMap(PLEGMA_Su3field<Float> &A);
+    Float sumRtraceU();
     void wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLEGMA_Su3field<Float> &tmp, int dirOr, bool reverse=false);
     void su3Projection();
   };

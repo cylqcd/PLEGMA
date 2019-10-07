@@ -61,6 +61,10 @@ void PLEGMA_Su3field<Float>::traceHerExpMap(PLEGMA_Su3field<Float> &A){
   traceHerExpMap_k(*this,A);
 }
 
+template<typename Float>
+Float PLEGMA_Su3field<Float>::sumRtraceU(){
+  return sumRtraceU_k<Float,Float>(*this);
+}
 
 template<typename Float>
 static void pathX(int *dir, int *sign, int length,PLEGMA_Su3field<Float> **u_s,

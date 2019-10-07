@@ -6,8 +6,8 @@ using namespace plegma;
 template<typename Float>
 struct MomF{
   int sign;
-  int momx, momy, momz, momt;
-  MomF(int sign, int momx, int momy, int momz, int momt):sign(sign),momx(momx),momy(momy),momz(momz),momt(momt){}
+  Float momx, momy, momz, momt;
+  MomF(int sign, Float momx, Float momy, Float momz, Float momt):sign(sign),momx(momx),momy(momy),momz(momz),momt(momt){}
   template<typename Tuple>
   __device__ void operator()(Tuple t){
     int id = thrust::get<0>(t);
@@ -27,7 +27,7 @@ struct MomF{
 };
 
 template<typename Float>
-static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int sign){
+static void createMomField(Float2<Float> *x, std::vector<Float> mom, int D3D4, int sign){
   if(D3D4 == 3){
     if(mom.size() != 3) PLEGMA_error("A momentum vector in three dimensions need three components\n");}
   else if (D3D4 == 4){
@@ -47,7 +47,7 @@ static void createMomField(Float2<Float> *x, std::vector<int> mom, int D3D4, int
 
 
 template<typename Float>
-static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<std::vector<int> > mom, int sign){
+static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<std::vector<Float> > mom, int sign){
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() == 0) PLEGMA_error("Momentum container is empty");
   int Nmom = mom.size();
@@ -72,7 +72,7 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
 }
 
 template<typename Float>
-static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<std::vector<int> > mom, int sign){
+static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vector<std::vector<Float> > mom, int sign){
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() == 0) PLEGMA_error("Momentum container is empty");
   int Nmom = mom.size();

@@ -187,7 +187,7 @@ template<typename Float, typename FloatS>
 static void sum_real_trace_host(ProfileStruct& ps, PLEGMA_Su3field<FloatS> &su3M, Float& sum){
   Float *h_partial_sum = NULL;
   Float *d_partial_sum = NULL;
-
+  sum=0.;
   int gridDimX = ps.tp.grid.x;
   
   hostMalloc(h_partial_sum, gridDimX * sizeof(Float) );
@@ -205,11 +205,11 @@ static void sum_real_trace_host(ProfileStruct& ps, PLEGMA_Su3field<FloatS> &su3M
 }
 
 template<typename Float, typename FloatS>
-static Float sumRtraceU(PLEGMA_Su3field<FloatS> &su3M){
+static Float sumRtraceU_k(PLEGMA_Su3field<FloatS> &su3M){
   Float sum = 0.;
 
   ProfileStruct ps(HGC_localVolume,sizeof(FloatS));
-  tuneAndRun(ps, "sumRtraceU", sum_real_trace_host<Float,FloatS>, ps, su3M, sum);
+  tuneAndRun(ps, "sum_real_trace_host", sum_real_trace_host<Float,FloatS>, ps, su3M, sum);
 
   Float globalSum = 0.;
   MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , MPI_COMM_WORLD);  
