@@ -24,6 +24,8 @@ int main(int argc, char **argv)
     gauge.calculatePlaq();
     gauge.calculatePlaqCorners();
     gauge.calculatePlaqShifts();
+    gauge.calculatePlaqClover();
+    gauge.calculatePlaqStaples();
 
     // Loading to QUDA and computing plaquette also there
     initGaugeQuda(gauge, false, QUDA_SU3_LINKS);
