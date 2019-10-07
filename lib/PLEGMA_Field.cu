@@ -8,6 +8,7 @@
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_FT.cuh>
 #include <utils/PLEGMA_auxiliary.h>
+#include <io/PLEGMA_lime.h>
 using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT
@@ -63,24 +64,26 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
   else if (alloc_flag == DEVICE){
     create_device();
   }
+  else if (alloc_flag == NONE){
+  }
   else{
     PLEGMA_error("Error not supported %d\n",alloc_flag);
   }
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag,bool isPinnedHost):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag, bool isPinnedHost, bool D3, bool checkErr):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(CUSTOM)
+  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(CUSTOM)
 {
-  initialize(alloc_flag, site_size, HGC_localVolume);
+  initialize(alloc_flag, site_size, D3 ? HGC_localVolume3D : HGC_localVolume);
   field_name = "PLEGMA_CUSTOM";
 }
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag, bool isPinnedHost):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), field_type(classT)
+  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(true), field_type(classT)
 {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
@@ -167,14 +170,14 @@ template<typename Float>
 void PLEGMA_Field<Float>::load(){
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
-  checkCudaError();
+  if(checkErr) checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload(){
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
-  checkCudaError();
+  if(checkErr) checkCudaError();
 }
 
 
@@ -189,7 +192,7 @@ void PLEGMA_Field<Float>::create_host(){
 template<typename Float>
 void PLEGMA_Field<Float>::create_device(){
   cudaMalloc((void**)&d_elem,bytes_total_plus_ghost_length);
-  checkCudaError();
+  if(checkErr) checkCudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
   HGC_deviceMemory += bytes_total_plus_ghost_length/(1024.*1024.);          
@@ -215,7 +218,7 @@ void PLEGMA_Field<Float>::create_device(){
 #endif
 
   }
-  checkCudaError();
+  if(checkErr) checkCudaError();
   isAllocDevice = true;
 }
 
@@ -229,7 +232,7 @@ void PLEGMA_Field<Float>::destroy_host(){
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_device(){
   cudaFree(d_elem);
-  checkCudaError();
+  if(checkErr) checkCudaError();
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
   HGC_deviceMemory -= bytes_total_plus_ghost_length/(1024.*1024.);
@@ -254,7 +257,7 @@ void PLEGMA_Field<Float>::destroy_device(){
 #endif
 
   }
-  checkCudaError();
+  if(checkErr) checkCudaError();
   isAllocDevice=false;
 }
 
@@ -320,7 +323,7 @@ cudaTextureObject_t PLEGMA_Field<Float>::createTexObject(){
   texDesc.readMode = cudaReadModeElementType;
 
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
-  checkCudaError();
+  if(checkErr) checkCudaError();
   return tex;
 }
 
@@ -364,7 +367,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
         // collecting elements from device
         copy_side_to_ghost(*this, i);
         cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-        checkCudaError();
+        if(checkErr) checkCudaError();
 	
 	disp = (i<N_DIMS) ? +1 : -1;
         mh_recv.push_back(comm_declare_receive_relative(pointer_receive,i%N_DIMS,disp,nbytes)); 
@@ -389,14 +392,14 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
     Float *host = h_ext_ghost_r;
     Float *device = d_elem+total_length*field_length*2;
     cudaMemcpy(device, host, bytes_ghost_length,cudaMemcpyHostToDevice);
-    checkCudaError();
+    if(checkErr) checkCudaError();
   } else {
     if( HGC_dimBreak[dirOr%N_DIMS] ){
       Float *host = h_ext_ghost_r + (HGC_sideGhost[dirOr]-total_length)*field_length*2;
       Float *device = d_elem + HGC_sideGhost[dirOr]*field_length*2;
       cudaMemcpy(device, host, HGC_surface3D[dirOr%N_DIMS]*field_length*2*sizeof(Float),
           cudaMemcpyHostToDevice);
-      checkCudaError();
+      if(checkErr) checkCudaError();
     }
   }
 }
@@ -429,7 +432,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
           // collecting elements from device
           copy_corner_to_ghost(*this, i, j);
           cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-          checkCudaError();
+          if(checkErr) checkCudaError();
 
           // communicating
           disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
@@ -459,7 +462,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
     Float *hostCorner = h_ext_ghost_corner_r;
     Float *device = d_elem+(total_length+ghost_length)*field_length*2;
     cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
-    checkCudaError();
+    if(checkErr) checkCudaError();
   } else {
     for(int i=0; i<2*N_DIMS; i++){
       for(int j=i+1; j<2*N_DIMS; j++){
@@ -469,7 +472,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
             Float *device = d_elem+HGC_cornerGhost[i][j]*field_length*2;
             cudaMemcpy(device, hostCorner, HGC_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float),
                 cudaMemcpyHostToDevice);
-            checkCudaError();
+            if(checkErr) checkCudaError();
           }
         }
       }
@@ -506,7 +509,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
 
   randstate_ptr = new PLEGMA_RNG(seed, total_length);
-  checkCudaError();  
+  if(checkErr) checkCudaError();  
 }
 
 template<typename Float>
@@ -528,7 +531,7 @@ void PLEGMA_Field<Float>::stochastic_Z(int n){
     default:
       PLEGMA_error("This value of n has not been compiled. Come here to add it");
   }
-  checkCudaError();
+  if(checkErr) checkCudaError();
 }
 
 template<typename Float>
@@ -563,13 +566,13 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
   if(total_length == HGC_localVolume && mom.size() != 4 ) PLEGMA_error("A 4D field needs a 4D momentum vector\n");
-  if( (total_length == HGC_localVolume/HGC_localL[3]) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
+  if( (total_length == HGC_localVolume3D) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
   int D3D4 = mom.size();
-  int V = D3D4 == 3 ? HGC_localVolume/HGC_localL[3] : HGC_localVolume;
+  int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
   Float2<Float> *x;
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
-  checkCudaError();
+  if(checkErr) checkCudaError();
   std::vector<Float> momF(mom.begin(), mom.end());
   createMomField(x, momF, D3D4, sign);
   for(int dof = 0; dof < field_length; dof++)
@@ -577,8 +580,9 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   cudaFree(x);
 }
 
+// y=a*x+y
 template<typename Float>
-void PLEGMA_Field<Float>::axpy(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
+void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
   Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
   cuBLAS::axpy(total_length*field_length, a, fieldIn.D_elem(), d_elem);
 }

@@ -1,3 +1,4 @@
+#include <PLEGMA_Correlator.h>
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_gammas.cuh>

@@ -3,28 +3,11 @@
 #include <PLEGMA_Thrust.h>
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_Random.h>
+#include <PLEGMA_Fmunu.h>
+#include <PLEGMA_Fmunu.h>
+#include <PLEGMA_Su3field.h>
+#include <PLEGMA_Gauge.h>
 using namespace plegma;
-
-template<typename FloatOut,typename FloatIn1, typename FloatIn2, typename Float>
-static __global__ void xpby_kernel(FloatOut *z, FloatIn1 *x, FloatIn2 *y, Float beta, int length_field){
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
-  generic2<FloatOut> Rz(z);
-  generic2<FloatIn1> Ry(y);
-  generic2<FloatIn2> Rx(x);
-  for(int i = 0 ; i < length_field ; i++)
-    Rz.set(i, sid, Rx.get(i,sid) + beta*Ry.get(i,sid));
-}
-
-template<typename Float>
-static void xpby(PLEGMA_Field<Float> &Fz, PLEGMA_Field<Float> &Fx, PLEGMA_Field<Float> &Fy, Float beta){
-  if(Fz.Field_length() != Fx.Field_length()) PLEGMA_error("Error input, output fields do not match");
-  if(Fz.Field_length() != Fy.Field_length()) PLEGMA_error("Error input, output fields do not match");
-  ProfileStruct ps(HGC_localVolume);
-  run(ps,"xpby_kernel",xpby_kernel<Float,Float,Float,Float>,Fz.D_elem(), Fx.D_elem(),
-	     Fy.D_elem(),beta,Fz.Field_length());
-  checkCudaError();
-}
 
 template<typename FloatOut,typename FloatIn>
 static __global__ void cast_kernel(FloatOut *out, FloatIn *in, size_t size){

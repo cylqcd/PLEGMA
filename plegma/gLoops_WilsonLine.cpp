@@ -62,7 +62,7 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
     if(munu_l[0].sign * munu_r[0].sign == -1) out.cscale(signC);
     tmp.TrFmunuSu3FmunuSu3(fmunu_l,munu_l[1].munu,Wl,fmunu_r,munu_r[1].munu,Wr);
     if(munu_l[1].sign * munu_r[1].sign == -1) tmp.cscale(signC);
-    out.axpy(tmp,(std::complex<double>) {1.,0.});
+    out.add(tmp,(std::complex<double>) {1.,0.});
     out.cscale((std::complex<double>) {0.5,0.}); //average the two contributions
   }
   else{
@@ -70,11 +70,11 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
     for(int i = 0 ; i < N_DIMS-1; i++)
       for(int j = i+1 ; j < N_DIMS-1; j++){
 	tmp.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_r, std::make_pair(i,j), Wr);
-	out.axpy(tmp,(std::complex<double>) {1.,0.});
+	out.add(tmp,(std::complex<double>) {1.,0.});
       }
     for(int i = 0 ; i < N_DIMS-1; i++){
       tmp.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3), Wl,fmunu_r, std::make_pair(i,3), Wr);
-      out.axpy(tmp,(std::complex<double>) {-1.,0.});
+      out.add(tmp,(std::complex<double>) {-1.,0.});
     }
   }
 }
@@ -130,7 +130,7 @@ int main(int argc, char **argv){
    */
   for(int i = 0 ; i < N_DIMS-1; i++){
     traceO1.trPmunu(*smearedGaugeOp, std::make_pair(3,i));
-    traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
+    traceO2.add(traceO1,(std::complex<double>) {1.,0.});
   }
   ftUL.apply(traceO2);
   ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Plq_def_Term1" +  "_" + confID + ".dat" ,corr_file_format);
@@ -139,7 +139,7 @@ int main(int argc, char **argv){
   for(int i = 0 ; i < N_DIMS-1; i++)
     for(int j = i+1 ; j < N_DIMS-1; j++){
       traceO1.trPmunu(*smearedGaugeOp, std::make_pair(i,j));
-      traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
+      traceO2.add(traceO1,(std::complex<double>) {1.,0.});
     }
   ftUL.apply(traceO2);
   ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Plq_def_Term2" +  "_" + confID + ".dat" ,corr_file_format);
@@ -165,7 +165,7 @@ int main(int argc, char **argv){
   
   for(int i = 0 ; i < N_DIMS-1; i++){
     traceO1.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,3),Wl,fmunu_l,std::make_pair(i,3),Wr);
-    traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
+    traceO2.add(traceO1,(std::complex<double>) {1.,0.});
   }
   ftUL.apply(traceO2);
   ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Clv_def_Term2" +  "_" + confID + ".dat" ,corr_file_format);
@@ -174,7 +174,7 @@ int main(int argc, char **argv){
   for(int i = 0 ; i < N_DIMS-1; i++)
     for(int j = i+1 ; j < N_DIMS-1; j++){
       traceO1.TrFmunuSu3FmunuSu3(fmunu_l, std::make_pair(i,j), Wl,fmunu_l, std::make_pair(i,j), Wr);
-      traceO2.axpy(traceO1,(std::complex<double>) {1.,0.});
+      traceO2.add(traceO1,(std::complex<double>) {1.,0.});
     }
   ftUL.apply(traceO2);
   ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Clv_def_Term1" +  "_" + confID + ".dat" ,corr_file_format);

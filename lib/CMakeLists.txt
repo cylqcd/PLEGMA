@@ -19,7 +19,14 @@ set (PLEGMA_OBJS
   PLEGMA_Fmunu.cu
 )
 
-if(PLEGMA_ALL_BARYONS)
+if(PLEGMA_UDSC_BARYONS)
+  LIST(APPEND PLEGMA_OBJS
+    kernels/PLEGMA_baryons_udsc.cu
+    kernels/PLEGMA_baryons_udsc_arrays.cu
+  )
+endif()
+
+if(PLEGMA_LIGHT_BARYONS)
   LIST(APPEND PLEGMA_OBJS
     kernels/PLEGMA_baryons_NtoR.cu
     kernels/PLEGMA_baryons_RtoN.cu

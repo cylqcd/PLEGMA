@@ -1,8 +1,13 @@
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <functional>
+#ifdef PLEGMA_UDSC_BARYONS
+#include <PLEGMA_baryons_udsc.cuh>
+#endif
+
 using namespace plegma;
 
 //--------------------------------//
@@ -55,8 +60,6 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       int source[4]){
 
   setSource(source);
-  n_datasets = 2;
-  n_groups = N_MESONS;
   shape = {};
   datasets =  {"twop_meson_1", "twop_meson_2"};
   groups =  {"mesons/pseudoscalar", "mesons/scalar", "mesons/g5g1", "mesons/g5g2",
@@ -82,14 +85,13 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 		int source[4]){
 
   setSource(source);
-  n_datasets = 2;
-  n_groups = N_BARYONS;
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
-  groups =  {"nucl_nucl",
-#ifdef ALL_BARYONS
-	     "nucl_nucl2","nucl2_nucl","nucl2_nucl2","deltap_deltaz_11","deltap_deltaz_22","deltap_deltaz_33",
-	     "deltapp_deltamm_11","deltapp_deltamm_22","deltapp_deltamm_33"
+  groups =  {"baryons/nucl_nucl",
+#ifdef PLEGMA_LIGHT_BARYONS
+	     "baryons/nucl_nucl2","baryons/nucl2_nucl","baryons/nucl2_nucl2",
+	     "baryons/deltap_deltaz_11","baryons/deltap_deltaz_22","baryons/deltap_deltaz_33",
+	     "baryons/deltapp_deltamm_11","baryons/deltapp_deltamm_22","baryons/deltapp_deltamm_33"
 #endif
   };
   description = "1,g1,g2,g3,g4,g5,g5g1,g5g2,g5g3,g5g4,s12,s13,s23,s41,s42,s43";
@@ -105,6 +107,73 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   prop2.destroyTexObject(prop2Tex.tex);
 }
 
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
+		    PLEGMA_Propagator<Float> &propDN, 
+		    PLEGMA_Propagator<Float> &propST, 
+		    PLEGMA_Propagator<Float> &propCH, 
+		    int source[4], bool only_st, bool only_ch){
+
+#ifdef PLEGMA_UDSC_BARYONS
+  setSource(source);
+  shape = {};
+  description = "";
+  datasets = {};
+  groups = {};
+
+  bool not_up = propUP.getAllocation() == NONE;
+  bool not_dn = propDN.getAllocation() == NONE;
+  bool not_st = propST.getAllocation() == NONE;
+  bool not_ch = propCH.getAllocation() == NONE;
+
+  std::vector<int> todo;
+  for(int i=0; i<BP_prop_prods.size(); i++) {
+    if(not_up && BP_prop_prods[i].find('u')!=std::string::npos)
+      continue;
+    if(not_dn && BP_prop_prods[i].find('d')!=std::string::npos)
+      continue;
+    if(not_st && BP_prop_prods[i].find('s')!=std::string::npos)
+      continue;
+    if(not_ch && BP_prop_prods[i].find('c')!=std::string::npos)
+      continue;
+    if(only_st && BP_prop_prods[i].find('s')==std::string::npos)
+      continue;
+    if(only_ch && BP_prop_prods[i].find('c')==std::string::npos)
+      continue;
+    if(true) {
+      todo.push_back(i);
+      for(auto name: BP_prop_prods_names[i])
+	datasets.push_back(name);
+    }
+  }
+
+  if(HGC_verbosity > 2) {
+    PLEGMA_printf("contractBaryonsUDSC is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  }
+
+  initialize();
+  propTex<Float> propUPTex, propDNTex, propSTTex, propCHTex;
+  if (!not_up) propUPTex.tex = propUP.createTexObject();
+  if (!not_dn) propDNTex.tex = propDN.createTexObject();
+  if (!not_st) propSTTex.tex = propST.createTexObject();
+  if (!not_ch) propCHTex.tex = propCH.createTexObject();
+
+  contract_baryons_udsc(propUPTex, propDNTex, propSTTex, propCHTex, *this, todo);
+
+  if (!not_up) propUP.destroyTexObject(propUPTex.tex);
+  if (!not_dn) propDN.destroyTexObject(propDNTex.tex);
+  if (!not_st) propST.destroyTexObject(propSTTex.tex);
+  if (!not_ch) propCH.destroyTexObject(propCHTex.tex);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+}
+
+
 template<typename FloatC,typename FloatA, typename FloatB>
 void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
 			      int signProps, int it, std::vector<GAMMAS> gammas);
@@ -114,8 +183,6 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
 			  int signProps, std::vector<GAMMAS> gammas,
 			  int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
   datasets = {"threep"};
@@ -176,8 +243,6 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas,
 			 int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {N_DIMS, (int) gammas.size()};
   setSource(source);
   datasets = {"threep"};
@@ -196,8 +261,6 @@ contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Gauge<Float> &gauge,
 			int signProps, int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {N_DIMS};
   setSource(source);
   datasets = {"threep"};
@@ -221,8 +284,6 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Su3field<Float> &su3,
 			       int signProps, std::vector<GAMMAS> gammas,
 			       int source[4]){
-  n_datasets = 1;
-  n_groups = 1;
   shape = {(int) gammas.size()};
   setSource(source);
   datasets = {"threep"};
@@ -280,16 +341,16 @@ writeASCII(std::string filename_out) {
     hostMalloc(corrReorder, vol_size*site_size*2*sizeof(Float));
     memcpy(corrReorder,corr,vol_size*site_size*2*sizeof(Float));
 
-    int site_sizeR=site_size/(n_datasets*n_groups);
+    int site_sizeR=site_size/(n_datasets()*n_groups());
 
     for(int it=0; it<HGC_localL[3]; it++)
       for(int imom=0; imom<Nmoms; imom++)
-	for(int id=0; id < n_datasets; id++)
-	  for(int ig=0; ig < n_groups; ig++)
+	for(int id=0; id < n_datasets(); id++)
+	  for(int ig=0; ig < n_groups(); ig++)
 	    for(int is=0; is < site_sizeR; is++)
 	      for(int ri =0 ; ri < 2 ; ri++)
-		corr[it*Nmoms*site_size*2+imom*site_size*2+id*n_groups*site_sizeR*2+ig*site_sizeR*2+is*2+ri]=
-		  corrReorder[ig*n_datasets*HGC_localL[3]*Nmoms*site_sizeR*2 + id*HGC_localL[3]*Nmoms*site_sizeR*2 + it*Nmoms*site_sizeR*2 + imom*site_sizeR*2 + is*2+ri];
+		corr[it*Nmoms*site_size*2+imom*site_size*2+id*n_groups()*site_sizeR*2+ig*site_sizeR*2+is*2+ri]=
+		  corrReorder[ig*n_datasets()*HGC_localL[3]*Nmoms*site_sizeR*2 + id*HGC_localL[3]*Nmoms*site_sizeR*2 + it*Nmoms*site_sizeR*2 + imom*site_sizeR*2 + is*2+ri];
     hostFree(corrReorder, vol_size*site_size*2*sizeof(Float));
     if(rank == 0) hostMalloc(corrGlobal, g_vol_size*site_size*2*sizeof(Float));
     //=============================================================================
@@ -462,15 +523,16 @@ writeHDF5(std::string filename) {
   std::vector<int> mvec;
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
   
-  for(int g=0; g<n_groups; g++){
-    writer.cd(top+groups[g]);
+  for(size_t g=0; g<n_groups(); g++){
+    writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
     if(corr_space == MOMENTUM_SPACE) {
       writer.write_dataset("mvec", mvec, momShape);
     }
-    for(int d=0; d<n_datasets; d++) {
-      Float *writeBuf = corr + (g*n_datasets+d)*writeSize + corrShift;
-      writer.write_dataset(datasets[d], writeBuf, shape, lshape, start);
-      writer.write_attribute(datasets[d], "description", descr);
+    for(size_t d=0; d<n_datasets(); d++) {
+      Float *writeBuf = corr + (g*n_datasets()+d)*writeSize + corrShift;
+      std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
+      writer.write_dataset(dataset, writeBuf, shape, lshape, start);
+      writer.write_attribute(dataset, "description", descr);
     }
   }
 }

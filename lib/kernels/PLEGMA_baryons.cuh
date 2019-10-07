@@ -1,15 +1,14 @@
+#pragma once
+
 #include <PLEGMA_kernel_utils.cuh>
 
-enum BARYONS_TYPE{NtoN,
-#ifdef ALL_BARYONS
-		  NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,
-		  DELTA_3O2_1, DELTA_3O2_2, DELTA_3O2_3,
-#endif
-		  // add here
+enum BARYONS_TYPE{NtoN,		
+#ifdef PLEGMA_LIGHT_BARYONS		
+		  NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,		
+		  DELTA_3O2_1, DELTA_3O2_2, DELTA_3O2_3,		
+#endif		
+		  // add here		
 		  N_BARYONS}; // N_BARYONS must be last 
-
-static const __device__ short int Delta_indices[3][16][4] = {0,0,0,0,0,0,1,1,0,0,2,2,0,0,3,3,1,1,0,0,1,1,1,1,1,1,2,2,1,1,3,3,2,2,0,0,2,2,1,1,2,2,2,2,2,2,3,3,3,3,0,0,3,3,1,1,3,3,2,2,3,3,3,3,0,0,0,0,0,0,1,1,0,0,2,2,0,0,3,3,1,1,0,0,1,1,1,1,1,1,2,2,1,1,3,3,2,2,0,0,2,2,1,1,2,2,2,2,2,2,3,3,3,3,0,0,3,3,1,1,3,3,2,2,3,3,3,3,0,1,0,1,0,1,1,0,0,1,2,3,0,1,3,2,1,0,0,1,1,0,1,0,1,0,2,3,1,0,3,2,2,3,0,1,2,3,1,0,2,3,2,3,2,3,3,2,3,2,0,1,3,2,1,0,3,2,2,3,3,2,3,2};
-static const __device__ float Delta_values[3][16] = {1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
@@ -48,7 +47,7 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
-#ifdef ALL_BARYONS
+#ifdef PLEGMA_LIGHT_BARYONS
     case NtoR:
       contract_NtoR_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
@@ -122,8 +121,10 @@ static void contract_baryons_host( ProfileStruct &ps,
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
+    dim3 grid = ps.tp.grid;
+    grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
     contract_baryons_device
-      <<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>
+      <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (texProp1, texProp2, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source,
        (BARYONS_TYPE) ip, runFT, mom_list);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;

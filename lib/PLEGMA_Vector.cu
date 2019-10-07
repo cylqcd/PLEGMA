@@ -1,4 +1,5 @@
 #include <PLEGMA_Vector.h>
+#include <PLEGMA_Su3field.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_vector_utils.cuh> 
@@ -325,6 +326,11 @@ std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, int *sourc
   return absPsi;
 }
 
+template<typename Float>
+void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u){
+  mulGV_k(*this, u, vecIn);
+}
+
 
 template class PLEGMA_Vector<float>;
 template class PLEGMA_Vector<double>;
@@ -395,12 +401,6 @@ namespace plegma{
     checkCudaError();
   }
 
-  template<typename Float>
-  void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u){
-    mulGV_k(*this, u, vecIn);
-  }
-
-  
   template class PLEGMA_Vector3D<float>;
   template class PLEGMA_Vector3D<double>;
 

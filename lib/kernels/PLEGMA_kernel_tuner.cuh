@@ -142,7 +142,7 @@ protected:
       int max = ps.aux_range.x*ps.aux_range.y*ps.aux_range.z*ps.aux_range.w;
       int4 aux = param.aux; // starting from 0
       int current = (((aux.w-1)*ps.aux_range.z + aux.z - 1)*ps.aux_range.y + aux.y - 1)*ps.aux_range.x + aux.x - 1;
-      if(current < max) {
+      if(current < max-1) {
 	current++;
 
 	param.aux.x = current%ps.aux_range.x + 1;

@@ -1,4 +1,3 @@
-#include <PLEGMA.h>
 #include <errno.h>
 #include <mpi.h>  
 #include <limits>
@@ -6,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
+#include <PLEGMA_global.h>
 
 
 #ifndef PLEGMA_KERNEL_COMPLEX_CUH
@@ -52,20 +52,23 @@ namespace plegma {
 	this->y = 0.;
       }	
     }
+
     inline __host__ __device__ void conj() {
       this->y *= -1.;
     }
 
     template<typename FloatIn>
-    inline __host__ __device__ void operator+=(const Float2<FloatIn> a){
+    inline __host__ __device__ Float2<Float> operator+=(const Float2<FloatIn> a){
       this->x = this->x + a.x;
       this->y = this->y + a.y;
+      return *this;
     }
 
     template<typename FloatIn>
-    inline __host__ __device__ void operator-=(const Float2<FloatIn> a){
+    inline __host__ __device__ Float2<Float> operator-=(const Float2<FloatIn> a){
       this->x = this->x - a.x;
       this->y = this->y - a.y;
+      return *this;
     }
 
   };
@@ -87,11 +90,11 @@ namespace plegma {
 
   template<typename Float>
   inline __host__ __device__ Float2<Float> operator/(const Float2<Float> x, const Float2<Float> y){
-  Float2<Float> res;
-  res.x = (x.x * y.x + x.y * y.y) / (y.x * y.x + y.y * y.y);
-  res.y = (x.y * y.x - x.x * y.y) / (y.x * y.x + y.y * y.y);
-  return res;
-}
+    Float2<Float> res;
+    res.x = (x.x * y.x + x.y * y.y) / (y.x * y.x + y.y * y.y);
+    res.y = (x.y * y.x - x.x * y.y) / (y.x * y.x + y.y * y.y);
+    return res;
+  }
 
   template<typename Float>
   inline __host__ __device__ Float2<Float> operator/(const Float2<Float> a, const Float b){

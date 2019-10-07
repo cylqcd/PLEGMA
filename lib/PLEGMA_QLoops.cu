@@ -1,4 +1,8 @@
 #include <PLEGMA_QLoops.h>
+#include <PLEGMA_Vector.h>
+#include <PLEGMA_Gauge.h>
+#include <PLEGMA_Su3field.h>
+#include <PLEGMA_FT.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_contractG5_bilinear.cuh>
 #include <functional>
@@ -192,7 +196,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	}
 	  
 	this->shift(*qLtmp,mu==3?mu+4:nu+4);
-	this->axpy(*qLtmp,(std::complex<Float>) {1.,0.});
+	this->add(*qLtmp,(std::complex<Float>) {1.,0.});
 	this->unload();
 	cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_twoD[count]);
 	if(mu == 3){
@@ -204,7 +208,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	  qLtmp->contractG5(*(tmp[8+mu*2+0]), *(tmp[nu*2+0]), ACC_MINUS);	  
 	}
 	this->shift(*qLtmp,mu==3?mu:nu);
-	this->axpy(*qLtmp,(std::complex<Float>) {1.,0.});
+	this->add(*qLtmp,(std::complex<Float>) {1.,0.});
 	this->unload();
 	cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_twoD[count]);
       }

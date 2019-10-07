@@ -136,9 +136,14 @@ if(PLEGMA_NUCLEON_3PF_FIX_SINK)
 endif()
 
 # compile contractions for all baryons
-set(PLEGMA_ALL_BARYONS FALSE CACHE BOOL "compile contractions for all baryons")
-if(PLEGMA_ALL_BARYONS)
-  add_definitions(-DALL_BARYONS)
+set(PLEGMA_LIGHT_BARYONS FALSE CACHE BOOL "compile contractions for all light baryons")
+if(PLEGMA_LIGHT_BARYONS)
+  add_definitions(-DPLEGMA_LIGHT_BARYONS)
+endif()
+
+set(PLEGMA_UDSC_BARYONS TRUE CACHE BOOL "compile contractions for all u,d,s and c baryons")
+if(PLEGMA_UDSC_BARYONS)
+  add_definitions(-DPLEGMA_UDSC_BARYONS)
 endif()
 
 # flag to allow for pinned memory ghost buffers

@@ -217,7 +217,7 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
   for(int i = 0; i < nSmear; i++){
     for(int idir = 0 ; idir < D3D4; idir++){
       u_s2[idir]->staples(u_s1, idir, tmp1, tmp2, alpha, D3D4);
-      xpby(*(u_s2[idir]), *(u_s2[idir]), *(u_s1[idir]), (Float) 1. );
+      u_s2[idir]->add(*(u_s1[idir]), (Float) 1.);
       u_s2[idir]->su3Projection();
     }
     for(int idir = 0 ; idir < D3D4; idir++){

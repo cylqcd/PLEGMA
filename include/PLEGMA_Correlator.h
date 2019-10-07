@@ -29,8 +29,6 @@ namespace plegma {
     int Q2_max;
     std::vector<int> fixMomVec ;
     size_t vol_size;
-    int n_datasets;
-    int n_groups;
     std::vector<int> shape;
     // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
     int site_size;
@@ -61,8 +59,14 @@ namespace plegma {
     CORR_SPACE getCorrSpace() {
       return corr_space;
     }
+    inline size_t n_datasets() {
+      return MAX(1,datasets.size());
+    }
+    inline size_t n_groups() {
+      return MAX(1,groups.size());
+    }
     size_t getSiteSize() {
-      int size=n_datasets*n_groups;
+      size_t size=n_datasets()*n_groups();
       std::for_each(shape.begin(), shape.end(), [&] (int n) {size *= n;});
       return size;
     }
@@ -99,6 +103,22 @@ namespace plegma {
     Float* getCorr() {
       return corr;
     }
+    std::vector<std::string> getDatasets() {
+      return datasets;
+    }
+    void setDatasets(std::vector<std::string> d) {
+      if (datasets.size() == d.size() || datasets.size() == 0) {
+	datasets = d;
+      } else {
+	PLEGMA_error("Given vector size do not match. This would change the correlator size.");
+      }
+    }
+    void setDatasets(std::string s) {
+      return setDatasets({s});
+    }
+    std::vector<std::string> getGroups() {
+      return groups;
+    }
     void setGroups(std::vector<std::string> d) {
       if (groups.size() == d.size() || groups.size() == 0) {
 	groups = d;
@@ -118,7 +138,13 @@ namespace plegma {
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2, 
 			 int source[4]);
-
+    
+    void contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
+			     PLEGMA_Propagator<Float> &propDN, 
+			     PLEGMA_Propagator<Float> &propST, 
+			     PLEGMA_Propagator<Float> &propCH, 
+			     int source[4], bool only_st=false, bool only_ch=false);
+    
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
 				   int signProps, std::vector<GAMMAS> gammas,
