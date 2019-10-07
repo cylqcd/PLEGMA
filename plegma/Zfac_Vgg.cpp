@@ -166,7 +166,7 @@ int main(int argc, char **argv){
   	trace2.zero_device();
   	for(int i = 0 ; i < N_DIMS-1; i++){
   	  trace1.trPmunu((n%2==0)?gauge2:gauge1, std::make_pair(3,i));
-  	  trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+  	  trace2.add(trace1,(std::complex<double>) {1.,0.});
   	}
   	ftUL1.apply(trace2,FT_GEMV);
 
@@ -174,7 +174,7 @@ int main(int argc, char **argv){
   	for(int i = 0 ; i < N_DIMS-1; i++)
   	  for(int j = i+1 ; j < N_DIMS-1; j++){
   	    trace1.trPmunu((n%2==0)?gauge2:gauge1, std::make_pair(i,j));
-  	    trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+  	    trace2.add(trace1,(std::complex<double>) {1.,0.});
   	  }
   	ftUL2.apply(trace2,FT_GEMV);
   	gLoopPlt.push_back(ftUL1.H_elem()[0] - ftUL2.H_elem()[0]);
@@ -191,7 +191,7 @@ int main(int argc, char **argv){
 	trace2.zero_device();
 	for(int i = 0 ; i < N_DIMS-1; i++){
 	  trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(i,3),one3x3,fmunu,std::make_pair(i,3),one3x3);
-	  trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+	  trace2.add(trace1,(std::complex<double>) {1.,0.});
 	}
 	ftUL1.apply(trace2,FT_GEMV);
 	trace2.zero_device();
@@ -199,7 +199,7 @@ int main(int argc, char **argv){
 	  for(int j = i+1 ; j < N_DIMS-1; j++){
 	    trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(i,j), one3x3,fmunu,
 				      std::make_pair(i,j), one3x3);
-	    trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+	    trace2.add(trace1,(std::complex<double>) {1.,0.});
 	  }
 	ftUL2.apply(trace2,FT_GEMV);
 	gLoopFST.push_back(ftUL2.H_elem()[0] - ftUL1.H_elem()[0]);
@@ -217,7 +217,7 @@ int main(int argc, char **argv){
 	    if((i!=mu) && (mu!=3)){
 	      if(i<mu){ trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(i,mu), one3x3,fmunu,std::make_pair(mu,3), one3x3); sign=-1;}
 	      else{trace1.TrFmunuSu3FmunuSu3(fmunu, std::make_pair(mu,i), one3x3,fmunu,std::make_pair(mu,3), one3x3); sign=+1;}
-	      trace2.axpy(trace1,(std::complex<double>) {1.,0.});	      
+	      trace2.add(trace1,(std::complex<double>) {1.,0.});	      
 	    }
 	  }
 	  ftUL1.apply(trace2,FT_GEMV);
@@ -263,7 +263,7 @@ int main(int argc, char **argv){
   // 	  for(int i = 0 ; i < N_DIMS; i++){
   // 	    if(i != nu){
   // 	      trace1.trPmunu((n%2==0)?gauge2:gauge1, std::make_pair(nu,i));
-  // 	      trace2.axpy(trace1,(std::complex<double>) {1.,0.});
+  // 	      trace2.add(trace1,(std::complex<double>) {1.,0.});
   // 	    }
   // 	  }
   // 	  ftUL1.apply(trace2,FT_GEMV);
