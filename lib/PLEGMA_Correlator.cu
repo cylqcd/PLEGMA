@@ -376,12 +376,12 @@ writeASCII(std::string filename_out) {
 
     if(corr_space == MOMENTUM_SPACE) {
       int Nmoms = corr_mom_space->Nmoms();
-      std::vector<std::vector<int>> momV = corr_mom_space->MomList();
+      std::vector<std::vector<Float>> momV = corr_mom_space->MomList();
       for(int it=0; it<HGC_totalL[3]; it++) {
 	int it_shift = (it + source_position[3])%HGC_totalL[3];
 	for(int imom=0; imom<Nmoms; imom++) {
 	  int ipos = (it_shift*Nmoms + imom)*site_size;
-	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, momV[imom][0], momV[imom][1], momV[imom][2]);
+	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, (int) round(momV[imom][0]),(int) round(momV[imom][1]),(int) round(momV[imom][2]));
 	  for(int is = 0; is<site_size; is++)
 	    fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2+is*2], corrGlobal[ipos*2+is*2+1]);
 	  fprintf(ptr_out, "\n");

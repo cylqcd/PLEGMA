@@ -85,3 +85,5 @@ target_link_libraries(benchmark ${PLEGMA_LIBS})
 cuda_add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
 target_link_libraries(quark_rms ${PLEGMA_LIBS})
 
+cuda_add_executable(Zfac_Vgg Zfac_Vgg.cpp)
+target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})

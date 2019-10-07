@@ -11,9 +11,11 @@ namespace plegma {
   class PLEGMA_FT : public IO<void,int>  {
     using Vint = std::vector<int>;
     using VVint = std::vector<Vint>;
+    using VFloat = std::vector<Float>;
+    using VVFloat = std::vector<VFloat>;
   protected:
     int Q2_max;
-    VVint momList;
+    VVFloat momList;
     bool isAllocated;
     int dof; // degrees of freedom the field has
     Float *h_elem; // memory to hold the transformed data
@@ -61,7 +63,8 @@ namespace plegma {
        @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
        @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
      **/
-    PLEGMA_FT(std::vector<int> mom, int D3D4 = 3, bool accum = false);
+    template<typename T>
+    PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false);
     
     ~PLEGMA_FT();
     /**
@@ -76,7 +79,7 @@ namespace plegma {
     /**
        @brief Accessor to the list where the components of each momentun are stored
      **/
-    VVint MomList() const{ return momList;}
+    VVFloat MomList() const{ return momList;}
     /**
        @brief Clean the buffer of the class
      **/
@@ -97,8 +100,13 @@ namespace plegma {
 
     
     void apply(const PLEGMA_Field<Float> &f, FT_TYPE type = FT_GEMV, int sign = -1);
-    
-    void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
+
+    /**
+       @brief Put additional phases to the FT
+       @params src: (\vec{src} \cdot \vec{p}) *(2*PI/L) where src is the source and p the momentum without (2*PI/L)
+       @params sign: the appropriate size you want to put
+     **/
+    void mulConstMomentumPhases(Vint src, int sign);
     void scale(Float a);
 
     void writeFile(std::string filename, FILE_FORMAT format, int timeshift = 0) {

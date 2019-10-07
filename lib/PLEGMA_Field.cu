@@ -573,7 +573,8 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
   if(checkErr) checkCudaError();
-  createMomField(x, mom, D3D4, sign);
+  std::vector<Float> momF(mom.begin(), mom.end());
+  createMomField(x, momF, D3D4, sign);
   for(int dof = 0; dof < field_length; dof++)
     plegma::elemWiseMul(V,(Float*) x, d_elem + dof*total_length*2);
   cudaFree(x);

@@ -37,7 +37,7 @@ template<typename T1>
 std::string write_std_vecs_unpacker(int i, const std::vector<T1> vec){
   std::stringstream ss;
   if(i>= vec.size())  ss << "NA" << std::endl;
-  else   ss << vec[i] << std::endl;
+  else   ss << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << vec[i] << std::endl;
   return ss.str();
 }
 
@@ -45,13 +45,15 @@ template<typename T1, typename ...T2>
 std::string write_std_vecs_unpacker(int i, const std::vector<T1>& vec,const std::vector<T2>& ...vecs){
   std::stringstream ss;
   if(i>= vec.size())  ss << "NA" << "\t" << write_std_vecs_unpacker(i,vecs...);
-  else ss << vec[i] << "\t" << write_std_vecs_unpacker(i,vecs...);
+  else ss << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << vec[i] << "\t" << write_std_vecs_unpacker(i,vecs...);
   return ss.str();
 }
 
 template<typename T1, typename ...T2>
-void write_std_vecs(std::string filename,const std::vector<T1>& vec,const std::vector<T2>& ...vecs){
-  std::ofstream file(filename);
+void write_std_vecs(std::string filename,bool isAppend,const std::vector<T1>& vec,const std::vector<T2>& ...vecs){
+  std::ofstream file;
+  if(isAppend) file.open(filename,std::ofstream::out | std::ofstream::app);
+  else file.open(filename);
   if(!file) PLEGMA_error("Cannot open file %s\n", filename.c_str());
   for(int i = 0; i < vec.size(); i++)
     file << write_std_vecs_unpacker(i,vec,vecs...);
@@ -62,4 +64,17 @@ inline std::string getDateAndTime(){
   std::stringstream ss;
   ss << std::put_time(std::gmtime(&time), "%F %T%z");
   return "Date: " + ss.str();
+}
+
+inline std::string basename(std::string str,char c){
+  size_t found = str.find_last_of(c);
+  if(found == std::string::npos) PLEGMA_error("Cannot get the baseanem of string=%s with delimiter=%c\n",str.c_str(),c);
+  std::string suff = str.substr(found+1,std::string::npos);
+  return suff;
+}
+
+inline void cleanFile(std::string filename){
+  std::ofstream file(filename);
+  if(file.fail()) PLEGMA_error("Cannot open file to clean it: %s\n",filename.c_str());
+  file.close();
 }
