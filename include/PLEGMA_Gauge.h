@@ -23,8 +23,20 @@ namespace plegma {
     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
 
     Float calculatePlaq();
-    void calculatePlaqCorners();
-    void calculatePlaqShifts();
+
+    //for checks
+    Float calculatePlaqCorners();
+    Float calculatePlaqShifts();
+    Float calculatePlaqClover();
+    Float calculatePlaqStaples();
+
+    //PLEGMA_topocharge.cuh
+    Float calculateTopo(TOPO_CHARGE_DEF charge_def);
+
+    //PLEGMA_WFlow.cuh
+    void GFlow_step( PLEGMA_Gauge<Float> &Z, double eps );
+    void applyGradientFlow( PLEGMA_Gauge<Float> &Z, int N, double eps);
+    void unitarize();
 
     void scaleDirWise(std::complex<Float> scale[N_DIMS]);
     void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
