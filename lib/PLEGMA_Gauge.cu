@@ -5,6 +5,7 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
+#include <PLEGMA_gFixing.cuh>
 #include <PLEGMA_io.h>
 
 using namespace plegma;
@@ -56,7 +57,7 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
       int spath[] = {dir1,dir2,4+dir1,4+dir2};
       std::vector<int> vspath(spath,spath+4);
       res.path(vspath, u_s, tmp);
-      resV += sumRtraceU<Float,Float>(res);
+      resV += res.sumRtraceU();
     }
   Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
 
@@ -95,7 +96,6 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
   }
   PLEGMA_Su3field<Float> tmp1(BOTH);
   PLEGMA_Su3field<Float> tmp2(BOTH);
-
   PLEGMA_Su3field<Float> *u_s1[D3D4];
   PLEGMA_Su3field<Float> *u_s2[D3D4];
 
@@ -127,7 +127,6 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
     cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
     checkCudaError();
   }
-  
   for(int idir = 0; idir < D3D4 ; idir++){
     delete u_s1[idir];
     delete u_s2[idir];
@@ -197,6 +196,17 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
   }
 }
 
+template<typename Float>
+void PLEGMA_Gauge<Float>::gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar,Float tolerance,int maxIter,int seedOverRelax){
+  gFixingLandau_k(*this,uIn,overelaxPar,tolerance,maxIter,seedOverRelax);
+  PLEGMA_printf("Landau Gauge Fixed plaquette is: ");
+  calculatePlaq();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::gluonField(PLEGMA_Gauge<Float> &uIn){
+  gluonField_k(*this,uIn);
+}
 
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;

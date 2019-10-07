@@ -5,14 +5,34 @@
 using namespace plegma;
 using namespace quda;
 
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC", "Eig-PolyDeg", "Eig-amin",
-					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV"
-#ifdef HAVE_ARPACK
-					   ,"Eig-NkV", "Eig-logFile"
-#elif HAVE_PRIMME
-					   "Eig-printLevel", "Eig-method-PRIMME"
+#ifdef HAVE_PRIMME
+int Nmethods = 16;
+static std::string methods[] = { "PRIMME_DEFAULT_METHOD","PRIMME_DYNAMIC","PRIMME_DEFAULT_MIN_TIME",
+			  "PRIMME_DEFAULT_MIN_MATVECS", "PRIMME_Arnoldi", "PRIMME_GD",
+			 "PRIMME_GD_plusK", "PRIMME_GD_Olsen_plusK", "PRIMME_JD_Olsen_plusK", "PRIMME_RQI",
+			 "PRIMME_JDQR", "PRIMME_JDQMR", "PRIMME_JDQMR_ETol", "PRIMME_STEEPEST_DESCENT",
+			  "PRIMME_LOBPCG_OrthoBasis", "PRIMME_LOBPCG_OrthoBasis_Window"};
+static primme_preset_method getMethod(std::string str){
+  for(int i = 0; i < Nmethods; i++)
+    if(str == methods[i])
+      return static_cast<primme_preset_method>(i);
+  PLEGMA_warning("Method provided %s is not in PRIMME, available methods are",str.c_str());
+  for(int i = 0; i < Nmethods; i++)
+    PLEGMA_printf(methods[i].c_str());
+  PLEGMA_exit(-1);
+  return static_cast<primme_preset_method>(0);
+}
 #endif
-					   ,"nsrc", "maxQsq", "rng-seed", "corr-file-format"
+
+
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC", "Eig-PolyDeg", "Eig-amin",
+					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV",
+#ifdef HAVE_ARPACK
+					   "Eig-NkV", "Eig-logFile",
+#elif HAVE_PRIMME
+					   "Eig-printLevel", "Eig-method-PRIMME",
+#endif
+					   "nsrc", "maxQsq", "rng-seed", "corr-file-format"
 };
 
 

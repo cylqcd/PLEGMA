@@ -54,7 +54,12 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
-
+  // List of configurations-----------------------------------------------------------------------------
+  if(isInList(list,"load-gauge-list-filename")){
+    isFound = opt.set("load-gauge-list-filename", "Filename of the list of the configuration to analyze", verbosity, pathListGaugeConfs);
+    if(isFound) readConfsList();
+  }
+  
   if(isInList(list,"rng-seed")) opt.set("rng-seed", "A seed for the random number generator", verbosity, rng_seed);
 
   //3pt Functions -----------------------------------------------------------------------------------------
