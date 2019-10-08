@@ -517,7 +517,8 @@ do_writeHDF5( HDF5 writer, std::vector<hsize_t> &shape, std::vector<hsize_t> &ls
 template<typename Float>
 void PLEGMA_Correlator<Float>::freeThreads(){
   if( !corr_threads.empty()){
-    corr_threads[0].join();
+    corr_threads[0]->join();
+    delete corr_threads[0];
     corr_threads.erase( corr_threads.begin() );
   }
 }
@@ -556,8 +557,7 @@ writeHDF5(std::string filename, bool asynch) {
 
   if( asynch ){
     freeThreads();
-    std::thread tmp_thread( do_writeHDF5, writer, shape, lshape, start, corrShift, writeSize );
-    corr_threads.push_back( tmp_thread );
+    corr_threads.push_back( new std::thread( do_writeHDF5, writer, shape, lshape, start, corrShift, writeSize ) );
   }
   else{
     do_writeHDF5(writer, shape, lshape, start, corrShift, writeSize);

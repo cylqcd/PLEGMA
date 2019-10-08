@@ -40,7 +40,6 @@ namespace plegma {
     std::string description;
 
     std::vector<std::thread> corr_threads;
-    std::vector<std::string> corr_tfiles;
     
     void initialize();
     void finalize();
