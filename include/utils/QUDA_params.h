@@ -96,7 +96,6 @@ define(QudaEigSpectrumType mg_eig_spectrum[QUDA_MAX_MG_LEVEL], {});
 define(QudaBoolean mg_eig_coarse_guess, {});
 define(QudaEigType mg_eig_type[QUDA_MAX_MG_LEVEL], {});
 define(QudaBoolean preserve_deflation, {}); 
-define(int rank_order, 0);
 
 
 define(std::string vec_infile, "");
