@@ -16,11 +16,7 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
   // we need to do it first for enabling the printing
   HGC_options->setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", 0,
 			 procs[0], procs[1], procs[2], procs[3]);
-  std::string tmpString;
-  HGC_options->set("Q-rank-order","Set the [t][z][y][x] rank order as either column major (t fastest, default) or row major (x fastest), options(col,row)", 0,
-			 tmpString);
-  if(!tmpString.empty()) rank_order=get_rank_order(tmpString);
-  
+    
   for(int i=0; i<4; i++) if( procs[i] <= 0 )
 			   PLEGMA_error("Error with dim %d: Negative proc or not divisor of dim\n", i);
   initComms(argc, argv, procs);
