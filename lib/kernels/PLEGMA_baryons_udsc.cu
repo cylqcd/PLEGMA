@@ -289,6 +289,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
       FloatC *corr_ip = corr.getCorr() + shift*corr.getVolSize()*2;
       MPI_Allreduce(result, corr_ip, BP_prop_prods_count[i].size()*corr.getVolSize()*2, MPI_Type(corr_ip),
 		    MPI_SUM, HGC_spaceComm);
+      hostFree(result, BP_prop_prods_count[i].size()*corr.getVolSize()*sizeof(Float2<FloatC>));
     }
     shift+=BP_prop_prods_count[i].size();
   }

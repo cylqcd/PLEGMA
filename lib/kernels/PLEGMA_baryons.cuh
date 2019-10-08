@@ -186,4 +186,6 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
       result += corr.getTotalSize()/N_BARYONS;
     }
   } 
+  if(runFT)
+    hostFree(result, (corr.getTotalSize()/N_BARYONS)*sizeof(Float2<FloatC>));
 }

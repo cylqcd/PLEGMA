@@ -142,6 +142,8 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   tuneAndRun( ps, "contract_mesons", contract_mesons_host<FloatA,FloatB,FloatC>,
 	      ps, texProp1, texProp2, corr, result);
 
-  if(runFT)
+  if(runFT) {
     MPI_Allreduce(result, corr.getCorr(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);
+    hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
+  }
 }
