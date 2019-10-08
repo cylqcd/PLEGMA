@@ -16,7 +16,7 @@ namespace plegma {
   ////////////////////////////// 
 
   template<typename Float>
-  class PLEGMA_Correlator : public IO<void> {
+  class PLEGMA_Correlator : public IO<void,bool> {
   protected:
     // Allocation
     bool isAlloc;
@@ -39,6 +39,9 @@ namespace plegma {
     std::vector<std::string> groups;
     std::string description;
 
+    std::vector<std::thread> corr_threads;
+    std::vector<std::string> corr_tfiles;
+    
     void initialize();
     void finalize();
     
@@ -168,6 +171,6 @@ namespace plegma {
 					int source[4]);
 
     virtual void writeASCII(std::string filename);
-    virtual void writeHDF5(std::string filename);
+    virtual void writeHDF5(std::string filename, bool asynch=false);
   };
 }

@@ -49,6 +49,11 @@ finalize() {
       delete corr_mom_space;
     else
       PLEGMA_error("corr_space not supported by correlator");
+    for(int i=0; i<corr_threads.size(); i++){
+      corr_threads[i].join();
+      corr_threads.erase(corr_threads.begin() + i);
+      corr_tfiles.erase(corr_tfiles.begin() + i);
+    }
   }
   isAlloc = false;
 }
@@ -481,8 +486,38 @@ static std::string str(T begin, T end) {
 }
 
 template<typename Float>
+voi PLEGMA_Correlator<Float>::
+do_writeHDF5( HDF5 writer, std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start,
+	      size_t corrShift, hsize_t writeSize){
+
+  char *source;
+  asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
+           source_position[3]);
+  std::string top=(std::string) "/" + source;
+  free(source);
+  
+  std::vector<hsize_t> momShape = { 3 };
+  std::vector<int> mvec;
+  if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
+
+  for(size_t g=0; g<n_groups(); g++){
+    writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
+    if(corr_space == MOMENTUM_SPACE) {
+      writer.write_dataset("mvec", mvec, momShape);
+    }
+    for(size_t d=0; d<n_datasets(); d++) {
+      Float *writeBuf = corr + (g*n_datasets()+d)*writeSize + corrShift;
+      std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
+      writer.write_dataset(dataset, writeBuf, shape, lshape, start);
+      writer.write_attribute(dataset, "description", descr);
+    }
+  }
+
+}
+
+template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename) {
+writeHDF5(std::string filename, bool asynch) {
 
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
@@ -512,30 +547,28 @@ writeHDF5(std::string filename) {
 
   HDF5 writer(filename, MPI_COMM_WORLD);
 
-  char *source;
-  asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
-	   source_position[3]);
-  std::string top=(std::string) "/" + source; 
-  free(source);
-
-  
-  std::vector<hsize_t> momShape = { 3 };
-  std::vector<int> mvec;
-  if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
-  
-  for(size_t g=0; g<n_groups(); g++){
-    writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
-    if(corr_space == MOMENTUM_SPACE) {
-      writer.write_dataset("mvec", mvec, momShape);
+  if( asynch ){
+    // check if file is already open
+    for(int i=0; i<corr_threads.size(); i++){
+      if( corr_tfiles[i] == filename ){
+	corr_thread[i].join();
+	corr_threads.erase( corr_threads.begin() + i );
+	corr_tfiles.erase( corr_tfiles.begin() + i );
+      }
     }
-    for(size_t d=0; d<n_datasets(); d++) {
-      Float *writeBuf = corr + (g*n_datasets()+d)*writeSize + corrShift;
-      std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
-      writer.write_dataset(dataset, writeBuf, shape, lshape, start);
-      writer.write_attribute(dataset, "description", descr);
-    }
+    // thread instance
+    std::thread tmp_thread( do_writeHDF5, writer, shape, lshape, start, corrShift, writeSize );
+    corr_threads.push_back( std::thread );
+    corr_tfiles.push_back( filename );
   }
+  else{
+    do_writeHDF5(writer, shape, lshape, start, corrShift, writeSize);
+  }
+  
+  
 }
+
+
 
 template class PLEGMA_Correlator<float>;
 template class PLEGMA_Correlator<double>;
