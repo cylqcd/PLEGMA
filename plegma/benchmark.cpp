@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, sources);
 
     // Benchmark Wilson line update 
-    PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2);
+    PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2, false);
 
     // Benchmark shift routine 
     PLEGMA_benchmark(&prop_b,&PLEGMA_Field<float>::shift,"Shift routine", prop_a, 2);
