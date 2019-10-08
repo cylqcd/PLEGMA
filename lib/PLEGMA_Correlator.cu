@@ -176,7 +176,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 
 template<typename FloatC,typename FloatA, typename FloatB>
 void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
-			      int signProps, int it, std::vector<GAMMAS> gammas);
+			      int signProps, std::vector<GAMMAS> gammas);
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
@@ -194,26 +194,24 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-
-  for(int it = 0; it < HGC_localL[3]; it++)
-    contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,it,gammas);
+  contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
 void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
-			     int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
+			     int signProps, su3Tex<FloatS> su3, int dir,std::vector<GAMMAS> gammas);
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
 void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
-			    int signProps, su3Tex<FloatS> su3, int it, int dir,std::vector<GAMMAS> gammas);
+			    int signProps, su3Tex<FloatS> su3, int dir,std::vector<GAMMAS> gammas);
 
 template<typename Float>
 static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Propagator<Float> &bwdProp,
 				       PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
 				       int signProps, std::vector<GAMMAS> gammas,
 				       std::function<void(PLEGMA_Correlator<Float>&,propTex<Float>,
-							  propTex<Float>,int,su3Tex<Float>,int,int,
+							  propTex<Float>,int,su3Tex<Float>,int,
 							  std::vector<GAMMAS>)> funcContract){
   // gauge should have the sign for the antiperiodic boundary conditions
 
@@ -228,8 +226,7 @@ static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Pr
   for(int idir = 0; idir < N_DIMS; idir++){
     gsu3.absorbDir_device(gauge,idir);
     gsu3.communicateGhost(idir+N_DIMS);
-    for(int it = 0; it < HGC_localL[3]; it++)
-      funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,it, idir,gammas);
+    funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,idir,gammas);
   }
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
@@ -276,7 +273,7 @@ contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
 void contractPropOpProp_wilsonLine(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1,
 				   propTex<FloatB> prop2, int signProps,
-				   su3Tex<FloatS> su3, int it, std::vector<GAMMAS> gammas);
+				   su3Tex<FloatS> su3, std::vector<GAMMAS> gammas);
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
@@ -297,10 +294,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
   fwdPropTex.tex = fwdProp.createTexObject();
   sTex.tex = su3.createTexObject();
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-
-  for(int it = 0; it < HGC_localL[3]; it++)
-    contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,it,gammas);
-
+  contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
   su3.destroyTexObject(sTex.tex);
