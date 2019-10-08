@@ -39,26 +39,6 @@ static void initRand()
 }
 
 
-static int lex_rank_from_coords_t(const int *coords, void *fdata)
-{
-  int rank = coords[0];
-  for (int i = 1; i < 4; i++) {
-    rank = procs[i] * rank + coords[i];
-  }
-  return rank;
-}
-
-static int lex_rank_from_coords_x(const int *coords, void *fdata)
-{
-  int rank = coords[3];
-  for (int i = 2; i >= 0; i--) {
-    rank = procs[i] * rank + coords[i];
-  }
-  return rank;
-}
-
-
-
 void initComms(int argc, char **argv, const int *commDims)
 {
   // TODO: QMP not supported right now
@@ -71,14 +51,8 @@ void initComms(int argc, char **argv, const int *commDims)
   MPI_Init(&argc, &argv);
 #endif
 
-  QudaCommsMap func = rank_order == 0 ? lex_rank_from_coords_t : lex_rank_from_coords_x;
-
-  initCommsGridQuda(4, commDims,func, NULL);
+  initCommsGridQuda(4, commDims,NULL, NULL);
   initRand();
-
-  PLEGMA_printf("Rank order is %s major (%s running fastest)\n",
-	     rank_order == 0 ? "column" : "row", rank_order == 0 ? "t" : "x");
-
 }
 
 void finalizeComms()
