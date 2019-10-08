@@ -17,8 +17,10 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
-  if(isAlloc && site_size == getSiteSize())
+  if(isAlloc && site_size == getSiteSize()){
+    freeThreads();
     return;
+  }
   finalize();
   site_size = getSiteSize();
   if(corr_space == MOMENTUM_SPACE) {
@@ -43,16 +45,13 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 finalize() {
   if (isAlloc) {
+    freeThreads();
     if(corr_space == POSITION_SPACE)
       delete corr_pos_space;
     else if(corr_space == MOMENTUM_SPACE)	 
       delete corr_mom_space;
     else
       PLEGMA_error("corr_space not supported by correlator");
-    for(int i=0; i<corr_threads.size(); i++){
-      corr_threads[i].join();
-      corr_threads.erase(corr_threads.begin() + i);
-      corr_tfiles.erase(corr_tfiles.begin() + i);
     }
   }
   isAlloc = false;
@@ -516,6 +515,14 @@ do_writeHDF5( HDF5 writer, std::vector<hsize_t> &shape, std::vector<hsize_t> &ls
 }
 
 template<typename Float>
+void PLEGMA_Correlator<Float>::freeThreads(){
+  if( !corr_threads.empty()){
+    corr_threads[0].join();
+    corr_threads.erase( corr_threads.begin() );
+  }
+}
+
+template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeHDF5(std::string filename, bool asynch) {
 
@@ -548,18 +555,9 @@ writeHDF5(std::string filename, bool asynch) {
   HDF5 writer(filename, MPI_COMM_WORLD);
 
   if( asynch ){
-    // check if file is already open
-    for(int i=0; i<corr_threads.size(); i++){
-      if( corr_tfiles[i] == filename ){
-	corr_thread[i].join();
-	corr_threads.erase( corr_threads.begin() + i );
-	corr_tfiles.erase( corr_tfiles.begin() + i );
-      }
-    }
-    // thread instance
+    freeThreads();
     std::thread tmp_thread( do_writeHDF5, writer, shape, lshape, start, corrShift, writeSize );
-    corr_threads.push_back( std::thread );
-    corr_tfiles.push_back( filename );
+    corr_threads.push_back( tmp_thread );
   }
   else{
     do_writeHDF5(writer, shape, lshape, start, corrShift, writeSize);
@@ -567,7 +565,6 @@ writeHDF5(std::string filename, bool asynch) {
   
   
 }
-
 
 
 template class PLEGMA_Correlator<float>;
