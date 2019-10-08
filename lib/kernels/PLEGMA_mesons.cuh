@@ -53,7 +53,7 @@ __global__ void contract_mesons_device( propTex<FloatA> texProp1,
     int source_pos[3] = {source.x, source.y, source.z}; 
     fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid3D, source_pos, moms, 0, -1, time_step, tid);
   } else {
-    if(block2 != NULL)
+    if (sid3D < DGC_localVolume3D)
       for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
 	block2[(tid*DGC_localVolume3D + sid3D)*2*N_MESONS + ip] = accum[ip];
       }

@@ -124,7 +124,7 @@ __global__ void contract_props(propTex<FloatA> texProp1, propTex<FloatA> texProp
     int source_pos[3] = {source.x, source.y, source.z};
     fourier_transform_3D(block, &accum, shared_cache, 1, sid3D, source_pos, moms, 0, -1, time_step, tid);
   } else {
-    if(block!=NULL)
+    if (sid3D < DGC_localVolume3D)
       block[tid*DGC_localVolume3D + sid3D] = accum;
   }  
 }

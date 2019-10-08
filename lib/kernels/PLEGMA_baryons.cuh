@@ -85,9 +85,10 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
     int source_pos[3] = {source.x, source.y, source.z}; 
     fourier_transform_3D(block2, accum, shared_cache, 2*N_SPINS*N_SPINS, sid3D, source_pos, mom_list, 0, -1, time_step, tid);
   } else {
-    for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
-      block2[(tid*DGC_localVolume3D + sid3D)*2*N_SPINS*N_SPINS + i] = accum[i];
-    }
+    if (sid3D < DGC_localVolume3D)
+        for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
+    	  block2[(tid*DGC_localVolume3D + sid3D)*2*N_SPINS*N_SPINS + i] = accum[i];
+	}
   }
 }
 
