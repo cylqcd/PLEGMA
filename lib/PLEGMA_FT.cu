@@ -117,7 +117,7 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
     Float intp;
     for(int i=0; i<texMomList.Nmoms; i++) {
       for(int j=0; j<dims; j++) {
-	if(std::modf(momList[i][j],&intp) == 0.0) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
+      	if(std::modf(momList[i][j],&intp) != 0.0) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
 	hostPtr[i*4+j]=(int) round(momList[i][j]);
       }
     }
