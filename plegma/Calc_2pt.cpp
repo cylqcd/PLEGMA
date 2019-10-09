@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
-  bool run_ud = false;
+  bool run_ud = true;
   HGC_options->set("run-ud", "Wheater to run or not light quark flavors", verbosity, run_ud);
   HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
   HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
