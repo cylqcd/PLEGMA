@@ -144,6 +144,7 @@ template<typename Float>
 PLEGMA_Field<Float>::~PLEGMA_Field(){
   if(isAllocHost) destroy_host();
   if(isAllocDevice) destroy_device();
+  destroy_randstate();
 }
 
 template<typename Float>
@@ -284,6 +285,9 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
   else if (alloc_flag == DEVICE){
     zero_device();
   }
+  else if(alloc_flag == NONE){
+    
+  } 
   else{
     PLEGMA_error("Not supported %d\n",alloc_flag);
   }
@@ -507,16 +511,19 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, int dirOr){
 
 template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
-
   randstate_ptr = new PLEGMA_RNG(seed, total_length);
   if(checkErr) checkCudaError();  
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::destroy_randstate(){
+  if(randstate_ptr != NULL) delete randstate_ptr;
+}
+
+template<typename Float>
 void PLEGMA_Field<Float>::stochastic_Z(int n){
   this->zero_device();
-
-  //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
+  if(randstate_ptr == NULL) PLEGMA_error("Random number generator state not initialized");
   int rng_size = this->total_length;
   switch( n ){
     case 2:
@@ -537,7 +544,7 @@ void PLEGMA_Field<Float>::stochastic_Z(int n){
 template<typename Float>
 void PLEGMA_Field<Float>::random(DIST sampling){
   this->zero_device();
-  //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
+  if(randstate_ptr == NULL) PLEGMA_error("Random number generator state not initialized");
   int rng_size = this->total_length;
   set_random<Float>( *randstate_ptr, *this, this->field_length, rng_size, sampling);    
 }
@@ -545,10 +552,6 @@ void PLEGMA_Field<Float>::random(DIST sampling){
 
 template<typename Float>
 void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
-  /* 
-   * Set specific indices of Field to one as provided from indOne
-   * Example: For Su3 field indOne ={0,4,8};
-   */
   if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   for(int i = 0 ; i < Field_length(); i++){
     std::vector<int>::iterator it = std::find(indDiag.begin(), indDiag.end(), i);
@@ -583,13 +586,17 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
 // y=a*x+y
 template<typename Float>
 void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
-  Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
+  if(field_length != fieldIn.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
+  if(total_length != fieldIn.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
+w  Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
   cuBLAS::axpy(total_length*field_length, a, fieldIn.D_elem(), d_elem);
 }
 
 
 template<typename Float>
 std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
+  if(field_length != fieldIn.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
+  if(total_length != fieldIn.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
   return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
 }
 
@@ -626,7 +633,8 @@ static void hostCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatI
 template<typename FloatOut>
 template<typename FloatIn>
 void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where){
-  if(field_length != f.Field_length()) PLEGMA_error("The d.o.f of the fields does not match\n");
+  if(field_length != f.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
+  if(total_length != f.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
   switch(where){
   case(HOST):
     if(!isAllocHost || !f.IsAllocHost() ) PLEGMA_error("Allocation flags do not match for copying\n");
