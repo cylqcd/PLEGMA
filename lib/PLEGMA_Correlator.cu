@@ -52,7 +52,6 @@ finalize() {
       delete corr_mom_space;
     else
       PLEGMA_error("corr_space not supported by correlator");
-    }
   }
   isAlloc = false;
 }
@@ -312,7 +311,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeASCII(std::string filename_out) {
+writeASCII(std::string filename_out, bool async) {
   MPI_Comm comm;
   size_t g_vol_size;
   int rank;
@@ -485,10 +484,39 @@ static std::string str(T begin, T end) {
 }
 
 template<typename Float>
-voi PLEGMA_Correlator<Float>::
-do_writeHDF5( HDF5 writer, std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start,
-	      size_t corrShift, hsize_t writeSize){
+void PLEGMA_Correlator<Float>::
+do_writeHDF5(std::string filename){
+	     
+  std::vector<hsize_t> shape, lshape, start;
 
+  hsize_t corrSize = 2*getVolSize();
+  hsize_t writeSize = 1;
+  for(auto l: this->shape) corrSize*=l;
+  for(auto l: lshape) writeSize*=l;
+  assert(corrSize==writeSize);
+
+  // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.                                                                           
+  // All of them will write a different piece                                                                                                                           
+  int nWriters = (corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1;
+  int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
+  size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
+  if(id >= nWriters) lshape[0] = 0; // not writing                                                                                                                      
+  if(nWriters>1) {
+    if(HGC_verbosity > 3) {
+      std::string out = "rank: "+std::to_string(id)+
+        ", shape: ("+str(shape.begin(), shape.end())+
+	"), lshape: ("+str(lshape.begin(), lshape.end())+
+        "), start: ("+str(start.begin(), start.end())+
+        "), shift: "+std::to_string(corrShift)+"\n";
+      printf(out.c_str());
+    }
+  }
+
+  MPI_Comm thread_comm;
+  MPI_Comm_dup(MPI_COMM_WORLD, &thread_comm);
+
+  HDF5 writer(filename, thread_comm);
+  
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
            source_position[3]);
@@ -497,6 +525,7 @@ do_writeHDF5( HDF5 writer, std::vector<hsize_t> &shape, std::vector<hsize_t> &ls
   
   std::vector<hsize_t> momShape = { 3 };
   std::vector<int> mvec;
+  std::string descr = fill_H5_shapes(shape, lshape, start);
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
 
   for(size_t g=0; g<n_groups(); g++){
@@ -508,10 +537,13 @@ do_writeHDF5( HDF5 writer, std::vector<hsize_t> &shape, std::vector<hsize_t> &ls
       Float *writeBuf = corr + (g*n_datasets()+d)*writeSize + corrShift;
       std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
       writer.write_dataset(dataset, writeBuf, shape, lshape, start);
+      
       writer.write_attribute(dataset, "description", descr);
     }
   }
 
+  MPI_Comm_free(&thread_comm);
+  
 }
 
 template<typename Float>
@@ -527,40 +559,12 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeHDF5(std::string filename, bool asynch) {
 
-  std::vector<hsize_t> shape, lshape, start;
-  std::string descr = fill_H5_shapes(shape, lshape, start);
-
-  hsize_t corrSize = 2*getVolSize();
-  hsize_t writeSize = 1;
-  for(auto l: this->shape) corrSize*=l;
-  for(auto l: lshape) writeSize*=l;
-  assert(corrSize==writeSize);
-
-  // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.
-  // All of them will write a different piece
-  int nWriters = (corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1;
-  int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
-  size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
-  if(id >= nWriters) lshape[0] = 0; // not writing
-  if(nWriters>1) {
-    if(HGC_verbosity > 3) {
-      std::string out = "rank: "+std::to_string(id)+
-	", shape: ("+str(shape.begin(), shape.end())+
-	"), lshape: ("+str(lshape.begin(), lshape.end())+
-	"), start: ("+str(start.begin(), start.end())+
-	"), shift: "+std::to_string(corrShift)+"\n";
-      printf(out.c_str());
-    }
-  }
-
-  HDF5 writer(filename, MPI_COMM_WORLD);
-
   if( asynch ){
     freeThreads();
-    corr_threads.push_back( new std::thread( do_writeHDF5, writer, shape, lshape, start, corrShift, writeSize ) );
+    corr_threads.push_back( new std::thread( &PLEGMA_Correlator<Float>::do_writeHDF5, this, filename));
   }
   else{
-    do_writeHDF5(writer, shape, lshape, start, corrShift, writeSize);
+    do_writeHDF5(filename);
   }
   
   

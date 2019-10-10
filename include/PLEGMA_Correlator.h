@@ -39,7 +39,7 @@ namespace plegma {
     std::vector<std::string> groups;
     std::string description;
 
-    std::vector<std::thread> corr_threads;
+    std::vector<std::thread*> corr_threads;
     
     void initialize();
     void finalize();
@@ -169,10 +169,9 @@ namespace plegma {
 					int signProps, std::vector<GAMMAS> gammas,
 					int source[4]);
 
-    void do_writeHDF5( HDF5 writer, std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start,
-		       size_t corrShift, hsize_t writeSize);
+    void do_writeHDF5(std::string filename);
     void freeThreads();
-    virtual void writeASCII(std::string filename);
+    virtual void writeASCII(std::string filename, bool asynch=false);
     virtual void writeHDF5(std::string filename, bool asynch=false);
   };
 }
