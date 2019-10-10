@@ -92,7 +92,7 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/HGC_localL[3];
-  size_t size = corr.getTotalSize()/HGC_localL[3];
+  size_t size = corr.getTotalSize()/HGC_localL[3]*time_step;
   int site_size = gammas.size();
   int3 source = corr.getSource3();
   tex_mom_list moms = corr.getTexMomList();
