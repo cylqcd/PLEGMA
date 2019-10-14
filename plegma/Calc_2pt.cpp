@@ -115,13 +115,13 @@ int main(int argc, char **argv)
 	asprintf(&dset2, "twop_mesons_d[%+1.1e]u[%+1.1e]", -1*mu_ud, mu_ud);
 	corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	free(dset1); free(dset2);
-	corr.writeFile(twop_filename.c_str(), corr_file_format);
+	corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 	
 	start_time = MPI_Wtime();
 	corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
 	tmp_time = MPI_Wtime()-start_time;
 	PLEGMA_printf("Contraction time for baryons %lf sec\n",tmp_time);
-	corr.writeFile(twop_filename.c_str(), corr_file_format);
+	corr.writeFile(twop_filename.c_str(), corr_file_format, true);
       }
       
       // Storing only the smaller and then computing on the fly the other
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
 		       only_st ? "_only-s" : "", only_ch ? "_only-c" : "");
 	      corr.setGroups(group);
 	      free(group);
-	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 #endif
 	      corr.contractMesons(propST, propCH, sourcePositions[isource]);
 	      char *dset1, *dset2;
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 	      asprintf(&dset2, "twop_mesons_c[%+1.1e]s[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 
 	      if(!only_ch) {
 		corr.contractMesons(propUP, propST, sourcePositions[isource]);
@@ -205,14 +205,14 @@ int main(int argc, char **argv)
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corr.writeFile(twop_filename.c_str(), corr_file_format);
+		corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 	      
 		corr.contractMesons(propDN, propST, sourcePositions[isource]);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corr.writeFile(twop_filename.c_str(), corr_file_format);
+		corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 	      }
 
 	      if(!only_st) {
@@ -221,14 +221,14 @@ int main(int argc, char **argv)
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corr.writeFile(twop_filename.c_str(), corr_file_format);
+		corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 	      
 		corr.contractMesons(propDN, propCH, sourcePositions[isource]);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corr.writeFile(twop_filename.c_str(), corr_file_format);
+		corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 	      }
 	    }
 	  } else {
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 	    }
 	    corr.setGroups(group);
 	    free(group);
-	    corr.writeFile(twop_filename.c_str(), corr_file_format);
+	    corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 #endif
 	    if(!only_ch && !only_st) {
 	      char *dset1, *dset2;
@@ -264,7 +264,7 @@ int main(int argc, char **argv)
 
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 	      
 	      corr.contractMesons(propDN, (cSmaller=='s') ? propCH : propST, sourcePositions[isource]);
 	      if(cSmaller=='s') {
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
 	      }
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      corr.writeFile(twop_filename.c_str(), corr_file_format);
+	      corr.writeFile(twop_filename.c_str(), corr_file_format, true);
 	    }
 	  }
 	}
