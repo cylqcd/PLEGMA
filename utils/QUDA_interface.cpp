@@ -250,24 +250,25 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   current->smoother = param->smoother[level];
   
   if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
-    if(changeBlock(current->geoBlockSize, param->geo_block_size[level])) {
-      delete (mg->*get(MG_Coarse()));
-      mg->*get(MG_Coarse())=nullptr;
-      delete (mg->*get(MG_CoarseParam()));
-      mg->*get(MG_CoarseParam())=nullptr;
+    MG* &coarse = mg->*get(MG_Coarse());
+    MGParam* &coarseParam = mg->*get(MG_CoarseParam());
+    if(changeBlock(coarseParam->geoBlockSize, param->geo_block_size[level+1])) {
+      delete coarse;
+      coarse=nullptr;
+      delete coarseParam;
+      coarseParam=nullptr;
       delete (mg->*get(MG_Transfer()));
       mg->*get(MG_Transfer())=nullptr;
       return;
     }
-    if((mg->*get(MG_CoarseParam()))->Nvec != param->n_vec[level]) {
-      delete (mg->*get(MG_Coarse()));
-      mg->*get(MG_Coarse())=nullptr;
-      delete (mg->*get(MG_CoarseParam()));
-      mg->*get(MG_CoarseParam())=nullptr;
+    if(coarseParam->Nvec != param->n_vec[level+1]) {
+      delete coarse;
+      coarse=nullptr;
+      delete coarseParam;
+      coarseParam=nullptr;
       return;
     }
-    
-    updateMultigridParam(mg->*get(MG_Coarse()), mg->*get(MG_CoarseParam()), param, level+1);
+    updateMultigridParam(coarse, coarseParam, param, level+1);
   }
 }
 
@@ -289,11 +290,12 @@ void QUDA_solver::UpdateSolver()
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
 
-  if(((multigrid_solver*) mg_preconditioner)->mgParam->Nvec != mg_param.n_vec[0]) {
+  multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
+  if( changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
+      mg->mgParam->Nvec != mg_param.n_vec[0]) {
     destroyMultigridQuda(mg_preconditioner);
     mg_preconditioner = newMultigridQuda(&mg_param);
   } else {
-    multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
     updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
     updateMultigridQuda(mg_preconditioner, &mg_param);
   }
