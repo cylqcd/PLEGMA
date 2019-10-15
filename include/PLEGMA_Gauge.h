@@ -40,7 +40,7 @@ namespace plegma {
 
     void scaleDirWise(std::complex<Float> scale[N_DIMS]);
     void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
-    void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-8,int maxIter=10000, int seedOverRelax=123456);
+    void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-6,int maxIter=10000, int seedOverRelax=123456);
     void gluonField(PLEGMA_Gauge<Float> &uIn);
   };
 }
