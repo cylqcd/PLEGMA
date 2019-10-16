@@ -12,21 +12,21 @@ using namespace plegma;
 
 
 template<typename Float>
-PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
-Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum, int dimT):
+  Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4),
+  dimT(D3D4==3?dimT:1), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
-  dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
+  if(dimT<0 || dimT>HGC_localL[DIM_T]) PLEGMA_error("The time dimension cannot be negative or larger than local size\n");
   createMom();
   texMomList.Nmoms=0;
 }
 
 template<typename Float>
 template<typename T>
-PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum):
-  isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum, int dimT):
+  isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
-  dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
   VFloat momF(mom.begin(),mom.end());
   momList.push_back(momF);
@@ -210,11 +210,12 @@ template<typename Float>
 void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!isAllocated) PLEGMA_error("Memory not allocated cannot write data");
+  if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
 
   Float *helem_global=NULL;
   bool gAlloc=false;
-  if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
-    hostMalloc(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
+  if(dimT != 1 && HGC_nProc[DIM_T] != 1 && HGC_spaceRank == 0){
+    hostMalloc(helem_global, HGC_nProc[DIM_T]*sizeN*sizeof(Float));
     gAlloc=true;
     if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
     int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
@@ -225,17 +226,17 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
   if(comm_rank() == 0){
     FILE *ptr = fopen(filename.c_str(), "w");
     if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
-    int T = (dimT != 1)?HGC_totalL[3]:1;
+    int T = (dimT != 1)?HGC_totalL[DIM_T]:1;
     for(int idf = 0 ; idf < dof; idf++)
       for(int it = 0 ; it < T; it++){
-	int its = (it + timeshift)%HGC_totalL[3];
+	int its = (it + timeshift)%HGC_totalL[DIM_T];
 	for(int imom = 0; imom < Nmoms(); imom++)
 	  fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it,(int) round(momList[imom][0]),(int) round(momList[imom][1]),(int) round(momList[imom][2]),
 		  helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
       }
     fclose(ptr);
   }
-  if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
+  if(gAlloc) hostFree(helem_global, HGC_nProc[DIM_T]*sizeN*sizeof(Float));
   comm_barrier();
 }
 
@@ -246,11 +247,11 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   std::string descr;
   
   // Time
-  if(dims==3 && dimT == HGC_localL[3]) {
+  if(dims==3 && dimT == HGC_localL[DIM_T]) {
     descr += "/time";
-    shape.push_back(HGC_totalL[3]);
-    lshape.push_back(HGC_localL[3]);
-    start.push_back((HGC_procPosition[3]*HGC_localL[3] + HGC_totalL[3] - timeshift) % HGC_totalL[3]);
+    shape.push_back(HGC_totalL[DIM_T]);
+    lshape.push_back(HGC_localL[DIM_T]);
+    start.push_back((HGC_procPosition[DIM_T]*HGC_localL[DIM_T] + HGC_totalL[DIM_T] - timeshift) % HGC_totalL[DIM_T]);
   } else {
     assert(dimT==1);
   }
@@ -319,6 +320,7 @@ static std::string str(T begin, T end) {
 template<typename Float>
 void PLEGMA_FT<Float>::
 writeHDF5(std::string filename, int timeshift) {
+  if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);
   
@@ -327,9 +329,9 @@ writeHDF5(std::string filename, int timeshift) {
   assert(sizeN==writeSize);
 
   size_t shift = 0;
-  if(dims==3 && dimT != HGC_localL[3]) { // then it was a 3D Field. Using timeshift to determine the origin
-    int my_it = timeshift - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  if(dims==3 && dimT != HGC_localL[DIM_T]) { // then it was a 3D Field. Using timeshift to determine the origin
+    int my_it = timeshift - comm_coords(HGC_default_topo)[DIM_T] * HGC_localL[DIM_T];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
     if(!is_myIt) lshape[0]=0; // not writing
   } else {
     int nWriters = (dims==4) ? HGC_fullSize : HGC_spaceSize;
@@ -372,9 +374,9 @@ writeHDF5(std::string filename, int timeshift) {
 
 template class PLEGMA_FT<float>;
 template class PLEGMA_FT<double>;
-template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool);
-template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool);
-template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool);
-template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool);
-template PLEGMA_FT<float>::PLEGMA_FT<double>(std::vector<double>,int,bool);
-template PLEGMA_FT<double>::PLEGMA_FT<double>(std::vector<double>,int,bool);
+template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
+template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
+template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
+template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
+template PLEGMA_FT<float>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
+template PLEGMA_FT<double>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
