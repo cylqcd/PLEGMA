@@ -55,8 +55,8 @@ namespace plegma {
     void initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l);
   public:
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false);
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool D3 = false, bool checkErr = true);
-    virtual ~PLEGMA_Field();
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localV = HGC_localVolume, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
+    ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();
     void zero_device();

@@ -72,11 +72,11 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag, bool isPinnedHost, bool D3, bool checkErr):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localVol, GHOST_FLAG ghost_flag, bool isPinnedHost, bool checkErr):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(CUSTOM)
 {
-  initialize(alloc_flag, site_size, D3 ? HGC_localVolume3D : HGC_localVolume);
+  initialize(alloc_flag, site_size, localVol);
   field_name = "PLEGMA_CUSTOM";
 }
 
@@ -115,12 +115,12 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case PROPAGATOR3D:
-    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume3D);
     field_name = "PLEGMA_PROPAGATOR3D";
     setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case VECTOR3D:
-    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume3D);
     field_name = "PLEGMA_VECTOR3D";
     setSiteShape({N_SPINS, N_COLS});
     break;
