@@ -52,6 +52,7 @@ define(QudaInverterType inv_type, QUDA_MG_INVERTER);
 define(QudaInverterType precon_type, QUDA_INVALID_INVERTER);
 
 // MG options
+define(bool  use_mg, true); //Use the multigrid preconditioner 
 define(int gcrNkrylov, 10); // number of inner iterations for GCR, or l for BiCGstab-l
 define(int nvec[QUDA_MAX_MG_LEVEL], {});
 define(int mg_levels, 2);

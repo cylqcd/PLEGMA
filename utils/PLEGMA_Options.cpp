@@ -252,6 +252,8 @@ void qudaOptions(Options &opt){
   opt.set("Q-reliable-delta", "The delta factor for the reliable updates", verbosity, reliable_delta);
 
   //=================================== Multigrid related =======================//
+  opt.set("Q-use-mg", "Use the multigrid as preconditioner ", verbosity, use_mg);
+  
   opt.set("Q-mg-levels", "The number of multigrid levels to do. One level has no meaning", verbosity, mg_levels);
 
   isFound=opt.set("Q-mg-vec-outfile", "Name of the output file containing the multigrid vectors", verbosity, vec_outfile);
