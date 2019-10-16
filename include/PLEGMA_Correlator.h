@@ -77,6 +77,9 @@ namespace plegma {
     size_t getTotalSize() {
       return site_size*vol_size;
     }
+    int MaxT() {
+      return maxT;
+    }
     int getTSize() {
       // Returns the local T size accordingly to the time source and maxT
       int startT = (HGC_procPosition[DIM_T] * HGC_localL[DIM_T] - source_position[DIM_T] +
