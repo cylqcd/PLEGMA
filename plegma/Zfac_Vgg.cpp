@@ -47,7 +47,9 @@ int main(int argc, char **argv){
   std::string filesSuffix="r0";
   HGC_options->set("suffix", "Suffix of data filename to distiguish replicas", verbosity, filesSuffix);
   std::string filenameMomList="./momList.txt";
-  HGC_options->set("filenameMomList", "Path where to find momenta list", verbosity, filenameMomList);    
+  HGC_options->set("filenameMomList", "Path where to find momenta list", verbosity, filenameMomList);
+  double tolerance = 1e-08;
+  HGC_options->set("tolerance", "Tolerance to use for the gauge fixing procedure", verbosity, tolerance);
   double overelaxPar = 0.2;
   HGC_options->set("overelax-param", "The value of the parameter will be used for the overelaxation",verbosity,overelaxPar);
   bool isGFixed = false;
@@ -111,7 +113,7 @@ int main(int argc, char **argv){
     gauge1.calculatePlaq();
     if(!isGFixed){
       double t3=MPI_Wtime();
-      gauge2.gFixingLandau(gauge1,overelaxPar);
+      gauge2.gFixingLandau(gauge1,overelaxPar,tolerance);
       double t4=MPI_Wtime();
       PLEGMA_printf("Gauge fixing completed in %f secs\n",t4-t3);
       gauge1.copy(gauge2);
