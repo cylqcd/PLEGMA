@@ -21,15 +21,16 @@ initialize() {
     return;
   finalize();
   site_size = getSiteSize();
+  int t_size = getTSize();
   if(corr_space == MOMENTUM_SPACE) {
-    if(fixMomVec.empty()) corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
+    if(fixMomVec.empty()) corr_mom_space = new PLEGMA_FT<Float>(Q2_max, 3, false, t_size);
     else corr_mom_space = new PLEGMA_FT<Float>(this->fixMomVec);
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();
   }
   else if(corr_space == POSITION_SPACE) {
-    corr_pos_space = new PLEGMA_Field<Float>(HOST, site_size, NO_GHOSTS);
+    corr_pos_space = new PLEGMA_Field<Float>(HOST, site_size, HGC_localVolume3D*t_size, NO_GHOSTS);
     corr = corr_pos_space->H_elem();
     vol_size = corr_pos_space->Total_length();
   }
@@ -57,9 +58,10 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       PLEGMA_Propagator<Float> &prop2, 
-	       int source[4]){
+	       int source[4], int max_t){
 
   setSource(source);
+  maxT = max_t;
   shape = {};
   datasets =  {"twop_meson_1", "twop_meson_2"};
   groups =  {"mesons/pseudoscalar", "mesons/scalar", "mesons/g5g1", "mesons/g5g2",
@@ -82,9 +84,10 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractBaryons(PLEGMA_Propagator<Float> &prop1,
 		PLEGMA_Propagator<Float> &prop2, 
-		int source[4]){
+		int source[4], int max_t){
 
   setSource(source);
+  maxT = max_t;
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"baryons/nucl_nucl",
@@ -113,10 +116,11 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
 		    PLEGMA_Propagator<Float> &propCH, 
-		    int source[4], bool only_st, bool only_ch){
+		    int source[4], int max_t, bool only_st, bool only_ch){
 
 #ifdef PLEGMA_UDSC_BARYONS
   setSource(source);
+  maxT = max_t;
   shape = {};
   description = "";
   datasets = {};
@@ -182,9 +186,10 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
 			  int signProps, std::vector<GAMMAS> gammas,
-			  int source[4]){
+			  int source[4], int max_t){
   shape = {(int) gammas.size()};
   setSource(source);
+  maxT = max_t;
   datasets = {"threep"};
   groups =  {"Local"};
   description = getGammasString(gammas);
@@ -239,9 +244,10 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas,
-			 int source[4]){
+			 int source[4], int max_t){
   shape = {N_DIMS, (int) gammas.size()};
   setSource(source);
+  maxT = max_t;
   datasets = {"threep"};
   groups =  {"OneD"};
   description = "x,y,z,t / "+getGammasString(gammas);
@@ -257,9 +263,10 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Gauge<Float> &gauge,
-			int signProps, int source[4]){
+			int signProps, int source[4], int max_t){
   shape = {N_DIMS};
   setSource(source);
+  maxT = max_t;
   datasets = {"threep"};
   groups =  {"Noether"};
   description = "x,y,z,t";
@@ -280,9 +287,10 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Propagator<Float> &fwdProp,
 			       PLEGMA_Su3field<Float> &su3,
 			       int signProps, std::vector<GAMMAS> gammas,
-			       int source[4]){
+			       int source[4], int max_t){
   shape = {(int) gammas.size()};
   setSource(source);
+  maxT = max_t;
   datasets = {"threep"};
   groups =  {"wilsonLine"};
   description = getGammasString(gammas);
