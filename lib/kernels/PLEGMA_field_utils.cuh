@@ -4,7 +4,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_Random.h>
 #include <PLEGMA_Fmunu.h>
-#include <PLEGMA_Fmunu.h>
+#include <PLEGMA_Vector.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_Gauge.h>
 using namespace plegma;
@@ -299,5 +299,36 @@ static void trPmunu_k(PLEGMA_Field<FloatA> &f,PLEGMA_Gauge<FloatB> &gauge, std::
   ProfileStruct ps(HGC_localVolume);
   if(std::get<0>(munu) == std::get<1>(munu)) PLEGMA_error("For Pmunu cannot have mu == nu");
   tuneAndRun(ps,"trPmunu_kernel",trPmunu_kernel<FloatA,FloatB>,f.D_elem(),gauge.D_elem(),std::get<0>(munu),std::get<1>(munu));
+  checkCudaError();
+}
+
+template<typename FloatOut, typename FloatIn>
+static __global__ void summod_kernel(FloatOut *out, FloatIn *in){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  vector2<FloatIn> vec(in);
+  Float2<FloatOut> *Fout = (Float2<FloatOut> *) out;
+
+  Float2<FloatIn> Sin[N_SPINS][N_COLS];
+  FloatOut res=0.0;
+    
+  if (sid >= DGC_localVolume) return;
+
+  vec.get(Sin,sid);
+  
+  #pragma unroll
+  for(int i=0; i<N_SPINS; i++){
+    #pragma unroll
+    for(int j=0; j<N_COLS; j++){
+      res += Sin[i][j].x*Sin[i][j].x + Sin[i][j].y*Sin[i][j].y;
+    }
+  }
+  
+  Fout[sid] = res;
+}
+
+template<typename FloatOut, typename FloatIn>
+static void summod_k(PLEGMA_Field<FloatOut> &Fo, PLEGMA_Vector<FloatIn> &Vi){
+  ProfileStruct ps(HGC_localVolume);
+  tuneAndRun(ps,"summod_kernel", summod_kernel<FloatOut,FloatIn>, Fo.D_elem(), Vi.D_elem());
   checkCudaError();
 }

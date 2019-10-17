@@ -768,6 +768,36 @@ void PLEGMA_Field<Float>::writeHDF5(std::string filename){
   writer.write_attribute(dataset, "description", descr);
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int global_it){
+  if(!this->isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
+  if(!srcfield.IsAllocDevice()) PLEGMA_error("This function needs allocation of input field on the device to work\n");
+  
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  if( this->field_name.compare(srcfield.Field_name()) != 0) PLEGMA_error("Fields types does not match\n");
+
+  //check dimensions
+  
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  int V3 = HGC_localVolume/HGC_localL[3];
+  int V4 = HGC_localVolume;
+  Float *pointer_src = NULL;
+  Float *pointer_dst = NULL;
+
+
+  for(int i = 0 ; i < this->field_length; i++){
+    cudaMemset( this->d_elem + i*V4*2, 0, V4*2*sizeof(Float));
+      if(is_myIt){
+	pointer_dst = (this->d_elem + i*V4*2 + my_it*V3*2);
+       	pointer_src = (srcfield.D_elem() + i*V4*2 + my_it*V3*2);
+       	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      }
+    }
+  comm_barrier();
+  checkCudaError();
+}
+
 
 template<typename Float>
 void PLEGMA_Field<Float>::TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
@@ -780,6 +810,13 @@ template<typename Float>
 void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu){
   gauge.communicateSideGhost();
   trPmunu_k(*this,gauge,munu);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::sumMod(PLEGMA_Vector<Float> &Vi){
+  if(!this->isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
+  if(!Vi.IsAllocDevice()) PLEGMA_error("This function needs allocation of input field on the device to work\n");
+  summod_k<Float,Float>(*this,Vi);
 }
 
 template class PLEGMA_Field<float>;
