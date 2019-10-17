@@ -123,7 +123,13 @@ QUDA_solver::QUDA_solver(double mu) {
     checkMultigridParam(&mg_param);
     if(HGC_verbosity > 2) printQudaMultigridParam(&mg_param);
     mg_param.invert_param->mu = mu;
+
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+    mg_eig_param = new QudaEigParam[mg_param.n_level];
+    setEigMultigridParam(mg_param,mg_eig_param);
+#endif
     mg_preconditioner = newMultigridQuda(&mg_param);
+    inv_param.preconditioner = mg_preconditioner;
   }
   
   inv_param = newQudaInvertParam();
@@ -132,11 +138,6 @@ QUDA_solver::QUDA_solver(double mu) {
   if(HGC_verbosity > 2) {
     printQudaInvertParam(&inv_param);
   }
-#ifdef QUDA_INCLUDES_COMMIT_775a033
-  if(use_mg){
-  mg_eig_param = new QudaEigParam[mg_param.n_level];
-  setEigMultigridParam(mg_param,mg_eig_param);}
-#endif
   if(inv_param.gamma_basis != QUDA_UKQCD_GAMMA_BASIS) 
     PLEGMA_error("initSolver: This function works only with ukqcd gamma basis\n");
   if(inv_param.dirac_order != QUDA_DIRAC_ORDER) 
@@ -145,7 +146,7 @@ QUDA_solver::QUDA_solver(double mu) {
   inv_param.mu = mu;
     
   bool pc_solution = false;
-  //bool pc_solve = true;
+  bool pc_solve = true;
 
   inv_param.secs = 0;
   inv_param.gflops = 0;
@@ -156,7 +157,7 @@ QUDA_solver::QUDA_solver(double mu) {
   DPre = NULL;
 
   // create the dirac operator
-  createDirac(D, DSloppy, DPre, inv_param, use_mg);
+  createDirac(D, DSloppy, DPre, inv_param, pc_solve);
 
   // Create Operators
   M = new DiracM(*D);
@@ -164,10 +165,9 @@ QUDA_solver::QUDA_solver(double mu) {
   MPre = new DiracM(*DPre);
 
   // Create Solvers
-  if(use_mg) inv_param.preconditioner = mg_preconditioner;
   solverParam = new SolverParam(inv_param);
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-			 *MPre, *profiler);
+			  *MPre, *profiler);
 
   ColorSpinorParam cpuParam(NULL, inv_param, HGC_localL, pc_solution,
 			    inv_param.input_location);

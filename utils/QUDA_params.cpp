@@ -365,7 +365,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.mass_normalization = normalization;
 
   // do we want full solution or single-parity solution
-  inv_param.solution_type = use_mg? QUDA_MAT_SOLUTION : QUDA_MATDAG_MAT_SOLUTION;
+  inv_param.solution_type = QUDA_MAT_SOLUTION ;
 
   // do we want to use an even-odd preconditioned solve or not
   inv_param.solve_type = solve_type;
@@ -380,7 +380,6 @@ void setInvertParam(QudaInvertParam &inv_param) {
 
   inv_param.inv_type = use_mg? QUDA_GCR_INVERTER : QUDA_CG_INVERTER;
 
-  inv_param.verbosity = QUDA_VERBOSE;
   inv_param.verbosity_precondition = mg_verbosity[0];
 
   inv_param.inv_type_precondition = use_mg? QUDA_MG_INVERTER : QUDA_INVALID_INVERTER;
