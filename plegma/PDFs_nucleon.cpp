@@ -14,26 +14,27 @@ int main(int argc, char **argv)
   initializeOptions(argc, argv, true, listOpt);
 
   size_t WilsDir;
-  HGC_options->set("wilson_direction", "Direction of the wilson line", verbosity, WilsDir);
+  HGC_options->set("wilson-direction", "Direction of the wilson line", verbosity, WilsDir);
   if(WilsDir>N_DIMS) PLEGMA_error("The direction of the WIlson line has to be smaller than 3");
 
   double rhoStout;
-  HGC_options->set("rho_stout", "Rho parameter stout smearing", verbosity, rhoStout);
+  HGC_options->set("rho-stout", "Rho parameter stout smearing", verbosity, rhoStout);
 
   size_t maxStout;
-  HGC_options->set("max_stout", "Maximum number of stout smearing steps", verbosity, maxStout);
+  HGC_options->set("max-stout", "Maximum number of stout smearing steps", verbosity, maxStout);
 
   size_t stepStout;
-  HGC_options->set("step_stout", "Save the PDFs every step_stout stout smearing step", verbosity, stepStout);
+  HGC_options->set("stout-steps", "Save the PDFs every step_stout stout smearing step", verbosity, stepStout);
 
   bool calc3pt = true ;
   HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
 
-  
   std::string proj ;
-  HGC_options->set("which_projector", "Which projector to use for 3pt function", verbosity, proj);
+  HGC_options->set("which-projector", "Which projector to use for 3pt function", verbosity, proj);
   WHICHPROJECTOR which_proj=get_projector(proj.c_str());
 
+  
+  
   initializePLEGMA();
   
   // Reading from Lime file and loading to device
