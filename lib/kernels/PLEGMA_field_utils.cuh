@@ -303,7 +303,7 @@ static void trPmunu_k(PLEGMA_Field<FloatA> &f,PLEGMA_Gauge<FloatB> &gauge, std::
 }
 
 template<typename FloatOut, typename FloatIn>
-static __global__ void summod_kernel(FloatOut *out, FloatIn *in){
+static __global__ void sumModVector_kernel(FloatOut *out, FloatIn *in){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   vector2<FloatIn> vec(in);
   Float2<FloatOut> *Fout = (Float2<FloatOut> *) out;
@@ -327,8 +327,8 @@ static __global__ void summod_kernel(FloatOut *out, FloatIn *in){
 }
 
 template<typename FloatOut, typename FloatIn>
-static void summod_k(PLEGMA_Field<FloatOut> &Fo, PLEGMA_Vector<FloatIn> &Vi){
+static void sumModVector_k(PLEGMA_Field<FloatOut> &Fo, PLEGMA_Vector<FloatIn> &Vi){
   ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps,"summod_kernel", summod_kernel<FloatOut,FloatIn>, Fo.D_elem(), Vi.D_elem());
+  tuneAndRun(ps,"sumModVector_kernel", summod_kernel<FloatOut,FloatIn>, Fo.D_elem(), Vi.D_elem());
   checkCudaError();
 }

@@ -813,10 +813,10 @@ void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int>
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::sumMod(PLEGMA_Vector<Float> &Vi){
+void PLEGMA_Field<Float>::sumModVector(PLEGMA_Vector<Float> &Vi){
   if(!this->isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   if(!Vi.IsAllocDevice()) PLEGMA_error("This function needs allocation of input field on the device to work\n");
-  summod_k<Float,Float>(*this,Vi);
+  sumModVector_k<Float,Float>(*this,Vi);
 }
 
 template class PLEGMA_Field<float>;

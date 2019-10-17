@@ -143,7 +143,7 @@ namespace plegma {
 
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
 
-    void sumMod(PLEGMA_Vector<Float> &Vi);
+    void sumModVector(PLEGMA_Vector<Float> &Vi);
 
     virtual void readLIME(std::string filename);
     virtual void writeLIME(std::string filename);
