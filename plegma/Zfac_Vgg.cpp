@@ -11,6 +11,7 @@ inline std::vector<std::vector<double>> readMomList(std::string filename){
   std::vector<std::vector<double>> momList;
   std::ifstream file(filename,std::ifstream::in);
   if(file.fail()) PLEGMA_error("Cannot open file to read momentum list: %s\n",filename.c_str());
+  if(file.peek() == std::ifstream::traits_type::eof()) return momList;
   std::string str;
   int counter=0;
   std::vector<double> a(4);
@@ -55,19 +56,20 @@ int main(int argc, char **argv){
   double overelaxPar = 1.5;
   HGC_options->set("overelax-param", "The value of the parameter will be used for the exact overelaxation (QUDA)",verbosity,overelaxPar);
   std::string overelaxType = "exact";
-  HGC_options->set("overelaxType", "Choose between exact overrelaxation and stochastic, options (stoch,exact)",verbosity,overelaxType);
-    
+  HGC_options->set("overelaxType", "Choose between exact overrelaxation and stochastic, options (stoch,exact)",verbosity,overelaxType);    
   bool isGFixed = false;
   HGC_options->set("isGFixed", "If this is true it means that the configuration provided is alread gauge fixed", verbosity,isGFixed);
   bool doGLoops = true;
   HGC_options->set("doGLoops", "If you want to compute also gluon loops", verbosity,doGLoops);
   bool doSmearGprop = false;
-  HGC_options->set("doSmearGprop", "If we want to smear the gluon propagator", verbosity,doSmearGprop);
+  HGC_options->set("doSmearGprop", "If we want to smear the gluon propagator (only stout for now)", verbosity,doSmearGprop);
   int nsmearStoutGprop = 10;
   double alphaStoutGprop = 0.129;
   HGC_options->set("nsmear-stout-Gprop", "Number of stout smearing step for Gprop",verbosity,nsmearStoutGprop);
   HGC_options->set("alpha-stout-Gprop", "Coefficient for the stout smearing for Gprop",verbosity,alphaStoutGprop);
-
+  std::string stoutOrWF="stout";
+  HGC_options->set("stoutOrWF", "Choose what smearing to do in the operator, either stout or Wilson Flow. Options (stout,WF)",verbosity,stoutOrWF);
+  
   //==========================//
   initializePLEGMA();
 
@@ -171,16 +173,21 @@ int main(int argc, char **argv){
       gLoopPlt.clear();
       gLoopFST.clear();
       gLoopFST_off[0].clear();      gLoopFST_off[1].clear();      gLoopFST_off[2].clear();
-      for(int n=0; n<=nsmearStout;n++){
-  	if(n%2 == 0){
-  	  if(n==0) gauge2.copy(gauge1);
-  	  else gauge2.stoutSmearing(gauge1,1,alphaStout,4);
-  	}
-  	else{
-  	  gauge1.stoutSmearing(gauge2,1,alphaStout,4);
-  	}
+      if(stoutOrWF != "stout" && stoutOrWF != "WF") PLEGMA_error("Either Stout or Wilson flow are needed");
+      int nSteps = (stoutOrWF == "stout")?nsmearStout:0;
+      for(int n=0; n<=nSteps;n++){
 
-
+	if(stoutOrWF == "stout"){
+	  if(n%2 == 0){
+	    if(n==0) gauge2.copy(gauge1);
+	    else gauge2.stoutSmearing(gauge1,1,alphaStout,4);
+	  }
+	  else{
+	    gauge1.stoutSmearing(gauge2,1,alphaStout,4);
+	  }
+	}
+	else
+	  gauge2.applyGradientFlow(gauge1,100,0.01); // fixed for now Nsteps*epsilon=1
 	// gLoops diagonal Plq definition
 	/*
 	 * Plaquete definition of the gluon loops
@@ -254,7 +261,7 @@ int main(int argc, char **argv){
 	PLEGMA_printf("conf.%s completed in %f secs\n",confStr.c_str(),t2-t1);
       }
       
-      std::vector<std::string> confVec(nsmearStout+1,confStr);
+      std::vector<std::string> confVec(nSteps+1,confStr);
       if(comm_rank() == 0){
 	write_std_vecs(filenameGLoopPlt,true,confVec,nScount,gLoopPlt);
 	write_std_vecs(filenameGLoopFST,true,confVec,nScount,gLoopFST);
