@@ -64,6 +64,24 @@ void finalizeComms()
 #endif
 }
 
+void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, double overelaxPar,double tolerance,
+			   int maxiter, int verbosePerSteps, int reunit_interval, int stop_theta){
+  QudaGaugeParam gauge_param = newQudaGaugeParam();
+  setGaugeParam(gauge_param);
+  gauge_param.type = QUDA_WILSON_LINKS;
+  gauge_param.make_resident_gauge = 0;
+  gaugeIn.unload();
+  double* buf[N_DIMS];
+  for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gaugeIn.Bytes_total()/N_DIMS);
+  unpackGaugeToEvenOdd(buf, gaugeIn);
+  computeGaugeFixingOVRQuda(buf,4,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param,nullptr);
+  packGaugeToNormal(gaugeOut,buf);
+  gaugeOut.load();
+  for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gaugeIn.Bytes_total()/N_DIMS);
+  PLEGMA_printf("Landau Gauge Fixed plaquette is: ");
+  gaugeOut.calculatePlaq();
+}
+
 void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType type) {
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
