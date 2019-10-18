@@ -4,11 +4,14 @@
 template<typename FloatA, typename FloatC>
 __global__ void create_prop_product(generic2<FloatC> *propProd,
 				    propTex<FloatA> texProp1, propTex<FloatA> texProp2, propTex<FloatA> texProp3,
-				    int it, int time_step){
+				    int it, int time_step, int maxT, int4 source){
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
-  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  // this takes into account the case where the source is in the local lattice
+  // and we need to start from it when we go over maxT
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC_localVolume3D;
   sidStride ss(sid3D, DGC_localVolume3D);
   
   if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
@@ -53,7 +56,7 @@ __global__ void create_prop_product(generic2<FloatC> *propProd,
 template<typename FloatC>
 __global__ void contract_prop_prod(genericTex<FloatC> *texPropProd, Float2<FloatC>* block,
 				   int size, short *idxs, Float2<float>*vals,
-				   int3 source, bool runFT, tex_mom_list moms, int it, int time_step){
+				   int4 source, bool runFT, tex_mom_list moms, int it, int time_step, int maxT){
 
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
@@ -84,12 +87,15 @@ __global__ void contract_prop_prod(genericTex<FloatC> *texPropProd, Float2<Float
 template<typename FloatA, typename FloatC>
 __global__ void contract_props(propTex<FloatA> texProp1, propTex<FloatA> texProp2, propTex<FloatA> texProp3,
 			       Float2<FloatC>* block, int size, short *idxs, Float2<float>*vals,
-			       int3 source, bool runFT, tex_mom_list moms, int it, int time_step){
+			       int4 source, bool runFT, tex_mom_list moms, int it, int time_step, int maxT){
   
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
-  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  // this takes into account the case where the source is in the local lattice
+  // and we need to start from it when we go over maxT
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC_localVolume3D;
   Float2<FloatC> accum=0;
 
   if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
@@ -134,11 +140,13 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
 				propTex<FloatA> *props,
 				PLEGMA_Correlator<FloatC> &corr,
 				Float2<FloatC> *result, int i) {
+
+  int t_size = corr.LocalT(); if(t_size==0) return;
+  int maxT = MAX(corr.TotalT() - corr.StartT(), 0); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
-  
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
-  int3 source = corr.getSource3();
-  size_t volume3D = corr.getVolSize()/HGC_localL[3];
+  int4 source = corr.getSource();
+  size_t volume3D = corr.getVolSize()/t_size;
   size_t volume = volume3D*time_step;
   tex_mom_list moms = corr.getTexMomList();
   
@@ -187,47 +195,47 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) { goto exit; }
 
-  for(int it=0; it < HGC_localL[3]; it+=time_step) {
+  for(int it=0; it < t_size; it+=time_step) {
     
     if(ps.tp.aux.x == 2) {
       // Would be nice to run another tuner here but not possible right now with quda_tune. 
-      //ProfileStruct ps2((ps.volume/time_step)*MIN(HGC_localL[3]-it, time_step),0);
-      //tuneAndRun(ps2, "create_prop_product", create_prop_product<FloatA,FloatC>, propProd2, props[0], props[1], props[2], it, MIN(HGC_localL[3]-it, time_step)); 
+      //ProfileStruct ps2((ps.volume/time_step)*MIN(t_size-it, time_step),0);
+      //tuneAndRun(ps2, "create_prop_product", create_prop_product<FloatA,FloatC>, propProd2, props[0], props[1], props[2], it, MIN(t_size-it, time_step)); 
       dim3 grid = ps.tp.grid;
-      grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+      grid.x = (grid.x/time_step)*MIN(t_size-it, time_step);
       create_prop_product
 	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-	(propProd2, props[0], props[1], props[2], it, MIN(HGC_localL[3]-it, time_step));
+	(propProd2, props[0], props[1], props[2], it, MIN(t_size-it, time_step), maxT, source);
     }
     
     shift = 0;
     for(int j=0; j<BP_prop_prods_count[i].size(); j++) {
       dim3 grid = ps.tp.grid;
-      grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
-      if(ps.tp.aux.x == 2)
+      grid.x = (grid.x/time_step)*MIN(t_size-it, time_step);
+      if(ps.tp.aux.x == 2) {
 	contract_prop_prod
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (texPropProd, d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
-	   source, runFT, moms, it, MIN(HGC_localL[3]-it, time_step));
-      else
+	   source, runFT, moms, it, MIN(t_size-it, time_step), maxT);
+      } else {
 	contract_props
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (props[0], props[1], props[2], d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
-	   source, runFT, moms, it, MIN(HGC_localL[3]-it, time_step));
-	
+	   source, runFT, moms, it, MIN(t_size-it, time_step), maxT);
+      }
       cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
       if(runFT==true){
 	int accumX = ps.tp.grid.x/time_step;
-	Float2<FloatC> *reduction = result + (j*HGC_localL[3] + it)*volume3D;
-	for(size_t k = 0 ; k < volume3D*MIN(HGC_localL[3]-it, time_step); k++) {
+	Float2<FloatC> *reduction = result + (j*t_size + it)*volume3D;
+	for(size_t k = 0 ; k < volume3D*MIN(t_size-it, time_step); k++) {
 	  reduction[k] = 0;
 	  for(int l = 0 ; l < accumX; l++) {
 	    reduction[k] += h_partial_block[k*accumX + l];
 	  }
 	}
       } else {
-	for(size_t k = 0 ; k < volume3D*MIN(HGC_localL[3]-it, time_step); k++)
-	  result[(j*HGC_localL[3] + it)*volume3D + k] = h_partial_block[k];    
+	for(size_t k = 0 ; k < volume3D*MIN(t_size-it, time_step); k++)
+	  result[(j*t_size + it)*volume3D + k] = h_partial_block[k];    
       }
       shift += BP_prop_prods_count[i][j];
     }
@@ -278,7 +286,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     }
     
     ProfileStruct ps(HGC_localVolume3D, sizeof(Float2<FloatC>));
-    ps.max_volume = HGC_localVolume;
+    ps.max_volume = HGC_localVolume3D*corr.TotalT();
     ps.tune_globally = true;
     ps.aux_range.x = 2;
     

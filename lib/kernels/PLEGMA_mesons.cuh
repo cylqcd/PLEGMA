@@ -9,13 +9,17 @@ const __device__ float mesons_values[N_MESONS][16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,
 template<typename FloatA, typename FloatB, typename FloatC>
 __global__ void contract_mesons_device( propTex<FloatA> texProp1,
 					propTex<FloatB> texProp2,
-					Float2<FloatC> *block2, int it, int time_step, int3 source,
+					Float2<FloatC> *block2,
+					int it, int time_step, int maxT, int4 source,
 					bool runFT, tex_mom_list moms){
 
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
-  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  // this takes into account the case where the source is in the local lattice
+  // and we need to start from it when we go over maxT
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC_localVolume3D;
     
   register Float2<FloatC> accum[2*N_MESONS];
   for(int i = 0 ; i < 2*N_MESONS ; i++){
@@ -65,11 +69,13 @@ void contract_mesons_host( ProfileStruct &ps,
 			   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 			   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result){
 
+  int t_size = corr.LocalT(); if(t_size==0) return;
+  int maxT = MAX(corr.TotalT() - corr.StartT(), 0); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
-  size_t size = corr.getTotalSize()/HGC_localL[3]*time_step;
-  size_t volume = corr.getVolSize()/HGC_localL[3];
-  int3 source = corr.getSource3();
+  size_t size = corr.getTotalSize()/t_size*time_step;
+  size_t volume = corr.getVolSize()/t_size;
+  int4 source = corr.getSource();
   tex_mom_list moms = corr.getTexMomList();
   int site_size = 2*N_MESONS;
 
@@ -89,29 +95,29 @@ void contract_mesons_host( ProfileStruct &ps,
   }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   
-  for(int it=0; it < HGC_localL[3]; it+=time_step) {
+  for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+    grid.x = (grid.x/time_step)*MIN(t_size-it, time_step);
     contract_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (texProp1, texProp2, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source, runFT, moms);
+      (texProp1, texProp2, d_partial_block, it, MIN(t_size-it, time_step), maxT, source, runFT, moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
       
     if(runFT==true) {
       int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*MIN(t_size-it, time_step); v++)
 	for(int f = 0 ; f < site_size; f++) {
-	  result[(f*HGC_localL[3] + it)*volume+v] = 0;
+	  result[(f*t_size + it)*volume+v] = 0;
 	  for(int j = 0 ; j < accumX; j++)
-	    result[(f*HGC_localL[3] + it)*volume+v] += h_partial_block[(v*site_size+f)*accumX+j];
+	    result[(f*t_size + it)*volume+v] += h_partial_block[(v*site_size+f)*accumX+j];
 	}
     } else {
       for(size_t v = 0 ; v < volume; v++)
 	for(int f = 0 ; f < site_size; f++) {
-	  result[(f*HGC_localL[3] + it)*volume+v] = h_partial_block[v*site_size+f];
+	  result[(f*t_size + it)*volume+v] = h_partial_block[v*site_size+f];
 	}
     }
   }
@@ -137,7 +143,8 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     result = (Float2<FloatC> *) corr.getCorr();
 
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume;
+  ps.max_volume = HGC_localVolume3D*corr.TotalT();
+  ps.tune_globally = true;
   
   tuneAndRun( ps, "contract_mesons", contract_mesons_host<FloatA,FloatB,FloatC>,
 	      ps, texProp1, texProp2, corr, result);

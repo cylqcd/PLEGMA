@@ -9,12 +9,16 @@ struct KernelArr {T* array; int size;};
 
 template<typename FloatC, typename FloatA, typename FloatB, typename FloatS, bool isLink, int dir, bool isCons>
 __global__ void contractPropOpProp_device(Float2<FloatC>* block2, propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
-					  su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas, int it, int time_step,
-					  int3 source, int signProps, bool runFT, tex_mom_list moms){
+					  su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas,
+					  int it, int time_step, int maxT, int4 source,
+					  int signProps, bool runFT, tex_mom_list moms){
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
-  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  // this takes into account the case where the source is in the local lattice
+  // and we need to start from it when we go over maxT
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC_localVolume3D;
   
   Float2<FloatC> R[N_SPINS][N_SPINS];
   Float2<FloatC> noeV=0;
@@ -89,12 +93,14 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
 				    propTex<FloatA> prop1, propTex<FloatA> prop2,
 				    int signProps, su3Tex<FloatS> su3, std::vector<GAMMAS> gammas){
   
+  int t_size = corr.LocalT(); if(t_size==0) return;
+  int maxT = MAX(corr.TotalT() - corr.StartT(), 0); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
-  size_t volume = corr.getVolSize()/HGC_localL[3];
-  size_t size = corr.getTotalSize()/HGC_localL[3]*time_step;
+  size_t volume = corr.getVolSize()/t_size;
+  size_t size = corr.getTotalSize()/t_size*time_step;
   int site_size = gammas.size();
-  int3 source = corr.getSource3();
+  int4 source = corr.getSource();
   tex_mom_list moms = corr.getTexMomList();
 
   int shift = (dir<0) ? 0 : dir*gammas.size();
@@ -117,21 +123,21 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
 
-  for(int it=0; it < HGC_localL[3]; it+=time_step) {
+  for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+    grid.x = (grid.x/time_step)*MIN(t_size-it, time_step);
     contractPropOpProp_device<FloatC,FloatA, FloatB, FloatS, isLink, dir,isCons>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, prop1, prop2, su3, listGammas, it, MIN(HGC_localL[3]-it, time_step),
+      (d_partial_block, prop1, prop2, su3, listGammas, it, MIN(t_size-it, time_step), maxT,
        source, signProps, runFT, moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*MIN(t_size-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*MIN(t_size-it, time_step); v++)
 	for(int i = 0 ; i < site_size; i++) {
 	    result[(it*volume+v)*Mshift*site_size+shift+i] = 0;
 	    for(int j = 0 ; j < accumX; j++)
@@ -139,7 +145,7 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
 		h_partial_block[(v*site_size+i)*accumX+j];
 	}
     } else {
-      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*MIN(t_size-it, time_step); v++)
 	for(int i = 0 ; i < site_size; i++)
 	  result[(it*volume+v)*Mshift*site_size+shift+i] +=
 	    h_partial_block[v*site_size+i];
@@ -176,8 +182,9 @@ static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> 
   }
 
   ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
-  ps.max_volume = HGC_localVolume;
-
+  ps.max_volume = HGC_localVolume3D*corr.TotalT();
+  ps.tune_globally = true;
+  
   Float2<FloatC> *result = NULL;
   if(runFT)
     hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
