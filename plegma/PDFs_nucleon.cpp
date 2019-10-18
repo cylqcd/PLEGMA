@@ -9,9 +9,11 @@ int main(int argc, char **argv)
 
   static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 					     "nsrc", "src-filename", "maxQsq", "twop-filename","threep-filename",  "corr-file-format",
-					     "corr-space", "tSinks","Projs","xiMomSm","sinkMom","which_particle","gammas"};
+					     "corr-space", "tSinks","Projs","xiMomSm","gammas"};
 
   initializeOptions(argc, argv, true, listOpt);
+
+    //================ Add your options in this between initializeOptions and initializePLEGMA ================//
 
   size_t WilsDir;
   HGC_options->set("wilson-direction", "Direction of the wilson line", verbosity, WilsDir);
@@ -29,14 +31,27 @@ int main(int argc, char **argv)
   bool calc3pt = true ;
   HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
 
-  std::string proj ;
-  HGC_options->set("which-projector", "Which projector to use for 3pt function", verbosity, proj);
-  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
+  std::string aux_str ;
+  HGC_options->set("which-projector", "Which projector to use for 3pt function", verbosity, aux_str);
+  WHICHPROJECTOR which_proj=get_projector(aux_str.c_str());
 
-  
-  
+  //In case the momentum transfer DeltaMom = 0, then PMom corresponds to the momentum of the sink;
+  //If DeltaMom != 0, then the momentum of the sink is PMom + delta;
+  std::vector<int> PMom={0,0,0,0};
+  HGC_options->set("P-momentum", "If added to the momentum transfer delta gives the sink momentum", verbosity, PMom);
+
+  std::vector<int> DeltaMom={0,0,0,0};
+  HGC_options->set("Delta-momentum", "Square root of the momentum transfer", verbosity, PMom);
+
+  aux_str = "proton";
+  HGC_options->set("which-particle", "Choice of the nucleon interpolator to insert in the three point function (neutron,proton)", verbosity, aux_str);
+  WHICHPARTICLE nucleon = get_particle(aux_str.c_str());
+
+  //=========================================================================================================//
+
   initializePLEGMA();
-  
+
+  if(nucleon!=NEUTRON && nucleon!=PROTON) PLEGMA_error("Only nucleon PDFs have been implemented so far\n");
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFile(latfile, LIME_FORMAT);
@@ -47,15 +62,21 @@ int main(int argc, char **argv)
   initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
   plaqQuda();
   
-  WHICHPARTICLE nucleon = which_particle;
-  if(nucleon!=NEUTRON && nucleon!=PROTON) PLEGMA_error("Only nucleon PDFs have been implemented so far\n");
-  
   // Smearing
   PLEGMA_Gauge<double> smearedGauge;
   smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
   PLEGMA_printf("Plaquette after smearing:\n");
   smearedGauge.calculatePlaq();
 
+
+  
+  std::vector<double> HalfDelta; 
+  std::transform(DeltaMom.begin(), DeltaMom.end(), HalfDelta.begin(), [](int c) {return (double)c/(double)(2.);});
+  std::for_each(HalfDelta.begin(), HalfDelta.end(), [](double i){ std::cout << i << " " ;});
+  std::vector<double> sinkMom;
+  std::transform(PMom.begin(), PMom.end(), HalfDelta.begin(), sinkMom.begin(), std::plus<double>());
+  std::for_each(sinkMom.begin(), sinkMom.end(), [](double i){ std::cout << i << " " ;});
+   
   //Momentum smearing: put the momentum phase to smeared gauge field
   std::complex<double> momSmScale[N_DIMS];
   std::complex<double> I(0,1);
