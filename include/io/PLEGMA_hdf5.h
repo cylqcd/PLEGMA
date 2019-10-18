@@ -339,7 +339,7 @@ protected:
     std::vector<hsize_t> exceeding_shape;
     for(size_t i=0; i<shape.size(); i++) {
       int exceeding = start[i] + lshape[i] - shape[i];
-      if(exceeding > 0) { // then i it's exceeding
+      if(lshape[i] > 0 && exceeding > 0) { // then i it's exceeding
 	if(HGC_verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);
@@ -517,6 +517,8 @@ public:
 			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
     if(HGC_verbosity > 2) PLEGMA_printf("Going to write dataset %s in path %s \n", name.c_str(),
 					path.c_str());
+    if(HGC_verbosity > 3) printf("RANK(%d) Dataset shape=(%s), lshape=(%s), start=(%s)\n", getRank(),
+				 toString(shape).c_str(), toString(lshape).c_str(), toString(start).c_str());
     cd(path);
 
     // Sanity check
