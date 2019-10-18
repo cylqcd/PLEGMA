@@ -129,10 +129,12 @@ QUDA_solver::QUDA_solver(double mu) {
     setEigMultigridParam(mg_param,mg_eig_param);
 #endif
     mg_preconditioner = newMultigridQuda(&mg_param);
-    inv_param.preconditioner = mg_preconditioner;
   }
   
   inv_param = newQudaInvertParam();
+
+  if(use_mg) inv_param.preconditioner = mg_preconditioner;
+
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
   if(HGC_verbosity > 2) {
@@ -160,9 +162,9 @@ QUDA_solver::QUDA_solver(double mu) {
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
 
   // Create Operators
-  M = new DiracM(*D);
-  MSloppy = new DiracM(*DSloppy);
-  MPre = new DiracM(*DPre);
+  M = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*D)) : static_cast<DiracMatrix*>(new DiracM(*D));
+  MSloppy = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DSloppy)) : static_cast<DiracMatrix*>(new DiracM(*DSloppy));
+  MPre = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DPre)) : static_cast<DiracMatrix*>(new DiracMdagM(*DPre));
 
   // Create Solvers
   solverParam = new SolverParam(inv_param);
@@ -279,12 +281,14 @@ void QUDA_solver::UpdateSolver()
   delete DSloppy; DSloppy = NULL;
   delete DPre; DPre = NULL;
 
+  if(use_mg){
   PLEGMA_printf("Updating multigrid parameters\n");
-  setMultigridParam(mg_param);
- 
+  setMultigridParam(mg_param);}
+
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
 
+  if(use_mg){
   if(((multigrid_solver*) mg_preconditioner)->mgParam->Nvec != mg_param.n_vec[0]) {
     destroyMultigridQuda(mg_preconditioner);
     mg_preconditioner = newMultigridQuda(&mg_param);
@@ -292,16 +296,17 @@ void QUDA_solver::UpdateSolver()
     multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
     updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
     updateMultigridQuda(mg_preconditioner, &mg_param);
-  }
+  }}
   
   bool pc_solve = true;
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
 
   // Create Operators
-  M = new DiracM(*D);
-  MSloppy = new DiracM(*DSloppy);
-  MPre = new DiracM(*DPre);
+  M = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*D)) : static_cast<DiracMatrix*>(new DiracM(*D));
+  MSloppy = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DSloppy)) : static_cast<DiracMatrix*>(new DiracM(*DSloppy));
+  MPre = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DPre)) : static_cast<DiracMatrix*>(new DiracMdagM(*DPre));
 
+  
   // Create Solvers
   solverParam = new SolverParam(inv_param);
   
