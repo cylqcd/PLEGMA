@@ -77,25 +77,33 @@ namespace plegma {
     size_t getTotalSize() {
       return site_size*vol_size;
     }
-    int MaxT() {
+    int TotalT() {
       return maxT;
     }
-    int getTSize() {
+    int StartT() {
+      return (HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + HGC_totalL[DIM_T] - source_position[DIM_T] ) % HGC_totalL[DIM_T];
+    }
+    int LocalT() {
       // Returns the local T size accordingly to the time source and maxT
-      int startT = (HGC_procPosition[DIM_T] * HGC_localL[DIM_T] - source_position[DIM_T] +
-		    HGC_totalL[DIM_T]) % HGC_totalL[DIM_T];
-      if(startT>=maxT) return 0;
+      if(maxT==HGC_totalL[DIM_T]) return HGC_localL[DIM_T];
+      int startT = StartT();
+      if((HGC_procPosition[DIM_T]*HGC_localL[DIM_T]) <= source_position[DIM_T]
+	 && source_position[DIM_T] < ((HGC_procPosition[DIM_T]+1)*HGC_localL[DIM_T])) {
+	// When the source is in the local lattice we may have two pieces:
+	// |     s-->| from the source to the end and then
+	// |-->  s   | from the beginning to maxT
+	int t_source = source_position[DIM_T]%HGC_localL[DIM_T];
+	int t_size = MIN(maxT-t_source, HGC_localL[DIM_T]-t_source); 
+	if(startT==t_source || startT>=maxT) return t_size;
+	else {
+	  assert(0 < (maxT-startT) < (HGC_localL[DIM_T]-t_size));
+	  return t_size+maxT-startT;
+	}
+      } else if(startT>=maxT) return 0;
       else return MIN(maxT-startT, HGC_localL[DIM_T]);
     }
-    int3 getSource3() {
-      int3 source;
-      source.x = source_position[0];
-      source.y = source_position[1];
-      source.z = source_position[2];
-      return source;
-    }
-    std::array<int,4> getSource() {
-      return source_position;
+    int4 getSource() {
+      return make_int4(source_position[0],source_position[1],source_position[2],source_position[3]);
     }
     void setSource(int source[4]) {
       for ( int i = 0; i < 4; i++ )

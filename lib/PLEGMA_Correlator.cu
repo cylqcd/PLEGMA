@@ -21,7 +21,7 @@ initialize() {
     return;
   finalize();
   site_size = getSiteSize();
-  int t_size = getTSize();
+  int t_size = LocalT();
   if(corr_space == MOMENTUM_SPACE) {
     if(fixMomVec.empty()) corr_mom_space = new PLEGMA_FT<Float>(Q2_max, 3, false, t_size);
     else corr_mom_space = new PLEGMA_FT<Float>(this->fixMomVec);
@@ -408,9 +408,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   case MOMENTUM_SPACE:
     descr += "/time/moms";
     // Time
-    shape.push_back(HGC_totalL[3]);
-    lshape.push_back(HGC_localL[3]);
-    start.push_back((HGC_procPosition[3]*HGC_localL[3] + HGC_totalL[3] - source_position[3]) % HGC_totalL[3]);
+    shape.push_back(TotalT());
+    lshape.push_back(LocalT());
+    start.push_back(StartT());
     // Moms
     shape.push_back((hsize_t)corr_mom_space->Nmoms());
     lshape.push_back((hsize_t)corr_mom_space->Nmoms());
@@ -420,8 +420,8 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     descr += "/x/y/z/t";
     // Volume
     for(int i=0; i<N_DIMS; i++) {
-      shape.push_back(HGC_totalL[i]);
-      lshape.push_back(HGC_localL[i]);
+      shape.push_back(i==DIM_T ? TotalT() : HGC_totalL[i]);
+      lshape.push_back(i==DIM_T ? LocalT() : HGC_localL[i]);
       start.push_back((HGC_procPosition[i]*HGC_localL[i] + HGC_totalL[i] - source_position[i]) % HGC_totalL[i]);
     }
     break;
