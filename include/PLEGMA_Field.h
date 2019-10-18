@@ -122,8 +122,9 @@ namespace plegma {
 
     template<typename FloatIn>
     void copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where=DEVICE);
-    
-    void mulMomentumPhases(std::vector<int> mom, int sign=-1);
+
+    template<typename FloatMom>
+    void mulMomentumPhases(std::vector<FloatMom> mom, int sign=-1);
 
     // F += a*Fin
     void add(PLEGMA_Field &Fin, std::complex<Float> alpha = 1.);
