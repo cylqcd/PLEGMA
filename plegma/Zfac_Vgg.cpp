@@ -50,8 +50,13 @@ int main(int argc, char **argv){
   HGC_options->set("filenameMomList", "Path where to find momenta list", verbosity, filenameMomList);
   double tolerance = 1e-08;
   HGC_options->set("tolerance", "Tolerance to use for the gauge fixing procedure", verbosity, tolerance);
-  double overelaxPar = 0.2;
-  HGC_options->set("overelax-param", "The value of the parameter will be used for the overelaxation",verbosity,overelaxPar);
+  double stochoverelaxPar = 0.2;
+  HGC_options->set("stochoverelax-param", "The value of this parameter will be used for the stochastic overelaxation (PLEGMA)",verbosity,stochoverelaxPar);
+  double overelaxPar = 1.5;
+  HGC_options->set("overelax-param", "The value of the parameter will be used for the exact overelaxation (QUDA)",verbosity,overelaxPar);
+  std::string overelaxType = "exact";
+  HGC_options->set("overelaxType", "Choose between exact overrelaxation and stochastic, options (stoch,exact)",verbosity,overelaxType);
+    
   bool isGFixed = false;
   HGC_options->set("isGFixed", "If this is true it means that the configuration provided is alread gauge fixed", verbosity,isGFixed);
   bool doGLoops = true;
@@ -113,7 +118,9 @@ int main(int argc, char **argv){
     gauge1.calculatePlaq();
     if(!isGFixed){
       double t3=MPI_Wtime();
-      gauge2.gFixingLandau(gauge1,overelaxPar,tolerance);
+      if(overelaxType == "exact") gFixingLandauOVR_QUDA(gauge2,gauge1,overelaxPar,tolerance,10000,10000);
+      else if (overelaxType == "stoch") gauge2.gFixingLandau(gauge1,stochoverelaxPar,tolerance);
+      else PLEGMA_error("Overrelaxation type %s not implemented",overelaxType.c_str());
       double t4=MPI_Wtime();
       PLEGMA_printf("Gauge fixing completed in %f secs\n",t4-t3);
       gauge1.copy(gauge2);
