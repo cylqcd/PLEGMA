@@ -338,8 +338,8 @@ protected:
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
     for(size_t i=0; i<shape.size(); i++) {
-      int exceeding = start[i] + lshape[i] - shape[i];
-      if(lshape[i] > 0 && exceeding > 0) { // then i it's exceeding
+      int exceeding = MIN(lshape[i], start[i] + lshape[i] - shape[i]);
+      if(exceeding > 0) { // then i it's exceeding
 	if(HGC_verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);
@@ -389,7 +389,7 @@ protected:
 	  }
 	} else if(i >= my_n_writings) {
 	  // do a dummy write to keep the communications active
-	  tmp_lshape = ones_like(lshape);
+	  tmp_lshape = zeros_like(lshape);
 	}
 	_write_dataset_parallel(dataset_id, tmp, shape, tmp_lshape, tmp_start);
 	if(tmp != buf) hostFree(tmp, product(tmp_lshape)*sizeof(T));

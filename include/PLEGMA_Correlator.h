@@ -93,10 +93,10 @@ namespace plegma {
 	// |     s-->| from the source to the end and then
 	// |-->  s   | from the beginning to maxT
 	int t_source = source_position[DIM_T]%HGC_localL[DIM_T];
-	int t_size = MIN(maxT-t_source, HGC_localL[DIM_T]-t_source); 
+	int t_size = MIN(maxT, HGC_localL[DIM_T]-t_source); 
 	if(startT==t_source || startT>=maxT) return t_size;
 	else {
-	  assert(0 < (maxT-startT) < (HGC_localL[DIM_T]-t_size));
+	  assert((maxT-startT) < (HGC_localL[DIM_T]-t_size));
 	  return t_size+maxT-startT;
 	}
       } else if(startT>=maxT) return 0;
