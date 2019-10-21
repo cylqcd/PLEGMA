@@ -31,6 +31,8 @@ define(int maxQsq, 64);
 define(FILE_FORMAT corr_file_format, HDF5_FORMAT);
 define(CORR_SPACE corr_space, MOMENTUM_SPACE);
 define(std::string twop_filename, "./twop");
+define(std::string twop_b_filename, "./baryon_twop");
+define(std::string twop_m_filename, "./meson_twop");
 define(std::string threep_filename, "./threep");
 define(std::vector<int> tSinks, {});
 define(std::vector<std::string> Projs, {});

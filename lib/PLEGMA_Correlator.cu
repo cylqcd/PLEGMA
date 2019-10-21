@@ -488,6 +488,7 @@ void PLEGMA_Correlator<Float>::
 do_writeHDF5(std::string filename){
 	     
   std::vector<hsize_t> shape, lshape, start;
+  std::string descr = fill_H5_shapes(shape, lshape, start);
 
   hsize_t corrSize = 2*getVolSize();
   hsize_t writeSize = 1;
@@ -495,37 +496,35 @@ do_writeHDF5(std::string filename){
   for(auto l: lshape) writeSize*=l;
   assert(corrSize==writeSize);
 
-  // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.                                                                           
-  // All of them will write a different piece                                                                                                                           
+  // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.
+  // All of them will write a different piece
   int nWriters = (corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1;
   int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
   size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
-  if(id >= nWriters) lshape[0] = 0; // not writing                                                                                                                      
+  if(id >= nWriters) lshape[0] = 0; // not writing
   if(nWriters>1) {
     if(HGC_verbosity > 3) {
       std::string out = "rank: "+std::to_string(id)+
-        ", shape: ("+str(shape.begin(), shape.end())+
+	", shape: ("+str(shape.begin(), shape.end())+
 	"), lshape: ("+str(lshape.begin(), lshape.end())+
-        "), start: ("+str(start.begin(), start.end())+
-        "), shift: "+std::to_string(corrShift)+"\n";
+	"), start: ("+str(start.begin(), start.end())+
+	"), shift: "+std::to_string(corrShift)+"\n";
       printf(out.c_str());
     }
   }
 
   MPI_Comm thread_comm;
-  MPI_Comm_dup(MPI_COMM_WORLD, &thread_comm);
-
+  MPI_Comm_dup( MPI_COMM_WORLD, &thread_comm );
   HDF5 writer(filename, thread_comm);
-  
+
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
-           source_position[3]);
-  std::string top=(std::string) "/" + source;
+	   source_position[3]);
+  std::string top=(std::string) "/" + source; 
   free(source);
   
   std::vector<hsize_t> momShape = { 3 };
   std::vector<int> mvec;
-  std::string descr = fill_H5_shapes(shape, lshape, start);
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
 
   for(size_t g=0; g<n_groups(); g++){
