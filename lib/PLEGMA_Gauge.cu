@@ -5,7 +5,10 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_field_utils.cuh>
+#include <PLEGMA_gFixing.cuh>
 #include <PLEGMA_io.h>
+#include <PLEGMA_topocharge.cuh>
+#include <PLEGMA_WFlow.cuh>
 
 using namespace plegma;
 
@@ -19,6 +22,18 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_f
 
 
 template<typename Float>
+Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
+
+  tex.tex = this->createTexObject();
+  Float Q = calcTopoCharge<Float>(tex, charge_def);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated topological charge is %.14f\n",Q);
+  this->destroyTexObject(tex.tex);
+  return Q;
+}
+
+template<typename Float>
 Float PLEGMA_Gauge<Float>::calculatePlaq(){
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_SIDE);
@@ -30,18 +45,19 @@ Float PLEGMA_Gauge<Float>::calculatePlaq(){
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::calculatePlaqCorners(){
+Float PLEGMA_Gauge<Float>::calculatePlaqClover(){
   gaugeTex<Float> tex;
   this->communicateGhost(-1,FIRST_CORNER);
   tex.tex = this->createTexObject();
-  Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
-  Float plaqRef = calculatePlaquette<Float>(tex);
-  PLEGMA_printf("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
+  Float plaqClover = calcPlaqClovDef<Float,Float>(tex);
+  Float plaq = calculatePlaquette<Float>(tex);
+  if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette with clover is %f; diff with reference: %e\n",plaqClover, plaqClover-plaq);
   this->destroyTexObject(tex.tex);
+  return plaqClover;
 }
 
 template<typename Float>
-void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
+Float PLEGMA_Gauge<Float>::calculatePlaqShifts(){
   PLEGMA_Su3field<Float> res(BOTH);
   PLEGMA_Su3field<Float> tmp(BOTH);
   PLEGMA_Su3field<Float> *u_s[4];
@@ -56,7 +72,7 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
       int spath[] = {dir1,dir2,4+dir1,4+dir2};
       std::vector<int> vspath(spath,spath+4);
       res.path(vspath, u_s, tmp);
-      resV += sumRtraceU<Float,Float>(res);
+      resV += res.sumRtraceU();
     }
   Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
 
@@ -70,6 +86,35 @@ void PLEGMA_Gauge<Float>::calculatePlaqShifts(){
   for(int idir = 0; idir < 4 ; idir++)
     delete u_s[idir];
 
+  return plaqShifts;
+}
+
+template<typename Float>
+Float PLEGMA_Gauge<Float>::calculatePlaqStaples(){
+  
+  this->communicateGhost(-1,FIRST_CORNER);
+
+  Float plaqStaples = calcPlaqStaplesDef<Float>( this->D_elem() );
+
+  gaugeTex<Float> tex;
+  tex.tex = this->createTexObject();
+  Float plaq = calculatePlaquette<Float>(tex);
+  this->destroyTexObject(tex.tex);
+
+  if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette using staples is %f; diff with reference: %e\n", plaqStaples, plaqStaples-plaq);
+  return plaqStaples;
+}
+
+template<typename Float>
+Float PLEGMA_Gauge<Float>::calculatePlaqCorners(){
+  gaugeTex<Float> tex;
+  this->communicateGhost(-1,FIRST_CORNER);
+  tex.tex = this->createTexObject();
+  Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
+  Float plaqRef = calculatePlaquette<Float>(tex);
+  PLEGMA_printf("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);
+  this->destroyTexObject(tex.tex);
+  return plaqCorners;
 }
 
 template<typename Float>
@@ -95,7 +140,6 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
   }
   PLEGMA_Su3field<Float> tmp1(BOTH);
   PLEGMA_Su3field<Float> tmp2(BOTH);
-
   PLEGMA_Su3field<Float> *u_s1[D3D4];
   PLEGMA_Su3field<Float> *u_s2[D3D4];
 
@@ -127,7 +171,6 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
     cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
     checkCudaError();
   }
-  
   for(int idir = 0; idir < D3D4 ; idir++){
     delete u_s1[idir];
     delete u_s2[idir];
@@ -197,6 +240,53 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
   }
 }
 
+template<typename FloatG>
+void PLEGMA_Gauge<FloatG>::GFlow_step( PLEGMA_Gauge<FloatG> &Z, double eps )
+{
+
+  //1step RK
+  GFlow_substep<FloatG,double>( this->D_elem(), Z.D_elem(), eps/(4.0), 0.0 );// 1/4epsZ_0, W1
+  //communicate ghost W1
+  this->communicateGhost();
+  
+  //2step RK
+  GFlow_substep<FloatG,double>( this->D_elem(), Z.D_elem(), eps*(8.0/9.0), -(17.0/9.0) );// 8/9epsZ_1-17/36epsZ_0, W2
+  //communicate ghost W2
+  this->communicateGhost();
+
+  //3step RK
+  GFlow_substep<FloatG,double>( this->D_elem(), Z.D_elem(), eps*(3.0/4.0), (-1.0) );// Z_2=8/9epsZ_1-17/36epsZ_0, W3
+  //communicate ghost W3
+  this->communicateGhost();
+
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::applyGradientFlow( PLEGMA_Gauge<Float> &Z, int N, double eps ){
+  this->communicateGhost();
+  for(int i=0; i<N; i++){
+    this->GFlow_step( Z, eps );
+  }
+  this->unload();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::unitarize(){
+  unitarize_dev( this->D_elem() );
+  this->communicateGhost();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar,Float tolerance,int maxIter,int seedOverRelax){
+  gFixingLandau_k(*this,uIn,overelaxPar,tolerance,maxIter,seedOverRelax);
+  PLEGMA_printf("Landau Gauge Fixed plaquette is: ");
+  calculatePlaq();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::gluonField(PLEGMA_Gauge<Float> &uIn){
+  gluonField_k(*this,uIn);
+}
 
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;

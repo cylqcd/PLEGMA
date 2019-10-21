@@ -94,14 +94,14 @@ int main(int argc, char **argv) {
     int sources[4] = {1,0,1,0};
     
     // Benchmark Meson contration 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_a, prop_b, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_a, prop_b, sources, HGC_totalL[DIM_T]);
 
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b, sources, HGC_totalL[DIM_T]);
 
     PLEGMA_Propagator<float> prop_c, prop_d;
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsUDSC,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, sources, false, false);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsUDSC,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, sources, HGC_totalL[DIM_T], false, false);
   }
 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
@@ -126,9 +126,9 @@ int main(int argc, char **argv) {
     int sources[4] = {1,0,1,0};
     
     // Benchmark three point functions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas, sources);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, sources);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas, sources, HGC_totalL[DIM_T]);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, sources, HGC_totalL[DIM_T]);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1, sources, HGC_totalL[DIM_T]);
   }
   
   if(run({"PDFs"})) {
@@ -145,10 +145,10 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing (scale 1 dir)",momSmScale);
 
     // Benchmark contraction  3pt
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, sources);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, sources, HGC_totalL[DIM_T]);
 
     // Benchmark Wilson line update 
-    PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2);
+    PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2, false);
 
     // Benchmark shift routine 
     PLEGMA_benchmark(&prop_b,&PLEGMA_Field<float>::shift,"Shift routine", prop_a, 2);

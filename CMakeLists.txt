@@ -53,6 +53,26 @@ if(GIT_FOUND)
     if(${QUDA_INCLUDES_IT} EQUAL 0)
       add_compile_definitions(QUDA_INCLUDES_COMMIT_b08233a)
     endif()
+
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 775a033a84b4f085e8cf68812b89f989e6a5a816 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+		    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+		    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_775a033)
+    endif()
+
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 55782743d1ee8d99af21e1038be11a7023650d7d HEAD
+    	            WORKING_DIRECTORY ${QUDA_SRC}
+		    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+		    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_55782743)
+    endif()
+
+
     execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 1dec1db7a57e4fe00b14e04ba2088ca5039f8760 HEAD
                     WORKING_DIRECTORY ${QUDA_SRC}
 		    RESULT_VARIABLE QUDA_INCLUDES_IT

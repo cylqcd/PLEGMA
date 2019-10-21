@@ -343,7 +343,7 @@ protected:
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
     for(size_t i=0; i<shape.size(); i++) {
-      int exceeding = start[i] + lshape[i] - shape[i];
+      int exceeding = MIN(lshape[i], start[i] + lshape[i] - shape[i]);
       if(exceeding > 0) { // then i it's exceeding
 	if(HGC_verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
@@ -394,7 +394,7 @@ protected:
 	  }
 	} else if(i >= my_n_writings) {
 	  // do a dummy write to keep the communications active
-	  tmp_lshape = ones_like(lshape);
+	  tmp_lshape = zeros_like(lshape);
 	}
 	_write_dataset_parallel(dataset_id, tmp, shape, tmp_lshape, tmp_start);
 	if(tmp != buf) hostFree(tmp, product(tmp_lshape)*sizeof(T));
@@ -538,6 +538,8 @@ public:
 			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
     if(HGC_verbosity > 2) PLEGMA_printf("Going to write dataset %s in path %s \n", name.c_str(),
 					path.c_str());
+    if(HGC_verbosity > 3) printf("RANK(%d) Dataset shape=(%s), lshape=(%s), start=(%s)\n", getRank(),
+				 toString(shape).c_str(), toString(lshape).c_str(), toString(start).c_str());
     cd(path);
 
     // Sanity check

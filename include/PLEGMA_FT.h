@@ -11,15 +11,17 @@ namespace plegma {
   class PLEGMA_FT : public IO<void,int>  {
     using Vint = std::vector<int>;
     using VVint = std::vector<Vint>;
+    using VFloat = std::vector<Float>;
+    using VVFloat = std::vector<VFloat>;
   protected:
     int Q2_max;
-    VVint momList;
+    VVFloat momList;
     bool isAllocated;
     int dof; // degrees of freedom the field has
     Float *h_elem; // memory to hold the transformed data
     int sizeN; // size of the elements array include real,imag
     int dims; // the dimensionality of the transformation either 3 or 4
-    int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[3] : 1; 
+    int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[DIM_T] : 1; 
     bool accum;
     tex_mom_list texMomList;
     std::string field_name;
@@ -53,15 +55,18 @@ namespace plegma {
        @params int Q2_max: Up to which momentum square we want to do the transformation
        @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
        @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
+       @params bool dimT = HGC_localL[DIM_T]: Size of the time dimension in case we want to transform only part of the vector
      **/
-    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); 
+    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
     /**
        @brief Constructor of the FT class with specific momentum vector
        @params std::vector<int> mom: Momentum vector, either 3 or 4 components based on the choice of D3D4
        @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
        @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
+       @params bool dimT = HGC_localL[DIM_T]: Size of the time dimension in case we want to transform only part of the vector
      **/
-    PLEGMA_FT(std::vector<int> mom, int D3D4 = 3, bool accum = false);
+    template<typename T>
+    PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
     
     ~PLEGMA_FT();
     /**
@@ -76,7 +81,7 @@ namespace plegma {
     /**
        @brief Accessor to the list where the components of each momentun are stored
      **/
-    VVint MomList() const{ return momList;}
+    VVFloat MomList() const{ return momList;}
     /**
        @brief Clean the buffer of the class
      **/
@@ -86,7 +91,7 @@ namespace plegma {
      **/
     int Dims() const{return dims;}
     /**
-       @brief Accessor. If field is 3D field dimT=1. If is 4D and the transformation is on 3D then dimT=localL[3], if it is a 4D transformation dimT=1
+       @brief Accessor. If field is 3D field dimT=1. If is 4D and the transformation is on 3D then dimT=localL[DIM_T], if it is a 4D transformation dimT=1
      **/
     int DimT() const{return dimT;}
 
@@ -97,8 +102,13 @@ namespace plegma {
 
     
     void apply(const PLEGMA_Field<Float> &f, FT_TYPE type = FT_GEMV, int sign = -1);
-    
-    void mulConstMomentumPhases(Vint src, int sign); // put momentum phases due to the point sources
+
+    /**
+       @brief Put additional phases to the FT
+       @params src: (\vec{src} \cdot \vec{p}) *(2*PI/L) where src is the source and p the momentum without (2*PI/L)
+       @params sign: the appropriate size you want to put
+     **/
+    void mulConstMomentumPhases(Vint src, int sign);
     void scale(Float a);
 
     void writeFile(std::string filename, FILE_FORMAT format, int timeshift = 0) {

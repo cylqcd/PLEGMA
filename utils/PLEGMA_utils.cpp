@@ -16,6 +16,7 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
   // we need to do it first for enabling the printing
   HGC_options->setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", 0,
 			 procs[0], procs[1], procs[2], procs[3]);
+    
   for(int i=0; i<4; i++) if( procs[i] <= 0 )
 			   PLEGMA_error("Error with dim %d: Negative proc or not divisor of dim\n", i);
   initComms(argc, argv, procs);

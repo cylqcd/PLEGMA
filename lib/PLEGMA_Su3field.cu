@@ -3,7 +3,6 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_SU3_projection.cuh>
-
 using namespace plegma;
 
 //--------------------------//
@@ -48,6 +47,11 @@ void PLEGMA_Su3field<Float>::UxUdag(PLEGMA_Su3field<Float> &B, PLEGMA_Su3field<F
 }
 
 template<typename Float>
+void PLEGMA_Su3field<Float>::U_plus_eq_aU(PLEGMA_Su3field<Float> &B, Float c){
+  U_plus_eq_aU_k<Float,Float,Float>(*this,B,c);
+}
+
+template<typename Float>
 void PLEGMA_Su3field<Float>::su3Projection(){
   su3Projection_k(*this);
 }
@@ -57,6 +61,10 @@ void PLEGMA_Su3field<Float>::traceHerExpMap(PLEGMA_Su3field<Float> &A){
   traceHerExpMap_k(*this,A);
 }
 
+template<typename Float>
+Float PLEGMA_Su3field<Float>::sumRtraceU(){
+  return sumRtraceU_k<Float,Float>(*this);
+}
 
 template<typename Float>
 static void pathX(int *dir, int *sign, int length,PLEGMA_Su3field<Float> **u_s,

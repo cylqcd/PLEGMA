@@ -38,6 +38,7 @@ static void initRand()
   srand(17*rank + 137);
 }
 
+
 void initComms(int argc, char **argv, const int *commDims)
 {
   // TODO: QMP not supported right now
@@ -49,7 +50,8 @@ void initComms(int argc, char **argv, const int *commDims)
 #elif defined(MPI_COMMS)
   MPI_Init(&argc, &argv);
 #endif
-  initCommsGridQuda(4, commDims, NULL, NULL);
+
+  initCommsGridQuda(4, commDims,NULL, NULL);
   initRand();
 }
 
@@ -112,7 +114,7 @@ void plaqQuda() {
 QUDA_solver::QUDA_solver(double mu) {
   profiler = new TimeProfile(("Solver profiler mu="+to_string(mu)).c_str());
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
-  
+
   mg_inv_param = newQudaInvertParam();
   mg_param = newQudaMultigridParam();
   mg_param.invert_param = &mg_inv_param;
@@ -128,7 +130,10 @@ QUDA_solver::QUDA_solver(double mu) {
   if(HGC_verbosity > 2) {
     printQudaInvertParam(&inv_param);
   }
-  
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  mg_eig_param = new QudaEigParam[mg_param.n_level];
+  setEigMultigridParam(mg_param,mg_eig_param);
+#endif
   // TODO: add support for other solvers
   if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 
     PLEGMA_error("initSolver: This function works only with Direct solve and even odd preconditioning");
@@ -194,6 +199,9 @@ QUDA_solver::~QUDA_solver(){
   delete D;
   delete DSloppy;
   delete DPre;
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  delete mg_eig_param;
+#endif
 }
 
 struct MG_Transfer{
@@ -242,24 +250,25 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   current->smoother = param->smoother[level];
   
   if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
-    if(changeBlock(current->geoBlockSize, param->geo_block_size[level])) {
-      delete (mg->*get(MG_Coarse()));
-      mg->*get(MG_Coarse())=nullptr;
-      delete (mg->*get(MG_CoarseParam()));
-      mg->*get(MG_CoarseParam())=nullptr;
+    MG* &coarse = mg->*get(MG_Coarse());
+    MGParam* &coarseParam = mg->*get(MG_CoarseParam());
+    if(changeBlock(coarseParam->geoBlockSize, param->geo_block_size[level+1])) {
+      delete coarse;
+      coarse=nullptr;
+      delete coarseParam;
+      coarseParam=nullptr;
       delete (mg->*get(MG_Transfer()));
       mg->*get(MG_Transfer())=nullptr;
       return;
     }
-    if((mg->*get(MG_CoarseParam()))->Nvec != param->n_vec[level]) {
-      delete (mg->*get(MG_Coarse()));
-      mg->*get(MG_Coarse())=nullptr;
-      delete (mg->*get(MG_CoarseParam()));
-      mg->*get(MG_CoarseParam())=nullptr;
+    if(coarseParam->Nvec != param->n_vec[level+1]) {
+      delete coarse;
+      coarse=nullptr;
+      delete coarseParam;
+      coarseParam=nullptr;
       return;
     }
-    
-    updateMultigridParam(mg->*get(MG_Coarse()), mg->*get(MG_CoarseParam()), param, level+1);
+    updateMultigridParam(coarse, coarseParam, param, level+1);
   }
 }
 
@@ -281,11 +290,12 @@ void QUDA_solver::UpdateSolver()
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
 
-  if(((multigrid_solver*) mg_preconditioner)->mgParam->Nvec != mg_param.n_vec[0]) {
+  multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
+  if( changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
+      mg->mgParam->Nvec != mg_param.n_vec[0]) {
     destroyMultigridQuda(mg_preconditioner);
     mg_preconditioner = newMultigridQuda(&mg_param);
   } else {
-    multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
     updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
     updateMultigridQuda(mg_preconditioner, &mg_param);
   }

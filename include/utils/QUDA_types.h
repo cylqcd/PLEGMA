@@ -418,7 +418,48 @@ inline std::string get_solver_str(QudaInverterType type) {
   case QUDA_INVALID_INVERTER:
     return "none";
   default:
-    PLEGMA_error("invalid solver type %d\n", type);
+    PLEGMA_warning("invalid solver type %d\n", type);
     return "";
   }
 }
+
+inline QudaBoolean get_boolean(std::string s){
+  if(s.compare("true")==0) return QUDA_BOOLEAN_YES;
+  else if (s.compare("false")==0) return QUDA_BOOLEAN_NO;
+  else PLEGMA_warning("Boolean not recognized");
+}
+
+
+inline QudaEigSpectrumType get_eigensolution_type(std::string s) {
+  if(s=="sr")
+    return QUDA_SPECTRUM_SR_EIG;
+  else if(s=="lr")
+    return QUDA_SPECTRUM_LR_EIG;
+  else if(s=="sm")
+    return QUDA_SPECTRUM_SM_EIG;
+  else if(s=="lm")
+    return QUDA_SPECTRUM_LM_EIG;
+  else if(s=="si")
+    return QUDA_SPECTRUM_SI_EIG; 
+  else if(s=="li")
+    return QUDA_SPECTRUM_LI_EIG; 
+  else {
+    PLEGMA_warning( "invalid eigensolver type %s\n", s.c_str());
+    return QUDA_SPECTRUM_INVALID;
+  }
+}
+
+inline  QudaEigType get_eigensolver(std::string s){
+  if(s=="trlan" || s=="trlm")
+    return QUDA_EIG_TR_LANCZOS;
+  else if(s=="irlan" || s=="irlm")
+    return QUDA_EIG_IR_LANCZOS;
+  else if(s=="irarn" || s=="iram")
+    return QUDA_EIG_IR_ARNOLDI;
+  else {
+    PLEGMA_warning("Invalid eigensolver for multigrid exact deflation\n");
+    return QUDA_EIG_INVALID;
+  }
+}
+
+

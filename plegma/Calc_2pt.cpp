@@ -17,7 +17,8 @@ int main(int argc, char **argv)
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
-  bool not_ud = HGC_options->set("not-ud", "If given, up and down will not be run", verbosity);
+  bool run_ud = true;
+  HGC_options->set("run-ud", "Wheater to run or not light quark flavors", verbosity, run_ud);
   HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
   HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
   HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
@@ -50,10 +51,10 @@ int main(int argc, char **argv)
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
 
-      PLEGMA_Propagator<float> propUP(not_ud ? NONE : BOTH);
+      PLEGMA_Propagator<float> propUP(run_ud ? BOTH : NONE);
       tmp_time = 0;
       // ensuring mu positive
-      if (! not_ud) {
+      if (run_ud) {
 	if(mu != mu_ud) {
 	  for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = mu_ud_factor[i];
 	  mu = mu_ud;
@@ -76,9 +77,9 @@ int main(int argc, char **argv)
 	}
       }
       
-      PLEGMA_Propagator<float> propDN(not_ud ? NONE : BOTH);
+      PLEGMA_Propagator<float> propDN(run_ud ? BOTH : NONE);
       // ensuring mu negative
-      if (! not_ud) {
+      if (run_ud) {
 	if(mu != -1*mu_ud) {
 	  mu = -1*mu_ud;
 	  solver.UpdateSolver();
@@ -184,7 +185,7 @@ int main(int argc, char **argv)
 	      bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	      bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
-	      corrb.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], only_st, only_ch);
+	      corrb.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], HGC_totalL[DIM_T], only_st, only_ch);
 	      char * group;
 	    
 	      asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]s[%+1.1e]c[%+1.1e]%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],
@@ -242,7 +243,7 @@ int main(int argc, char **argv)
 	    bool only_st = (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
-	    corrb.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], only_st, only_ch);
+	    corrb.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], HGC_totalL[DIM_T], only_st, only_ch);
 	    char * group;
 
 	    if(cSmaller=='s') {
@@ -283,11 +284,11 @@ int main(int argc, char **argv)
 	    }
 	  }
 	}
-      } else if( !not_ud ) {
+      } else if(run_ud) {
 #ifdef PLEGMA_UDSC_BARYONS
 	PLEGMA_Propagator<float> none(NONE);
 	PLEGMA_Correlator<float> corrb(corr_space, maxQsq);
-	corrb.contractBaryonsUDSC(propUP, propDN, none, none, sourcePositions[isource], false, false);
+	corrb.contractBaryonsUDSC(propUP, propDN, none, none, sourcePositions[isource]);
 	char * group;
 	
 	asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);

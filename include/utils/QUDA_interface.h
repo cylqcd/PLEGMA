@@ -18,7 +18,10 @@ namespace quda {
     Dirac *D, *DSloppy, *DPre;
     DiracM *M, *MSloppy, *MPre;
     cudaColorSpinorField *b, *x;
-    
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+    QudaEigParam *mg_eig_param;
+#endif
+
   public:
     QudaInvertParam getInvParams() const{return inv_param;}
     SolverParam* getSolverParam() const{return solverParam;}
