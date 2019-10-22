@@ -89,8 +89,8 @@ namespace plegma {
      **/
     void GFlow_step( PLEGMA_Gauge<Float> &Z, double eps );
     /**
-       @brief Performs the Wilson flow calling GFlow_step to do many steps (N*eps=flow time)
-       @param[in] Z: Input gauge field
+       @brief Performs the Wilson flow calling GFlow_step to do many steps (N*eps=flow time). Input output field on "this"
+       @param[in] Z: Auxiliary field for temporal use
        @param[in] N: number of steps in the integration
        @param[in] eps: epsilon used for the integration
      **/
