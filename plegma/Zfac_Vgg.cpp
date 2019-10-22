@@ -81,8 +81,6 @@ int main(int argc, char **argv){
   std::vector<double> gLoopPlt; // gluon loops with Plaquette definition
   std::vector<double> gLoopFST; // gluon loops diagonals with Field strength tensor
   std::vector<double> gLoopFST_off[3]; // gluon loops off-diagonals with Field strength tensor
-  std::vector<int> nScount;
-  for(int n=0; n<=nsmearStout;n++) nScount.push_back(n);
   std::vector<std::vector<std::complex<double>>> AxA;
   PLEGMA_FT<double> *ftAl=nullptr, *ftAr=nullptr;
   std::vector<std::string> filenameGprop;
@@ -175,6 +173,9 @@ int main(int argc, char **argv){
       gLoopFST_off[0].clear();      gLoopFST_off[1].clear();      gLoopFST_off[2].clear();
       if(stoutOrWF != "stout" && stoutOrWF != "WF") PLEGMA_error("Either Stout or Wilson flow are needed");
       int nSteps = (stoutOrWF == "stout")?nsmearStout:0;
+      std::vector<int> nScount;
+      for(int n=0; n<=nSteps;n++) nScount.push_back(n);
+      
       for(int n=0; n<=nSteps;n++){
 
 	if(stoutOrWF == "stout"){
@@ -186,8 +187,10 @@ int main(int argc, char **argv){
 	    gauge1.stoutSmearing(gauge2,1,alphaStout,4);
 	  }
 	}
-	else
+	else{
+	  gauge2.copy(gauge1);
 	  gauge2.applyGradientFlow(gauge1,100,0.01); // fixed for now Nsteps*epsilon=1
+	}
 	// gLoops diagonal Plq definition
 	/*
 	 * Plaquete definition of the gluon loops
