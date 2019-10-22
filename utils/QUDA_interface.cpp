@@ -88,7 +88,6 @@ void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType 
     setInvertParam(inv_param);
     checkInvertParam(&inv_param);
 
-    inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
     loadCloverQuda(NULL, NULL, &inv_param);
   }
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gauge.Bytes_total()/N_DIMS);
