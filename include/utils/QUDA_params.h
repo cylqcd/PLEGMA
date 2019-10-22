@@ -50,6 +50,7 @@ define(int pipeline, 0); // length of pipeline for fused operations in GCR or Bi
 define(int solution_accumulator_pipeline, 0);
 define(QudaInverterType inv_type, QUDA_MG_INVERTER);
 define(QudaInverterType precon_type, QUDA_INVALID_INVERTER);
+define(QudaInverterType solver_type, QUDA_GCR_INVERTER);
 
 // MG options
 define(bool  use_mg, true); //Use the multigrid preconditioner 

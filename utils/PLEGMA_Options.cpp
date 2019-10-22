@@ -247,6 +247,11 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-solve-type", "The way to solve the system, options (direct, direct-pc, normop, normop-pc, normerr, normerr-pc)", verbosity, tmpString);
   if(isFound) solve_type = get_solve_type(tmpString.c_str());
 
+  tmpString = get_solver_str(solver_type);
+  isFound=opt.set("Q-solver-type", "The type of solver to use, options (cg,bicgstab,gcr, etc.)", verbosity, tmpString);
+  if(isFound) solver_type = get_solver_type(tmpString.c_str());
+
+  
   opt.set("Q-tol", "The L2 residual tolerance", verbosity, tol);
   opt.set("Q-tolhq", "Set heavy-quark residual tolerance", verbosity, tol_hq);
   opt.set("Q-reliable-delta", "The delta factor for the reliable updates", verbosity, reliable_delta);

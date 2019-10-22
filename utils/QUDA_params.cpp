@@ -369,7 +369,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
 
   // do we want to use an even-odd preconditioned solve or not
   inv_param.solve_type = solve_type;
-  if(isEven) {
+  if(isEven) { 
     inv_param.matpc_type = QUDA_MATPC_EVEN_EVEN;
     PLEGMA_printf("### Running for the Even-Even Operator\n");
   }
@@ -378,7 +378,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.matpc_type = QUDA_MATPC_ODD_ODD;
   }
 
-  inv_param.inv_type = use_mg? QUDA_GCR_INVERTER : QUDA_CG_INVERTER;
+  inv_param.inv_type = solver_type;
 
   inv_param.verbosity_precondition = mg_verbosity[0];
 
