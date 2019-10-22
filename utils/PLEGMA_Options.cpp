@@ -223,10 +223,6 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-inv-type", "The type of solver to use, options (cg,bicgstab,gcr)", verbosity, tmpString);
   if(isFound) inv_type = get_solver_type(tmpString.c_str());
 
-  tmpString = get_solver_str(precon_type);
-  isFound=opt.set("Q-precon-type", "The type of precon solver to use, options (mr,none)", verbosity, tmpString);
-  if(isFound)precon_type = get_solver_type(tmpString.c_str());
-
   opt.set("Q-kappa", "Kappa value of the Dirac operator", verbosity, kappa);
   opt.set("Q-mu", "Twisted mass value", verbosity, mu);
   opt.set("Q-csw", "The coefficient of the clover term", verbosity, csw);
@@ -243,15 +239,6 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-matpc", "Operator preconditioning type, options (even-even, odd-odd, even-even-asym, odd-odd-asym)", verbosity, tmpString);
   if(isFound) matpc_type = get_matpc_type(tmpString.c_str());
 
-  tmpString = get_solve_str(solve_type);
-  isFound=opt.set("Q-solve-type", "The way to solve the system, options (direct, direct-pc, normop, normop-pc, normerr, normerr-pc)", verbosity, tmpString);
-  if(isFound) solve_type = get_solve_type(tmpString.c_str());
-
-  tmpString = get_solver_str(solver_type);
-  isFound=opt.set("Q-solver-type", "The type of solver to use, options (cg,bicgstab,gcr, etc.)", verbosity, tmpString);
-  if(isFound) solver_type = get_solver_type(tmpString.c_str());
-
-  
   opt.set("Q-tol", "The L2 residual tolerance", verbosity, tol);
   opt.set("Q-tolhq", "Set heavy-quark residual tolerance", verbosity, tol_hq);
   opt.set("Q-reliable-delta", "The delta factor for the reliable updates", verbosity, reliable_delta);
