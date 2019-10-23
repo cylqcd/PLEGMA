@@ -285,6 +285,7 @@ protected:
 
   template<typename T>
   inline void _write_dataset_parallel(hid_t dataset_id, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start, bool serial=false) {
+    hsize_t size=1; for(auto l: shape) size*=l; if(size==0) return;
     hid_t filespace = H5Dget_space(dataset_id);
     hid_t subspace   = H5Screate_simple(lshape.size(), lshape.data(), NULL);
     H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start.data(), NULL, lshape.data(), NULL);
