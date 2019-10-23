@@ -151,8 +151,9 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   tex_mom_list moms = corr.getTexMomList();
   
   if(HGC_verbosity > 2)
-    PLEGMA_printf("time_step = %d, ps.tp.aux.x = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n",
-		   time_step,      ps.tp.aux.x,      ps.tp.grid.x,      ps.tp.block.x,      ps.tp.shared_bytes);
+    if(corr.hasSource())
+      printf("time_step = %d, ps.tp.aux.x = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n",
+	      time_step,      ps.tp.aux.x,      ps.tp.grid.x,      ps.tp.block.x,      ps.tp.shared_bytes);
   
   Float2<FloatC> *h_partial_block = NULL;        
   Float2<FloatC> *d_partial_block = NULL;

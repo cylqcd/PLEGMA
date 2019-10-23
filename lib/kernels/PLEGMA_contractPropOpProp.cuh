@@ -112,7 +112,8 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
-    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+    if(corr.hasSource())
+      printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
   size_t alloc_size = (runFT==true)? (size * (ps.tp.grid.x/time_step) ) : size;
 
