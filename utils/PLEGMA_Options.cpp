@@ -281,6 +281,7 @@ void qudaOptions(Options &opt){
   map_to_array_MG<QudaInverterType>(tpl_int_string, setup_inv, get_solver_type);
 
   opt.set("Q-mg-setup-tol", "The tolerance to use for the setup of multigrid", verbosity, setup_tol);
+  opt.set("Q-mg-setup-maxiter", "The number of max iteration to use for the setup of multigrid", verbosity, setup_maxiter);
   opt.set("Q-mg-omega", "The over/under relaxation factor for the smoother of multigrid", verbosity, omega);
 
   default_map_MG(tpl_int_string, (std::string) "mr");
