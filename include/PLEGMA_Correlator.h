@@ -81,7 +81,8 @@ namespace plegma {
       return maxT;
     }
     int StartT() {
-      return (HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + HGC_totalL[DIM_T] - source_position[DIM_T] ) % HGC_totalL[DIM_T];
+      int startT=(HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + HGC_totalL[DIM_T] - source_position[DIM_T] ) % HGC_totalL[DIM_T];
+      return (startT>=maxT) ? 0 : startT;
     }
     int LocalT() {
       // Returns the local T size accordingly to the time source and maxT
@@ -94,12 +95,12 @@ namespace plegma {
 	// |-->  s   | from the beginning to maxT
 	int t_source = source_position[DIM_T]%HGC_localL[DIM_T];
 	int t_size = MIN(maxT, HGC_localL[DIM_T]-t_source); 
-	if(startT==t_source || startT>=maxT) return t_size;
+	if(startT==0) return t_size;
 	else {
 	  assert((maxT-startT) < (HGC_localL[DIM_T]-t_size));
 	  return t_size+maxT-startT;
 	}
-      } else if(startT>=maxT) return 0;
+      } else if(startT==0) return 0;
       else return MIN(maxT-startT, HGC_localL[DIM_T]);
     }
     int4 getSource() {

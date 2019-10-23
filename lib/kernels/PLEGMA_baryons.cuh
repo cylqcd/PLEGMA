@@ -101,7 +101,7 @@ static void contract_baryons_host( ProfileStruct &ps,
 				   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result, int ip){
 
   int t_size = corr.LocalT(); if(t_size==0) return;
-  int maxT = MAX(corr.TotalT() - corr.StartT(), 0); 
+  int maxT = corr.StartT()==0 ? 0 : (corr.TotalT() - corr.StartT()); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = corr.getCorrSpace()==MOMENTUM_SPACE;
   size_t volume = corr.getVolSize()/t_size;

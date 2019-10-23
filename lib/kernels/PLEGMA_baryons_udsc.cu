@@ -142,7 +142,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
 				Float2<FloatC> *result, int i) {
 
   int t_size = corr.LocalT(); if(t_size==0) return;
-  int maxT = MAX(corr.TotalT() - corr.StartT(), 0); 
+  int maxT = corr.StartT()==0 ? 0 : (corr.TotalT() - corr.StartT()); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int4 source = corr.getSource();
