@@ -21,7 +21,7 @@ static inline bool isInList(std::vector<std::string> list,std::string str){
 }
 
 
-void plegmaOptions(Options &opt, std::vector<std::string> list){
+void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_params){
   bool isFound;
   std::string tmpString;
   if(isInList(list,"verbosity")) opt.set("verbosity","Set verbosity level, 0 minimal, 1 verbose, 2 debug, 3 debug all", 0, verbosity);
@@ -35,8 +35,9 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     PLEGMA_printf( "procs %d %d %d %d\n",  procs[0], procs[1], procs[2], procs[3]);
   }
 
+  if(!update_params){
   opt.setForced("dims","Set local dimensions (X Y Z T), e.g. 8 8 8 16", verbosity, dims[0], dims[1], dims[2], dims[3]);
-  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);
+  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);}
 
   if(isInList(list,"load-gauge")) opt.set("load-gauge", "Path to the gauge field", verbosity, latfile);
 
@@ -420,4 +421,15 @@ void qudaOptions(Options &opt){
 
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
+
+  isFound=opt.set("Up-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputUP);
+
+  isFound=opt.set("Down-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputDN);
+  
+  isFound=opt.set("Strange-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputST);
+  
+  isFound=opt.set("Charm-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputCH);
+
 }
+
+
