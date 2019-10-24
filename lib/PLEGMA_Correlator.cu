@@ -17,8 +17,10 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
-  if(isAlloc && site_size == getSiteSize())
+  if(isAlloc && site_size == getSiteSize()){
+    freeThreads();
     return;
+  }
   finalize();
   site_size = getSiteSize();
   int t_size = LocalT();
@@ -44,6 +46,7 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 finalize() {
   if (isAlloc) {
+    freeThreads();
     if(corr_space == POSITION_SPACE)
       delete corr_pos_space;
     else if(corr_space == MOMENTUM_SPACE)	 
@@ -310,7 +313,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeASCII(std::string filename_out) {
+writeASCII(std::string filename_out, bool async) {
   MPI_Comm comm;
   size_t g_vol_size;
   int rank;
@@ -484,8 +487,8 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename) {
-
+do_writeHDF5(std::string filename){
+	     
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
@@ -512,19 +515,20 @@ writeHDF5(std::string filename) {
     }
   }
 
-  HDF5 writer(filename, MPI_COMM_WORLD);
+  MPI_Comm thread_comm;
+  MPI_Comm_dup( MPI_COMM_WORLD, &thread_comm );
+  HDF5 writer(filename, thread_comm);
 
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
 	   source_position[3]);
   std::string top=(std::string) "/" + source; 
   free(source);
-
   
   std::vector<hsize_t> momShape = { 3 };
   std::vector<int> mvec;
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
-  
+
   for(size_t g=0; g<n_groups(); g++){
     writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
     if(corr_space == MOMENTUM_SPACE) {
@@ -534,10 +538,39 @@ writeHDF5(std::string filename) {
       Float *writeBuf = corr + (g*n_datasets()+d)*writeSize + corrShift;
       std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
       writer.write_dataset(dataset, writeBuf, shape, lshape, start);
+      
       writer.write_attribute(dataset, "description", descr);
     }
   }
+
+  MPI_Comm_free(&thread_comm);
+  
 }
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::freeThreads(){
+  if( !corr_threads.empty()){
+    corr_threads[0]->join();
+    delete corr_threads[0];
+    corr_threads.erase( corr_threads.begin() );
+  }
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+writeHDF5(std::string filename, bool asynch) {
+
+  if( asynch ){
+    freeThreads();
+    corr_threads.push_back( new std::thread( &PLEGMA_Correlator<Float>::do_writeHDF5, this, filename));
+  }
+  else{
+    do_writeHDF5(filename);
+  }
+  
+  
+}
+
 
 template class PLEGMA_Correlator<float>;
 template class PLEGMA_Correlator<double>;

@@ -10,6 +10,7 @@
 //#define TIMING_REPORT
 using namespace plegma;
 extern Topology *default_topo;
+std::vector<std::string> HDF5::open_files;
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
   HGC_hold_exit = false;

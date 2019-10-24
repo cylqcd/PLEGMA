@@ -22,6 +22,8 @@ protected:
   std::vector<std::string> path_str;
   std::string prev_path;
 
+  static std::vector<std::string> open_files;
+  
   inline std::string join_path(std::vector<std::string> vp, bool fromTop = true) {
     std::string ret = fromTop ? "" : "." ;
     for (auto s : vp) ret += "/" + s;
@@ -46,6 +48,9 @@ public:
    * @brief Returns the path to the current group
    * @return a string contining the path to the current
    */
+
+  //static std::vector<std::string> open_files;
+  
   inline std::string pwd() {
     return join_path(path_str);
   }
@@ -402,6 +407,13 @@ protected:
     H5Dclose(dataset_id);
   }
 
+  bool isFileOpen( std::string filename){
+    if( std::find(open_files.begin(), open_files.end(), filename) != open_files.end() )
+      return true;
+    else
+      return false;
+  }
+  
 public:
   /*
    * Creates or opens a path.
@@ -431,6 +443,7 @@ public:
    *    then go to group1 and group2
    */
   HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD) : comm(comm) {
+    
     hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
 
@@ -450,7 +463,11 @@ public:
     } else {
       filename = name;
     }
-  
+
+    // check if filename is open by another instance
+    while( isFileOpen(filename) )
+      sleep(0.001);
+    
     // checking if file exists or creating it
     if(access( filename.c_str(), F_OK ) != -1) {
       file_id = H5Fopen(filename.c_str(),  H5F_ACC_RDWR, fapl_id);
@@ -479,6 +496,10 @@ public:
     }
     H5Fclose(file_id);
     if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
+    // remove opened file from vector
+    std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filename);
+    if (posix != open_files.end())
+      open_files.erase(posix);
   }
 
   /*
