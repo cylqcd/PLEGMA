@@ -244,9 +244,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
     // if we are using an outer even-odd preconditioned solve, then we
     // use single parity injection into the coarse grid
-    mg_param.coarse_grid_solution_type[i] = 
-      solve_type == QUDA_DIRECT_PC_SOLVE ? QUDA_MATPC_SOLUTION : QUDA_MAT_SOLUTION;
-
+    mg_param.coarse_grid_solution_type[i] = QUDA_MATPC_SOLUTION; 
+      
     mg_param.omega[i] = omega; // over/under relaxation factor
 
     mg_param.location[i] = QUDA_CUDA_FIELD_LOCATION;
@@ -368,7 +367,9 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.solution_type = QUDA_MAT_SOLUTION ;
 
   // do we want to use an even-odd preconditioned solve or not
-  inv_param.solve_type = solve_type;
+  inv_param.solve_type = (inv_type == QUDA_CG_INVERTER || inv_type == QUDA_CA_CG_INVERTER)?
+    QUDA_NORMOP_PC_SOLVE : QUDA_DIRECT_PC_SOLVE;
+ 
   if(isEven) { 
     inv_param.matpc_type = QUDA_MATPC_EVEN_EVEN;
     PLEGMA_printf("### Running for the Even-Even Operator\n");
@@ -378,7 +379,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.matpc_type = QUDA_MATPC_ODD_ODD;
   }
 
-  inv_param.inv_type = solver_type;
+  inv_param.inv_type = inv_type;
 
   inv_param.verbosity_precondition = mg_verbosity[0];
 
