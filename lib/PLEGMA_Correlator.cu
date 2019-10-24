@@ -497,9 +497,9 @@ writeHDF5(std::string filename) {
 
   // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.
   // All of them will write a different piece
-  int nWriters = (corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1;
+  int nWriters = writeSize==0 ? 0 : ((corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1);
   int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
-  size_t corrShift = use_multiple_writers(shape, lshape, start, nWriters, id);
+  size_t corrShift = writeSize==0 ? 0 : use_multiple_writers(shape, lshape, start, nWriters, id);
   if(id >= nWriters) lshape[0] = 0; // not writing
   if(nWriters>1) {
     if(HGC_verbosity > 3) {
