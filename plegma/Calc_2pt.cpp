@@ -4,7 +4,7 @@
 using namespace plegma;
 using namespace quda;
 static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-					    "nsrc", "src-filename", "maxQsq", "twop-baryons-filename", "twop-mesons-filename", "corr-file-format", "corr-space"};
+					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space"};
   
 int main(int argc, char **argv)
 {
@@ -25,6 +25,11 @@ int main(int argc, char **argv)
   HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
   //=========================================================================================================//
   initializePLEGMA();
+
+  twop_filename += std::string("_") + ((nsmearGauss>0) ? "SS" : "LL") +
+    "_gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) +
+    "_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
+
   double start_time, tmp_time;
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
@@ -45,6 +50,8 @@ int main(int argc, char **argv)
       smearedGauge.calculatePlaq();
     }
     QUDA_solver solver(mu);
+    PLEGMA_Correlator<float> corrm(corr_space, maxQsq);
+    PLEGMA_Correlator<float> corrb(corr_space, maxQsq);
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
@@ -105,8 +112,6 @@ int main(int argc, char **argv)
 	propUP.applyBoundaries_device(sourcePositions[isource][3]);
 	propDN.applyBoundaries_device(sourcePositions[isource][3]);
 
-	PLEGMA_Correlator<float> corrm(corr_space, maxQsq);
-	PLEGMA_Correlator<float> corrb(corr_space, maxQsq);
 	start_time = MPI_Wtime();
 	corrm.contractMesons(propUP, propDN, sourcePositions[isource]);
 	tmp_time = MPI_Wtime()-start_time;
@@ -117,13 +122,13 @@ int main(int argc, char **argv)
 	asprintf(&dset2, "twop_mesons_d[%+1.1e]u[%+1.1e]", -1*mu_ud, mu_ud);
 	corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 	free(dset1); free(dset2);
-	corrm.writeFile(twop_m_filename.c_str(), corr_file_format, true);
+	corrm.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	
 	start_time = MPI_Wtime();
 	corrb.contractBaryons(propUP, propDN, sourcePositions[isource]);
 	tmp_time = MPI_Wtime()-start_time;
 	PLEGMA_printf("Contraction time for baryons %lf sec\n",tmp_time);
-	corrb.writeFile(twop_b_filename.c_str(), corr_file_format, true);
+	corrb.writeFile((twop_filename+"_baryons").c_str(), corr_file_format, true);
       }
       
       // Storing only the smaller and then computing on the fly the other
@@ -180,8 +185,6 @@ int main(int argc, char **argv)
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
 	      PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
 	      PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
-	      PLEGMA_Correlator<float> corrb(corr_space, maxQsq);
-	      PLEGMA_Correlator<float> corrm(corr_space, maxQsq);
 	      bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	      bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -192,7 +195,7 @@ int main(int argc, char **argv)
 		       only_st ? "_only-s" : "", only_ch ? "_only-c" : "");
 	      corrb.setGroups(group);
 	      free(group);
-	      corrb.writeFile(twop_filename.c_str(), corr_file_format, true);
+	      corrb.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 #endif
 	      corrm.contractMesons(propST, propCH, sourcePositions[isource]);
 	      char *dset1, *dset2;
@@ -200,7 +203,7 @@ int main(int argc, char **argv)
 	      asprintf(&dset2, "twop_mesons_c[%+1.1e]s[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
 	      corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      corrm.writeFile(twop_filename.c_str(), corr_file_format, true);
+	      corrm.writeFile((twop_filename+"_baryons").c_str(), corr_file_format, true);
 
 	      if(!only_ch) {
 		corrm.contractMesons(propUP, propST, sourcePositions[isource]);
@@ -208,14 +211,14 @@ int main(int argc, char **argv)
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
 		corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corrm.writeFile(twop_m_filename.c_str(), corr_file_format, true);
+		corrm.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      
 		corrm.contractMesons(propDN, propST, sourcePositions[isource]);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
 		corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corrm.writeFile(twop_m_filename.c_str(), corr_file_format, true);
+		corrm.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      }
 
 	      if(!only_st) {
@@ -224,22 +227,20 @@ int main(int argc, char **argv)
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
 		corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corrm.writeFile(twop_m_filename.c_str(), corr_file_format, true);
+		corrm.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      
 		corrm.contractMesons(propDN, propCH, sourcePositions[isource]);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
 		corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		corrm.writeFile(twop_m_filename.c_str(), corr_file_format, true);
+		corrm.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      }
 	    }
 	  } else {
 	    PLEGMA_Propagator<float> none(NONE);
 	    PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? none : propL;
 	    PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? none : propL;
-	    PLEGMA_Correlator<float> corrb(corr_space, maxQsq);
-	    PLEGMA_Correlator<float> corrm(corr_space, maxQsq);
 	    bool only_st = (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -253,7 +254,7 @@ int main(int argc, char **argv)
 	    }
 	    corrb.setGroups(group);
 	    free(group);
-	    corrb.writeFile(twop_b_filename.c_str(), corr_file_format, true);
+	    corrb.writeFile((twop_filename+"_baryons").c_str(), corr_file_format, true);
 #endif
 	    if(!only_ch && !only_st) {
 	      char *dset1, *dset2;
@@ -268,7 +269,7 @@ int main(int argc, char **argv)
 
 	      corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      corrm.writeFile(twop_m_filename.c_str(), corr_file_format, true);
+	      corrm.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      
 	      corrm.contractMesons(propDN, (cSmaller=='s') ? propCH : propST, sourcePositions[isource]);
 	      if(cSmaller=='s') {
@@ -280,24 +281,25 @@ int main(int argc, char **argv)
 	      }
 	      corrm.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      corrm.writeFile(twop_m_filename.c_str(), corr_file_format, true);
+	      corrm.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	    }
 	  }
 	}
       } else if(run_ud) {
 #ifdef PLEGMA_UDSC_BARYONS
 	PLEGMA_Propagator<float> none(NONE);
-	PLEGMA_Correlator<float> corrb(corr_space, maxQsq);
 	corrb.contractBaryonsUDSC(propUP, propDN, none, none, sourcePositions[isource]);
 	char * group;
 	
 	asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
 	corrb.setGroups(group);
 	free(group);
-	corrb.writeFile(twop_b_filename.c_str(), corr_file_format);
+	corrb.writeFile((twop_filename+"_baryons").c_str(), corr_file_format);
 #endif
       }
     }
+    corrm.waitThreads();
+    corrb.waitThreads();
   }
   
   finalize();

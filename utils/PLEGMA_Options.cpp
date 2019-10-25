@@ -5,8 +5,7 @@
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq",
-						     "twop-filename", "twop-baryons-filename", "twop-mesons-filename",
-						     "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
+						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
 #ifdef HAVE_ARPACK
 						     ,"Eig-NkV", "Eig-logFile"
 #elif HAVE_PRIMME
@@ -82,8 +81,6 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);
-  if(isInList(list,"twop-baryons-filename")) opt.set("twop-baryons-filename", "File name for baryon two-point functions, extension will be added", verbosity, twop_b_filename);
-  if(isInList(list,"twop-mesons-filename")) opt.set("twop-mesons-filename", "File name for meson two-point functions, extension will be added", verbosity, twop_m_filename);
   if(isInList(list,"threep-filename")) opt.set("threep-filename", "File name for three-point functions, extension will be added", verbosity, threep_filename);
 
   if(isInList(list,"corr-file-format")){
