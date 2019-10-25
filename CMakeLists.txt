@@ -182,7 +182,8 @@ endif()
 #set(PLEGMA_GSLHOME "" CACHE PATH "path to GSL")
 set(PLEGMA_LIMEHOME "" CACHE PATH "path to LIME")
 set(PLEGMA_HDF5HOME "" CACHE PATH "path to HDF5")
-
+set(PLEGMA_HDF5_THREAD_SAFE OFF CACHE BOOL "Is HDF5 compiled in a thread-safe mode?")
+    
 # Switch between MKL and OpenBlas BLAS
 set(PLEGMA_MKL OFF CACHE BOOL "build PLEGMA with MKL")
 set(PLEGMA_OPENBLAS OFF CACHE BOOL "build PLEGMA with OPENBLAS")
@@ -308,8 +309,15 @@ if(HDF5_FOUND)
   FIND_LIBRARY(PLEGMA_Z_LIB z ${LIBRARY_DIRS})	
 #link_libraries(${HDF5_C_LIBRARY_hdf5})
   message(STATUS "HDF5 version ${HDF5_VERSION} found, include dir: ${HDF5_INCLUDE_DIRS}, libraries ${HDF5_C_LIBRARY_hdf5}")
+  if(NOT HDF5_IS_PARALLEL)
+    message(FATAL_ERROR "HDF5 must be parallel")
+  endif()
 else()
   message(FATAL_ERROR "HDF5 could not be located, did you try specifying -DPLEGMA_HDF5HOME?")
+endif()
+
+if(PLEGMA_HDF5_THREAD_SAFE)
+  add_definitions(-DHDF5_THREAD_SAFE)
 endif()
 
 add_definitions(-DHAVE_LIME)
