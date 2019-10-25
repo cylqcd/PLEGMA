@@ -1,4 +1,5 @@
 #include <hdf5.h>
+#include <stdlib.h>
 
 //TODO: This function should be overloaded for different data type
 template<typename T> inline hid_t datatype();
@@ -48,9 +49,6 @@ public:
    * @brief Returns the path to the current group
    * @return a string contining the path to the current
    */
-
-  //static std::vector<std::string> open_files;
-  
   inline std::string pwd() {
     return join_path(path_str);
   }
@@ -408,9 +406,14 @@ protected:
   }
 
   bool isFileOpen( std::string filename){
+    // NOTE: in order to open multiple files one needs to check if HDF5 is thread-safe
+#ifdef HDF5_THREAD_SAFE
     if( std::find(open_files.begin(), open_files.end(), filename) != open_files.end() )
       return true;
-    else
+#elif
+    if( not open_files.empty() )
+      return true;
+#endif
       return false;
   }
   
@@ -465,9 +468,13 @@ public:
     }
 
     // check if filename is open by another instance
-    while( isFileOpen(filename) )
-      sleep(0.001);
-    
+    char* filepath = realpath(filename.c_str(), NULL);
+    if(filepath != NULL){
+      if(HGC_verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filepath);
+      while( isFileOpen(filepath) )
+	sleep(0.001);
+      free(filepath);
+    }
     // checking if file exists or creating it
     if(access( filename.c_str(), F_OK ) != -1) {
       file_id = H5Fopen(filename.c_str(),  H5F_ACC_RDWR, fapl_id);
@@ -477,7 +484,14 @@ public:
       if(HGC_verbosity > 2) PLEGMA_printf("Created file %s\n", filename.c_str());
     }
     H5Pclose(fapl_id);
-
+    
+    // adding opened file to vector
+    filepath = realpath(filename.c_str(), NULL);
+    assert(filepath != NULL);
+    if(HGC_verbosity > 2) PLEGMA_printf("Adding %s to open files\n", filepath);
+    open_files.push_back(filepath);
+    free(filepath);
+    
     if(path != "/") {
       cd(path);
     }
@@ -496,10 +510,15 @@ public:
     }
     H5Fclose(file_id);
     if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
+    
     // remove opened file from vector
-    std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filename);
-    if (posix != open_files.end())
-      open_files.erase(posix);
+    char* filepath = realpath(filename.c_str(), NULL);
+    assert(filepath != NULL);
+    if(HGC_verbosity > 2) PLEGMA_printf("Removing %s from open files\n", filepath);
+    std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filepath);
+    assert(posix != open_files.end());
+    open_files.erase(posix);
+    free(filepath);
   }
 
   /*
