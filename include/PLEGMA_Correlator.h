@@ -27,7 +27,7 @@ namespace plegma {
     // Correlator info
     CORR_SPACE corr_space;
     int Q2_max;
-    std::vector<int> fixMomVec ;
+    std::vector<int> fixMomVec;
     size_t vol_size;
     std::vector<int> shape;
     // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
@@ -40,13 +40,11 @@ namespace plegma {
     std::vector<std::string> groups;
     std::string description;
 
-    std::vector<std::thread*> corr_threads;
-    
     void initialize();
     void finalize();
     
     // For HDF5 file writing
-    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const;
     
   public:
     PLEGMA_Correlator(CORR_SPACE CorrSpace, int Q2_max):
@@ -59,45 +57,45 @@ namespace plegma {
     {}
 
     ~PLEGMA_Correlator(){finalize();}
-    CORR_SPACE getCorrSpace() {
+    CORR_SPACE getCorrSpace() const{
       return corr_space;
     }
-    inline size_t n_datasets() {
+    inline size_t n_datasets() const{
       return MAX(1,datasets.size());
     }
-    inline size_t n_groups() {
+    inline size_t n_groups() const{
       return MAX(1,groups.size());
     }
-    size_t getSiteSize() {
+    size_t getSiteSize() const{
       size_t size=n_datasets()*n_groups();
       std::for_each(shape.begin(), shape.end(), [&] (int n) {size *= n;});
       return size;
     }
-    size_t getVolSize() {
+    size_t getVolSize() const{
       return vol_size;
     }
-    size_t getTotalSize() {
+    size_t getTotalSize() const{
       return site_size*vol_size;
     }
-    bool hasSource(int dir) {
+    bool hasSource(int dir) const{
       if(dir<0 || dir>N_DIMS) return false;
       return ((HGC_procPosition[dir]*HGC_localL[dir]) <= source_position[dir]
 	      && source_position[dir] < ((HGC_procPosition[dir]+1)*HGC_localL[dir]));
     }
-    bool hasSource() {
+    bool hasSource() const{
       bool ret=true;
       for(int dir=0; ret && dir<N_DIMS; dir++)
 	ret &= hasSource(dir);
       return ret;
     }
-    int TotalT() {
+    int TotalT() const{
       return maxT;
     }
-    int StartT() {
+    int StartT() const{
       int startT=(HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + HGC_totalL[DIM_T] - source_position[DIM_T] ) % HGC_totalL[DIM_T];
       return (startT>=maxT) ? 0 : startT;
     }
-    int LocalT() {
+    int LocalT() const{
       // Returns the local T size accordingly to the time source and maxT
       if(maxT==HGC_totalL[DIM_T]) return HGC_localL[DIM_T];
       int startT = StartT();
@@ -115,7 +113,7 @@ namespace plegma {
       } else if(startT==0) return 0;
       else return MIN(maxT-startT, HGC_localL[DIM_T]);
     }
-    int4 getSource() {
+    int4 getSource() const{
       return make_int4(source_position[0],source_position[1],source_position[2],source_position[3]);
     }
     void setSource(int source[4]) {
@@ -123,7 +121,7 @@ namespace plegma {
 	source_position[i] = source[i];
     }
 
-    tex_mom_list getTexMomList() {
+    tex_mom_list getTexMomList() const{
       if(corr_space == MOMENTUM_SPACE) {
 	return corr_mom_space->getTexMomList();
       } else {
@@ -132,10 +130,10 @@ namespace plegma {
 	return dummy;
       }
     }
-    Float* getCorr() {
+    Float* getCorr() const{
       return corr;
     }
-    std::vector<std::string> getDatasets() {
+    std::vector<std::string> getDatasets() const{
       return datasets;
     }
     void setDatasets(std::vector<std::string> d) {
@@ -148,7 +146,7 @@ namespace plegma {
     void setDatasets(std::string s) {
       return setDatasets({s});
     }
-    std::vector<std::string> getGroups() {
+    std::vector<std::string> getGroups() const{
       return groups;
     }
     void setGroups(std::vector<std::string> d) {
@@ -200,8 +198,7 @@ namespace plegma {
 					int signProps, std::vector<GAMMAS> gammas,
 					int source[4], int max_t=HGC_totalL[DIM_T]);
 
-    void do_writeHDF5(std::string filename);
-    void freeThreads();
+    void do_writeHDF5(std::string filename, bool finalize=false) const;
     virtual void writeASCII(std::string filename, bool asynch=false);
     virtual void writeHDF5(std::string filename, bool asynch=false);
   };

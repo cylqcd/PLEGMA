@@ -17,16 +17,12 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
-  if(isAlloc && site_size == getSiteSize()){
-    freeThreads();
-    return;
-  }
   finalize();
   site_size = getSiteSize();
   int t_size = LocalT();
   if(corr_space == MOMENTUM_SPACE) {
     if(fixMomVec.empty()) corr_mom_space = new PLEGMA_FT<Float>(Q2_max, 3, false, t_size);
-    else corr_mom_space = new PLEGMA_FT<Float>(this->fixMomVec);
+    else corr_mom_space = new PLEGMA_FT<Float>(this->fixMomVec, 3, false, t_size);
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();
@@ -46,7 +42,6 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 finalize() {
   if (isAlloc) {
-    freeThreads();
     if(corr_space == POSITION_SPACE)
       delete corr_pos_space;
     else if(corr_space == MOMENTUM_SPACE)	 
@@ -405,7 +400,7 @@ writeASCII(std::string filename_out, bool async) {
 
 template<typename Float>
 std::string PLEGMA_Correlator<Float>::
-fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const{
   std::string descr = "shape: ";
   switch(corr_space) {
   case MOMENTUM_SPACE:
@@ -487,8 +482,7 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-do_writeHDF5(std::string filename){
-	     
+do_writeHDF5(std::string filename, bool finalize) const{
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
@@ -521,7 +515,7 @@ do_writeHDF5(std::string filename){
 
   char *source;
   asprintf(&source,"/sx%02dsy%02dsz%02dst%02d/", source_position[0], source_position[1], source_position[2],
-	   source_position[3]);
+ 	   source_position[3]);
   std::string top=(std::string) "/" + source; 
   free(source);
   
@@ -538,37 +532,36 @@ do_writeHDF5(std::string filename){
       Float *writeBuf = corr + (g*n_datasets()+d)*writeSize + corrShift;
       std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
       writer.write_dataset(dataset, writeBuf, shape, lshape, start);
-      
       writer.write_attribute(dataset, "description", descr);
     }
   }
 
   MPI_Comm_free(&thread_comm);
-  
-}
 
-template<typename Float>
-void PLEGMA_Correlator<Float>::freeThreads(){
-  if( !corr_threads.empty()){
-    corr_threads[0]->join();
-    delete corr_threads[0];
-    corr_threads.erase( corr_threads.begin() );
+  if(finalize) {
+    if(corr_space == POSITION_SPACE)
+      delete corr_pos_space;
+    else if(corr_space == MOMENTUM_SPACE)	 
+      delete corr_mom_space;
+    else
+      PLEGMA_error("corr_space not supported by correlator");
   }
 }
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 writeHDF5(std::string filename, bool asynch) {
-
   if( asynch ){
-    freeThreads();
-    corr_threads.push_back( new std::thread( &PLEGMA_Correlator<Float>::do_writeHDF5, this, filename));
+    // Here the lambda does a copy of *this into tmp that will take care of the finalization
+    // when the thread is finished
+    isAlloc = false;
+    if(corr_space == MOMENTUM_SPACE)	 
+      corr_mom_space->freeTexMomList();
+    std::thread([=,tmp=*this](){ tmp.do_writeHDF5(filename, true); }).detach();
   }
   else{
     do_writeHDF5(filename);
   }
-  
-  
 }
 
 
