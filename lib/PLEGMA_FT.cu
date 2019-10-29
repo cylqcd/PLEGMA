@@ -37,8 +37,7 @@ PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum, int dimT):
 template<typename Float>
 PLEGMA_FT<Float>::~PLEGMA_FT(){
   if(isAllocated) hostFree(h_elem, sizeN*sizeof(Float));
-  if(texMomList.Nmoms>0)
-    texMomList.free();
+  freeTexMomList();
 }
 
 template<typename Float>
@@ -135,7 +134,12 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   }
   return texMomList;
 }
-    
+
+template<typename Float>
+void PLEGMA_FT<Float>::freeTexMomList() {
+  if(texMomList.Nmoms>0)
+    texMomList.free();
+}
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
