@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <limits>
 #include <string.h>
+#include <PLEGMA_io.h>
 
 //#define TIMING_REPORT
 using namespace plegma;
@@ -173,4 +174,8 @@ void plegma::PLEGMA_end() {
   // TODO: here we should destroy everything is created in init.
   cublasStatus_t error = cublasDestroy(HGC_cublas_handle);
   if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("\nError indestroying cublas context, error code = %d\n", error);
+  if(HDF5::isWriting()) {
+    PLEGMA_printf("Waiting for HDF5 to finish the writing\n");
+    while(HDF5::isWriting()) sleep(0.001);
+  }
 }

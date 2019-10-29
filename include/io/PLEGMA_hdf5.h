@@ -1,5 +1,4 @@
 #include <hdf5.h>
-#include <stdlib.h>
 
 //TODO: This function should be overloaded for different data type
 template<typename T> inline hid_t datatype();
@@ -52,7 +51,14 @@ public:
   inline std::string pwd() {
     return join_path(path_str);
   }
-  
+
+  /*
+   * @brief Returns if HDF5 has open writing
+   */
+  static bool isWriting() {
+    return not open_files.empty();
+  }
+
   /*
    * @brief Creates or opens the groups to reach the path.
    * @param path a string containing the path. Similar rules to filesystem are used: 
@@ -288,7 +294,7 @@ protected:
 
   template<typename T>
   inline void _write_dataset_parallel(hid_t dataset_id, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start, bool serial=false) {
-    hsize_t size=1; for(auto l: shape) size*=l; if(size==0) return;
+    //hsize_t size=1; for(auto l: shape) size*=l; if(size==0) return;
     hid_t filespace = H5Dget_space(dataset_id);
     hid_t subspace   = H5Screate_simple(lshape.size(), lshape.data(), NULL);
     H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start.data(), NULL, lshape.data(), NULL);
@@ -410,7 +416,7 @@ protected:
 #ifdef HDF5_THREAD_SAFE
     if( std::find(open_files.begin(), open_files.end(), filename) != open_files.end() )
       return true;
-#elif
+#else
     if( not open_files.empty() )
       return true;
 #endif
@@ -446,10 +452,6 @@ public:
    *    then go to group1 and group2
    */
   HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD) : comm(comm) {
-    
-    hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-    H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
-
     // Creating filename and path from name
     std::string path = "/";
     // checking if .h5 is given and at the end of file
@@ -468,13 +470,13 @@ public:
     }
 
     // check if filename is open by another instance
-    char* filepath = realpath(filename.c_str(), NULL);
-    if(filepath != NULL){
-      if(HGC_verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filepath);
-      while( isFileOpen(filepath) )
-	sleep(0.001);
-      free(filepath);
-    }
+    if(HGC_verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filename.c_str());
+    while( isFileOpen(filename) )
+      sleep(0.001);
+    
+    hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
+
     // checking if file exists or creating it
     if(access( filename.c_str(), F_OK ) != -1) {
       file_id = H5Fopen(filename.c_str(),  H5F_ACC_RDWR, fapl_id);
@@ -486,11 +488,8 @@ public:
     H5Pclose(fapl_id);
     
     // adding opened file to vector
-    filepath = realpath(filename.c_str(), NULL);
-    assert(filepath != NULL);
-    if(HGC_verbosity > 2) PLEGMA_printf("Adding %s to open files\n", filepath);
-    open_files.push_back(filepath);
-    free(filepath);
+    if(HGC_verbosity > 2) PLEGMA_printf("Adding %s to open files\n", filename.c_str());
+    open_files.push_back(filename);
     
     if(path != "/") {
       cd(path);
@@ -512,13 +511,10 @@ public:
     if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
     
     // remove opened file from vector
-    char* filepath = realpath(filename.c_str(), NULL);
-    assert(filepath != NULL);
-    if(HGC_verbosity > 2) PLEGMA_printf("Removing %s from open files\n", filepath);
-    std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filepath);
+    if(HGC_verbosity > 2) PLEGMA_printf("Removing %s from open files\n", filename.c_str());
+    std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filename);
     assert(posix != open_files.end());
     open_files.erase(posix);
-    free(filepath);
   }
 
   /*
