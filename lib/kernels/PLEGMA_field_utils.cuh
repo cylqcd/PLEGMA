@@ -323,12 +323,12 @@ static __global__ void sumModVector_kernel(FloatOut *out, FloatIn *in){
     }
   }
   
-  Fout[sid] = res;
+  Fout[sid] = Fout[sid] + res;
 }
 
 template<typename FloatOut, typename FloatIn>
 static void sumModVector_k(PLEGMA_Field<FloatOut> &Fo, PLEGMA_Vector<FloatIn> &Vi){
   ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps,"sumModVector_kernel", summod_kernel<FloatOut,FloatIn>, Fo.D_elem(), Vi.D_elem());
+  tuneAndRun(ps,"sumModVector_kernel", sumModVector_kernel<FloatOut,FloatIn>, Fo.D_elem(), Vi.D_elem());
   checkCudaError();
 }

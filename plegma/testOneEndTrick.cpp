@@ -3,6 +3,7 @@
 
 using namespace plegma;
 using namespace quda;
+
 static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsrc", "twop-filename"};
   
 int main(int argc, char **argv)
@@ -26,14 +27,14 @@ int main(int argc, char **argv)
     }
     QUDA_solver solver(mu);
 
-    PLEGMA_Field<double> out(BOTH), tmp(DEVICE);
+    PLEGMA_Field<double> out(BOTH, SCALAR);
     out.zero_device();
     
     PLEGMA_Vector<double> vectorAux(DEVICE), vectorInOut(DEVICE);
     int t0=10;
     vectorAux.randInit(1234);
     
-    for(int isrc=0; i<nsrc; i++){
+    for(int isrc=0; isrc<numSourcePositions; isrc++){
       // - stochastic source at fixed timeslice t0
     
       vectorAux.stochastic_Z(4);
@@ -44,16 +45,15 @@ int main(int argc, char **argv)
       solver.solve( vectorInOut,  vectorInOut);
 
       // - reduce by summing over all his spincolor components
-      tmp.zero_device();
-      tmp.sumModVector(vectorInOut);
+      out.sumModVector(vectorInOut, true);
+    }
 
-      // - sum over r
-      out.add( tmp, 1./nsrc);    
-    }    
+    out.cscale(1./numSourcePositions);
+    
     // - sum over x
     std::vector<int> mom{0,0,0};
  
-    PLEGMA_FT<double> corr( mom, 3, False);
+    PLEGMA_FT<double> corr( mom, 3, false);
 
     corr.apply( out, FT_NAIVE, 1);
     corr.writeASCII( twop_filename.c_str(), t0);
