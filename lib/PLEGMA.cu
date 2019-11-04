@@ -116,8 +116,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
     int space3D_proc;
     space3D_proc = HGC_nProc[0] * HGC_nProc[1] * HGC_nProc[2];
-    int *ranks;
-    hostMalloc(ranks, space3D_proc*sizeof(int));
+    int ranks[space3D_proc];
 
     for(int i= 0 ; i < space3D_proc ; i++)
       ranks[i] = HGC_procPosition[3] + HGC_nProc[3]*i;
@@ -128,8 +127,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     MPI_Comm_create(MPI_COMM_WORLD, HGC_spaceGroup , &HGC_spaceComm);
 
     // create group of process to use mpi gather
-    int *ranksTime;
-    hostMalloc(ranksTime, HGC_nProc[3]*sizeof(int));
+    int ranksTime[HGC_nProc[3]];
 
     int spaceId = (HGC_procPosition[0] * HGC_nProc[1] + HGC_procPosition[1]) * HGC_nProc[2] + HGC_procPosition[2];
     for(int i=0 ; i < HGC_nProc[3] ; i++)
@@ -139,10 +137,6 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     MPI_Group_rank(HGC_timeGroup, &HGC_timeRank);
     MPI_Group_size(HGC_timeGroup, &HGC_timeSize);
     MPI_Comm_create(MPI_COMM_WORLD, HGC_timeGroup, &HGC_timeComm);
-
-    //////////////////////////////////////////////////////////////////////////////
-    hostFree(ranks, space3D_proc*sizeof(int));
-    hostFree(ranksTime, HGC_nProc[3]*sizeof(int));
 
     cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
     if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCreate failed with error %d", error);
