@@ -37,7 +37,7 @@
 #ifdef __NVCC__
 #define global_both(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				\
-__constant__ __device__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);		
+  __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);		
 #else
 #define global_both(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				
@@ -46,18 +46,14 @@ __constant__ __device__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);
 #else
 
 #define global_host(dtype, name, ...)					\
-  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
-  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
+  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
 #ifdef __NVCC__
 #define global_both(dtype, name, ...)					\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
-  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); \
-  extern __constant__ __device__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);	\
-  extern __constant__ dtype c_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); // This line should be removed
+  extern __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__); 
 #else
-#define global_both(dtype, name, ...)					\
-  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
-  extern dtype GK_##name PARENTHESES(1,__VA_ARGS__) __attribute__((deprecated)); 
+#define global_both(dtype, name, ...)			\
+  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
 #endif
 #endif
 #endif
