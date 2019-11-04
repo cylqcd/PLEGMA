@@ -28,7 +28,7 @@ inline std::istream& operator >> (std::istream &i, site &x){
 struct tex_mom_list {
   size_t Nmoms;
   cudaTextureObject_t tex;
-  inline __device__ int4 get(size_t i){
+  inline __device__ int4 get(const size_t &i) const {
 #ifdef __NVCC__
     return tex1Dfetch<int4>(tex,i);
 #else
@@ -46,55 +46,33 @@ struct tex_mom_list {
 };
 
 struct pointer_holder {
+  const size_t size;
+  const size_t bytes;
   void * hostPointer;
   void * devPointer;
-  size_t size;
-  size_t bytes;
-  std::string var_name;
-  std::string type_name;
-  char type_char;
+  const std::string var_name;
+  const std::string type_name;
+  const char type_char;
   
-  template<typename hostT>
-  pointer_holder(const char* name, hostT *host, int s=0) {
-    hostPointer = (void*) host;
-    devPointer = NULL;
-    if(s<=0) size = sizeof(host)/sizeof(hostT);
-    else size=s;
-    bytes = sizeof(hostT);
-    var_name = name;
-    type_name = plegma::type_name<hostT>();
-    type_char = plegma::type_char<hostT>();
-  }
-  template<typename hostT, typename devT>
-  pointer_holder(const char* name, hostT *host, devT *dev, int s=0) : pointer_holder(name, host, s) {
-    devPointer = (void*) dev;
-  }
-  void copyToDevice() {
-    if(devPointer != NULL) {
-      cudaMemcpy( devPointer, hostPointer, bytes*size, cudaMemcpyHostToDevice);
-      checkCudaError();
-    }
-  }
-  void copyFromDevice() {
-    if(devPointer != NULL) {
-      cudaMemcpy( hostPointer, devPointer, bytes*size, cudaMemcpyDeviceToHost);
-      checkCudaError();
-    }
-  }
+  template<typename hostT, typename deviceT>
+  pointer_holder(const std::string& name, const size_t& size, hostT *host, deviceT *device=nullptr ) :
+    size(size), bytes(sizeof(hostT)), hostPointer((void*) host), devPointer((void*) device),
+    var_name(name), type_name(plegma::type_name<hostT>()), type_char(plegma::type_char<hostT>()) { }
+
   void copyToDeviceConstant() {
-    if(devPointer != NULL) {
+    if(devPointer != nullptr) {
       cudaMemcpyToSymbol( *((char**) devPointer), hostPointer, bytes*size);
       checkCudaError();
     }
   }
   void copyFromDeviceConstant() {
-    if(devPointer != NULL) {
+    if(devPointer != nullptr) {
       cudaMemcpyFromSymbol(hostPointer, *((char**) devPointer), bytes*size);
       checkCudaError();
     }
   }
   bool checkDeviceConstant() {
-    if(devPointer != NULL) {
+    if(devPointer != nullptr) {
       char tmp[bytes*size];
       memcpy(tmp,hostPointer,bytes*size);
       copyFromDeviceConstant();
@@ -110,7 +88,7 @@ struct pointer_holder {
     }
     return true;
   }
-  std::string get_value() {
+  std::string get_value() const {
     std::string line = var_name + " = (type: " + type_name + ", size: " + std::to_string(size) + (size==1 ? ", value:" : ", values:");
     char* tmp = (char*) hostPointer;
     for(size_t i = 0; i<size; i++) {
@@ -125,13 +103,9 @@ struct pointer_holder {
 struct global_vars {
   std::vector<pointer_holder> globals;
 
-  template<typename hostT>
-  void add(const char* name, hostT &host, int size) {
-    globals.push_back(pointer_holder(name,&host,size));
-  }
   template<typename hostT, typename deviceT>
-  void add(const char* name, hostT &host, deviceT &device, int size) {
-    globals.push_back(pointer_holder(name,&host,&device, size));
+  void add(const std::string& name, const size_t& size, hostT *host, deviceT *device = nullptr) {
+    globals.push_back(pointer_holder(name, size, host, device));
   }
   void copyToDevice() {
     for(size_t i = 0; i != globals.size(); i++) {
@@ -148,7 +122,7 @@ struct global_vars {
     PLEGMA_printf("\nGlobal constants available only on host:\n");
     for(size_t i = 0; i < globals.size(); i++) {
 #ifdef __NVCC__
-      if(globals[i].devPointer != NULL) continue;
+      if(globals[i].devPointer != nullptr) continue;
 #endif
       std::string line = "HGC_" + globals[i].get_value();
       PLEGMA_printf(line.c_str());
@@ -156,7 +130,7 @@ struct global_vars {
 #ifdef __NVCC__
     PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
     for(int i = 0; i < globals.size(); i++) {
-      if(globals[i].devPointer == NULL) continue;
+      if(globals[i].devPointer == nullptr) continue;
       if(globals[i].checkDeviceConstant()) {
 	std::string line = "H/DGC_" + globals[i].get_value();
 	PLEGMA_printf(line.c_str());

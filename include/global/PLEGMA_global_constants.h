@@ -19,15 +19,15 @@
 #ifdef ADD_TO_GLOBAL
 
 #define global_host(dtype, name, ...)					\
-  HGC_global_vars.add<dtype>(#name,					\
-			     HGC_##name PARENTHESES(0,__VA_ARGS__),	\
-			     PRODUCT(__VA_ARGS__))
+  HGC_global_vars.add<dtype,dtype>(#name,				\
+				   PRODUCT(__VA_ARGS__),		\
+				   &HGC_##name PARENTHESES(0,__VA_ARGS__))
 
 #define global_both(dtype, name, ...)					\
   HGC_global_vars.add<dtype,dtype>(#name,				\
-				   HGC_##name PARENTHESES(0,__VA_ARGS__), \
-				   DGC_##name PARENTHESES(0,__VA_ARGS__), \
-				   PRODUCT(__VA_ARGS__))
+				   PRODUCT(__VA_ARGS__),		\
+				   &HGC_##name PARENTHESES(0,__VA_ARGS__), \
+				   &DGC_##name PARENTHESES(0,__VA_ARGS__))
 
 #else
 #ifdef ALLOCATE
