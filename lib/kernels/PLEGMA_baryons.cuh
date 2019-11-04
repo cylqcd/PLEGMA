@@ -122,19 +122,19 @@ static void contract_baryons_host( ProfileStruct &ps,
   
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
     dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+    grid.x = (grid.x/time_step)*std::min(HGC_localL[3]-it, time_step);
     contract_baryons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (texProp1, texProp2, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source,
+      (texProp1, texProp2, d_partial_block, it, std::min(HGC_localL[3]-it, time_step), source,
        (BARYONS_TYPE) ip, runFT, mom_list);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*std::min(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*std::min(HGC_localL[3]-it, time_step); v++)
 	for(int f = 0 ; f < 2; f++)
 	  for(int i = 0 ; i < site_size/2; i++) {
 	    result[((f*HGC_localL[3] + it)*volume +v)*site_size/2+i] = 0;
@@ -143,7 +143,7 @@ static void contract_baryons_host( ProfileStruct &ps,
 		h_partial_block[((v*2+f)*site_size/2+i)*accumX+j];
 	  }
     } else {
-      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*std::min(HGC_localL[3]-it, time_step); v++)
 	for(int f = 0 ; f < 2; f++)
 	  for(int i = 0 ; i < site_size/2; i++)
 	    result[((f*HGC_localL[3] + it)*volume +v)*site_size/2+i] = 

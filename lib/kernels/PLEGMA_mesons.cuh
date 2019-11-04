@@ -91,18 +91,18 @@ void contract_mesons_host( ProfileStruct &ps,
   
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
     dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+    grid.x = (grid.x/time_step)*std::min(HGC_localL[3]-it, time_step);
     contract_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (texProp1, texProp2, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source, runFT, moms);
+      (texProp1, texProp2, d_partial_block, it, std::min(HGC_localL[3]-it, time_step), source, runFT, moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
       
     if(runFT==true) {
       int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*std::min(HGC_localL[3]-it, time_step); v++)
 	for(int f = 0 ; f < site_size; f++) {
 	  result[(f*HGC_localL[3] + it)*volume+v] = 0;
 	  for(int j = 0 ; j < accumX; j++)

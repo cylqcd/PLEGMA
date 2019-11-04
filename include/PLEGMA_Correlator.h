@@ -60,10 +60,10 @@ namespace plegma {
       return corr_space;
     }
     inline size_t n_datasets() {
-      return MAX(1,datasets.size());
+      return std::max(datasets.size(), (size_t) 1);
     }
     inline size_t n_groups() {
-      return MAX(1,groups.size());
+      return std::max(groups.size(), (size_t) 1);
     }
     size_t getSiteSize() {
       size_t size=n_datasets()*n_groups();
