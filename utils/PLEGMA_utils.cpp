@@ -60,12 +60,12 @@ void updateOptions(WHICHFLAVOR fl){
     aux_str[0] = "random_string";
     aux_str[1] = "--inputFile";
     aux_str[2] = const_cast<char*>(filename.c_str());
-    HGC_options = new Options(3,const_cast<char**>(aux_str));
+    Options LocalOptions = Options(3,const_cast<char**>(aux_str));
     std::vector<std::string> aux_vec= {};
-    plegmaOptions(*HGC_options, aux_vec, true);
-    qudaOptions(*HGC_options);
+    plegmaOptions(LocalOptions, aux_vec, true);
+    qudaOptions(LocalOptions);
     if(verbosity>0) infoQuda();
-    HGC_options->close();
+    LocalOptions.close();
   }
 }
   
