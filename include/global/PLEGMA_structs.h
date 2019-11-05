@@ -27,20 +27,20 @@ inline std::istream& operator >> (std::istream &i, site &x){
 struct tex_mom_list {
   size_t Nmoms;
   cudaTextureObject_t tex;
+  std::shared_ptr<void> devPtr;
+
+  tex_mom_list() : Nmoms(0), tex(), devPtr() {}
+
+  tex_mom_list(size_t Nmoms, cudaTextureObject_t tex, void* devPtr) :
+    Nmoms(Nmoms), tex(tex), devPtr(std::shared_ptr<void>(devPtr, [=](void* ptr) { cudaFree(ptr);
+	  cudaDestroyTextureObject(tex); })) {}
+  
   inline __device__ int4 get(const size_t &i) const {
 #ifdef __NVCC__
     return tex1Dfetch<int4>(tex,i);
 #else
     return make_int4(0,0,0,0);
 #endif
-  };
-  void free(){
-    cudaResourceDesc desc;
-    cudaGetTextureObjectResourceDesc(&desc, tex);
-    cudaFree(desc.res.linear.devPtr);
-    cudaDestroyTextureObject(tex);
-    checkCudaError();
-    Nmoms=0;
   };
 };
 

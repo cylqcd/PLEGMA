@@ -13,37 +13,26 @@ using namespace plegma;
 
 template<typename Float>
 PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum):
-Q2_max(Q2_max), isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+Q2_max(Q2_max), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
   createMom();
-  texMomList.Nmoms=0;
 }
 
 template<typename Float>
 template<typename T>
-PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum):
-  isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum): dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
   if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
   VFloat momF(mom.begin(),mom.end());
   momList.push_back(momF);
-  texMomList.Nmoms=0;
-}
-
-
-template<typename Float>
-PLEGMA_FT<Float>::~PLEGMA_FT(){
-  if(isAllocated) hostFree(h_elem, sizeN*sizeof(Float));
-  if(texMomList.Nmoms>0)
-    texMomList.free();
 }
 
 template<typename Float>
 void PLEGMA_FT<Float>::zero(){
-  if(isAllocated) memset(h_elem, 0, Nmoms()*dimT*dof*2*sizeof(Float));
+  if(h_elem) memset(h_elem.get(), 0, Nmoms()*dimT*dof*2*sizeof(Float));
 }
 
 template<typename Float>
@@ -72,68 +61,53 @@ void PLEGMA_FT<Float>::createMom(){
 
 template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
-  if(isAllocated && dof == newDof) return;
-  try{
-    if(!isAllocated){dof = newDof; sizeN = Nmoms()*dimT*dof*2; hostMalloc(h_elem, sizeN*sizeof(Float));}
-    else{
-      if(dof != newDof){
-	dof = newDof;
-	hostFree(h_elem, sizeN*sizeof(Float));
-	sizeN = Nmoms()*dimT*dof*2;
-	hostMalloc(h_elem, sizeN*sizeof(Float));
-      }
-    }
+  if(dof != newDof) {
+    dof = newDof;
+    h_elem.reset(new Float[Nmoms()*dimT*dof*2]);
   }
-  catch (std::bad_alloc& err){
-    PLEGMA_error(err.what());
-  }
-  isAllocated=true;
   zero();
 }
 
 template<typename Float>
 tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
-  if(texMomList.Nmoms==0) {
-    texMomList.Nmoms=Nmoms();
-    cudaChannelFormatDesc desc;
-    memset(&desc, 0, sizeof(cudaChannelFormatDesc));
-    desc.f = cudaChannelFormatKindSigned;
-    desc.x = 8*4;
-    desc.y = 8*4;
-    desc.z = 8*4;
-    desc.w = 8*4;
+  cudaChannelFormatDesc desc;
+  memset(&desc, 0, sizeof(cudaChannelFormatDesc));
+  desc.f = cudaChannelFormatKindSigned;
+  desc.x = 8*4;
+  desc.y = 8*4;
+  desc.z = 8*4;
+  desc.w = 8*4;
+  
+  cudaResourceDesc resDesc;
+  memset(&resDesc, 0, sizeof(resDesc));
+  resDesc.resType = cudaResourceTypeLinear;
+  resDesc.res.linear.desc = desc;
 
-    cudaResourceDesc resDesc;
-    memset(&resDesc, 0, sizeof(resDesc));
-    resDesc.resType = cudaResourceTypeLinear;
-    resDesc.res.linear.desc = desc;
-
-    size_t bytes = texMomList.Nmoms*4*sizeof(int);
-    void * devPtr;
-    int * hostPtr;
-    hostMalloc(hostPtr, bytes);
-    memset(hostPtr, 0, sizeof(bytes));
-    cudaMalloc(&devPtr, bytes);
-    Float intp;
-    for(int i=0; i<texMomList.Nmoms; i++) {
-      for(int j=0; j<dims; j++) {
-	if(abs(std::modf(momList[i][j],&intp)) > std::numeric_limits<Float>::epsilon()) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
-	hostPtr[i*4+j]=(int) round(momList[i][j]);
-      }
+  size_t bytes = Nmoms()*4*sizeof(int);
+  void * devPtr;
+  int hostPtr[bytes];
+  memset(hostPtr, 0, sizeof(bytes));
+  cudaMalloc(&devPtr, bytes);
+  Float intp;
+  for(int i=0; i<Nmoms(); i++) {
+    for(int j=0; j<dims; j++) {
+      if(abs(std::modf(momList[i][j],&intp)) > std::numeric_limits<Float>::epsilon()) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
+      hostPtr[i*4+j]=(int) std::lround(momList[i][j]);
     }
-    cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
-    hostFree(hostPtr, bytes);
-    resDesc.res.linear.devPtr = devPtr;
-    resDesc.res.linear.sizeInBytes = bytes;
-
-    cudaTextureDesc texDesc;
-    memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.readMode = cudaReadModeElementType;
-
-    cudaCreateTextureObject(&texMomList.tex, &resDesc, &texDesc, NULL);
-    checkCudaError();
   }
-  return texMomList;
+  cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
+  resDesc.res.linear.devPtr = devPtr;
+  resDesc.res.linear.sizeInBytes = bytes;
+
+  cudaTextureDesc texDesc;
+  memset(&texDesc, 0, sizeof(texDesc));
+  texDesc.readMode = cudaReadModeElementType;
+
+  cudaTextureObject_t tex;
+  cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+  checkCudaError();
+  
+  return tex_mom_list(Nmoms(), tex, devPtr);
 }
     
 
@@ -186,8 +160,8 @@ void PLEGMA_FT<Float>::mulConstMomentumPhases(Vint src, int sign){
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   Float phase;
   std::complex<Float> expPhase;
-  if(!isAllocated) PLEGMA_error("Apply first FT and then the const phases");
-  std::complex<Float> *h2 = (std::complex<Float> *) h_elem;
+  if(!h_elem) PLEGMA_error("Apply first FT and then the const phases");
+  std::complex<Float> *h2 = (std::complex<Float> *) h_elem.get();
   for(int imom = 0; imom < Nmoms(); imom++){
     phase=0.;
     for(int i = 0; i < dims; i++) phase += ((Float) src[i] * momList[imom][i])/((Float) HGC_totalL[i]);
@@ -201,27 +175,24 @@ void PLEGMA_FT<Float>::mulConstMomentumPhases(Vint src, int sign){
 
 template<typename Float>
 void PLEGMA_FT<Float>::scale(Float a){
-  if(!isAllocated) PLEGMA_error("Apply first FT and then you can scale it");
-  cBLAS::scal(sizeN/2, a, h_elem);
+  if(!h_elem) PLEGMA_error("Apply first FT and then you can scale it");
+  cBLAS::scal(sizeN/2, a, h_elem.get());
 }
 
 
 template<typename Float>
 void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
-  if(!isAllocated) PLEGMA_error("Memory not allocated cannot write data");
+  if(!h_elem) PLEGMA_error("Memory not allocated cannot write data");
 
-  Float *helem_global=NULL;
-  bool gAlloc=false;
+  std::shared_ptr<Float> helem_global = h_elem;
   if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
-    hostMalloc(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
-    gAlloc=true;
+    helem_global.reset(new Float[HGC_nProc[3]*sizeN]);
     if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
-    int error = MPI_Gather(h_elem, sizeN, MPI_Type(h_elem), helem_global, sizeN, MPI_Type(h_elem),0,HGC_timeComm);
+    int error = MPI_Gather(h_elem.get(), sizeN, MPI_Type<Float>(), helem_global.get(), sizeN, MPI_Type<Float>(),0,HGC_timeComm);
     if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
   }
-  else
-    helem_global = h_elem;
+  
   if(comm_rank() == 0){
     FILE *ptr = fopen(filename.c_str(), "w");
     if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
@@ -231,11 +202,10 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
 	int its = (it + timeshift)%HGC_totalL[3];
 	for(int imom = 0; imom < Nmoms(); imom++)
 	  fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it,(int) round(momList[imom][0]),(int) round(momList[imom][1]),(int) round(momList[imom][2]),
-		  helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
+		  helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
       }
     fclose(ptr);
   }
-  if(gAlloc) hostFree(helem_global, HGC_nProc[3]*sizeN*sizeof(Float));
   comm_barrier();
 }
 
@@ -361,7 +331,7 @@ writeHDF5(std::string filename, int timeshift) {
 
   HDF5 writer(filename, MPI_COMM_WORLD);
 
-  writer.write_dataset(dataset, h_elem+shift, shape, lshape, start);
+  writer.write_dataset(dataset, h_elem.get()+shift, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);
 
   std::vector<hsize_t> momShape = { (hsize_t) dims };
