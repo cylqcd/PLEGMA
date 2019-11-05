@@ -381,6 +381,9 @@ void setInvertParam(QudaInvertParam &inv_param) {
 
   inv_param.inv_type = inv_type;
 
+  if(inv_param.inv_type == QUDA_CG_INVERTER)
+    PLEGMA_error("CG is not implemented, use CGNE instead\n");
+
   inv_param.verbosity_precondition = mg_verbosity[0];
 
   inv_param.inv_type_precondition = use_mg? QUDA_MG_INVERTER : QUDA_INVALID_INVERTER;
