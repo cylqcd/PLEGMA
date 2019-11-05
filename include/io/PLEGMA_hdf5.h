@@ -340,7 +340,7 @@ protected:
     std::vector<hsize_t> exceeding_shape;
     for(size_t i=0; i<shape.size(); i++) {
       if(start[i] + lshape[i] > shape[i]) { // then i it's exceeding
-	int exceeding = MIN(lshape[i], start[i] + lshape[i] - shape[i]);
+	int exceeding = std::min(lshape[i], start[i] + lshape[i] - shape[i]);
 	if(HGC_verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);

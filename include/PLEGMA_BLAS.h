@@ -227,8 +227,8 @@ namespace cuBLAS{
   }
   // In case that m is partitioned and we take trans of dagger then reduction is needed
   // Cannot work if n is partitioned
-template<typename Float>
-inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, Float *yHost, MPI_Comm comm){
+  template<typename Float>
+  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, Float *yHost, MPI_Comm comm){
     if(trans == NOTRANS) PLEGMA_error("Use gemv without MPI comm");
     if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
     cuBLAS::gemv_(trans, m, n, alpha, A, x, beta, y);
@@ -240,14 +240,12 @@ inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, F
 
   // In case that m is partitioned and we take trans of dagger then reduction is needed
   // Cannot work if n is partitioned
-template<typename Float>
+  template<typename Float>
   inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, MPI_Comm comm){
-    Float *yHost = nullptr;
-    hostMalloc(yHost,n*2*sizeof(Float));
-    cuBLAS::gemv(trans,m, n, alpha, A, x, beta, y,yHost,comm);
-    cudaMemcpy(y,yHost,n*2*sizeof(Float));
+    Float yHost[n*2];
+    cuBLAS::gemv(trans,m, n, alpha, A, x, beta, y, yHost,comm);
+    cudaMemcpy(y,yHost,sizeof(yHost),cudaMemcpyHostToDevice);
     checkCudaError();
-    hostFree(yHost,n*2*sizeof(Float));
   }
 }
 //=================================================================//

@@ -91,17 +91,18 @@ int main(int argc, char **argv) {
   if(run({"twop"})) {
     PLEGMA_Propagator<float> prop_a,  prop_b;
     PLEGMA_Correlator<float> corr(corr_space,maxQsq);
-    int sources[4] = {1,0,1,0};
+    site source;
+    source.fill(0);
     
     // Benchmark Meson contration 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_a, prop_b, sources, HGC_totalL[DIM_T]);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_a, prop_b, source, HGC_totalL[DIM_T]);
 
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b, sources, HGC_totalL[DIM_T]);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b, source, HGC_totalL[DIM_T]);
 
     PLEGMA_Propagator<float> prop_c, prop_d;
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsUDSC,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, sources, HGC_totalL[DIM_T], false, false);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsUDSC,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, source, HGC_totalL[DIM_T], false, false);
   }
 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK

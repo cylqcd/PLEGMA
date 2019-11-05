@@ -58,9 +58,9 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       PLEGMA_Propagator<Float> &prop2, 
-	       int source[4], int max_t){
+	       site& source, int max_t){
 
-  setSource(source);
+  source_position = source;
   maxT = max_t;
   shape = {};
   datasets =  {"twop_meson_1", "twop_meson_2"};
@@ -84,9 +84,9 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractBaryons(PLEGMA_Propagator<Float> &prop1,
 		PLEGMA_Propagator<Float> &prop2, 
-		int source[4], int max_t){
+		site& source, int max_t){
 
-  setSource(source);
+  source_position = source;
   maxT = max_t;
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
@@ -116,10 +116,10 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
 		    PLEGMA_Propagator<Float> &propCH, 
-		    int source[4], int max_t, bool only_st, bool only_ch){
+		    site& source, int max_t, bool only_st, bool only_ch){
 
 #ifdef PLEGMA_UDSC_BARYONS
-  setSource(source);
+  source_position = source;
   maxT = max_t;
   shape = {};
   description = "";
@@ -186,9 +186,9 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
 			  int signProps, std::vector<GAMMAS> gammas,
-			  int source[4], int max_t){
+			  site& source, int max_t){
   shape = {(int) gammas.size()};
-  setSource(source);
+  source_position = source;
   maxT = max_t;
   datasets = {"threep"};
   groups =  {"Local"};
@@ -244,9 +244,9 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas,
-			 int source[4], int max_t){
+			 site& source, int max_t){
   shape = {N_DIMS, (int) gammas.size()};
-  setSource(source);
+  source_position = source;
   maxT = max_t;
   datasets = {"threep"};
   groups =  {"OneD"};
@@ -263,9 +263,9 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Gauge<Float> &gauge,
-			int signProps, int source[4], int max_t){
+			int signProps, site& source, int max_t){
   shape = {N_DIMS};
-  setSource(source);
+  source_position = source;
   maxT = max_t;
   datasets = {"threep"};
   groups =  {"Noether"};
@@ -287,9 +287,9 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Propagator<Float> &fwdProp,
 			       PLEGMA_Su3field<Float> &su3,
 			       int signProps, std::vector<GAMMAS> gammas,
-			       int source[4], int max_t){
+			       site& source, int max_t){
   shape = {(int) gammas.size()};
-  setSource(source);
+  source_position = source;
   maxT = max_t;
   datasets = {"threep"};
   groups =  {"wilsonLine"};

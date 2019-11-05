@@ -126,19 +126,19 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
 
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*MIN(t_size-it, time_step);
+    grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     contractPropOpProp_device<FloatC,FloatA, FloatB, FloatS, isLink, dir,isCons>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, prop1, prop2, su3, listGammas, it, MIN(t_size-it, time_step), maxT,
+      (d_partial_block, prop1, prop2, su3, listGammas, it, std::min(t_size-it, time_step), maxT,
        source, signProps, runFT, moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*MIN(t_size-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*MIN(t_size-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*std::min(t_size-it, time_step); v++)
 	for(int i = 0 ; i < site_size; i++) {
 	    result[(it*volume+v)*Mshift*site_size+shift+i] = 0;
 	    for(int j = 0 ; j < accumX; j++)
@@ -146,7 +146,7 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
 		h_partial_block[(v*site_size+i)*accumX+j];
 	}
     } else {
-      for(size_t v = 0 ; v < volume*MIN(t_size-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*std::min(t_size-it, time_step); v++)
 	for(int i = 0 ; i < site_size; i++)
 	  result[(it*volume+v)*Mshift*site_size+shift+i] +=
 	    h_partial_block[v*site_size+i];

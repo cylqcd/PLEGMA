@@ -126,7 +126,7 @@ int main(int argc, char **argv)
       }
       
       // Storing only the smaller and then computing on the fly the other
-      int nSmaller = MIN(mu_s.size(),mu_c.size());
+      int nSmaller = std::min(mu_s.size(),mu_c.size());
       char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
 
       PLEGMA_Propagator<float> propS[nSmaller];
