@@ -54,7 +54,6 @@ void updateOptions(WHICHFLAVOR fl){
       break;
     }
 
-  if(filename.empty() && fl!=UP) filename = inputUP;
   if(!filename.empty()){
     const char *aux_str[3];
     aux_str[0] = "random_string";
