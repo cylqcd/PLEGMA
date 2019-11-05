@@ -157,23 +157,23 @@ int main(int argc, char **argv)
 	    std::string preSuf;
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propUP : propDN;
-	    PLEGMA_Correlator<float> corr(corr_space,maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], tsinkMtsource+1, maxQsq);
 	  
 	    // LOCAL contractions
-	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas, sourcePositions[isource], tsinkMtsource+1);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;      
+	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    // ONED contractions
-	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, sourcePositions[isource], tsinkMtsource+1);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    // noe contractions
-	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, sourcePositions[isource], tsinkMtsource+1);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 	  }
@@ -213,23 +213,23 @@ int main(int argc, char **argv)
 	    std::string preSuf;
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propDN : propUP;
-	    PLEGMA_Correlator<float> corr(corr_space,maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], tsinkMtsource+1, maxQsq);
 	  
 	    //LOCAL
-	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas, sourcePositions[isource], tsinkMtsource+1);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    //ONED
-	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, sourcePositions[isource], tsinkMtsource+1);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    //ONED
-	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, sourcePositions[isource], tsinkMtsource+1);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 	  }
@@ -257,11 +257,11 @@ int main(int argc, char **argv)
       propUP.applyBoundaries_device(sourcePositions[isource][3]);
       propDN.applyBoundaries_device(sourcePositions[isource][3]);
   
-      PLEGMA_Correlator<float> corr(corr_space,maxQsq);
-      corr.contractMesons(propUP, propDN, sourcePositions[isource]);
+      PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+      corr.contractMesons(propUP, propDN);
       corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
-      corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
+      corr.contractBaryons(propUP, propDN);
       corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
     }  
   }

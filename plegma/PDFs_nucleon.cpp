@@ -86,8 +86,6 @@ int main(int argc, char **argv)
   PLEGMA_Propagator3D<float> propUP3D;
   PLEGMA_Propagator3D<float> propDN3D;
 
-  PLEGMA_Correlator<float> corrThrpWL(corr_space,0); 
-  
   // PLEGMA_Correlator<float> *nucleonThrpWLP_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]]; // if is the z direction
   // PLEGMA_Correlator<float> *nucleonThrpWLP_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
 
@@ -106,6 +104,8 @@ int main(int argc, char **argv)
     // for the test use sinkSourceSep = 10;
   int  isource=0;
 
+  PLEGMA_Correlator<float> corrThrpWL(corr_space, sourcePositions[isource], 0); 
+  
   for(int ts=0;ts<tSinks.size();ts++)
     {
       int signPer = (tSinks[ts] + sourcePositions[isource][3]) >= HGC_totalL[3] ? -1 : +1;
@@ -206,8 +206,8 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir);
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
@@ -219,8 +219,8 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
@@ -283,8 +283,8 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
@@ -296,8 +296,8 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
-	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
@@ -329,12 +329,13 @@ int main(int argc, char **argv)
   propUP->applyBoundaries_device(sourcePositions[isource][3]);
   propDN->applyBoundaries_device(sourcePositions[isource][3]);
 
-  PLEGMA_Correlator<float> corr(corr_space, sinkMom_3D);
-  corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
+  PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource]);
+  corr.setFixMomVec(sinkMom_3D);
+  corr.contractMesons(*propUP, *propDN);
   corr.writeFile(twop_filename.c_str(), corr_file_format);
 
   //!!!!!!!!!! maybe later we choose the specific momentum when this allows it
-  corr.contractBaryons(*propUP, *propDN, sourcePositions[isource]);
+  corr.contractBaryons(*propUP, *propDN);
   corr.writeFile(twop_filename.c_str(), corr_file_format);
     
   delete propUP;

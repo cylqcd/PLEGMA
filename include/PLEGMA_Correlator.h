@@ -18,103 +18,118 @@ namespace plegma {
   template<typename Float>
   class PLEGMA_Correlator : public IO<void> {
   protected:
-    // Allocation
-    bool isAlloc;
-    PLEGMA_Field<Float>* corr_pos_space;
-    PLEGMA_FT<Float>* corr_mom_space;
-    Float* corr;
-
     // Correlator info
-    CORR_SPACE corr_space;
-    int Q2_max;
-    std::vector<int> fixMomVec ;
-    size_t vol_size;
+    const site source;
+    const int totalT;
     std::vector<int> shape;
-    // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
-    int site_size;
-    site source_position;
-    int maxT;
-
-    // Writing informations
     std::vector<std::string> datasets;
     std::vector<std::string> groups;
     std::string description;
 
+    // Correlator in pos/mom space
+    const CORR_SPACE corr_space;
+    std::shared_ptr<PLEGMA_Field<Float>> corr_pos_space;
+    std::shared_ptr<PLEGMA_FT<Float>> corr_mom_space;
+
     void initialize();
-    void finalize();
     
     // For HDF5 file writing
     std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
-    
-  public:
-    PLEGMA_Correlator(CORR_SPACE CorrSpace, int Q2_max):
-      isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
-      Q2_max(Q2_max)
-    {}
-    PLEGMA_Correlator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec):
-      isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
-      fixMomVec(fixMomVec)
-    {}
 
-    ~PLEGMA_Correlator(){finalize();}
-    CORR_SPACE getCorrSpace() {
-      return corr_space;
-    }
-    inline size_t n_datasets() {
-      return std::max(datasets.size(), (size_t) 1);
-    }
-    inline size_t n_groups() {
-      return std::max(groups.size(), (size_t) 1);
-    }
-    size_t getSiteSize() {
-      size_t size=n_datasets()*n_groups();
-      std::for_each(shape.begin(), shape.end(), [&] (int n) {size *= n;});
-      return size;
-    }
-    size_t getVolSize() {
-      return vol_size;
-    }
-    size_t getTotalSize() {
-      return site_size*vol_size;
-    }
-    bool hasSource(int dir) {
+  public:
+    bool hasSource(int dir) const {
+      // Tells if the source is included in the local lattice for the given direction
       if(dir<0 || dir>N_DIMS) return false;
-      return ((HGC_procPosition[dir]*HGC_localL[dir]) <= source_position[dir]
-	      && source_position[dir] < ((HGC_procPosition[dir]+1)*HGC_localL[dir]));
+      return ((HGC_procPosition[dir]*HGC_localL[dir]) <= source[dir])
+	&& (source[dir] < ((HGC_procPosition[dir]+1)*HGC_localL[dir]));
     }
-    bool hasSource() {
+    bool hasSource() const {
       bool ret=true;
-      for(int dir=0; ret && dir<N_DIMS; dir++)
-	ret &= hasSource(dir);
+      // Tells if the source is included in the local lattice
+      for(int dir=0; ret && dir<N_DIMS; dir++) ret &= hasSource(dir);
       return ret;
     }
-    int TotalT() {
-      return maxT;
+    int startT() const {
+      // Returns the starting point in time of the correlator wrt the source.
+      // Zero is returned if the local time slice is not used.
+      int start=(HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + HGC_totalL[DIM_T] - source[DIM_T] )
+	% HGC_totalL[DIM_T];
+      return (start>=totalT) ? 0 : start;
     }
-    int StartT() {
-      int startT=(HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + HGC_totalL[DIM_T] - source_position[DIM_T] ) % HGC_totalL[DIM_T];
-      return (startT>=maxT) ? 0 : startT;
+    int endT() const {
+      // Returns the end point
+      int start = startT();
+      if(start>0)
+	return std::min(totalT, HGC_localL[DIM_T]+start);
+      else
+	return 0;
     }
-    int LocalT() {
-      // Returns the local T size accordingly to the time source and maxT
-      if(maxT==HGC_totalL[DIM_T]) return HGC_localL[DIM_T];
-      int startT = StartT();
+    int localT() const {
+      // Returns the local T size
       if(hasSource(DIM_T)) {
 	// When the source is in the local lattice we may have two pieces:
-	// |     s-->| from the source to the end and then
-	// |-->  s   | from the beginning to maxT
-	int t_source = source_position[DIM_T]%HGC_localL[DIM_T];
-	int t_size = std::min(maxT, HGC_localL[DIM_T]-t_source); 
-	if(startT==0) return t_size;
-	else {
-	  assert((maxT-startT) < (HGC_localL[DIM_T]-t_size));
-	  return t_size+maxT-startT;
-	}
-      } else if(startT==0) return 0;
-      else return std::min(maxT-startT, HGC_localL[DIM_T]);
+	// |-->  s   | from startT to endT
+	// |     s-->| from the source to the end
+	int t_source = source[DIM_T]%HGC_localL[DIM_T];
+	return endT() - startT() + std::min(totalT, HGC_localL[DIM_T]-t_source); 
+      } else {
+	return endT() - startT();
+      }
+    }
+    
+    PLEGMA_Correlator(CORR_SPACE corr_space, site source, int Q2_max = 0, int totalT=HGC_totalL[DIM_T]):
+      source(source), totalT(totalT), corr_space(corr_space), corr_pos_space(nullptr),
+      corr_mom_space(corr_space==MOMENTUM_SPACE ?
+		     new PLEGMA_FT<Float>(Q2_max, 3, false, localT()) : nullptr) { }
+
+    ~PLEGMA_Correlator() {}
+    
+    CORR_SPACE getCorrSpace() const {
+      return corr_space;
+    }
+    Float* H_elem() const {
+      if(corr_space == MOMENTUM_SPACE) {
+	assert(corr_mom_space);
+	return corr_mom_space->H_elem();
+      } else {
+	assert(corr_pos_space);
+	return corr_pos_space->H_elem();
+      }
     }
     site getSource() {
-      return source_position;
+      return source;
+    }
+    size_t nDatasets() const {
+      return std::max(datasets.size(), (size_t) 1);
+    }
+    size_t nGroups() const {
+      return std::max(groups.size(), (size_t) 1);
+    }
+    size_t getSiteSize() const {
+      // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
+      size_t size=nDatasets()*nGroups();
+      for(auto n: shape) size *= n;
+      return size;
+    }
+    size_t getVolSize() const {
+      if(corr_space == MOMENTUM_SPACE) {
+	assert(corr_mom_space);
+	return corr_mom_space->Nmoms()*corr_mom_space->DimT();
+      } else {
+	assert(corr_pos_space);
+	return corr_pos_space->Total_length();
+      }
+    }
+    size_t getTotalSize() const {
+      return getSiteSize()*getVolSize();
+    }
+    void setQ2max(int Q2_max) {
+      assert(corr_space == MOMENTUM_SPACE);
+      corr_mom_space.reset(new PLEGMA_FT<Float>(Q2_max, 3, false, localT()));
+    }
+    void setFixMomVec(std::vector<int>& fixMomVec) {
+      assert(corr_space == MOMENTUM_SPACE);
+      corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomVec, 3, false, localT()));
     }
 
     tex_mom_list getTexMomList() {
@@ -126,14 +141,11 @@ namespace plegma {
 	return dummy;
       }
     }
-    Float* getCorr() {
-      return corr;
-    }
     std::vector<std::string> getDatasets() {
       return datasets;
     }
     void setDatasets(std::vector<std::string> d) {
-      if (datasets.size() == d.size() || datasets.size() == 0) {
+      if (datasets.size() == d.size() || (datasets.size() == 0 && d.size() == 1)) {
 	datasets = d;
       } else {
 	PLEGMA_error("Given vector size do not match. This would change the correlator size.");
@@ -146,7 +158,7 @@ namespace plegma {
       return groups;
     }
     void setGroups(std::vector<std::string> d) {
-      if (groups.size() == d.size() || groups.size() == 0) {
+      if (groups.size() == d.size() || (groups.size() == 0 && d.size() == 1)) {
 	groups = d;
       } else {
 	PLEGMA_error("Given vector size do not match. This would change the correlator size.");
@@ -157,41 +169,34 @@ namespace plegma {
       setGroups(d);
     }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
-			PLEGMA_Propagator<Float> &prop2, 
-			site& source, int max_t=HGC_totalL[DIM_T]);
+			PLEGMA_Propagator<Float> &prop2);
     
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
-			 PLEGMA_Propagator<Float> &prop2, 
-			 site& source, int max_t=HGC_totalL[DIM_T]);
+			 PLEGMA_Propagator<Float> &prop2);
     
     void contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 			     PLEGMA_Propagator<Float> &propDN, 
 			     PLEGMA_Propagator<Float> &propST, 
-			     PLEGMA_Propagator<Float> &propCH, 
-			     site& source, int max_t=HGC_totalL[DIM_T],
+			     PLEGMA_Propagator<Float> &propCH,
 			     bool only_st=false, bool only_ch=false);
     
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
-				   int signProps, std::vector<GAMMAS> gammas,
-				   site& source, int max_t=HGC_totalL[DIM_T]);
+				   int signProps, std::vector<GAMMAS> gammas);
     
     void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 				  PLEGMA_Propagator<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
-				  int signProps, std::vector<GAMMAS> gammas,
-				  site& source, int max_t=HGC_totalL[DIM_T]);
+				  int signProps, std::vector<GAMMAS> gammas);
     
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,
-				 PLEGMA_Gauge<Float> &gauge,
-				 int signProps, site& source, int max_t=HGC_totalL[DIM_T]);
+				 PLEGMA_Gauge<Float> &gauge, int signProps);
 
     void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 					PLEGMA_Propagator<Float> &fwdProp,
 					PLEGMA_Su3field<Float> &su3,
-					int signProps, std::vector<GAMMAS> gammas,
-					site& source, int max_t=HGC_totalL[DIM_T]);
+					int signProps, std::vector<GAMMAS> gammas);
 
 
     virtual void writeASCII(std::string filename);

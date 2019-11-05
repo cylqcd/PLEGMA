@@ -93,8 +93,8 @@ static void contractPropOpProp_host(ProfileStruct &ps, Float2<FloatC> *result, P
 				    propTex<FloatA> prop1, propTex<FloatA> prop2,
 				    int signProps, su3Tex<FloatS> su3, std::vector<GAMMAS> gammas){
   
-  int t_size = corr.LocalT(); if(t_size==0) return;
-  int maxT = corr.StartT()==0 ? 0 : (corr.TotalT() - corr.StartT()); 
+  int t_size = corr.localT(); if(t_size==0) return;
+  int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
@@ -183,14 +183,17 @@ static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> 
   }
 
   ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
-  ps.max_volume = HGC_localVolume3D*corr.TotalT();
+  int myLocalT = corr.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
   
   Float2<FloatC> *result = NULL;
   if(runFT)
     hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   else
-    result = (Float2<FloatC> *) corr.getCorr();
+    result = (Float2<FloatC> *) corr.H_elem();
   
   std::string name = (std::string) "contract_threep_"+(isLink?"isLink_":"")+(isCons?"isCons_":"")+
     "dir"+std::to_string(dir)+"_nGamma"+std::to_string(site_size);
@@ -198,7 +201,7 @@ static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> 
 	      ps, result, corr, prop1, prop2, signProps, su3, gammas);
 
   if(runFT) {
-    MPI_Allreduce(result, corr.getCorr(), corr.getTotalSize()*2, MPI_Type(corr.getCorr()),
+    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
 		  MPI_SUM, HGC_spaceComm);
     hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   }

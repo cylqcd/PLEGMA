@@ -100,8 +100,8 @@ static void contract_baryons_host( ProfileStruct &ps,
 				   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 				   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result, int ip){
 
-  int t_size = corr.LocalT(); if(t_size==0) return;
-  int maxT = corr.StartT()==0 ? 0 : (corr.TotalT() - corr.StartT()); 
+  int t_size = corr.localT(); if(t_size==0) return;
+  int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = corr.getCorrSpace()==MOMENTUM_SPACE;
   size_t volume = corr.getVolSize()/t_size;
@@ -176,10 +176,13 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   if(runFT)
     hostMalloc(result, (corr.getTotalSize()/N_BARYONS)*sizeof(Float2<FloatC>));
   else
-    result = (Float2<FloatC> *) corr.getCorr();
+    result = (Float2<FloatC> *) corr.H_elem();
 
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume3D*corr.TotalT();
+  int myLocalT = corr.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   for(int ip=0; ip<N_BARYONS; ip++) {
@@ -187,7 +190,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
     tuneAndRun( ps, name, contract_baryons_host<FloatA,FloatB,FloatC>,
 		ps, texProp1, texProp2, corr, result, ip);
     if(runFT) {
-      FloatC *corr_ip = corr.getCorr() + ip*corr.getTotalSize()/N_BARYONS*2;
+      FloatC *corr_ip = corr.H_elem() + ip*corr.getTotalSize()/N_BARYONS*2;
       MPI_Allreduce(result, corr_ip, corr.getTotalSize()/N_BARYONS*2, MPI_Type(corr_ip),
 		    MPI_SUM, HGC_spaceComm);
     } else {

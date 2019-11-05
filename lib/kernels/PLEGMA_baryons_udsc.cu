@@ -141,8 +141,8 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
 				PLEGMA_Correlator<FloatC> &corr,
 				Float2<FloatC> *result, int i) {
 
-  int t_size = corr.LocalT(); if(t_size==0) return;
-  int maxT = corr.StartT()==0 ? 0 : (corr.TotalT() - corr.StartT()); 
+  int t_size = corr.localT(); if(t_size==0) return;
+  int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int4 source = corr.getSource();
@@ -270,7 +270,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     if(runFT)
       hostMalloc(result, BP_prop_prods_count[i].size()*corr.getVolSize()*sizeof(Float2<FloatC>));
     else
-      result = ((Float2<FloatC> *) corr.getCorr()) + shift*corr.getVolSize();
+      result = ((Float2<FloatC> *) corr.H_elem()) + shift*corr.getVolSize();
 
     propTex<FloatA> props[3];
     for (int j=0; j<3; j++) {
@@ -287,7 +287,10 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     }
     
     ProfileStruct ps(HGC_localVolume3D, sizeof(Float2<FloatC>));
-    ps.max_volume = HGC_localVolume3D*corr.TotalT();
+    int myLocalT = corr.localT();
+    int maxLocalT = myLocalT;
+    MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+    ps.max_volume = HGC_localVolume3D*maxLocalT;
     ps.tune_globally = true;
     ps.aux_range.x = 2;
     
@@ -295,7 +298,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     tuneAndRun(ps, "contract_baryons_"+BP_prop_prods[i], contract_baryons_udsc_host<FloatA,FloatC>, ps, props, corr, result, i);
 
     if(runFT) {
-      FloatC *corr_ip = corr.getCorr() + shift*corr.getVolSize()*2;
+      FloatC *corr_ip = corr.H_elem() + shift*corr.getVolSize()*2;
       MPI_Allreduce(result, corr_ip, BP_prop_prods_count[i].size()*corr.getVolSize()*2, MPI_Type(corr_ip),
 		    MPI_SUM, HGC_spaceComm);
       hostFree(result, BP_prop_prods_count[i].size()*corr.getVolSize()*sizeof(Float2<FloatC>));
