@@ -4,14 +4,6 @@
 using namespace plegma;
 using namespace quda;
 
-template<typename T>
-std::vector<T> extract_v(std::vector<T> const &v, int m, int n) {
-  auto first = v.begin() + m;
-  auto last = v.begin() + n + 1;
-  std::vector<T> vector(first, last);
-  return vector;
-}
-
 int main(int argc, char **argv)
 {
 
@@ -89,18 +81,18 @@ int main(int argc, char **argv)
   PLEGMA_printf("Plaquette after smearing:\n");
   smearedGauge.calculatePlaq();
 
-  std::vector<std::vector<int>> DeltaMom = {};
-  std::vector<std::vector<int>> PMom = {};
+  std::vector<std::vector<int>> DeltaMom(DeltaMom_v.size());
+  std::vector<std::vector<int>> PMom(DeltaMom_v.size());
   for(size_t i = 0; i< (int)(DeltaMom_v.size()/3); i++){
-    DeltaMom.push_back(extract_v<int>(DeltaMom_v,i*3,(i+1)*3));
-    PMom.push_back(extract_v<int>(PMom_v,i*3,(i+1)*3));
+    std::copy(DeltaMom_v.begin()+i*3,DeltaMom_v.begin()+(i+1)*3,DeltaMom[i].begin());
+    std::copy(PMom_v.begin()+i*3,PMom_v.begin()+(i+1)*3,PMom[i].begin());
   }
 
   
-  std::vector<double> HalfDelta = {0,0,0,0}; 
-  std::vector<std::vector<double>> auxMom ;
-  std::vector<double> sinkMom = {0,0,0,0};
-  std::vector<double> sourceMom = {0,0,0,0};
+  std::vector<int> HalfDelta = {0,0,0,0}; 
+  std::vector<std::vector<int>> auxMom ;
+  std::vector<int> sinkMom = {0,0,0,0};
+  std::vector<int> sourceMom = {0,0,0,0};
   std::vector<float> SourcePhases;
   
   /* 
@@ -109,19 +101,19 @@ int main(int argc, char **argv)
   */
   
   for(size_t i=0; i < PMom.size() ; i++){
-    std::transform(DeltaMom[i].begin(), DeltaMom[i].end(), HalfDelta.begin(), [](int &c) { return (double)c/(double)(2.);});
-    std::transform(PMom[i].begin(), PMom[i].end(), HalfDelta.begin(), sinkMom.begin(), std::plus<double>());
+    std::transform(DeltaMom[i].begin(), DeltaMom[i].end(), HalfDelta.begin(), [](int &c) { return (int)(c/2);});
+    std::transform(PMom[i].begin(), PMom[i].end(), HalfDelta.begin(), sinkMom.begin(), std::plus<int>());
     auxMom.push_back(sinkMom);
   }
 
-  bool constSink =  !std::all_of(auxMom.begin(), auxMom.end(), [auxMom](std::vector<double> x){ return x==auxMom[0]; });
+  bool constSink =  !std::all_of(auxMom.begin(), auxMom.end(), [auxMom](std::vector<int> x){ return x==auxMom[0]; });
   if(constSink) PLEGMA_error("The different combinations of momenta give incompatible sink momenta\n");
   
   //Momentum smearing: put the momentum phase to smeared gauge field
   std::complex<double> momSmScale[N_DIMS];
   std::complex<double> I(0,1);
   for(int i = 0 ; i < N_DIMS-1; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sinkMom[i]/HGC_totalL[i])*I);
-  momSmScale[i] = 1.;
+  momSmScale[N_DIMS-1] = 1.;
 
   smearedGauge.scaleDirWise(momSmScale);
 
@@ -238,8 +230,8 @@ int main(int argc, char **argv)
 	      
 	      std::complex<float> Isingle(0,1);
 
-	      std::transform(DeltaMom[np].begin(), DeltaMom[np].end(), HalfDelta.begin(), [](int &c) { return (double)c/(double)(2.);});
-	      std::transform(PMom[np].begin(), PMom[np].end(), HalfDelta.begin(), sourceMom.begin(), std::minus<double>());
+	      std::transform(DeltaMom[np].begin(), DeltaMom[np].end(), HalfDelta.begin(), [](int &c) { return (int)(c/2);});
+	      std::transform(PMom[np].begin(), PMom[np].end(), HalfDelta.begin(), sourceMom.begin(), std::minus<int>());
 	      
 	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float)sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
