@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 	    std::string preSuf;
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propUP : propDN;
-	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], tsinkMtsource+1, maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
 	  
 	    // LOCAL contractions
 	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
 	    std::string preSuf;
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propDN : propUP;
-	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], tsinkMtsource+1, maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
 	  
 	    //LOCAL
 	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
