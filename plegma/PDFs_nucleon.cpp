@@ -81,14 +81,16 @@ int main(int argc, char **argv)
   PLEGMA_printf("Plaquette after smearing:\n");
   smearedGauge.calculatePlaq();
 
-  std::vector<std::vector<int>> DeltaMom(DeltaMom_v.size());
-  std::vector<std::vector<int>> PMom(DeltaMom_v.size());
+  std::vector<std::vector<int>> DeltaMom((int)(DeltaMom_v.size()/3));
+  std::vector<std::vector<int>> PMom((int)(PMom_v.size()/3));
+
   for(size_t i = 0; i< (int)(DeltaMom_v.size()/3); i++){
+    DeltaMom[i] = {0,0,0,0};
+    PMom[i] = {0,0,0,0};
     std::copy(DeltaMom_v.begin()+i*3,DeltaMom_v.begin()+(i+1)*3,DeltaMom[i].begin());
     std::copy(PMom_v.begin()+i*3,PMom_v.begin()+(i+1)*3,PMom[i].begin());
   }
-
-  
+    
   std::vector<int> HalfDelta = {0,0,0,0}; 
   std::vector<std::vector<int>> auxMom ;
   std::vector<int> sinkMom = {0,0,0,0};
@@ -105,7 +107,7 @@ int main(int argc, char **argv)
     std::transform(PMom[i].begin(), PMom[i].end(), HalfDelta.begin(), sinkMom.begin(), std::plus<int>());
     auxMom.push_back(sinkMom);
   }
-
+  
   bool constSink =  !std::all_of(auxMom.begin(), auxMom.end(), [auxMom](std::vector<int> x){ return x==auxMom[0]; });
   if(constSink) PLEGMA_error("The different combinations of momenta give incompatible sink momenta\n");
   
@@ -393,7 +395,9 @@ int main(int argc, char **argv)
   propUP->applyBoundaries_device(sourcePositions[isource][3]);
   propDN->applyBoundaries_device(sourcePositions[isource][3]);
 
-  PLEGMA_Correlator<float> corr(corr_space, sinkMom);
+  std::vector<int> auxMom3D = {0,0,0};
+  std::copy(sinkMom.begin(),sinkMom.begin()+3,auxMom3D.begin());
+  PLEGMA_Correlator<float> corr(corr_space, auxMom3D);
   corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
   corr.writeFile(twop_filename.c_str(), corr_file_format);
 
