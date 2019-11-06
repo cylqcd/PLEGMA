@@ -91,6 +91,7 @@ int main(int argc, char **argv)
   std::vector<std::vector<double>> auxMom ;
   std::vector<double> sinkMom = {0,0,0,0};
   std::vector<double> sourceMom = {0,0,0,0};
+  std::vector<float> SourcePhases;
   
   for(size_t i=0; i < PMom.size() ; i++){
     std::transform(DeltaMom[i].begin(), DeltaMom[i].end(), HalfDelta.begin(), [](int &c) { return (double)c/(double)(2.);});
@@ -238,28 +239,27 @@ int main(int argc, char **argv)
 
 	  for(size_t np = 0 ; np < DeltaMom.size(); np++)
 	    {
-	      // for(int nu = 0 ; nu < 4 ; nu++)
-	      // 	for(int c2 = 0 ; c2 < 3 ; c2++)
-	      // 	  seqPropOut->absorb(vectorAuxF, nu, c2);
-
+	      
 	      std::complex<float> Isingle(0,1);
 
 	      std::transform(DeltaMom[np].begin(), DeltaMom[np].end(), HalfDelta.begin(), [](int &c) { return (double)c/(double)(2.);});
 	      std::transform(PMom[np].begin(), PMom[np].end(), HalfDelta.begin(), sourceMom.begin(), std::minus<double>());
-
-	      PLEGMA_printf("FLORIANO: Source Mom\n");
-	      for(size_t i=0; i<4;i++) PLEGMA_printf("%d\t",sourceMom[i]);
-	      PLEGMA_printf("FLORIANO: Sink Mom\n");
-	      for(size_t i=0; i<4;i++) PLEGMA_printf("%d\t",sinkMom[i]);
 	      
 	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float)sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
 				   + ((float)sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
 
-	      seqPropOut->cscale(Isingle*std::exp<float>(+phase*Isingle));
-	      seqPropOut->apply_gamma(G5);
-	      seqPropOut->conjugate();
-    
+	      
+	      SourcePhases.push_back(phase);
+	      
+
+	      if(np==0){
+		seqPropOut->apply_gamma(G5);
+		seqPropOut->conjugate();
+	      }
+
+	      seqPropOut->cscale(std::exp<float>(-(float)(phase+PI/2.)*Isingle));
+
 	      int signProps = (nucleon == PROTON) ? +1: -1;
 
 	      PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
@@ -294,6 +294,7 @@ int main(int argc, char **argv)
 		}
 		propF->load();
 	      }
+	      seqPropOut->cscale(std::exp<float>((float)(phase+PI/2.)*Isingle)); 
 	    }
 	}
 	//seq source part 1Props and contraction block
@@ -332,22 +333,15 @@ int main(int argc, char **argv)
 
 	  for(size_t np = 0 ; np < DeltaMom.size(); np++)
 	    {
-	      // for(int nu = 0 ; nu < 4 ; nu++)
-	      // 	for(int c2 = 0 ; c2 < 3 ; c2++)
-	      // 	  seqPropOut->absorb(vectorAuxF, nu, c2);
-
 	      std::complex<float> Isingle(0,1);
-	      std::transform(DeltaMom[np].begin(), DeltaMom[np].end(), HalfDelta.begin(), [](int &c) { return (double)c/(double)(2.);});
-	      std::transform(PMom[np].begin(), PMom[np].end(), HalfDelta.begin(), sourceMom.begin(), std::minus<double>());
+	      	      
+	      
+	      if(np==0){
+		seqPropOut->apply_gamma(G5);
+		seqPropOut->conjugate();
+	      }
+	      seqPropOut->cscale(std::exp<float>(-SourcePhases[np]*Isingle));
 
-	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
-				   + ((float)sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				   + ((float)sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-
-	      seqPropOut->cscale(std::exp<float>(+phase*Isingle));
-	      seqPropOut->apply_gamma(G5);
-	      seqPropOut->conjugate();
-    
 	      int signProps = (nucleon == PROTON) ? -1: +1;
 
 	      PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
@@ -382,6 +376,7 @@ int main(int argc, char **argv)
 		}
 		propF->load();
 	      }
+	      seqPropOut->cscale(std::exp<float>(+SourcePhases[np]*Isingle));
 	    }
 	}
       }
