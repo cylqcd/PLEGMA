@@ -257,27 +257,27 @@ int main(int argc, char **argv)
 	      
 	      //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	      for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
-		std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+		std::string suff = "_stout_"+std::to_string(stIt*stepStout);
 		if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
 		su3.absorbDir_device(gaugeWL, WilsDir);
 		WL.setUnit( (std::vector<int>) {0,4,8});
 		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],i,2,sourceMom);
 		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + "_tSource_" + std::to_string(np)  + ".dat").c_str() ); 
+		  corrThrpWL.writeHDF5( (threep_filename +  suff + "_ts_" + std::to_string(tSinks[ts])).c_str() ); 
 		  propExchange = propIn; propIn = propF; propF = propExchange;
 		  WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
 		  propF->shift(*propIn, 4+WilsDir);
 		}
 
-		suff="_CP2_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+		suff="_stout_"+std::to_string(stIt*stepStout);
 		propF->load();
 		su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 		WL.setUnit( (std::vector<int>) {0,4,8});
-		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+		for(int i = 1 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],-i,2,sourceMom);
 		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + "_tSource_" + std::to_string(np) + ".dat").c_str() );
+		  corrThrpWL.writeHDF5( (threep_filename + suff +  "_ts_" + std::to_string(tSinks[ts])).c_str() );
 		  propExchange = propIn; propIn = propF; propF = propExchange;
 		  WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
 		  propF->shift(*propIn, WilsDir);
@@ -343,26 +343,26 @@ int main(int argc, char **argv)
 	      //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	      for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
 		if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
-		std::string suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+		std::string suff="_stout_"+std::to_string(stIt*stepStout);
 		su3.absorbDir_device(gaugeWL, WilsDir); 
 		WL.setUnit( (std::vector<int>) {0,4,8});
 		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],i,1,sourceMom);
 		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + "_tSource_" + std::to_string(np) + ".dat").c_str() );
+		  corrThrpWL.writeHDF5( (threep_filename +  suff + "_ts_" + std::to_string(tSinks[ts])).c_str() );
 		  propExchange = propIn; propIn = propF; propF = propExchange;
 		  WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
 		  propF->shift(*propIn, 4+WilsDir);
 		}
     
 		propF->load();
-		suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+		suff="_stout_"+std::to_string(stIt*stepStout);
 		su3.absorbDir_device(gaugeWL, WilsDir); 
 		WL.setUnit( (std::vector<int>) {0,4,8});
 		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource]);
+		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],-i,1,sourceMom);
 		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + "_tSource_" + std::to_string(np) + ".dat").c_str() );
+		  corrThrpWL.writeHDF5( (threep_filename +  suff + "_ts_" + std::to_string(tSinks[ts])).c_str() );
 		  propExchange = propIn; propIn = propF; propF = propExchange;
 		  WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
 		  propF->shift(*propIn, WilsDir);
