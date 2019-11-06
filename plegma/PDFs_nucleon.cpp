@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 
   size_t WilsDir;
   HGC_options->set("wilson-direction", "Direction of the wilson line", verbosity, WilsDir);
-  if(WilsDir>N_DIMS) PLEGMA_error("The direction of the Wilson line has to be smaller than 3\n");
+
 
   double rhoStout = 0.;
   HGC_options->set("rho-stout", "Rho parameter stout smearing", verbosity, rhoStout);
@@ -51,9 +51,6 @@ int main(int argc, char **argv)
   std::vector<int> DeltaMom_v = {0,0,0,0};
   HGC_options->set("Delta-momentum", "Square root of the momentum transfer", verbosity, DeltaMom_v);
 
-  if(DeltaMom_v.size()%4 != 0 || DeltaMom_v.size()%4 != 0) PLEGMA_error("P-momentum and Delta-momentum size has to be a multiple of four\n");
-  if(DeltaMom_v.size()!=PMom_v.size()) PLEGMA_error("PMom has to have the same size of DeltaMom\n");
-  
   aux_str = "proton";
   HGC_options->set("which-particle", "Choice of the nucleon interpolator to insert in the three point function (neutron,proton)", verbosity, aux_str);
   WHICHPARTICLE nucleon = get_particle(aux_str.c_str());
@@ -62,7 +59,11 @@ int main(int argc, char **argv)
 
   initializePLEGMA();
 
+  if(DeltaMom_v.size()%4 != 0 || DeltaMom_v.size()%4 != 0) PLEGMA_error("P-momentum and Delta-momentum size has to be a multiple of four\n");
+  if(DeltaMom_v.size()!=PMom_v.size()) PLEGMA_error("PMom has to have the same size of DeltaMom\n");
+  if(WilsDir>N_DIMS) PLEGMA_error("The direction of the Wilson line has to be smaller than 3\n");
   if(nucleon!=NEUTRON && nucleon!=PROTON) PLEGMA_error("Only nucleon PDFs have been implemented so far\n");
+
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFile(latfile, LIME_FORMAT);
@@ -247,24 +248,24 @@ int main(int argc, char **argv)
 	      
 	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float)sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				   + ((float)sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-
+				   + ((float)sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2])
+				   + (float) (PI/2.);
 	      
 	      SourcePhases.push_back(phase);
 	      
-
 	      if(np==0){
 		seqPropOut->apply_gamma(G5);
 		seqPropOut->conjugate();
 	      }
 
-	      seqPropOut->cscale(std::exp<float>(-(float)(phase+PI/2.)*Isingle));
+	      seqPropOut->cscale(std::exp<float>(-phase*Isingle));
 
 	      int signProps = (nucleon == PROTON) ? +1: -1;
 
 	      PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
 
-
+	      propF->mulMomentumPhases(DeltaMom[np],1);
+	      
 	      //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	      for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
 		std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
@@ -294,7 +295,8 @@ int main(int argc, char **argv)
 		}
 		propF->load();
 	      }
-	      seqPropOut->cscale(std::exp<float>((float)(phase+PI/2.)*Isingle)); 
+	      seqPropOut->cscale(std::exp<float>(phase*Isingle)); 
+	      propF->mulMomentumPhases(DeltaMom[np],-1);
 	    }
 	}
 	//seq source part 1Props and contraction block
@@ -345,6 +347,8 @@ int main(int argc, char **argv)
 	      int signProps = (nucleon == PROTON) ? -1: +1;
 
 	      PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
+	      propF->mulMomentumPhases(DeltaMom[np],1);
+
 	      gaugeWL.copy(gauge);
 
 	      //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
@@ -377,6 +381,7 @@ int main(int argc, char **argv)
 		propF->load();
 	      }
 	      seqPropOut->cscale(std::exp<float>(+SourcePhases[np]*Isingle));
+	      propF->mulMomentumPhases(DeltaMom[np],-1);
 	    }
 	}
       }
