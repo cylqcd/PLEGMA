@@ -109,10 +109,9 @@ int main(int argc, char **argv)
 	propUP.applyBoundaries_device(sourcePositions[isource][3]);
 	propDN.applyBoundaries_device(sourcePositions[isource][3]);
 
-	PLEGMA_Correlator<float> corr(corr_space, maxQsq);
-
+	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
 	start_time = MPI_Wtime();
-	corr.contractMesons(propUP, propDN, sourcePositions[isource]);
+	corr.contractMesons(propUP, propDN);
 	tmp_time = MPI_Wtime()-start_time;
 	PLEGMA_printf("Contraction time for mesons %lf sec\n",tmp_time);
 	
@@ -121,10 +120,11 @@ int main(int argc, char **argv)
 	asprintf(&dset2, "twop_mesons_d[%+1.1e]u[%+1.1e]", -1*mu_ud, mu_ud);
 	corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	free(dset1); free(dset2);
+	MPI_Barrier(MPI_COMM_WORLD);
 	corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	
 	start_time = MPI_Wtime();
-	corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
+	corr.contractBaryons(propUP, propDN);
 	tmp_time = MPI_Wtime()-start_time;
 	PLEGMA_printf("Contraction time for baryons %lf sec\n",tmp_time);
 	if(HDF5::isWriting()) {
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
       }
       
       // Storing only the smaller and then computing on the fly the other
-      int nSmaller = MIN(mu_s.size(),mu_c.size());
+      int nSmaller = std::min(mu_s.size(),mu_c.size());
       char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
 
       PLEGMA_Propagator<float> propS[nSmaller];
@@ -184,16 +184,15 @@ int main(int argc, char **argv)
 	  propL.rotateToPhysicalBase_device(mu/abs(mu));
 	  propL.applyBoundaries_device(sourcePositions[isource][3]);
 
-	  PLEGMA_Correlator<float> corr(corr_space, maxQsq);
-	  
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
 	      PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
 	      PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
+	      PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
 	      bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	      bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
-	      corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], HGC_totalL[DIM_T], only_st, only_ch);
+	      corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch);
 	      char * group;
 	    
 	      asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]s[%+1.1e]c[%+1.1e]%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],
@@ -202,7 +201,7 @@ int main(int argc, char **argv)
 	      free(group);
 	      corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 #endif
-	      corr.contractMesons(propST, propCH, sourcePositions[isource]);
+	      corr.contractMesons(propST, propCH);
 	      char *dset1, *dset2;
 	      asprintf(&dset1, "twop_mesons_s[%+1.1e]c[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
 	      asprintf(&dset2, "twop_mesons_c[%+1.1e]s[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
@@ -211,14 +210,14 @@ int main(int argc, char **argv)
 	      corr.writeFile((twop_filename+"_baryons").c_str(), corr_file_format, true);
 
 	      if(!only_ch) {
-		corr.contractMesons(propUP, propST, sourcePositions[isource]);
+		corr.contractMesons(propUP, propST);
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]s[%+1.1e]", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
 		corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      
-		corr.contractMesons(propDN, propST, sourcePositions[isource]);
+		corr.contractMesons(propDN, propST);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
@@ -227,14 +226,14 @@ int main(int argc, char **argv)
 	      }
 
 	      if(!only_st) {
-		corr.contractMesons(propUP, propCH, sourcePositions[isource]);
+		corr.contractMesons(propUP, propCH);
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
 		corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      
-		corr.contractMesons(propDN, propCH, sourcePositions[isource]);
+		corr.contractMesons(propDN, propCH);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
@@ -246,10 +245,11 @@ int main(int argc, char **argv)
 	    PLEGMA_Propagator<float> none(NONE);
 	    PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? none : propL;
 	    PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? none : propL;
+	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
 	    bool only_st = (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
-	    corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, sourcePositions[isource], HGC_totalL[DIM_T], only_st, only_ch);
+	    corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch);
 	    char * group;
 
 	    if(cSmaller=='s') {
@@ -263,7 +263,7 @@ int main(int argc, char **argv)
 #endif
 	    if(!only_ch && !only_st) {
 	      char *dset1, *dset2;
-	      corr.contractMesons(propUP, (cSmaller=='s') ? propCH : propST, sourcePositions[isource]);
+	      corr.contractMesons(propUP, (cSmaller=='s') ? propCH : propST);
 	      if(cSmaller=='s') {
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[ilarge], mu_ud);
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
 	      free(dset1); free(dset2);
 	      corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format, true);
 	      
-	      corr.contractMesons(propDN, (cSmaller=='s') ? propCH : propST, sourcePositions[isource]);
+	      corr.contractMesons(propDN, (cSmaller=='s') ? propCH : propST);
 	      if(cSmaller=='s') {
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[ilarge], -1*mu_ud);
@@ -293,7 +293,8 @@ int main(int argc, char **argv)
       } else if(run_ud) {
 #ifdef PLEGMA_UDSC_BARYONS
 	PLEGMA_Propagator<float> none(NONE);
-	corr.contractBaryonsUDSC(propUP, propDN, none, none, sourcePositions[isource]);
+	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	corr.contractBaryonsUDSC(propUP, propDN, none, none);
 	char * group;
 	
 	asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);

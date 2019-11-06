@@ -288,7 +288,7 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-smoother", "The smoother to use for multigrid, usage(level,inv)", verbosity, tpl_int_string);
   map_to_array_MG<QudaInverterType>(tpl_int_string, smoother_type, get_solver_type);
 
-  default_map_MG(tpl_int_site, (site) (std::array<int,4>) {2,2,2,2});
+  default_map_MG(tpl_int_site, (site) (std::array<int,N_DIMS>) {2,2,2,2});
   tpl_int_site[0] = site({4,4,4,4});
   isFound=opt.set("Q-mg-block-size", "Set the geometric block size for the each multigrid level's transfer operator", verbosity, tpl_int_site);
   { // custom map_to_array for site tuple. If needed more often create function.
@@ -299,8 +299,8 @@ void qudaOptions(Options &opt){
       site val = it->second;
       if(lvl < 0 || lvl >= QUDA_MAX_MG_LEVEL) PLEGMA_error("ERROR: invalid multigrid level %d", lvl);
       for(int j=0; j<N_DIMS; j++) {
-	mg_block_size[lvl][j]=val.x[j];
-	mg_block_volume[lvl]*=val.x[j];
+	mg_block_size[lvl][j]=val[j];
+	mg_block_volume[lvl]*=val[j];
       }
       it++;
     }

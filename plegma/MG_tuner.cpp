@@ -138,13 +138,13 @@ struct SolverTimings{
     remove_not_mathing(time_copy);
     if(time_copy.empty()) {
       double t0, t1;
-      int sources[4]={0};
-      sources[1]=1;
+      site source;
+      source.fill(0);
       solver.UpdateSolver();
       // Doing one iter for performing tuning where needed
-      vectorInOut.pointSource(sources, 0, 0, DEVICE);
+      vectorInOut.pointSource(source, 0, 0, DEVICE);
       solver.runOneIter(vectorInOut, vectorInOut);
-      vectorInOut.pointSource(sources, 0, 0, DEVICE);
+      vectorInOut.pointSource(source, 0, 0, DEVICE);
       t1=MPI_Wtime();
       solver.solve(vectorInOut, vectorInOut);
       t0 = MPI_Wtime()-t1;

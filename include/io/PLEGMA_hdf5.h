@@ -349,7 +349,7 @@ protected:
     std::vector<hsize_t> exceeding_shape;
     for(size_t i=0; i<shape.size(); i++) {
       if(start[i] + lshape[i] > shape[i]) { // then i it's exceeding
-	int exceeding = MIN(lshape[i], start[i] + lshape[i] - shape[i]);
+	int exceeding = std::min(lshape[i], start[i] + lshape[i] - shape[i]);
 	if(HGC_verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);
@@ -452,6 +452,7 @@ public:
    *    then go to group1 and group2
    */
   HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD) : comm(comm) {
+    wait();
     // Creating filename and path from name
     std::string path = "/";
     // checking if .h5 is given and at the end of file
@@ -497,6 +498,7 @@ public:
   }
 
   ~HDF5() {
+    wait();
     go_top();
     int open_obj = 1, my_open_obj = H5Fget_obj_count(file_id, H5F_OBJ_ALL);
     if(my_open_obj > 1) {
@@ -524,6 +526,7 @@ public:
   template<typename T>
   void write_attribute(std::string object, std::string attr_name, T attr_value,
 		       std::string path=".") {
+    wait();
     // checking for / in attr_name
     size_t check = object.rfind("/");
     if(check != std::string::npos)
@@ -547,6 +550,7 @@ public:
   template<typename T>
   void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
 			    std::vector<hsize_t> start={}, std::string path=".") {
+    wait();
     // checking for / in name
     size_t check = name.rfind("/");
     if(check != std::string::npos)

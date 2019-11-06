@@ -13,13 +13,13 @@ extern __device__ cudaDeviceProp devProp;
 //  necessary for the tuning evaluation
 struct ProfileStruct{
   bool tuned;
-  long unsigned int flops; 
-  long unsigned int outBytes; 
-  long unsigned int inpBytes;
-  long long texBytes;
-  long long min_volume;
-  long long volume;
-  long long max_volume;
+  size_t flops; 
+  size_t outBytes; 
+  size_t inpBytes;
+  size_t texBytes;
+  size_t min_volume;
+  size_t volume;
+  size_t max_volume;
   bool sharedMemory;
   bool tune_globally;
   unsigned int sharedBytesPerThread;
@@ -28,7 +28,7 @@ struct ProfileStruct{
   int4 aux_range;
   
   ProfileStruct()=default;
-  ProfileStruct(long long vol, unsigned int shBPT=0){
+  ProfileStruct(size_t vol, unsigned int shBPT=0){
     tuned = false;
     flops = 0;
     outBytes = 0;
@@ -102,7 +102,7 @@ protected:
   bool tuneVolume() const { if(ps.max_volume > ps.min_volume) return true; else return false; }
   // until possible increasing the volume at powers of 2 (i.e. adding ps.volume to itself),
   // then touching max_volume and then exceeding of 1 to move on.
-  int volumeStep() const { return MAX(MIN(ps.max_volume - ps.volume, ps.volume), 1); }
+  size_t volumeStep() const { return std::max(std::min(ps.max_volume - ps.volume, ps.volume), (size_t) 1); }
   bool advanceVolume(TuneParam &param) const {
     bool ret;
     ps.volume += volumeStep();

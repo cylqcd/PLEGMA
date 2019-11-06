@@ -69,8 +69,8 @@ void contract_mesons_host( ProfileStruct &ps,
 			   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
 			   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result){
 
-  int t_size = corr.LocalT(); if(t_size==0) return;
-  int maxT = corr.StartT()==0 ? 0 : (corr.TotalT() - corr.StartT()); 
+  int t_size = corr.localT(); if(t_size==0) return;
+  int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   size_t size = corr.getTotalSize()/t_size*time_step;
@@ -98,18 +98,18 @@ void contract_mesons_host( ProfileStruct &ps,
   
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*MIN(t_size-it, time_step);
+    grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     contract_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (texProp1, texProp2, d_partial_block, it, MIN(t_size-it, time_step), maxT, source, runFT, moms);
+      (texProp1, texProp2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
       
     if(runFT==true) {
       int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*MIN(t_size-it, time_step); v++)
+      for(size_t v = 0 ; v < volume*std::min(t_size-it, time_step); v++)
 	for(int f = 0 ; f < site_size; f++) {
 	  result[(f*t_size + it)*volume+v] = 0;
 	  for(int j = 0 ; j < accumX; j++)
@@ -127,7 +127,7 @@ void contract_mesons_host( ProfileStruct &ps,
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+static void contract_mesons(propTex<FloatA> &texProp1, propTex<FloatB> &texProp2,
 			    PLEGMA_Correlator<FloatC> &corr){
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size = 2*N_MESONS;
@@ -141,17 +141,20 @@ static void contract_mesons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   if(runFT)
     hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   else
-    result = (Float2<FloatC> *) corr.getCorr();
+    result = (Float2<FloatC> *) corr.H_elem();
 
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume3D*corr.TotalT();
+  int myLocalT = corr.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
   
   tuneAndRun( ps, "contract_mesons", contract_mesons_host<FloatA,FloatB,FloatC>,
 	      ps, texProp1, texProp2, corr, result);
 
   if(runFT) {
-    MPI_Allreduce(result, corr.getCorr(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);
+    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);
     hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   }
 }

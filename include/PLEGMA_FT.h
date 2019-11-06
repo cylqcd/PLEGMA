@@ -16,14 +16,12 @@ namespace plegma {
   protected:
     int Q2_max;
     VVFloat momList;
-    bool isAllocated;
     int dof; // degrees of freedom the field has
-    Float *h_elem; // memory to hold the transformed data
+    std::shared_ptr<Float> h_elem; // memory to hold the transformed data
     int sizeN; // size of the elements array include real,imag
     int dims; // the dimensionality of the transformation either 3 or 4
     int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[DIM_T] : 1; 
     bool accum;
-    tex_mom_list texMomList;
     std::string field_name;
     std::vector<int> site_shape;
 
@@ -68,7 +66,7 @@ namespace plegma {
     template<typename T>
     PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
     
-    ~PLEGMA_FT();
+    ~PLEGMA_FT() {};
     /**
        @brief First time a field is provided for transformation the FT object allocates memory. If field with same dof is provided then uses the same buffer otherwise has to reallocate memory for the new field.
        @params int newDof: The dof of the field we want to transform
@@ -97,9 +95,8 @@ namespace plegma {
 
     bool IsAccum() const{return accum;}
     
-    Float* H_elem() const{return h_elem;}
+    Float* H_elem() const{return h_elem.get();}
     tex_mom_list getTexMomList();
-    void freeTexMomList();
 
     
     void apply(const PLEGMA_Field<Float> &f, FT_TYPE type = FT_GEMV, int sign = -1);
