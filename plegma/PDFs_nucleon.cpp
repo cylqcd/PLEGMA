@@ -43,12 +43,21 @@ int main(int argc, char **argv)
   HGC_options->set("which-projector", "Which projector to use for 3pt function", verbosity, aux_str);
   WHICHPROJECTOR which_proj=get_projector(aux_str.c_str());
 
-  //In case the momentum transfer DeltaMom = 0, then PMom corresponds to the momentum of the sink;
-  //If DeltaMom != 0, then the momentum of the sink is PMom + delta;
-  std::vector<int> PMom_v = {0,0,0,0};
+
+  /*
+  We consider the momenta in the symmetric frame. Both P-momentum and Delta-momentum are vectors
+  having a number of components that is a multiple of three. They correspond to lists of 
+  three-dimensional momenta. 
+  The source momentum is given by delta/2-p, while the sink momentum by delta/2+p.
+  All the three-dimensional momenta in the vectors have to share the same sink momentum. Indeed,
+  keeping constant the sink momentum (i.e. doing one inversion of the sequential source)
+  different combinations of the momentum transfer delta and source momentum can be tested.
+  */
+
+  std::vector<int> PMom_v = {0,0,0};
   HGC_options->set("P-momentum", "If added to the momentum transfer delta gives the sink momentum", verbosity, PMom_v);
 
-  std::vector<int> DeltaMom_v = {0,0,0,0};
+  std::vector<int> DeltaMom_v = {0,0,0};
   HGC_options->set("Delta-momentum", "Square root of the momentum transfer", verbosity, DeltaMom_v);
 
   aux_str = "proton";
@@ -59,7 +68,7 @@ int main(int argc, char **argv)
 
   initializePLEGMA();
 
-  if(DeltaMom_v.size()%4 != 0 || DeltaMom_v.size()%4 != 0) PLEGMA_error("P-momentum and Delta-momentum size has to be a multiple of four\n");
+  if(DeltaMom_v.size()%3 != 0 || DeltaMom_v.size()%3 != 0) PLEGMA_error("P-momentum and Delta-momentum size has to be a multiple of three\n");
   if(DeltaMom_v.size()!=PMom_v.size()) PLEGMA_error("PMom has to have the same size of DeltaMom\n");
   if(WilsDir>N_DIMS) PLEGMA_error("The direction of the Wilson line has to be smaller than 3\n");
   if(nucleon!=NEUTRON && nucleon!=PROTON) PLEGMA_error("Only nucleon PDFs have been implemented so far\n");
@@ -82,9 +91,9 @@ int main(int argc, char **argv)
 
   std::vector<std::vector<int>> DeltaMom = {};
   std::vector<std::vector<int>> PMom = {};
-  for(size_t i = 0; i< (int)(DeltaMom_v.size()/4); i++){
-    DeltaMom.push_back(extract_v<int>(DeltaMom_v,i*4,(i+1)*4));
-    PMom.push_back(extract_v<int>(PMom_v,i*4,(i+1)*4));
+  for(size_t i = 0; i< (int)(DeltaMom_v.size()/3); i++){
+    DeltaMom.push_back(extract_v<int>(DeltaMom_v,i*3,(i+1)*3));
+    PMom.push_back(extract_v<int>(PMom_v,i*3,(i+1)*3));
   }
 
   
@@ -94,30 +103,31 @@ int main(int argc, char **argv)
   std::vector<double> sourceMom = {0,0,0,0};
   std::vector<float> SourcePhases;
   
+  /* 
+     Compute sink momentum. Checking that each combination
+     of PMom and DeltaMom gives the same sinkMom.
+  */
+  
   for(size_t i=0; i < PMom.size() ; i++){
     std::transform(DeltaMom[i].begin(), DeltaMom[i].end(), HalfDelta.begin(), [](int &c) { return (double)c/(double)(2.);});
     std::transform(PMom[i].begin(), PMom[i].end(), HalfDelta.begin(), sinkMom.begin(), std::plus<double>());
     auxMom.push_back(sinkMom);
   }
 
-    
   bool constSink =  !std::all_of(auxMom.begin(), auxMom.end(), [auxMom](std::vector<double> x){ return x==auxMom[0]; });
   if(constSink) PLEGMA_error("The different combinations of momenta give incompatible sink momenta\n");
   
   //Momentum smearing: put the momentum phase to smeared gauge field
   std::complex<double> momSmScale[N_DIMS];
   std::complex<double> I(0,1);
-  for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sinkMom[i]/HGC_totalL[i])*I);
+  for(int i = 0 ; i < N_DIMS-1; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sinkMom[i]/HGC_totalL[i])*I);
+  momSmScale[i] = 1.;
+
   smearedGauge.scaleDirWise(momSmScale);
 
   PLEGMA_Gauge<float> gaugeWL;
   gaugeWL.copy(gauge);
 
-  // Extracting the spacial sink momentum from the sink 4-momentum  
-  std::vector<int> sinkMom_3D(3);
-  std::copy(sinkMom.begin(),sinkMom.begin()+3,sinkMom_3D.begin());
-  
-  
   // ensuring mu positive
   if(mu<0)  mu*=-1.;
   QUDA_solver *solver = new QUDA_solver(mu);
@@ -137,22 +147,7 @@ int main(int argc, char **argv)
 
   PLEGMA_Correlator<float> corrThrpWL(corr_space,0); 
   
-  // PLEGMA_Correlator<float> *nucleonThrpWLP_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]]; // if is the z direction
-  // PLEGMA_Correlator<float> *nucleonThrpWLP_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
-
-  // PLEGMA_Correlator<float> *nucleonThrpWLM_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
-  // PLEGMA_Correlator<float> *nucleonThrpWLM_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
-
-  // PLEGMA_Correlator<float> *nucleonThrpWL_CP2[2];
-  // nucleonThrpWL_CP2[0] = nucleonThrpWLP_CP2;
-  // nucleonThrpWL_CP2[1] = nucleonThrpWLM_CP2;
-
-  // PLEGMA_Correlator<float> *nucleonThrpWL_CP1[2];
-  // nucleonThrpWL_CP1[0] = nucleonThrpWLP_CP1;
-  // nucleonThrpWL_CP1[1] = nucleonThrpWLM_CP1;
-
-
-  // for the test use sinkSourceSep = 10;
+  
   int  isource=0;
 
   for(int ts=0;ts<tSinks.size();ts++)
@@ -406,25 +401,18 @@ int main(int argc, char **argv)
   propUP->applyBoundaries_device(sourcePositions[isource][3]);
   propDN->applyBoundaries_device(sourcePositions[isource][3]);
 
-  //PLEGMA_Correlator<float> corr(corr_space, sinkMom_3D);
-  //corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
-  //corr.writeFile(twop_filename.c_str(), corr_file_format);
+  PLEGMA_Correlator<float> corr(corr_space, sinkMom);
+  corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
+  corr.writeFile(twop_filename.c_str(), corr_file_format);
 
   //!!!!!!!!!! maybe later we choose the specific momentum when this allows it
-  //corr.contractBaryons(*propUP, *propDN, sourcePositions[isource]);
-  //  corr.writeFile(twop_filename.c_str(), corr_file_format);
+  corr.contractBaryons(*propUP, *propDN, sourcePositions[isource]);
+  corr.writeFile(twop_filename.c_str(), corr_file_format);
     
   delete propUP;
   delete propDN;
   delete propIn;
   delete seqPropOut;
-  
-  // delete[] nucleonThrpWLP_CP1;
-  // delete[] nucleonThrpWLP_CP2;
-
-  // delete[] nucleonThrpWLM_CP1;
-  // delete[] nucleonThrpWLM_CP2;
-
   delete solver;
   
   finalize();
