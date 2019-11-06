@@ -16,7 +16,7 @@ namespace plegma {
   ////////////////////////////// 
 
   template<typename Float>
-  class PLEGMA_Correlator : public IO<void,bool> {
+  class PLEGMA_Correlator : public IO<void> {
   protected:
     // Correlator info
     const site source;
@@ -199,8 +199,7 @@ namespace plegma {
 					int signProps, std::vector<GAMMAS> gammas);
 
 
-    void do_writeHDF5(std::string filename, bool finalize=false) const;
-    virtual void writeASCII(std::string filename, bool asynch=false);
-    virtual void writeHDF5(std::string filename, bool asynch=false);
+    virtual void writeASCII(std::string filename);
+    virtual void writeHDF5(std::string filename);
   };
 }

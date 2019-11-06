@@ -250,7 +250,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeASCII(std::string filename_out, bool async) {
+writeASCII(std::string filename_out) {
   MPI_Comm comm;
   size_t g_vol_size = getVolSize();
   int rank;
@@ -420,7 +420,7 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-do_writeHDF5(std::string filename) const{
+writeHDF5(std::string filename) {
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
@@ -475,19 +475,6 @@ do_writeHDF5(std::string filename) const{
   }
 
   MPI_Comm_free(&thread_comm);
-}
-
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename, bool asynch) {
-  if( asynch ){
-    // Here the lambda does a copy of *this into tmp that will take care of the finalization
-    // when the thread is finished
-    std::thread([=](PLEGMA_Correlator<Float> corr){ corr.do_writeHDF5(filename);}, *this).detach();
-  }
-  else{
-    do_writeHDF5(filename);
-  }
 }
 
 
