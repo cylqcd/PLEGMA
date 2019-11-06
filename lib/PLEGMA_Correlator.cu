@@ -1,8 +1,10 @@
+#include <PLEGMA_Gauge.h>
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_baryons.cuh>
+#include <PLEGMA_threep.cuh>
 #include <functional>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
@@ -146,9 +148,6 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 }
 
 
-template<typename FloatC,typename FloatA, typename FloatB>
-void contractPropOpProp_local(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
-			      int signProps, std::vector<GAMMAS> gammas);
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
@@ -164,44 +163,11 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
   bwdPropTex.tex = bwdProp.createTexObject();
   fwdPropTex.tex = fwdProp.createTexObject();
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  contractPropOpProp_local(*this,bwdPropTex,fwdPropTex,signProps,gammas);
+  threep_local(*this,bwdPropTex,fwdPropTex,signProps,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
-			     int signProps, su3Tex<FloatS> su3, int dir,std::vector<GAMMAS> gammas);
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
-			    int signProps, su3Tex<FloatS> su3, int dir,std::vector<GAMMAS> gammas);
-
-template<typename Float>
-static void contractNucleonThrp_derGen(PLEGMA_Correlator<Float> &corr, PLEGMA_Propagator<Float> &bwdProp,
-				       PLEGMA_Propagator<Float> &fwdProp, PLEGMA_Gauge<Float> &gauge,
-				       int signProps, std::vector<GAMMAS> gammas,
-				       std::function<void(PLEGMA_Correlator<Float>&,propTex<Float>,
-							  propTex<Float>,int,su3Tex<Float>,int,
-							  std::vector<GAMMAS>)> funcContract){
-  // gauge should have the sign for the antiperiodic boundary conditions
-
-  PLEGMA_Su3field<Float> gsu3(DEVICE);
-  propTex<Float> bwdPropTex, fwdPropTex;
-  su3Tex<Float> gsu3Tex;
-  gsu3Tex.tex = gsu3.createTexObject();
-  bwdProp.communicateGhost();
-  fwdProp.communicateGhost();
-  bwdPropTex.tex = bwdProp.createTexObject();
-  fwdPropTex.tex = fwdProp.createTexObject();
-  for(int idir = 0; idir < N_DIMS; idir++){
-    gsu3.absorbDir_device(gauge,idir);
-    gsu3.communicateGhost(idir+N_DIMS);
-    funcContract(corr,bwdPropTex,fwdPropTex,signProps,gsu3Tex,idir,gammas);
-  }
-  bwdProp.destroyTexObject(bwdPropTex.tex);
-  fwdProp.destroyTexObject(fwdPropTex.tex);
-  gsu3.destroyTexObject(gsu3Tex.tex);
-}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -216,8 +182,20 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,
-				    contractPropOpProp_oneD<Float,Float,Float,Float>);
+  
+  gauge.communicateSideGhost();
+  bwdProp.communicateGhost();
+  fwdProp.communicateGhost();
+  
+  propTex<Float> bwdPropTex, fwdPropTex;
+  gaugeTex<Float> gaugeTex;
+  gaugeTex.tex = gauge.createTexObject();
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  threep_oneD(*this,bwdPropTex,fwdPropTex,signProps,gaugeTex,gammas);
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+  gauge.destroyTexObject(gaugeTex.tex);
 }
 
 template<typename Float>
@@ -231,15 +209,21 @@ contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
   description = "x,y,z,t";
   initialize();
 
-  std::vector<GAMMAS> gammas = {};
-  contractNucleonThrp_derGen<Float>(*this,bwdProp,fwdProp,gauge,signProps,gammas,
-				    contractPropOpProp_noe<Float,Float,Float,Float>);
+  gauge.communicateSideGhost();
+  bwdProp.communicateGhost();
+  fwdProp.communicateGhost();
+  
+  propTex<Float> bwdPropTex, fwdPropTex;
+  gaugeTex<Float> gaugeTex;
+  gaugeTex.tex = gauge.createTexObject();
+  bwdPropTex.tex = bwdProp.createTexObject();
+  fwdPropTex.tex = fwdProp.createTexObject();
+  threep_noe(*this,bwdPropTex,fwdPropTex,signProps,gaugeTex);
+  bwdProp.destroyTexObject(bwdPropTex.tex);
+  fwdProp.destroyTexObject(fwdPropTex.tex);
+  gauge.destroyTexObject(gaugeTex.tex);
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-void contractPropOpProp_wilsonLine(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1,
-				   propTex<FloatB> prop2, int signProps,
-				   su3Tex<FloatS> su3, std::vector<GAMMAS> gammas);
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
@@ -258,7 +242,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
   fwdPropTex.tex = fwdProp.createTexObject();
   sTex.tex = su3.createTexObject();
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  contractPropOpProp_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,gammas);
+  threep_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,gammas);
   bwdProp.destroyTexObject(bwdPropTex.tex);
   fwdProp.destroyTexObject(fwdPropTex.tex);
   su3.destroyTexObject(sTex.tex);
@@ -360,9 +344,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   case MOMENTUM_SPACE:
     descr += "/time/moms";
     // Time
-    shape.push_back((hsize_t)totalT);
-    lshape.push_back((hsize_t)localT());
-    start.push_back((hsize_t)startT());
+    shape.push_back(totalT);
+    lshape.push_back(localT());
+    start.push_back(startT());
     // Moms
     shape.push_back((hsize_t)corr_mom_space->Nmoms());
     lshape.push_back((hsize_t)corr_mom_space->Nmoms());
@@ -441,11 +425,11 @@ writeHDF5(std::string filename) {
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
-  hsize_t corrSize = (hsize_t)2*getVolSize();
-  for(auto l: this->shape){ printf("this->l = %ld, ", (hsize_t)l); corrSize*=l; }
+  hsize_t corrSize = 2*getVolSize();
+  for(auto l: this->shape) corrSize*=l;
 
   hsize_t writeSize = 1;
-  for(auto l: lshape){ printf("lshape->l = %ld, ", l); writeSize*=l; }
+  for(auto l: lshape) writeSize*=l;
   assert(corrSize==writeSize);
 
   // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.
