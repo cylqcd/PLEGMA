@@ -81,7 +81,7 @@ void contract_mesons_host( ProfileStruct &ps,
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
-      printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+      printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
   size_t alloc_size = (runFT==true) ? (size * (ps.tp.grid.x/time_step)) : size;
 
