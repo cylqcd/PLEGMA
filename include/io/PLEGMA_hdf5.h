@@ -452,7 +452,6 @@ public:
    *    then go to group1 and group2
    */
   HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD) : comm(comm) {
-    wait();
     // Creating filename and path from name
     std::string path = "/";
     // checking if .h5 is given and at the end of file
@@ -473,7 +472,7 @@ public:
     // check if filename is open by another instance
     if(HGC_verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filename.c_str());
     while( isFileOpen(filename) )
-      sleep(0.001);
+      std::this_thread::sleep_for(1ms);
     
     hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
@@ -498,7 +497,6 @@ public:
   }
 
   ~HDF5() {
-    wait();
     go_top();
     int open_obj = 1, my_open_obj = H5Fget_obj_count(file_id, H5F_OBJ_ALL);
     if(my_open_obj > 1) {
@@ -526,7 +524,6 @@ public:
   template<typename T>
   void write_attribute(std::string object, std::string attr_name, T attr_value,
 		       std::string path=".") {
-    wait();
     // checking for / in attr_name
     size_t check = object.rfind("/");
     if(check != std::string::npos)
@@ -550,7 +547,6 @@ public:
   template<typename T>
   void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
 			    std::vector<hsize_t> start={}, std::string path=".") {
-    wait();
     // checking for / in name
     size_t check = name.rfind("/");
     if(check != std::string::npos)
