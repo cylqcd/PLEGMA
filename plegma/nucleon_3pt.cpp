@@ -19,6 +19,7 @@ int main(int argc, char **argv)
   initializePLEGMA();
 
   {
+    std::vector<std::thread> threads;
     // Reading from Lime file and loading to device
     PLEGMA_Gauge<double> gauge;
     gauge.readFile(latfile, LIME_FORMAT);
@@ -163,19 +164,22 @@ int main(int argc, char **argv)
 	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
+	    threads.push_back(std::thread([=]() {
+	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 
 	    // ONED contractions
 	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
+	    threads.push_back(std::thread([=]() {
+	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 
 	    // noe contractions
 	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
+	    threads.push_back(std::thread([=]() {
+	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 	  }
   
 	  //seq source part 1Prop contraction
@@ -219,19 +223,22 @@ int main(int argc, char **argv)
 	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
+	    threads.push_back(std::thread([=]() {
+	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 
 	    //ONED
 	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
+	    threads.push_back(std::thread([=]() {
+	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 
 	    //ONED
 	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
+	    threads.push_back(std::thread([=]() {
+	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 	  }
 	}
       }    
@@ -259,11 +266,15 @@ int main(int argc, char **argv)
   
       PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
       corr.contractMesons(propUP, propDN);
-      corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
+      threads.push_back(std::thread([=]() {
+      corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 
       corr.contractBaryons(propUP, propDN);
-      corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
-    }  
+      threads.push_back(std::thread([=]() {
+      corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+    }
+    
+    while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }
 
   finalize();
