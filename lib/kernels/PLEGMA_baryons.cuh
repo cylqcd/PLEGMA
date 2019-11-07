@@ -102,7 +102,7 @@ static void contract_baryons_host( ProfileStruct &ps,
   size_t size = corr.getTotalSize()/HGC_localL[3]/N_BARYONS*time_step;
   int site_size=2*N_SPINS*N_SPINS;
   int3 source = corr.getSource3();
-  tex_mom_list mom_list = corr.getTexMomList();
+  auto mom_list = corr.getTexMomList();
 
   if(HGC_verbosity > 2)
     PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
@@ -126,7 +126,7 @@ static void contract_baryons_host( ProfileStruct &ps,
     contract_baryons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (texProp1, texProp2, d_partial_block, it, std::min(HGC_localL[3]-it, time_step), source,
-       (BARYONS_TYPE) ip, runFT, mom_list);
+       (BARYONS_TYPE) ip, runFT, *mom_list);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*std::min(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);

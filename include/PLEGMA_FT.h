@@ -94,7 +94,7 @@ namespace plegma {
     bool IsAccum() const{return accum;}
     
     Float* H_elem() const{return h_elem.get();}
-    tex_mom_list getTexMomList();
+    std::shared_ptr<tex_mom_list> getTexMomList();
 
     
     void apply(const PLEGMA_Field<Float> &f, FT_TYPE type = FT_GEMV, int sign = -1);

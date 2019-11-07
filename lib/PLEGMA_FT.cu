@@ -67,7 +67,7 @@ void PLEGMA_FT<Float>::checkAllocation(int newDof){
 }
 
 template<typename Float>
-tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
+std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
   cudaChannelFormatDesc desc;
   memset(&desc, 0, sizeof(cudaChannelFormatDesc));
   desc.f = cudaChannelFormatKindSigned;
@@ -104,7 +104,7 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
   checkCudaError();
   
-  return tex_mom_list(Nmoms(), tex, devPtr);
+  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); cudaFree(moms->devPtr); checkCudaError(); });
 }
     
 
@@ -116,10 +116,10 @@ void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   checkAllocation(f.Field_length());
   field_name = f.Field_name();
   site_shape = f.getSiteShape();
-  tex_mom_list moms = this->getTexMomList();
+  auto moms = this->getTexMomList();
   if(!accum) zero();
   for(int it =0 ; it < dimT; it++)
-    fourier_transform_3D_k(*this,f,moms,it,sign);
+    fourier_transform_3D_k(*this,f,*moms,it,sign);
 }
 
 template<typename Float>
