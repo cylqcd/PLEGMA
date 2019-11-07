@@ -31,13 +31,12 @@ inline std::istream& operator >> (std::istream &i, site &x){
 struct tex_mom_list {
   size_t Nmoms;
   cudaTextureObject_t tex;
-  std::shared_ptr<void> devPtr;
+  void* devPtr;
 
-  tex_mom_list() : Nmoms(0), tex(), devPtr() {}
+  tex_mom_list() : Nmoms(0), tex(), devPtr(nullptr) {}
 
   tex_mom_list(size_t Nmoms, cudaTextureObject_t tex, void* devPtr) :
-    Nmoms(Nmoms), tex(tex), devPtr(std::shared_ptr<void>(devPtr, [=](void* ptr) { cudaFree(ptr);
-	  cudaDestroyTextureObject(tex); })) {}
+    Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
   
   inline __device__ int4 get(const size_t &i) const {
 #ifdef __NVCC__

@@ -83,7 +83,7 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   cudaMemset(x,0,V*2*sizeof(Float));
   cudaMalloc((void**)&d_res, f.Field_length() * ft.DimT() * 2*sizeof(Float));
   checkCudaError();
-  Float2<Float> h_res[f.Field_length() * ft.DimT() * 2];
+  Float2<Float> h_res[f.Field_length()*ft.DimT()];
   Float2<Float> *h_ft = (Float2<Float> *) ft.H_elem();
   Float one[2] = {1.,0.}, zero[2] = {0.,0.};
   for(int imom = 0; imom < Nmom; imom++){

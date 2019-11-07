@@ -83,7 +83,7 @@ static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
   size_t size = corr.getTotalSize()/t_size*time_step;
   int site_size = corr.getSiteSize();
   int4 source = corr.getSource();
-  tex_mom_list moms = corr.getTexMomList();
+  auto moms = corr.getTexMomList();
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
@@ -110,7 +110,7 @@ static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
     threep_oneD_device<FloatC,FloatA, FloatB, FloatG>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (d_partial_block, prop1, prop2, gauge, listGammas, it, t_step, maxT,
-       source, signProps, runFT, moms);
+       source, signProps, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);

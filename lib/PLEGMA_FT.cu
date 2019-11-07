@@ -61,15 +61,13 @@ void PLEGMA_FT<Float>::createMom(){
 
 template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
-  if(dof != newDof) {
-    dof = newDof;
-    h_elem.reset(new Float[Nmoms()*dimT*dof*2]);
-  }
+  dof = newDof;
+  h_elem.reset(new Float[Nmoms()*dimT*dof*2]);
   zero();
 }
 
 template<typename Float>
-tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
+std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
   cudaChannelFormatDesc desc;
   memset(&desc, 0, sizeof(cudaChannelFormatDesc));
   desc.f = cudaChannelFormatKindSigned;
@@ -83,21 +81,20 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   resDesc.resType = cudaResourceTypeLinear;
   resDesc.res.linear.desc = desc;
 
-  size_t bytes = Nmoms()*4*sizeof(int);
   void * devPtr;
-  int hostPtr[bytes];
-  memset(hostPtr, 0, sizeof(bytes));
-  cudaMalloc(&devPtr, bytes);
+  int hostPtr[Nmoms()*N_DIMS];
+  memset(hostPtr, 0, sizeof(hostPtr));
+  cudaMalloc(&devPtr, sizeof(hostPtr));
   Float intp;
   for(int i=0; i<Nmoms(); i++) {
     for(int j=0; j<dims; j++) {
       if(abs(std::modf(momList[i][j],&intp)) > std::numeric_limits<Float>::epsilon()) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
-      hostPtr[i*4+j]=(int) std::lround(momList[i][j]);
+      hostPtr[i*N_DIMS+j]=(int) std::lround(momList[i][j]);
     }
   }
-  cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
+  cudaMemcpy(devPtr, hostPtr, sizeof(hostPtr), cudaMemcpyHostToDevice );
   resDesc.res.linear.devPtr = devPtr;
-  resDesc.res.linear.sizeInBytes = bytes;
+  resDesc.res.linear.sizeInBytes = sizeof(hostPtr);
 
   cudaTextureDesc texDesc;
   memset(&texDesc, 0, sizeof(texDesc));
@@ -107,7 +104,7 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
   checkCudaError();
   
-  return tex_mom_list(Nmoms(), tex, devPtr);
+  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); cudaFree(moms->devPtr); checkCudaError(); });
 }
 
 template<typename Float>
@@ -118,10 +115,10 @@ void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   checkAllocation(f.Field_length());
   field_name = f.Field_name();
   site_shape = f.getSiteShape();
-  tex_mom_list moms = this->getTexMomList();
+  auto moms = this->getTexMomList();
   if(!accum) zero();
   for(int it =0 ; it < dimT; it++)
-    fourier_transform_3D_k(*this,f,moms,it,sign);
+    fourier_transform_3D_k(*this,f,*moms,it,sign);
 }
 
 template<typename Float>

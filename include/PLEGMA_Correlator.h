@@ -134,13 +134,11 @@ namespace plegma {
       corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomVec, 3, false, localT()));
     }
 
-    tex_mom_list getTexMomList() const{
+    std::shared_ptr<tex_mom_list> getTexMomList() const {
       if(corr_space == MOMENTUM_SPACE) {
 	return corr_mom_space->getTexMomList();
       } else {
-	tex_mom_list dummy;
-	dummy.Nmoms=0;
-	return dummy;
+	return std::shared_ptr<tex_mom_list>(new tex_mom_list());
       }
     }
     std::vector<std::string> getDatasets() const{
