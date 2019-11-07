@@ -61,10 +61,8 @@ void PLEGMA_FT<Float>::createMom(){
 
 template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
-  if(dof != newDof) {
-    dof = newDof;
-    h_elem.reset(new Float[Nmoms()*dimT*dof*2]);
-  }
+  dof = newDof;
+  h_elem.reset(new Float[Nmoms()*dimT*dof*2]);
   zero();
 }
 
@@ -83,21 +81,20 @@ tex_mom_list PLEGMA_FT<Float>::getTexMomList() {
   resDesc.resType = cudaResourceTypeLinear;
   resDesc.res.linear.desc = desc;
 
-  size_t bytes = Nmoms()*4*sizeof(int);
   void * devPtr;
-  int hostPtr[bytes];
-  memset(hostPtr, 0, sizeof(bytes));
-  cudaMalloc(&devPtr, bytes);
+  int hostPtr[Nmoms()*N_DIMS];
+  memset(hostPtr, 0, sizeof(hostPtr));
+  cudaMalloc(&devPtr, sizeof(hostPtr));
   Float intp;
   for(int i=0; i<Nmoms(); i++) {
     for(int j=0; j<dims; j++) {
       if(abs(std::modf(momList[i][j],&intp)) > std::numeric_limits<Float>::epsilon()) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
-      hostPtr[i*4+j]=(int) std::lround(momList[i][j]);
+      hostPtr[i*N_DIMS+j]=(int) std::lround(momList[i][j]);
     }
   }
-  cudaMemcpy(devPtr, hostPtr, bytes, cudaMemcpyHostToDevice );
+  cudaMemcpy(devPtr, hostPtr, sizeof(hostPtr), cudaMemcpyHostToDevice );
   resDesc.res.linear.devPtr = devPtr;
-  resDesc.res.linear.sizeInBytes = bytes;
+  resDesc.res.linear.sizeInBytes = sizeof(hostPtr);
 
   cudaTextureDesc texDesc;
   memset(&texDesc, 0, sizeof(texDesc));
