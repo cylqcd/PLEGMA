@@ -30,6 +30,7 @@ namespace plegma {
     const CORR_SPACE corr_space;
     std::shared_ptr<PLEGMA_Field<Float>> corr_pos_space;
     std::shared_ptr<PLEGMA_FT<Float>> corr_mom_space;
+    std::shared_ptr<MPI_Comm> comm;
 
     void initialize();
     
@@ -80,7 +81,8 @@ namespace plegma {
     PLEGMA_Correlator(CORR_SPACE corr_space, site source, int Q2_max = 0, int totalT=HGC_totalL[DIM_T]):
       source(source), totalT(totalT), corr_space(corr_space), corr_pos_space(nullptr),
       corr_mom_space(corr_space==MOMENTUM_SPACE ?
-		     new PLEGMA_FT<Float>(Q2_max, 3, false, localT()) : nullptr) { }
+		     new PLEGMA_FT<Float>(Q2_max, 3, false, localT()) : nullptr),
+      comm(nullptr) { }
 
     ~PLEGMA_Correlator() {}
     
@@ -199,7 +201,7 @@ namespace plegma {
 					int signProps, std::vector<GAMMAS> gammas);
 
 
-    virtual void writeASCII(std::string filename);
-    virtual void writeHDF5(std::string filename);
+    virtual void writeASCII(std::string filename) const;
+    virtual void writeHDF5(std::string filename) const;
   };
 }

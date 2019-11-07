@@ -180,7 +180,7 @@ void PLEGMA_FT<Float>::scale(Float a){
 
 
 template<typename Float>
-void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
+void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift) const{
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!h_elem) PLEGMA_error("Memory not allocated cannot write data");
   if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
@@ -212,7 +212,7 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
 
 template<typename Float>
 std::string PLEGMA_FT<Float>::
-fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift) {
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift) const{
   std::string descr;
   
   // Time
@@ -288,7 +288,7 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_FT<Float>::
-writeHDF5(std::string filename, int timeshift) {
+writeHDF5(std::string filename, int timeshift) const{
   if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);

@@ -34,23 +34,23 @@ namespace plegma {
     }
   public:
     
-    virtual returnT writeDEFAULT(std::string filename, argsT ... args) {
+    virtual returnT writeDEFAULT(std::string filename, argsT ... args) const {
       PLEGMA_error("No default writing defined\n");
       return returnT();
     }
-    virtual returnT writeASCII(std::string filename, argsT ... args) {
+    virtual returnT writeASCII(std::string filename, argsT ... args) const {
       PLEGMA_error("Writing in ASCII not supported. Trying default writing\n");
       return writeDEFAULT(filename, args...);
     }
-    virtual returnT writeHDF5(std::string filename, argsT ... args) {
+    virtual returnT writeHDF5(std::string filename, argsT ... args) const {
       PLEGMA_error("Writing in ASCII not supported. Trying default writing\n");
       return writeDEFAULT(filename, args...);
     }
-    virtual returnT writeLIME(std::string filename, argsT ... args) {
+    virtual returnT writeLIME(std::string filename, argsT ... args) const {
       PLEGMA_error("Writing in ASCII not supported. Trying default writing\n");
       return writeDEFAULT(filename, args...);
     }
-    returnT writeFile(std::string filename, FILE_FORMAT format, argsT ... args) {
+    returnT writeFile(std::string filename, FILE_FORMAT format, argsT ... args) const {
       switch (format) {
       case ASCII_FORMAT:
 	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename.c_str());
@@ -67,7 +67,7 @@ namespace plegma {
 	return writeDEFAULT(filename, args...);
       }
     }
-    returnT writeFile(std::string filename, argsT ... args) {
+    returnT writeFile(std::string filename, argsT ... args) const {
       return writeFile(filename, deduce_type(filename), args...);
     }
 

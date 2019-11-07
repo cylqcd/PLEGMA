@@ -19,6 +19,8 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
+  comm.reset(new MPI_Comm(), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
+  MPI_Comm_dup( MPI_COMM_WORLD, comm.get() );
   if(corr_space == MOMENTUM_SPACE) {
     assert(corr_mom_space);
     corr_mom_space->checkAllocation(getSiteSize());
@@ -250,7 +252,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeASCII(std::string filename_out) {
+writeASCII(std::string filename_out) const {
   MPI_Comm comm;
   size_t g_vol_size = getVolSize();
   int rank;
@@ -420,7 +422,7 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename) {
+writeHDF5(std::string filename) const {
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
@@ -448,15 +450,13 @@ writeHDF5(std::string filename) {
     }
   }
 
-  MPI_Comm thread_comm;
-  MPI_Comm_dup( MPI_COMM_WORLD, &thread_comm );
-  HDF5 writer(filename, thread_comm);
-
+  HDF5 writer(filename, *comm);
+    
   char *ssource;
   asprintf(&ssource,"/sx%02dsy%02dsz%02dst%02d/", source[0], source[1], source[2], source[3]);
   std::string top=(std::string) "/" + ssource; 
   free(ssource);
-
+  
   std::vector<hsize_t> momShape = { 3 };
   std::vector<int> mvec;
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
@@ -473,8 +473,6 @@ writeHDF5(std::string filename) {
       writer.write_attribute(dataset, "description", descr);
     }
   }
-
-  MPI_Comm_free(&thread_comm);
 }
 
 
