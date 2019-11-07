@@ -148,7 +148,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   int4 source = corr.getSource();
   size_t volume3D = corr.getVolSize()/t_size;
   size_t volume = volume3D*time_step;
-  tex_mom_list moms = corr.getTexMomList();
+  auto moms = corr.getTexMomList();
   
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -217,12 +217,12 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
 	contract_prop_prod
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (texPropProd, d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
-	   source, runFT, moms, it, std::min(t_size-it, time_step), maxT);
+	   source, runFT, *moms, it, std::min(t_size-it, time_step), maxT);
       } else {
 	contract_props
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (props[0], props[1], props[2], d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
-	   source, runFT, moms, it, std::min(t_size-it, time_step), maxT);
+	   source, runFT, *moms, it, std::min(t_size-it, time_step), maxT);
       }
       cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
       if(runFT==true){

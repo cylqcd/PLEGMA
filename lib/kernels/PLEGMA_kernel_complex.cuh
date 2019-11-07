@@ -54,119 +54,124 @@ namespace plegma {
     }
 
     // Conjugate
-    inline __host__ __device__ Float2<Float>& conj() {
-      this->y *= -1.;
-      return *this;
+    inline __host__ __device__ void conj() {
+      this->y = -this->y;
     }
-
-    // Equality
+    
+    // Sum with complex
     template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator=(const Float2<FloatIn>& a) {
-      this->x = a.x;
-      this->y = a.y;
-      return *this;
-    }
-
-    // SumEq with complex
-    template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator+=(const Float2<FloatIn>& a) {
+    inline __host__ __device__ void operator+=(const Float2<FloatIn>& a) {
       this->x += a.x;
       this->y += a.y;
-      return *this;
     }
-
-    // SumEq with real
     template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator+=(const FloatIn& a) {
-      this->x += a;
-      return *this;
+    inline __host__ __device__ Float2<Float> operator+(const Float2<FloatIn>& a) const {
+      Float2<Float> res;
+      res.x = this->x + a.x;
+      res.y = this->y + a.y;
+      return res;
     }
 
-    // Sum
+    // Sum with real
+    template<typename FloatIn>
+    inline __host__ __device__ void operator+=(const FloatIn& a) {
+      this->x += a;
+    }
     template<typename FloatIn>
     inline __host__ __device__ Float2<Float> operator+(const FloatIn& a) const {
-      return Float2<Float>(*this)+=a;
+      Float2<Float> res;
+      res.x = this->x + a;
+      res.y = this->y;
+      return res;
     }
-
-    // DiffEq with complex
+    
+    // Diff with complex
     template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator-=(const Float2<FloatIn>& a) {
+    inline __host__ __device__ void operator-=(const Float2<FloatIn>& a) {
       this->x -= a.x;
       this->y -= a.y;
-      return *this;
     }
-
-    // DiffEq with real
     template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator-=(const FloatIn& a) {
-      this->x -= a;
-      return *this;
+    inline __host__ __device__ Float2<Float> operator-(const Float2<FloatIn>& a) const {
+      Float2<Float> res;
+      res.x = this->x - a.x;
+      res.y = this->y - a.y;
+      return res;
     }
 
-    // Diff
+    // Diff with real
+    template<typename FloatIn>
+    inline __host__ __device__ void operator-=(const FloatIn& a) {
+      this->x -= a;
+    }
     template<typename FloatIn>
     inline __host__ __device__ Float2<Float> operator-(const FloatIn& a) const {
-      return Float2<Float>(*this)-=a;
+      Float2<Float> res;
+      res.x = this->x - a;
+      res.y = this->y;
+      return res;
     }
 
     // Mul with complex
     template<typename FloatIn>
+    inline __host__ __device__ void operator*=(const Float2<FloatIn>& a) const {
+      Float2<Float> b(*this);
+      this->x = a.x*b.x - a.y*b.y;
+      this->y = a.x*b.y + a.y*b.x;
+    }
+    template<typename FloatIn>
     inline __host__ __device__ Float2<Float> operator*(const Float2<FloatIn>& a) const {
-      Float2<Float> res(*this);
+      Float2<Float> res;
       res.x = a.x*this->x - a.y*this->y;
       res.y = a.x*this->y + a.y*this->x;
       return res;
     }
     
-    // MulEq with complex
-    template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator*=(const Float2<FloatIn>& a) {
-      return *this = (*this*a);
-    }
-
-    // MulEq with real
-    template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator*=(const FloatIn& a) {
-      this->x *= a;
-      this->y *= a;
-      return *this;
-    }
-
     // Mul with real
     template<typename FloatIn>
+    inline __host__ __device__ void operator*=(const FloatIn& a) {
+      this->x *= a;
+      this->y *= a;
+    }
+    template<typename FloatIn>
     inline __host__ __device__ Float2<Float> operator*(const FloatIn& a) const {
-      return Float2<Float>(*this)*=a;
+      Float2<Float> res;
+      res.x = a*this->x;
+      res.y = a*this->y;
+      return res;
     }
 
     // Div with complex
     template<typename FloatIn>
+    inline __host__ __device__ void operator/=(const Float2<FloatIn>& a) {
+      Float2<Float> b(*this);
+      FloatIn den = (a.x * a.x + a.y * a.y);
+      this->x = (a.x*b.x + a.y*b.y) / den;
+      this->y = (a.x*b.y - a.y*b.x) / den;
+    }
+    template<typename FloatIn>
     inline __host__ __device__ Float2<Float> operator/(const Float2<FloatIn>& a) const {
       Float2<Float> res;
-      res.x = (this->x * a.x + this->y * a.y) / (a.x * a.x + a.y * a.y);
-      res.y = (this->y * a.x - this->x * a.y) / (a.x * a.x + a.y * a.y);
+      FloatIn den = (a.x * a.x + a.y * a.y);
+      res.x = (this->x * a.x + this->y * a.y) / den;
+      res.y = (this->y * a.x - this->x * a.y) / den;
       return res;
-    }
-
-    // DivEq with complex
-    template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator/=(const Float2<FloatIn>& a) {
-      return *this = *this/a;
-    }
-
-    // DivEq with real
-    template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& operator/=(const FloatIn& a) {
-      this->x /= a;
-      this->y /= a;
-      return *this;
     }
     
     // Div with real
     template<typename FloatIn>
-    inline __host__ __device__ Float2<Float> operator/(const FloatIn& a) const {
-      return Float2<Float>(*this)/=a;
+    inline __host__ __device__ void operator/=(const FloatIn& a) {
+      this->x /= a;
+      this->y /= a;
     }
-
+    template<typename FloatIn>
+    inline __host__ __device__ Float2<Float> operator/(const FloatIn& a) const {
+      Float2<Float> res;
+      res.x = this->x/a;
+      res.y = this->y/a;
+      return res;
+    }
+    
     // Norm
     inline __host__ __device__ Float norm2() const {
       return this->x*this->x + this->y*this->y;
@@ -177,12 +182,11 @@ namespace plegma {
 
     // Power
     template<typename FloatIn>
-    inline __host__ __device__ Float2<Float>& cpow(const FloatIn& a) {
+    inline __host__ __device__ void cpow(const FloatIn& a) {
       Float _atan = atan2(this->y,this->x);
       Float _norm = norm();
       this->x = pow(_norm,a) * cos(_atan*a);
       this->y = pow(_norm,a) * sin(_atan*a);
-      return *this;
     }
   };
 
@@ -192,8 +196,11 @@ namespace plegma {
   }
 
   template<typename Float>
-  inline __host__ __device__ Float2<Float> conj( const Float2<Float>& a) {
-    return Float2<Float>(a).conj();
+  inline __host__ __device__ Float2<Float> conj(const Float2<Float>& a) {
+    Float2<Float> res;
+    res.x = a.x;
+    res.y = -a.y;
+    return res;
   }
 
   template<typename Float>
@@ -206,10 +213,14 @@ namespace plegma {
     return a.norm();
   }
 
-  template<typename FloatX, typename FloatA>
-  inline __host__ __device__ Float2<FloatX> cpow(const Float2<FloatX>& x , const FloatA& a) {
-    return Float2<FloatX>(x).cpow(a);
+  template<typename Float>
+  inline __host__ __device__ Float2<Float> cpow(const Float2<Float>& x , const Float& a) {
+    Float _atan = atan2(x.y,x.x);
+    Float _norm = x.norm();
+    Float2<Float> res;
+    res.x = pow(_norm,a) * cos(_atan*a);
+    res.y = pow(_norm,a) * sin(_atan*a);
+    return res;
   }
-
 }
 #endif

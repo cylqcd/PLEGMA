@@ -76,7 +76,7 @@ void contract_mesons_host( ProfileStruct &ps,
   size_t size = corr.getTotalSize()/t_size*time_step;
   size_t volume = corr.getVolSize()/t_size;
   int4 source = corr.getSource();
-  tex_mom_list moms = corr.getTexMomList();
+  auto moms = corr.getTexMomList();
   int site_size = 2*N_MESONS;
 
   if(HGC_verbosity > 2)
@@ -101,7 +101,7 @@ void contract_mesons_host( ProfileStruct &ps,
     grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     contract_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (texProp1, texProp2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, moms);
+      (texProp1, texProp2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
