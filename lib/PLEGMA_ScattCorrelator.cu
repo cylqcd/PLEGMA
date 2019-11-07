@@ -1,4 +1,6 @@
-#include <PLEGMA_Field.h>
-#include <PLEGMA_Tensor.h>
+#include <PLEGMA_ScattCorrelator.h>
 
 using namespace plegma;
+//--------------------------------//
+//  class PLEGMA_ScattCorrelator  //
+//--------------------------------//

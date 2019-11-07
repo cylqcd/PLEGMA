@@ -1,10 +1,11 @@
-#include <PLEGMA_Correlator.h>
-#include <PLEGMA_Vector.h>
-#include <PLEGMA_Propagator.h>
-
 #pragma once
+#include <PLEGMA_Correlator.h>
 
 namespace plegma {
+  // forward declaration
+  template<typename Float>  class PLEGMA_Vector;
+  template<typename Float>  class PLEGMA_Propagator;
+
   /////////////////
   // This PLEGMA_ScattCorrelator Class allows to store a generic number of d.o.f
   // (divided into spin and color index) per momentum. It  
@@ -50,10 +51,13 @@ namespace plegma {
   public:
     // these constructors does NOT ALLOCATE the memory PLEGMA_ScattCorrelator here, because
     // the dimension is not provided. It will be allocated when used.
-    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, in Q2_max);
-    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec);
+    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, int Q2_max):
+      PLEGMA_Correlator<Float>(CorrSpace,Q2_max) { ; }
 
-    ~PLEGMA_ScattCorrelator();
+    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec):
+      PLEGMA_Correlator<Float>(CorrSpace,fixMomVec) { ; }
+
+    ~PLEGMA_ScattCorrelator(){;}
 
     //functions that return values of protected variables
     std::string Shape_labels() const{ return shape_labels;}
