@@ -21,7 +21,7 @@ static inline bool isInList(std::vector<std::string> list,std::string str){
 }
 
 
-void plegmaOptions(Options &opt, std::vector<std::string> list){
+void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_params){
   bool isFound;
   std::string tmpString;
   if(isInList(list,"verbosity")) opt.set("verbosity","Set verbosity level, 0 minimal, 1 verbose, 2 debug, 3 debug all", 0, verbosity);
@@ -35,8 +35,9 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     PLEGMA_printf( "procs %d %d %d %d\n",  procs[0], procs[1], procs[2], procs[3]);
   }
 
+  if(!update_params){
   opt.setForced("dims","Set local dimensions (X Y Z T), e.g. 8 8 8 16", verbosity, dims[0], dims[1], dims[2], dims[3]);
-  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);
+  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);}
 
   if(isInList(list,"load-gauge")) opt.set("load-gauge", "Path to the gauge field", verbosity, latfile);
 
@@ -223,10 +224,6 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-inv-type", "The type of solver to use, options (cg,bicgstab,gcr)", verbosity, tmpString);
   if(isFound) inv_type = get_solver_type(tmpString.c_str());
 
-  tmpString = get_solver_str(precon_type);
-  isFound=opt.set("Q-precon-type", "The type of precon solver to use, options (mr,none)", verbosity, tmpString);
-  if(isFound)precon_type = get_solver_type(tmpString.c_str());
-
   opt.set("Q-kappa", "Kappa value of the Dirac operator", verbosity, kappa);
   opt.set("Q-mu", "Twisted mass value", verbosity, mu);
   opt.set("Q-csw", "The coefficient of the clover term", verbosity, csw);
@@ -243,15 +240,13 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-matpc", "Operator preconditioning type, options (even-even, odd-odd, even-even-asym, odd-odd-asym)", verbosity, tmpString);
   if(isFound) matpc_type = get_matpc_type(tmpString.c_str());
 
-  tmpString = get_solve_str(solve_type);
-  isFound=opt.set("Q-solve-type", "The way to solve the system, options (direct, direct-pc, normop, normop-pc, normerr, normerr-pc)", verbosity, tmpString);
-  if(isFound) solve_type = get_solve_type(tmpString.c_str());
-
   opt.set("Q-tol", "The L2 residual tolerance", verbosity, tol);
   opt.set("Q-tolhq", "Set heavy-quark residual tolerance", verbosity, tol_hq);
   opt.set("Q-reliable-delta", "The delta factor for the reliable updates", verbosity, reliable_delta);
 
   //=================================== Multigrid related =======================//
+  opt.set("Q-use-mg", "Use the multigrid as preconditioner ", verbosity, use_mg);
+  
   opt.set("Q-mg-levels", "The number of multigrid levels to do. One level has no meaning", verbosity, mg_levels);
 
   isFound=opt.set("Q-mg-vec-outfile", "Name of the output file containing the multigrid vectors", verbosity, vec_outfile);
@@ -427,4 +422,15 @@ void qudaOptions(Options &opt){
 
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
+
+  isFound=opt.set("Up-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputUP);
+
+  isFound=opt.set("Down-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputDN);
+  
+  isFound=opt.set("Strange-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputST);
+  
+  isFound=opt.set("Charm-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputCH);
+
 }
+
+

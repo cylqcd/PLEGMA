@@ -16,7 +16,7 @@ namespace quda {
     QudaInvertParam mg_inv_param;
     QudaMultigridParam mg_param;
     Dirac *D, *DSloppy, *DPre;
-    DiracM *M, *MSloppy, *MPre;
+    DiracMatrix *M, *MSloppy, *MPre;
     cudaColorSpinorField *b, *x;
 #ifdef QUDA_INCLUDES_COMMIT_775a033
     QudaEigParam *mg_eig_param;

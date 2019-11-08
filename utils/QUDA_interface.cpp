@@ -88,7 +88,6 @@ void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType 
     setInvertParam(inv_param);
     checkInvertParam(&inv_param);
 
-    inv_param.solve_type = QUDA_DIRECT_PC_SOLVE;
     loadCloverQuda(NULL, NULL, &inv_param);
   }
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gauge.Bytes_total()/N_DIMS);
@@ -115,41 +114,38 @@ QUDA_solver::QUDA_solver(double mu) {
   profiler = new TimeProfile(("Solver profiler mu="+to_string(mu)).c_str());
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
 
-  mg_inv_param = newQudaInvertParam();
-  mg_param = newQudaMultigridParam();
-  mg_param.invert_param = &mg_inv_param;
-  setMultigridParam(mg_param);
-  checkMultigridParam(&mg_param);
-  if(HGC_verbosity > 2) {
-    printQudaMultigridParam(&mg_param);
+  if(use_mg){
+    mg_inv_param = newQudaInvertParam();
+    mg_param = newQudaMultigridParam();
+    mg_param.invert_param = &mg_inv_param;
+    setMultigridParam(mg_param);
+    checkMultigridParam(&mg_param);
+    if(HGC_verbosity > 2) printQudaMultigridParam(&mg_param);
+    mg_param.invert_param->mu = mu;
+
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+    mg_eig_param = new QudaEigParam[mg_param.n_level];
+    setEigMultigridParam(mg_param,mg_eig_param);
+#endif
+    mg_preconditioner = newMultigridQuda(&mg_param);
   }
   
   inv_param = newQudaInvertParam();
+
+  if(use_mg) inv_param.preconditioner = mg_preconditioner;
+
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
   if(HGC_verbosity > 2) {
     printQudaInvertParam(&inv_param);
   }
-#ifdef QUDA_INCLUDES_COMMIT_775a033
-  mg_eig_param = new QudaEigParam[mg_param.n_level];
-  setEigMultigridParam(mg_param,mg_eig_param);
-#endif
-  // TODO: add support for other solvers
-  if(inv_param.solve_type != QUDA_DIRECT_PC_SOLVE) 
-    PLEGMA_error("initSolver: This function works only with Direct solve and even odd preconditioning");
-  
-  if(inv_param.inv_type != QUDA_GCR_INVERTER) 
-    PLEGMA_error("initSolver: This function works only with GCR method");
-
   if(inv_param.gamma_basis != QUDA_UKQCD_GAMMA_BASIS) 
     PLEGMA_error("initSolver: This function works only with ukqcd gamma basis\n");
   if(inv_param.dirac_order != QUDA_DIRAC_ORDER) 
     PLEGMA_error("initSolver: This function works only with colors inside the spins\n");
 
   inv_param.mu = mu;
-  mg_param.invert_param->mu = mu;
-  mg_preconditioner = newMultigridQuda(&mg_param);
-  
+    
   bool pc_solution = false;
   bool pc_solve = true;
 
@@ -165,15 +161,14 @@ QUDA_solver::QUDA_solver(double mu) {
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
 
   // Create Operators
-  M = new DiracM(*D);
-  MSloppy = new DiracM(*DSloppy);
-  MPre = new DiracM(*DPre);
+  M = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*D)) : static_cast<DiracMatrix*>(new DiracM(*D));
+  MSloppy = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DSloppy)) : static_cast<DiracMatrix*>(new DiracM(*DSloppy));
+  MPre = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DPre)) : static_cast<DiracMatrix*>(new DiracM(*DPre));
 
   // Create Solvers
-  inv_param.preconditioner = mg_preconditioner;
   solverParam = new SolverParam(inv_param);
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-			 *MPre, *profiler);
+			  *MPre, *profiler);
 
   ColorSpinorParam cpuParam(NULL, inv_param, HGC_localL, pc_solution,
 			    inv_param.input_location);
@@ -187,7 +182,12 @@ QUDA_solver::QUDA_solver(double mu) {
 }
 
 QUDA_solver::~QUDA_solver(){
+  if(use_mg){
   destroyMultigridQuda(mg_preconditioner);
+#ifdef QUDA_INCLUDES_COMMIT_775a033
+  delete mg_eig_param;
+#endif
+  }
   delete solver;
   delete solverParam;
   delete profiler;
@@ -199,9 +199,6 @@ QUDA_solver::~QUDA_solver(){
   delete D;
   delete DSloppy;
   delete DPre;
-#ifdef QUDA_INCLUDES_COMMIT_775a033
-  delete mg_eig_param;
-#endif
 }
 
 struct MG_Transfer{
@@ -284,12 +281,14 @@ void QUDA_solver::UpdateSolver()
   delete DSloppy; DSloppy = NULL;
   delete DPre; DPre = NULL;
 
+  if(use_mg){
   PLEGMA_printf("Updating multigrid parameters\n");
-  setMultigridParam(mg_param);
- 
+  setMultigridParam(mg_param);}
+
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
 
+  if(use_mg){
   multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
   if( changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
       mg->mgParam->Nvec != mg_param.n_vec[0]) {
@@ -298,16 +297,17 @@ void QUDA_solver::UpdateSolver()
   } else {
     updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
     updateMultigridQuda(mg_preconditioner, &mg_param);
-  }
+  }}
   
   bool pc_solve = true;
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
 
   // Create Operators
-  M = new DiracM(*D);
-  MSloppy = new DiracM(*DSloppy);
-  MPre = new DiracM(*DPre);
+  M = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*D)) : static_cast<DiracMatrix*>(new DiracM(*D));
+  MSloppy = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DSloppy)) : static_cast<DiracMatrix*>(new DiracM(*DSloppy));
+  MPre = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DPre)) : static_cast<DiracMatrix*>(new DiracM(*DPre));
 
+  
   // Create Solvers
   solverParam = new SolverParam(inv_param);
   

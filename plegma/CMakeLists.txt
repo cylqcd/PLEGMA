@@ -49,6 +49,9 @@ target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 cuda_add_executable(nucleon_3pt nucleon_3pt.cpp)
 target_link_libraries(nucleon_3pt ${PLEGMA_LIBS})
 
+cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
+target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
+
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
 

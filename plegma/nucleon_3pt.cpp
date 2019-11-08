@@ -1,6 +1,13 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-#include <mutex>
+
+double runtime;
+#define TIME(fnc)  runtime = MPI_Wtime(); fnc; runtime = MPI_Wtime()-runtime; \
+  PLEGMA_printf("TIME for "#fnc" %lf sec\n", runtime)
+
+std::vector<std::thread> threads;
+//#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
+#define THREAD(fnc) TIME(fnc)
 
 using namespace plegma;
 using namespace quda;
@@ -38,12 +45,12 @@ int main(int argc, char **argv)
 
     // Smearing
     PLEGMA_Gauge<double> smearedGauge;
-    smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3); 
+    TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3)); 
     PLEGMA_printf("Plaquette after smearing:\n");
     smearedGauge.calculatePlaq();
 
     // ensuring mu positive
-    QUDA_solver solver(mu);
+    TIME(QUDA_solver solver(mu));
 
     std::string smearType = ((nsmearGauss>0) ? "SS" : "LL");
     std::string smearString = smearType + "_" + "gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) + "aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
@@ -51,12 +58,6 @@ int main(int argc, char **argv)
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
-      // std::stringstream ss;
-      // for(int i = 0 ; i < N_DIMS; i++)
-      //   ss << std::setfill('0') << std::setw(3) << sourcePositions[isource][i] << ".";
-      // 	//<< sourcePositions[isource][1] << "." << sourcePositions[isource][2] << "." << sourcePositions[isource][3];
-      // std::string sourcePosString = "_" + ss.str().substr(0,std::string::npos-1) + "_";
-      // ss.str(std::string()); ss.clear();
     
       // Do forward propagators ----------------------------------------------------
       PLEGMA_Propagator<float> propUP;
@@ -87,10 +88,10 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut,vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
       
 	PLEGMA_printf("Going to invert DN for component %d\n", isc);
-	solver.solve(vectorInOut, vectorInOut);
+	TIME(solver.solve(vectorInOut, vectorInOut));
 	vectorAuxF.copy(vectorInOut);
 	propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
@@ -109,13 +110,13 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxF.absorb(propUP,isc/3, isc%3);
 	  vectorAuxD1.copy(vectorAuxF);
-	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD2);
 	  propUP3D.absorb(vectorAuxF, global_fixSinkTime, isc/3, isc%3);
 
 	  vectorAuxF.absorb(propDN,isc/3, isc%3);
 	  vectorAuxD1.copy(vectorAuxF);
-	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD2);
 	  propDN3D.absorb(vectorAuxF, global_fixSinkTime, isc/3, isc%3);
 	}
@@ -144,10 +145,10 @@ int main(int argc, char **argv)
 		vectorAuxF.conjugate();
 		vectorAuxF.apply_gamma(G5);
 		vectorAuxD.copy(vectorAuxF);
-		vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
+		TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss));
 		double norm = vectorInOut.norm();
 		vectorInOut.cscale(1/norm);
-		solver.solve(vectorInOut, vectorInOut);
+		TIME(solver.solve(vectorInOut, vectorInOut));
 		vectorInOut.cscale(norm);
 		vectorAuxF.copy(vectorInOut);
 		seqProp.absorb(vectorAuxF, nu, c2);
@@ -160,29 +161,24 @@ int main(int argc, char **argv)
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propUP : propDN;
 	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
-	    std::mutex mtx;
 	  
 	    // LOCAL contractions
-	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
+	    TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
-	    mtx.lock();
-	    threads.push_back(std::thread([=, &mtx]() { mtx.unlock();
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+	    THREAD(corr.writeFile(filename+partName+preSuf+get_file_format_suffix(corr_file_format), corr_file_format));
 
 	    // ONED contractions
-	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
+	    TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
-	    threads.push_back(std::thread([=]() {
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+	    THREAD(corr.writeFile(filename+partName+preSuf+get_file_format_suffix(corr_file_format), corr_file_format));
 
 	    // noe contractions
-	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
+	    TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
-	    threads.push_back(std::thread([=]() {
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+	    THREAD(corr.writeFile(filename+partName+preSuf+get_file_format_suffix(corr_file_format), corr_file_format));
 	  }
   
 	  //seq source part 1Prop contraction
@@ -205,7 +201,7 @@ int main(int argc, char **argv)
 		vectorAuxF.conjugate();
 		vectorAuxF.apply_gamma(G5);
 		vectorAuxD.copy(vectorAuxF);
-		vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
+		TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss));
 		double norm = vectorInOut.norm();
 		vectorInOut.cscale(1/norm);
 		solver.solve(vectorInOut, vectorInOut);
@@ -223,25 +219,22 @@ int main(int argc, char **argv)
 	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
 	  
 	    //LOCAL
-	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
+	    TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
-	    threads.push_back(std::thread([=]() {
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+	    THREAD(corr.writeFile(filename+partName+preSuf+get_file_format_suffix(corr_file_format), corr_file_format));
 
 	    //ONED
-	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
+	    TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
-	    threads.push_back(std::thread([=]() {
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+	    THREAD(corr.writeFile(filename+partName+preSuf+get_file_format_suffix(corr_file_format), corr_file_format));
 
 	    //ONED
-	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
+	    TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
-	    threads.push_back(std::thread([=]() {
-	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+	    THREAD(corr.writeFile(filename+partName+preSuf+get_file_format_suffix(corr_file_format), corr_file_format));
 	  }
 	}
       }    
@@ -251,13 +244,13 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxF.absorb(propUP, nu, c2);
 	  vectorAuxD1.copy(vectorAuxF);
-	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD2);
 	  propUP.absorb(vectorAuxF, nu, c2);
 
 	  vectorAuxF.absorb(propDN, nu, c2);
 	  vectorAuxD1.copy(vectorAuxF);
-	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD2);
 	  propDN.absorb(vectorAuxF, nu, c2);
 	}
@@ -268,15 +261,12 @@ int main(int argc, char **argv)
       propDN.applyBoundaries_device(sourcePositions[isource][3]);
   
       PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
-      corr.contractMesons(propUP, propDN);
-      threads.push_back(std::thread([=]() {
-      corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+      TIME(corr.contractMesons(propUP, propDN));
+      THREAD(corr.writeFile(twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format), corr_file_format));
 
-      corr.contractBaryons(propUP, propDN);
-      threads.push_back(std::thread([=]() {
-      corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
+      TIME(corr.contractBaryons(propUP, propDN));
+      THREAD(corr.writeFile(twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format), corr_file_format));
     }
-    
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }
 
