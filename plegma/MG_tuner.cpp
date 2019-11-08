@@ -148,7 +148,7 @@ struct SolverTimings{
       t1=MPI_Wtime();
       solver.solve(vectorInOut, vectorInOut);
       t0 = MPI_Wtime()-t1;
-      MPI_Allreduce(&t0, &t1, 1, MPI_Type(t0), MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&t0, &t1, 1, MPI_Type(t0), MPI_MAX, HGC_fullComm);
       // Rescaling the time with the residual
       t1=t1*log(tol)/log(solver.getSolverParam()->true_res);
       append(t1);

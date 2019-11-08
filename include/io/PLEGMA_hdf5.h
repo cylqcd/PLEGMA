@@ -37,7 +37,7 @@ public:
    * @param name the filename. The extension '.h5' will be added if not provided. It can also contain a list of groups to open, e.g. name="./sample.h5/group1/group2" would create the file sample.h5 an dthen go to group1 and group2.
    * @param comm the communicator to use during the file writing.
    **/
-  //  HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD);
+  //  HDF5(std::string name, MPI_Comm comm=HGC_fullComm);
 
   /*
    * @brief Does sanity checks and close the file.
@@ -451,7 +451,7 @@ public:
    *    i.e. name="./sample.h5/group1/group2" would create the file sample.h5 and
    *    then go to group1 and group2
    */
-  HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD) : comm(comm) {
+  HDF5(std::string name, MPI_Comm comm=HGC_fullComm) : comm(comm) {
     // Creating filename and path from name
     std::string path = "/";
     // checking if .h5 is given and at the end of file

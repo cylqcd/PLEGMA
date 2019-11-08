@@ -192,7 +192,7 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
     fclose(fid);
   }
   comm_barrier();
-  int mpiErr = MPI_Bcast(&offset,sizeof(MPI_Offset),MPI_BYTE,0,MPI_COMM_WORLD);
+  int mpiErr = MPI_Bcast(&offset,sizeof(MPI_Offset),MPI_BYTE,0,HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
 
   Float *ftmp;
@@ -214,7 +214,7 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
   MPI_Type_create_subarray(N_DIMS+1,sizes,lsizes,starts,MPI_ORDER_C,MPI_Type(data),&subblock);
   MPI_Type_commit(&subblock);
 	
-  MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_WRONLY, MPI_INFO_NULL, &mpifid);
+  MPI_File_open(HGC_fullComm, filename.c_str(), MPI_MODE_WRONLY, MPI_INFO_NULL, &mpifid);
   MPI_File_set_view(mpifid, offset, MPI_Type(data), subblock, "native", MPI_INFO_NULL);
 
   for(size_t i = 0; i < HGC_localVolume; i++) {
@@ -271,7 +271,7 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
   MPI_Type_create_subarray(N_DIMS+1,sizes,lsizes,starts,MPI_ORDER_C,MPI_Type(data),&subblock);
   MPI_Type_commit(&subblock);
 	
-  MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifid);
+  MPI_File_open(HGC_fullComm, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifid);
   MPI_File_set_view(mpifid, offset, MPI_Type(data), subblock, "native", MPI_INFO_NULL);
 
   if(sizeVec*2 > 2147483648) PLEGMA_warning("Be careful for possible integer overflow in MPI_File_read_all function");

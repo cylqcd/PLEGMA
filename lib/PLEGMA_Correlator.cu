@@ -20,7 +20,7 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
   comm.reset(new MPI_Comm(), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
-  MPI_Comm_dup( MPI_COMM_WORLD, comm.get() );
+  MPI_Comm_dup( HGC_fullComm, comm.get() );
   if(corr_space == MOMENTUM_SPACE) {
     corr_mom_space.reset(new PLEGMA_FT<Float>(*corr_mom_space));
     corr_mom_space->checkAllocation(getSiteSize());
@@ -268,7 +268,7 @@ writeASCII(std::string filename_out) const {
     break;
   case POSITION_SPACE:
     g_vol_size *= HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
-    comm = MPI_COMM_WORLD;
+    comm = HGC_fullComm;
     rank = comm_rank();
     PLEGMA_error("WriteASCII do not support writing in position space.\n");
     break;
@@ -296,7 +296,7 @@ writeASCII(std::string filename_out) const {
 		  H_elem()[((((ig*nDatasets()+id)*HGC_localL[3]+it)*Nmoms+imom)*site_sizeR+is)*2+ri];
 
     //=============================================================================
-    // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
+    // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for HGC_fullComm (POSITION SPACE)
     // in the second case requires reordering of the memory
     MPI_Gather(corrReorder,sizeof(corrReorder)/sizeof(Float),MPI_Type(corrReorder),
 	       corrGlobal,sizeof(corrReorder)/sizeof(Float),MPI_Type(corrReorder),

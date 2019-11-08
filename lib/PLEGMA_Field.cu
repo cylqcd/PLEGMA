@@ -590,12 +590,12 @@ void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &fieldIn, std::complex<Float> 
 
 template<typename Float>
 std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
-  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
+  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), HGC_fullComm);
 }
 
 template<typename Float>
 Float PLEGMA_Field<Float>::norm(){
-  return cuBLAS::norm(total_length*field_length, d_elem, MPI_COMM_WORLD);
+  return cuBLAS::norm(total_length*field_length, d_elem, HGC_fullComm);
 }
 
 template<typename Float>
@@ -760,7 +760,7 @@ void PLEGMA_Field<Float>::writeHDF5(std::string filename) const{
     }
   }
 
-  HDF5 writer(filename, MPI_COMM_WORLD);
+  HDF5 writer(filename, HGC_fullComm);
 
   writer.write_dataset(dataset, h_elem, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);

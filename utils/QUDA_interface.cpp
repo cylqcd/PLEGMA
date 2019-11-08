@@ -32,7 +32,7 @@ static void initRand()
 #if defined(QMP_COMMS)
   rank = QMP_get_node_number();
 #elif defined(MPI_COMMS)
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(HGC_fullComm, &rank);
 #endif
 
   srand(17*rank + 137);

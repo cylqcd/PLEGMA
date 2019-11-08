@@ -327,7 +327,7 @@ writeHDF5(std::string filename, int timeshift) const{
     }
   }
 
-  HDF5 writer(filename, MPI_COMM_WORLD);
+  HDF5 writer(filename, HGC_fullComm);
 
   writer.write_dataset(dataset, h_elem.get()+shift, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);

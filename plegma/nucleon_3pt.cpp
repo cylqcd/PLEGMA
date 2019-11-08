@@ -1,5 +1,6 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <mutex>
 
 using namespace plegma;
 using namespace quda;
@@ -159,12 +160,14 @@ int main(int argc, char **argv)
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propUP : propDN;
 	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
+	    std::mutex mtx;
 	  
 	    // LOCAL contractions
 	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
 	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
-	    threads.push_back(std::thread([=]() {
+	    mtx.lock();
+	    threads.push_back(std::thread([=, &mtx]() { mtx.unlock();
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);}));
 
 	    // ONED contractions

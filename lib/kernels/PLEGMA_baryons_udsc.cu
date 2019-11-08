@@ -289,7 +289,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     ProfileStruct ps(HGC_localVolume3D, sizeof(Float2<FloatC>));
     int myLocalT = corr.localT();
     int maxLocalT = myLocalT;
-    MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
     ps.max_volume = HGC_localVolume3D*maxLocalT;
     ps.tune_globally = true;
     ps.aux_range.x = 2;
