@@ -1,5 +1,5 @@
 #include <PLEGMA_Gauge.h>
-#include <PLEGMA_Correlator.h>
+1;5202;0c#include <PLEGMA_Correlator.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
@@ -19,7 +19,7 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
-  comm.reset(new MPI_Comm(), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
+  comm.reset(new MPI_Comm(HGC_fullComm), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
   MPI_Comm_dup( HGC_fullComm, comm.get() );
   if(corr_space == MOMENTUM_SPACE) {
     corr_mom_space.reset(new PLEGMA_FT<Float>(*corr_mom_space));

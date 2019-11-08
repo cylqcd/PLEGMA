@@ -82,7 +82,7 @@ namespace plegma {
       source(source), totalT(totalT), corr_space(corr_space), corr_pos_space(nullptr),
       corr_mom_space(corr_space==MOMENTUM_SPACE ?
 		     new PLEGMA_FT<Float>(Q2_max, 3, false, localT()) : nullptr),
-      comm(nullptr) { }
+      comm(new MPI_Comm(HGC_fullComm)) { }
 
     ~PLEGMA_Correlator() {}
     
