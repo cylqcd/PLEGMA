@@ -22,7 +22,7 @@ initialize() {
   comm.reset(new MPI_Comm(), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
   MPI_Comm_dup( MPI_COMM_WORLD, comm.get() );
   if(corr_space == MOMENTUM_SPACE) {
-    assert(corr_mom_space);
+    corr_mom_space.reset(new PLEGMA_FT<Float>(*corr_mom_space));
     corr_mom_space->checkAllocation(getSiteSize());
   }
   else if(corr_space == POSITION_SPACE) {
