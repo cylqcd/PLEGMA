@@ -19,6 +19,8 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
     
   for(int i=0; i<4; i++) if( procs[i] <= 0 )
 			   PLEGMA_error("Error with dim %d: Negative proc or not divisor of dim\n", i);
+  
+  
   initComms(argc, argv, procs);
 
   // Reading plegma options
@@ -32,6 +34,40 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
   isInitOpt=true;
 }
 
+void updateOptions(WHICHFLAVOR fl){
+  PLEGMA_printf("Reading new Quda parameter\n");
+
+  std::string filename;
+  switch(fl)
+    {
+    case UP:
+      filename = inputUP;
+      break;
+    case DOWN:
+      filename = inputDN;
+      break;
+    case STRANGE:
+      filename = inputST;
+      break;
+    case CHARM:
+      filename = inputCH;
+      break;
+    }
+
+  if(!filename.empty()){
+    const char *aux_str[3];
+    aux_str[0] = "random_string";
+    aux_str[1] = "--inputFile";
+    aux_str[2] = const_cast<char*>(filename.c_str());
+    Options LocalOptions = Options(3,const_cast<char**>(aux_str));
+    std::vector<std::string> aux_vec= {};
+    plegmaOptions(LocalOptions, aux_vec, true);
+    qudaOptions(LocalOptions);
+    if(verbosity>0) infoQuda();
+    LocalOptions.close();
+  }
+}
+  
 void initializePLEGMA() {
   if(!isInitOpt){fprintf(stderr,"initializeOptions should be called before initializePLEGMA");exit(EXIT_FAILURE);}
   HGC_options->close();
