@@ -288,14 +288,12 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
   shape = {(int) gammas.size()};
   setSource(source);
+  datasets = {"z_"+std::to_string(z)};
+  std::string aux_str = "Source_px"+std::to_string(sourceMom[0])+"py"+std::to_string(sourceMom[1])+
+    "pz"+std::to_string(sourceMom[2]);
 
-  datasets = {"z" + std::to_string(z)};
+  groups =  {"CP"+std::to_string(cp)+"/"+aux_str.c_str()};
 
-  std::string auxStr = "SourceMom_px"+std::to_string(sourceMom[0])+",py"+
-    std::to_string(sourceMom[1])+",pz"+ std::to_string(sourceMom[2]);
-
-  groups =  {"CP" + std::to_string(cp)+"/"+auxStr.c_str()};
-  
   description = getGammasString(gammas);
   initialize();
   

@@ -165,7 +165,8 @@ namespace plegma {
 					PLEGMA_Propagator<Float> &fwdProp,
 					PLEGMA_Su3field<Float> &su3,
 					int signProps, std::vector<GAMMAS> gammas,
-					int source[4], int z, size_t cp, std::vector<int>);
+					int source[4],  int z, size_t cp,
+					std::vector<int> sourceMom);
 
     virtual void writeASCII(std::string filename);
     virtual void writeHDF5(std::string filename);
