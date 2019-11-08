@@ -1,5 +1,6 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <mutex>
 
 using namespace plegma;
 using namespace quda;
@@ -121,17 +122,15 @@ int main(int argc, char **argv)
 	asprintf(&dset2, "twop_mesons_d[%+1.1e]u[%+1.1e]", -1*mu_ud, mu_ud);
 	corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	free(dset1); free(dset2);
-	MPI_Barrier(MPI_COMM_WORLD);
-
 	threads.push_back(std::thread([=]() {
-	corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+	      corr.writeFile(twop_filename, corr_file_format);}));
 	
 	start_time = MPI_Wtime();
 	corr.contractBaryons(propUP, propDN);
 	tmp_time = MPI_Wtime()-start_time;
 	PLEGMA_printf("Contraction time for baryons %lf sec\n",tmp_time);
-	threads.push_back(std::thread([=]() {
-	corr.writeFile((twop_filename+"_baryons").c_str(), corr_file_format);}));
+	threads.push_back(std::thread([=]() { 
+	      corr.writeFile(twop_filename, corr_file_format);}));
       }
       
       // Storing only the smaller and then computing on the fly the other
@@ -200,7 +199,7 @@ int main(int argc, char **argv)
 	      corr.setGroups(group);
 	      free(group);
 	      threads.push_back(std::thread([=]() {
-	      corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+	      corr.writeFile(twop_filename, corr_file_format);}));
 #endif
 	      corr.contractMesons(propST, propCH);
 	      char *dset1, *dset2;
@@ -209,7 +208,7 @@ int main(int argc, char **argv)
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
 	      threads.push_back(std::thread([=]() {
-	      corr.writeFile((twop_filename+"_baryons").c_str(), corr_file_format);}));
+	      corr.writeFile(twop_filename, corr_file_format);}));
 
 	      if(!only_ch) {
 		corr.contractMesons(propUP, propST);
@@ -218,7 +217,7 @@ int main(int argc, char **argv)
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
 		threads.push_back(std::thread([=]() {
-		corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+		corr.writeFile(twop_filename, corr_file_format);}));
 	      
 		corr.contractMesons(propDN, propST);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
@@ -226,7 +225,7 @@ int main(int argc, char **argv)
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
 		threads.push_back(std::thread([=]() {
-		corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+		corr.writeFile(twop_filename, corr_file_format);}));
 	      }
 
 	      if(!only_st) {
@@ -236,7 +235,7 @@ int main(int argc, char **argv)
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
 		threads.push_back(std::thread([=]() {
-		corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+		corr.writeFile(twop_filename, corr_file_format);}));
 	      
 		corr.contractMesons(propDN, propCH);
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
@@ -244,7 +243,7 @@ int main(int argc, char **argv)
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
 		threads.push_back(std::thread([=]() {
-		corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+		corr.writeFile(twop_filename, corr_file_format);}));
 	      }
 	    }
 	  } else {
@@ -266,7 +265,7 @@ int main(int argc, char **argv)
 	    corr.setGroups(group);
 	    free(group);
 	    threads.push_back(std::thread([=]() {
-	    corr.writeFile((twop_filename+"_baryons").c_str(), corr_file_format);}));
+	    corr.writeFile(twop_filename, corr_file_format);}));
 #endif
 	    if(!only_ch && !only_st) {
 	      char *dset1, *dset2;
@@ -282,7 +281,7 @@ int main(int argc, char **argv)
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
 	      threads.push_back(std::thread([=]() {
-	      corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+	      corr.writeFile(twop_filename, corr_file_format);}));
 	      
 	      corr.contractMesons(propDN, (cSmaller=='s') ? propCH : propST);
 	      if(cSmaller=='s') {
@@ -295,7 +294,7 @@ int main(int argc, char **argv)
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
 	      threads.push_back(std::thread([=]() {
-	      corr.writeFile((twop_filename+"_mesons").c_str(), corr_file_format);}));
+	      corr.writeFile(twop_filename, corr_file_format);}));
 	    }
 	  }
 	}
@@ -310,7 +309,7 @@ int main(int argc, char **argv)
 	corr.setGroups(group);
 	free(group);
 	threads.push_back(std::thread([=]() {
-	corr.writeFile((twop_filename+"_baryons").c_str(), corr_file_format);}));
+	corr.writeFile(twop_filename, corr_file_format);}));
 #endif
       }
     }
