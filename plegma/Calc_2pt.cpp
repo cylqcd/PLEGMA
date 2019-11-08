@@ -1,6 +1,13 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-#include <mutex>
+
+double runtime;
+#define TIME(fnc)  runtime = MPI_Wtime(); fnc; runtime = MPI_Wtime()-runtime; \
+  PLEGMA_printf("TIME for "#fnc" %lf sec\n", runtime)
+
+std::vector<std::thread> threads;
+//#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
+#define THREAD(fnc) TIME(fnc)
 
 using namespace plegma;
 using namespace quda;
@@ -31,7 +38,6 @@ int main(int argc, char **argv)
     "_gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) +
     "_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
 
-  double start_time, tmp_time;
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
     {
@@ -46,11 +52,11 @@ int main(int argc, char **argv)
       plaqQuda();
       
       // Smearing
-      smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3);
+      TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
       PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
     }
-    QUDA_solver solver(mu);
+    TIME(QUDA_solver solver(mu));
     std::vector<std::thread> threads;
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -61,7 +67,6 @@ int main(int argc, char **argv)
       PLEGMA_Propagator<float> propUP(run_ud ? BOTH : NONE);
       PLEGMA_Propagator<float> propDN(run_ud ? BOTH : NONE);
       
-      tmp_time = 0;
       if (run_ud) {
 	// ensuring mu positive
 	if(mu != mu_ud) {
@@ -73,14 +78,10 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  start_time = MPI_Wtime();
-	  vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-	  tmp_time += MPI_Wtime()-start_time;
+	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 	  PLEGMA_printf("Going to invert UP for component %d\n", isc);
-	  solver.solve(vectorInOut, vectorInOut);
-	  start_time = MPI_Wtime();
-	  vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
-	  tmp_time += MPI_Wtime()-start_time;
+	  TIME(solver.solve(vectorInOut, vectorInOut));
+	  TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD);
 	  propUP.absorb(vectorAuxF, isc/3, isc%3);
 	}
@@ -94,43 +95,30 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  start_time = MPI_Wtime();
-	  vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-	  tmp_time += MPI_Wtime()-start_time;
+	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 	  PLEGMA_printf("Going to invert DN for component %d\n", isc);
-	  solver.solve(vectorInOut, vectorInOut);
-	  start_time = MPI_Wtime();
-	  vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss);
-	  tmp_time += MPI_Wtime()-start_time;
+	  TIME(solver.solve(vectorInOut, vectorInOut));
+	  TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD);
 	  propDN.absorb(vectorAuxF, isc/3, isc%3);
 	}
-	PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
 	propUP.rotateToPhysicalBase_device(+1);
 	propDN.rotateToPhysicalBase_device(-1);
 	propUP.applyBoundaries_device(sourcePositions[isource][3]);
 	propDN.applyBoundaries_device(sourcePositions[isource][3]);
 
 	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
-	start_time = MPI_Wtime();
-	corr.contractMesons(propUP, propDN);
-	tmp_time = MPI_Wtime()-start_time;
-	PLEGMA_printf("Contraction time for mesons %lf sec\n",tmp_time);
+	TIME(corr.contractMesons(propUP, propDN));
 	
 	char *dset1, *dset2;
 	asprintf(&dset1, "twop_mesons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
 	asprintf(&dset2, "twop_mesons_d[%+1.1e]u[%+1.1e]", -1*mu_ud, mu_ud);
 	corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	free(dset1); free(dset2);
-	threads.push_back(std::thread([=]() {
-	      corr.writeFile(twop_filename, corr_file_format);}));
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
 	
-	start_time = MPI_Wtime();
-	corr.contractBaryons(propUP, propDN);
-	tmp_time = MPI_Wtime()-start_time;
-	PLEGMA_printf("Contraction time for baryons %lf sec\n",tmp_time);
-	threads.push_back(std::thread([=]() { 
-	      corr.writeFile(twop_filename, corr_file_format);}));
+	TIME(corr.contractBaryons(propUP, propDN));
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
       }
       
       // Storing only the smaller and then computing on the fly the other
@@ -148,11 +136,11 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss);
+	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss));
 	  
 	  PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
-	  solver.solve(vectorInOut, vectorInOut);
-	  vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss);
+	  TIME(solver.solve(vectorInOut, vectorInOut));
+	  TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD);
 	  propS[ismall].absorb(vectorAuxF, isc/3, isc%3);
 	}
@@ -172,11 +160,11 @@ int main(int argc, char **argv)
 	    PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	    PLEGMA_Vector<float> vectorAuxF;
 	    vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	    vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss);
+	    TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss));
 	    
 	    PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
-	    solver.solve(vectorInOut, vectorInOut);
-	    vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss);
+	    TIME(solver.solve(vectorInOut, vectorInOut));
+	    TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss));
 	    vectorAuxF.copy(vectorAuxD);
 	    propL.absorb(vectorAuxF, isc/3, isc%3);
 	  }
@@ -191,59 +179,53 @@ int main(int argc, char **argv)
 	      bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	      bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
-	      corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch);
+	      TIME(corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch));
 	      char * group;
 	    
 	      asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]s[%+1.1e]c[%+1.1e]%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],
 		       only_st ? "_only-s" : "", only_ch ? "_only-c" : "");
 	      corr.setGroups(group);
 	      free(group);
-	      threads.push_back(std::thread([=]() {
-	      corr.writeFile(twop_filename, corr_file_format);}));
+	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
-	      corr.contractMesons(propST, propCH);
+	      TIME(corr.contractMesons(propST, propCH));
 	      char *dset1, *dset2;
 	      asprintf(&dset1, "twop_mesons_s[%+1.1e]c[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
 	      asprintf(&dset2, "twop_mesons_c[%+1.1e]s[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      threads.push_back(std::thread([=]() {
-	      corr.writeFile(twop_filename, corr_file_format);}));
+	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 
 	      if(!only_ch) {
-		corr.contractMesons(propUP, propST);
+		TIME(corr.contractMesons(propUP, propST));
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]s[%+1.1e]", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		threads.push_back(std::thread([=]() {
-		corr.writeFile(twop_filename, corr_file_format);}));
+		THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      
-		corr.contractMesons(propDN, propST);
+		TIME(corr.contractMesons(propDN, propST));
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		threads.push_back(std::thread([=]() {
-		corr.writeFile(twop_filename, corr_file_format);}));
+		THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      }
 
 	      if(!only_st) {
-		corr.contractMesons(propUP, propCH);
+		TIME(corr.contractMesons(propUP, propCH));
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		threads.push_back(std::thread([=]() {
-		corr.writeFile(twop_filename, corr_file_format);}));
-	      
-		corr.contractMesons(propDN, propCH);
+		THREAD(corr.writeFile(twop_filename, corr_file_format));	      
+
+		TIME(corr.contractMesons(propDN, propCH));
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		threads.push_back(std::thread([=]() {
-		corr.writeFile(twop_filename, corr_file_format);}));
+		THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      }
 	    }
 	  } else {
@@ -254,7 +236,7 @@ int main(int argc, char **argv)
 	    bool only_st = (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
-	    corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch);
+	    TIME(corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch));
 	    char * group;
 
 	    if(cSmaller=='s') {
@@ -264,12 +246,11 @@ int main(int argc, char **argv)
 	    }
 	    corr.setGroups(group);
 	    free(group);
-	    threads.push_back(std::thread([=]() {
-	    corr.writeFile(twop_filename, corr_file_format);}));
+	    THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
 	    if(!only_ch && !only_st) {
 	      char *dset1, *dset2;
-	      corr.contractMesons(propUP, (cSmaller=='s') ? propCH : propST);
+	      TIME(corr.contractMesons(propUP, (cSmaller=='s') ? propCH : propST));
 	      if(cSmaller=='s') {
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[ilarge], mu_ud);
@@ -280,10 +261,9 @@ int main(int argc, char **argv)
 
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      threads.push_back(std::thread([=]() {
-	      corr.writeFile(twop_filename, corr_file_format);}));
+	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      
-	      corr.contractMesons(propDN, (cSmaller=='s') ? propCH : propST);
+	      TIME(corr.contractMesons(propDN, (cSmaller=='s') ? propCH : propST));
 	      if(cSmaller=='s') {
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[ilarge], -1*mu_ud);
@@ -293,8 +273,7 @@ int main(int argc, char **argv)
 	      }
 	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 	      free(dset1); free(dset2);
-	      threads.push_back(std::thread([=]() {
-	      corr.writeFile(twop_filename, corr_file_format);}));
+	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 	    }
 	  }
 	}
@@ -302,14 +281,13 @@ int main(int argc, char **argv)
 #ifdef PLEGMA_UDSC_BARYONS
 	PLEGMA_Propagator<float> none(NONE);
 	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
-	corr.contractBaryonsUDSC(propUP, propDN, none, none);
-	char * group;
+	TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
 	
+	char * group;
 	asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
 	corr.setGroups(group);
 	free(group);
-	threads.push_back(std::thread([=]() {
-	corr.writeFile(twop_filename, corr_file_format);}));
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
       }
     }

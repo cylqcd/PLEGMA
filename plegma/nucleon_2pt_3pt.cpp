@@ -1,12 +1,12 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-#include <mutex>
 
 double runtime;
 #define TIME(fnc)  runtime = MPI_Wtime(); fnc; runtime = MPI_Wtime()-runtime; \
   PLEGMA_printf("TIME for "#fnc" %lf sec\n", runtime)
 
-##define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
+std::vector<std::thread> threads;
+//#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
 #define THREAD(fnc) TIME(fnc)
 
 using namespace plegma;
@@ -62,7 +62,6 @@ int main(int argc, char **argv)
 
     updateOptions(UP);
     TIME(QUDA_solver solver(mu));
-    std::vector<std::thread> threads;
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
