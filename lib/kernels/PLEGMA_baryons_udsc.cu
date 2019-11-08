@@ -295,7 +295,7 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     ps.aux_range.x = 2;
     
     if(HGC_verbosity>2) PLEGMA_printf("Running for %s\n", BP_prop_prods[i].c_str());
-    tuneAndRun(ps, "contract_baryons_"+BP_prop_prods[i], contract_baryons_udsc_host<FloatA,FloatC>, ps, props, corr, result, i);
+    tuneAndRun(ps, "contract_baryons_size"+std::to_string(BP_prop_prods_count[i].size()), contract_baryons_udsc_host<FloatA,FloatC>, ps, props, corr, result, i);
 
     if(runFT) {
       FloatC *corr_ip = corr.H_elem() + shift*corr.getVolSize()*2;
