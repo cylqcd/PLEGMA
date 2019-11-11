@@ -185,7 +185,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
     cudaMalloc((void**)&texPropProd, time_step * sizeof(genericTex<FloatC>) );
     cudaMalloc((void**)&propProd2, time_step * sizeof(generic2<FloatC>) );
     for(int t=0; t<time_step; t++) {
-      propProd[t] = new PLEGMA_Field<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, HGC_localVolume3D, NO_GHOSTS);
+      propProd[t] = new PLEGMA_Field<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, HGC_localVolume3D, NO_GHOSTS, false, false);
       h_texPropProd[t].tex = propProd[t]->createTexObject();
       h_propProd2[t].p = (Float2<FloatC> *) propProd[t]->D_elem();
     }

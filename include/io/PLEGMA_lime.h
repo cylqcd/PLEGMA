@@ -13,7 +13,7 @@ inline bool exists_file (const char* name) {
 
 static void swap_8(double *Rd, int N)
 {
-   register char *i,*j,*k;
+   char *i,*j,*k;
    char swap;
    char *max;
    char *R = (char*) Rd;
@@ -34,7 +34,7 @@ static void swap_8(double *Rd, int N)
 
 static void swap_4(float *Rd, int N)
 {
-  register char *i,*j,*k;
+  char *i,*j,*k;
   char swap;
   char *max;
   char *R =(char*) Rd;

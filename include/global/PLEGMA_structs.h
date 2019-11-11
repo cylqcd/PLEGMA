@@ -127,7 +127,7 @@ struct global_vars {
       if(globals[i].devPointer != nullptr) continue;
 #endif
       std::string line = "HGC_" + globals[i].get_value();
-      PLEGMA_printf(line.c_str());
+      PLEGMA_printf("%s",line.c_str());
     }
 #ifdef __NVCC__
     PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
@@ -135,14 +135,14 @@ struct global_vars {
       if(globals[i].devPointer == nullptr) continue;
       if(globals[i].checkDeviceConstant()) {
 	std::string line = "H/DGC_" + globals[i].get_value();
-	PLEGMA_printf(line.c_str());
+	PLEGMA_printf("%s",line.c_str());
       } else {
 	PLEGMA_printf("!!!!!! ERROR: HGC_ and DGC_ differ in the following !!!!!!!\n");
 	std::string line = "HGC_" + globals[i].get_value();
-	PLEGMA_printf(line.c_str());
+	PLEGMA_printf("%s",line.c_str());
 	globals[i].copyFromDeviceConstant();
 	line = "DGC_" + globals[i].get_value();
-	PLEGMA_printf(line.c_str());
+	PLEGMA_printf("%s",line.c_str());
       }
     }
 #endif

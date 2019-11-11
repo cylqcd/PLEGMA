@@ -102,9 +102,8 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
 
   cudaTextureObject_t tex;
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
-  checkCudaError();
   
-  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); cudaFree(moms->devPtr); checkCudaError(); });
+  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); cudaFree(moms->devPtr);});
 }
 
 template<typename Float>
