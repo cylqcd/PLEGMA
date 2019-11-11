@@ -12,7 +12,7 @@ __global__ void gaussian_smearing_kernel(Float2<FloatOut>* out,
 
   if(it >= 0) {
     Float2<FloatIn> S[N_SPINS][N_COLS];
-    it = it - DGC_procPosition[3] * DGC_localL[3];
+    it = it - DGC_procPosition[DIM_T] * DGC_localL[DIM_T];
     // Only the correct timeslice has to work, the others just copy
     if(it != sid/DGC_localVolume3D) {
       if(not onlyGhost) {
@@ -61,8 +61,8 @@ __global__ void gaussian_smearing_kernel(Float2<FloatOut>* out,
     }
   }
 
-  double normalize;
-  normalize = 1./(1. + 6. * alpha);
+  FloatOut normalize;
+  normalize = 1.d/(1.d + 6.d * alpha);
 
   if(not onlyGhost) {
     vecInTex.get(S,sid);
