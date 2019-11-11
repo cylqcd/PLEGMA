@@ -18,9 +18,7 @@ PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
-					    int nsmearGauss, Float alphaGauss){
-  gauge.communicateSideGhost();
-  vecIn.communicateSideGhost();
+					    int nsmearGauss, Float alphaGauss, int timeSlice){
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
@@ -32,15 +30,29 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
   texVecOut.tex = this->createTexObject();
   texVecIn.tex = vecIn.createTexObject();
   texGauge.tex = gauge.createTexObject();
-  
+
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
-      gaussian_smearing(this->D_elem(),texVecIn,texGauge, alphaGauss);
-      this->communicateSideGhost();
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) gauge.communicateSideGhost(dir, START);
+	vecIn.communicateSideGhost(dir, START);
+      }
+      gaussian_smearing_no_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) gauge.communicateSideGhost(dir, FINISH);
+	vecIn.communicateSideGhost(dir, FINISH);
+      }
+      gaussian_smearing_only_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss);
     }
     else{
-      gaussian_smearing(vecIn.D_elem(),texVecOut,texGauge, alphaGauss);
-      vecIn.communicateSideGhost();
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, START);
+      }
+      gaussian_smearing_no_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, FINISH);
+      }
+      gaussian_smearing_only_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss);
     }
   }
   if( (nsmearGauss%2) == 0)
