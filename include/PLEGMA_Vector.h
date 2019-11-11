@@ -82,7 +82,7 @@ namespace plegma {
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
-    std::vector<Float> rms(std::vector<int> listR2, int *sourceposition);
+    std::vector<Float> rms(std::vector<int> listR2, const site& sourceposition) const;
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };
 
