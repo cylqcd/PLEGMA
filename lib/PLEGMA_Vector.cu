@@ -20,11 +20,13 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
 					    int nsmearGauss, Float alphaGauss, int timeSlice){
 
+  bool hasTimeSlice=true;
   if(timeSlice>=0) {
     if(timeSlice >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    timeSlice = timeSlice - HGC_procPosition[3] * HGC_localL[3];
-    if(not ((timeSlice >= 0) && (timeSlice < HGC_localL[3]))) return;
+    int myT = timeSlice - HGC_procPosition[3] * HGC_localL[3];
+    if(not ((myT >= 0) && (myT < HGC_localL[3]))) hasTimeSlice=false;
   }
+  
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
@@ -39,26 +41,34 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
-      for(int dir=0; dir<N_DIMS-1; dir++) {
-	if(i==0) gauge.communicateSideGhost(dir, START);
-	vecIn.communicateSideGhost(dir, START);
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  if(i==0) gauge.communicateSideGhost(dir, START);
+	  vecIn.communicateSideGhost(dir, START);
+	}
       }
-      gaussian_smearing_no_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss);
-      for(int dir=0; dir<N_DIMS-1; dir++) {
-	if(i==0) gauge.communicateSideGhost(dir, FINISH);
-	vecIn.communicateSideGhost(dir, FINISH);
+      gaussian_smearing_no_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss, timeSlice);
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  if(i==0) gauge.communicateSideGhost(dir, FINISH);
+	  vecIn.communicateSideGhost(dir, FINISH);
+	}
       }
-      gaussian_smearing_only_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss);
+      gaussian_smearing_only_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss, timeSlice);
     }
     else{
-      for(int dir=0; dir<N_DIMS-1; dir++) {
-	this->communicateSideGhost(dir, START);
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  this->communicateSideGhost(dir, START);
+	}
       }
-      gaussian_smearing_no_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss);
-      for(int dir=0; dir<N_DIMS-1; dir++) {
-	this->communicateSideGhost(dir, FINISH);
+      gaussian_smearing_no_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss, timeSlice);
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  this->communicateSideGhost(dir, FINISH);
+	}
       }
-      gaussian_smearing_only_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss);
+      gaussian_smearing_only_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss, timeSlice);
     }
   }
   if( (nsmearGauss%2) == 0)

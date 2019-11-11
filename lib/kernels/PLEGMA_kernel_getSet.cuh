@@ -200,7 +200,7 @@ namespace plegma {
     // Fetch is going to be specialized after
     inline __device__ Float2<Float> fetch(const size_t& i) const;
     inline __device__ Float2<Float> get(const int& i, const sidStride& ss) const {
-      return ss.returnZero ? 0 : texture<Float>::fetch(i*ss.stride + ss.sid);
+      return ss.returnZero ? Float2<Float>(0) : texture<Float>::fetch(i*ss.stride + ss.sid);
     }
     inline __device__ void set(const int& i, const sidStride& ss, const Float2<Float>& v);
   };
@@ -222,7 +222,7 @@ namespace plegma {
       p = (Float2<Float> *) pointer;
     }
     inline __host__ __device__ Float2<Float> get(const int& i, const sidStride& ss) const {
-      return ss.returnZero ? 0 : p[i*ss.stride + ss.sid];
+      return ss.returnZero ? Float2<Float>(0) : p[i*ss.stride + ss.sid];
     }
     inline __host__ __device__ void set(const int& i, const sidStride& ss, const Float2<Float>& v) {
       p[i*ss.stride + ss.sid] = v;
