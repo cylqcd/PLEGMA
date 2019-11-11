@@ -43,6 +43,7 @@ namespace plegma {
     bool isAllocHost;
     bool isAllocDevice;
     bool checkErr;
+    std::vector<MsgHandle*> messages;
 
     CLASS_ENUM field_type;
     std::string field_name;
@@ -92,10 +93,10 @@ namespace plegma {
 	return 0;
     } 
     void printInfo();
-    void communicateSideGhost(int dirOr=-1);
-    void communicateCornerGhost(int dirOr=-1);
-    void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
-    void communicateGhost(int dirOr=-1);
+    void communicateSideGhost(int dirOr=-1, ACTION action=DO_ALL);
+    void communicateCornerGhost(int dirOr=-1, ACTION action=DO_ALL);
+    void communicateGhost(int dirOr, GHOST_FLAG which_ghost, ACTION action=DO_ALL);
+    void communicateGhost(int dirOr=-1, ACTION action=DO_ALL);
 
     std::vector<int> getSiteShape() const {return site_shape;}
     void setSiteShape(std::vector<int> new_shape) {
