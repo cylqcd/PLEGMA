@@ -355,9 +355,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     start.push_back(0);
     break;
   case POSITION_SPACE:
-    descr += "/x/y/z/t";
+    descr += "/t/z/y/x";
     // Volume
-    for(int i=0; i<N_DIMS; i++) {
+    for(int i=N_DIMS-1; i>=0; i--) {
       shape.push_back(i==DIM_T ? totalT : HGC_totalL[i]);
       lshape.push_back(i==DIM_T ? localT() : HGC_localL[i]);
       start.push_back(i==DIM_T ? startT() : ((HGC_procPosition[i]*HGC_localL[i] + HGC_totalL[i] - source[i]) % HGC_totalL[i]));

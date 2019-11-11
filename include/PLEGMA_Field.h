@@ -112,7 +112,7 @@ namespace plegma {
     void unpack(Float *out);
 
     void load();
-    void unload();
+    void unload() const;
     
     void shift(PLEGMA_Field &Fin, int dirOr);
     void randInit(int seed);

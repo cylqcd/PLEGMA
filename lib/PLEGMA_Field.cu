@@ -174,7 +174,7 @@ void PLEGMA_Field<Float>::load(){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::unload(){
+void PLEGMA_Field<Float>::unload() const{
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
   if(checkErr) checkCudaError();
@@ -661,6 +661,7 @@ void PLEGMA_Field<Float>::writeLIME(std::string filename) const{
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   FILE *fid;
   LimeWriter *limewriter = (LimeWriter*)NULL;
+  unload();
   if(comm_rank() == 0){
     fid=fopen(filename.c_str(),"w");
     if(fid==NULL) PLEGMA_error("Error opening file for writing: %s\n", filename.c_str());
@@ -720,9 +721,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     }
   }
   
-  descr += "/x/y/z/t";
+  descr += "/t/z/y/x";
   // Volume
-  for(int i=0; i<N_DIMS; i++) {
+  for(int i=N_DIMS-1; i>=0; i--) {
     shape.push_back(HGC_totalL[i]);
     lshape.push_back(HGC_localL[i]);
     start.push_back(HGC_procPosition[i]*HGC_localL[i]);
@@ -742,6 +743,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::writeHDF5(std::string filename) const{
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   assert(isAllocHost);
+  unload();
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
