@@ -85,7 +85,10 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&gauge_b,&PLEGMA_Gauge<double>::APEsmearing, "APEsmearing (1 iter)", gauge_a, 1, 0.5, 3);
 
     // Benchmark gaussian smearing 
-    PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing (1 iter)",vector_b, gauge_a, 1, 0.2);
+    PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing one timeslice (1 iter)",vector_b, gauge_a, 1, 0.2, 0);
+
+    // Benchmark gaussian smearing 
+    PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing all timeslice (1 iter)",vector_b, gauge_a, 1, 0.2, -1);
   }
 
   if(run({"twop"})) {
