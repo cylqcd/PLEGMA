@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut,vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]);
       
 	PLEGMA_printf("Going to invert UP for component %d\n", isc);
 	solver.solve(vectorInOut, vectorInOut);
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut,vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
 	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
+	TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
       
 	PLEGMA_printf("Going to invert DN for component %d\n", isc);
 	TIME(solver.solve(vectorInOut, vectorInOut));
@@ -110,13 +110,13 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxF.absorb(propUP,isc/3, isc%3);
 	  vectorAuxD1.copy(vectorAuxF);
-	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss));
+	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss, global_fixSinkTime));
 	  vectorAuxF.copy(vectorAuxD2);
 	  propUP3D.absorb(vectorAuxF, global_fixSinkTime, isc/3, isc%3);
 
 	  vectorAuxF.absorb(propDN,isc/3, isc%3);
 	  vectorAuxD1.copy(vectorAuxF);
-	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss));
+	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss, global_fixSinkTime));
 	  vectorAuxF.copy(vectorAuxD2);
 	  propDN3D.absorb(vectorAuxF, global_fixSinkTime, isc/3, isc%3);
 	}
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 		vectorAuxF.conjugate();
 		vectorAuxF.apply_gamma(G5);
 		vectorAuxD.copy(vectorAuxF);
-		TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss));
+		TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss, global_fixSinkTime));
 		double norm = vectorInOut.norm();
 		vectorInOut.cscale(1/norm);
 		TIME(solver.solve(vectorInOut, vectorInOut));
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
 		vectorAuxF.conjugate();
 		vectorAuxF.apply_gamma(G5);
 		vectorAuxD.copy(vectorAuxF);
-		TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss));
+		TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss, global_fixSinkTime));
 		double norm = vectorInOut.norm();
 		vectorInOut.cscale(1/norm);
 		solver.solve(vectorInOut, vectorInOut);
