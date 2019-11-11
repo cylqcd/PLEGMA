@@ -19,6 +19,12 @@ template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
 					    int nsmearGauss, Float alphaGauss, int timeSlice){
+
+  if(timeSlice>=0) {
+    if(timeSlice >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    timeSlice = timeSlice - HGC_procPosition[3] * HGC_localL[3];
+    if(not ((timeSlice >= 0) && (timeSlice < HGC_localL[3]))) return;
+  }
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
@@ -318,7 +324,7 @@ void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, P
 }
 
 template<typename Float>
-std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, int *sourceposition){
+std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
   if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
   for(int i = 0; i < N_DIMS; i++)
     if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
