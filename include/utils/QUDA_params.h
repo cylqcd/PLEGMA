@@ -43,6 +43,7 @@ define(double tol_hq, 0.1); // heavy-quark tolerance for inverter
 define(double reliable_delta, 1e-4);
 define(int niter,100);
 define(QudaMatPCType matpc_type, QUDA_MATPC_EVEN_EVEN);
+define(QudaSolveType solve_type, QUDA_DIRECT_PC_SOLVE);
 define(bool verify_results, false);
 define(bool kernel_pack_t, false);
 define(int pipeline, 0); // length of pipeline for fused operations in GCR or BiCGstab-l

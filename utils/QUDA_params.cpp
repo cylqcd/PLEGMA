@@ -367,9 +367,8 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.solution_type = QUDA_MAT_SOLUTION ;
 
   // do we want to use an even-odd preconditioned solve or not
-  inv_param.solve_type = (inv_type == QUDA_CG_INVERTER || inv_type == QUDA_CA_CG_INVERTER)?
-    QUDA_NORMOP_PC_SOLVE : QUDA_DIRECT_PC_SOLVE;
- 
+  inv_param.solve_type = solve_type;
+   
   if(isEven) { 
     inv_param.matpc_type = QUDA_MATPC_EVEN_EVEN;
     PLEGMA_printf("### Running for the Even-Even Operator\n");
