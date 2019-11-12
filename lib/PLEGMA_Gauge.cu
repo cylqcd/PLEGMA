@@ -290,3 +290,6 @@ void PLEGMA_Gauge<Float>::gluonField(PLEGMA_Gauge<Float> &uIn){
 
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;
+
+template class PLEGMA_Gauge3D<float>;
+template class PLEGMA_Gauge3D<double>;

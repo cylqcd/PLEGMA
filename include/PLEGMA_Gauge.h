@@ -11,7 +11,7 @@ namespace plegma {
   ////////////////////////
   
   template<typename Float>
-    class PLEGMA_Gauge : public PLEGMA_Field<Float> {
+  class PLEGMA_Gauge : virtual public PLEGMA_Field<Float> {
   public:
     PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_CORNER);
     ~PLEGMA_Gauge(){;}
@@ -42,6 +42,18 @@ namespace plegma {
     void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
     void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-8,int maxIter=10000, int seedOverRelax=123456);
     void gluonField(PLEGMA_Gauge<Float> &uIn);
+  };
+
+  /////////////////////////////////////
+  // CLASS: PLEGMA_Gauge3D ///////////
+  ////////////////////////////////////
+  
+  template<typename Float>
+  class PLEGMA_Gauge3D : public PLEGMA_Field3D<Float>, public PLEGMA_Gauge<Float> {
+  public:
+    PLEGMA_Gauge3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE):
+      PLEGMA_Field<Float>(alloc_flag, GAUGE3D, ghost_flag) { }
+    ~PLEGMA_Gauge3D(){ }
   };
 }
 
