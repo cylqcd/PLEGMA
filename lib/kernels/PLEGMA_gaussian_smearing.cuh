@@ -61,8 +61,7 @@ __global__ void gaussian_smearing_kernel(Float2<FloatOut>* out,
     }
   }
 
-  FloatOut normalize;
-  normalize = 1.d/(1.d + 6.d * alpha);
+  FloatOut normalize = 1/(1 + 6 * alpha);
 
   if(not onlyGhost) {
     vecInTex.get(S,sid);
