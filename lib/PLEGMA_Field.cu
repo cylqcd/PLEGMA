@@ -350,8 +350,9 @@ void PLEGMA_Field<Float>::printInfo(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTION action){
-  if(comm_size() == 1)
-    return;
+  if(comm_size() == 1) return;
+  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+  
   if(ghost_flag < FIRST_SIDE)
     PLEGMA_error("First side ghosts have not been allocated.\n");
   if(dir<-1 || dir>=N_DIMS)
@@ -360,10 +361,11 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     PLEGMA_error("Directions should be an orientation enum");
 
   bool isAll = (dir<0) ? true:false;
+  bool runT = Total_length()==HGC_localVolume;
 
   if(action==START || action==DO_ALL)
     for(short i=0; i<N_DIMS; i++)
-      if( (dir == i || isAll) && HGC_dimBreak[i] )
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
 	for(short s = 0; s < DIR_BOTH; s++)
 	  if(sign == s || sign==DIR_BOTH){
 	    Float *pointer_receive = h_ext_ghost_r+(HGC_sideGhost[i][s]-total_length)*field_length*2;
@@ -399,7 +401,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       if(checkErr) checkCudaError();
     } else {
       for(short i=0; i<N_DIMS; i++)
-	if( (dir == i || isAll) && HGC_dimBreak[i] )
+	if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
 	  for(short s = 0; s < DIR_BOTH; s++)
 	    if(sign == s || sign==DIR_BOTH){
 	      Float *host = h_ext_ghost_r + (HGC_sideGhost[dir][s]-total_length)*field_length*2;
@@ -415,19 +417,23 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 
 template<typename Float>
 void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, ACTION action){if(comm_size() == 1) return;
+  if(comm_size() == 1) return;
+  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+  
   if(ghost_flag < FIRST_CORNER)
     PLEGMA_error("First corner ghosts have not been allocated.\n");
   if(dir<-1 || dir>=N_DIMS)
     PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
 
   bool isAll = (dir<0) ? true:false;
+  bool runT = Total_length()==HGC_localVolume;
 
   std::vector<MsgHandle*> messages;
 
   if(action==START || action==DO_ALL)
     for(short i=0; i<N_DIMS; i++)
       for(short j=i+1; j<N_DIMS; j++)
-	if( i != j && HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) )
+	if( i != j && HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
 	  if(dir == i || dir == j || isAll)
 	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
@@ -470,7 +476,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
     } else {
       for(short i=0; i<N_DIMS; i++)
 	for(short j=i+1; j<N_DIMS; j++)
-	  if( i != j && HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) )
+	  if( i != j && HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
 	    if(dir == i || dir == j || isAll)
 	      for(short s1 = 0; s1 < DIR_BOTH; s1++)
 		for(short s2 = 0; s2 < DIR_BOTH; s2++)
