@@ -278,7 +278,7 @@ struct computeRMS{
     Float2<Float> e[N_SPINS*N_COLS];
     Float2<Float> *w = &(thrust::get<1>(t));
 #pragma unroll
-    for(int i = 0 ; i < N_SPINS*N_COLS; i++) e[i] = *(w+i*DGC_localVolume);
+    for(int i = 0 ; i < N_SPINS*N_COLS; i++) e[i] = *(w+i*DGC_localVolume3D);
     Float val =0;
 #pragma unroll
     for(int i = 0 ; i < N_SPINS*N_COLS ; i++) val += e[i].x*e[i].x  + e[i].y*e[i].y; 
@@ -287,7 +287,7 @@ struct computeRMS{
 };
 
 template<typename Float>
-static void compute_rms(const PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std::vector<Float> &absPsi, int my_it, const site& sourceposition){
+static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &listR2, std::vector<Float> &absPsi, const site& sourceposition){
   int *d_listR2 = nullptr;
   Float *d_absPsi = nullptr;
   if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");
@@ -295,16 +295,14 @@ static void compute_rms(const PLEGMA_Vector<Float> &vec, std::vector<int> &listR
   cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); checkCudaError();
   cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkCudaError();
   cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkCudaError();
-  int V = HGC_localVolume;
-  int V3 = V/HGC_localL[3];
   thrust::counting_iterator<int> first(0);
-  thrust::counting_iterator<int> last = first + V3;
+  thrust::counting_iterator<int> last = first + HGC_localVolume3D;
   typedef thrust::device_ptr<Float2<Float> > DpF2;
-  DpF2 y( (Float2<Float>*) (vec.D_elem() + my_it*V3*2) );
+  DpF2 y( (Float2<Float>*) vec.D_elem());
   typedef thrust::tuple<thrust::counting_iterator<int>,DpF2> tplIntDev2;
   typedef thrust::zip_iterator<tplIntDev2> zipTplIntDev2;
   zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
-  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+V3));
+  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+HGC_localVolume3D));
   thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
   cudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), cudaMemcpyDeviceToHost); checkCudaError();
   cudaFree(d_listR2);
