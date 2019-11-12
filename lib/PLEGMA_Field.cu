@@ -37,17 +37,30 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
   field_length = field_l;
   total_length = vol_l;
   site_shape = {field_l};
-  
+
   ghost_length = 0;
   ghost_corner_length = 0;
+  
+  if(ghost_flag>NO_GHOSTS) {
+    assert(vol_l==PLEGMA_localVolume || vol_l==PLEGMA_localVolume3D, "Ghosts available only for full volume or timeslice");
 
-  for(int i = 0 ; i < N_DIMS ; i++){
-    if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i];
-    for(int j = i+1; j < N_DIMS; j++){
-      if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[i][j];
+    if(vol_l==PLEGMA_localVolume) {
+      for(int i = 0 ; i < N_DIMS ; i++){
+	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i];
+	for(int j = i+1; j < N_DIMS; j++){
+	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[i][j];
+	}
+      }
+    } else if(vol_l==PLEGMA_localVolume3D) {
+      for(int i = 0 ; i < N_DIMS-1 ; i++){
+	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i]/HGC_localL[DIM_T];
+	for(int j = i+1; j < N_DIMS-1; j++){
+	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[i][j]/HGC_localL[DIM_T];
+	}
+      }      
     }
   }
-
+  
   if( alloc_flag == BOTH ){
     create_host();
     create_device();
