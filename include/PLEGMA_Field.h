@@ -137,6 +137,8 @@ namespace plegma {
     virtual void readLIME(std::string filename);
     virtual void writeLIME(std::string filename) const;
     virtual void writeHDF5(std::string filename) const;
+
+    virtual bool includesActiveTimeSlice(){return true;}
   };
 
   template<typename Float>
@@ -149,21 +151,6 @@ namespace plegma {
     }
     PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
       PLEGMA_Field<Float>(alloc_flag, site_size, ghost_flag, isPinnedHost) {
-    }
-
-    bool includesActiveTimeSlice(){return activeTimeSlice;}
-
-    void communicateSideGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL) {
-      if(not includesActiveTimeSlice()) return;
-      return PLEGMA_Field<Float>::communicateSideGhost(dirOr,sign,action);
-    }
-    void communicateCornerGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL) {
-      if(not includesActiveTimeSlice()) return;
-      return PLEGMA_Field<Float>::communicateCornerGhost(dirOr,sign,action);
-    }
-    void communicateGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, GHOST_FLAG which_ghost=ALL_GHOSTS, ACTION action=DO_ALL) {
-      if(not includesActiveTimeSlice()) return;
-      return PLEGMA_Field<Float>::communicateGhost(dirOr,sign,which_ghost,action);
     }
 
     void absorb(const PLEGMA_Field<Float> &field, int global_it);

@@ -435,5 +435,4 @@ namespace plegma{
 
   template class PLEGMA_Vector3D<float>;
   template class PLEGMA_Vector3D<double>;
-
 }
