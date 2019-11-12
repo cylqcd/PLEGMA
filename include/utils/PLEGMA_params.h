@@ -37,6 +37,10 @@ define(std::string threep_filename, "./threep");
 define(std::vector<int> tSinks, {});
 define(std::vector<std::string> Projs, {});
 define(int rng_seed, 123456);
+define(std::string inputUP,"");
+define(std::string inputDN,"");
+define(std::string inputST,"");
+define(std::string inputCH,"");
 
 define(int Eig_NeV, 10);
 define(bool Eig_isACC, true);
