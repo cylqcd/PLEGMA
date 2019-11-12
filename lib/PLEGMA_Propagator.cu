@@ -228,12 +228,6 @@ void  PLEGMA_Propagator<Float>::apply_gamma5(){
 //----------------------------------//
 
 template<typename Float>
-PLEGMA_Propagator3D<Float>::
-PLEGMA_Propagator3D(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
-  PLEGMA_Field3D<Float>(alloc_flag, PROPAGATOR3D, ghost_flag){
-}
-
-template<typename Float>
 void PLEGMA_Propagator3D<Float>::
 absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
 			int timeslice){

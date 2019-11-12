@@ -111,9 +111,19 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     field_name = "PLEGMA_GAUGE";
     setSiteShape({N_DIMS, N_COLS, N_COLS});
     break;    
+  case GAUGE3D:
+    initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume3D);
+    field_name = "PLEGMA_GAUGE3D";
+    setSiteShape({N_DIMS, N_COLS, N_COLS});
+    break;
   case VECTOR:
     initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_VECTOR";
+    setSiteShape({N_SPINS, N_COLS});
+    break;
+  case VECTOR3D:
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume3D);
+    field_name = "PLEGMA_VECTOR3D";
     setSiteShape({N_SPINS, N_COLS});
     break;
   case PROPAGATOR:
@@ -125,11 +135,6 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume3D);
     field_name = "PLEGMA_PROPAGATOR3D";
     setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
-    break;
-  case VECTOR3D:
-    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume3D);
-    field_name = "PLEGMA_VECTOR3D";
-    setSiteShape({N_SPINS, N_COLS});
     break;
   case QLOOPS:
     initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);

@@ -16,7 +16,7 @@ namespace plegma {
   /////////////////////////
   
   template<typename Float>
-    class PLEGMA_Vector : public PLEGMA_Field<Float> {
+  class PLEGMA_Vector : virtual public PLEGMA_Field<Float> {
   public:
     PLEGMA_Vector(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Vector(){;}
@@ -94,10 +94,12 @@ namespace plegma {
   ////////////////////////////////////
   
   template<typename Float>
-    class PLEGMA_Vector3D : public PLEGMA_Field3D<Float> {
+  class PLEGMA_Vector3D : public PLEGMA_Field3D<Float> {
   public:
-    PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS);
-    ~PLEGMA_Vector3D(){;}
+    PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS) :
+      PLEGMA_Field<Float>(alloc_flag, VECTOR3D, ghost_flag){ }
+
+    ~PLEGMA_Vector3D(){ }
 
     /**
        @brief Absorbs elements nu, c2 from a 3D propagator to a 3D vector

@@ -15,7 +15,7 @@ namespace plegma {
   ////////////////////////
   
   template<typename Float>
-  class PLEGMA_Field : public IO<void> {
+  class PLEGMA_Field : virtual public IO<void> {
   protected:
     
     int field_length;
@@ -142,16 +142,16 @@ namespace plegma {
   };
 
   template<typename Float>
-  class PLEGMA_Field3D : public PLEGMA_Field<Float> {
+  class PLEGMA_Field3D : virtual public PLEGMA_Field<Float> {
   protected:
     bool activeTimeSlice;
   public:
     PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
-      PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost) {
-    }
+      PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost), activeTimeSlice(false) { }
     PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
-      PLEGMA_Field<Float>(alloc_flag, site_size, ghost_flag, isPinnedHost) {
-    }
+      PLEGMA_Field<Float>(alloc_flag, site_size, HGC_localVolume3D, ghost_flag, isPinnedHost), activeTimeSlice(false) { }
+    PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC_localVolume3D), activeTimeSlice(false) { }
+
 
     void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };

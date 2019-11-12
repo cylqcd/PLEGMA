@@ -387,12 +387,7 @@ namespace plegma{
   //----------------------------------//
   // class PLEGMA_Vector3D //
   //----------------------------------//
-  template<typename Float>
-  PLEGMA_Vector3D<Float>::
-  PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag):
-    PLEGMA_Field3D<Float>(alloc_flag, VECTOR3D, ghost_flag){
-  }
-
+  
   // vec3D <- Prop3D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int nu , int c2){
