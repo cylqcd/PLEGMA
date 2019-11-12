@@ -166,8 +166,7 @@ inline std::string get_projector_str(WHICHPROJECTOR proj){
 
 inline WHICHFLAVOR get_flavor(std::string s){
   WHICHFLAVOR fl;
-  if(s == "UP") fl = UP;
-  else if (s == "DOWN") fl = DOWN;
+  if(s == "LIGHT") fl = LIGHT;
   else if (s == "STRANGE") fl = STRANGE;
   else if (s == "CHARM") fl = CHARM;
   else PLEGMA_error("Flavor %s is not implemented", s.c_str());
