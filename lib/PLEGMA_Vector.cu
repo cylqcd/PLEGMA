@@ -327,27 +327,6 @@ void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, P
 }
 
 template<typename Float>
-std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
-  if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
-  for(int i = 0; i < N_DIMS; i++)
-    if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
-  int my_it = sourceposition[3] - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int coords[4];
-  for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
-  std::vector<Float> absPsi_loc(listR2.size(),0.0);
-  std::vector<Float> absPsi(listR2.size(),0.0);
-  if(is_myIt) compute_rms(*this,listR2,absPsi_loc,my_it,sourceposition);
-  comm_barrier();
-  int mpiErr = MPI_Allreduce(absPsi_loc.data(), absPsi.data(), listR2.size(), MPI_Type<Float>(), MPI_SUM, HGC_spaceComm);
-  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-  int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
-  mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
-  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
-  return absPsi;
-}
-
-template<typename Float>
 void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u){
   mulGV_k(*this, u, vecIn);
 }
@@ -424,6 +403,27 @@ namespace plegma{
     return ((PLEGMA_Vector<Float>*) this)->pointSource(sourceposition,spin,color,where);
   }
 
+  template<typename Float>
+  std::vector<Float> PLEGMA_Vector3D<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
+    if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
+    for(int i = 0; i < N_DIMS; i++)
+      if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
+    std::vector<Float> absPsi_loc(listR2.size(),0.0);
+    std::vector<Float> absPsi(listR2.size(),0.0);
+    if(this->includesActiveTimeSlice()) {
+      compute_rms(*this,listR2,absPsi_loc,sourceposition);
+      int mpiErr = MPI_Allreduce(absPsi_loc.data(), absPsi.data(), listR2.size(), MPI_Type<Float>(), MPI_SUM, HGC_spaceComm);
+      if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
+    }
+    
+    int coords[4];
+    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
+    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+    int mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+    return absPsi;
+  }
+  
   template class PLEGMA_Vector3D<float>;
   template class PLEGMA_Vector3D<double>;
 }

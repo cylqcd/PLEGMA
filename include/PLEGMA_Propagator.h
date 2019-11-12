@@ -48,7 +48,9 @@ namespace plegma {
        @param int global_it, The global time slice where data which will be inserted, the rest of the time-slices will become zero in the 4D propagator
        @return void
      **/    
-    void absorb(PLEGMA_Propagator3D<Float> &prop, int global_it);
+    void absorb(PLEGMA_Propagator3D<Float> &prop, int global_it) {
+      ((PLEGMA_Field<Float>*) this)->absorb(prop, global_it);	    
+    }
 
     /**
        @brief Absorbs a 3D vector to a 4D Propagator at a specific global time and nu, c2 element

@@ -8,6 +8,7 @@ namespace plegma {
 
   // forward declaration
   template<typename Float>  class PLEGMA_Gauge;
+  template<typename Float>  class PLEGMA_Vector3D;
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
   template<typename Float>  class PLEGMA_Su3field;
@@ -66,7 +67,17 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
-    
+
+    /**
+       @brief Absorbs 3D vector and puts it at a specific global time of the 4D vector
+       @param PLEGMA_Propagator3D<Float> prop, The 3D propagator
+       @param int global_it, The global time slice where data will be inserted, the rest of the time-slices will become zero in the 4D vector
+       @return void
+     **/    
+    void absorb(PLEGMA_Vector3D<Float> &vec, int global_it) {
+      ((PLEGMA_Field<Float>*) this)->absorb(vec, global_it);
+    }
+
     void dilutespin(PLEGMA_Vector<Float> &vecIn, int spin);
 
     void dilutecolor(PLEGMA_Vector<Float> &vecIn, int color);
@@ -80,7 +91,6 @@ namespace plegma {
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
-    std::vector<Float> rms(std::vector<int> listR2, const site& sourceposition) const;
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };
 
@@ -92,7 +102,7 @@ namespace plegma {
   ////////////////////////////////////
   
   template<typename Float>
-  class PLEGMA_Vector3D : public PLEGMA_Field3D<Float> {
+  class PLEGMA_Vector3D : public PLEGMA_Field3D<Float>, public PLEGMA_Vector<Float> {
   public:
     PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS) :
       PLEGMA_Field<Float>(alloc_flag, VECTOR3D, ghost_flag){ }
@@ -119,6 +129,8 @@ namespace plegma {
     void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2);
 
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
+    
+    std::vector<Float> rms(std::vector<int> listR2, const site& sourceposition) const;
   };
 }
 
