@@ -47,12 +47,6 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
       if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[i][j];
     }
   }
-  total_plus_ghost_length = total_length + ghost_length + ghost_corner_length;
-
-  bytes_total_length = total_length*field_length*2*sizeof(Float);
-  bytes_ghost_length = ghost_length*field_length*2*sizeof(Float);
-  bytes_ghost_corner_length = ghost_corner_length*field_length*2*sizeof(Float);
-  bytes_total_plus_ghost_length = total_plus_ghost_length*field_length*2*sizeof(Float);
 
   if( alloc_flag == BOTH ){
     create_host();
@@ -169,52 +163,52 @@ void PLEGMA_Field<Float>::unpack(Float *out){
 template<typename Float>
 void PLEGMA_Field<Float>::load(){
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
-  cudaMemcpy(d_elem, h_elem, bytes_total_length, cudaMemcpyHostToDevice );
+  cudaMemcpy(d_elem, h_elem, Bytes_total(), cudaMemcpyHostToDevice );
   if(checkErr) checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload() const{
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
-  cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_elem, d_elem, Bytes_total(), cudaMemcpyDeviceToHost);
   if(checkErr) checkCudaError();
 }
 
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_host(){
-  if(!isPinnedHost)hostMalloc(h_elem, bytes_total_plus_ghost_length);
-  else hostMallocPinned(h_elem, bytes_total_plus_ghost_length);
+  if(!isPinnedHost)hostMalloc(h_elem, Bytes_total_plus_ghost());
+  else hostMallocPinned(h_elem, Bytes_total_plus_ghost());
   isAllocHost = true;
   zero_host();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_device(){
-  cudaMalloc((void**)&d_elem,bytes_total_plus_ghost_length);
+  cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
   if(checkErr) checkCudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
-  HGC_deviceMemory += bytes_total_plus_ghost_length/(1024.*1024.);          
+  HGC_deviceMemory += Bytes_total_plus_ghost()/(1024.*1024.);          
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
 #endif
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
 #ifdef HAVE_PINNED_GHOST
-    cudaMallocHost((void**)&h_ext_ghost_r, bytes_ghost_length);
-    cudaMallocHost((void**)&h_ext_ghost_s, bytes_ghost_length);
+    cudaMallocHost((void**)&h_ext_ghost_r, Bytes_ghost());
+    cudaMallocHost((void**)&h_ext_ghost_s, Bytes_ghost());
 #else
-    hostMalloc(h_ext_ghost_r, bytes_ghost_length);
-    hostMalloc(h_ext_ghost_s, bytes_ghost_length);
+    hostMalloc(h_ext_ghost_r, Bytes_ghost());
+    hostMalloc(h_ext_ghost_s, Bytes_ghost());
 #endif
   }
   if(ghost_flag == FIRST_CORNER){
 #ifdef HAVE_PINNED_GHOST
-    cudaMallocHost((void**)&h_ext_ghost_corner_r, bytes_ghost_corner_length);
-    cudaMallocHost((void**)&h_ext_ghost_corner_s, bytes_ghost_corner_length);
+    cudaMallocHost((void**)&h_ext_ghost_corner_r, Bytes_ghostCorner());
+    cudaMallocHost((void**)&h_ext_ghost_corner_s, Bytes_ghostCorner());
 #else    
-    hostMalloc(h_ext_ghost_corner_r, bytes_ghost_corner_length);
-    hostMalloc(h_ext_ghost_corner_s, bytes_ghost_corner_length);
+    hostMalloc(h_ext_ghost_corner_r, Bytes_ghostCorner());
+    hostMalloc(h_ext_ghost_corner_s, Bytes_ghostCorner());
 #endif
 
   }
@@ -224,8 +218,8 @@ void PLEGMA_Field<Float>::create_device(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_host(){
-  if(!isPinnedHost)hostFree(h_elem, bytes_total_plus_ghost_length);
-  else hostFreePinned(h_elem, bytes_total_plus_ghost_length);
+  if(!isPinnedHost)hostFree(h_elem, Bytes_total_plus_ghost());
+  else hostFreePinned(h_elem, Bytes_total_plus_ghost());
   isAllocHost=false;
 }
 
@@ -235,7 +229,7 @@ void PLEGMA_Field<Float>::destroy_device(){
   if(checkErr) checkCudaError();
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
-  HGC_deviceMemory -= bytes_total_plus_ghost_length/(1024.*1024.);
+  HGC_deviceMemory -= Bytes_total_plus_ghost()/(1024.*1024.);
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
 #endif
   if(ghost_flag >= FIRST_SIDE){
@@ -243,8 +237,8 @@ void PLEGMA_Field<Float>::destroy_device(){
     cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
     cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
 #else
-    hostFree(h_ext_ghost_r,bytes_ghost_length); h_ext_ghost_r=NULL;
-    hostFree(h_ext_ghost_s,bytes_ghost_length); h_ext_ghost_s=NULL;
+    hostFree(h_ext_ghost_r,Bytes_ghost()); h_ext_ghost_r=NULL;
+    hostFree(h_ext_ghost_s,Bytes_ghost()); h_ext_ghost_s=NULL;
 #endif
   }
   if(ghost_flag == FIRST_CORNER){
@@ -252,8 +246,8 @@ void PLEGMA_Field<Float>::destroy_device(){
     cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
     cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
 #else
-    hostFree(h_ext_ghost_corner_r,bytes_ghost_corner_length); h_ext_ghost_corner_r=NULL;
-    hostFree(h_ext_ghost_corner_s,bytes_ghost_corner_length); h_ext_ghost_corner_s=NULL;
+    hostFree(h_ext_ghost_corner_r,Bytes_ghostCorner()); h_ext_ghost_corner_r=NULL;
+    hostFree(h_ext_ghost_corner_s,Bytes_ghostCorner()); h_ext_ghost_corner_s=NULL;
 #endif
 
   }
@@ -263,12 +257,12 @@ void PLEGMA_Field<Float>::destroy_device(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::zero_host(){
-  if(isAllocHost)memset(h_elem,0,bytes_total_plus_ghost_length);
+  if(isAllocHost)memset(h_elem,0,Bytes_total_plus_ghost());
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::zero_device(){
-  if(isAllocDevice)cudaMemset(d_elem,0,bytes_total_plus_ghost_length);
+  if(isAllocDevice)cudaMemset(d_elem,0,Bytes_total_plus_ghost());
 }
 
 template<typename Float>
@@ -316,7 +310,7 @@ cudaTextureObject_t PLEGMA_Field<Float>::createTexObject(){
   resDesc.resType = cudaResourceTypeLinear;
   resDesc.res.linear.devPtr = d_elem;
   resDesc.res.linear.desc = desc;
-  resDesc.res.linear.sizeInBytes = bytes_total_plus_ghost_length;
+  resDesc.res.linear.sizeInBytes = Bytes_total_plus_ghost();
 
   cudaTextureDesc texDesc;
   memset(&texDesc, 0, sizeof(texDesc));
@@ -336,7 +330,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::printInfo(){
   PLEGMA_printf("This object has precision %d\n",Precision());
   PLEGMA_printf("This object needs %f Mb\n",
-      bytes_total_plus_ghost_length/(1024.*1024.));
+      Bytes_total_plus_ghost()/(1024.*1024.));
   PLEGMA_printf("The flag for the host allocation is %d\n",(int) isAllocHost);
   PLEGMA_printf("The flag for the device allocation is %d\n",(int) isAllocDevice);
 }
@@ -388,7 +382,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr, ACTION action){
     if(isAll) {
       Float *host = h_ext_ghost_r;
       Float *device = d_elem+total_length*field_length*2;
-      cudaMemcpy(device, host, bytes_ghost_length,cudaMemcpyHostToDevice);
+      cudaMemcpy(device, host, Bytes_ghost(),cudaMemcpyHostToDevice);
       if(checkErr) checkCudaError();
     } else {
       if( HGC_dimBreak[dirOr%N_DIMS] ){
@@ -458,7 +452,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr, ACTION action){
     if(isAll) {
       Float *hostCorner = h_ext_ghost_corner_r;
       Float *device = d_elem+(total_length+ghost_length)*field_length*2;
-      cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
+      cudaMemcpy(device,hostCorner,Bytes_ghostCorner(),cudaMemcpyHostToDevice);
       if(checkErr) checkCudaError();
     } else {
       for(int i=0; i<2*N_DIMS; i++){

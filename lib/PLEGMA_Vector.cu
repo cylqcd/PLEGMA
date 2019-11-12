@@ -83,7 +83,7 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
   }
   if( (nsmearGauss%2) == 0)
     cudaMemcpy(this->D_elem(),vecIn.D_elem(),
-	       this->bytes_total_length,cudaMemcpyDeviceToDevice);
+	       this->Bytes_total(),cudaMemcpyDeviceToDevice);
   
   this->destroyTexObject(texVecOut.tex);
   vecIn.destroyTexObject(texVecIn.tex);

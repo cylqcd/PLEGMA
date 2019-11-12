@@ -19,15 +19,9 @@ namespace plegma {
   protected:
     
     int field_length;
-    int total_length;        
-    int ghost_length;
-    int ghost_corner_length;
-    int total_plus_ghost_length;
-
-    size_t bytes_total_length;
-    size_t bytes_ghost_length;
-    size_t bytes_ghost_corner_length;
-    size_t bytes_total_plus_ghost_length;
+    size_t total_length;        
+    size_t ghost_length;
+    size_t ghost_corner_length;
     
     Float *h_elem;
     Float *d_elem;
@@ -73,14 +67,16 @@ namespace plegma {
 
     ALLOCATION_FLAG getAllocation() const { return allocation; }
 
-    size_t Bytes_total() const { return bytes_total_length; }
-    size_t Bytes_ghost() const { return bytes_ghost_length; }
-    size_t Bytes_total_plus_ghost() const { return bytes_total_plus_ghost_length; }
-
     int Field_length() const { return field_length;} // degrees of freedom per lattice point
-    int Total_length() const { return total_length;} // the length of the field (local)
-    int Ghost_length() const { return ghost_length;} // the length of the ghost
-    int TotalGhost_length() const { return total_plus_ghost_length;} // total + ghost
+    size_t Total_length() const { return total_length;} // the length of the field (local)
+    size_t Ghost_length() const { return ghost_length;} // the length of the ghost
+    size_t GhostCorner_length() const { return ghost_corner_length;} // the length of the ghost for corners
+    size_t TotalPlusGhost_length() const { return Total_length()+Ghost_length()+GhostCorner_length();} // total + ghost
+
+    size_t Bytes_total() const { return this->Total_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_ghost() const { return this->Ghost_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_total_plus_ghost() const { return this->TotalPlusGhost_length()*this->Field_length()*2*sizeof(Float); }
 
     std::string Field_name() const {return field_name;}
     GHOST_FLAG Ghost_flag() const {return ghost_flag;}
