@@ -24,7 +24,7 @@ PLEGMA_Gauge<Float>::PLEGMA_Gauge(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_f
 template<typename Float>
 Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
   gaugeTex<Float> tex;
-  this->communicateGhost(-1,FIRST_CORNER);
+  this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
 
   tex.tex = this->createTexObject();
   Float Q = calcTopoCharge<Float>(tex, charge_def);
@@ -36,7 +36,7 @@ Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
 template<typename Float>
 Float PLEGMA_Gauge<Float>::calculatePlaq(){
   gaugeTex<Float> tex;
-  this->communicateGhost(-1,FIRST_SIDE);
+  this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
   tex.tex = this->createTexObject();
   Float plaq = calculatePlaquette<Float>(tex);
   if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
@@ -47,7 +47,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaq(){
 template<typename Float>
 Float PLEGMA_Gauge<Float>::calculatePlaqClover(){
   gaugeTex<Float> tex;
-  this->communicateGhost(-1,FIRST_CORNER);
+  this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   tex.tex = this->createTexObject();
   Float plaqClover = calcPlaqClovDef<Float,Float>(tex);
   Float plaq = calculatePlaquette<Float>(tex);
@@ -77,7 +77,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaqShifts(){
   Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
 
   gaugeTex<Float> tex;
-  this->communicateGhost(-1,FIRST_SIDE);
+  this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
   tex.tex = this->createTexObject();
   Float plaqRef = calculatePlaquette<Float>(tex);
   this->destroyTexObject(tex.tex);
@@ -92,7 +92,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaqShifts(){
 template<typename Float>
 Float PLEGMA_Gauge<Float>::calculatePlaqStaples(){
   
-  this->communicateGhost(-1,FIRST_CORNER);
+  this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
 
   Float plaqStaples = calcPlaqStaplesDef<Float>( this->D_elem() );
 
@@ -108,7 +108,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaqStaples(){
 template<typename Float>
 Float PLEGMA_Gauge<Float>::calculatePlaqCorners(){
   gaugeTex<Float> tex;
-  this->communicateGhost(-1,FIRST_CORNER);
+  this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   tex.tex = this->createTexObject();
   Float plaqCorners = calculatePlaquetteCorners<Float>(tex);
   Float plaqRef = calculatePlaquette<Float>(tex);

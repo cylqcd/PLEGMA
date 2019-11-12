@@ -75,34 +75,35 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
       }
     }
     
-    for(int i = 0 ; i < 2*N_DIMS ; i++){
-      HGC_sideGhost[i] = 0;
-    }
+    for(int i = 0 ; i < N_DIMS ; i++)
+      for(int dir = 0; dir < DIR_BOTH; dir++)
+	HGC_sideGhost[i][dir] = 0;
 
-    for(int i=0; i<2*N_DIMS; i++){
-      for(int j=0; j<2*N_DIMS; j++){
-	HGC_cornerGhost[i][j] = 0;
-      }
-    }
+    for(int i=0; i<N_DIMS; i++)
+      for(int j=0; j<N_DIMS; j++)
+	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
+	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
+	    HGC_cornerGhost[i][j][dir1][dir2] = 0;
     
 #ifdef MULTI_GPU
     size_t lastIndex = HGC_localVolume;
     
-    for(int i = 0 ; i < 2*N_DIMS ; i++)
-      if( HGC_dimBreak[i%N_DIMS] ){
-	HGC_sideGhost[i] = lastIndex ;
-	lastIndex += HGC_surface3D[i%N_DIMS];
-      }
-
-    for(int i=0; i<2*N_DIMS; i++){
-      for(int j=i+1; j<2*N_DIMS; j++){
-	if( (i%N_DIMS != j%N_DIMS ) && HGC_dimBreak[i%N_DIMS] && HGC_dimBreak[j%N_DIMS] ){
-	  HGC_cornerGhost[i][j] = lastIndex;
-	  HGC_cornerGhost[j][i] = lastIndex;
-	  lastIndex += HGC_surface2D[i%N_DIMS][j%N_DIMS];
+    for(int i = 0 ; i < N_DIMS ; i++)
+      for(int dir = 0; dir < DIR_BOTH; dir++)
+	if( HGC_dimBreak[i] ){
+	  HGC_sideGhost[i][dir] = lastIndex;
+	  lastIndex += HGC_surface3D[i];
 	}
-      }
-    }
+
+    for(int i=0; i<N_DIMS; i++)
+      for(int j=i+1; j<N_DIMS; j++)
+	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
+	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
+	    if( (i != j ) && HGC_dimBreak[i] && HGC_dimBreak[j] ) {
+	      HGC_cornerGhost[i][j][dir1][dir2] = lastIndex;
+	      HGC_cornerGhost[j][i][dir2][dir1] = lastIndex;
+	      lastIndex += HGC_surface2D[i][j];
+	    }
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)

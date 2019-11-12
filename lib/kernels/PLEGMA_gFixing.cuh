@@ -110,10 +110,10 @@ static void gFixingLandau_k(PLEGMA_Gauge<Float> &u_gFixed, PLEGMA_Gauge<Float> &
   u_gFixed.copy(u);
   while(prec>tolerance && iter<maxIter){
     for(int eo=0; eo < 2; eo++){
-      u_gFixed.communicateGhost(4);u_gFixed.communicateGhost(5);u_gFixed.communicateGhost(6);u_gFixed.communicateGhost(7);
+      u_gFixed.communicateGhost(-1, DIR_MINUS);
       gTransformLandau_kernel<Float><<<gridDim,blockDim>>>(g.D_elem(), u_gFixed.D_elem(), rnd.D_elem(),overelaxPar,eo);
       checkCudaError();
-      g.communicateGhost(0);g.communicateGhost(1);g.communicateGhost(2);g.communicateGhost(3);
+      g.communicateGhost(-1, DIR_PLUS);
       gTransformMulALandau_kernel<Float><<<gridDim,blockDim>>>(g.D_elem(), u_gFixed.D_elem(),eo);
       checkCudaError();
       rnd.random(Uniform);

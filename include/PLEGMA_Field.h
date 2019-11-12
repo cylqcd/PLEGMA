@@ -89,10 +89,9 @@ namespace plegma {
 	return 0;
     } 
     void printInfo();
-    void communicateSideGhost(int dirOr=-1, ACTION action=DO_ALL);
-    void communicateCornerGhost(int dirOr=-1, ACTION action=DO_ALL);
-    void communicateGhost(int dirOr, GHOST_FLAG which_ghost, ACTION action=DO_ALL);
-    void communicateGhost(int dirOr=-1, ACTION action=DO_ALL);
+    void communicateSideGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateCornerGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, GHOST_FLAG which_ghost=ALL_GHOSTS, ACTION action=DO_ALL);
 
     std::vector<int> getSiteShape() const {return site_shape;}
     void setSiteShape(std::vector<int> new_shape) {
@@ -110,7 +109,7 @@ namespace plegma {
     void load();
     void unload() const;
     
-    void shift(PLEGMA_Field &Fin, int dirOr);
+    void shift(PLEGMA_Field &Fin, short dirOr);
     void randInit(int seed);
     void destroy_randstate();
     void stochastic_Z(int n=2);
