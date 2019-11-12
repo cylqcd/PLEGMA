@@ -18,14 +18,7 @@ PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
-					    int nsmearGauss, Float alphaGauss, int timeSlice){
-
-  bool hasTimeSlice=true;
-  if(timeSlice>=0) {
-    if(timeSlice >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    int myT = timeSlice - HGC_procPosition[3] * HGC_localL[3];
-    if(not ((myT >= 0) && (myT < HGC_localL[3]))) hasTimeSlice=false;
-  }
+					    int nsmearGauss, Float alphaGauss){
   
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
@@ -41,7 +34,7 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
-      if(hasTimeSlice) {
+      if(this->includesActiveTimeSlice()) {
 	for(int dir=0; dir<N_DIMS-1; dir++) {
 	  if(i==0) {
 	    gauge.communicateSideGhost(dir, DIR_BOTH, START);
@@ -49,8 +42,8 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 	  vecIn.communicateSideGhost(dir, DIR_BOTH, START);
 	}
       }
-      gaussian_smearing_no_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss, timeSlice);
-      if(hasTimeSlice) {
+      gaussian_smearing_no_ghost(*this,texVecIn,texGauge, alphaGauss);
+      if(this->includesActiveTimeSlice()) {
 	for(int dir=0; dir<N_DIMS-1; dir++) {
 	  if(i==0) {
 	    gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
@@ -58,21 +51,21 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 	  vecIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
 	}
       }
-      gaussian_smearing_only_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss, timeSlice);
+      gaussian_smearing_only_ghost(*this,texVecIn,texGauge, alphaGauss);
     }
     else{
-      if(hasTimeSlice) {
+      if(this->includesActiveTimeSlice()) {
 	for(int dir=0; dir<N_DIMS-1; dir++) {
 	  this->communicateSideGhost(dir, DIR_BOTH, START);
 	}
       }
-      gaussian_smearing_no_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss, timeSlice);
-      if(hasTimeSlice) {
+      gaussian_smearing_no_ghost(vecIn, texVecOut, texGauge, alphaGauss);
+      if(this->includesActiveTimeSlice()) {
 	for(int dir=0; dir<N_DIMS-1; dir++) {
 	  this->communicateSideGhost(dir, DIR_BOTH, FINISH);
 	}
       }
-      gaussian_smearing_only_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss, timeSlice);
+      gaussian_smearing_only_ghost(vecIn, texVecOut, texGauge, alphaGauss);
     }
   }
   if( (nsmearGauss%2) == 0)
@@ -245,45 +238,41 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
 
 template<typename Float>
 void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG where){
+  if(where == EVERY) where = this->allocation;
   for(int i = 0; i < N_DIMS; i++)
     if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
   
   this->zero_where(where);
   int my_src[N_DIMS];
   size_t id=0;
-  Float temp[1];
-  temp[0] = 1.0;
-
   for(int i = N_DIMS-1; i >= 0; i--) {
     my_src[i] = (sourceposition[i] - comm_coords(HGC_default_topo)[i] * HGC_localL[i]);
 
     // if out of the local lattice we break
-    if((my_src[i]<0) || (my_src[i]>=HGC_localL[i]))
-      return;
+    if((my_src[i]<0) || (my_src[i]>=HGC_localL[i])) return;
 
     id = id * HGC_localL[i] + my_src[i];
   }
+  // This make it work also for vector3D
+  id = id % this->Total_length();
 
+  Float temp[1];
+  temp[0] = 1.0;
   if( where == BOTH ){
     this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*HGC_localVolume + id)*2), temp,sizeof(Float),
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else if (where == HOST){
-    this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
+    this->h_elem[((spin*N_COLS+color)*this->Total_length() + id)*2] = 1.0; 
   }
   else if (where == DEVICE){
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*HGC_localVolume + id)*2), temp,sizeof(Float),
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else{
     PLEGMA_error("Not supported %d\n",where);
   }
-}
-
-template<typename Float>
-void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int color){
-  pointSource(sourceposition,spin,color,this->allocation);
 }
 
 
@@ -426,6 +415,13 @@ namespace plegma{
 	  cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
       }
     checkCudaError();
+  }
+
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG where){
+    int my_it = sourceposition[DIM_T] - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
+    this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
+    return ((PLEGMA_Vector<Float>*) this)->pointSource(sourceposition,spin,color,where);
   }
 
   template class PLEGMA_Vector3D<float>;

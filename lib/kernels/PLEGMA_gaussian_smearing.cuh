@@ -4,29 +4,12 @@ template<typename FloatOut, typename FloatIn, typename FloatGauge, bool noGhost=
 __global__ void gaussian_smearing_kernel(Float2<FloatOut>* out,
 					 vectorTex<FloatIn> vecInTex,
 					 gaugeTex<FloatGauge> gaugeTex,
-					 FloatOut alpha, int it=-1){
+					 FloatOut alpha){
   static_assert(not (noGhost and onlyGhost), "Not possible to have both: noGhost and onlyGhost");
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_localVolume) return;
 
-  if(it >= 0) {
-    Float2<FloatIn> S[N_SPINS][N_COLS];
-    it = it - DGC_procPosition[DIM_T] * DGC_localL[DIM_T];
-    // Only the correct timeslice has to work, the others just copy
-    if(it != sid/DGC_localVolume3D) {
-      if(not onlyGhost) {
-	vecInTex.get(S,sid);
-        #pragma unroll
-	for(int mu=0; mu<N_SPINS; mu++) 
-          #pragma unroll
-	  for(int c=0; c<N_COLS; c++)
-	    out[(mu*N_COLS + c)*DGC_localVolume + sid] = S[mu][c];
-      }
-      return;
-    }
-  }
-  
   if(onlyGhost) {
     // Checking if we are on the border
     bool exit = true;
@@ -81,25 +64,28 @@ __global__ void gaussian_smearing_kernel(Float2<FloatOut>* out,
 }
 
 template<typename FloatOut,typename FloatIn, typename FloatGauge>
-static void gaussian_smearing(FloatOut* out, vectorTex<FloatIn> vecInTex, 
-			      gaugeTex<FloatGauge> gaugeTex, FloatOut alpha, int it=-1){
-  ProfileStruct ps(HGC_localVolume);
+static void gaussian_smearing(PLEGMA_Vector<FloatOut> &out, vectorTex<FloatIn> vecInTex, 
+			      gaugeTex<FloatGauge> gaugeTex, FloatOut alpha){
+  ProfileStruct ps(out.Total_length());
   ps.tune_globally = true;
-  tuneAndRun(ps, "gaussian_smearing_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,false,false>, (Float2<FloatOut> *) out, vecInTex, gaugeTex, alpha, it);
+  tuneAndRun(ps, "gaussian_smearing_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,false,false>,
+	     (Float2<FloatOut>*) out.D_elem(), vecInTex, gaugeTex, alpha);
 }
 
 template<typename FloatOut,typename FloatIn, typename FloatGauge>
-static void gaussian_smearing_no_ghost(FloatOut* out, vectorTex<FloatIn> vecInTex, 
-				       gaugeTex<FloatGauge> gaugeTex, FloatOut alpha, int it=-1){
-  ProfileStruct ps(HGC_localVolume);
+static void gaussian_smearing_no_ghost(PLEGMA_Vector<FloatOut> &out, vectorTex<FloatIn> vecInTex, 
+				       gaugeTex<FloatGauge> gaugeTex, FloatOut alpha){
+  ProfileStruct ps(out.Total_length());
   ps.tune_globally = true;
-  tuneAndRun(ps, "gaussian_smearing_no_ghost_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,true,false>, (Float2<FloatOut> *) out, vecInTex, gaugeTex, alpha, it);
+  tuneAndRun(ps, "gaussian_smearing_no_ghost_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,true,false>,
+	     (Float2<FloatOut>*) out.D_elem(), vecInTex, gaugeTex, alpha);
 }
 
 template<typename FloatOut,typename FloatIn, typename FloatGauge>
-static void gaussian_smearing_only_ghost(FloatOut* out, vectorTex<FloatIn> vecInTex, 
-					 gaugeTex<FloatGauge> gaugeTex, FloatOut alpha, int it=-1){
-  ProfileStruct ps(HGC_localVolume);
+static void gaussian_smearing_only_ghost(PLEGMA_Vector<FloatOut> &out, vectorTex<FloatIn> vecInTex, 
+					 gaugeTex<FloatGauge> gaugeTex, FloatOut alpha){
+  ProfileStruct ps(out.Total_length());
   ps.tune_globally = true;
-  tuneAndRun(ps, "gaussian_smearing_only_ghost_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,false,true>, (Float2<FloatOut> *) out, vecInTex, gaugeTex, alpha, it);
+  tuneAndRun(ps, "gaussian_smearing_only_ghost_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,false,true>,
+	     (Float2<FloatOut>*) out.D_elem(), vecInTex, gaugeTex, alpha);
 }

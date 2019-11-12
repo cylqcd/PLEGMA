@@ -25,14 +25,13 @@ namespace plegma {
     void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
 
     /**
-       @brief Applies N times Gaussian(Wuppertal) smearing operator on all time-slices of a vector
+       @brief Applies N times Gaussian(Wuppertal) smearing operator on all time-slices of a vector. NOTE: works also for Vector3D
        @param PLEGMA_Vector<Float> &vecIn, The 4D input vector (Exchange of boundaries happens inside the function)
        @param PLEGMA_Gauge<Float> &gauge, The gauge field that will be used in the Gaussian smearing operator (Exchange of boundaries happens inside the function)
        @param int nsmearGauss, The number of times to apply the operator (if zero copies inVec to outVec)
        @param Float alphaGauss, alpha parameter of the Gaussian smearing
-       @param int timeSlice, if timeSlice < 0 all the time slices are done
      **/
-    void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss, int timeSlice = -1);
+    void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss);
 
     
     void scaleVector(Float a);
@@ -74,8 +73,7 @@ namespace plegma {
     
     void dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color);
     
-    void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag);
-    void pointSource(const site& sourceposition, int spin, int color);
+    void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
     void conjugate();
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
@@ -119,6 +117,8 @@ namespace plegma {
        @return void
      **/
     void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2);
+
+    void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
   };
 }
 
