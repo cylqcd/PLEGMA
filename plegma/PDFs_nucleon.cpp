@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     {
       int signPer = (tSinks[ts] + sourcePositions[isource][3]) >= HGC_totalL[3] ? -1 : +1;
       int global_fixSinkTime = (tSinks[ts] + sourcePositions[isource][3])%HGC_totalL[3]; 
-      int my_fixSinkTime = global_fixSinkTime - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+      int my_fixSinkTime = global_fixSinkTime - HGC_procPosition[3] * HGC_localL[3];
       bool is_myST = (my_fixSinkTime >= 0) && ( my_fixSinkTime < HGC_localL[3] );
 
       for(int isc = 0 ; isc < 12 ; isc++){

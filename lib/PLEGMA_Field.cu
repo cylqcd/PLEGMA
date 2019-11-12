@@ -818,7 +818,7 @@ template<typename Float>
 void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   assert(field.Field_length() == this->Field_length());
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[3] );
   size_t V3 = HGC_localVolume3D*2;
   size_t V4 = HGC_localVolume*2;

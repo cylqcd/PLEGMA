@@ -107,7 +107,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)
-      HGC_procPosition[i] = comm_coords(HGC_default_topo)[i];
+      HGC_procPosition[i] = HGC_procPosition[i];
 
     // copying globals to device
     HGC_global_vars.copyToDevice();

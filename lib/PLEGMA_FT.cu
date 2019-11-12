@@ -295,7 +295,7 @@ writeHDF5(std::string filename, int timeshift) const{
 
   size_t shift = 0;
   if(dims==3 && dimT != HGC_localL[DIM_T]) { // then it was a 3D Field. Using timeshift to determine the origin
-    int my_it = timeshift - comm_coords(HGC_default_topo)[DIM_T] * HGC_localL[DIM_T];
+    int my_it = timeshift - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
     if(!is_myIt) lshape[0]=0; // not writing
   } else {

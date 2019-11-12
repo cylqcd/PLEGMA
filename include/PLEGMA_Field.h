@@ -152,6 +152,7 @@ namespace plegma {
       PLEGMA_Field<Float>(alloc_flag, site_size, HGC_localVolume3D, ghost_flag, isPinnedHost), activeTimeSlice(false) { }
     PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC_localVolume3D), activeTimeSlice(false) { }
 
+    virtual bool includesActiveTimeSlice(){return activeTimeSlice;}
 
     void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };

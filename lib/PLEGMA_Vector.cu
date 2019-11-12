@@ -132,7 +132,7 @@ void PLEGMA_Vector<Float>::norm2Host(){
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -155,7 +155,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -246,7 +246,7 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
   int my_src[N_DIMS];
   size_t id=0;
   for(int i = N_DIMS-1; i >= 0; i--) {
-    my_src[i] = (sourceposition[i] - comm_coords(HGC_default_topo)[i] * HGC_localL[i]);
+    my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
 
     // if out of the local lattice we break
     if((my_src[i]<0) || (my_src[i]>=HGC_localL[i])) return;
@@ -294,7 +294,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
 template<typename Float>
 void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   this->zero_device();
   if(is_myIt){
@@ -311,7 +311,7 @@ void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> pro
 template<typename Float>
 void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   this->zero_device();
   if(is_myIt){
@@ -331,7 +331,7 @@ std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, const site
   if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
   for(int i = 0; i < N_DIMS; i++)
     if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
-  int my_it = sourceposition[3] - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = sourceposition[3] - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int coords[4];
   for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
@@ -397,7 +397,7 @@ namespace plegma{
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
     if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+    int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     this->activeTimeSlice = is_myIt;
     int V3 = HGC_localVolume/HGC_localL[3];
