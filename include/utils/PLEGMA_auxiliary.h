@@ -9,11 +9,11 @@
 #pragma once
 
 template<typename T>
-std::string convNumToStr(T num){
+std::string convNumToStr(T num,int prec=12){
   if(!std::is_floating_point<T>::value) PLEGMA_error("Only floating point types are allowed");
   std::stringstream ss;
   ss <<	std::fixed;
-  ss <<	std::setprecision(12);
+  ss <<	std::setprecision(prec);
   ss <<	num;
   std::string s = ss.str();
   std::replace(s.begin(), s.end(), '.', 'p');
