@@ -163,6 +163,9 @@ int main(int argc, char **argv)
 
     // for the test use sinkSourceSep = 10;
   int  isource=0;
+  PLEGMA_Gauge<double> *AuxSinkGauge;
+  if(isGPD) AuxSinkGauge = smearedGauge_sink;
+  else AuxSinkGauge = &smearedGauge;
 
   for(int ts=0;ts<tSinks.size();ts++)
     {
@@ -179,7 +182,7 @@ int main(int argc, char **argv)
 	solver->solve(vectorOut, vectorIn);
 	vectorAuxF.copy(vectorOut);
 	propUP->absorb(vectorAuxF, isc/3, isc%3);
-	vectorAuxD.gaussianSmearing(vectorOut, *smearedGauge_sink , nsmearGauss, alphaGauss);
+	vectorAuxD.gaussianSmearing(vectorOut, *AuxSinkGauge , nsmearGauss, alphaGauss);
 	vectorAuxF.copy(vectorAuxD);
 	propUP3D.absorb(vectorAuxF,global_fixSinkTime, isc/3, isc%3);
       }
@@ -197,7 +200,7 @@ int main(int argc, char **argv)
 	solver->solve(vectorOut, vectorIn);
 	vectorAuxF.copy(vectorOut);
 	propDN->absorb(vectorAuxF, isc/3, isc%3);
-	vectorAuxD.gaussianSmearing(vectorOut, *smearedGauge_sink , nsmearGauss, alphaGauss);
+	vectorAuxD.gaussianSmearing(vectorOut, *AuxSinkGauge , nsmearGauss, alphaGauss);
 	vectorAuxF.copy(vectorAuxD);
 	propDN3D.absorb(vectorAuxF,global_fixSinkTime, isc/3, isc%3);
       }
@@ -228,7 +231,7 @@ int main(int argc, char **argv)
 	      vectorAuxF.conjugate();
 	      vectorAuxF.apply_gamma(G5);
 	      vectorAuxD.copy(vectorAuxF);
-	      vectorIn.gaussianSmearing(vectorAuxD,*smearedGauge_sink, nsmearGauss, alphaGauss);
+	      vectorIn.gaussianSmearing(vectorAuxD,*AuxSinkGauge, nsmearGauss, alphaGauss);
 	      // check if we need to normalize the seqsource for mix precision solver
 	      if(nucleon == PROTON){
 		if(mu<0) {
@@ -309,7 +312,7 @@ int main(int argc, char **argv)
 	      vectorAuxF.conjugate();
 	      vectorAuxF.apply_gamma(G5);
 	      vectorAuxD.copy(vectorAuxF);
-	      vectorIn.gaussianSmearing(vectorAuxD,*smearedGauge_sink, nsmearGauss, alphaGauss);
+	      vectorIn.gaussianSmearing(vectorAuxD,*AuxSinkGauge, nsmearGauss, alphaGauss);
 	    
 	      if(nucleon == PROTON){
 		if(mu<0) {
