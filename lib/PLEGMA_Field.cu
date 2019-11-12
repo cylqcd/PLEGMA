@@ -796,3 +796,26 @@ template void PLEGMA_Field<float>::copy<float>(PLEGMA_Field<float> &f, ALLOCATIO
 template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<double>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<double>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
+
+// field3D <- field4D
+template<typename Float>
+void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it){
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  assert(field.Field_length() == this->Field_length());
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  size_t V3 = HGC_localVolume3D*2;
+  size_t V4 = HGC_localVolume*2;
+  Float *pointer_src = NULL;
+  Float *pointer_dst = NULL;
+  for(int i = 0; i < this->Field_length(); i++) {
+    pointer_dst = (this->D_elem() + i*V3);
+    if(this->activeTimeSlice) {
+      pointer_src = (field.D_elem() + i*V4 + my_it*V3);
+      cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
+    } else {
+      cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
+    }
+  }
+  checkCudaError();
+}

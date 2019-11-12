@@ -166,6 +166,7 @@ namespace plegma {
       return PLEGMA_Field<Float>::communicateGhost(dirOr,sign,which_ghost,action);
     }
 
+    void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };
 }
 #endif
