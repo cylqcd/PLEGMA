@@ -32,11 +32,11 @@ namespace plegma {
     //   CORR_SPACE corr_space;
     //   int Q2_max;
     //   std::vector<int> fixMomVec ;
-    //   size_t vol_size;
+    //   size_t vol_size; COMMENT: number_of_momenta*time_ext
     //   std::vector<int> shape;
 
-    //   // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
-    //   int site_size;
+    //   // Allocated 
+    //   int site_size; COMMENT:site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
     //   std::array<int,4> source_position;
 
     //   // Writing informations
