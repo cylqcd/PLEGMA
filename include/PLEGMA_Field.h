@@ -7,6 +7,7 @@
 #define _PLEGMA_FIELD_H
 
 namespace plegma {
+  template<typename Float>  class PLEGMA_Field3D;
   template<typename Float>  class PLEGMA_Fmunu;
   template<typename Float>  class PLEGMA_Su3field;
   template<typename Float>  class PLEGMA_Gauge;
@@ -134,11 +135,13 @@ namespace plegma {
 
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
 
+    void absorb(const PLEGMA_Field3D<Float> &field, int global_it);
+
     virtual void readLIME(std::string filename);
     virtual void writeLIME(std::string filename) const;
     virtual void writeHDF5(std::string filename) const;
 
-    virtual bool includesActiveTimeSlice(){return true;}
+    virtual bool includesActiveTimeSlice() const{return true;}
   };
 
   template<typename Float>
@@ -152,7 +155,7 @@ namespace plegma {
       PLEGMA_Field<Float>(alloc_flag, site_size, HGC_localVolume3D, ghost_flag, isPinnedHost), activeTimeSlice(false) { }
     PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC_localVolume3D), activeTimeSlice(false) { }
 
-    virtual bool includesActiveTimeSlice(){return activeTimeSlice;}
+    virtual bool includesActiveTimeSlice() const{return activeTimeSlice;}
 
     void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };

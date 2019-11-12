@@ -681,6 +681,29 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
   }
 }
 
+// field4D <- field3D
+template<typename Float>
+void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it){
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  assert(field.Field_length() == this->Field_length());
+  this->zero_where(allocation);
+  
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  if(not is_myIt) return;
+  
+  size_t V4 = HGC_localVolume*2;
+  size_t V3 = HGC_localVolume3D*2;
+  Float *pointer_src = NULL;
+  Float *pointer_dst = NULL;
+  for(int i = 0; i < this->Field_length(); i++) {
+    pointer_src = (this->D_elem() + i*V3);
+    pointer_dst = (field.D_elem() + i*V4 + my_it*V3);
+    cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
+  }
+  checkCudaError();
+}
+
 template<typename Float>
 void PLEGMA_Field<Float>::writeLIME(std::string filename) const{
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
@@ -835,3 +858,6 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   }
   checkCudaError();
 }
+
+template class PLEGMA_Field3D<float>;
+template class PLEGMA_Field3D<double>;
