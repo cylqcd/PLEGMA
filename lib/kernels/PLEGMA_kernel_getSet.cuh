@@ -57,12 +57,12 @@ namespace plegma {
   enum get_from { Me, Plus, Minus, PlusPlus, MinusMinus, PlusMinus, MinusPlus, PlusNoGhost, MinusNoGhost, PlusOnlyGhost, MinusOnlyGhost};
 
   struct sidStride {
+    const bool is4D;
+    bool returnZero;
     size_t sid;
     size_t stride;
-    bool is4D;
-    bool returnZero;
     inline __device__ sidStride(const size_t& sid, const bool& is4D = true, const bool& returnZero = false) :
-      sid(sid), stride(is4D ? DGC_localVolume : DGC_localVolume3D), is4D(is4D), returnZero(returnZero) { }
+      is4D(is4D), returnZero(returnZero), sid(sid), stride(is4D ? DGC_localVolume : DGC_localVolume3D) { }
 
     template<get_from src>
     inline __device__ void shift(const int& site_size, const short& dir);

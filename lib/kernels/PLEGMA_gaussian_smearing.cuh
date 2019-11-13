@@ -8,7 +8,7 @@ __global__ void gaussian_smearing_kernel(vector2<FloatOut> out,
   static_assert(not (noGhost and onlyGhost), "Not possible to have both: noGhost and onlyGhost");
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= (is4D ? DGC_localVolume : DGC_localVolume3D)) return;
 
   out.is4D = is4D;
   vecInTex.is4D = is4D;
