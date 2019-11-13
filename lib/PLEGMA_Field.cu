@@ -701,8 +701,8 @@ void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   for(int i = 0; i < this->Field_length(); i++) {
-    pointer_src = (this->D_elem() + i*V3);
-    pointer_dst = (field.D_elem() + i*V4 + my_it*V3);
+    pointer_src = (field.D_elem() + i*V3);
+    pointer_dst = (this->D_elem() + i*V4 + my_it*V3);
     cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
   }
   checkCudaError();
