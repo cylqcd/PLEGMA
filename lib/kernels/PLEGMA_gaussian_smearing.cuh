@@ -1,14 +1,18 @@
 #include <PLEGMA_kernel_utils.cuh>
 using namespace plegma;
 template<typename FloatOut, typename FloatIn, typename FloatGauge, bool noGhost=false, bool onlyGhost=false>
-__global__ void gaussian_smearing_kernel(Float2<FloatOut>* out,
+__global__ void gaussian_smearing_kernel(vector2<FloatOut> out,
 					 vectorTex<FloatIn> vecInTex,
 					 gaugeTex<FloatGauge> gaugeTex,
-					 FloatOut alpha){
+					 FloatOut alpha, bool is4D){
   static_assert(not (noGhost and onlyGhost), "Not possible to have both: noGhost and onlyGhost");
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_localVolume) return;
+
+  out.is4D = is4D;
+  vecInTex.is4D = is4D;
+  gaugeTex.is4D = is4D;
 
   if(onlyGhost) {
     // Checking if we are on the border
@@ -46,20 +50,21 @@ __global__ void gaussian_smearing_kernel(Float2<FloatOut>* out,
 
   FloatOut normalize = 1/(1 + 6 * alpha);
 
+  sidStride ss(sid, out.is4D);
   if(not onlyGhost) {
     vecInTex.get(S,sid);
     #pragma unroll
     for(int mu=0; mu<N_SPINS; mu++) 
       #pragma unroll
       for(int c=0; c<N_COLS; c++)
-	out[(mu*N_COLS + c)*DGC_localVolume + sid] = normalize * (S[mu][c] + alpha * tmp[mu][c]);
+	out.p[(mu*N_COLS + c)*ss.stride + ss.sid] = normalize * (S[mu][c] + alpha * tmp[mu][c]);
   } else if(isNotZeroV(tmp)) {
     normalize *= alpha;
     #pragma unroll
     for(int mu=0; mu<N_SPINS; mu++) 
       #pragma unroll
       for(int c=0; c<N_COLS; c++)
-	out[(mu*N_COLS + c)*DGC_localVolume + sid] += normalize * tmp[mu][c];
+	out.p[(mu*N_COLS + c)*ss.stride + ss.sid] += normalize * tmp[mu][c];
   }
 }
 
@@ -68,8 +73,9 @@ static void gaussian_smearing(PLEGMA_Vector<FloatOut> &out, vectorTex<FloatIn> v
 			      gaugeTex<FloatGauge> gaugeTex, FloatOut alpha){
   ProfileStruct ps(out.Total_length());
   ps.tune_globally = true;
+  bool is4D = out.Total_length()==HGC_localVolume;
   tuneAndRun(ps, "gaussian_smearing_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,false,false>,
-	     (Float2<FloatOut>*) out.D_elem(), vecInTex, gaugeTex, alpha);
+	     out.D_elem(), vecInTex, gaugeTex, alpha, is4D);
 }
 
 template<typename FloatOut,typename FloatIn, typename FloatGauge>
@@ -77,8 +83,9 @@ static void gaussian_smearing_no_ghost(PLEGMA_Vector<FloatOut> &out, vectorTex<F
 				       gaugeTex<FloatGauge> gaugeTex, FloatOut alpha){
   ProfileStruct ps(out.Total_length());
   ps.tune_globally = true;
+  bool is4D = out.Total_length()==HGC_localVolume;
   tuneAndRun(ps, "gaussian_smearing_no_ghost_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,true,false>,
-	     (Float2<FloatOut>*) out.D_elem(), vecInTex, gaugeTex, alpha);
+	     out.D_elem(), vecInTex, gaugeTex, alpha, is4D);
 }
 
 template<typename FloatOut,typename FloatIn, typename FloatGauge>
@@ -86,6 +93,7 @@ static void gaussian_smearing_only_ghost(PLEGMA_Vector<FloatOut> &out, vectorTex
 					 gaugeTex<FloatGauge> gaugeTex, FloatOut alpha){
   ProfileStruct ps(out.Total_length());
   ps.tune_globally = true;
+  bool is4D = out.Total_length()==HGC_localVolume;
   tuneAndRun(ps, "gaussian_smearing_only_ghost_kernel", gaussian_smearing_kernel<FloatOut,FloatIn,FloatGauge,false,true>,
-	     (Float2<FloatOut>*) out.D_elem(), vecInTex, gaugeTex, alpha);
+	     out.D_elem(), vecInTex, gaugeTex, alpha, is4D);
 }
