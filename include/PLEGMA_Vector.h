@@ -8,6 +8,7 @@ namespace plegma {
 
   // forward declaration
   template<typename Float>  class PLEGMA_Gauge;
+  template<typename Float>  class PLEGMA_Gauge3D;
   template<typename Float>  class PLEGMA_Vector3D;
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
@@ -128,7 +129,16 @@ namespace plegma {
      **/
     void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2);
 
-    void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
+    void gaussianSmearing(PLEGMA_Vector3D<Float> &vecIn, PLEGMA_Gauge3D<Float> &gauge, int nsmearGauss, Float alphaGauss) {
+      this->activeTimeSlice = vecIn.activeTimeSlice;
+      return ((PLEGMA_Vector<Float>*) this)->gaussianSmearing(vecIn,gauge,nsmearGauss,alphaGauss);
+    }
+
+    void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY){
+      int my_it = sourceposition[DIM_T] - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
+      this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
+      return ((PLEGMA_Vector<Float>*) this)->pointSource(sourceposition,spin,color,alloc_flag);
+    }
     
     std::vector<Float> rms(std::vector<int> listR2, const site& sourceposition) const;
   };

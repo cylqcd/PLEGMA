@@ -389,13 +389,6 @@ namespace plegma{
   }
 
   template<typename Float>
-  void PLEGMA_Vector3D<Float>::pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG where){
-    int my_it = sourceposition[DIM_T] - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
-    this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
-    return ((PLEGMA_Vector<Float>*) this)->pointSource(sourceposition,spin,color,where);
-  }
-
-  template<typename Float>
   std::vector<Float> PLEGMA_Vector3D<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
     if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
     for(int i = 0; i < N_DIMS; i++)
