@@ -46,6 +46,12 @@ int main(int argc, char **argv)
   std::vector<int> counter = createR2(list_R2);
   PLEGMA_Vector3D<double> v1,v2;
 
+  v1.pointSource(src,0,0);
+  if(writeVec) {
+    v1.writeHDF5(outPrefix+".h5/source");
+    smearedGauge3D.writeHDF5(outPrefix+".h5/gauge");
+  }
+  
   int nGauss = *std::max_element(nsmearGaussList.begin(), nsmearGaussList.end());
   for(auto alpha : alphaGaussList){
     v1.pointSource(src,0,0);
@@ -54,16 +60,13 @@ int main(int argc, char **argv)
       else v1.gaussianSmearing(v2,smearedGauge3D,1, alpha);
       
       if(std::find(nsmearGaussList.begin(), nsmearGaussList.end(),n+1) != nsmearGaussList.end()){
-	PLEGMA_printf("%d %f\n",n+1, alpha);
 	PLEGMA_Vector3D<double>& v = (n%2 == 0) ? v2 : v1;
 	std::vector<double> rms = v.rms(list_R2,src);
 	std::string filename = outPrefix + "_nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(n+1)
 	  + "_aGau" + convNumToStr(alpha);
 	if(comm_rank() == 0) write_std_vecs( filename,false,list_R2, counter,rms);
 	if(writeVec) {
-	  PLEGMA_Vector<double> v_all;
-	  v_all.absorb(v,src[DIM_T]);
-	  v_all.writeHDF5(outPrefix+".h5/nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(n+1) + "_aGau" + convNumToStr(alpha));
+	  v.writeHDF5(outPrefix+".h5/nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(n+1) + "_aGau" + convNumToStr(alpha));
 	}
       }
     }
