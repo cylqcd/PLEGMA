@@ -12,7 +12,7 @@ __global__ void create_prop_product(generic2<FloatC> *propProd,
   // and we need to start from it when we go over maxT
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
-  sidStride ss(sid3D, DGC_localVolume3D);
+  sidStride ss(sid3D, false);
   
   if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];

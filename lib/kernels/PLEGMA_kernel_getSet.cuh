@@ -27,10 +27,13 @@
 #define LEXIC_NOT(j,id)( j==0 ? LEXIC_ZY(id[2],id[1],DGC_localL) : \
 			 ( j==1 ? LEXIC_ZX(id[2],id[0],DGC_localL) : \
 			   LEXIC_YX(id[1],id[0],DGC_localL)  ) )
+
+#define LEXIC_ID_3D4D(id,is4D) (is4D ? LEXIC_ID(id) : LEXIC_ZYX(id[2],id[1],id[0],DGC_localL))
+
 // assuming i!=j
 #define LEXIC_2D(i,j,id)( i==0 ? LEXIC_NOX(j,id) :   \
-			  ( i==1 ? LEXIC_NOY(j,id) : \
-			    ( i==2 ? LEXIC_NOZ(j,id) : LEXIC_NOT(j,id) )))
+			( i==1 ? LEXIC_NOY(j,id) :			\
+			( i==2 ? LEXIC_NOZ(j,id) : LEXIC_NOT(j,id) )))
 #define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]+1)%DGC_localL[0],DGC_localL) : \
                         (i==1 ? LEXIC(id[3],id[2],(id[1]+1)%DGC_localL[1],id[0],DGC_localL) : \
                         (i==2 ? LEXIC(id[3],(id[2]+1)%DGC_localL[2],id[1],id[0],DGC_localL) : \
@@ -40,71 +43,121 @@
                          (i==2 ? LEXIC(id[3],(id[2]-1+DGC_localL[2])%DGC_localL[2],id[1],id[0],DGC_localL) : \
 			         LEXIC((id[3]-1+DGC_localL[3])%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
 
+#define LEXIC_3D_PLUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],(id[0]+1)%DGC_localL[0],DGC_localL) : \
+			   (i==1 ? LEXIC_ZYX(id[2],(id[1]+1)%DGC_localL[1],id[0],DGC_localL) : \
+			           LEXIC_ZYX((id[2]+1)%DGC_localL[2],id[1],id[0],DGC_localL)))
+#define LEXIC_3D_MINUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],(id[0]-1+DGC_localL[0])%DGC_localL[0],DGC_localL) : \
+			    (i==1 ? LEXIC_ZYX(id[2],(id[1]-1+DGC_localL[1])%DGC_localL[1],id[0],DGC_localL) : \
+			            LEXIC_ZYX((id[2]-1+DGC_localL[2])%DGC_localL[2],id[1],id[0],DGC_localL)))
+
+#define LEXIC_3D4D_PLUS(i,id,is4D) (is4D ? LEXIC_PLUS(i,id) : LEXIC_3D_PLUS(i,id))
+#define LEXIC_3D4D_MINUS(i,id,is4D) (is4D ? LEXIC_MINUS(i,id) : LEXIC_3D_MINUS(i,id))
+
 namespace plegma {
   enum get_from { Me, Plus, Minus, PlusPlus, MinusMinus, PlusMinus, MinusPlus, PlusNoGhost, MinusNoGhost, PlusOnlyGhost, MinusOnlyGhost};
 
   struct sidStride {
     size_t sid;
     size_t stride;
+    bool is4D;
     bool returnZero;
-    inline __device__ sidStride() = default; 
-    inline __device__ sidStride(const size_t& sid, const size_t& stride=DGC_localVolume, const bool& returnZero = false) : sid(sid), stride(stride), returnZero(returnZero) { }
+    inline __device__ sidStride(const size_t& sid, const bool& is4D = true, const bool& returnZero = false) :
+      sid(sid), stride(is4D ? DGC_localVolume : DGC_localVolume3D), is4D(is4D), returnZero(returnZero) { }
+
     template<get_from src>
-    inline __device__ void setSidStride(const size_t&, const int&, const short int&);
+    inline __device__ void shift(const int& site_size, const short& dir);
+    
     template<get_from src>
-    inline __device__ void setSidStride(const size_t&, const int&, const short int&, const short int&);
+    inline __device__ void shift(const int& site_size, const short& dir1, const short& dir2);
+    
+    inline __device__ void accessSideGhost(const size_t& sid3D, const int& site_size, const short& dir, const ORIENTATION& sign) {
+      size_t volume = is4D ? DGC_localVolume : DGC_localVolume3D;
+      size_t sideGhost = DGC_sideGhost[dir][sign];
+      this->stride = DGC_surface3D[dir];
+      if(not is4D) {
+	sideGhost /= DGC_localL[DIM_T];
+	this->stride /= DGC_localL[DIM_T];
+      }
+      this->sid = (volume+sideGhost)*site_size + sid3D;
+    }
+    
+    inline __device__ void accessCornerGhost(const size_t& sid2D, const int& site_size, const short& dir1, const short& dir2, const ORIENTATION& sign1, const ORIENTATION& sign2) {
+      size_t volume = is4D ? DGC_localVolume : DGC_localVolume3D;
+      size_t sideGhostVolume = is4D ? DGC_sideGhostVolume : DGC_sideGhostVolume3D;
+      size_t cornerGhost = DGC_cornerGhost[dir1][dir2][sign1][sign2];
+      this->stride = DGC_surface2D[dir1][dir2];
+      if(not is4D) {
+	cornerGhost /= DGC_localL[DIM_T];
+	this->stride /= DGC_localL[DIM_T];
+      }
+      this->sid = (volume+sideGhostVolume+cornerGhost)*site_size + sid2D;
+    }
   };
+
+
   template<>
-  inline __device__ void sidStride::setSidStride<Plus>(const size_t& sid, const int& site_size, const short int& dirPlus) {
+  inline __device__ void sidStride::shift<Plus>(const int& site_size, const short& dirPlus) {
     size_t id[4] = GET_ID(sid);
     bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
-    this->sid = plus_ghost ? ((DGC_localVolume+DGC_sideGhost[dirPlus][DIR_PLUS])*site_size + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
-    this->stride = plus_ghost ? DGC_surface3D[dirPlus] : DGC_localVolume;
-    this->returnZero = false;
+    if(plus_ghost) {
+      this->accessSideGhost(LEXIC_3D(dirPlus,id), site_size, dirPlus, DIR_PLUS);
+    } else {
+      this->sid = LEXIC_3D4D_PLUS(dirPlus, id, is4D);
+    }
   }
   template<>
-  inline __device__ void sidStride::setSidStride<Minus>(const size_t& sid, const int& site_size, const short int& dirMinus) {
+  inline __device__ void sidStride::shift<Minus>(const int& site_size, const short& dirMinus) {
     size_t id[4] = GET_ID(sid);
     bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    this->sid = minus_ghost ? ((DGC_localVolume+DGC_sideGhost[dirMinus][DIR_MINUS])*site_size + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
-    this->stride = minus_ghost ? DGC_surface3D[dirMinus] : DGC_localVolume;
-    this->returnZero = false;
+    if(minus_ghost) {
+      this->accessSideGhost(LEXIC_3D(dirMinus,id), site_size, dirMinus, DIR_MINUS);
+    } else {
+      this->sid = LEXIC_3D4D_MINUS(dirMinus, id, is4D);
+    }
   }
   template<>
-  inline __device__ void sidStride::setSidStride<PlusOnlyGhost>(const size_t& sid, const int& site_size, const short int& dirPlus) {
+  inline __device__ void sidStride::shift<PlusOnlyGhost>(const int& site_size, const short& dirPlus) {
     size_t id[4] = GET_ID(sid);
     bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
-    this->sid = plus_ghost ? ((DGC_localVolume+DGC_sideGhost[dirPlus][DIR_PLUS])*site_size + LEXIC_3D(dirPlus,id)) : 0;
-    this->stride = plus_ghost ? DGC_surface3D[dirPlus] : 0;
-    this->returnZero = not plus_ghost;
+    if(plus_ghost) {
+      this->accessSideGhost(LEXIC_3D(dirPlus,id), site_size, dirPlus, DIR_PLUS);
+    } else {
+      this->returnZero = true;
+    }
   }
   template<>
-  inline __device__ void sidStride::setSidStride<MinusOnlyGhost>(const size_t& sid, const int& site_size, const short int& dirMinus) {
+  inline __device__ void sidStride::shift<MinusOnlyGhost>(const int& site_size, const short& dirMinus) {
     size_t id[4] = GET_ID(sid);
     bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    this->sid = minus_ghost ? ((DGC_localVolume+DGC_sideGhost[dirMinus][DIR_MINUS])*site_size + LEXIC_3D(dirMinus,id)) : 0;
-    this->stride = minus_ghost ? DGC_surface3D[dirMinus] : 0;
-    this->returnZero = not minus_ghost;
+    if(minus_ghost) {
+      this->accessSideGhost(LEXIC_3D(dirMinus,id), site_size, dirMinus, DIR_MINUS);
+    } else {
+      this->returnZero = true;
+    }
   }
   
   template<>
-  inline __device__ void sidStride::setSidStride<PlusNoGhost>(const size_t& sid, const int& site_size, const short int& dirPlus) {
+  inline __device__ void sidStride::shift<PlusNoGhost>(const int& site_size, const short& dirPlus) {
     size_t id[4] = GET_ID(sid);
     bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
-    this->sid = plus_ghost ? 0 : LEXIC_PLUS(dirPlus, id);
-    this->stride = plus_ghost ? 0 : DGC_localVolume;
-    this->returnZero = plus_ghost;
+    if(plus_ghost) {
+      this->returnZero = true;
+    } else {
+      this->sid = LEXIC_3D4D_PLUS(dirPlus, id, is4D);
+    }
   }
   template<>
-  inline __device__ void sidStride::setSidStride<MinusNoGhost>(const size_t& sid, const int& site_size, const short int& dirMinus) {
+  inline __device__ void sidStride::shift<MinusNoGhost>(const int& site_size, const short& dirMinus) {
     size_t id[4] = GET_ID(sid);
     bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    this->sid = minus_ghost ? 0 : LEXIC_MINUS(dirMinus, id);
-    this->stride = minus_ghost ? 0 : DGC_localVolume;
-    this->returnZero = minus_ghost;
+    if(not minus_ghost) {
+      this->returnZero = true;
+    } else {
+      this->sid = LEXIC_3D4D_MINUS(dirMinus, id, is4D);
+    }
   }
   template<>
-  inline __device__ void sidStride::setSidStride<PlusPlus>(const size_t& sid, const int& site_size, const short int& dirPlus1, const short int& dirPlus2) {
+  inline __device__ void sidStride::shift<PlusPlus>(const int& site_size, const short& dirPlus1, const short& dirPlus2) {
     if(dirPlus1 == dirPlus2 && DGC_dimBreak[dirPlus1]) {
       printf(" !!! ERROR: in PlusPlus we cannot access the second neighbour !!!");
     } else {
@@ -115,23 +168,18 @@ namespace plegma {
       if(!plus2_ghost) id[dirPlus2] = (id[dirPlus2] + 1)%DGC_localL[dirPlus2];
 
       if(plus1_ghost && plus2_ghost){
-	this->sid = (DGC_localVolume+DGC_sideGhostVolume+DGC_cornerGhost[dirPlus1][dirPlus2][DIR_PLUS][DIR_PLUS])*site_size + LEXIC_2D(dirPlus1,dirPlus2,id);
-	this->stride = DGC_surface2D[dirPlus1][dirPlus2];
+	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), site_size, dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
       } else if(plus1_ghost) {
-	this->sid = (DGC_localVolume+DGC_sideGhost[dirPlus1][DIR_PLUS])*site_size + LEXIC_3D(dirPlus1,id);
-	this->stride = DGC_surface3D[dirPlus1];
+	this->accessSideGhost(LEXIC_3D(dirPlus1,id), site_size, dirPlus1, DIR_PLUS);
       } else if(plus2_ghost) {
-	this->sid = (DGC_localVolume+DGC_sideGhost[dirPlus2][DIR_PLUS])*site_size + LEXIC_3D(dirPlus2,id);
-	this->stride = DGC_surface3D[dirPlus2];
+	this->accessSideGhost(LEXIC_3D(dirPlus2,id), site_size, dirPlus2, DIR_PLUS);
       } else {
-	this->sid = LEXIC_ID(id);
-	this->stride = DGC_localVolume;
+	this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
-    this->returnZero = false;
   }
   template<>
-  inline __device__ void sidStride::setSidStride<MinusMinus>(const size_t& sid, const int& site_size, const short int& dirMinus1, const short int& dirMinus2) {
+  inline __device__ void sidStride::shift<MinusMinus>(const int& site_size, const short& dirMinus1, const short& dirMinus2) {
     if(dirMinus1 == dirMinus2 && DGC_dimBreak[dirMinus1]) {
       printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
@@ -142,26 +190,20 @@ namespace plegma {
       if(!minus2_ghost) id[dirMinus2] = (id[dirMinus2] + DGC_localL[dirMinus2] - 1)%DGC_localL[dirMinus2];
 
       if(minus1_ghost && minus2_ghost){
-	this->sid = (DGC_localVolume+DGC_sideGhostVolume+DGC_cornerGhost[dirMinus1][dirMinus2][DIR_MINUS][DIR_MINUS])*site_size + LEXIC_2D(dirMinus1,dirMinus2,id);
-	this->stride = DGC_surface2D[dirMinus1][dirMinus2];
+	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), site_size, dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
       } else if(minus1_ghost) {
-	this->sid = (DGC_localVolume+DGC_sideGhost[dirMinus1][DIR_MINUS])*site_size + LEXIC_3D(dirMinus1,id);
-	this->stride = DGC_surface3D[dirMinus1];
+	this->accessSideGhost(LEXIC_3D(dirMinus1,id), site_size, dirMinus1, DIR_MINUS);
       } else if(minus2_ghost) {
-	this->sid = (DGC_localVolume+DGC_sideGhost[dirMinus2][DIR_MINUS])*site_size + LEXIC_3D(dirMinus2,id);
-	this->stride = DGC_surface3D[dirMinus2];
+	this->accessSideGhost(LEXIC_3D(dirMinus2,id), site_size, dirMinus2, DIR_MINUS);
       } else {
-	this->sid = LEXIC_ID(id);
-	this->stride = DGC_localVolume;
+	this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
-    this->returnZero = false;
   }
   template<>
-  inline __device__ void sidStride::setSidStride<PlusMinus>(const size_t& sid, const int& site_size, const short int& dirPlus, const short int& dirMinus) {
+  inline __device__ void sidStride::shift<PlusMinus>(const int& site_size, const short& dirPlus, const short& dirMinus) {
     if(dirPlus == dirMinus) {
-      this->sid = sid;
-      this->stride = DGC_localVolume;      
+      return;
     } else {
       size_t id[4] = GET_ID(sid);
       bool plus_ghost = DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1);
@@ -170,24 +212,19 @@ namespace plegma {
       if(!minus_ghost) id[dirMinus] = (id[dirMinus] + DGC_localL[dirMinus] - 1)%DGC_localL[dirMinus];
 
       if(plus_ghost && minus_ghost){
-	this->sid = (DGC_localVolume+DGC_sideGhostVolume+DGC_cornerGhost[dirPlus][dirMinus][DIR_PLUS][DIR_MINUS])*site_size + LEXIC_2D(dirPlus,dirMinus,id);
-	this->stride = DGC_surface2D[dirPlus][dirMinus];
+	this->accessCornerGhost(LEXIC_2D(dirPlus,dirMinus,id), site_size, dirPlus, dirMinus, DIR_PLUS, DIR_MINUS);
       } else if(plus_ghost) {
-	this->sid = (DGC_localVolume+DGC_sideGhost[dirPlus][DIR_PLUS])*site_size + LEXIC_3D(dirPlus,id);
-	this->stride = DGC_surface3D[dirPlus];
+	this->accessSideGhost(LEXIC_3D(dirPlus,id), site_size, dirPlus, DIR_PLUS);
       } else if(minus_ghost) {
-	this->sid = (DGC_localVolume+DGC_sideGhost[dirMinus][DIR_MINUS])*site_size + LEXIC_3D(dirMinus,id);
-	this->stride = DGC_surface3D[dirMinus];
+	this->accessSideGhost(LEXIC_3D(dirMinus,id), site_size, dirMinus, DIR_MINUS);
       } else {
-	this->sid = LEXIC_ID(id);
-	this->stride = DGC_localVolume;
+	this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
-    this->returnZero = false;
   }
   template<>
-  inline __device__ void sidStride::setSidStride<MinusPlus>(const size_t& sid, const int& site_size, const short int& dirMinus, const short int& dirPlus) {
-    this->setSidStride<PlusMinus>(sid, site_size, dirPlus, dirMinus);
+  inline __device__ void sidStride::shift<MinusPlus>(const int& site_size, const short& dirMinus, const short& dirPlus) {
+    this->shift<PlusMinus>(site_size, dirPlus, dirMinus);
   }
 
   template<typename Float>
@@ -232,8 +269,10 @@ namespace plegma {
   template<typename T, typename Float>
   struct generic : T {
     using T::T;
+    bool is4D = true;
+    bool returnZero = false;
     inline __device__ void set(const int& i, const size_t& sid, const Float2<Float>& v) {
-      sidStride ss(sid);
+      sidStride ss(sid,this->is4D,this->returnZero);
       T::set(i,ss,v);
     }
     inline __device__ void set(const int& i, const sidStride& ss, const Float2<Float>& v) {
@@ -243,8 +282,8 @@ namespace plegma {
       return T::get(i,ss);
     }
     inline __device__ Float2<Float> get(const int& i, const size_t& sid) const {
-      sidStride ss(sid);
-      return get(i,ss);
+      sidStride ss(sid,this->is4D,this->returnZero);
+      return T::get(i,ss);
     }
     inline __device__ void get(Float2<Float> *p, const int& site_size, const sidStride& ss) const {
       #pragma unroll
@@ -254,70 +293,70 @@ namespace plegma {
     }
     template<get_from src, typename ...dir_t>
     inline __device__ Float2<Float> get(const int& i, const size_t& sid, const int& site_size, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, site_size, dirs ...);
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(site_size, dirs ...);
       return get(i, ss);
     }
     template<get_from src, typename ...dir_t>
     inline __device__ void get(Float2<Float> *p, const size_t& sid, const int& site_size, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, site_size, dirs ...);
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(site_size, dirs ...);
       get(p, site_size, ss); 
     }    
   };
   
   template<typename Float>
-  using genericTex = generic<texture<Float>,Float>;
+  using genericTex = generic<texture<Float>, Float>;
   
   template<typename Float>
-  using generic2 = generic<pFloat2<Float>,Float>;
+  using generic2 = generic<pFloat2<Float>, Float>;
 
 
   template<typename T, typename Float>
   struct genericGauge : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline __device__ void set(const short int& mu, const short int& c1, const short int& c2, const size_t& sid, const Float2<Float>& v) {
+    inline __device__ void set(const short& mu, const short& c1, const short& c2, const size_t& sid, const Float2<Float>& v) {
       generic<T,Float>::set(((mu*N_COLS + c1)*N_COLS + c2), sid, v);
     }
-    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], const short int& mu, const size_t& sid) {
+    inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], const short& mu, const size_t& sid) {
 #pragma unroll
-      for(short int c1=0; c1<N_COLS; c1++) {
+      for(short c1=0; c1<N_COLS; c1++) {
 #pragma unroll
-	for(short int c2=0; c2<N_COLS; c2++) {
+	for(short c2=0; c2<N_COLS; c2++) {
 	  set(mu, c1, c2, sid, G[c1][c2]);
 	}    
       }
     }
-    inline __device__ Float2<Float> get(const short int& mu, const short int& c1, const short int& c2, const sidStride& ss) const {
+    inline __device__ Float2<Float> get(const short& mu, const short& c1, const short& c2, const sidStride& ss) const {
       return generic<T,Float>::get(((mu*N_COLS + c1)*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(const short int& mu, const short int& c1, const short int& c2, const size_t& sid) const {
-      sidStride ss(sid);
+    inline __device__ Float2<Float> get(const short& mu, const short& c1, const short& c2, const size_t& sid) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
       return get(mu, c1, c2, ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(const short int& mu, const short int& c1, const short int& c2, const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
+    inline __device__ Float2<Float> get(const short& mu, const short& c1, const short& c2, const size_t& sid, const dir_t&... dirs) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_DIMS*N_COLS*N_COLS, dirs ...);
       return get(mu,c1,c2,ss);
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const short int& mu, const sidStride& ss) const {
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const short& mu, const sidStride& ss) const {
       #pragma unroll
-      for(short int c1=0; c1<N_COLS; c1++) {
+      for(short c1=0; c1<N_COLS; c1++) {
         #pragma unroll
-	for(short int c2=0; c2<N_COLS; c2++) {
+	for(short c2=0; c2<N_COLS; c2++) {
 	  G[c1][c2] = get(mu, c1, c2, ss);
 	}    
       }
     }
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const short int& mu, const size_t& sid) const {
-      sidStride ss(sid);
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const short& mu, const size_t& sid) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
       get(G, mu, ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const short int& mu, const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_DIMS*N_COLS*N_COLS, dirs ...);
+    inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const short& mu, const size_t& sid, const dir_t&... dirs) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_DIMS*N_COLS*N_COLS, dirs ...);
       get(G, mu, ss);
     }
   };
@@ -331,86 +370,86 @@ namespace plegma {
   template<typename T, typename Float>
   struct genericSu3 : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline __device__ void set(const short int& c1, const short int& c2, const size_t& sid, const Float2<Float>& v) {
+    inline __device__ void set(const short& c1, const short& c2, const size_t& sid, const Float2<Float>& v) {
       generic<T,Float>::set((c1*N_COLS + c2), sid, v);
     }
     inline __device__ void set(Float2<Float> G[N_COLS][N_COLS], const size_t& sid) {
 #pragma unroll
-      for(short int c1=0; c1<N_COLS; c1++) {
+      for(short c1=0; c1<N_COLS; c1++) {
 #pragma unroll
-	for(short int c2=0; c2<N_COLS; c2++) {
+	for(short c2=0; c2<N_COLS; c2++) {
 	  set(c1, c2, sid, G[c1][c2]);
 	}    
       }
     }
 
-    inline __device__ Float2<Float> get(const short int& c1, const short int& c2, const sidStride& ss) const {
+    inline __device__ Float2<Float> get(const short& c1, const short& c2, const sidStride& ss) const {
       return generic<T,Float>::get((c1*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(const short int& c1, const short int& c2, const size_t& sid) const {
-      sidStride ss(sid);
+    inline __device__ Float2<Float> get(const short& c1, const short& c2, const size_t& sid) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
       return get(c1,c2,ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(const short int& c1, const short int& c2, const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_COLS*N_COLS, dirs ...);
+    inline __device__ Float2<Float> get(const short& c1, const short& c2, const size_t& sid, const dir_t&... dirs) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_COLS*N_COLS, dirs ...);
       return get(c1,c2,ss);
     }
     inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const sidStride& ss) const {
       #pragma unroll
-      for(short int c1=0; c1<N_COLS; c1++) {
+      for(short c1=0; c1<N_COLS; c1++) {
         #pragma unroll
-	for(short int c2=0; c2<N_COLS; c2++) {
+	for(short c2=0; c2<N_COLS; c2++) {
 	  G[c1][c2] = get(c1, c2, ss);
 	}    
       }
     }
     inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const size_t& sid) const {
-      sidStride ss(sid);
+      sidStride ss(sid,this->is4D,this->returnZero);
       get(G, ss);
     }
     template<get_from src, typename ...dir_t>
     inline __device__ void get(Float2<Float> G[N_COLS][N_COLS], const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_COLS*N_COLS, dirs ...);
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_COLS*N_COLS, dirs ...);
       get(G, ss);
     }
   };
 
   template<typename Float>
-  using su3Tex = genericSu3<texture<Float>, Float >;
+  using su3Tex = genericSu3<texture<Float>, Float>;
 
   template<typename Float>
-  using su3_2 = genericSu3<pFloat2<Float>, Float >;
+  using su3_2 = genericSu3<pFloat2<Float>, Float>;
   
   
   template<typename T,typename Float>
   struct genericVector : generic<T,Float> {
     using generic<T,Float>::generic;
-    inline __device__ void set(const short int& mu, const short int& c, const size_t& sid, const Float2<Float>& v) {
+    inline __device__ void set(const short& mu, const short& c, const size_t& sid, const Float2<Float>& v) {
       generic<T,Float>::set((mu*N_COLS + c),sid,v);
     }
     inline __device__ void set(Float2<Float> S[N_SPINS][N_COLS], const size_t& sid) {
       #pragma unroll
-      for(short int mu=0; mu<N_SPINS; mu++) {
+      for(short mu=0; mu<N_SPINS; mu++) {
         #pragma unroll
-	for(short int c=0; c<N_COLS; c++) {
+	for(short c=0; c<N_COLS; c++) {
 	  set(mu,c,sid,S[mu][c]);
 	}    
       }
     }
-    inline __device__ Float2<Float> get(const short int& mu, const short int& c, const sidStride& ss) const {
+    inline __device__ Float2<Float> get(const short& mu, const short& c, const sidStride& ss) const {
       return generic<T,Float>::get((mu*N_COLS + c),ss);
     }
-    inline __device__ Float2<Float> get(const short int& mu, const short int& c, const size_t& sid) const {
-      sidStride ss(sid);
+    inline __device__ Float2<Float> get(const short& mu, const short& c, const size_t& sid) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
       return get(mu,c,ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(const short int& mu, const short int& c, const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_SPINS*N_COLS, dirs ...);
+    inline __device__ Float2<Float> get(const short& mu, const short& c, const size_t& sid, const dir_t&... dirs) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_SPINS*N_COLS, dirs ...);
       return get(mu,c,ss);
     }
     inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], const sidStride& ss) const {
@@ -423,82 +462,82 @@ namespace plegma {
       }
     }
     inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], const size_t& sid) const {
-      sidStride ss(sid);
+      sidStride ss(sid,this->is4D,this->returnZero);
       get(S,ss);
     }
     template<get_from src, typename ...dir_t>
     inline __device__ void get(Float2<Float> S[N_SPINS][N_COLS], const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_SPINS*N_COLS, dirs ...);
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_SPINS*N_COLS, dirs ...);
       get(S,ss);
     }
   };
 
   template<typename Float>
-  using vectorTex = genericVector< texture<Float>, Float >;
+  using vectorTex = genericVector< texture<Float>, Float>;
 
   template<typename Float>
-  using vector2 = genericVector< pFloat2<Float>, Float >;
+  using vector2 = genericVector< pFloat2<Float>, Float>;
 
   template<typename T, typename Float>
     struct genericProp : generic<T,Float>  {
     using generic<T,Float>::generic;
-    inline __device__ void set(const short int& mu, const short int& nu, const short int& c1, const short int& c2, const size_t& sid, const Float2<Float>& v) {
+    inline __device__ void set(const short& mu, const short& nu, const short& c1, const short& c2, const size_t& sid, const Float2<Float>& v) {
       generic<T,Float>::set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),sid,v);
     }
     inline __device__ void set(Float2<Float> P[4][4][3][3], const size_t& sid) {
       #pragma unroll
-      for(short int mu = 0 ; mu < N_SPINS ; mu++)
+      for(short mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
-	for(short int nu = 0 ; nu < N_SPINS ; nu++)
+	for(short nu = 0 ; nu < N_SPINS ; nu++)
           #pragma unroll
-	  for(short int c1 = 0 ; c1 < N_COLS ; c1++)
+	  for(short c1 = 0 ; c1 < N_COLS ; c1++)
             #pragma unroll
-	    for(short int c2 = 0 ; c2 < N_COLS ; c2++)
+	    for(short c2 = 0 ; c2 < N_COLS ; c2++)
 	      set(mu, nu, c1, c2, sid, P[mu][nu][c1][c2]);
     }
 
-    inline __device__ Float2<Float> get(const short int& mu, const short int& nu, const short int& c1, const short int& c2, const sidStride& ss) const {
+    inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2, const sidStride& ss) const {
       return generic<T,Float>::get((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2), ss);
     }
-    inline __device__ Float2<Float> get(const short int& mu, const short int& nu, const short int& c1, const short int& c2, const size_t& sid) const {
-      sidStride ss(sid);
+    inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2, const size_t& sid) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
       return get(mu, nu, c1, c2, ss);
     }
     template<get_from src, typename ...dir_t>
-    inline __device__ Float2<Float> get(const short int& mu, const short int& nu, const short int& c1, const short int& c2, const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
+    inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2, const size_t& sid, const dir_t&... dirs) const {
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
       return get(mu,nu,c1,c2,ss);
     }
     inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], const sidStride& ss) const {
       #pragma unroll
-      for(short int mu = 0 ; mu < N_SPINS ; mu++)
+      for(short mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
-	for(short int nu = 0 ; nu < N_SPINS ; nu++)
+	for(short nu = 0 ; nu < N_SPINS ; nu++)
           #pragma unroll
-	  for(short int c1 = 0 ; c1 < N_COLS ; c1++)
+	  for(short c1 = 0 ; c1 < N_COLS ; c1++)
             #pragma unroll
-	    for(short int c2 = 0 ; c2 < N_COLS ; c2++)
+	    for(short c2 = 0 ; c2 < N_COLS ; c2++)
 	      P[mu][nu][c1][c2] = get(mu, nu, c1, c2, ss);
     }
     inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], const size_t& sid) const {
-      sidStride ss(sid);
+      sidStride ss(sid,this->is4D,this->returnZero);
       get( P, ss );
     }
     template<get_from src, typename ...dir_t>
     inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], const size_t& sid, const dir_t&... dirs) const {
-      sidStride ss;
-      ss.setSidStride<src>(sid, N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
+      sidStride ss(sid,this->is4D,this->returnZero);
+      ss.shift<src>(N_SPINS*N_SPINS*N_COLS*N_COLS, dirs ...);
       get(P,ss);
     }
   };
 
   template<typename Float>
-  using propTex = genericProp< texture<Float>, Float >;
+  using propTex = genericProp< texture<Float>, Float>;
 
   template<typename Float>
-  using prop2 = genericProp< pFloat2<Float>, Float >;
+  using prop2 = genericProp< pFloat2<Float>, Float>;
 
 }
 #endif

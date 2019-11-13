@@ -13,7 +13,7 @@ __device__ void contractNucleonSeqSource(FloatC* vec, genericTex<FloatA> prop1, 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   size_t space_stride = DGC_localVolume3D;
-  sidStride ss(sid,space_stride);
+  sidStride ss(sid,false);
   if(sid >= space_stride) return;
   Float2<FloatC> *vec2 = (Float2<FloatC> *) vec;
   
