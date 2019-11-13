@@ -148,22 +148,6 @@ int main(int argc, char **argv)
   std::copy(DeltaMom.begin(),DeltaMom.begin()+3,DeltaMom_3D.begin());
   PLEGMA_Correlator<float> corrThrpWL(corr_space,DeltaMom_3D); 
   
-  // PLEGMA_Correlator<float> *nucleonThrpWLP_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]]; // if is the z direction
-  // PLEGMA_Correlator<float> *nucleonThrpWLP_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
-
-  // PLEGMA_Correlator<float> *nucleonThrpWLM_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
-  // PLEGMA_Correlator<float> *nucleonThrpWLM_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
-
-  // PLEGMA_Correlator<float> *nucleonThrpWL_CP2[2];
-  // nucleonThrpWL_CP2[0] = nucleonThrpWLP_CP2;
-  // nucleonThrpWL_CP2[1] = nucleonThrpWLM_CP2;
-
-  // PLEGMA_Correlator<float> *nucleonThrpWL_CP1[2];
-  // nucleonThrpWL_CP1[0] = nucleonThrpWLP_CP1;
-  // nucleonThrpWL_CP1[1] = nucleonThrpWLM_CP1;
-
-
-    // for the test use sinkSourceSep = 10;
   int  isource=0;
   PLEGMA_Gauge<double> *AuxSinkGauge;
   if(isGPD) AuxSinkGauge = smearedGauge_sink;
@@ -228,7 +212,7 @@ int main(int argc, char **argv)
 	      std::complex<float> Isingle(0,1);
 	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float) sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
+				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2] + 0.25);
 	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 	      vectorAuxF.conjugate();
 	      vectorAuxF.apply_gamma(G5);
@@ -236,13 +220,13 @@ int main(int argc, char **argv)
 	      vectorIn.gaussianSmearing(vectorAuxD,*AuxSinkGauge, nsmearGauss, alphaGauss);
 	      // check if we need to normalize the seqsource for mix precision solver
 	      if(nucleon == PROTON){
-		if(mu<0) {
+		if(mu>0) {
 		  mu*=-1.;
 		  solver->UpdateSolver();
 		}
 	      }
 	      else{
-		if(mu>0) {
+		if(mu<0) {
 		  mu*=-1.;
 		  solver->UpdateSolver();
 		}
@@ -306,7 +290,7 @@ int main(int argc, char **argv)
 	      std::complex<float> Isingle(0,1);
 	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float) sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
+				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2] + 0.25);
 	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 	      vectorAuxF.conjugate();
 	      vectorAuxF.apply_gamma(G5);
@@ -397,7 +381,6 @@ int main(int argc, char **argv)
   corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
   corr.writeFile(twop_filename.c_str(), corr_file_format);
 
-  //!!!!!!!!!! maybe later we choose the specific momentum when this allows it
   corr.contractBaryons(*propUP, *propDN, sourcePositions[isource]);
   corr.writeFile(twop_filename.c_str(), corr_file_format);
     
@@ -406,11 +389,6 @@ int main(int argc, char **argv)
   delete propIn;
   delete seqPropOut;
   if(isGPD) delete smearedGauge_sink;
-  // delete[] nucleonThrpWLP_CP1;
-  // delete[] nucleonThrpWLP_CP2;
-
-  // delete[] nucleonThrpWLM_CP1;
-  // delete[] nucleonThrpWLM_CP2;
 
   delete solver;
   
