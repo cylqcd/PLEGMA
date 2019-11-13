@@ -104,7 +104,7 @@ namespace plegma {
   template<typename Float>
   class PLEGMA_Vector3D : public PLEGMA_Field3D<Float>, public PLEGMA_Vector<Float> {
   public:
-    PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=NO_GHOSTS) :
+    PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE) :
       PLEGMA_Field<Float>(alloc_flag, VECTOR3D, ghost_flag){ }
 
     ~PLEGMA_Vector3D(){ }
