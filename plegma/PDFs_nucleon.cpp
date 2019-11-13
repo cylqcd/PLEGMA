@@ -212,7 +212,8 @@ int main(int argc, char **argv)
 	      std::complex<float> Isingle(0,1);
 	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float) sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2] + 0.25);
+				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
+	      if(isGPD) phase += PI/2.;
 	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 	      vectorAuxF.conjugate();
 	      vectorAuxF.apply_gamma(G5);
@@ -290,7 +291,8 @@ int main(int argc, char **argv)
 	      std::complex<float> Isingle(0,1);
 	      float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float) sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2] + 0.25);
+				   + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
+	      if(isGPD) phase+=PI/2.;
 	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 	      vectorAuxF.conjugate();
 	      vectorAuxF.apply_gamma(G5);
