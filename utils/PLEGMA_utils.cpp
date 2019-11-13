@@ -40,11 +40,8 @@ void updateOptions(WHICHFLAVOR fl){
   std::string filename;
   switch(fl)
     {
-    case UP:
+    case LIGHT:
       filename = inputUP;
-      break;
-    case DOWN:
-      filename = inputDN;
       break;
     case STRANGE:
       filename = inputST;
