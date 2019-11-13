@@ -371,17 +371,18 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 
   bool isAll = (dir<0) ? true:false;
   bool runT = Total_length()==HGC_localVolume;
+  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
 
   if(action==START || action==DO_ALL)
     for(short i=0; i<N_DIMS; i++)
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
 	for(short s = 0; s < DIR_BOTH; s++)
 	  if(sign == s || sign==DIR_BOTH){
-	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]*field_length*2;
-	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]*field_length*2;
-	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]+total_length)*field_length*2;
+	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
+	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
+	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
 	    int disp;
-	    size_t nbytes = HGC_surface3D[i]*field_length*2*sizeof(Float);
+	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
 	    
 	    // collecting elements from device
 	    copy_side_to_ghost(*this, i, s);
@@ -419,9 +420,9 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
 	  for(short s = 0; s < DIR_BOTH; s++)
 	    if(sign == s || sign==DIR_BOTH){
-	      Float *host = h_ext_ghost_r + HGC_sideGhost[dir][s]*field_length*2;
-	      Float *device = d_elem + (HGC_sideGhost[dir][s]+total_length)*field_length*2;
-	      cudaMemcpy(device, host, HGC_surface3D[dir]*field_length*2*sizeof(Float),
+	      Float *host = h_ext_ghost_r + HGC_sideGhost[dir][s]/scaleT*field_length*2;
+	      Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length)*field_length*2;
+	      cudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
 			 cudaMemcpyHostToDevice);
 	      if(checkErr) checkCudaError();
 	    }
@@ -442,6 +443,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 
   bool isAll = (dir<0) ? true:false;
   bool runT = Total_length()==HGC_localVolume;
+  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
 
   std::vector<MsgHandle*> messages;
 
@@ -453,11 +455,11 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
-		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[i][j][s1][s2]*field_length*2;
-		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[i][j][s1][s2]*field_length*2;
-		  Float *pointer_device = d_elem + (HGC_cornerGhost[i][j][s1][s2]+total_length+ghost_length)*field_length*2;
+		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
+		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
+		  Float *pointer_device = d_elem + (HGC_cornerGhost[i][j][s1][s2]/scaleT+total_length+ghost_length)*field_length*2;
 		  int disp[N_DIMS] = {0};
-		  size_t nbytes = HGC_surface2D[i][j]*field_length*2*sizeof(Float);
+		  size_t nbytes = HGC_surface2D[i][j]/scaleT*field_length*2*sizeof(Float);
 
 		  // collecting elements from device
 		  copy_corner_to_ghost(*this, i, j, s1, s2);
@@ -501,9 +503,9 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 	      for(short s1 = 0; s1 < DIR_BOTH; s1++)
 		for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		  if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
-		    Float *hostCorner = h_ext_ghost_corner_r + HGC_cornerGhost[i][j][s1][s2]*field_length*2;
-		    Float *device = d_elem+(HGC_cornerGhost[i][j][s1][s2]+total_length+ghost_length)*field_length*2;
-		    cudaMemcpy(device, hostCorner, HGC_surface2D[i][j]*field_length*2*sizeof(Float),
+		    Float *hostCorner = h_ext_ghost_corner_r + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
+		    Float *device = d_elem+(HGC_cornerGhost[i][j][s1][s2]/scaleT+total_length+ghost_length)*field_length*2;
+		    cudaMemcpy(device, hostCorner, HGC_surface2D[i][j]/scaleT*field_length*2*sizeof(Float),
 			       cudaMemcpyHostToDevice);
 		    if(checkErr) checkCudaError();
 		  }

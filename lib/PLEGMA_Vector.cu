@@ -34,36 +34,28 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
-      if(this->includesActiveTimeSlice()) {
-	for(int dir=0; dir<N_DIMS-1; dir++) {
-	  if(i==0) {
-	    gauge.communicateSideGhost(dir, DIR_BOTH, START);
-	  }
-	  vecIn.communicateSideGhost(dir, DIR_BOTH, START);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) {
+	  gauge.communicateSideGhost(dir, DIR_BOTH, START);
 	}
+	vecIn.communicateSideGhost(dir, DIR_BOTH, START);
       }
       gaussian_smearing_no_ghost(*this,texVecIn,texGauge, alphaGauss);
-      if(this->includesActiveTimeSlice()) {
-	for(int dir=0; dir<N_DIMS-1; dir++) {
-	  if(i==0) {
-	    gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
-	  }
-	  vecIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) {
+	  gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
 	}
+	vecIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
       }
       gaussian_smearing_only_ghost(*this,texVecIn,texGauge, alphaGauss);
     }
     else{
-      if(this->includesActiveTimeSlice()) {
-	for(int dir=0; dir<N_DIMS-1; dir++) {
-	  this->communicateSideGhost(dir, DIR_BOTH, START);
-	}
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, DIR_BOTH, START);
       }
       gaussian_smearing_no_ghost(vecIn, texVecOut, texGauge, alphaGauss);
-      if(this->includesActiveTimeSlice()) {
-	for(int dir=0; dir<N_DIMS-1; dir++) {
-	  this->communicateSideGhost(dir, DIR_BOTH, FINISH);
-	}
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, DIR_BOTH, FINISH);
       }
       gaussian_smearing_only_ghost(vecIn, texVecOut, texGauge, alphaGauss);
     }
