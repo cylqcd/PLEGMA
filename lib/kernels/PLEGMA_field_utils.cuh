@@ -27,7 +27,7 @@ static void cudaCast(FloatOut *out, FloatIn *in, size_t size){
 
 
 template<typename FloatInOut>
-static __global__ void copy_side_to_ghost_kernel(FloatInOut *f, short dir, short sign, int length_field){
+static __global__ void copy_side_to_ghost_kernel(FloatInOut *f, short dir, short sign, int length_field, size_t localVolume){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_surface3D[dir]) return;
   generic2<FloatInOut> F(f);
@@ -43,22 +43,22 @@ static __global__ void copy_side_to_ghost_kernel(FloatInOut *f, short dir, short
   }
   size_t vid = LEXIC_ID(id);
   sidStride ss;
-  ss.sid = DGC_sideGhost[dir][sign]*length_field + sid;
-  ss.stride = DGC_surface3D[dir];
+  ss.sid = (localVolume + DGC_sideGhost[dir][sign])*length_field + sid;
+  ss.stride = DGC_surface3D[dir]/(DGC_localVolume/localVolume);
   for(int i = 0 ; i < length_field ; i++)
-    F.set(i, ss, F.get(i,vid));
+    F.set(i, ss, F.get(i,sidStride(vid,localVolume)));
 }
 
 template<typename Float>
 static void copy_side_to_ghost(PLEGMA_Field<Float> &f, short dir, short sign){
   if( HGC_dimBreak[dir] ){
     ProfileStruct ps(HGC_surface3D[dir]);
-    tuneAndRun(ps, "copy_side_to_ghost_kernel", copy_side_to_ghost_kernel<Float>, f.D_elem(), dir, sign, f.Field_length());
+    tuneAndRun(ps, "copy_side_to_ghost_kernel", copy_side_to_ghost_kernel<Float>, f.D_elem(), dir, sign, f.Field_length(), f.Total_length());
   }
 }
 
 template<typename FloatInOut>
-static __global__ void copy_corner_to_ghost_kernel(FloatInOut *f, short dir1, short dir2, short sign1, short sign2, int length_field){
+static __global__ void copy_corner_to_ghost_kernel(FloatInOut *f, short dir1, short dir2, short sign1, short sign2, int length_field, size_t localVolume, size_t sideGhostVolume){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_surface2D[dir1][dir2]) return;
   generic2<FloatInOut> F(f);
@@ -75,17 +75,17 @@ static __global__ void copy_corner_to_ghost_kernel(FloatInOut *f, short dir1, sh
   }
   size_t vid = LEXIC_ID(id);
   sidStride ss;
-  ss.sid = DGC_cornerGhost[dir1][dir2][sign1][sign2]*length_field + sid;
-  ss.stride = DGC_surface2D[dir1][dir2];
+  ss.sid = (localVolume + sideGhostVolume + DGC_cornerGhost[dir1][dir2][sign1][sign2])*length_field + sid;
+  ss.stride = DGC_surface2D[dir1][dir2]/(DGC_localVolume/localVolume);
   for(int i = 0 ; i < length_field ; i++)
-    F.set(i, ss, F.get(i,vid));
+    F.set(i, ss, F.get(i,sidStride(vid,localVolume)));
 }
 
 template<typename Float>
 static void copy_corner_to_ghost(PLEGMA_Field<Float> &f, short dir1, short dir2, short sign1, short sign2){
   if( (dir1 != dir2 ) && HGC_dimBreak[dir1] && HGC_dimBreak[dir2] ){
     ProfileStruct ps(HGC_surface2D[dir1][dir2]);
-    tuneAndRun(ps, "copy_corner_to_ghost_kernel", copy_corner_to_ghost_kernel<Float>, f.D_elem(), dir1, dir2, sign1, sign2, f.Field_length());
+    tuneAndRun(ps, "copy_corner_to_ghost_kernel", copy_corner_to_ghost_kernel<Float>, f.D_elem(), dir1, dir2, sign1, sign2, f.Field_length(), f.Total_length(), f.Ghost_length());
   }
 }
 

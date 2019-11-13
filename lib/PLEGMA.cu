@@ -78,32 +78,42 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     for(int i = 0 ; i < N_DIMS ; i++)
       for(int dir = 0; dir < DIR_BOTH; dir++)
 	HGC_sideGhost[i][dir] = 0;
+    HGC_sideGhostVolume=0;
+    HGC_sideGhostVolume3D=0;    
 
     for(int i=0; i<N_DIMS; i++)
       for(int j=0; j<N_DIMS; j++)
 	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
 	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
 	    HGC_cornerGhost[i][j][dir1][dir2] = 0;
-    
+    HGC_cornerGhostVolume=0; 
+    HGC_cornerGhostVolume3D=0;
+   
 #ifdef MULTI_GPU
-    size_t lastIndex = HGC_localVolume;
-    
+    size_t lastIndex = 0;
     for(int i = 0 ; i < N_DIMS ; i++)
-      for(int dir = 0; dir < DIR_BOTH; dir++)
+      for(int dir = 0; dir < DIR_BOTH; dir++) {
+	HGC_sideGhost[i][dir] = lastIndex;
 	if( HGC_dimBreak[i] ){
-	  HGC_sideGhost[i][dir] = lastIndex;
 	  lastIndex += HGC_surface3D[i];
 	}
-
-    for(int i=0; i<N_DIMS; i++)
-      for(int j=i+1; j<N_DIMS; j++)
+      }
+    HGC_sideGhostVolume = lastIndex;
+    HGC_sideGhostVolume3D = HGC_sideGhost[DIM_T][0]/HGC_localL[DIM_T];
+    
+    lastIndex = 0;
+    for(int i=1; i<N_DIMS; i++)
+      for(int j=0; j<i; j++)
 	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
-	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
+	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++) {
+	    HGC_cornerGhost[i][j][dir1][dir2] = lastIndex;
+	    HGC_cornerGhost[j][i][dir2][dir1] = lastIndex;
 	    if( (i != j ) && HGC_dimBreak[i] && HGC_dimBreak[j] ) {
-	      HGC_cornerGhost[i][j][dir1][dir2] = lastIndex;
-	      HGC_cornerGhost[j][i][dir2][dir1] = lastIndex;
 	      lastIndex += HGC_surface2D[i][j];
 	    }
+	  }
+    HGC_cornerGhostVolume = lastIndex;
+    HGC_cornerGhostVolume3D = HGC_cornerGhost[DIM_T][0][0][0]/HGC_localL[DIM_T];
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)
