@@ -144,7 +144,9 @@ int main(int argc, char **argv)
   PLEGMA_Propagator3D<float> propUP3D;
   PLEGMA_Propagator3D<float> propDN3D;
 
-  PLEGMA_Correlator<float> corrThrpWL(corr_space,0); 
+  std::vector<int> DeltaMom_3D(3);
+  std::copy(DeltaMom.begin(),DeltaMom.begin()+3,DeltaMom_3D.begin());
+  PLEGMA_Correlator<float> corrThrpWL(corr_space,DeltaMom_3D); 
   
   // PLEGMA_Correlator<float> *nucleonThrpWLP_CP1 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]]; // if is the z direction
   // PLEGMA_Correlator<float> *nucleonThrpWLP_CP2 = new PLEGMA_Correlator<float>(MOMENTUM_SPACE,0)[HGC_totalL[2]];
@@ -260,8 +262,6 @@ int main(int argc, char **argv)
 	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
 	  std::string aux_str = (nucleon == PROTON) ? "UP" : "DOWN";
 
-	  //	  propF->mulMomentumPhases(DeltaMom,-1);
-	 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	  for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
 	    std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
@@ -292,7 +292,6 @@ int main(int argc, char **argv)
 	    
 	    propF->load();
 	  }
-	  
 	}
 
 	//seq source part 1Props and contraction block
