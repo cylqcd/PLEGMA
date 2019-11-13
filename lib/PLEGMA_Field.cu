@@ -775,12 +775,23 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     }
   }
   
-  descr += "/t/z/y/x";
-  // Volume
-  for(int i=N_DIMS-1; i>=0; i--) {
-    shape.push_back(HGC_totalL[i]);
-    lshape.push_back(HGC_localL[i]);
-    start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+  if(total_length == HGC_localVolume3D) {
+    descr += "/z/y/x";
+    // Volume
+    for(int i=N_DIMS-2; i>=0; i--) {
+      shape.push_back(HGC_totalL[i]);
+      lshape.push_back(HGC_localL[i]);
+      start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+    }
+    if(not includesActiveTimeSlice()) lshape[0]=0;
+  } else {
+    descr += "/t/z/y/x";
+    // Volume
+    for(int i=N_DIMS-1; i>=0; i--) {
+      shape.push_back(HGC_totalL[i]);
+      lshape.push_back(HGC_localL[i]);
+      start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+    }
   }
 
   //re-im
@@ -795,7 +806,8 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 
 template<typename Float>
 void PLEGMA_Field<Float>::writeHDF5(std::string filename) const{
-  if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
+  if(total_length != HGC_localVolume && total_length != HGC_localVolume3D)
+    PLEGMA_error("Writing of 3D fields is not supported");
   assert(isAllocHost);
   unload();
   std::vector<hsize_t> shape, lshape, start;
