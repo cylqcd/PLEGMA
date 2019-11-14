@@ -65,6 +65,8 @@ int main(int argc, char **argv)
   if(WilsDir>N_DIMS) PLEGMA_error("The direction of the Wilson line has to be smaller than 3\n");
   if(nucleon!=NEUTRON && nucleon!=PROTON) PLEGMA_error("Only nucleon PDFs have been implemented so far\n");
 
+  bool isGPD = !std::all_of(DeltaMom.begin(), DeltaMom.end(), [](int i) { return i==0; });
+  if(isGPD && gammas.size()!=4) PLEGMA_warning("Not all the insertion relevant for the computation of GPDs have been set in the input file\n");
   
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
@@ -103,7 +105,6 @@ int main(int argc, char **argv)
  
 
   PLEGMA_Gauge<double> *smearedGauge_sink;
-  bool isGPD = !std::all_of(DeltaMom.begin(), DeltaMom.end(), [](int i) { return i==0; });
   if(isGPD){
     smearedGauge_sink = new PLEGMA_Gauge<double>(BOTH);
     smearedGauge_sink->copy(smearedGauge);}
