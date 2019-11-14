@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 
   bool isGPD = !std::all_of(DeltaMom.begin(), DeltaMom.end(), [](int i) { return i==0; });
   if(isGPD && gammas.size()!=4) PLEGMA_warning("Not all the insertion relevant for the computation of GPDs have been set in the input file\n");
-  
+
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFile(latfile, LIME_FORMAT);
@@ -211,7 +211,6 @@ int main(int argc, char **argv)
 		float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				     + ((float) sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
 				     + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-		if(isGPD) phase += PI/2.;
 		vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 		vectorAuxF.conjugate();
 		vectorAuxF.apply_gamma(G5);
@@ -247,27 +246,27 @@ int main(int argc, char **argv)
 
 	    //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	    for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
-	      std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	      std::string suff = "_stout_"+std::to_string(stIt*stepStout);
 	      if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
 	      su3.absorbDir_device(gaugeWL, WilsDir);
 	      WL.setUnit( (std::vector<int>) {0,4,8});
 	      for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
 		corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],i,aux_str);
 		if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + "_Proj_" + proj_str.c_str()+ ".dat").c_str() ); 
+		corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts])  + "_Proj_" + proj_str.c_str()).c_str() ); 
 		propExchange = propIn; propIn = propF; propF = propExchange;
 		WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
 		propF->shift(*propIn, 4+WilsDir);
 	      }
 
-	      suff="_CP2_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	      suff="_stout_"+std::to_string(stIt*stepStout);
 	      propF->load();
 	      su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 	      WL.setUnit( (std::vector<int>) {0,4,8});
 	      for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
 		corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],-i,aux_str);
 		if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str() + ".dat").c_str() );
+		corrThrpWL.writeHDF5( (threep_filename + suff  +  "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str()).c_str() );
 		propExchange = propIn; propIn = propF; propF = propExchange;
 		WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
 		propF->shift(*propIn, WilsDir);
@@ -293,7 +292,6 @@ int main(int argc, char **argv)
 		float phase = 2.*PI*(((float) sourceMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				     + ((float) sourceMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
 				     + ((float) sourceMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-		if(isGPD) phase+=PI/2.;
 		vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 		vectorAuxF.conjugate();
 		vectorAuxF.apply_gamma(G5);
@@ -330,26 +328,26 @@ int main(int argc, char **argv)
 	    //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	    for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
 	      if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
-	      std::string suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	      std::string suff="_stout_"+std::to_string(stIt*stepStout);
 	      su3.absorbDir_device(gaugeWL, WilsDir); 
 	      WL.setUnit( (std::vector<int>) {0,4,8});
 	      for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
 		corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],i,aux_str);
 		if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str() + ".dat").c_str() );
+		corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str() ).c_str() );
 		propExchange = propIn; propIn = propF; propF = propExchange;
 		WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
 		propF->shift(*propIn, 4+WilsDir);
 	      }
     
 	      propF->load();
-	      suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	      suff="_stout_"+std::to_string(stIt*stepStout);
 	      su3.absorbDir_device(gaugeWL, WilsDir); 
 	      WL.setUnit( (std::vector<int>) {0,4,8});
 	      for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
 		corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, sourcePositions[isource],-i, aux_str);
 		if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str() + ".dat").c_str() );
+		corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str()).c_str() );
 		propExchange = propIn; propIn = propF; propF = propExchange;
 		WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
 		propF->shift(*propIn, WilsDir);
