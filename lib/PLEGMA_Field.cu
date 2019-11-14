@@ -378,18 +378,18 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
 	for(short s = 0; s < DIR_BOTH; s++)
 	  if(sign == s || sign==DIR_BOTH){
-	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
-	    int disp;
-	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
-	    
 	    // collecting elements from device
 	    copy_side_to_ghost(*this, i, s);
 
 	    // For Field3D we need to run only up to the previous kernel due to tuning.
 	    // The rest is useless if not in the timeslice
 	    if(not includesActiveTimeSlice()) continue;
+	    
+	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
+	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
+	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
+	    int disp;
+	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
 	    
 	    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
 	    if(checkErr) checkCudaError();
@@ -455,18 +455,18 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
-		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
-		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
-		  Float *pointer_device = d_elem + (HGC_cornerGhost[i][j][s1][s2]/scaleT+total_length+ghost_length)*field_length*2;
-		  int disp[N_DIMS] = {0};
-		  size_t nbytes = HGC_surface2D[i][j]/scaleT*field_length*2*sizeof(Float);
-
 		  // collecting elements from device
 		  copy_corner_to_ghost(*this, i, j, s1, s2);
 		  // For Field3D we need to run only up to the previous kernel due to tuning.
 		  // The rest is useless if not in the timeslice
 		  if(not includesActiveTimeSlice()) continue;
 		  
+		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
+		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
+		  Float *pointer_device = d_elem + (HGC_cornerGhost[i][j][s1][s2]/scaleT+total_length+ghost_length)*field_length*2;
+		  int disp[N_DIMS] = {0};
+		  size_t nbytes = HGC_surface2D[i][j]/scaleT*field_length*2*sizeof(Float);
+
 		  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
 		  if(checkErr) checkCudaError();
 	    
