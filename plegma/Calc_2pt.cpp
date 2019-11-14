@@ -1,9 +1,10 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 
-double runtime;
-#define TIME(fnc)  runtime = MPI_Wtime(); fnc; runtime = MPI_Wtime()-runtime; \
-  PLEGMA_printf("TIME for "#fnc" %lf sec\n", runtime)
+std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;			\
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back()
 
 std::vector<std::thread> threads;
 //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
@@ -94,19 +95,19 @@ int main(int argc, char **argv)
 				   { // Smearing the solution
 				     PLEGMA_Vector<double> vectorAuxD;
 				     PLEGMA_Vector<float> vectorAuxF;
-				     TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge3D, nSmear, alphaGauss));
+				     TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nSmear, alphaGauss));
 				     vectorAuxF.copy(vectorAuxD);
 				     prop.absorb(vectorAuxF, isc/3, isc%3);
 				   }
 				 }  
 				 prop.rotateToPhysicalBase_device(run_mu/abs(run_mu));
-				 prop.applyBoundaries_device(source[3]);
+				 prop.applyBoundaries_device(source[DIM_T]);
 			       };
 
       if (run_ud) {
-	computePropagator(propUP, mu_ud, LIGHT, nsmearGauss);
+	TIME(computePropagator(propUP, mu_ud, LIGHT, nsmearGauss));
 
-	computePropagator(propDN, -mu_ud, LIGHT, nsmearGauss);
+	TIME(computePropagator(propDN, -mu_ud, LIGHT, nsmearGauss));
 
 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	TIME(corr.contractMesons(propUP, propDN));
@@ -132,7 +133,7 @@ int main(int argc, char **argv)
 	mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
 	
-	computePropagator(propS[ismall], mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear);
+	TIME(computePropagator(propS[ismall], mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear));
       }
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
@@ -141,7 +142,7 @@ int main(int argc, char **argv)
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
 	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-	  computePropagator(propL, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear);
+	  TIME(computePropagator(propL, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear));
 	  
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
