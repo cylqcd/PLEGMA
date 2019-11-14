@@ -33,12 +33,8 @@ int main(int argc, char **argv)
   
   /*
     We consider the momenta in the symmetric frame. Both P-momentum and Delta-momentum are vectors
-    having a number of components that is a multiple of three. They correspond to lists of 
-    three-dimensional momenta. 
+    having three components. 
     The source momentum is given by delta/2-p, while the sink momentum by delta/2+p.
-    All the three-dimensional momenta in the vectors have to share the same sink momentum. Indeed,
-    keeping constant the sink momentum (i.e. doing one inversion of the sequential source)
-    different combinations of the momentum transfer delta and source momentum can be tested.
   */
 
   std::vector<int> PMom = {0,0,0};
