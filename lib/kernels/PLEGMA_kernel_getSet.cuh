@@ -38,17 +38,17 @@
                         (i==1 ? LEXIC(id[3],id[2],(id[1]+1)%DGC_localL[1],id[0],DGC_localL) : \
                         (i==2 ? LEXIC(id[3],(id[2]+1)%DGC_localL[2],id[1],id[0],DGC_localL) : \
 			        LEXIC((id[3]+1)%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
-#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]-1+DGC_localL[0])%DGC_localL[0],DGC_localL) : \
-                         (i==1 ? LEXIC(id[3],id[2],(id[1]-1+DGC_localL[1])%DGC_localL[1],id[0],DGC_localL) : \
-                         (i==2 ? LEXIC(id[3],(id[2]-1+DGC_localL[2])%DGC_localL[2],id[1],id[0],DGC_localL) : \
-			         LEXIC((id[3]-1+DGC_localL[3])%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
+#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]+DGC_localL[0]-1)%DGC_localL[0],DGC_localL) : \
+                         (i==1 ? LEXIC(id[3],id[2],(id[1]+DGC_localL[1]-1)%DGC_localL[1],id[0],DGC_localL) : \
+                         (i==2 ? LEXIC(id[3],(id[2]+DGC_localL[2]-1)%DGC_localL[2],id[1],id[0],DGC_localL) : \
+			         LEXIC((id[3]+DGC_localL[3]-1)%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
 
 #define LEXIC_3D_PLUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],(id[0]+1)%DGC_localL[0],DGC_localL) : \
 			   (i==1 ? LEXIC_ZYX(id[2],(id[1]+1)%DGC_localL[1],id[0],DGC_localL) : \
 			           LEXIC_ZYX((id[2]+1)%DGC_localL[2],id[1],id[0],DGC_localL)))
-#define LEXIC_3D_MINUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],(id[0]-1+DGC_localL[0])%DGC_localL[0],DGC_localL) : \
-			    (i==1 ? LEXIC_ZYX(id[2],(id[1]-1+DGC_localL[1])%DGC_localL[1],id[0],DGC_localL) : \
-			            LEXIC_ZYX((id[2]-1+DGC_localL[2])%DGC_localL[2],id[1],id[0],DGC_localL)))
+#define LEXIC_3D_MINUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],(id[0]+DGC_localL[0]-1)%DGC_localL[0],DGC_localL) : \
+			    (i==1 ? LEXIC_ZYX(id[2],(id[1]+DGC_localL[1]-1)%DGC_localL[1],id[0],DGC_localL) : \
+			            LEXIC_ZYX((id[2]+DGC_localL[2]-1)%DGC_localL[2],id[1],id[0],DGC_localL)))
 
 #define LEXIC_3D4D_PLUS(i,id,is4D) (is4D ? LEXIC_PLUS(i,id) : LEXIC_3D_PLUS(i,id))
 #define LEXIC_3D4D_MINUS(i,id,is4D) (is4D ? LEXIC_MINUS(i,id) : LEXIC_3D_MINUS(i,id))
@@ -150,7 +150,7 @@ namespace plegma {
   inline __device__ void sidStride::shift<MinusNoGhost>(const int& site_size, const short& dirMinus) {
     size_t id[4] = GET_ID(sid);
     bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    if(not minus_ghost) {
+    if(minus_ghost) {
       this->returnZero = true;
     } else {
       this->sid = LEXIC_3D4D_MINUS(dirMinus, id, is4D);
