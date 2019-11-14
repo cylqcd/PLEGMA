@@ -142,6 +142,7 @@ namespace plegma {
     virtual void writeHDF5(std::string filename) const;
 
     virtual bool includesActiveTimeSlice() const{return true;}
+    virtual bool is4D() const{assert(Total_length==HGC_localVolume); return true;}
   };
 
   template<typename Float>
@@ -156,6 +157,7 @@ namespace plegma {
     PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC_localVolume3D), activeTimeSlice(false) { }
 
     virtual bool includesActiveTimeSlice() const{return activeTimeSlice;}
+    virtual bool is4D() const{assert(Total_length==HGC_localVolume3D); return false;}
 
     void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };
