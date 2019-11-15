@@ -82,9 +82,9 @@ namespace plegma {
 
     inline __host__ __device__ size_t sideGhostL(const short& dir) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_surface3D[dir] : DGC_surface2D[dir][DIM_T];
+      return is4D ? DGC_surface3D[dir] : (DGC_surface3D[dir]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_surface3D[dir] : HGC_surface2D[dir][DIM_T];      
+      return is4D ? HGC_surface3D[dir] : (HGC_surface3D[dir]/HGC_localL[DIM_T]);
       #endif
     }
 
@@ -106,13 +106,9 @@ namespace plegma {
 
     inline __host__ __device__ size_t cornerGhostL(const short& dir1, const short& dir2) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_surface2D[dir1][dir2] : DGC_localL[ dir1==DIM_X ? (dir2==DIM_Y ? DIM_Z : DIM_Y):
-							   (dir1==DIM_Y ? (dir2==DIM_X ? DIM_Z : DIM_X):
-							   (dir2==DIM_Y ? DIM_X : DIM_Y))];
+      return is4D ? DGC_surface2D[dir1][dir2] : (DGC_surface2D[dir1][dir2]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_surface2D[dir1][dir2] : HGC_localL[ dir1==DIM_X ? (dir2==DIM_Y ? DIM_Z : DIM_Y):
-							   (dir1==DIM_Y ? (dir2==DIM_X ? DIM_Z : DIM_X):
-							   (dir2==DIM_Y ? DIM_X : DIM_Y))];
+      return is4D ? HGC_surface2D[dir1][dir2] : (HGC_surface2D[dir1][dir2]/HGC_localL[DIM_T]);
       #endif
     }
 
