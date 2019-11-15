@@ -4,6 +4,7 @@
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
+#include <PLEGMA_seqSourceNucleon.cuh> 
 #include <PLEGMA_covD.cuh>
 using namespace plegma;
 using namespace quda;
@@ -25,12 +26,11 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
   } else {
     PLEGMA_warning("VecIn is not allocated on BOTH; gaussianSmearing will overwrite the device memory.\n");
   }
-  
-  gaugeTex<Float> texGauge;
-  vectorTex<Float> texVecIn, texVecOut;
-  texVecOut.tex = this->createTexObject();
-  texVecIn.tex = vecIn.createTexObject();
-  texGauge.tex = gauge.createTexObject();
+
+  assert(this->checkVolume(vecIn, gauge));
+  auto texGauge = toTexture<gaugeTex>(gauge);
+  auto texVecIn = toTexture<vectorTex>(vecIn);
+  auto texVecOut = toTexture<vectorTex>(*this);
 
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
@@ -40,33 +40,30 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 	}
 	vecIn.communicateSideGhost(dir, DIR_BOTH, START);
       }
-      gaussian_smearing_no_ghost(*this,texVecIn,texGauge, alphaGauss);
+      gaussian_smearing_no_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss);
       for(int dir=0; dir<N_DIMS-1; dir++) {
 	if(i==0) {
 	  gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
 	}
 	vecIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
       }
-      gaussian_smearing_only_ghost(*this,texVecIn,texGauge, alphaGauss);
+      gaussian_smearing_only_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss);
     }
     else{
       for(int dir=0; dir<N_DIMS-1; dir++) {
 	this->communicateSideGhost(dir, DIR_BOTH, START);
       }
-      gaussian_smearing_no_ghost(vecIn, texVecOut, texGauge, alphaGauss);
+      gaussian_smearing_no_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss);
       for(int dir=0; dir<N_DIMS-1; dir++) {
 	this->communicateSideGhost(dir, DIR_BOTH, FINISH);
       }
-      gaussian_smearing_only_ghost(vecIn, texVecOut, texGauge, alphaGauss);
+      gaussian_smearing_only_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss);
     }
   }
   if( (nsmearGauss%2) == 0)
     cudaMemcpy(this->D_elem(),vecIn.D_elem(),
 	       this->Bytes_total(),cudaMemcpyDeviceToDevice);
   
-  this->destroyTexObject(texVecOut.tex);
-  vecIn.destroyTexObject(texVecIn.tex);
-  gauge.destroyTexObject(texGauge.tex);
   checkCudaError();
 
   if(vecIn.IsAllocHost()) {
@@ -86,38 +83,14 @@ void PLEGMA_Vector<Float>::copyFromQUDA(ColorSpinorField *qudaVector, bool isEv)
 }
 
 template<typename Float>
-void  PLEGMA_Vector<Float>::scaleVector(Float a){
-  scale_vector(a,this->d_elem);
-}
-
-template<typename Float>
-void  PLEGMA_Vector<Float>::conjugate(){
-  conjugate_vector(this->d_elem);
-}
-
-template<typename Float>
 void  PLEGMA_Vector<Float>::apply_gamma5(){
-  apply_gamma5_vector(this->d_elem);
+  apply_gamma5_vector(toField2<vector2>(*this));
 }
 
 
 template<typename Float> 
 void  PLEGMA_Vector<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
-  apply_gamma_vector(LR,this->d_elem,gMat);
-}
-
-template<typename Float>
-void PLEGMA_Vector<Float>::norm2Host(){
-  Float res = 0.;
-  Float globalRes;
-
-  for(int i = 0 ; i < N_SPINS*N_COLS*HGC_localVolume ; i++){
-    res += this->h_elem[i*2 + 0]*this->h_elem[i*2 + 0] + this->h_elem[i*2 + 1]*this->h_elem[i*2 + 1];
-  }
-
-  int rc = MPI_Allreduce(&res, &globalRes , 1, sizeof(Float)==4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, HGC_fullComm);
-  if( rc != MPI_SUCCESS ) PLEGMA_error("Error in MPI reduction for plaquette");
-  PLEGMA_printf("Vector norm2 is %e\n",globalRes);
+  apply_gamma_vector(LR,toField2<vector2>(*this),gMat);
 }
 
 // vec4D <- Prop3D
@@ -272,55 +245,16 @@ template<typename Float>
 void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr){
   // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
   if(dirOr < 0 || dirOr > 7) PLEGMA_error("Wrong direction is given");
-  vectorTex<Float> texVecIn;
-  texVecIn.tex= vecIn.createTexObject();
-  gaugeTex<Float> texGaugeIn;
-  texGaugeIn.tex = gauge.createTexObject();
-  covD_k<Float,Float,Float>(this->D_elem(), texVecIn, texGaugeIn, dirOr);
-  vecIn.destroyTexObject(texVecIn.tex);
-  gauge.destroyTexObject(texGaugeIn.tex);
-}
-
-template<typename FloatC, typename FloatA>
-void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
-template<typename Float>
-void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  this->zero_device();
-  if(is_myIt){
-    genericTex<Float> texProp;
-    texProp.tex = prop.createTexObject();
-    contractNucleonSeqSource<Float,Float>(*this, texProp, proj, particle, my_it, c_nu, c_c2);
-    prop.destroyTexObject(texProp.tex);
-  }
-  comm_barrier();
-}
-
-template<typename FloatC, typename FloatA, typename FloatB>
-void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
-template<typename Float>
-void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  this->zero_device();
-  if(is_myIt){
-    genericTex<Float> texProp1;
-    texProp1.tex = prop1.createTexObject();
-    genericTex<Float> texProp2;
-    texProp2.tex = prop2.createTexObject();
-    contractNucleonSeqSource<Float,Float,Float>(*this, texProp1,texProp2, proj, particle, my_it, c_nu, c_c2);
-    prop1.destroyTexObject(texProp1.tex);
-    prop2.destroyTexObject(texProp2.tex);
-  }
-  comm_barrier();
+  assert(this->checkVolume(vecIn, gauge));
+  auto texVecIn = toTexture<vectorTex>(vecIn);
+  auto texGaugeIn = toTexture<gaugeTex>(gauge);
+  covD_k<Float,Float,Float>(toField2<vector2>(*this), *texVecIn, *texGaugeIn, dirOr);
 }
 
 template<typename Float>
 void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u){
-  mulGV_k(*this, u, vecIn);
+  assert(this->checkVolume(vecIn, u));
+  mulGV_k(toField2<vector2>(*this), toField2<su3_2>(u), toField2<vector2>(vecIn));
 }
 
 
@@ -408,6 +342,26 @@ namespace plegma{
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     return absPsi;
   }
+
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2){
+    this->activeTimeSlice = prop.activeTimeSlice;
+    this->zero_device();
+
+    auto texProp = toTexture<propTex>(prop);
+    contractNucleonSeqSource<Float,Float>(toField2<vector2>(*this), *texProp, proj, particle, c_nu, c_c2);
+  }
+  
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2){
+    this->activeTimeSlice = prop1.activeTimeSlice;
+    this->zero_device();
+
+    auto texProp1 = toTexture<propTex>(prop1);
+    auto texProp2 = toTexture<propTex>(prop2);
+    contractNucleonSeqSource<Float,Float,Float>(toField2<vector2>(*this), *texProp1, *texProp2, proj, particle, c_nu, c_c2);
+  }
+  
   
   template class PLEGMA_Vector3D<float>;
   template class PLEGMA_Vector3D<double>;

@@ -35,11 +35,6 @@ namespace plegma {
      **/
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss);
 
-    
-    void scaleVector(Float a);
-    void norm2Host();
-    void norm2Device();
-
     /**
        @brief Absorbs elements nu, c2 from a 4D propagator at specific global time and puts it in a 4D vector
        @param PLEGMA_Propagator<Float> prop, The 4D propagator
@@ -90,8 +85,6 @@ namespace plegma {
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
-    void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
-    void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };
 
@@ -141,6 +134,9 @@ namespace plegma {
     }
     
     std::vector<Float> rms(std::vector<int> listR2, const site& sourceposition) const;
+
+    void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2);
+    void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2);
   };
 }
 
