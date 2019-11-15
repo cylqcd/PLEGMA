@@ -1,6 +1,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 using namespace plegma;
 template<typename T>
+
 // struct KernelArr {T* array; int size;};
 // KernelArr<GAMMAS> listGammas;
 //   listGammas.size = gammas.size();
