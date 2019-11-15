@@ -18,7 +18,6 @@ namespace plegma {
     PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Propagator(){;}
     
-    void conjugate();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
     void apply_gamma5();
     void absorbVectorToHost(PLEGMA_Vector<Float> &vec, 

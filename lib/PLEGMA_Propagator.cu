@@ -181,21 +181,14 @@ void PLEGMA_Propagator<Float>::rotateToPhysicalBase_host(int sign_int){
       }
 }
 
-
-template<typename Float>
-void  PLEGMA_Propagator<Float>::conjugate(){
-  conjugate_propagator(this->d_elem);
-}
-
-
 template<typename Float>
 void  PLEGMA_Propagator<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
-  apply_gamma_prop(LR,this->d_elem,gMat);
+  apply_gamma_prop(LR,*this,gMat);
 }
 
 template<typename Float>
 void  PLEGMA_Propagator<Float>::apply_gamma5(){
-  apply_gamma5_propagator(this->d_elem);
+  apply_gamma5_propagator(*this);
 }
 
 //----------------------------------//

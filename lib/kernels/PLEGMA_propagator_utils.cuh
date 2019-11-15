@@ -2,27 +2,27 @@
 using namespace plegma;
 
 template<LEFTRIGHT LF,typename Float>
-static __global__ void apply_gamma_prop_kernel(Float *inOut, GAMMAS r){
+static __global__ void apply_gamma_prop_kernel(prop2<Float>& prop, GAMMAS r){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  prop2<Float> prop(inOut);
   Float2<Float> Sin[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<Float> Sout[N_SPINS][N_SPINS][N_COLS][N_COLS];
-  if (sid >= DGC_localVolume) return;
+  if (sid >= prop.volume()) return;
   prop.get(Sin,sid);
   gammaProp<LF>(Sout,Sin,r);
   prop.set(Sout,sid);
 }
 
 template<typename Float>
-static void apply_gamma_prop(LEFTRIGHT LR, Float *inOut, GAMMAS r){
+static void apply_gamma_prop(LEFTRIGHT LR, PLEGMA_Propagator<Float>& InOut, GAMMAS r){
+  auto prop = toField2<prop2>(InOut);
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (prop.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   switch(LR){
   case(LEFT):
-    apply_gamma_prop_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    apply_gamma_prop_kernel<LEFT><<<gridDim,blockDim>>>(prop, r);
     break;
   case(RIGHT):
-    apply_gamma_prop_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    apply_gamma_prop_kernel<RIGHT><<<gridDim,blockDim>>>(prop, r);
     break;
   }
   checkCudaError();
@@ -30,11 +30,11 @@ static void apply_gamma_prop(LEFTRIGHT LR, Float *inOut, GAMMAS r){
 
 
 template<typename Float>
-static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
+static __global__ void apply_gamma5_propagator_kernel(prop2<Float> prop){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  Float2<Float> *inOut2 = (Float2<Float> *) inOut;
-  if (sid >= DGC_localVolume) return;
-   
+  if (sid >= prop.volume()) return;
+
+  prop.setSid(sid);
   #pragma unroll
   for(int nu = 0 ; nu < N_SPINS ; nu++)
     #pragma unroll
@@ -45,39 +45,20 @@ static __global__ void apply_gamma5_propagator_kernel(Float *inOut){
 	// inline shuffling
         #pragma unroll
 	for(int mu = 0 ; mu < N_SPINS ; mu++)
-	  spinor[(mu+2)%4] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid];
+	  spinor[(mu+2)%4] = prop.get(mu, nu, c1, c2);
 	// replacing
         #pragma unroll
 	for(int mu = 0 ; mu < N_SPINS ; mu++)
-	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid] = spinor[mu];
-  }
-
+	  prop.set(mu, nu, c1, c2, spinor[mu]);
+      }
 }
 
 template<typename Float>
-void apply_gamma5_propagator(Float *inOut){
+void apply_gamma5_propagator(PLEGMA_Propagator<Float>& inOut){
+  auto prop = toField2<prop2>(inOut);
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  apply_gamma5_propagator_kernel<<<gridDim,blockDim>>>(inOut);
-}
-
-template<typename Float>
-static __global__ void conjugate_propagator_kernel(Float *inOut){
-
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
-
-  #pragma unroll
-  for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++)
-    inOut[(i*DGC_localVolume + sid)*2 + 1] *= -1.;
-}
-
-template<typename Float>
-void conjugate_propagator(Float *inOut){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  conjugate_propagator_kernel<<<gridDim,blockDim>>>(inOut);
-  checkCudaError();
+  dim3 gridDim( (prop.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
+  apply_gamma5_propagator_kernel<<<gridDim,blockDim>>>(prop);
 }
 
 template<typename Float>
