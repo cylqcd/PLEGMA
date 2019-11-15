@@ -9,7 +9,7 @@ static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gaugeTex, Floa
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
-  if (sid < DGC_localVolume) {
+  if (sid < gaugeTex.volume()) {
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];    
     Float trace = 0.;
@@ -67,8 +67,9 @@ static void calculatePlaquette_host(ProfileStruct& ps, gaugeTex<FloatG> gaugeTex
 
 template<typename Float, typename FloatG>
 static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
-  
-  ProfileStruct ps(HGC_localVolume,sizeof(Float));
+
+  assert(gaugeTex.is4D); // TODO: For 3D we should not compute the plaquette in T
+  ProfileStruct ps(gaugeTex.volume(),sizeof(Float));
   Float plaquette;
   tuneAndRun(ps, "calculatePlaquette", calculatePlaquette_host<Float,FloatG>, ps, gaugeTex, plaquette);
 

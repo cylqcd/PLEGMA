@@ -83,7 +83,7 @@ static __global__ void calcTopChClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
 
-  if (sid < DGC_localVolume) {
+  if (sid < gaugeTex.volume()) {
     int dir0[3]={3,3,3}, dir1[3]={0,1,2}, dir2[3]={1,2,0}, dir3[3]={2,0,1};
     Float2<FloatG> clov1[N_COLS][N_COLS], clov2[N_COLS][N_COLS];
    
@@ -149,7 +149,7 @@ static __global__ void calcTopChPlaqDef_kernel(gaugeTex<FloatG> gaugeTex, Float 
 
   FloatG trace = 0. ;
 
-  if (sid < DGC_localVolume) {
+  if (sid < gaugeTex.volume()) {
     #pragma unroll
     for(int i=0; i<3; i++) {
       plaquette( plaq1, gaugeTex, dir0, dir1[i], sid );
@@ -180,21 +180,13 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
   Float Q = 0.;
   Float globalQ = 0.;
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (gaugeTex.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   Float *h_partial_Q = NULL;
   Float *d_partial_Q = NULL;
   h_partial_Q = (Float*) malloc(gridDim.x * sizeof(Float) );
   if(h_partial_Q == NULL) errorQuda("Error allocate memory for host partial plaq");
   cudaMalloc((void**)&d_partial_Q, gridDim.x * sizeof(Float));
 
-#ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-#endif
-  
   switch(charge_def){
   case PLAQUETTE:
     calcTopChPlaqDef_kernel<FloatG,Float><<<gridDim,blockDim>>>( gaugeTex, d_partial_Q );
@@ -204,15 +196,6 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
     break;
     }
   checkCudaError();
-
-#ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
-#endif
 
   cudaMemcpy(h_partial_Q, d_partial_Q , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_Q);
@@ -235,7 +218,7 @@ static __global__ void calcPlaqClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float *
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
 
-  if (sid < DGC_localVolume) {
+  if (sid < gaugeTex.volume()) {
     Float2<FloatG> clov_tmp[N_COLS][N_COLS];
     Float trace = 0. ;
 
@@ -265,31 +248,14 @@ static Float calcPlaqClovDef(gaugeTex<FloatG> gaugeTex){
   Float Plaq = 0.;
   Float globalPlaq = 0.;
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (gaugeTex.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   Float *h_partial_Plaq = NULL;
   Float *d_partial_Plaq = NULL;
   h_partial_Plaq = (Float*) malloc(gridDim.x * sizeof(Float) );
   if(h_partial_Plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
   cudaMalloc((void**)&d_partial_Plaq, gridDim.x * sizeof(Float));
 
-#ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-#endif
-
   calcPlaqClovDef_kernel<FloatG,Float><<<gridDim,blockDim>>>( gaugeTex, d_partial_Plaq );
-
-#ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
-#endif
 
   cudaMemcpy(h_partial_Plaq, d_partial_Plaq , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_Plaq);
