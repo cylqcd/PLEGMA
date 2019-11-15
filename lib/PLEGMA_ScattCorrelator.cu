@@ -11,20 +11,23 @@ using namespace plegma;
 // - finalize() -> delete corr_*_space;
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<Float> Gammas, PLEGMA_Propagator<Float> &S) {
+void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> Gammas, PLEGMA_Propagator<Float> &S) {
 
   if( corr_space==POSITION_SPACE )
     PLEGMA_Error("Not implemented yet\n");
 
-  int n_gammas= Gammas.size()%16==0 ? Gammas.size()/16 : 0;
+  int n_gammas= Gammas.size();
 
   if(n_gammas==0)
-    PLEGMA_Error("size of Gammas must be multiple of 16\n");
+    PLEGMA_Error("provide at list 1 Gamma matrix\n");
   
-  if(!isAlloc || site_size!=n_gammas*4*3){
+  if(!isAlloc || site_size!=n_gammas*N_SPINS*N_COLS){
     datasets={};
     groups={};
-    shape={n_gammas,4,3};
+    shape={n_gammas,N_SPINS,N_COLS};
     initialize();
   }
+
+  V3_k( *this, Phi, Gammas, S);
+  
 }
