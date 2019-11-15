@@ -92,9 +92,9 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, siz
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag, bool isPinnedHost):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag, bool isPinnedHost, bool checkErr):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
-  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(true), field_type(classT)
+  ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(classT)
 {
   if(HGC_init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
@@ -306,7 +306,8 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
 }
 
 template<typename Float>
-cudaTextureObject_t PLEGMA_Field<Float>::createTexObject(){
+cudaTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
+#ifdef PLEGMA_TEXTURE
   cudaTextureObject_t tex;
   cudaChannelFormatDesc desc;
   memset(&desc, 0, sizeof(cudaChannelFormatDesc));
@@ -341,11 +342,16 @@ cudaTextureObject_t PLEGMA_Field<Float>::createTexObject(){
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
   if(checkErr) checkCudaError();
   return tex;
+#else
+  return 0;
+#endif
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::destroyTexObject(cudaTextureObject_t tex){
+void PLEGMA_Field<Float>::destroyTexObject(cudaTextureObject_t tex) const{
+#ifdef PLEGMA_TEXTURE
   cudaDestroyTextureObject(tex);
+#endif
 }
 
 template<typename Float>
@@ -379,7 +385,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	for(short s = 0; s < DIR_BOTH; s++)
 	  if(sign == s || sign==DIR_BOTH){
 	    // collecting elements from device
-	    copy_side_to_ghost(*this, i, s);
+	    copy_side_to_ghost(toField2<pFloat2>(*this), i, s);
 
 	    // For Field3D we need to run only up to the previous kernel due to tuning.
 	    // The rest is useless if not in the timeslice
@@ -456,7 +462,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
 		  // collecting elements from device
-		  copy_corner_to_ghost(*this, i, j, s1, s2);
+		  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2);
 		  // For Field3D we need to run only up to the previous kernel due to tuning.
 		  // The rest is useless if not in the timeslice
 		  if(not includesActiveTimeSlice()) continue;
@@ -526,6 +532,13 @@ void PLEGMA_Field<Float>::communicateGhost(short dir, ORIENTATION sign, GHOST_FL
     communicateCornerGhost(dir, sign, action);
   }
 }
+
+template<typename Float>
+void PLEGMA_Field<Float>::conjugate(){
+  // we have to make sure that we have the ghost
+  conjugate_k(*this);
+}
+
 
 template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr){
@@ -628,6 +641,12 @@ Float PLEGMA_Field<Float>::norm(){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::scale(Float val){
+  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
+  cuBLAS::scal(field_length*total_length, val, d_elem );
+}
+
+template<typename Float>
 void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
   if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
@@ -635,8 +654,9 @@ void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
 
 template<typename FloatOut, typename FloatIn>
 static void cudaCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatIn> &fieldIn){
+  assert(fieldOut.checkVolume(fieldIn));
   if(typeid(FloatIn) != typeid(FloatOut) )
-    cudaCast(fieldOut.D_elem(), fieldIn.D_elem(), fieldIn.Bytes_total()/sizeof(FloatIn));
+    cudaCast(toField2<pFloat2>(fieldOut), toField2<pFloat2>(fieldIn));
   else
     cudaMemcpy(fieldOut.D_elem(), fieldIn.D_elem(), fieldIn.Bytes_total(), 
 	       cudaMemcpyDeviceToDevice);

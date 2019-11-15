@@ -50,15 +50,15 @@ namespace plegma {
     void destroy_device();
     void initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l);
   public:
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localV = HGC_localVolume, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
     ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();
     void zero_device();
     void zero_where(ALLOCATION_FLAG alloc_flag);
-    cudaTextureObject_t createTexObject();
-    void destroyTexObject(cudaTextureObject_t tex);
+    cudaTextureObject_t createTexObject() const;
+    void destroyTexObject(cudaTextureObject_t tex) const;
     
     Float* H_elem() const { return h_elem; }
     Float* D_elem() const { return d_elem; }
@@ -79,6 +79,12 @@ namespace plegma {
     size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_total_plus_ghost() const { return this->TotalPlusGhost_length()*this->Field_length()*2*sizeof(Float); }
 
+    template<class... Args>
+    bool checkVolume(const Args&... fields) {
+      std::vector<bool> checks = {this->Total_length() == fields.Total_length() ...};
+      return std::all_of(checks.begin(), checks.end(), [](bool i){return i;});
+    }
+    
     std::string Field_name() const {return field_name;}
     GHOST_FLAG Ghost_flag() const {return ghost_flag;}
     int Precision() const{
@@ -117,6 +123,8 @@ namespace plegma {
     void random(DIST sampling=Uniform);
     void setUnit(std::vector<int> indDiag);
 
+    void conjugate();
+
     template<typename FloatIn>
     void copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where=DEVICE);
     
@@ -126,6 +134,7 @@ namespace plegma {
     void add(PLEGMA_Field &Fin, std::complex<Float> alpha = 1.);
     std::complex<Float> dot(PLEGMA_Field<Float> &FieldIn);    
     Float norm();
+    void scale(Float val);
     void cscale(std::complex<Float> val);
     
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
@@ -142,22 +151,22 @@ namespace plegma {
     virtual void writeHDF5(std::string filename) const;
 
     virtual bool includesActiveTimeSlice() const{return true;}
-    virtual bool is4D() const{assert(Total_length==HGC_localVolume); return true;}
+    virtual bool is4D() const{assert(Total_length()==HGC_localVolume); return true;}
   };
 
   template<typename Float>
   class PLEGMA_Field3D : virtual public PLEGMA_Field<Float> {
-  protected:
-    bool activeTimeSlice;
   public:
-    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
-      PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost), activeTimeSlice(false) { }
-    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
-      PLEGMA_Field<Float>(alloc_flag, site_size, HGC_localVolume3D, ghost_flag, isPinnedHost), activeTimeSlice(false) { }
+    bool activeTimeSlice;
+    
+    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true) :
+      PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost, checkErr), activeTimeSlice(false) { }
+    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true) :
+      PLEGMA_Field<Float>(alloc_flag, site_size, HGC_localVolume3D, ghost_flag, isPinnedHost, checkErr), activeTimeSlice(false) { }
     PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC_localVolume3D), activeTimeSlice(false) { }
 
     virtual bool includesActiveTimeSlice() const{return activeTimeSlice;}
-    virtual bool is4D() const{assert(Total_length==HGC_localVolume3D); return false;}
+    virtual bool is4D() const{assert(this->Total_length()==HGC_localVolume3D); return false;}
 
     void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };

@@ -10,86 +10,107 @@
 using namespace plegma;
 
 template<typename FloatOut,typename FloatIn>
-static __global__ void cast_kernel(FloatOut *out, FloatIn *in, size_t size){
+static __global__ void cast_kernel(pFloat2<FloatOut> out, pFloat2<FloatIn> in){
   
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if(sid>=out.volume()) return;
 
-  for (; sid < size; sid += gridDim.x * blockDim.x)
-    out[sid] = (FloatIn) in[sid];
+  in.setSid(sid);
+  out.setSid(sid);
+  for (int i = 0; i < out.site_size; i++)
+    out.set(i, in.get(i));
 }
 
 template<typename FloatOut,typename FloatIn>
-static void cudaCast(FloatOut *out, FloatIn *in, size_t size){
-  ProfileStruct ps(HGC_localVolume); // here we can actually use any size
-  tuneAndRun(ps, "cast_kernel", cast_kernel<FloatOut,FloatIn>, (FloatOut*) out, (FloatIn*) in, size);
+static void cudaCast(pFloat2<FloatOut> out, pFloat2<FloatIn> in){
+  ProfileStruct ps(out.volume()); // here we can actually use any size
+  tuneAndRun(ps, "cast_kernel", cast_kernel<FloatOut,FloatIn>, out, in);
   checkCudaError();
 }
 
 
 template<typename FloatInOut>
-static __global__ void copy_side_to_ghost_kernel(FloatInOut *f, short dir, short sign, int site_size, bool is4D){
+static __global__ void copy_side_to_ghost_kernel(pFloat2<FloatInOut> F, short dir, short sign){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_surface3D[dir]) return;
-  generic2<FloatInOut> F(f);
+  if (sid >= F.sideGhostL(dir)) return;
+  
   size_t id[4], tmp_sid=sid;
   #pragma unroll
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir) {
-      id[i] = sign==1 ? (DGC_localL[dir]-1):0;
+      id[i] = sign==DIR_MINUS ? (DGC_localL[dir]-1):0;
     } else {
       id[i] = tmp_sid % DGC_localL[i];
       tmp_sid /= DGC_localL[i];
     }
   }
   size_t vid = LEXIC_ID(id);
-  sidStride ss(vid,is4D);
-  ss.accessSideGhost(LEXIC_3D(dir,id), site_size, dir, (ORIENTATION) sign);
-  for(int i = 0 ; i < site_size ; i++)
-    F.set(i, ss, F.get(i,sidStride(vid,is4D)));
+  F.setSid(vid);
+  pFloat2<FloatInOut> F_ghost=F;
+  F_ghost.accessSideGhost(LEXIC_3D(dir,id), dir, (ORIENTATION) sign);
+  for(int i = 0 ; i < F.site_size ; i++)
+    F_ghost.set(i, F.get(i));
 }
 
 template<typename Float>
-static void copy_side_to_ghost(PLEGMA_Field<Float> &f, short dir, short sign){
+static void copy_side_to_ghost(pFloat2<Float> F, short dir, short sign){
   if( HGC_dimBreak[dir] ){
-    assert(f.Total_length() == HGC_localVolume || f.Total_length() == HGC_localVolume3D);
-    bool is4D = f.Total_length() == HGC_localVolume;
-    ProfileStruct ps(is4D ? HGC_surface3D[dir] : (HGC_surface3D[dir]/HGC_localL[DIM_T]));
-    tuneAndRun(ps, "copy_side_to_ghost_kernel", copy_side_to_ghost_kernel<Float>, f.D_elem(), dir, sign, f.Field_length(), is4D);
+    ProfileStruct ps(F.sideGhostL(dir));
+    tuneAndRun(ps, "copy_side_to_ghost_kernel", copy_side_to_ghost_kernel<Float>, F, dir, sign);
   }
 }
 
 template<typename FloatInOut>
-static __global__ void copy_corner_to_ghost_kernel(FloatInOut *f, short dir1, short dir2, short sign1, short sign2, int site_size, size_t localVolume, bool is4D){
+static __global__ void copy_corner_to_ghost_kernel(pFloat2<FloatInOut> F, short dir1, short dir2, short sign1, short sign2){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_surface2D[dir1][dir2]) return;
-  generic2<FloatInOut> F(f);
+  if (sid >= F.cornerGhostL(dir1,dir2)) return;
   size_t id[4], tmp_sid=sid;
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir1) {
-      id[i] = sign1==1 ? (DGC_localL[dir1]-1):0;
+      id[i] = sign1==DIR_MINUS ? (DGC_localL[dir1]-1):0;
     } else if(i==dir2) {
-      id[i] = sign2==1 ? (DGC_localL[dir2]-1):0;      
+      id[i] = sign2==DIR_MINUS ? (DGC_localL[dir2]-1):0;      
     } else {
       id[i] = tmp_sid % DGC_localL[i];
       tmp_sid /= DGC_localL[i];
     }
   }
   size_t vid = LEXIC_ID(id);
-  sidStride ss(vid, is4D);
-  ss.accessCornerGhost(LEXIC_2D(dir1,dir2,id), site_size, dir1, dir2, (ORIENTATION) sign1, (ORIENTATION) sign2);
-  for(int i = 0 ; i < site_size ; i++)
-    F.set(i, ss, F.get(i,sidStride(vid,is4D)));
+  F.setSid(vid);
+  pFloat2<FloatInOut> F_ghost=F;
+  F_ghost.accessCornerGhost(LEXIC_2D(dir1,dir2,id), dir1, dir2, (ORIENTATION) sign1, (ORIENTATION) sign2);
+  for(int i = 0 ; i < F.site_size ; i++)
+    F_ghost.set(i, F.get(i));
 }
 
 template<typename Float>
-static void copy_corner_to_ghost(PLEGMA_Field<Float> &f, short dir1, short dir2, short sign1, short sign2){
+static void copy_corner_to_ghost(pFloat2<Float> F, short dir1, short dir2, short sign1, short sign2){
   if( (dir1 != dir2 ) && HGC_dimBreak[dir1] && HGC_dimBreak[dir2] ){
-    assert(f.Total_length() == HGC_localVolume || f.Total_length() == HGC_localVolume3D);
-    bool is4D = f.Total_length() == HGC_localVolume;
-    ProfileStruct ps(is4D ? HGC_surface2D[dir1][dir2] : (HGC_surface2D[dir1][dir2]/HGC_localL[DIM_T]));
-    tuneAndRun(ps, "copy_corner_to_ghost_kernel", copy_corner_to_ghost_kernel<Float>, f.D_elem(), dir1, dir2, sign1, sign2, f.Field_length(), f.Total_length(), is4D);
+    ProfileStruct ps(F.cornerGhostL(dir1, dir2));
+    tuneAndRun(ps, "copy_corner_to_ghost_kernel", copy_corner_to_ghost_kernel<Float>, F, dir1, dir2, sign1, sign2);
   }
 }
+
+template<typename Float>
+static __global__ void conjugate_kernel(generic2<Float> field){
+
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= field.volume()) return;
+
+  #pragma unroll
+  for(int i = 0 ; i < field.site_size; i++)
+    field[i].conj();
+}
+
+template<typename Float>
+void conjugate_k(PLEGMA_Field<Float>& inOut){
+  auto field = toField2<generic2>(inOut);
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (field.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
+  conjugate_kernel<<<gridDim,blockDim>>>(field);
+  checkCudaError();
+}
+
 
 /**
   @brief CUDA kernel to generate random number from the CURAND RNG states
@@ -241,18 +262,14 @@ static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
 }
 
 template<typename Float, typename FloatA, typename FloatB, typename FloatC, typename FloatD>
-static __global__ void traceMulFmunuSu3FmunuSu3_kernel(Float *F, FloatA *A, FloatB *B, FloatC *C, FloatD *D){
+static __global__ void traceMulFmunuSu3FmunuSu3_kernel(Float *F, su3_2<FloatA> RA, su3_2<FloatB> RB, su3_2<FloatC> RC, su3_2<FloatD> RD){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> *F2 = (Float2<Float> *) F;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= RA.volume()) return;
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatB> lB[N_COLS][N_COLS];
   Float2<FloatC> lC[N_COLS][N_COLS];
   Float2<FloatD> lD[N_COLS][N_COLS];
-  su3_2<FloatA> RA(A);
-  su3_2<FloatB> RB(B);
-  su3_2<FloatC> RC(C);
-  su3_2<FloatD> RD(D);
   RA.get(lA,sid);
   RB.get(lB,sid);
   RC.get(lC,sid);
@@ -265,20 +282,22 @@ template<typename Float, typename FloatA, typename FloatB, typename FloatC,typen
 static void traceMulFmunuSu3FmunuSu3_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<FloatA> &A, std::pair<int,int> munu_l,
 				       PLEGMA_Su3field<FloatB> &B, PLEGMA_Fmunu<FloatC> &C,  std::pair<int,int> munu_r,
 				       PLEGMA_Su3field<FloatD> &D){
-  ProfileStruct ps(HGC_localVolume);
+  assert(F.checkVolume(A,B,C,D));
   long int lshift = ((long int) A.munuToIndx(munu_l)) * N_COLS * N_COLS * HGC_localVolume * 2;
   long int rshift = ((long int) C.munuToIndx(munu_r)) * N_COLS * N_COLS * HGC_localVolume * 2;
-  tuneAndRun(ps, "traceMulFmunuSu3FmunuSu3_kernel", traceMulFmunuSu3FmunuSu3_kernel<Float,FloatA,FloatB,FloatC,FloatD>,
-	     F.D_elem(), A.D_elem()+lshift, B.D_elem(),C.D_elem()+rshift, D.D_elem());
+  su3_2<Float> RA((Float2<Float>*) A.D_elem()+lshift, A.Field_length(), A.is4D(), false);
+  su3_2<Float> RC((Float2<Float>*) C.D_elem()+rshift, C.Field_length(), C.is4D(), false);
+
+  ProfileStruct ps(RA.volume());
+  tuneAndRun(ps, "traceMulFmunuSu3FmunuSu3_kernel", traceMulFmunuSu3FmunuSu3_kernel<Float,FloatA,FloatB,FloatC,FloatD>, F.D_elem(), RA, toField2<su3_2>(B), RC, toField2<su3_2>(D));
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB>
-static void __global__ trPmunu_kernel(FloatA *out, FloatB *gauge, int mu, int nu){
+static void __global__ trPmunu_kernel(FloatA *out, gauge2<FloatA> u, int mu, int nu){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= DGC_localVolume) return;
   Float2<FloatA> *out2 = (Float2<FloatA> *) out;
-  gauge2<FloatA> u(gauge);
   Float2<FloatB> U1[N_COLS][N_COLS], U2[N_COLS][N_COLS], U3[N_COLS][N_COLS];
     /**
       --<-- 
@@ -295,8 +314,9 @@ static void __global__ trPmunu_kernel(FloatA *out, FloatB *gauge, int mu, int nu
 
 template<typename FloatA, typename FloatB>
 static void trPmunu_k(PLEGMA_Field<FloatA> &f,PLEGMA_Gauge<FloatB> &gauge, std::pair<int,int> munu){
-  ProfileStruct ps(HGC_localVolume);
+  assert(f.checkVolume(gauge));
+  ProfileStruct ps(gauge.Total_length());
   if(std::get<0>(munu) == std::get<1>(munu)) PLEGMA_error("For Pmunu cannot have mu == nu");
-  tuneAndRun(ps,"trPmunu_kernel",trPmunu_kernel<FloatA,FloatB>,f.D_elem(),gauge.D_elem(),std::get<0>(munu),std::get<1>(munu));
+  tuneAndRun(ps,"trPmunu_kernel",trPmunu_kernel<FloatA,FloatB>,f.D_elem(),toField2<gauge2>(gauge),std::get<0>(munu),std::get<1>(munu));
   checkCudaError();
 }
