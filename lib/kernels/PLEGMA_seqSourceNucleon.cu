@@ -10,7 +10,7 @@ static const __device__ float NtoN_values[16] = {-1,1,-1,1,1,-1,1,-1,-1,1,-1,1,1
 
 using namespace plegma;
 template<typename FloatC, typename FloatA, typename FloatB, bool isTwoPropDiff, int c_nu, int c_c2>
-__device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& prop1, propTex<FloatB>& prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice){
+__device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& prop1, propTex<FloatB>& prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   if(sid >= vec.volume()) return;

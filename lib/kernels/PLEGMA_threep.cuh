@@ -1,3 +1,7 @@
+#pragma once
+#include <PLEGMA_Propagator.h>
+
+
 template<typename FloatC,typename FloatA, typename FloatB>
 void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, std::vector<GAMMAS>& gammas);
 

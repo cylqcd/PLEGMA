@@ -97,7 +97,7 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
     grid.x = (grid.x/time_step)*t_step;
     threep_local_device<FloatC,FloatA, FloatB>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, propTex1, propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms);
+      (d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);

@@ -1,4 +1,5 @@
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_Gauge.h>
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_gammas.cuh>
@@ -113,7 +114,7 @@ static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
     grid.x = (grid.x/time_step)*t_step;
     threep_oneD_device<FloatC,FloatA, FloatB, FloatG>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, propTex1, propTex2, gaugetex, listGammas, it, t_step, maxT,
+      (d_partial_block, *propTex1, *propTex2, *gaugetex, listGammas, it, t_step, maxT,
        source, signProps, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 

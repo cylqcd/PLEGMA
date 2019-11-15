@@ -1,4 +1,5 @@
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_Gauge.h>
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_gammas.cuh>
@@ -107,7 +108,7 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
     grid.x = (grid.x/time_step)*t_step;
     threep_noe_device<FloatC,FloatA, FloatB, FloatG>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, propTex1, propTex2, gaugetex, it, t_step, maxT, source, signProps, runFT, *moms);
+      (d_partial_block, *propTex1, *propTex2, *gaugetex, it, t_step, maxT, source, signProps, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
