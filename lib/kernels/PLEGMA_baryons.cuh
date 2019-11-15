@@ -11,25 +11,25 @@ enum BARYONS_TYPE{NtoN,
 		  N_BARYONS}; // N_BARYONS must be last 
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_NtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_NtoN_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_NtoR_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_NtoR_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_RtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_RtoN_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_RtoR_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_RtoR_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC, int gamma>
-__device__ void contract_deltas_iso1o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_deltas_iso1o2_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC, int gamma>
-__device__ void contract_deltas_iso3o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_deltas_iso3o2_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC>* block2,
+__global__ void contract_baryons_device(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC>* block2,
 					int it, int time_step, int maxT, int4 source, BARYONS_TYPE ip, bool runFT, tex_mom_list mom_list){
 
   int grid3D = gridDim.x/time_step;
@@ -97,7 +97,7 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void contract_baryons_host( ProfileStruct &ps,
-				   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
+				   PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
 				   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result, int ip){
 
   int t_size = corr.localT(); if(t_size==0) return;
@@ -126,13 +126,16 @@ static void contract_baryons_host( ProfileStruct &ps,
     return;
   }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
-  
+
+  auto propTex1 = toTexture<propTex>(prop1);
+  auto propTex2 = toTexture<propTex>(prop2);
+
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     contract_baryons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (texProp1, texProp2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source,
+      (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source,
        (BARYONS_TYPE) ip, runFT, *mom_list);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
@@ -163,7 +166,7 @@ static void contract_baryons_host( ProfileStruct &ps,
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2, PLEGMA_Correlator<FloatC> &corr){
+static void contract_baryons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, PLEGMA_Correlator<FloatC> &corr){
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size=2*N_SPINS*N_SPINS;
   
@@ -188,7 +191,7 @@ static void contract_baryons(propTex<FloatA> texProp1, propTex<FloatB> texProp2,
   for(int ip=0; ip<N_BARYONS; ip++) {
     std::string name = "contract_baryons_"+std::to_string(ip);
     tuneAndRun( ps, name, contract_baryons_host<FloatA,FloatB,FloatC>,
-		ps, texProp1, texProp2, corr, result, ip);
+		ps, prop1, prop2, corr, result, ip);
     if(runFT) {
       FloatC *corr_ip = corr.H_elem() + ip*corr.getTotalSize()/N_BARYONS*2;
       MPI_Allreduce(result, corr_ip, corr.getTotalSize()/N_BARYONS*2, MPI_Type(corr_ip),

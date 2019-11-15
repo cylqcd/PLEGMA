@@ -2,7 +2,7 @@
 #include <PLEGMA_baryons_udsc.cuh>
 
 template<typename FloatA, typename FloatC>
-__global__ void create_prop_product(generic2<FloatC> *propProd,
+__global__ void create_prop_product(genericTex<FloatC> *propProd,
 				    propTex<FloatA> texProp1, propTex<FloatA> texProp2, propTex<FloatA> texProp3,
 				    int it, int time_step, int maxT, int4 source){
   int grid3D = gridDim.x/time_step;
@@ -12,7 +12,6 @@ __global__ void create_prop_product(generic2<FloatC> *propProd,
   // and we need to start from it when we go over maxT
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
-  sidStride ss(sid3D, false);
   
   if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -48,7 +47,7 @@ __global__ void create_prop_product(generic2<FloatC> *propProd,
 #pragma unroll
 		for(int j = 0; j < 6; j++)
 		  i=i*N_SPINS+mu[j];
-		propProd[tid].set(i,ss,accum);
+		propProd[tid].set(i,sid3D,accum);
 	      }
   }
 }
@@ -61,7 +60,6 @@ __global__ void contract_prop_prod(genericTex<FloatC> *texPropProd, Float2<Float
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
-  sidStride ss(sid3D, DGC_localVolume3D);
   Float2<FloatC> accum=0;
 
   if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
@@ -70,7 +68,7 @@ __global__ void contract_prop_prod(genericTex<FloatC> *texPropProd, Float2<Float
 #pragma unroll
       for(int j = 0; j < 6; j++)
 	mu=mu*N_SPINS+idxs[i*6+j];
-      accum += texPropProd[tid].get(mu, ss)*((Float2<FloatC>) vals[i]);
+      accum += texPropProd[tid].get(mu, sid3D)*((Float2<FloatC>) vals[i]);
     }
   }
   if(runFT) {
@@ -137,7 +135,7 @@ __global__ void contract_props(propTex<FloatA> texProp1, propTex<FloatA> texProp
 
 template<typename FloatA, typename FloatC>
 void contract_baryons_udsc_host(ProfileStruct &ps,
-				propTex<FloatA> *props,
+				PLEGMA_Propagator<FloatA>**props,
 				PLEGMA_Correlator<FloatC> &corr,
 				Float2<FloatC> *result, int i) {
 
@@ -176,26 +174,24 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   }
     
   // in case of ps.tp.aux == 1 we create a propProd which has open indeces. Otherwise we contract directly the props
+  std::vector<std::shared_ptr<genericTex<FloatC>>> holder;
   PLEGMA_Field<FloatC> *propProd[time_step];
-  genericTex<FloatC> h_texPropProd[time_step];
   genericTex<FloatC> *texPropProd = NULL;
-  generic2<FloatC> *propProd2 = NULL;
   if (ps.tp.aux.x == 2) {
-    generic2<FloatC> h_propProd2[time_step];
     cudaMalloc((void**)&texPropProd, time_step * sizeof(genericTex<FloatC>) );
-    cudaMalloc((void**)&propProd2, time_step * sizeof(generic2<FloatC>) );
     for(int t=0; t<time_step; t++) {
-      propProd[t] = new PLEGMA_Field<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, HGC_localVolume3D, NO_GHOSTS, false, false);
-      h_texPropProd[t].tex = propProd[t]->createTexObject();
-      h_propProd2[t].p = (Float2<FloatC> *) propProd[t]->D_elem();
+      propProd[t] = new PLEGMA_Field3D<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, NO_GHOSTS, false, false);
+      holder.push_back(toTexture<genericTex>(*(propProd[t])));
+      cudaMemcpy(texPropProd+t*sizeof(genericTex<FloatC>), holder.back().get(), sizeof(genericTex<FloatC>), cudaMemcpyHostToDevice);
     }
-    cudaMemcpy(texPropProd, h_texPropProd, time_step * sizeof(genericTex<FloatC>), cudaMemcpyHostToDevice);
-    cudaMemcpy(propProd2, h_propProd2, time_step * sizeof(generic2<FloatC>), cudaMemcpyHostToDevice);
   }
+
+  auto propTex1 = toTexture<propTex>(*(props[0]));
+  auto propTex2 = toTexture<propTex>(*(props[1]));
+  auto propTex3 = toTexture<propTex>(*(props[2]));
 
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) { goto exit; }
-
   for(int it=0; it < t_size; it+=time_step) {
     
     if(ps.tp.aux.x == 2) {
@@ -206,7 +202,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
       grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
       create_prop_product
 	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-	(propProd2, props[0], props[1], props[2], it, std::min(t_size-it, time_step), maxT, source);
+	(texPropProd, *propTex1, *propTex2, *propTex3, it, std::min(t_size-it, time_step), maxT, source);
     }
     
     shift = 0;
@@ -221,7 +217,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
       } else {
 	contract_props
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-	  (props[0], props[1], props[2], d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
+	  (*propTex1, *propTex2, *propTex3, d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
 	   source, runFT, *moms, it, std::min(t_size-it, time_step), maxT);
       }
       cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
@@ -250,17 +246,18 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   
   if (ps.tp.aux.x == 2) {
     cudaFree(texPropProd);
-    cudaFree(propProd2);
     for(int t=0; t<time_step; t++) {
-      propProd[t]->destroyTexObject(h_texPropProd[i].tex);
+      holder.pop_back();
+    }
+    for(int t=0; t<time_step; t++) {
       delete propProd[t];
     }
   }
 }
 
 template<typename FloatA, typename FloatC>
-void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
-			   propTex<FloatA> texPropST, propTex<FloatA> texPropCH,
+void contract_baryons_udsc(PLEGMA_Propagator<FloatA>& propUP, PLEGMA_Propagator<FloatA>& propDN,
+			   PLEGMA_Propagator<FloatA>& propST, PLEGMA_Propagator<FloatA>& propCH,
 			   PLEGMA_Correlator<FloatC> &corr, std::vector<int> &todo){
 
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
@@ -272,16 +269,16 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     else
       result = ((Float2<FloatC> *) corr.H_elem()) + shift*corr.getVolSize();
 
-    propTex<FloatA> props[3];
+    PLEGMA_Propagator<FloatA>* props[3];
     for (int j=0; j<3; j++) {
       if(BP_prop_prods[i][j] == 'u')
-	props[j] = texPropUP;
+	props[j] = &propUP;
       else if(BP_prop_prods[i][j] == 'd')
-	props[j] = texPropDN;
+	props[j] = &propDN;
       else if(BP_prop_prods[i][j] == 's')
-	props[j] = texPropST;
+	props[j] = &propST;
       else if(BP_prop_prods[i][j] == 'c')
-	props[j] = texPropCH;
+	props[j] = &propCH;
       else
 	PLEGMA_error("Unknown propagator %c", BP_prop_prods[i][j]);
     }
@@ -308,11 +305,11 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
 }
 
 template
-void contract_baryons_udsc<float,float>(propTex<float> texPropUP, propTex<float> texPropDN,
-					propTex<float> texPropST, propTex<float> texPropCH,
+void contract_baryons_udsc<float,float>(PLEGMA_Propagator<float>& propUP, PLEGMA_Propagator<float>& propDN,
+					PLEGMA_Propagator<float>& propST, PLEGMA_Propagator<float>& propCH,
 					PLEGMA_Correlator<float> &corr, std::vector<int> &todo);
 
 template
-void contract_baryons_udsc<double,double>(propTex<double> texPropUP, propTex<double> texPropDN,
-					  propTex<double> texPropST, propTex<double> texPropCH,
+void contract_baryons_udsc<double,double>(PLEGMA_Propagator<double>& propUP, PLEGMA_Propagator<double>& propDN,
+					  PLEGMA_Propagator<double>& propST, PLEGMA_Propagator<double>& propCH,
 					  PLEGMA_Correlator<double> &corr, std::vector<int> &todo);

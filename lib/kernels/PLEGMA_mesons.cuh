@@ -7,8 +7,8 @@ const __device__ short int mesons_indices[N_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,
 const __device__ float mesons_values[N_MESONS][16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_mesons_device( propTex<FloatA> texProp1,
-					propTex<FloatB> texProp2,
+__global__ void contract_mesons_device( propTex<FloatA>& texProp1,
+					propTex<FloatB>& texProp2,
 					Float2<FloatC> *block2,
 					int it, int time_step, int maxT, int4 source,
 					bool runFT, tex_mom_list moms){
@@ -66,8 +66,8 @@ __global__ void contract_mesons_device( propTex<FloatA> texProp1,
 
 template<typename FloatA, typename FloatB, typename FloatC>
 void contract_mesons_host( ProfileStruct &ps,
-			   propTex<FloatA> texProp1, propTex<FloatB> texProp2,
-			   PLEGMA_Correlator<FloatC> &corr, Float2<FloatC> *result){
+			   PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
+			   PLEGMA_Correlator<FloatC>& corr, Float2<FloatC> *result){
 
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
@@ -95,13 +95,16 @@ void contract_mesons_host( ProfileStruct &ps,
     return;
   }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
-  
+
+  auto propTex1 = toTexture<propTex>(prop1);
+  auto propTex2 = toTexture<propTex>(prop2);
+    
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     contract_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (texProp1, texProp2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
+      (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
@@ -127,8 +130,8 @@ void contract_mesons_host( ProfileStruct &ps,
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_mesons(propTex<FloatA> &texProp1, propTex<FloatB> &texProp2,
-			    PLEGMA_Correlator<FloatC> &corr){
+static void contract_mesons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
+			    PLEGMA_Correlator<FloatC>& corr){
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size = 2*N_MESONS;
   
@@ -151,7 +154,7 @@ static void contract_mesons(propTex<FloatA> &texProp1, propTex<FloatB> &texProp2
   ps.tune_globally = true;
   
   tuneAndRun( ps, "contract_mesons", contract_mesons_host<FloatA,FloatB,FloatC>,
-	      ps, texProp1, texProp2, corr, result);
+	      ps, prop1, prop2, corr, result);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);

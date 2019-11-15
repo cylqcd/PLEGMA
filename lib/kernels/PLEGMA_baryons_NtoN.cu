@@ -4,7 +4,7 @@ static const __device__ short int NtoN_indices[16][4] = {0,1,0,1,0,1,1,0,0,1,2,3
 static const __device__ float NtoN_values[16] = {-1,1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_NtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid) {
+__device__ void contract_NtoN_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid) {
   Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
   texProp1.get(prop1,vid);
@@ -45,7 +45,7 @@ __device__ void contract_NtoN_kernel(propTex<FloatA> texProp1, propTex<FloatB> t
     }
 }
 
-template __device__ void contract_NtoN_kernel<float,float,float>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_NtoN_kernel<double,double,double>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_NtoN_kernel<float,float,float>(propTex<float>& texProp1, propTex<float>& texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_NtoN_kernel<double,double,double>(propTex<double>& texProp1, propTex<double>& texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
 
 

@@ -5,7 +5,7 @@ static const __device__ float deltas_values[3][16] =  {1,-1,-1,1,-1,1,1,-1,-1,1,
 
 // ISO1/2 Deltap and delta0, 11,22,33
 template<typename FloatA, typename FloatB, typename FloatC, int gamma>
-__device__ void contract_deltas_iso1o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid) {
+__device__ void contract_deltas_iso1o2_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid) {
   Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
   texProp1.get(prop1,vid);
@@ -60,7 +60,7 @@ __device__ void contract_deltas_iso1o2_kernel(propTex<FloatA> texProp1, propTex<
 
 // ISO3/2 Deltapp and deltam, 11,22,33
 template<typename FloatA, typename FloatB, typename FloatC, int gamma>
-__device__ void contract_deltas_iso3o2_kernel(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid) {
+__device__ void contract_deltas_iso3o2_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid) {
   Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
   texProp1.get(prop1,vid);
@@ -109,15 +109,15 @@ __device__ void contract_deltas_iso3o2_kernel(propTex<FloatA> texProp1, propTex<
     }
 }
 
-template __device__ void contract_deltas_iso1o2_kernel<float,float,float,0>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso1o2_kernel<float,float,float,1>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso1o2_kernel<float,float,float,2>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso3o2_kernel<float,float,float,0>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso3o2_kernel<float,float,float,1>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso3o2_kernel<float,float,float,2>(propTex<float> texProp1, propTex<float> texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso1o2_kernel<double,double,double,0>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso1o2_kernel<double,double,double,1>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso1o2_kernel<double,double,double,2>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso3o2_kernel<double,double,double,0>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso3o2_kernel<double,double,double,1>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
-template __device__ void contract_deltas_iso3o2_kernel<double,double,double,2>(propTex<double> texProp1, propTex<double> texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso1o2_kernel<float,float,float,0>(propTex<float>& texProp1, propTex<float>& texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso1o2_kernel<float,float,float,1>(propTex<float>& texProp1, propTex<float>& texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso1o2_kernel<float,float,float,2>(propTex<float>& texProp1, propTex<float>& texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso3o2_kernel<float,float,float,0>(propTex<float>& texProp1, propTex<float>& texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso3o2_kernel<float,float,float,1>(propTex<float>& texProp1, propTex<float>& texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso3o2_kernel<float,float,float,2>(propTex<float>& texProp1, propTex<float>& texProp2, Float2<float> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso1o2_kernel<double,double,double,0>(propTex<double>& texProp1, propTex<double>& texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso1o2_kernel<double,double,double,1>(propTex<double>& texProp1, propTex<double>& texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso1o2_kernel<double,double,double,2>(propTex<double>& texProp1, propTex<double>& texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso3o2_kernel<double,double,double,0>(propTex<double>& texProp1, propTex<double>& texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso3o2_kernel<double,double,double,1>(propTex<double>& texProp1, propTex<double>& texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);
+template __device__ void contract_deltas_iso3o2_kernel<double,double,double,2>(propTex<double>& texProp1, propTex<double>& texProp2, Float2<double> accum[2*N_SPINS*N_SPINS], int vid);

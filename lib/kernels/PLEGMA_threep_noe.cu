@@ -71,8 +71,8 @@ __global__ void threep_noe_device(Float2<FloatC>* block2,
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
 static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Correlator<FloatC> &corr,
-			    propTex<FloatA> prop1, propTex<FloatA> prop2,
-			    int signProps, gaugeTex<FloatG> gauge){
+			    PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatA>& prop2,
+			    int signProps, PLEGMA_Gauge<FloatG>& gauge){
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
@@ -94,16 +94,20 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
   Float2<FloatC> *d_partial_block = NULL;
   cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
+
+  auto propTex1 = toTexture<propTex>(prop1);
+  auto propTex2 = toTexture<propTex>(prop2);
+  auto gaugetex = toTexture<gaugeTex>(gauge);
+
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
-
   for(int it=0; it < t_size; it+=time_step) {
     int t_step = std::min(t_size-it, time_step);
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*t_step;
     threep_noe_device<FloatC,FloatA, FloatB, FloatG>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, prop1, prop2, gauge, it, t_step, maxT, source, signProps, runFT, *moms);
+      (d_partial_block, propTex1, propTex2, gaugetex, it, t_step, maxT, source, signProps, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
@@ -132,7 +136,7 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
-void threep_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2, int signProps, gaugeTex<FloatG> gauge) {
+void threep_noe(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Gauge<FloatG>& gauge) {
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   int site_size = N_DIMS;
@@ -166,6 +170,6 @@ void threep_noe(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<
 #endif
 }
 
-template void threep_noe<float,float,float,float>(PLEGMA_Correlator<float> &corr, propTex<float> prop1, propTex<float> prop2, int signProps, gaugeTex<float> gauge);
-template void threep_noe<double,double,double,double>(PLEGMA_Correlator<double> &corr, propTex<double> prop1, propTex<double> prop2, int signProps, gaugeTex<double> gauge);
+template void threep_noe<float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Gauge<float>& gauge);
+template void threep_noe<double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, PLEGMA_Gauge<double>& gauge);
 
