@@ -129,6 +129,15 @@ else()
   
 endif()
 
+# Use CUDA textures
+set(PLEGMA_TEXTURE TRUE CACHE BOOL "Wheater to use or not CUDA textures")
+mark_as_advanced(PLEGMA_TEXTURE)
+if(PLEGMA_TEXTURE)
+  add_definitions(-DPLEGMA_TEXTURE)
+else()
+  
+endif()
+
 # compile contractions for nucleon fix sink 3pf
 set(PLEGMA_NUCLEON_3PF_FIX_SINK FALSE CACHE BOOL "compile contractions for nucleon 3pf fix sink method")
 if(PLEGMA_NUCLEON_3PF_FIX_SINK)
