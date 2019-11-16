@@ -46,9 +46,6 @@ target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
-cuda_add_executable(nucleon_3pt nucleon_3pt.cpp)
-target_link_libraries(nucleon_3pt ${PLEGMA_LIBS})
-
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
@@ -88,7 +85,7 @@ target_link_libraries(MG_tuner ${PLEGMA_LIBS})
 cuda_add_executable(benchmark benchmark.cpp)
 target_link_libraries(benchmark ${PLEGMA_LIBS})
 
-cuda_add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
+cuda_add_executable(quark_rms quark_rms.cpp)
 target_link_libraries(quark_rms ${PLEGMA_LIBS})
 
 cuda_add_executable(Zfac_Vgg Zfac_Vgg.cpp)
