@@ -348,7 +348,7 @@ namespace plegma {
     }
     inline __device__ void get(Float2<Float> *p, const size_t& sid) {
       sidStride::setSid(sid);
-      return T::get(p);
+      return get(p);
     }
     template<get_from src, typename ...dir_t>
     inline __device__ Float2<Float> get(const int& i, const size_t& sid, const dir_t&... dirs) {
@@ -360,7 +360,7 @@ namespace plegma {
     inline __device__ void get(Float2<Float> *p, const size_t& sid, const dir_t&... dirs) {
       sidStride::setSid(sid);
       sidStride::shift<src>(dirs ...);
-      T::get(p); 
+      get(p); 
     }    
   };
   
@@ -577,7 +577,7 @@ namespace plegma {
     }
 
     inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2) const {
-      return get(mu, nu, c1, c2);
+      return T::get(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2);
     }
     inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2, const size_t& sid) {
       sidStride::setSid(sid);
