@@ -53,6 +53,8 @@ namespace plegma {
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localV = HGC_localVolume, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
     ~PLEGMA_Field();
+    // Deleting copy contructor at the moment. This would cause seg fault due to the fields allocated
+    PLEGMA_Field(const PLEGMA_Field<Float>&) = delete;
     void zero_host();
     void zero_host_backup();
     void zero_device();
