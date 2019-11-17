@@ -186,8 +186,8 @@ int main(int argc, char **argv) {
 		    // put a momentum in the sink later
 		    vectorAuxF.conjugate();
 		    vectorAuxF.apply_gamma(G5);
-		    vectorAuxD1.copy(vectorAuxF);
-		    TIME(vectorInOut.gaussianSmearing(vectorAuxD1,smearedGauge3D, nsmearGauss, alphaGauss));
+		    vectorAuxD.copy(vectorAuxF);
+		    TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge3D, nsmearGauss, alphaGauss));
 		  }
 		  double norm = vectorInOut.norm();
 		  vectorInOut.cscale(1/norm);
