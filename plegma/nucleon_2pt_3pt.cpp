@@ -1,9 +1,10 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 
-double runtime;
-#define TIME(fnc)  runtime = MPI_Wtime(); fnc; runtime = MPI_Wtime()-runtime; \
-  PLEGMA_printf("TIME for "#fnc" %lf sec\n", runtime)
+std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;			\
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back()
 
 std::vector<std::thread> threads;
 //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
@@ -14,8 +15,7 @@ using namespace quda;
 static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space", "tSinks","Projs", "threep-filename"};
   
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   initializeOptions(argc, argv, true, listOpt);
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
   std::vector<double> mu_s;
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
       applyBoundaryConditions(contractGauge,true);
     }
 
-    updateOptions(UP);
+    updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -68,58 +68,66 @@ int main(int argc, char **argv)
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
 
+      site& source = sourcePositions[isource];
+      PLEGMA_Gauge3D<double> smearedGauge3D;
+      smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
+
+      auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
+				   double run_mu, WHICHFLAVOR fl, int nSmear, bool finalize) {
+				 // ensuring mu value
+				 if(mu != run_mu) {
+				   updateOptions(fl);
+				   mu = run_mu;
+				   solver.UpdateSolver();
+				 }
+				 for(int isc = 0 ; isc < 12 ; isc++){
+				   PLEGMA_Vector<double> vectorInOut;
+				   { // Smearing the source
+				     PLEGMA_Vector3D<double> vector1, vector2;
+				     vector1.pointSource(source, isc/3, isc%3, DEVICE);
+				     TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear, alphaGauss));
+				     vectorInOut.absorb(vector2,source[DIM_T]);
+				   }
+				   // Inverting
+				   PLEGMA_printf("Going to invert %s for component %d\n",
+						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
+				   TIME(solver.solve(vectorInOut, vectorInOut));
+				   if(prop_SL.getAllocation() != NONE) {
+				     PLEGMA_Vector<float> vectorAuxF;
+				     vectorAuxF.copy(vectorInOut);
+				     prop_SL.absorb(vectorAuxF, isc/3, isc%3);
+				   }
+				   { // Smearing the solution
+				     PLEGMA_Vector<double> vectorAuxD;
+				     PLEGMA_Vector<float> vectorAuxF;
+				     TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nSmear, alphaGauss));
+				     vectorAuxF.copy(vectorAuxD);
+				     prop_SS.absorb(vectorAuxF, isc/3, isc%3);
+				   }
+				 }
+				 if(finalize) {
+				   prop_SS.rotateToPhysicalBase_device(run_mu/abs(run_mu));
+				   prop_SS.applyBoundaries_device(source[DIM_T]);
+				 }
+			       };
+
+
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propDN;
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
-	PLEGMA_Propagator<float> propUP_SL;
-	PLEGMA_Propagator<float> propDN_SL;
+	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
+	PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
+
+	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
+	TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
 	
-	// ensuring mu positive
-	if(mu != mu_ud) {
-	  updateOptions(UP);
-	  mu = mu_ud;
-	  solver.UpdateSolver();
-	}
-	for(int isc = 0 ; isc < 12 ; isc++){
-	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	  PLEGMA_Vector<float> vectorAuxF;
-	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
-	  PLEGMA_printf("Going to invert UP for component %d\n", isc);
-	  TIME(solver.solve(vectorInOut, vectorInOut));
-	  vectorAuxF.copy(vectorInOut);
-	  propUP_SL.absorb(vectorAuxF, isc/3, isc%3);
-	  TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
-	  vectorAuxF.copy(vectorAuxD);
-	  propUP.absorb(vectorAuxF, isc/3, isc%3);
-	}
-	
-	// ensuring mu negative
-	if(mu != -mu_ud) {
-	  updateOptions(DOWN);
-	  mu = -mu_ud;
-	  solver.UpdateSolver();
-	}
-	for(int isc = 0 ; isc < 12 ; isc++){
-	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	  PLEGMA_Vector<float> vectorAuxF;
-	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
-	  PLEGMA_printf("Going to invert DN for component %d\n", isc);
-	  TIME(solver.solve(vectorInOut, vectorInOut));
-	  vectorAuxF.copy(vectorInOut);
-	  propDN_SL.absorb(vectorAuxF, isc/3, isc%3);
-	  TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss));
-	  vectorAuxF.copy(vectorAuxD);
-	  propDN.absorb(vectorAuxF, isc/3, isc%3);
-	}
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 	for(size_t its = 0; its < tSinks.size(); its++){
 	  int tsinkMtsource = tSinks[its];
 	  if(tsinkMtsource >= HGC_totalL[3])
 	    PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
-	  int signPer = (tsinkMtsource+sourcePositions[isource][3]) >= HGC_totalL[3] ? -1 : +1;
-	  int global_fixSinkTime = (tsinkMtsource + sourcePositions[isource][3])%HGC_totalL[3]; 
+	  int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
+	  int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
 	  // 3D propagators at t_sink
 	  PLEGMA_Propagator3D<float> propUP3D;
@@ -141,14 +149,14 @@ int main(int argc, char **argv)
 	      if(flav==0) {
 		// ensuring mu positive
 		if(mu != mu_ud) {
-		  updateOptions(UP);
+		  updateOptions(LIGHT);
 		  mu = mu_ud;
 		  solver.UpdateSolver();
 		}
 	      } else {
 		// ensuring mu negative
 		if(mu != -mu_ud) {
-		  updateOptions(DOWN);
+		  updateOptions(LIGHT);
 		  mu = -mu_ud;
 		  solver.UpdateSolver();
 		}
@@ -156,53 +164,56 @@ int main(int argc, char **argv)
 	      
 	      for(int nu = 0 ; nu < 4 ; nu++)
 		for(int c2 = 0 ; c2 < 3 ; c2++){
-		  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-		  PLEGMA_Vector<float> vectorAuxF;
-		  if(flav==0) {
-		    if(nucleon == PROTON)
-		      vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, get_projector(Projs[iproj]),
-						  nucleon, global_fixSinkTime, nu, c2);
-		    else
-		      vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, get_projector(Projs[iproj]),
-						  nucleon, global_fixSinkTime, nu, c2);
-		  } else {
-		    if(nucleon == PROTON)
-		      vectorAuxF.seqSourceNucleon(propUP3D, get_projector(Projs[iproj]), nucleon,
-						  global_fixSinkTime, nu, c2);
-		    else
-		      vectorAuxF.seqSourceNucleon(propDN3D, get_projector(Projs[iproj]), nucleon,
-						  global_fixSinkTime, nu, c2);
+		  PLEGMA_Vector<double> vectorInOut;
+		  {
+		    PLEGMA_Vector<double> vectorAuxD;
+		    PLEGMA_Vector<float> vectorAuxF;
+		    if(flav==0) {
+		      if(nucleon == PROTON)
+			vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, get_projector(Projs[iproj]),
+						    nucleon, global_fixSinkTime, nu, c2);
+		      else
+			vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, get_projector(Projs[iproj]),
+						    nucleon, global_fixSinkTime, nu, c2);
+		    } else {
+		      if(nucleon == PROTON)
+			vectorAuxF.seqSourceNucleon(propUP3D, get_projector(Projs[iproj]), nucleon,
+						    global_fixSinkTime, nu, c2);
+		      else
+			vectorAuxF.seqSourceNucleon(propDN3D, get_projector(Projs[iproj]), nucleon,
+						    global_fixSinkTime, nu, c2);
+		    }
+		    // put a momentum in the sink later
+		    vectorAuxF.conjugate();
+		    vectorAuxF.apply_gamma(G5);
+		    vectorAuxD1.copy(vectorAuxF);
+		    TIME(vectorInOut.gaussianSmearing(vectorAuxD1,smearedGauge3D, nsmearGauss, alphaGauss));
 		  }
-		  // put a momentum in the sink later
-		  vectorAuxF.conjugate();
-		  vectorAuxF.apply_gamma(G5);
-		  vectorAuxD.copy(vectorAuxF);
-		  // TODO: gaussian smearing only on the t_sink
-		  TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss, global_fixSinkTime));
 		  double norm = vectorInOut.norm();
 		  vectorInOut.cscale(1/norm);
 		  TIME(solver.solve(vectorInOut, vectorInOut));
 		  vectorInOut.cscale(norm);
+		  PLEGMA_Vector<float> vectorAuxF;
 		  vectorAuxF.copy(vectorInOut);
 		  seqProp.absorb(vectorAuxF, nu, c2);
 		}
 	      seqProp.apply_gamma(G5);
 	      seqProp.conjugate();
 	      
-	      PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
+	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
 	  
 	      // LOCAL contractions
-	      corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
+	      TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 	      THREAD(corr.writeFile(filename, corr_file_format));
 	      
 	      // ONED contractions
-	      corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
+	      TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	      THREAD(corr.writeFile( filename, corr_file_format));
 
 	      // noe contractions
-	      corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
+	      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	      THREAD(corr.writeFile( filename, corr_file_format));
 	    }
@@ -212,11 +223,11 @@ int main(int argc, char **argv)
       }
       propUP.rotateToPhysicalBase_device(+1);
       propDN.rotateToPhysicalBase_device(-1);
-      propUP.applyBoundaries_device(sourcePositions[isource][3]);
-      propDN.applyBoundaries_device(sourcePositions[isource][3]);
+      propUP.applyBoundaries_device(source[3]);
+      propDN.applyBoundaries_device(source[3]);
 
       {
-	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	TIME(corr.contractMesons(propUP, propDN));
 	
 	char *dset1, *dset2;
@@ -234,59 +245,28 @@ int main(int argc, char **argv)
       int nSmaller = std::min(mu_s.size(),mu_c.size());
       char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
       
+      PLEGMA_Propagator<float> none(NONE);
       PLEGMA_Propagator<float> propS[nSmaller];
       for(int ismall=0; ismall < nSmaller; ismall++) {
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
-	updateOptions((cSmaller=='s') ? STRANGE : CHARM);
 	mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
-	solver.UpdateSolver();
-	
-	for(int isc = 0 ; isc < 12 ; isc++){
-	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	  PLEGMA_Vector<float> vectorAuxF;
-	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss, sourcePositions[isource][DIM_T]));
-	  
-	  PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
-	  TIME(solver.solve(vectorInOut, vectorInOut));
-	  TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss));
-	  vectorAuxF.copy(vectorAuxD);
-	  propS[ismall].absorb(vectorAuxF, isc/3, isc%3);
-	}
-	propS[ismall].rotateToPhysicalBase_device(mu/abs(mu));
-	propS[ismall].applyBoundaries_device(sourcePositions[isource][3]);
+	TIME(computePropagator(propS[ismall], none, mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear, true));
       }
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
       if(nLarger > 0) {
 	PLEGMA_Propagator<float> propL;
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
-	  updateOptions((cSmaller!='s') ? STRANGE : CHARM);
 	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-	  solver.UpdateSolver();
-	  
-	  for(int isc = 0 ; isc < 12 ; isc++){
-	    PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	    PLEGMA_Vector<float> vectorAuxF;
-	    vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	    TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss, sourcePositions[isource][DIM_T]));
-	    
-	    PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
-	    TIME(solver.solve(vectorInOut, vectorInOut));
-	    TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss));
-	    vectorAuxF.copy(vectorAuxD);
-	    propL.absorb(vectorAuxF, isc/3, isc%3);
-	  }
-	  propL.rotateToPhysicalBase_device(mu/abs(mu));
-	  propL.applyBoundaries_device(sourcePositions[isource][3]);
+	  TIME(computePropagator(propL, none, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear, true));
 
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
 	      PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
 	      PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
-	      PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	      bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	      bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -343,7 +323,7 @@ int main(int argc, char **argv)
 	    PLEGMA_Propagator<float> none(NONE);
 	    PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? none : propL;
 	    PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? none : propL;
-	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	    bool only_st = (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -391,7 +371,7 @@ int main(int argc, char **argv)
       } else {
 #ifdef PLEGMA_UDSC_BARYONS
 	PLEGMA_Propagator<float> none(NONE);
-	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
 	char * group;
 	
