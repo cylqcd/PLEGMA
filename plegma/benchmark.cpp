@@ -80,15 +80,17 @@ int main(int argc, char **argv) {
   if(run({"twop","threep","PDFs","smearing"})) {
     PLEGMA_Gauge<double> gauge_a, gauge_b;
     PLEGMA_Vector<double> vector_a, vector_b;
+    PLEGMA_Gauge3D<double> gauge3D;
+    PLEGMA_Vector3D<double> vector3D_a, vector3D_b;
 
     // Benchmark of the APEsmearing function 
     PLEGMA_benchmark(&gauge_b,&PLEGMA_Gauge<double>::APEsmearing, "APEsmearing (1 iter)", gauge_a, 1, 0.5, 3);
 
-    // Benchmark gaussian smearing 
-    PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing one timeslice (1 iter)",vector_b, gauge_a, 1, 0.2, 0);
-
-    // Benchmark gaussian smearing 
-    PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing all timeslice (1 iter)",vector_b, gauge_a, 1, 0.2, -1);
+    // Benchmark gaussian smearing
+    PLEGMA_benchmark(&vector3D_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing 3D on one timeslice (1 iter)",vector3D_b, gauge3D, 1, 0.2);
+    
+    // Benchmark gaussian smearing
+    PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing on all timeslice (1 iter)",vector_b, gauge_a, 1, 0.2);
   }
 
   if(run({"twop"})) {
