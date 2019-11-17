@@ -166,29 +166,28 @@ int main(int argc, char **argv) {
 		for(int c2 = 0 ; c2 < 3 ; c2++){
 		  PLEGMA_Vector<double> vectorInOut;
 		  {
-		    PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
-		    PLEGMA_Vector3D<float> vectorAuxF;
+		    PLEGMA_Vector<double> vectorAuxD;
+		    PLEGMA_Vector<float> vectorAuxF;
 		    if(flav==0) {
 		      if(nucleon == PROTON)
 			vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, get_projector(Projs[iproj]),
-						    nucleon, nu, c2);
+						    nucleon, global_fixSinkTime, nu, c2);
 		      else
 			vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, get_projector(Projs[iproj]),
-						    nucleon, nu, c2);
+						    nucleon, global_fixSinkTime, nu, c2);
 		    } else {
 		      if(nucleon == PROTON)
 			vectorAuxF.seqSourceNucleon(propUP3D, get_projector(Projs[iproj]), nucleon,
-						    nu, c2);
+						    global_fixSinkTime, nu, c2);
 		      else
 			vectorAuxF.seqSourceNucleon(propDN3D, get_projector(Projs[iproj]), nucleon,
-						    nu, c2);
+						    global_fixSinkTime, nu, c2);
 		    }
 		    // put a momentum in the sink later
 		    vectorAuxF.conjugate();
 		    vectorAuxF.apply_gamma(G5);
 		    vectorAuxD1.copy(vectorAuxF);
-		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D, nsmearGauss, alphaGauss));
-		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+		    TIME(vectorInOut.gaussianSmearing(vectorAuxD1,smearedGauge3D, nsmearGauss, alphaGauss));
 		  }
 		  double norm = vectorInOut.norm();
 		  vectorInOut.cscale(1/norm);
