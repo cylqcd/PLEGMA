@@ -39,11 +39,10 @@ void PLEGMA_Correlator<Float>::
 contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       PLEGMA_Propagator<Float> &prop2 ){
 
-  shape = {};
+  shape = {10};
   datasets =  {"twop_meson_1", "twop_meson_2"};
-  groups =  {"mesons/pseudoscalar", "mesons/scalar", "mesons/g5g1", "mesons/g5g2",
-	     "mesons/g5g3", "mesons/g5g4", "mesons/g1", "mesons/g2", "mesons/g3", "mesons/g4"};
-  description = "";
+  groups =  {"mesons"};
+  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
   
   initialize();
   propTex<Float> prop1Tex, prop2Tex;
