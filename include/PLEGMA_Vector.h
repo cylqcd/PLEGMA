@@ -110,6 +110,8 @@ namespace plegma {
 
     ~PLEGMA_Vector3D(){ }
 
+    using PLEGMA_Field3D<Float>::absorb;
+
     /**
        @brief Absorbs elements nu, c2 from a 3D propagator to a 3D vector
        @param PLEGMA_Propagator3D<Float> prop, The 3D propagator
