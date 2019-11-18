@@ -41,7 +41,7 @@ void updateOptions(WHICHFLAVOR fl){
   switch(fl)
     {
     case LIGHT:
-      filename = inputUP;
+      filename = inputLIGHT;
       break;
     case STRANGE:
       filename = inputST;
