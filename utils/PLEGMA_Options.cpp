@@ -427,7 +427,7 @@ void qudaOptions(Options &opt){
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
 
-  isFound=opt.set("Light-params-infile", "Name of the input file containing inverter input parameters for light quarks", verbosity, inputUP);
+  isFound=opt.set("Light-params-infile", "Name of the input file containing inverter input parameters for light quarks", verbosity, inputLIGHT);
 
   isFound=opt.set("Strange-params-infile", "Name of the input file containing inverter input parameters for quark strange", verbosity, inputST);
   
