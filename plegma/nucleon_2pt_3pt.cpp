@@ -187,7 +187,10 @@ int main(int argc, char **argv) {
 		    vectorAuxF.conjugate();
 		    vectorAuxF.apply_gamma(G5);
 		    vectorAuxD.copy(vectorAuxF);
-		    TIME(vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge3D, nsmearGauss, alphaGauss));
+		    PLEGMA_Vector3D<double> vectorAux3D1, vectorAux3D2;
+		    vectorAux3D1.absorb(vectorAuxD, global_fixSinkTime);
+		    TIME(vectorAux3D2.gaussianSmearing(vectorAux3D1,smearedGauge3D, nsmearGauss, alphaGauss));
+		    vectorInOut.absorb(vectorAux3D2, global_fixSinkTime);
 		  }
 		  double norm = vectorInOut.norm();
 		  vectorInOut.cscale(1/norm);
