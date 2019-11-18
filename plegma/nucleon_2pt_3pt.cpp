@@ -60,7 +60,7 @@ int main(int argc, char **argv)
       applyBoundaryConditions(contractGauge,true);
     }
 
-    updateOptions(UP);
+    updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 	
 	// ensuring mu positive
 	if(mu != mu_ud) {
-	  updateOptions(UP);
+	  updateOptions(LIGHT);
 	  mu = mu_ud;
 	  solver.UpdateSolver();
 	}
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 	
 	// ensuring mu negative
 	if(mu != -mu_ud) {
-	  updateOptions(DOWN);
+	  updateOptions(LIGHT);
 	  mu = -mu_ud;
 	  solver.UpdateSolver();
 	}
@@ -141,14 +141,14 @@ int main(int argc, char **argv)
 	      if(flav==0) {
 		// ensuring mu positive
 		if(mu != mu_ud) {
-		  updateOptions(UP);
+		  updateOptions(LIGHT);
 		  mu = mu_ud;
 		  solver.UpdateSolver();
 		}
 	      } else {
 		// ensuring mu negative
 		if(mu != -mu_ud) {
-		  updateOptions(DOWN);
+		  updateOptions(LIGHT);
 		  mu = -mu_ud;
 		  solver.UpdateSolver();
 		}
