@@ -1,4 +1,5 @@
 #include <PLEGMA_ScattCorrelator.h>
+#include <PLEGMA_scattreductions.cuh>
 
 using namespace plegma;
 //--------------------------------//
@@ -11,23 +12,25 @@ using namespace plegma;
 // - finalize() -> delete corr_*_space;
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> Gammas, PLEGMA_Propagator<Float> &S) {
+void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S, int source[4]) {
 
-  if( corr_space==POSITION_SPACE )
-    PLEGMA_Error("Not implemented yet\n");
+  if( this->corr_space==POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
 
-  int n_gammas= Gammas.size();
+  int n_gammas= this->Gammas.size();
 
-  if(n_gammas==0)
-    PLEGMA_Error("provide at list 1 Gamma matrix\n");
+  if(n_gammas==0||n_gammas>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
   
-  if(!isAlloc || site_size!=n_gammas*N_SPINS*N_COLS){
-    datasets={};
-    groups={};
-    shape={n_gammas,N_SPINS,N_COLS};
-    initialize();
+  if(!this->isAlloc || this->site_size!=n_gammas*N_SPINS*N_COLS){
+    this->datasets={};
+    this->groups={};
+    this->shape={n_gammas,N_SPINS,N_COLS};
+    this->initialize();
   }
 
+  //N.B. source[0] not used
+  this->setSource(source);
   V3_k( *this, Phi, Gammas, S);
   
 }

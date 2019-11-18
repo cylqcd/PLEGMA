@@ -1,73 +1,78 @@
 #include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_gammas.cuh>
+
 using namespace plegma;
 template<typename T>
+struct KernelArr {T* array; int size;};
 
-// struct KernelArr {T* array; int size;};
-// KernelArr<GAMMAS> listGammas;
-//   listGammas.size = gammas.size();
-//   cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-//   checkCudaError();
-//   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
-//   checkCudaError();
+template<typename FloatOut, typename FloatV, typename FloatP>
+__global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
+			   FloatP *S, Float2<FloatOut> *block2,
+			   int it, int time_step, int3 source, tex_mom_list moms){
 
-// template<typename FloatOut, typename FloatV, typename FloatP>
-// __global__ void V3_kernel( FloatV *Phi, /*Passgammastodevicesomehow*/ vector<GAMMAS> Gammas,
-// 			   FloatP *S, Float2<FloatOut> *block2, int site_size,
-// 			   int it, int time_step, int3 source, tex_mom_list moms){
-
-//   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
-//   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
-//   int tid = blockIdx.x/grid3D;
-//   int vid = sid3D + (it+tid)*DGC_localVolume3D;
-    
-//   register Float2<FloatC> accum[2*N_MESONS];
-//   for(int i = 0 ; i < 2*N_MESONS ; i++){
-//     accum[i] = 0.;
-//   }
-
-//   if (sid3D < DGC_localVolume3D){
-//     prop2<FloatP> propS(S);
-//     vector2<FloatV> vectorPhi(Phi);
-    
-//     Float2<FloatP> s[N_SPINS][N_SPINS][N_COLS][N_COLS];
-//     Float2<FloatV> phi[N_SPINS][N_COLS];
-//     propS.get(s,vid);
-//     vectorPhi.get(phi,vid);
-
-//     for(int i_g = 0 ; i_g < n_gammas ; i_g++){
-//       #pragma unroll
-//       for(int i_ss = 0 ; i_ss < N_SPINS*N_SPINS ; i_ss++){
-// 	int alpha=i_ss/N_SPINS;
-// 	int beta=i_ss%N_SPINS;
-//         #pragma unroll
-// 	for(int a = 0 ; a < N_COLS ; a++){
-//           #pragma unroll
-// 	  for(int b = 0 ; b < N_COLS ; b++){
-// 	    accum[(i_g*N_SPINS + beta)*N_COLS+b] = [(i_g*N_SPINS + beta)*N_COLS+b] + gamma[i_g][alpha][beta] * prop1[alpha][beta][a][b] * conj(prop1[delta][gamma][a][b]);
-// 	  }
-// 	}
-//       }
-//     }
-//   }
-
+  int grid3D = gridDim.x/time_step; //n_blocks x timeslice
+  int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
+  int tid = blockIdx.x/grid3D;
+  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  int site_size = listGammas.size*N_SPINS*N_COLS;
   
-//   if(runFT) {
-//     extern __shared__ int ext_shared_cache[];
-//     Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
-//     int source_pos[3] = {source.x, source.y, source.z}; 
-//     fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid3D, source_pos, moms, 0, -1, time_step, tid);
-//   } else {
-//     if(block2 != NULL)
-//       for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
-// 	block2[(tid*DGC_localVolume3D + sid3D)*2*N_MESONS + ip] = accum[ip];
-//       }
-//   }
-// }
+  register Float2<FloatOut> accum[16*N_SPINS*N_COLS];
+  for(int i = 0 ; i <16*N_SPINS*N_COLS  ; i++){
+    accum[i] = 0.;
+  }
+
+  if (sid3D < DGC_localVolume3D){
+    prop2<FloatP> propS(S);
+    vector2<FloatV> vectorPhi(Phi);
+    
+    Float2<FloatP> s[N_SPINS][N_SPINS][N_COLS][N_COLS];
+    Float2<FloatV> phi[N_SPINS][N_COLS];
+    propS.get(s,vid);
+    vectorPhi.get(phi,vid);
+
+    const Float2<float> (*g)[4];
+    const short int (*gammasIdx)[4][2];
+    g = (Float2<float> (*)[4]) plegma::gamma;
+    gammasIdx = gammaInd;
+
+    #pragma unroll
+    for(int i_g = 0 ; i_g < 16; i_g++){
+      if(i_g<listGammas.size){
+	int gId=listGammas.array[i_g];
+        #pragma unroll //for loop over nonzero entries
+	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+	  int alpha0=gammasIdx[gId][nz_e][0];
+	  int alpha1=gammasIdx[gId][nz_e][1];
+	  Float2<FloatOut> factor=g[gId][nz_e];
+	  
+          #pragma unroll
+	  for(int beta = 0 ; beta < N_SPINS ; beta++){
+            #pragma unroll
+	    for(int a = 0 ; a < N_COLS ; a++){
+              #pragma unroll
+	      for(int b = 0 ; b < N_COLS ; b++){
+		accum[(i_g*N_SPINS + beta)*N_COLS+b] =
+		  accum[(i_g*N_SPINS + beta)*N_COLS+b]
+		  + conj(phi[alpha0][a])*factor*s[alpha1][beta][a][b];
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+  
+  extern __shared__ int ext_shared_cache[];
+  Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
+  int source_pos[3] = {source.x, source.y, source.z}; 
+  fourier_transform_3D(block2, accum, shared_cache, site_size, sid3D, source_pos, moms, 0, -1, time_step, tid);
+  
+}
 
 template<typename FloatOut, typename FloatV, typename FloatP>
 static void V3_k_host( ProfileStruct &ps,
 		       PLEGMA_ScattCorrelator<FloatOut> &Vout,
-		       PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS> &Gammas,
+		       PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS> &gammas,
 		       PLEGMA_Propagator<FloatP> &S, Float2<FloatOut>* result){
 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
@@ -94,28 +99,40 @@ static void V3_k_host( ProfileStruct &ps,
     return;
   }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  
+
+  KernelArr<GAMMAS> listGammas;
+  listGammas.size = gammas.size();
+  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  checkCudaError();
+  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  checkCudaError();
+
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
-    V3_kernel<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (,, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source, moms);
+
+    V3_kernel
+      <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
+      (Phi.D_elem(), listGammas, S.D_elem(), d_partial_block, it,
+       MIN(HGC_localL[3]-it, time_step), source, moms);
+
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
+    
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
       
-
     for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
       for(int f = 0 ; f < site_size; f++) {
 	result[(f*HGC_localL[3] + it)*volume+v] = 0;
 	for(int j = 0 ; j < nblockspert; j++)
-	  result[(f*HGC_localL[3] + it)*volume+v] += h_partial_block[(v*site_size+f)*accumXnblockspert+j];
+	  result[(f*HGC_localL[3] + it)*volume+v] += h_partial_block[(v*site_size+f)*nblockspert+j];
       }
     
   }
-  hostFree(h_partial_block, alloc_size*sizeof(FloatOut));
+  hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
   cudaFree(d_partial_block);
+  cudaFree(listGammas.array);
   
 }
 
@@ -126,7 +143,7 @@ static void V3_k(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
   int site_size = Gammas.size()*N_SPINS*N_COLS;
   
-  if(corr.getSiteSize() != site_size)
+  if(Vout.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
 
   int shared_size = site_size*sizeof(Float2<FloatOut>);
@@ -139,9 +156,9 @@ static void V3_k(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   ps.max_volume = HGC_localVolume;
   
   tuneAndRun( ps, "V3_k", V3_k_host<FloatOut, FloatV, FloatP>,
-	      ps, Vout, Phi, Gammas, S);
+	      ps, Vout, Phi, Gammas, S, result);
 
-  //reduction between spaceComm for the sum of Fourier transformaton between nodes
+  //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
 }
 

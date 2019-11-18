@@ -17,6 +17,7 @@ set (PLEGMA_OBJS
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
   PLEGMA_Fmunu.cu
+  PLEGMA_ScattCorrelator.cu
 )
 
 if(PLEGMA_UDSC_BARYONS)
