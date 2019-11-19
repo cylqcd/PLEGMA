@@ -33,6 +33,7 @@ void setEigMultigridParam(QudaMultigridParam &mg_param, QudaEigParam *mg_eig_par
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 extern const std::vector<std::string> listAvailOptPLEGMA;
 void initializeOptions(int argc, char **argv, bool withQuda=true, std::vector<std::string> listOptPLEGMA = listAvailOptPLEGMA);
+void updateOptions(std::string filename);
 void updateOptions(WHICHFLAVOR fl);
 void initializePLEGMA();
 void finalize();
