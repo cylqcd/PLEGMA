@@ -8,6 +8,7 @@
 #include <utils/QUDA_params.h>
 #include <utils/QUDA_types.h>
 #include <utils/QUDA_interface.h>
+#include <functional>
 
 using namespace plegma;
 
