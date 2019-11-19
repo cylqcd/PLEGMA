@@ -34,7 +34,7 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
   isInitOpt=true;
 }
 
-void updateOptions(std::string filename, std::function<void(Options&)> add_options){
+void updateOptions(std::string filename, std::vector<std::string>& listOpt, std::function<void(Options&)> add_options){
   PLEGMA_printf("Reading options from file %s\n", filename.c_str());
   if(!filename.empty() and access( filename.c_str(), F_OK ) != -1){
     const char *aux_str[3];
@@ -43,8 +43,7 @@ void updateOptions(std::string filename, std::function<void(Options&)> add_optio
     aux_str[2] = const_cast<char*>(filename.c_str());
     Options LocalOptions = Options(3,const_cast<char**>(aux_str));
     if(add_options) add_options(LocalOptions);
-    std::vector<std::string> aux_vec= {};
-    plegmaOptions(LocalOptions, aux_vec, true);
+    plegmaOptions(LocalOptions, listOpt, true);
     qudaOptions(LocalOptions);
     if(verbosity>0) infoQuda();
     LocalOptions.close();
@@ -65,7 +64,8 @@ void updateOptions(WHICHFLAVOR fl){
       filename = inputCH;
       break;
     }
-  return updateOptions(filename);
+  std::vector<std::string> aux = {};
+  return updateOptions(filename, aux);
 }
 
 void initializePLEGMA() {

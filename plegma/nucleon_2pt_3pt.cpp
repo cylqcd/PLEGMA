@@ -72,7 +72,7 @@ int main(int argc, char **argv)
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
-      updateOptions(srcInputFile + std::to_string(isource), add_options);
+      updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propDN;
