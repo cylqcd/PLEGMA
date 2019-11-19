@@ -27,12 +27,15 @@ int main(int argc, char **argv)
   int nsmearGauss_c = 0;
   std::string prOrNt = "neutron";
   std::string srcInputFile = "./input.src";
-  HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
-  HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
-  HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
-  HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
-  HGC_options->set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
-  HGC_options->set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
+  auto add_options = [&](Options& options) {
+    options.set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
+    options.set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
+    options.set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
+    options.set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
+    options.set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
+    options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
+		     };
+  add_options(*HGC_options);
   if(prOrNt != "proton" && prOrNt != "neutron") PLEGMA_error("This exec is only for nucleon, %s is not allowed",prOrNt.c_str());
   //=========================================================================================================//
   initializePLEGMA();
@@ -69,7 +72,7 @@ int main(int argc, char **argv)
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
-      updateOptions(srcInputFile + std::to_string(isource));
+      updateOptions(srcInputFile + std::to_string(isource), add_options);
 
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propDN;
