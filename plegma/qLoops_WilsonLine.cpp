@@ -74,6 +74,9 @@ int main(int argc, char **argv)
     PLEGMA_warning("The Low modes reconstruction is off forcing number of eigenvalues to zero");
     Eig_NeV = 0;
   }
+
+  double mu_h=0.;
+  HGC_options->set("mu-heavy", "Twisted mass mu of the heavy quark. If different from zero the eigenvalues will be shifted accordingly", verbosity, mu_h);
   //=========================================================================================================//
   initializePLEGMA();
 
@@ -167,6 +170,7 @@ int main(int argc, char **argv)
   if(lowModesRecon)
     for(int i=0; i< eigSol->getEigVals().size(); i++){
       double eigVal = std::get<0>(eigSol->getEigVals()[i]);
+      if(mu_h>0.) eigVal += 4.*inv_params.kappa*inv_params.kappa*(mu_h*mu_h-mu*mu);
       long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
@@ -195,6 +199,13 @@ int main(int argc, char **argv)
   }
 #endif
 
+  
+  if(mu_h>0.) {
+   	mu = mu_h;
+	solverDN->UpdateSolver();
+  }
+
+  
   PLEGMA_Hprobing *hprop = nullptr;
   if(k_probing>0) hprop = new PLEGMA_Hprobing(k_probing);
 
