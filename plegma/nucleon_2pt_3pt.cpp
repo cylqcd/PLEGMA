@@ -67,6 +67,9 @@ int main(int argc, char **argv)
 
     updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));
+
+    std::string given_twop_filename = twop_filename;
+    std::string given_threep_filename = threep_filename;
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
@@ -74,6 +77,12 @@ int main(int argc, char **argv)
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
       updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
+      char * src_string;
+      asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+      twop_filename = given_twop_filename + src_string;
+      threep_filename = given_threep_filename + src_string;
+      free(src_string);
+      
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propDN;
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
