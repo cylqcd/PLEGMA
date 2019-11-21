@@ -145,7 +145,7 @@ int main(int argc, char **argv)
   if(isGPD) AuxSinkGauge = smearedGauge_sink;
   else AuxSinkGauge = &smearedGauge;
 
-  for(int isource=0;isource<numSourcePositions;isource++)
+  for(int isource=0;isource<numSourcePositions;isource++){
     for(int ts=0;ts<tSinks.size();ts++)
       {
 	int signPer = (tSinks[ts] + sourcePositions[isource][3]) >= HGC_totalL[3] ? -1 : +1;
@@ -356,42 +356,42 @@ int main(int argc, char **argv)
 	}
       }
 
-  for(int nu = 0 ; nu < 4 ; nu++)
-    for(int c2 = 0 ; c2 < 3 ; c2++){
-      vectorAuxF.absorb(*propUP, nu, c2);
-      vectorAuxD.copy(vectorAuxF);
-      vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-      vectorAuxF.copy(vectorOut);
-      propUP->absorb(vectorAuxF, nu, c2);
+    for(int nu = 0 ; nu < 4 ; nu++)
+      for(int c2 = 0 ; c2 < 3 ; c2++){
+	vectorAuxF.absorb(*propUP, nu, c2);
+	vectorAuxD.copy(vectorAuxF);
+	vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	vectorAuxF.copy(vectorOut);
+	propUP->absorb(vectorAuxF, nu, c2);
 
-      vectorAuxF.absorb(*propDN, nu, c2);
-      vectorAuxD.copy(vectorAuxF);
-      vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-      vectorAuxF.copy(vectorOut);
-      propDN->absorb(vectorAuxF, nu, c2);
-    }
+	vectorAuxF.absorb(*propDN, nu, c2);
+	vectorAuxD.copy(vectorAuxF);
+	vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	vectorAuxF.copy(vectorOut);
+	propDN->absorb(vectorAuxF, nu, c2);
+      }
   
-  propUP->rotateToPhysicalBase_device(+1);
-  propDN->rotateToPhysicalBase_device(-1);
-  propUP->applyBoundaries_device(sourcePositions[isource][3]);
-  propDN->applyBoundaries_device(sourcePositions[isource][3]);
+    propUP->rotateToPhysicalBase_device(+1);
+    propDN->rotateToPhysicalBase_device(-1);
+    propUP->applyBoundaries_device(sourcePositions[isource][3]);
+    propDN->applyBoundaries_device(sourcePositions[isource][3]);
 
-  PLEGMA_Correlator<float> corr(corr_space, sinkMom_3D);
-  corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
-  corr.writeFile(twop_filename.c_str(), corr_file_format);
+    PLEGMA_Correlator<float> corr(corr_space, sinkMom_3D);
+    corr.contractMesons(*propUP, *propDN, sourcePositions[isource]);
+    corr.writeFile(twop_filename.c_str(), corr_file_format);
 
-  corr.contractBaryons(*propUP, *propDN, sourcePositions[isource]);
-  corr.writeFile(twop_filename.c_str(), corr_file_format);
-}
-delete propUP;
-delete propDN;
-delete propIn;
-delete seqPropOut;
-if(isGPD) delete smearedGauge_sink;
+    corr.contractBaryons(*propUP, *propDN, sourcePositions[isource]);
+    corr.writeFile(twop_filename.c_str(), corr_file_format);
+  }
+  delete propUP;
+  delete propDN;
+  delete propIn;
+  delete seqPropOut;
+  if(isGPD) delete smearedGauge_sink;
 
-delete solver;
+  delete solver;
   
-finalize();
-return 0;
+  finalize();
+  return 0;
 }
 
