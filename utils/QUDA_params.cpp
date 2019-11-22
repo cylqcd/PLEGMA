@@ -84,9 +84,9 @@ void setGaugeParam(QudaGaugeParam &gauge_param) {
   int y_face_size = gauge_param.X[0]*gauge_param.X[2]*gauge_param.X[3]/2;
   int z_face_size = gauge_param.X[0]*gauge_param.X[1]*gauge_param.X[3]/2;
   int t_face_size = gauge_param.X[0]*gauge_param.X[1]*gauge_param.X[2]/2;
-  int pad_size =MAX(x_face_size, y_face_size);
-  pad_size = MAX(pad_size, z_face_size);
-  pad_size = MAX(pad_size, t_face_size);
+  int pad_size =std::max(x_face_size, y_face_size);
+  pad_size = std::max(pad_size, z_face_size);
+  pad_size = std::max(pad_size, t_face_size);
   gauge_param.ga_pad = pad_size;    
 #endif
 }
@@ -205,6 +205,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.setup_inv_type[i] = setup_inv[i];
     mg_param.num_setup_iter[i] = num_setup_iter[i];
     mg_param.setup_tol[i] = setup_tol;
+    mg_param.setup_maxiter[i] = setup_maxiter;
     mg_param.spin_block_size[i] = 1;
     mg_param.n_vec[i] = nvec[i] == 0 ? 24 : nvec[i]; // default to 24 vectors if not set
     mg_param.precision_null[i] = prec_null; // precision to store the null-space basis
@@ -244,9 +245,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
     // if we are using an outer even-odd preconditioned solve, then we
     // use single parity injection into the coarse grid
-    mg_param.coarse_grid_solution_type[i] = 
-      solve_type == QUDA_DIRECT_PC_SOLVE ? QUDA_MATPC_SOLUTION : QUDA_MAT_SOLUTION;
-
+    mg_param.coarse_grid_solution_type[i] = QUDA_MATPC_SOLUTION; 
+      
     mg_param.omega[i] = omega; // over/under relaxation factor
 
     mg_param.location[i] = QUDA_CUDA_FIELD_LOCATION;
@@ -365,11 +365,12 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.mass_normalization = normalization;
 
   // do we want full solution or single-parity solution
-  inv_param.solution_type = QUDA_MAT_SOLUTION;
+  inv_param.solution_type = QUDA_MAT_SOLUTION ;
 
   // do we want to use an even-odd preconditioned solve or not
   inv_param.solve_type = solve_type;
-  if(isEven) {
+   
+  if(isEven) { 
     inv_param.matpc_type = QUDA_MATPC_EVEN_EVEN;
     PLEGMA_printf("### Running for the Even-Even Operator\n");
   }
@@ -378,12 +379,14 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.matpc_type = QUDA_MATPC_ODD_ODD;
   }
 
-  inv_param.inv_type = QUDA_GCR_INVERTER;
+  inv_param.inv_type = inv_type;
 
-  inv_param.verbosity = QUDA_VERBOSE;
+  if(inv_param.inv_type == QUDA_CG_INVERTER)
+    PLEGMA_error("CG is not implemented, use CGNE instead\n");
+
   inv_param.verbosity_precondition = mg_verbosity[0];
 
-  inv_param.inv_type_precondition = QUDA_MG_INVERTER;
+  inv_param.inv_type_precondition = use_mg? QUDA_MG_INVERTER : QUDA_INVALID_INVERTER;
   inv_param.pipeline = pipeline;
   inv_param.gcrNkrylov = gcrNkrylov;
   inv_param.tol = tol;

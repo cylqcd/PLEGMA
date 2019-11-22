@@ -22,6 +22,8 @@ protected:
   std::vector<std::string> path_str;
   std::string prev_path;
 
+  static std::vector<std::string> open_files;
+  
   inline std::string join_path(std::vector<std::string> vp, bool fromTop = true) {
     std::string ret = fromTop ? "" : "." ;
     for (auto s : vp) ret += "/" + s;
@@ -35,7 +37,7 @@ public:
    * @param name the filename. The extension '.h5' will be added if not provided. It can also contain a list of groups to open, e.g. name="./sample.h5/group1/group2" would create the file sample.h5 an dthen go to group1 and group2.
    * @param comm the communicator to use during the file writing.
    **/
-  //  HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD);
+  //  HDF5(std::string name, MPI_Comm comm=HGC_fullComm);
 
   /*
    * @brief Does sanity checks and close the file.
@@ -49,7 +51,14 @@ public:
   inline std::string pwd() {
     return join_path(path_str);
   }
-  
+
+  /*
+   * @brief Returns if HDF5 has open writing
+   */
+  static bool isWriting() {
+    return not open_files.empty();
+  }
+
   /*
    * @brief Creates or opens the groups to reach the path.
    * @param path a string containing the path. Similar rules to filesystem are used: 
@@ -285,6 +294,7 @@ protected:
 
   template<typename T>
   inline void _write_dataset_parallel(hid_t dataset_id, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start, bool serial=false) {
+    //hsize_t size=1; for(auto l: shape) size*=l; if(size==0) return;
     hid_t filespace = H5Dget_space(dataset_id);
     hid_t subspace   = H5Screate_simple(lshape.size(), lshape.data(), NULL);
     H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start.data(), NULL, lshape.data(), NULL);
@@ -338,8 +348,8 @@ protected:
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
     for(size_t i=0; i<shape.size(); i++) {
-      int exceeding = start[i] + lshape[i] - shape[i];
-      if(exceeding > 0) { // then i it's exceeding
+      if(start[i] + lshape[i] > shape[i]) { // then i it's exceeding
+	int exceeding = std::min(lshape[i], start[i] + lshape[i] - shape[i]);
 	if(HGC_verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);
@@ -389,7 +399,7 @@ protected:
 	  }
 	} else if(i >= my_n_writings) {
 	  // do a dummy write to keep the communications active
-	  tmp_lshape = ones_like(lshape);
+	  tmp_lshape = zeros_like(lshape);
 	}
 	_write_dataset_parallel(dataset_id, tmp, shape, tmp_lshape, tmp_start);
 	if(tmp != buf) hostFree(tmp, product(tmp_lshape)*sizeof(T));
@@ -401,6 +411,18 @@ protected:
     H5Dclose(dataset_id);
   }
 
+  bool isFileOpen( std::string filename){
+    // NOTE: in order to open multiple files one needs to check if HDF5 is thread-safe
+#ifdef HDF5_THREAD_SAFE
+    if( std::find(open_files.begin(), open_files.end(), filename) != open_files.end() )
+      return true;
+#else
+    if( not open_files.empty() )
+      return true;
+#endif
+      return false;
+  }
+  
 public:
   /*
    * Creates or opens a path.
@@ -429,10 +451,7 @@ public:
    *    i.e. name="./sample.h5/group1/group2" would create the file sample.h5 and
    *    then go to group1 and group2
    */
-  HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD) : comm(comm) {
-    hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-    H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
-
+  HDF5(std::string name, MPI_Comm comm=HGC_fullComm) : comm(comm) {
     // Creating filename and path from name
     std::string path = "/";
     // checking if .h5 is given and at the end of file
@@ -449,7 +468,15 @@ public:
     } else {
       filename = name;
     }
-  
+
+    // check if filename is open by another instance
+    if(HGC_verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filename.c_str());
+    while( isFileOpen(filename) )
+      std::this_thread::sleep_for(1ms);
+    
+    hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
+
     // checking if file exists or creating it
     if(access( filename.c_str(), F_OK ) != -1) {
       file_id = H5Fopen(filename.c_str(),  H5F_ACC_RDWR, fapl_id);
@@ -459,7 +486,11 @@ public:
       if(HGC_verbosity > 2) PLEGMA_printf("Created file %s\n", filename.c_str());
     }
     H5Pclose(fapl_id);
-
+    
+    // adding opened file to vector
+    if(HGC_verbosity > 2) PLEGMA_printf("Adding %s to open files\n", filename.c_str());
+    open_files.push_back(filename);
+    
     if(path != "/") {
       cd(path);
     }
@@ -478,6 +509,12 @@ public:
     }
     H5Fclose(file_id);
     if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
+    
+    // remove opened file from vector
+    if(HGC_verbosity > 2) PLEGMA_printf("Removing %s from open files\n", filename.c_str());
+    std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filename);
+    assert(posix != open_files.end());
+    open_files.erase(posix);
   }
 
   /*
@@ -517,6 +554,8 @@ public:
 			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
     if(HGC_verbosity > 2) PLEGMA_printf("Going to write dataset %s in path %s \n", name.c_str(),
 					path.c_str());
+    if(HGC_verbosity > 3) printf("RANK(%d) Dataset shape=(%s), lshape=(%s), start=(%s)\n", getRank(),
+				 toString(shape).c_str(), toString(lshape).c_str(), toString(start).c_str());
     cd(path);
 
     // Sanity check

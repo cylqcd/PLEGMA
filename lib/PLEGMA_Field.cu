@@ -72,11 +72,11 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 }
 
 template<typename Float>
-PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag, bool isPinnedHost, bool D3, bool checkErr):
+PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localVol, GHOST_FLAG ghost_flag, bool isPinnedHost, bool checkErr):
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(CUSTOM)
 {
-  initialize(alloc_flag, site_size, D3 ? HGC_localVolume3D : HGC_localVolume);
+  initialize(alloc_flag, site_size, localVol);
   field_name = "PLEGMA_CUSTOM";
 }
 
@@ -115,12 +115,12 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case PROPAGATOR3D:
-    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume3D);
     field_name = "PLEGMA_PROPAGATOR3D";
     setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case VECTOR3D:
-    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume/HGC_localL[3]);
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume3D);
     field_name = "PLEGMA_VECTOR3D";
     setSiteShape({N_SPINS, N_COLS});
     break;
@@ -174,7 +174,7 @@ void PLEGMA_Field<Float>::load(){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::unload(){
+void PLEGMA_Field<Float>::unload() const{
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
   if(checkErr) checkCudaError();
@@ -342,7 +342,7 @@ void PLEGMA_Field<Float>::printInfo(){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
+void PLEGMA_Field<Float>::communicateSideGhost(int dirOr, ACTION action){
   if(comm_size() == 1)
     return;
   if(ghost_flag < FIRST_SIDE)
@@ -352,61 +352,59 @@ void PLEGMA_Field<Float>::communicateSideGhost(int dirOr){
 
   bool isAll = (dirOr<0) ? true:false;
 
-  std::vector<MsgHandle *> mh_recv;
-  std::vector<MsgHandle *> mh_send;
+  if(action==START || action==DO_ALL) {
+    for(int i=0; i<2*N_DIMS; i++){
+      if( HGC_dimBreak[i%N_DIMS] ){
+	if(dirOr == i || isAll){
+	  Float *pointer_receive = h_ext_ghost_r + (HGC_sideGhost[i]-total_length)*field_length*2;
+	  Float *pointer_send = h_ext_ghost_s + (HGC_sideGhost[i]-total_length)*field_length*2;
+	  Float *pointer_device = d_elem + HGC_sideGhost[i]*field_length*2;
+	  int disp;
+	  size_t nbytes = HGC_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
 
-  for(int i=0; i<2*N_DIMS; i++){
-    if( HGC_dimBreak[i%N_DIMS] ){
-      if(dirOr == i || isAll){
-        Float *pointer_receive = h_ext_ghost_r + (HGC_sideGhost[i]-total_length)*field_length*2;
-        Float *pointer_send = h_ext_ghost_s + (HGC_sideGhost[i]-total_length)*field_length*2;
-        Float *pointer_device = d_elem + HGC_sideGhost[i]*field_length*2;
-	int disp;
-        size_t nbytes = HGC_surface3D[i%N_DIMS]*field_length*2*sizeof(Float);
-
-        // collecting elements from device
-        copy_side_to_ghost(*this, i);
-        cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-        if(checkErr) checkCudaError();
+	  // collecting elements from device
+	  copy_side_to_ghost(*this, i);
+	  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+	  if(checkErr) checkCudaError();
 	
-	disp = (i<N_DIMS) ? +1 : -1;
-        mh_recv.push_back(comm_declare_receive_relative(pointer_receive,i%N_DIMS,disp,nbytes)); 
-	disp *= -1;
-        mh_send.push_back(comm_declare_send_relative(pointer_send,i%N_DIMS,disp,nbytes));
-        comm_start(mh_recv.back());
-        comm_start(mh_send.back());
+	  disp = (i<N_DIMS) ? +1 : -1;
+	  messages.push_back(comm_declare_receive_relative(pointer_receive,i%N_DIMS,disp,nbytes));
+	  comm_start(messages.back());
+	  disp *= -1;
+	  messages.push_back(comm_declare_send_relative(pointer_send,i%N_DIMS,disp,nbytes));
+	  comm_start(messages.back());
+	}
       }
     }
   }
-  // waiting for communications
-  while (! mh_recv.empty()) {
-    comm_wait(mh_recv.back());
-    comm_wait(mh_send.back());
-    comm_free(mh_recv.back());
-    comm_free(mh_send.back());
-    mh_recv.pop_back();
-    mh_send.pop_back();
-  }
-  //copying to device
-  if(isAll) {
-    Float *host = h_ext_ghost_r;
-    Float *device = d_elem+total_length*field_length*2;
-    cudaMemcpy(device, host, bytes_ghost_length,cudaMemcpyHostToDevice);
-    if(checkErr) checkCudaError();
-  } else {
-    if( HGC_dimBreak[dirOr%N_DIMS] ){
-      Float *host = h_ext_ghost_r + (HGC_sideGhost[dirOr]-total_length)*field_length*2;
-      Float *device = d_elem + HGC_sideGhost[dirOr]*field_length*2;
-      cudaMemcpy(device, host, HGC_surface3D[dirOr%N_DIMS]*field_length*2*sizeof(Float),
-          cudaMemcpyHostToDevice);
+  if(action==FINISH || action==DO_ALL) {
+    // waiting for communications
+    while (! messages.empty()) {
+      comm_wait(messages.back());
+      comm_free(messages.back());
+      messages.pop_back();
+    }
+    //copying to device
+    if(isAll) {
+      Float *host = h_ext_ghost_r;
+      Float *device = d_elem+total_length*field_length*2;
+      cudaMemcpy(device, host, bytes_ghost_length,cudaMemcpyHostToDevice);
       if(checkErr) checkCudaError();
+    } else {
+      if( HGC_dimBreak[dirOr%N_DIMS] ){
+	Float *host = h_ext_ghost_r + (HGC_sideGhost[dirOr]-total_length)*field_length*2;
+	Float *device = d_elem + HGC_sideGhost[dirOr]*field_length*2;
+	cudaMemcpy(device, host, HGC_surface3D[dirOr%N_DIMS]*field_length*2*sizeof(Float),
+		   cudaMemcpyHostToDevice);
+	if(checkErr) checkCudaError();
+      }
     }
   }
 }
 
 
 template<typename Float>
-void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
+void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr, ACTION action){
   if(comm_size() == 1)
     return;
   if(ghost_flag < FIRST_CORNER)
@@ -416,86 +414,86 @@ void PLEGMA_Field<Float>::communicateCornerGhost(int dirOr){
 
   bool isAll = (dirOr<0) ? true:false;
 
-  std::vector<MsgHandle *> mh_recv;
-  std::vector<MsgHandle *> mh_send;
+  std::vector<MsgHandle*> messages;
 
-  for(int i=0; i<2*N_DIMS; i++){
-    for(int j=i+1; j<2*N_DIMS; j++){
-      if( (i%N_DIMS != j%N_DIMS ) && HGC_dimBreak[i%N_DIMS] && HGC_dimBreak[j%N_DIMS] ){
-        if(dirOr == i || dirOr == j || isAll){
-          Float *pointer_receive = h_ext_ghost_corner_r + (HGC_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
-          Float *pointer_send = h_ext_ghost_corner_s + (HGC_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
-          Float *pointer_device = d_elem + HGC_cornerGhost[i][j]*field_length*2;
-          int disp[N_DIMS] = {0};
-          size_t nbytes = HGC_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float);
+  if(action==START || action==DO_ALL) {
+    for(int i=0; i<2*N_DIMS; i++){
+      for(int j=i+1; j<2*N_DIMS; j++){
+	if( (i%N_DIMS != j%N_DIMS ) && HGC_dimBreak[i%N_DIMS] && HGC_dimBreak[j%N_DIMS] ){
+	  if(dirOr == i || dirOr == j || isAll){
+	    Float *pointer_receive = h_ext_ghost_corner_r + (HGC_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+	    Float *pointer_send = h_ext_ghost_corner_s + (HGC_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+	    Float *pointer_device = d_elem + HGC_cornerGhost[i][j]*field_length*2;
+	    int disp[N_DIMS] = {0};
+	    size_t nbytes = HGC_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float);
 
-          // collecting elements from device
-          copy_corner_to_ghost(*this, i, j);
-          cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-          if(checkErr) checkCudaError();
-
-          // communicating
-          disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
-          disp[j%N_DIMS] = (j<N_DIMS) ? +1 : -1;
-          mh_recv.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
-          disp[i%N_DIMS] *= -1;
-          disp[j%N_DIMS] *= -1;
-          mh_send.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
-          disp[i%N_DIMS] = 0; disp[j%N_DIMS] = 0;	  
-          comm_start(mh_recv.back());
-          comm_start(mh_send.back());
-        }
+	    // collecting elements from device
+	    copy_corner_to_ghost(*this, i, j);
+	    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+	    if(checkErr) checkCudaError();
+	    
+	    // communicating
+	    disp[i%N_DIMS] = (i<N_DIMS) ? +1 : -1;
+	    disp[j%N_DIMS] = (j<N_DIMS) ? +1 : -1;
+	    messages.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
+	    comm_start(messages.back());
+	    disp[i%N_DIMS] *= -1;
+	    disp[j%N_DIMS] *= -1;
+	    messages.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+	    disp[i%N_DIMS] = 0; disp[j%N_DIMS] = 0;	  
+	    comm_start(messages.back());
+	  }
+	}
       }
     }
   }
-  // waiting for communications
-  while (! mh_recv.empty()) {
-    comm_wait(mh_recv.back());
-    comm_wait(mh_send.back());
-    comm_free(mh_recv.back());
-    comm_free(mh_send.back());
-    mh_recv.pop_back();
-    mh_send.pop_back();
-  }
-  //copying to device
-  if(isAll) {
-    Float *hostCorner = h_ext_ghost_corner_r;
-    Float *device = d_elem+(total_length+ghost_length)*field_length*2;
-    cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
-    if(checkErr) checkCudaError();
-  } else {
-    for(int i=0; i<2*N_DIMS; i++){
-      for(int j=i+1; j<2*N_DIMS; j++){
-        if( (i%N_DIMS != j%N_DIMS ) && HGC_dimBreak[i%N_DIMS] && HGC_dimBreak[j%N_DIMS] ){
-          if(dirOr == i || dirOr == j || isAll){
-            Float *hostCorner = h_ext_ghost_corner_r + (HGC_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
-            Float *device = d_elem+HGC_cornerGhost[i][j]*field_length*2;
-            cudaMemcpy(device, hostCorner, HGC_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float),
-                cudaMemcpyHostToDevice);
-            if(checkErr) checkCudaError();
-          }
-        }
+  if(action==FINISH || action==DO_ALL) {
+    // waiting for communications
+    while (! messages.empty()) {
+      comm_wait(messages.back());
+      comm_free(messages.back());
+      messages.pop_back();
+    }
+    //copying to device
+    if(isAll) {
+      Float *hostCorner = h_ext_ghost_corner_r;
+      Float *device = d_elem+(total_length+ghost_length)*field_length*2;
+      cudaMemcpy(device,hostCorner,bytes_ghost_corner_length,cudaMemcpyHostToDevice);
+      if(checkErr) checkCudaError();
+    } else {
+      for(int i=0; i<2*N_DIMS; i++){
+	for(int j=i+1; j<2*N_DIMS; j++){
+	  if( (i%N_DIMS != j%N_DIMS ) && HGC_dimBreak[i%N_DIMS] && HGC_dimBreak[j%N_DIMS] ){
+	    if(dirOr == i || dirOr == j || isAll){
+	      Float *hostCorner = h_ext_ghost_corner_r + (HGC_cornerGhost[i][j]-total_length-ghost_length)*field_length*2;
+	      Float *device = d_elem+HGC_cornerGhost[i][j]*field_length*2;
+	      cudaMemcpy(device, hostCorner, HGC_surface2D[i%N_DIMS][j%N_DIMS]*field_length*2*sizeof(Float),
+			 cudaMemcpyHostToDevice);
+	      if(checkErr) checkCudaError();
+	    }
+	  }
+	}
       }
     }
   }
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::communicateGhost(int dirOr, GHOST_FLAG which_ghost){
+void PLEGMA_Field<Float>::communicateGhost(int dirOr, GHOST_FLAG which_ghost, ACTION action){
   if(ghost_flag < which_ghost) {
     PLEGMA_error("Asking to communicate ghost but they have not been allocated.\n");
   }
   if(which_ghost >= FIRST_SIDE){
-    communicateSideGhost(dirOr);
+    communicateSideGhost(dirOr, action);
   }
   if(which_ghost >= FIRST_CORNER){
-    communicateCornerGhost(dirOr);
+    communicateCornerGhost(dirOr, action);
   }
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::communicateGhost(int dirOr){
-  this->communicateGhost(dirOr, ghost_flag);
+void PLEGMA_Field<Float>::communicateGhost(int dirOr, ACTION action){
+  this->communicateGhost(dirOr, ghost_flag, action);
 }
 
 template<typename Float>
@@ -591,12 +589,12 @@ void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &fieldIn, std::complex<Float> 
 
 template<typename Float>
 std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
-  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
+  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), HGC_fullComm);
 }
 
 template<typename Float>
 Float PLEGMA_Field<Float>::norm(){
-  return cuBLAS::norm(total_length*field_length, d_elem, MPI_COMM_WORLD);
+  return cuBLAS::norm(total_length*field_length, d_elem, HGC_fullComm);
 }
 
 template<typename Float>
@@ -660,10 +658,11 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::writeLIME(std::string filename){
+void PLEGMA_Field<Float>::writeLIME(std::string filename) const{
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   FILE *fid;
   LimeWriter *limewriter = (LimeWriter*)NULL;
+  unload();
   if(comm_rank() == 0){
     fid=fopen(filename.c_str(),"w");
     if(fid==NULL) PLEGMA_error("Error opening file for writing: %s\n", filename.c_str());
@@ -679,7 +678,6 @@ void PLEGMA_Field<Float>::writeLIME(std::string filename){
     oss << "</ildgFormat>";
     write_lime_header(limewriter,"ildg-format",oss.str(),1,0);
   }
-  if(isAllocDevice) unload();
   write_binary_to_lime(filename,fid,limewriter,h_elem,field_length);
   limeDestroyWriter(limewriter);
 }
@@ -711,7 +709,7 @@ void PLEGMA_Field<Float>::readLIME(std::string filename){
 
 template<typename Float>
 std::string PLEGMA_Field<Float>::
-fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const{
   std::string descr = "shape: ";
 
   // Field shape
@@ -724,9 +722,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     }
   }
   
-  descr += "/x/y/z/t";
+  descr += "/t/z/y/x";
   // Volume
-  for(int i=0; i<N_DIMS; i++) {
+  for(int i=N_DIMS-1; i>=0; i--) {
     shape.push_back(HGC_totalL[i]);
     lshape.push_back(HGC_localL[i]);
     start.push_back(HGC_procPosition[i]*HGC_localL[i]);
@@ -743,9 +741,10 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 
 
 template<typename Float>
-void PLEGMA_Field<Float>::writeHDF5(std::string filename){
+void PLEGMA_Field<Float>::writeHDF5(std::string filename) const{
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   assert(isAllocHost);
+  unload();
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
@@ -762,9 +761,8 @@ void PLEGMA_Field<Float>::writeHDF5(std::string filename){
     }
   }
 
-  HDF5 writer(filename, MPI_COMM_WORLD);
+  HDF5 writer(filename, HGC_fullComm);
 
-  if(isAllocDevice) unload();
   writer.write_dataset(dataset, h_elem, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);
 }

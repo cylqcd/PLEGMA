@@ -4,8 +4,8 @@
 #include <functional>
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
-						     "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
+						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq",
+						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
 #ifdef HAVE_ARPACK
 						     ,"Eig-NkV", "Eig-logFile"
 #elif HAVE_PRIMME
@@ -21,7 +21,7 @@ static inline bool isInList(std::vector<std::string> list,std::string str){
 }
 
 
-void plegmaOptions(Options &opt, std::vector<std::string> list){
+void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_params){
   bool isFound;
   std::string tmpString;
   if(isInList(list,"verbosity")) opt.set("verbosity","Set verbosity level, 0 minimal, 1 verbose, 2 debug, 3 debug all", 0, verbosity);
@@ -35,8 +35,9 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
     PLEGMA_printf( "procs %d %d %d %d\n",  procs[0], procs[1], procs[2], procs[3]);
   }
 
+  if(!update_params){
   opt.setForced("dims","Set local dimensions (X Y Z T), e.g. 8 8 8 16", verbosity, dims[0], dims[1], dims[2], dims[3]);
-  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);
+  if(!opt.getIsHelp()) for(int i=0; i<4; i++) if( (dims[i] <= 0 || dims[i] > 512) ) PLEGMA_error("Error with dim %d: dims should be > 0 and < 512\n", i);}
 
   if(isInList(list,"load-gauge")) opt.set("load-gauge", "Path to the gauge field", verbosity, latfile);
 
@@ -153,17 +154,17 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-prec", "Precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec = get_prec(tmpString.c_str());
 
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_sloppy == QUDA_INVALID_PRECISION ? prec : prec_sloppy);
   isFound=opt.set("Q-prec-sloppy", "Sloppy precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_sloppy = get_prec(tmpString.c_str());
   if (prec_sloppy == QUDA_INVALID_PRECISION) prec_sloppy = prec;
   
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_precondition == QUDA_INVALID_PRECISION ? prec : prec_precondition);
   isFound=opt.set("Q-prec-precondition", "Preconditioner precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_precondition = get_prec(tmpString.c_str());
   if (prec_precondition == QUDA_INVALID_PRECISION) prec_precondition = prec_sloppy;
 
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_null == QUDA_INVALID_PRECISION ? prec : prec_null);
   isFound=opt.set("Q-prec-null", "NUll-vector precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_null = get_prec(tmpString.c_str());
   if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
@@ -172,12 +173,12 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-recon", "Type of link reconstruction, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon  = get_recon(tmpString.c_str());
 
-  tmpString = get_recon_str(link_recon);
+  tmpString = get_recon_str(link_recon_sloppy == QUDA_RECONSTRUCT_INVALID ? link_recon : link_recon_sloppy);
   isFound=opt.set("Q-recon-sloppy", "Type of link reconstruction for sloppy, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon_sloppy  = get_recon(tmpString.c_str());
   if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
 
-  tmpString = get_recon_str(link_recon);
+  tmpString = get_recon_str(link_recon_precondition == QUDA_RECONSTRUCT_INVALID ? link_recon : link_recon_precondition);
   isFound=opt.set("Q-recon-precondition", "Type of link reconstruction for precon, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon_precondition  = get_recon(tmpString.c_str());
   if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
@@ -216,10 +217,6 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-inv-type", "The type of solver to use, options (cg,bicgstab,gcr)", verbosity, tmpString);
   if(isFound) inv_type = get_solver_type(tmpString.c_str());
 
-  tmpString = get_solver_str(precon_type);
-  isFound=opt.set("Q-precon-type", "The type of precon solver to use, options (mr,none)", verbosity, tmpString);
-  if(isFound)precon_type = get_solver_type(tmpString.c_str());
-
   opt.set("Q-kappa", "Kappa value of the Dirac operator", verbosity, kappa);
   opt.set("Q-mu", "Twisted mass value", verbosity, mu);
   opt.set("Q-csw", "The coefficient of the clover term", verbosity, csw);
@@ -239,12 +236,14 @@ void qudaOptions(Options &opt){
   tmpString = get_solve_str(solve_type);
   isFound=opt.set("Q-solve-type", "The way to solve the system, options (direct, direct-pc, normop, normop-pc, normerr, normerr-pc)", verbosity, tmpString);
   if(isFound) solve_type = get_solve_type(tmpString.c_str());
-
+  
   opt.set("Q-tol", "The L2 residual tolerance", verbosity, tol);
   opt.set("Q-tolhq", "Set heavy-quark residual tolerance", verbosity, tol_hq);
   opt.set("Q-reliable-delta", "The delta factor for the reliable updates", verbosity, reliable_delta);
 
   //=================================== Multigrid related =======================//
+  opt.set("Q-use-mg", "Use the multigrid as preconditioner ", verbosity, use_mg);
+  
   opt.set("Q-mg-levels", "The number of multigrid levels to do. One level has no meaning", verbosity, mg_levels);
 
   isFound=opt.set("Q-mg-vec-outfile", "Name of the output file containing the multigrid vectors", verbosity, vec_outfile);
@@ -274,13 +273,14 @@ void qudaOptions(Options &opt){
   map_to_array_MG<QudaInverterType>(tpl_int_string, setup_inv, get_solver_type);
 
   opt.set("Q-mg-setup-tol", "The tolerance to use for the setup of multigrid", verbosity, setup_tol);
+  opt.set("Q-mg-setup-maxiter", "The number of max iteration to use for the setup of multigrid", verbosity, setup_maxiter);
   opt.set("Q-mg-omega", "The over/under relaxation factor for the smoother of multigrid", verbosity, omega);
 
   default_map_MG(tpl_int_string, (std::string) "mr");
   isFound=opt.set("Q-mg-smoother", "The smoother to use for multigrid, usage(level,inv)", verbosity, tpl_int_string);
   map_to_array_MG<QudaInverterType>(tpl_int_string, smoother_type, get_solver_type);
 
-  default_map_MG(tpl_int_site, (site) (std::array<int,4>) {2,2,2,2});
+  default_map_MG(tpl_int_site, (site) (std::array<int,N_DIMS>) {2,2,2,2});
   tpl_int_site[0] = site({4,4,4,4});
   isFound=opt.set("Q-mg-block-size", "Set the geometric block size for the each multigrid level's transfer operator", verbosity, tpl_int_site);
   { // custom map_to_array for site tuple. If needed more often create function.
@@ -291,8 +291,8 @@ void qudaOptions(Options &opt){
       site val = it->second;
       if(lvl < 0 || lvl >= QUDA_MAX_MG_LEVEL) PLEGMA_error("ERROR: invalid multigrid level %d", lvl);
       for(int j=0; j<N_DIMS; j++) {
-	mg_block_size[lvl][j]=val.x[j];
-	mg_block_volume[lvl]*=val.x[j];
+	mg_block_size[lvl][j]=val[j];
+	mg_block_volume[lvl]*=val[j];
       }
       it++;
     }
@@ -419,4 +419,13 @@ void qudaOptions(Options &opt){
 
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
+
+  isFound=opt.set("Light-params-infile", "Name of the input file containing inverter input parameters for light quarks", verbosity, inputLIGHT);
+
+  isFound=opt.set("Strange-params-infile", "Name of the input file containing inverter input parameters for quark strange", verbosity, inputST);
+  
+  isFound=opt.set("Charm-params-infile", "Name of the input file containing inverter input parameters for quark charm", verbosity, inputCH);
+
 }
+
+

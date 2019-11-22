@@ -43,6 +43,7 @@ namespace plegma {
     bool isAllocHost;
     bool isAllocDevice;
     bool checkErr;
+    std::vector<MsgHandle*> messages;
 
     CLASS_ENUM field_type;
     std::string field_name;
@@ -55,8 +56,8 @@ namespace plegma {
     void initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l);
   public:
     PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false);
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool D3 = false, bool checkErr = true);
-    virtual ~PLEGMA_Field();
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localV = HGC_localVolume, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
+    ~PLEGMA_Field();
     void zero_host();
     void zero_host_backup();
     void zero_device();
@@ -92,10 +93,10 @@ namespace plegma {
 	return 0;
     } 
     void printInfo();
-    void communicateSideGhost(int dirOr=-1);
-    void communicateCornerGhost(int dirOr=-1);
-    void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
-    void communicateGhost(int dirOr=-1);
+    void communicateSideGhost(int dirOr=-1, ACTION action=DO_ALL);
+    void communicateCornerGhost(int dirOr=-1, ACTION action=DO_ALL);
+    void communicateGhost(int dirOr, GHOST_FLAG which_ghost, ACTION action=DO_ALL);
+    void communicateGhost(int dirOr=-1, ACTION action=DO_ALL);
 
     std::vector<int> getSiteShape() const {return site_shape;}
     void setSiteShape(std::vector<int> new_shape) {
@@ -105,13 +106,13 @@ namespace plegma {
       assert(current_size==new_size);
       site_shape = new_shape;
     }
-    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const;
     
     void pack(Float *topack);
     void unpack(Float *out);
 
     void load();
-    void unload();
+    void unload() const;
     
     void shift(PLEGMA_Field &Fin, int dirOr);
     void randInit(int seed);
@@ -140,8 +141,8 @@ namespace plegma {
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
 
     virtual void readLIME(std::string filename);
-    virtual void writeLIME(std::string filename);
-    virtual void writeHDF5(std::string filename);
+    virtual void writeLIME(std::string filename) const;
+    virtual void writeHDF5(std::string filename) const;
   };
 
   template<typename Float>

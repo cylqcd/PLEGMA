@@ -15,12 +15,15 @@ int main(int argc, char **argv)
   for(int i = 10; i<= 200; i+=10) nsmearGaussList.push_back(i);
   std::vector<double> alphaGaussList;
   for(double a = 0.1; a<=4.; a+=0.1) alphaGaussList.push_back(a);
-  int src[] = {0,0,0,0};
+  site src;
+  src.fill(0);
   std::string outPrefix = "./output";
+  bool writeVec = false;
   HGC_options->set("src-xyzt", "Source position in order (x,y,z,t)",verbosity,src[0],src[1],src[2],src[3]);
   HGC_options->set("list-nsmear-gauss", "List for the number of the Gaussian smearing steps", verbosity, nsmearGaussList);
   HGC_options->set("list-alpha-gaussian", "List of the alpha for Gaussian smearing", verbosity, alphaGaussList);
   HGC_options->set("outPrefix", "Path to the prefix output file", verbosity, outPrefix);
+  HGC_options->set("writeVec", "Tells to write or not the vectors", verbosity, writeVec);
   //=========================================================================================================//
   initializePLEGMA();
 
@@ -41,24 +44,23 @@ int main(int argc, char **argv)
   std::vector<int> counter = createR2(list_R2);
   PLEGMA_Vector<double> v1,v2;
 
-  //  smearedGauge.communicateSideGhost();
-  
   for(auto alpha : alphaGaussList){
     v1.pointSource(src,0,0,DEVICE);
     for(int n = 0; n < *std::max_element(nsmearGaussList.begin(), nsmearGaussList.end()); n++ ){
-      if(n%2 == 0) v2.gaussianSmearing(v1,smearedGauge,1, alpha);
-      else v1.gaussianSmearing(v2,smearedGauge,1, alpha);
+      if(n%2 == 0) v2.gaussianSmearing(v1,smearedGauge,1, alpha,src[DIM_T]);
+      else v1.gaussianSmearing(v2,smearedGauge,1, alpha,src[DIM_T]);
       
       if(std::find(nsmearGaussList.begin(), nsmearGaussList.end(),n+1) != nsmearGaussList.end()){
 	PLEGMA_printf("%d %f\n",n+1, alpha);
-	std::vector<double> rms = (n%2 == 0) ? v2.rms(list_R2,src) : v1.rms(list_R2,src);	  
+	PLEGMA_Vector<double>& v = (n%2 == 0) ? v2 : v1;
+	std::vector<double> rms = v.rms(list_R2,src);
 	std::string filename = outPrefix + "_nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(n+1)
-	  + "aGau" + convNumToStr(alpha);
+	  + "_aGau" + convNumToStr(alpha);
 	if(comm_rank() == 0) write_std_vecs( filename,false,list_R2, counter,rms);
+	if(writeVec) v.writeHDF5(outPrefix+".h5/nAPE" + std::to_string(nsmearAPE) + "_aAPE" + convNumToStr(alphaAPE) + "_nGau" + std::to_string(n+1) + "_aGau" + convNumToStr(alpha));
       }
     }
   }
-  
   
   finalize();
 }
