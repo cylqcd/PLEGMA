@@ -25,6 +25,7 @@ int main(int argc, char **argv)
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
+  int startSource = 0;
   std::string prOrNt = "neutron";
   std::string srcInputFile = "./input.src";
   auto add_options = [&](Options& options) {
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
     options.set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
     options.set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
     options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
+    options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
 		     };
   add_options(*HGC_options);
   if(prOrNt != "proton" && prOrNt != "neutron") PLEGMA_error("This exec is only for nucleon, %s is not allowed",prOrNt.c_str());
@@ -71,7 +73,7 @@ int main(int argc, char **argv)
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
     
-    for(int isource = 0 ; isource < numSourcePositions; isource++){
+    for(int isource = startSource; isource < numSourcePositions; isource++){
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
