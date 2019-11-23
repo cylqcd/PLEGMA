@@ -1,6 +1,14 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 
+double runtime;
+#define TIME(fnc)  runtime = MPI_Wtime(); fnc; runtime = MPI_Wtime()-runtime; \
+  PLEGMA_printf("TIME for "#fnc" %lf sec\n", runtime)
+
+std::vector<std::thread> threads;
+//#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
+#define THREAD(fnc) saveTuneCache(false); TIME(fnc)
+
 using namespace plegma;
 using namespace quda;
 
@@ -105,7 +113,7 @@ int main(int argc, char **argv)
   std::complex<double> momSmScale[N_DIMS];
   std::complex<double> I(0,1);
   for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sourceMom[i]/HGC_totalL[i])*I);
-  smearedGauge.scaleDirWise(momSmScale);
+  TIME(smearedGauge.scaleDirWise(momSmScale));
   
   for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sinkMom[i]/HGC_totalL[i])*I);
   if(isGPD) smearedGauge_sink->scaleDirWise(momSmScale);
@@ -121,7 +129,7 @@ int main(int argc, char **argv)
   
   // ensuring mu positive
   if(mu<0)  mu*=-1.;
-  QUDA_solver *solver = new QUDA_solver(mu);
+  TIME(QUDA_solver *solver = new QUDA_solver(mu));
 
   PLEGMA_Vector<double> vectorIn;
   PLEGMA_Vector<double> vectorOut;
@@ -150,7 +158,7 @@ int main(int argc, char **argv)
     for(int ts=0;ts<tSinks.size();ts++)
       {
 	PLEGMA_Correlator<float> corrThrpWL(corr_space,sourcePositions[isource],0,tSinks[ts]+1);
-	corrThrpWL.setFixMomVec(DeltsMom_3D);
+	corrThrpWL.setFixMomVec(DeltaMom_3D);
 	int signPer = (tSinks[ts] + sourcePositions[isource][3]) >= HGC_totalL[3] ? -1 : +1;
 	int global_fixSinkTime = (tSinks[ts] + sourcePositions[isource][3])%HGC_totalL[3]; 
 	int my_fixSinkTime = global_fixSinkTime - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
@@ -158,13 +166,13 @@ int main(int argc, char **argv)
 
 	for(int isc = 0 ; isc < 12 ; isc++){
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	  TIME(vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
     
 	  PLEGMA_printf("Going to invert UP for component %d\n", isc);
-	  solver->solve(vectorOut, vectorIn);
+	  TIME(solver->solve(vectorOut, vectorIn));
 	  vectorAuxF.copy(vectorOut);
 	  propUP->absorb(vectorAuxF, isc/3, isc%3);
-	  vectorAuxD.gaussianSmearing(vectorOut, *AuxSinkGauge , nsmearGauss, alphaGauss);
+	  TIME(vectorAuxD.gaussianSmearing(vectorOut, *AuxSinkGauge , nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD);
 	  propUP3D.absorb(vectorAuxF,global_fixSinkTime, isc/3, isc%3);
 	}
@@ -176,13 +184,13 @@ int main(int argc, char **argv)
 	}
 	for(int isc = 0 ; isc < 12 ; isc++){
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	  TIME(vectorIn.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
     
 	  PLEGMA_printf("Going to invert DN for component %d\n", isc);
-	  solver->solve(vectorOut, vectorIn);
+	  TIME(solver->solve(vectorOut, vectorIn));
 	  vectorAuxF.copy(vectorOut);
 	  propDN->absorb(vectorAuxF, isc/3, isc%3);
-	  vectorAuxD.gaussianSmearing(vectorOut, *AuxSinkGauge , nsmearGauss, alphaGauss);
+	  TIME(vectorAuxD.gaussianSmearing(vectorOut, *AuxSinkGauge , nsmearGauss, alphaGauss));
 	  vectorAuxF.copy(vectorAuxD);
 	  propDN3D.absorb(vectorAuxF,global_fixSinkTime, isc/3, isc%3);
 	}
@@ -215,7 +223,7 @@ int main(int argc, char **argv)
 		  vectorAuxF.conjugate();
 		  vectorAuxF.apply_gamma(G5);
 		  vectorAuxD.copy(vectorAuxF);
-		  vectorIn.gaussianSmearing(vectorAuxD,*AuxSinkGauge, nsmearGauss, alphaGauss);
+		  TIME(vectorIn.gaussianSmearing(vectorAuxD,*AuxSinkGauge, nsmearGauss, alphaGauss, global_fixSinkTime));
 		  // check if we need to normalize the seqsource for mix precision solver
 		  if(nucleon == PROTON){
 		    if(mu>0) {
@@ -231,7 +239,7 @@ int main(int argc, char **argv)
 		  }
 		  double norm = vectorIn.norm();
 		  vectorIn.cscale(1/norm);
-		  solver->solve(vectorOut, vectorIn);
+		  TIME(solver->solve(vectorOut, vectorIn));
 		  vectorOut.cscale(norm);    
 		  vectorAuxF.copy(vectorOut);
 		  seqPropOut->absorb(vectorAuxF, nu, c2);
@@ -252,12 +260,12 @@ int main(int argc, char **argv)
 		su3.absorbDir_device(gaugeWL, WilsDir);
 		WL.setUnit( (std::vector<int>) {0,4,8});
 		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, i,aux_str);
-		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts])  + "_Proj_" + proj_str.c_str()).c_str() ); 
+		  TIME(corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, i,aux_str));
+		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.H_elem())[iv] *= signPer;
+		  THREAD(corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts])  + "_Proj_" + proj_str.c_str()).c_str() )); 
 		  propExchange = propIn; propIn = propF; propF = propExchange;
-		  WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
-		  propF->shift(*propIn, 4+WilsDir);
+		  TIME(WL.wilsonLineUpdate(su3, tmp, 4+WilsDir)); 
+		  TIME(propF->shift(*propIn, 4+WilsDir));
 		}
 
 		suff="_stout_"+std::to_string(stIt*stepStout);
@@ -265,12 +273,12 @@ int main(int argc, char **argv)
 		su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 		WL.setUnit( (std::vector<int>) {0,4,8});
 		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas ,-i,aux_str);
-		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeHDF5( (threep_filename + suff  +  "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str()).c_str() );
+		  TIME(corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas ,-i,aux_str));
+		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.H_elem())[iv] *= signPer;
+		  THREAD(corrThrpWL.writeHDF5( (threep_filename + suff  +  "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str()).c_str() ));
 		  propExchange = propIn; propIn = propF; propF = propExchange;
-		  WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
-		  propF->shift(*propIn, WilsDir);
+		  TIME(WL.wilsonLineUpdate(su3, tmp, WilsDir)); // build Wilson line in the +z direction
+		  TIME(propF->shift(*propIn, WilsDir));
 		}
 	    
 		propF->load();
@@ -297,7 +305,7 @@ int main(int argc, char **argv)
 		  vectorAuxF.conjugate();
 		  vectorAuxF.apply_gamma(G5);
 		  vectorAuxD.copy(vectorAuxF);
-		  vectorIn.gaussianSmearing(vectorAuxD,*AuxSinkGauge, nsmearGauss, alphaGauss);
+		  TIME(vectorIn.gaussianSmearing(vectorAuxD,*AuxSinkGauge, nsmearGauss, alphaGauss,global_fixSinkTime));
 	    
 		  if(nucleon == PROTON){
 		    if(mu<0) {
@@ -313,7 +321,7 @@ int main(int argc, char **argv)
 		  }
 		  double norm = vectorIn.norm();
 		  vectorIn.cscale(1/norm);
-		  solver->solve(vectorOut, vectorIn);
+		  TIME(solver->solve(vectorOut, vectorIn));
 		  vectorOut.cscale(norm);
 		  vectorAuxF.copy(vectorOut);
 		  seqPropOut->absorb(vectorAuxF, nu, c2);
@@ -329,17 +337,17 @@ int main(int argc, char **argv)
 	      aux_str = (nucleon == PROTON)? "DOWN" : "UP";
 	      //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	      for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
-		if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
+		if(stIt>0) TIME(gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3));
 		std::string suff="_stout_"+std::to_string(stIt*stepStout);
 		su3.absorbDir_device(gaugeWL, WilsDir); 
 		WL.setUnit( (std::vector<int>) {0,4,8});
 		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,i,aux_str);
-		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str() ).c_str() );
+		  TIME(corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,i,aux_str));
+		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.H_elem())[iv] *= signPer;
+		  THREAD(corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str() ).c_str() ));
 		  propExchange = propIn; propIn = propF; propF = propExchange;
-		  WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
-		  propF->shift(*propIn, 4+WilsDir);
+		  TIME(WL.wilsonLineUpdate(su3, tmp, 4+WilsDir)); // build Wilson line in the +z direction
+		  TIME(propF->shift(*propIn, 4+WilsDir));
 		}
     
 		propF->load();
@@ -347,12 +355,12 @@ int main(int argc, char **argv)
 		su3.absorbDir_device(gaugeWL, WilsDir); 
 		WL.setUnit( (std::vector<int>) {0,4,8});
 		for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-		  corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,-i, aux_str);
-		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.getCorr())[iv] *= signPer;
-		  corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str()).c_str() );
+		  TIME(corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,-i, aux_str));
+		  if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.H_elem())[iv] *= signPer;
+		  THREAD(corrThrpWL.writeHDF5( (threep_filename + suff + "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str.c_str()).c_str() ));
 		  propExchange = propIn; propIn = propF; propF = propExchange;
-		  WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
-		  propF->shift(*propIn, WilsDir);
+		  TIME(WL.wilsonLineUpdate(su3, tmp, WilsDir)); // build Wilson line in the +z direction
+		  TIME(propF->shift(*propIn, WilsDir));
 		}
 		propF->load();
 	      }
@@ -365,13 +373,13 @@ int main(int argc, char **argv)
       for(int c2 = 0 ; c2 < 3 ; c2++){
 	vectorAuxF.absorb(*propUP, nu, c2);
 	vectorAuxD.copy(vectorAuxF);
-	vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	TIME(vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 	vectorAuxF.copy(vectorOut);
 	propUP->absorb(vectorAuxF, nu, c2);
 
 	vectorAuxF.absorb(*propDN, nu, c2);
 	vectorAuxD.copy(vectorAuxF);
-	vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+	TIME(vectorOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 	vectorAuxF.copy(vectorOut);
 	propDN->absorb(vectorAuxF, nu, c2);
       }
@@ -382,13 +390,13 @@ int main(int argc, char **argv)
     propUP->applyBoundaries_device(sourcePositions[isource][3]);
     propDN->applyBoundaries_device(sourcePositions[isource][3]);
 
-    PLEGMA_Correlator<float> corr(corr_space, sinkMom_3D);
-    corrThrpWL.setFixMomVec(sinkMom_3D);
-    corr.contractMesons(*propUP, *propDN);
-    corr.writeFile(twop_filename.c_str(), corr_file_format);
+    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource]);
+    corr.setFixMomVec(sinkMom_3D);
+    TIME(corr.contractMesons(*propUP, *propDN));
+    THREAD(corr.writeFile(twop_filename.c_str(), corr_file_format));
 
-    corr.contractBaryons(*propUP, *propDN);
-    corr.writeFile(twop_filename.c_str(), corr_file_format);
+    TIME(corr.contractBaryons(*propUP, *propDN));
+    THREAD(corr.writeFile(twop_filename.c_str(), corr_file_format));
   }
   delete propUP;
   delete propDN;
