@@ -161,17 +161,17 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-prec", "Precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec = get_prec(tmpString.c_str());
 
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_sloppy == QUDA_INVALID_PRECISION ? prec : prec_sloppy);
   isFound=opt.set("Q-prec-sloppy", "Sloppy precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_sloppy = get_prec(tmpString.c_str());
   if (prec_sloppy == QUDA_INVALID_PRECISION) prec_sloppy = prec;
   
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_precondition == QUDA_INVALID_PRECISION ? prec : prec_precondition);
   isFound=opt.set("Q-prec-precondition", "Preconditioner precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_precondition = get_prec(tmpString.c_str());
   if (prec_precondition == QUDA_INVALID_PRECISION) prec_precondition = prec_sloppy;
 
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_null == QUDA_INVALID_PRECISION ? prec : prec_null);
   isFound=opt.set("Q-prec-null", "NUll-vector precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_null = get_prec(tmpString.c_str());
   if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
@@ -180,12 +180,12 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-recon", "Type of link reconstruction, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon  = get_recon(tmpString.c_str());
 
-  tmpString = get_recon_str(link_recon);
+  tmpString = get_recon_str(link_recon_sloppy == QUDA_RECONSTRUCT_INVALID ? link_recon : link_recon_sloppy);
   isFound=opt.set("Q-recon-sloppy", "Type of link reconstruction for sloppy, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon_sloppy  = get_recon(tmpString.c_str());
   if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
 
-  tmpString = get_recon_str(link_recon);
+  tmpString = get_recon_str(link_recon_precondition == QUDA_RECONSTRUCT_INVALID ? link_recon : link_recon_precondition);
   isFound=opt.set("Q-recon-precondition", "Type of link reconstruction for precon, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon_precondition  = get_recon(tmpString.c_str());
   if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
