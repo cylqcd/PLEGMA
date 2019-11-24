@@ -239,10 +239,16 @@ template<typename Tag,typename Tag::type M>
 struct Rob {
   friend typename Tag::type get(Tag){ return M;}
 };
-  
+
+struct Profiler_name{
+  typedef std::string TimeProfile::*type;
+  friend type get(Profiler_name);
+};
+
 template struct Rob<MG_Transfer,&MG::transfer>;
 template struct Rob<MG_CoarseParam,&MG::param_coarse>;
 template struct Rob<MG_Coarse,&MG::coarse>;
+template struct Rob<Profiler_name,&TimeProfile::fname>;
 
 inline bool changeBlock(int* blockOut, int* blockIn) {
   bool changed = false;
@@ -336,6 +342,7 @@ void QUDA_solver::UpdateSolver()
   solver = Solver::create(*solverParam, *M, *MSloppy, 
   			 *MPre, *profiler);
 
+  profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+to_string(mu)).c_str();
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();
