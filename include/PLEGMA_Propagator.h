@@ -22,6 +22,9 @@ namespace plegma {
     void apply_gamma5();
     void absorbVectorToHost(PLEGMA_Vector<Float> &vec, 
 			    int nu, int c2);
+
+    // This is the generic absorb. Other specializations follow
+    using PLEGMA_Field<Float>::absorb;
     /**
        @brief Absorbs elements from a 4D vector to a 4D propagator at nu, c2
        @param PLEGMA_Vector<Float> vec, The 4D vector
@@ -40,16 +43,6 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2);
-
-    /**
-       @brief Absorbs all  elements from a 3D propagator and puts it at a specific global time of the 4D propagator
-       @param PLEGMA_Propagator3D<Float> prop, The 3D propagator
-       @param int global_it, The global time slice where data which will be inserted, the rest of the time-slices will become zero in the 4D propagator
-       @return void
-     **/    
-    void absorb(PLEGMA_Propagator3D<Float> &prop, int global_it) {
-      ((PLEGMA_Field<Float>*) this)->absorb(prop, global_it);	    
-    }
 
     /**
        @brief Absorbs a 3D vector to a 4D Propagator at a specific global time and nu, c2 element
@@ -79,7 +72,9 @@ namespace plegma {
     
     void absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
 				 int timeslice);
-
+    
+    // This is the generic absorb. Other specializations follow
+    using PLEGMA_Field3D<Float>::absorb;
     /**
        @brief Absorbs a time-slice from a 4D vector to a 3D Propagator at nu, c2 element
        @param PLEGMA_Vector<Float> vec, The 4D vector
@@ -89,14 +84,6 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2);
-
-    /**
-       @brief Absorbs a time-slice from a 4D propagator to a 3D Propagator
-       @param PLEGMA_Vector<Float> prop, The 4D propagator
-       @param int global_it, The global time slice from where data will be extracted from the the 4D prop
-       @return void
-     **/    
-    void absorb(PLEGMA_Propagator<Float> &prop, int global_it);
 
     /**
        @brief Absorbs a 3D vector to a 3D Propagator at nu, c2 element

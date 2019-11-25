@@ -44,8 +44,8 @@ __global__ void contract_mesons_device( propTex<FloatA>& texProp1,
 	for(int a = 0 ; a < N_COLS ; a++){
 #pragma unroll
 	  for(int b = 0 ; b < N_COLS ; b++){
-	    accum[ip*2+0] = accum[ip*2+0] + value * prop1[alpha][beta][a][b] * conj(prop1[delta][gamma][a][b]);
-	    accum[ip*2+1] = accum[ip*2+1] + value * prop2[alpha][beta][a][b] * conj(prop2[delta][gamma][a][b]);
+	    accum[ip] = accum[ip] + value * prop1[alpha][beta][a][b] * conj(prop1[delta][gamma][a][b]);
+	    accum[N_MESONS+ip] = accum[N_MESONS+ip] + value * prop2[alpha][beta][a][b] * conj(prop2[delta][gamma][a][b]);
 	  }
 	}
       }

@@ -151,6 +151,7 @@ QUDA_solver::QUDA_solver(double mu) {
   inv_param = newQudaInvertParam();
 
   if(use_mg) inv_param.preconditioner = mg_preconditioner;
+  else inv_param.preconditioner = nullptr;
 
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
@@ -307,15 +308,18 @@ void QUDA_solver::UpdateSolver()
   checkInvertParam(&inv_param);
 
   if(use_mg){
-  multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
-  if( changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
-      mg->mgParam->Nvec != mg_param.n_vec[0]) {
-    destroyMultigridQuda(mg_preconditioner);
-    mg_preconditioner = newMultigridQuda(&mg_param);
-  } else {
-    updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
-    updateMultigridQuda(mg_preconditioner, &mg_param);
-  }}
+    inv_param.preconditioner = mg_preconditioner;
+    multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
+    if( changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
+	mg->mgParam->Nvec != mg_param.n_vec[0]) {
+      destroyMultigridQuda(mg_preconditioner);
+      mg_preconditioner = newMultigridQuda(&mg_param);
+    } else {
+      updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
+      updateMultigridQuda(mg_preconditioner, &mg_param);
+    }
+  }
+  else inv_param.preconditioner = nullptr;
   
   bool pc_solve = true;
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);

@@ -35,6 +35,8 @@ namespace plegma {
      **/
     void gaussianSmearing(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss);
 
+    // This is the generic absorb. Other specializations follow
+    using PLEGMA_Field<Float>::absorb;
     /**
        @brief Absorbs elements nu, c2 from a 4D propagator at specific global time and puts it in a 4D vector
        @param PLEGMA_Propagator<Float> prop, The 4D propagator
@@ -63,17 +65,7 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
-
-    /**
-       @brief Absorbs 3D vector and puts it at a specific global time of the 4D vector
-       @param PLEGMA_Propagator3D<Float> prop, The 3D propagator
-       @param int global_it, The global time slice where data will be inserted, the rest of the time-slices will become zero in the 4D vector
-       @return void
-     **/    
-    void absorb(PLEGMA_Vector3D<Float> &vec, int global_it) {
-      ((PLEGMA_Field<Float>*) this)->absorb(vec, global_it);
-    }
-
+    
     void dilutespin(PLEGMA_Vector<Float> &vecIn, int spin);
 
     void dilutecolor(PLEGMA_Vector<Float> &vecIn, int color);
@@ -81,7 +73,6 @@ namespace plegma {
     void dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color);
     
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
-    void conjugate();
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
@@ -102,7 +93,9 @@ namespace plegma {
       PLEGMA_Field<Float>(alloc_flag, VECTOR3D, ghost_flag){ }
 
     ~PLEGMA_Vector3D(){ }
-
+    
+    // This is the generic absorb. Other specializations follow
+    using PLEGMA_Field3D<Float>::absorb;
     /**
        @brief Absorbs elements nu, c2 from a 3D propagator to a 3D vector
        @param PLEGMA_Propagator3D<Float> prop, The 3D propagator
