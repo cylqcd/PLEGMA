@@ -135,6 +135,12 @@ namespace plegma {
 
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
 
+    /**
+       @brief Absorbs all  elements from a 3D field and puts it at a specific global time of the 4D field
+       @param PLEGMA_Field3D<Float> prop, The 3D field
+       @param int global_it, The global time slice where data which will be inserted, the rest of the time-slices will become zero in the 4D field
+       @return void
+     **/    
     void absorb(const PLEGMA_Field3D<Float> &field, int global_it);
 
     virtual void readLIME(std::string filename);
@@ -157,6 +163,12 @@ namespace plegma {
 
     virtual bool includesActiveTimeSlice() const{return activeTimeSlice;}
 
+    /**
+       @brief Absorbs a time-slice from a 4D field to a 3D field
+       @param PLEGMA_Field<Float> field, The 4D field
+       @param int global_it, The global time slice from where data will be extracted from the the 4D field
+       @return void
+     **/    
     void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };
 }
