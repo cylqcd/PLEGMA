@@ -98,9 +98,9 @@ namespace plegma {
 	return 0;
     } 
     void printInfo();
-    void communicateSideGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
-    void communicateCornerGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
-    void communicateGhost(short dirOr=-1, ORIENTATION sign=DIR_BOTH, GHOST_FLAG which_ghost=ALL_GHOSTS, ACTION action=DO_ALL);
+    void communicateSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, GHOST_FLAG which_ghost=ALL_GHOSTS, ACTION action=DO_ALL);
 
     std::vector<int> getSiteShape() const {return site_shape;}
     void setSiteShape(std::vector<int> new_shape) {
