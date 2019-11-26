@@ -2,7 +2,7 @@
 using namespace plegma;
 
 template<LEFTRIGHT LF,typename Float>
-static __global__ void apply_gamma_prop_kernel(prop2<Float>& prop, GAMMAS r){
+static __global__ void apply_gamma_prop_kernel(prop2<Float> prop, GAMMAS r){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> Sin[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<Float> Sout[N_SPINS][N_SPINS][N_COLS][N_COLS];

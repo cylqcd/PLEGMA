@@ -29,7 +29,7 @@ template<typename FloatA, typename FloatB, typename FloatC, int gamma>
 __device__ void contract_deltas_iso3o2_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_baryons_device(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC>* block2,
+__global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC>* block2,
 					int it, int time_step, int maxT, int4 source, BARYONS_TYPE ip, bool runFT, tex_mom_list mom_list){
 
   int grid3D = gridDim.x/time_step;

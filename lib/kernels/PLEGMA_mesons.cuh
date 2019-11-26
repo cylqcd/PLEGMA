@@ -7,8 +7,8 @@ const __device__ short int mesons_indices[N_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,
 const __device__ float mesons_values[N_MESONS][16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,-1,-1,1,-1,-1,1,-1,1,1,-1,-1,1,1,-1,1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,-1,1,-1,1,1,-1,1,1,-1,-1,1,1,-1,-1,-1,-1,1,1,-1,-1,1,1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_mesons_device( propTex<FloatA>& texProp1,
-					propTex<FloatB>& texProp2,
+__global__ void contract_mesons_device( propTex<FloatA> texProp1,
+					propTex<FloatB> texProp2,
 					Float2<FloatC> *block2,
 					int it, int time_step, int maxT, int4 source,
 					bool runFT, tex_mom_list moms){
@@ -20,7 +20,7 @@ __global__ void contract_mesons_device( propTex<FloatA>& texProp1,
   // and we need to start from it when we go over maxT
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
-    
+  
   register Float2<FloatC> accum[2*N_MESONS];
   for(int i = 0 ; i < 2*N_MESONS ; i++){
     accum[i] = 0.;
@@ -98,7 +98,6 @@ void contract_mesons_host( ProfileStruct &ps,
 
   auto propTex1 = toTexture<propTex>(prop1);
   auto propTex2 = toTexture<propTex>(prop2);
-    
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);

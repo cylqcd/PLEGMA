@@ -8,7 +8,7 @@ using namespace plegma;
 using namespace quda;
 
 template<LEFTRIGHT LF,typename Float>
-static __global__ void apply_gamma_vector_kernel(vector2<Float>& vec, GAMMAS r){
+static __global__ void apply_gamma_vector_kernel(vector2<Float> vec, GAMMAS r){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   Float2<Float> Sin[N_SPINS][N_COLS];
   Float2<Float> Sout[N_SPINS][N_COLS]; 
@@ -34,7 +34,7 @@ static void apply_gamma_vector(LEFTRIGHT LR,vector2<Float> inOut,GAMMAS r){
 }
 
 template<typename Float>
-static __global__ void apply_gamma5_vector_kernel(vector2<Float>& vec){
+static __global__ void apply_gamma5_vector_kernel(vector2<Float> vec){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= vec.volume()) return;
 
