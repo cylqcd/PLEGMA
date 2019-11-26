@@ -153,6 +153,10 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
       printf("time_step = %d, ps.tp.aux.x = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n",
 	      time_step,      ps.tp.aux.x,      ps.tp.grid.x,      ps.tp.block.x,      ps.tp.shared_bytes);
   
+  auto propTex1 = toTexture<propTex>(*(props[0]));
+  auto propTex2 = toTexture<propTex>(*(props[1]));
+  auto propTex3 = toTexture<propTex>(*(props[2]));
+
   Float2<FloatC> *h_partial_block = NULL;        
   Float2<FloatC> *d_partial_block = NULL;
   size_t alloc_size = (runFT==true) ? (volume * (ps.tp.grid.x/time_step)):volume;
@@ -181,17 +185,18 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
     cudaMalloc((void**)&texPropProd, time_step * sizeof(genericTex<FloatC>) );
     for(int t=0; t<time_step; t++) {
       propProd[t] = new PLEGMA_Field3D<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, NO_GHOSTS, false, false);
+    }
+    cudaError_t error=cudaPeekAtLastError();
+    if(error != cudaSuccess) { goto exit; }
+    for(int t=0; t<time_step; t++) {
       holder.push_back(toTexture<genericTex>(*(propProd[t])));
       cudaMemcpy(texPropProd+t, holder.back().get(), sizeof(genericTex<FloatC>), cudaMemcpyHostToDevice);
     }
+  } else {
+    cudaError_t error=cudaPeekAtLastError();
+    if(error != cudaSuccess) { goto exit; }
   }
 
-  auto propTex1 = toTexture<propTex>(*(props[0]));
-  auto propTex2 = toTexture<propTex>(*(props[1]));
-  auto propTex3 = toTexture<propTex>(*(props[2]));
-
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess) { goto exit; }
   for(int it=0; it < t_size; it+=time_step) {
     
     if(ps.tp.aux.x == 2) {
