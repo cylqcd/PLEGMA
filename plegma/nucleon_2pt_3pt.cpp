@@ -148,8 +148,10 @@ int main(int argc, char **argv) {
 	  // 3D propagators at t_sink
 	  PLEGMA_Propagator3D<float> propUP3D;
 	  PLEGMA_Propagator3D<float> propDN3D;
+	  PLEGMA_Gauge3D<double> smearedGauge3D_sink;
 	  propUP3D.absorb(propUP, global_fixSinkTime);
 	  propDN3D.absorb(propDN, global_fixSinkTime);
+	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
@@ -203,13 +205,13 @@ int main(int argc, char **argv) {
 		    vectorAuxF.conjugate();
 		    vectorAuxF.apply_gamma(G5);
 		    vectorAuxD1.copy(vectorAuxF);
-		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D, nsmearGauss, alphaGauss));
+		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
 		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
 		  }
 		  double norm = vectorInOut.norm();
-		  vectorInOut.cscale(1/norm);
+		  vectorInOut.scale(1/norm);
 		  TIME(solver.solve(vectorInOut, vectorInOut));
-		  vectorInOut.cscale(norm);
+		  vectorInOut.scale(norm);
 		  PLEGMA_Vector<float> vectorAuxF;
 		  vectorAuxF.copy(vectorInOut);
 		  seqProp.absorb(vectorAuxF, nu, c2);
