@@ -200,9 +200,11 @@ int main(int argc, char **argv)
 #endif
 
   
-  if(mu_h>0.) {
-   	mu = mu_h;
-	solverDN->UpdateSolver();
+  if(std::abs(mu_h)>0) {
+    if(mu_h>0) mu_h*=-1.;	
+    mu = mu_h;
+    PLEGMA_printf("Updating the solver with mu value %f\n",mu);
+    solverDN->UpdateSolver();
   }
 
   
