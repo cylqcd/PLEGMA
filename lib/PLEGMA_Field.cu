@@ -387,10 +387,6 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	    // collecting elements from device
 	    copy_side_to_ghost(toField2<pFloat2>(*this), i, s);
 
-	    // For Field3D we need to run only up to the previous kernel due to tuning.
-	    // The rest is useless if not in the timeslice
-	    if(not includesActiveTimeSlice()) continue;
-	    
 	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
 	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
 	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
@@ -407,7 +403,6 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	    messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
 	    comm_start(messages.back());
 	  }
-  if(not includesActiveTimeSlice()) return;
   if(action==FINISH || action==DO_ALL) {
     // waiting for communications
     while (! messages.empty()) {
@@ -463,9 +458,6 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
 		  // collecting elements from device
 		  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2);
-		  // For Field3D we need to run only up to the previous kernel due to tuning.
-		  // The rest is useless if not in the timeslice
-		  if(not includesActiveTimeSlice()) continue;
 		  
 		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
 		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[i][j][s1][s2]/scaleT*field_length*2;
@@ -487,7 +479,6 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 		  disp[i] = 0; disp[j] = 0;	  
 		  comm_start(messages.back());
 		}
-  if(not includesActiveTimeSlice()) return;
   if(action==FINISH || action==DO_ALL) {
     // waiting for communications
     while (! messages.empty()) {
