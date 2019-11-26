@@ -6,7 +6,7 @@ template<typename T>
 struct KernelArr {T* array; int size;};
 
 template<typename FloatOut, typename FloatV, typename FloatP>
-__global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
+__global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS>& listGammas,
 			   FloatP *S, Float2<FloatOut> *block2,
 			   int it, int time_step, int3 source, tex_mom_list moms){
 
@@ -16,11 +16,11 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
   int site_size = listGammas.size*N_SPINS*N_COLS;
   
-  register Float2<FloatOut> accum[16*N_SPINS*N_COLS];
-  for(int i = 0 ; i <16*N_SPINS*N_COLS  ; i++){
+  register Float2<FloatOut> accum[N_SPINS*N_COLS];
+  for(int i = 0 ; i <N_SPINS*N_COLS  ; i++){
     accum[i] = 0.;
   }
-
+  
   if (sid3D < DGC_localVolume3D){
     prop2<FloatP> propS(S);
     vector2<FloatV> vectorPhi(Phi);
@@ -30,21 +30,25 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
     propS.get(s,vid);
     vectorPhi.get(phi,vid);
 
+    
     const Float2<float> (*g)[4];
     const short int (*gammasIdx)[4][2];
     g = (Float2<float> (*)[4]) plegma::gamma;
     gammasIdx = gammaInd;
-
+    
+    //if (vid==0) {printf("check1\n");}
+    
     #pragma unroll
-    for(int i_g = 0 ; i_g < 16; i_g++){
+    for(int i_g = 0 ; i_g < 1; i_g++){
       if(i_g<listGammas.size){
 	int gId=listGammas.array[i_g];
+	//if (vid==0) {printf("check2 - gId=%d\n", gId);}
         #pragma unroll //for loop over nonzero entries
 	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
 	  int alpha0=gammasIdx[gId][nz_e][0];
 	  int alpha1=gammasIdx[gId][nz_e][1];
 	  Float2<FloatOut> factor=g[gId][nz_e];
-	  
+	  //if (vid==0) {printf("check3 - n_ze=%d, a0-a1-f %d-%d-%f\n", nz_e, alpha0, alpha1, factor);}
           #pragma unroll
 	  for(int beta = 0 ; beta < N_SPINS ; beta++){
             #pragma unroll
@@ -61,12 +65,12 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
       }
     }
   }
-  
+      
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z}; 
   fourier_transform_3D(block2, accum, shared_cache, site_size, sid3D, source_pos, moms, 0, -1, time_step, tid);
-  
+    
 }
 
 template<typename FloatOut, typename FloatV, typename FloatP>
@@ -83,18 +87,22 @@ static void V3_k_host( ProfileStruct &ps,
   int site_size = Vout.getSiteSize();
   int nblockspert = ps.tp.grid.x/time_step;
   
-  if(HGC_verbosity > 2)
+  if(HGC_verbosity > 2){
     PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
-
+    PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, volume, nblockspert);
+  }
+  
   size_t alloc_size = size * nblockspert; // N_moms*site_size*n_blocks
 
   Float2<FloatOut> *h_partial_block = NULL;
   Float2<FloatOut> *d_partial_block = NULL;
   
   cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatOut>));
+  
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
+    PLEGMA_printf("ERROR0\n");
     cudaFree(d_partial_block);
     return;
   }
@@ -106,21 +114,21 @@ static void V3_k_host( ProfileStruct &ps,
   checkCudaError();
   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
   checkCudaError();
+  PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
+  PLEGMA_printf("OK till now\n");
 
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+    V3_kernel<<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi.D_elem(), listGammas, S.D_elem(), d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source, moms);
 
-    V3_kernel
-      <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (Phi.D_elem(), listGammas, S.D_elem(), d_partial_block, it,
-       MIN(HGC_localL[3]-it, time_step), source, moms);
+    //cudaDeviceSynchronize();
 
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
 
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
     
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
       
     for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
       for(int f = 0 ; f < site_size; f++) {
@@ -147,7 +155,8 @@ static void V3_k(PLEGMA_ScattCorrelator<FloatOut> &Vout,
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
 
   int shared_size = site_size*sizeof(Float2<FloatOut>);
-
+  PLEGMA_printf("site_size= %d\n", site_size);
+  
   Float2<FloatOut> *result = NULL;
   hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 

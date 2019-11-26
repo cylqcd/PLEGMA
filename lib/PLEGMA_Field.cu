@@ -175,7 +175,7 @@ void PLEGMA_Field<Float>::load(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload(){
-  if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
+  if(allocation != BOTH) PLEGMA_error("Load from Device to Host needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, bytes_total_length, cudaMemcpyDeviceToHost);
   if(checkErr) checkCudaError();
 }
