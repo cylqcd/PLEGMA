@@ -176,6 +176,12 @@ namespace plegma {
     virtual bool includesActiveTimeSlice() const{return activeTimeSlice;}
     virtual bool is4D() const{assert(this->Total_length()==HGC_localVolume3D); return false;}
 
+    template<typename FloatIn>
+    void copy(PLEGMA_Field3D<FloatIn> &f, ALLOCATION_FLAG where=DEVICE) {
+      this->activeTimeSlice = f.activeTimeSlice;
+      return ((PLEGMA_Field<Float>*) this)->copy(f,where);
+    }
+    
     /**
        @brief Absorbs a time-slice from a 4D field to a 3D field
        @param PLEGMA_Field<Float> field, The 4D field
