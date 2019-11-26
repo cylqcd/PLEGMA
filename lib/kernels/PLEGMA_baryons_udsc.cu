@@ -175,14 +175,14 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
     
   // in case of ps.tp.aux == 1 we create a propProd which has open indeces. Otherwise we contract directly the props
   std::vector<std::shared_ptr<genericTex<FloatC>>> holder;
-  PLEGMA_Field<FloatC> *propProd[time_step];
+  PLEGMA_Field3D<FloatC> *propProd[time_step];
   genericTex<FloatC> *texPropProd = NULL;
   if (ps.tp.aux.x == 2) {
     cudaMalloc((void**)&texPropProd, time_step * sizeof(genericTex<FloatC>) );
     for(int t=0; t<time_step; t++) {
       propProd[t] = new PLEGMA_Field3D<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, NO_GHOSTS, false, false);
       holder.push_back(toTexture<genericTex>(*(propProd[t])));
-      cudaMemcpy(texPropProd+t*sizeof(genericTex<FloatC>), holder.back().get(), sizeof(genericTex<FloatC>), cudaMemcpyHostToDevice);
+      cudaMemcpy(texPropProd+t, holder.back().get(), sizeof(genericTex<FloatC>), cudaMemcpyHostToDevice);
     }
   }
 
@@ -246,9 +246,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   
   if (ps.tp.aux.x == 2) {
     cudaFree(texPropProd);
-    for(int t=0; t<time_step; t++) {
-      holder.pop_back();
-    }
+    holder.clear();
     for(int t=0; t<time_step; t++) {
       delete propProd[t];
     }
