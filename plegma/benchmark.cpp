@@ -113,14 +113,14 @@ int main(int argc, char **argv) {
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(run({"threep","PDFs"})) {
     PLEGMA_Propagator3D<float> prop_a,  prop_b;
-    PLEGMA_Vector<float> vector;
+    PLEGMA_Vector3D<float> vector;
 
     // Since seqSourceNucleon is overloaded we need to select one version of it
-    void (PLEGMA_Vector<float>::*seqSourceNucleon)(PLEGMA_Propagator3D<float> &, PLEGMA_Propagator3D<float> &, WHICHPROJECTOR, WHICHPARTICLE, int, int, int) = &PLEGMA_Vector<float>::seqSourceNucleon;
+    void (PLEGMA_Vector3D<float>::*seqSourceNucleon)(PLEGMA_Propagator3D<float> &, PLEGMA_Propagator3D<float> &, WHICHPROJECTOR, WHICHPARTICLE, int, int) = &PLEGMA_Vector3D<float>::seqSourceNucleon;
     // Benchmark Sequential source 
     for(int i=0; i<(int) N_PROJS; i++) {
-      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source proton P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, PROTON, 1, 0, 0);
-      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source neutron P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, NEUTRON, 1, 0, 0);
+      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source proton P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, PROTON, 0, 0);
+      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source neutron P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, NEUTRON, 0, 0);
     }
   }
 
