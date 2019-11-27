@@ -97,6 +97,7 @@ static __global__ void conjugate_kernel(generic2<Float> field){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= field.volume()) return;
 
+  field.setSid(sid);
   #pragma unroll
   for(int i = 0 ; i < field.site_size; i++)
     field[i].conj();
