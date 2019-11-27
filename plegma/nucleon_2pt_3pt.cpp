@@ -74,12 +74,11 @@ int main(int argc, char **argv) {
     std::string given_threep_filename = threep_filename;
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
+      site& source = sourcePositions[isource];
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
-		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
-		    sourcePositions[isource][2], sourcePositions[isource][3]);
+		    isource, source[0], source[1], source[2], source[3]);
       updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
-      site& source = sourcePositions[isource];
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
@@ -123,7 +122,7 @@ int main(int argc, char **argv) {
 			       };
 
       char * src_string;
-      asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+      asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", source[0], source[1], source[2], source[3]);
       twop_filename = given_twop_filename + src_string;
       threep_filename = given_threep_filename + src_string;
       free(src_string);
