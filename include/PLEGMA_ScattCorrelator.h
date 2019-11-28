@@ -2,6 +2,8 @@
 #include <PLEGMA_Correlator.h>
 
 namespace plegma {
+  enum VRED {V_2,V_3,V_4};
+  
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Propagator;
@@ -62,12 +64,10 @@ namespace plegma {
     //functions that return values of protected variables
     std::string Shape_labels() const{ return shape_labels;}
 
-    // COMMENT: probably source_pos needed. Not clear to me now, we will see...
     void V1( PLEGMA_Vector<Float> Phi, std::vector<Float> Gammas, PLEGMA_Propagator<Float> S);
     void V2( PLEGMA_Vector<Float> Phi, std::vector<Float> Gammas, PLEGMA_Propagator<Float> S1,  PLEGMA_Propagator<Float> S2);
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S);
-    void V4( PLEGMA_Vector<Float> Phi, std::vector<Float> Gammas, PLEGMA_Propagator<Float> S1,  PLEGMA_Propagator<Float> S2 );
-
+    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
 
   };
 }
