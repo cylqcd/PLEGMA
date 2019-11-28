@@ -64,12 +64,6 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
   if(isInList(list,"rng-seed")) opt.set("rng-seed", "A seed for the random number generator", verbosity, rng_seed);
 
   //3pt Functions -----------------------------------------------------------------------------------------
-  if(isInList(list,"which_particle")){
-    tmpString=get_particle_str(which_particle);
-    isFound=opt.set("which_particle", "Hadron to insert in the three point function", verbosity, tmpString);
-    if(isFound) which_particle=get_particle(tmpString.c_str());
-  }
- 
   if(isInList(list,"gammas")){
     std::vector<std::string> tmpString;
     get_gammas_str(gammas,&tmpString);
@@ -98,7 +92,6 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
 
   if(isInList(list, "tSinks")) opt.set("tSinks", "List with the source-sink time separations to do", verbosity, tSinks);
   if(isInList(list, "Projs")) opt.set("Projs", "List of the projectors to be used", verbosity, Projs);
-  if(isInList(list, "sinkMom")) opt.set("sinkMom", "Sink momentum boosted nucleon", verbosity, sinkMom);
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
 #ifdef HAVE_ARPACK

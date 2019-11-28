@@ -207,10 +207,12 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Propagator<Float> &fwdProp,
 			       PLEGMA_Su3field<Float> &su3,
-			       int signProps, std::vector<GAMMAS> gammas){
+			       int signProps, std::vector<GAMMAS> gammas,
+			       int z, std::string quark ){
   shape = {(int) gammas.size()};
-  datasets = {"threep"};
-  groups =  {"wilsonLine"};
+  datasets = {"z_"+std::to_string(z)};
+  groups =  {quark.c_str()};
+
   description = getGammasString(gammas);
   initialize();
   
