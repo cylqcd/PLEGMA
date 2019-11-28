@@ -125,8 +125,8 @@ int main(int argc, char **argv) {
   }
 
   if(run({"threep"})) {
-    PLEGMA_Gauge<float> gauge;
-    PLEGMA_Propagator<float> prop_a,  prop_b;
+    PLEGMA_Gauge<float> gauge(BOTH, FIRST_CORNER);
+    PLEGMA_Propagator<float> prop_a(BOTH, FIRST_CORNER),  prop_b(BOTH, FIRST_CORNER);
     site source;
     source.fill(0);
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
@@ -135,6 +135,7 @@ int main(int argc, char **argv) {
     // Benchmark three point functions 
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas);
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_twoD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas);
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1);
   }
   
