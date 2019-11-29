@@ -38,6 +38,7 @@ int main(int argc, char **argv)
     //Create Propagator
     PLEGMA_Propagator<float> propUP(BOTH);
     if (path_P==""){
+      PLEGMA_printf("Build propagator from scratch\n");     
       // Allocation done on BOTH, DEVICE and HOST
       //PLEGMA_Gauge<double> smearedGauge(BOTH);
       //{
@@ -85,6 +86,7 @@ int main(int argc, char **argv)
 
       if(outfile_S!="")
 	{
+	  PLEGMA_printf("Save propagator\n");
 	  PLEGMA_Vector<float> vectorAuxPrint(BOTH);
 	  for(int isc = 0 ; isc < 12 ; isc++){
 	    std::string spin=std::to_string(isc/3);
@@ -97,13 +99,21 @@ int main(int argc, char **argv)
 	}
     }
     else {
-      propUP.readFile(path_P, LIME_FORMAT);
-      propUP.load();
+      PLEGMA_printf("Read propagator from: %s\n",path_P.c_str());     
+      for(int isc = 0 ; isc < 12 ; isc++){
+	PLEGMA_Vector<float> vectorRead(BOTH);
+	std::string spin=std::to_string(isc/3);
+	std::string col=std::to_string(isc%3);
+	vectorRead.readFile(path_P+"_s"+spin+"_c"+col,LIME_FORMAT);
+	vectorRead.load();
+	propUP.absorb(vectorRead, isc/3, isc%3);
+      }
     }
     
     //create vector field
     PLEGMA_Vector<float> vectorStoc(BOTH);
     if(path_V==""){
+      PLEGMA_printf("Build vector from scratch\n");     
       int nroots=4;
       QUDA_solver solver(mu);
       vectorStoc.randInit(1234);
@@ -111,22 +121,24 @@ int main(int argc, char **argv)
       solver.solve(vectorStoc, vectorStoc);
 
       if(outfile_V!=""){
+	PLEGMA_printf("Print Vector\n");     
 	vectorStoc.unload();
 	vectorStoc.writeLIME(outfile_V);
       }
     }
     else{
+      PLEGMA_printf("Read Vector from: %s\n",path_V.c_str());     
       vectorStoc.readFile(path_V, LIME_FORMAT);
       vectorStoc.load();
     }
     
     //do V3 reduction
     std::vector<int> mom={0,0,1};
-    std::vector<GAMMAS> glist1={G1,G2,G3};
-    std::vector<GAMMAS> glist2={G4,G5};
+    //std::vector<GAMMAS> glist1={G1,G2,G3};
+    std::vector<GAMMAS> glist2={G4};
     PLEGMA_ScattCorrelator<float> V3reduction(MOMENTUM_SPACE, mom);
     
-    V3reduction.V3( vectorStoc, glist1, propUP);
+    //V3reduction.V3( vectorStoc, glist1, propUP);
     V3reduction.V3( vectorStoc, glist2, propUP);
 
     V3reduction.writeHDF5(outfile_V3);

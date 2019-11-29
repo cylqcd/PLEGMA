@@ -2,7 +2,7 @@
 #include <PLEGMA_Correlator.h>
 
 namespace plegma {
-  enum VRED {V_2,V_3,V_4};
+  enum VRED {V_2=2,V_3=3,V_4=4};
   
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;

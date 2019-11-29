@@ -2,6 +2,7 @@
 #include <PLEGMA_gammas.cuh>
 
 using namespace plegma;
+
 template<typename T>
 struct KernelArr {T* array; int size;};
 
@@ -38,18 +39,18 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
     g = (Float2<float> (*)[4]) plegma::gamma;
     gammasIdx = gammaInd;
     
-    if (vid==0) {printf("check1\n");}
+    //if (vid==0) {printf("check1\n");}
     
     #pragma unroll
     for(int i_g = 0 ; i_g < N_GAMMAS; i_g++){
       int gId=listGammas.array[i_g];
-      if (vid==0) {printf("check2 - gId=%d\n", gId);}
+      //if (vid==0) {printf("check2 - gId=%d\n", gId);}
       #pragma unroll //for loop over nonzero entries
       for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
 	int alpha0=gammasIdx[gId][nz_e][0];
 	int alpha1=gammasIdx[gId][nz_e][1];
 	Float2<FloatOut> factor=g[gId][nz_e];
-	if (vid==0) {printf("check3 - n_ze=%d, a0-a1-f %d-%d-%f+i%f\n", nz_e, alpha0, alpha1, factor.x, factor.y);}
+	//if (vid==0) {printf("check3 - n_ze=%d, a0-a1-f %d-%d-%f+i%f\n", nz_e, alpha0, alpha1, factor.x, factor.y);}
         #pragma unroll
 	for(int beta = 0 ; beta < N_SPINS ; beta++){
           #pragma unroll
@@ -74,9 +75,9 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
 }
 
 template<typename FloatOut, typename FloatV, typename FloatP>
-void V3_kernel_wr( ProfileStruct &ps, FloatV *Phi, KernelArr<GAMMAS> &listGammas,
-		FloatP *S, Float2<FloatOut> *block2,
-		int it, int time_step, int3 source, tex_mom_list moms){
+void V3_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
+			int it, int time_step, int3 source, tex_mom_list moms,
+			KernelArr<GAMMAS> &listGammas, FloatV *Phi, FloatP *S){
   dim3 grid = ps.tp.grid;
   grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
 
@@ -100,104 +101,3 @@ void V3_kernel_wr( ProfileStruct &ps, FloatV *Phi, KernelArr<GAMMAS> &listGammas
   }
   
 }
-
-template<typename FloatOut, typename FloatV, typename FloatP>
-static void V3_k_host( ProfileStruct &ps,
-		       PLEGMA_ScattCorrelator<FloatOut> &Vout,
-		       PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS> &gammas,
-		       PLEGMA_Propagator<FloatP> &S, Float2<FloatOut>* result){
-
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
-  size_t size = Vout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
-  size_t N_moms = Vout.getVolSize()/HGC_localL[3];//N_moms
-  int3 source = Vout.getSource3();
-  tex_mom_list moms = Vout.getTexMomList();
-  int site_size = Vout.getSiteSize();
-  int nblockspert = ps.tp.grid.x/time_step;
-  
-  if(HGC_verbosity > 2){
-    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
-    PLEGMA_printf("size = %d, N_moms = %d, nblockxt = %d\n", size, N_moms, nblockspert);
-  }
-  
-  size_t alloc_size = size * nblockspert; // N_moms*site_size*n_blocks
-
-  Float2<FloatOut> *h_partial_block = NULL;
-  Float2<FloatOut> *d_partial_block = NULL;
-  
-  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  
-  // Checking for allocation error. In case we return and let the tuner handle the error.
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess) {
-    PLEGMA_printf("ERROR0\n");
-    cudaFree(d_partial_block);
-    return;
-  }
-  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-
-  KernelArr<GAMMAS> listGammas;
-  listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  checkCudaError();
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
-  checkCudaError();
-  PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
-  
-  for(int it=0; it < HGC_localL[3]; it+=time_step) {
-    
-    V3_kernel_wr(ps, Phi.D_elem(), listGammas, S.D_elem(), d_partial_block, it,  time_step, source, moms);
-
-    cudaDeviceSynchronize();
-
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
-
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
-    
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
-
-    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*MIN(HGC_localL[3]-it, time_step); tslicexmom++){
-      for(int f = 0 ; f < site_size; f++) {
-	result[(f*HGC_localL[3] + it)*N_moms+tslicexmom] = 0;
-	for(int j = 0 ; j < nblockspert; j++)
-	  result[(f*HGC_localL[3] + it)*N_moms+tslicexmom] += h_partial_block[(tslicexmom*site_size+f)*nblockspert+j];
-      }
-    }
-    
-  }
-  hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
-  
-}
-
-template<typename FloatOut, typename FloatV, typename FloatP>
-static void V3_k(PLEGMA_ScattCorrelator<FloatOut> &Vout,
-		 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS> &Gammas,
-		 PLEGMA_Propagator<FloatP> &S){
-
-  int site_size = Gammas.size()*N_SPINS*N_COLS;
-  
-  if(Vout.getSiteSize() != site_size)
-    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
-
-  int shared_size = site_size*sizeof(Float2<FloatOut>);
-  PLEGMA_printf("site_size= %d\n", site_size);
-  
-  Float2<FloatOut> *result = NULL;
-  hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
-
-  //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume;
-
-  std::string kerName="V3_k_gammas_";
-  for(auto const& G: Gammas) {kerName+=GAMMAS_STR[int(G)];}
-  
-  tuneAndRun( ps, kerName, V3_k_host<FloatOut, FloatV, FloatP>,
-	      ps, Vout, Phi, Gammas, S, result);
-
-  //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
-}
-
