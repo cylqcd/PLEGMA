@@ -64,7 +64,8 @@ int main(int argc, char **argv)
 
   bool isGPD = !std::all_of(DeltaMom.begin(), DeltaMom.end(), [](int i) { return i==0; });
   if(isGPD && gammas.size()!=4) PLEGMA_warning("Not all the insertion relevant for the computation of GPDs have been set in the input file\n");
-
+  
+  
   {
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
@@ -84,11 +85,10 @@ int main(int argc, char **argv)
   smearedGauge.calculatePlaq();
 
 
-  DeltaMom.push_back(0);
-  
-  std::vector<int> HalfDelta = {0,0,0,0}; 
-  std::vector<int> sinkMom = {0,0,0,0};
-  std::vector<int> sourceMom = {0,0,0,0};
+    
+  std::vector<int> HalfDelta = {0,0,0}; 
+  std::vector<int> sinkMom = {0,0,0};
+  std::vector<int> sourceMom = {0,0,0};
   float SourcePhase;
   
   // Compute the source and sink momenta
@@ -99,7 +99,8 @@ int main(int argc, char **argv)
   
   PLEGMA_printf("Source Momentum px %d, py %d, pz %d, pt %d\nSink Momentum px %d, py %d, pz %d, pt %d\n",
 		sourceMom[0],sourceMom[1],sourceMom[2],sourceMom[3],sinkMom[0],sinkMom[1],sinkMom[2],sinkMom[3]);
- 
+  if(isGPD && maxQsq < sourceMom[0]*sourceMom[0]+sourceMom[1]*sourceMom[1]+sourceMom[2]*sourceMom[2])
+   PLEGMA_error("maxQsq does not include the source momentum\n");
 
   PLEGMA_Gauge<double> *smearedGauge_sink;
   if(isGPD){
@@ -117,11 +118,6 @@ int main(int argc, char **argv)
   if(isGPD) smearedGauge_sink->scaleDirWise(momSmScale);
 
   
-  // Extracting the spacial sink momentum from the sink 4-momentum  
-  std::vector<int> sinkMom_3D(3);
-  std::copy(sourceMom.begin(),sourceMom.begin()+3,sinkMom_3D.begin());
-  
-  
   // ensuring mu positive
   if(mu<0)  mu*=-1.;
   TIME(QUDA_solver solver(mu));
@@ -131,10 +127,7 @@ int main(int argc, char **argv)
   PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
   PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
   
-  std::vector<int> DeltaMom_3D(3);
-  std::copy(DeltaMom.begin(),DeltaMom.begin()+3,DeltaMom_3D.begin());
-  
-  
+    
   PLEGMA_Gauge<double> *AuxSinkGauge;
   if(isGPD) AuxSinkGauge = smearedGauge_sink;
   else AuxSinkGauge = &smearedGauge;
@@ -184,7 +177,7 @@ int main(int argc, char **argv)
     
     for(int ts=0;ts<tSinks.size();ts++) {
       PLEGMA_Correlator<float> corrThrpWL(corr_space,source,0,tSinks[ts]+1);
-      corrThrpWL.setFixMomVec(DeltaMom_3D);
+      corrThrpWL.setFixMomVec(DeltaMom);
       int signPer = (tSinks[ts] + source[3]) >= HGC_totalL[3] ? -1 : +1;
       int global_fixSinkTime = (tSinks[ts] + source[3])%HGC_totalL[3]; 
 
@@ -192,9 +185,32 @@ int main(int argc, char **argv)
       PLEGMA_Propagator3D<float> propUP3D;
       PLEGMA_Propagator3D<float> propDN3D;
       PLEGMA_Gauge3D<double> smearedGauge3D_sink;
-      propUP3D.absorb(propUP, global_fixSinkTime);
-      propDN3D.absorb(propDN, global_fixSinkTime);
       smearedGauge3D_sink.absorb(*AuxSinkGauge, global_fixSinkTime);
+
+      propUP3D.absorb(propUP_SL, global_fixSinkTime);
+      propDN3D.absorb(propDN_SL, global_fixSinkTime);
+
+      for(int isc = 0 ; isc < 12 ; isc++){
+	PLEGMA_Vector3D<double> vectorAuxD;
+	PLEGMA_Vector3D<float> vectorAuxF;
+	vectorAuxF.absorb(propUP3D,isc/3, isc%3);
+	vectorAuxD.copy(vectorAuxF);
+	TIME(vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge3D_sink, nsmearGauss, alphaGauss));
+	vectorAuxF.copy(vectorAuxD);
+	propUP3D.absorb(vectorAuxF,isc/3, isc%3);
+      }
+      for(int isc = 0 ; isc < 12 ; isc++){
+	PLEGMA_Vector3D<double> vectorAuxD;
+	PLEGMA_Vector3D<float> vectorAuxF;
+	vectorAuxF.absorb(propDN3D,isc/3, isc%3);
+	vectorAuxD.copy(vectorAuxF);
+	TIME(vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge3D_sink, nsmearGauss, alphaGauss));
+	vectorAuxF.copy(vectorAuxD);
+	propDN3D.absorb(vectorAuxF,isc/3, isc%3);
+      }
+	
+      
+      
       
       PLEGMA_Su3field<float> su3;
       PLEGMA_Su3field<float> WL;
@@ -249,27 +265,31 @@ int main(int argc, char **argv)
 
 			       PLEGMA_Gauge<float> gaugeWL;
 			       gaugeWL.copy(gauge);
-			       
-			       // LOCAL contractions
-			       TIME(corrThrpWL.contractNucleonThrp_local(seqPropOut, *propF, signProps, gammas));
-			       if(signPer < 0) for(size_t iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;      
-			       THREAD(corrThrpWL.writeFile(filename, corr_file_format));
-			       
-			       // oneD contractions
-			       TIME(corrThrpWL.contractNucleonThrp_oneD(seqPropOut, *propF, gaugeWL, signProps, gammas));
-			       if(signPer < 0) for(size_t iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-			       THREAD(corrThrpWL.writeFile( filename, corr_file_format));
-			       
-			       // noe contractions
-			       TIME(corrThrpWL.contractNucleonThrp_noe(seqPropOut, *propF, gaugeWL, signProps));
-			       if(signPer < 0) for(size_t iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-			       THREAD(corrThrpWL.writeFile( filename, corr_file_format));
-	      
-			       // twoD contractions
-			       TIME(corrThrpWL.contractNucleonThrp_twoD(seqPropOut, *propF, gaugeWL, signProps, gammas));
-			       if(signPer < 0) for(size_t iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-			       THREAD(corrThrpWL.writeFile( filename, corr_file_format));
 
+			       {
+				 PLEGMA_Correlator<float> corrQsq(corr_space,source,maxQsq,tSinks[ts]+1);
+			       
+				 // LOCAL contractions
+				 TIME(corrQsq.contractNucleonThrp_local(seqPropOut, *propF, signProps, gammas));
+				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;      
+				 THREAD(corrQsq.writeFile(filename, corr_file_format));
+			       
+				 // oneD contractions
+				 TIME(corrQsq.contractNucleonThrp_oneD(seqPropOut, *propF, gaugeWL, signProps, gammas));
+				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
+				 THREAD(corrQsq.writeFile( filename, corr_file_format));
+			       
+				 // noe contractions
+				 TIME(corrQsq.contractNucleonThrp_noe(seqPropOut, *propF, gaugeWL, signProps));
+				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
+				 THREAD(corrQsq.writeFile( filename, corr_file_format));
+	      
+				 // twoD contractions
+				 TIME(corrQsq.contractNucleonThrp_twoD(seqPropOut, *propF, gaugeWL, signProps, gammas));
+				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
+				 THREAD(corrQsq.writeFile( filename, corr_file_format));
+			       }
+			       
 			       PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);
 			       PLEGMA_Propagator<float> *propExchange = nullptr;
 			       propF->unload();
@@ -320,8 +340,7 @@ int main(int argc, char **argv)
     propUP.applyBoundaries_device(source[3]);
     propDN.applyBoundaries_device(source[3]);
     
-    PLEGMA_Correlator<float> corr(corr_space, source);
-    corr.setFixMomVec(sinkMom_3D);
+    PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
     TIME(corr.contractMesons(propUP, propDN));
     THREAD(corr.writeFile(twop_filename, corr_file_format));
     
