@@ -24,7 +24,7 @@ static __global__ void cast_kernel(pFloat2<FloatOut> out, pFloat2<FloatIn> in){
 template<typename FloatOut,typename FloatIn>
 static void cudaCast(pFloat2<FloatOut> out, pFloat2<FloatIn> in){
   ProfileStruct ps(out.volume()); // here we can actually use any size
-  tuneAndRun(ps, "cast_kernel", cast_kernel<FloatOut,FloatIn>, out, in);
+  tuneAndRun(ps, "cast_kernel_size_"+std::to_string(out.site_size), cast_kernel<FloatOut,FloatIn>, out, in);
   checkCudaError();
 }
 
@@ -56,7 +56,7 @@ template<typename Float>
 static void copy_side_to_ghost(pFloat2<Float> F, short dir, short sign){
   if( HGC_dimBreak[dir] ){
     ProfileStruct ps(F.sideGhostL(dir));
-    tuneAndRun(ps, "copy_side_to_ghost_kernel", copy_side_to_ghost_kernel<Float>, F, dir, sign);
+    tuneAndRun(ps, "copy_side_to_ghost_kernel_size_"+std::to_string(F.site_size), copy_side_to_ghost_kernel<Float>, F, dir, sign);
   }
 }
 
@@ -87,7 +87,7 @@ template<typename Float>
 static void copy_corner_to_ghost(pFloat2<Float> F, short dir1, short dir2, short sign1, short sign2){
   if( (dir1 != dir2 ) && HGC_dimBreak[dir1] && HGC_dimBreak[dir2] ){
     ProfileStruct ps(F.cornerGhostL(dir1, dir2));
-    tuneAndRun(ps, "copy_corner_to_ghost_kernel", copy_corner_to_ghost_kernel<Float>, F, dir1, dir2, sign1, sign2);
+    tuneAndRun(ps, "copy_corner_to_ghost_kernel_size_"+std::to_string(F.site_size), copy_corner_to_ghost_kernel<Float>, F, dir1, dir2, sign1, sign2);
   }
 }
 
