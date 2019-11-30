@@ -192,19 +192,21 @@ int main(int argc, char **argv)
 
       for(int isc = 0 ; isc < 12 ; isc++){
 	PLEGMA_Vector3D<double> vectorAuxD;
+	PLEGMA_Vector3D<double> vectorAuxD2;
 	PLEGMA_Vector3D<float> vectorAuxF;
 	vectorAuxF.absorb(propUP3D,isc/3, isc%3);
-	vectorAuxD.copy(vectorAuxF);
-	TIME(vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge3D_sink, nsmearGauss, alphaGauss));
+	vectorAuxD2.copy(vectorAuxF);
+	TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
 	vectorAuxF.copy(vectorAuxD);
 	propUP3D.absorb(vectorAuxF,isc/3, isc%3);
       }
       for(int isc = 0 ; isc < 12 ; isc++){
 	PLEGMA_Vector3D<double> vectorAuxD;
+	PLEGMA_Vector3D<double> vectorAuxD2;
 	PLEGMA_Vector3D<float> vectorAuxF;
 	vectorAuxF.absorb(propDN3D,isc/3, isc%3);
-	vectorAuxD.copy(vectorAuxF);
-	TIME(vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge3D_sink, nsmearGauss, alphaGauss));
+	vectorAuxD2.copy(vectorAuxF);
+	TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
 	vectorAuxF.copy(vectorAuxD);
 	propDN3D.absorb(vectorAuxF,isc/3, isc%3);
       }
