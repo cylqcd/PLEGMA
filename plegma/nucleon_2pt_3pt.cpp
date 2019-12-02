@@ -155,70 +155,68 @@ int main(int argc, char **argv) {
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
 	  for(size_t iproj = 0; iproj < Projs.size(); iproj++){
-	    for(int flav = 0; flav < 2; flav++){
-	      auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
-				     std::string filename = threep_filename + "_" + Projs[iproj] + "_dt" + std::to_string(tsinkMtsource) + "_" + fl;
-				     PLEGMA_Propagator<float> seqProp;
-				     // ensuring mu positive
-				     if(mu != run_mu) {
-				       updateOptions(LIGHT);
-				       mu = run_mu;
-				       solver.UpdateSolver();
-				     }
-				     
-				     for(int nu = 0 ; nu < 4 ; nu++)
-				       for(int c2 = 0 ; c2 < 3 ; c2++){
-					 PLEGMA_Vector<double> vectorInOut;
-					 {
-					   PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
-					   PLEGMA_Vector3D<float> vectorAuxF;
-					   if(&prop1 != &prop2)
-					     vectorAuxF.seqSourceNucleon(prop1, prop2, get_projector(Projs[iproj]), nucleon, nu, c2);
-					   else
-					     vectorAuxF.seqSourceNucleon(prop1, get_projector(Projs[iproj]), nucleon, nu, c2);
-					 
-					   // put a momentum in the sink later
-					   vectorAuxF.conjugate();
-					   vectorAuxF.apply_gamma(G5);
-					   vectorAuxD1.copy(vectorAuxF);
-					   TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
-					   vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
-					 }
-					 double norm = vectorInOut.norm();
-					 vectorInOut.scale(1/norm);
-					 TIME(solver.solve(vectorInOut, vectorInOut));
-					 vectorInOut.scale(norm);
-					 PLEGMA_Vector<float> vectorAuxF;
-					 vectorAuxF.copy(vectorInOut);
-					 seqProp.absorb(vectorAuxF, nu, c2);
-				       }
-				     seqProp.apply_gamma(G5);
-				     seqProp.conjugate();
-				     
-				     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
-	  
-				     // LOCAL contractions
-				     TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
-				     if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-				     THREAD(corr.writeFile(filename, corr_file_format));
-				     
-				     // ONED contractions
-				     TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
-				     if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-				     THREAD(corr.writeFile( filename, corr_file_format));
-				     
-				     // noe contractions
-				     TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
-				     if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-				     THREAD(corr.writeFile( filename, corr_file_format));
-				   };
-	      if(nucleon == PROTON) {
-		TIME(computeThreep(-mu_ud, propUP3D, propDN3D, +1, propUP_SL, "up"));
-		TIME(computeThreep( mu_ud, propUP3D, propUP3D, -1, propDN_SL, "dn"));
-	      } else {
-		TIME(computeThreep( mu_ud, propDN3D, propUP3D, -1, propDN_SL, "dn"));
-		TIME(computeThreep(-mu_ud, propDN3D, propDN3D, +1, propUP_SL, "up"));
+	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
+	      std::string filename = threep_filename + "_" + Projs[iproj] + "_dt" + std::to_string(tsinkMtsource) + "_" + fl;
+	      PLEGMA_Propagator<float> seqProp;
+	      // ensuring mu positive
+	      if(mu != run_mu) {
+		updateOptions(LIGHT);
+		mu = run_mu;
+		solver.UpdateSolver();
 	      }
+				     
+	      for(int nu = 0 ; nu < 4 ; nu++)
+		for(int c2 = 0 ; c2 < 3 ; c2++){
+		  PLEGMA_Vector<double> vectorInOut;
+		  {
+		    PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
+		    PLEGMA_Vector3D<float> vectorAuxF;
+		    if(&prop1 != &prop2)
+		      vectorAuxF.seqSourceNucleon(prop1, prop2, get_projector(Projs[iproj]), nucleon, nu, c2);
+		    else
+		      vectorAuxF.seqSourceNucleon(prop1, get_projector(Projs[iproj]), nucleon, nu, c2);
+					 
+		    // put a momentum in the sink later
+		    vectorAuxF.conjugate();
+		    vectorAuxF.apply_gamma(G5);
+		    vectorAuxD1.copy(vectorAuxF);
+		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
+		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+		  }
+		  double norm = vectorInOut.norm();
+		  vectorInOut.scale(1/norm);
+		  TIME(solver.solve(vectorInOut, vectorInOut));
+		  vectorInOut.scale(norm);
+		  PLEGMA_Vector<float> vectorAuxF;
+		  vectorAuxF.copy(vectorInOut);
+		  seqProp.absorb(vectorAuxF, nu, c2);
+		}
+	      seqProp.apply_gamma(G5);
+	      seqProp.conjugate();
+				     
+	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
+	  
+	      // LOCAL contractions
+	      TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
+	      THREAD(corr.writeFile(filename, corr_file_format));
+				     
+	      // ONED contractions
+	      TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	      THREAD(corr.writeFile( filename, corr_file_format));
+				     
+	      // noe contractions
+	      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	      THREAD(corr.writeFile( filename, corr_file_format));
+	    };
+	    if(nucleon == PROTON) {
+	      TIME(computeThreep(-mu_ud, propUP3D, propDN3D, +1, propUP_SL, "up"));
+	      TIME(computeThreep( mu_ud, propUP3D, propUP3D, -1, propDN_SL, "dn"));
+	    } else {
+	      TIME(computeThreep( mu_ud, propDN3D, propUP3D, -1, propDN_SL, "dn"));
+	      TIME(computeThreep(-mu_ud, propDN3D, propDN3D, +1, propUP_SL, "up"));
 	    }
 	  }
 	}

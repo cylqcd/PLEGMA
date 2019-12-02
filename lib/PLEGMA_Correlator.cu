@@ -168,10 +168,10 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas){
-  shape = {(N_DIMS*(N_DIMS-1))/2, (int) gammas.size()};
+  shape = {N_DIMS*(N_DIMS-1), (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"TwoD"};
-  description = "xy,xz,xt,yz,yt,zt / "+getGammasString(gammas);
+  description = "xy,xz,xt,yx,yz,yt,zx,zy,zt,tx,ty,tz / "+getGammasString(gammas);
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
