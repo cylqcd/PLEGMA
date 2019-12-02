@@ -23,9 +23,9 @@ __global__ void threep_twoD_device(Float2<FloatC>* block2,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   
-  Float2<FloatC> accum[(N_DIMS*(N_DIMS-1))/2*N_SPINS*N_SPINS];
+  Float2<FloatC> accum[N_DIMS*(N_DIMS-1)*N_SPINS*N_SPINS];
   #pragma unroll
-  for(int i = 0; i < (N_DIMS*(N_DIMS-1))/2*N_SPINS*N_SPINS; i++)
+  for(int i = 0; i < N_DIMS*(N_DIMS-1)*N_SPINS*N_SPINS; i++)
     accum[i]=0;
 
   if (sid3D < DGC_localVolume3D){
@@ -36,9 +36,10 @@ __global__ void threep_twoD_device(Float2<FloatC>* block2,
     Float2<FloatG> su3_2[N_COLS][N_COLS];
     short dir_index = 0;
     #pragma unroll
-    for(int dir1 = 0; dir1 < N_DIMS-1; dir1++) {
+    for(int dir1 = 0; dir1 < N_DIMS; dir1++) {
       #pragma unroll
-      for(int dir2 = dir1+1; dir2 < N_DIMS; dir2++) {
+      for(int dir2 = 0; dir2 < N_DIMS; dir2++) {
+	if(dir1 == dir2) continue;
 	// - term x+dir1, x^, x, x+dir2
 	prop1Tex.get<Plus>(prop1,vid,dir1); gaugeTex.get(su3_1,dir1,vid); gaugeTex.get(su3_2,dir2,vid); prop2Tex.get<Plus>(prop2,vid,dir2);
 	partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2);
@@ -112,7 +113,7 @@ __global__ void threep_twoD_device(Float2<FloatC>* block2,
     }
   }
 
-  int site_size = (N_DIMS*(N_DIMS-1))/2*listGammas.size;
+  int site_size = N_DIMS*(N_DIMS-1)*listGammas.size;
   int source_pos[3] = {source.x, source.y, source.z}; 
   if(runFT){
     extern __shared__ int ext_shared_cache[];
@@ -208,7 +209,7 @@ void threep_twoD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
     PLEGMA_error("Error maximum number of gamma matrices is 16");
 
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
-  int site_size = (N_DIMS*(N_DIMS-1))/2*gammas.size();
+  int site_size = N_DIMS*(N_DIMS-1)*gammas.size();
   if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
   
