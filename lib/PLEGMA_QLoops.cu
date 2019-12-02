@@ -85,12 +85,10 @@ void PLEGMA_QLoops<Float>::contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<F
     accum_sign = -1;
     break;
   }
-  vectorTex<Float> vtex_l, vtex_r;
-  vtex_l.tex = x_l.createTexObject();
-  vtex_r.tex = x_r.createTexObject();
-  contractG5_bilinear(*this, vtex_l, vtex_r, accum_sign);
-  x_l.destroyTexObject(vtex_l.tex);
-  x_r.destroyTexObject(vtex_r.tex);
+  assert(this->checkVolume(x_l,x_r));
+  auto vtex_l = toTexture<vectorTex>(x_l);
+  auto vtex_r = toTexture<vectorTex>(x_r);
+  contractG5_bilinear(toField2<generic2>(*this), *vtex_l, *vtex_r, accum_sign);
   checkCudaError();
 }
 

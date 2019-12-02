@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     {
       int signPer = (tSinks[ts] + sourcePositions[isource][3]) >= HGC_totalL[3] ? -1 : +1;
       int global_fixSinkTime = (tSinks[ts] + sourcePositions[isource][3])%HGC_totalL[3]; 
-      int my_fixSinkTime = global_fixSinkTime - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+      int my_fixSinkTime = global_fixSinkTime - HGC_procPosition[3] * HGC_localL[3];
       bool is_myST = (my_fixSinkTime >= 0) && ( my_fixSinkTime < HGC_localL[3] );
 
       for(int isc = 0 ; isc < 12 ; isc++){
@@ -157,18 +157,20 @@ int main(int argc, char **argv)
 	{
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
+	      PLEGMA_Vector3D<float> vectorAux3D;
 	      if(nucleon == PROTON)
-		vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
+		vectorAux3D.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, nu, c2);
 	      else
-		vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
-	      vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
+		vectorAux3D.seqSourceNucleon(propDN3D, propUP3D, which_proj, nucleon, nu, c2);
+	      vectorAux3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
 	      std::complex<float> Isingle(0,1);
 	      float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
 				   + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
-	      vectorAuxF.conjugate();
-	      vectorAuxF.apply_gamma(G5);
+	      vectorAux3D.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
+	      vectorAux3D.conjugate();
+	      vectorAux3D.apply_gamma(G5);
+	      vectorAuxF.absorb(vectorAux3D, global_fixSinkTime);
 	      vectorAuxD.copy(vectorAuxF);
 	      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 	      // check if we need to normalize the seqsource for mix precision solver
@@ -234,18 +236,20 @@ int main(int argc, char **argv)
 	{
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
+	      PLEGMA_Vector3D<float> vectorAux3D;
 	      if(nucleon == PROTON)
-		vectorAuxF.seqSourceNucleon(propUP3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
+		vectorAux3D.seqSourceNucleon(propUP3D, which_proj, nucleon, nu, c2);
 	      else
-		vectorAuxF.seqSourceNucleon(propDN3D, which_proj, nucleon, global_fixSinkTime, nu, c2);
-	      vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
+		vectorAux3D.seqSourceNucleon(propDN3D, which_proj, nucleon, nu, c2);
+	      vectorAux3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
 	      std::complex<float> Isingle(0,1);
 	      float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 				   + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
 				   + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-	      vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
-	      vectorAuxF.conjugate();
-	      vectorAuxF.apply_gamma(G5);
+	      vectorAux3D.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
+	      vectorAux3D.conjugate();
+	      vectorAux3D.apply_gamma(G5);
+	      vectorAuxF.absorb(vectorAux3D, global_fixSinkTime);
 	      vectorAuxD.copy(vectorAuxF);
 	      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 	    

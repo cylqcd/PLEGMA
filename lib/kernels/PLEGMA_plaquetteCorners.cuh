@@ -20,7 +20,7 @@ static __global__ void calculatePlaquetteCorners_device(gaugeTex<FloatG> gaugeTe
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
-  if (sid < DGC_localVolume) {
+  if (sid < gaugeTex.volume()) {
 
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];
@@ -120,7 +120,7 @@ static void calculatePlaquetteCorners_host(ProfileStruct& ps, gaugeTex<FloatG> g
 template<typename Float, typename FloatG>
 static Float calculatePlaquetteCorners(gaugeTex<FloatG> gaugeTex){
   
-  ProfileStruct ps(HGC_localVolume,sizeof(Float));
+  ProfileStruct ps(gaugeTex.volume(),sizeof(Float));
   Float plaquette;
   tuneAndRun(ps, "calculatePlaquetteCorners", calculatePlaquetteCorners_host<Float,FloatG>, ps, gaugeTex, plaquette);
 

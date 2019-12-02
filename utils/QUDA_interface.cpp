@@ -375,7 +375,7 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
   vectorOut.copyFromQUDA( x, flag_eo);
   if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION || 
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
-    vectorOut.scaleVector(2*inv_param.kappa);
+    vectorOut.scale(2*inv_param.kappa);
   }
 }
 
@@ -444,7 +444,7 @@ void QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, Qu
   Pin.copyToQUDA(in);
   apply<type>();
   Pout.copyFromQUDA(out);
-  if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) Pout.scaleVector(1./(2*inv_param.kappa));
+  if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) Pout.scale(1./(2*inv_param.kappa));
 }
 
 template void QUDA_dirac::apply<M>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);

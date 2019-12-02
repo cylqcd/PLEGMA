@@ -65,10 +65,9 @@ inline __device__ void su3Projection(Float2<Float> U[N_COLS][N_COLS],Float2<Floa
 }
 
 template<typename Float>
-static __global__ void su3Projection_kernel(Float* S){
+static __global__ void su3Projection_kernel(su3_2<Float> RS){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
-  su3_2<Float> RS(S);
+  if (sid >= RS.volume()) return;
   Float2<Float> M[N_COLS][N_COLS] , U[N_COLS][N_COLS];
   RS.get(M,sid);
   su3Projection(U,M);
@@ -79,7 +78,7 @@ static __global__ void su3Projection_kernel(Float* S){
 template<typename Float>
 static void su3Projection_k(PLEGMA_Su3field<Float> &S){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  su3Projection_kernel<Float><<<gridDim,blockDim>>>(S.D_elem());
+  dim3 gridDim( (S.Total_length() + blockDim.x -1)/blockDim.x , 1 , 1);
+  su3Projection_kernel<Float><<<gridDim,blockDim>>>(toField2<su3_2>(S));
   checkCudaError();
 }

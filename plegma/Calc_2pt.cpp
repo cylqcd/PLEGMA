@@ -1,9 +1,10 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 
-double runtime;
-#define TIME(fnc)  runtime = MPI_Wtime(); fnc; runtime = MPI_Wtime()-runtime; \
-  PLEGMA_printf("TIME for "#fnc" %lf sec\n", runtime)
+std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;			\
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back()
 
 std::vector<std::thread> threads;
 //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
@@ -13,7 +14,7 @@ using namespace plegma;
 using namespace quda;
 static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space"};
-  
+
 int main(int argc, char **argv)
 {
   initializeOptions(argc, argv, true, listOpt);
@@ -56,58 +57,60 @@ int main(int argc, char **argv)
       PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
     }
+    updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));
     std::vector<std::thread> threads;
+
     
     for(int isource = 0 ; isource < numSourcePositions; isource++){
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
 
+      site& source = sourcePositions[isource];
       PLEGMA_Propagator<float> propUP(run_ud ? BOTH : NONE);
       PLEGMA_Propagator<float> propDN(run_ud ? BOTH : NONE);
-      
+
+      PLEGMA_Gauge3D<double> smearedGauge3D;
+      smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
+
+      auto computePropagator = [&](PLEGMA_Propagator<float>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
+				 // ensuring mu value
+				 if(mu != run_mu) {
+				   updateOptions(fl);
+				   mu = run_mu;
+				   solver.UpdateSolver();
+				 }
+				 for(int isc = 0 ; isc < 12 ; isc++){
+				   PLEGMA_Vector<double> vectorInOut;
+				   { // Smearing the source
+				     PLEGMA_Vector3D<double> vector1, vector2;
+				     vector1.pointSource(source, isc/3, isc%3, DEVICE);
+				     TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear, alphaGauss));
+				     vectorInOut.absorb(vector2,source[DIM_T]);
+				   }
+				   // Inverting
+				   PLEGMA_printf("Going to invert %s for component %d\n",
+						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
+				   TIME(solver.solve(vectorInOut, vectorInOut));
+				   { // Smearing the solution
+				     PLEGMA_Vector<double> vectorAuxD;
+				     PLEGMA_Vector<float> vectorAuxF;
+				     TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nSmear, alphaGauss));
+				     vectorAuxF.copy(vectorAuxD);
+				     prop.absorb(vectorAuxF, isc/3, isc%3);
+				   }
+				 }  
+				 prop.rotateToPhysicalBase_device(run_mu/abs(run_mu));
+				 prop.applyBoundaries_device(source[DIM_T]);
+			       };
+
       if (run_ud) {
-	// ensuring mu positive
-	if(mu != mu_ud) {
-	  for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = mu_ud_factor[i];
-	  mu = mu_ud;
-	  solver.UpdateSolver();
-	}
-	for(int isc = 0 ; isc < 12 ; isc++){
-	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	  PLEGMA_Vector<float> vectorAuxF;
-	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
-	  PLEGMA_printf("Going to invert UP for component %d\n", isc);
-	  TIME(solver.solve(vectorInOut, vectorInOut));
-	  TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
-	  vectorAuxF.copy(vectorAuxD);
-	  propUP.absorb(vectorAuxF, isc/3, isc%3);
-	}
+	TIME(computePropagator(propUP, mu_ud, LIGHT, nsmearGauss));
 
-	// ensuring mu negative
-	if(mu != -1*mu_ud) {
-	  mu = -1*mu_ud;
-	  solver.UpdateSolver();
-	}
-	for(int isc = 0 ; isc < 12 ; isc++){
-	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	  PLEGMA_Vector<float> vectorAuxF;
-	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
-	  PLEGMA_printf("Going to invert DN for component %d\n", isc);
-	  TIME(solver.solve(vectorInOut, vectorInOut));
-	  TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss));
-	  vectorAuxF.copy(vectorAuxD);
-	  propDN.absorb(vectorAuxF, isc/3, isc%3);
-	}
-	propUP.rotateToPhysicalBase_device(+1);
-	propDN.rotateToPhysicalBase_device(-1);
-	propUP.applyBoundaries_device(sourcePositions[isource][3]);
-	propDN.applyBoundaries_device(sourcePositions[isource][3]);
+	TIME(computePropagator(propDN, -mu_ud, LIGHT, nsmearGauss));
 
-	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	TIME(corr.contractMesons(propUP, propDN));
 	
 	char *dset1, *dset2;
@@ -130,22 +133,8 @@ int main(int argc, char **argv)
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
 	mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
-	solver.UpdateSolver();
 	
-	for(int isc = 0 ; isc < 12 ; isc++){
-	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	  PLEGMA_Vector<float> vectorAuxF;
-	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss, sourcePositions[isource][DIM_T]));
-	  
-	  PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
-	  TIME(solver.solve(vectorInOut, vectorInOut));
-	  TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss));
-	  vectorAuxF.copy(vectorAuxD);
-	  propS[ismall].absorb(vectorAuxF, isc/3, isc%3);
-	}
-	propS[ismall].rotateToPhysicalBase_device(mu/abs(mu));
-	propS[ismall].applyBoundaries_device(sourcePositions[isource][3]);
+	TIME(computePropagator(propS[ismall], mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear));
       }
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
@@ -154,28 +143,13 @@ int main(int argc, char **argv)
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
 	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-	  solver.UpdateSolver();
+	  TIME(computePropagator(propL, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear));
 	  
-	  for(int isc = 0 ; isc < 12 ; isc++){
-	    PLEGMA_Vector<double> vectorInOut, vectorAuxD;
-	    PLEGMA_Vector<float> vectorAuxF;
-	    vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	    TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss, sourcePositions[isource][DIM_T]));
-	    
-	    PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
-	    TIME(solver.solve(vectorInOut, vectorInOut));
-	    TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmear, alphaGauss));
-	    vectorAuxF.copy(vectorAuxD);
-	    propL.absorb(vectorAuxF, isc/3, isc%3);
-	  }
-	  propL.rotateToPhysicalBase_device(mu/abs(mu));
-	  propL.applyBoundaries_device(sourcePositions[isource][3]);
-
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
 	      PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
 	      PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
-	      PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	      bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	      bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -232,7 +206,7 @@ int main(int argc, char **argv)
 	    PLEGMA_Propagator<float> none(NONE);
 	    PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? none : propL;
 	    PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? none : propL;
-	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	    bool only_st = (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -280,7 +254,7 @@ int main(int argc, char **argv)
       } else if(run_ud) {
 #ifdef PLEGMA_UDSC_BARYONS
 	PLEGMA_Propagator<float> none(NONE);
-	PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
 	
 	char * group;

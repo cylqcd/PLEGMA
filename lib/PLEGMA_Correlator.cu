@@ -45,14 +45,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
   
   initialize();
-  propTex<Float> prop1Tex, prop2Tex;
-  prop1Tex.tex = prop1.createTexObject();
-  prop2Tex.tex = prop2.createTexObject();
-
-  contract_mesons(prop1Tex,prop2Tex,*this);
-
-  prop1.destroyTexObject(prop1Tex.tex);
-  prop2.destroyTexObject(prop2Tex.tex);
+  contract_mesons(prop1,prop2,*this);
 }
 
 
@@ -73,14 +66,7 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   description = "1,g1,g2,g3,g4,g5,g5g1,g5g2,g5g3,g5g4,s12,s13,s23,s41,s42,s43";
 
   initialize();
-  propTex<Float> prop1Tex, prop2Tex;
-  prop1Tex.tex = prop1.createTexObject();
-  prop2Tex.tex = prop2.createTexObject();
-
-  contract_baryons(prop1Tex,prop2Tex,*this);
-
-  prop1.destroyTexObject(prop1Tex.tex);
-  prop2.destroyTexObject(prop2Tex.tex);
+  contract_baryons(prop1,prop2,*this);
 }
 
 template<typename Float>
@@ -131,18 +117,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
   }
 
   initialize();
-  propTex<Float> propUPTex, propDNTex, propSTTex, propCHTex;
-  if (!not_up) propUPTex.tex = propUP.createTexObject();
-  if (!not_dn) propDNTex.tex = propDN.createTexObject();
-  if (!not_st) propSTTex.tex = propST.createTexObject();
-  if (!not_ch) propCHTex.tex = propCH.createTexObject();
-
-  contract_baryons_udsc(propUPTex, propDNTex, propSTTex, propCHTex, *this, todo);
-
-  if (!not_up) propUP.destroyTexObject(propUPTex.tex);
-  if (!not_dn) propDN.destroyTexObject(propDNTex.tex);
-  if (!not_st) propST.destroyTexObject(propSTTex.tex);
-  if (!not_ch) propCH.destroyTexObject(propCHTex.tex);
+  contract_baryons_udsc(propUP, propDN, propST, propCH, *this, todo);
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -160,13 +135,8 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
   description = getGammasString(gammas);
   initialize();
 
-  propTex<Float> bwdPropTex, fwdPropTex;
-  bwdPropTex.tex = bwdProp.createTexObject();
-  fwdPropTex.tex = fwdProp.createTexObject();
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_local(*this,bwdPropTex,fwdPropTex,signProps,gammas);
-  bwdProp.destroyTexObject(bwdPropTex.tex);
-  fwdProp.destroyTexObject(fwdPropTex.tex);
+  threep_local(*this,bwdProp,fwdProp,signProps,gammas);
 }
 
 
@@ -188,15 +158,7 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost();
   fwdProp.communicateGhost();
   
-  propTex<Float> bwdPropTex, fwdPropTex;
-  gaugeTex<Float> gaugeTex;
-  gaugeTex.tex = gauge.createTexObject();
-  bwdPropTex.tex = bwdProp.createTexObject();
-  fwdPropTex.tex = fwdProp.createTexObject();
-  threep_oneD(*this,bwdPropTex,fwdPropTex,signProps,gaugeTex,gammas);
-  bwdProp.destroyTexObject(bwdPropTex.tex);
-  fwdProp.destroyTexObject(fwdPropTex.tex);
-  gauge.destroyTexObject(gaugeTex.tex);
+  threep_oneD(*this,bwdProp,fwdProp,signProps,gauge,gammas);
 }
 
 template<typename Float>
@@ -214,15 +176,7 @@ contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost();
   fwdProp.communicateGhost();
   
-  propTex<Float> bwdPropTex, fwdPropTex;
-  gaugeTex<Float> gaugeTex;
-  gaugeTex.tex = gauge.createTexObject();
-  bwdPropTex.tex = bwdProp.createTexObject();
-  fwdPropTex.tex = fwdProp.createTexObject();
-  threep_noe(*this,bwdPropTex,fwdPropTex,signProps,gaugeTex);
-  bwdProp.destroyTexObject(bwdPropTex.tex);
-  fwdProp.destroyTexObject(fwdPropTex.tex);
-  gauge.destroyTexObject(gaugeTex.tex);
+  threep_noe(*this,bwdProp,fwdProp,signProps,gauge);
 }
 
 template<typename Float>
@@ -237,16 +191,8 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
   description = getGammasString(gammas);
   initialize();
   
-  propTex<Float> bwdPropTex, fwdPropTex;
-  su3Tex<Float> sTex;
-  bwdPropTex.tex = bwdProp.createTexObject();
-  fwdPropTex.tex = fwdProp.createTexObject();
-  sTex.tex = su3.createTexObject();
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_wilsonLine(*this,bwdPropTex,fwdPropTex,signProps,sTex,gammas);
-  bwdProp.destroyTexObject(bwdPropTex.tex);
-  fwdProp.destroyTexObject(fwdPropTex.tex);
-  su3.destroyTexObject(sTex.tex);
+  threep_wilsonLine(*this,bwdProp,fwdProp,signProps,su3,gammas);
 }
 
 template<typename Float>

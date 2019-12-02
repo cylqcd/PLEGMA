@@ -102,37 +102,37 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
 
 
 template<typename Float>
-__global__ void fourier_transform_3D_kernel(Float* block, Float* in, int field_length,tex_mom_list texMomList,int it, int sign){
+__global__ void fourier_transform_3D_kernel(Float* block, pFloat2<Float> in, tex_mom_list texMomList,int it, int sign){
   int vid = blockIdx.x*blockDim.x + threadIdx.x;
   int sid = vid + it*DGC_localVolume3D;
   Float2<Float> *block2 = (Float2<Float> *)block;
   if(vid >= DGC_localVolume3D) return;
-  generic2<Float> R(in);
   Float2<Float> tmp;
   extern __shared__ int ext_shared_cache[];
   Float2<Float> *shared_cache = (Float2<Float> *) ext_shared_cache;
   int source_pos[3] = {0,0,0};      
 
-  for(int i = 0; i < field_length; i++){
-    tmp = R.get(i,sid);
-    if(block2==NULL) fourier_transform_3D(block2,&tmp,shared_cache,1,vid,source_pos,texMomList,field_length-1,sign);
-    else fourier_transform_3D(block2+i*gridDim.x,&tmp,shared_cache,1,vid,source_pos,texMomList,field_length-1,sign);
+  in.setSid(sid);
+  for(int i = 0; i < in.site_size; i++){
+    tmp = in.get(i);  
+    if(block2==NULL) fourier_transform_3D(block2,&tmp,shared_cache,1,vid,source_pos,texMomList,in.site_size-1,sign);
+    else fourier_transform_3D(block2+i*gridDim.x,&tmp,shared_cache,1,vid,source_pos,texMomList,in.site_size-1,sign);
   }
 }
 
 
 template<typename Float>
-static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft,const PLEGMA_Field<Float> &field, tex_mom_list &texMomList, int it, int sign){
+static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &field, tex_mom_list &texMomList, int it, int sign){
   int SpVol = HGC_localVolume/HGC_localL[3];
   Float *d_partial_block = NULL;
   int site_size = field.Field_length();
   int shared_size = 2*sizeof(Float);
   ProfileStruct ps(SpVol, shared_size);
-  tune(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, field.D_elem(), field.Field_length(), texMomList, it, sign);
+  tune(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   size_t alloc_size=ft.Nmoms()*site_size*ps.tp.grid.x*2*sizeof(Float);
   cudaMalloc((void**)&d_partial_block, alloc_size);
   checkCudaError();
-  run(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, field.D_elem(), field.Field_length(), texMomList, it, sign);
+  run(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   Float *h_partial_block = NULL;
   hostMalloc(h_partial_block,alloc_size);
   cudaMemcpy(h_partial_block,d_partial_block,alloc_size,cudaMemcpyDeviceToHost);
