@@ -7,7 +7,7 @@ double runtime;
 
 std::vector<std::thread> threads;
 //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
-#define THREAD(fnc) TIME(fnc)
+#define THREAD(fnc) saveTuneCache(false); TIME(fnc)
 
 using namespace plegma;
 using namespace quda;
@@ -208,8 +208,8 @@ int main(int argc, char **argv)
 	    }
 	  }
 	}
-      }
 #endif
+      }
       propUP.rotateToPhysicalBase_device(+1);
       propDN.rotateToPhysicalBase_device(-1);
       propUP.applyBoundaries_device(sourcePositions[isource][3]);
