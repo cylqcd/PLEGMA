@@ -24,6 +24,9 @@ void infoQuda();
 void setGaugeParam(QudaGaugeParam &gauge_param);
 void setMultigridParam(QudaMultigridParam &mg_param);
 void setInvertParam(QudaInvertParam &inv_param);
+#ifdef HAVE_QUDAEIG
+void setQUDAEigParam(QudaEigParam &eig_param, EigSolverParams eigParam);
+#endif
 #ifdef QUDA_INCLUDES_COMMIT_775a033
 void setEigMultigridParam(QudaMultigridParam &mg_param, QudaEigParam *mg_eig_param);
 #endif
