@@ -2,6 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
+
 using namespace plegma;
 using namespace quda;
 
@@ -20,6 +21,9 @@ static double G_amax;
 EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isReadEigenVectors,bool isWriteEigenVectors,std::string filenamePrefix,
 		     bool verbose):verbose(verbose),p(params),
 				   h_eigVecs(nullptr),h_eigVals(nullptr)
+#ifdef HAVE_QUDAEIG
+				  ,dslashT(dslashType)
+#endif
 {
   if(!HGC_init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
   if(isReadEigenVectors && isWriteEigenVectors) PLEGMA_warning("Read and write eigenvectors is a strange choice...");
@@ -37,7 +41,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   size_NeV = ((size_t) p.NeV) * size_per_Vec;
   bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
   bytes_NeV = size_NeV * 2 * sizeof(double);
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
   if(isReadEigenVectors) p.NkV = p.NeV;
   if(p.NkV < p.NeV) PLEGMA_error("The NkV should be larger equal than NeV");
   size_NkV = ((size_t) p.NkV) * size_per_Vec;
@@ -51,6 +55,15 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_rnorms,p.NeV*2*sizeof(double));
+#elif defined(HAVE_QUDAEIG)//test app appars to use the full field...
+  hostMalloc(q_eigVecs,((size_t) p.NeV)*sizeof(void *));
+  hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
+  for(int i=0; i < p.NeV; i++)
+    q_eigVecs[i] = (void *) (h_eigVecs+i*size_per_Vec*2);
+  if(!isReadEigenVectors){
+    hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
+    q_eigVals=h_eigVals;
+  }
 #else
   PLEGMA_error("Not implemented");
 #endif
@@ -69,21 +82,24 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     else if(p.spectrumPart == "LR") p.spectrumPart = "SR";
     else PLEGMA_error("Not implemented");
   }
-  
+
+  /* compute eigenvectors */
   if(!isReadEigenVectors){
     initEigSolver();
     if(verbose) print();
-    computeEigVecs();
+    computeEigVecs();printf("d12\n");
   }
   else readEigenVectors(filenamePrefix);
     
   if(isWriteEigenVectors) writeEigenVectors(filenamePrefix);
-  
+
   computeEigVals();
   if(!isReadEigenVectors){
 #if defined(HAVE_ARPACK)
     hostFree(h_eigVals,p.NkV*2*sizeof(double));
 #elif defined(HAVE_PRIMME)
+    hostFree(h_eigVals,p.NeV*2*sizeof(double));
+#elif defined(HAVE_QUDAEIG)
     hostFree(h_eigVals,p.NeV*2*sizeof(double));
 #else
   PLEGMA_error("Not implemented");
@@ -110,6 +126,9 @@ EigSolver::~EigSolver(){
     hostFree(h_eigVecs,size_NkV*2*sizeof(double));
 #elif defined(HAVE_PRIMME)
     hostFree(h_eigVecs,size_NeV*2*sizeof(double));
+#elif defined(HAVE_QUDAEIG)//might move to constructor and combine with ARPACK
+    hostFree(q_eigVecs,p.NeV*sizeof(void *));
+    hostFree(h_eigVecs,size_NeV*2*sizeof(double));
 #else
   PLEGMA_error("Not implemented");
 #endif    
@@ -117,8 +136,10 @@ EigSolver::~EigSolver(){
 }
 
 
-  
-#if defined(HAVE_PRIMME)
+#ifndef HAVE_QUDAEIG
+#if defined(HAVE_PRIMME) && defined(HAVE_MAGMA)
+//under construction
+#elif defined(HAVE_PRIMME)
 static void applyOperator(double *out, double *in, int size_per_Vec){
   size_t bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
 #else
@@ -165,6 +186,7 @@ void EigSolver::applyOperator(double *out, double *in){
   cudaMemcpy(out,d_out->D_elem(),bytes_per_Vec,cudaMemcpyDeviceToHost);
   checkCudaError();
 }
+#endif
 
 #if defined(HAVE_PRIMME)
 static void applyOperator(void *in, PRIMME_INT *ldx, void *out, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *ierr){
@@ -194,7 +216,22 @@ void EigSolver::initEigSolver(){
     pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
   }
 #elif HAVE_PRIMME
+#ifdef HAVE_MAGMA
+  /* Initialize MAGMA and create some LA structures */
+  magma_init();
+  magma_queue_t queue;
+  magma_queue_create(0, &queue);
+  
+  magma_d_matrix A={Magma_CSR}, dA={Magma_CSR};
+  
+  /* Pass the matrix to MAGMA and copy it to the GPU */
+  // row, col, val for TM Dirac needs to be specified in CSR format.
+  magma_dcsrset(n, n, row, col, val, &A, queue);
+  magma_dmtransfer(A, &dA, Magma_CPU, Magma_DEV, queue);
+#endif
+  /* Set default values in PRIMME configuration struct */
   primme_initialize(&primme_pars);
+  /* Set problem parameters */
   primme_pars.matrixMatvec = applyOperator;
   MPI_Comm commPRIMME = MPI_COMM_WORLD;
   primme_pars.commInfo=&commPRIMME;
@@ -206,11 +243,42 @@ void EigSolver::initEigSolver(){
   primme_pars.numEvals = p.NeV;
   primme_pars.eps = p.tol;
   primme_pars.maxOuterIterations = p.maxIters;
+  /*  Tuning */
+  primme_pars.correctionParams.robustShifts = 1; // led to faster convergence with 0 for tol=1e-8
+  primme_pars.locking=1;
+  /* James and Xiao-Yong's optimal setting */
+  if(primme_pars.locking != 0){ /* relevant if locking != 0 */
+    primme_pars.minRestartSize=120;
+    primme_pars.maxBasisSize=192;
+  }
+  primme_pars.maxBlockSize=8;
+  primme_pars.restartingParams.maxPrevRetain=2;
+  /*  END: Tuning  */
   if(p.spectrumPart == "SR") primme_pars.target = primme_smallest;
   else if(p.spectrumPart == "LR") primme_pars.target = primme_largest;
   else PLEGMA_error("Not implemented");
   primme_pars.printLevel = p.printLevel;
   primme_set_method(p.primme_method, &primme_pars);
+#elif defined(HAVE_QUDAEIG)
+  // It could have been already checked...
+  if(dslashT != QUDA_WILSON_DSLASH
+     && dslashT != QUDA_CLOVER_WILSON_DSLASH
+     && dslashT != QUDA_TWISTED_MASS_DSLASH
+     && dslashT != QUDA_TWISTED_CLOVER_DSLASH) PLEGMA_error("Error dslashType is not allowed in PLEGMA");
+
+  eig_param = newQudaEigParam();
+  // Though no inversions are performed, the inv_param
+  // structure contains all the information we need to
+  // construct the dirac operator. We encapsualte the
+  // inv_param structure inside the eig_param structure
+  // to avoid any confusion
+  eig_inv_param = newQudaInvertParam();
+  //cpu_prec = QUDA_DOUBLE_PRECISION;  //This is not necessary.
+  setInvertParam(eig_inv_param);
+  eig_inv_param.dslash_type = dslashT;
+  eig_inv_param.solve_type=QUDA_DIRECT_SOLVE;
+  eig_param.invert_param = &eig_inv_param;
+  setQUDAEigParam(eig_param,p);
 #else
   PLEGMA_error("Not implemented")
 #endif
@@ -327,6 +395,19 @@ void EigSolver::computeEigVecs(){
 
 #elif defined(HAVE_PRIMME)
   zprimme(h_eigVals, (std::complex<double> *) h_eigVecs, h_rnorms, &primme_pars);
+#elif defined(HAVE_QUDAEIG)
+  // Thick Restarted Lanczos Eigensolver
+
+  // This function returns the host_evecs and host_evals pointers, populated with the
+  // requested data, at the requested prec. All the information needed to perfom the
+  // solve is in the eig_param container. If eig_param.arpack_check == true and
+  // precision is double, the routine will use ARPACK rather than the GPU.
+  double time = -((double)clock());
+  //printQudaInvertParam(eig_param.invert_param);
+  eigensolveQuda(q_eigVecs, (double _Complex*) q_eigVals, &eig_param);
+  //for(int i=0; i<p.NeV; i++) memcpy(h_eigVals+i*2*sizeof(double),q_eigVals+i,sizeof(double _Complex));
+  time += (double)clock();
+  PLEGMA_printf("Time for %s solution = %f\n", eig_param.arpack_check ? "ARPACK" : "QUDA", time / CLOCKS_PER_SEC);
 #else
   PLEGMA_error("Not implemented");
 #endif

@@ -1,5 +1,8 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#ifdef HAVE_QUDAEIG
+#include <string.h>
+#endif
 
 using namespace plegma;
 using namespace quda;
@@ -25,7 +28,7 @@ static primme_preset_method getMethod(std::string str){
 
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC", "Eig-PolyDeg", "Eig-amin",
 					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV",
-#ifdef HAVE_ARPACK
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
 					   "Eig-NkV", "Eig-logFile"
 #elif HAVE_PRIMME
 					   "Eig-printLevel", "Eig-method-PRIMME"
@@ -60,7 +63,7 @@ int main(int argc, char **argv)
   eigParam.spectrumPart = Eig_spectrumPart;
   eigParam.tol =Eig_tol;
   eigParam.maxIters = Eig_maxIters;
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
   eigParam.NkV = Eig_NkV;
   eigParam.logFile = Eig_logFile;
 #elif defined(HAVE_PRIMME)
@@ -69,8 +72,8 @@ int main(int argc, char **argv)
 #else
   PLEGMA_error("No arpack or primme is compiled");
 #endif
- 
-  EigSolver eigSol(eigParam, dslash_type , true);
+
+  EigSolver eigSol(eigParam, dslash_type , false);
   eigSol.dumpEvalsVdagG5V(Eig_outputFile);
   PLEGMA_Vector<double> in,out;
   in.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});

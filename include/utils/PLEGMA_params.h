@@ -46,7 +46,7 @@ define(double Eig_amax, 4.5);
 define(std::string Eig_spectrumPart, "SR");
 define(double Eig_tol, 1e-05);
 define(int Eig_maxIters, 100000);
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
 define(int Eig_NkV, 2*Eig_NeV);
 define(std::string Eig_logFile, "./logfile.out");
 #elif defined(HAVE_PRIMME)

@@ -91,6 +91,54 @@ void setGaugeParam(QudaGaugeParam &gauge_param) {
 #endif
 }
 
+#ifdef HAVE_QUDAEIG
+/*
+  Set parameters to initialize QUDA eigensolver to compute eigenpairts for MdagM,
+  which is Hermitian.
+ */
+void setQUDAEigParam(QudaEigParam &eig_param, EigSolverParams eigParam)
+{
+  // current default.  Change this part to make it more general
+  eig_param.eig_type = QUDA_EIG_TR_LANCZOS; 
+  if(eigParam.spectrumPart == "SR"){
+    eig_param.spectrum = QUDA_SPECTRUM_SR_EIG;
+  }
+  else if(eigParam.spectrumPart == "LR"){
+    eig_param.spectrum = QUDA_SPECTRUM_LR_EIG;
+  }
+
+  // Defalut: nEv == nCov.
+  eig_param.nEv = eigParam.NeV;
+  eig_param.nKr = eigParam.NkV;
+  eig_param.nConv = eigParam.NeV;
+  eig_param.require_convergence = QUDA_BOOLEAN_NO;
+
+  eig_param.tol = eigParam.tol;
+  //eig_param.check_interval = EigParam.check_interval; //will not use this for now.
+  eig_param.max_restarts = eigParam.maxIters;
+  eig_param.cuda_prec_ritz = cuda_prec;
+
+  // By defalut, find eigenpairs of MdagM.
+  eig_param.compute_svd = QUDA_BOOLEAN_NO;
+  eig_param.use_norm_op = QUDA_BOOLEAN_YES;
+  eig_param.use_dagger  = QUDA_BOOLEAN_NO;
+
+  eig_param.use_poly_acc = eigParam.isACC?QUDA_BOOLEAN_YES:QUDA_BOOLEAN_NO;
+  eig_param.poly_deg     = eigParam.PolyDeg;
+  eig_param.a_min        = eigParam.amin;
+  eig_param.a_max        = eigParam.amax;
+
+  strcpy(eig_param.QUDA_logfile,eigParam.logFile.c_str());
+  // For now, we set input and output files supplied to QUDA to "".
+  // Storage is handled by eigensolver class in PLEGMA
+  // We explicitly initialize these variables as the arrays of char
+  // are neither global nor local and static.
+  strcpy(eig_param.vec_infile, "");
+  strcpy(eig_param.vec_outfile, "");
+
+}
+#endif
+
 #ifdef QUDA_INCLUDES_COMMIT_775a033
 void setEigParam(QudaEigParam &mg_eig_param, int level)
 {
@@ -317,8 +365,7 @@ void setInvertParam(QudaInvertParam &inv_param) {
   }
   
   PLEGMA_printf("Kappa = %.8f Mass = %.8f\n", inv_param.kappa, inv_param.mass);
-
-
+  
   inv_param.Ls = 1;
 
   inv_param.sp_pad = 0;
@@ -343,20 +390,20 @@ void setInvertParam(QudaInvertParam &inv_param) {
     inv_param.clover_coeff = csw*inv_param.kappa;
   }
 
-  inv_param.input_location = QUDA_CUDA_FIELD_LOCATION;
+  inv_param.input_location = QUDA_CUDA_FIELD_LOCATION;//CPU -> GPU
   inv_param.output_location = QUDA_CUDA_FIELD_LOCATION;
 
   inv_param.dslash_type = dslash_type;
 
   if (dslash_type == QUDA_TWISTED_MASS_DSLASH || 
       dslash_type == QUDA_TWISTED_CLOVER_DSLASH) {
-    inv_param.mu = mu;
+    inv_param.mu = mu;// no epsilon
     inv_param.twist_flavor = twist_flavor;
     inv_param.Ls = (inv_param.twist_flavor == QUDA_TWIST_NONDEG_DOUBLET) ? 
       2 : 1;
 
     if (twist_flavor == QUDA_TWIST_NONDEG_DOUBLET) {
-      PLEGMA_printf("Twisted-mass doublet non supported (yet)\n");
+      PLEGMA_printf("Twisted-mass doublet not supported (yet)\n");
       exit(0);
     }
   }

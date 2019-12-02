@@ -100,7 +100,7 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list, "sinkMom")) opt.set("sinkMom", "Sink momentum boosted nucleon", verbosity, sinkMom);
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
-#ifdef HAVE_ARPACK
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
   if(isInList(list, "Eig-NkV")) opt.set("Eig-NkV", "Number of vectors for the Krylov subspace", verbosity, Eig_NkV);
   if(isInList(list, "Eig-logFile")) opt.set("Eig-logFile", "Path for the logfile of the eigensolver", verbosity, Eig_logFile);
 #elif HAVE_PRIMME
