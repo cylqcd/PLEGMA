@@ -18,6 +18,8 @@ void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLi
 void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
 void finalizeGaugeQuda();
 void plaqQuda();
+void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut, PLEGMA_Gauge<double> &gaugeIn, double overelaxPar=1.5, double tolerance=1e-12,
+			   int maxiter=10000,int verbosePerSteps=1, int reunit_interval=1, int stop_theta=0);
 
 //============= QUDA_params.cpp ===================================//
 void infoQuda();
@@ -31,6 +33,7 @@ void setEigMultigridParam(QudaMultigridParam &mg_param, QudaEigParam *mg_eig_par
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 extern const std::vector<std::string> listAvailOptPLEGMA;
 void initializeOptions(int argc, char **argv, bool withQuda=true, std::vector<std::string> listOptPLEGMA = listAvailOptPLEGMA);
+void updateOptions(WHICHFLAVOR fl);
 void initializePLEGMA();
 void finalize();
 template<typename FloatOut, typename FloatIn> void unpackGaugeToEvenOdd(FloatOut *buf[4], PLEGMA_Gauge<FloatIn> &gauge);
@@ -40,6 +43,6 @@ template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge
 std::vector<int> createR2(std::vector<int> &vec);
 
 //=================== PLEGMA_Options.cpp ==========================//
-void plegmaOptions(Options &opt, std::vector<std::string> list);
+void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_params = false);
 void qudaOptions(Options &opt);
 
