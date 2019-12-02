@@ -326,6 +326,7 @@ int main(int argc, char **argv)
 				 
 				 propF->load();
 			       }
+			       delete propIn;
 			     };
 	if(nucleon == PROTON) {
 	  TIME(computeThreep(mu<0 ? mu : -mu, propUP3D, propDN3D, +1, &propUP_SL, "UP"));
