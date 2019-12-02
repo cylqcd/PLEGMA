@@ -5,12 +5,19 @@
 
 #ifdef HAVE_EIGENSOLVER
 
-#if defined(HAVE_ARPACK) && defined(HAVE_PRIMME)
-#error Cannot have both ARPACK and PRIMME
+#if defined(HAVE_ARPACK) && defined(HAVE_PRIMME) || defined(HAVE_QUDAEIG) && defined(HAVE_PRIMME) || defined(HAVE_ARPACK) && defined(HAVE_QUDAEIG)
+#error Can have only one from ARPACK, PRIMME, and QUDA eigensolver.
 #endif
 
 #if defined(HAVE_PRIMME)
 #include <primme.h>
+#include <primme_eigs.h>
+#ifdef HAVE_MAGMA
+#include <magma_v2.h> // assume I use the one provided by the system through module
+//#include <magmasparse.h>
+#endif
+#elif defined(HAVE_QUDAEIG)
+#include <quda.h>
 #elif defined(HAVE_ARPACK)
 extern "C"{
   extern int initlog_(int*, char*, int);
@@ -42,9 +49,17 @@ namespace plegma{
     double amax; // High boundary for polynomial accelerator
     double tol;          // tolerance of the eigen solver
     int maxIters;        // maximum number of iterations for solver
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
     int NkV; // Krylov space size should be > NeV
     std::string logFile; // path to the eigensolver log file
+#ifdef HAVE_QUDAEIG
+    QudaEigType eig_type;
+    int nConv;
+    int check_interval;
+    int nKr;
+    char vec_infile[256];
+    char vec_outfile[256];
+#endif
 #elif defined(HAVE_PRIMME)
     int printLevel; // primme level of print (0 for no printing at all), (5, for printing everything)
     primme_preset_method primme_method; // method to eigenSolver
@@ -65,7 +80,6 @@ namespace plegma{
        PRIMME_LOBPCG_OrthoBasis
        PRIMME_LOBPCG_OrthoBasis_Window
     */
-#else
 #endif
   };
 
@@ -76,25 +90,34 @@ namespace plegma{
     int field_length;
     int size_per_Vec;
     size_t size_NeV;
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
     size_t size_NkV;
 #endif
     size_t bytes_per_Vec;
     size_t bytes_NeV;
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(HAVE_QUDAEIG)
     size_t bytes_NkV;
 #endif
   
-    double *h_eigVecs;
+#ifdef HAVE_QUDAEIG
+    void**q_eigVecs;
+    void* q_eigVals;
+#endif
+    double *h_eigVecs; 
     double *h_eigVals;
 #if defined(HAVE_PRIMME)
     double *h_rnorms;
     primme_params primme_pars;
+#elif defined(HAVE_QUDAEIG)
+    QudaDslashType dslashT;
+    QudaInvertParam eig_inv_param;
+    QudaEigParam eig_param;
 #endif
     std::vector< std::tuple<double,double,double,int> > evalsOrdered; // real, imag, residual, orderInd
 #if defined(HAVE_ARPACK)  
     void applyOperator(double *out, double *in);
 #endif
+    // private methods used to read/compute and possibly write eigenpairs during construction.
     void initEigSolver();
     void computeEigVecs();
     void computeEigVals();
@@ -103,7 +126,7 @@ namespace plegma{
     void readEigenVectors(std::string filenamePrefix);
   public:
     EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isReadEigenVectors = false,
-	      bool isWriteEigenVectors = false, std::string filenamePrefix = "", bool verbose=false);
+	      bool isWriteEigenVectors = false, std::string filenamePrefix = "", bool verbose=true);
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
     void projectVector(PLEGMA_Vector<double> &vec);
