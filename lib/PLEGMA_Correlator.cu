@@ -57,9 +57,9 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       PLEGMA_Propagator<Float> &prop2, 
-	       int source[4]){
+	       site& source){
 
-  setSource(source);
+  source_position = source;
   shape = {};
   datasets =  {"twop_meson_1", "twop_meson_2"};
   groups =  {"mesons/pseudoscalar", "mesons/scalar", "mesons/g5g1", "mesons/g5g2",
@@ -82,9 +82,9 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractBaryons(PLEGMA_Propagator<Float> &prop1,
 		PLEGMA_Propagator<Float> &prop2, 
-		int source[4]){
+		site& source){
 
-  setSource(source);
+  source_position = source;
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"baryons/nucl_nucl",
@@ -113,10 +113,10 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
 		    PLEGMA_Propagator<Float> &propCH, 
-		    int source[4], bool only_st, bool only_ch){
+		    site& source, bool only_st, bool only_ch){
 
 #ifdef PLEGMA_UDSC_BARYONS
-  setSource(source);
+  source_position = source;
   shape = {};
   description = "";
   datasets = {};
@@ -182,9 +182,9 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
 			  int signProps, std::vector<GAMMAS> gammas,
-			  int source[4]){
+			  site& source){
   shape = {(int) gammas.size()};
-  setSource(source);
+  source_position = source;
   datasets = {"threep"};
   groups =  {"Local"};
   description = getGammasString(gammas);
@@ -242,9 +242,9 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas,
-			 int source[4]){
+			 site& source){
   shape = {N_DIMS, (int) gammas.size()};
-  setSource(source);
+  source_position = source;
   datasets = {"threep"};
   groups =  {"OneD"};
   description = "x,y,z,t / "+getGammasString(gammas);
@@ -260,9 +260,9 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Gauge<Float> &gauge,
-			int signProps, int source[4]){
+			int signProps, site& source){
   shape = {N_DIMS};
-  setSource(source);
+  source_position = source;
   datasets = {"threep"};
   groups =  {"Noether"};
   description = "x,y,z,t";
@@ -283,9 +283,9 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Propagator<Float> &fwdProp,
 			       PLEGMA_Su3field<Float> &su3,
 			       int signProps, std::vector<GAMMAS> gammas,
-			       int source[4]){
+			       site& source){
   shape = {(int) gammas.size()};
-  setSource(source);
+  source_position = source;
   datasets = {"threep"};
   groups =  {"wilsonLine"};
   description = getGammasString(gammas);

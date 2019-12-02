@@ -13,10 +13,6 @@
 #define	LEXIC_ZX(iz,ix,L) ( (iz)*L[0] + (ix) )
 #define	LEXIC_YX(iy,ix,L) ( (iy)*L[0] + (ix) )
 
-#define MIN(a,b) ((a)<(b) ? (a):(b))
-#define MAX(a,b) ((a)>(b) ? (a):(b))
-
-
 #define BOOST_PP_VARIADICS 1
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>

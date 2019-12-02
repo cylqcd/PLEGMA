@@ -8,6 +8,7 @@
 #define define(var,...) extern var 
 #endif
 
+
 // Main paramters -- read by plegmaOptions
 define(int dims[N_DIMS], {8,8,8,16});
 define(int procs[N_DIMS], {1,1,1,1});
@@ -28,7 +29,7 @@ define(int numSourcePositions, 1);
 define(std::string pathListGaugeConfs);
 define(std::vector<std::string> listGaugeConfs);
 define(std::string pathListSourcePositions);
-define(int (*sourcePositions)[N_DIMS], NULL);
+define(std::vector<site> sourcePositions, {});
 define(int maxQsq, 64);
 define(FILE_FORMAT corr_file_format, HDF5_FORMAT);
 define(CORR_SPACE corr_space, MOMENTUM_SPACE);

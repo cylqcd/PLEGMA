@@ -32,7 +32,7 @@ namespace plegma {
     std::vector<int> shape;
     // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
     int site_size;
-    std::array<int,4> source_position;
+    site source_position;
 
     // Writing informations
     std::vector<std::string> datasets;
@@ -60,10 +60,10 @@ namespace plegma {
       return corr_space;
     }
     inline size_t n_datasets() {
-      return MAX(1,datasets.size());
+      return std::max(datasets.size(), (size_t) 1);
     }
     inline size_t n_groups() {
-      return MAX(1,groups.size());
+      return std::max(groups.size(), (size_t) 1);
     }
     size_t getSiteSize() {
       size_t size=n_datasets()*n_groups();
@@ -83,21 +83,15 @@ namespace plegma {
       source.z = source_position[2];
       return source;
     }
-    std::array<int,4> getSource() {
+    site getSource() {
       return source_position;
     }
-    void setSource(int source[4]) {
-      for ( int i = 0; i < 4; i++ )
-	source_position[i] = source[i];
-    }
 
-    tex_mom_list getTexMomList() {
+    std::shared_ptr<tex_mom_list> getTexMomList() {
       if(corr_space == MOMENTUM_SPACE) {
 	return corr_mom_space->getTexMomList();
       } else {
-	tex_mom_list dummy;
-	dummy.Nmoms=0;
-	return dummy;
+	return std::shared_ptr<tex_mom_list>(new tex_mom_list());
       }
     }
     Float* getCorr() {
@@ -132,40 +126,40 @@ namespace plegma {
     }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2, 
-			int source[4]);
+			site& source);
 
     
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2, 
-			 int source[4]);
+			 site& source);
     
     void contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 			     PLEGMA_Propagator<Float> &propDN, 
 			     PLEGMA_Propagator<Float> &propST, 
 			     PLEGMA_Propagator<Float> &propCH, 
-			     int source[4], bool only_st=false, bool only_ch=false);
+			     site& source, bool only_st=false, bool only_ch=false);
     
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
 				   int signProps, std::vector<GAMMAS> gammas,
-				   int source[4]);
+				   site& source);
     
     void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 				  PLEGMA_Propagator<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
 				  int signProps, std::vector<GAMMAS> gammas,
-				  int source[4]);
+				  site& source);
     
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,
 				 PLEGMA_Gauge<Float> &gauge,
-				 int signProps, int source[4]);
+				 int signProps, site& source);
 
     void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 					PLEGMA_Propagator<Float> &fwdProp,
 					PLEGMA_Su3field<Float> &su3,
 					int signProps, std::vector<GAMMAS> gammas,
-					int source[4]);
+					site& source);
 
     virtual void writeASCII(std::string filename);
     virtual void writeHDF5(std::string filename);

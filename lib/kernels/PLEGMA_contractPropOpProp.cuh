@@ -100,7 +100,7 @@ static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> 
   size_t volume = corr.getVolSize()/HGC_localL[3];
   size_t size = corr.getTotalSize()/HGC_localL[3];
   int3 source = corr.getSource3();
-  tex_mom_list moms = corr.getTexMomList();
+  auto moms = corr.getTexMomList();
 
   int shift = (dir<0) ? 0 : dir*gammas.size()*2;
   int Mshift = (dir<0) ? 1 : N_DIMS;
@@ -135,7 +135,7 @@ static void contractPropOpProp(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> 
   checkCudaError();
   contractPropOpProp_kernel<FloatC,FloatA, FloatB, FloatS, isLink, dir,isCons>
     <<<gridDim,blockDim>>>(d_partial_block, prop1, prop2, su3, listGammas, it,
-			   source.x,source.y,source.z, signProps, runFT, moms);
+			   source.x,source.y,source.z, signProps, runFT, *moms);
   checkCudaError();
   
   FloatC *h_partial_block = NULL;

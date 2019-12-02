@@ -140,7 +140,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   int3 source = corr.getSource3();
   size_t volume3D = corr.getVolSize()/HGC_localL[3];
   size_t volume = volume3D*time_step;
-  tex_mom_list moms = corr.getTexMomList();
+  auto moms = corr.getTexMomList();
   
   if(HGC_verbosity > 2)
     PLEGMA_printf("time_step = %d, ps.tp.aux.x = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n",
@@ -191,42 +191,42 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
     
     if(ps.tp.aux.x == 2) {
       // Would be nice to run another tuner here but not possible right now with quda_tune. 
-      //ProfileStruct ps2((ps.volume/time_step)*MIN(HGC_localL[3]-it, time_step),0);
-      //tuneAndRun(ps2, "create_prop_product", create_prop_product<FloatA,FloatC>, propProd2, props[0], props[1], props[2], it, MIN(HGC_localL[3]-it, time_step)); 
+      //ProfileStruct ps2((ps.volume/time_step)*std::min(HGC_localL[3]-it, time_step),0);
+      //tuneAndRun(ps2, "create_prop_product", create_prop_product<FloatA,FloatC>, propProd2, props[0], props[1], props[2], it, std::min(HGC_localL[3]-it, time_step)); 
       dim3 grid = ps.tp.grid;
-      grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+      grid.x = (grid.x/time_step)*std::min(HGC_localL[3]-it, time_step);
       create_prop_product
 	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-	(propProd2, props[0], props[1], props[2], it, MIN(HGC_localL[3]-it, time_step));
+	(propProd2, props[0], props[1], props[2], it, std::min(HGC_localL[3]-it, time_step));
     }
     
     shift = 0;
     for(int j=0; j<BP_prop_prods_count[i].size(); j++) {
       dim3 grid = ps.tp.grid;
-      grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+      grid.x = (grid.x/time_step)*std::min(HGC_localL[3]-it, time_step);
       if(ps.tp.aux.x == 2)
 	contract_prop_prod
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (texPropProd, d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
-	   source, runFT, moms, it, MIN(HGC_localL[3]-it, time_step));
+	   source, runFT, *moms, it, std::min(HGC_localL[3]-it, time_step));
       else
 	contract_props
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (props[0], props[1], props[2], d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
-	   source, runFT, moms, it, MIN(HGC_localL[3]-it, time_step));
+	   source, runFT, *moms, it, std::min(HGC_localL[3]-it, time_step));
 	
       cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
       if(runFT==true){
 	int accumX = ps.tp.grid.x/time_step;
 	Float2<FloatC> *reduction = result + (j*HGC_localL[3] + it)*volume3D;
-	for(size_t k = 0 ; k < volume3D*MIN(HGC_localL[3]-it, time_step); k++) {
+	for(size_t k = 0 ; k < volume3D*std::min(HGC_localL[3]-it, time_step); k++) {
 	  reduction[k] = 0;
 	  for(int l = 0 ; l < accumX; l++) {
 	    reduction[k] += h_partial_block[k*accumX + l];
 	  }
 	}
       } else {
-	for(size_t k = 0 ; k < volume3D*MIN(HGC_localL[3]-it, time_step); k++)
+	for(size_t k = 0 ; k < volume3D*std::min(HGC_localL[3]-it, time_step); k++)
 	  result[(j*HGC_localL[3] + it)*volume3D + k] = h_partial_block[k];    
       }
       shift += BP_prop_prods_count[i][j];

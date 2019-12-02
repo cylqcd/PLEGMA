@@ -78,12 +78,13 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   int Nmom = mom.size();
   int V3 = HGC_localVolume/HGC_localL[3];
   int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
-  Float2<Float> *x,*d_res,*h_res;
+  Float2<Float> *x,*d_res;
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset(x,0,V*2*sizeof(Float));
   cudaMalloc((void**)&d_res, f.Field_length() * ft.DimT() * 2*sizeof(Float));
   checkCudaError();
-  hostMalloc(h_res,f.Field_length() * ft.DimT() * 2*sizeof(Float));
+  Float2<Float> h_res[f.Field_length()*ft.DimT()];
+  Float2<Float> *h_ft = (Float2<Float> *) ft.H_elem();
   Float one[2] = {1.,0.}, zero[2] = {0.,0.};
   for(int imom = 0; imom < Nmom; imom++){
     createMomField(x,mom[imom],ft.Dims(),sign); 
@@ -92,12 +93,10 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
 		 (ft.Dims() == 3) ? HGC_spaceComm : MPI_COMM_WORLD);
     for(int idf = 0 ; idf < f.Field_length(); idf++)
       for(int it = 0 ; it < ft.DimT(); it++)
-	for(int ir = 0 ; ir < 2 ; ir++)
-	  ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + ir] += ((Float*)h_res)[idf*ft.DimT()*2+it*2+ir];
+	  h_ft[it*f.Field_length()*Nmom + idf*Nmom + imom] += h_res[idf*ft.DimT()+it];
   }
   cudaFree(x);
   cudaFree(d_res);
-  hostFree(h_res,f.Field_length() * ft.DimT() * 2*sizeof(Float));
 }
 
 

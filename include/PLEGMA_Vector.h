@@ -73,9 +73,8 @@ namespace plegma {
     
     void dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color);
     
-    void pointSource(int *sourceposition, 
-        int spin, int color, ALLOCATION_FLAG alloc_flag);
-    void pointSource(int *sourceposition, int spin, int color);
+    void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag);
+    void pointSource(const site& sourceposition, int spin, int color);
     void conjugate();
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
