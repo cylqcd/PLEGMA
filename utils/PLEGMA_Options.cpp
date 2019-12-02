@@ -240,6 +240,10 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-matpc", "Operator preconditioning type, options (even-even, odd-odd, even-even-asym, odd-odd-asym)", verbosity, tmpString);
   if(isFound) matpc_type = get_matpc_type(tmpString.c_str());
 
+  tmpString = get_solve_str(solve_type);
+  isFound=opt.set("Q-solve-type", "The way to solve the system, options (direct, direct-pc, normop, normop-pc, normerr, normerr-pc)", verbosity, tmpString);
+  if(isFound) solve_type = get_solve_type(tmpString.c_str());
+  
   opt.set("Q-tol", "The L2 residual tolerance", verbosity, tol);
   opt.set("Q-tolhq", "Set heavy-quark residual tolerance", verbosity, tol_hq);
   opt.set("Q-reliable-delta", "The delta factor for the reliable updates", verbosity, reliable_delta);
@@ -423,13 +427,11 @@ void qudaOptions(Options &opt){
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
 
-  isFound=opt.set("Up-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputUP);
+  isFound=opt.set("Light-params-infile", "Name of the input file containing inverter input parameters for light quarks", verbosity, inputUP);
 
-  isFound=opt.set("Down-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputDN);
+  isFound=opt.set("Strange-params-infile", "Name of the input file containing inverter input parameters for quark strange", verbosity, inputST);
   
-  isFound=opt.set("Strange-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputST);
-  
-  isFound=opt.set("Charm-params-infile", "Name of the input file containing inverter input parameters for quark up", verbosity, inputCH);
+  isFound=opt.set("Charm-params-infile", "Name of the input file containing inverter input parameters for quark charm", verbosity, inputCH);
 
 }
 
