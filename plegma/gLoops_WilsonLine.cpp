@@ -182,6 +182,27 @@ int main(int argc, char **argv){
   traceO1.zero_device();
   traceO2.zero_device();
 
+  // ====================================================
+  // Elements (diagonal and above) of the gluon EMT 
+  // Note that need to be mupliplied by a factor 2/g^2
+
+  for(int mu = 0; mu < N_DIMS; mu++)
+    for(int nu = mu; nu < N_DIMS; nu++){
+      traceO2.zero_device();
+      for(int rho = 0; rho < N_DIMS; rho++)
+	if(rho != mu && rho != nu){
+	  pairedSinged mu_rho, nu_rho;
+	  mu_rho=makePairCheck(mu,rho);
+	  nu_rho=makePairCheck(nu,rho);
+	  traceO1.TrFmunuSu3FmunuSu3(fmunu_l,mu_rho.munu, Wl, fmunu_l, nu_rho.munu,Wr);
+	  double sign = mu_rho.sign * nu_rho.sign;
+	  traceO2.add(traceO1,(std::complex<double>) {sign,0.});
+	}
+      ftUL.apply(traceO2);
+      ftUL.writeFile(filesPrefix + "/gLoops_ultralocal_Clv_EMT_" + std::to_string(mu) + std::to_string(nu) +  "_" + confID + ".dat" ,corr_file_format);
+    }
+
+  
   //=====================================================
   /* Gluon loops with Wilson Line
    * We have three types of Operator in order to avoid mixing
