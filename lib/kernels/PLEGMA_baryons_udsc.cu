@@ -185,7 +185,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
     cudaMalloc((void**)&texPropProd, time_step * sizeof(genericTex<FloatC>) );
     cudaMalloc((void**)&propProd2, time_step * sizeof(generic2<FloatC>) );
     for(int t=0; t<time_step; t++) {
-      propProd[t] = new PLEGMA_Field<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, HGC_localVolume3D, NO_GHOSTS);
+      propProd[t] = new PLEGMA_Field<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, HGC_localVolume3D, NO_GHOSTS, false, false);
       h_texPropProd[t].tex = propProd[t]->createTexObject();
       h_propProd2[t].p = (Float2<FloatC> *) propProd[t]->D_elem();
     }
@@ -289,13 +289,13 @@ void contract_baryons_udsc(propTex<FloatA> texPropUP, propTex<FloatA> texPropDN,
     ProfileStruct ps(HGC_localVolume3D, sizeof(Float2<FloatC>));
     int myLocalT = corr.localT();
     int maxLocalT = myLocalT;
-    MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
     ps.max_volume = HGC_localVolume3D*maxLocalT;
     ps.tune_globally = true;
     ps.aux_range.x = 2;
     
     if(HGC_verbosity>2) PLEGMA_printf("Running for %s\n", BP_prop_prods[i].c_str());
-    tuneAndRun(ps, "contract_baryons_"+BP_prop_prods[i], contract_baryons_udsc_host<FloatA,FloatC>, ps, props, corr, result, i);
+    tuneAndRun(ps, "contract_baryons_size"+std::to_string(BP_prop_prods_count[i].size()), contract_baryons_udsc_host<FloatA,FloatC>, ps, props, corr, result, i);
 
     if(runFT) {
       FloatC *corr_ip = corr.H_elem() + shift*corr.getVolSize()*2;

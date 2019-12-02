@@ -19,8 +19,10 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
+  comm.reset(new MPI_Comm(HGC_fullComm), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
+  MPI_Comm_dup( HGC_fullComm, comm.get() );
   if(corr_space == MOMENTUM_SPACE) {
-    assert(corr_mom_space);
+    corr_mom_space.reset(new PLEGMA_FT<Float>(*corr_mom_space));
     corr_mom_space->checkAllocation(getSiteSize());
   }
   else if(corr_space == POSITION_SPACE) {
@@ -250,7 +252,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeASCII(std::string filename_out) {
+writeASCII(std::string filename_out) const {
   MPI_Comm comm;
   size_t g_vol_size = getVolSize();
   int rank;
@@ -266,7 +268,7 @@ writeASCII(std::string filename_out) {
     break;
   case POSITION_SPACE:
     g_vol_size *= HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
-    comm = MPI_COMM_WORLD;
+    comm = HGC_fullComm;
     rank = comm_rank();
     PLEGMA_error("WriteASCII do not support writing in position space.\n");
     break;
@@ -294,7 +296,7 @@ writeASCII(std::string filename_out) {
 		  H_elem()[((((ig*nDatasets()+id)*HGC_localL[3]+it)*Nmoms+imom)*site_sizeR+is)*2+ri];
 
     //=============================================================================
-    // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for MPI_COMM_WORLD (POSITION SPACE)
+    // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for HGC_fullComm (POSITION SPACE)
     // in the second case requires reordering of the memory
     MPI_Gather(corrReorder,sizeof(corrReorder)/sizeof(Float),MPI_Type(corrReorder),
 	       corrGlobal,sizeof(corrReorder)/sizeof(Float),MPI_Type(corrReorder),
@@ -338,7 +340,7 @@ writeASCII(std::string filename_out) {
 
 template<typename Float>
 std::string PLEGMA_Correlator<Float>::
-fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const{
   std::string descr = "shape: ";
   switch(corr_space) {
   case MOMENTUM_SPACE:
@@ -420,8 +422,7 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
-writeHDF5(std::string filename) {
-
+writeHDF5(std::string filename) const {
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start);
 
@@ -449,13 +450,12 @@ writeHDF5(std::string filename) {
     }
   }
 
-  HDF5 writer(filename, MPI_COMM_WORLD);
-
+  HDF5 writer(filename, *comm);
+    
   char *ssource;
   asprintf(&ssource,"/sx%02dsy%02dsz%02dst%02d/", source[0], source[1], source[2], source[3]);
   std::string top=(std::string) "/" + ssource; 
   free(ssource);
-
   
   std::vector<hsize_t> momShape = { 3 };
   std::vector<int> mvec;
@@ -474,6 +474,7 @@ writeHDF5(std::string filename) {
     }
   }
 }
+
 
 template class PLEGMA_Correlator<float>;
 template class PLEGMA_Correlator<double>;

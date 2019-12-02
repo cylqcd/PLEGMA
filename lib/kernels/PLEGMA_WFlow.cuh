@@ -259,6 +259,6 @@ static FloatG calcPlaqStaplesDef( FloatG* d_pointer ){
     plaquette += h_partial_plaq[i];
   free(h_partial_plaq);
 
-  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
+  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , HGC_fullComm);  
   return globalPlaquette/(HGC_totalVolume*N_COLS*24);
 }

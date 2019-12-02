@@ -102,11 +102,9 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
 
   cudaTextureObject_t tex;
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
-  checkCudaError();
   
-  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); cudaFree(moms->devPtr); checkCudaError(); });
+  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); cudaFree(moms->devPtr);});
 }
-    
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
@@ -178,7 +176,7 @@ void PLEGMA_FT<Float>::scale(Float a){
 
 
 template<typename Float>
-void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
+void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift) const{
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!h_elem) PLEGMA_error("Memory not allocated cannot write data");
   if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
@@ -210,7 +208,7 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift){
 
 template<typename Float>
 std::string PLEGMA_FT<Float>::
-fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift) {
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift) const{
   std::string descr;
   
   // Time
@@ -286,7 +284,7 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_FT<Float>::
-writeHDF5(std::string filename, int timeshift) {
+writeHDF5(std::string filename, int timeshift) const{
   if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);
@@ -328,7 +326,7 @@ writeHDF5(std::string filename, int timeshift) {
     }
   }
 
-  HDF5 writer(filename, MPI_COMM_WORLD);
+  HDF5 writer(filename, HGC_fullComm);
 
   writer.write_dataset(dataset, h_elem.get()+shift, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);

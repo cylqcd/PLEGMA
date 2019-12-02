@@ -34,11 +34,7 @@ int main(int argc, char **argv)
   FILE *ptr_out = NULL;
   int rank;
 
-  MPI_Initialized( &rank );
-  if( rank ) MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-  else rank=0;
-  
-  if(rank == 0){
+  if(HGC_fullRank == 0){
     ptr_out = fopen(outFile.c_str(), "a");
     if(ptr_out == NULL) PLEGMA_error("Error opening file for writing\n");
   }

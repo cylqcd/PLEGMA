@@ -144,7 +144,7 @@ static void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr,
   ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
   ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
   

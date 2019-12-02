@@ -98,7 +98,7 @@ void PLEGMA_Vector<Float>::norm2Host(){
     res += this->h_elem[i*2 + 0]*this->h_elem[i*2 + 0] + this->h_elem[i*2 + 1]*this->h_elem[i*2 + 1];
   }
 
-  int rc = MPI_Allreduce(&res, &globalRes , 1, sizeof(Float)==4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  int rc = MPI_Allreduce(&res, &globalRes , 1, sizeof(Float)==4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, HGC_fullComm);
   if( rc != MPI_SUCCESS ) PLEGMA_error("Error in MPI reduction for plaquette");
   PLEGMA_printf("Vector norm2 is %e\n",globalRes);
 }
@@ -321,7 +321,7 @@ std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, int *sourc
   int mpiErr = MPI_Allreduce(absPsi_loc.data(), absPsi.data(), listR2.size(), MPI_Type<Float>(), MPI_SUM, HGC_spaceComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
   int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
-  mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, MPI_COMM_WORLD);
+  mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
   return absPsi;
 }

@@ -73,6 +73,6 @@ static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
   tuneAndRun(ps, "calculatePlaquette", calculatePlaquette_host<Float,FloatG>, ps, gaugeTex, plaquette);
 
   Float globalPlaquette = 0.;
-  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
+  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , HGC_fullComm);  
   return globalPlaquette/(HGC_totalVolume*N_COLS*6);
 }

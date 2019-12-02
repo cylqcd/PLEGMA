@@ -63,7 +63,7 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
       for(int it = 0 ; it < ft.DimT(); it++){
 	Float2<Float> *y = (Float2<Float> *)f.D_elem() + idf*f.Total_length() + it*V3;
 	std::complex<Float> res = cuBLAS::dot((ft.Dims() == 3) ? V3 : HGC_localVolume, (Float*) x,(Float*) y,
-					      (ft.Dims() == 3) ? HGC_spaceComm : MPI_COMM_WORLD);
+					      (ft.Dims() == 3) ? HGC_spaceComm : HGC_fullComm);
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.real();
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.imag();
       }
@@ -90,7 +90,7 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
     createMomField(x,mom[imom],ft.Dims(),sign); 
     cuBLAS::gemv(TRANS,(ft.Dims() == 3) ? V3 : HGC_localVolume, f.Field_length() * ft.DimT(), one,
 		 (Float*) f.D_elem(), (Float*) x, zero, (Float*) d_res, (Float*) h_res,
-		 (ft.Dims() == 3) ? HGC_spaceComm : MPI_COMM_WORLD);
+		 (ft.Dims() == 3) ? HGC_spaceComm : HGC_fullComm);
     for(int idf = 0 ; idf < f.Field_length(); idf++)
       for(int it = 0 ; it < ft.DimT(); it++)
 	  h_ft[it*f.Field_length()*Nmom + idf*Nmom + imom] += h_res[idf*ft.DimT()+it];

@@ -30,12 +30,13 @@ namespace plegma {
     const CORR_SPACE corr_space;
     std::shared_ptr<PLEGMA_Field<Float>> corr_pos_space;
     std::shared_ptr<PLEGMA_FT<Float>> corr_mom_space;
+    std::shared_ptr<MPI_Comm> comm;
 
     void initialize();
     
     // For HDF5 file writing
-    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
-
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const;
+    
   public:
     bool hasSource(int dir) const {
       // Tells if the source is included in the local lattice for the given direction
@@ -80,7 +81,8 @@ namespace plegma {
     PLEGMA_Correlator(CORR_SPACE corr_space, site source, int Q2_max = 0, int totalT=HGC_totalL[DIM_T]):
       source(source), totalT(totalT), corr_space(corr_space), corr_pos_space(nullptr),
       corr_mom_space(corr_space==MOMENTUM_SPACE ?
-		     new PLEGMA_FT<Float>(Q2_max, 3, false, localT()) : nullptr) { }
+		     new PLEGMA_FT<Float>(Q2_max, 3, false, localT()) : nullptr),
+      comm(new MPI_Comm(HGC_fullComm)) { }
 
     ~PLEGMA_Correlator() {}
     
@@ -132,14 +134,14 @@ namespace plegma {
       corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomVec, 3, false, localT()));
     }
 
-    std::shared_ptr<tex_mom_list> getTexMomList() {
+    std::shared_ptr<tex_mom_list> getTexMomList() const {
       if(corr_space == MOMENTUM_SPACE) {
 	return corr_mom_space->getTexMomList();
       } else {
 	return std::shared_ptr<tex_mom_list>(new tex_mom_list());
       }
     }
-    std::vector<std::string> getDatasets() {
+    std::vector<std::string> getDatasets() const{
       return datasets;
     }
     void setDatasets(std::vector<std::string> d) {
@@ -152,7 +154,7 @@ namespace plegma {
     void setDatasets(std::string s) {
       return setDatasets({s});
     }
-    std::vector<std::string> getGroups() {
+    std::vector<std::string> getGroups() const{
       return groups;
     }
     void setGroups(std::vector<std::string> d) {
@@ -197,7 +199,7 @@ namespace plegma {
 					int signProps, std::vector<GAMMAS> gammas);
 
 
-    virtual void writeASCII(std::string filename);
-    virtual void writeHDF5(std::string filename);
+    virtual void writeASCII(std::string filename) const;
+    virtual void writeHDF5(std::string filename) const;
   };
 }

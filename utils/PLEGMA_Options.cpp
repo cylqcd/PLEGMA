@@ -4,8 +4,8 @@
 #include <functional>
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
-						     "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
+						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq",
+						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
 #ifdef HAVE_ARPACK
 						     ,"Eig-NkV", "Eig-logFile"
 #elif HAVE_PRIMME

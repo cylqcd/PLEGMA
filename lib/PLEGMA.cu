@@ -6,10 +6,12 @@
 #include <errno.h>
 #include <limits>
 #include <string.h>
+#include <PLEGMA_io.h>
 
 //#define TIMING_REPORT
 using namespace plegma;
 extern Topology *default_topo;
+std::vector<std::string> HDF5::open_files;
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
   HGC_hold_exit = false;
@@ -110,7 +112,8 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     HGC_global_vars.copyToDevice();
 
     // create groups of process to use mpi reduce only on spatial points
-    MPI_Comm_group(MPI_COMM_WORLD, &HGC_fullGroup);
+    MPI_Comm_dup(MPI_COMM_WORLD, &HGC_fullComm);
+    MPI_Comm_group(HGC_fullComm, &HGC_fullGroup);
     MPI_Group_rank(HGC_fullGroup,&HGC_fullRank);
     MPI_Group_size(HGC_fullGroup,&HGC_fullSize);
 
@@ -124,7 +127,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     MPI_Group_incl(HGC_fullGroup,space3D_proc,ranks,&HGC_spaceGroup);
     MPI_Group_rank(HGC_spaceGroup,&HGC_spaceRank);
     MPI_Group_size(HGC_spaceGroup,&HGC_spaceSize);
-    MPI_Comm_create(MPI_COMM_WORLD, HGC_spaceGroup , &HGC_spaceComm);
+    MPI_Comm_create(HGC_fullComm, HGC_spaceGroup , &HGC_spaceComm);
 
     // create group of process to use mpi gather
     int ranksTime[HGC_nProc[3]];
@@ -136,7 +139,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     MPI_Group_incl(HGC_fullGroup,HGC_nProc[3], ranksTime, &HGC_timeGroup);
     MPI_Group_rank(HGC_timeGroup, &HGC_timeRank);
     MPI_Group_size(HGC_timeGroup, &HGC_timeSize);
-    MPI_Comm_create(MPI_COMM_WORLD, HGC_timeGroup, &HGC_timeComm);
+    MPI_Comm_create(HGC_fullComm, HGC_timeGroup, &HGC_timeComm);
 
     cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
     if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCreate failed with error %d", error);
@@ -166,4 +169,11 @@ void plegma::PLEGMA_end() {
   // TODO: here we should destroy everything is created in init.
   cublasStatus_t error = cublasDestroy(HGC_cublas_handle);
   if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("\nError indestroying cublas context, error code = %d\n", error);
+  if(HDF5::isWriting()) {
+    PLEGMA_printf("Waiting for HDF5 to finish the writing\n");
+    while(HDF5::isWriting()) sleep(0.001);
+  }
+  MPI_Comm_free(&HGC_fullComm);
+  MPI_Comm_free(&HGC_spaceComm);
+  MPI_Comm_free(&HGC_timeComm);
 }

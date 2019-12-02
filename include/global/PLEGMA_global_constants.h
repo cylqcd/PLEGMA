@@ -88,6 +88,7 @@ global_host(int, nProc, N_DIMS);
 global_host(MPI_Group, fullGroup);
 global_host(MPI_Group, spaceGroup);
 global_host(MPI_Group, timeGroup);
+global_host(MPI_Comm, fullComm);
 global_host(MPI_Comm, spaceComm);
 global_host(MPI_Comm, timeComm);
 global_host(int, fullRank);

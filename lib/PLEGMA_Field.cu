@@ -590,12 +590,12 @@ void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &fieldIn, std::complex<Float> 
 
 template<typename Float>
 std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
-  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), MPI_COMM_WORLD);
+  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), HGC_fullComm);
 }
 
 template<typename Float>
 Float PLEGMA_Field<Float>::norm(){
-  return cuBLAS::norm(total_length*field_length, d_elem, MPI_COMM_WORLD);
+  return cuBLAS::norm(total_length*field_length, d_elem, HGC_fullComm);
 }
 
 template<typename Float>
@@ -659,7 +659,7 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::writeLIME(std::string filename){
+void PLEGMA_Field<Float>::writeLIME(std::string filename) const{
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   FILE *fid;
   LimeWriter *limewriter = (LimeWriter*)NULL;
@@ -678,7 +678,6 @@ void PLEGMA_Field<Float>::writeLIME(std::string filename){
     oss << "</ildgFormat>";
     write_lime_header(limewriter,"ildg-format",oss.str(),1,0);
   }
-  if(isAllocDevice) unload();
   write_binary_to_lime(filename,fid,limewriter,h_elem,field_length);
   limeDestroyWriter(limewriter);
 }
@@ -710,7 +709,7 @@ void PLEGMA_Field<Float>::readLIME(std::string filename){
 
 template<typename Float>
 std::string PLEGMA_Field<Float>::
-fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) {
+fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const{
   std::string descr = "shape: ";
 
   // Field shape
@@ -742,7 +741,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 
 
 template<typename Float>
-void PLEGMA_Field<Float>::writeHDF5(std::string filename){
+void PLEGMA_Field<Float>::writeHDF5(std::string filename) const{
   if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   assert(isAllocHost);
   std::vector<hsize_t> shape, lshape, start;
@@ -761,9 +760,8 @@ void PLEGMA_Field<Float>::writeHDF5(std::string filename){
     }
   }
 
-  HDF5 writer(filename, MPI_COMM_WORLD);
+  HDF5 writer(filename, HGC_fullComm);
 
-  if(isAllocDevice) unload();
   writer.write_dataset(dataset, h_elem, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);
 }

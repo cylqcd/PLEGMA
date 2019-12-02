@@ -308,8 +308,8 @@ void QUDA_solver::UpdateSolver()
 
   if(use_mg){
   multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
-  if(changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
-     mg->mgParam->Nvec != mg_param.n_vec[0]) {
+  if( changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
+      mg->mgParam->Nvec != mg_param.n_vec[0]) {
     destroyMultigridQuda(mg_preconditioner);
     mg_preconditioner = newMultigridQuda(&mg_param);
   } else {

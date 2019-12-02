@@ -105,7 +105,7 @@ namespace plegma {
       assert(current_size==new_size);
       site_shape = new_shape;
     }
-    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const;
     
     void pack(Float *topack);
     void unpack(Float *out);
@@ -139,8 +139,8 @@ namespace plegma {
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
 
     virtual void readLIME(std::string filename);
-    virtual void writeLIME(std::string filename);
-    virtual void writeHDF5(std::string filename);
+    virtual void writeLIME(std::string filename) const;
+    virtual void writeHDF5(std::string filename) const;
   };
 
   template<typename Float>

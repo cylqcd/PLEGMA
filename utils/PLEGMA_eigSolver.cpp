@@ -174,7 +174,7 @@ static void applyOperator(void *in, PRIMME_INT *ldx, void *out, PRIMME_INT *ldy,
 }
 
 static void par_GlobalSumForDouble(void *sendBuf, void *recvBuf, int *count, primme_params *primme, int *ierr) {
-  MPI_Comm communicator = MPI_COMM_WORLD;	
+  MPI_Comm communicator = HGC_fullComm;	
   if (sendBuf == recvBuf)
     *ierr = MPI_Allreduce(MPI_IN_PLACE, recvBuf, *count, MPI_DOUBLE, MPI_SUM, communicator) != MPI_SUCCESS;
   else
@@ -196,7 +196,7 @@ void EigSolver::initEigSolver(){
 #elif HAVE_PRIMME
   primme_initialize(&primme_pars);
   primme_pars.matrixMatvec = applyOperator;
-  MPI_Comm commPRIMME = MPI_COMM_WORLD;
+  MPI_Comm commPRIMME = HGC_fullComm;
   primme_pars.commInfo=&commPRIMME;
   primme_pars.globalSumReal=par_GlobalSumForDouble;
   primme_pars.numProcs=HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
@@ -237,7 +237,7 @@ void EigSolver::print(){
 
 void EigSolver::computeEigVecs(){
 #if defined(HAVE_ARPACK)
-  MPI_Fint mpi_comm_f = MPI_Comm_c2f(MPI_COMM_WORLD);
+  MPI_Fint mpi_comm_f = MPI_Comm_c2f(HGC_fullComm);
   char *bmat = strdup("I");
   int rvec = 1;
   int lworkl = (3*p.NkV*p.NkV+5*p.NkV)*2;
@@ -339,10 +339,10 @@ void EigSolver::computeEigVals(){
     cudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
     checkCudaError();
     dOp->apply<MdagM>(*tmp2,*tmp1);
-    std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), MPI_COMM_WORLD);
+    std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), HGC_fullComm);
     cuBLAS::scal(size_per_Vec,-eval.real(),tmp1->D_elem());
     cuBLAS::axpy(size_per_Vec,one,tmp2->D_elem(),tmp1->D_elem());
-    std::complex<double> res = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), MPI_COMM_WORLD);
+    std::complex<double> res = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), HGC_fullComm);
     evalsOrdered.push_back(std::make_tuple(eval.real(), eval.imag(), std::sqrt(res.real()), j));
     ptr_tmp += size_per_Vec*2;
   }
@@ -366,7 +366,7 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<doubl
   double *tmpArr = nullptr;
   try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
   memset(tmpArr,0,p.NeV*2*sizeof(double));
-  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vecIn.H_elem(), b, tmpArr, MPI_COMM_WORLD);
+  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vecIn.H_elem(), b, tmpArr, HGC_fullComm);
   cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, b, vecOut.H_elem());
   cBLAS::axpy(size_per_Vec, aP, vecIn.H_elem(), vecOut.H_elem());
   vecOut.load();
@@ -386,7 +386,7 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vec){
   double *tmpArr = nullptr;
   try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
   memset(tmpArr,0,p.NeV*2*sizeof(double));
-  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, MPI_COMM_WORLD);
+  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
   cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
   vec.load();
   delete[] tmpArr;
@@ -403,7 +403,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
     checkCudaError();
     V.copy(g5V);
     g5V.apply_gamma(G5);
-    std::complex<double> res = cuBLAS::dot(size_per_Vec, V.D_elem(), g5V.D_elem(),MPI_COMM_WORLD);
+    std::complex<double> res = cuBLAS::dot(size_per_Vec, V.D_elem(), g5V.D_elem(),HGC_fullComm);
     VdagG5V.push_back(res.real());
     ptr_tmp += size_per_Vec*2;
   }
