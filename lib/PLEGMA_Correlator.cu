@@ -39,11 +39,10 @@ void PLEGMA_Correlator<Float>::
 contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       PLEGMA_Propagator<Float> &prop2 ){
 
-  shape = {};
+  shape = {10};
   datasets =  {"twop_meson_1", "twop_meson_2"};
-  groups =  {"mesons/pseudoscalar", "mesons/scalar", "mesons/g5g1", "mesons/g5g2",
-	     "mesons/g5g3", "mesons/g5g4", "mesons/g1", "mesons/g2", "mesons/g3", "mesons/g4"};
-  description = "";
+  groups =  {"mesons"};
+  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
   
   initialize();
   propTex<Float> prop1Tex, prop2Tex;
@@ -355,9 +354,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     start.push_back(0);
     break;
   case POSITION_SPACE:
-    descr += "/x/y/z/t";
+    descr += "/t/z/y/x";
     // Volume
-    for(int i=0; i<N_DIMS; i++) {
+    for(int i=N_DIMS-1; i>=0; i--) {
       shape.push_back(i==DIM_T ? totalT : HGC_totalL[i]);
       lshape.push_back(i==DIM_T ? localT() : HGC_localL[i]);
       start.push_back(i==DIM_T ? startT() : ((HGC_procPosition[i]*HGC_localL[i] + HGC_totalL[i] - source[i]) % HGC_totalL[i]));

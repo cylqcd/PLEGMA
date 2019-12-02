@@ -18,9 +18,15 @@ PLEGMA_Vector<Float>::PLEGMA_Vector(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost
 template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
-					    int nsmearGauss, Float alphaGauss){
-  gauge.communicateSideGhost();
-  vecIn.communicateSideGhost();
+					    int nsmearGauss, Float alphaGauss, int timeSlice){
+
+  bool hasTimeSlice=true;
+  if(timeSlice>=0) {
+    if(timeSlice >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    int myT = timeSlice - HGC_procPosition[3] * HGC_localL[3];
+    if(not ((myT >= 0) && (myT < HGC_localL[3]))) hasTimeSlice=false;
+  }
+  
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
@@ -32,15 +38,47 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
   texVecOut.tex = this->createTexObject();
   texVecIn.tex = vecIn.createTexObject();
   texGauge.tex = gauge.createTexObject();
-  
+
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
-      gaussian_smearing(this->D_elem(),texVecIn,texGauge, alphaGauss);
-      this->communicateSideGhost();
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  if(i==0) {
+	    gauge.communicateSideGhost(dir, START);
+	    gauge.communicateSideGhost(dir+N_DIMS, START);
+	  }
+	  vecIn.communicateSideGhost(dir, START);
+	  vecIn.communicateSideGhost(dir+N_DIMS, START);
+	}
+      }
+      gaussian_smearing_no_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss, timeSlice);
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  if(i==0) {
+	    gauge.communicateSideGhost(dir, FINISH);
+	    gauge.communicateSideGhost(dir+N_DIMS, FINISH);
+	  }
+	  vecIn.communicateSideGhost(dir, FINISH);
+	  vecIn.communicateSideGhost(dir+N_DIMS, FINISH);
+	}
+      }
+      gaussian_smearing_only_ghost(this->D_elem(),texVecIn,texGauge, alphaGauss, timeSlice);
     }
     else{
-      gaussian_smearing(vecIn.D_elem(),texVecOut,texGauge, alphaGauss);
-      vecIn.communicateSideGhost();
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  this->communicateSideGhost(dir, START);
+	  this->communicateSideGhost(dir+N_DIMS, START);
+	}
+      }
+      gaussian_smearing_no_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss, timeSlice);
+      if(hasTimeSlice) {
+	for(int dir=0; dir<N_DIMS-1; dir++) {
+	  this->communicateSideGhost(dir, FINISH);
+	  this->communicateSideGhost(dir+N_DIMS, FINISH);
+	}
+      }
+      gaussian_smearing_only_ghost(vecIn.D_elem(), texVecOut, texGauge, alphaGauss, timeSlice);
     }
   }
   if( (nsmearGauss%2) == 0)
@@ -306,7 +344,7 @@ void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, P
 }
 
 template<typename Float>
-std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, int *sourceposition){
+std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
   if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
   for(int i = 0; i < N_DIMS; i++)
     if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);

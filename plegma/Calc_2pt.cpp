@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
+	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
 	  PLEGMA_printf("Going to invert UP for component %d\n", isc);
 	  TIME(solver.solve(vectorInOut, vectorInOut));
 	  TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
+	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss, sourcePositions[isource][DIM_T]));
 	  PLEGMA_printf("Going to invert DN for component %d\n", isc);
 	  TIME(solver.solve(vectorInOut, vectorInOut));
 	  TIME(vectorAuxD.gaussianSmearing(vectorInOut,smearedGauge, nsmearGauss, alphaGauss));
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
 	  PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	  PLEGMA_Vector<float> vectorAuxF;
 	  vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss));
+	  TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss, sourcePositions[isource][DIM_T]));
 	  
 	  PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
 	  TIME(solver.solve(vectorInOut, vectorInOut));
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 	    PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	    PLEGMA_Vector<float> vectorAuxF;
 	    vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	    TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss));
+	    TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmear, alphaGauss, sourcePositions[isource][DIM_T]));
 	    
 	    PLEGMA_printf("Going to invert %f for component %d\n", mu, isc);
 	    TIME(solver.solve(vectorInOut, vectorInOut));

@@ -293,13 +293,17 @@ public:
     int countF = 0;
     for(size_t i = 0 ; i < args.size(); i++)
       if(args[i].name == name){
-	cs.clear();
-	cs.str(args[i].value);
-	int count=0;
-	while(!cs.eof()){
-	  vec.resize(count+1);
-	  set(name,cs,vec[count]);
-	  count++;
+	cs.clear();	
+	vec.clear();
+	// We use "-" just to empty a vector
+	if(args[i].value != "-") {
+	  cs.str(args[i].value);
+	  int count=0;
+	  while(!cs.eof()){
+	    vec.resize(count+1);
+	    set(name,cs,vec[count]);
+	    count++;
+	  }
 	}
 	args.erase(args.begin()+i);
 	countF++;

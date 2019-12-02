@@ -34,14 +34,28 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
   isInitOpt=true;
 }
 
-void updateOptions(WHICHFLAVOR fl){
-  PLEGMA_printf("Reading new Quda parameter\n");
+void updateOptions(std::string filename, std::vector<std::string>& listOpt, std::function<void(Options&)> add_options){
+  PLEGMA_printf("Reading options from file %s\n", filename.c_str());
+  if(!filename.empty() and access( filename.c_str(), F_OK ) != -1){
+    const char *aux_str[3];
+    aux_str[0] = "random_string";
+    aux_str[1] = "--inputFile";
+    aux_str[2] = const_cast<char*>(filename.c_str());
+    Options LocalOptions = Options(3,const_cast<char**>(aux_str));
+    if(add_options) add_options(LocalOptions);
+    plegmaOptions(LocalOptions, listOpt, true);
+    qudaOptions(LocalOptions);
+    if(verbosity>0) infoQuda();
+    LocalOptions.close();
+  }
+}
 
+void updateOptions(WHICHFLAVOR fl){
   std::string filename;
   switch(fl)
     {
     case LIGHT:
-      filename = inputUP;
+      filename = inputLIGHT;
       break;
     case STRANGE:
       filename = inputST;
@@ -50,21 +64,10 @@ void updateOptions(WHICHFLAVOR fl){
       filename = inputCH;
       break;
     }
-
-  if(!filename.empty()){
-    const char *aux_str[3];
-    aux_str[0] = "random_string";
-    aux_str[1] = "--inputFile";
-    aux_str[2] = const_cast<char*>(filename.c_str());
-    Options LocalOptions = Options(3,const_cast<char**>(aux_str));
-    std::vector<std::string> aux_vec= {};
-    plegmaOptions(LocalOptions, aux_vec, true);
-    qudaOptions(LocalOptions);
-    if(verbosity>0) infoQuda();
-    LocalOptions.close();
-  }
+  std::vector<std::string> aux = {};
+  return updateOptions(filename, aux);
 }
-  
+
 void initializePLEGMA() {
   if(!isInitOpt){fprintf(stderr,"initializeOptions should be called before initializePLEGMA");exit(EXIT_FAILURE);}
   HGC_options->close();

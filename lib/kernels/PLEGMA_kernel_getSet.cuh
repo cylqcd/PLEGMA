@@ -41,16 +41,14 @@
 			         LEXIC((id[3]-1+DGC_localL[3])%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
 
 namespace plegma {
-  enum get_from { Me, Plus, Minus, PlusPlus, MinusMinus, PlusMinus, MinusPlus };
+  enum get_from { Me, Plus, Minus, PlusPlus, MinusMinus, PlusMinus, MinusPlus, PlusNoGhost, MinusNoGhost, PlusOnlyGhost, MinusOnlyGhost};
 
   struct sidStride {
     size_t sid;
     size_t stride;
+    bool returnZero;
     inline __device__ sidStride() = default; 
-    inline __device__ sidStride(const size_t& sid, const size_t& stride=DGC_localVolume) {
-      this->sid = sid;
-      this->stride = stride;      
-    }  
+    inline __device__ sidStride(const size_t& sid, const size_t& stride=DGC_localVolume, const bool& returnZero = false) : sid(sid), stride(stride), returnZero(returnZero) { }
     template<get_from src>
     inline __device__ void setSidStride(const size_t&, const int&, const short int&);
     template<get_from src>
@@ -62,6 +60,7 @@ namespace plegma {
     bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
     this->sid = plus_ghost ? (DGC_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : LEXIC_PLUS(dirPlus, id);
     this->stride = plus_ghost ? DGC_surface3D[dirPlus] : DGC_localVolume;
+    this->returnZero = false;
   }
   template<>
   inline __device__ void sidStride::setSidStride<Minus>(const size_t& sid, const int& offset, const short int& dirMinus) {
@@ -69,6 +68,40 @@ namespace plegma {
     bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
     this->sid = minus_ghost ? (DGC_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id)) : LEXIC_MINUS(dirMinus, id);
     this->stride = minus_ghost ? DGC_surface3D[dirMinus] : DGC_localVolume;
+    this->returnZero = false;
+  }
+  template<>
+  inline __device__ void sidStride::setSidStride<PlusOnlyGhost>(const size_t& sid, const int& offset, const short int& dirPlus) {
+    size_t id[4] = GET_ID(sid);
+    bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
+    this->sid = plus_ghost ? (DGC_sideGhost[dirPlus]*offset + LEXIC_3D(dirPlus,id)) : 0;
+    this->stride = plus_ghost ? DGC_surface3D[dirPlus] : 0;
+    this->returnZero = not plus_ghost;
+  }
+  template<>
+  inline __device__ void sidStride::setSidStride<MinusOnlyGhost>(const size_t& sid, const int& offset, const short int& dirMinus) {
+    size_t id[4] = GET_ID(sid);
+    bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
+    this->sid = minus_ghost ? (DGC_sideGhost[dirMinus+N_DIMS]*offset + LEXIC_3D(dirMinus,id)) : 0;
+    this->stride = minus_ghost ? DGC_surface3D[dirMinus] : 0;
+    this->returnZero = not minus_ghost;
+  }
+  
+  template<>
+  inline __device__ void sidStride::setSidStride<PlusNoGhost>(const size_t& sid, const int& offset, const short int& dirPlus) {
+    size_t id[4] = GET_ID(sid);
+    bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
+    this->sid = plus_ghost ? 0 : LEXIC_PLUS(dirPlus, id);
+    this->stride = plus_ghost ? 0 : DGC_localVolume;
+    this->returnZero = plus_ghost;
+  }
+  template<>
+  inline __device__ void sidStride::setSidStride<MinusNoGhost>(const size_t& sid, const int& offset, const short int& dirMinus) {
+    size_t id[4] = GET_ID(sid);
+    bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
+    this->sid = minus_ghost ? 0 : LEXIC_MINUS(dirMinus, id);
+    this->stride = minus_ghost ? 0 : DGC_localVolume;
+    this->returnZero = minus_ghost;
   }
   template<>
   inline __device__ void sidStride::setSidStride<PlusPlus>(const size_t& sid, const int& offset, const short int& dirPlus1, const short int& dirPlus2) {
@@ -95,6 +128,7 @@ namespace plegma {
 	this->stride = DGC_localVolume;
       }
     }
+    this->returnZero = false;
   }
   template<>
   inline __device__ void sidStride::setSidStride<MinusMinus>(const size_t& sid, const int& offset, const short int& dirMinus1, const short int& dirMinus2) {
@@ -121,6 +155,7 @@ namespace plegma {
 	this->stride = DGC_localVolume;
       }
     }
+    this->returnZero = false;
   }
   template<>
   inline __device__ void sidStride::setSidStride<PlusMinus>(const size_t& sid, const int& offset, const short int& dirPlus, const short int& dirMinus) {
@@ -148,6 +183,7 @@ namespace plegma {
 	this->stride = DGC_localVolume;
       }
     }
+    this->returnZero = false;
   }
   template<>
   inline __device__ void sidStride::setSidStride<MinusPlus>(const size_t& sid, const int& offset, const short int& dirMinus, const short int& dirPlus) {
@@ -164,7 +200,7 @@ namespace plegma {
     // Fetch is going to be specialized after
     inline __device__ Float2<Float> fetch(const size_t& i) const;
     inline __device__ Float2<Float> get(const int& i, const sidStride& ss) const {
-      return texture<Float>::fetch(i*ss.stride + ss.sid);
+      return ss.returnZero ? Float2<Float>(0) : texture<Float>::fetch(i*ss.stride + ss.sid);
     }
     inline __device__ void set(const int& i, const sidStride& ss, const Float2<Float>& v);
   };
@@ -186,7 +222,7 @@ namespace plegma {
       p = (Float2<Float> *) pointer;
     }
     inline __host__ __device__ Float2<Float> get(const int& i, const sidStride& ss) const {
-      return p[i*ss.stride + ss.sid];
+      return ss.returnZero ? Float2<Float>(0) : p[i*ss.stride + ss.sid];
     }
     inline __host__ __device__ void set(const int& i, const sidStride& ss, const Float2<Float>& v) {
       p[i*ss.stride + ss.sid] = v;

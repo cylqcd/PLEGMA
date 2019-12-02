@@ -287,7 +287,7 @@ struct computeRMS{
 };
 
 template<typename Float>
-static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std::vector<Float> &absPsi, int my_it, int *sourceposition){
+static void compute_rms(const PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std::vector<Float> &absPsi, int my_it, const site& sourceposition){
   int *d_listR2 = nullptr;
   Float *d_absPsi = nullptr;
   if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");

@@ -57,7 +57,12 @@ namespace plegma {
     inline __host__ __device__ void conj() {
       this->y = -this->y;
     }
-    
+
+    // Checks if the number is zero
+    inline __host__ __device__ bool isZero() {
+      return this->x == 0 && this->y == 0;
+    }
+
     // Sum with complex
     template<typename FloatIn>
     inline __host__ __device__ void operator+=(const Float2<FloatIn>& a) {
