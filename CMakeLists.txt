@@ -108,6 +108,16 @@ endif()
 
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG HOSTDEBUG DEVICEDEBUG)
 
+# sanitize: temporary fix !!!!!!!!!!
+set(QUDA_SANITIZE OFF CACHE BOOL "build PLEGMA with sanitized QUDA")
+if(QUDA_SANITIZE)
+  set(CMAKE_C_FLAGS_SANITIZE "-fsanitize=address,undefined"  CACHE STRING "Flags used by the C compiler with sanitization.")
+  SET(CMAKE_C_FLAGS  "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS_SANITIZE}")
+  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS_SANITIZE}")
+  SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_C_FLAGS_SANITIZE}")
+endif()
+
+
 # using dirs in LD_LIBRARY_PATh for searching for libraries
 string(REPLACE ":" ";" LIBRARY_DIRS $ENV{LD_LIBRARY_PATH})
 
