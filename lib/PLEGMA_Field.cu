@@ -340,7 +340,6 @@ cudaTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
   texDesc.readMode = cudaReadModeElementType;
 
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
-  if(checkErr) checkCudaError();
   return tex;
 #else
   return 0;
