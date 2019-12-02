@@ -66,6 +66,7 @@ define(QudaVerbosity mg_verbosity[QUDA_MAX_MG_LEVEL], {});
 define(QudaInverterType setup_inv[QUDA_MAX_MG_LEVEL],{});
 define(int num_setup_iter[QUDA_MAX_MG_LEVEL], {});
 define(double setup_tol, 5e-6);
+define(int setup_maxiter, 500);
 define(QudaSetupType setup_type, QUDA_NULL_VECTOR_SETUP);
 define(bool pre_orthonormalize, false);
 define(bool post_orthonormalize, true);

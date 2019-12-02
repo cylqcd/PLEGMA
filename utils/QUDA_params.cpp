@@ -205,6 +205,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.setup_inv_type[i] = setup_inv[i];
     mg_param.num_setup_iter[i] = num_setup_iter[i];
     mg_param.setup_tol[i] = setup_tol;
+    mg_param.setup_maxiter[i] = setup_maxiter;
     mg_param.spin_block_size[i] = 1;
     mg_param.n_vec[i] = nvec[i] == 0 ? 24 : nvec[i]; // default to 24 vectors if not set
     mg_param.precision_null[i] = prec_null; // precision to store the null-space basis

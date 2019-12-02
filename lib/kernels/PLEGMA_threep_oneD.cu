@@ -1,0 +1,184 @@
+#include <PLEGMA_Correlator.h>
+#include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_kernel_getSet.cuh>
+#include <PLEGMA_gammas.cuh>
+#include <PLEGMA_threep.cuh>
+
+using namespace plegma;
+template<typename T>
+struct KernelArr {T* array; int size;};
+
+template<typename FloatC, typename FloatA, typename FloatB, typename FloatG>
+__global__ void threep_oneD_device(Float2<FloatC>* block2,
+				   propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
+				   gaugeTex<FloatG> gaugeTex, KernelArr<GAMMAS> listGammas,
+				   int it, int time_step, int maxT, int4 source,
+				   int signProps, bool runFT, tex_mom_list moms){
+  int grid3D = gridDim.x/time_step;
+  int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
+  int tid = blockIdx.x/grid3D;
+  // this takes into account the case where the source is in the local lattice
+  // and we need to start from it when we go over maxT
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC_localVolume3D;
+  
+  Float2<FloatC> accum[N_DIMS*N_SPINS*N_SPINS];
+  #pragma unroll
+  for(int i = 0; i < N_DIMS*N_SPINS*N_SPINS; i++)
+    accum[i]=0;
+
+  if (sid3D < DGC_localVolume3D){
+    Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
+    Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
+    Float2<FloatC> R[N_SPINS][N_SPINS];
+    Float2<FloatG> su3[N_COLS][N_COLS];
+    
+    #pragma unroll
+    for(int dir = 0; dir < N_DIMS; dir++) {
+      // term x, x, x+dir
+      prop1Tex.get(prop1,vid); gaugeTex.get(su3,dir,vid); prop2Tex.get<Plus>(prop2,vid,dir);
+      partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+
+      //term x, x-dir, x-dir
+      gaugeTex.get<Minus>(su3,dir,vid,dir); prop2Tex.get<Minus>(prop2,vid,dir);
+      partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+
+      //term x+dir, x, x
+      prop1Tex.get<Plus>(prop1,vid,dir); gaugeTex.get(su3,dir,vid); prop2Tex.get(prop2,vid);
+      partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+
+      //term x-dir, x-dir, x
+      prop1Tex.get<Minus>(prop1,vid,dir); gaugeTex.get<Minus>(su3,dir,vid,dir);
+      partial_trace_mul_Prop_G_Prop<true,ACC_PLUS,false>(R,prop1,prop2,su3);
+
+      for(int iop = 0; iop < listGammas.size; iop++){
+	int opId=listGammas.array[iop];
+	accum[dir*listGammas.size + iop] = 0.25*((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
+      }
+    }
+  }
+
+  int source_pos[3] = {source.x, source.y, source.z}; 
+  if(runFT){
+    extern __shared__ int ext_shared_cache[];
+    Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
+    fourier_transform_3D(block2, accum, shared_cache, N_DIMS*listGammas.size, sid3D, source_pos, moms, 0, +1, time_step, tid);
+  } else{
+    if (sid3D < DGC_localVolume3D)
+      for(int iop = 0; iop < N_DIMS*listGammas.size; iop++)
+	block2[(tid*DGC_localVolume3D + sid3D)*N_DIMS*listGammas.size+iop] = accum[iop];
+  }
+}
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Correlator<FloatC> &corr,
+			     propTex<FloatA> prop1, propTex<FloatA> prop2,
+			     int signProps, gaugeTex<FloatG> gauge, std::vector<GAMMAS> gammas){
+  
+  int t_size = corr.localT(); if(t_size==0) return;
+  int maxT = corr.endT() - corr.startT(); 
+  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
+  bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
+  size_t volume = corr.getVolSize()/t_size;
+  size_t size = corr.getTotalSize()/t_size*time_step;
+  int site_size = corr.getSiteSize();
+  int4 source = corr.getSource();
+  auto moms = corr.getTexMomList();
+
+  KernelArr<GAMMAS> listGammas;
+  listGammas.size = gammas.size();
+  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+
+  if(HGC_verbosity > 2)
+    if(corr.hasSource())
+      printf("time_step = %d, t_size = %d, maxT = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step, t_size, maxT, ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+
+  size_t alloc_size = (runFT==true)? (size * (ps.tp.grid.x/time_step) ) : size;
+
+  Float2<FloatC> *h_partial_block = NULL;
+  Float2<FloatC> *d_partial_block = NULL;
+  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  cudaError_t error=cudaPeekAtLastError();
+  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
+
+  for(int it=0; it < t_size; it+=time_step) {
+    int t_step = std::min(t_size-it, time_step);
+    dim3 grid = ps.tp.grid;
+    grid.x = (grid.x/time_step)*t_step;
+    threep_oneD_device<FloatC,FloatA, FloatB, FloatG>
+      <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
+      (d_partial_block, prop1, prop2, gauge, listGammas, it, t_step, maxT,
+       source, signProps, runFT, *moms);
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+
+    if(runFT==true){
+      int accumX = ps.tp.grid.x/time_step;
+      for(size_t v = 0 ; v < volume*t_step; v++)
+	for(int i = 0 ; i < site_size; i++) {
+	  result[(it*volume+v)*site_size+i] = 0;
+	    for(int j = 0 ; j < accumX; j++)
+	      result[(it*volume+v)*site_size+i] +=
+		h_partial_block[(v*site_size+i)*accumX+j];
+	}
+    } else {
+      for(size_t v = 0 ; v < volume*t_step; v++)
+	for(int i = 0 ; i < site_size; i++)
+	  result[(it*volume+v)*site_size+i] +=
+	    h_partial_block[v*site_size+i];
+    }
+  }
+
+ exit:
+  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  cudaFree(d_partial_block);
+  cudaFree(listGammas.array);
+}
+
+template<typename FloatC,typename FloatA,typename FloatB,typename FloatG>
+void threep_oneD(PLEGMA_Correlator<FloatC> &corr, propTex<FloatA> prop1, propTex<FloatB> prop2,
+		 int signProps, gaugeTex<FloatG> gauge, std::vector<GAMMAS> gammas){
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
+  if(gammas.size() <= 0)
+    PLEGMA_error("Error the container of gamma matrices cannot be zero");
+  if(gammas.size() > N_SPINS*N_SPINS)
+    PLEGMA_error("Error maximum number of gamma matrices is 16");
+
+  bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
+  int site_size = N_DIMS*gammas.size();
+  if(corr.getSiteSize() != site_size)
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+  
+  ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
+  int myLocalT = corr.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, MPI_COMM_WORLD);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  ps.tune_globally = true;
+  
+  Float2<FloatC> *result = NULL;
+  if(runFT)
+    hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
+  else
+    result = (Float2<FloatC> *) corr.H_elem();
+  
+  tuneAndRun( ps, "threep_oneD", threep_oneD_host<FloatC,FloatA,FloatB,FloatG>,
+	      ps, result, corr, prop1, prop2, signProps, gauge, gammas );
+  
+  if(runFT) {
+    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
+		  MPI_SUM, HGC_spaceComm);
+    hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
+  }
+#else
+  PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
+#endif
+}
+
+template void threep_oneD<float,float,float,float>(PLEGMA_Correlator<float> &corr, propTex<float> prop1, propTex<float> prop2, int signProps, gaugeTex<float> gauge, std::vector<GAMMAS> gammas);
+template void threep_oneD<double,double,double,double>(PLEGMA_Correlator<double> &corr, propTex<double> prop1, propTex<double> prop2, int signProps, gaugeTex<double> gauge, std::vector<GAMMAS> gammas);
+

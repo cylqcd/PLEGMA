@@ -4,6 +4,10 @@ template<typename Float> struct texture;
 struct site : std::array<int,N_DIMS> {
   site() = default;
   site(const std::array<int,N_DIMS>& val) : std::array<int,N_DIMS>(val) {}
+
+  operator int4() {
+    return make_int4((*this)[0],(*this)[1],(*this)[2],(*this)[3]);
+  }
   // TODO: add functions line to_ID, from_ID, etc
 };
 inline std::ostream& operator << (std::ostream &o, site &x){

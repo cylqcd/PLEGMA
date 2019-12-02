@@ -45,7 +45,7 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
   }
   if( (nsmearGauss%2) == 0)
     cudaMemcpy(this->D_elem(),vecIn.D_elem(),
-	       PLEGMA_Field<Float>::bytes_total_length,cudaMemcpyDeviceToDevice);
+	       this->bytes_total_length,cudaMemcpyDeviceToDevice);
   
   this->destroyTexObject(texVecOut.tex);
   vecIn.destroyTexObject(texVecIn.tex);
@@ -60,33 +60,33 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
 template<typename Float>
 void PLEGMA_Vector<Float>::copyToQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_to_QUDA(PLEGMA_Field<Float>::d_elem, *qudaVector, isEv);
+  copy_to_QUDA(this->d_elem, *qudaVector, isEv);
 }
 
 template<typename Float>
 void PLEGMA_Vector<Float>::copyFromQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_from_QUDA(PLEGMA_Field<Float>::d_elem, *qudaVector, isEv);
+  copy_from_QUDA(this->d_elem, *qudaVector, isEv);
 }
 
 template<typename Float>
 void  PLEGMA_Vector<Float>::scaleVector(Float a){
-  scale_vector(a,PLEGMA_Field<Float>::d_elem);
+  scale_vector(a,this->d_elem);
 }
 
 template<typename Float>
 void  PLEGMA_Vector<Float>::conjugate(){
-  conjugate_vector(PLEGMA_Field<Float>::d_elem);
+  conjugate_vector(this->d_elem);
 }
 
 template<typename Float>
 void  PLEGMA_Vector<Float>::apply_gamma5(){
-  apply_gamma5_vector(PLEGMA_Field<Float>::d_elem);
+  apply_gamma5_vector(this->d_elem);
 }
 
 
 template<typename Float> 
 void  PLEGMA_Vector<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
-  apply_gamma_vector(LR,PLEGMA_Field<Float>::d_elem,gMat);
+  apply_gamma_vector(LR,this->d_elem,gMat);
 }
 
 template<typename Float>
@@ -95,7 +95,7 @@ void PLEGMA_Vector<Float>::norm2Host(){
   Float globalRes;
 
   for(int i = 0 ; i < N_SPINS*N_COLS*HGC_localVolume ; i++){
-    res += PLEGMA_Field<Float>::h_elem[i*2 + 0]*PLEGMA_Field<Float>::h_elem[i*2 + 0] + PLEGMA_Field<Float>::h_elem[i*2 + 1]*PLEGMA_Field<Float>::h_elem[i*2 + 1];
+    res += this->h_elem[i*2 + 0]*this->h_elem[i*2 + 0] + this->h_elem[i*2 + 1]*this->h_elem[i*2 + 1];
   }
 
   int rc = MPI_Allreduce(&res, &globalRes , 1, sizeof(Float)==4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -115,9 +115,9 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
@@ -138,9 +138,9 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
        	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
        	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
@@ -157,7 +157,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
   int V4 = HGC_localVolume;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
+      pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
       pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2);
       cudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
     }
@@ -370,7 +370,7 @@ namespace plegma{
     Float *pointer_dst = NULL;
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V3*2 + c1*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
@@ -390,7 +390,7 @@ namespace plegma{
     Float *pointer_dst = NULL;
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V3*2 + c1*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
 	if(is_myIt){
 	  pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	  cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);

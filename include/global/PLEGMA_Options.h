@@ -1,5 +1,5 @@
 #pragma once
-
+#include "PLEGMA_templates.h"
 struct argument{std::string name, value;};
 
 class Arguments{
@@ -194,33 +194,6 @@ private:
   void set(std::string name,std::stringstream &cs, T & p1, Pars & ... pars){
     set(name,cs,p1);
     set(name, cs, pars...);
-  }
-
-  std::string toString(){return "";}
-
-  template<typename T, typename... Pars>
-  std::string toString(T & p1, Pars & ... pars){
-    std::stringstream cs;
-    cs << " " << p1;
-    return cs.str() + toString(pars...);
-  }
-
-  template<typename T>
-  std::string toString(std::vector<T> &vec){
-    std::stringstream cs;
-    for(T i : vec) cs << " " << i;
-    return cs.str();
-  }
-
-  template<typename T1, typename T2>
-  std::string toString(std::map<T1,T2> &tpl){
-    std::stringstream cs;
-    typename std::map<T1,T2>::iterator it_b = tpl.begin();
-    while(it_b != tpl.end()){
-      cs << " (" <<it_b->first << ", " << it_b->second << ")";
-      it_b++;
-    }
-    return cs.str();
   }
 
   template<typename... Pars>

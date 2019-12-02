@@ -31,15 +31,14 @@ int main(int argc, char **argv)
 
     PLEGMA_Gauge<float> contractGauge;
     contractGauge.copy(gauge);
-
-    // Smearing
-    PLEGMA_Gauge<float> smearedGauge;
-    smearedGauge.APEsmearing(contractGauge, nsmearAPE, alphaAPE, 3); 
-    PLEGMA_printf("Plaquette after smearing:\n");
-    smearedGauge.calculatePlaq();
-
     // apply boundary conditions since is needed for the covariant derivative
     applyBoundaryConditions(contractGauge,true);
+
+    // Smearing
+    PLEGMA_Gauge<double> smearedGauge;
+    smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3); 
+    PLEGMA_printf("Plaquette after smearing:\n");
+    smearedGauge.calculatePlaq();
 
     // ensuring mu positive
     QUDA_solver solver(mu);
@@ -65,16 +64,15 @@ int main(int argc, char **argv)
 	solver.UpdateSolver();
       }
       for(int isc = 0 ; isc < 12 ; isc++){
-	PLEGMA_Vector<double> vectorInOut;
-	PLEGMA_Vector<float> vectorAux1,vectorAux2;
-	vectorAux1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	vectorAux2.gaussianSmearing(vectorAux1, smearedGauge, nsmearGauss, alphaGauss);
-	vectorInOut.copy(vectorAux2);
+	PLEGMA_Vector<double> vectorInOut,vectorAuxD;
+	PLEGMA_Vector<float> vectorAuxF;
+	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
       
 	PLEGMA_printf("Going to invert UP for component %d\n", isc);
 	solver.solve(vectorInOut, vectorInOut);
-	vectorAux1.copy(vectorInOut);
-	propUP.absorb(vectorAux1, isc/3, isc%3);
+	vectorAuxF.copy(vectorInOut);
+	propUP.absorb(vectorAuxF, isc/3, isc%3);
       }	
     
       PLEGMA_Propagator<float> propDN;
@@ -84,16 +82,15 @@ int main(int argc, char **argv)
 	solver.UpdateSolver();
       }
       for(int isc = 0 ; isc < 12 ; isc++){
-	PLEGMA_Vector<double> vectorInOut;
-	PLEGMA_Vector<float> vectorAux1,vectorAux2;
-	vectorAux1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-	vectorAux2.gaussianSmearing(vectorAux1, smearedGauge, nsmearGauss, alphaGauss);
-	vectorInOut.copy(vectorAux2);
+	PLEGMA_Vector<double> vectorInOut,vectorAuxD;
+	PLEGMA_Vector<float> vectorAuxF;
+	vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+	vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
       
 	PLEGMA_printf("Going to invert DN for component %d\n", isc);
 	solver.solve(vectorInOut, vectorInOut);
-	vectorAux1.copy(vectorInOut);
-	propDN.absorb(vectorAux1, isc/3, isc%3);
+	vectorAuxF.copy(vectorInOut);
+	propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
       for(size_t its = 0; its < tSinks.size(); its++){
@@ -106,14 +103,19 @@ int main(int argc, char **argv)
 	PLEGMA_Propagator3D<float> propUP3D;
 	PLEGMA_Propagator3D<float> propDN3D;
 	for(int isc = 0 ; isc < 12 ; isc++){
-	  PLEGMA_Vector<float> vectorAux1,vectorAux2;
-	  vectorAux1.absorb(propUP,isc/3, isc%3);
-	  vectorAux2.gaussianSmearing(vectorAux1, smearedGauge, nsmearGauss, alphaGauss);
-	  propUP3D.absorb(vectorAux2, global_fixSinkTime, isc/3, isc%3);
+	  PLEGMA_Vector<double> vectorAuxD1,vectorAuxD2;
+	  PLEGMA_Vector<float> vectorAuxF;
+	  vectorAuxF.absorb(propUP,isc/3, isc%3);
+	  vectorAuxD1.copy(vectorAuxF);
+	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  vectorAuxF.copy(vectorAuxD2);
+	  propUP3D.absorb(vectorAuxF, global_fixSinkTime, isc/3, isc%3);
 
-	  vectorAux1.absorb(propDN,isc/3, isc%3);
-	  vectorAux2.gaussianSmearing(vectorAux1, smearedGauge, nsmearGauss, alphaGauss);
-	  propDN3D.absorb(vectorAux2, global_fixSinkTime, isc/3, isc%3);      
+	  vectorAuxF.absorb(propDN,isc/3, isc%3);
+	  vectorAuxD1.copy(vectorAuxF);
+	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  vectorAuxF.copy(vectorAuxD2);
+	  propDN3D.absorb(vectorAuxF, global_fixSinkTime, isc/3, isc%3);
 	}
     
 	WHICHPARTICLE nucleon = get_particle(prOrNt); 
@@ -130,23 +132,23 @@ int main(int argc, char **argv)
 	    }
 	    for(int nu = 0 ; nu < 4 ; nu++)
 	      for(int c2 = 0 ; c2 < 3 ; c2++){
-		PLEGMA_Vector<double> vectorInOut;
-		PLEGMA_Vector<float> vectorAux1, vectorAux2;
+		PLEGMA_Vector<double> vectorInOut, vectorAuxD;
+		PLEGMA_Vector<float> vectorAuxF;
 		if(nucleon == PROTON)
-		  vectorAux1.seqSourceNucleon(propUP3D, propDN3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2);
+		  vectorAuxF.seqSourceNucleon(propUP3D, propDN3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2);
 		else
-		  vectorAux1.seqSourceNucleon(propDN3D, propUP3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2);
+		  vectorAuxF.seqSourceNucleon(propDN3D, propUP3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2);
 		// put a momentum in the sink later
-		vectorAux1.conjugate();
-		vectorAux1.apply_gamma(G5);
-		vectorAux2.gaussianSmearing(vectorAux1,smearedGauge, nsmearGauss, alphaGauss);
-		vectorInOut.copy(vectorAux2);
+		vectorAuxF.conjugate();
+		vectorAuxF.apply_gamma(G5);
+		vectorAuxD.copy(vectorAuxF);
+		vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 		double norm = vectorInOut.norm();
 		vectorInOut.cscale(1/norm);
 		solver.solve(vectorInOut, vectorInOut);
 		vectorInOut.cscale(norm);
-		vectorAux1.copy(vectorInOut);
-		seqProp.absorb(vectorAux1, nu, c2);
+		vectorAuxF.copy(vectorInOut);
+		seqProp.absorb(vectorAuxF, nu, c2);
 	      }
 	    seqProp.apply_gamma(G5);
 	    seqProp.conjugate();
@@ -155,23 +157,23 @@ int main(int argc, char **argv)
 	    std::string preSuf;
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propUP : propDN;
-	    PLEGMA_Correlator<float> corr(corr_space,maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
 	  
 	    // LOCAL contractions
-	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas, sourcePositions[isource]); // 0 is isource change later 
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;      
+	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    // ONED contractions
-	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, sourcePositions[isource]); // 0 is isource change lat
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    // noe contractions
-	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, sourcePositions[isource]); // 0 is isource change lat
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 	  }
@@ -186,23 +188,23 @@ int main(int argc, char **argv)
 	    }
 	    for(int nu = 0 ; nu < 4 ; nu++)
 	      for(int c2 = 0 ; c2 < 3 ; c2++){
-		PLEGMA_Vector<double> vectorInOut;
-		PLEGMA_Vector<float> vectorAux1, vectorAux2;
+		PLEGMA_Vector<double> vectorInOut, vectorAuxD;
+		PLEGMA_Vector<float> vectorAuxF;
 		if(nucleon == PROTON)
-		  vectorAux1.seqSourceNucleon(propUP3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2); //test case unpolarized proj
+		  vectorAuxF.seqSourceNucleon(propUP3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2); //test case unpolarized proj
 		else
-		  vectorAux1.seqSourceNucleon(propDN3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2);
+		  vectorAuxF.seqSourceNucleon(propDN3D, get_projector(Projs[iproj]), nucleon, global_fixSinkTime, nu, c2);
 		// put a momentum in the sink later
-		vectorAux1.conjugate();
-		vectorAux1.apply_gamma(G5);
-		vectorAux2.gaussianSmearing(vectorAux1,smearedGauge, nsmearGauss, alphaGauss);
-		vectorInOut.copy(vectorAux2);
+		vectorAuxF.conjugate();
+		vectorAuxF.apply_gamma(G5);
+		vectorAuxD.copy(vectorAuxF);
+		vectorInOut.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 		double norm = vectorInOut.norm();
 		vectorInOut.cscale(1/norm);
 		solver.solve(vectorInOut, vectorInOut);
 		vectorInOut.cscale(norm);
-		vectorAux1.copy(vectorInOut);
-		seqProp.absorb(vectorAux1, nu, c2);
+		vectorAuxF.copy(vectorInOut);
+		seqProp.absorb(vectorAuxF, nu, c2);
 	      }
 	    seqProp.apply_gamma(G5);
 	    seqProp.conjugate();
@@ -211,23 +213,23 @@ int main(int argc, char **argv)
 	    std::string preSuf;
 	  
 	    PLEGMA_Propagator<float> &propF = (nucleon == PROTON) ? propDN : propUP;
-	    PLEGMA_Correlator<float> corr(corr_space,maxQsq);
+	    PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq, tsinkMtsource+1);
 	  
 	    //LOCAL
-	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas, sourcePositions[isource]);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_local" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    //ONED
-	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas, sourcePositions[isource]);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_oneD" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
 	    //ONED
-	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps, sourcePositions[isource]);
-	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) (corr.getCorr())[iv] *= signPer;
+	    corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps);
+	    if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	    preSuf = (corr_file_format == ASCII_FORMAT || corr_file_format == LIME_FORMAT) ? "_noe" : "";
 	    corr.writeFile( (filename+partName+preSuf+get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 	  }
@@ -235,14 +237,19 @@ int main(int argc, char **argv)
       }    
       for(int nu = 0 ; nu < 4 ; nu++)
 	for(int c2 = 0 ; c2 < 3 ; c2++){
-	  PLEGMA_Vector<float> vectorAux1,vectorAux2;
-	  vectorAux1.absorb(propUP, nu, c2);
-	  vectorAux2.gaussianSmearing(vectorAux1, smearedGauge, nsmearGauss, alphaGauss);
-	  propUP.absorb(vectorAux2, nu, c2);
+	  PLEGMA_Vector<double> vectorAuxD1,vectorAuxD2;
+	  PLEGMA_Vector<float> vectorAuxF;
+	  vectorAuxF.absorb(propUP, nu, c2);
+	  vectorAuxD1.copy(vectorAuxF);
+	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  vectorAuxF.copy(vectorAuxD2);
+	  propUP.absorb(vectorAuxF, nu, c2);
 
-	  vectorAux1.absorb(propDN, nu, c2);
-	  vectorAux2.gaussianSmearing(vectorAux1, smearedGauge, nsmearGauss, alphaGauss);
-	  propDN.absorb(vectorAux2, nu, c2);
+	  vectorAuxF.absorb(propDN, nu, c2);
+	  vectorAuxD1.copy(vectorAuxF);
+	  vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss);
+	  vectorAuxF.copy(vectorAuxD2);
+	  propDN.absorb(vectorAuxF, nu, c2);
 	}
   
       propUP.rotateToPhysicalBase_device(+1);
@@ -250,11 +257,11 @@ int main(int argc, char **argv)
       propUP.applyBoundaries_device(sourcePositions[isource][3]);
       propDN.applyBoundaries_device(sourcePositions[isource][3]);
   
-      PLEGMA_Correlator<float> corr(corr_space,maxQsq);
-      corr.contractMesons(propUP, propDN, sourcePositions[isource]);
+      PLEGMA_Correlator<float> corr(corr_space, sourcePositions[isource], maxQsq);
+      corr.contractMesons(propUP, propDN);
       corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
 
-      corr.contractBaryons(propUP, propDN, sourcePositions[isource]);
+      corr.contractBaryons(propUP, propDN);
       corr.writeFile((twop_filename + "_" + smearString + get_file_format_suffix(corr_file_format)).c_str(), corr_file_format);
     }  
   }

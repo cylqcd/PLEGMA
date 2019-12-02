@@ -20,7 +20,7 @@ namespace plegma {
     std::shared_ptr<Float> h_elem; // memory to hold the transformed data
     int sizeN; // size of the elements array include real,imag
     int dims; // the dimensionality of the transformation either 3 or 4
-    int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[3] : 1; 
+    int dimT; // if dims = 3, dimT = (dims ==3) ? HGC_localL[DIM_T] : 1; 
     bool accum;
     std::string field_name;
     std::vector<int> site_shape;
@@ -53,16 +53,18 @@ namespace plegma {
        @params int Q2_max: Up to which momentum square we want to do the transformation
        @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
        @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
+       @params bool dimT = HGC_localL[DIM_T]: Size of the time dimension in case we want to transform only part of the vector
      **/
-    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false); 
+    PLEGMA_FT(int Q2_max, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
     /**
        @brief Constructor of the FT class with specific momentum vector
        @params std::vector<int> mom: Momentum vector, either 3 or 4 components based on the choice of D3D4
        @params int D3D4 = 3: The dimensionality of the FT, either 3 or 4 dimensions are supported
        @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
+       @params bool dimT = HGC_localL[DIM_T]: Size of the time dimension in case we want to transform only part of the vector
      **/
     template<typename T>
-    PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false);
+    PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
     
     ~PLEGMA_FT() {};
     /**
@@ -87,7 +89,7 @@ namespace plegma {
      **/
     int Dims() const{return dims;}
     /**
-       @brief Accessor. If field is 3D field dimT=1. If is 4D and the transformation is on 3D then dimT=localL[3], if it is a 4D transformation dimT=1
+       @brief Accessor. If field is 3D field dimT=1. If is 4D and the transformation is on 3D then dimT=localL[DIM_T], if it is a 4D transformation dimT=1
      **/
     int DimT() const{return dimT;}
 
