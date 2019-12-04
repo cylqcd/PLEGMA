@@ -134,15 +134,18 @@ int main(int argc, char **argv)
     
     //do V3 reduction
     std::vector<int> mom={0,0,1};
-    //std::vector<GAMMAS> glist1={G1,G2,G3};
-    std::vector<GAMMAS> glist2={G4};
+    std::vector<GAMMAS> glist2={G1,G2,G3,G4};
+    std::vector<GAMMAS> glist1={G4};
     PLEGMA_ScattCorrelator<float> V3reduction(MOMENTUM_SPACE, mom);
     
-    //V3reduction.V3( vectorStoc, glist1, propUP);
+    V3reduction.V3( vectorStoc, glist1, propUP);
+    //V3reduction.writeHDF5(outfile_V3);
+    V3reduction.writeHDF5(outfile_V3+"_1");
+
     V3reduction.V3( vectorStoc, glist2, propUP);
+    V3reduction.writeHDF5(outfile_V3+"_2");
 
-    V3reduction.writeHDF5(outfile_V3);
-
+    
     
 
   }

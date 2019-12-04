@@ -3,9 +3,6 @@
 
 using namespace plegma;
 
-template<typename T>
-struct KernelArr {T* array; int size;};
-
 template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS>
 __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
 			   FloatP *S, Float2<FloatOut> *block2,

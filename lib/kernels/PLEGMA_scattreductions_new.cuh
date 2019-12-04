@@ -1,18 +1,19 @@
+using namespace plegma;
+template<typename T>
+struct KernelArr {T* array; int size;};
+
 #include <PLEGMA_scattreductionsV3.cu>
+#include <PLEGMA_scattreductionsV2.cu>
+#include <PLEGMA_scattreductionsV4.cu>
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP>
-void V2_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
-			int it, int time_step, int3 source, tex_mom_list moms,
-			KernelArr<GAMMAS> &listGammas, FloatV *Phi, FloatP *S1,  FloatP *S2){}
-
-template<VRED V, typename FloatOut, typename FloatV, typename FloatP>
+template<VRED V, typename FloatOut, typename FloatV, typename FloatP, typename ...Args>
 void V_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 			int it, int time_step, int3 source, tex_mom_list moms,
 			KernelArr<GAMMAS> &listGammas, FloatV *Phi, FloatP* S1, FloatP* S2=NULL){
   if((V==V_2) && (S2!=NULL))
-    V2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas, Phi, S1, S2 ); 
+    V2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas, Phi, S1, S2 );
   else if((V==V_3) && (S2==NULL))
     V3_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas, Phi, S1 ); 
   else if((V==V_4) && (S2!=NULL))
@@ -28,7 +29,7 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
   size_t size = Vout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
-  size_t volume = Vout.getVolSize()/HGC_localL[3];//N_moms
+  size_t N_moms = Vout.getVolSize()/HGC_localL[3];//N_moms
   int3 source = Vout.getSource3();
   tex_mom_list moms = Vout.getTexMomList();
   int site_size = Vout.getSiteSize();
@@ -36,7 +37,7 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   
   if(HGC_verbosity > 2){
     PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
-    PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, volume, nblockspert);
+    PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
   
   size_t alloc_size = size * nblockspert; // N_moms*site_size*n_blocks
@@ -75,14 +76,14 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
     
     error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
-      
-    for(size_t v = 0 ; v < volume*MIN(HGC_localL[3]-it, time_step); v++)
+
+    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*MIN(HGC_localL[3]-it, time_step); tslicexmom++){
       for(int f = 0 ; f < site_size; f++) {
-	result[(f*HGC_localL[3] + it)*volume+v] = 0;
+	result[(it*N_moms+tslicexmom)*site_size + f] = 0;
 	for(int j = 0 ; j < nblockspert; j++)
-	  result[(f*HGC_localL[3] + it)*volume+v] += h_partial_block[(v*site_size+f)*nblockspert+j];
+	  result[(it*N_moms+tslicexmom)*site_size + f] += h_partial_block[(tslicexmom*site_size+f)*nblockspert+j];
       }
-    
+    }
   }
   hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
   cudaFree(d_partial_block);
@@ -118,6 +119,8 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+
+  hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 }
 
 template<VRED V, typename FloatOut, typename FloatV, typename FloatP>
@@ -148,5 +151,8 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+
+ hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
+ 
 }
 

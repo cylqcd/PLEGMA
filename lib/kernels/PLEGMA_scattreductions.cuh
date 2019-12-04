@@ -158,9 +158,9 @@ static void V3_k_host( ProfileStruct &ps,
 
     for(size_t tslicexmom = 0 ; tslicexmom< N_moms*MIN(HGC_localL[3]-it, time_step); tslicexmom++){
       for(int f = 0 ; f < site_size; f++) {
-	result[(f*HGC_localL[3] + it)*N_moms+tslicexmom] = 0;
+	result[(it*N_moms+tslicexmom)*site_size + f] = 0;
 	for(int j = 0 ; j < nblockspert; j++)
-	  result[(f*HGC_localL[3] + it)*N_moms+tslicexmom] += h_partial_block[(tslicexmom*site_size+f)*nblockspert+j];
+	  result[(it*N_moms+tslicexmom)*site_size + f] += h_partial_block[(tslicexmom*site_size+f)*nblockspert+j];
       }
     }
     
@@ -199,5 +199,7 @@ static void V3_k(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+
+  hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 }
 

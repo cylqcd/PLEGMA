@@ -65,7 +65,7 @@ namespace plegma {
     std::string Shape_labels() const{ return shape_labels;}
 
     void V1( PLEGMA_Vector<Float> Phi, std::vector<Float> Gammas, PLEGMA_Propagator<Float> S);
-    void V2( PLEGMA_Vector<Float> Phi, std::vector<Float> Gammas, PLEGMA_Propagator<Float> S1,  PLEGMA_Propagator<Float> S2);
+    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S);
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
 

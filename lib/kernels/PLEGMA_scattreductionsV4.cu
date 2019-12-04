@@ -3,9 +3,6 @@
 
 using namespace plegma;
 
-template<typename T>
-struct KernelArr {T* array; int size;};
-
 //(s1[alfa1][beta][][]+s1[beta][alfa1][][])*(s2[alfa2][beta][][]+s2[beta][alfa2][][])+s1[alfa1][alfa2][][]*s2[beta][beta][][]+s1[beta][beta][][]*s2[alfa1][alfa2][][];
 
 template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS>
@@ -57,7 +54,7 @@ __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
 	    int beta1=gammasIdx[gId][nz_e][1];
 	    Float2<FloatOut> factor=g[gId][nz_e];
 	    #pragma unroll
-	    for( unsigned short alfa0=0; alfa1<N_SPINS; alfa0++){
+	    for( unsigned short alfa0=0; alfa0<N_SPINS; alfa0++){
 	      #pragma unroll
 	      for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
 		unsigned short a=plegma::eps[eps1_nz][0];
