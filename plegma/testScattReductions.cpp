@@ -17,12 +17,16 @@ int main(int argc, char **argv)
   std::string outfile_V="";
   std::string outfile_S="";
   std::string outfile_V3;
+  std::string outfile_V2;
+  std::string outfile_V4;
   std::string path_V="";
   std::string path_P="";
   
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
   HGC_options->set("outProp", "Path for saving the propagator used", verbosity, outfile_S);
   HGC_options->set("outV3", "Path for saving the result of V3_reduction", verbosity, outfile_V3);
+  HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
+  HGC_options->set("outV4", "Path for saving the result of V3_reduction", verbosity, outfile_V4);
   HGC_options->set("loadVector", "Path for loading V", verbosity, path_V);
   HGC_options->set("loadProp", "Path for loading P", verbosity, path_P);
 
@@ -132,25 +136,66 @@ int main(int argc, char **argv)
       vectorStoc.load();
     }
     
-    //do V3 reduction
+    //do reductions
     std::vector<int> mom={0,0,1};
-    std::vector<GAMMAS> glist2={G1,G2,G3,G4};
-    std::vector<GAMMAS> glist1={G4};
-    PLEGMA_ScattCorrelator<float> V3reduction(MOMENTUM_SPACE, mom);
+    int Qmax=1;
+    //std::vector<GAMMAS> glist2={G1,G2,G3,G4};
+    //std::vector<GAMMAS> glist1={G4,G5};
+    std::vector<GAMMAS> glist={G4};
+    PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
+      reductions.V2( vectorStoc, glist, propUP, propUP);
+      reductions.writeHDF5(outfile_V2);
+      reductions.V3( vectorStoc, glist, propUP);
+      reductions.writeHDF5(outfile_V3);
+      reductions.V4( vectorStoc, glist, propUP, propUP);
+      reductions.writeHDF5(outfile_V4);
+    //PLEGMA_ScattCorrelator<float> reductionV2(MOMENTUM_SPACE, mom);
+    //reductionV2.V2( vectorStoc, glist, propUP, propUP);
+    //reductionV2.writeHDF5(outfile_V2);
     
-    V3reduction.V3( vectorStoc, glist1, propUP);
-    //V3reduction.writeHDF5(outfile_V3);
-    V3reduction.writeHDF5(outfile_V3+"_1");
-
-    V3reduction.V3( vectorStoc, glist2, propUP);
-    V3reduction.writeHDF5(outfile_V3+"_2");
-
-    
-    
-
+    /*{
+      PLEGMA_ScattCorrelator<float> reductionV2(MOMENTUM_SPACE, mom);
+      reductionV2.V2( vectorStoc, glist1, propUP, propUP);
+      reductionV2.writeHDF5(outfile_V2+"_1mom_gl1_c0");
+      reductionV2.V2( vectorStoc, glist2, propUP, propUP);
+      reductionV2.writeHDF5(outfile_V2+"_1mom_gl2_c0");
+    }
+    {
+      PLEGMA_ScattCorrelator<float> reductionV3(MOMENTUM_SPACE, mom);
+      reductionV3.V3( vectorStoc, glist1, propUP);
+      reductionV3.writeHDF5(outfile_V3+"_1mom_gl1_c0");
+      reductionV3.V3( vectorStoc, glist2, propUP);
+      reductionV3.writeHDF5(outfile_V3+"_1mom_gl2_c0");   
+    }
+    {
+      PLEGMA_ScattCorrelator<float> reductionV4(MOMENTUM_SPACE, mom);
+      reductionV4.V4( vectorStoc, glist1, propUP ,propUP);
+      reductionV4.writeHDF5(outfile_V4+"_1mom_gl1_c0");
+      reductionV4.V4( vectorStoc, glist2, propUP,propUP);
+      reductionV4.writeHDF5(outfile_V4+"_1mom_gl2_c0");   
+    }
+    {
+      PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
+      reductions.V2( vectorStoc, glist1, propUP, propUP);
+      reductions.writeHDF5(outfile_V2+"_1mom_gl1_c1");
+      reductions.V3( vectorStoc, glist1, propUP);
+      reductions.writeHDF5(outfile_V3+"_1mom_gl1_c1");
+      reductions.V4( vectorStoc, glist1, propUP, propUP);
+      reductions.writeHDF5(outfile_V4+"_1mom_gl1_c1");
+    }
+    {
+      PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, Qmax);
+      reductions.V2( vectorStoc, glist1, propUP, propUP);
+      reductions.writeHDF5(outfile_V2+"_Qmax_gl1_c1");
+      reductions.V3( vectorStoc, glist1, propUP);
+      reductions.writeHDF5(outfile_V3+"_Qmax_gl1_c1");
+      reductions.V4( vectorStoc, glist1, propUP, propUP);
+      reductions.writeHDF5(outfile_V4+"_Qmax_gl1_c1");
+    }
+    */
   }
   finalize();
-
+  
   return 0;
 }
 
