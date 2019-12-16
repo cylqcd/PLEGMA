@@ -1,8 +1,7 @@
 #include <PLEGMA_ScattCorrelator.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
-//#include <PLEGMA_scattreductions.cuh>
-#include <PLEGMA_scattreductions_new.cuh>
+#include <PLEGMA_scattreductions.cuh>
 
 using namespace plegma;
 
@@ -39,7 +38,6 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
   this->setSource(source);
   
   V_reductions<V,Float,Float,Float>( *this, Phi, Gammas, S);
-  //V3_k( *this, Phi, Gammas, S);
   
 }
 
