@@ -5,6 +5,7 @@
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
 #include <PLEGMA_seqSourceNucleon.cuh> 
+#include <PLEGMA_seqSourceMeson.cuh> 
 #include <PLEGMA_covD.cuh>
 using namespace plegma;
 using namespace quda;
@@ -341,6 +342,15 @@ namespace plegma{
     int mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     return absPsi;
+  }
+
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::seqSourceMeson(PLEGMA_Propagator3D<Float> &prop, GAMMAS gId, int nu, int c2){
+    this->activeTimeSlice = prop.activeTimeSlice;
+    this->zero_device();
+
+    auto texProp = toTexture<propTex>(prop);
+    contractMesonSeqSource<Float,Float>(toField2<vector2>(*this), *texProp, gId, nu, c2);
   }
 
   template<typename Float>

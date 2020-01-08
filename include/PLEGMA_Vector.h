@@ -128,6 +128,7 @@ namespace plegma {
     
     std::vector<Float> rms(std::vector<int> listR2, const site& sourceposition) const;
 
+    void seqSourceMeson(PLEGMA_Propagator3D<Float> &prop, GAMMAS gId, int nu, int c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2);
   };
