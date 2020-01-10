@@ -12,8 +12,8 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
-  int site_size = N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS;
-
+  int site_size = N_SPINS*N_SPINS*N_SPINS*N_COLS;
+  
   if (vid==0) {  printf("check0\n");}
 
   register Float2<FloatOut> accum[N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS];
@@ -42,8 +42,6 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
     g = (Float2<float> (*)[4]) plegma::gamma;
     gammasIdx = gammaInd;
 
-    //if (vid==0) {printf("check1\n");}
-
     #pragma unroll 
     for( unsigned short alfa1=0; alfa1<N_SPINS; alfa1++){
       #pragma unroll 
@@ -53,14 +51,12 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
           #pragma unroll 
 	  for(unsigned short n_g=0; n_g<N_GAMMAS; n_g++ ){
 	    int gId=listGammas.array[n_g];
-	    //if (vid==0) {printf("check2 - gId=%d\n", gId);}
 
             #pragma unroll 
 	    for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
 	      int beta0=gammasIdx[gId][nz_e][0];
 	      int beta1=gammasIdx[gId][nz_e][1];
 	      Float2<FloatOut> factor=g[gId][nz_e];
-	      //if (vid==0) {printf("check3 - n_ze=%d, a0-a1-f %d-%d-%f+i%f\n", nz_e, beta0, beta1, factor.x, factor.y);}
 
 	      #pragma unroll
 	      for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
@@ -88,8 +84,11 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z}; 
-  fourier_transform_3D(block2, accum, shared_cache, site_size, sid3D, source_pos, moms, 0, -1, time_step, tid);
- 
+
+  #pragma unroll
+  for(int i_g = 0 ; i_g < N_GAMMAS; i_g++)
+    fourier_transform_3D(block2+i_g*site_size*grid3D, accum+i_g*site_size, shared_cache, site_size, sid3D, source_pos, moms, (N_GAMMAS-1)*site_size, -1, time_step, tid); //+
+
 }
 
 

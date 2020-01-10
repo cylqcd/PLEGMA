@@ -3,8 +3,6 @@
 
 using namespace plegma;
 
-//(s1[alfa1][beta][][]+s1[beta][alfa1][][])*(s2[alfa2][beta][][]+s2[beta][alfa2][][])+s1[alfa1][alfa2][][]*s2[beta][beta][][]+s1[beta][beta][][]*s2[alfa1][alfa2][][];
-
 template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS>
 __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
 			   FloatP *S1, FloatP *S2, Float2<FloatOut> *block2,
@@ -14,7 +12,7 @@ __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
-  int site_size = N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS;
+  int site_size = N_SPINS*N_SPINS*N_SPINS*N_COLS;
 
   register Float2<FloatOut> accum[N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS];
   for(int i = 0 ; i <N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS  ; i++){
@@ -80,9 +78,10 @@ __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
 
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
-  int source_pos[3] = {source.x, source.y, source.z}; 
-  fourier_transform_3D(block2, accum, shared_cache, site_size, sid3D, source_pos, moms, 0, -1, time_step, tid);
-
+  int source_pos[3] = {source.x, source.y, source.z};
+  #pragma unroll
+  for(int i_g = 0 ; i_g < N_GAMMAS; i_g++)
+    fourier_transform_3D(block2+i_g*site_size*grid3D, accum+i_g*site_size, shared_cache, site_size, sid3D, source_pos, moms, (N_GAMMAS-1)*site_size, -1, time_step, tid);
 }
 
 

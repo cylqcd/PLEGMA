@@ -62,8 +62,8 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   checkCudaError();
   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
   checkCudaError();
-  PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
-  PLEGMA_printf("OK till now\n");
+  if(HGC_verbosity > 2)
+    PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
 
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
     
@@ -101,7 +101,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   if(Vout.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
 
-  int shared_size = site_size*sizeof(Float2<FloatOut>);
+  int shared_size = (site_size / Gammas.size())*sizeof(Float2<FloatOut>); //+
   PLEGMA_printf("site_size= %d\n", site_size);
   
   Float2<FloatOut> *result = NULL;
@@ -133,7 +133,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   if(Vout.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
 
-  int shared_size = site_size*sizeof(Float2<FloatOut>);
+  int shared_size = (site_size / Gammas.size())*sizeof(Float2<FloatOut>); //+
   PLEGMA_printf("site_size= %d\n", site_size);
   
   Float2<FloatOut> *result = NULL;
