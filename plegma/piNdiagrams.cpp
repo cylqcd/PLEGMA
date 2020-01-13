@@ -16,20 +16,24 @@ int main(int argc, char **argv)
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   std::string outfile_V="";
-  std::string outfile_S="";
-  std::string outfile_V3;
-  std::string outfile_V2;
-  std::string outfile_V4;
-  std::string path_V="";
-  std::string path_P="";
+  std::string outfile_upS="";
+  std::string outfile_dnS="";
+  std::string outfile_SEQ="";
+//  std::string outfile_V3;
+//  std::string outfile_V2;
+//  std::string outfile_V4;
+//  std::string path_V="";
+//  std::string path_P="";
   
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
-  HGC_options->set("outProp", "Path for saving the propagator used", verbosity, outfile_S);
-  HGC_options->set("outV3", "Path for saving the result of V3_reduction", verbosity, outfile_V3);
-  HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
-  HGC_options->set("outV4", "Path for saving the result of V3_reduction", verbosity, outfile_V4);
-  HGC_options->set("loadVector", "Path for loading V", verbosity, path_V);
-  HGC_options->set("loadProp", "Path for loading P", verbosity, path_P);
+  HGC_options->set("outPropUP", "Path for saving the up propagator used", verbosity, outfile_upS);
+  HGC_options->set("outPropDN", "Path for saving the up propagator used", verbosity, outfile_dnS);
+  HGC_options->set("outPropSeq", "Path for saving the sequential propagator used", verbosity, outfile_SEQ);
+//  HGC_options->set("outV3", "Path for saving the result of V3_reduction", verbosity, outfile_V3);
+//  HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
+//  HGC_options->set("outV4", "Path for saving the result of V3_reduction", verbosity, outfile_V4);
+//  HGC_options->set("loadVector", "Path for loading V", verbosity, path_V);
+//  HGC_options->set("loadProp", "Path for loading P", verbosity, path_P);
 
   //=========================================================================================================//
   initializePLEGMA();
@@ -109,6 +113,21 @@ int main(int argc, char **argv)
         propUP.absorb(vectorAuxF, isc/3, isc%3);
       }
 
+      if(outfile_upS!="")
+        {
+          PLEGMA_printf("Save propagator for the up quark\n");
+          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
+          for(int isc = 0 ; isc < 12 ; isc++){
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
+
+            vectorAuxPrint.absorb(propUP,isc/3,isc%3);
+            vectorAuxPrint.unload();
+            vectorAuxPrint.writeLIME(outfile_upS+"_s"+spin+"_c"+col);
+          }
+        }
+
+
       // ensuring mu negative
       if(mu>0) {
         mu*=-1.;
@@ -139,6 +158,20 @@ int main(int argc, char **argv)
         propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
+
+      if(outfile_dnS!="")
+        {
+          PLEGMA_printf("Save propagator for the d quark\n");
+          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
+          for(int isc = 0 ; isc < 12 ; isc++){
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
+
+            vectorAuxPrint.absorb(propDN,isc/3,isc%3);
+            vectorAuxPrint.unload();
+            vectorAuxPrint.writeLIME(outfile_dnS+"_s"+spin+"_c"+col);
+          }
+        }
       // ensuring mu positive
       if(mu<0) {
         mu*=-1.;
@@ -164,6 +197,7 @@ int main(int argc, char **argv)
         propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
       }
 
+
       //Computing sequential propagators UD T_fii with insertion
       //gamma4 and momentum SinkMom
       for(int isc = 0 ; isc < 12 ; isc++){
@@ -181,6 +215,21 @@ int main(int argc, char **argv)
           vectorAuxF.copy(vectorAuxD);
           propUPDN.absorb(vectorAuxF, isc/3, isc%3);
       }
+
+      if(outfile_SEQ!="")
+        {
+          PLEGMA_printf("Save sequential propagator for the ud \n");
+          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
+          for(int isc = 0 ; isc < 12 ; isc++){
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
+
+            vectorAuxPrint.absorb(propUPDN,isc/3,isc%3);
+            vectorAuxPrint.unload();
+            vectorAuxPrint.writeLIME(outfile_SEQ+"_s"+spin+"_c"+col);
+          }
+        }
+
 
       PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
 
@@ -206,18 +255,25 @@ int main(int argc, char **argv)
 
     
       
-      //Compute Diagram B1 and B2 
       vectorStoc_source.apply_gamma5();
       std::vector<GAMMAS> glist_sink_nucleon={G4};
       std::vector<GAMMAS> glist_sink_meson={ONE};
       PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, sinkMom_Nucleon);
       PLEGMA_ScattCorrelator<float> reductionsV3(MOMENTUM_SPACE, sinkMom_Meson);
 
+
+      //Compute Diagram B1 and B2 
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
 
-      //Compute Diagram W1
-      
+      //Compute Diagram W1,W2
+      reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
+      reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+
+      //Compute Diagram W3,W4
+      reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
+      reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
+ 
      
     }
 
