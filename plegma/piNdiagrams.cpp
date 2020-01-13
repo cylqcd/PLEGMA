@@ -182,21 +182,21 @@ int main(int argc, char **argv)
       int sequential_time_source=sourcePositions[isource][3];
 
       //smearing the 3D propagators
-      PLEGMA_Propagator3D<float> propDN3D;
+      PLEGMA_Propagator3D<float> propDN3D;      
       for(int isc = 0 ; isc < 12 ; isc++){
-        PLEGMA_Vector<double> vectorAuxD;
-        PLEGMA_Vector<float> vectorAuxF;
-        vectorAuxF.absorb(propDN,isc/3, isc%3);
-        vectorAuxD.copy(vectorAuxF);
-        start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-        tmp_time += MPI_Wtime()-start_time;
-        vectorAuxD.mulMomentumPhases(sourceMom_Meson,-1);
-        vectorAuxD.apply_gamma(G4);
-        vectorAuxF.copy(vectorAuxD);
-        propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
+          PLEGMA_Vector<double> vectorAuxD;
+          PLEGMA_Vector<float> vectorAuxF;
+          vectorAuxF.absorb(propDN,isc/3, isc%3);
+          vectorAuxD.copy(vectorAuxF);
+          start_time = MPI_Wtime();
+          vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+          tmp_time += MPI_Wtime()-start_time;
+          vectorAuxD.apply_gamma(G4);
+          vectorAuxF.copy(vectorAuxD);
+          propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
       }
 
+      propDN3D.mulMomentumPhases(sourceMom_Meson,-1);
 
       //Computing sequential propagators UD T_fii with insertion
       //gamma4 and momentum SinkMom
@@ -253,8 +253,7 @@ int main(int argc, char **argv)
       vectorStoc_source.stochastic_Z(nroots);
       solver.solve(vectorStoc_propag, vectorStoc_source);
 
-    
-      
+          
       vectorStoc_source.apply_gamma5();
       std::vector<GAMMAS> glist_sink_nucleon={G4};
       std::vector<GAMMAS> glist_sink_meson={ONE};
@@ -273,8 +272,45 @@ int main(int argc, char **argv)
       //Compute Diagram W3,W4
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
- 
-     
+
+      //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
+      std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
+      PLEGMA_Vector<float> stochastic_source_spin_diluted; 
+
+      
+      vectorStoc_source.randInit(4321);
+      //Spin 0
+      stochastic_source_spin_diluted.dilutespin(vectorStoc_source, 0);
+      stochastic_source_spin_diluted.writeLIME(outfile_V+"source"+"0");
+
+      solver.solve(stochastic_propagator[0], stochastic_source_spin_diluted );
+      stochastic_propagator[0].writeLIME(outfile_V+"propagator"+"0");
+      
+      //Spin 1
+      vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 1, 0);
+      vectorStoc_source.writeLIME(outfile_V+"source"+"1");
+
+      solver.solve(stochastic_propagator[1], vectorStoc_source );
+      stochastic_propagator[1].writeLIME(outfile_V+"propagator"+"1");
+
+      //Spin 2 
+      stochastic_source_spin_diluted.dilutespindisplace(vectorStoc_source, 2, 1);
+      vectorStoc_source.writeLIME(outfile_V+"source"+"2");
+
+      solver.solve(stochastic_propagator[2], vectorStoc_source );
+      stochastic_propagator[2].writeLIME(outfile_V+"propagator"+"2");
+
+      //Spin 3       
+      vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 3, 2);
+      vectorStoc_source.writeLIME(outfile_V+"source"+"3");
+
+      solver.solve(stochastic_propagator[3], vectorStoc_source );
+      stochastic_propagator[3].writeLIME(outfile_V+"propagator"+"3");
+
+      //Diagram Z1
+      //
+
+
     }
 
   }
