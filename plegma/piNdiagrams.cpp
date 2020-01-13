@@ -307,9 +307,40 @@ int main(int argc, char **argv)
       solver.solve(stochastic_propagator[3], vectorStoc_source );
       stochastic_propagator[3].writeLIME(outfile_V+"propagator"+"3");
 
-      //Diagram Z1
-      //
+      //Defining ScattCorrelator for spin dilution
 
+      PLEGMA_ScattCorrelator<float> reductionsV3_diluted[4] = {
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson)
+      };
+
+      PLEGMA_ScattCorrelator<float> reductionsV2_diluted[4] = {
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon)
+      };
+
+      PLEGMA_ScattCorrelator<float> reductionsV4_diluted[4] = {
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson)
+      };
+
+
+      //Diagram Z1,Z2
+      for (int i=0; i< 4; ++i){
+        reductionsV3_diluted[i].V3( stochastic_propagator[i], glist_sink_meson, propUP);
+        reductionsV4_diluted[i].V4( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
+      }
+
+      //Diagram Z3,Z4
+      for (int i=0; i< 4; ++i){
+        reductionsV2_diluted[i].V2( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
+      }
 
     }
 
