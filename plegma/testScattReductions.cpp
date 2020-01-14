@@ -19,6 +19,8 @@ int main(int argc, char **argv)
   std::string outfile_V3;
   std::string outfile_V2;
   std::string outfile_V4;
+  std::string outfile_T1;
+  std::string outfile_T2;
   std::string path_V="";
   std::string path_P="";
   
@@ -27,6 +29,8 @@ int main(int argc, char **argv)
   HGC_options->set("outV3", "Path for saving the result of V3_reduction", verbosity, outfile_V3);
   HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
   HGC_options->set("outV4", "Path for saving the result of V3_reduction", verbosity, outfile_V4);
+  HGC_options->set("outT1", "Path for saving the result of T1_reduction", verbosity, outfile_T1);
+  HGC_options->set("outt2", "Path for saving the result of T2_reduction", verbosity, outfile_T2);
   HGC_options->set("loadVector", "Path for loading V", verbosity, path_V);
   HGC_options->set("loadProp", "Path for loading P", verbosity, path_P);
 
@@ -142,6 +146,10 @@ int main(int argc, char **argv)
     //std::vector<GAMMAS> glist2={G1,G2,G3,G4};
     //std::vector<GAMMAS> glist1={G4,G5};
     std::vector<GAMMAS> glist={G1,G2,G3,G4};
+    // // std::vector<GAMMAS> glist={G4};
+    // // std::vector<GAMMAS> glist_in={G4};
+    // // std::vector<GAMMAS> glist_fi={G4};
+
     PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
     double t0 = MPI_Wtime();
 
@@ -164,6 +172,13 @@ int main(int argc, char **argv)
 
     reductions.writeHDF5(outfile_V4);
     PLEGMA_printf("Time elapsed for V4 kernel = %g s\n",(MPI_Wtime()-t0)/10);
+
+    // // reductions.writeHDF5(outfile_V4);
+    // // reductions.T1(glist_in, glist_fi, propUP, propUP, propUP);
+    // // reductions.writeHDF5(outfile_T1);
+    // // reductions.T2(glist_in, glist_fi, propUP, propUP, propUP);
+    // // reductions.writeHDF5(outfile_T2);
+
     //PLEGMA_ScattCorrelator<float> reductionV2(MOMENTUM_SPACE, mom);
     //reductionV2.V2( vectorStoc, glist, propUP, propUP);
     //reductionV2.writeHDF5(outfile_V2);

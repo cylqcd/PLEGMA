@@ -93,3 +93,6 @@ target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})
 
 cuda_add_executable(testScattReductions testScattReductions.cpp)
 target_link_libraries(testScattReductions ${PLEGMA_LIBS})
+
+cuda_add_executable(piNdiagrams piNdiagrams.cpp)
+target_link_libraries(piNdiagrams ${PLEGMA_LIBS})

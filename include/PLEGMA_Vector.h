@@ -72,6 +72,14 @@ namespace plegma {
     void dilutecolor(PLEGMA_Vector<Float> &vecIn, int color);
     
     void dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color);
+
+    /**
+       @brief Moves a spincomponent to another one, used for creating sources in spin dilution
+       @param PLEGMA_Vector<Float> vecIn input vector (assumed to be non-zero only at one spin component
+       @param int spin1 target spin index
+       @param int spin2 original spin index
+     **/
+    void dilutespindisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
     
     void pointSource(int *sourceposition, 
         int spin, int color, ALLOCATION_FLAG alloc_flag);

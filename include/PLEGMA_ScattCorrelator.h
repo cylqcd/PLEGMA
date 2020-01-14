@@ -3,7 +3,7 @@
 
 namespace plegma {
   enum VRED {V_2=2,V_3=3,V_4=4};
-  
+  enum TRED {T_1=1,T_2=2};  
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Propagator;
@@ -34,11 +34,11 @@ namespace plegma {
     //   CORR_SPACE corr_space;
     //   int Q2_max;
     //   std::vector<int> fixMomVec ;
-    //   size_t vol_size; COMMENT: number_of_momenta*time_ext
+    //   size_t vol_size;
     //   std::vector<int> shape;
 
-    //   // Allocated 
-    //   int site_size; COMMENT:site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
+    //   // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
+    //   int site_size;
     //   std::array<int,4> source_position;
 
     //   // Writing informations
@@ -53,11 +53,11 @@ namespace plegma {
   public:
     // these constructors does NOT ALLOCATE the memory PLEGMA_ScattCorrelator here, because
     // the dimension is not provided. It will be allocated when used.
-    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, int Q2_max):
-      PLEGMA_Correlator<Float>(CorrSpace,Q2_max) { ; }
-
-    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec):
-      PLEGMA_Correlator<Float>(CorrSpace,fixMomVec) { ; }
+    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, int Q2_max);
+//      PLEGMA_Correlator<Float>(CorrSpace,Q2_max) { ; }
+//
+    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec);
+//      PLEGMA_Correlator<Float>(CorrSpace,fixMomVec) { ; }
 
     ~PLEGMA_ScattCorrelator(){;}
 
@@ -68,9 +68,12 @@ namespace plegma {
     void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S);
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
+    void T1( std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
+    void T2( std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
 
     //manipulation
     template <int s_free>
     void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
+
   };
 }
