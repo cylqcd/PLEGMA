@@ -47,8 +47,8 @@ namespace plegma {
     //   std::string description;
     //////////////
     
-    std::string shape_labels;    //     index_struct = "sssc" (because spin first)
-    int shape_size;               //     prod(shape)    = 4*4*4*3
+    std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
+    size_t shape_size;               //     prod(shape)    = n_gammas*4*4*4*3
     
   public:
     // these constructors does NOT ALLOCATE the memory PLEGMA_ScattCorrelator here, because
@@ -64,10 +64,13 @@ namespace plegma {
     //functions that return values of protected variables
     std::string Shape_labels() const{ return shape_labels;}
 
-    void V1( PLEGMA_Vector<Float> Phi, std::vector<Float> Gammas, PLEGMA_Propagator<Float> S);
+    //reductions
     void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S);
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
 
+    //manipulation
+    template <int s_free>
+    void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
   };
 }
