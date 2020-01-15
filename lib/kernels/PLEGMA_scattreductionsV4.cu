@@ -12,7 +12,7 @@ __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
-  int site_size = N_SPINS*N_SPINS*N_SPINS*N_COLS;
+  //int site_size = N_SPINS*N_SPINS*N_SPINS*N_COLS;
 
   register Float2<FloatOut> accum[N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS];
   for(int i = 0 ; i <N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS  ; i++){
@@ -79,9 +79,14 @@ __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z};
+
+  const unsigned int OUT_DOF= N_GAMMAS*N_SPINS*N_SPINS;
+  const unsigned int IN_DOF= N_SPINS*N_COLS;
+
   #pragma unroll
-  for(int i_g = 0 ; i_g < N_GAMMAS; i_g++)
-    fourier_transform_3D(block2+i_g*site_size*grid3D, accum+i_g*site_size, shared_cache, site_size, sid3D, source_pos, moms, (N_GAMMAS-1)*site_size, -1, time_step, tid);
+  for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+    fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
+
 }
 
 

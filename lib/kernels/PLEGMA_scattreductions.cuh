@@ -103,7 +103,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   if(Vout.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
 
-  int shared_size = (site_size / Gammas.size())*sizeof(Float2<FloatOut>); //+
+  int shared_size = N_SPINS*N_COLS*sizeof(Float2<FloatOut>); //+
   PLEGMA_printf("site_size= %d\n", site_size);
   
   Float2<FloatOut> *result = NULL;
@@ -135,7 +135,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   if(Vout.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
 
-  int shared_size = (site_size / Gammas.size())*sizeof(Float2<FloatOut>); //+
+  int shared_size = N_SPINS*N_COLS*sizeof(Float2<FloatOut>); //+
   PLEGMA_printf("site_size= %d\n", site_size);
   
   Float2<FloatOut> *result = NULL;
