@@ -236,3 +236,11 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float
 
 template class PLEGMA_ScattCorrelator<float>;
 template class PLEGMA_ScattCorrelator<double>;
+template void PLEGMA_ScattCorrelator<float>::absorb_fromV24<0>( PLEGMA_ScattCorrelator<float> &, int, int);
+template void PLEGMA_ScattCorrelator<float>::absorb_fromV24<1>( PLEGMA_ScattCorrelator<float> &, int, int);
+template void PLEGMA_ScattCorrelator<float>::absorb_fromV24<2>( PLEGMA_ScattCorrelator<float> &, int, int);
+template void PLEGMA_ScattCorrelator<double>::absorb_fromV24<0>( PLEGMA_ScattCorrelator<double> &, int, int);
+template void PLEGMA_ScattCorrelator<double>::absorb_fromV24<1>( PLEGMA_ScattCorrelator<double> &, int, int);
+template void PLEGMA_ScattCorrelator<double>::absorb_fromV24<2>( PLEGMA_ScattCorrelator<double> &, int, int);
+
+
