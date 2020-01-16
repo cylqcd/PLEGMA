@@ -199,6 +199,9 @@ int main(int argc, char **argv)
       ft_gen[i]->zero();
     }
   }
+  //Write the eigenvectors sorted wrt the real part of the eigenmodes and read it again
+  eigSol->writeEigenVectors(fnameEigenVecsPrefix);
+  eigSol->readEigenVectors(fnameEigenVecsPrefix);
 #endif
 
   
@@ -232,7 +235,7 @@ int main(int argc, char **argv)
 	  double t1=MPI_Wtime();
 #if defined(HAVE_EIGENSOLVER)
 	  if(lowModesRecon)
-	    eigSol->projectVector(phi,t*NdumpStepEv); // In place application of deflation projector operator on solution vector
+	    eigSol->projectVector(phi,(t+1)*NdumpStepEv); // In place application of deflation projector operator on solution vector
 #endif
 	  phi_r.copy(phi);
 	  qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1,gaugeStout,ft_std);

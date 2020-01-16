@@ -433,7 +433,8 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
    PLEGMA_Vector<double> tmp(HOST);
    for(int i = 0 ; i < p.NeV; i++){
-     double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
+     long int iorder = std::get<3>(this->getEigVals()[i]);
+     double *eigVec = h_eigVecs + iorder * size_per_Vec*2;
      memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
      tmp.writeFile(filenamePrefix + "_eV" + std::to_string(i), LIME_FORMAT);
      if(verbose) PLEGMA_printf("Eigenvector %d writen\n", i);
