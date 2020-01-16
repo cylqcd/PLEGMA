@@ -247,8 +247,8 @@ int main(int argc, char **argv)
 
       double t1=MPI_Wtime();
       if((isrc+1)%NdumpStep == 0){
-	dumpLoops(ft_std, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_NeV_"+std::to_string(t*NdumpStepEv), confID, corr_file_format);
-	dumpLoops(ft_gen, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_NeV_"+std::to_string(t*NdumpStepEv), confID, corr_file_format);
+	dumpLoops(ft_std, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_NeV_"+std::to_string((t+1)*NdumpStepEv), confID, corr_file_format);
+	dumpLoops(ft_gen, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_NeV_"+std::to_string((t+1)*NdumpStepEv), confID, corr_file_format);
       }
       double t2=MPI_Wtime();
       PLEGMA_printf("FT and dump data time is %f\n",t2-t1);
