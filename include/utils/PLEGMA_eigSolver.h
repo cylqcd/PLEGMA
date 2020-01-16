@@ -106,7 +106,7 @@ namespace plegma{
 	      bool isWriteEigenVectors = false, std::string filenamePrefix = "", bool verbose=false);
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
-    void projectVector(PLEGMA_Vector<double> &vec);
+    void projectVector(PLEGMA_Vector<double> &vec, int nvecs=0);
     void dumpEvalsVdagG5V(std::string filename);
     double* getEigVecs() const{return h_eigVecs;}
     std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
