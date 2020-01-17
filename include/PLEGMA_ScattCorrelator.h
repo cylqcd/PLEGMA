@@ -49,7 +49,9 @@ namespace plegma {
     
     std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
     size_t shape_size;               //     prod(shape)    = n_gammas*4*4*4*3
-    
+
+    void absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta);
+
   public:
     // these constructors does NOT ALLOCATE the memory PLEGMA_ScattCorrelator here, because
     // the dimension is not provided. It will be allocated when used.
@@ -76,4 +78,46 @@ namespace plegma {
     void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
 
   };
+
 }
+
+
+
+//template functions must be defined here
+template<typename Float>
+template <int s_free>
+void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2,
+						    int alfa, int beta){
+  this->absorb_fromV24_checks(srcV2, alfa, beta);
+  if( s_free<0 || s_free>=3 )
+    PLEGMA_error("s_free %d out of range (0, 1 or 2)\n",s_free);
+    
+  int n_gammas = srcV2.shape[0];
+
+  const unsigned short N_S1C=N_SPINS*N_COLS;
+  const unsigned short N_S2C=N_SPINS*N_SPINS*N_COLS;
+  const unsigned short N_S3C=N_SPINS*N_SPINS*N_SPINS*N_COLS;
+  const unsigned short N_GS3C=n_gammas*N_SPINS*N_SPINS*N_SPINS*N_COLS;
+  const unsigned short N_GS1C=n_gammas*N_SPINS*N_COLS;
+    
+  size_t VOL_SIZE = srcV2.getVolSize();
+  Float* dest = this->corr;
+  Float* src = srcV2.corr;
+  for(int v=0; v < VOL_SIZE; v++)
+    for(int g=0; g < n_gammas; g++)
+      #pragma unroll
+      for(int s=0; s < N_SPINS; s++)
+        #pragma unroll
+	for(int c=0; c < N_COLS; c++)
+	  if( s_free == 0){
+	    dest[v*N_GS1C+g*N_S1C+s*N_COLS+c] =
+	      src[v*N_GS3C+g*N_S3C+s*N_S2C+alfa*N_S1C+beta*N_COLS+c];
+	  } else if ( s_free == 1 ){
+	    dest[v*N_GS1C+g*N_S1C+s*N_COLS+c] =
+	      src[v*N_GS3C+g*N_S3C+alfa*N_S2C+s*N_S1C+beta*N_COLS+c];
+	  } else {
+	    dest[v*N_GS1C+g*N_S1C+s*N_COLS+c] =
+	      src[v*N_GS3C+g*N_S3C+alfa*N_S2C+beta*N_S1C+s*N_COLS+c];
+	  }
+}
+

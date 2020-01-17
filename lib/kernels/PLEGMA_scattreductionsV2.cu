@@ -94,31 +94,3 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
 
 }
 
-
-template<typename FloatOut, typename FloatV, typename FloatP>
-void V2_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
-			int it, int time_step, int3 source, tex_mom_list moms,
-			KernelArr<GAMMAS> &listGammas, FloatV *Phi, FloatP *S1, FloatP *S2){
-  PLEGMA_printf("Executing V2_kernel_wrapper\n");
-  dim3 grid = ps.tp.grid;
-  grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
-
-  switch(listGammas.size){
-  case(1): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)1><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  case(2): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  case(3): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)3><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  case(4): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)4><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(5): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)5><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(6): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)6><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(7): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)7><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(8): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)8><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(9): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)9><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(10): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)10><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(11): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)11><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(12): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)12><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(13): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)13><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(14): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)14><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(15): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)15><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  // case(16): V2_kernel<FloatOut,FloatV,FloatP,(unsigned int)16><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi, listGammas, S1, S2, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-  }
-}

@@ -2,27 +2,9 @@ using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-#include <PLEGMA_scattreductionsV3.cu>
-#include <PLEGMA_scattreductionsV2.cu>
-#include <PLEGMA_scattreductionsV4.cu>
 #include <PLEGMA_scattreductionsT1.cu>
 #include <PLEGMA_scattreductionsT2.cu>
-
-using namespace plegma;
-
-template<VRED V, typename FloatOut, typename FloatV, typename FloatP, typename ...Args>
-void V_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
-			int it, int time_step, int3 source, tex_mom_list moms,
-			KernelArr<GAMMAS> &listGammas, FloatV *Phi, FloatP* S1, FloatP* S2=NULL){
-  if((V==V_2) && (S2!=NULL))
-    V2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas, Phi, S1, S2 );
-  else if((V==V_3) && (S2==NULL))
-    V3_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas, Phi, S1 ); 
-  else if((V==V_4) && (S2!=NULL))
-    V4_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas, Phi, S1, S2 );
-  else
-    PLEGMA_error("Unrecognized V reduction type\n");
-}
+#include <PLEGMA_scattreductionsWraps.cu>
 
 template<VRED V,typename FloatOut, typename FloatV, typename ... Args>
 static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Vout,
@@ -162,12 +144,12 @@ template<TRED T, typename FloatOut, typename FloatP, typename ...Args>
 void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 			int it, int time_step, int3 source, tex_mom_list moms,
 			KernelArr<GAMMAS> &listGammas_i, KernelArr<GAMMAS> &listGammas_f, FloatP* S1, FloatP* S2, FloatP* S3){
-  if(T==T_1)
-    T1_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
-  else if(T==T_2)
-    T2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
-  else
-    PLEGMA_error("Unrecognized T reduction type\n");
+  // if(T==T_1)
+  //   T1_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
+  // else if(T==T_2)
+  //   T2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
+  // else
+  //   PLEGMA_error("Unrecognized T reduction type\n");
 }
 
 template<TRED T,typename FloatOut, typename ... Args>
