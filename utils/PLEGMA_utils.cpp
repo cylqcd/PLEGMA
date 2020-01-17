@@ -236,22 +236,23 @@ short int gammaInd_host[16][4][2] =
      {{0,3},{1,2},{2,1},{3,0}},
      {{0,2},{1,3},{2,0},{3,1}},
     };
-
 //vector matrix vector multiplication for piN scattering project
 //doing on the cpu
 void V_M_V( float * V1, float * V2, GAMMAS gamma, float *Dest){
    *(Dest+0)=0.;
    *(Dest+1)=0.;
-   for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+   for(int nz_e = 0 ; nz_e < 4 ; nz_e++){  
      int beta0=gammaInd_host[gamma][nz_e][0];
      int beta1=gammaInd_host[gamma][nz_e][1];
-     *(Dest+0)+= +V1[2*beta0+0]*gamma_host[gamma][nz_e][0]*V2[2*beta1+0]
-                 -V1[2*beta0+0]*gamma_host[gamma][nz_e][1]*V2[2*beta1+1]
-                 -V1[2*beta0+1]*gamma_host[gamma][nz_e][0]*V2[2*beta1+1]
-                 -V1[2*beta0+1]*gamma_host[gamma][nz_e][1]*V2[2*beta1+0];
-     *(Dest+1)+= -V1[2*beta0+1]*gamma_host[gamma][nz_e][1]*V2[2*beta1+1]
-                 +V1[2*beta0+1]*gamma_host[gamma][nz_e][0]*V2[2*beta1+0]
-                 +V1[2*beta0+0]*gamma_host[gamma][nz_e][1]*V2[2*beta1+0]
-                 +V1[2*beta0+0]*gamma_host[gamma][nz_e][0]*V2[2*beta1+1];
+     for (int nz_c = 0; nz_c < 3; nz_c++) {
+       *(Dest+0)+= +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   -V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0];
+       *(Dest+1)+= -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   +V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1];
+     }
    }
 }
