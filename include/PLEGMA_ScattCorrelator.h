@@ -78,7 +78,8 @@ namespace plegma {
     //manipulation
     template <int s_free>
     void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
-    void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
+    template <int s_fixed>
+    void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa);
 
 
   };
@@ -125,7 +126,7 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float
 	  }
 }
 
-template functions must be defined here
+//template functions must be defined here
 template<typename Float>
 template <int s_fixed>
 void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2, 
@@ -156,11 +157,11 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrel
           if( s_fixed == 0){
             dest[v*N_GS1C+g*N_S2C+s1*N_S1C+s2*N_COLS+c] =
               src[v*N_GS3C+g*N_S3C+s1*N_S2C+s2*N_S1C+alfa*N_COLS+c];
-          } else if ( s_free == 1 ){
+          } else if ( s_fixed == 1 ){
             dest[v*N_GS1C+g*N_S2C+s1*N_S1C+s2*N_COLS+c] =
               src[v*N_GS3C+g*N_S3C+s1*N_S2C+alfa*N_S1C+s2*N_COLS+c];
           } else {
-            dest[v*N_GS1C+g*N_S1C+s*N_COLS+c] =
+            dest[v*N_GS1C+g*N_S1C+s1*N_S1C+s2*N_COLS+c] =
               src[v*N_GS3C+g*N_S3C+alfa*N_S2C+s1*N_S1C+s2*N_COLS+c];
 
           }
