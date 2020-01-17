@@ -200,6 +200,42 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelato
   this->setSource( source );
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa){
+  if( this->corr_space==POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
+  if( srcV2.corr_space==POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
+
+  //check site_size
+  std::string expstr ("gsssc");
+  if( srcV2.shape.size() != 5 || srcV2.Shape_labels().compare(expstr)!=0 )
+    PLEGMA_error("The shape of src object must be of the type gsssc\n");
+  if( srcV2.n_datasets()!=1 || srcV2.n_groups()!=1 )
+    PLEGMA_error("1 dataset and 1 group only\n");
+
+  //check index ranges
+  if( alfa<0 || alfa>=N_SPINS ) PLEGMA_error("%d out of range\n", alfa);
+
+
+  //allocate
+  int n_gammas = srcV2.shape[0];
+
+  if(srcV2.fixMomVec.empty()) this->Q2_max = srcV2.Q2_max;
+    else this->fixMomVec = srcV2.fixMomVec;
+
+  this->datasets={""};
+  this->groups={""};
+  this->shape={n_gammas,N_SPINS,N_COLS};
+  this->shape_labels="gssc";
+  this->initialize();
+
+
+  int source[4]={0,0,0,0};
+  this->setSource( source );
+}
+
+
 
 //V3_a^l*G_ab*V3_b^l
 //template<typename Float>
