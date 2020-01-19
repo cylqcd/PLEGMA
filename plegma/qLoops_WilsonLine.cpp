@@ -163,10 +163,10 @@ int main(int argc, char **argv)
   PLEGMA_Vector<double> phi;
   PLEGMA_Vector<double> phi_r;
     
-  PLEGMA_Vector<double> source(DEVICE);
-  if(!debugMode) source.randInit(rng_seed);
-  PLEGMA_Vector<double> *sourceDil = nullptr;
-  if(k_probing>0 || spinColorDil) sourceDil = new PLEGMA_Vector<double>(DEVICE);
+  // PLEGMA_Vector<double> source(DEVICE);
+  // if(!debugMode) source.randInit(rng_seed);
+  // PLEGMA_Vector<double> *sourceDil = nullptr;
+  // if(k_probing>0 || spinColorDil) sourceDil = new PLEGMA_Vector<double>(DEVICE);
 
 
   std::size_t foundPos = latfile.find("conf.");
@@ -214,13 +214,17 @@ int main(int argc, char **argv)
 
 
   int ndumps=(int)(Eig_NeV/NdumpStepEv);
-  PLEGMA_printf("Verranno effettuati %d dumps\n",ndumps);
-
-  PLEGMA_Hprobing *hprop = nullptr;
-  if(k_probing>0) hprop = new PLEGMA_Hprobing(k_probing);
 
   std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
   for(size_t t=0;t<ndumps;t++){
+   
+    PLEGMA_Hprobing *hprop = nullptr;
+    if(k_probing>0) hprop = new PLEGMA_Hprobing(k_probing);
+    PLEGMA_Vector<double> source(DEVICE);
+    if(!debugMode) source.randInit(rng_seed);
+    PLEGMA_Vector<double> *sourceDil = nullptr;
+    if(k_probing>0 || spinColorDil) sourceDil = new PLEGMA_Vector<double>(DEVICE);
+    
     for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
       if(debugMode) source.setUnit(indDof);
       else source.stochastic_Z(4); // hardcoded 4 roots of one
@@ -261,10 +265,12 @@ int main(int argc, char **argv)
       ft_std[i]->zero();
       ft_gen[i]->zero();
     }
+    if(k_probing>0 || spinColorDil) delete sourceDil;
+    if(k_probing>0) delete hprop;
   }
 
-  if(k_probing>0) delete hprop;
-  if(k_probing>0 || spinColorDil) delete sourceDil;
+  
+  
 #if defined(HAVE_EIGENSOLVER)
   if(lowModesRecon) delete eigSol;
 #endif
