@@ -163,15 +163,18 @@ void PLEGMA_ScattCorrelator<Float>::B1_diagramm(std::vector<GAMMAS> &Gammas_i1, 
       std::vector<int> mom={0,0,1};
       PLEGMA_ScattCorrelator<Float> temporaryV3(MOMENTUM_SPACE, mom );
       temporaryV3.absorb_fromV24<2>( srcV2, beta, alfa);
+      #pragma unroll
       for (int loop_gammai1=0 ; loop_gammai1 < n_gammas_i1 ; ++loop_gammai1 ){
+        #pragma unroll
         for ( int loop_gammaf1=0; loop_gammaf1 < n_gammas_f1 ; ++loop_gammaf1 ){
+          #pragma unroll
           for ( int loop_gammaf2=0; loop_gammaf2 < n_gammas_f2 ; ++loop_gammaf2 ){
             size_t VOL_SIZE = srcV3.getVolSize();
             Float* dest = this->corr;
             Float* src1 = srcV3.corr;
             Float* src2 = temporaryV3.corr;
             for(int v=0; v < VOL_SIZE; v++){
-              V_M_V( &src1[v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS],
+              V_M_V<Float>( &src1[v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS],
                      &src2[v*NG1NSPIN1NCOL1_V2R+loop_gammaf1*N_SPINS*N_COLS], 
                      Gammas_i1[loop_gammai1], 
                      &dest[v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta] );
@@ -181,7 +184,6 @@ void PLEGMA_ScattCorrelator<Float>::B1_diagramm(std::vector<GAMMAS> &Gammas_i1, 
       }
     }
   }
-
 }
 
 // template<typename Float>
