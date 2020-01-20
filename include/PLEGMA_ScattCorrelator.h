@@ -2,6 +2,7 @@
 #include <PLEGMA_Correlator.h>
 
 namespace plegma {
+
   enum VRED {V_2=2,V_3=3,V_4=4};
   enum TRED {T_1=1,T_2=2};  
   // forward declaration
@@ -60,6 +61,7 @@ namespace plegma {
 //
     PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec);
 //      PLEGMA_Correlator<Float>(CorrSpace,fixMomVec) { ; }
+    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<std::array<int,3>> fixMomsVec);
 
     ~PLEGMA_ScattCorrelator(){;}
 
@@ -105,19 +107,18 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float
   Float* src = srcV2.corr;
   for(int v=0; v < VOL_SIZE; v++)
     for(int g=0; g < n_gammas; g++)
-      #pragma unroll
       for(int s=0; s < N_SPINS; s++)
-        #pragma unroll
-	for(int c=0; c < N_COLS; c++)
-	  if( s_free == 0){
-	    dest[v*N_GS1C+g*N_S1C+s*N_COLS+c] =
-	      src[v*N_GS3C+g*N_S3C+s*N_S2C+alfa*N_S1C+beta*N_COLS+c];
-	  } else if ( s_free == 1 ){
-	    dest[v*N_GS1C+g*N_S1C+s*N_COLS+c] =
-	      src[v*N_GS3C+g*N_S3C+alfa*N_S2C+s*N_S1C+beta*N_COLS+c];
-	  } else {
-	    dest[v*N_GS1C+g*N_S1C+s*N_COLS+c] =
-	      src[v*N_GS3C+g*N_S3C+alfa*N_S2C+beta*N_S1C+s*N_COLS+c];
-	  }
+      	for(int c=0; c < N_COLS; c++)
+	  for(int ri=0; ri<2; ri++)
+	    if( s_free == 0){
+	      dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2+ri] =
+		src[(v*N_GS3C+g*N_S3C+s*N_S2C+alfa*N_S1C+beta*N_COLS+c)*2+ri];
+	    } else if ( s_free == 1 ){
+	      dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2+ri] =
+		src[(v*N_GS3C+g*N_S3C+alfa*N_S2C+s*N_S1C+beta*N_COLS+c)*2+ri];
+	    } else {
+	      dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2+ri] =
+		src[(v*N_GS3C+g*N_S3C+alfa*N_S2C+beta*N_S1C+s*N_COLS+c)*2+ri];
+	    }
 }
 
