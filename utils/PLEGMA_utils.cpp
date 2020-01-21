@@ -294,9 +294,9 @@ void V_TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
                         -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
       *(Dest+2*nz_c+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
                         +gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-      }
     }
   }
+  
 }
 
 template void V_TR_MM<float>( float * V1, GAMMAS gamma, float *Dest );
