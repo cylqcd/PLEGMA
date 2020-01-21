@@ -174,10 +174,10 @@ void PLEGMA_ScattCorrelator<Float>::B1_diagramm(std::vector<GAMMAS> &Gammas_i1, 
             Float* src1 = srcV3.corr;
             Float* src2 = temporaryV3.corr;
             for(int v=0; v < VOL_SIZE; v++){
-              V_M_V<Float>( &src1[v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS],
-                     &src2[v*NG1NSPIN1NCOL1_V2R+loop_gammaf1*N_SPINS*N_COLS], 
+              V_M_V<Float>( &src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS)],
+                     &src2[2*(v*NG1NSPIN1NCOL1_V2R+loop_gammaf1*N_SPINS*N_COLS)], 
                      Gammas_i1[loop_gammai1], 
-                     &dest[v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta] );
+                     &dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)] );
             }
           }
         }
@@ -271,8 +271,8 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelato
   if(srcV2.fixMomVec.empty()) this->Q2_max = srcV2.Q2_max;
     else this->fixMomVec = srcV2.fixMomVec;
     
-  this->datasets={""};
-  this->groups={""};
+  this->datasets={"absorbvectorfromV24"};
+  this->groups={"absorbvectorfromV24"};
   this->shape={n_gammas,N_SPINS,N_COLS};
   this->shape_labels="gsc";
   this->initialize();
@@ -306,8 +306,8 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_Scat
   if(srcV2.fixMomVec.empty()) this->Q2_max = srcV2.Q2_max;
     else this->fixMomVec = srcV2.fixMomVec;
 
-  this->datasets={""};
-  this->groups={""};
+  this->datasets={"absorbmatrixv24"};
+  this->groups={"absorbmatrixv24"};
   this->shape={n_gammas,N_SPINS,N_COLS};
   this->shape_labels="gssc";
   this->initialize();
