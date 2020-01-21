@@ -106,8 +106,7 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
 }
 
 template<typename Float>
-template <int diagramm_index>
-void PLEGMA_ScattCorrelator<Float>::B_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2) {
+void PLEGMA_ScattCorrelator<Float>::B_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index) {
 
   if( (diagramm_index != 1) || (diagramm_index !=2 ) )
     PLEGMA_error("diagramm_index %d out of range (1 or 2)\n",diagramm_index);
@@ -199,8 +198,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(std::vector<GAMMAS> &Gammas_i1, 
 }
 
 template<typename Float>
-template <int diagramm_index>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2) {
+void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, const int diagramm_index) {
 
   if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
@@ -258,7 +256,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, 
 
   int source[4]={0,0,0,0};
   this->setSource(source);
-  std::vector<Float> temporary(24);
+  Float *temporary_colorvector=(Float *)malloc(sizeof(Float)*24);
   for (int alfa=0 ; alfa < N_SPINS; ++alfa){
     for (int beta=0; beta < N_SPINS; ++beta){
       std::vector<int> mom={0,0,0};
@@ -283,6 +281,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, 
             Float* src1 = srcV3.corr;
             Float* src2 = temporaryV3.corr;
             for(int v=0; v < VOL_SIZE; v++){
+
               if ( (diagramm_index == 1) || (diagramm_index == 4)) {
                 V_M_V<Float>( &src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS)],
                               &src2[2*(v*NG1NSPIN1NCOL1_V2R+loop_gammaf1*N_SPINS*N_COLS)],
@@ -290,13 +289,14 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, 
                               &dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)] );
               }
               else {
-                V_TR_MM<Float,1>(&src2[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS)], 
-                                 Gammas_i1[loop_gammai1], temporary);
+                V_TR_MM<Float>(&src2[2*(v*NG1NSPIN1NCOL1_V2R+loop_gammaf1*N_SPINS*N_COLS)], 
+                               Gammas_i1[loop_gammai1], 
+                               temporary_colorvector);
                 dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+0]=0.0;
                 dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+1]=0.0;
                 for (int coloridx=0; coloridx<3; ++coloridx ){
-                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+0]+=temporary[2*alfa*N_COLS+2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0]-temporary[2*alfa*N_COLS+2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1];
-                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+1]+=temporary[2*alfa*N_COLS+2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1]+temporary[2*alfa*N_COLS+2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0];
+                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+0]+=temporary_colorvector[2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0]-temporary_colorvector[2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1];
+                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+1]+=temporary_colorvector[2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1]+temporary_colorvector[2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0];
                 }
               }
             }
@@ -305,14 +305,15 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, 
       }
     }
   }
+  free(temporary_colorvector);
 }
 
 template<typename Float>
-template <int diagramm_index>
 void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1, 
                                                 std::vector<GAMMAS> &Gammas_i2, 
                                                 std::vector<PLEGMA_ScattCorrelator<Float>> &srcV3, 
-                                                std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2) {
+                                                std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2,
+                                                int diagramm_index) {
 
   if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
@@ -347,12 +348,12 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
 
 
   //check site_size
-  std::string expstr1 ("gsssc");
+  std::string expstr2 ("gsssc");
   for (int idx=0; idx < srcV2.size() ; ++idx){
     if( srcV2[idx].corr_space==POSITION_SPACE )
       PLEGMA_error("Not implemented yet\n");
 
-    if( srcV2[idx].shape.size() != 5 || srcV2[idx].Shape_labels().compare(expstr1)!=0 )
+    if( srcV2[idx].shape.size() != 5 || srcV2[idx].Shape_labels().compare(expstr2)!=0 )
       PLEGMA_error("The shape of srcV2 object must be of the type gsssc\n");
     if( srcV2[idx].n_datasets()!=1 || srcV2[idx].n_groups()!=1 )
       PLEGMA_error("1 dataset and 1 group only\n");
@@ -374,19 +375,93 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
   }
 
 
-/*
-  if( srcV2.corr_space==POSITION_SPACE )
-    PLEGMA_error("Not implemented yet\n");
+  int NG4SPIN2=n_gammas_i1*n_gammas_i2*n_gammas_f1*n_gammas_f2*N_SPINS*N_SPINS ;
+  int NG3SPIN2=n_gammas_i2*n_gammas_f1*n_gammas_f2*N_SPINS*N_SPINS ;
+  int NG2SPIN2=n_gammas_f1*n_gammas_f2*N_SPINS*N_SPINS ;
+  int NG1SPIN2=n_gammas_f2*N_SPINS*N_SPINS ;
+  int NSPIN2= N_SPINS*N_SPINS ;
+  int NG1NSPIN1NCOL1_V3=n_gammas_f2*N_SPINS*N_COLS;
+  int NG1NSPIN1NCOL1_V2R=n_gammas_f1*N_SPINS*N_COLS;
 
-  //check site_size
-  std::string expstr1 ("gsssc");
-  if( srcV2.shape.size() != 5 || srcV2.Shape_labels().compare(expstr1)!=0 )
-    PLEGMA_error("The shape of srcV2 object must be of the type gsssc\n");
-  if( srcV2.n_datasets()!=1 || srcV2.n_groups()!=1 )
-    PLEGMA_error("1 dataset and 1 group only\n");
 
-*/
+  int source[4]={0,0,0,0};
+  this->setSource(source);
 
+  Float *temporary_dilution=(Float *)malloc(sizeof(Float)*32);
+  Float *temporary_colorvector=(Float *)malloc(sizeof(Float)*6);
+
+  for (int alfa=0 ; alfa < N_SPINS; ++alfa){
+    for (int beta=0; beta < N_SPINS; ++beta){
+      std::vector<int> mom={0,0,0};
+      std::vector<PLEGMA_ScattCorrelator<Float>> temporaryV24;
+      for (int i=0; i<4; ++i){
+        temporaryV24.push_back(PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom));
+      }
+      for (int i=0; i<4; ++i){
+        if ( diagramm_index == 1 ){
+          temporaryV24[i].absorb_fromV24<1>( srcV2[i], beta, alfa);
+        }
+        else if ( diagramm_index == 2 ){
+          temporaryV24[i].absorbspinmatrix_fromV24<0>( srcV2[i], alfa );
+        }
+        else if ( diagramm_index == 3 ){
+          temporaryV24[i].absorbspinmatrix_fromV24<1>( srcV2[i], alfa );
+        }
+        else{
+          temporaryV24[i].absorb_fromV24<0>( srcV2[i], alfa, beta);
+        }
+      }
+      #pragma unroll
+      for (int loop_gammai1=0 ; loop_gammai1 < n_gammas_i1 ; ++loop_gammai1 ){
+        #pragma unroll
+        for ( int loop_gammaf1=0; loop_gammaf1 < n_gammas_f1 ; ++loop_gammaf1 ){
+          #pragma unroll
+          for ( int loop_gammaf2=0; loop_gammaf2 < n_gammas_f2 ; ++loop_gammaf2 ){
+            size_t VOL_SIZE = srcV3[0].getVolSize();
+            Float* dest = this->corr;
+            Float* src1; 
+            Float* src2;
+            for(int v=0; v < VOL_SIZE; v++){
+              for (int i=0 ; i<32; ++i){
+                temporary_dilution[i]=0.;
+              }
+              for (int kappa=0; kappa< N_SPINS; ++kappa){
+                for (int lambda=0; lambda< N_SPINS; ++lambda){  
+                  src1 = srcV3[kappa].corr ;
+                  src2 = temporaryV24[lambda].corr ;
+                  
+                  if ( (diagramm_index == 1) || (diagramm_index == 4)) {
+                    V_M_V<Float>( &src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS)],
+                                  &src2[2*(v*NG1NSPIN1NCOL1_V2R+loop_gammaf1*N_SPINS*N_COLS)],
+                                  Gammas_i1[loop_gammai1],
+                                  temporary_dilution );
+                  }
+                  else {
+                    V_TR_MM<Float>(&src2[2*(v*NG1NSPIN1NCOL1_V2R+loop_gammaf1*N_SPINS*N_COLS)],
+                                    Gammas_i1[loop_gammai1],
+                                    temporary_colorvector);
+                    for( int coloridx=0; coloridx<3; ++coloridx){
+                      temporary_dilution[(kappa*N_SPINS+lambda)*2+0]+=
+                        +temporary_colorvector[2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0]
+                        -temporary_colorvector[2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1];
+                      temporary_dilution[(kappa*N_SPINS+lambda)*2+1]+=
+                        +temporary_colorvector[2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1]
+                        +temporary_colorvector[2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0];
+                    }
+                  }
+                }
+              }
+              for (int loop_gammai2=0; loop_gammai2 < n_gammas_i2 ; ++loop_gammai2 ){
+                TR_MM<Float>( temporary_dilution,
+                              Gammas_i2[loop_gammai2],
+                              &dest[2*(v*NG4SPIN2+loop_gammai1*NG3SPIN2+loop_gammai2*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)] ) ;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 

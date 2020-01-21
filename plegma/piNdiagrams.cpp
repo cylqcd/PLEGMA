@@ -272,10 +272,10 @@ int main(int argc, char **argv)
  
       PLEGMA_ScattCorrelator<float> diagramB(MOMENTUM_SPACE, sinkMom_Meson);
      
-      diagramB.B_diagramms<1>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramB.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
       diagramB.writeHDF5("B1Diagramm");
 
-      diagramB.B_diagramms<2>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramB.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 2 );
       diagramB.writeHDF5("B2Diagramm");
 
       //Compute Diagram W1,W2
@@ -284,20 +284,20 @@ int main(int argc, char **argv)
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
 
-      diagramW.W_diagramms<1>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
       diagramW.writeHDF5("W1Diagramm");
 
-      diagramW.W_diagramms<2>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 2 );
       diagramW.writeHDF5("W2Diagramm");
 
       //Compute Diagram W3,W4
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
 
-      diagramW.W_diagramms<3>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 3 );
       diagramW.writeHDF5("W3Diagramm");
 
-      diagramW.W_diagramms<4>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 4 );
       diagramW.writeHDF5("W4Diagramm");
 
       
@@ -358,17 +358,30 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson)
       };
 
+      PLEGMA_ScattCorrelator<float> diagramZ(MOMENTUM_SPACE, sinkMom_Meson);
 
       //Diagram Z1,Z2
       for (int i=0; i< 4; ++i){
         reductionsV3_diluted[i].V3( stochastic_propagator[i], glist_sink_meson, propUP);
         reductionsV4_diluted[i].V4( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
       }
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 1 );
+      diagramZ.writeHDF5("Z1Diagramm");
 
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 2 );
+      diagramZ.writeHDF5("Z2Diagramm");
+
+      
       //Diagram Z3,Z4
       for (int i=0; i< 4; ++i){
         reductionsV2_diluted[i].V2( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
       }
+
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 3 );
+      diagramZ.writeHDF5("Z3Diagramm");
+
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 4 );
+      diagramZ.writeHDF5("Z2Diagramm");
 
     }
 
