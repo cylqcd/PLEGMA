@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 
         //Smearing on the source
         start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
         vectorInOut.copy(vectorAuxD);
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 
         //Smearing at the sink
         start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
 
         vectorAuxF.copy(vectorInOut);
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
         vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
 
         start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
         
         vectorInOut.copy(vectorAuxD);
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
         solver.solve(vectorInOut, vectorInOut);
 
         start_time = MPI_Wtime();
-        vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
 
         vectorAuxF.copy(vectorInOut);
@@ -189,13 +189,14 @@ int main(int argc, char **argv)
           vectorAuxF.absorb(propDN,isc/3, isc%3);
           vectorAuxD.copy(vectorAuxF);
           start_time = MPI_Wtime();
-          vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+          //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
           tmp_time += MPI_Wtime()-start_time;
           vectorAuxD.apply_gamma(G4);
           vectorAuxF.copy(vectorAuxD);
           propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
       }
-
+ 
+      std::vector<int> sourceMom_Meson={0,0,0};
       propDN3D.mulMomentumPhases(sourceMom_Meson,-1);
 
       //Computing sequential propagators UD T_fii with insertion
@@ -210,9 +211,9 @@ int main(int argc, char **argv)
           PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
           solver.solve(vectorInOut, vectorInOut);
           start_time = MPI_Wtime();
-          vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+          //vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
           tmp_time += MPI_Wtime()-start_time;
-          vectorAuxF.copy(vectorAuxD);
+          vectorAuxF.copy(vectorInOut);
           propUPDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
@@ -255,6 +256,7 @@ int main(int argc, char **argv)
 
           
       vectorStoc_source.apply_gamma5();
+      std::vector<GAMMAS> glist_source_nucleon={G4};
       std::vector<GAMMAS> glist_sink_nucleon={G4};
       std::vector<GAMMAS> glist_sink_meson={ONE};
       PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, sinkMom_Nucleon);
@@ -263,7 +265,15 @@ int main(int argc, char **argv)
 
       //Compute Diagram B1 and B2 
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
+      reductionsV3.writeHDF5("V3sourceforB1");
+
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+      reductionsV2.writeHDF5("V2sourceforB1");
+ 
+      PLEGMA_ScattCorrelator<float> diagramB1(MOMENTUM_SPACE, sinkMom_Meson);
+     
+      diagramB1.B1_diagramm(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramB1.writeHDF5("B1Diagramm");
 
       //Compute Diagram W1,W2
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
@@ -272,6 +282,9 @@ int main(int argc, char **argv)
       //Compute Diagram W3,W4
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
+
+
+      
 
       //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
       std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
