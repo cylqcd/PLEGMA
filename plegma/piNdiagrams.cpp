@@ -270,22 +270,37 @@ int main(int argc, char **argv)
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
       reductionsV2.writeHDF5("V2sourceforB1");
  
-      PLEGMA_ScattCorrelator<float> diagramB1(MOMENTUM_SPACE, sinkMom_Meson);
+      PLEGMA_ScattCorrelator<float> diagramB(MOMENTUM_SPACE, sinkMom_Meson);
      
-      diagramB1.B1_diagramm(glist_source_nucleon, reductionsV3, reductionsV2 );
-      diagramB1.writeHDF5("B1Diagramm");
+      diagramB.B_diagramms<1>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramB.writeHDF5("B1Diagramm");
+
+      diagramB.B_diagramms<2>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramB.writeHDF5("B2Diagramm");
 
       //Compute Diagram W1,W2
+      PLEGMA_ScattCorrelator<float> diagramW(MOMENTUM_SPACE, sinkMom_Meson);
+
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+
+      diagramW.W_diagramms<1>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.writeHDF5("W1Diagramm");
+
+      diagramW.W_diagramms<2>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.writeHDF5("W2Diagramm");
 
       //Compute Diagram W3,W4
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
 
+      diagramW.W_diagramms<3>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.writeHDF5("W3Diagramm");
+
+      diagramW.W_diagramms<4>(glist_source_nucleon, reductionsV3, reductionsV2 );
+      diagramW.writeHDF5("W4Diagramm");
 
       
-
       //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
       std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
       PLEGMA_Vector<float> stochastic_source_spin_diluted; 
