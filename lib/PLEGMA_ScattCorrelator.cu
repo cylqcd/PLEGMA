@@ -295,8 +295,8 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, 
                 dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+0]=0.0;
                 dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+1]=0.0;
                 for (int coloridx=0; coloridx<3; ++coloridx ){
-                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+0]+=temporary[2*alfa*N_COLS+2*color.idx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+color.idx)+0]-temporary[2*alfa*N_COLS+2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1];
-                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+1]+=temporary[2*alfa*N_COLS+2*color.idx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+color.idx)+1]+temporary[2*alfa*N_COLS+2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0];
+                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+0]+=temporary[2*alfa*N_COLS+2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0]-temporary[2*alfa*N_COLS+2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1];
+                  dest[2*(v*NG3SPIN2+loop_gammai1*NG2SPIN2+loop_gammaf1*NG1SPIN2+loop_gammaf2*NSPIN2+alfa*N_SPINS+beta)+1]+=temporary[2*alfa*N_COLS+2*coloridx+0]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+1]+temporary[2*alfa*N_COLS+2*coloridx+1]*src1[2*(v*NG1NSPIN1NCOL1_V3+loop_gammaf2*N_SPINS*N_COLS+beta*N_COLS+coloridx)+0];
                 }
               }
             }
@@ -307,6 +307,87 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, 
   }
 }
 
+template<typename Float>
+template <int diagramm_index>
+void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1, 
+                                                std::vector<GAMMAS> &Gammas_i2, 
+                                                std::vector<PLEGMA_ScattCorrelator<Float>> &srcV3, 
+                                                std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2) {
+
+  if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
+    PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
+
+  if( this ->corr_space == POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
+  int n_gammas_i1 = Gammas_i1.size();
+  if ((n_gammas_i1 <= 0) || (n_gammas_i1 >16)){
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  }
+
+  int n_gammas_i2 = Gammas_i2.size();
+  if ((n_gammas_i2 <= 0) || (n_gammas_i2 >16)){
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  }
+
+  //check site_size
+  std::string expstr1 ("gsc");
+  for (int idx=0; idx < srcV3.size() ; ++idx){
+    if( srcV3[idx].corr_space==POSITION_SPACE )
+      PLEGMA_error("Not implemented yet\n");
+
+    if( srcV3[idx].shape.size() != 5 || srcV3[idx].Shape_labels().compare(expstr1)!=0 )
+      PLEGMA_error("The shape of srcV2 object must be of the type gsssc\n");
+    if( srcV3[idx].n_datasets()!=1 || srcV3[idx].n_groups()!=1 )
+      PLEGMA_error("1 dataset and 1 group only\n");
+
+  }
+
+  //allocate
+  int n_gammas_f2 = srcV3[0].shape[0];
+
+
+  //check site_size
+  std::string expstr1 ("gsssc");
+  for (int idx=0; idx < srcV2.size() ; ++idx){
+    if( srcV2[idx].corr_space==POSITION_SPACE )
+      PLEGMA_error("Not implemented yet\n");
+
+    if( srcV2[idx].shape.size() != 5 || srcV2[idx].Shape_labels().compare(expstr1)!=0 )
+      PLEGMA_error("The shape of srcV2 object must be of the type gsssc\n");
+    if( srcV2[idx].n_datasets()!=1 || srcV2[idx].n_groups()!=1 )
+      PLEGMA_error("1 dataset and 1 group only\n");
+ 
+  }
+
+  //allocate
+  int n_gammas_f1 = srcV2[0].shape[0];
+
+  std::string dataset_diagrammString = "dataset_W" + std::to_string(diagramm_index) + "diagramm";
+  std::string group_diagrammString = "group_W" + std::to_string(diagramm_index) + "diagramm";
+
+  if(!this->isAlloc || this->site_size!=n_gammas_i1*n_gammas_i2*n_gammas_f1*n_gammas_f2*N_SPINS*N_SPINS){
+    this->datasets={dataset_diagrammString};
+    this->groups={group_diagrammString};
+    this->shape={n_gammas_i1,n_gammas_i2,n_gammas_f1,n_gammas_f2,N_SPINS,N_SPINS};
+    this->shape_labels="ggggss";
+    this->initialize();
+  }
+
+
+/*
+  if( srcV2.corr_space==POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
+
+  //check site_size
+  std::string expstr1 ("gsssc");
+  if( srcV2.shape.size() != 5 || srcV2.Shape_labels().compare(expstr1)!=0 )
+    PLEGMA_error("The shape of srcV2 object must be of the type gsssc\n");
+  if( srcV2.n_datasets()!=1 || srcV2.n_groups()!=1 )
+    PLEGMA_error("1 dataset and 1 group only\n");
+
+*/
+
+}
 
 
 // template<typename Float>
