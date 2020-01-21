@@ -323,7 +323,7 @@ void V_TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
     #pragma unroll
     for (int nz_c = 0 ; nz_c < 3 ; nz_c++){
       *(Dest+2*nz_e*N_COLS+2*nz_c+0) = 0;
-      *(Dest+2*nz_e*N_COLS+2*nz_c+0) = 0;
+      *(Dest+2*nz_e*N_COLS+2*nz_c+1) = 0;
     }
   }
   #pragma unroll
