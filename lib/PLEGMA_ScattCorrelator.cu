@@ -393,13 +393,21 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
   for (int alfa=0 ; alfa < N_SPINS; ++alfa){
     for (int beta=0; beta < N_SPINS; ++beta){
       std::vector<int> mom={0,0,0};
-      std::vector<PLEGMA_ScattCorrelator<Float>> temporaryV24;
-      for (int i=0; i<4; ++i){
-        temporaryV24.push_back(PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom));
-      }
+//      std::vector<PLEGMA_ScattCorrelator> temporaryV24;
+      PLEGMA_ScattCorrelator<Float> temporaryV24[4] = {
+        PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom),
+        PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom),
+        PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom),
+        PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom)
+      };
+
+
+      //for (int i=0; i<4; ++i){
+      //  temporaryV24.push_back(PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom));
+      //}
       for (int i=0; i<4; ++i){
         if ( diagramm_index == 1 ){
-          temporaryV24[i].absorb_fromV24<1>( srcV2[i], beta, alfa);
+          (temporaryV24[i]).absorb_fromV24<1>( srcV2[i], beta, alfa);
         }
         else if ( diagramm_index == 2 ){
           temporaryV24[i].absorbspinmatrix_fromV24<0>( srcV2[i], alfa );
@@ -462,6 +470,8 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
       }
     }
   }
+  free(temporary_colorvector);
+  free(temporary_dilution);
 }
 
 
