@@ -22,8 +22,8 @@ initialize() {
   finalize();
   site_size = getSiteSize();
   if(corr_space == MOMENTUM_SPACE) {
-    if(fixMomVec.empty()) corr_mom_space = new PLEGMA_FT<Float>(Q2_max);
-    else corr_mom_space = new PLEGMA_FT<Float>(this->fixMomVec);
+    if(fixMomVec.empty()) corr_mom_space = (fixMomList.empty()) ? new PLEGMA_FT<Float>(Q2_max) : new PLEGMA_FT<Float>(fixMomList);
+    else corr_mom_space = new PLEGMA_FT<Float>(fixMomVec);
     corr_mom_space->checkAllocation(site_size);
     corr = corr_mom_space->H_elem();
     vol_size = corr_mom_space->Nmoms()*corr_mom_space->DimT();

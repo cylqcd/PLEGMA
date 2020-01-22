@@ -33,6 +33,21 @@ PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum):
   texMomList.Nmoms=0;
 }
 
+template<typename Float>
+template<typename T>
+PLEGMA_FT<Float>::PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4, bool accum ):
+  isAllocated(false), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(0), accum(accum){
+  if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
+  dimT = (dims == 3) ? HGC_localL[3] : 1; // when apply, if a 3D field set dimT=1 even if dims=3
+  for(auto &mom : moms){
+    if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
+    VFloat momF(mom.begin(),mom.end());
+    momList.push_back(momF);
+  }
+
+  texMomList.Nmoms=0;
+}
+
 
 template<typename Float>
 PLEGMA_FT<Float>::~PLEGMA_FT(){
@@ -378,3 +393,5 @@ template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool);
 template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool);
 template PLEGMA_FT<float>::PLEGMA_FT<double>(std::vector<double>,int,bool);
 template PLEGMA_FT<double>::PLEGMA_FT<double>(std::vector<double>,int,bool);
+template PLEGMA_FT<float>::PLEGMA_FT<int>( std::vector<std::vector<int>> &, int, bool);
+template PLEGMA_FT<double>::PLEGMA_FT<int>( std::vector<std::vector<int>> &, int, bool);

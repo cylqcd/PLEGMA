@@ -28,6 +28,7 @@ namespace plegma {
     CORR_SPACE corr_space;
     int Q2_max;
     std::vector<int> fixMomVec ;
+    std::vector<std::vector<int>> fixMomList ;
     size_t vol_size;
     std::vector<int> shape;
     // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
@@ -54,8 +55,13 @@ namespace plegma {
       isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
       fixMomVec(fixMomVec)
     {}
-
+    PLEGMA_Correlator(CORR_SPACE CorrSpace, std::vector<std::vector<int>> fixMomList):
+      isAlloc(false),corr_pos_space(NULL), corr_mom_space(NULL), corr(NULL), corr_space(CorrSpace),
+      fixMomList(fixMomList)
+    {}
+    
     ~PLEGMA_Correlator(){finalize();}
+    
     CORR_SPACE getCorrSpace() {
       return corr_space;
     }
