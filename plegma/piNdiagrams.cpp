@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 
         //Smearing on the source
         start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
         vectorInOut.copy(vectorAuxD);
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 
         //Smearing at the sink
         start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
 
         vectorAuxF.copy(vectorInOut);
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
         vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
 
         start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
         
         vectorInOut.copy(vectorAuxD);
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
         solver.solve(vectorInOut, vectorInOut);
 
         start_time = MPI_Wtime();
-        vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+        //vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
 
         vectorAuxF.copy(vectorInOut);
@@ -189,13 +189,14 @@ int main(int argc, char **argv)
           vectorAuxF.absorb(propDN,isc/3, isc%3);
           vectorAuxD.copy(vectorAuxF);
           start_time = MPI_Wtime();
-          vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+          //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
           tmp_time += MPI_Wtime()-start_time;
           vectorAuxD.apply_gamma(G4);
           vectorAuxF.copy(vectorAuxD);
           propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
       }
-
+ 
+      std::vector<int> sourceMom_Meson={0,0,0};
       propDN3D.mulMomentumPhases(sourceMom_Meson,-1);
 
       //Computing sequential propagators UD T_fii with insertion
@@ -210,9 +211,9 @@ int main(int argc, char **argv)
           PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
           solver.solve(vectorInOut, vectorInOut);
           start_time = MPI_Wtime();
-          vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+          //vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
           tmp_time += MPI_Wtime()-start_time;
-          vectorAuxF.copy(vectorAuxD);
+          vectorAuxF.copy(vectorInOut);
           propUPDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
@@ -255,6 +256,7 @@ int main(int argc, char **argv)
 
           
       vectorStoc_source.apply_gamma5();
+      std::vector<GAMMAS> glist_source_nucleon={G4};
       std::vector<GAMMAS> glist_sink_nucleon={G4};
       std::vector<GAMMAS> glist_sink_meson={ONE};
       PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, sinkMom_Nucleon);
@@ -263,16 +265,42 @@ int main(int argc, char **argv)
 
       //Compute Diagram B1 and B2 
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
+      reductionsV3.writeHDF5("V3sourceforB1");
+
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+      reductionsV2.writeHDF5("V2sourceforB1");
+ 
+      PLEGMA_ScattCorrelator<float> diagramB(MOMENTUM_SPACE, sinkMom_Meson);
+     
+      diagramB.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
+      diagramB.writeHDF5("B1Diagramm");
+
+      diagramB.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 2 );
+      diagramB.writeHDF5("B2Diagramm");
 
       //Compute Diagram W1,W2
+      PLEGMA_ScattCorrelator<float> diagramW(MOMENTUM_SPACE, sinkMom_Meson);
+
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
+      diagramW.writeHDF5("W1Diagramm");
+
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 2 );
+      diagramW.writeHDF5("W2Diagramm");
 
       //Compute Diagram W3,W4
       reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
       reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
 
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 3 );
+      diagramW.writeHDF5("W3Diagramm");
+
+      diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 4 );
+      diagramW.writeHDF5("W4Diagramm");
+
+      
       //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
       std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
       PLEGMA_Vector<float> stochastic_source_spin_diluted; 
@@ -330,17 +358,30 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson)
       };
 
+      PLEGMA_ScattCorrelator<float> diagramZ(MOMENTUM_SPACE, sinkMom_Meson);
 
       //Diagram Z1,Z2
       for (int i=0; i< 4; ++i){
         reductionsV3_diluted[i].V3( stochastic_propagator[i], glist_sink_meson, propUP);
         reductionsV4_diluted[i].V4( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
       }
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 1 );
+      diagramZ.writeHDF5("Z1Diagramm");
 
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 2 );
+      diagramZ.writeHDF5("Z2Diagramm");
+
+      
       //Diagram Z3,Z4
       for (int i=0; i< 4; ++i){
         reductionsV2_diluted[i].V2( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
       }
+
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 3 );
+      diagramZ.writeHDF5("Z3Diagramm");
+
+      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 4 );
+      diagramZ.writeHDF5("Z2Diagramm");
 
     }
 

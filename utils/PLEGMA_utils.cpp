@@ -245,7 +245,7 @@ short int gammaInd_host[16][4][2] =
  *  @params Float * Dest pointer to 2 Float number (complex)
  **/
 template<typename Float>
-inline void V_M_V( Float * V1, Float * V2, GAMMAS gamma, Float *Dest ){
+void V_M_V( Float * V1, Float * V2, GAMMAS gamma, Float *Dest ){
    *(Dest+0)=0.;
    *(Dest+1)=0.;
    #pragma unroll
@@ -265,51 +265,60 @@ inline void V_M_V( Float * V1, Float * V2, GAMMAS gamma, Float *Dest ){
      }
    }
 }
+template void V_M_V<float>( float * V1, float * V2, GAMMAS gamma, float *Dest );
+
+template void V_M_V<double>( double * V1, double * V2, GAMMAS gamma, double *Dest );
+
 /**
  *  @brief tensor*matrix multiplication  
  *         for piN scattering project
- *  @params Float * V1 pointer to a Float array of size 2*N_COLS*N_SPINS*N_SPINS*N_SPINS
+ *  @params Float * V1 pointer to a Float array of size 2*N_COLS*N_SPINS*N_SPINS
  *  @params GAMMAS gamma enumerator specifies the gamma matrix
  *  @params int index determines which index of the three component tensor has to be returned
- *  @params Float *Dest pointer to array of Float with size N_SPINS*N_COLS*2
+ *  @params Float *Dest pointer to array of Float with size 2*N_COLS
  **/
-template<typename Float, int s_free>
-inline void V_TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
+template<typename Float>
+void V_TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
   #pragma unroll
-  for (int nz_e = 0 ; nz_e < 4 ; nz_e++){
-    #pragma unroll
-    for (int nz_c = 0 ; nz_c < 3 ; nz_c++){
-      *(Dest+2*nz_e*N_COLS+2*nz_c+0) = 0;
-      *(Dest+2*nz_e*N_COLS+2*nz_c+0) = 0;
-    }
+  for (int nz_c = 0 ; nz_c < 3 ; nz_c++){
+    *(Dest+2*nz_c+0) = 0;
+    *(Dest+2*nz_c+1) = 0;
   }
   #pragma unroll
-  for (int nz_e_outer = 0 ; nz_e_outer < 4 ; nz_e_outer++){
+  for (int nz_c=0; nz_c < 3 ; nz_c++){
     #pragma unroll
-    for (int nz_c=0; nz_c < 3 ; nz_c++){
-      #pragma unroll
-      for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
-        int beta0=gammaInd_host[gamma][nz_e_inner][0];
-        int beta1=gammaInd_host[gamma][nz_e_inner][1];
-        if (s_free == 0){
-          *(Dest+2*nz_e_outer*N_COLS+2*nz_c+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(nz_e_outer*N_SPINS*N_SPINS*N_COLS+beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                                                -gamma_host[gamma][nz_e_inner][1]*V1[2*(nz_e_outer*N_SPINS*N_SPINS*N_COLS+beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-          *(Dest+2*nz_e_outer*N_COLS+2*nz_c+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(nz_e_outer*N_SPINS*N_SPINS*N_COLS+beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                                                +gamma_host[gamma][nz_e_inner][0]*V1[2*(nz_e_outer*N_SPINS*N_SPINS*N_COLS+beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-        }
-        else if (s_free == 1){
-          *(Dest+2*nz_e_outer*N_COLS+2*nz_c+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+nz_e_outer*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                                                -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+nz_e_outer*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-          *(Dest+2*nz_e_outer*N_COLS+2*nz_c+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+nz_e_outer*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                                                +gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+nz_e_outer*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-        }
-        else if (s_free == 2) {
-          *(Dest+2*nz_e_outer*N_COLS+2*nz_c+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+beta0*N_SPINS*N_COLS+nz_e_outer*N_COLS+nz_c)+0]
-                                                -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+beta0*N_SPINS*N_COLS+nz_e_outer*N_COLS+nz_c)+1];
-          *(Dest+2*nz_e_outer*N_COLS+2*nz_c+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+beta0*N_SPINS*N_COLS+nz_e_outer*N_COLS+nz_c)+0]
-                                                +gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_SPINS*N_COLS+beta0*N_SPINS*N_COLS+nz_e_outer*N_COLS+nz_c)+1];
-        }
-      }
+    for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
+      int beta0=gammaInd_host[gamma][nz_e_inner][0];
+      int beta1=gammaInd_host[gamma][nz_e_inner][1];
+      *(Dest+2*nz_c+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
+                        -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
+      *(Dest+2*nz_c+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
+                        +gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
     }
+  }
+  
+}
+
+template void V_TR_MM<float>( float * V1, GAMMAS gamma, float *Dest );
+
+template void V_TR_MM<double>( double * V1, GAMMAS gamma, double *Dest );
+
+template<typename Float>
+void TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
+  *(Dest+0) = 0;
+  *(Dest+1) = 0;
+  #pragma unroll
+  for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
+    int beta0=gammaInd_host[gamma][nz_e_inner][0];
+    int beta1=gammaInd_host[gamma][nz_e_inner][1];
+    *(Dest+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS+beta0)+0]
+               -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS+beta0)+1];
+    *(Dest+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS+beta0)+0]
+               +gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS+beta0)+1];   
   }
 }
+
+template void TR_MM<float>( float * V1, GAMMAS gamma, float *Dest );
+
+template void TR_MM<double>( double * V1, GAMMAS gamma, double *Dest );
+

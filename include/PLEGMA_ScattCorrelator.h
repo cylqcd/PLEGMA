@@ -174,9 +174,12 @@ namespace plegma {
     void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa);
 
     friend void V3V2reduction(std::vector<GAMMAS> &, std::vector<std::array<int,3>> &, std::vector<std::array<int,3>> &, PLEGMA_ScattCorrelator<Float> &, PLEGMA_ScattCorrelator<Float> &, Float *, int, bool transp=false, int offset=0);
-    void B1_diagramm(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2);
 
+    void B_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
 
+    void W_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
+
+    void Z_diagramms(std::vector<GAMMAS> &Gammas_i1, std::vector<GAMMAS> &Gammas_i2, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2, int diagramm_index);
 
   };
 
