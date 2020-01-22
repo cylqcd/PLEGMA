@@ -66,10 +66,17 @@ inline std::string getDateAndTime(){
   return "Date: " + ss.str();
 }
 
-inline std::string basename(std::string str,char c){
+inline std::string splitStrFwd(std::string str,char c){
   size_t found = str.find_last_of(c);
   if(found == std::string::npos) PLEGMA_error("Cannot get the baseanem of string=%s with delimiter=%c\n",str.c_str(),c);
   std::string suff = str.substr(found+1,std::string::npos);
+  return suff;
+}
+
+inline std::string splitStrBwd(std::string str,char c){
+  size_t found = str.find_last_of(c);
+  if(found == std::string::npos) PLEGMA_error("Cannot get the baseanem of string=%s with delimiter=%c\n",str.c_str(),c);
+  std::string suff = str.substr(0,found);
   return suff;
 }
 
