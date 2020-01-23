@@ -197,7 +197,7 @@ int main(int argc, char **argv)
         for (auto gamma_i2 : glist_source_meson) {
 
           //List of momenta corresponding to a fix value of p_i2
-          momlist filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
+          momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
          
           // Computing sequential propagators f1 <- i_2 <- i_1 
           // so the sequential source source time is fixed
