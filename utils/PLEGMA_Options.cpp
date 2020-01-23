@@ -4,7 +4,7 @@
 #include <functional>
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
+						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "momlist-filename", "maxQsq", "twop-filename",
 						     "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
 #ifdef HAVE_ARPACK
 						     ,"Eig-NkV", "Eig-logFile"
@@ -53,6 +53,9 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if(isInList(list,"src-filename")){
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
+  }
+  if (isInList(list, "momlist-filename")){
+    opt.set("momlist-filename", "Filename of list of momenta", verbosity, pathListMomenta);
   }
   // List of configurations-----------------------------------------------------------------------------
   if(isInList(list,"load-gauge-list-filename")){
