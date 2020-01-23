@@ -8,16 +8,20 @@ namespace plegma {
     std::vector<std::array<int,3>> p_f1;
     std::vector<std::array<int,3>> p_f2;
     std::vector<std::array<int,3>> *ps[3]={&p_i2,&p_f1,&p_f2};
+
   public:
     momList() {;}
+    
     momList( std::vector<int> &mom_list ){
+
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
       for(int i=0; i<mom_list.size(); i=i+9)
 	for(int j=0; j<3; j++){
 	  std::array<int,3> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
 	  (*ps[j]).push_back(p);
-      }
+	}
     }
+    
     int size(){ return p_i2.size(); }
 
     void add_mom( std::vector<int> &mom ){
