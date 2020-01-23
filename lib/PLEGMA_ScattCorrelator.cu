@@ -3,7 +3,6 @@
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_scattreductions.cuh>
 #include <PLEGMA_utils.h>
-
 using namespace plegma;
 
 //--------------------------------//
@@ -25,6 +24,37 @@ PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std:
 template<typename Float>
 PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<std::vector<int>> fixMomsVec):
   PLEGMA_Correlator<Float>(CorrSpace,fixMomsVec) { ; }
+
+template<typename Float>
+bool PLEGMA_ScattCorrelator<Float>::is_V24() {
+  std::string exp_shape("gsssc");
+
+  if( this->corr_space==POSITION_SPACE )
+    return false;
+
+  //check site_size
+  if( this->shape.size() != 5 || this->shape_labels.compare(exp_shape)!=0 )
+    return false;
+  if( this->n_datasets()!=1 || this->n_groups()!=1 )
+    return false;
+
+  return true;
+}
+template<typename Float>
+bool PLEGMA_ScattCorrelator<Float>::is_V3() {
+  std::string exp_shape("gsc");
+
+  if( this->corr_space==POSITION_SPACE )
+    return false;
+
+  //check site_size
+  if( this->shape.size() != 3 || this->shape_labels.compare(exp_shape)!=0 )
+    return false;
+  if( this->n_datasets()!=1 || this->n_groups()!=1 )
+    return false;
+
+  return true;
+}
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S) { 
@@ -109,6 +139,55 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
 
   const VRED V=V_2;
   V_reductions<V,Float,Float,Float>( *this, Phi, Gammas, S1, S2);
+  
+}
+void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, GAMMAS G_i2 , std::vector<GAMMAS> &G_f1, std::vector<GAMMAS> &G_f2, std::vector<std::string> &out){
+  std::string tmp;
+  for(auto &mom : moms.print() )
+    for( auto &g1 : G_i1 )
+      for( auto &g2 : G_f1 )
+	for( auto &g3 : G_f2 ){
+	  tmp = mom + "/" + GAMMAS_STR[g1] + "/" + GAMMAS_STR[G_i2] + "/" + GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3];
+	  out.push_back(tmp);
+	}
+}
+
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile) {
+
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+  if( this->corr_space == POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
+
+  //allocate
+  int n_gammas_f1 = srcV2.shape[0];
+  this->datasets={"B1"};
+  print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
+  this->shape={N_SPINS,N_SPINS};
+  this->shape_labels="ss";
+  this->initialize();
+
+  if( this->vol_size*this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
+    PLEGMA_error("I did some mistakes\n");
+
+  
+  std::vector<std::array<int,3>> imap=moms.index_map();
+  int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS*2;
+
+  //write B1
+  for(int i_m=0; i_m<imap.size(); i_m++)
+    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);
+
+  this->writeHDF5(outfile);
+
+  //write B2
+  this->datasets={"B2"};
+  for(int i_m=0; i_m<imap.size(); i_m++)
+    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0);
+
+  this->writeHDF5(outfile);
   
 }
 
@@ -483,40 +562,25 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
 
 
 template<typename Float>
-void V3V2reduction(std::vector<GAMMAS> &Gammas_i, std::vector<std::array<int,3>> &p_i, std::vector<std::array<int,3>> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index, bool transp=false, int offset=0) {
-  int n_gammas_i = Gammas_i.size();
-  if ((n_gammas_i <= 0) || (n_gammas_i >16)){
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, int n_gammas_i2, int g0) {
+  int n_gammas_i1 = Gammas_i1.size();
+  if ((n_gammas_i1 <= 0) || (n_gammas_i1 >16)){
    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
   } 
 
-  //check site_size
-  std::string expV2("gsssc");
-  std::string expV3("gsc");
-  if( srcV2.shape.size() != 5 || srcV2.shape_labels.compare(expV2)!=0 )
-    PLEGMA_error("The shape of srcV2 object must be of the type gsssc\n");
-  if( srcV2.n_datasets()!=1 || srcV2.n_groups()!=1 )
-    PLEGMA_error("1 dataset and 1 group only\n");
+  if( !srcV2.is_V24() ) PLEGMA_error("SrcV2 object does not seem a V2like object\n");
+  if( !this->is_V3() ) PLEGMA_error("SrcV3 object does not seem a V3like object\n");
+ 
+  int n_gammas_f1 = srcV2.getGList().size();
+  int n_gammas_f2 = this->GList.size();
 
-  if( srcV3.shape.size() != 3 || srcV3.shape_labels.compare(expV3)!=0 )
-    PLEGMA_error("The shape of srcV2 object must be of the type gsssc\n");
-  if( srcV3.n_datasets()!=1 || srcV3.n_groups()!=1 )
-    PLEGMA_error("1 dataset and 1 group only\n");
+  int Nmoms_f1 = srcV2.getVolSize()/HGC_localL[3];
+  int Nmoms_f2 = this->vol_size/HGC_localL[3];
 
-  int n_gammas_f1 = srcV2.GList.size();
-  int n_gammas_f2 = srcV3.GList.size();
-
-  int Nmoms_f1 = srcV2.vol_size/HGC_localL[3];
-  int Nmoms_f2 = srcV3.vol_size/HGC_localL[3];
-
-  PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE,srcV2.fixMomList);
-  auto absorbFunc =
-    (index==0) ? V3aux.absorb_fromV24<0> :
-    ( (index==1) ? V3aux.absorb_fromV24<1> :
-     ( (index==2) ? V3aux.absorb_fromV24<2> : NULL));
-  int spins;
+  PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.getFixMomList());
   
-  Float* srcf2 = srcV3.corr;//V3
-  Float* srcf1 = V3aux.corr;//V2
+  Float* srcf2 = this->corr;//V3
+  Float* srcf1 = V3aux.getCorr();//V2
   
   int TIME=HGC_localL[3];
   //
@@ -527,29 +591,30 @@ void V3V2reduction(std::vector<GAMMAS> &Gammas_i, std::vector<std::array<int,3>>
   const int f1_MGSC2=Nmoms_f1*n_gammas_f1*N_SPINS*N_COLS*2;
   const int f1_GSC2=n_gammas_f1*N_SPINS*N_COLS*2;
   //
-  const int d_GGGTSS2=n_gammas_i*n_gammas_f1*n_gammas_f2*TIME*N_SPIN*N_SPIN*2;
-  const int d_GGTSS2=n_gammas_f1*n_gammas_f2*TIME*N_SPIN*N_SPIN*2;
-  const int d_GTSS2=n_gammas_f2*TIME*N_SPIN*N_SPIN*2;
-  const int d_TSS2=TIME*N_SPIN*N_SPIN*2;
-  const int d_SS2=N_SPIN*N_SPIN*2;
+  const int d_GGTSS2=n_gammas_f1*n_gammas_f2*TIME*N_SPINS*N_SPINS*2;
+  const int d_GTSS2=n_gammas_f2*TIME*N_SPINS*N_SPINS*2;
+  const int d_TSS2=TIME*N_SPINS*N_SPINS*2;
+  const int d_SS2=N_SPINS*N_SPINS*2;
  
-  for (int m_idx=0 ; m_idx < indexmap.size(); ++m_idx){
-    p_i_i = p_i[indexmap[m_idx][0]];
-    i_mom_f1 = indexmap[m_idx][1];
-    i_mom_f2 = indexmap[m_idx][2];
-    for (int alfa=0; alfa < N_SPINS; ++alfa ){
-      for (int beta=0; beta < N_SPINS; ++beta ){
-	spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
-	absorbFunc( srcV2, alfa, beta );
-	for (int g1=0 ; g1 < n_gammas_i ; ++g1 ){//pi
-	  for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-	    for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
-	      for(int t=0; t < TIME; ++t){
-		V_M_V<Float>( srcf2 + t*f2_MGSC2 + i_mom_f2*f2_GSC2 + g3*N_SC2,
-			      srcf1 + t*f1_MGSC2 + i_mom_f1*f1_GSC2 + g2*N_SC2, 
-			      Gammas_i[g1], 
-			      dest + offset + m_idx*d_GGGTSS2 + g1*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins);
-	      }
+  int i_mom_f1 = indexmap[1];
+  int i_mom_f2 = indexmap[2];
+  for (int alfa=0; alfa < N_SPINS; ++alfa ){
+    for (int beta=0; beta < N_SPINS; ++beta ){
+      int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
+      switch(index_abs){
+      case 0: V3aux.absorb_fromV24<0>( srcV2, alfa, beta ); break;
+      case 1: V3aux.absorb_fromV24<1>( srcV2, alfa, beta ); break;
+      case 2: V3aux.absorb_fromV24<2>( srcV2, alfa, beta ); break;
+      }
+      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+	for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+	    for(int t=0; t < TIME; ++t){
+	      V_M_V<Float>( srcf2 + t*f2_MGSC2 + i_mom_f2*f2_GSC2 + g3*N_SC2,
+			    srcf1 + t*f1_MGSC2 + i_mom_f1*f1_GSC2 + g2*N_SC2, 
+			    Gammas_i1[g1], 
+			    dest + g1*(n_gammas_i2 + g0)*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins);
+	    }
           }
         }
       }
@@ -616,21 +681,41 @@ void V3V2reduction(std::vector<GAMMAS> &Gammas_i, std::vector<std::array<int,3>>
   
 //   T_reductions<T,Float,Float>( *this, Gammas_i, Gammas_f, S1, S2, S3);
 // }
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::contract_GxV2_checks( PLEGMA_ScattCorrelator<Float> &srcV2){
+  if( this->corr_space==POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
+  if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
+  
+  if(!srcV2.fixMomList.empty()){
+    if( this->fixMomList != srcV2.fixMomList ) PLEGMA_error("src and dest must have same momenta\n");
+  }
+  else if(!srcV2.fixMomVec.empty()){
+    if( this->fixMomVec != srcV2.fixMomVec ) PLEGMA_error("src and dest must have same momenta\n");
+  } else {
+    if(this->Q2_max != srcV2.Q2_max) PLEGMA_error("src and dest must have same momenta\n");
+  }
+
+  //allocate
+  int n_gammas = srcV2.GList.size();
+  this->GList=srcV2.GList;
+  this->datasets={"absorbvectorfromV24"};
+  this->groups={"absorbvectorfromV24"};
+  this->shape={n_gammas,N_SPINS,N_COLS};
+  this->shape_labels="gsc";
+  this->initialize();
+  
+
+  int source[4]={0,0,0,0};
+  this->setSource( source );
+}
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta){
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
-  if( srcV2.corr_space==POSITION_SPACE )
-    PLEGMA_error("Not implemented yet\n");
-
-  //check site_size
-  std::string expstr ("gsssc");
-  if( srcV2.shape.size() != 5 || srcV2.Shape_labels().compare(expstr)!=0 )
-    PLEGMA_error("The shape of src object must be of the type gsssc\n");
-  if( srcV2.n_datasets()!=1 || srcV2.n_groups()!=1 )
-    PLEGMA_error("1 dataset and 1 group only\n");
-
+  if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
+  
   //check index ranges
   if( alfa<0 || alfa>=N_SPINS ) PLEGMA_error("%d out of range\n", alfa);
   if( beta<0 || beta>=N_SPINS ) PLEGMA_error("%d out of range\n", beta);
@@ -639,9 +724,16 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelato
   //allocate
   int n_gammas = srcV2.shape[0];
 
-  if(srcV2.fixMomVec.empty()) this->Q2_max = srcV2.Q2_max;
-    else this->fixMomVec = srcV2.fixMomVec;
-    
+  if(!srcV2.fixMomList.empty()){
+    if( this->fixMomList != srcV2.fixMomList ) PLEGMA_error("src and dest must have same momenta\n");
+  }
+  else if(!srcV2.fixMomVec.empty()){
+    if( this->fixMomVec != srcV2.fixMomVec ) PLEGMA_error("src and dest must have same momenta\n");
+  } else {
+    if(this->Q2_max != srcV2.Q2_max) PLEGMA_error("src and dest must have same momenta\n");
+  }
+  
+  this->GList=srcV2.GList;
   this->datasets={"absorbvectorfromV24"};
   this->groups={"absorbvectorfromV24"};
   this->shape={n_gammas,N_SPINS,N_COLS};
@@ -657,16 +749,8 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa){
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
-  if( srcV2.corr_space==POSITION_SPACE )
-    PLEGMA_error("Not implemented yet\n");
-
-  //check site_size
-  std::string expstr ("gsssc");
-  if( srcV2.shape.size() != 5 || srcV2.Shape_labels().compare(expstr)!=0 )
-    PLEGMA_error("The shape of src object must be of the type gsssc\n");
-  if( srcV2.n_datasets()!=1 || srcV2.n_groups()!=1 )
-    PLEGMA_error("1 dataset and 1 group only\n");
-
+  if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
+  
   //check index ranges
   if( alfa<0 || alfa>=N_SPINS ) PLEGMA_error("%d out of range\n", alfa);
 
@@ -674,9 +758,16 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_Scat
   //allocate
   int n_gammas = srcV2.shape[0];
 
-  if(srcV2.fixMomVec.empty()) this->Q2_max = srcV2.Q2_max;
-    else this->fixMomVec = srcV2.fixMomVec;
-
+  if(!srcV2.fixMomList.empty()){
+    if( this->fixMomList != srcV2.fixMomList ) PLEGMA_error("src and dest must have same momenta\n");
+  }
+  else if(!srcV2.fixMomVec.empty()){
+    if( this->fixMomVec != srcV2.fixMomVec ) PLEGMA_error("src and dest must have same momenta\n");
+  } else {
+    if(this->Q2_max != srcV2.Q2_max) PLEGMA_error("src and dest must have same momenta\n");
+  }
+  
+  this->GList=srcV2.GList;
   this->datasets={"absorbmatrixv24"};
   this->groups={"absorbmatrixv24"};
   this->shape={n_gammas,N_SPINS,N_COLS};

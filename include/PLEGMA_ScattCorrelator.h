@@ -1,5 +1,6 @@
 #pragma once
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_gammas.h>
 
 namespace plegma {
   class momList {
@@ -17,8 +18,10 @@ namespace plegma {
 	  (*ps[j]).push_back(p);
       }
     }
+    int size(){ return p_i2.size(); }
+
     void add_mom( std::vector<int> &mom ){
-      if(mom.size()%9!=0) PLEGMA_error("9 integers expected\n");; return;
+      if(mom.size()%9!=0) PLEGMA_error("9 integers expected\n");
       for(int j=0; j<3; j++){
 	std::array<int,3> p={mom[j*3],mom[j*3+1],mom[j*3+2]};
 	(*ps[j]).push_back(p);
@@ -80,12 +83,29 @@ namespace plegma {
 	res.push_back({aux1[i],aux2[i],aux3[i]});
       return res;
     }
-
-    void print(){
-      for(int n=0; n<p_i2.size(); n++)
-	std::cout<< "p_i2=" << p_i2[n][0] << "_" << p_i2[n][1] << "_" << p_i2[n][2] << "_" <<
-	  "p_f1=" << p_f1[n][0] << "_" << p_f1[n][1] << "_" << p_f1[n][2] << "_" <<
-	  "p_f2=" << p_f2[n][0] << "_" << p_f2[n][1] << "_" << p_f2[n][2] << "\n";
+    std::vector<std::array<int,3>> pi1(){
+      std::vector<std::array<int,3>> p_i1;
+      std::array<int,3> tmp;
+      for(int n=0; n<p_i2.size(); n++){
+	for(int j=0; j<3; j++)
+	  tmp[j]=p_f1[n][j]+p_f2[n][j]-p_i2[n][j];
+	p_i1.push_back(tmp);
+      }
+      return p_i1;
+    }
+    
+    std::vector<std::string> print(){
+      std::vector<std::array<int,3>> p_i1=pi1();
+      std::vector<std::string> out;
+      std::string tmp;
+      for(int n=0; n<p_i2.size(); n++){
+        tmp ="p_i1="+std::to_string(p_i1[n][0])+"_"+std::to_string(p_i1[n][1])+"_"+std::to_string(p_i1[n][2])+"_";
+	tmp += "p_i2="+std::to_string(p_i2[n][0])+"_"+std::to_string(p_i2[n][1])+"_"+std::to_string(p_i2[n][2])+"_";
+	tmp += "p_f1="+std::to_string(p_f1[n][0])+"_"+std::to_string(p_f1[n][1])+"_"+std::to_string(p_f1[n][2])+"_";
+	tmp += "p_f2="+std::to_string(p_f2[n][0])+"_"+std::to_string(p_f2[n][1])+"_"+std::to_string(p_f2[n][2]);
+	out.push_back(tmp);
+      }
+      return out;
     }
   };
 
@@ -140,6 +160,7 @@ namespace plegma {
 
     void absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta);
     void absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa );
+    void contract_GxV2_checks( PLEGMA_ScattCorrelator<Float> &srcV2);
 
 
 
@@ -160,6 +181,10 @@ namespace plegma {
     std::vector<std::vector<int>> getFixMomList(){ return fixMomList; }
     std::vector<GAMMAS> getGList(){ return GList; }
 
+    //checks
+    bool is_V24();
+    bool is_V3();
+
     //reductions
     void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S);
@@ -167,13 +192,18 @@ namespace plegma {
     void T1( std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
     void T2( std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
 
+
     //manipulation
     template <int s_free>
     void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
     template <int s_fixed>
     void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa);
+    template <int s_fixed>
+    void contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2like, GAMMAS &G, bool transp=false );
 
-    friend void V3V2reduction(std::vector<GAMMAS> &, std::vector<std::array<int,3>> &, std::vector<std::array<int,3>> &, PLEGMA_ScattCorrelator<Float> &, PLEGMA_ScattCorrelator<Float> &, Float *, int, bool transp=false, int offset=0);
+    void V3V2reduction(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, int n_gammas_i2=1, int g0=0);
+
+    void B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile);
 
     void B_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
 
@@ -185,9 +215,55 @@ namespace plegma {
 
 }
 
-
+using namespace plegma;
 
 //template functions must be defined here
+template<typename Float>
+template <int s_free>
+void PLEGMA_ScattCorrelator<Float>::contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS &G, bool transp){
+  if( s_free<0 || s_free>=3 )
+    PLEGMA_error("s_free %d out of range (0, 1 or 2)\n",s_free);
+  this->contract_GxV2_checks(srcV2);
+
+  int n_gammas=srcV2.GList.size();
+  const unsigned short N_S1C=N_SPINS*N_COLS;
+  const unsigned short N_S2C=N_SPINS*N_SPINS*N_COLS;
+  const unsigned short N_S3C=N_SPINS*N_SPINS*N_SPINS*N_COLS;
+  const unsigned short N_GS3C=n_gammas*N_SPINS*N_SPINS*N_SPINS*N_COLS;
+  const unsigned short N_GS1C=n_gammas*N_SPINS*N_COLS;
+    
+  size_t VOL_SIZE = srcV2.getVolSize();
+  Float* dest = this->corr;
+  Float* src = srcV2.corr;
+  
+  for(int v=0; v < VOL_SIZE; v++)
+    for(int g=0; g < n_gammas; g++)
+      for(int s=0; s < N_SPINS; s++)
+      	for(int c=0; c < N_COLS; c++){
+	  dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2] = 0.;
+	  dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2 + 1] = 0.;
+	  for(int e_nz=0; e_nz<4; e_nz++){
+	    int alfa = (transp) ? gammaInd_host[G][e_nz][1] : gammaInd_host[G][e_nz][0];
+	    int beta = (transp) ? gammaInd_host[G][e_nz][0] : gammaInd_host[G][e_nz][1];
+	    std::complex<Float> g(gamma_host[G][e_nz][0],gamma_host[G][e_nz][1]);
+	    std::complex<Float> a;
+	    Float* aux;
+	    
+	    if( s_free == 0){
+	      aux = src + (v*N_GS3C+g*N_S3C+s*N_S2C+alfa*N_S1C+beta*N_COLS+c)*2;
+	    } else if ( s_free == 1 ){
+	      aux = src + (v*N_GS3C+g*N_S3C+alfa*N_S2C+s*N_S1C+beta*N_COLS+c)*2;
+	    } else {
+	      aux = src + (v*N_GS3C+g*N_S3C+alfa*N_S2C+beta*N_S1C+s*N_COLS+c)*2;
+	    }
+	    a = {*aux,*(aux+1)};
+	    g = g*a;
+	    dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2] += g.real();
+	    dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2 + 1] += g.imag();
+	  }
+	}
+}
+
 template<typename Float>
 template <int s_free>
 void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2,

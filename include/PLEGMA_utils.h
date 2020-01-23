@@ -9,6 +9,7 @@
 #include <utils/QUDA_types.h>
 #include <utils/QUDA_interface.h>
 
+
 using namespace plegma;
 
 //============ QUDA_interface.cpp ===============================//
