@@ -491,6 +491,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
       //for (int i=0; i<4; ++i){
       //  temporaryV24.push_back(PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom));
       //}
+      /*
       for (int i=0; i<4; ++i){
         if ( diagramm_index == 1 ){
           (temporaryV24[i]).absorb_fromV24<1>( srcV2[i], beta, alfa);
@@ -504,7 +505,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
         else{
           temporaryV24[i].absorb_fromV24<0>( srcV2[i], alfa, beta);
         }
-      }
+      }*/
       #pragma unroll
       for (int loop_gammai1=0 ; loop_gammai1 < n_gammas_i1 ; ++loop_gammai1 ){
         #pragma unroll
