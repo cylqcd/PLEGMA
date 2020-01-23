@@ -259,6 +259,7 @@ int main(int argc, char **argv)
       std::vector<GAMMAS> glist_source_nucleon={G4};
       std::vector<GAMMAS> glist_sink_nucleon={G4};
       std::vector<GAMMAS> glist_sink_meson={ONE};
+      std::vector<GAMMAS> glist_source_meson={ONE};
       PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, sinkMom_Nucleon);
       PLEGMA_ScattCorrelator<float> reductionsV3(MOMENTUM_SPACE, sinkMom_Meson);
 
@@ -365,10 +366,10 @@ int main(int argc, char **argv)
         reductionsV3_diluted[i].V3( stochastic_propagator[i], glist_sink_meson, propUP);
         reductionsV4_diluted[i].V4( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
       }
-      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 1 );
+      diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 1 );
       diagramZ.writeHDF5("Z1Diagramm");
 
-      diagramZ.Z_diagramms(glist_source_nucleon, g_list_source_meson, reductionsV3_diluted, reductionsV4_diluted, 2 );
+      diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 2 );
       diagramZ.writeHDF5("Z2Diagramm");
 
       
