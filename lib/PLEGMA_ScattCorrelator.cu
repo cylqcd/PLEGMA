@@ -286,7 +286,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(std::vector<GAMMAS> &Gammas_i1, 
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile, int diagrammindex){
+void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile, int diagramm_index){
 //template<typename Float>
 //void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, const int diagramm_index) {
 
@@ -324,17 +324,15 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
     //write W3
     else if (diagramm_index == 3){
       srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);}
-    }
     //write W4
     else {
-      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0 );
-    }
+      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0 );}
   }
   this->writeHDF5(outfile);
 
-
+}
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, int n_gammas_i2, int g0) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpgamma, int n_gammas_i2, int g0) {
   int n_gammas_i1 = Gammas_i1.size();
   if ((n_gammas_i1 <= 0) || (n_gammas_i1 >16)){
    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
@@ -373,39 +371,29 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Ga
   int i_mom_f2 = indexmap[2];
 
 
-
-  int NG3SPIN2=n_gammas_i1*n_gammas_f1*n_gammas_f2*N_SPINS*N_SPINS ;
-  int NG2SPIN2=n_gammas_f1*n_gammas_f2*N_SPINS*N_SPINS ;
-  int NG1SPIN2=n_gammas_f2*N_SPINS*N_SPINS ;
-  int NSPIN2= N_SPINS*N_SPINS ;
-  int NG1NSPIN1NCOL1_V3=n_gammas_f2*N_SPINS*N_COLS;
-  int NG1NSPIN1NCOL1_V2R=n_gammas_f1*N_SPINS*N_COLS;
-
-
   Float *temporary_colorvector=(Float *)malloc(sizeof(Float)*24);
   for (int alfa=0 ; alfa < N_SPINS; ++alfa){
     for (int beta=0; beta < N_SPINS; ++beta){
       int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
-      std::vector<int> mom={0,0,0};
-      PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, mom );
       V3aux.absorbspinmatrix_fromV24<1>( srcV2, alfa );
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
 	for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
 	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
             for(int t=0; t < TIME; t++){
-              V_TR_MM<Float>(srcf1+t*f1_MGSC2 + i_mom_f1*f1_GSC2+g2*N_SC2,
+              V_TR_MM<Float>(srcf1+t*f1_MGSSC2 + i_mom_f1*f1_GSSC2+g2*N_SSC2,
                              Gammas_i1[g1],
+                             transpgamma,
                              temporary_colorvector);
               dest[(g1*n_gammas_i2+g0)*d_GGTSS2+g2*d_GTSS2+g3*d_TSS2+t*d_SS2+spins+0]=0.;
               dest[(g1*n_gammas_i2+g0)*d_GGTSS2+g2*d_GTSS2+g3*d_TSS2+t*d_SS2+spins+1]=0.;
              
               for (int coloridx=0; coloridx<3; ++coloridx){
                 dest[(g1*n_gammas_i2+g0)*d_GGTSS2+g2*d_GTSS2+g3*d_TSS2+t*d_SS2+spins+0]+=
-                   +temporary_colorvector[2*coloridx+0]*srcf1[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+0]
-                   -temporary_colorvector[2*coloridx+1]*srcf1[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+1];
+                   +temporary_colorvector[2*coloridx+0]*srcf2[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+0]
+                   -temporary_colorvector[2*coloridx+1]*srcf2[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+1];
                 dest[(g1*n_gammas_i2+g0)*d_GGTSS2+g2*d_GTSS2+g3*d_TSS2+t*d_SS2+spins+1]+=
-                   +temporary_colorvector[2*coloridx+1]*srcf1[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+0]
-                   +temporary_colorvector[2*coloridx+0]*srcf1[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+1];
+                   +temporary_colorvector[2*coloridx+1]*srcf2[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+0]
+                   +temporary_colorvector[2*coloridx+0]*srcf2[t*f2_MGSC2+i_mom_f2*f2_GSC2+g3*N_SC2+beta*N_COLS*2+2*coloridx+1];
 
               }              
             }
@@ -416,7 +404,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Ga
   }
   free(temporary_colorvector);
 }
-
+/*
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
                                                 std::vector<GAMMAS> &Gammas_i2, 
@@ -514,21 +502,21 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
       //for (int i=0; i<4; ++i){
       //  temporaryV24.push_back(PLEGMA_ScattCorrelator<Float>(MOMENTUM_SPACE, mom));
       //}
-      /*
-      for (int i=0; i<4; ++i){
-        if ( diagramm_index == 1 ){
-          (temporaryV24[i]).absorb_fromV24<1>( srcV2[i], beta, alfa);
-        }
-        else if ( diagramm_index == 2 ){
-          temporaryV24[i].absorbspinmatrix_fromV24<0>( srcV2[i], alfa );
-        }
-        else if ( diagramm_index == 3 ){
-          temporaryV24[i].absorbspinmatrix_fromV24<1>( srcV2[i], alfa );
-        }
-        else{
-          temporaryV24[i].absorb_fromV24<0>( srcV2[i], alfa, beta);
-        }
-      }*/
+      //
+      //for (int i=0; i<4; ++i){
+      //  if ( diagramm_index == 1 ){
+      //    (temporaryV24[i]).absorb_fromV24<1>( srcV2[i], beta, alfa);
+      //  }
+      //   else if ( diagramm_index == 2 ){
+      //    temporaryV24[i].absorbspinmatrix_fromV24<0>( srcV2[i], alfa );
+      //  }
+      //  else if ( diagramm_index == 3 ){
+      //    temporaryV24[i].absorbspinmatrix_fromV24<1>( srcV2[i], alfa );
+      //  }
+      //  else{
+      //    temporaryV24[i].absorb_fromV24<0>( srcV2[i], alfa, beta);
+      //  }
+      //}
       #pragma unroll
       for (int loop_gammai1=0 ; loop_gammai1 < n_gammas_i1 ; ++loop_gammai1 ){
         #pragma unroll
@@ -584,10 +572,10 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::vector<GAMMAS> &Gammas_i1,
   free(temporary_colorvector);
   free(temporary_dilution);
 }
-
+*/
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpV3V2, int n_gammas_i2, int g0) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpgamma, int n_gammas_i2, int g0) {
   int n_gammas_i1 = Gammas_i1.size();
   if ((n_gammas_i1 <= 0) || (n_gammas_i1 >16)){
    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
@@ -638,7 +626,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1
 	      V_M_V<Float>( srcf2 + t*f2_MGSC2 + i_mom_f2*f2_GSC2 + g3*N_SC2,
 	                    srcf1 + t*f1_MGSC2 + i_mom_f1*f1_GSC2 + g2*N_SC2, 
 		            Gammas_i1[g1], 
-                            transpV3V2,
+                            transpgamma,
 		            dest + g1*(n_gammas_i2 + g0)*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins );
               
 	    }
