@@ -37,7 +37,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   size_NeV = ((size_t) p.NeV) * size_per_Vec;
   bytes_per_Vec = size_per_Vec * 2 * sizeof(double);
   bytes_NeV = size_NeV * 2 * sizeof(double);
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
   if(isReadEigenVectors) p.NkV = p.NeV;
   if(p.NkV < p.NeV) PLEGMA_error("The NkV should be larger equal than NeV");
   size_NkV = ((size_t) p.NkV) * size_per_Vec;
@@ -47,6 +47,15 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
 #if defined(HAVE_ARPACK)
   hostMalloc(h_eigVecs,size_NkV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NkV*2*sizeof(double));
+#elif defined(QUDAEIG)
+  hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
+  if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
+  hostMalloc(h_eigVecs_p, p.NeV*sizeof(double*)); // need to check if this does the trick
+  double* ptr_tmp = h_eigVecs;
+  for(int i = 0; i < p.NeV; i++){
+    h_eigVecs_p[i] = ptr_tmp;
+    ptr_tmp += size_per_Vec*2;
+  }
 #elif defined(HAVE_PRIMME)
   hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
@@ -59,16 +68,28 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     d_in = new PLEGMA_Vector<double>(DEVICE);
     d_out = new PLEGMA_Vector<double>(DEVICE);
   }
+
   dOp = new QUDA_dirac(dslashType);
+#if defined(QUDAEIG)
+  eig_inv_param = newQudaInvertParam();
+  setInvertParam(eig_inv_param);
+  eig_inv_param.dslash_type = dslashType;
+  eig_inv_param.solve_type = QUDA_DIRECT_SOLVE;
+  eig_inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
+  eig_inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
+  eig_param.invert_param = &eig_inv_param;
+#endif
   tmp1 = new PLEGMA_Vector<double>(DEVICE);
   tmp2 = new PLEGMA_Vector<double>(DEVICE);
   // check the spectrumPart
   if(p.spectrumPart != "SR" && p.spectrumPart != "LR") PLEGMA_error("Allowed values for spectrum part are SR or LR");
+#if defined(HAVE_ARPACK) || defined(HAVE_PRIMME)
   if(p.isACC){
     if(p.spectrumPart == "SR") p.spectrumPart = "LR";
     else if(p.spectrumPart == "LR") p.spectrumPart = "SR";
     else PLEGMA_error("Not implemented");
   }
+#endif
   
   if(!isReadEigenVectors){
     initEigSolver();
@@ -76,13 +97,14 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     computeEigVecs();
   }
   else readEigenVectors(filenamePrefix);
-    
+  computeEigVals();    
   if(isWriteEigenVectors) writeEigenVectors(filenamePrefix);
   
-  computeEigVals();
   if(!isReadEigenVectors){
 #if defined(HAVE_ARPACK)
     hostFree(h_eigVals,p.NkV*2*sizeof(double));
+#elif defined(QUDAEIG)
+    hostFree(h_eigVals,p.NeV*2*sizeof(double));
 #elif defined(HAVE_PRIMME)
     hostFree(h_eigVals,p.NeV*2*sizeof(double));
 #else
@@ -92,6 +114,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     delete d_out;
     d_in = nullptr; d_out = nullptr;
   }
+
   delete dOp;
   delete tmp1;
   delete tmp2;
@@ -108,15 +131,18 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
 EigSolver::~EigSolver(){
 #if defined(HAVE_ARPACK)
     hostFree(h_eigVecs,size_NkV*2*sizeof(double));
+#elif defined(QUDAEIG)
+     hostFree(h_eigVecs,size_NeV*2*sizeof(double));
+     hostFree(h_eigVecs_p, p.NeV*sizeof(double*));
 #elif defined(HAVE_PRIMME)
     hostFree(h_eigVecs,size_NeV*2*sizeof(double));
 #else
   PLEGMA_error("Not implemented");
 #endif    
-  delete[] h_eigVecs;
+  //  delete[] h_eigVecs;
 }
 
-
+#ifndef QUDAEIG
   
 #if defined(HAVE_PRIMME)
 static void applyOperator(double *out, double *in, int size_per_Vec){
@@ -181,7 +207,9 @@ static void par_GlobalSumForDouble(void *sendBuf, void *recvBuf, int *count, pri
     *ierr = MPI_Allreduce(sendBuf, recvBuf, *count, MPI_DOUBLE, MPI_SUM, communicator) != MPI_SUCCESS;
 }
 #endif
-
+ 
+#endif
+ 
 void EigSolver::initEigSolver(){
 #ifdef HAVE_ARPACK
   int arpack_log_u = 9999;
@@ -211,6 +239,33 @@ void EigSolver::initEigSolver(){
   else PLEGMA_error("Not implemented");
   primme_pars.printLevel = p.printLevel;
   primme_set_method(p.primme_method, &primme_pars);
+#elif QUDAEIG
+  eig_param.eig_type = QUDA_EIG_TR_LANCZOS; // Up to now QUDA only provides the thick restarted Lanczos
+  if(p.spectrumPart == "SR") eig_param.spectrum = QUDA_SPECTRUM_SR_EIG;
+  else if(p.spectrumPart == "LR") eig_param.spectrum = QUDA_SPECTRUM_LR_EIG;
+  else PLEGMA_error("Not implemented");
+  eig_param.location = QUDA_CUDA_FIELD_LOCATION;
+  eig_param.nConv = p.NeV;
+  eig_param.nEv = p.NeV;
+  eig_param.nKr = p.NkV;
+  eig_param.tol = p.tol;
+  //  eig_param.batched_rotate = 0; // not in the release 1.0.x
+  eig_param.require_convergence = QUDA_BOOLEAN_TRUE;
+  eig_param.check_interval = 10;
+  eig_param.max_restarts = 1000;
+  eig_param.cuda_prec_ritz = QUDA_DOUBLE_PRECISION;
+  eig_param.use_norm_op = QUDA_BOOLEAN_TRUE; // put it on so it will do M^+ M
+  eig_param.use_dagger = QUDA_BOOLEAN_FALSE;
+  eig_param.compute_svd = QUDA_BOOLEAN_FALSE;
+  eig_param.use_poly_acc = G_isACC ? QUDA_BOOLEAN_TRUE : QUDA_BOOLEAN_FALSE;
+  eig_param.poly_deg = G_PolyDeg;
+  eig_param.a_min = G_amin;
+  eig_param.a_max = G_amax;
+  eig_param.arpack_check = QUDA_BOOLEAN_FALSE;
+  strcpy(eig_param.arpack_logfile, "");
+  strcpy(eig_param.QUDA_logfile, p.logFile.c_str());
+  strcpy(eig_param.vec_infile, "");
+  strcpy(eig_param.vec_outfile, "");
 #else
   PLEGMA_error("Not implemented")
 #endif
@@ -218,7 +273,7 @@ void EigSolver::initEigSolver(){
 
 void EigSolver::print(){
   PLEGMA_printf("Number of eigenvalues requested: %d\n",p.NeV);
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
   PLEGMA_printf("Size of Krylov space requested: %d\n",p.NkV);
 #endif
   if(p.isACC) PLEGMA_printf("Using Polynomial acceleration with parameters: Degree=%d, amin=%+e, amax=%+e\n",p.PolyDeg,p.amin,p.amax);
@@ -227,7 +282,7 @@ void EigSolver::print(){
   else{ PLEGMA_printf("\n");}
   PLEGMA_printf("Tolerance for eigenSolver is %+e\n",p.tol);
   PLEGMA_printf("Max number of iterations for eigenSolver is %d\n",p.maxIters);
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
   PLEGMA_printf("The eigensolver logfile is: %s\n",p.logFile.c_str());
 #endif
 #if defined(HAVE_PRIMME)
@@ -235,6 +290,31 @@ void EigSolver::print(){
 #endif
 }
 
+template<typename FOUT, typename FIN>
+void packVectorToNormal(FOUT *vOut, FIN *vIn, long int volume){
+  long int VOLUME=volume;
+  long int VOLUMEh = VOLUME / 2;
+  int sSize = N_SPINS * N_COLS;
+  for(long int even = 0; even < VOLUMEh; even++) {
+    long int odd = even+VOLUMEh;
+    long int norm_coord = 2 * even;
+    int evenSiteBit = 0;
+    long int tmp = norm_coord/dims[0];
+    for(int i=1; i<N_DIMS; i++) {
+      evenSiteBit += tmp%dims[i];
+      tmp /= dims[i];
+    }
+    evenSiteBit = evenSiteBit % 2;
+    int oddSiteBit  = evenSiteBit ^ 1;
+    for(int c = 0; c < sSize; c++) {
+      vOut[( c*VOLUME + norm_coord + evenSiteBit )*2  +0] = vIn[(even*sSize + c)*2 + 0];
+      vOut[( c*VOLUME + norm_coord + evenSiteBit )*2  +1] = vIn[(even*sSize + c)*2 + 1];
+      vOut[( c*VOLUME + norm_coord + oddSiteBit )*2  +0] = vIn[(odd*sSize + c)*2 + 0];
+      vOut[( c*VOLUME + norm_coord + oddSiteBit )*2  +1] = vIn[(odd*sSize + c)*2 + 1];
+    }
+  }
+}
+ 
 void EigSolver::computeEigVecs(){
 #if defined(HAVE_ARPACK)
   MPI_Fint mpi_comm_f = MPI_Comm_c2f(HGC_fullComm);
@@ -327,6 +407,17 @@ void EigSolver::computeEigVecs(){
 
 #elif defined(HAVE_PRIMME)
   zprimme(h_eigVals, (std::complex<double> *) h_eigVecs, h_rnorms, &primme_pars);
+#elif defined(QUDAEIG)
+  eigensolveQuda((void**)h_eigVecs_p, (double _Complex *) h_eigVals, &eig_param);
+  double *vtmp;
+  hostMalloc(vtmp,bytes_per_Vec);
+  double* ptr_tmp = h_eigVecs;
+  for(int i = 0; i < p.NeV; i++){
+    memcpy(vtmp,ptr_tmp,bytes_per_Vec);
+    packVectorToNormal(ptr_tmp,vtmp,HGC_localVolume);
+    ptr_tmp += size_per_Vec*2;
+  }
+  hostFree(vtmp,bytes_per_Vec);
 #else
   PLEGMA_error("Not implemented");
 #endif
@@ -420,7 +511,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    PLEGMA_Vector<double> tmp(HOST);
    for(int i = 0 ; i < p.NeV; i++){
      double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
-     tmp.readFile(filenamePrefix + "_eV" + std::to_string(i),LIME_FORMAT);
+     tmp.readLIME(filenamePrefix + "_eV" + std::to_string(i),false);
      memcpy(eigVec,tmp.H_elem(),bytes_per_Vec);
      if(verbose) PLEGMA_printf("Eigenvector %d loaded\n", i);
    }
@@ -430,9 +521,9 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
    PLEGMA_Vector<double> tmp(HOST);
    for(int i = 0 ; i < p.NeV; i++){
-     double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
+     double *eigVec = h_eigVecs + ((long int) std::get<3>(evalsOrdered[i])) * size_per_Vec*2;
      memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
-     tmp.writeFile(filenamePrefix + "_eV" + std::to_string(i), LIME_FORMAT);
+     tmp.writeLIME(filenamePrefix + "_eV" + std::to_string(i),false);
      if(verbose) PLEGMA_printf("Eigenvector %d writen\n", i);
    }   
  }

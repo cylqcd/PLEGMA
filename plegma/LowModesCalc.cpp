@@ -25,9 +25,9 @@ static primme_preset_method getMethod(std::string str){
 
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC", "Eig-PolyDeg", "Eig-amin",
 					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV",
-#ifdef HAVE_ARPACK
+#if  defined(HAVE_ARPACK) || defined(QUDAEIG)
 					   "Eig-NkV", "Eig-logFile"
-#elif HAVE_PRIMME
+#elif defined(HAVE_PRIMME)
 					   "Eig-printLevel", "Eig-method-PRIMME"
 #endif
 };
@@ -38,11 +38,16 @@ int main(int argc, char **argv)
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
   std::string Eig_outputFile = "./eigsVdagG5V.dat";
   HGC_options->set("Eig-outputFile", "Path to dump the eigenvalues and vdag g5 v",verbosity, Eig_outputFile);
+  bool isReadEigenVecs = false, isWriteEigenVecs = false;
+  std::string fnameEigenVecsPrefix="";
+  HGC_options->set("readEigenVectors", "Where we want to read EigenVectors from file", verbosity, isReadEigenVecs);
+  HGC_options->set("writeEigenVectors", "Where we want to read EigenVectors from file", verbosity, isWriteEigenVecs);
+  HGC_options->set("prefixEigenVecsFile", "Path with prefix for the filenames of the eigenvectors", verbosity, fnameEigenVecsPrefix);
   //=========================================================================================================//
   initializePLEGMA();
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
-  gauge.readFile(latfile, LIME_FORMAT);
+  gauge.readFile(latfile, LIME_FORMAT,true);
   gauge.load();
   gauge.calculatePlaq();
 
@@ -60,22 +65,25 @@ int main(int argc, char **argv)
   eigParam.spectrumPart = Eig_spectrumPart;
   eigParam.tol =Eig_tol;
   eigParam.maxIters = Eig_maxIters;
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
   eigParam.NkV = Eig_NkV;
   eigParam.logFile = Eig_logFile;
 #elif defined(HAVE_PRIMME)
   eigParam.printLevel = Eig_printLevel;
   eigParam.primme_method=getMethod(Eig_method);
+#elif defined(QUDAEIG)
+  
 #else
   PLEGMA_error("No arpack or primme is compiled");
 #endif
  
-  EigSolver eigSol(eigParam, dslash_type , true);
+  EigSolver eigSol(eigParam, dslash_type,isReadEigenVecs, isWriteEigenVecs, fnameEigenVecsPrefix, true);
   eigSol.dumpEvalsVdagG5V(Eig_outputFile);
-  PLEGMA_Vector<double> in,out;
-  in.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
-  eigSol.projectVector(out,in);
-  std::complex<double> aka = out.dot(out);
+
+  // PLEGMA_Vector<double> in,out;
+  // in.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
+  // eigSol.projectVector(out,in);
+  // std::complex<double> aka = out.dot(out);
 
 #else
   PLEGMA_error("No eigenSolver is compiled");
