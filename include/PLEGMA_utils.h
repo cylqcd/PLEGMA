@@ -41,7 +41,7 @@ template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge
 std::vector<int> createR2(std::vector<int> &vec);
 template<typename Float> void V_M_V( Float * V1, Float * V2, GAMMAS gamma, bool transp, Float *Dest);
 template<typename Float> void V_TR_MM( Float *V1, GAMMAS gamma, bool transp, Float *Dest );
-template<typename Float> void TR_MM( Float *V1, GAMMAS gamma, Float *Dest );
+template<typename Float> void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size );
 
 //=================== PLEGMA_Options.cpp ==========================//
 void plegmaOptions(Options &opt, std::vector<std::string> list);

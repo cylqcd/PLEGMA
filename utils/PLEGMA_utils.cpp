@@ -305,6 +305,22 @@ template void V_TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest
 
 template void V_TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
 
+        x_pe_cy(dest+i_m*d_GGGGTSS2, gi, temporary, size);
+
+template<typename Float>
+void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size ){
+  for (int i=0; i<size; ++i){
+    dest[2*i+0]+= floatcomplex[0]*temporary[2*i+0]-floatcomplex[1]*temporary[2*i+1];
+    dest[2*i+1]+= floatcomplex[1]*temporary[2*i+0]+floatcomplex[0]*temporary[2*i+1];
+  }
+}
+
+
+template void x_pe_cy<float>(  float *dest,  float  *floatcomplex, float  *temporary, int size) ;
+
+
+template void x_pe_cy<double>( double *dest, double *floatcomplex, double *temporary, int size) ;
+/*
 template<typename Float>
 void TR_MM( Float * V1, GAMMAS gamma, bool transp, Float *Dest ){
   *(Dest+0) = 0;
@@ -323,4 +339,4 @@ void TR_MM( Float * V1, GAMMAS gamma, bool transp, Float *Dest ){
 template void TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest );
 
 template void TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
-
+*/
