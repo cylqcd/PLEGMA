@@ -279,7 +279,7 @@ template void V_M_V<double>( double * V1, double * V2, GAMMAS gamma, bool transp
  *  @params Float *Dest pointer to array of Float with size 2*N_COLS
  **/
 template<typename Float>
-void V_TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
+void V_TR_MM( Float * V1, GAMMAS gamma,bool transp, Float *Dest ){
   #pragma unroll
   for (int nz_c = 0 ; nz_c < 3 ; nz_c++){
     *(Dest+2*nz_c+0) = 0;
@@ -289,8 +289,8 @@ void V_TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
   for (int nz_c=0; nz_c < 3 ; nz_c++){
     #pragma unroll
     for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
-      int beta0=gammaInd_host[gamma][nz_e_inner][0];
-      int beta1=gammaInd_host[gamma][nz_e_inner][1];
+      int beta0=(!transp) ? gammaInd_host[gamma][nz_e_inner][0] : gammaInd_host[gamma][nz_e_inner][1];
+      int beta1=(!transp) ? gammaInd_host[gamma][nz_e_inner][1] : gammaInd_host[gamma][nz_e_inner][0];
       *(Dest+2*nz_c+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
                         -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
       *(Dest+2*nz_c+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
@@ -300,18 +300,19 @@ void V_TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
   
 }
 
-template void V_TR_MM<float>( float * V1, GAMMAS gamma, float *Dest );
+template void V_TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest );
 
-template void V_TR_MM<double>( double * V1, GAMMAS gamma, double *Dest );
+
+template void V_TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
 
 template<typename Float>
-void TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
+void TR_MM( Float * V1, GAMMAS gamma, bool transp, Float *Dest ){
   *(Dest+0) = 0;
   *(Dest+1) = 0;
   #pragma unroll
   for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
-    int beta0=gammaInd_host[gamma][nz_e_inner][0];
-    int beta1=gammaInd_host[gamma][nz_e_inner][1];
+    int beta0=(!transp) ? gammaInd_host[gamma][nz_e_inner][0] : gammaInd_host[gamma][nz_e_inner][1];
+    int beta1=(!transp) ? gammaInd_host[gamma][nz_e_inner][1] : gammaInd_host[gamma][nz_e_inner][0];
     *(Dest+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS+beta0)+0]
                -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS+beta0)+1];
     *(Dest+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS+beta0)+0]
@@ -319,7 +320,7 @@ void TR_MM( Float * V1, GAMMAS gamma, Float *Dest ){
   }
 }
 
-template void TR_MM<float>( float * V1, GAMMAS gamma, float *Dest );
+template void TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest );
 
-template void TR_MM<double>( double * V1, GAMMAS gamma, double *Dest );
+template void TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
 
