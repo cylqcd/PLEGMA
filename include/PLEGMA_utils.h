@@ -39,7 +39,7 @@ template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gaug
 template<typename Float> void applyAntiperiodicBoundary(Float **buf);
 template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic);
 std::vector<int> createR2(std::vector<int> &vec);
-template<typename Float> void V_M_V( Float * V1, Float * V2, GAMMAS gamma, Float *Dest);
+template<typename Float> void V_M_V( Float * V1, Float * V2, GAMMAS gamma, bool transp, Float *Dest);
 template<typename Float> void V_TR_MM( Float *V1, GAMMAS gamma, Float *Dest );
 template<typename Float> void TR_MM( Float *V1, GAMMAS gamma, Float *Dest );
 
