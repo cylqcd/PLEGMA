@@ -8,15 +8,18 @@ namespace plegma {
     std::vector<std::array<int,3>> p_f1;
     std::vector<std::array<int,3>> p_f2;
     std::vector<std::array<int,3>> *ps[3]={&p_i2,&p_f1,&p_f2};
+
   public:
     momList() {;}
+    
     momList( std::vector<int> &mom_list ){
+
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
       for(int i=0; i<mom_list.size(); i=i+9)
 	for(int j=0; j<3; j++){
 	  std::array<int,3> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
 	  (*ps[j]).push_back(p);
-      }
+	}
     }
     momList( std::string input_file){
       std::ifstream file;
@@ -118,10 +121,10 @@ namespace plegma {
       std::vector<std::string> out;
       std::string tmp;
       for(int n=0; n<p_i2.size(); n++){
-        tmp ="p_i1="+std::to_string(p_i1[n][0])+"_"+std::to_string(p_i1[n][1])+"_"+std::to_string(p_i1[n][2])+"_";
-	tmp += "p_i2="+std::to_string(p_i2[n][0])+"_"+std::to_string(p_i2[n][1])+"_"+std::to_string(p_i2[n][2])+"_";
-	tmp += "p_f1="+std::to_string(p_f1[n][0])+"_"+std::to_string(p_f1[n][1])+"_"+std::to_string(p_f1[n][2])+"_";
-	tmp += "p_f2="+std::to_string(p_f2[n][0])+"_"+std::to_string(p_f2[n][1])+"_"+std::to_string(p_f2[n][2]);
+        tmp ="pi1="+std::to_string(p_i1[n][0])+"_"+std::to_string(p_i1[n][1])+"_"+std::to_string(p_i1[n][2])+"_";
+	tmp += "pi2="+std::to_string(p_i2[n][0])+"_"+std::to_string(p_i2[n][1])+"_"+std::to_string(p_i2[n][2])+"_";
+	tmp += "pf1="+std::to_string(p_f1[n][0])+"_"+std::to_string(p_f1[n][1])+"_"+std::to_string(p_f1[n][2])+"_";
+	tmp += "pf2="+std::to_string(p_f2[n][0])+"_"+std::to_string(p_f2[n][1])+"_"+std::to_string(p_f2[n][2]);
 	out.push_back(tmp);
       }
       return out;

@@ -542,7 +542,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1
 		            Gammas_i1[g1], 
                             transpgamma,
 		            dest + g1*(n_gammas_i2 + g0)*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins );
-              
 	    }
           }
         }
