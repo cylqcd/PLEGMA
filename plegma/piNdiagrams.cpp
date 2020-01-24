@@ -298,13 +298,14 @@ int main(int argc, char **argv)
            diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, "Bdiagramm_Antonino");
 
      
-           diagramB.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
-           diagramB.writeHDF5("B1Diagramm");
+           diagramm.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
+           diagramm.writeHDF5("B1Diagramm");
 
-           diagramB.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 2 );
-           diagramB.writeHDF5("B2Diagramm");
+           diagramm.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 2 );
+           diagramm.writeHDF5("B2Diagramm");
 
            //Compute Diagram W1,W2
+           /*
            PLEGMA_ScattCorrelator<float> diagramW(MOMENTUM_SPACE, sinkMom_Meson);
 
            reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
@@ -325,7 +326,7 @@ int main(int argc, char **argv)
 
            diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 4 );
            diagramW.writeHDF5("W4Diagramm");
-
+           */
       
           //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
           std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
