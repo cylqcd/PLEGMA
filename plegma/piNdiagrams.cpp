@@ -331,103 +331,103 @@ int main(int argc, char **argv)
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 4 );
           //diagramW.writeHDF5("W4Diagramm");          
+          //
+       } //loop over gamma i2
          
       
-          //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
-          std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
-          PLEGMA_Vector<float> stochastic_source_spin_diluted; 
-          PLEGMA_Vector<float> vectortmp;
+       //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
+       std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
+       PLEGMA_Vector<float> stochastic_source_spin_diluted; 
+       PLEGMA_Vector<float> vectortmp;
           
       
-          vectorStoc_source.randInit(4321);
-          vectortmp.absorbTimeslice(vectorStoc_source, sequential_time_source)
-          //Multiplying by the appropraite gamma and momentum phase
-          vectortmp.apply_gamma(gamma_i2);
-          vectortmp.mulMomentumPhases(momentum_i2,1);
+       vectorStoc_source.randInit(4321);
+       vectortmp.absorbTimeslice(vectorStoc_source, sequential_time_source)
+       //Multiplying by the appropraite gamma and momentum phase
+       vectortmp.apply_gamma(gamma_i2);
+       vectortmp.mulMomentumPhases(momentum_i2,1);
 
-          //Spin 0
-          stochastic_source_spin_diluted.dilutespin(tmp, 0);
-          stochastic_source_spin_diluted.writeLIME(outfile_V+"source"+"0");
+       //Spin 0
+       stochastic_source_spin_diluted.dilutespin(tmp, 0);
+       stochastic_source_spin_diluted.writeLIME(outfile_V+"source"+"0");
  
-          vectorInOut.copy(stochastic_source_spin_diltued);
-          solver.solve(vectorInOut, vectorInOut);
-          stochastic_propagator[0].copy(vectorInOut);
-          stochastic_propagator[0].writeLIME(outfile_V+"propagator"+"0");
+       vectorInOut.copy(stochastic_source_spin_diltued);
+       solver.solve(vectorInOut, vectorInOut);
+       stochastic_propagator[0].copy(vectorInOut);
+       stochastic_propagator[0].writeLIME(outfile_V+"propagator"+"0");
       
-          //Spin 1
-          vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 1, 0);
-          vectorStoc_source.writeLIME(outfile_V+"source"+"1");
+       //Spin 1
+       vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 1, 0);
+       vectorStoc_source.writeLIME(outfile_V+"source"+"1");
 
-          vectorInOut.copy(vectorStoc_source);
-          solver.solve(vectorInOut, vectorInOut);
-          stochastic_propagator[1].copy(vectorInOut);
-          stochastic_propagator[1].writeLIME(outfile_V+"propagator"+"1");
+       vectorInOut.copy(vectorStoc_source);
+       solver.solve(vectorInOut, vectorInOut);
+       stochastic_propagator[1].copy(vectorInOut);
+       stochastic_propagator[1].writeLIME(outfile_V+"propagator"+"1");
 
-          //Spin 2 
-          stochastic_source_spin_diluted.dilutespindisplace(vectorStoc_source, 2, 1);
-          stochastic_source_spin_diluted.writeLIME(outfile_V+"source"+"2");
+       //Spin 2 
+       stochastic_source_spin_diluted.dilutespindisplace(vectorStoc_source, 2, 1);
+       stochastic_source_spin_diluted.writeLIME(outfile_V+"source"+"2");
           
-          vectorInOut.copy(stochastic_source_spin_diluted);
-          solver.solve(vectorInOut, vectorInOut);
-          stochastic_propagator[2].copy(vectorInOut);
-          stochastic_propagator[2].writeLIME(outfile_V+"propagator"+"2");
+       vectorInOut.copy(stochastic_source_spin_diluted);
+       solver.solve(vectorInOut, vectorInOut);
+       stochastic_propagator[2].copy(vectorInOut);
+       stochastic_propagator[2].writeLIME(outfile_V+"propagator"+"2");
 
-          //Spin 3       
-          vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 3, 2);
-          vectorStoc_source.writeLIME(outfile_V+"source"+"3");
+       //Spin 3       
+       vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 3, 2);
+       vectorStoc_source.writeLIME(outfile_V+"source"+"3");
  
-          vectorInOut.copy(vectorStoc_source);
-          solver.solve(vectorInOut, vectorInOut);
-          stochastice_propagator[3].copy(vectorInOut);
-          stochastic_propagator[3].writeLIME(outfile_V+"propagator"+"3");
+       vectorInOut.copy(vectorStoc_source);
+       solver.solve(vectorInOut, vectorInOut);
+       stochastice_propagator[3].copy(vectorInOut);
+       stochastic_propagator[3].writeLIME(outfile_V+"propagator"+"3");
 
-          //Defining ScattCorrelator for spin dilution
+       //Defining ScattCorrelator for spin dilution
           
-          PLEGMA_ScattCorrelator<float> reductionsV3_diluted[4] = {
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2))
+       PLEGMA_ScattCorrelator<float> reductionsV3_diluted[4] = {
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2))
           };
 
-          PLEGMA_ScattCorrelator<float> reductionsV2_diluted[4] = {
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1))
+       PLEGMA_ScattCorrelator<float> reductionsV2_diluted[4] = {
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
+        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1))
           };
 
-          //PLEGMA_ScattCorrelator<float> diagramZ(MOMENTUM_SPACE, sinkMom_Meson);
+       //PLEGMA_ScattCorrelator<float> diagramZ(MOMENTUM_SPACE, sinkMom_Meson);
 
-          //Diagram Z1,Z2
-          for (int i=0; i< 4; ++i){
-            reductionsV3_diluted[i].V3( stochastic_propagator[i], glist_sink_meson, propUP);
-            reductionsV2_diluted[i].V4( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
-          }
-          /*diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 1 );
+       //Diagram Z1,Z2
+       for (int i=0; i< 4; ++i){
+         reductionsV3_diluted[i].V3( stochastic_propagator[i], glist_sink_meson, propUP);
+         reductionsV2_diluted[i].V4( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
+       }
+       
+       /*diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 1 );
         diagramZ.writeHDF5("Z1Diagramm");
 
         diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 2 );
         diagramZ.writeHDF5("Z2Diagramm");
         */
       
-        //Diagram Z3,Z4
-          for (int i=0; i< 4; ++i){
-            reductionsV2_diluted[i].V2( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
-          }
+       //Diagram Z3,Z4
+       for (int i=0; i< 4; ++i){
+         reductionsV2_diluted[i].V2( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
+       }
 
 
-        /*    diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 3 );
+       /*    diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 3 );
         diagramZ.writeHDF5("Z3Diagramm");
 
         diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 4 );
         diagramZ.writeHDF5("Z2Diagramm");
         */
 
-
-       }//loop over gamma_i2
-
-     }//loop over unique set of momenta for p_i2
+      }//loop over unique set of momenta for p_i2
 
     } //loop over source position
 
