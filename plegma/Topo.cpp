@@ -1,5 +1,6 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+
 using namespace plegma;
 using namespace quda;
 

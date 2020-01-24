@@ -7,9 +7,12 @@
 #define _PLEGMA_FIELD_H
 
 namespace plegma {
+  template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Fmunu;
   template<typename Float>  class PLEGMA_Su3field;
   template<typename Float>  class PLEGMA_Gauge;
+  
+
   ////////////////////////
   // CLASS: PLEGMA_Field //
   ////////////////////////
@@ -77,7 +80,7 @@ namespace plegma {
     size_t Bytes_total_plus_ghost() const { return bytes_total_plus_ghost_length; }
 
     int Field_length() const { return field_length;} // degrees of freedom per lattice point
-    int Total_length() const { return total_length;} // the length of the field (local)
+    int Total_length() const { return total_length;} // the length of the field (i.e. the number of local sites without the ghost)
     int Ghost_length() const { return ghost_length;} // the length of the ghost
     int TotalGhost_length() const { return total_plus_ghost_length;} // total + ghost
 
@@ -133,10 +136,14 @@ namespace plegma {
     
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
 
+    void absorbTimeslice(PLEGMA_Field<Float> &srcfield, int global_it);
+
     void TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
 			    PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r, PLEGMA_Su3field<Float> &Wr);
 
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
+
+    void sumModVector(PLEGMA_Vector<Float> &Vi, bool accum = false);
 
     virtual void readLIME(std::string filename);
     virtual void writeLIME(std::string filename);
