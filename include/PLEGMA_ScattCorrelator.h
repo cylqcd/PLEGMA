@@ -4,10 +4,10 @@
 
 namespace plegma {
   class momList {
-    std::vector<std::array<int,3>> p_i2;
-    std::vector<std::array<int,3>> p_f1;
-    std::vector<std::array<int,3>> p_f2;
-    std::vector<std::array<int,3>> *ps[3]={&p_i2,&p_f1,&p_f2};
+    std::vector<std::vector<int>> p_i2;
+    std::vector<std::vector<int>> p_f1;
+    std::vector<std::vector<int>> p_f2;
+    std::vector<std::vector<int>> *ps[3]={&p_i2,&p_f1,&p_f2};
 
   public:
     momList() {;}
@@ -17,7 +17,7 @@ namespace plegma {
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
       for(int i=0; i<mom_list.size(); i=i+9)
 	for(int j=0; j<3; j++){
-	  std::array<int,3> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
+	  std::vector<int> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
 	  (*ps[j]).push_back(p);
 	}
     }
@@ -35,7 +35,7 @@ namespace plegma {
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
       for(int i=0; i<mom_list.size(); i=i+9)
         for(int j=0; j< 3; j++){
-          std::array<int,3> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
+          std::vector<int> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
           (*ps[j]).push_back(p);
         }
     }
@@ -45,35 +45,35 @@ namespace plegma {
     void add_mom( std::vector<int> &mom ){
       if(mom.size()%9!=0) PLEGMA_error("9 integers expected\n");
       for(int j=0; j<3; j++){
-	std::array<int,3> p={mom[j*3],mom[j*3+1],mom[j*3+2]};
+	std::vector<int> p={mom[j*3],mom[j*3+1],mom[j*3+2]};
 	(*ps[j]).push_back(p);
       }
     }
-    void add_mom( std::array<int,3> &p1, std::array<int,3> &p2, std::array<int,3> &p3 ){
+    void add_mom( std::vector<int> &p1, std::vector<int> &p2, std::vector<int> &p3 ){
       p_i2.push_back(p1);
       p_f1.push_back(p2);
       p_f2.push_back(p3);
     }
       
-    std::vector<std::array<int,3>> uniq_p(int p_i){
-      std::vector<std::array<int,3>> out=(*ps[p_i]);
+    std::vector<std::vector<int>> uniq_p(int p_i){
+      std::vector<std::vector<int>> out=(*ps[p_i]);
       std::sort(out.begin(),out.end());
       auto new_end = std::unique(out.begin(),out.end());
       out.resize(new_end-out.begin());
       return out;
     }
 
-    momList extract( std::array<int,3> &mom, int p_i ){
+    momList extract( std::vector<int> &mom, int p_i ){
       momList out;
       for(int j=0; j<p_i2.size(); j++)
 	if( (*ps[p_i])[j]==mom ) out.add_mom( p_i2[j], p_f1[j], p_f2[j]);
       return out;
     }
 
-    std::vector<int> u_posix( int p_i, std::vector<std::array<int,3>> &moms){
+    std::vector<int> u_posix( int p_i, std::vector<std::vector<int>> &moms){
       int aux;
       std::vector<int> res;
-      std::vector<std::array<int,3>> uniq_pi=uniq_p(p_i);
+      std::vector<std::vector<int>> uniq_pi=uniq_p(p_i);
 
       for( auto& mom: moms ){
 	auto momf = std::find(uniq_pi.begin(), uniq_pi.end(), mom);
@@ -85,7 +85,7 @@ namespace plegma {
     std::vector<int> u_posix( int p_i ){
       int aux;
       std::vector<int> res;
-      std::vector<std::array<int,3>> uniq_pi=uniq_p(p_i);
+      std::vector<std::vector<int>> uniq_pi=uniq_p(p_i);
 
       for( auto& mom: (*this->ps[p_i]) ){
 	auto momf = std::find(uniq_pi.begin(), uniq_pi.end(), mom);
@@ -105,19 +105,18 @@ namespace plegma {
 	res.push_back({aux1[i],aux2[i],aux3[i]});
       return res;
     }
-    std::vector<std::array<int,3>> pi1(){
-      std::vector<std::array<int,3>> p_i1;
-      std::array<int,3> tmp;
+    
+    std::vector<std::vector<int>> pi1(){
+      std::vector<std::vector<int>> p_i1;
       for(int n=0; n<p_i2.size(); n++){
-	for(int j=0; j<3; j++)
-	  tmp[j]=p_f1[n][j]+p_f2[n][j]-p_i2[n][j];
+	std::vector<int> tmp={p_f1[n][0]+p_f2[n][0]-p_i2[n][0],p_f1[n][1]+p_f2[n][1]-p_i2[n][1],p_f1[n][2]+p_f2[n][2]-p_i2[n][2]};
 	p_i1.push_back(tmp);
       }
       return p_i1;
     }
     
     std::vector<std::string> print(){
-      std::vector<std::array<int,3>> p_i1=pi1();
+      std::vector<std::vector<int>> p_i1=pi1();
       std::vector<std::string> out;
       std::string tmp;
       for(int n=0; n<p_i2.size(); n++){
