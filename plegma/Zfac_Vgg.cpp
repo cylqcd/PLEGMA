@@ -113,7 +113,7 @@ int main(int argc, char **argv){
   for(int iconf=0; iconf < listGaugeConfs.size(); iconf++){
     double t1=MPI_Wtime();
     std::string confStr=splitStrFwd(listGaugeConfs[iconf],'.');
-    gauge1.readFile(listGaugeConfs[iconf], LIME_FORMAT);
+    gauge1.readFile(listGaugeConfs[iconf], LIME_FORMAT,true);
     PLEGMA_printf("Unsmeared Plaquette is: ");
     gauge1.calculatePlaq();
     if(!isGFixed){

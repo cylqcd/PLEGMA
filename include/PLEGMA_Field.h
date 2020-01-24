@@ -16,7 +16,7 @@ namespace plegma {
   ////////////////////////
   
   template<typename Float>
-  class PLEGMA_Field : virtual public IO<void> {
+  class PLEGMA_Field : virtual public IO<void,bool> {
   protected:
     
     int field_length;
@@ -161,9 +161,9 @@ namespace plegma {
      **/
     void mulThetaPhase(Float theta, bool dagger=false);
 
-    virtual void readLIME(std::string filename);
-    virtual void writeLIME(std::string filename) const;
-    virtual void writeHDF5(std::string filename) const;
+    virtual void readLIME(std::string filename, bool loadToDev);
+    virtual void writeLIME(std::string filename, bool unloadFromDev) const;
+    virtual void writeHDF5(std::string filename, bool unloadFromDev) const;
 
     virtual bool includesActiveTimeSlice() const{return true;}
     virtual bool is4D() const{assert(Total_length()==HGC_localVolume); return true;}

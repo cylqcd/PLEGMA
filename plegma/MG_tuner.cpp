@@ -362,7 +362,7 @@ int main(int argc, char **argv) {
 
   {
     PLEGMA_Gauge<double> gauge;
-    gauge.readFile(latfile, LIME_FORMAT);
+    gauge.readFile(latfile, LIME_FORMAT,true);
     gauge.load();
     initGaugeQuda(gauge, true);
   }

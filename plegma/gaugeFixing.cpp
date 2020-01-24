@@ -23,7 +23,7 @@ int main(int argc, char **argv){
   for(int iconf=0; iconf < listGaugeConfs.size(); iconf++){
     std::string prefix=splitStrBwd(listGaugeConfs[iconf],'.');
     std::string confStr=splitStrFwd(listGaugeConfs[iconf],'.');
-    G1.readFile(listGaugeConfs[iconf], LIME_FORMAT);
+    G1.readFile(listGaugeConfs[iconf], LIME_FORMAT,true);
     PLEGMA_printf("Plaquette before gauge fixing is: ");
     G1.calculatePlaq();
     if(overelaxType == "exact") gFixingLandauOVR_QUDA(G2,G1,exactoverelaxPar,tolerance,10000,1000);
