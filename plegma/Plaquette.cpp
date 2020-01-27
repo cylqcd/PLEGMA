@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     cudaProfilerStart();
     PLEGMA_Gauge<double> gauge(BOTH);
     // Reading from Lime file and loading to device
-    gauge.readFile(latfile, LIME_FORMAT,true);
+    gauge.readFile(latfile, LIME_FORMAT);
 
     // Computing plaquette on device in three different way for crosschecking
     gauge.calculatePlaq();

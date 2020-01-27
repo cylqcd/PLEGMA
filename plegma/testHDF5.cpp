@@ -31,8 +31,7 @@ int main(int argc, char **argv)
     PLEGMA_Gauge<double> gauge(BOTH);
       
     // Reading from Lime file and loading to device
-    gauge.readFile(latfile, LIME_FORMAT,true);
-    gauge.load();
+    gauge.readFile(latfile, LIME_FORMAT);
       
     // Compuiting plaquette on device in three different way for crosschecking
     double plaq = gauge.calculatePlaq();
