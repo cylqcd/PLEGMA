@@ -350,7 +350,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Ga
   PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.getFixMomList());
 
   Float* srcf2 = this->corr;//V3
-  Float* srcf1 = V3aux.getCorr();//V2
+  Float* srcf1;//V2
 
   int TIME=HGC_localL[3];
   //
@@ -424,14 +424,21 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
-  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_i2.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS*2;
-  const int d_GGGTSS2= tot_size/moms.size();
+//  if  ((srcV2.size() !=4 ) || (srcV3.size()!=4)){
+//    PLEGMA_error("For Z diagramms we need spin dilution with separate reduction for each spin\n");
+//  }
+
+
+  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_i2.size()*srcV2[0]GList.size()*srcV3[0]->GList.size()*N_SPINS*N_SPINS*2;
+  const int d_GGGGTSS2= tot_size/moms.size();
+  const int d_GGGGTSS = d_GGGGTSS2/2;
+
   
   //allocate
   int n_gammas_f1 = srcV2[0].getGList().size();
 
-  this->datasets={"Z"+std::to_String(diagramm_index)};
-  print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
+  this->datasets={"Z"+std::to_string(diagramm_index)};
+  print_groups_names(moms, Gammas_i1, Gammas_i2, srcV2[0].GList, srcV3[0].GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -439,22 +446,26 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   if( this->vol_size*this->site_size*2 != tot_size )
     PLEGMA_error("I did some mistakes\n");
 
-  Float * temporary= (Float *)malloc(sizeof(Float)*Gammas_i1.size()*Gammas_i2.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS*2);
+  Float * temporary= (Float *)malloc(sizeof(Float)*d_GGGGTSS2);
+
+  Float * g = (Float *)malloc(sizeof(Float)*2);
 
   std::vector<std::array<int,3>> imap=moms.index_map();
 
   //write Z1
 
-  zero_x(this->corr,size);
+  Float *dest = this->corr;
+
   memset(this->corr,0,tot_size*sizeof(Float));
   for(int i_m=0; i_m<imap.size(); i_m++){
     for (int g2=0; g2<Gammas_i2.size();++g2 ){
       GAMMAS gammai2= Gammas_i2[g2];
-      zero(temporary,d_GGGTSS2*sizeof(Float));
+      memset(temporary,0,d_GGGGTSS2*sizeof(Float));
       for (int n=0; n<4; ++n){
         int kappa= gammaInd_host[gammai2][n][0]; 
         int lambda=  gammaInd_host[gammai2][n][1];
-        Float gi=gamma_host[gammai2][n][1],gr= gamma_host[gammai2][n][0];
+        g[1]=gamma_host[gammai2][n][1];
+        g[0]=gamma_host[gammai2][n][0];
         if (diagramm_index==1){
           srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
         }
@@ -468,11 +479,14 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
           srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
         }
 
-        x_pe_cy(dest+i_m*d_GGGGTSS2, gi, temporary, size);
+        x_pe_cy(dest+i_m*d_GGGGTSS2, g, temporary, d_GGGGTSS);
 
       }
     }
   }
+
+  free(temporary);
+  free(g);
 
   this->writeHDF5(outfile);
 
@@ -497,7 +511,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1
   PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.getFixMomList());
   
   Float* srcf2 = this->corr;//V3
-  Float* srcf1 = V3aux.getCorr();//V2
+  Float* srcf1; //V2
   
   int TIME=HGC_localL[3];
   //

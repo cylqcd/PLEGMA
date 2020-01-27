@@ -305,7 +305,6 @@ template void V_TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest
 
 template void V_TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
 
-        x_pe_cy(dest+i_m*d_GGGGTSS2, gi, temporary, size);
 
 template<typename Float>
 void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size ){
