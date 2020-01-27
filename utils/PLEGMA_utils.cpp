@@ -200,49 +200,17 @@ std::vector<int> createR2(std::vector<int> &vec){
   return clearDuplicates(vec);
 }
 
-// float gamma_host[16][4][2] =
-//   {{{1,0},{1,0},{1,0},{1,0}}, // 1
-//    {{0,1},{0,1},{0,-1},{0,-1}}, // g1
-//    {{1,0},{-1,0},{-1,0},{1,0}}, // g2
-//    {{0,1},{0,-1},{0,-1},{0,1}}, // g3
-//    {{1,0},{1,0},{-1,0},{-1,0}}, // g4
-//    {{1,0},{1,0},{1,0},{1,0}},   // g5
-//    {{0,-1},{0,-1},{0,1},{0,1}}, // g5g1
-//    {{-1,0},{1,0},{1,0},{-1,0}}, // g5g2
-//    {{0,-1},{0,1},{0,1},{0,-1}}, // g5g3
-//    {{-1,0},{-1,0},{1,0},{1,0}}, // g5g4
-//    {{1,0},{-1,0},{1,0},{-1,0}}, // -I/2 [g1,g2]
-//    {{0,1},{0,-1},{0,1},{0,-1}}, // -I/2 [g1,g3]
-//    {{1,0},{1,0},{1,0},{1,0}},   // -I/2 [g2,g3]
-//    {{1,0},{1,0},{1,0},{1,0}},   // -I/2 [g4,g1]
-//    {{0,-1},{0,1},{0,-1},{0,1}}, // -I/2 [g4,g2]
-//    {{1,0},{-1,0},{1,0},{-1,0}}, // -I/2 [g4,g3]
-//   };
-// short int gammaInd_host[16][4][2] =
-//   {{{0,0},{1,1},{2,2},{3,3}},
-//    {{0,3},{1,2},{2,1},{3,0}},
-//    {{0,3},{1,2},{2,1},{3,0}},
-//    {{0,2},{1,3},{2,0},{3,1}},
-//    {{0,0},{1,1},{2,2},{3,3}},
-//    {{0,2},{1,3},{2,0},{3,1}},
-//    {{0,1},{1,0},{2,3},{3,2}},
-//    {{0,1},{1,0},{2,3},{3,2}},
-//    {{0,0},{1,1},{2,2},{3,3}},
-//    {{0,2},{1,3},{2,0},{3,1}},
-//    {{0,0},{1,1},{2,2},{3,3}},
-//    {{0,1},{1,0},{2,3},{3,2}},
-//    {{0,1},{1,0},{2,3},{3,2}},
-//    {{0,3},{1,2},{2,1},{3,0}},
-//    {{0,3},{1,2},{2,1},{3,0}},
-//    {{0,2},{1,3},{2,0},{3,1}},
-//   };
 
 /**
+ *
  *  @brief vector(spin x color)  matrix(spin x spin)  vector(spin x color) 
- *          multiplication for piN scattering project
+ *          multiplication for piN scattering project resulting in complex
+ *          number: V1*gamma*V2
  *  @params Float * V1 pointer to a float array of size 2*N_COLS*N_SPINS
  *  @params Float * V2 pointer to a float array of size 2*N_COLS*N_SPINS
  *  @params GAMMAS gamma enumerator specifies the gamma matrix
+ *  @params bool transp transp==false then V1(a)Gamma(a,b)V2(b) is returned
+ *                      transp==true  then V1(a)Gamma(b,a)V2(b) is returned 
  *  @params Float * Dest pointer to 2 Float number (complex)
  **/
 template<typename Float>
@@ -272,10 +240,11 @@ template void V_M_V<double>( double * V1, double * V2, GAMMAS gamma, bool transp
 
 /**
  *  @brief tensor*matrix multiplication  
- *         for piN scattering project
+ *         for piN scattering project returns a color vector
  *  @params Float * V1 pointer to a Float array of size 2*N_COLS*N_SPINS*N_SPINS
  *  @params GAMMAS gamma enumerator specifies the gamma matrix
- *  @params int index determines which index of the three component tensor has to be returned
+ *  @params bool transp if transp==false Gamma(a,b)*V1(b,a) is returned
+ *                      if transp==true  Gamma(a,b)*V1(a,b) is returned
  *  @params Float *Dest pointer to array of Float with size 2*N_COLS
  **/
 template<typename Float>
@@ -299,9 +268,7 @@ void V_TR_MM( Float * V1, GAMMAS gamma,bool transp, Float *Dest ){
   }
   
 }
-
 template void V_TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest );
-
 
 template void V_TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
 
@@ -313,29 +280,6 @@ void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size ){
     dest[2*i+1]+= floatcomplex[1]*temporary[2*i+0]+floatcomplex[0]*temporary[2*i+1];
   }
 }
-
-
 template void x_pe_cy<float>(  float *dest,  float  *floatcomplex, float  *temporary, int size) ;
 
-
 template void x_pe_cy<double>( double *dest, double *floatcomplex, double *temporary, int size) ;
-/*
-template<typename Float>
-void TR_MM( Float * V1, GAMMAS gamma, bool transp, Float *Dest ){
-  *(Dest+0) = 0;
-  *(Dest+1) = 0;
-  #pragma unroll
-  for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
-    int beta0=(!transp) ? gammaInd_host[gamma][nz_e_inner][0] : gammaInd_host[gamma][nz_e_inner][1];
-    int beta1=(!transp) ? gammaInd_host[gamma][nz_e_inner][1] : gammaInd_host[gamma][nz_e_inner][0];
-    *(Dest+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS+beta0)+0]
-               -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS+beta0)+1];
-    *(Dest+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS+beta0)+0]
-               +gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS+beta0)+1];   
-  }
-}
-
-template void TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest );
-
-template void TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
-*/
