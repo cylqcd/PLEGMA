@@ -416,8 +416,8 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
                                                 std::string &outfile, 
                                                 int diagramm_index ){
 
-//  if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
-//    PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
+  if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
+    PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
 
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
@@ -429,7 +429,8 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   
   //allocate
   int n_gammas_f1 = srcV2[0].getGList().size();
-  this->datasets={"Z1"};
+
+  this->datasets={"Z"+std::to_String(diagramm_index)};
   print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
@@ -443,6 +444,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   std::vector<std::array<int,3>> imap=moms.index_map();
 
   //write Z1
+
   zero_x(this->corr,size);
   memset(this->corr,0,tot_size*sizeof(Float));
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -453,32 +455,21 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
         int kappa= gammaInd_host[gammai2][n][0]; 
         int lambda=  gammaInd_host[gammai2][n][1];
         Float gi=gamma_host[gammai2][n][1],gr= gamma_host[gammai2][n][0];
-        
-        srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
+        if (diagramm_index==1){
+          srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
+        }
+        else if (diagramm_index ==2){
+          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,true, true, Gammas_i2.size(),g2 );
+        }
+        else if (diagramm_index ==3){
+          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,true, true, Gammas_i2.size(),g2 );
+        }
+        else {
+          srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
+        }
 
         x_pe_cy(dest+i_m*d_GGGGTSS2, gi, temporary, size);
-      }
-    }
-  }
 
-  this->writeHDF5(outfile);
-
-  //write Z2
-  this->datasets={"Z2"};
-
-  zero_x(this->corr,size);
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    for (int g2=0; g2<Gammas_i2.size();++g2 ){
-      GAMMAS gammai2= Gammas_i2[g2];
-      zero(temporary,sizetmp);
-      for (int n=0; n<4; ++n){
-        int kappa= gammaInd_host[gammai2][n][0];
-        int lambda=  gammaInd_host[gammai2][n][1];
-        Float gi=gamma_host[gammai2][n][1],gr= gamma_host[gammai2][n][0];
-
-        srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
-
-        x_pe_cy(dest+i_m*d_GGGGTSS2, gi, temporary, size);
       }
     }
   }
