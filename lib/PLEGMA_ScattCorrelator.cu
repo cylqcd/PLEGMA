@@ -151,6 +151,17 @@ void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, GAMMAS G_i2 ,
 	  out.push_back(tmp);
 	}
 }
+void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, std::vector<GAMMAS> &G_i2 , std::vector<GAMMAS> &G_f1, std::vector<GAMMAS> &G_f2, std::vector<std::string> &out){
+  std::string tmp;
+  for(auto &mom : moms.print() )
+    for( auto &g1 : G_i1 )
+      for( auto &g2 : G_i2 )
+	for( auto &g3 : G_f1 )
+	  for( auto &g4 : G_f2 ){
+	    tmp = mom + "/" + GAMMAS_STR[g1] + "/" + GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3] + "/" + GAMMAS_STR[g4];
+	    out.push_back(tmp);
+	  }
+}
 
 
 template<typename Float>
