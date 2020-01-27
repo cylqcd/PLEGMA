@@ -79,6 +79,9 @@ int main(int argc, char **argv)
 
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
+
+      int sequential_time_source=sourcePositions[isource][3];
+
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
                     sourcePositions[isource][2], sourcePositions[isource][3]);
@@ -245,7 +248,6 @@ int main(int argc, char **argv)
           // Computing sequential propagators f1 <- i_2 <- i_1 
           // so the sequential source source time is fixed
           // and the momentum is also fixed to be momentum_i2
-          int sequential_time_source=sourcePositions[isource][3];
 
           //smearing the 3D propagators
           PLEGMA_Propagator3D<float> propDN3D;      
@@ -358,6 +360,21 @@ int main(int argc, char **argv)
        std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
        std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
 
+       std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted = {
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson)
+         };
+
+       std::array<PLEGMA_ScattCorrelator<float>,4> reductionsV2_diluted = {
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon)
+       };
+
+
        PLEGMA_Vector<float> stochastic_source_spin_diluted_momp_i2; 
        PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 
        PLEGMA_Vector<float> vectortmp1;
@@ -416,10 +433,10 @@ int main(int argc, char **argv)
          reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, outfilename, 1);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 1);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, outfilename, 2);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 2);
  
       
        //Diagram Z3,Z4
@@ -427,10 +444,10 @@ int main(int argc, char **argv)
          reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon,  outfilename, 3);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 3);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon,  outfilename, 4);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 4);
 
 
       }//loop over unique set of momenta for p_i2
