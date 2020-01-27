@@ -338,8 +338,8 @@ int main(int argc, char **argv)
       
        //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
               
-       std::vector<PLEGMA_Vector<float>> stochastic_propagator_momzero(4);
-       std::vector<PLEGMA_Vector<float>> stochastic_propagator_momp_i2(4);
+       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
+       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
 
        PLEGMA_Vector<float> stochastic_source_spin_diluted_momp_i2; 
        PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 

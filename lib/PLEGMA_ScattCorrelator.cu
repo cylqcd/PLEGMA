@@ -162,7 +162,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
     PLEGMA_error("Not implemented yet\n");
 
   //allocate
-  int n_gammas_f1 = srcV2.shape[0];
+  //int n_gammas_f1 = srcV2.shape[0];
   this->datasets={"B1"};
   print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
@@ -300,7 +300,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
 
   //allocate
-  int n_gammas_f1 = srcV2.shape[0];
+  //int n_gammas_f1 = srcV2.shape[0];
   this->datasets={"W"+std::to_string(diagramm_index)};
   print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
@@ -409,8 +409,8 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Ga
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
                                                 momList &moms, 
-                                                std::vector<PLEGMA_ScattCorrelator<Float>> (&srcV3)[4],
-                                                std::vector<PLEGMA_ScattCorrelator<Float>> (&srcV2)[4],
+                                                std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3),
+                                                std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),
                                                 std::vector<GAMMAS> &Gammas_i2, 
                                                 std::vector<GAMMAS> &Gammas_i1, 
                                                 std::string &outfile, 
@@ -428,14 +428,13 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 //    PLEGMA_error("For Z diagramms we need spin dilution with separate reduction for each spin\n");
 //  }
 
-
-  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_i2.size()*srcV2[0]GList.size()*srcV3[0]->GList.size()*N_SPINS*N_SPINS*2;
+  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_i2.size()*srcV2[0].GList.size()*srcV3[0].GList.size()*N_SPINS*N_SPINS*2;
   const int d_GGGGTSS2= tot_size/moms.size();
   const int d_GGGGTSS = d_GGGGTSS2/2;
 
   
   //allocate
-  int n_gammas_f1 = srcV2[0].getGList().size();
+  //int n_gammas_f1 = srcV2[0].getGList().size();
 
   this->datasets={"Z"+std::to_string(diagramm_index)};
   print_groups_names(moms, Gammas_i1, Gammas_i2, srcV2[0].GList, srcV3[0].GList, this->groups);

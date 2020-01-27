@@ -234,9 +234,9 @@ namespace plegma {
 
     //void W_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
 
-    void Z_diagramms(std::vector<GAMMAS> &Gammas_i1, std::vector<GAMMAS> &Gammas_i2, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2, int diagramm_index);
+    //void Z_diagramms(std::vector<GAMMAS> &Gammas_i1, std::vector<GAMMAS> &Gammas_i2, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2, int diagramm_index);
 
-    void Z_diagramms(momList &moms, std::vector<PLEGMA_ScattCorrelator<Float>> (&srcV3)[4], std::vector<PLEGMA_ScattCorrelator<Float>> (&srcV2)[4], std::vector<GAMMAS> &Gammas_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile, int diagramm_index );
+    void Z_diagramms(momList &moms, std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4>(&srcV2), std::vector<GAMMAS> &Gammas_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile, int diagramm_index );
 
 
   };
