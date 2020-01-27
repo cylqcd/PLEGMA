@@ -181,10 +181,10 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected vol_size=%d\n",this->vol_size);
   
-  if( this->vol_size*this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
+  if( this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
     PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
 		 this->vol_size*this->site_size,moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
-		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS);
+		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS);
 
   
   std::vector<std::array<int,3>> imap=moms.index_map();
@@ -321,8 +321,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
  
-  if( this->vol_size*this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
-    PLEGMA_error("I did some mistakes\n");
+  if( this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
+		 this->vol_size*this->site_size,moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
+		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS);
 
 
   std::vector<std::array<int,3>> imap=moms.index_map();
@@ -440,7 +442,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 //    PLEGMA_error("For Z diagramms we need spin dilution with separate reduction for each spin\n");
 //  }
 
-  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_i2.size()*srcV2[0].GList.size()*srcV3[0].GList.size()*N_SPINS*N_SPINS*2;
+  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_i2.size()*srcV2[0].GList.size()*srcV3[0].GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
   const int d_GGGGTSS2= tot_size/moms.size();
   const int d_GGGGTSS = d_GGGGTSS2/2;
 
@@ -456,8 +458,10 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
-  if( this->vol_size*this->site_size*2 != tot_size )
-    PLEGMA_error("I did some mistakes\n");
+  if( this->site_size*2 != tot_size/HGC_localL[3] )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gi2=%d),(Gf2=%d),(Gf1=%d)%d\n",
+		 this->vol_size*this->site_size,moms.size(),Gammas_i1.size(),Gammas_i2.size(),
+		 srcV2[0].GList.size(),srcV3[0].GList.size(),tot_size/2);
 
   Float * temporary= (Float *)malloc(sizeof(Float)*d_GGGGTSS2);
 
