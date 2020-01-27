@@ -190,6 +190,41 @@ int main(int argc, char **argv)
         solver.UpdateSolver();
       }
 
+      //Computing stochastic propagators and stochastic source
+
+      PLEGMA_Vector<float> vectorStoc_source(BOTH);//FP: Do we really need both here?
+      PLEGMA_Vector<float> vectorStoc_propag(BOTH);
+      PLEGMA_Vector<double> vectorInOut;
+      PLEGMA_printf("Build vector from scratch\n");
+      //Note that we replace the f1<-f2 DN propagator with a stochastic one
+      //in two steps actually
+      //DN(x_f1 <- x_f2 ) = \phihat(x_f2)(x_f1)\xi^{dagger}(x_f2)(x_f2)
+      //where x_f2 is the source
+      //      x_f1 is the sink
+      //so \phihat(x_f2)(x_f1) is the x_f1 coordinate of the stochastic 
+      //propagator created at x_f2 for the down quark
+      //=gamma_5*U(x_f2 <- x_f1)^dagger*gamma_5
+      //=gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
+      //Here we compute phi and xi
+      int nroots=4;
+      QUDA_solver solver(mu);
+      vectorStoc_source.randInit(1234);
+      vectorStoc_source.stochastic_Z(nroots);
+
+      vectorInOut.copy(vectorStoc_source);
+      //Smearing the source
+      //vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+      
+      solver.solve(vectorInOut, vectorInOut);
+
+      //Smearing the propagator    
+      //vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+      vectorStoc_propag.copy(vectorInOut);
+      vectorStoc_propag.writeLIME(outfile_V+"globalTpropagator_zeromomentum");
+
+      vectorStoc_source.apply_gamma5();
+      vectorStoc_source.writeLIME(outfile_V+"globalTsource_zeromomentum");
+
       //We first have a loop over all unique the source meson momentum p_i2 
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
 
@@ -263,28 +298,6 @@ int main(int argc, char **argv)
 
           PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
 
-          //Next prepare the stochastic propagator and vector
-          PLEGMA_Vector<float> vectorStoc_source(BOTH);
-          PLEGMA_Vector<float> vectorStoc_propag(BOTH);
-          PLEGMA_printf("Build vector from scratch\n");
-          //Note that we replace the f1<-f2 DN propagator with a stochastic one
-          //in two steps actually
-          //DN(x_f1 <- x_f2 ) = \phihat(x_f2)(x_f1)\xi^{dagger}(x_f2)(x_f2)
-          //where x_f2 is the source
-          //      x_f1 is the sink
-          //so \phihat(x_f2)(x_f1) is the x_f1 coordinate of the stochastic 
-          //propagator created at x_f2 for the down quark
-          //=gamma_5*U(x_f2 <- x_f1)^dagger*gamma_5
-          //=gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
-          //Here we compute phi and xi
-          int nroots=4;
-          QUDA_solver solver(mu);
-          vectorStoc_source.randInit(1234);
-          vectorStoc_source.stochastic_Z(nroots);
-          solver.solve(vectorStoc_propag, vectorStoc_source);
-          
-          vectorStoc_source.apply_gamma5();
-
           //Compute Diagram B1 and B2 
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
           reductionsV3.writeHDF5("V3sourceforB1");
@@ -292,8 +305,8 @@ int main(int argc, char **argv)
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
           reductionsV2.writeHDF5("V2sourceforB1");
  
-
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, "Bdiagramm_Antonino");
+          std::string outfilename="Bdiagramm_Antonino" ;
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename);
 
      
           //diagramm.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
@@ -309,9 +322,11 @@ int main(int argc, char **argv)
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, "Wdiagramm_Antonino", 1);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, "Wdiagramm_Antonino", 2);
+          outfilename= "Wdiagramm_Antonino";
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 1);
+
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 2);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
           //diagramW.writeHDF5("W1Diagramm");
@@ -323,9 +338,9 @@ int main(int argc, char **argv)
           //reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP); maybe does not have to be recomputed
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, "Wdiagramm_Antonino", 3);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 3);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, "Wdiagramm_Antonino", 4);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 4);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 3 );
           //diagramW.writeHDF5("W3Diagramm");
@@ -335,6 +350,8 @@ int main(int argc, char **argv)
           //
        } //loop over gamma i2
          
+       std::string outfilename="Zdiagramm_Antonino" ;
+
       
        //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
               
@@ -356,40 +373,40 @@ int main(int argc, char **argv)
        //vectortmp2 <-- source wuth zero momentum
        vectortmp1.mulMomentumPhases(momentum_i2,1);
 
-       for (int spinindex=0; spinindex<3; ++i){
+       for (int spinindex=0; spinindex<3; ++spinindex){
 
          stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp1, spinindex);
          //Ideally doing the smearing on the source only on a 3D vector
          //stochastic_source_spin_diluted_momp_i2.gaussianSmearing(stochastic_source_spin_diluted_momp_i2, smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;       
-         stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_String(spinindex));
+         stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
 
          stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2, spinindex);
          //Ideally doing the smearing om the source only on a 3D vector
          //stochastic_source_spin_diluted_momźero.gaussianSmearing(stochastic_source_spin_diluted_momzero, smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;
-         stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_String(spinindex));
+         stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));
 
 
  
-         vectorInOut.copy(stochastic_source_spin_diltued_momp_i2);
+         vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
          solver.solve(vectorInOut, vectorInOut);
          stochastic_propagator_momp_i2[spinindex].copy(vectorInOut);
          //Ideally doing the smearing on the propagator only on a 3D vector
          //stochastic_propagator_momp_i2[spinindex].gaussianSmearing(stochastic_propagator_momp_i2[spinindex], smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;         
-         stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_String(spinindex));
+         stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
 
 
-          vectorInOut.copy(stochastic_source_spin_diltued_momzero);
+          vectorInOut.copy(stochastic_source_spin_diluted_momzero);
           solver.solve(vectorInOut, vectorInOut);
           stochastic_propagator_momzero[spinindex].copy(vectorInOut);
           //Ideally doing the smearing on the propagator only on a 3D vector
           //stochastic_propagator_momzero[0].gaussianSmearing(stochastic_propagator_momzero[0], smearedGauge, nsmearGauss, alphaGauss);
           //tmp_time += MPI_Wtime()-start_time;
 
-          stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_String(spinindex));
+          stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
 
        }      
 
@@ -399,10 +416,10 @@ int main(int argc, char **argv)
          reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 1);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, outfilename, 1);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 2);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, outfilename, 2);
  
       
        //Diagram Z3,Z4
@@ -410,10 +427,10 @@ int main(int argc, char **argv)
          reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 3);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon,  outfilename, 3);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 4);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon,  outfilename, 4);
 
 
       }//loop over unique set of momenta for p_i2
