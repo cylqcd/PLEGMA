@@ -167,8 +167,6 @@ void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, std::vector<G
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile) {
 
-  if( this->vol_size != HGC_localL[3] )
-    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected vol_size=%d\n",this->vol_size);
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
@@ -179,7 +177,10 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
-
+  
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected vol_size=%d\n",this->vol_size);
+  
   if( this->vol_size*this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
     PLEGMA_error("I did some mistakes\n");
 
@@ -301,8 +302,6 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
 //template<typename Float>
 //void PLEGMA_ScattCorrelator<Float>::W_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, const int diagramm_index) {
 
-  if( this->vol_size != HGC_localL[3] )
-    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
@@ -317,7 +316,9 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
-
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+ 
   if( this->vol_size*this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
     PLEGMA_error("I did some mistakes\n");
 
@@ -430,8 +431,6 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
 
-  if( this->vol_size != HGC_localL[3] )
-    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
@@ -452,6 +451,8 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
   if( this->vol_size*this->site_size*2 != tot_size )
     PLEGMA_error("I did some mistakes\n");
