@@ -524,7 +524,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
      double *eigVec = h_eigVecs + ((long int) std::get<3>(evalsOrdered[i])) * size_per_Vec*2;
      memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
      tmp.writeLIME(filenamePrefix + "_eV" + std::to_string(i),false);
-     if(verbose) PLEGMA_printf("Eigenvector %d writen\n", i);
+     if(verbose) PLEGMA_printf("Eigenvector %d is written\n", i);
    }   
  }
 #endif
