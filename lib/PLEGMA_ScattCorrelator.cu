@@ -168,7 +168,7 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile) {
 
   if( this->vol_size != HGC_localL[3] )
-    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected vol_size=%d\n",this->vol_size);
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
