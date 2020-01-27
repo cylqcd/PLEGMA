@@ -193,11 +193,19 @@ int main(int argc, char **argv)
       //We first have a loop over all unique the source meson momentum p_i2 
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
 
+
+        //List of momenta corresponding to a fix value of p_i2
+        momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
+
+        PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV3(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2));
+
+        std::vector<int> mom={0,0,0};
+        PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
+
+
         //Loop over the different gamma structure for the source meson
         for (auto gamma_i2 : glist_source_meson) {
-
-          //List of momenta corresponding to a fix value of p_i2
-          momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
          
           // Computing sequential propagators f1 <- i_2 <- i_1 
           // so the sequential source source time is fixed
@@ -276,11 +284,6 @@ int main(int argc, char **argv)
           solver.solve(vectorStoc_propag, vectorStoc_source);
           
           vectorStoc_source.apply_gamma5();
-      
-          //Computing diagramm B1
-          PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsV3(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2));
-
 
           //Compute Diagram B1 and B2 
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
@@ -289,8 +292,6 @@ int main(int argc, char **argv)
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
           reductionsV2.writeHDF5("V2sourceforB1");
  
-          std::vector<int> mom={0,0,0};
-          PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
 
           diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, "Bdiagramm_Antonino");
 
@@ -336,96 +337,84 @@ int main(int argc, char **argv)
          
       
        //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
-       std::vector<PLEGMA_Vector<float>> stochastic_propagator(4);
-       PLEGMA_Vector<float> stochastic_source_spin_diluted; 
-       PLEGMA_Vector<float> vectortmp;
+              
+       std::vector<PLEGMA_Vector<float>> stochastic_propagator_momzero(4);
+       std::vector<PLEGMA_Vector<float>> stochastic_propagator_momp_i2(4);
+
+       PLEGMA_Vector<float> stochastic_source_spin_diluted_momp_i2; 
+       PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 
+       PLEGMA_Vector<float> vectortmp1;
+       PLEGMA_Vector<float> vectortmp2;
           
       
        vectorStoc_source.randInit(4321);
-       vectortmp.absorbTimeslice(vectorStoc_source, sequential_time_source)
-       //Multiplying by the appropraite gamma and momentum phase
-       vectortmp.apply_gamma(gamma_i2);
-       vectortmp.mulMomentumPhases(momentum_i2,1);
+       vectortmp1.absorbTimeslice(vectorStoc_source, sequential_time_source);
+       vectortmp2.copy(vectortmp1);
 
-       //Spin 0
-       stochastic_source_spin_diluted.dilutespin(tmp, 0);
-       stochastic_source_spin_diluted.writeLIME(outfile_V+"source"+"0");
+       //Multiplying by the appropriate momentum phase
+       //vectortmp1 <-- source with finite momentum
+       //vectortmp2 <-- source wuth zero momentum
+       vectortmp1.mulMomentumPhases(momentum_i2,1);
+
+       for (int spinindex=0; spinindex<3; ++i){
+
+         stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp1, spinindex);
+         //Ideally doing the smearing on the source only on a 3D vector
+         //stochastic_source_spin_diluted_momp_i2.gaussianSmearing(stochastic_source_spin_diluted_momp_i2, smearedGauge, nsmearGauss, alphaGauss);
+         //tmp_time += MPI_Wtime()-start_time;       
+         stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_String(spinindex));
+       
+
+         stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2, spinindex);
+         //Ideally doing the smearing om the source only on a 3D vector
+         //stochastic_source_spin_diluted_momźero.gaussianSmearing(stochastic_source_spin_diluted_momzero, smearedGauge, nsmearGauss, alphaGauss);
+         //tmp_time += MPI_Wtime()-start_time;
+         stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_String(spinindex));
+
+
  
-       vectorInOut.copy(stochastic_source_spin_diltued);
-       solver.solve(vectorInOut, vectorInOut);
-       stochastic_propagator[0].copy(vectorInOut);
-       stochastic_propagator[0].writeLIME(outfile_V+"propagator"+"0");
-      
-       //Spin 1
-       vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 1, 0);
-       vectorStoc_source.writeLIME(outfile_V+"source"+"1");
+         vectorInOut.copy(stochastic_source_spin_diltued_momp_i2);
+         solver.solve(vectorInOut, vectorInOut);
+         stochastic_propagator_momp_i2[spinindex].copy(vectorInOut);
+         //Ideally doing the smearing on the propagator only on a 3D vector
+         //stochastic_propagator_momp_i2[spinindex].gaussianSmearing(stochastic_propagator_momp_i2[spinindex], smearedGauge, nsmearGauss, alphaGauss);
+         //tmp_time += MPI_Wtime()-start_time;         
+         stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_String(spinindex));
 
-       vectorInOut.copy(vectorStoc_source);
-       solver.solve(vectorInOut, vectorInOut);
-       stochastic_propagator[1].copy(vectorInOut);
-       stochastic_propagator[1].writeLIME(outfile_V+"propagator"+"1");
 
-       //Spin 2 
-       stochastic_source_spin_diluted.dilutespindisplace(vectorStoc_source, 2, 1);
-       stochastic_source_spin_diluted.writeLIME(outfile_V+"source"+"2");
-          
-       vectorInOut.copy(stochastic_source_spin_diluted);
-       solver.solve(vectorInOut, vectorInOut);
-       stochastic_propagator[2].copy(vectorInOut);
-       stochastic_propagator[2].writeLIME(outfile_V+"propagator"+"2");
+          vectorInOut.copy(stochastic_source_spin_diltued_momzero);
+          solver.solve(vectorInOut, vectorInOut);
+          stochastic_propagator_momzero[spinindex].copy(vectorInOut);
+          //Ideally doing the smearing on the propagator only on a 3D vector
+          //stochastic_propagator_momzero[0].gaussianSmearing(stochastic_propagator_momzero[0], smearedGauge, nsmearGauss, alphaGauss);
+          //tmp_time += MPI_Wtime()-start_time;
 
-       //Spin 3       
-       vectorStoc_source.dilutespindisplace(stochastic_source_spin_diluted, 3, 2);
-       vectorStoc_source.writeLIME(outfile_V+"source"+"3");
- 
-       vectorInOut.copy(vectorStoc_source);
-       solver.solve(vectorInOut, vectorInOut);
-       stochastice_propagator[3].copy(vectorInOut);
-       stochastic_propagator[3].writeLIME(outfile_V+"propagator"+"3");
+          stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_String(spinindex));
 
-       //Defining ScattCorrelator for spin dilution
-          
-       PLEGMA_ScattCorrelator<float> reductionsV3_diluted[4] = {
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2))
-          };
-
-       PLEGMA_ScattCorrelator<float> reductionsV2_diluted[4] = {
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-        PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1))
-          };
-
-       //PLEGMA_ScattCorrelator<float> diagramZ(MOMENTUM_SPACE, sinkMom_Meson);
+       }      
 
        //Diagram Z1,Z2
        for (int i=0; i< 4; ++i){
-         reductionsV3_diluted[i].V3( stochastic_propagator[i], glist_sink_meson, propUP);
-         reductionsV2_diluted[i].V4( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
+         reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], glist_sink_meson, propUP);
+         reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
        }
-       
-       /*diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 1 );
-        diagramZ.writeHDF5("Z1Diagramm");
 
-        diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 2 );
-        diagramZ.writeHDF5("Z2Diagramm");
-        */
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 1);
+
+
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 2);
+ 
       
        //Diagram Z3,Z4
        for (int i=0; i< 4; ++i){
-         reductionsV2_diluted[i].V2( stochastic_propagator[i], glist_sink_nucleon, propDN, propUP);
+         reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
        }
 
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 3);
 
-       /*    diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 3 );
-        diagramZ.writeHDF5("Z3Diagramm");
 
-        diagramZ.Z_diagramms(glist_source_nucleon, glist_source_meson, reductionsV3_diluted, reductionsV4_diluted, 4 );
-        diagramZ.writeHDF5("Z2Diagramm");
-        */
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_meson, glist_source_nucleon, "Zdiagramm_Antonino", 4);
+
 
       }//loop over unique set of momenta for p_i2
 
