@@ -49,7 +49,6 @@ int main(int argc, char **argv) {
       // Reading from Lime file and loading to device
       PLEGMA_Gauge<double> gauge;
       gauge.readFile(latfile, LIME_FORMAT);
-      gauge.load();
       gauge.calculatePlaq();
       
       // Loading to QUDA and computing plaquette also there
@@ -65,7 +64,7 @@ int main(int argc, char **argv) {
       contractGauge.copy(gauge);
       // apply boundary conditions since is needed for the covariant derivative
       applyBoundaryConditions(contractGauge,true);
-    }
+   }
 
     updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));

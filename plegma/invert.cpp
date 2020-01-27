@@ -31,7 +31,6 @@ int main(int argc, char **argv)
   {
     PLEGMA_Gauge<double> gauge;
     gauge.readFile(latfile, LIME_FORMAT);
-    gauge.load();
     gauge.calculatePlaq();
     initGaugeQuda(gauge, boundaryCond == "antiperiodic");
     plaqQuda();

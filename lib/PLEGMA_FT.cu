@@ -62,7 +62,8 @@ void PLEGMA_FT<Float>::createMom(){
 template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
   dof = newDof;
-  h_elem.reset(new Float[Nmoms()*dimT*dof*2]);
+  sizeN=Nmoms()*dimT*dof*2;
+  h_elem.reset(new Float[sizeN]);
   zero();
 }
 

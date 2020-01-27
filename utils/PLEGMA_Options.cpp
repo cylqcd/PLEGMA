@@ -6,9 +6,9 @@
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq",
 						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
-#ifdef HAVE_ARPACK
+#if  defined(HAVE_ARPACK) || defined(QUDAEIG)
 						     ,"Eig-NkV", "Eig-logFile"
-#elif HAVE_PRIMME
+#elif defined(HAVE_PRIMME)
 						     ,"Eig-printLevel", "Eig-method-PRIMME"
 #endif
 						     ,"Eig-isACC", "Eig-PolyDeg", "Eig-amin", "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters"
@@ -106,10 +106,10 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
   if(isInList(list, "sinkMom")) opt.set("sinkMom", "Sink momentum boosted nucleon", verbosity, sinkMom);
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
-#ifdef HAVE_ARPACK
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
   if(isInList(list, "Eig-NkV")) opt.set("Eig-NkV", "Number of vectors for the Krylov subspace", verbosity, Eig_NkV);
   if(isInList(list, "Eig-logFile")) opt.set("Eig-logFile", "Path for the logfile of the eigensolver", verbosity, Eig_logFile);
-#elif HAVE_PRIMME
+#elif defined(HAVE_PRIMME)
   if(isInList(list, "Eig-printLevel")) opt.set("Eig-printLevel", "Print Level for the PRIMEE eigenSolver", verbosity, Eig_printLevel);
   if(isInList(list, "Eig-method-PRIMME")) opt.set("Eig-method-PRIMME", "The method for eigensolver from PRIMME see manual for all", verbosity, Eig_method);
 #endif

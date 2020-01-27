@@ -32,7 +32,6 @@ int main(int argc, char **argv)
       
     // Reading from Lime file and loading to device
     gauge.readFile(latfile, LIME_FORMAT);
-    gauge.load();
       
     // Compuiting plaquette on device in three different way for crosschecking
     double plaq = gauge.calculatePlaq();
