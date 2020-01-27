@@ -55,10 +55,15 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
-  // List of configurations-----------------------------------------------------------------------------
+  // List of configurations or vectors-----------------------------------------------------------------------------
   if(isInList(list,"load-gauge-list-filename")){
     isFound = opt.set("load-gauge-list-filename", "Filename of the list of the configuration to analyze", verbosity, pathListGaugeConfs);
     if(isFound) readConfsList();
+  }
+
+  if(isInList(list,"load-list-vectors")){
+    isFound = opt.set("load-list-vectors", "Filename of the list of the vectors to proccess", verbosity, pathListVecs);
+    if(isFound) readVecsList();
   }
   
   if(isInList(list,"rng-seed")) opt.set("rng-seed", "A seed for the random number generator", verbosity, rng_seed);

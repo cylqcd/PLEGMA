@@ -75,6 +75,10 @@ namespace plegma {
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
+    /**
+       @brief Performs the similarity transformation of gamma matrices from tmLQCD to QUDA-UKQCD and vice versa
+     **/
+    void rotate_uk_ch();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };

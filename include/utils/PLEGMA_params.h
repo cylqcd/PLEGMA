@@ -28,6 +28,8 @@ define(std::vector<GAMMAS> gammas, {});
 define(int numSourcePositions, 1);
 define(std::string pathListGaugeConfs);
 define(std::vector<std::string> listGaugeConfs);
+define(std::string pathListVecs);
+define(std::vector<std::string> listVecs);
 define(std::string pathListSourcePositions);
 define(std::vector<site> sourcePositions, {});
 define(int maxQsq, 64);

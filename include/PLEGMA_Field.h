@@ -129,8 +129,9 @@ namespace plegma {
 
     template<typename FloatIn>
     void copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where=DEVICE);
-    
-    void mulMomentumPhases(std::vector<int> mom, int sign=-1);
+
+    template<typename T>
+    void mulMomentumPhases(std::vector<T> mom, int sign=-1);
 
     // F += a*Fin
     void add(PLEGMA_Field &Fin, std::complex<Float> alpha = 1.);
@@ -153,6 +154,12 @@ namespace plegma {
        @return void
      **/    
     void absorb(const PLEGMA_Field3D<Float> &field, int global_it);
+    /**
+       @brief Multiplies a field with theta twists in temporal direction, namely e^{i \theta \pi t/T}
+       @param double theta: the parameter \theta as used above
+       @param bool dagger: If true flips the sign in the exponential
+     **/
+    void mulThetaPhase(Float theta, bool dagger=false);
 
     virtual void readLIME(std::string filename);
     virtual void writeLIME(std::string filename) const;

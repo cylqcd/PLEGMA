@@ -593,7 +593,8 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
+template<typename T>
+void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<T> mom, int sign){
   if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
@@ -610,6 +611,13 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<int> mom, int sign){
   for(int dof = 0; dof < field_length; dof++)
     plegma::elemWiseMul(V,(Float*) x, d_elem + dof*total_length*2);
   cudaFree(x);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::mulThetaPhase(Float theta, bool dagger){
+  int sign = dagger?+1:-1;
+  std::vector<Float> mom = {0.,0.,0.,static_cast<Float>(theta*0.5)};
+  mulMomentumPhases(mom,sign);
 }
 
 // y=a*x+y
@@ -864,6 +872,10 @@ template void PLEGMA_Field<float>::copy<float>(PLEGMA_Field<float> &f, ALLOCATIO
 template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<double>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<double>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
+template void PLEGMA_Field<float>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
+template void PLEGMA_Field<double>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
+template void PLEGMA_Field<float>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
+template void PLEGMA_Field<double>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
 
 // field3D <- field4D
 template<typename Float>
@@ -887,6 +899,7 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   }
   checkCudaError();
 }
+
 
 template class PLEGMA_Field3D<float>;
 template class PLEGMA_Field3D<double>;
