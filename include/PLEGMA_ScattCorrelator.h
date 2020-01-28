@@ -175,7 +175,6 @@ namespace plegma {
     //   std::string description;
     //////////////
     std::vector<GAMMAS> GList;
-    std::vector<std::vector<int>> fixMomList;
     std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
     size_t shape_size;               //     prod(shape)    = n_gammas*4*4*4*3
 
@@ -199,7 +198,6 @@ namespace plegma {
 
     //functions that return values of protected variables
     std::string Shape_labels() const{ return shape_labels; }
-    std::vector<std::vector<int>> getFixMomList(){ return fixMomList; }
     std::vector<GAMMAS> getGList(){ return GList; }
 
     //checks

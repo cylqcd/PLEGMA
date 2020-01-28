@@ -96,6 +96,8 @@ namespace plegma {
       for ( int i = 0; i < 4; i++ )
 	source_position[i] = source[i];
     }
+    
+    std::vector<std::vector<int>> getFixMomList(){ return fixMomList; }
 
     tex_mom_list getTexMomList() {
       if(corr_space == MOMENTUM_SPACE) {

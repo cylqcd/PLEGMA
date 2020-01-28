@@ -675,12 +675,12 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelato
   int n_gammas = srcV2.shape[0];
 
   if(!srcV2.fixMomList.empty()){
-    if( this->fixMomList != srcV2.fixMomList ) PLEGMA_error("src and dest must have same momenta\n");
+    if( this->fixMomList != srcV2.fixMomList ) PLEGMA_error("src and dest must have same momenta. fixMomList detected.\n");
   }
   else if(!srcV2.fixMomVec.empty()){
-    if( this->fixMomVec != srcV2.fixMomVec ) PLEGMA_error("src and dest must have same momenta\n");
+    if( this->fixMomVec != srcV2.fixMomVec ) PLEGMA_error("src and dest must have same momenta. fixMomVec detected.\n");
   } else {
-    if(this->Q2_max != srcV2.Q2_max) PLEGMA_error("src and dest must have same momenta\n");
+    if(this->Q2_max != srcV2.Q2_max) PLEGMA_error("src and dest must have same momenta. Q2_max detected.\n");
   }
   
   this->GList=srcV2.GList;
