@@ -220,7 +220,7 @@ namespace plegma {
     template <int s_fixed>
     void contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2like, GAMMAS &G, bool transp=false );
 
-    void V3V2reduction(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=true, int n_gammas_i2=1, int g0=0);
+    void V3V2reduction(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0);
 
     void V3V2reduction_matrix(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0) ;
 

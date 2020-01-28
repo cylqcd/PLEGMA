@@ -143,6 +143,7 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
 }
 void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, GAMMAS G_i2 , std::vector<GAMMAS> &G_f1, std::vector<GAMMAS> &G_f2, std::vector<std::string> &out){
   std::string tmp;
+  out.clear();
   for(auto &mom : moms.print() )
     for( auto &g1 : G_i1 )
       for( auto &g2 : G_f1 )
@@ -153,6 +154,7 @@ void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, GAMMAS G_i2 ,
 }
 void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, std::vector<GAMMAS> &G_i2 , std::vector<GAMMAS> &G_f1, std::vector<GAMMAS> &G_f2, std::vector<std::string> &out){
   std::string tmp;
+  out.clear();
   for(auto &mom : moms.print() )
     for( auto &g1 : G_i1 )
       for( auto &g2 : G_i2 )
@@ -308,11 +310,9 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
     PLEGMA_error("Not implemented yet\n");
 
 
-  if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
+  if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
 
-  //allocate
-  //int n_gammas_f1 = srcV2.shape[0];
   this->datasets={"W"+std::to_string(diagramm_index)};
   print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
@@ -339,10 +339,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
       srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);}
     //write W3
     else if (diagramm_index == 3){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);}
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true, true);}
     //write W4
     else {
-      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0 );}
+      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0, false, true);}
   }
   this->writeHDF5(outfile);
 
@@ -432,7 +432,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
                                                 std::string &outfile, 
                                                 int diagramm_index ){
 
-  if( (diagramm_index != 1) || (diagramm_index !=2 ) ||  (diagramm_index != 3) ||  (diagramm_index != 4)   )
+  if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
 
   if( this->corr_space == POSITION_SPACE )
@@ -563,7 +563,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1
 	                    srcf1 + t*f1_MGSC2 + i_mom_f1*f1_GSC2 + g2*N_SC2, 
 		            Gammas_i1[g1], 
                             transpgamma,
-		            dest + g1*(n_gammas_i2 + g0)*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins );
+		            dest + (g1*n_gammas_i2 + g0)*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins );
 	    }
           }
         }
