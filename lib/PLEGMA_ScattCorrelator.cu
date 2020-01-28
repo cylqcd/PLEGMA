@@ -465,7 +465,6 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 
   Float * temporary= (Float *)malloc(sizeof(Float)*d_GGGGTSS2);
 
-  Float * g = (Float *)malloc(sizeof(Float)*2);
 
   std::vector<std::array<int,3>> imap=moms.index_map();
 
@@ -481,6 +480,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
       for (int n=0; n<4; ++n){
         int kappa= gammaInd_host[gammai2][n][0]; 
         int lambda=  gammaInd_host[gammai2][n][1];
+        Float g[2];
         g[1]=gamma_host[gammai2][n][1];
         g[0]=gamma_host[gammai2][n][0];
         if (diagramm_index==1){
@@ -503,7 +503,6 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   }
 
   free(temporary);
-  free(g);
 
   this->writeHDF5(outfile);
 
