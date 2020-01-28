@@ -633,7 +633,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_Scat
   this->GList=srcV2.GList;
   this->datasets={"absorbmatrixv24"};
   this->groups={"absorbmatrixv24"};
-  this->shape={n_gammas,N_SPINS,N_COLS};
+  this->shape={n_gammas,N_SPINS,N_SPINS,N_COLS};
   this->shape_labels="gssc";
   this->initialize();
 
