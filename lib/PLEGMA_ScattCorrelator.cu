@@ -241,10 +241,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
       srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true, true );}
     //write W2
     else if (diagramm_index == 2){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, true);}
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, false);}
     //write W3
     else if (diagramm_index == 3){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, true, true);}
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, false, true);}
     //write W4
     else {
       srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0, false, true);}
@@ -300,7 +300,12 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Ga
   for (int alfa=0 ; alfa < N_SPINS; ++alfa){
     for (int beta=0; beta < N_SPINS; ++beta){
       int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
-      V3aux.absorbspinmatrix_fromV24<1>( srcV2, alfa );
+      switch(index_abs){
+        case 0: V3aux.absorbspinmatrix_fromV24<0>( srcV2, alfa ); break;
+        case 1: V3aux.absorbspinmatrix_fromV24<1>( srcV2, alfa ); break;
+        case 2: V3aux.absorbspinmatrix_fromV24<2>( srcV2, alfa ); break;
+      }
+ 
       srcf1=V3aux.getCorr();
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
 	for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
@@ -396,10 +401,10 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
           srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
         }
         else if (diagramm_index ==2){
-          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,true, true, Gammas_i2.size(),g2 );
+          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
         }
         else if (diagramm_index ==3){
-          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,true, true, Gammas_i2.size(),g2 );
+          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
         }
         else {
           srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
