@@ -384,11 +384,14 @@ int main(int argc, char **argv)
        vectorStoc_source.randInit(4321);
        vectortmp1.absorbTimeslice(vectorStoc_source, sequential_time_source);
        vectortmp2.copy(vectortmp1);
+       
 
        //Multiplying by the appropriate momentum phase
        //vectortmp1 <-- source with finite momentum
        //vectortmp2 <-- source wuth zero momentum
-       vectortmp1.mulMomentumPhases(momentum_i2,1);
+       std::vector<int> tmp_4Dmom= momentum_i2 ; 
+       tmp_4Dmom.push_back(0);
+       vectortmp1.mulMomentumPhases(tmp_4Dmom,1);
 
        for (int spinindex=0; spinindex<3; ++spinindex){
 
