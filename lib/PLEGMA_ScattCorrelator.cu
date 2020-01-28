@@ -363,7 +363,12 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Ga
   int Nmoms_f1 = srcV2.getVolSize()/HGC_localL[3];
   int Nmoms_f2 = this->vol_size/HGC_localL[3];
 
-  PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.getFixMomList());
+  if(!srcV2.getFixMomList().empty())
+    PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.fixMomList);
+  else if(!srcV2.getFixMomVec().empty())
+    PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.fixMomVec);
+  else
+    PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.Q2_max);
 
   Float* srcf2 = this->corr;//V3
   Float* srcf1;//V2
@@ -524,7 +529,12 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1
   int Nmoms_f1 = srcV2.getVolSize()/HGC_localL[3];
   int Nmoms_f2 = this->vol_size/HGC_localL[3];
 
-  PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.getFixMomList());
+  if(!srcV2.getFixMomList().empty())
+    PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.fixMomList);
+  else if(!srcV2.getFixMomVec().empty())
+    PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.fixMomVec);
+  else
+    PLEGMA_ScattCorrelator<Float> V3aux(MOMENTUM_SPACE, srcV2.Q2_max);
   
   Float* srcf2 = this->corr;//V3
   Float* srcf1; //V2
@@ -689,6 +699,9 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelato
   this->shape_labels="gsc";
   this->initialize();
   
+  size_t exp_size = srcV2.vol_size*n_gammas*N_SPINS*N_COLS;
+  if( this->getTotalSize() != exp_size )
+    PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
 
   int source[4]={0,0,0,0};
   this->setSource( source );
@@ -723,7 +736,9 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_Scat
   this->shape_labels="gssc";
   this->initialize();
 
-
+  size_t exp_size = srcV2.vol_size*n_gammas*N_SPINS*N_SPINS*N_COLS;
+  if( this->getTotalSize() != exp_size )
+    PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
   int source[4]={0,0,0,0};
   this->setSource( source );
 }
