@@ -241,10 +241,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
       srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true, true );}
     //write W2
     else if (diagramm_index == 2){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);}
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, true);}
     //write W3
     else if (diagramm_index == 3){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true, true);}
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, true, true);}
     //write W4
     else {
       srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0, false, true);}
