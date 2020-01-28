@@ -323,7 +323,7 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float
 	    } else {
 	      dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2+ri] =
 		src[(v*N_GS3C+g*N_S3C+alfa*N_S2C+beta*N_S1C+s*N_COLS+c)*2+ri];
-	    }
+           } 
 }
 
 //template functions must be defined here
@@ -341,7 +341,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrel
   const unsigned short N_S2C=N_SPINS*N_SPINS*N_COLS;
   const unsigned short N_S3C=N_SPINS*N_SPINS*N_SPINS*N_COLS;
   const unsigned short N_GS3C=n_gammas*N_SPINS*N_SPINS*N_SPINS*N_COLS;
-  const unsigned short N_GS1C=n_gammas*N_SPINS*N_COLS;
+  const unsigned short N_GS2C=n_gammas*N_SPINS*N_SPINS*N_COLS;
 
   size_t VOL_SIZE = srcV2.getVolSize();
   Float* dest = this->corr;
@@ -353,13 +353,13 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrel
 	  for(int c=0; c < N_COLS; c++)
 	    for(int ri=0; ri<2; ri++)
 	      if( s_fixed == 2){
-		dest[(v*N_GS1C+g*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
+		dest[(v*N_GS2C+g*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
 		  src[(v*N_GS3C+g*N_S3C+s1*N_S2C+s2*N_S1C+alfa*N_COLS+c)*2+ri];
 	      } else if ( s_fixed == 1 ){
-		dest[(v*N_GS1C+g*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
+		dest[(v*N_GS2C+g*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
 		  src[(v*N_GS3C+g*N_S3C+s1*N_S2C+alfa*N_S1C+s2*N_COLS+c)*2+ri];
 	      } else {
-		dest[(v*N_GS1C+g*N_S1C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
+		dest[(v*N_GS2C+g*N_S1C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
 		  src[(v*N_GS3C+g*N_S3C+alfa*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri];
 		
 	      }
