@@ -393,7 +393,7 @@ int main(int argc, char **argv)
        tmp_4Dmom.push_back(0);
        vectortmp1.mulMomentumPhases(tmp_4Dmom,1);
 
-       for (int spinindex=0; spinindex<3; ++spinindex){
+       for (int spinindex=0; spinindex<4; ++spinindex){
 
          stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp1, spinindex);
          //Ideally doing the smearing on the source only on a 3D vector
