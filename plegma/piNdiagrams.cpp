@@ -433,7 +433,10 @@ int main(int argc, char **argv)
        //Diagram Z1,Z2
        for (int i=0; i< 4; ++i){
          reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], glist_sink_meson, propUP);
+         reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
+
          reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
+         reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
 
        diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 1);
@@ -445,6 +448,8 @@ int main(int argc, char **argv)
        //Diagram Z3,Z4
        for (int i=0; i< 4; ++i){
          reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
+         reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
+
        }
 
        diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 3);
