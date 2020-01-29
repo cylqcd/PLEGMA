@@ -51,10 +51,10 @@ int main(int argc, char **argv)
 
 
     //List of gammas
-    std::vector<GAMMAS> glist_source_nucleon={G4};
-    std::vector<GAMMAS> glist_sink_nucleon={G4};
-    std::vector<GAMMAS> glist_sink_meson={ONE};
-    std::vector<GAMMAS> glist_source_meson={ONE};
+    std::vector<GAMMAS> glist_source_nucleon={G5};
+    std::vector<GAMMAS> glist_sink_nucleon={G5};
+    std::vector<GAMMAS> glist_sink_meson={G5};
+    std::vector<GAMMAS> glist_source_meson={G5};
     
     // Loading to QUDA and computing plaquette also there
     initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
