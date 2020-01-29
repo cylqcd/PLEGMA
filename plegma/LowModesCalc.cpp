@@ -43,6 +43,10 @@ int main(int argc, char **argv)
   HGC_options->set("readEigenVectors", "Where we want to read EigenVectors from file", verbosity, isReadEigenVecs);
   HGC_options->set("writeEigenVectors", "Where we want to read EigenVectors from file", verbosity, isWriteEigenVecs);
   HGC_options->set("prefixEigenVecsFile", "Path with prefix for the filenames of the eigenvectors", verbosity, fnameEigenVecsPrefix);
+#ifdef QUDAEIG
+  int batched_rotate = 1;
+  HGC_options->set("batched-rotate", "The size of the batch during Ritz rotation", verbosity, batched_rotate);
+#endif
   //=========================================================================================================//
   initializePLEGMA();
   // Reading from Lime file and loading to device
@@ -64,25 +68,21 @@ int main(int argc, char **argv)
   eigParam.spectrumPart = Eig_spectrumPart;
   eigParam.tol =Eig_tol;
   eigParam.maxIters = Eig_maxIters;
+#ifdef QUDAEIG
+  eigParam.batched_rotate = batched_rotate;
+#endif
 #if defined(HAVE_ARPACK) || defined(QUDAEIG)
   eigParam.NkV = Eig_NkV;
   eigParam.logFile = Eig_logFile;
 #elif defined(HAVE_PRIMME)
   eigParam.printLevel = Eig_printLevel;
   eigParam.primme_method=getMethod(Eig_method);
-#elif defined(QUDAEIG)
-  
 #else
   PLEGMA_error("No arpack or primme is compiled");
 #endif
  
   EigSolver eigSol(eigParam, dslash_type,isReadEigenVecs, isWriteEigenVecs, fnameEigenVecsPrefix, true);
   eigSol.dumpEvalsVdagG5V(Eig_outputFile);
-
-  // PLEGMA_Vector<double> in,out;
-  // in.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
-  // eigSol.projectVector(out,in);
-  // std::complex<double> aka = out.dot(out);
 
 #else
   PLEGMA_error("No eigenSolver is compiled");
