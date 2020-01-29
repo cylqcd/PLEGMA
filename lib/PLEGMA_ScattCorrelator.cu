@@ -352,17 +352,9 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
-//  if  ((srcV2.size() !=4 ) || (srcV3.size()!=4)){
-//    PLEGMA_error("For Z diagramms we need spin dilution with separate reduction for each spin\n");
-//  }
-
   const int tot_size= moms.size()*Gammas_i1.size()*Gammas_i2.size()*srcV2[0].GList.size()*srcV3[0].GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
   const int d_GGGGTSS2= tot_size/moms.size();
   const int d_GGGGTSS = d_GGGGTSS2/2;
-
-  
-  //allocate
-  //int n_gammas_f1 = srcV2[0].getGList().size();
 
   this->datasets={"Z"+std::to_string(diagramm_index)};
   print_groups_names(moms, Gammas_i1, Gammas_i2, srcV2[0].GList, srcV3[0].GList, this->groups);
