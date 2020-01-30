@@ -5,7 +5,7 @@ using namespace plegma;
 using namespace quda;
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "time-dilution"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
 
 int main(int argc, char **argv)
@@ -76,6 +76,63 @@ int main(int argc, char **argv)
 
     std::string smearType = ((nsmearGauss>0) ? "SS" : "LL");
     std::string smearString = smearType + "_" + "gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) + "aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
+
+
+    //Computing time-diluted stochastic propagators and stochastic source
+
+    PLEGMA_Vector<float> vectorStoc_source(BOTH);//FP: Do we really need both here?
+    PLEGMA_Vector<float> vectorStoc_propag(BOTH);
+    PLEGMA_Vector<double> vectorAuxD1(BOTH);
+    PLEGMA_Vector<double> vectorAuxD2(BOTH);
+    PLEGMA_Vector<double> vectorInOut;
+    PLEGMA_printf("Build vector from scratch\n");
+    //Note that we replace the f1<-f2 DN propagator with a stochastic one
+    //in two steps actually
+    //DN(x_f1 <- x_f2 ) = \phihat(x_f2)(x_f1)\xi^{dagger}(x_f2)(x_f2)
+    //where x_f2 is the source
+    //      x_f1 is the sink
+    //so \phihat(x_f2)(x_f1) is the x_f1 coordinate of the stochastic 
+    //propagator created at x_f2 for the down quark
+    //=gamma_5*U(x_f2 <- x_f1)^dagger*gamma_5
+    //=gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
+    //Here we compute phi and xi
+    int nroots=4;
+    //Step(1) Creating the time-diluted stochastic source
+    vectorStoc_source.randInit(1234);
+    vectorStoc_source.stochastic_Z(nroots);
+
+    //Step(2) Smearing all the time slice
+    vectorAuxD1.copy(vectorStoc_source);
+    //vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
+    vectorAuxD2.copy(vectorAuxD1);
+    //for the cross-checks we are not performing the smearing
+    vectorAuxD1.scaleVector(0.0);
+    
+    if (timedilutionflagstring.compare("on")){
+      for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+        //Step(3) pick out a particular timeslice from the source
+        vectorInOut.absorbTimeslice(vectorAuxD2, timeidx);
+        //Step(4) Solve
+        solver.solve(vectorInOut, vectorInOut);
+        //Step(5) absorbing the particular timeslice to a 4d vector
+        vectorAuxD1.absorbTimeslice(vectorInOut, timeidx, false);
+      }
+    }
+    else{
+      vectorInOut.copy(vectorAuxD2);
+      solver.solve(vectorInOut, vectorInOut);
+      vectorAuxD1.copy(vectorInOut);
+    } 
+
+    vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_source");
+    vectorAuxD2.apply_gamma5();
+    vectorStoc_source.copy(vectorAuxD2);
+
+    //Step(6) Smearing all the time slice in the propagator
+    //vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
+    vectorAuxD2.copy(vectorAuxD1);
+    vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
+    vectorStoc_propag.copy(vectorAuxD2);
 
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -193,40 +250,6 @@ int main(int argc, char **argv)
         solver.UpdateSolver();
       }
 
-      //Computing stochastic propagators and stochastic source
-
-      PLEGMA_Vector<float> vectorStoc_source(BOTH);//FP: Do we really need both here?
-      PLEGMA_Vector<float> vectorStoc_propag(BOTH);
-      PLEGMA_Vector<double> vectorInOut;
-      PLEGMA_printf("Build vector from scratch\n");
-      //Note that we replace the f1<-f2 DN propagator with a stochastic one
-      //in two steps actually
-      //DN(x_f1 <- x_f2 ) = \phihat(x_f2)(x_f1)\xi^{dagger}(x_f2)(x_f2)
-      //where x_f2 is the source
-      //      x_f1 is the sink
-      //so \phihat(x_f2)(x_f1) is the x_f1 coordinate of the stochastic 
-      //propagator created at x_f2 for the down quark
-      //=gamma_5*U(x_f2 <- x_f1)^dagger*gamma_5
-      //=gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
-      //Here we compute phi and xi
-      int nroots=4;
-      QUDA_solver solver(mu);
-      vectorStoc_source.randInit(1234);
-      vectorStoc_source.stochastic_Z(nroots);
-
-      vectorInOut.copy(vectorStoc_source);
-      //Smearing the source
-      //vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
-      
-      solver.solve(vectorInOut, vectorInOut);
-
-      //Smearing the propagator    
-      //vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
-      vectorStoc_propag.copy(vectorInOut);
-      vectorStoc_propag.writeLIME(outfile_V+"globalTpropagator_zeromomentum");
-
-      vectorStoc_source.apply_gamma5();
-      vectorStoc_source.writeLIME(outfile_V+"globalTsource_zeromomentum");
 
       //We first have a loop over all unique the source meson momentum p_i2 
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
@@ -392,23 +415,22 @@ int main(int argc, char **argv)
        std::vector<int> tmp_4Dmom= momentum_i2 ; 
        tmp_4Dmom.push_back(0);
        vectortmp1.mulMomentumPhases(tmp_4Dmom,1);
-
+  
+       stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp1,0);
+       stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2,0);
+ 
+       
        for (int spinindex=0; spinindex<4; ++spinindex){
 
-         stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp1, spinindex);
          //Ideally doing the smearing on the source only on a 3D vector
          //stochastic_source_spin_diluted_momp_i2.gaussianSmearing(stochastic_source_spin_diluted_momp_i2, smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;       
          stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
-
-         stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2, spinindex);
          //Ideally doing the smearing om the source only on a 3D vector
          //stochastic_source_spin_diluted_momźero.gaussianSmearing(stochastic_source_spin_diluted_momzero, smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;
          stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));
-
-
  
          vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
          solver.solve(vectorInOut, vectorInOut);
@@ -418,15 +440,21 @@ int main(int argc, char **argv)
          //tmp_time += MPI_Wtime()-start_time;         
          stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
 
+         vectorInOut.copy(stochastic_source_spin_diluted_momzero);
+         solver.solve(vectorInOut, vectorInOut);
+         stochastic_propagator_momzero[spinindex].copy(vectorInOut);
+         //Ideally doing the smearing on the propagator only on a 3D vector
+         //stochastic_propagator_momzero[0].gaussianSmearing(stochastic_propagator_momzero[0], smearedGauge, nsmearGauss, alphaGauss);
+         //tmp_time += MPI_Wtime()-start_time;
 
-          vectorInOut.copy(stochastic_source_spin_diluted_momzero);
-          solver.solve(vectorInOut, vectorInOut);
-          stochastic_propagator_momzero[spinindex].copy(vectorInOut);
-          //Ideally doing the smearing on the propagator only on a 3D vector
-          //stochastic_propagator_momzero[0].gaussianSmearing(stochastic_propagator_momzero[0], smearedGauge, nsmearGauss, alphaGauss);
-          //tmp_time += MPI_Wtime()-start_time;
-
-          stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+         stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+         
+         if (spinindex<3){
+           vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momp_i2,spinindex+1,spinindex);
+           vectortmp2.dilutespindisplace(stochastic_source_spin_diluted_momzero,spinindex+1,spinindex);
+           stochastic_source_spin_diluted_momp_i2.copy(vectortmp1);
+           stochastic_source_spin_diluted_momzero.copy(vectortmp2);
+         }
 
        }      
 

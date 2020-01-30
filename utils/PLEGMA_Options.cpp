@@ -57,6 +57,9 @@ void plegmaOptions(Options &opt, std::vector<std::string> list){
   if (isInList(list, "momlist-filename")){
     opt.set("momlist-filename", "Filename of list of momenta", verbosity, pathListMomenta);
   }
+  if (isInList(list, "time-dilution")){
+    opt.set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilutionflagstring);
+  }
   // List of configurations-----------------------------------------------------------------------------
   if(isInList(list,"load-gauge-list-filename")){
     isFound = opt.set("load-gauge-list-filename", "Filename of the list of the configuration to analyze", verbosity, pathListGaugeConfs);
