@@ -22,7 +22,7 @@ enum GAMMAS {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43}; //
 const std::string GAMMAS_STR[16] = {"1","g1","g2","g3","g4","g5","g5g1","g5g2","g5g3","g5g4",
     "s12","s13","s23","s41","s42","s43"};
 
-enum GAMMAS_SCATT {ONE,G1,G2,G3,G4,G5,CG1,CG2,CG3,CG14,CG24,CG34,CG145,CG245,CG345}; // Do not change this order
+enum GAMMAS_SCATT {ID,G_1,G_2,G_3,G_4,G_5,CG1,CG2,CG3,CG14,CG24,CG34,CG145,CG245,CG345}; // Do not change this order
 const std::string GAMMAS_SCATT_STR[15] = {"1","g1","g2","g3","g4","g5","cg1","cg2","cg3","cg1g4","cg2g4","cg3g4","cg1g4g5","cg2g4g5","cg3g4g5"};
  
 
