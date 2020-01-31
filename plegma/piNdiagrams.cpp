@@ -384,16 +384,16 @@ int main(int argc, char **argv)
        std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
 
        std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted = {
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Meson)
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2))
          };
 
        std::array<PLEGMA_ScattCorrelator<float>,4> reductionsV2_diluted = {
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon)
        };
 
