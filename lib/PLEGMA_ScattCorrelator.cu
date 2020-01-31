@@ -481,16 +481,17 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gam
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
-                                                momList &moms,
-                                                PLEGMA_Propagator<Float> (&S1),
-                                                PLEGMA_Propagator<Float> (&S2),
-                                                PLEGMA_Propagator<Float> (&S3),                                                                          std::vector<GAMMAS_SCATT> &Gammas_i1,
-                                                std::vector<GAMMAS_SCATT> &Gammas_f1,
-                                                std::vector<GAMMAS_SCATT> &Gammas_i2,
-                                                std::vector<GAMMAS_SCATT> &Gammas_f2,
-                                                std::string &outfile){
+                    momList &moms, 
+                    PLEGMA_Propagator<Float> (&S1),
+                    PLEGMA_Propagator<Float> (&S2),
+                    PLEGMA_Propagator<Float> (&S3), 
+                    std::vector<GAMMAS_SCATT> &Gammas_i1,
+                    std::vector<GAMMAS_SCATT> &Gammas_f1,
+                    std::vector<GAMMAS_SCATT> &Gammas_i2,
+                    std::vector<GAMMAS_SCATT> &Gammas_f2,
+                    std::string &outfile){
 
-  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_f1.size()*Gammas_i2.size()*&Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int tot_size= moms.size()*Gammas_i1.size()*Gammas_f1.size()*Gammas_i2.size()*Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   this->datasets={"D"};
   print_groups_names(moms, Gammas_i1, Gammas_f1, Gammas_i2, Gammas_f2, this->groups);
@@ -506,15 +507,16 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                                                             Gammas_f2.size(),Gammas_i2.size(),tot_size/2);
 
 
-  PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, moms.uniq_p(0));
-  PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, moms.uniq_p(0));
+  PLEGMA_ScattCorrelator<Float> reductionsT1(MOMENTUM_SPACE, moms.uniq_p(0));
+  PLEGMA_ScattCorrelator<Float> reductionsT2(MOMENTUM_SPACE, moms.uniq_p(0));
 
   reductionsT1.T1( Gammas_i1, Gammas_f1, S1, S2, S3);
   reductionsT2.T2( Gammas_i1, Gammas_f1, S1, S2, S3);
 
   int Nmom_T1=reductionsT1.getVolSize()/HGC_localL[3];
   const int i_MGGTSS2=Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
-  const int d_SS2;
+  const int i_MGGT   =Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3];
+  const int d_SS2=N_SPINS*N_SPINS*2;
 
 
   Float *srcT1 = reductionsT1.getCorr();
@@ -524,8 +526,8 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
   for (int f2g=0; f2g < Gammas_f2.size(); ++f2g ){
     for (int i2g=0; i2g < Gammas_i2.size(); ++i2g ){
-      GAMMAS_SCATT_SCATT gammaf2= Gammas_f2[f2g];
-      GAMMAS_SCATT_SCATT gammai2= Gammas_i2[i2g];
+      GAMMAS_SCATT gammaf2= Gammas_f2[f2g];
+      GAMMAS_SCATT gammai2= Gammas_i2[i2g];
       for (int n=0; n<4; ++n){
         int alfa =   gammaInd_scatt_host[gammaf2][n][0];
         int alfa0=   gammaInd_scatt_host[gammaf2][n][1];
@@ -541,26 +543,26 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
         gf[1]=gamma_scatt_host[gammaf2][n][1];
         gf[0]=gamma_scatt_host[gammaf2][n][0];
           
-        for (int internalind=0; internalind < i_MGGTV; ++internalind){
+        for (int internalind=0; internalind < i_MGGT; ++internalind){
           dest[(f2g*Gammas_i2.size()+i2g)*i_MGGTSS2+internalind*d_SS2+(alfa*N_SPINS+beta)*2+0]=
-                +gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*4.
-                -gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*4.
-                -gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*4.
-                -gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*4.
-                +gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*2.
-                -gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*2.
-                -gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*2.
-                -gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*2.;
+                +gf[0]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*4.
+                -gf[1]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*4.
+                -gf[1]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*4.
+                -gf[0]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*4.
+                +gf[0]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*2.
+                -gf[1]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*2.
+                -gf[1]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*2.
+                -gf[0]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*2.;
 
           dest[(f2g*Gammas_i2.size()+i2g)*i_MGGTSS2+internalind*d_SS2+(alfa*N_SPINS+beta)*2+1]=
-                -gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*4.
-                +gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*4.
-                +gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*4.
-                +gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*4.
-                -gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*2.
-                +gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*2.
-                +gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*2.
-                +gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*2.;
+                -gf[1]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*4.
+                +gf[1]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*4.
+                +gf[0]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*4.
+                +gf[0]*srcT1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*4.
+                -gf[1]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*2.
+                +gf[1]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*2.
+                +gf[0]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*2.
+                +gf[0]*srcT2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*2.;
 
         }
       }
