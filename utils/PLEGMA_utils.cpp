@@ -208,47 +208,47 @@ std::vector<int> createR2(std::vector<int> &vec){
  *          number: V1*gamma*V2
  *  @params Float * V1 pointer to a float array of size 2*N_COLS*N_SPINS
  *  @params Float * V2 pointer to a float array of size 2*N_COLS*N_SPINS
- *  @params GAMMAS gamma enumerator specifies the gamma matrix
+ *  @params GAMMAS_SCATT gamma enumerator specifies the gamma matrix
  *  @params bool transp transp==false then V1(a)Gamma(a,b)V2(b) is returned
  *                      transp==true  then V1(a)Gamma(b,a)V2(b) is returned 
  *  @params Float * Dest pointer to 2 Float number (complex)
  **/
 template<typename Float>
-void V_M_V( Float * V1, Float * V2, GAMMAS gamma, bool transp, Float *Dest ){
+void V_M_V( Float * V1, Float * V2, GAMMAS_SCATT gamma, bool transp, Float *Dest ){
    *(Dest+0)=0.;
    *(Dest+1)=0.;
    #pragma unroll
    for(int nz_e = 0 ; nz_e < 4 ; nz_e++){  
-     int beta0= (!transp) ? gammaInd_host[gamma][nz_e][0] : gammaInd_host[gamma][nz_e][1];
-     int beta1= (!transp) ? gammaInd_host[gamma][nz_e][1] : gammaInd_host[gamma][nz_e][0];
+     int beta0= (!transp) ? gammaInd_scatt_host[gamma][nz_e][0] : gammaInd_scatt_host[gamma][nz_e][1];
+     int beta1= (!transp) ? gammaInd_scatt_host[gamma][nz_e][1] : gammaInd_scatt_host[gamma][nz_e][0];
      #pragma unroll
      for (int nz_c = 0; nz_c < 3; nz_c++) {
-       *(Dest+0)+= +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   -V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0];
-       *(Dest+1)+= -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   +V1[2*(beta0*N_COLS+nz_c)+1]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1];
+       *(Dest+0)+= +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   -V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0];
+       *(Dest+1)+= -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   +V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1];
      }
    }
 }
-template void V_M_V<float>( float * V1, float * V2, GAMMAS gamma, bool transp, float *Dest );
+template void V_M_V<float>( float * V1, float * V2, GAMMAS_SCATT gamma, bool transp, float *Dest );
 
-template void V_M_V<double>( double * V1, double * V2, GAMMAS gamma, bool transp, double *Dest );
+template void V_M_V<double>( double * V1, double * V2, GAMMAS_SCATT gamma, bool transp, double *Dest );
 
 /**
  *  @brief tensor*matrix multiplication  
  *         for piN scattering project returns a color vector
  *  @params Float * V1 pointer to a Float array of size 2*N_COLS*N_SPINS*N_SPINS
- *  @params GAMMAS gamma enumerator specifies the gamma matrix
+ *  @params GAMMAS_SCATT gamma enumerator specifies the gamma matrix
  *  @params bool transp if transp==false Gamma(a,b)*V1(b,a) is returned
  *                      if transp==true  Gamma(a,b)*V1(a,b) is returned
  *  @params Float *Dest pointer to array of Float with size 2*N_COLS
  **/
 template<typename Float>
-void V_TR_MM( Float * V1, GAMMAS gamma,bool transp, Float *Dest ){
+void V_TR_MM( Float * V1, GAMMAS_SCATT gamma,bool transp, Float *Dest ){
   #pragma unroll
   for (int nz_c = 0 ; nz_c < 3 ; nz_c++){
     *(Dest+2*nz_c+0) = 0;
@@ -258,19 +258,19 @@ void V_TR_MM( Float * V1, GAMMAS gamma,bool transp, Float *Dest ){
   for (int nz_c=0; nz_c < 3 ; nz_c++){
     #pragma unroll
     for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
-      int beta0=(!transp) ? gammaInd_host[gamma][nz_e_inner][0] : gammaInd_host[gamma][nz_e_inner][1];
-      int beta1=(!transp) ? gammaInd_host[gamma][nz_e_inner][1] : gammaInd_host[gamma][nz_e_inner][0];
-      *(Dest+2*nz_c+0)+=+gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                        -gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-      *(Dest+2*nz_c+1)+=+gamma_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                        +gamma_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
+      int beta0=(!transp) ? gammaInd_scatt_host[gamma][nz_e_inner][0] : gammaInd_scatt_host[gamma][nz_e_inner][1];
+      int beta1=(!transp) ? gammaInd_scatt_host[gamma][nz_e_inner][1] : gammaInd_scatt_host[gamma][nz_e_inner][0];
+      *(Dest+2*nz_c+0)+=+gamma_scatt_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
+                        -gamma_scatt_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
+      *(Dest+2*nz_c+1)+=+gamma_scatt_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
+                        +gamma_scatt_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
     }
   }
   
 }
-template void V_TR_MM<float>( float * V1, GAMMAS gamma, bool transp, float *Dest );
+template void V_TR_MM<float>( float * V1, GAMMAS_SCATT gamma, bool transp, float *Dest );
 
-template void V_TR_MM<double>( double * V1, GAMMAS gamma, bool transp, double *Dest );
+template void V_TR_MM<double>( double * V1, GAMMAS_SCATT gamma, bool transp, double *Dest );
 
 
 template<typename Float>

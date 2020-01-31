@@ -174,7 +174,7 @@ namespace plegma {
     //   std::vector<std::string> groups;
     //   std::string description;
     //////////////
-    std::vector<GAMMAS> GList;
+    std::vector<GAMMAS_SCATT> GList;
     std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
     size_t shape_size;               //     prod(shape)    = n_gammas*4*4*4*3
 
