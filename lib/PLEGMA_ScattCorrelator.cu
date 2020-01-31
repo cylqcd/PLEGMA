@@ -478,22 +478,20 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS> &Gammas_i1
     }
   }
 }
-/*
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                                                 momList &moms,
                                                 PLEGMA_Propagator<Float> (&S1),
                                                 PLEGMA_Propagator<Float> (&S2),
                                                 PLEGMA_Propagator<Float> (&S3),                                                  
-                                                std::vector<DELTA_GAMMAS> &Gammas_i1,
-                                                std::vector<DELTA_GAMMAS> &Gammas_f1,
-                                                std::vector<DELTA_GAMMAS> &Gammas_i2,
-                                                std::vector<DELTA_GAMMAS> &Gammas_f2,
+                                                std::vector<GAMMAS_SCATT> &Gammas_i1,
+                                                std::vector<GAMMAS_SCATT> &Gammas_f1,
+                                                std::vector<GAMMAS_SCATT> &Gammas_i2,
+                                                std::vector<GAMMAS_SCATT> &Gammas_f2,
                                                 std::string &outfile){
 
   const int tot_size= moms.size()*Gammas_i1.size()*Gammas_f1.size()*Gammas_i2.size()*&Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
-  const int d_GGGGTSS2= tot_size/moms.size();
-  const int d_GGGGTSS = d_GGGGTSS2/2;
 
   this->datasets={"D"};
   print_groups_names(moms, Gammas_i1, Gammas_f1, Gammas_i2, Gammas_f2, this->groups);
@@ -503,6 +501,12 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
+  if( this->site_size*2 != tot_size/HGC_localL[3] )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gi2=%d),(Gf2=%d),(Gf1=%d)%d\n",
+                 this->vol_size*this->site_size,moms.size(),Gammas_f1.size(),Gammas_i1.size(),
+                                                            Gammas_f2.size(),Gammas_i2.size(),tot_size/2);
+
+
   PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, moms.uniq_p(0));
   PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, moms.uniq_p(0));
 
@@ -510,7 +514,8 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   reductionsT2.T2( Gammas_i1, Gammas_f1, S1, S2, S3);
 
   int Nmom_T1=reductionsT1.getVolSize()/HGC_localL[3];
-  const int i_MGGTV=Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3];
+  const int i_MGGTSS2=Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int d_SS2;
 
 
   Float *srcT1 = reductionsT1.getCorr();
@@ -518,39 +523,51 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
   Float *dest = this->corr;
 
-  for (int alfa=0; alfa < N_SPINS; ++alfa ){
-    for (int beta=0; beta < N_SPINS; ++beta ){
-      for (int f2g=0; f2g < Gammas_f2.size(); ++f2g ){
-        for (int i2g=0; i2g < Gammas_i2.size(); ++i2g ){
+  for (int f2g=0; f2g < Gammas_f2.size(); ++f2g ){
+    for (int i2g=0; i2g < Gammas_i2.size(); ++i2g ){
+      GAMMAS_SCATT gammaf2= Gammas_f2[f2g];
+      GAMMAS_SCATT gammai2= Gammas_i2[i2g];
+      for (int n=0; n<4; ++n){
+        int alfa =   gammaInd_scatt_host[gammaf2][n][0];
+        int alfa0=   gammaInd_scatt_host[gammaf2][n][1];
 
-          DELTA_GAMMAS gammaf2= Gammas_f2[f2g];
-          DELTA_GAMMAS gammai2= Gammas_i2[i2g];
-          for (int n=0; n<4; ++n){
-            int alpfa =   deltagammaInd_host[gammai2][n][0];
-            int alpfa0=   deltagammaInd_host[gammai2][n][1];
-
-            int beta=   deltagammaInd_host[gammai2][n][0];
-            int beta0=  deltagammaInd_host[gammai2][n][1];
+        int beta=    gammaInd_scatt_host[gammai2][n][0];
+        int beta0=   gammaInd_scatt_host[gammai2][n][1];
              
-            Float gf[2];
-            Float gi[2];
-            gi[1]=deltagamma_host[gammai2][n][1];
-            gi[0]=deltagamma_host[gammai2][n][0];
+        Float gf[2];
+        Float gi[2];
+        gi[1]=gamma_host[gammai2][n][1];
+        gi[0]=gamma_host[gammai2][n][0];
              
-            gf[1]=deltagamma_host[gammaf2][n][1];
-            gf[0]=deltagamma_host[gammaf2][n][0];
+        gf[1]=gamma_scatt_host[gammaf2][n][1];
+        gf[0]=gamma_scatt_host[gammaf2][n][0];
           
-            for (int internalind=0; internalind < i_MGGTV; ++internalind){
-              dest[(f2g*Gammas_i2.size()+i2g);
-     
-            }
-          }
+        for (int internalind=0; internalind < i_MGGTV; ++internalind){
+          dest[(f2g*Gammas_i2.size()+i2g)*i_MGGTSS2+internalind*d_SS2+(alfa*N_SPINS+beta)*2+0]=
+                +gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*4.
+                -gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*4.
+                -gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*4.
+                -gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*4.
+                +gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*2.
+                -gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*2.
+                -gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*2.
+                -gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*2.;
+
+          dest[(f2g*Gammas_i2.size()+i2g)*i_MGGTSS2+internalind*d_SS2+(alfa*N_SPINS+beta)*2+1]=
+                -gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*4.
+                +gf[1]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*4.
+                +gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*4.
+                +gf[0]*T1[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*4.
+                -gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[1]*2.
+                +gf[1]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[0]*2.
+                +gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+1]*gi[0]*2.
+                +gf[0]*T2[internalind*d_SS2+(alfa0*N_SPINS+beta0)*2+0]*gi[1]*2.;
+
         }
       }
     }
   } 
 }
-*/
 // template<typename Float>
 // void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
 
