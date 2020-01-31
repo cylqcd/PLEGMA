@@ -57,7 +57,7 @@ bool PLEGMA_ScattCorrelator<Float>::is_V3() {
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S) { 
+void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S) { 
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
@@ -85,7 +85,7 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
 
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -114,7 +114,7 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
 
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -141,7 +141,7 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   V_reductions<V,Float,Float,Float>( *this, Phi, Gammas, S1, S2);
   
 }
-void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, GAMMAS G_i2 , std::vector<GAMMAS> &G_f1, std::vector<GAMMAS> &G_f2, std::vector<std::string> &out){
+void print_groups_names( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, GAMMAS_SCATT G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
   std::string tmp;
   out.clear();
   for(auto &mom : moms.print() )
@@ -152,7 +152,7 @@ void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, GAMMAS G_i2 ,
 	  out.push_back(tmp);
 	}
 }
-void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, std::vector<GAMMAS> &G_i2 , std::vector<GAMMAS> &G_f1, std::vector<GAMMAS> &G_f2, std::vector<std::string> &out){
+void print_groups_names( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
   std::string tmp;
   out.clear();
   for(auto &mom : moms.print() )
@@ -167,7 +167,7 @@ void print_groups_names( momList &moms, std::vector<GAMMAS> &G_i1, std::vector<G
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile) {
+void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile) {
 
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -209,7 +209,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile, int diagramm_index){
+void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
 
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -253,7 +253,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
 
 }
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpgamma, int n_gammas_i2, int g0) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpgamma, int n_gammas_i2, int g0) {
   int n_gammas_i1 = Gammas_i1.size();
   if ((n_gammas_i1 <= 0) || (n_gammas_i1 >16)){
    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
@@ -341,7 +341,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
                                                 momList &moms, 
                                                 std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3),
                                                 std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),
-                                                std::vector<GAMMAS> &Gammas_i2, 
+                                                std::vector<GAMMAS_SCATT> &Gammas_i2, 
                                                 std::vector<GAMMAS_SCATT> &Gammas_i1, 
                                                 std::string &outfile, 
                                                 int diagramm_index ){
