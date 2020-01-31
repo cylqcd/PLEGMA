@@ -71,3 +71,4 @@ static const short int gammaInd_scatt_host[15][4][2] =
      {{0,2},{1,3},{2,0},{3,1}},     // Cgygtg5
      {{0,3},{1,2},{2,1},{3,0}},     // Cgzgtg5
     }; 
+}
