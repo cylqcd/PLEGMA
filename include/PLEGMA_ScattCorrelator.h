@@ -232,7 +232,7 @@ namespace plegma {
 
     void Z_diagramms(momList &moms, std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4>(&srcV2), std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index );
 
-    void D_diagramms(momList &moms, PLEGMA_Propagator<Float> (&S1), PLEGMA_Propagator<Float> (&S2), PLEGMA_Propagator<Float> (&S3), std::vector<GAMMAS_SCATT> &Gammas_i1, std::vector<GAMMAS_SCATT> &Gammas_f1, std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile)
+    void D_diagramms(momList &moms, PLEGMA_Propagator<Float> (&S1), PLEGMA_Propagator<Float> (&S2), PLEGMA_Propagator<Float> (&S3), std::vector<GAMMAS_SCATT> &Gammas_i1, std::vector<GAMMAS_SCATT> &Gammas_f1, std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
   };
 
 }
