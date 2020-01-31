@@ -1,10 +1,10 @@
 #include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_gammas.cuh>
+#include <PLEGMA_gammas_scatt.cuh>
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS>
-__global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
+template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
+__global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
 			   FloatP *S, Float2<FloatOut> *block2,
 			   int it, int time_step, int3 source, tex_mom_list moms){
 
@@ -14,8 +14,8 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
   //int site_size = N_SPINS*N_COLS;
 
-  register Float2<FloatOut> accum[N_GAMMAS*N_SPINS*N_COLS];
-  for(int i = 0 ; i <N_GAMMAS*N_SPINS*N_COLS  ; i++){
+  register Float2<FloatOut> accum[N_GAMMAS_SCATT*N_SPINS*N_COLS];
+  for(int i = 0 ; i <N_GAMMAS_SCATT*N_SPINS*N_COLS  ; i++){
     accum[i] = 0.;
   }
   
@@ -31,11 +31,11 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
     
     const Float2<float> (*g)[4];
     const short int (*gammasIdx)[4][2];
-    g = (Float2<float> (*)[4]) plegma::gamma;
-    gammasIdx = gammaInd;
+    g = (Float2<float> (*)[4]) plegma::gamma_scatt;
+    gammasIdx = gammaInd_scatt;
 
     #pragma unroll
-    for(int i_g = 0 ; i_g < N_GAMMAS; i_g++){
+    for(int i_g = 0 ; i_g < N_GAMMAS_SCATT; i_g++){
       int gId=listGammas.array[i_g];
       
       #pragma unroll //for loop over nonzero entries
@@ -64,7 +64,7 @@ __global__ void V3_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z};
 
-  const unsigned int OUT_DOF= N_GAMMAS;
+  const unsigned int OUT_DOF= N_GAMMAS_SCATT;
   const unsigned int IN_DOF= N_SPINS*N_COLS;
 
   #pragma unroll

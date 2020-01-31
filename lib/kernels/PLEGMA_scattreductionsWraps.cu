@@ -7,7 +7,7 @@ using namespace plegma;
 template<VRED V, unsigned int NG, typename FloatOut, typename FloatV, typename FloatP, typename ...Args>
 void V_kernels( ProfileStruct &ps, Float2<FloatOut> *block2,
 		int it, int time_step, int3 source, tex_mom_list moms,
-		KernelArr<GAMMAS> &listGammas, FloatV *Phi, FloatP* S1, FloatP* S2=NULL){
+		KernelArr<GAMMAS_SCATT> &listGammas, FloatV *Phi, FloatP* S1, FloatP* S2=NULL){
   dim3 grid = ps.tp.grid;
   grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
   
@@ -24,7 +24,7 @@ void V_kernels( ProfileStruct &ps, Float2<FloatOut> *block2,
 template<VRED V, typename FloatOut, typename FloatV, typename FloatP, typename ...Args>
 void V_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 			int it, int time_step, int3 source, tex_mom_list moms,
-			KernelArr<GAMMAS> &listGammas, FloatV *Phi, FloatP *S1, FloatP *S2=NULL){
+			KernelArr<GAMMAS_SCATT> &listGammas, FloatV *Phi, FloatP *S1, FloatP *S2=NULL){
 
   switch(listGammas.size){
   case(1): V_kernels<V,(unsigned int)1,FloatOut,FloatV,FloatP, Args...>( ps, block2, it, time_step, source, moms, listGammas, Phi, S1, S2 ); break;

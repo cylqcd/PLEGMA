@@ -198,18 +198,18 @@ namespace plegma {
 
     //functions that return values of protected variables
     std::string Shape_labels() const{ return shape_labels; }
-    std::vector<GAMMAS> getGList(){ return GList; }
+    std::vector<GAMMAS_SCATT> getGList(){ return GList; }
 
     //checks
     bool is_V24();
     bool is_V3();
 
     //reductions
-    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
-    void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S);
-    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
-    void T1( std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
-    void T2( std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
+    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
+    void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S);
+    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
+    void T1( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
+    void T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
 
 
     //manipulation
@@ -218,23 +218,23 @@ namespace plegma {
     template <int s_fixed>
     void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa);
     template <int s_fixed>
-    void contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2like, GAMMAS &G, bool transp=false );
+    void contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2like, GAMMAS_SCATT &G, bool transp=false );
 
-    void V3V2reduction(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0);
+    void V3V2reduction(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0);
 
-    void V3V2reduction_matrix(std::vector<GAMMAS> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0) ;
+    void V3V2reduction_matrix(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0) ;
 
-    void B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile);
+    void B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile);
 
-    void B_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
+    void B_diagramms(std::vector<GAMMAS_SCATT> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
 
-    void W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS G_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile, int diagramm_index);
+    void W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index);
 
-    //void W_diagramms(std::vector<GAMMAS> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
+    //void W_diagramms(std::vector<GAMMAS_SCATT> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
 
-    //void Z_diagramms(std::vector<GAMMAS> &Gammas_i1, std::vector<GAMMAS> &Gammas_i2, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2, int diagramm_index);
+    //void Z_diagramms(std::vector<GAMMAS_SCATT> &Gammas_i1, std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>> &srcV2, int diagramm_index);
 
-    void Z_diagramms(momList &moms, std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4>(&srcV2), std::vector<GAMMAS> &Gammas_i2, std::vector<GAMMAS> &Gammas_i1, std::string &outfile, int diagramm_index );
+    void Z_diagramms(momList &moms, std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4>(&srcV2), std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index );
 
 
   };
@@ -246,7 +246,7 @@ using namespace plegma;
 //template functions must be defined here
 template<typename Float>
 template <int s_free>
-void PLEGMA_ScattCorrelator<Float>::contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS &G, bool transp){
+void PLEGMA_ScattCorrelator<Float>::contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT &G, bool transp){
   if( s_free<0 || s_free>=3 )
     PLEGMA_error("s_free %d out of range (0, 1 or 2)\n",s_free);
   this->contract_GxV2_checks(srcV2);
@@ -269,9 +269,9 @@ void PLEGMA_ScattCorrelator<Float>::contract_GxV2( PLEGMA_ScattCorrelator<Float>
 	  dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2] = 0.;
 	  dest[(v*N_GS1C+g*N_S1C+s*N_COLS+c)*2 + 1] = 0.;
 	  for(int e_nz=0; e_nz<4; e_nz++){
-	    int alfa = (transp) ? gammaInd_host[G][e_nz][1] : gammaInd_host[G][e_nz][0];
-	    int beta = (transp) ? gammaInd_host[G][e_nz][0] : gammaInd_host[G][e_nz][1];
-	    std::complex<Float> g(gamma_host[G][e_nz][0],gamma_host[G][e_nz][1]);
+	    int alfa = (transp) ? gammaInd_scatt_host[G][e_nz][1] : gammaInd_scatt_host[G][e_nz][0];
+	    int beta = (transp) ? gammaInd_scatt_host[G][e_nz][0] : gammaInd_scatt_host[G][e_nz][1];
+	    std::complex<Float> g(gamma_scatt_host[G][e_nz][0],gamma_scatt_host[G][e_nz][1]);
 	    std::complex<Float> a;
 	    Float* aux;
 	    

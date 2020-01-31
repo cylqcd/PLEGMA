@@ -1,10 +1,10 @@
 #include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_gammas.cuh>
+#include <PLEGMA_gammas_scatt.cuh>
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatP, unsigned int N_GAMMAS_I, unsigned int N_GAMMAS_F>
-__global__ void T2_kernel( KernelArr<GAMMAS> listGammas_i, KernelArr<GAMMAS> listGammas_f,
+template<typename FloatOut, typename FloatP, unsigned int N_GAMMAS_SCATT_I, unsigned int N_GAMMAS_SCATT_F>
+__global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMAS_SCATT> listGammas_f,
 			   FloatP *S1, FloatP *S2, FloatP *S3, Float2<FloatOut> *block2,
 			   int it, int time_step, int3 source, tex_mom_list moms){
 
@@ -12,12 +12,12 @@ __global__ void T2_kernel( KernelArr<GAMMAS> listGammas_i, KernelArr<GAMMAS> lis
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
-  int site_size = N_GAMMAS_I*N_GAMMAS_F*N_SPINS*N_SPINS;
+  int site_size = N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS;
 
   if (vid==0) {  printf("check0\n");}
 
-  register Float2<FloatOut> accum[N_GAMMAS_I*N_GAMMAS_F*N_SPINS*N_SPINS];
-  for(int i = 0 ; i <N_GAMMAS_I*N_GAMMAS_F*N_SPINS*N_SPINS ; i++){
+  register Float2<FloatOut> accum[N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS];
+  for(int i = 0 ; i <N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS ; i++){
     accum[i] = 0.;
   }
 
@@ -32,17 +32,17 @@ __global__ void T2_kernel( KernelArr<GAMMAS> listGammas_i, KernelArr<GAMMAS> lis
     
     const Float2<float> (*gi)[4];
     const short (*gammas_i_Idx)[4][2];
-    gi = (Float2<float> (*)[4]) plegma::gamma;
-    gammas_i_Idx = gammaInd;
+    gi = (Float2<float> (*)[4]) plegma::gamma_scatt;
+    gammas_i_Idx = gammaInd_scatt;
 
     const Float2<float> (*gf)[4];
     const short (*gammas_f_Idx)[4][2];
-    gf = (Float2<float> (*)[4]) plegma::gamma;
-    gammas_f_Idx = gammaInd;
+    gf = (Float2<float> (*)[4]) plegma::gamma_scatt;
+    gammas_f_Idx = gammaInd_scatt;
     //if (vid==0) {printf("check1\n");}
 
     #pragma unroll 
-    for(unsigned short n_gf=0; n_gf<N_GAMMAS_F; n_gf++ ){
+    for(unsigned short n_gf=0; n_gf<N_GAMMAS_SCATT_F; n_gf++ ){
     
       int g_f_Id=listGammas_f.array[n_gf];
       //if (vid==0) {printf("check2 - gId=%d\n", gId);}
@@ -55,7 +55,7 @@ __global__ void T2_kernel( KernelArr<GAMMAS> listGammas_i, KernelArr<GAMMAS> lis
         //if (vid==0) {printf("check3 - n_ze=%d, a0-a1-f %d-%d-%f+i%f\n", nz_e, beta0, beta1, factor.x, factor.y);}
              
         #pragma unroll 
-        for(unsigned short n_gi=0; n_gi<N_GAMMAS_I; n_gi++ ){
+        for(unsigned short n_gi=0; n_gi<N_GAMMAS_SCATT_I; n_gi++ ){
 	          
           int g_i_Id=listGammas_i.array[n_gi];
 
@@ -85,8 +85,8 @@ __global__ void T2_kernel( KernelArr<GAMMAS> listGammas_i, KernelArr<GAMMAS> lis
                     unsigned short m=plegma::eps[eps2_nz][1];
                     unsigned short n=plegma::eps[eps2_nz][2];
                     int eps2_sgn=plegma::sgn_eps[eps2_nz];
-                    accum[ (((n_gf*N_GAMMAS_I + n_gi)*N_SPINS) + beta)*N_SPINS + alpha ] =
-                      accum[ (((n_gf*N_GAMMAS_I + n_gi)*N_SPINS) + beta)*N_SPINS + alpha ] + eps1_sgn*eps2_sgn*s1[alpha][beta][c][l]*factor_i*s2[alpha1][beta0][b][m]*factor_f*s3[beta1][alpha0][a][n];
+                    accum[ (((n_gf*N_GAMMAS_SCATT_I + n_gi)*N_SPINS) + beta)*N_SPINS + alpha ] =
+                      accum[ (((n_gf*N_GAMMAS_SCATT_I + n_gi)*N_SPINS) + beta)*N_SPINS + alpha ] + eps1_sgn*eps2_sgn*s1[alpha][beta][c][l]*factor_i*s2[alpha1][beta0][b][m]*factor_f*s3[beta1][alpha0][a][n];
                   }
                 }
               }
@@ -108,7 +108,7 @@ __global__ void T2_kernel( KernelArr<GAMMAS> listGammas_i, KernelArr<GAMMAS> lis
 template<typename FloatOut, typename FloatP>
 void T2_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 			int it, int time_step, int3 source, tex_mom_list moms,
-			KernelArr<GAMMAS> &listGammas_i, KernelArr<GAMMAS> &listGammas_f, FloatP *S1, FloatP *S2, FloatP *S3){
+			KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f, FloatP *S1, FloatP *S2, FloatP *S3){
   PLEGMA_printf("Executing T2_kernel_wrapper\n");
   dim3 grid = ps.tp.grid;
   grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);

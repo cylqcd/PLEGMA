@@ -1,10 +1,10 @@
 #include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_gammas.cuh>
+#include <PLEGMA_gammas_scatt.cuh>
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS>
-__global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
+template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
+__global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
 			   FloatP *S1, FloatP *S2, Float2<FloatOut> *block2,
 			   int it, int time_step, int3 source, tex_mom_list moms){
 
@@ -16,8 +16,8 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   
   if (vid==0) {  printf("check0\n");}
 
-  register Float2<FloatOut> accum[N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS];
-  for(int i = 0 ; i <N_GAMMAS*N_SPINS*N_SPINS*N_SPINS*N_COLS  ; i++){
+  register Float2<FloatOut> accum[N_GAMMAS_SCATT*N_SPINS*N_SPINS*N_SPINS*N_COLS];
+  for(int i = 0 ; i <N_GAMMAS_SCATT*N_SPINS*N_SPINS*N_SPINS*N_COLS  ; i++){
     accum[i] = 0.;
   }
 
@@ -39,8 +39,8 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
     
     const Float2<float> (*g)[4];
     const short (*gammasIdx)[4][2];
-    g = (Float2<float> (*)[4]) plegma::gamma;
-    gammasIdx = gammaInd;
+    g = (Float2<float> (*)[4]) plegma::gamma_scatt;
+    gammasIdx = gammaInd_scatt;
 
     #pragma unroll 
     for( unsigned short alfa1=0; alfa1<N_SPINS; alfa1++){
@@ -49,7 +49,7 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
         #pragma unroll 
 	for( unsigned short alfa0=0; alfa0<N_SPINS; alfa0++ ){
           #pragma unroll 
-	  for(unsigned short n_g=0; n_g<N_GAMMAS; n_g++ ){
+	  for(unsigned short n_g=0; n_g<N_GAMMAS_SCATT; n_g++ ){
 	    int gId=listGammas.array[n_g];
 
             #pragma unroll 
@@ -85,7 +85,7 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS> listGammas,
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z}; 
 
-  const unsigned int OUT_DOF= N_GAMMAS*N_SPINS*N_SPINS;
+  const unsigned int OUT_DOF= N_GAMMAS_SCATT*N_SPINS*N_SPINS;
   const unsigned int IN_DOF= N_SPINS*N_COLS;
 
   #pragma unroll

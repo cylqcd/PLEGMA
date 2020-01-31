@@ -8,7 +8,7 @@ struct KernelArr {T* array; int size;};
 
 template<VRED V,typename FloatOut, typename FloatV, typename ... Args>
 static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Vout,
-			       Float2<FloatOut>* result, std::vector<GAMMAS> &gammas,
+			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas,
 			       FloatV *Phi, Args*... S_fields){
 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
@@ -40,11 +40,11 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
 
-  KernelArr<GAMMAS> listGammas;
+  KernelArr<GAMMAS_SCATT> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
   checkCudaError();
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
   checkCudaError();
   if(HGC_verbosity > 2)
     PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
@@ -77,7 +77,7 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
 
 template<VRED V, typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
-		 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS> &Gammas,
+		 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
 		 PLEGMA_Propagator<FloatP> &S){
 
   int site_size = Gammas.size()*N_SPINS*N_COLS;
@@ -109,7 +109,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
 template<VRED V, typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
-		  PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS> &Gammas,
+		  PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
 		  PLEGMA_Propagator<FloatP> &S1,  PLEGMA_Propagator<FloatP> &S2){
 
   int site_size = Gammas.size()*N_SPINS*N_SPINS*N_SPINS*N_COLS;
@@ -143,7 +143,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 template<TRED T, typename FloatOut, typename FloatP, typename ...Args>
 void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 			int it, int time_step, int3 source, tex_mom_list moms,
-			KernelArr<GAMMAS> &listGammas_i, KernelArr<GAMMAS> &listGammas_f, FloatP* S1, FloatP* S2, FloatP* S3){
+			KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f, FloatP* S1, FloatP* S2, FloatP* S3){
   // if(T==T_1)
   //   T1_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
   // else if(T==T_2)
@@ -154,7 +154,7 @@ void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 
 template<TRED T,typename FloatOut, typename ... Args>
 static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Tout,
-			       Float2<FloatOut>* result, std::vector<GAMMAS> &gammas_i, std::vector<GAMMAS> &gammas_f,
+			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas_i, std::vector<GAMMAS_SCATT> &gammas_f,
 			       Args*... S_fields){
 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
@@ -186,14 +186,14 @@ static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
 
-  KernelArr<GAMMAS> listGammas_i, listGammas_f;
+  KernelArr<GAMMAS_SCATT> listGammas_i, listGammas_f;
   listGammas_i.size = gammas_i.size();
   listGammas_f.size = gammas_f.size();
-  cudaMalloc((void**)&listGammas_i.array, gammas_i.size()*sizeof(GAMMAS));
-  cudaMalloc((void**)&listGammas_f.array, gammas_f.size()*sizeof(GAMMAS));
+  cudaMalloc((void**)&listGammas_i.array, gammas_i.size()*sizeof(GAMMAS_SCATT));
+  cudaMalloc((void**)&listGammas_f.array, gammas_f.size()*sizeof(GAMMAS_SCATT));
   checkCudaError();
-  cudaMemcpy(listGammas_i.array, gammas_i.data(), gammas_i.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
-  cudaMemcpy(listGammas_f.array, gammas_f.data(), gammas_f.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  cudaMemcpy(listGammas_i.array, gammas_i.data(), gammas_i.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
+  cudaMemcpy(listGammas_f.array, gammas_f.data(), gammas_f.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
   checkCudaError();
   PLEGMA_printf("site_size= %d\n", listGammas_f.size*listGammas_i.size*N_SPINS*N_SPINS);
   PLEGMA_printf("OK till now\n");
@@ -228,7 +228,7 @@ static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
 
 template<TRED T, typename FloatOut, typename FloatP>
 static void T_reductions(PLEGMA_ScattCorrelator<FloatOut> &Tout,
-		  std::vector<GAMMAS> &Gammas_i, std::vector<GAMMAS> &Gammas_f, 
+		  std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, 
       PLEGMA_Propagator<FloatP> &S1, PLEGMA_Propagator<FloatP> &S2,
 		  PLEGMA_Propagator<FloatP> &S3){
 
