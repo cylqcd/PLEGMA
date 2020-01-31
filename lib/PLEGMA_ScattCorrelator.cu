@@ -485,10 +485,10 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                                                 PLEGMA_Propagator<Float> (&S1),
                                                 PLEGMA_Propagator<Float> (&S2),
                                                 PLEGMA_Propagator<Float> (&S3),                                                  
-                                                std::vector<GAMMAS_SCATT_SCATT> &Gammas_i1,
-                                                std::vector<GAMMAS_SCATT_SCATT> &Gammas_f1,
-                                                std::vector<GAMMAS_SCATT_SCATT> &Gammas_i2,
-                                                std::vector<GAMMAS_SCATT_SCATT> &Gammas_f2,
+                                                std::vector<GAMMAS_SCATT> &Gammas_i1,
+                                                std::vector<GAMMAS_SCATT> &Gammas_f1,
+                                                std::vector<GAMMAS_SCATT> &Gammas_i2,
+                                                std::vector<GAMMAS_SCATT> &Gammas_f2,
                                                 std::string &outfile){
 
   const int tot_size= moms.size()*Gammas_i1.size()*Gammas_f1.size()*Gammas_i2.size()*&Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
