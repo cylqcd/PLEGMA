@@ -7,7 +7,8 @@ namespace plegma {
     std::vector<std::vector<int>> p_i2;
     std::vector<std::vector<int>> p_f1;
     std::vector<std::vector<int>> p_f2;
-    std::vector<std::vector<int>> *ps[3]={&p_i2,&p_f1,&p_f2};
+    std::vector<std::vector<int>> p_tot;
+    std::vector<std::vector<int>> *ps[4]={&p_i2,&p_f1,&p_f2,&p_tot};
 
   public:
     momList() {;}
@@ -15,12 +16,17 @@ namespace plegma {
     momList( std::vector<int> &mom_list ){
 
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
-      for(int i=0; i<mom_list.size(); i=i+9)
+      for(int i=0; i<mom_list.size(); i=i+9){
 	for(int j=0; j<3; j++){
 	  std::vector<int> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
 	  (*ps[j]).push_back(p);
 	}
+	int idx=(int)(i/9);
+	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	p_tot.push_back(p);
+      }
     }
+    
     momList( std::string input_file){
       std::ifstream file;
       int tmp;
@@ -33,11 +39,15 @@ namespace plegma {
       file.close();
 
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
-      for(int i=0; i<mom_list.size(); i=i+9)
+      for(int i=0; i<mom_list.size(); i=i+9){
         for(int j=0; j< 3; j++){
           std::vector<int> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
           (*ps[j]).push_back(p);
         }
+	int idx=(int)(i/9);
+	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	p_tot.push_back(p);
+      }
     }
 
     int size(){ return p_i2.size(); }
@@ -48,11 +58,18 @@ namespace plegma {
 	std::vector<int> p={mom[j*3],mom[j*3+1],mom[j*3+2]};
 	(*ps[j]).push_back(p);
       }
+      int idx=p_i2.size()-1;
+      p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+      p_tot.push_back(p);
     }
+    
     void add_mom( std::vector<int> &p1, std::vector<int> &p2, std::vector<int> &p3 ){
+      if(p1.size()!=3||p2.size()!=3||p3.size()!=3) PLEGMA_error("3dim vectors expected\n");
       p_i2.push_back(p1);
       p_f1.push_back(p2);
       p_f2.push_back(p3);
+      std::vector<int> p={p2[0]+p3[0],p2[1]+p3[1],p2[2]+p3[2]};
+      p_tot.push_back(p);
     }
       
     std::vector<std::vector<int>> uniq_p(int p_i){
@@ -128,6 +145,7 @@ namespace plegma {
       }
       return out;
     }
+
   };
 
   enum VRED {V_2=2,V_3=3,V_4=4};
@@ -175,6 +193,7 @@ namespace plegma {
     //   std::string description;
     //////////////
     std::vector<GAMMAS_SCATT> GList;
+    std::vector<GAMMAS_SCATT> GList2;
     std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
     size_t shape_size;               //     prod(shape)    = n_gammas*4*4*4*3
 
@@ -199,6 +218,7 @@ namespace plegma {
     //functions that return values of protected variables
     std::string Shape_labels() const{ return shape_labels; }
     std::vector<GAMMAS_SCATT> getGList(){ return GList; }
+    std::vector<GAMMAS_SCATT> getGList2(){ return GList2; }
 
     //checks
     bool is_V24();

@@ -141,18 +141,9 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   V_reductions<V,Float,Float,Float>( *this, Phi, Gammas, S1, S2);
   
 }
-void print_groups_names( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, GAMMAS_SCATT G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
-  std::string tmp;
-  out.clear();
-  for(auto &mom : moms.print() )
-    for( auto &g1 : G_i1 )
-      for( auto &g2 : G_f1 )
-	for( auto &g3 : G_f2 ){
-	  tmp = mom + "/" + GAMMAS_STR[g1] + "/" + GAMMAS_STR[G_i2] + "/" + GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3];
-	  out.push_back(tmp);
-	}
-}
-void print_groups_names( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
+
+//create a list with the structure of hdf5 file for 4pt. Groups order is the same of arguments orde.r The printed momenta are p_i1, p_i2, p_f1, p_f2.
+void print_groups_names_4pt( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
   std::string tmp;
   out.clear();
   for(auto &mom : moms.print() )
@@ -161,6 +152,20 @@ void print_groups_names( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, std::ve
 	for( auto &g3 : G_f1 )
 	  for( auto &g4 : G_f2 ){
 	    tmp = mom + "/" + GAMMAS_STR[g1] + "/" + GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3] + "/" + GAMMAS_STR[g4];
+	    out.push_back(tmp);
+	  }
+}
+
+//create a list with the structure of hdf5 file for 2pt. Groups order is the same of arguments order. The printed momentum is the total one (p_f1+p_f2).
+void print_groups_names_2pt( std::vector<GAMMAS_SCATT> &G_f2, std::vector<GAMMAS_SCATT> &G_i2, std::vector<std::vector<int>> &moms, std::vector<GAMMAS_SCATT> &G_i1 , std::vector<GAMMAS_SCATT> &G_f1,  std::vector<std::string> &out){
+  std::string tmp;
+  out.clear();
+  for( auto &g4 : G_f2 )
+    for( auto &g2 : G_i2 )
+      for(auto &mom : moms )
+	for( auto &g1 : G_i1 )
+	  for( auto &g3 : G_f1 ){
+	    tmp = "ptot="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_STR[g1]+"-"+ GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3]+"-"+GAMMAS_STR[g4];
 	    out.push_back(tmp);
 	  }
 }
@@ -174,8 +179,9 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
 
   //allocate
   //int n_gammas_f1 = srcV2.shape[0];
+  std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
   this->datasets={"B1"};
-  print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
+  print_groups_names_4pt(moms, Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -219,7 +225,9 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
 
   this->datasets={"W"+std::to_string(diagramm_index)};
-  print_groups_names(moms, Gammas_i1, G_i2, srcV2.GList, srcV3.GList, this->groups);
+
+  std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
+  print_groups_names_4pt(moms, Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -357,7 +365,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   const int d_GGGGTSS = d_GGGGTSS2/2;
 
   this->datasets={"Z"+std::to_string(diagramm_index)};
-  print_groups_names(moms, Gammas_i1, Gammas_i2, srcV2[0].GList, srcV3[0].GList, this->groups);
+  print_groups_names_4pt(moms, Gammas_i1, Gammas_i2, srcV2[0].GList, srcV3[0].GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -479,6 +487,8 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gam
   }
 }
 
+//TO FERENC. I was thinking that maybe we don't need to pass momList because we already provide the list of P_tot in Ts reductions (I added some functions for extracting P_tot in momList).
+//So if we provide Ts PLEGMA_SC to this function, then we can read the list of P_tot from T.fixMomList and pass just this list to the print_groups_names_2pt. 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                     momList &moms, 
@@ -494,7 +504,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   const int tot_size= moms.size()*Gammas_i1.size()*Gammas_f1.size()*Gammas_i2.size()*Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   this->datasets={"D"};
-  print_groups_names(moms, Gammas_i1, Gammas_f1, Gammas_i2, Gammas_f2, this->groups);
+  print_groups_names_2pt( Gammas_f2, Gammas_i2, moms, Gammas_i1, Gammas_f1, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -580,9 +590,11 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   
 //   if(n_gammas_i<=0||n_gammas_i>16)
 //     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  
+//   this->GList=Gammas_i;
+
 //   if(n_gammas_f<=0||n_gammas_f>16)
 //     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+//   this->GList2=Gammas_f;
   
 //   if(!this->isAlloc || this->site_size!=n_gammas_i*n_gammas_f*N_SPINS*N_SPINS){
 //     this->datasets={"dataset_t1"};
@@ -610,9 +622,11 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
 //   if(n_gammas_i<=0||n_gammas_i>16)
 //     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+//   this->GList=Gammas_i;
   
 //   if(n_gammas_f<=0||n_gammas_f>16)
 //     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+//   this->GList2=Gammas_f;
   
 //   if(!this->isAlloc || this->site_size!=n_gammas_i*n_gammas_f*N_SPINS*N_SPINS){
 //     this->datasets={"dataset_t2"};
