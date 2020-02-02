@@ -23,7 +23,7 @@ namespace plegma {
 	  (*ps[j]).push_back(p);
 	}
 	int idx=(int)(i/9);
-	std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
 	p_tot.push_back(p);
       }
     }
@@ -47,7 +47,7 @@ namespace plegma {
           (*ps[j]).push_back(p);
         }
 	int idx=(int)(i/9);
-	std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
 	p_tot.push_back(p);
       }
     }
@@ -62,7 +62,7 @@ namespace plegma {
 	(*ps[j]).push_back(p);
       }
       int idx=p_i2.size()-1;
-      std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+      p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
       p_tot.push_back(p);
     }
     
