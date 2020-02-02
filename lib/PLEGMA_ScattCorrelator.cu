@@ -582,69 +582,69 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
     }
   } 
 }
-// template<typename Float>
-// void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
+ template<typename Float>
+ void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
 
-//   if( this->corr_space==POSITION_SPACE )
-//     PLEGMA_error("Not implemented yet\n");
+   if( this->corr_space==POSITION_SPACE )
+     PLEGMA_error("Not implemented yet\n");
 
-//   int n_gammas_i= Gammas_i.size();
-//   int n_gammas_f= Gammas_f.size();
+   int n_gammas_i= Gammas_i.size();
+   int n_gammas_f= Gammas_f.size();
   
-//   if(n_gammas_i<=0||n_gammas_i>16)
-//     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-//   this->GList=Gammas_i;
+   if(n_gammas_i<=0||n_gammas_i>16)
+     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+   this->GList=Gammas_i;
 
-//   if(n_gammas_f<=0||n_gammas_f>16)
-//     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-//   this->GList2=Gammas_f;
+   if(n_gammas_f<=0||n_gammas_f>16)
+     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+   this->GList2=Gammas_f;
   
-//   if(!this->isAlloc || this->site_size!=n_gammas_i*n_gammas_f*N_SPINS*N_SPINS){
-//     this->datasets={"dataset_t1"};
-//     this->groups={"group_t1"};
-//     this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
-//     this->initialize();
-//   }
+  if(!this->isAlloc || this->site_size!=n_gammas_i*n_gammas_f*N_SPINS*N_SPINS){
+     this->datasets={"dataset_t1"};
+     this->groups={"group_t1"};
+     this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
+     this->initialize();
+   }
 
-//   int source[4]={0,0,0,0};
-//   const TRED T=T_1;
-//   this->setSource(source);
+   int source[4]={0,0,0,0};
+   const TRED T=T_1;
+   this->setSource(source);
   
-//   T_reductions<T,Float,Float>( *this, Gammas_i, Gammas_f, S1, S2, S3);
+   T_reductions<T,Float,Float>( *this, Gammas_i, Gammas_f, S1, S2, S3);
   
-// }
+ }
 
-// template<typename Float>
-// void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
+ template<typename Float>
+ void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
 
-//   if( this->corr_space==POSITION_SPACE )
-//     PLEGMA_error("Not implemented yet\n");
+   if( this->corr_space==POSITION_SPACE )
+     PLEGMA_error("Not implemented yet\n");
 
-//   int n_gammas_i= Gammas_i.size();
-//   int n_gammas_f= Gammas_f.size();
+   int n_gammas_i= Gammas_i.size();
+   int n_gammas_f= Gammas_f.size();
 
-//   if(n_gammas_i<=0||n_gammas_i>16)
-//     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-//   this->GList=Gammas_i;
+   if(n_gammas_i<=0||n_gammas_i>16)
+     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+   this->GList=Gammas_i;
   
-//   if(n_gammas_f<=0||n_gammas_f>16)
-//     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-//   this->GList2=Gammas_f;
+   if(n_gammas_f<=0||n_gammas_f>16)
+     PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+   this->GList2=Gammas_f;
   
-//   if(!this->isAlloc || this->site_size!=n_gammas_i*n_gammas_f*N_SPINS*N_SPINS){
-//     this->datasets={"dataset_t2"};
-//     this->groups={"group_t2"};
-//     this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
-//     this->initialize();
-//   }
+   if(!this->isAlloc || this->site_size!=n_gammas_i*n_gammas_f*N_SPINS*N_SPINS){
+     this->datasets={"dataset_t2"};
+     this->groups={"group_t2"};
+     this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
+     this->initialize();
+   }
 
 
-//   int source[4]={0,0,0,0};
-//   const TRED T=T_2;
-//   this->setSource(source);
+   int source[4]={0,0,0,0};
+   const TRED T=T_2;
+   this->setSource(source);
   
-//   T_reductions<T,Float,Float>( *this, Gammas_i, Gammas_f, S1, S2, S3);
-// }
+   T_reductions<T,Float,Float>( *this, Gammas_i, Gammas_f, S1, S2, S3);
+ }
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::contract_GxV2_checks( PLEGMA_ScattCorrelator<Float> &srcV2){
   if( this->corr_space==POSITION_SPACE )

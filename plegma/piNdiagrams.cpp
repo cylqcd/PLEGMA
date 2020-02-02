@@ -297,7 +297,7 @@ int main(int argc, char **argv)
             start_time = MPI_Wtime();
             //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
             tmp_time += MPI_Wtime()-start_time;
-            vectorAuxD.apply_gamma(gamma_i2);
+            vectorAuxD.apply_gamma_scatt(gamma_i2);
             vectorAuxF.copy(vectorAuxD);
             propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
           }
