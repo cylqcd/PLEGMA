@@ -51,8 +51,8 @@ int main(int argc, char **argv)
 
 
     //List of gammas
-    std::vector<GAMMAS_SCATT> glist_source_nucleon={C_G_1,C_G_2,C_G_3,C_G_1_G_4,C_G_2_G_4,C_G_3_G4};
-    std::vector<GAMMAS_SCATT> glist_sink_nucleon={C_G_1,C_G_2,C_G_3,C_G_1_G_4,C_G_2_G_4,C_G_3_G4};
+    std::vector<GAMMAS_SCATT> glist_source_nucleon={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
+    std::vector<GAMMAS_SCATT> glist_sink_nucleon={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
     std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired={ID, G_5};
     std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID, G_5};
 
@@ -252,8 +252,8 @@ int main(int argc, char **argv)
       std::vector<int> mom={0,0,0};
       PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
 
-      PLEGMA_ScattCorrelator<Float> reductionsT1(MOMENTUM_SPACE, moms.uniq_p(3));
-      PLEGMA_ScattCorrelator<Float> reductionsT2(MOMENTUM_SPACE, moms.uniq_p(3));
+      PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
+      PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
 
       reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
       reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
