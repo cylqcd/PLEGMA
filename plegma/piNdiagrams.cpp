@@ -351,7 +351,7 @@ int main(int argc, char **argv)
           reductionsT5triangle.T2(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP);
 
           outfilename="Tdiagramm_Antonino";
-          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT2triangle, reductionsT5triangle, gamma_i2, glist_sink_nucleon_unpaired, outfilename);
+          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_sink_nucleon_unpaired, outfilename);
 
 
           //Compute Diagram B1 and B2 
