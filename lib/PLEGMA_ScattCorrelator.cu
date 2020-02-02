@@ -170,6 +170,20 @@ void print_groups_names_2pt( std::vector<GAMMAS_SCATT> &G_f2, std::vector<GAMMAS
 	  }
 }
 
+//create a list with the structure of hdf5 file for 3pt. Groups order is the same of arguments order. The printed momentum is (p_i1, p_i2, p_f1+p_f2).
+void print_groups_names_3pt(  std::vector<GAMMAS_SCATT> &G_f2, momList &moms, std::vector<GAMMAS_SCATT> &G_i1 , std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1,  std::vector<std::string> &out){
+  std::string tmp;
+  out.clear();
+  for( auto &g4 : G_f2 )
+    for(auto &mom : moms.print_3pt() )
+      for( auto &g1 : G_i1 )
+	for( auto &g2 : G_i2 )
+	  for( auto &g3 : G_f1 ){
+	    tmp = mom + "/" + GAMMAS_STR[g1] + "/" + GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3]+"-"+GAMMAS_STR[g4];
+	    out.push_back(tmp);
+	  }
+}
+
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile) {
@@ -417,6 +431,82 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   }
 
   free(temporary);
+
+  this->writeHDF5(outfile);
+
+}
+
+//here pi2 and Gamma_i2 are looped outside in the building of the sequential propagator. The T reduction contains ptot.
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3,
+						 PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2,
+						 std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile){
+
+  std::vector<std::vector<int>> moms_tot=moms.uniq_p(3);
+  std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2,};
+  
+  if(!(T1.fixMomList.empty())){
+    if(T1.fixMomList!=moms_tot||T3.fixMomList!=moms_tot||T5.fixMomList!=moms_tot)
+      PLEGMA_error("T1,T2 or T3 have not the expected mom list\n");
+  }
+  else if(!(T1.fixMomVec.empty())){
+    if(T1.fixMomVec!=moms_tot[0]||T3.fixMomVec!=moms_tot[0]||T5.fixMomVec!=moms_tot[0])
+      PLEGMA_error("T1,T2 or T3 have not the expected mom list\n");
+  }
+  else
+    PLEGMA_error("T1,T2 or T3 wrong mom list\n");
+  
+  int n_gammas_i1=T1.GList.size();
+  int n_gammas_f1=T1.GList2.size();
+
+  
+  const int tot_size= moms_tot.size()*n_gammas_i1*n_gammas_f1*Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+
+  this->datasets={"T"};
+  print_groups_names_3pt( Gammas_f2, moms, T1.GList, aux_gammas_i2, T1.GList2, this->groups);
+  this->shape={N_SPINS,N_SPINS};
+  this->shape_labels="ss";
+  this->initialize();
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+
+  if( this->site_size*2 != tot_size/HGC_localL[3] )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gi2=%d),(Gf2=%d),(Gf1=%d)%d\n", this->vol_size*this->site_size,moms_tot.size(),
+		 n_gammas_f1,n_gammas_i1,Gammas_f2.size(), aux_gammas_i2.size(),tot_size/2);
+
+  
+  const int d_MGGTSS2 = moms_tot.size()*n_gammas_i1*n_gammas_f1*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int i_MGGT = moms_tot.size()*n_gammas_i1*n_gammas_f1*HGC_localL[3];
+  const int i_SS2=N_SPINS*N_SPINS*2;
+
+
+  Float (*srcTs)[3] = {T1.getCorr(),T3.getCorr(),T5.getCorr()};
+
+  Float *dest = this->corr;
+  memset(this->corr,0,tot_size*sizeof(Float));
+
+  //multiply first spin index with gammas_f2
+  for (int f2g=0; f2g < Gammas_f2.size(); ++f2g ){
+    //for each non_zero component of gamma
+    for (int i_nz=0; i_nz<4; ++i_nz){
+      int alfa = gammaInd_scatt_host[Gammas_f2[f2g]][i_nz][0];
+      int alfa0 = gammaInd_scatt_host[Gammas_f2[f2g]][i_nz][1];
+      Float gf[2] = gamma_scatt_host[Gammas_f2[f2g]][i_nz];
+      //other free spin index
+      for(int beta=0; beta<N_SPINS; ++beta)
+	//loop over intermediate dofs
+	for(int int_idx=0; int_idx<i_MGGT; ++int_idx)
+	  //loop over T1,T3,T5
+	  for(int ts=0; ts<3; ++ts){
+	    dest[f2g*d_MGGTSS2+int_idx*i_SS2+(alfa*N_SPINS+beta)*2+0] +=
+	      +gf[0]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+0]*2.
+	      -gf[1]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+1]*2.;//Re{gamma[alfa][alfa0]*T[ts][alfa0][beta]}
+	    dest[f2g*d_MGGTSS2+int_idx*i_SS2+(alfa*N_SPINS+beta)*2+1] +=
+	      +gf[0]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+1]*2.
+	      +gf[1]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+0]*2.;//Im{gamma[alfa][alfa0]*T[ts][alfa0][beta]}
+	  }
+    }
+  }
 
   this->writeHDF5(outfile);
 

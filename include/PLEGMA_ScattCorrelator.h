@@ -99,6 +99,7 @@ namespace plegma {
       }
       return res;
     }
+    
     std::vector<int> u_posix( int p_i ){
       int aux;
       std::vector<int> res;
@@ -132,6 +133,21 @@ namespace plegma {
       return p_i1;
     }
     
+    std::vector<std::string> print_3pt(){
+      std::vector<std::vector<int>> p_tot_u = uniq_p(3);
+      std::vector<std::string> out;
+      std::string tmp;
+
+      for(int n=0; n < p_tot.size(); n++){
+	std::vector<int> p_i1={p_tot_u[n][0]-p_i2[0][0],p_tot_u[n][1]-p_i2[0][1],p_tot_u[n][2]-p_i2[0][2]};
+        tmp ="pi1="+std::to_string(p_i1[0])+"_"+std::to_string(p_i1[1])+"_"+std::to_string(p_i1[2])+"_";
+	tmp += "pi2="+std::to_string(p_i2[0][0])+"_"+std::to_string(p_i2[0][1])+"_"+std::to_string(p_i2[0][2])+"_";
+	tmp += "ptot="+std::to_string(p_tot_u[n][0])+"_"+std::to_string(p_tot_u[n][1])+"_"+std::to_string(p_tot_u[n][2]);
+	out.push_back(tmp);
+      }
+      return out;
+    }
+
     std::vector<std::string> print(){
       std::vector<std::vector<int>> p_i1=pi1();
       std::vector<std::string> out;
@@ -145,7 +161,6 @@ namespace plegma {
       }
       return out;
     }
-
   };
 
   enum VRED {V_2=2,V_3=3,V_4=4};
@@ -244,13 +259,14 @@ namespace plegma {
 
     void V3V2reduction_matrix(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0) ;
 
+    //diagrams
     void B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile);
-
-    void B_diagramms(std::vector<GAMMAS_SCATT> &Gammas_i1, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagramm_index);
 
     void W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index);
 
     void Z_diagramms(momList &moms, std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4>(&srcV2), std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index );
+
+    void T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
 
     void D_diagramms(momList &moms, PLEGMA_Propagator<Float> (&S1), PLEGMA_Propagator<Float> (&S2), PLEGMA_Propagator<Float> (&S3), std::vector<GAMMAS_SCATT> &Gammas_i1, std::vector<GAMMAS_SCATT> &Gammas_f1, std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
   };
