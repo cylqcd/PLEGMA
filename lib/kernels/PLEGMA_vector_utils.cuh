@@ -34,6 +34,33 @@ static void apply_gamma_vector(LEFTRIGHT LR,Float *inOut,GAMMAS r){
   checkCudaError();
 }
 
+template<LEFTRIGHT LF,typename Float>
+static __global__ void apply_gamma_scatt_vector_kernel(Float *inOut, GAMMAS_SCATT r){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  vector2<Float> vec(inOut);
+  Float2<Float> Sin[N_SPINS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_COLS];
+  if (sid >= DGC_localVolume) return;
+  vec.get(Sin,sid);
+  gamma_scattV<LF>(Sout,Sin,r);
+  vec.set(Sout,sid);
+}
+
+template<typename Float>
+static void apply_gamma_scatt_vector(LEFTRIGHT LR,Float *inOut,GAMMAS_SCATT r){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  switch(LR){
+  case(LEFT):
+    apply_gamma_scatt_vector_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  case(RIGHT):
+    apply_gamma_scatt_vector_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    break;
+  }
+  checkCudaError();
+}
+
 template<typename Float>
 static __global__ void apply_gamma5_vector_kernel(Float *inOut){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;

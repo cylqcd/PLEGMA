@@ -23,7 +23,7 @@ namespace plegma {
 	  (*ps[j]).push_back(p);
 	}
 	int idx=(int)(i/9);
-	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
 	p_tot.push_back(p);
       }
     }
@@ -47,7 +47,7 @@ namespace plegma {
           (*ps[j]).push_back(p);
         }
 	int idx=(int)(i/9);
-	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
 	p_tot.push_back(p);
       }
     }
@@ -62,7 +62,7 @@ namespace plegma {
 	(*ps[j]).push_back(p);
       }
       int idx=p_i2.size()-1;
-      p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+      std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
       p_tot.push_back(p);
     }
     
@@ -271,7 +271,8 @@ namespace plegma {
 
     void T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
 
-    void D_diagramms(momList &moms, PLEGMA_Propagator<Float> (&S1), PLEGMA_Propagator<Float> (&S2), PLEGMA_Propagator<Float> (&S3), std::vector<GAMMAS_SCATT> &Gammas_i1, std::vector<GAMMAS_SCATT> &Gammas_f1, std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
+
+    void D_diagramms( PLEGMA_ScattCorrelator<Float> (&srcT1), PLEGMA_ScattCorrelator<Float> (&srcT2), std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
   };
 
 }

@@ -51,10 +51,13 @@ int main(int argc, char **argv)
 
 
     //List of gammas
-    std::vector<GAMMAS> glist_source_nucleon={G5};
-    std::vector<GAMMAS> glist_sink_nucleon={G5};
-    std::vector<GAMMAS> glist_sink_meson={G5};
-    std::vector<GAMMAS> glist_source_meson={G5};
+    std::vector<GAMMAS_SCATT> glist_source_nucleon={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
+    std::vector<GAMMAS_SCATT> glist_sink_nucleon={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
+    std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired={ID, G_5};
+    std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID, G_5};
+
+    std::vector<GAMMAS_SCATT> glist_sink_meson={ID, G_5};
+    std::vector<GAMMAS_SCATT> glist_source_meson={ID, G_5};
     
     // Loading to QUDA and computing plaquette also there
     initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
@@ -244,6 +247,22 @@ int main(int argc, char **argv)
             vectorAuxPrint.writeLIME(outfile_dnS+"_s"+spin+"_c"+col);
           }
         }
+
+
+      std::vector<int> mom={0,0,0};
+      PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
+
+      PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
+      PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
+
+      reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
+      reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
+
+
+      std::string outfilename="Ddiagramm_Antonino" ;
+      diagramm.D_diagramms( reductionsT1, reductionsT2, glist_sink_nucleon_unpaired, glist_source_nucleon_unpaired, outfilename);
+
+
       // ensuring mu positive
       if(mu<0) {
         mu*=-1.;
@@ -260,10 +279,6 @@ int main(int argc, char **argv)
 
         PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV3(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2));
-
-        std::vector<int> mom={0,0,0};
-        PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
-
 
         //Loop over the different gamma structure for the source meson
         for (auto gamma_i2 : glist_source_meson) {
@@ -282,7 +297,7 @@ int main(int argc, char **argv)
             start_time = MPI_Wtime();
             //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
             tmp_time += MPI_Wtime()-start_time;
-            vectorAuxD.apply_gamma(gamma_i2);
+            vectorAuxD.apply_gamma_scatt(gamma_i2);
             vectorAuxF.copy(vectorAuxD);
             propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
           }
@@ -330,7 +345,7 @@ int main(int argc, char **argv)
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
           reductionsV2.writeHDF5("V2sourceforB1");
  
-          std::string outfilename="Bdiagramm_Antonino" ;
+          outfilename="Bdiagramm_Antonino" ;
           diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename);
 
      
