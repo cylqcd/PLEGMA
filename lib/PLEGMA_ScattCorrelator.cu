@@ -669,6 +669,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
       }
     }
   } 
+  this->writeHDF5(outfile);
 }
 
 template<typename Float>
