@@ -577,9 +577,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gam
   }
 }
 
-//TO FERENC. I was thinking that maybe we don't need to pass momList because we already provide the list of P_tot in Ts reductions (I added some functions for extracting P_tot in momList).
-//So if we provide Ts PLEGMA_SC to this function, then we can read the list of P_tot from T.fixMomList and pass just this list to the print_groups_names_2pt. 
-/*template<typename Float>
+template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                     PLEGMA_ScattCorrelator<Float> &srcT1,
                     PLEGMA_ScattCorrelator<Float> &srcT2,
@@ -671,7 +669,8 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
       }
     }
   } 
-}*/
+}
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
   
