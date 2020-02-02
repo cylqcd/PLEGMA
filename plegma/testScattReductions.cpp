@@ -143,12 +143,12 @@ int main(int argc, char **argv)
     //do reductions
     std::vector<int> mom={0,0,1};
     int Qmax=1;
-    //std::vector<GAMMAS> glist2={G1,G2,G3,G4};
-    //std::vector<GAMMAS> glist1={G4,G5};
-    std::vector<GAMMAS> glist={G1,G2,G3,G4};
-    // // std::vector<GAMMAS> glist={G4};
-    // // std::vector<GAMMAS> glist_in={G4};
-    // // std::vector<GAMMAS> glist_fi={G4};
+    //std::vector<GAMMAS_SCATT> glist2={G_1,G_2,G_3,G_4};
+    //std::vector<GAMMAS_SCATT> glist1={G_4,G_5};
+    std::vector<GAMMAS_SCATT> glist={G_1,G_2,G_3,G_4};
+    // // std::vector<GAMMAS_SCATT> glist={G_4};
+    // // std::vector<GAMMAS_SCATT> glist_in={G_4};
+    // // std::vector<GAMMAS_SCATT> glist_fi={G_4};
 
     PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
     double t0 = MPI_Wtime();

@@ -17,8 +17,9 @@ namespace plegma {
 
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
       for(int i=0; i<mom_list.size(); i=i+9){
+	std::vector<int> p;
 	for(int j=0; j<3; j++){
-	  std::vector<int> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
+	  p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
 	  (*ps[j]).push_back(p);
 	}
 	int idx=(int)(i/9);
@@ -40,8 +41,9 @@ namespace plegma {
 
       if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
       for(int i=0; i<mom_list.size(); i=i+9){
-        for(int j=0; j< 3; j++){
-          std::vector<int> p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
+        std::vector<int> p;
+	for(int j=0; j< 3; j++){
+          p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
           (*ps[j]).push_back(p);
         }
 	int idx=(int)(i/9);
@@ -54,8 +56,9 @@ namespace plegma {
 
     void add_mom( std::vector<int> &mom ){
       if(mom.size()%9!=0) PLEGMA_error("9 integers expected\n");
+      std::vector<int> p;
       for(int j=0; j<3; j++){
-	std::vector<int> p={mom[j*3],mom[j*3+1],mom[j*3+2]};
+	p={mom[j*3],mom[j*3+1],mom[j*3+2]};
 	(*ps[j]).push_back(p);
       }
       int idx=p_i2.size()-1;

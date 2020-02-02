@@ -480,7 +480,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   const int i_SS2=N_SPINS*N_SPINS*2;
 
 
-  Float (*srcTs)[3] = {T1.getCorr(),T3.getCorr(),T5.getCorr()};
+  Float *srcTs[3] = {T1.getCorr(),T3.getCorr(),T5.getCorr()};
 
   Float *dest = this->corr;
   memset(this->corr,0,tot_size*sizeof(Float));
@@ -491,7 +491,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
     for (int i_nz=0; i_nz<4; ++i_nz){
       int alfa = gammaInd_scatt_host[Gammas_f2[f2g]][i_nz][0];
       int alfa0 = gammaInd_scatt_host[Gammas_f2[f2g]][i_nz][1];
-      Float gf[2] = gamma_scatt_host[Gammas_f2[f2g]][i_nz];
+      float gf[2] = {gamma_scatt_host[Gammas_f2[f2g]][i_nz][0],gamma_scatt_host[Gammas_f2[f2g]][i_nz][1]};
       //other free spin index
       for(int beta=0; beta<N_SPINS; ++beta)
 	//loop over intermediate dofs
@@ -579,7 +579,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gam
 
 //TO FERENC. I was thinking that maybe we don't need to pass momList because we already provide the list of P_tot in Ts reductions (I added some functions for extracting P_tot in momList).
 //So if we provide Ts PLEGMA_SC to this function, then we can read the list of P_tot from T.fixMomList and pass just this list to the print_groups_names_2pt. 
-template<typename Float>
+/*template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                     momList &moms, 
                     PLEGMA_Propagator<Float> (&S1),
@@ -668,7 +668,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
       }
     }
   } 
-}
+  }*/
 // template<typename Float>
 // void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
 
