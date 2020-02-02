@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     int Qmax=1;
     //std::vector<GAMMAS> glist2={G1,G2,G3,G4};
     //std::vector<GAMMAS> glist1={G4,G5};
-    std::vector<GAMMAS> glist={G1,G2,G3,G4};
+    std::vector<GAMMAS_SCATT> glist={G_1,G_2,G_3,G_4};
     // // std::vector<GAMMAS> glist={G4};
     // // std::vector<GAMMAS> glist_in={G4};
     // // std::vector<GAMMAS> glist_fi={G4};
