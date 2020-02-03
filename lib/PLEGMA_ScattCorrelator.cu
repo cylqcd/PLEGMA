@@ -163,7 +163,7 @@ void print_groups_names_4pt( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, std
       for( auto &g2 : G_i2 )
 	for( auto &g3 : G_f1 )
 	  for( auto &g4 : G_f2 ){
-	    tmp = mom + "/" + GAMMAS_STR[g1] + "/" + GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3] + "/" + GAMMAS_STR[g4];
+	    tmp = mom + "/" + GAMMAS_SCATT_STR[g1] + "/" + GAMMAS_SCATT_STR[g2] + "/" + GAMMAS_SCATT_STR[g3] + "/" + GAMMAS_SCATT_STR[g4];
 	    out.push_back(tmp);
 	  }
 }
@@ -177,7 +177,7 @@ void print_groups_names_2pt( std::vector<GAMMAS_SCATT> &G_f2, std::vector<GAMMAS
       for(auto &mom : moms )
 	for( auto &g1 : G_i1 )
 	  for( auto &g3 : G_f1 ){
-	    tmp = "ptot="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_STR[g1]+"-"+ GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3]+"-"+GAMMAS_STR[g4];
+	    tmp = "ptot="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_SCATT_STR[g1]+"-"+ GAMMAS_SCATT_STR[g2] + "/" + GAMMAS_SCATT_STR[g3]+"-"+GAMMAS_SCATT_STR[g4];
 	    out.push_back(tmp);
 	  }
 }
@@ -191,7 +191,7 @@ void print_groups_names_3pt(  std::vector<GAMMAS_SCATT> &G_f2, momList &moms, st
       for( auto &g1 : G_i1 )
 	for( auto &g2 : G_i2 )
 	  for( auto &g3 : G_f1 ){
-	    tmp = mom + "/" + GAMMAS_STR[g1] + "/" + GAMMAS_STR[g2] + "/" + GAMMAS_STR[g3]+"-"+GAMMAS_STR[g4];
+	    tmp = mom + "/" + GAMMAS_SCATT_STR[g1] + "/" + GAMMAS_SCATT_STR[g2] + "/" + GAMMAS_SCATT_STR[g3]+"-"+GAMMAS_SCATT_STR[g4];
 	    out.push_back(tmp);
 	  }
 }
