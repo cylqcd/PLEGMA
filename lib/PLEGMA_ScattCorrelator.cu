@@ -236,9 +236,9 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
  
   //write B1
   for(int i_m=0; i_m<imap.size(); i_m++){
-    const Float phase= mom_i1_list[i_m][0]*this->source_position[0]+
-                       mom_i1_list[i_m][1]*this->source_position[1]+
-                       mom_i1_list[i_m][2]*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
     srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);
     x_e_cx<Float>( this->corr + offset*i_m,  tmpreim, offset/2);
@@ -250,9 +250,9 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   //write B2
   this->datasets={"B2"};
   for(int i_m=0; i_m<imap.size(); i_m++){
-    const Float phase= mom_i1_list[i_m][0]*this->source_position[0]+
-                       mom_i1_list[i_m][1]*this->source_position[1]+
-                       mom_i1_list[i_m][2]*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
     srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0);
@@ -300,21 +300,32 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
 
   std::vector<std::array<int,3>> imap=moms.index_map();
 
+  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
   int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   for(int i_m=0; i_m<imap.size(); i_m++){
     //write W1
     if (diagramm_index == 1){
-      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true, true );}
+      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true, true );
+    }
     //write W2
     else if (diagramm_index == 2){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, false);}
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, false);
+    }
     //write W3
     else if (diagramm_index == 3){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, false, true);}
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 1, false, true);
+    }
     //write W4
     else {
-      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0, false, true);}
+      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0, false, true);
+    }
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+    x_e_cx<Float>( this->corr + offset*i_m,  tmpreim, offset/2);
+
   }
   this->writeHDF5(outfile);
 
