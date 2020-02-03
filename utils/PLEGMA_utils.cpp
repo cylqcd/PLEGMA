@@ -283,3 +283,17 @@ void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size ){
 template void x_pe_cy<float>(  float *dest,  float  *floatcomplex, float  *temporary, int size) ;
 
 template void x_pe_cy<double>( double *dest, double *floatcomplex, double *temporary, int size) ;
+
+template<typename Float>
+void x_e_cx( Float *dest, const Float floatcomplex[2],  int size ){
+  for (int i=0; i<size; ++i){
+    Float tmpre=floatcomplex[0]*dest[2*i+0]-floatcomplex[1]*dest[2*i+1];
+    Float tmpim=floatcomplex[1]*dest[2*i+0]+floatcomplex[0]*dest[2*i+1];
+    dest[2*i+0]= tmpre;
+    dest[2*i+1]= tmpim;
+  }
+}
+template void x_e_cx<float>(  float *dest,  const float  floatcomplex[2], int size) ;
+
+template void x_e_cx<double>( double *dest, const double floatcomplex[2], int size) ;
+

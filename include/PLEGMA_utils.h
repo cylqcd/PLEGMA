@@ -42,6 +42,7 @@ std::vector<int> createR2(std::vector<int> &vec);
 template<typename Float> void V_M_V( Float * V1, Float * V2, GAMMAS_SCATT gamma, bool transp, Float *Dest);
 template<typename Float> void V_TR_MM( Float *V1, GAMMAS_SCATT gamma, bool transp, Float *Dest );
 template<typename Float> void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size );
+template<typename Float> void x_e_cx( Float *dest, const Float floatcomplex[2], int size );
 
 //=================== PLEGMA_Options.cpp ==========================//
 void plegmaOptions(Options &opt, std::vector<std::string> list);
