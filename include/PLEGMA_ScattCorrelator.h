@@ -83,6 +83,18 @@ namespace plegma {
       return out;
     }
 
+    std::vector<std::vector<int>> get_pi1(){
+      std::vector<std::vector<int>> out;
+      std::vector<std::vector<int>> p_i2_all =(*ps[0]);
+      std::vector<std::vector<int>> p_tot_all=(*ps[3]);
+      std::vector<int> p;
+      for (int i=0; i< p_i2_all.size(); ++i){
+        p={p_tot_all[i][0]-p_i2_all[i][0],p_tot_all[i][1]-p_i2_all[i][1],p_tot_all[i][2]-p_i2_all[i][2]};
+        out.push_back(p);
+      }
+      return out;
+    }
+
     momList extract( std::vector<int> &mom, int p_i ){
       momList out;
       for(int j=0; j<p_i2.size(); j++)
