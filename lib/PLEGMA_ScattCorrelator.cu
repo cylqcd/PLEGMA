@@ -210,7 +210,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
 
   
   std::vector<std::array<int,3>> imap=moms.index_map();
-  int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS*2;
+  int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   //write B1
   for(int i_m=0; i_m<imap.size(); i_m++)
@@ -255,7 +255,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
 
 
   std::vector<std::array<int,3>> imap=moms.index_map();
-  int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS*2;
+  int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   for(int i_m=0; i_m<imap.size(); i_m++){
     //write W1
