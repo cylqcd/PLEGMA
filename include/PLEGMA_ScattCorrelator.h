@@ -23,7 +23,7 @@ namespace plegma {
 	  (*ps[j]).push_back(p);
 	}
 	int idx=(int)(i/9);
-	std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
 	p_tot.push_back(p);
       }
     }
@@ -47,7 +47,7 @@ namespace plegma {
           (*ps[j]).push_back(p);
         }
 	int idx=(int)(i/9);
-	std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
 	p_tot.push_back(p);
       }
     }
@@ -62,7 +62,7 @@ namespace plegma {
 	(*ps[j]).push_back(p);
       }
       int idx=p_i2.size()-1;
-      std::vector<int> p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
+      p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
       p_tot.push_back(p);
     }
     
@@ -80,6 +80,18 @@ namespace plegma {
       std::sort(out.begin(),out.end());
       auto new_end = std::unique(out.begin(),out.end());
       out.resize(new_end-out.begin());
+      return out;
+    }
+
+    std::vector<std::vector<int>> get_pi1(){
+      std::vector<std::vector<int>> out;
+      std::vector<std::vector<int>> p_i2_all =(*ps[0]);
+      std::vector<std::vector<int>> p_tot_all=(*ps[3]);
+      std::vector<int> p;
+      for (int i=0; i< p_i2_all.size(); ++i){
+        p={p_tot_all[i][0]-p_i2_all[i][0],p_tot_all[i][1]-p_i2_all[i][1],p_tot_all[i][2]-p_i2_all[i][2]};
+        out.push_back(p);
+      }
       return out;
     }
 

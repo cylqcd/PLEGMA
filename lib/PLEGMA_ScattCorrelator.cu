@@ -211,19 +211,35 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   
   std::vector<std::array<int,3>> imap=moms.index_map();
   int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
-
+  std::vector<std::vector<int>> mom_i1_list=moms.get_pi1();
+ 
   //write B1
-  for(int i_m=0; i_m<imap.size(); i_m++)
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    const Float phase= mom_i1_list[i_m][0]*this->source_position[0]+
+                       mom_i1_list[i_m][1]*this->source_position[1]+
+                       mom_i1_list[i_m][2]*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
     srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);
+    x_e_cx<Float>( this->corr + offset*i_m,  tmpreim, offset/2);
+
+  }
 
   this->writeHDF5(outfile);
 
   //write B2
   this->datasets={"B2"};
-  for(int i_m=0; i_m<imap.size(); i_m++)
-    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0);
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    const Float phase= mom_i1_list[i_m][0]*this->source_position[0]+
+                       mom_i1_list[i_m][1]*this->source_position[1]+
+                       mom_i1_list[i_m][2]*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
 
+    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0);
+    x_e_cx<Float>( this->corr + offset*i_m,  tmpreim, offset/2);
+
+  }
   this->writeHDF5(outfile);
+  
   
 }
 
@@ -253,8 +269,8 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
 		 this->vol_size*this->site_size,moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
 		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS);
 
-
   std::vector<std::array<int,3>> imap=moms.index_map();
+
   int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -669,6 +685,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
       }
     }
   } 
+  this->writeHDF5(outfile);
 }
 
 template<typename Float>

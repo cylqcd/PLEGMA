@@ -255,6 +255,7 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
       PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
 
+
       reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
       reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
 
@@ -335,8 +336,23 @@ int main(int argc, char **argv)
              }
           }
 
-
           PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
+
+          //Compute triangle diagramms          
+          
+
+          PLEGMA_ScattCorrelator<float> reductionsT1triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
+         
+          PLEGMA_ScattCorrelator<float> reductionsT3triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
+
+          PLEGMA_ScattCorrelator<float> reductionsT5triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
+          reductionsT1triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUPDN, propUP  , propUP);
+          reductionsT3triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP);
+          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP);
+
+          outfilename="Tdiagramm_Antonino";
+          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_sink_nucleon_unpaired, outfilename);
+
 
           //Compute Diagram B1 and B2 
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
