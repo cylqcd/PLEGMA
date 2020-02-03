@@ -76,10 +76,10 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
   }
 
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   const VRED V=V_3;
   this->setSource(source);
@@ -109,10 +109,10 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
   }
 
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   this->setSource(source);
 
@@ -142,10 +142,10 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   }
 
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   this->setSource(source);
 
@@ -212,10 +212,10 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   this->shape_labels="ss";
   this->initialize();
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   this->setSource(source);
 
@@ -283,10 +283,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
   this->shape_labels="ss";
   this->initialize();
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   this->setSource(source);
 
@@ -441,10 +441,10 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   this->shape_labels="ss";
   this->initialize();
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   this->setSource(source);
 
@@ -505,7 +505,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3,
 						 PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2,
-						 std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile, int source_index){
+						 std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile, int source_idx){
 
   std::vector<std::vector<int>> moms_tot=moms.uniq_p(3);
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2,};
@@ -533,10 +533,10 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   this->shape_labels="ss";
   this->initialize();
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   this->setSource(source);
 
@@ -668,10 +668,10 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   this->setSource(source);
 
@@ -777,10 +777,10 @@ void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std:
     this->initialize();
   }
   
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
   const TRED T=T_1;
   this->setSource(source);
   
@@ -813,10 +813,10 @@ void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std
   }
 
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={sourcePositions[source_idx][0],
+                 sourcePositions[source_idx][1],
+                 sourcePositions[source_idx][2],
+                 sourcePositions[source_idx][3]};
 
   const TRED T=T_2;
   this->setSource(source);
@@ -854,7 +854,7 @@ void PLEGMA_ScattCorrelator<Float>::contract_GxV2_checks( PLEGMA_ScattCorrelator
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta, int source_idx){
+void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta){
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
   if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
@@ -887,16 +887,12 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelato
   if( this->getTotalSize() != exp_size )
     PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
 
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
-
+  int source[4]={0,0,0,0};
   this->setSource( source );
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int source_idx){
+void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa){
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
   if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
@@ -927,10 +923,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_Scat
   size_t exp_size = srcV2.vol_size*n_gammas*N_SPINS*N_SPINS*N_COLS;
   if( this->getTotalSize() != exp_size )
     PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
-  int source[4]={source_Position[source_idx][0],
-                 source_Position[source_idx][1],
-                 source_Position[source_idx][2],
-                 source_Position[source_idx][3]};
+  int source[4]={0,0,0,0};
 
   this->setSource( source );
 }

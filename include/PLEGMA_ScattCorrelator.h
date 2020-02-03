@@ -215,8 +215,8 @@ namespace plegma {
     std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
     size_t shape_size;               //     prod(shape)    = n_gammas*4*4*4*3
 
-    void absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta, int source_idx);
-    void absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int source_idx);
+    void absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta);
+    void absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa);
     void contract_GxV2_checks( PLEGMA_ScattCorrelator<Float> &srcV2);
 
 
@@ -396,7 +396,6 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrel
 		  src[(v*N_GS3C+g*N_S3C+s1*N_S2C+alfa*N_S1C+s2*N_COLS+c)*2+ri];
 	      } else {
 		dest[(v*N_GS2C+g*N_S1C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
-		  src[(v*N_GS3C+g*N_S3C+alfa*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri];
-		
+		  src[(v*N_GS3C+g*N_S3C+alfa*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri];	
 	      }
 }
