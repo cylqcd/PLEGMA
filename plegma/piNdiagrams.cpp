@@ -346,19 +346,19 @@ int main(int argc, char **argv)
           PLEGMA_ScattCorrelator<float> reductionsT3triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
 
           PLEGMA_ScattCorrelator<float> reductionsT5triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
-          reductionsT1triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUPDN, propUP  , propUP);
-          reductionsT3triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP);
-          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP);
+          reductionsT1triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUPDN, propUP  , propUP, source_idx);
+          reductionsT3triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP, source_idx);
+          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP, source_idx);
 
           outfilename="Tdiagramm_Antonino";
           diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_sink_nucleon_unpaired, outfilename);
 
 
           //Compute Diagram B1 and B2 
-          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
+          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN, source_idx);
           reductionsV3.writeHDF5("V3sourceforB1");
 
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP, source_idx)
           reductionsV2.writeHDF5("V2sourceforB1");
  
           outfilename="Bdiagramm_Antonino" ;

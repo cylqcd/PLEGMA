@@ -57,7 +57,7 @@ bool PLEGMA_ScattCorrelator<Float>::is_V3() {
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S) { 
+void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S, int source_idx){ 
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
 
@@ -76,7 +76,11 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
   }
 
 
-  int source[4]={0,0,0,0};
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
   const VRED V=V_3;
   this->setSource(source);
   
@@ -85,7 +89,7 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, int source_idx) {
 
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -105,7 +109,11 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
   }
 
 
-  int source[4]={0,0,0,0};
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
   this->setSource(source);
 
   const VRED V=V_4;
@@ -114,7 +122,7 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, int source_idx) {
 
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -134,7 +142,11 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   }
 
 
-  int source[4]={0,0,0,0};
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
   this->setSource(source);
 
   const VRED V=V_2;
@@ -186,7 +198,7 @@ void print_groups_names_3pt(  std::vector<GAMMAS_SCATT> &G_f2, momList &moms, st
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile) {
+void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int source_idx) {
 
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -199,6 +211,14 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
+
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
+  this->setSource(source);
+
   
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected vol_size=%d\n",this->vol_size);
@@ -210,7 +230,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
 
   
   std::vector<std::array<int,3>> imap=moms.index_map();
-  std::vector<std::vector<int>> mom_i1_list=moms.get_pi1();
+  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
   
   int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS*2;
 
@@ -246,7 +266,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
+void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index, int source_idx){
 
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -262,6 +282,14 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
+
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
+  this->setSource(source);
+
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
  
@@ -381,7 +409,8 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
                                                 std::vector<GAMMAS_SCATT> &Gammas_i2, 
                                                 std::vector<GAMMAS_SCATT> &Gammas_i1, 
                                                 std::string &outfile, 
-                                                int diagramm_index ){
+                                                int diagramm_index, 
+                                                int source_idx ){
 
   if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
     PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
@@ -398,6 +427,14 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
+
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
+  this->setSource(source);
+
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
@@ -455,7 +492,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3,
 						 PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2,
-						 std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile){
+						 std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile, int source_index){
 
   std::vector<std::vector<int>> moms_tot=moms.uniq_p(3);
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2,};
@@ -482,6 +519,14 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
+
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
+  this->setSource(source);
+
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
@@ -598,7 +643,8 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                     PLEGMA_ScattCorrelator<Float> &srcT2,
                     std::vector<GAMMAS_SCATT> &Gammas_i2,
                     std::vector<GAMMAS_SCATT> &Gammas_f2,
-                    std::string &outfile){
+                    std::string &outfile, 
+                    int source_idx){
 
 
   std::vector<GAMMAS_SCATT> Gammas_i1=srcT1.getGList();
@@ -609,6 +655,13 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
+  this->setSource(source);
+
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
@@ -688,7 +741,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
+void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3, int source_idx) {
   
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -711,7 +764,10 @@ void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std:
     this->initialize();
   }
   
-  int source[4]={0,0,0,0};
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
   const TRED T=T_1;
   this->setSource(source);
   
@@ -720,7 +776,7 @@ void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std:
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
+void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3, int source_idx){
   
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -744,7 +800,11 @@ void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std
   }
 
 
-  int source[4]={0,0,0,0};
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
   const TRED T=T_2;
   this->setSource(source);
   
@@ -781,7 +841,7 @@ void PLEGMA_ScattCorrelator<Float>::contract_GxV2_checks( PLEGMA_ScattCorrelator
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta){
+void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta, int source_idx){
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
   if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
@@ -814,12 +874,16 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelato
   if( this->getTotalSize() != exp_size )
     PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
 
-  int source[4]={0,0,0,0};
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
   this->setSource( source );
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa){
+void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int source_idx){
   if( this->corr_space==POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
   if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
@@ -850,7 +914,11 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_Scat
   size_t exp_size = srcV2.vol_size*n_gammas*N_SPINS*N_SPINS*N_COLS;
   if( this->getTotalSize() != exp_size )
     PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
-  int source[4]={0,0,0,0};
+  int source[4]={source_Position[source_idx][0],
+                 source_Position[source_idx][1],
+                 source_Position[source_idx][2],
+                 source_Position[source_idx][3]};
+
   this->setSource( source );
 }
 
