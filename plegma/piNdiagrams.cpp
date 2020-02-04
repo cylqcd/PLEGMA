@@ -111,7 +111,8 @@ int main(int argc, char **argv)
     //for the cross-checks we are not performing the smearing
     vectorAuxD1.scaleVector(0.0);
     
-    if (timedilutionflagstring.compare("on")){
+    if (timedilutionflagstring.compare("on")==0){
+      PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
       for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
         //Step(3) pick out a particular timeslice from the source
         vectorInOut.absorbTimeslice(vectorAuxD2, timeidx);
@@ -122,6 +123,7 @@ int main(int argc, char **argv)
       }
     }
     else{
+      PLEGMA_printf("#piNdiagramms: No time dilution is used n stochastic propagators\n");
       vectorInOut.copy(vectorAuxD2);
       solver.solve(vectorInOut, vectorInOut);
       vectorAuxD1.copy(vectorInOut);
@@ -252,16 +254,23 @@ int main(int argc, char **argv)
       std::vector<int> mom={0,0,0};
       PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
 
+      int source[4]={sourcePositions[isource][0],
+                     sourcePositions[isource][1],
+                     sourcePositions[isource][2],
+                     sourcePositions[isource][3]};
+
+      diagramm.setSource(source);
+
       PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
       PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
 
 
-      reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP, isource);
-      reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP, isource);
+      reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
+      reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propUP, propUP);
 
 
       std::string outfilename="Ddiagramm_Antonino" ;
-      diagramm.D_diagramms( reductionsT1, reductionsT2, glist_sink_nucleon_unpaired, glist_source_nucleon_unpaired, outfilename, isource);
+      diagramm.D_diagramms( reductionsT1, reductionsT2, glist_sink_nucleon_unpaired, glist_source_nucleon_unpaired, outfilename);
 
 
       // ensuring mu positive
@@ -346,23 +355,23 @@ int main(int argc, char **argv)
           PLEGMA_ScattCorrelator<float> reductionsT3triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
 
           PLEGMA_ScattCorrelator<float> reductionsT5triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
-          reductionsT1triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUPDN, propUP  , propUP, isource);
-          reductionsT3triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP, isource);
-          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP, isource);
+          reductionsT1triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUPDN, propUP  , propUP);
+          reductionsT3triangle.T1(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP);
+          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_nucleon, propUP  , propUPDN, propUP);
 
           outfilename="Tdiagramm_Antonino";
-          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_sink_nucleon_unpaired, outfilename, isource);
+          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_sink_nucleon_unpaired, outfilename);
 
 
           //Compute Diagram B1 and B2 
-          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN, isource);
+          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
           reductionsV3.writeHDF5("V3sourceforB1");
 
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP, isource);
+          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
           reductionsV2.writeHDF5("V2sourceforB1");
  
           outfilename="Bdiagramm_Antonino" ;
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, isource);
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename);
 
      
           //diagramm.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
@@ -375,14 +384,14 @@ int main(int argc, char **argv)
            
           //PLEGMA_ScattCorrelator<float> diagramW(MOMENTUM_SPACE, sinkMom_Meson);
 
-          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP, isource);
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN, isource);
+          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
+          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN);
 
 
           outfilename= "Wdiagramm_Antonino";
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 1, isource);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 1);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 2, isource);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 2);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
           //diagramW.writeHDF5("W1Diagramm");
@@ -392,11 +401,11 @@ int main(int argc, char **argv)
 
           //Compute Diagram W3,W4
           //reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP); maybe does not have to be recomputed
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP, isource);
+          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 3, isource);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 3);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 4, isource);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 4);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 3 );
           //diagramW.writeHDF5("W3Diagramm");
@@ -491,30 +500,30 @@ int main(int argc, char **argv)
 
        //Diagram Z1,Z2
        for (int i=0; i< 4; ++i){
-         reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], glist_sink_meson, propUP, isource);
+         reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], glist_sink_meson, propUP);
          reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
 
-         reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP, isource);
+         reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 1, isource);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 1);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 2, isource);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 2);
  
       
        //Diagram Z3,Z4
        for (int i=0; i< 4; ++i){
-         reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP, isource);
+         reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
 
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 3, isource);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 3);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 4, isource);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 4);
 
 
       }//loop over unique set of momenta for p_i2
