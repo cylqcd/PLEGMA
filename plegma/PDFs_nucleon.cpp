@@ -242,9 +242,9 @@ int main(int argc, char **argv)
 				     }
 				     vectorAuxF.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
 				     std::complex<float> Isingle(0,1);
-				     float phase = 2.*PI*(((float) sourceMom[0] * source[0])/HGC_totalL[0]
-							  + ((float) sourceMom[1] * source[1])/HGC_totalL[1]
-							  + ((float) sourceMom[2] * source[2])/HGC_totalL[2]);
+				     float phase = 2.*PI*(((float) (sourceMom[0] + DeltaMom[0]) * source[0])/HGC_totalL[0]
+							  + ((float) (sourceMom[1] + DeltaMom[1]) * source[1])/HGC_totalL[1]
+							  + ((float) (sourceMom[2] + DeltaMom[2]) * source[2])/HGC_totalL[2]);
 				     vectorAuxF.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 				     vectorAuxF.conjugate();
 				     vectorAuxF.apply_gamma(G5);
@@ -329,11 +329,11 @@ int main(int argc, char **argv)
 			       delete propIn;
 			     };
 	if(nucleon == PROTON) {
-	  TIME(computeThreep(mu<0 ? mu : -mu, propUP3D, propDN3D, +1, &propUP_SL, "UP"));
-	  TIME(computeThreep(mu>0 ? mu : -mu, propUP3D, propUP3D, -1, &propDN_SL, "DOWN"));
+	  TIME(computeThreep(mu<0 ? mu : -mu, propUP3D, propDN3D, +1, &propUP_SL, "DOWN"));
+	  TIME(computeThreep(mu>0 ? mu : -mu, propUP3D, propUP3D, -1, &propDN_SL, "UP"));
 	} else {
-	  TIME(computeThreep(mu>0 ? mu : -mu, propDN3D, propUP3D, -1, &propDN_SL, "DOWN"));
-	  TIME(computeThreep(mu<0 ? mu : -mu, propDN3D, propDN3D, +1, &propUP_SL, "UP"));
+	  TIME(computeThreep(mu>0 ? mu : -mu, propDN3D, propUP3D, -1, &propDN_SL, "UP"));
+	  TIME(computeThreep(mu<0 ? mu : -mu, propDN3D, propDN3D, +1, &propUP_SL, "DOWN"));
 	}
       }
     }
