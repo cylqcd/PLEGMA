@@ -314,12 +314,12 @@ void M_e_GNG( Float *dest, GAMMAS_SCATT Gamma_i, GAMMAS_SCATT Gamma_f, Float *so
       Float gf[2];
       gf[1]=gamma_scatt_host[Gamma_f][n_gamma_f][1];
       gf[0]=gamma_scatt_host[Gamma_f][n_gamma_f][0];
-      dest[(alfa*N_SPIN+beta)*2+0]+=
+      dest[(alfa*N_SPINS+beta)*2+0]+=
                 +gi[0]*source[(alfa0*N_SPINS+beta0)*2+0]*gi[0]
                 -gi[1]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[0]
                 -gi[1]*source[(alfa0*N_SPINS+beta0)*2+0]*gf[1]
                 -gi[0]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[1];
-      dest[(alfa*N_SPIN+beta)*2+1]+=
+      dest[(alfa*N_SPINS+beta)*2+1]+=
                 -gi[1]*source[(alfa0*N_SPINS+beta0)*2+1]*gi[1]
                 +gi[1]*source[(alfa0*N_SPINS+beta0)*2+0]*gf[0]
                 +gi[0]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[0]
