@@ -494,6 +494,19 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
     }
   }
 
+  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
+
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+    x_e_cx<Float>( this->corr + d_GGGGGGTSS2*i_m,  tmpreim, d_GGGGGGTSS2/2);
+
+  }
+
+
+
   free(temporary);
   free(temporary2);
   this->writeHDF5(outfile);
