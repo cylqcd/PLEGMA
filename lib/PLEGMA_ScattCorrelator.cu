@@ -192,7 +192,7 @@ void print_groups_names_3pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, 
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile) {
+void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_f, std::vector<GAMMAS_SCATT> Gammas_ext_i, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile) {
 
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -201,7 +201,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   //int n_gammas_f1 = srcV2.shape[0];
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
   this->datasets={"B1"};
-  print_groups_names_4pt(moms, Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
+  print_groups_names_4pt(moms, Gammas_ext_i, Gammas_ext_f, Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -253,7 +253,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
+void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_sink, std::vector<GAMMAS_SCATT> Gammas_ext_source, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
 
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -265,7 +265,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
   this->datasets={"W"+std::to_string(diagramm_index)};
 
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
-  print_groups_names_4pt(moms, Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
+  print_groups_names_4pt(moms, Gammas_ext_source, Gammas_ext_sink,  Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -419,6 +419,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   const int d_GGGGT   = Gammas_i1.size()*Gammas_i2.size()*srcV2[0].GList.size()*srcV3[0].GList.size()*HGC_localL[3];
   const int d_G_ext_i = Gammas_ext_i.size();
   const int d_G_ext_f = Gammas_ext_f.size();
+  const int d_SS2 = N_SPINS*N_SPINS*2 ;
 
   this->datasets={"Z"+std::to_string(diagramm_index)};
   print_groups_names_4pt(moms, Gammas_ext_i, Gammas_ext_f, Gammas_i1, Gammas_i2, srcV2[0].GList, srcV3[0].GList, this->groups);
@@ -436,7 +437,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 		 srcV2[0].GList.size(),srcV3[0].GList.size(),tot_size/2);
 
   Float * temporary= (Float *)malloc(sizeof(Float)*d_GGGGTSS2);
-  Float * temporary2 =  (Float *)malloc(sizeof(Float)*tot_size);
+  Float * temporary2 =  (Float *)malloc(sizeof(Float)*d_GGGGTSS2);
 
 
   std::vector<std::array<int,3>> imap=moms.index_map();
@@ -452,7 +453,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
       GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
 
       for(int i_m=0; i_m<imap.size(); i_m++){
-        memset(temporary2, 0, d_MGGGGTSS2*sizeof(Float));
+        memset(temporary2, 0, d_GGGGTSS2*sizeof(Float));
         for (int g2=0; g2<Gammas_i2.size();++g2 ){
           GAMMAS_SCATT gammai2= Gammas_i2[g2];
           memset(temporary,0,d_GGGGTSS2*sizeof(Float));
@@ -475,19 +476,18 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
               srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
             }
 
-            x_pe_cy(temporary2+i_m*d_GGGGTSS2, g, temporary, d_GGGGTSS);
-
+            x_pe_cy(temporary2, g, temporary, d_GGGGTSS);
 
           }
+
         }
-      }
-      for (int i_m=0; i_m<imap.size(); i_m++){
-        for (int internalind=0; internalind < i_GGGGT; ++internalind){
+
+        for (int internalind=0; internalind < d_GGGGT; ++internalind){
           //Doing the gamma multiplication for the final indices
-          M_e_GNG<Float>(&dest[i_mom*d_GGGGGGTSS2+(i2g*i_Gi+f2g)*i_GGGGTSS2+internalind*i_SS2],
+          M_e_GNG<Float>(&dest[i_m*d_GGGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGGTSS2+internalind*d_SS2],
                          gammaf2,
                          gammai2,
-                         &temporary2[i_mom*d_GGGGTSS2+internalind*i_SS2]);
+                         &temporary2[i_m*d_GGGGTSS2+internalind*d_SS2]);
 
         }
       }
@@ -679,7 +679,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
     if(srcT1.fixMomList!=srcT2.fixMomList)
       PLEGMA_error("T1,T2 have not the the same mom list\n");
     Nmom_T1=srcT1.fixMomList.size();
-    print_groups_names_2pt( srcT1.fixMomList, Gammas_ext_i, Gammas_ext_f, Gammas_ext_i, Gammas_i1, Gammas_f1, this->groups);
+    print_groups_names_2pt( srcT1.fixMomList, Gammas_ext_i, Gammas_ext_f, Gammas_i1, Gammas_f1, this->groups);
     
   }
   else if(!(srcT1.fixMomVec.empty())){
@@ -688,7 +688,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
     Nmom_T1=1;
     std::vector<std::vector<int>> temporarymom;
     temporarymom.push_back(srcT1.fixMomVec);
-    print_groups_names_2pt( temporarymom, Gammas_ext_i, Gammas_ext_f, Gammas_ext_i, Gammas_i1, Gammas_f1, this->groups);
+    print_groups_names_2pt( temporarymom, Gammas_ext_i, Gammas_ext_f, Gammas_i1, Gammas_f1, this->groups);
   }
   else
     PLEGMA_error("T1,T2 wrong mom list\n");
