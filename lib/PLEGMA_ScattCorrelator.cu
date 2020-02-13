@@ -395,6 +395,8 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
                                                 momList &moms, 
                                                 std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3),
                                                 std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),
+                                                std::vector<GAMMAS_SCATT> &Gammas_ext_i,
+                                                std::vector<GAMMAS_SCATT> &Gammas_ext_f,
                                                 std::vector<GAMMAS_SCATT> &Gammas_i2, 
                                                 std::vector<GAMMAS_SCATT> &Gammas_i1, 
                                                 std::string &outfile, 
@@ -616,8 +618,8 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
                     PLEGMA_ScattCorrelator<Float> &srcT1,
                     PLEGMA_ScattCorrelator<Float> &srcT2,
-                    std::vector<GAMMAS_SCATT> &Gammas_i2,
-                    std::vector<GAMMAS_SCATT> &Gammas_f2,
+                    std::vector<GAMMAS_SCATT> &Gammas_ext_i,
+                    std::vector<GAMMAS_SCATT> &Gammas_ext_f,
                     std::string &outfile){
 
   //Gamma_i1, Gamma_f1 are the gammas in front of the unpaired Wilson quark
@@ -628,7 +630,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
   this->datasets={"D"};
   //Antonino: I think we have to adjust this a bit
-  print_groups_names_2pt( Gammas_f2, Gammas_i2, srcT1.fixMomList, Gammas_i1, Gammas_f1, this->groups);
+  print_groups_names_2pt( Gammas_ext_i, Gammas_ext_f, Gammas_ext_i, Gammas_i1, Gammas_f1, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -652,17 +654,17 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
     PLEGMA_error("T1,T2 wrong mom list\n");
 
   //total size of destination
-  const int tot_size= Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*Gammas_i2.size()*Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int tot_size= Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*Gammas_ext_i.size()*Gammas_ext_f.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   if( this->site_size*2 != tot_size/HGC_localL[3] )
     PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gi2=%d),(Gf2=%d),(Gf1=%d)%d\n",
                  this->vol_size*this->site_size,Nmom_T1,Gammas_f1.size(),Gammas_i1.size(),
-                                                            Gammas_f2.size(),Gammas_i2.size(),tot_size/2);
+                                                            Gammas_ext_f.size(),Gammas_ext_i.size(),tot_size/2);
   const int i_GGGGTSS2=tot_size/Nmom_T1;
   const int i_SS2=N_SPINS*N_SPINS*2;
 
-  const int i_Gi = Gammas_i2.size();
-  const int i_Gf = Gammas_f2.size();
+  const int i_Gi = Gammas_ext_i.size();
+  const int i_Gf = Gammas_ext_f.size();
 
   const int i_GGT = Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3];
   const int i_GGTSS2 = Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
@@ -674,18 +676,18 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   Float *dest = this->corr;
 
   Float tmp_4t12t2[24];
-  for (int f2g=0; f2g < i_Gi; ++f2g ){
-    for (int i2g=0; i2g < i_Gf; ++i2g ){
-      GAMMAS_SCATT gammaf2= Gammas_f2[f2g];
-      GAMMAS_SCATT gammai2= Gammas_i2[i2g];
+  for (int i_mom=0; i_mom< Nmom_T1; ++i_mom){
+    for (int f2g=0; f2g < i_Gi; ++f2g ){
+      for (int i2g=0; i2g < i_Gf; ++i2g ){
+        GAMMAS_SCATT gammaf2= Gammas_ext_f[f2g];
+        GAMMAS_SCATT gammai2= Gammas_ext_i[i2g];
 
-      for (int i_mom=0; i_mom< Nmom_T1; ++i_mom){
         for (int internalind=0; internalind < i_GGT; ++internalind){
           for (int i=0; i<i_SS2 ; ++i){
             tmp_4t12t2[i]=4*srcT1_corr[(i_mom*i_GGT+internalind)*i_SS2+i]+2*srcT2_corr[(i_mom*i_GGT+internalind)*i_SS2+i];
           }
           //Doing the gamma multiplication for the final indices
-          M_e_GNG<Float>(&dest[i_mom*i_GGGGTSS2+(f2g*i_Gi+i2g)*i_GGTSS2+internalind*i_SS2],
+          M_e_GNG<Float>(&dest[i_mom*i_GGGGTSS2+(i2g*i_Gi+f2g)*i_GGTSS2+internalind*i_SS2],
                          gammai2,
                          gammaf2,
                          tmp_4t12t2);
