@@ -29,7 +29,7 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
     Float2<FloatP> s1[N_SPINS][N_SPINS][N_COLS][N_COLS], s2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatV> phi[N_SPINS][N_COLS];
     propS1.get(s1,vid);
-    propS1.get(s2,vid);
+    propS2.get(s2,vid);
     vectorPhi.get(phi,vid);
 
     const unsigned short N_S1C=N_SPINS*N_COLS;
