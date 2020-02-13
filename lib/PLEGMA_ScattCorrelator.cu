@@ -144,46 +144,50 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   
 }
 
-//create a list with the structure of hdf5 file for 4pt. Groups order is the same of arguments orde.r The printed momenta are p_i1, p_i2, p_f1, p_f2.
-void print_groups_names_4pt( momList &moms, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
+//create a list with the structure of hdf5 file for 4pt. Groups order is the same of arguments order. The printed momenta are p_i1, p_i2, p_f1, p_f2.
+void print_groups_names_4pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f1, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
   std::string tmp;
   out.clear();
   for(auto &mom : moms.print() )
-    for( auto &g1 : G_i1 )
-      for( auto &g2 : G_i2 )
-	for( auto &g3 : G_f1 )
-	  for( auto &g4 : G_f2 ){
-	    tmp = mom + "/" + GAMMAS_SCATT_STR[g1] + "/" + GAMMAS_SCATT_STR[g2] + "/" + GAMMAS_SCATT_STR[g3] + "/" + GAMMAS_SCATT_STR[g4];
-	    out.push_back(tmp);
-	  }
+    for( auto &g1e : extG_i1 )
+      for( auto &g3e : extG_f1 )
+	for( auto &g1 : G_i1 )
+	  for( auto &g2 : G_i2 )
+	    for( auto &g3 : G_f1 )
+	      for( auto &g4 : G_f2 ){
+		tmp = mom + "/" + GAMMAS_SCATT_STR[g1]+"-"+GAMMAS_SCATT_STR[g1e] + "/" + GAMMAS_SCATT_STR[g2] + "/"
+		  + GAMMAS_SCATT_STR[g3]+"-"+GAMMAS_SCATT_STR[g3e]+ "/" + GAMMAS_SCATT_STR[g4];
+		out.push_back(tmp);
+	      }
 }
 
 //create a list with the structure of hdf5 file for 2pt. Groups order is the same of arguments order. The printed momentum is the total one (p_f1+p_f2).
-void print_groups_names_2pt( std::vector<GAMMAS_SCATT> &G_f2, std::vector<GAMMAS_SCATT> &G_i2, std::vector<std::vector<int>> &moms, std::vector<GAMMAS_SCATT> &G_i1 , std::vector<GAMMAS_SCATT> &G_f1,  std::vector<std::string> &out){
+void print_groups_names_2pt( std::vector<std::vector<int>> &moms, std::vector<GAMMAS_SCATT> &extG_i, std::vector<GAMMAS_SCATT> &extG_f, std::vector<GAMMAS_SCATT> &G_i, std::vector<GAMMAS_SCATT> &G_f,  std::vector<std::string> &out){
   std::string tmp;
   out.clear();
-  for( auto &g4 : G_f2 )
-    for( auto &g2 : G_i2 )
-      for(auto &mom : moms )
-	for( auto &g1 : G_i1 )
-	  for( auto &g3 : G_f1 ){
-	    tmp = "ptot="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_SCATT_STR[g1]+"-"+ GAMMAS_SCATT_STR[g2] + "/" + GAMMAS_SCATT_STR[g3]+"-"+GAMMAS_SCATT_STR[g4];
+  for(auto &mom : moms )
+    for( auto &g1e : extG_i )
+      for( auto &g2e : extG_f )
+	for( auto &g1 : G_i )
+	  for( auto &g2 : G_f ){
+	    tmp = "ptot="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_SCATT_STR[g1]+"-"+GAMMAS_SCATT_STR[g1e] + "/" + GAMMAS_SCATT_STR[g2]+"-"+GAMMAS_SCATT_STR[g2e];
 	    out.push_back(tmp);
 	  }
 }
 
 //create a list with the structure of hdf5 file for 3pt. Groups order is the same of arguments order. The printed momentum is (p_i1, p_i2, p_f1+p_f2).
-void print_groups_names_3pt(  std::vector<GAMMAS_SCATT> &G_f2, momList &moms, std::vector<GAMMAS_SCATT> &G_i1 , std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1,  std::vector<std::string> &out){
+void print_groups_names_3pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f, std::vector<GAMMAS_SCATT> &G_i1 , std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f,  std::vector<std::string> &out){
   std::string tmp;
   out.clear();
-  for( auto &g4 : G_f2 )
-    for(auto &mom : moms.print_3pt() )
-      for( auto &g1 : G_i1 )
-	for( auto &g2 : G_i2 )
-	  for( auto &g3 : G_f1 ){
-	    tmp = mom + "/" + GAMMAS_SCATT_STR[g1] + "/" + GAMMAS_SCATT_STR[g2] + "/" + GAMMAS_SCATT_STR[g3]+"-"+GAMMAS_SCATT_STR[g4];
-	    out.push_back(tmp);
-	  }
+  for(auto &mom : moms.print_3pt() )
+    for( auto &g1e : extG_i1 )
+      for( auto &g3e : extG_f )
+	for( auto &g1 : G_i1 )
+	  for( auto &g2 : G_i2 )
+	    for( auto &g3 : G_f ){
+	      tmp = mom + "/" + GAMMAS_SCATT_STR[g1]+"-"+GAMMAS_SCATT_STR[g1e] + "/" + GAMMAS_SCATT_STR[g2] + "/" + GAMMAS_SCATT_STR[g3]+"-"+GAMMAS_SCATT_STR[g3e];
+	      out.push_back(tmp);
+	    }
 }
 
 
@@ -474,7 +478,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3,
 						 PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2,
-						 std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile){
+						 std::vector<GAMMAS_SCATT> &extGammas_i1, std::vector<GAMMAS_SCATT> &extGammas_f, std::string &outfile){
 
   std::vector<std::vector<int>> moms_tot=moms.uniq_p(3);
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2,};
@@ -492,12 +496,12 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   
   int n_gammas_i1=T1.GList.size();
   int n_gammas_f1=T1.GList2.size();
-
+  int n_gammas_extf=extGammas_f.size();
   
-  const int tot_size= moms_tot.size()*n_gammas_i1*n_gammas_f1*Gammas_f2.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int tot_size= moms_tot.size()*extGammas_i1.size()*n_gammas_extf*n_gammas_i1*aux_gammas_i2.size()*n_gammas_f1*HGC_localL[3]*N_SPINS*N_SPINS*2;
 
   this->datasets={"T"};
-  print_groups_names_3pt( Gammas_f2, moms, T1.GList, aux_gammas_i2, T1.GList2, this->groups);
+  print_groups_names_3pt( moms, extGammas_i1, extGammas_f, T1.GList, aux_gammas_i2, T1.GList2, this->groups);
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
@@ -506,43 +510,41 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
   if( this->site_size*2 != tot_size/HGC_localL[3] )
-    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gi2=%d),(Gf2=%d),(Gf1=%d)%d\n", this->vol_size*this->site_size,moms_tot.size(),
-		 n_gammas_f1,n_gammas_i1,Gammas_f2.size(), aux_gammas_i2.size(),tot_size/2);
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(extG1=%d),(Gi2=%d),(Gf1=%d),(extGf=%d),%d\n", this->vol_size*this->site_size,moms_tot.size(),
+		 n_gammas_i1, extGammas_i1, aux_gammas_i2.size(), n_gammas_f1, n_gammas_extf, tot_size/2);
 
   
-  const int d_MGGTSS2 = moms_tot.size()*n_gammas_i1*n_gammas_f1*HGC_localL[3]*N_SPINS*N_SPINS*2;
-  const int i_MGGT = moms_tot.size()*n_gammas_i1*n_gammas_f1*HGC_localL[3];
-  const int i_SS2=N_SPINS*N_SPINS*2;
-
+  const int i_GGGT = n_gammas_i1*aux_gammas_i2.size()*n_gammas_f1*HGC_localL[3];
+  const int i_SS2 = N_SPINS*N_SPINS*2;
+  const int i_GGGTSS2 = i_GGGT*i_SS2;
+  const int d_GGGGGTSS2 = extGammas_i1.size()*n_gammas_extf*d_GGGTSS2;
 
   Float *srcTs[3] = {T1.getCorr(),T3.getCorr(),T5.getCorr()};
 
   Float *dest = this->corr;
-  memset(this->corr,0,tot_size*sizeof(Float));
+  Float *temp = (Float *)malloc(sizeof(Float)*i_SS2);
+    
+  for(int i_mom; i_mom<moms_tot.size(); ++i_mom){
+    for(int out_idx=0; out_idx<i_GGGT; ++out_idx){
 
-  //multiply first spin index with gammas_f2
-  for (int f2g=0; f2g < Gammas_f2.size(); ++f2g ){
-    //for each non_zero component of gamma
-    for (int i_nz=0; i_nz<4; ++i_nz){
-      int alfa = gammaInd_scatt_host[Gammas_f2[f2g]][i_nz][0];
-      int alfa0 = gammaInd_scatt_host[Gammas_f2[f2g]][i_nz][1];
-      float gf[2] = {gamma_scatt_host[Gammas_f2[f2g]][i_nz][0],gamma_scatt_host[Gammas_f2[f2g]][i_nz][1]};
-      //other free spin index
-      for(int beta=0; beta<N_SPINS; ++beta)
-	//loop over intermediate dofs
-	for(int int_idx=0; int_idx<i_MGGT; ++int_idx)
-	  //loop over T1,T3,T5
-	  for(int ts=0; ts<3; ++ts){
-	    dest[f2g*d_MGGTSS2+int_idx*i_SS2+(alfa*N_SPINS+beta)*2+0] +=
-	      +gf[0]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+0]*2.
-	      -gf[1]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+1]*2.;//Re{gamma[alfa][alfa0]*T[ts][alfa0][beta]}
-	    dest[f2g*d_MGGTSS2+int_idx*i_SS2+(alfa*N_SPINS+beta)*2+1] +=
-	      +gf[0]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+1]*2.
-	      +gf[1]*srcTs[ts][int_idx*i_SS2+(alfa0*N_SPINS+beta)*2+0]*2.;//Im{gamma[alfa][alfa0]*T[ts][alfa0][beta]}
-	  }
+      memset(temp,0,i_SS2*sizeof(Float));
+
+      for(int ts=0; ts<3; ++ts)
+	for(int int_idx=0; int_idx<i_SS2; ++int_idx)
+	  temp[int_idx] += srcTs[ts][ i_mom*i_GGGTSS2 + out_idx*i_SS2 + int_idx ]*2.; //2T1+2T3+2T5 for all moms x gamma_i1 x gamma_i2 x gamma_f 
+
+      //multiply second spin index with extGammas_i1
+      for(int ext_gi1=0; ext_gi1 < extGammas_i1.size(); ++ext_gi1){
+	//multiply first spin index with extGammas_f
+	for(int ext_gf=0; ext_gf < extGammas_f.size(); ++ext_gf){
+	  M_e_GNG<Float>( dest + i_mom*d_GGGGGTSS2 + (ext_gi1*n_gammas_extf+ext_gf)*i_GGGTSS2 + out_idx*d_SS2,
+			  extGammas_f[ext_gf], extGammas_i1[ext_gi1], temp);
+	}
+      }
     }
   }
 
+  free( temp );
   this->writeHDF5(outfile);
 
 }
