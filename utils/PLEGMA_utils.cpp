@@ -298,29 +298,29 @@ template void x_e_cx<float>(  float *dest,  const float  floatcomplex[2], int si
 template void x_e_cx<double>( double *dest, const double floatcomplex[2], int size) ;
 
 template<typename Float>
-void M_e_GNG( Float *dest, const GAMMAS_SCATT Gamma_i, const GAMMAS_SCATT Gamma_f, const Float *source ){
+void M_e_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source ){
   const int N2=N_SPINS*N_SPINS*2;
   for (int i=0; i < N2; ++i)
     dest[i]=0.;
-  for (int n_gamma_i=0; n_gamma_i<4; ++n_gamma_i) {    
-    const int alfa =   gammaInd_scatt_host[Gamma_i][n_gamma_i][0];
-    const int alfa0=   gammaInd_scatt_host[Gamma_i][n_gamma_i][1];
-    Float gi[2];
-    gi[1]=gamma_scatt_host[Gamma_i][n_gamma_i][1];
-    gi[0]=gamma_scatt_host[Gamma_i][n_gamma_i][0];
-    for (int n_gamma_f=0; n_gamma_f<4; ++n_gamma_f){
-      const int beta=    gammaInd_scatt_host[Gamma_f][n_gamma_f][1];
-      const int beta0=   gammaInd_scatt_host[Gamma_f][n_gamma_f][0];
-      Float gf[2];
-      gf[1]=gamma_scatt_host[Gamma_f][n_gamma_f][1];
-      gf[0]=gamma_scatt_host[Gamma_f][n_gamma_f][0];
+  for (int n_gamma_f=0; n_gamma_f<4; ++n_gamma_f) {    
+    const int alfa =   gammaInd_scatt_host[Gamma_f][n_gamma_f][0];
+    const int alfa0=   gammaInd_scatt_host[Gamma_f][n_gamma_f][1];
+    Float gf[2];
+    gf[1]=gamma_scatt_host[Gamma_f][n_gamma_f][1];
+    gf[0]=gamma_scatt_host[Gamma_f][n_gamma_f][0];
+    for (int n_gamma_i=0; n_gamma_i<4; ++n_gamma_i){
+      const int beta=    gammaInd_scatt_host[Gamma_i][n_gamma_i][1];
+      const int beta0=   gammaInd_scatt_host[Gamma_i][n_gamma_i][0];
+      Float gi[2];
+      gi[1]=gamma_scatt_host[Gamma_i][n_gamma_i][1];
+      gi[0]=gamma_scatt_host[Gamma_i][n_gamma_i][0];
       dest[(alfa*N_SPINS+beta)*2+0]+=
-                +gi[0]*source[(alfa0*N_SPINS+beta0)*2+0]*gi[0]
+                +gi[0]*source[(alfa0*N_SPINS+beta0)*2+0]*gf[0]
                 -gi[1]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[0]
                 -gi[1]*source[(alfa0*N_SPINS+beta0)*2+0]*gf[1]
                 -gi[0]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[1];
       dest[(alfa*N_SPINS+beta)*2+1]+=
-                -gi[1]*source[(alfa0*N_SPINS+beta0)*2+1]*gi[1]
+                -gi[1]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[1]
                 +gi[1]*source[(alfa0*N_SPINS+beta0)*2+0]*gf[0]
                 +gi[0]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[0]
                 +gi[0]*source[(alfa0*N_SPINS+beta0)*2+0]*gf[1];
@@ -328,7 +328,7 @@ void M_e_GNG( Float *dest, const GAMMAS_SCATT Gamma_i, const GAMMAS_SCATT Gamma_
   }
 }
 
-template void M_e_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_i, const GAMMAS_SCATT Gamma_f, const float *source) ;
+template void M_e_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const float *source) ;
 
-template void M_e_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_i, const GAMMAS_SCATT Gamma_f, const double *source) ;
+template void M_e_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const double *source) ;
 
