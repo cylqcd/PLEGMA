@@ -656,10 +656,6 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
   this->datasets={"D"};
   //Antonino: I think we have to adjust this a bit
-  print_groups_names_2pt( Gammas_ext_i, Gammas_ext_f, Gammas_ext_i, Gammas_i1, Gammas_f1, this->groups);
-  this->shape={N_SPINS,N_SPINS};
-  this->shape_labels="ss";
-  this->initialize();
 
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
@@ -670,14 +666,23 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
     if(srcT1.fixMomList!=srcT2.fixMomList)
       PLEGMA_error("T1,T2 have not the the same mom list\n");
     Nmom_T1=srcT1.fixMomList.size();
+    print_groups_names_2pt( srcT1.fixMomList, Gammas_ext_i, Gammas_ext_f, Gammas_ext_i, Gammas_i1, Gammas_f1, this->groups);
+    
   }
   else if(!(srcT1.fixMomVec.empty())){
     if(srcT1.fixMomVec!=srcT2.fixMomVec)
       PLEGMA_error("T1,T2 have not the same mom vector\n");
     Nmom_T1=1;
+    std::vector<std::vector<int>> temporarymom;
+    temporarymom.push_back(srcT1.fixMomVec);
+    print_groups_names_2pt( temporarymom, Gammas_ext_i, Gammas_ext_f, Gammas_ext_i, Gammas_i1, Gammas_f1, this->groups);
   }
   else
     PLEGMA_error("T1,T2 wrong mom list\n");
+
+  this->shape={N_SPINS,N_SPINS};
+  this->shape_labels="ss";
+  this->initialize();
 
   //total size of destination
   const int tot_size= Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*Gammas_ext_i.size()*Gammas_ext_f.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
