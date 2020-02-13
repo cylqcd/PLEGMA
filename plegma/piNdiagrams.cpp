@@ -58,6 +58,10 @@ int main(int argc, char **argv)
 
     std::vector<GAMMAS_SCATT> glist_sink_meson={G_5};
     std::vector<GAMMAS_SCATT> glist_source_meson={G_5};
+
+    std::vector<GAMMAS_SCATT> glist_ext_sink={ID};
+    std::vector<GAMMAS_SCATT> glist_ext_source={ID};
+
     
     // Loading to QUDA and computing plaquette also there
     initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
@@ -516,10 +520,10 @@ int main(int argc, char **argv)
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 1);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon, outfilename, 1);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon, outfilename, 2);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon, outfilename, 2);
  
       
        //Diagram Z3,Z4
@@ -529,10 +533,10 @@ int main(int argc, char **argv)
 
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 3);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon,  outfilename, 3);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_meson, glist_source_nucleon,  outfilename, 4);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon,  outfilename, 4);
 
 
       }//loop over unique set of momenta for p_i2
