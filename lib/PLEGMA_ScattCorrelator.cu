@@ -513,20 +513,20 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
 
   if( this->site_size*2 != tot_size/HGC_localL[3] )
     PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(extG1=%d),(Gi2=%d),(Gf1=%d),(extGf=%d),%d\n", this->vol_size*this->site_size,moms_tot.size(),
-		 n_gammas_i1, extGammas_i1, aux_gammas_i2.size(), n_gammas_f1, n_gammas_extf, tot_size/2);
+		 n_gammas_i1, extGammas_i1.size(), aux_gammas_i2.size(), n_gammas_f1, n_gammas_extf, tot_size/2);
 
   
   const int i_GGGT = n_gammas_i1*aux_gammas_i2.size()*n_gammas_f1*HGC_localL[3];
   const int i_SS2 = N_SPINS*N_SPINS*2;
   const int i_GGGTSS2 = i_GGGT*i_SS2;
-  const int d_GGGGGTSS2 = extGammas_i1.size()*n_gammas_extf*d_GGGTSS2;
+  const int d_GGGGGTSS2 = extGammas_i1.size()*n_gammas_extf*i_GGGTSS2;
 
   Float *srcTs[3] = {T1.getCorr(),T3.getCorr(),T5.getCorr()};
 
   Float *dest = this->corr;
   Float *temp = (Float *)malloc(sizeof(Float)*i_SS2);
     
-  for(int i_mom; i_mom<moms_tot.size(); ++i_mom){
+  for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
     for(int out_idx=0; out_idx<i_GGGT; ++out_idx){
 
       memset(temp,0,i_SS2*sizeof(Float));
@@ -539,7 +539,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
       for(int ext_gi1=0; ext_gi1 < extGammas_i1.size(); ++ext_gi1){
 	//multiply first spin index with extGammas_f
 	for(int ext_gf=0; ext_gf < extGammas_f.size(); ++ext_gf){
-	  M_e_GNG<Float>( dest + i_mom*d_GGGGGTSS2 + (ext_gi1*n_gammas_extf+ext_gf)*i_GGGTSS2 + out_idx*d_SS2,
+	  M_e_GNG<Float>( dest + i_mom*d_GGGGGTSS2 + (ext_gi1*n_gammas_extf+ext_gf)*i_GGGTSS2 + out_idx*i_SS2,
 			  extGammas_f[ext_gf], extGammas_i1[ext_gi1], temp);
 	}
       }
