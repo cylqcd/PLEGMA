@@ -52,6 +52,9 @@ namespace plegma{
     double amax; // High boundary for polynomial accelerator
     double tol;          // tolerance of the eigen solver
     int maxIters;        // maximum number of iterations for solver
+#if defined(QUDAEIG)
+    int batched_rotate; // batched size of TRLM. Set 1 for small memory need but loose of performance
+#endif
 #if defined(HAVE_ARPACK) || defined(QUDAEIG)
     int NkV; // Krylov space size should be > NeV
     std::string logFile; // path to the eigensolver log file

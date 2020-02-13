@@ -85,3 +85,21 @@ inline void cleanFile(std::string filename){
   if(file.fail()) PLEGMA_error("Cannot open file to clean it: %s\n",filename.c_str());
   file.close();
 }
+
+template <typename T>
+std::string join(const T& v, const std::string& delim) {
+  std::stringstream s;
+    for (const auto& i : v) {
+      s << delim;
+      s << i;
+    }
+    return s.str();
+}
+
+
+template<typename T1,typename T2>
+T1 findAndReplace(T1 s, const T2& oldv, const T2& newv){
+  T1 sr=s;
+  std::replace( sr.begin(), sr.end(), oldv, newv);
+  return sr;
+}

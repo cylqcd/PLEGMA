@@ -249,7 +249,7 @@ void EigSolver::initEigSolver(){
   eig_param.nEv = p.NeV;
   eig_param.nKr = p.NkV;
   eig_param.tol = p.tol;
-  //  eig_param.batched_rotate = 0; // not in the release 1.0.x
+  eig_param.batched_rotate = p.batched_rotate;
   eig_param.require_convergence = QUDA_BOOLEAN_TRUE;
   eig_param.check_interval = 10;
   eig_param.max_restarts = 1000;
