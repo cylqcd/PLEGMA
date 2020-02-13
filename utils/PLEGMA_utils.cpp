@@ -298,7 +298,7 @@ template void x_e_cx<float>(  float *dest,  const float  floatcomplex[2], int si
 template void x_e_cx<double>( double *dest, const double floatcomplex[2], int size) ;
 
 template<typename Float>
-void M_e_GNG( Float *dest, GAMMAS_SCATT Gamma_i, GAMMAS_SCATT Gamma_f, Float *source ){
+void M_e_GNG( Float *dest, const GAMMAS_SCATT Gamma_i, const GAMMAS_SCATT Gamma_f, const Float *source ){
   const int N2=N_SPINS*N_SPINS*2;
   for (int i=0; i < N2; ++i)
     dest[i]=0.;
@@ -328,7 +328,7 @@ void M_e_GNG( Float *dest, GAMMAS_SCATT Gamma_i, GAMMAS_SCATT Gamma_f, Float *so
   }
 }
 
-template void M_e_GNG<float>( float *dest, GAMMAS_SCATT Gamma_i, GAMMAS_SCATT Gamma_f, float *source) ;
+template void M_e_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_i, const GAMMAS_SCATT Gamma_f, const float *source) ;
 
-template void M_e_GNG<double>( double *dest, GAMMAS_SCATT Gamma_i, GAMMAS_SCATT Gamma_f, double *source) ;
+template void M_e_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_i, const GAMMAS_SCATT Gamma_f, const double *source) ;
 
