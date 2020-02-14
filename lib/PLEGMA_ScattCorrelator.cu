@@ -287,12 +287,12 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   }
   this->writeHDF5(outfile);
   
-  
+  free(temporary); 
 }
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_sink, std::vector<GAMMAS_SCATT> Gammas_ext_source, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
+void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_source, std::vector<GAMMAS_SCATT> Gammas_ext_sink, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
 
   if( this->corr_space == POSITION_SPACE )
     PLEGMA_error("Not implemented yet\n");
@@ -312,17 +312,28 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
  
-  if( this->site_size != moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
-    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
-		 this->vol_size*this->site_size,moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
+  if( this->site_size != moms.size()*Gammas_ext_source.size()*Gammas_ext_sink.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gexti=%d),(Gextf=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
+		 this->vol_size*this->site_size,moms.size(),Gammas_ext_source.size(),Gammas_ext_sink.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
 		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS);
 
   std::vector<std::array<int,3>> imap=moms.index_map();
-
   std::vector<std::vector<int>> mom_i1_list=moms.pi1();
-  int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+
+
+  const int d_SS2= N_SPINS*N_SPINS*2;
+  const int d_G_ext_f = Gammas_ext_sink.size();
+  const int d_G_ext_i = Gammas_ext_source.size();
+  const int d_GGGT     = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3];
+  const int d_GGGTSS2  = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int d_GGGGGTSS2= Gammas_ext_source.size()*Gammas_ext_sink.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+
+  const int offset= d_GGGTSS2; 
+  Float *temporary=(Float *)malloc(sizeof(Float)*offset);
+
 
   for(int i_m=0; i_m<imap.size(); i_m++){
+    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
     //write W1
     if (diagramm_index == 1){
       srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true, true );
@@ -337,16 +348,31 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
     }
     //write W4
     else {
-      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0, false, true);
+      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 0, false, true);
     }
     const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
                       2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
                       2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
-    x_e_cx<Float>( this->corr + offset*i_m,  tmpreim, offset/2);
+    x_e_cx<Float>( temporary,  tmpreim, offset/2);
+    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
+      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){
+        GAMMAS_SCATT gammaf2= Gammas_ext_sink[g_i_ind];
+        GAMMAS_SCATT gammai2= Gammas_ext_source[g_f_ind];
 
+        for (int internalind=0; internalind < d_GGGT; ++internalind){
+          //Doing the gamma multiplication for the final indices
+          M_e_GNG<Float>(this->corr+ i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
+                         gammaf2,
+                         gammai2,
+                         &temporary[internalind*d_SS2]);
+
+        }
+      }
+    }
   }
   this->writeHDF5(outfile);
+  free(temporary);
 
 }
 template<typename Float>
