@@ -205,7 +205,6 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
   this->initialize();
-
   
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected vol_size=%d\n",this->vol_size);
@@ -215,21 +214,45 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
 		 this->vol_size*this->site_size,moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
 		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS);
 
+  const int d_SS2= N_SPINS*N_SPINS*2;
+  const int d_G_ext_f = Gammas_ext_f.size();
+  const int d_G_ext_i = Gammas_ext_i.size();
+  const int d_GGGT     = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3];
+  const int d_GGGTSS2  = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int d_GGGGGTSS2= Gammas_ext_i.size()*Gammas_ext_f.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
   
   std::vector<std::array<int,3>> imap=moms.index_map();
   std::vector<std::vector<int>> mom_i1_list=moms.pi1();
   
-  int offset=Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int offset=d_GGGTSS2; 
+  Float *temporary=(Float *)malloc(sizeof(Float)*offset);
+
  
   //write B1
   for(int i_m=0; i_m<imap.size(); i_m++){
+    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
     const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
                       2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
                       2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
-    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 2, true);
-    x_e_cx<Float>( this->corr + offset*i_m,  tmpreim, offset/2);
+    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 2, true);
+    x_e_cx<Float>( temporary, tmpreim, offset/2 );
 
+    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
+      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){    
+        GAMMAS_SCATT gammaf2= Gammas_ext_f[g_i_ind];
+        GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
+
+        for (int internalind=0; internalind < d_GGGT; ++internalind){
+          //Doing the gamma multiplication for the final indices
+          M_e_GNG<Float>(this->corr+i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
+                         gammaf2,
+                         gammai2,
+                         &temporary[internalind*d_SS2]);
+
+        }
+      }
+    }
   }
 
   this->writeHDF5(outfile);
@@ -237,13 +260,29 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   //write B2
   this->datasets={"B2"};
   for(int i_m=0; i_m<imap.size(); i_m++){
+    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
     const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
                       2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
                       2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
-    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, this->corr + offset*i_m, 0);
-    x_e_cx<Float>( this->corr + offset*i_m,  tmpreim, offset/2);
+    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 0);
+    x_e_cx<Float>( temporary,  tmpreim, offset/2);
+    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
+      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){
+        GAMMAS_SCATT gammaf2= Gammas_ext_f[g_i_ind];
+        GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
+
+        for (int internalind=0; internalind < d_GGGT; ++internalind){
+          //Doing the gamma multiplication for the final indices
+          M_e_GNG<Float>(this->corr+ i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
+                         gammaf2,
+                         gammai2,
+                         &temporary[internalind*d_SS2]);
+
+        }
+      }
+    }
 
   }
   this->writeHDF5(outfile);
@@ -442,69 +481,66 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 
   std::vector<std::array<int,3>> imap=moms.index_map();
 
+  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
+
   //write Z1
 
   Float *dest = this->corr;
 
   memset(this->corr,0,tot_size*sizeof(Float));
-  for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
-    for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){ 
-      GAMMAS_SCATT gammaf2= Gammas_ext_f[g_i_ind];
-      GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
 
-      for(int i_m=0; i_m<imap.size(); i_m++){
-        memset(temporary2, 0, d_GGGGTSS2*sizeof(Float));
-        for (int g2=0; g2<Gammas_i2.size();++g2 ){
-          GAMMAS_SCATT gammai2= Gammas_i2[g2];
-          memset(temporary,0,d_GGGGTSS2*sizeof(Float));
-          for (int n=0; n<4; ++n){
-            int kappa= gammaInd_scatt_host[gammai2][n][0]; 
-            int lambda=  gammaInd_scatt_host[gammai2][n][1];
-            Float g[2];
-            g[1]=gamma_scatt_host[gammai2][n][1];
-            g[0]=gamma_scatt_host[gammai2][n][0];
-            if (diagramm_index==1){
-              srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
-            }
-            else if (diagramm_index ==2){
-              srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
-            }
-            else if (diagramm_index ==3){
-              srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
-            }
-            else {
-              srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
-            }
-
-            x_pe_cy(temporary2, g, temporary, d_GGGGTSS);
-
-          }
-
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    memset(temporary2, 0, d_GGGGTSS2*sizeof(Float));
+    for (int g2=0; g2<Gammas_i2.size();++g2 ){
+      GAMMAS_SCATT gammai2= Gammas_i2[g2];
+      memset(temporary,0,d_GGGGTSS2*sizeof(Float));
+      for (int n=0; n<4; ++n){
+        int kappa= gammaInd_scatt_host[gammai2][n][0]; 
+        int lambda=  gammaInd_scatt_host[gammai2][n][1];
+        Float g[2];
+        g[1]=gamma_scatt_host[gammai2][n][1];
+        g[0]=gamma_scatt_host[gammai2][n][0];
+        if (diagramm_index==1){
+          srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
         }
+        else if (diagramm_index ==2){
+          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
+        }
+        else if (diagramm_index ==3){
+          srcV3[lambda].V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 1,false, true, Gammas_i2.size(),g2 );
+        }
+        else {
+          srcV3[lambda].V3V2reduction( Gammas_i1, imap[i_m], srcV2[kappa], temporary, 0,false, true, Gammas_i2.size(),g2 );
+        }
+        x_pe_cy(temporary2, g, temporary, d_GGGGTSS);
+
+      }
+
+    }
+
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+    x_e_cx<Float>( temporary2,  tmpreim, d_GGGGTSS2/2);
+
+
+    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
+      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){ 
+        GAMMAS_SCATT gammaf2= Gammas_ext_f[g_i_ind];
+        GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
 
         for (int internalind=0; internalind < d_GGGGT; ++internalind){
           //Doing the gamma multiplication for the final indices
           M_e_GNG<Float>(&dest[i_m*d_GGGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGGTSS2+internalind*d_SS2],
                          gammaf2,
                          gammai2,
-                         &temporary2[i_m*d_GGGGTSS2+internalind*d_SS2]);
+                         &temporary2[internalind*d_SS2]);
 
         }
       }
     }
   }
-
-  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
-
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
-    const Float tmpreim[2]={cos(phase),sin(phase)};
-    x_e_cx<Float>( this->corr + d_GGGGGGTSS2*i_m,  tmpreim, d_GGGGGGTSS2/2);
-
-  }
-
 
 
   free(temporary);
@@ -719,7 +755,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
   Float *dest = this->corr;
 
-  Float tmp_4t12t2[24];
+  Float tmp_4t12t2[32];
   for (int i_mom=0; i_mom< Nmom_T1; ++i_mom){
     for (int f2g=0; f2g < i_Gi; ++f2g ){
       for (int i2g=0; i2g < i_Gf; ++i2g ){
@@ -731,7 +767,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
             tmp_4t12t2[i]=4*srcT1_corr[(i_mom*i_GGT+internalind)*i_SS2+i]+2*srcT2_corr[(i_mom*i_GGT+internalind)*i_SS2+i];
           }
           //Doing the gamma multiplication for the final indices
-          M_e_GNG<Float>(&dest[i_mom*i_GGGGTSS2+(i2g*i_Gi+f2g)*i_GGTSS2+internalind*i_SS2],
+          M_e_GNG<Float>(&dest[i_mom*i_GGGGTSS2+(i2g*i_Gf+f2g)*i_GGTSS2+internalind*i_SS2],
                          gammai2,
                          gammaf2,
                          tmp_4t12t2);
