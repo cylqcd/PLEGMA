@@ -732,9 +732,6 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   this->datasets={"D"};
   //Antonino: I think we have to adjust this a bit
 
-  if( this->vol_size != HGC_localL[3] )
-    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
-
   int Nmom_T1;
   //Determining the number of momentas we have
   if(!(srcT1.fixMomList.empty())){
@@ -757,7 +754,10 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
-  this->initialize();
+  this->initialize(); 
+  
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
   //total size of destination
   const int tot_size= Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*Gammas_ext_i.size()*Gammas_ext_f.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
