@@ -500,7 +500,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 
 }
 
-//here pi2 and Gamma_i2 are looped outside in the building of the sequential propagator. The T reduction contains ptot.
+//here pi2 and Gamma_i2 are looped outside in the building of the sequential propagator. NB for moms I expect that pi2 is the same! The T reduction contains ptot.
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3,
 						 PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2,
@@ -508,7 +508,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
 
   std::vector<std::vector<int>> moms_tot=moms.uniq_p(3);
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2,};
-  
+
+  if(!moms.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+
   if(!(T1.fixMomList.empty())){
     if(T1.fixMomList!=moms_tot||T3.fixMomList!=moms_tot||T5.fixMomList!=moms_tot)
       PLEGMA_error("T1,T2 or T3 have not the expected mom list\n");
@@ -551,6 +553,12 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   Float *temp = (Float *)malloc(sizeof(Float)*i_SS2);
     
   for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
+    
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+
     for(int out_idx=0; out_idx<i_GGGT; ++out_idx){
 
       memset(temp,0,i_SS2*sizeof(Float));

@@ -83,6 +83,15 @@ namespace plegma {
       return out;
     }
 
+    bool check_eq( int p_i ){
+      bool res=true;
+      std::vector<int> el0 = (*ps[p_i])[0];
+      for( auto& mom: (*this->ps[p_i]) )
+	if( el0 != mom )
+	  res = false;
+      return res
+    }
+
     momList extract( std::vector<int> &mom, int p_i ){
       momList out;
       for(int j=0; j<p_i2.size(); j++)
