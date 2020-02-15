@@ -371,7 +371,7 @@ int main(int argc, char **argv)
           reductionsT1triangle.writeHDF5("T5sourceforT");
 
           outfilename="Tdiagramm_Antonino";
-          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_sink_nucleon_unpaired, outfilename);
+          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,  outfilename);
 
 
           //Compute Diagram B1 and B2 
@@ -382,7 +382,7 @@ int main(int argc, char **argv)
           reductionsV2.writeHDF5("V2sourceforB1");
  
           outfilename="Bdiagramm_Antonino" ;
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename);
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename);
 
      
           //diagramm.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
@@ -401,9 +401,9 @@ int main(int argc, char **argv)
           reductionsV2.writeHDF5("V2sourceforW12");
 
           outfilename= "Wdiagramm_Antonino";
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 1);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 1);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 2);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 2);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
           //diagramW.writeHDF5("W1Diagramm");
@@ -416,9 +416,9 @@ int main(int argc, char **argv)
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
           reductionsV2.writeHDF5("V2sourceforW34");
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 3);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 3);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, gamma_i2, glist_source_nucleon, outfilename, 4);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 4);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 3 );
           //diagramW.writeHDF5("W3Diagramm");
