@@ -1,4 +1,4 @@
-#include <PLEGMA_ScattCorrelator.h>
++#include <PLEGMA_ScattCorrelator.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_scattreductions.cuh>
@@ -585,7 +585,8 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2,};
 
   if(!moms.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
-
+  std::vector<int> p_i2=moms.pi(0)[0];
+  
   if(!(T1.fixMomList.empty())){
     if(T1.fixMomList!=moms_tot||T3.fixMomList!=moms_tot||T5.fixMomList!=moms_tot)
       PLEGMA_error("T1,T2 or T3 have not the expected mom list\n");
@@ -629,9 +630,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
     
   for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
     
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0]-p_i2[0])*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1]-p_i2[1])*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2]-p_i2[2])*this->source_position[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
     for(int out_idx=0; out_idx<i_GGGT; ++out_idx){
@@ -651,6 +652,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
 	}
       }
     }
+    x_e_cx<Float>( dest+i_mom*d_GGGGGTSS2,  tmpreim, d_GGGGGTSS2/2);
   }
 
   free( temp );

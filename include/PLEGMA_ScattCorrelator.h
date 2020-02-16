@@ -144,13 +144,18 @@ namespace plegma {
       }
       return p_i1;
     }
-    
+
+    std::vector<std::vector<int>> pi(int p_i){
+      std::vector<std::vector<int>> pi=*(this->ps[p_i]);
+      return pi;
+    }
+
     std::vector<std::string> print_3pt(){
       std::vector<std::vector<int>> p_tot_u = uniq_p(3);
       std::vector<std::string> out;
       std::string tmp;
 
-      for(int n=0; n < p_tot.size(); n++){
+      for(int n=0; n < p_tot_u.size(); n++){
 	std::vector<int> p_i1={p_tot_u[n][0]-p_i2[0][0],p_tot_u[n][1]-p_i2[0][1],p_tot_u[n][2]-p_i2[0][2]};
         tmp ="pi1="+std::to_string(p_i1[0])+"_"+std::to_string(p_i1[1])+"_"+std::to_string(p_i1[2])+"_";
 	tmp += "pi2="+std::to_string(p_i2[0][0])+"_"+std::to_string(p_i2[0][1])+"_"+std::to_string(p_i2[0][2])+"_";
