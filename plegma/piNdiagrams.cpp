@@ -87,8 +87,9 @@ int main(int argc, char **argv)
 
     //Computing time-diluted stochastic propagators and stochastic source
 
-    PLEGMA_Vector<float> vectorStoc_source(BOTH);//FP: Do we really need both here?
+    PLEGMA_Vector<float> vectorStoc_source(BOTH);
     PLEGMA_Vector<float> vectorStoc_propag(BOTH);
+    PLEGMA_Vector<float> vectorStoc_source_arch(BOTH); 
     PLEGMA_Vector<double> vectorAuxD1(BOTH);
     PLEGMA_Vector<double> vectorAuxD2(BOTH);
     PLEGMA_Vector<double> vectorInOut;
@@ -107,9 +108,11 @@ int main(int argc, char **argv)
     //Step(1) Creating the time-diluted stochastic source
     vectorStoc_source.randInit(1234);
     vectorStoc_source.stochastic_Z(nroots);
+    
 
     //Step(2) Smearing all the time slice
     vectorAuxD1.copy(vectorStoc_source);
+    vectorStoc_source_arch.copy(vectorStoc_source);
     //vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
     vectorAuxD2.copy(vectorAuxD1);
     //for the cross-checks we are not performing the smearing
@@ -457,8 +460,8 @@ int main(int argc, char **argv)
        PLEGMA_Vector<float> vectortmp2;
           
        //Using the already generated stochastic source and project it to a time-slice
-       vectortmp1.absorbTimeslice(vectorStoc_source, sequential_time_source);
-       vectortmp2.copy(vectortmp1);
+       vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source); //For nonzero momentum
+       vectortmp2.copy(vectortmp1);//For zero momentum
        
 
        //Multiplying by the appropriate momentum phase
@@ -525,7 +528,7 @@ int main(int argc, char **argv)
        diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, glist_source_meson, glist_source_nucleon, outfilename, 2);
  
       
-       //Diagram Z3,Z4
+       //Diagram Z3,Z4	
        for (int i=0; i< 4; ++i){
          reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
