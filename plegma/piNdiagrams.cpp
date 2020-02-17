@@ -382,7 +382,7 @@ int main(int argc, char **argv)
           reductionsV2.writeHDF5("V2sourceforB1");
  
           outfilename="Bdiagramm_Antonino" ;
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename);
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_source, glist_ext_sink, gamma_i2, glist_source_nucleon, outfilename);
 
      
           //diagramm.B_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
@@ -401,9 +401,9 @@ int main(int argc, char **argv)
           reductionsV2.writeHDF5("V2sourceforW12");
 
           outfilename= "Wdiagramm_Antonino";
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 1);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_source, glist_ext_sink, gamma_i2, glist_source_nucleon, outfilename, 1);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 2);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_source, glist_ext_sink, gamma_i2, glist_source_nucleon, outfilename, 2);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 1 );
           //diagramW.writeHDF5("W1Diagramm");
@@ -416,9 +416,9 @@ int main(int argc, char **argv)
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
           reductionsV2.writeHDF5("V2sourceforW34");
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 3);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_source, glist_ext_sink, gamma_i2, glist_source_nucleon, outfilename, 3);
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_sink, glist_ext_source, gamma_i2, glist_source_nucleon, outfilename, 4);
+          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_ext_source, glist_ext_sink, gamma_i2, glist_source_nucleon, outfilename, 4);
 
           //diagramW.W_diagramms(glist_source_nucleon, reductionsV3, reductionsV2, 3 );
           //diagramW.writeHDF5("W3Diagramm");
@@ -520,10 +520,10 @@ int main(int argc, char **argv)
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon, outfilename, 1);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, glist_source_meson, glist_source_nucleon, outfilename, 1);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon, outfilename, 2);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, glist_source_meson, glist_source_nucleon, outfilename, 2);
  
       
        //Diagram Z3,Z4
@@ -533,10 +533,10 @@ int main(int argc, char **argv)
 
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon,  outfilename, 3);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, glist_source_meson, glist_source_nucleon,  outfilename, 3);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_sink, glist_ext_source, glist_source_meson, glist_source_nucleon,  outfilename, 4);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, glist_source_meson, glist_source_nucleon,  outfilename, 4);
 
 
       }//loop over unique set of momenta for p_i2
