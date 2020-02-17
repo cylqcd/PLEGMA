@@ -169,7 +169,7 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
 
   this->setSource(source);
 
-  PhixGxPhi_k<V,Float,Float,Float>( *this, Phi_0, Gammas, Phi_1);
+  PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
   
 }
 
@@ -674,7 +674,7 @@ void PLEGMA_ScattCorrelator<Float>::m_diagramm_pi( momList &moms, std::vector<GA
       for( int i_pf2=0; i_pf2<moms_pf2.size(); ++i_pf2 )
 	for( int time=0; time<TIME; ++time)
 	  for( int gf2=0; gf2<G_f2.size(); ++gf2)
-	    x_pe_cy( this->corr + i_pf2*d_GGT2 + gi2*d_GT2 + gf2*2*TIME + t*2, g, pipi_aux.corr + t*i_MG2 + i_pf2*n_gammas_f2*2 + gf2*2, 1);
+	    x_pe_cy( this->corr + i_pf2*d_GGT2 + gi2*d_GT2 + gf2*2*TIME + time*2, g, pipi_aux.corr + time*i_MG2 + i_pf2*n_gammas_f2*2 + gf2*2, 1);
     }
   }
 	    
