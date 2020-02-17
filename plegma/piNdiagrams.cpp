@@ -456,8 +456,7 @@ int main(int argc, char **argv)
        PLEGMA_Vector<float> vectortmp1;
        PLEGMA_Vector<float> vectortmp2;
           
-      
-       vectorStoc_source.randInit(4321);
+       //Using the already generated stochastic source and project it to a time-slice
        vectortmp1.absorbTimeslice(vectorStoc_source, sequential_time_source);
        vectortmp2.copy(vectortmp1);
        
