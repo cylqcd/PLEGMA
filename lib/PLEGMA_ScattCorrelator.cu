@@ -781,8 +781,14 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
   Float *dest = this->corr;
 
-  Float tmp_4t12t2[32];
+  Float tmp_4t1_p_2t2[32];
+  Float temporary2[32];
   for (int i_mom=0; i_mom< Nmom_T1; ++i_mom){
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+
     for (int f2g=0; f2g < i_Gi; ++f2g ){
       for (int i2g=0; i2g < i_Gf; ++i2g ){
         GAMMAS_SCATT gammaf2= Gammas_ext_f[f2g];
@@ -792,11 +798,13 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
           for (int i=0; i<i_SS2 ; ++i){
             tmp_4t12t2[i]=4*srcT1_corr[(i_mom*i_GGT+internalind)*i_SS2+i]+2*srcT2_corr[(i_mom*i_GGT+internalind)*i_SS2+i];
           }
+
+          x_e_cx<Float>( temporary2,  tmp_4t1_p_2t2, 16);
           //Doing the gamma multiplication for the final indices
           M_e_GNG<Float>(&dest[i_mom*i_GGGGTSS2+(i2g*i_Gf+f2g)*i_GGTSS2+internalind*i_SS2],
                          gammai2,
                          gammaf2,
-                         tmp_4t12t2);
+                         temporary2);
 
         }
       } 
