@@ -332,3 +332,118 @@ template void M_e_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_f, const GAM
 
 template void M_e_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const double *source) ;
 
+GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
+{
+  switch(LR){
+  case(LEFT):
+    switch (source){
+    case(ID): 
+      return G_5;
+      break;
+    case(G_1):
+      return G_1_G_5;
+      break;
+    case(G_2):
+      return G_2_G_5;
+      break;
+    case(G_3):
+      return G_3_G_5;
+      break;
+    case(G_4):
+      return G_4_G_5;
+      break;
+    case(G_5): 
+      return ID;
+      break;
+    case(CG_1):
+      return CG_1_G_5;
+      break;
+    case(CG_2):
+      return CG_2_G_5;
+      break;
+    case(CG_3):
+      return CG_3_G_5;
+      break;
+    case(CG_1_G_4):
+      return CG_1_G_4_G_5;
+      break;
+    case(CG_2_G_4):
+      return CG_2_G_4_G_5;
+      break;
+    case(CG_3_G_4):
+      return CG_3_G_4_G_5;
+      break;
+    case(CG_1_G_4_G_5):
+      return CG_1_G_4;
+      break;
+    case(CG_2_G_4_G_5):
+      return CG_2_G_4;
+      break;
+    case(CG_3_G_4_G_5):
+      return CG_3_G_4;
+      break;    
+    }
+    break;
+  case(RIGHT):
+    switch (source){
+    case(ID):
+      return G_5;
+      break;
+    case(G_1):
+      return G_5_G_1;
+      break;
+    case(G_2):
+      return G_5_G_2;
+      break;
+    case(G_3):
+      return G_5_G_3;
+      break;
+    case(G_4):
+      return G_5_G_4;
+      break;
+    case(G_5):
+      return ID;
+      break;
+    case(CG_1):
+      return G_5_CG_1;
+      break;
+    case(CG_2):
+      return G_5_CG_2;
+      break;
+    case(CG_3):
+      return G_5_CG_3;
+      break;
+    case(CG_1_G_4):
+      return CG_1_G_4_G_5;
+      break;
+    case(CG_2_G_4):
+      return CG_2_G_4_G_5;
+      break;
+    case(CG_3_G_4):
+      return CG_3_G_4_G_5;
+      break;
+    case(CG_1_G_4_G_5):
+      return CG_1_G_4;
+      break;
+    case(CG_2_G_4_G_5):
+      return CG_2_G_4;
+      break;
+    case(CG_3_G_4_G_5):
+      return CG_3_G_4;
+      break;
+    }
+    default: 
+      PLEGMA_error("Gamma matrix multiplication with gamma is not implemented for the particular source gamma %d\n",source);
+  }
+}
+std::vector<GAMMAS_SCATT> apply_gamma5_scatt_gamma( std::vector<GAMMAS_SCATT> &source, LEFTRIGHT LR){
+  std::vector<GAMMAS_SCATT> output;
+  if (source.empty()){
+   PLEGMA_error("Trying to apply g5 on an empty list of gammas\n");
+  }
+  const int d_gamma=source.size();
+  for (int i=0; i<d_gamma; ++i){
+    output.push_back(apply_g5( source[i], LR));
+  }
+  return(output);
+}   
