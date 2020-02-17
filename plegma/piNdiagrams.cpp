@@ -537,10 +537,10 @@ int main(int argc, char **argv)
 
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, glist_source_meson, glist_source_nucleon,  outfilename, 3);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 3);
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, glist_source_meson, glist_source_nucleon,  outfilename, 4);
+       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 4);
 
 
       }//loop over unique set of momenta for p_i2
