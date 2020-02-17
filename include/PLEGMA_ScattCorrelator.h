@@ -83,6 +83,16 @@ namespace plegma {
       return out;
     }
 
+    bool check_eq( int p_i ){
+      bool res = true;
+      std::vector<int> el0 = (*ps[p_i])[0];
+      
+      for( auto& mom: *(this->ps[p_i]) )
+	if( el0 != mom )
+	  res = false;
+      return res;
+    }
+
     momList extract( std::vector<int> &mom, int p_i ){
       momList out;
       for(int j=0; j<p_i2.size(); j++)
@@ -135,13 +145,18 @@ namespace plegma {
       }
       return p_i1;
     }
-    
+
+    std::vector<std::vector<int>> pi(int p_i){
+      std::vector<std::vector<int>> pi=*(this->ps[p_i]);
+      return pi;
+    }
+
     std::vector<std::string> print_3pt(){
       std::vector<std::vector<int>> p_tot_u = uniq_p(3);
       std::vector<std::string> out;
       std::string tmp;
 
-      for(int n=0; n < p_tot.size(); n++){
+      for(int n=0; n < p_tot_u.size(); n++){
 	std::vector<int> p_i1={p_tot_u[n][0]-p_i2[0][0],p_tot_u[n][1]-p_i2[0][1],p_tot_u[n][2]-p_i2[0][2]};
         tmp ="pi1="+std::to_string(p_i1[0])+"_"+std::to_string(p_i1[1])+"_"+std::to_string(p_i1[2])+"_";
 	tmp += "pi2="+std::to_string(p_i2[0][0])+"_"+std::to_string(p_i2[0][1])+"_"+std::to_string(p_i2[0][2])+"_";
@@ -248,6 +263,7 @@ namespace plegma {
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2);
     void T1( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
     void T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
+    void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1);
 
 
     //manipulation
@@ -271,9 +287,11 @@ namespace plegma {
 
     void T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2, std::vector<GAMMAS_SCATT> &extGammas_i1, std::vector<GAMMAS_SCATT> &extGammas_f, std::string &outfile);
 
+    void m_diagramm_pi( momList &moms, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<PLEGMA_Vector<Float>> &Phi_0, std::vector<PLEGMA_Vector<Float>> &Phi_1, std::string &outfile);
 
     void D_diagramms( PLEGMA_ScattCorrelator<Float> (&srcT1), PLEGMA_ScattCorrelator<Float> (&srcT2), std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
   };
+
 
 }
 

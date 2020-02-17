@@ -2,6 +2,7 @@
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_scattreductions.cuh>
+#include <PLEGMA_scattreductionsPiPi.cuh>
 #include <PLEGMA_utils.h>
 using namespace plegma;
 
@@ -144,6 +145,35 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1) {
+
+  if( this->corr_space==POSITION_SPACE )
+    PLEGMA_error("Not implemented yet\n");
+
+  int n_gammas = Gammas.size();
+
+  if(n_gammas<=0||n_gammas>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList = Gammas;
+  
+  if(!this->isAlloc || this->site_size!=n_gammas){
+    this->datasets={"PhixGxPhi"};
+    this->groups={"group_PhixGxPhi"};
+    this->shape={n_gammas};
+    this->shape_labels="g";
+    this->initialize();
+  }
+
+  int source[4]={0,0,0,0};
+
+  this->setSource(source);
+
+  PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
+  
+}
+
+
 //create a list with the structure of hdf5 file for 4pt. Groups order is the same of arguments order. The printed momenta are p_i1, p_i2, p_f1, p_f2.
 void print_groups_names_4pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f1, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
   std::string tmp;
@@ -173,6 +203,22 @@ void print_groups_names_2pt( std::vector<std::vector<int>> &moms, std::vector<GA
 	    tmp = "ptot="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_SCATT_STR[g1]+"-"+GAMMAS_SCATT_STR[g1e] + "/" + GAMMAS_SCATT_STR[g2]+"-"+GAMMAS_SCATT_STR[g2e];
 	    out.push_back(tmp);
 	  }
+}
+
+//create a list with the structure of hdf5 file for the pion-pion loop. Groups order is the same of arguments order. The printed momentum is (p_i2,p_f2).
+void print_groups_names_2pt_pion( momList &moms, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2,  std::vector<std::string> &out){
+  if(!moms.check_eq(0)) PLEGMA_error("Mmmmmh pi2 must be equal in moms\n");
+  std::vector<int> pi2=moms.pi(0)[0];
+  std::string tmp;
+
+  out.clear();
+  for(auto &mom : moms.uniq_p(2) )
+    for( auto &g1 : G_i2 )
+      for( auto &g2 : G_f2 ){
+	tmp = "pi2="+std::to_string(pi2[0])+"_"+std::to_string(pi2[1])+"_"+std::to_string(pi2[2])+ "_pf2="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+
+	  "/" + GAMMAS_SCATT_STR[g1] + "/" + GAMMAS_SCATT_STR[g2];
+	out.push_back(tmp);
+      }
 }
 
 //create a list with the structure of hdf5 file for 3pt. Groups order is the same of arguments order. The printed momentum is (p_i1, p_i2, p_f1+p_f2).
@@ -575,7 +621,67 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 
 }
 
-//here pi2 and Gamma_i2 are looped outside in the building of the sequential propagator. The T reduction contains ptot.
+//here pi2 is looped outside in the building of the stocastic propagator. NB for moms I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::m_diagramm_pi( momList &moms, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<PLEGMA_Vector<Float>> &Phi_0, std::vector<PLEGMA_Vector<Float>> &Phi_1, std::string &outfile){
+  
+  //extract moms
+  if(!moms.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  std::vector<int> mom_pi2 = moms.pi(0)[0];
+  std::vector<std::vector<int>> moms_pf2 = moms.uniq_p(2);
+  
+  //size of final output for pipi
+  const int tot_size = moms_pf2.size()*G_i2.size()*G_f2.size()*HGC_localL[3]*2;
+  
+  //initialize output
+  print_groups_names_2pt_pion( moms, G_i2, G_f2, this->groups);
+  this->datasets={"Pi-Pi"};
+  this->shape={1,};
+  this->shape_labels="";
+  this->initialize();
+
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+
+  if( this->site_size*2 != tot_size/HGC_localL[3] )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi2=%d),(Gf2=%d),%d\n", this->vol_size*this->site_size, moms_pf2.size(),
+		 G_i2.size(), G_f2.size(), tot_size/2);
+
+  const int TIME = HGC_localL[3];
+  const int n_gammas_f2 = G_f2.size();
+
+  const int d_GGT2 = G_i2.size()*G_f2.size()*TIME*2;
+  const int d_GT2 = G_f2.size()*TIME*2;
+  const int i_MG2 = moms_pf2.size()*G_f2.size()*2;
+
+  PLEGMA_ScattCorrelator pipi_aux(MOMENTUM_SPACE, moms_pf2);
+
+  
+  memset( this->corr, 0, tot_size*sizeof(Float));
+  
+  //loop over G_i2
+  for(int gi2=0; gi2<G_i2.size(); ++gi2){
+    for(int nz_e=0; nz_e<4; ++nz_e){
+      int alfa = gammaInd_scatt_host[G_i2[gi2]][nz_e][0]; 
+      int beta = gammaInd_scatt_host[G_i2[gi2]][nz_e][1];
+      Float g[2];
+      g[1] = gamma_scatt_host[G_i2[gi2]][nz_e][1];
+      g[0] = gamma_scatt_host[G_i2[gi2]][nz_e][0];
+
+      //PhixGf2xPhi
+      pipi_aux.PhiPhi( Phi_0[beta], G_f2, Phi_1[alfa]); //N_moms  x T x n_gammas_f2
+
+      for( int i_pf2=0; i_pf2<moms_pf2.size(); ++i_pf2 )
+	for( int time=0; time<TIME; ++time)
+	  for( int gf2=0; gf2<G_f2.size(); ++gf2)
+	    x_pe_cy( this->corr + i_pf2*d_GGT2 + gi2*d_GT2 + gf2*2*TIME + time*2, g, pipi_aux.corr + time*i_MG2 + i_pf2*n_gammas_f2*2 + gf2*2, 1);
+    }
+  }
+	    
+}
+
+
+//here pi2 and Gamma_i2 are looped outside in the building of the sequential propagator. NB for moms I expect that pi2 is the same! The T reduction contains ptot.
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3,
 						 PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2,
@@ -583,6 +689,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
 
   std::vector<std::vector<int>> moms_tot=moms.uniq_p(3);
   std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2,};
+
+  if(!moms.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  std::vector<int> p_i2=moms.pi(0)[0];
   
   if(!(T1.fixMomList.empty())){
     if(T1.fixMomList!=moms_tot||T3.fixMomList!=moms_tot||T5.fixMomList!=moms_tot)
@@ -626,6 +735,12 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   Float *temp = (Float *)malloc(sizeof(Float)*i_SS2);
     
   for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
+    
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0]-p_i2[0])*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1]-p_i2[1])*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2]-p_i2[2])*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+
     for(int out_idx=0; out_idx<i_GGGT; ++out_idx){
 
       memset(temp,0,i_SS2*sizeof(Float));
@@ -643,6 +758,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
 	}
       }
     }
+    x_e_cx<Float>( dest+i_mom*d_GGGGGTSS2,  tmpreim, d_GGGGGTSS2/2);
   }
 
   free( temp );
