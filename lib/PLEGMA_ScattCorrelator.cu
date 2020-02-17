@@ -900,9 +900,14 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   Float tmp_4t1_p_2t2[32];
   Float temporary2[32];
   for (int i_mom=0; i_mom< Nmom_T1; ++i_mom){
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    
+    const Float phase= !srcT1.fixMomList.empty() ? 2*M_PI/(Float)HGC_totalL[0]* srcT1.fixMomList[i_mom][0]*this->source_position[0]+
+                                                   2*M_PI/(Float)HGC_totalL[1]* srcT1.fixMomList[i_mom][1]*this->source_position[1]+
+                                                   2*M_PI/(Float)HGC_totalL[2]* srcT1.fixMomList[i_mom][2]*this->source_position[2]
+                                                 : 2*M_PI/(Float)HGC_totalL[0]* srcT1.fixMomVec[0]*this->source_position[0]+
+                                                   2*M_PI/(Float)HGC_totalL[1]* srcT1.fixMomVec[1]*this->source_position[1]+
+                                                   2*M_PI/(Float)HGC_totalL[2]* srcT1.fixMomVec[2]*this->source_position[2];
+;
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
     for (int f2g=0; f2g < i_Gi; ++f2g ){
@@ -912,7 +917,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
 
         for (int internalind=0; internalind < i_GGT; ++internalind){
           for (int i=0; i<i_SS2 ; ++i){
-            tmp_4t12t2[i]=4*srcT1_corr[(i_mom*i_GGT+internalind)*i_SS2+i]+2*srcT2_corr[(i_mom*i_GGT+internalind)*i_SS2+i];
+            tmp_4t1_p_2t2[i]=4*srcT1_corr[(i_mom*i_GGT+internalind)*i_SS2+i]+2*srcT2_corr[(i_mom*i_GGT+internalind)*i_SS2+i];
           }
 
           x_e_cx<Float>( temporary2,  tmp_4t1_p_2t2, 16);
