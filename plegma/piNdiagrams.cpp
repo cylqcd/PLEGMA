@@ -281,7 +281,21 @@ int main(int argc, char **argv)
 
 
       std::string outfilename="Ddiagramm_Antonino" ;
-      diagramm.D_diagramms( reductionsT1, reductionsT2, glist_sink_nucleon_unpaired, glist_source_nucleon_unpaired, outfilename);
+      diagramm.D_diagramms( reductionsT1, reductionsT2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, outfilename);
+
+      //N diagram
+      PLEGMA_ScattCorrelator<float> diagramm_nucleon(MOMENTUM_SPACE, mom);
+      diagramm_nucleon.setSource(source);
+      
+      reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
+      reductionsT1.writeASCII("T1sourceforN");
+
+      reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
+      reductionsT2.writeASCII("T2sourceforN");
+
+
+      std::string outfilename="Ndiagramm_Antonino" ;
+      diagramm_nucleon.N_diagramms( reductionsT1, reductionsT2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, outfilename);
 
 
       // ensuring mu positive
@@ -541,6 +555,16 @@ int main(int argc, char **argv)
 
 
        diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_ext_source, glist_ext_sink, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 4);
+
+
+
+       //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
+       
+       std::string outfilename="Mdiagramm_Antonino";
+       std::vector<GAMMAS_SCATT> glist_sourcemeson_g5 = apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);       
+       std::vector<GAMMAS_SCATT> glist_sinkmeson_g5 = apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
+
+       diagramm.M_diagramms( sourcemomentumList, filtered_sourcemomentumList, diagramm_nucleon, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
 
 
       }//loop over unique set of momenta for p_i2
