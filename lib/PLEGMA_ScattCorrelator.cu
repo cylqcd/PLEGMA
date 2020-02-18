@@ -627,7 +627,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::M_diagramms( momList &moms, momList &moms_red, PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<PLEGMA_Vector<Float>> &Phi_0, std::vector<PLEGMA_Vector<Float>> &Phi_1, std::string &outfile){
+void PLEGMA_ScattCorrelator<Float>::M_diagramms( momList &moms, momList &moms_red, PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, std::string &outfile){
 
   //++++++++ PION-PION +++++++++
 

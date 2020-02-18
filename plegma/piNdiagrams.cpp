@@ -294,7 +294,7 @@ int main(int argc, char **argv)
       reductionsT2.writeASCII("T2sourceforN");
 
 
-      std::string outfilename="Ndiagramm_Antonino" ;
+      outfilename = "Ndiagramm_Antonino";
       diagramm_nucleon.N_diagramms( reductionsT1, reductionsT2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, outfilename);
 
 
@@ -560,9 +560,9 @@ int main(int argc, char **argv)
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        
-       std::string outfilename="Mdiagramm_Antonino";
        std::vector<GAMMAS_SCATT> glist_sourcemeson_g5 = apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);       
        std::vector<GAMMAS_SCATT> glist_sinkmeson_g5 = apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
+       outfilename = "Mdiagramm_Antonino";
 
        diagramm.M_diagramms( sourcemomentumList, filtered_sourcemomentumList, diagramm_nucleon, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
 
