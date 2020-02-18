@@ -528,8 +528,8 @@ int main(int argc, char **argv)
        }      
 
        //Diagram Z1,Z2
-       std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,RIGHT);       
-       std::vector<GAMMAS_SCATT>  sourcemeson_t_gamma_5=apply_gamma5_scatt_gamma(glist_source_meson,LEFT);
+       std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);       
+       std::vector<GAMMAS_SCATT>  sourcemeson_t_gamma_5=apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);
        for (int i=0; i< 4; ++i){
          reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP);
          reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
