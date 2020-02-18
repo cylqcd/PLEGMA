@@ -269,8 +269,10 @@ namespace plegma {
     //manipulation
     template <int s_free>
     void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
+
     template <int s_fixed>
     void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa);
+
     template <int s_fixed>
     void contract_GxV2( PLEGMA_ScattCorrelator<Float> &srcV2like, GAMMAS_SCATT &G, bool transp=false );
 
@@ -287,9 +289,13 @@ namespace plegma {
 
     void T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2, std::vector<GAMMAS_SCATT> &extGammas_i1, std::vector<GAMMAS_SCATT> &extGammas_f, std::string &outfile);
 
-    void m_diagramm_pi( momList &moms, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<PLEGMA_Vector<Float>> &Phi_0, std::vector<PLEGMA_Vector<Float>> &Phi_1, std::string &outfile);
+    void M_diagramms( momList &moms, momList &moms_red, PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<PLEGMA_Vector<Float>> &Phi_0, std::vector<PLEGMA_Vector<Float>> &Phi_1, std::string &outfile);
 
-    void D_diagramms( PLEGMA_ScattCorrelator<Float> (&srcT1), PLEGMA_ScattCorrelator<Float> (&srcT2), std::vector<GAMMAS_SCATT> &Gammas_i2, std::vector<GAMMAS_SCATT> &Gammas_f2, std::string &outfile);
+    void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, std::vector<GAMMAS_SCATT> &extG_i, std::vector<GAMMAS_SCATT> &extG_f, std::string &outfile);
+
+    void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f1, std::string &outfile);
+
+
   };
 
 
