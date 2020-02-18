@@ -192,7 +192,7 @@ void print_groups_names_4pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, 
 }
 
 //create a list with the structure of hdf5 file for 2pt. Groups order is the same of arguments order. The printed momentum is the total one (p_f1+p_f2).
-void print_groups_names_2pt( std::vector<std::vector<int>> &moms, std::vector<GAMMAS_SCATT> &extG_i, std::vector<GAMMAS_SCATT> &extG_f, std::vector<GAMMAS_SCATT> &G_i, std::vector<GAMMAS_SCATT> &G_f,  std::vector<std::string> &out){
+void print_groups_names_2pt( std::string prefix, std::vector<std::vector<int>> &moms, std::vector<GAMMAS_SCATT> &extG_i, std::vector<GAMMAS_SCATT> &extG_f, std::vector<GAMMAS_SCATT> &G_i, std::vector<GAMMAS_SCATT> &G_f,  std::vector<std::string> &out){
   std::string tmp;
   out.clear();
   for(auto &mom : moms )
@@ -200,22 +200,28 @@ void print_groups_names_2pt( std::vector<std::vector<int>> &moms, std::vector<GA
       for( auto &g2e : extG_f )
 	for( auto &g1 : G_i )
 	  for( auto &g2 : G_f ){
-	    tmp = "ptot="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_SCATT_STR[g1]+"-"+GAMMAS_SCATT_STR[g1e] + "/" + GAMMAS_SCATT_STR[g2]+"-"+GAMMAS_SCATT_STR[g2e];
+	    tmp = prefix + std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_SCATT_STR[g1]+"-"+GAMMAS_SCATT_STR[g1e] + "/" + GAMMAS_SCATT_STR[g2]+"-"+GAMMAS_SCATT_STR[g2e];
 	    out.push_back(tmp);
 	  }
 }
 
 //create a list with the structure of hdf5 file for the pion-pion loop. Groups order is the same of arguments order. The printed momentum is (p_i2,p_f2).
-void print_groups_names_2pt_pion( momList &moms, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2,  std::vector<std::string> &out){
-  if(!moms.check_eq(0)) PLEGMA_error("Mmmmmh pi2 must be equal in moms\n");
-  std::vector<int> pi2=moms.pi(0)[0];
-  std::string tmp;
+void print_groups_names_4pt( momList &moms_red, std::vector<std::string> &groupN, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
+  if(!moms_red.check_eq(0)) PLEGMA_error("Mmmmmh pi2 must be equal in moms\n");
 
+  std::string tmp;
+  std::string delimiter = "/";
+
+  std::string token = s.substr(0, s.find(delimiter));
+ 
   out.clear();
-  for(auto &mom : moms.uniq_p(2) )
+  for(auto &mom : moms_red.print() )
     for( auto &g1 : G_i2 )
-      for( auto &g2 : G_f2 ){
-	tmp = "pi2="+std::to_string(pi2[0])+"_"+std::to_string(pi2[1])+"_"+std::to_string(pi2[2])+ "_pf2="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+
+      for( auto &g2 : G_f2 )
+	for( auto &Nstring : groupN ){
+
+
+	  tmp = "pi2="+std::to_string(pi2[0])+"_"+std::to_string(pi2[1])+"_"+std::to_string(pi2[2])+ "_pf2="+std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+
 	  "/" + GAMMAS_SCATT_STR[g1] + "/" + GAMMAS_SCATT_STR[g2];
 	out.push_back(tmp);
       }
@@ -621,20 +627,91 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 
 }
 
-//here pi2 is looped outside in the building of the stocastic propagator. NB for moms I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
+//here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::m_diagramm_pi( momList &moms, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<PLEGMA_Vector<Float>> &Phi_0, std::vector<PLEGMA_Vector<Float>> &Phi_1, std::string &outfile){
-  
+void PLEGMA_ScattCorrelator<Float>::M_diagramm( momList &moms, momList &moms_red, PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<PLEGMA_Vector<Float>> &Phi_0, std::vector<PLEGMA_Vector<Float>> &Phi_1, std::string &outfile){
+
+  //++++++++ PION-PION +++++++++
+
   //extract moms
-  if(!moms.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
-  std::vector<int> mom_pi2 = moms.pi(0)[0];
-  std::vector<std::vector<int>> moms_pf2 = moms.uniq_p(2);
+  if(!moms_red.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  std::vector<int> mom_pi2 = moms_red.pi(0)[0]; //probably useless
+  std::vector<std::vector<int>> moms_pf2 = moms_red.uniq_p(2);
+
+  //size of temporal output for pion loop
+  const int pp_size = moms_pf2.size()*G_i2.size()*G_f2.size()*HGC_localL[3]*2;
+  Float *temp_pp = malloc( pp_size*sizeof(Float) );
+  memset( temp_pp, 0, pp_size*sizeof(Float) );
   
-  //size of final output for pipi
-  const int tot_size = moms_pf2.size()*G_i2.size()*G_f2.size()*HGC_localL[3]*2;
+  //useful consts
+  const int TIME = HGC_localL[3];
+  const int n_gammas_f2 = G_f2.size();
+  const int d_GGT2 = G_i2.size()*G_f2.size()*TIME*2;
+  const int d_GT2 = G_f2.size()*TIME*2;
+  const int i_MG2 = moms_pf2.size()*G_f2.size()*2;
+  const int d_GG = G_i2.size()*G_f2.size();
+
+  //aux PLEGMA_SC for PhixGxPhi multiplications
+  PLEGMA_ScattCorrelator pipi_aux(MOMENTUM_SPACE, moms_pf2);
+
+  //loop over G_i2
+  for(int gi2=0; gi2<G_i2.size(); ++gi2){
+    for(int nz_e=0; nz_e<4; ++nz_e){
+      int alfa = gammaInd_scatt_host[G_i2[gi2]][nz_e][0]; 
+      int beta = gammaInd_scatt_host[G_i2[gi2]][nz_e][1];
+      Float g[2];
+      g[1] = gamma_scatt_host[G_i2[gi2]][nz_e][1];
+      g[0] = gamma_scatt_host[G_i2[gi2]][nz_e][0];
+
+      //PhixGf2xPhi
+      pipi_aux.PhiPhi( Phi_0[beta], G_f2, Phi_1[alfa]); //T x N_moms x n_gammas_f2
+
+      for( int i_pf2=0; i_pf2<moms_pf2.size(); ++i_pf2 )
+	for( int time=0; time<TIME; ++time)
+	  for( int gf2=0; gf2<G_f2.size(); ++gf2)
+	    x_pe_cy( temp_pp + i_pf2*d_GGT2 + gi2*d_GT2 + gf2*2*TIME + time*2, g, pipi_aux.corr + time*i_MG2 + i_pf2*n_gammas_f2*2 + gf2*2, 1);
+    }
+  }
+
+  //++++++++ NUCLEON-NUCLEON +++++++++
+
+  //extract vector p_f1
+  std::vector<std::vector<int>> moms_pf1_red = moms_red.uniq_p(1); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pf1 = moms.uniq_p(1); //list of pf1 in Nucleons PLEGMA_SC
+
+  Float *temp_NN = CorrNucleon.getCorr();//N_moms_pf1*extG_i1*extG_f1*G_i1*G_f1*T*S*S;
+  std::vector<std::string> groupsN = CorrNucleon.getGroups();//N_moms_pf1*extG_i1*extG_f1*G_i1*G_f1
+
+  //useful consts
+  int N_GGGG = groupsN.size()/moms_pf1.size();
+  const int o_GGGGGGTSS2 = d_GG*o_GGGGTSS2;
+  const int o_GGGGTSS2 = N_GGGG*o_TSS2;
+  const int o_TSS2 = TIME*o_SS2;
+  const int o_SS2 = N_SPINS*N_SPINS*2;
+
+  const int tot_size = moms_red.size()*N_GGGG*d_GGT2*N_SPINS*N_SPINS;
+
+  std::vector<int> i_pf1s = moms.u_posix( 1, moms_red.uniq_p(1) );
+  std::vector<std::array<int,3>> map = moms_red.index_map();
   
+  for( int i_mom=0; i_mom<map.size(); ++i_mom){
+    int i_pf1 = i_pf1s[map[i_mom][1]];
+    int i_pf2 = map[i_mom][2];
+    for( int inner1=0; inner1<d_GG; ++inner1 )
+      for( int inner2=0; inner2<N_GGGG; ++inner2 )
+        x_pe_cy( this->corr + i_mom*o_GGGGGGTSS2 + inner1*o_GGGGTSS2 + inner2*o_TSS2 + t*o_SS2,
+		 temp_pp[ i_pf2*d_GGT2 + (inner1*TIME + t)*2 ],
+		 temp_NN + i_pf1*o_GGGGTSS2 + inner2*o_TSS2 + t*o_SS2,
+		 N_SPINS*N_SPINS);
+	 
+  }
+
+
+
+
+
   //initialize output
-  print_groups_names_2pt_pion( moms, G_i2, G_f2, this->groups);
+  print_groups_names_4pt( moms, G_i2, G_f2, this->groups);
   this->datasets={"Pi-Pi"};
   this->shape={1,};
   this->shape_labels="";
@@ -647,37 +724,98 @@ void PLEGMA_ScattCorrelator<Float>::m_diagramm_pi( momList &moms, std::vector<GA
     PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi2=%d),(Gf2=%d),%d\n", this->vol_size*this->site_size, moms_pf2.size(),
 		 G_i2.size(), G_f2.size(), tot_size/2);
 
-  const int TIME = HGC_localL[3];
-  const int n_gammas_f2 = G_f2.size();
-
-  const int d_GGT2 = G_i2.size()*G_f2.size()*TIME*2;
-  const int d_GT2 = G_f2.size()*TIME*2;
-  const int i_MG2 = moms_pf2.size()*G_f2.size()*2;
-
-  PLEGMA_ScattCorrelator pipi_aux(MOMENTUM_SPACE, moms_pf2);
 
   
-  memset( this->corr, 0, tot_size*sizeof(Float));
   
-  //loop over G_i2
-  for(int gi2=0; gi2<G_i2.size(); ++gi2){
-    for(int nz_e=0; nz_e<4; ++nz_e){
-      int alfa = gammaInd_scatt_host[G_i2[gi2]][nz_e][0]; 
-      int beta = gammaInd_scatt_host[G_i2[gi2]][nz_e][1];
-      Float g[2];
-      g[1] = gamma_scatt_host[G_i2[gi2]][nz_e][1];
-      g[0] = gamma_scatt_host[G_i2[gi2]][nz_e][0];
-
-      //PhixGf2xPhi
-      pipi_aux.PhiPhi( Phi_0[beta], G_f2, Phi_1[alfa]); //N_moms  x T x n_gammas_f2
-
-      for( int i_pf2=0; i_pf2<moms_pf2.size(); ++i_pf2 )
-	for( int time=0; time<TIME; ++time)
-	  for( int gf2=0; gf2<G_f2.size(); ++gf2)
-	    x_pe_cy( this->corr + i_pf2*d_GGT2 + gi2*d_GT2 + gf2*2*TIME + time*2, g, pipi_aux.corr + time*i_MG2 + i_pf2*n_gammas_f2*2 + gf2*2, 1);
-    }
-  }
 	    
+}
+
+//Nucleon correlator. This function should be called outside the p_i2 loop, with Ts computed using the entire list of unique p_f1s. N.B: we multiply the output by exp(i * x_sourcepos * p_f1);
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::N_diagramm( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f1, std::string &outfile){
+
+  //checks between T1 T2
+  if(!(T1.fixMomList.empty())){
+    if(T1.fixMomList!=T2.fixMomList)
+      PLEGMA_error("T1,T2 have not the the same mom list\n");
+  }
+  else if(!(T1.fixMomVec.empty())){
+    if(T1.fixMomVec!=T2.fixMomVec)
+      PLEGMA_error("T1,T2 have not the same mom vector\n");
+  }
+  else
+    PLEGMA_error("T1,T2 wrong mom list\n");
+
+  if((T1.GList!=T2.GList)||(T1.GList2!=T2.GList2))
+    PLEGMA_error("T1,T2 wrong gamma list\n");
+
+
+  //extract array mom
+  std::vector<std::vector<int>> moms_pf1 = (T1.fixMomList.empty()) ? {T1.fixMomVec,} : T1.fixMomList;
+  //size of final output for NN
+  const int n_gammas_i1 = T1.GList.size();
+  const int n_gammas_f1 = T1.GList2.size();
+  const int n_gammas_extf1 = extG_f1.size();
+  const int tot_size = moms_pf1.size()*extG_i1.size()*extG_f1.size()*n_gammas_i1*n_gammas_f1*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int src_size = HGC_localL[3]*moms_pf1.size()*n_gammas_i1*n_gammas_f1*N_SPINS*N_SPINS*2;
+  
+  //initialize output
+  print_groups_names_2pt("pf1=", moms_pf1, extG_i1, extG_f1, T1.GList, T1.GList2, this->groups);
+  this->datasets={"N"};
+  this->shape={N_SPINS,N_SPINS};
+  this->shape_labels="ss";
+  this->initialize();
+
+  //checks on memory
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+
+  if( this->site_size*2 != tot_size/HGC_localL[3] )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(extGi1=%d),(extGf1=%d),(Gi1=%d),(Gf1=%d),%d\n", this->vol_size*this->site_size, moms_pf1.size(),
+		 extG_i1.size(), extG_f1.size(), n_gammas_i1, n_gammas_f1, tot_size/2);
+
+  //put memory = 0
+  memset( this->corr, 0, tot_size*sizeof(Float));
+
+  //define temp array
+  Float *temp = (Float *)malloc(src_size*sizeof(Float));
+  for( int idx=0; idx<src_size; ++idx)
+    temp[idx] = T1.corr[idx] + T2.corr[idx];
+
+  //define constants
+  const int s_SS2 = N_SPINS*N_SPINS*2;
+  const int s_GGSS2 = extG_i1.size()*extG_f1.size()*s_SS2;
+  const int s_MGGSS2 = moms_pf1.size()*s_GGSS2;
+  const int d_TSS2 = HGC_localL[3]*s_SS2;
+  const int d_GGTSS2 = n_gammas_i1*n_gammas_f1*d_TSS2;
+  const int d_GGGGTSS2 = extG_i1.size()*extG_f1.size()*d_GGTSS2;
+
+  
+  for( int i_mom=0; i_mom<moms_pf1.size(); ++i_mom){
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_pf1[i_mom][0])*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]*(moms_pf1[i_mom][1])*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]*(moms_pf1[i_mom][2])*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+
+    for( int t=0; t<HGC_localL[3]; ++t){
+      for( int i_gg=0; i_gg<n_gammas_i1*n_gammas_f1; ++i_gg ){
+	
+	//multiply second spin index with extGammas_i1
+	for(int ext_gi1=0; ext_gi1 < extG_i1.size(); ++ext_gi1){
+	  //multiply first spin index with extGammas_f
+	  for(int ext_gf1=0; ext_gf1 < extG_f1.size(); ++ext_gf1){
+	    M_e_GNG<Float>( this->corr + i_mom*d_GGGGTSS2 + (ext_gi1*n_gammas_extf1+ext_gf1)*d_GGTSS2 + i_gg*d_TSS2 + t*s_SS2,
+			    extG_f1[ext_gf1], extG_i1[ext_gi1], temp + t*s_MGGSS2 + i_mom*s_GGSS2 + i_gg*s_SS2);
+	  }
+	}
+      }
+    }
+    x_e_cx<Float>( this->corr + i_mom*d_GGGGTSS2,  tmpreim, d_GGGGTSS2/2);
+  }
+
+  free( temp );
+  this->writeHDF5(outfile);
+  
 }
 
 
@@ -833,91 +971,95 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gam
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
-                    PLEGMA_ScattCorrelator<Float> &srcT1,
-                    PLEGMA_ScattCorrelator<Float> &srcT2,
-                    std::vector<GAMMAS_SCATT> &Gammas_ext_i,
-                    std::vector<GAMMAS_SCATT> &Gammas_ext_f,
+                    PLEGMA_ScattCorrelator<Float> &T1,
+                    PLEGMA_ScattCorrelator<Float> &T2,
+                    std::vector<GAMMAS_SCATT> &extG_i,
+                    std::vector<GAMMAS_SCATT> &extG_f,
                     std::string &outfile){
 
-  //Gamma_i1, Gamma_f1 are the gammas in front of the unpaired Wilson quark
-  //At the source
-  std::vector<GAMMAS_SCATT> Gammas_i1=srcT1.getGList();
-  //At the sink
-  std::vector<GAMMAS_SCATT> Gammas_f1=srcT1.getGList2();
-
-  this->datasets={"D"};
-  //Antonino: I think we have to adjust this a bit
-
-  int Nmom_T1;
-  //Determining the number of momentas we have
-  if(!(srcT1.fixMomList.empty())){
-    if(srcT1.fixMomList!=srcT2.fixMomList)
+  
+  //checks between T1 T2
+  if(!(T1.fixMomList.empty())){
+    if(T1.fixMomList!=T2.fixMomList)
       PLEGMA_error("T1,T2 have not the the same mom list\n");
-    Nmom_T1=srcT1.fixMomList.size();
-    print_groups_names_2pt( srcT1.fixMomList, Gammas_ext_i, Gammas_ext_f, Gammas_i1, Gammas_f1, this->groups);
-    
   }
-  else if(!(srcT1.fixMomVec.empty())){
-    if(srcT1.fixMomVec!=srcT2.fixMomVec)
+  else if(!(T1.fixMomVec.empty())){
+    if(T1.fixMomVec!=T2.fixMomVec)
       PLEGMA_error("T1,T2 have not the same mom vector\n");
-    Nmom_T1=1;
-    std::vector<std::vector<int>> temporarymom;
-    temporarymom.push_back(srcT1.fixMomVec);
-    print_groups_names_2pt( temporarymom, Gammas_ext_i, Gammas_ext_f, Gammas_i1, Gammas_f1, this->groups);
   }
   else
     PLEGMA_error("T1,T2 wrong mom list\n");
 
+  if((T1.GList!=T2.GList)||(T1.GList2!=T2.GList2))
+    PLEGMA_error("T1,T2 wrong gamma list\n");
+
+  //extract array mom
+  std::vector<std::vector<int>> moms_tot = (T1.fixMomList.empty()) ? {T1.fixMomVec,} : T1.fixMomList;
+  //size of final output for NN
+  const int n_gammas_i = T1.GList.size();
+  const int n_gammas_f = T1.GList2.size();
+  const int n_gammas_extf = extG_f.size();
+  const int tot_size = moms_tot.size()*extG_i.size()G*extG_f.size()*n_gammas_i*n_gammas_f*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  const int src_size = HGC_localL[3]*moms_tot.size()*n_gammas_i*n_gammas_f*N_SPINS*N_SPINS*2;
+
+  
+  //initialize output
+  print_groups_names_2pt("pf1=", moms_tot, extG_i, extG_f, T1.GList, T1.GList2, this->groups);
+  this->datasets={"D"};
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
-  this->initialize(); 
-  
+  this->initialize();
+
+  //checks on memory
   if( this->vol_size != HGC_localL[3] )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
-  //total size of destination
-  const int tot_size= Nmom_T1*Gammas_i1.size()*Gammas_f1.size()*Gammas_ext_i.size()*Gammas_ext_f.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
-
   if( this->site_size*2 != tot_size/HGC_localL[3] )
-    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(Gi1=%d),(Gi2=%d),(Gf2=%d),(Gf1=%d)%d\n",
-                 this->vol_size*this->site_size,Nmom_T1,Gammas_f1.size(),Gammas_i1.size(),
-                                                            Gammas_ext_f.size(),Gammas_ext_i.size(),tot_size/2);
-  const int i_GGGGTSS2=tot_size/Nmom_T1;
-  const int i_SS2=N_SPINS*N_SPINS*2;
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=%d),(extGi1=%d),(extGf1=%d),(Gi1=%d),(Gf1=%d),%d\n", this->vol_size*this->site_size, moms_tot.size(),
+		 extG_i.size(), extG_f.size(), n_gammas_i, n_gammas_f, tot_size/2);
 
-  const int i_Gi = Gammas_ext_i.size();
-  const int i_Gf = Gammas_ext_f.size();
+  //put memory = 0
+  memset( this->corr, 0, tot_size*sizeof(Float));
 
-  const int i_GGT = Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3];
-  const int i_GGTSS2 = Gammas_i1.size()*Gammas_f1.size()*HGC_localL[3]*N_SPINS*N_SPINS*2;
+  //define temp array
+  Float *temp = (Float *)malloc(src_size*sizeof(Float));
+  for( int idx=0; idx<src_size; ++idx)
+    temp[idx] = 4*T1.corr[idx] + 2*T2.corr[idx];
+
+  //define constants
+  const int s_SS2 = N_SPINS*N_SPINS*2;
+  const int s_GGSS2 = extG_i1.size()*extG_f1.size()*s_SS2;
+  const int s_MGGSS2 = moms_pf1.size()*s_GGSS2;
+  const int d_TSS2 = HGC_localL[3]*s_SS2;
+  const int d_GGTSS2 = n_gammas_i*n_gammas_f*d_TSS2;
+  const int d_GGGGTSS2 = extG_i.size()*extG_f.size()*d_GGTSS2;
 
 
-  Float *srcT1_corr = srcT1.getCorr();
-  Float *srcT2_corr = srcT2.getCorr();
+  
+  for( int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0])*this->source_position[0]+
+                      2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1])*this->source_position[1]+
+                      2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2])*this->source_position[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
 
-  Float *dest = this->corr;
-
-  Float tmp_4t12t2[32];
-  for (int i_mom=0; i_mom< Nmom_T1; ++i_mom){
-    for (int f2g=0; f2g < i_Gi; ++f2g ){
-      for (int i2g=0; i2g < i_Gf; ++i2g ){
-        GAMMAS_SCATT gammaf2= Gammas_ext_f[f2g];
-        GAMMAS_SCATT gammai2= Gammas_ext_i[i2g];
-
-        for (int internalind=0; internalind < i_GGT; ++internalind){
-          for (int i=0; i<i_SS2 ; ++i){
-            tmp_4t12t2[i]=4*srcT1_corr[(i_mom*i_GGT+internalind)*i_SS2+i]+2*srcT2_corr[(i_mom*i_GGT+internalind)*i_SS2+i];
-          }
-          //Doing the gamma multiplication for the final indices
-          M_e_GNG<Float>(&dest[i_mom*i_GGGGTSS2+(i2g*i_Gf+f2g)*i_GGTSS2+internalind*i_SS2],
-                         gammai2,
-                         gammaf2,
-                         tmp_4t12t2);
-
-        }
-      } 
+    for( int t=0; t<HGC_localL[3]; ++t){
+      for( int i_gg=0; i_gg<n_gammas_i*n_gammas_f; ++i_gg ){
+	
+	//multiply second spin index with extGammas_i1
+	for(int ext_gi=0; ext_gi< extG_i.size(); ++ext_gi){
+	  //multiply first spin index with extGammas_f
+	  for(int ext_gf=0; ext_gf < extG_f.size(); ++ext_gf){
+	    M_e_GNG<Float>( this->corr + i_mom*d_GGGGTSS2 + (ext_gi*n_gammas_extf+ext_gf)*d_GGTSS2 + i_gg*d_TSS2 + t*s_SS2,
+			    extG_f[ext_gf], extG_i[ext_gi], temp + t*s_MGGSS2 + i_mom*s_GGSS2 + i_gg*s_SS2);
+         
+	  }
+	}
+      }
     }
-  } 
+    x_e_cx<Float>( this->corr + i_mom*d_GGGGTSS2,  tmpreim, d_GGGGTSS2/2);
+  }
+
+  free( temp );
   this->writeHDF5(outfile);
 }
 
