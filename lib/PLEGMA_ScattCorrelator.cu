@@ -1034,8 +1034,6 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   const int d_GGTSS2 = n_gammas_i*n_gammas_f*d_TSS2;
   const int d_GGGGTSS2 = extG_i.size()*extG_f.size()*d_GGTSS2;
 
-
-  
   for( int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
     const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0])*this->source_position[0]+
                       2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1])*this->source_position[1]+
