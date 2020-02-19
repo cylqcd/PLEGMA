@@ -83,6 +83,17 @@ void  PLEGMA_Vector<Float>::apply_gamma5(){
   apply_gamma5_vector(PLEGMA_Field<Float>::d_elem);
 }
 
+template<typename Float>
+void PLEGMA_Vector<Float>::rotateToPhysicalBasis(PLEGMA_Vector<Float> &vecIn, int sgn){
+  PLEGMA_Vector<Float> temporary;
+  temporary.copy(vecIn);
+  temporary.apply_gamma5();
+  temporary.cscale((std::complex<Float>) {0.,sgn});
+  temporary.add(vecIn);
+  temporary.scaleVector(1./sqrt(2.));
+  this->copy(temporary);
+   
+}
 
 template<typename Float> 
 void  PLEGMA_Vector<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
@@ -93,6 +104,7 @@ template<typename Float>
 void  PLEGMA_Vector<Float>::apply_gamma_scatt(GAMMAS_SCATT gMat,LEFTRIGHT LR){
   apply_gamma_scatt_vector(LR,PLEGMA_Field<Float>::d_elem,gMat);
 }
+
 
 
 template<typename Float>
