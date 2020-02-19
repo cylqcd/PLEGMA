@@ -198,6 +198,9 @@ int main(int argc, char **argv)
         propUP.absorb(vectorAuxF, isc/3, isc%3);
       }
 
+      propUP.rotateToPhysicalBase_device(+1);
+      propUP.applyBoundaries_device(sourcePositions[isource][3]);
+
       if(outfile_upS!="")
         {
           PLEGMA_printf("Save propagator for the up quark\n");
@@ -208,7 +211,7 @@ int main(int argc, char **argv)
 
             vectorAuxPrint.absorb(propUP,isc/3,isc%3);
             vectorAuxPrint.unload();
-            vectorAuxPrint.writeLIME(outfile_upS+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeHDF5(outfile_upS+"_s"+spin+"_c"+col);
           }
         }
 
@@ -243,6 +246,10 @@ int main(int argc, char **argv)
         propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
+      propDN.rotateToPhysicalBase_device(-1);
+      propDN.applyBoundaries_device(sourcePositions[isource][3]);
+
+
 
       if(outfile_dnS!="")
         {
@@ -258,7 +265,6 @@ int main(int argc, char **argv)
           }
         }
 
-
       std::vector<int> mom={0,0,0};
       PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
 
@@ -268,6 +274,7 @@ int main(int argc, char **argv)
                      sourcePositions[isource][3]};
 
       diagramm.setSource(source);
+
 
       PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
       PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
@@ -356,6 +363,10 @@ int main(int argc, char **argv)
             vectorAuxF.copy(vectorInOut);
             propUPDN.absorb(vectorAuxF, isc/3, isc%3);
           }
+
+          propUPDN.rotateToPhysicalBase_device(+1);
+          propUPDN.applyBoundaries_device(sourcePositions[isource][3]);
+
 
           if(outfile_SEQ!="")
           {
