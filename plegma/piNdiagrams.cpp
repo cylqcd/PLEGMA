@@ -114,7 +114,8 @@ int main(int argc, char **argv)
     vectorAuxD1.copy(vectorStoc_source);
     vectorStoc_source_arch.copy(vectorStoc_source);
     //vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
-    vectorAuxD2.copy(vectorAuxD1);
+    //We rotate the source to the physical basis
+    vectorAuxD2.rotateToPhysicalBasis(vectorAuxD1,+1);
     //for the cross-checks we are not performing the smearing
     vectorAuxD1.scaleVector(0.0);
     
@@ -136,13 +137,16 @@ int main(int argc, char **argv)
       vectorAuxD1.copy(vectorInOut);
     } 
 
-    vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_source");
+    vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
+    vectorAuxD2.copy(vectorStoc_source_arch);
     vectorAuxD2.apply_gamma5();
     vectorStoc_source.copy(vectorAuxD2);
 
     //Step(6) Smearing all the time slice in the propagator
     //vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
-    vectorAuxD2.copy(vectorAuxD1);
+    //we rotate back the propagator to the physical basis
+    vectorAuxD2.rotateToPhysicalBasis(vectorAuxD1,+1);
+    
     vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
     vectorStoc_propag.copy(vectorAuxD2);
     vectorStoc_propag.apply_gamma5();
@@ -211,6 +215,7 @@ int main(int argc, char **argv)
 
             vectorAuxPrint.absorb(propUP,isc/3,isc%3);
             vectorAuxPrint.unload();
+            vectorAuxPrint.writeLIME(outfile_upS+"_s"+spin+"_c"+col);
             vectorAuxPrint.writeHDF5(outfile_upS+"_s"+spin+"_c"+col);
           }
         }
@@ -262,6 +267,8 @@ int main(int argc, char **argv)
             vectorAuxPrint.absorb(propDN,isc/3,isc%3);
             vectorAuxPrint.unload();
             vectorAuxPrint.writeLIME(outfile_dnS+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeHDF5(outfile_dnS+"_s"+spin+"_c"+col);
+
           }
         }
 
@@ -334,12 +341,14 @@ int main(int argc, char **argv)
           for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
             PLEGMA_Vector<float> vectorAuxF;
+            PLEGMA_Vector<double> vectorAuxRotate;
             vectorAuxF.absorb(propDN,isc/3, isc%3);
             vectorAuxD.copy(vectorAuxF);
             start_time = MPI_Wtime();
             //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
             tmp_time += MPI_Wtime()-start_time;
             vectorAuxD.apply_gamma_scatt(gamma_i2);
+            vectorAuxRotate.rotateToPhysicalBasis(vectorAuxD,+1);
             vectorAuxF.copy(vectorAuxD);
             propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
           }
@@ -360,12 +369,11 @@ int main(int argc, char **argv)
             start_time = MPI_Wtime();
             //vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
             tmp_time += MPI_Wtime()-start_time;
+            vectorAuxD.copy(vectorInOut);
+            vectorInOut.rotateToPhysicalBasis(vectorAuxD, +1);
             vectorAuxF.copy(vectorInOut);
             propUPDN.absorb(vectorAuxF, isc/3, isc%3);
           }
-
-          propUPDN.rotateToPhysicalBase_device(+1);
-          propUPDN.applyBoundaries_device(sourcePositions[isource][3]);
 
 
           if(outfile_SEQ!="")
@@ -485,22 +493,22 @@ int main(int argc, char **argv)
        PLEGMA_Vector<float> vectortmp2;
           
        //Using the already generated stochastic source and project it to a time-slice
-       vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source); //For nonzero momentum
-       vectortmp2.copy(vectortmp1);//For zero momentum
+       vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source); //Creating oet time-slice source
+       vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);//Transforming to physical base
        
+ 
+       stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2,0);
 
        //Multiplying by the appropriate momentum phase
-       //vectortmp1 <-- source with finite momentum
-       //vectortmp2 <-- source wuth zero momentum
+
        std::vector<int> tmp_4Dmom= momentum_i2 ; 
        tmp_4Dmom.push_back(0);
-       vectortmp1.mulMomentumPhases(tmp_4Dmom,1);
-  
-       stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp1,0);
-       stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2,0);
+       vectortmp2.mulMomentumPhases(tmp_4Dmom,1);
+       stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp2,0);
  
        
        for (int spinindex=0; spinindex<4; ++spinindex){
+         PLEGMA_Vector<double> vectorAuxD;
 
          //Ideally doing the smearing on the source only on a 3D vector
          //stochastic_source_spin_diluted_momp_i2.gaussianSmearing(stochastic_source_spin_diluted_momp_i2, smearedGauge, nsmearGauss, alphaGauss);
@@ -514,7 +522,8 @@ int main(int argc, char **argv)
  
          vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
          solver.solve(vectorInOut, vectorInOut);
-         stochastic_propagator_momp_i2[spinindex].copy(vectorInOut);
+         vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+         stochastic_propagator_momp_i2[spinindex].copy(vectorAuxD);
          //Ideally doing the smearing on the propagator only on a 3D vector
          //stochastic_propagator_momp_i2[spinindex].gaussianSmearing(stochastic_propagator_momp_i2[spinindex], smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;         
@@ -522,7 +531,8 @@ int main(int argc, char **argv)
 
          vectorInOut.copy(stochastic_source_spin_diluted_momzero);
          solver.solve(vectorInOut, vectorInOut);
-         stochastic_propagator_momzero[spinindex].copy(vectorInOut);
+         vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+         stochastic_propagator_momzero[spinindex].copy(vectorAuxD);
          //Ideally doing the smearing on the propagator only on a 3D vector
          //stochastic_propagator_momzero[0].gaussianSmearing(stochastic_propagator_momzero[0], smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;
