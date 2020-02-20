@@ -143,35 +143,35 @@ int main(int argc, char **argv)
     //do reductions
     std::vector<int> mom={0,0,1};
     int Qmax=1;
-    //std::vector<GAMMAS_SCATT> glist2={G_1,G_2,G_3,G_4};
-    //std::vector<GAMMAS_SCATT> glist1={G_4,G_5};
-    std::vector<GAMMAS_SCATT> glist={G_1,G_2,G_3,G_4};
+    std::vector<GAMMAS_SCATT> glist2={G_1,G_2,G_3,G_4};
+    std::vector<GAMMAS_SCATT> glist1={G_4,G_5};
+    // std::vector<GAMMAS_SCATT> glist={G_1,G_2,G_3,G_4};
     // // std::vector<GAMMAS_SCATT> glist={G_4};
     // // std::vector<GAMMAS_SCATT> glist_in={G_4};
     // // std::vector<GAMMAS_SCATT> glist_fi={G_4};
 
-    PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
-    double t0 = MPI_Wtime();
+    // PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
+    // double t0 = MPI_Wtime();
 
-    for(int j=0; j<10;j++)
-      reductions.V2( vectorStoc, glist, propUP, propUP);
+    // for(int j=0; j<10;j++)
+    //   reductions.V2( vectorStoc, glist, propUP, propUP);
 
-    reductions.writeHDF5(outfile_V2);
-    PLEGMA_printf("Time elapsed for V2 kernel = %g s\n",(MPI_Wtime()-t0)/10);
+    // reductions.writeHDF5(outfile_V2);
+    // PLEGMA_printf("Time elapsed for V2 kernel = %g s\n",(MPI_Wtime()-t0)/10);
 
-    t0 = MPI_Wtime();
-    for(int j=0; j<10;j++)
-      reductions.V3( vectorStoc, glist, propUP);
+    // t0 = MPI_Wtime();
+    // for(int j=0; j<10;j++)
+    //   reductions.V3( vectorStoc, glist, propUP);
 
-    reductions.writeHDF5(outfile_V3);
-    PLEGMA_printf("Time elapsed for V3 kernel = %g s\n",(MPI_Wtime()-t0)/10);
+    // reductions.writeHDF5(outfile_V3);
+    // PLEGMA_printf("Time elapsed for V3 kernel = %g s\n",(MPI_Wtime()-t0)/10);
 
-    t0 = MPI_Wtime();
-    for(int j=0; j<10;j++)
-      reductions.V4( vectorStoc, glist, propUP, propUP);
+    // t0 = MPI_Wtime();
+    // for(int j=0; j<10;j++)
+    //   reductions.V4( vectorStoc, glist, propUP, propUP);
 
-    reductions.writeHDF5(outfile_V4);
-    PLEGMA_printf("Time elapsed for V4 kernel = %g s\n",(MPI_Wtime()-t0)/10);
+    // reductions.writeHDF5(outfile_V4);
+    // PLEGMA_printf("Time elapsed for V4 kernel = %g s\n",(MPI_Wtime()-t0)/10);
 
     // // reductions.writeHDF5(outfile_V4);
     // // reductions.T1(glist_in, glist_fi, propUP, propUP, propUP);
@@ -183,7 +183,7 @@ int main(int argc, char **argv)
     //reductionV2.V2( vectorStoc, glist, propUP, propUP);
     //reductionV2.writeHDF5(outfile_V2);
     
-    /*{
+    {
       PLEGMA_ScattCorrelator<float> reductionV2(MOMENTUM_SPACE, mom);
       reductionV2.V2( vectorStoc, glist1, propUP, propUP);
       reductionV2.writeHDF5(outfile_V2+"_1mom_gl1_c0");
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
       reductions.V4( vectorStoc, glist1, propUP, propUP);
       reductions.writeHDF5(outfile_V4+"_Qmax_gl1_c1");
     }
-    */
+    
   }
   finalize();
   

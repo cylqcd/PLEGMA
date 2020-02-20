@@ -205,6 +205,18 @@ void print_groups_names_2pt( std::string prefix, std::vector<std::vector<int>> &
 	  }
 }
 
+//create a list with the structure of hdf5 file for 2pt. Groups order is the same of arguments order. The printed momentum is the total one (p_f1+p_f2).
+void print_groups_names_2pt( std::string prefix, std::vector<std::vector<int>> &moms,  std::vector<GAMMAS_SCATT> &G_i, std::vector<GAMMAS_SCATT> &G_f,  std::vector<std::string> &out){
+  std::string tmp;
+  out.clear();
+  for(auto &mom : moms )
+    for( auto &g1 : G_i )
+      for( auto &g2 : G_f ){
+	tmp = prefix + std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2])+ "/" + GAMMAS_SCATT_STR[g1] + "/" + GAMMAS_SCATT_STR[g2];
+	out.push_back(tmp);
+      }
+}
+
 //create a list with the structure of hdf5 file for the pion-pion loop. Groups order is moms(from moms_red), G_i2, G_f2, extG_i1, extG_f1, G_i1, G_f1 (as in NucleonsGroups)
 void print_groups_names_4pt( momList &moms_red, std::vector<std::string> &groupN, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
   if(!moms_red.check_eq(0)) PLEGMA_error("Mmmmmh pi2 must be equal in moms\n");
@@ -624,6 +636,60 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   this->writeHDF5(outfile);
 
 }
+
+//here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<int> mom_pi2, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, std::string &outfile){
+
+  //++++++++ PION-PION +++++++++
+ 
+  //size of temporal output for pion loop
+  const int tot_size = G_i2.size()*G_f2.size()*HGC_localL[3]*2;
+  std::vector<std::vector<int>> aux_mom = {mom_pi2 ,};
+
+  print_groups_names_2pt("p_tot=", aux_mom, G_i2, G_f2, this->groups);
+  this->datasets={"P"};
+  this->shape={1,};
+  this->shape_labels="";
+  this->initialize();
+
+  if( this->vol_size != HGC_localL[3] )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+
+  if( this->site_size*2 != tot_size/HGC_localL[3] )
+    PLEGMA_error("I did some mistakes. vol_size*site_size=%d; expected= (mom=1),(Gi2=%d),(Gf2=%d)%d\n", this->vol_size*this->site_size,
+		 G_i2.size(), G_f2.size(), tot_size/2);
+
+  memset( this->corr , 0, tot_size*sizeof(Float) );
+  
+  //useful consts
+  const int TIME = HGC_localL[3];
+  const int n_gammas_f2 = G_f2.size();
+  const int d_GT2 = G_f2.size()*TIME*2;
+
+  //aux PLEGMA_SC for PhixGxPhi multiplications
+  PLEGMA_ScattCorrelator pipi_aux(MOMENTUM_SPACE, mom_pi2);
+
+  //loop over G_i2
+  for(int gi2=0; gi2<G_i2.size(); ++gi2){
+    for(int nz_e=0; nz_e<4; ++nz_e){
+      int alfa = gammaInd_scatt_host[G_i2[gi2]][nz_e][0]; 
+      int beta = gammaInd_scatt_host[G_i2[gi2]][nz_e][1];
+      Float g[2];
+      g[1] = gamma_scatt_host[G_i2[gi2]][nz_e][1];
+      g[0] = gamma_scatt_host[G_i2[gi2]][nz_e][0];
+
+      //PhixGf2xPhi
+      pipi_aux.PhiPhi( Phi_0[beta], G_f2, Phi_1[alfa]); //T x N_moms x n_gammas_f2
+
+      for( int time=0; time<TIME; ++time)
+	for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+	  x_pe_cy( this->corr + gi2*d_GT2 + gf2*2*TIME + time*2, g, pipi_aux.corr + time*n_gammas_f2*2 + gf2*2, 1);
+    }
+  }
+  this->writeHDF5(outfile);
+}
+
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 template<typename Float>
