@@ -112,43 +112,44 @@ int main(int argc, char **argv)
 
     //Step(2) Smearing all the time slice
     vectorAuxD1.copy(vectorStoc_source);
-    vectorStoc_source_arch.copy(vectorStoc_source);
-    //vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
+    vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
+    //Save the smeared source in order to reuse it for oet.
+    vectorStoc_source_arch.copy(vectorAuxD2);
     //We rotate the source to the physical basis
-    vectorAuxD2.rotateToPhysicalBasis(vectorAuxD1,+1);
-    //for the cross-checks we are not performing the smearing
-    vectorAuxD1.scaleVector(0.0);
+    vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1);
+    //In vectorAuxD2 we store the results
+    vectorAuxD2.scaleVector(0.0);
     
     if (timedilutionflagstring.compare("on")==0){
       PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
       for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
         //Step(3) pick out a particular timeslice from the source
-        vectorInOut.absorbTimeslice(vectorAuxD2, timeidx);
+        vectorInOut.absorbTimeslice(vectorAuxD1, timeidx);
         //Step(4) Solve
         solver.solve(vectorInOut, vectorInOut);
         //Step(5) absorbing the particular timeslice to a 4d vector
-        vectorAuxD1.absorbTimeslice(vectorInOut, timeidx, false);
+        vectorAuxD2.absorbTimeslice(vectorInOut, timeidx, false);
       }
     }
     else{
       PLEGMA_printf("#piNdiagramms: No time dilution is used n stochastic propagators\n");
-      vectorInOut.copy(vectorAuxD2);
+      vectorInOut.copy(vectorAuxD1);
       solver.solve(vectorInOut, vectorInOut);
-      vectorAuxD1.copy(vectorInOut);
+      vectorAuxD2.copy(vectorInOut);
     } 
 
     vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
-    vectorAuxD2.copy(vectorStoc_source_arch);
-    vectorAuxD2.apply_gamma5();
-    vectorStoc_source.copy(vectorAuxD2);
+    vectorAuxD1.copy(vectorStoc_source_arch);
+    vectorAuxD1.apply_gamma5();
+    vectorStoc_source.copy(vectorAuxD1);
 
-    //Step(6) Smearing all the time slice in the propagator
-    //vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
-    //we rotate back the propagator to the physical basis
-    vectorAuxD2.rotateToPhysicalBasis(vectorAuxD1,+1);
+    //Step(6) We rotate back the propagator to the physical basis
+    vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1);
+    //Step(7) Smearing all the time slice in the propagator
+    vectorAuxD1.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss );
     
-    vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
-    vectorStoc_propag.copy(vectorAuxD2);
+    vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
+    vectorStoc_propag.copy(vectorAuxD1);
     vectorStoc_propag.apply_gamma5();
 
     //loop over the soure positions
@@ -185,25 +186,27 @@ int main(int argc, char **argv)
 
         //Smearing on the source
         start_time = MPI_Wtime();
-        //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
-        vectorInOut.copy(vectorAuxD);
+
+        //Rotation to the physical basis
+        vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);       
 
         //Inversion
         PLEGMA_printf("Going to invert UP for component %d\n", isc);
-        solver.solve(vectorInOut, vectorInOut);
+        solver.solve(vectorAuxD, vectorAuxD);
+
+        //Rotation to the physical basis
+        vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1);
 
         //Smearing at the sink
         start_time = MPI_Wtime();
-        //vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+        vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
 
-        vectorAuxF.copy(vectorInOut);
+        vectorAuxF.copy(vectorAuxD);
         propUP.absorb(vectorAuxF, isc/3, isc%3);
       }
-
-      propUP.rotateToPhysicalBase_device(+1);
-      propUP.applyBoundaries_device(sourcePositions[isource][3]);
 
       if(outfile_upS!="")
         {
@@ -231,29 +234,33 @@ int main(int argc, char **argv)
         PLEGMA_Vector<double> vectorInOut;
         PLEGMA_Vector<float> vectorAuxF;
         PLEGMA_Vector<double> vectorAuxD;
+        //(1 step) creating the point source
         vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
 
         start_time = MPI_Wtime();
-        //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-        tmp_time += MPI_Wtime()-start_time;
-        
-        vectorInOut.copy(vectorAuxD);
+        //(2 step) doing the gaussian smearing on the source
+        vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
 
+        //(3 step) rotation to the physical basis
+        vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1);
+
+        tmp_time += MPI_Wtime()-start_time;
+        //(4 step) doing the inversion
         PLEGMA_printf("Going to invert DN for component %d\n", isc);
-        solver.solve(vectorInOut, vectorInOut);
+        solver.solve(vectorAuxD, vectorAuxD);
 
         start_time = MPI_Wtime();
-        //vectorInOut.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+        //(5 step) rotating to the physical base
+        vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1);
+
+        //(6 step) doing the smearing on the propagator
+        vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
         tmp_time += MPI_Wtime()-start_time;
 
-        vectorAuxF.copy(vectorInOut);
+        vectorAuxF.copy(vectorAuxD);
 
         propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
-
-      propDN.rotateToPhysicalBase_device(-1);
-      propDN.applyBoundaries_device(sourcePositions[isource][3]);
-
 
 
       if(outfile_dnS!="")
@@ -341,14 +348,22 @@ int main(int argc, char **argv)
           for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
             PLEGMA_Vector<float> vectorAuxF;
-            PLEGMA_Vector<double> vectorAuxRotate;
+            PLEGMA_Vector<double> vectorAuxD2;
             vectorAuxF.absorb(propDN,isc/3, isc%3);
             vectorAuxD.copy(vectorAuxF);
             start_time = MPI_Wtime();
-            //vectorAuxD.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+
+            //Performing the smearing
+            vectorAuxD2.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
             tmp_time += MPI_Wtime()-start_time;
-            vectorAuxD.apply_gamma_scatt(gamma_i2);
-            vectorAuxRotate.rotateToPhysicalBasis(vectorAuxD,+1);
+
+            //Perform multiplication with gamma_i2
+            vectorAuxD2.apply_gamma_scatt(gamma_i2);
+
+            //Perform rotation to the physical basis
+            vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1);
+
+            
             vectorAuxF.copy(vectorAuxD);
             propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
           }
@@ -365,12 +380,17 @@ int main(int argc, char **argv)
             vectorAuxF.absorb(propDN3D, sequential_time_source, isc/3, isc%3);
             vectorInOut.copy(vectorAuxF);
             PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
+            //performing the inversion
             solver.solve(vectorInOut, vectorInOut);
             start_time = MPI_Wtime();
-            //vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+
+            //performing rotation to physical base
+            vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+
+            //performing smearing
+            vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
             tmp_time += MPI_Wtime()-start_time;
-            vectorAuxD.copy(vectorInOut);
-            vectorInOut.rotateToPhysicalBasis(vectorAuxD, +1);
+
             vectorAuxF.copy(vectorInOut);
             propUPDN.absorb(vectorAuxF, isc/3, isc%3);
           }
@@ -493,8 +513,11 @@ int main(int argc, char **argv)
        PLEGMA_Vector<float> vectortmp2;
           
        //Using the already generated stochastic source and project it to a time-slice
-       vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source); //Creating oet time-slice source
-       vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);//Transforming to physical base
+       //Smearing was already performed
+       //Creating oet time-slice source
+       vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source);
+       //Transforming to physical base
+       vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
        
  
        stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2,0);
@@ -510,31 +533,41 @@ int main(int argc, char **argv)
        for (int spinindex=0; spinindex<4; ++spinindex){
          PLEGMA_Vector<double> vectorAuxD;
 
-         //Ideally doing the smearing on the source only on a 3D vector
-         //stochastic_source_spin_diluted_momp_i2.gaussianSmearing(stochastic_source_spin_diluted_momp_i2, smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;       
          stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
-         //Ideally doing the smearing om the source only on a 3D vector
-         //stochastic_source_spin_diluted_momźero.gaussianSmearing(stochastic_source_spin_diluted_momzero, smearedGauge, nsmearGauss, alphaGauss);
          //tmp_time += MPI_Wtime()-start_time;
          stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));
  
          vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
+         //Doing the inversion
          solver.solve(vectorInOut, vectorInOut);
+
+         //Rotate back immediately to the physical basis
          vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+
+         //performing smearing
+         vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+
+         //Saving the propagator
          stochastic_propagator_momp_i2[spinindex].copy(vectorAuxD);
-         //Ideally doing the smearing on the propagator only on a 3D vector
-         //stochastic_propagator_momp_i2[spinindex].gaussianSmearing(stochastic_propagator_momp_i2[spinindex], smearedGauge, nsmearGauss, alphaGauss);
+
          //tmp_time += MPI_Wtime()-start_time;         
          stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
 
+         //Doing the same for zero momentum
          vectorInOut.copy(stochastic_source_spin_diluted_momzero);
+
+         //Doing the inversion
          solver.solve(vectorInOut, vectorInOut);
+
+         //Rotate back immediately to the physical basis
          vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
-         stochastic_propagator_momzero[spinindex].copy(vectorAuxD);
-         //Ideally doing the smearing on the propagator only on a 3D vector
-         //stochastic_propagator_momzero[0].gaussianSmearing(stochastic_propagator_momzero[0], smearedGauge, nsmearGauss, alphaGauss);
+
+         //Gaussian smearing of the propagator
+         vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+         
+         stochastic_propagator_momzero[spinindex].copy(vectorInOut);
          //tmp_time += MPI_Wtime()-start_time;
 
          stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
