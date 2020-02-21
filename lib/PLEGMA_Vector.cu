@@ -88,7 +88,7 @@ void PLEGMA_Vector<Float>::rotateToPhysicalBasis(PLEGMA_Vector<Float> &vecIn, in
   PLEGMA_Vector<Float> temporary;
   temporary.copy(vecIn);
   temporary.apply_gamma5();
-  temporary.cscale((std::complex<Float>) {0.,sgn});
+  temporary.cscale((std::complex<Float>) {0.,(Float)sgn});
   temporary.add(vecIn);
   temporary.scaleVector(1./sqrt(2.));
   this->copy(temporary);
