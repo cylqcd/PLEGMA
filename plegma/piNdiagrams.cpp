@@ -115,9 +115,11 @@ int main(int argc, char **argv)
     vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
     //Save the smeared source in order to reuse it for oet.
     vectorStoc_source_arch.copy(vectorAuxD2);
+
     //We rotate the source to the physical basis
     vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1);
-    //In vectorAuxD2 we store the results
+
+    //In vectorAuxD2 we store the results for the inversion
     vectorAuxD2.scaleVector(0.0);
     
     if (timedilutionflagstring.compare("on")==0){
@@ -146,7 +148,7 @@ int main(int argc, char **argv)
     //Step(6) We rotate back the propagator to the physical basis
     vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1);
     //Step(7) Smearing all the time slice in the propagator
-    vectorAuxD1.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss );
+    vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
     
     vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
     vectorStoc_propag.copy(vectorAuxD1);
