@@ -85,8 +85,8 @@ __global__ void T1_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
                     unsigned short m=plegma::eps[eps2_nz][1];
                     unsigned short n=plegma::eps[eps2_nz][2];
                     int eps2_sgn=plegma::sgn_eps[eps2_nz];
-                    accum[ (((n_gf*N_GAMMAS_SCATT_I + n_gi)*N_SPINS) + beta)*N_SPINS + alpha ] =
-                      accum[ (((n_gf*N_GAMMAS_SCATT_I + n_gi)*N_SPINS) + beta)*N_SPINS + alpha ] + eps1_sgn*eps2_sgn*s1[alpha][alpha0][c][l]*factor_i*s2[alpha1][beta0][b][m]*factor_f*s3[beta1][beta][a][n];
+                    accum[ (((n_gf*N_GAMMAS_SCATT_I + n_gi)*N_SPINS) + alpha)*N_SPINS + beta ] =
+                      accum[ (((n_gf*N_GAMMAS_SCATT_I + n_gi)*N_SPINS) + alpha)*N_SPINS + beta ] + eps1_sgn*eps2_sgn*s1[alpha][alpha0][c][l]*factor_i*s2[beta0][alpha1][b][m]*factor_f*s3[beta1][beta][a][n];
                   }
                 }
               }
