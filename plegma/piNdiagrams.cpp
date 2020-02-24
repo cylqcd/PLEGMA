@@ -428,8 +428,8 @@ int main(int argc, char **argv)
           reductionsT1triangle.writeHDF5("T1sourceforT");
           reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP);
           reductionsT3triangle.writeHDF5("T3sourceforT");
-          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP);
-          reductionsT1triangle.writeHDF5("T5sourceforT");
+          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN);
+          reductionsT5triangle.writeHDF5("T5sourceforT");
 
           outfilename="Tdiagramm_Antonino";
           diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_source_nucleon_unpaired, glist_sink_delta_unpaired,  outfilename);
