@@ -144,12 +144,12 @@ template<TRED T, typename FloatOut, typename FloatP, typename ...Args>
 void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 			int it, int time_step, int3 source, tex_mom_list moms,
 			KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f, FloatP* S1, FloatP* S2, FloatP* S3){
-  // if(T==T_1)
-  //   T1_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
-  // else if(T==T_2)
-  //   T2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
-  // else
-  //   PLEGMA_error("Unrecognized T reduction type\n");
+   if(T==T_1)
+     T1_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
+   else if(T==T_2)
+     T2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
+   else
+     PLEGMA_error("Unrecognized T reduction type\n");
 }
 
 template<TRED T,typename FloatOut, typename ... Args>

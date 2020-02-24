@@ -117,10 +117,10 @@ void T1_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
   case(1):
      switch(listGammas_f.size){
        case(1): T1_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)1><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-       case(2): T1_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
+      /* case(2): T1_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
        case(3): T1_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)3><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-       case(4): T1_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)4><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-     }
+       case(4): T1_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)4><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;*/
+     }/*
   case(2):
      switch(listGammas_f.size){
        case(1): T1_kernel<FloatOut,FloatP,(unsigned int)2,(unsigned int)1><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
@@ -141,6 +141,6 @@ void T1_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
        case(2): T1_kernel<FloatOut,FloatP,(unsigned int)4,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
        case(3): T1_kernel<FloatOut,FloatP,(unsigned int)4,(unsigned int)3><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
        case(4): T1_kernel<FloatOut,FloatP,(unsigned int)4,(unsigned int)4><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-     }
+     }*/
   }
 }
