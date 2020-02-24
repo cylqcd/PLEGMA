@@ -4,7 +4,7 @@
 #define PLEGMA_GAMMAS_SCATT_CUH
 namespace plegma{
 
-  const __device__ float gamma_scatt_host[35][4][2] =
+  const __device__ float gamma_scatt[35][4][2] =
     {{{1,0},{1,0},{1,0},{1,0}},     // 1
      {{0,1},{0,1},{0,-1},{0,-1}},   // g1
      {{1,0},{-1,0},{-1,0},{1,0}},   // g2
@@ -41,7 +41,7 @@ namespace plegma{
      {{0,1},{0,-1},{0,-1},{0,1}},    //Cgtg5
      {{0,-1},{0,1},{0,1},{0,-1}},    //Cg5gtg5
     };
-  const __device__short int gammaInd_scatt_host[35][4][2] =
+  const __device__ short int gammaInd_scatt[35][4][2] =
     {{{0,0},{1,1},{2,2},{3,3}},     //1
      {{0,3},{1,2},{2,1},{3,0}},     // g1
      {{0,3},{1,2},{2,1},{3,0}},     // g2
