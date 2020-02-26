@@ -21,7 +21,7 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
     accum[i] = 0.;
   }
 
-
+  
   if (sid3D < DGC_localVolume3D){
     prop2<FloatP> propS1(S1), propS2(S2), propS3(S3);
     
@@ -43,33 +43,32 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
 
     #pragma unroll 
     for(unsigned short n_gf=0; n_gf<N_GAMMAS_SCATT_F; n_gf++ ){
-    
+
       int g_f_Id=listGammas_f.array[n_gf];
-      //if (vid==0) {printf("check2 - gId=%d\n", gId);}
-
       #pragma unroll 
-      for(int nz_ef = 0 ; nz_ef < 4 ; nz_ef++){
-        int beta0=gammas_f_Idx[g_f_Id][nz_ef][0];
-        int beta1=gammas_f_Idx[g_f_Id][nz_ef][1];
-        Float2<FloatOut> factor_f=gf[g_f_Id][nz_ef];
-        //if (vid==0) {printf("check3 - n_ze=%d, a0-a1-f %d-%d-%f+i%f\n", nz_e, beta0, beta1, factor.x, factor.y);}
-             
-        #pragma unroll 
-        for(unsigned short n_gi=0; n_gi<N_GAMMAS_SCATT_I; n_gi++ ){
-	          
-          int g_i_Id=listGammas_i.array[n_gi];
+      for(unsigned short n_gi=0; n_gi<N_GAMMAS_SCATT_I; n_gi++ ){
 
-          #pragma unroll 
-          for(int nz_ei = 0 ; nz_ei < 4 ; nz_ei++){
-            int alpha0=gammas_i_Idx[g_i_Id][nz_ei][0];
-            int alpha1=gammas_i_Idx[g_i_Id][nz_ei][1];
-            Float2<FloatOut> factor_i=gi[g_i_Id][nz_ei];
-        
-            #pragma unroll 
-            for( unsigned short beta=0; beta<N_SPINS; beta++ ){
+        int g_i_Id=listGammas_i.array[n_gi];
+        #pragma unroll 
+        for( unsigned short beta=0; beta<N_SPINS; beta++ ){
               
+          #pragma unroll 
+          for( unsigned short alpha=0; alpha<N_SPINS; alpha++){
+            Float2<FloatOut> tmp=0.0;
+
+            #pragma unroll 
+            for(int nz_ef = 0 ; nz_ef < 4 ; nz_ef++){
+              int beta0=gammas_f_Idx[g_f_Id][nz_ef][0];
+              int beta1=gammas_f_Idx[g_f_Id][nz_ef][1];
+              Float2<FloatOut> factor_f=gf[g_f_Id][nz_ef];
+              //if (vid==0) {printf("check3 - n_ze=%d, a0-a1-f %d-%d-%f+i%f\n", nz_e, beta0, beta1, factor.x, factor.y);}
+         
               #pragma unroll 
-              for( unsigned short alpha=0; alpha<N_SPINS; alpha++){
+              for(int nz_ei = 0 ; nz_ei < 4 ; nz_ei++){
+                int alpha0=gammas_i_Idx[g_i_Id][nz_ei][0];
+                int alpha1=gammas_i_Idx[g_i_Id][nz_ei][1];
+                Float2<FloatOut> factor_i=gi[g_i_Id][nz_ei];
+        
                 
                 #pragma unroll
                 for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
@@ -85,14 +84,16 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
                     unsigned short m=plegma::eps[eps2_nz][1];
                     unsigned short n=plegma::eps[eps2_nz][2];
                     int eps2_sgn=plegma::sgn_eps[eps2_nz];
-                    accum[ (((n_gi*N_GAMMAS_SCATT_F + n_gf)*N_SPINS) + alpha)*N_SPINS + beta ] =
-                      accum[ (((n_gi*N_GAMMAS_SCATT_F + n_gf)*N_SPINS) + alpha)*N_SPINS + beta ] + eps1_sgn*eps2_sgn*s1[alpha][beta][c][l]*factor_i*s2[beta0][alpha1][b][m]*factor_f*s3[beta1][alpha0][a][n];
+                    Float2<FloatOut> factor=eps1_sgn*eps2_sgn*factor_i*factor_f;
+                    tmp =
+                      tmp + factor*s1[alpha][beta][c][l]*s2[beta0][alpha1][b][m]*s3[beta1][alpha0][a][n];
                   }
                 }
               }
-	          }
-	        }
-	      }
+	    }
+            accum[(((n_gi*N_GAMMAS_SCATT_F + n_gf)*N_SPINS) + alpha)*N_SPINS + beta ]=tmp;      
+	  }
+        }
       }
     }
   }
