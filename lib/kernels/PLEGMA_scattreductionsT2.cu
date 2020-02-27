@@ -14,7 +14,7 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
   int site_size = N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS;
 
-  if (vid==0) {  printf("check0\n");}
+  //if (vid==0) {  printf("check0\n");}
 
   register Float2<FloatOut> accum[N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS];
   for(int i = 0 ; i <N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS ; i++){
@@ -49,11 +49,10 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
       for(unsigned short n_gi=0; n_gi<N_GAMMAS_SCATT_I; n_gi++ ){
 
         int g_i_Id=listGammas_i.array[n_gi];
-        #pragma unroll 
-        for( unsigned short beta=0; beta<N_SPINS; beta++ ){
-              
+        #pragma unroll       
+        for( unsigned short alpha=0; alpha<N_SPINS; alpha++){
           #pragma unroll 
-          for( unsigned short alpha=0; alpha<N_SPINS; alpha++){
+          for( unsigned short beta=0; beta<N_SPINS; beta++ ){
             Float2<FloatOut> tmp=0.0;
 
             #pragma unroll 
@@ -87,15 +86,15 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
                     Float2<FloatOut> factor=eps1_sgn*eps2_sgn*factor_i*factor_f;
                     tmp =
                       tmp + factor*s1[alpha][beta][c][l]*s2[beta0][alpha1][b][m]*s3[beta1][alpha0][a][n];
-                  }
-                }
-              }
-	    }
+                  }//color_source
+                }//color_sink
+              }//mult_gamma_source
+	    }//mult_gamma_sink
             accum[(((n_gi*N_GAMMAS_SCATT_F + n_gf)*N_SPINS) + alpha)*N_SPINS + beta ]=tmp;      
-	  }
-        }
-      }
-    }
+	  }//spin final alpha
+        }//spin final beta
+      }//gamma_source
+    }//gamma sink
   }
 
   extern __shared__ int ext_shared_cache[];
