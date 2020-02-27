@@ -56,7 +56,7 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
 	    for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
 	      int beta0=gammasIdx[gId][nz_e][0];
 	      int beta1=gammasIdx[gId][nz_e][1];
-	      Float2<FloatOut> factor=g[gId][nz_e];
+	      Float2<FloatOut> factor_gamma=g[gId][nz_e];
 
 	      #pragma unroll
 	      for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
@@ -70,8 +70,9 @@ __global__ void V2_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
 		  unsigned short m=plegma::eps[eps2_nz][1];
 		  unsigned short n=plegma::eps[eps2_nz][2];
 		  int eps2_sgn=plegma::sgn_eps[eps2_nz];
+                  Float2<FloatOut> factor=eps1_sgn*eps2_sgn*factor_gamma;
 		  accum[ n_g*N_S3C + alfa0*N_S2C + alfa1*N_S1C + alfa2*N_COLS + n ] =
-		    accum[ n_g*N_S3C + alfa0*N_S2C + alfa1*N_S1C + alfa2*N_COLS + n ] + eps1_sgn*eps2_sgn*phi[beta0][c]*factor*s1[beta1][alfa0][b][m]*s2[alfa1][alfa2][a][l];
+		    accum[ n_g*N_S3C + alfa0*N_S2C + alfa1*N_S1C + alfa2*N_COLS + n ] + factor*phi[beta0][c]*s1[beta1][alfa0][b][m]*s2[alfa1][alfa2][a][l];
 		}
 	      }
 	    }
