@@ -237,7 +237,7 @@ static void T_reductions(PLEGMA_ScattCorrelator<FloatOut> &Tout,
   if(Tout.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Tout.getSiteSize(), site_size);
 
-  int shared_size = site_size*sizeof(Float2<FloatOut>);
+  int shared_size = N_SPINS*sizeof(Float2<FloatOut>);
   PLEGMA_printf("site_size= %d\n", site_size);
   
   Float2<FloatOut> *result = NULL;

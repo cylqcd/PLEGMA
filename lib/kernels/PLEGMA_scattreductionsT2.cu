@@ -100,7 +100,15 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z}; 
-  fourier_transform_3D(block2, accum, shared_cache, site_size, sid3D, source_pos, moms, 0, -1, time_step, tid);
+
+  const unsigned int OUT_DOF= N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS;
+  const unsigned int IN_DOF= N_SPINS;
+
+  #pragma unroll
+  for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+    fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
+
+
  
 }
 
