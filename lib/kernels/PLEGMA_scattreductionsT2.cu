@@ -12,7 +12,7 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
   int vid = sid3D + (it+tid)*DGC_localVolume3D;
-  int site_size = N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS;
+  //int site_size = N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS;
 
   //if (vid==0) {  printf("check0\n");}
 
@@ -107,12 +107,10 @@ __global__ void T2_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
   #pragma unroll
   for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
     fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
-
-
  
 }
 
-
+/*
 template<typename FloatOut, typename FloatP>
 void T2_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 			int it, int time_step, int3 source, tex_mom_list moms,
@@ -125,11 +123,11 @@ void T2_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
   case(1):
      switch(listGammas_f.size){
        case(1): T2_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)1><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-/*       case(2): T2_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
+       case(2): T2_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
        case(3): T2_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)3><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-       case(4): T2_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)4><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;*/
+       case(4): T2_kernel<FloatOut,FloatP,(unsigned int)1,(unsigned int)4><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
      }
-/*  case(2):
+ case(2):
      switch(listGammas_f.size){
        case(1): T2_kernel<FloatOut,FloatP,(unsigned int)2,(unsigned int)1><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
        case(2): T2_kernel<FloatOut,FloatP,(unsigned int)2,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
@@ -149,6 +147,7 @@ void T2_kernel_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
        case(2): T2_kernel<FloatOut,FloatP,(unsigned int)4,(unsigned int)2><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
        case(3): T2_kernel<FloatOut,FloatP,(unsigned int)4,(unsigned int)3><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
        case(4): T2_kernel<FloatOut,FloatP,(unsigned int)4,(unsigned int)4><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i, listGammas_f, S1, S2, S3, block2, it, MIN(HGC_localL[3]-it, time_step), source, moms); break;
-     }*/
+     }
   }
 }
+*/

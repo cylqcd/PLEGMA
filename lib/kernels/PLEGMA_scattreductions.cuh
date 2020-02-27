@@ -6,6 +6,10 @@ struct KernelArr {T* array; int size;};
 #include <PLEGMA_scattreductionsT2.cu>
 #include <PLEGMA_scattreductionsWraps.cu>
 
+// +++++++++++++++++++++++++++++++++++++++
+// +++++++++++| V reductions |++++++++++++
+// +++++++++++++++++++++++++++++++++++++++
+
 template<VRED V,typename FloatOut, typename FloatV, typename ... Args>
 static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas,
@@ -14,61 +18,68 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
   size_t size = Vout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
   size_t N_moms = Vout.getVolSize()/HGC_localL[3];//N_moms
-  int3 source = Vout.getSource3();
+  int3 source = Vout.getSource3(); 
   tex_mom_list moms = Vout.getTexMomList();
   int site_size = Vout.getSiteSize();
   int nblockspert = ps.tp.grid.x/time_step;
-  
+
+  //value of some quantities
   if(HGC_verbosity > 2){
     PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
     PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
-  
-  size_t alloc_size = size * nblockspert; // N_moms*site_size*n_blocks
 
+  //allocate partial_block on host and device
+  size_t alloc_size = size * nblockspert; // N_moms*site_size*n_blocks
   Float2<FloatOut> *h_partial_block = NULL;
   Float2<FloatOut> *d_partial_block = NULL;
-  
+  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
   cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
-    PLEGMA_printf("ERROR0\n");
+    PLEGMA_printf("Error in allocating d_partial_block\n");
     cudaFree(d_partial_block);
     return;
   }
-  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
 
+  //allocate list of Gammas that can be passed to the device (std::vector not recognized)
   KernelArr<GAMMAS_SCATT> listGammas;
   listGammas.size = gammas.size();
   cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
   checkCudaError();
   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
   checkCudaError();
-  if(HGC_verbosity > 2)
-    PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
 
+  //loop over the bunches of timeslices passed to device
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
     
+    //call the kernel wrapper
     V_kernels_wrapper<V,FloatOut, FloatV, Args...>(ps, d_partial_block, it, time_step, source, moms, listGammas, Phi, S_fields... );
 
+    //Syncronize (maybe useles) and look for errors (without stopping)
     cudaDeviceSynchronize();
+    error=cudaPeekAtLastError();
+    if(error != cudaSuccess) { PLEGMA_printf("Error after V_kernels_wrapper, it=%d\n",it); break;}
 
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
-
+    //copy partial summed 3dfourier back to host d_partial -> h_partial (device->host)
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
     
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
+    error=cudaPeekAtLastError(); 
+    if(error != cudaSuccess) { PLEGMA_printf("Error after copying back partial_block, it=%d\n",it); break;}
 
+    //perform intermediate sum between results of different blocks with same timeslice
     for(size_t tslicexmom = 0 ; tslicexmom< N_moms*MIN(HGC_localL[3]-it, time_step); tslicexmom++){
       for(int f = 0 ; f < site_size; f++) {
 	result[(it*N_moms+tslicexmom)*site_size + f] = 0;
 	for(int j = 0 ; j < nblockspert; j++)
 	  result[(it*N_moms+tslicexmom)*site_size + f] += h_partial_block[(tslicexmom*site_size+f)*nblockspert+j];
-      }
-    }
-  }
+      }//f loop
+    }//tslicexmom loop
+
+  }//it loop
+
+  //free allocated memory
   hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
   cudaFree(d_partial_block);
   cudaFree(listGammas.array);
@@ -140,22 +151,13 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
  
 }
 
-template<TRED T, typename FloatOut, typename FloatP, typename ...Args>
-void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
-			int it, int time_step, int3 source, tex_mom_list moms,
-			KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f, FloatP* S1, FloatP* S2, FloatP* S3){
-   if(T==T_1)
-     T1_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
-   else if(T==T_2)
-     T2_kernel_wrapper( ps, block2, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
-   else
-     PLEGMA_error("Unrecognized T reduction type\n");
-}
+// +++++++++++++++++++++++++++++++++++++++
+// +++++++++++| T reductions |++++++++++++
+// +++++++++++++++++++++++++++++++++++++++
 
-template<TRED T,typename FloatOut, typename ... Args>
+template<TRED T,typename FloatOut, typename FloatP>
 static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Tout,
-			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas_i, std::vector<GAMMAS_SCATT> &gammas_f,
-			       Args*... S_fields){
+			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas_i, std::vector<GAMMAS_SCATT> &gammas_f, FloatP* S1, FloatP* S2, FloatP* S3 ){
 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
   size_t size = Tout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
@@ -200,7 +202,7 @@ static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
 
   for(int it=0; it < HGC_localL[3]; it+=time_step) {
     
-    T_kernels_wrapper<T,FloatOut, Args...>(ps, d_partial_block, it, time_step, source, moms, listGammas_i, listGammas_f, S_fields... );
+    T_kernels_wrapper<T,FloatOut, FloatP>(ps, d_partial_block, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
 
     cudaDeviceSynchronize();
 
@@ -252,7 +254,7 @@ static void T_reductions(PLEGMA_ScattCorrelator<FloatOut> &Tout,
   kerName+="_gammas_f_";
   for(auto const& G: Gammas_f) {kerName+="g";}
 
-  tuneAndRun( ps, kerName, T_reductions_host<T,FloatOut,FloatP,FloatP,FloatP>,
+  tuneAndRun( ps, kerName, T_reductions_host<T,FloatOut,FloatP>,
 	      ps, Tout, result, Gammas_i, Gammas_f, S1.D_elem(), S2.D_elem(), S3.D_elem());
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
