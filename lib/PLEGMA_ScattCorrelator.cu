@@ -868,7 +868,7 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
 
   //define constants
   const int s_SS2 = N_SPINS*N_SPINS*2;
-  const int s_GGSS2 = n_gammas_i1.size()*n_gammas_f1.size()*s_SS2;
+  const int s_GGSS2 = n_gammas_i1*n_gammas_f1*s_SS2;
   const int s_MGGSS2 = moms_pf1.size()*s_GGSS2;
   const int d_TSS2 = HGC_localL[3]*s_SS2;
   const int d_GGTSS2 = n_gammas_i1*n_gammas_f1*d_TSS2;
