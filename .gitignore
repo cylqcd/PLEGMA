@@ -1,5 +1,4 @@
 *~
-.gitignore
 build/
-install_sim.sh
+install*.sh
 loadModules.sh
