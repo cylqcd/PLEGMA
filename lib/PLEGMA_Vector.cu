@@ -109,22 +109,6 @@ void  PLEGMA_Vector<Float>::apply_gamma_scatt(GAMMAS_SCATT gMat,LEFTRIGHT LR){
   apply_gamma_scatt_vector(LR,PLEGMA_Field<Float>::d_elem,gMat);
 }
 
-
-
-template<typename Float>
-void PLEGMA_Vector<Float>::norm2Host(){
-  Float res = 0.;
-  Float globalRes;
-
-  for(int i = 0 ; i < N_SPINS*N_COLS*HGC_localVolume ; i++){
-    res += PLEGMA_Field<Float>::h_elem[i*2 + 0]*PLEGMA_Field<Float>::h_elem[i*2 + 0] + PLEGMA_Field<Float>::h_elem[i*2 + 1]*PLEGMA_Field<Float>::h_elem[i*2 + 1];
-  }
-
-  int rc = MPI_Allreduce(&res, &globalRes , 1, sizeof(Float)==4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  if( rc != MPI_SUCCESS ) PLEGMA_error("Error in MPI reduction for plaquette");
-  PLEGMA_printf("Vector norm2 is %e\n",globalRes);
-}
-
 template<typename Float>
 void PLEGMA_Vector<Float>::rotate_uk_ch(){
   rotate_uk_ch_k(toField2<vector2>(*this));
