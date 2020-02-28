@@ -18,6 +18,8 @@ set (PLEGMA_OBJS
   PLEGMA_BLAS.cu
   PLEGMA_Fmunu.cu
   PLEGMA_ScattCorrelator.cu
+  kernels/PLEGMA_scattreductionsT.cu
+  kernels/PLEGMA_scattreductionsV.cu
 )
 
 if(PLEGMA_UDSC_BARYONS)

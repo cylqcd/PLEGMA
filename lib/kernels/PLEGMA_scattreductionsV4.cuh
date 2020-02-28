@@ -6,12 +6,13 @@ using namespace plegma;
 template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
 __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
 			   FloatP *S1, FloatP *S2, Float2<FloatOut> *block2,
-			   int it, int time_step, int3 source, tex_mom_list moms){
+			   int it, int time_step, int maxT, int4 source, tex_mom_list moms){
 
   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
-  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC_localVolume3D;
   //int site_size = N_SPINS*N_SPINS*N_SPINS*N_COLS;
 
   register Float2<FloatOut> accum[N_GAMMAS_SCATT*N_SPINS*N_SPINS*N_SPINS*N_COLS];
