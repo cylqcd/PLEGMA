@@ -5,6 +5,7 @@
 #include <utils/PLEGMA_readList.h>
 #include <utils/PLEGMA_auxiliary.h>
 #include <utils/PLEGMA_eigSolver.h>
+#include <utils/PLEGMA_scatt_utils.h>
 #include <utils/QUDA_params.h>
 #include <utils/QUDA_types.h>
 #include <utils/QUDA_interface.h>
@@ -44,12 +45,6 @@ template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gaug
 template<typename Float> void applyAntiperiodicBoundary(Float **buf);
 template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic);
 std::vector<int> createR2(std::vector<int> &vec);
-template<typename Float> void V_M_V( Float * V1, Float * V2, GAMMAS_SCATT gamma, bool transp, Float *Dest);
-template<typename Float> void V_TR_MM( Float *V1, GAMMAS_SCATT gamma, bool transp, Float *Dest );
-template<typename Float> void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size );
-template<typename Float> void x_e_cx( Float *dest, const Float floatcomplex[2], int size );
-template<typename Float> void M_e_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source) ;
-std::vector<GAMMAS_SCATT> apply_gamma5_scatt_gamma( std::vector<GAMMAS_SCATT> &source, LEFTRIGHT LR);
 //=================== PLEGMA_Options.cpp ==========================//
 void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_params = false);
 void qudaOptions(Options &opt);
