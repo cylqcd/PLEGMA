@@ -368,7 +368,7 @@ template void M_e_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_f, const GAM
 
 template void M_e_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const double *source) ;
 
-GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
+static inline GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
 {
   switch(LR){
   case(LEFT):
