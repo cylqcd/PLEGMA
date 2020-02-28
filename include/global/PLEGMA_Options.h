@@ -1,5 +1,5 @@
 #pragma once
-
+#include "PLEGMA_templates.h"
 struct argument{std::string name, value;};
 
 class Arguments{
@@ -196,33 +196,6 @@ private:
     set(name, cs, pars...);
   }
 
-  std::string toString(){return "";}
-
-  template<typename T, typename... Pars>
-  std::string toString(T & p1, Pars & ... pars){
-    std::stringstream cs;
-    cs << " " << p1;
-    return cs.str() + toString(pars...);
-  }
-
-  template<typename T>
-  std::string toString(std::vector<T> &vec){
-    std::stringstream cs;
-    for(T i : vec) cs << " " << i;
-    return cs.str();
-  }
-
-  template<typename T1, typename T2>
-  std::string toString(std::map<T1,T2> &tpl){
-    std::stringstream cs;
-    typename std::map<T1,T2>::iterator it_b = tpl.begin();
-    while(it_b != tpl.end()){
-      cs << " (" <<it_b->first << ", " << it_b->second << ")";
-      it_b++;
-    }
-    return cs.str();
-  }
-
   template<typename... Pars>
   void print(Pars & ... pars){
     PLEGMA_printf("%s",toString(pars...).c_str());
@@ -320,13 +293,17 @@ public:
     int countF = 0;
     for(size_t i = 0 ; i < args.size(); i++)
       if(args[i].name == name){
-	cs.clear();
-	cs.str(args[i].value);
-	int count=0;
-	while(!cs.eof()){
-	  vec.resize(count+1);
-	  set(name,cs,vec[count]);
-	  count++;
+	cs.clear();	
+	vec.clear();
+	// We use "-" just to empty a vector
+	if(args[i].value != "-") {
+	  cs.str(args[i].value);
+	  int count=0;
+	  while(!cs.eof()){
+	    vec.resize(count+1);
+	    set(name,cs,vec[count]);
+	    count++;
+	  }
 	}
 	args.erase(args.begin()+i);
 	countF++;

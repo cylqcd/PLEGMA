@@ -129,6 +129,15 @@ else()
   
 endif()
 
+# Use CUDA textures
+set(PLEGMA_TEXTURE TRUE CACHE BOOL "Wheater to use or not CUDA textures")
+mark_as_advanced(PLEGMA_TEXTURE)
+if(PLEGMA_TEXTURE)
+  add_definitions(-DPLEGMA_TEXTURE)
+else()
+  
+endif()
+
 # compile contractions for nucleon fix sink 3pf
 set(PLEGMA_NUCLEON_3PF_FIX_SINK FALSE CACHE BOOL "compile contractions for nucleon 3pf fix sink method")
 if(PLEGMA_NUCLEON_3PF_FIX_SINK)
@@ -152,14 +161,22 @@ if(PLEGMA_PINNED_GHOST_BUFFERS)
   add_definitions(-DHAVE_PINNED_GHOST)
 endif()
 
-set(PLEGMA_EIGENSOLVER FALSE CACHE BOOL "build eigensolver")
+set(PLEGMA_EIGENSOLVER FALSE CACHE BOOL "Build eigensolvers interface. Options (ARPACK, PRIMME, QUDAEIG)")
 if(PLEGMA_EIGENSOLVER)
   add_definitions(-DHAVE_EIGENSOLVER)
   #ARPACK || PRIMME
   set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
   set(PLEGMA_PRIMME OFF CACHE BOOL "build PRIMME interface")
+  set(PLEGMA_QUDAEIG OFF CACHE BOOL "build interface for QUDA eigensolver")
+
   if(PLEGMA_ARPACK AND PLEGMA_PRIMME)
-    message(SEND_ERROR "Please specify either ARPACK or PRIMME library, not both")
+    message(SEND_ERROR "Please specify either ARPACK or PRIMME eigensolver, not both")
+  endif()
+  if(PLEGMA_ARPACK AND PLEGMA_QUDAEIG)
+    message(SEND_ERROR "Please specify either ARPACK or QUDAEIG eigensolver, not both")
+  endif()
+  if(PLEGMA_QUDAEIG AND PLEGMA_PRIMME)
+    message(SEND_ERROR "Please specify either ARPACK or PRIMME eigensolver, not both")
   endif()
 
   if(PLEGMA_ARPACK)
@@ -171,6 +188,10 @@ if(PLEGMA_EIGENSOLVER)
     add_definitions(-DHAVE_PRIMME)
     set(PLEGMA_PRIMMEHOME "" CACHE PATH "path to PRIMME")
   endif(PLEGMA_PRIMME)
+
+  if(PLEGMA_QUDAEIG)
+     add_definitions(-DQUDAEIG)
+  endif(PLEGMA_QUDAEIG)
 endif(PLEGMA_EIGENSOLVER)
 
 set(PLEGMA_2FLAVMG ON CACHE BOOL "compile 2-flavour MG routines. This requires modification of QUDA to add extra preconditioner pointers")
@@ -182,7 +203,8 @@ endif()
 #set(PLEGMA_GSLHOME "" CACHE PATH "path to GSL")
 set(PLEGMA_LIMEHOME "" CACHE PATH "path to LIME")
 set(PLEGMA_HDF5HOME "" CACHE PATH "path to HDF5")
-
+set(PLEGMA_HDF5_THREAD_SAFE OFF CACHE BOOL "Is HDF5 compiled in a thread-safe mode?")
+    
 # Switch between MKL and OpenBlas BLAS
 set(PLEGMA_MKL OFF CACHE BOOL "build PLEGMA with MKL")
 set(PLEGMA_OPENBLAS OFF CACHE BOOL "build PLEGMA with OPENBLAS")
@@ -308,8 +330,15 @@ if(HDF5_FOUND)
   FIND_LIBRARY(PLEGMA_Z_LIB z ${LIBRARY_DIRS})	
 #link_libraries(${HDF5_C_LIBRARY_hdf5})
   message(STATUS "HDF5 version ${HDF5_VERSION} found, include dir: ${HDF5_INCLUDE_DIRS}, libraries ${HDF5_C_LIBRARY_hdf5}")
+ if(NOT HDF5_IS_PARALLEL)
+   message(FATAL_ERROR "HDF5 must be parallel")
+ endif()
 else()
   message(FATAL_ERROR "HDF5 could not be located, did you try specifying -DPLEGMA_HDF5HOME?")
+endif()
+
+if(PLEGMA_HDF5_THREAD_SAFE)
+  add_definitions(-DHDF5_THREAD_SAFE)
 endif()
 
 add_definitions(-DHAVE_LIME)

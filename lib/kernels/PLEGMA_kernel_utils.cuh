@@ -109,6 +109,18 @@ namespace plegma {
         vout[mu][c1] = vin[nu][c1] * gamma2[r][nz] ;
     }
   }
+
+  template<typename Float>
+  __inline__ __device__ void U_uk_ch_g5g4(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS]){
+    Float nrm=1./sqrt(2.);
+#pragma unroll
+    for(int c1 = 0; c1 < N_COLS; c1++){
+      vout[0][c1] = nrm * (vin[2][c1] - vin[0][c1]);
+      vout[1][c1] = nrm * (vin[3][c1] - vin[1][c1]);
+      vout[2][c1] = nrm * (vin[2][c1] + vin[0][c1]);
+      vout[3][c1] = nrm * (vin[3][c1] + vin[1][c1]);
+    }
+  }
   
   template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaProp(Float2<Float> pout[N_SPINS][N_SPINS][N_COLS][N_COLS],
@@ -417,23 +429,34 @@ namespace plegma {
       return tr;
     }
 
-  template<typename FloatOutV, typename FloatG, typename FloatInV>
+  template<typename FloatV>
+  __inline__ __device__ bool isNotZeroV(Float2<FloatV> vec[N_SPINS][N_COLS]){
+    #pragma unroll
+    for(int mu=0; mu<N_SPINS; mu++)
+      #pragma unroll
+      for(int j=0; j<N_COLS; j++)
+	if(not vec[mu][j].isZero()) return true;
+    return false;
+  }
+
+  template<typename FloatOutV, typename FloatG, typename FloatInV, ACCUM_TYPE accum=ACC_ZERO>
     __inline__ __device__ void mul_G_V(Float2<FloatOutV> outV[N_SPINS][N_COLS],
-        Float2<FloatG> G[N_COLS][N_COLS],
-        Float2<FloatInV> inV[N_SPINS][N_COLS]){
-#pragma unroll
+				       Float2<FloatG> G[N_COLS][N_COLS],
+				       Float2<FloatInV> inV[N_SPINS][N_COLS]){
+      #pragma unroll
       for(int mu=0; mu<N_SPINS; mu++)
-#pragma unroll
+        #pragma unroll
         for(int j=0; j<N_COLS; j++) {
-          outV[mu][j] = 0.;
-#pragma unroll
+          if(accum==ACC_ZERO) outV[mu][j] = 0.;
+          #pragma unroll
           for(int k=0; k<N_COLS; k++) {
-            outV[mu][j] = outV[mu][j] + G[j][k]*inV[mu][k];
+            if(accum==ACC_MINUS) outV[mu][j] -= G[j][k]*inV[mu][k];
+            else outV[mu][j] += G[j][k]*inV[mu][k];
           }
         }
     }
-
-  template<typename FloatOutV, typename FloatG, typename FloatInV>
+  
+  template<typename FloatOutV, typename FloatG, typename FloatInV, ACCUM_TYPE accum=ACC_ZERO>
   __inline__ __device__ void mul_Gdag_V(Float2<FloatOutV> outV[N_SPINS][N_COLS],
 					Float2<FloatG> G[N_COLS][N_COLS],
 					Float2<FloatInV> inV[N_SPINS][N_COLS]){
@@ -441,10 +464,11 @@ namespace plegma {
      for(int mu=0; mu<N_SPINS; mu++)
        #pragma unroll
        for(int j=0; j<N_COLS; j++) {
-	 outV[mu][j] = 0.;
+	 if(accum==ACC_ZERO) outV[mu][j] = 0.;
          #pragma unroll
 	 for(int k=0; k<N_COLS; k++) {
-	   outV[mu][j] = outV[mu][j] + conj(G[k][j])*inV[mu][k];
+	   if(accum==ACC_MINUS) outV[mu][j] -= conj(G[k][j])*inV[mu][k];
+	   else outV[mu][j] += conj(G[k][j])*inV[mu][k];
 	 }
        }
   }

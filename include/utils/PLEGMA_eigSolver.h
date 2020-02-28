@@ -9,6 +9,14 @@
 #error Cannot have both ARPACK and PRIMME
 #endif
 
+#if defined(QUDAEIG) && defined(HAVE_ARPACK)
+#error Cannot have both QUDAEIG and ARPACK
+#endif
+
+#if defined(QUDAEIG) && defined(HAVE_PRIMME)
+#error Cannot have both QUDAEIG and PRIMME
+#endif
+
 #if defined(HAVE_PRIMME)
 #include <primme.h>
 #elif defined(HAVE_ARPACK)
@@ -27,8 +35,10 @@ extern "C"{
 			    int howmany_size, int bmat_size, int which_size);
   extern int pmcinitdebug_(int*,int*,int*,int*,int*,int*,int*,int*);
 }
+#elif defined(QUDAEIG)
+#include <quda.h>
 #else
-#error Neither PRIMME nor ARPACK have been defined
+#error Neither PRIMME, ARPACK or QUDAEIG have been defined
 #endif
 
 namespace plegma{
@@ -42,7 +52,10 @@ namespace plegma{
     double amax; // High boundary for polynomial accelerator
     double tol;          // tolerance of the eigen solver
     int maxIters;        // maximum number of iterations for solver
-#if defined(HAVE_ARPACK)
+#if defined(QUDAEIG)
+    int batched_rotate; // batched size of TRLM. Set 1 for small memory need but loose of performance
+#endif
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
     int NkV; // Krylov space size should be > NeV
     std::string logFile; // path to the eigensolver log file
 #elif defined(HAVE_PRIMME)
@@ -76,15 +89,19 @@ namespace plegma{
     int field_length;
     int size_per_Vec;
     size_t size_NeV;
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
     size_t size_NkV;
 #endif
     size_t bytes_per_Vec;
     size_t bytes_NeV;
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
     size_t bytes_NkV;
 #endif
-  
+#if defined(QUDAEIG)
+    QudaInvertParam eig_inv_param;
+    QudaEigParam eig_param;
+    double **h_eigVecs_p;
+#endif
     double *h_eigVecs;
     double *h_eigVals;
 #if defined(HAVE_PRIMME)

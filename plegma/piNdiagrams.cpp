@@ -15,6 +15,7 @@ int main(int argc, char **argv)
   double mu_ud = mu;
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
+  bool timedilution;
   std::string outfile_V="";
   std::string outfile_upS="";
   std::string outfile_dnS="";
@@ -24,7 +25,8 @@ int main(int argc, char **argv)
 //  std::string outfile_V4;
 //  std::string path_V="";
 //  std::string path_P="";
-  
+
+  HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
   HGC_options->set("outPropUP", "Path for saving the up propagator used", verbosity, outfile_upS);
   HGC_options->set("outPropDN", "Path for saving the up propagator used", verbosity, outfile_dnS);
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
     //In vectorAuxD2 we store the results for the inversion
     vectorAuxD2.scaleVector(0.0);
     
-    if (timedilutionflagstring.compare("on")==0){
+    if (timedilution){
       PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
       for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
         //Step(3) pick out a particular timeslice from the source

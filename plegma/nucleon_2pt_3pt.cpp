@@ -8,15 +8,14 @@ std::vector<double> runtime;
 
 std::vector<std::thread> threads;
 //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
-#define THREAD(fnc) TIME(fnc)
+#define THREAD(fnc) saveTuneCache(false); TIME(fnc)
 
 using namespace plegma;
 using namespace quda;
 static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space"};
-
-int main(int argc, char **argv)
-{
+					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space", "tSinks","Projs", "threep-filename"};
+  
+int main(int argc, char **argv) {
   initializeOptions(argc, argv, true, listOpt);
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
   std::vector<double> mu_s;
@@ -26,21 +25,26 @@ int main(int argc, char **argv)
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
-  bool run_ud = true;
-  HGC_options->set("run-ud", "Wheater to run or not light quark flavors", verbosity, run_ud);
-  HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
-  HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
-  HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
-  HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
+  int startSource = 0;
+  std::string prOrNt = "neutron";
+  std::string srcInputFile = "./input.src";
+  auto add_options = [&](Options& options) {
+    options.set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
+    options.set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
+    options.set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
+    options.set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
+    options.set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
+    options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
+    options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
+		     };
+  add_options(*HGC_options);
+  if(prOrNt != "proton" && prOrNt != "neutron") PLEGMA_error("This exec is only for nucleon, %s is not allowed",prOrNt.c_str());
   //=========================================================================================================//
   initializePLEGMA();
 
-  twop_filename += std::string("_") + ((nsmearGauss>0) ? "SS" : "LL") +
-    "_gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) +
-    "_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
-
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
+    PLEGMA_Gauge<float> contractGauge(BOTH);
     {
       // Reading from Lime file and loading to device
       PLEGMA_Gauge<double> gauge;
@@ -55,25 +59,30 @@ int main(int argc, char **argv)
       TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
       PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
-    }
+
+      // Gauge for contractions
+      contractGauge.copy(gauge);
+      // apply boundary conditions since is needed for the covariant derivative
+      applyBoundaryConditions(contractGauge,true);
+   }
+
     updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));
-    std::vector<std::thread> threads;
 
+    std::string given_twop_filename = twop_filename;
+    std::string given_threep_filename = threep_filename;
     
-    for(int isource = 0 ; isource < numSourcePositions; isource++){
-      PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
-		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
-		    sourcePositions[isource][2], sourcePositions[isource][3]);
-
+    for(int isource = startSource; isource < numSourcePositions; isource++){
       site& source = sourcePositions[isource];
-      PLEGMA_Propagator<float> propUP(run_ud ? BOTH : NONE);
-      PLEGMA_Propagator<float> propDN(run_ud ? BOTH : NONE);
+      PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
+		    isource, source[0], source[1], source[2], source[3]);
+      updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
-      auto computePropagator = [&](PLEGMA_Propagator<float>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
+      auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
+				   double run_mu, WHICHFLAVOR fl, int nSmear, bool finalize) {
 				 // ensuring mu value
 				 if(mu != run_mu) {
 				   updateOptions(fl);
@@ -92,23 +101,132 @@ int main(int argc, char **argv)
 				   PLEGMA_printf("Going to invert %s for component %d\n",
 						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
 				   TIME(solver.solve(vectorInOut, vectorInOut));
+				   if(prop_SL.getAllocation() != NONE) {
+				     PLEGMA_Vector<float> vectorAuxF;
+				     vectorAuxF.copy(vectorInOut);
+				     prop_SL.absorb(vectorAuxF, isc/3, isc%3);
+				   }
 				   { // Smearing the solution
 				     PLEGMA_Vector<double> vectorAuxD;
 				     PLEGMA_Vector<float> vectorAuxF;
 				     TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nSmear, alphaGauss));
 				     vectorAuxF.copy(vectorAuxD);
-				     prop.absorb(vectorAuxF, isc/3, isc%3);
+				     prop_SS.absorb(vectorAuxF, isc/3, isc%3);
 				   }
-				 }  
-				 prop.rotateToPhysicalBase_device(run_mu/abs(run_mu));
-				 prop.applyBoundaries_device(source[DIM_T]);
+				 }
+				 if(finalize) {
+				   prop_SS.rotateToPhysicalBase_device(run_mu/abs(run_mu));
+				   prop_SS.applyBoundaries_device(source[DIM_T]);
+				 }
 			       };
 
-      if (run_ud) {
-	TIME(computePropagator(propUP, mu_ud, LIGHT, nsmearGauss));
+      char * src_string;
+      asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", source[0], source[1], source[2], source[3]);
+      twop_filename = given_twop_filename + src_string;
+      threep_filename = given_threep_filename + src_string;
+      free(src_string);
+      
+      PLEGMA_Propagator<float> propUP;
+      PLEGMA_Propagator<float> propDN;
+      { // Whithin this scope we keep track also of the propagator non smeared on the sink
+	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
+	PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
 
-	TIME(computePropagator(propDN, -mu_ud, LIGHT, nsmearGauss));
+	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
+	TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
+	
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
+	for(size_t its = 0; its < tSinks.size(); its++){
+	  int tsinkMtsource = tSinks[its];
+	  if(tsinkMtsource >= HGC_totalL[3])
+	    PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+	  int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
+	  int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
+	  // 3D propagators at t_sink
+	  PLEGMA_Propagator3D<float> propUP3D;
+	  PLEGMA_Propagator3D<float> propDN3D;
+	  PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+	  propUP3D.absorb(propUP, global_fixSinkTime);
+	  propDN3D.absorb(propDN, global_fixSinkTime);
+	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
+
+	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
+	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
+	  for(size_t iproj = 0; iproj < Projs.size(); iproj++){
+	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
+	      std::string filename = threep_filename + "_" + Projs[iproj] + "_dt" + std::to_string(tsinkMtsource) + "_" + fl;
+	      PLEGMA_Propagator<float> seqProp;
+	      // ensuring mu positive
+	      if(mu != run_mu) {
+		updateOptions(LIGHT);
+		mu = run_mu;
+		solver.UpdateSolver();
+	      }
+				     
+	      for(int nu = 0 ; nu < 4 ; nu++)
+		for(int c2 = 0 ; c2 < 3 ; c2++){
+		  PLEGMA_Vector<double> vectorInOut;
+		  {
+		    PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
+		    PLEGMA_Vector3D<float> vectorAuxF;
+		    if(&prop1 != &prop2)
+		      vectorAuxF.seqSourceNucleon(prop1, prop2, get_projector(Projs[iproj]), nucleon, nu, c2);
+		    else
+		      vectorAuxF.seqSourceNucleon(prop1, get_projector(Projs[iproj]), nucleon, nu, c2);
+					 
+		    // put a momentum in the sink later
+		    vectorAuxF.conjugate();
+		    vectorAuxF.apply_gamma(G5);
+		    vectorAuxD1.copy(vectorAuxF);
+		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
+		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+		  }
+		  double norm = vectorInOut.norm();
+		  vectorInOut.scale(1/norm);
+		  TIME(solver.solve(vectorInOut, vectorInOut));
+		  vectorInOut.scale(norm);
+		  PLEGMA_Vector<float> vectorAuxF;
+		  vectorAuxF.copy(vectorInOut);
+		  seqProp.absorb(vectorAuxF, nu, c2);
+		}
+	      seqProp.apply_gamma(G5);
+	      seqProp.conjugate();
+				     
+	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
+	  
+	      // LOCAL contractions
+	      TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
+	      THREAD(corr.writeFile(filename, corr_file_format));
+				     
+	      // ONED contractions
+	      TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	      THREAD(corr.writeFile( filename, corr_file_format));
+				     
+	      // noe contractions
+	      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	      THREAD(corr.writeFile( filename, corr_file_format));
+	    };
+	    if(nucleon == PROTON) {
+	      TIME(computeThreep(-mu_ud, propUP3D, propDN3D, +1, propUP_SL, "up"));
+	      TIME(computeThreep( mu_ud, propUP3D, propUP3D, -1, propDN_SL, "dn"));
+	    } else {
+	      TIME(computeThreep( mu_ud, propDN3D, propUP3D, -1, propDN_SL, "dn"));
+	      TIME(computeThreep(-mu_ud, propDN3D, propDN3D, +1, propUP_SL, "up"));
+	    }
+	  }
+	}
+#endif
+      }
+      propUP.rotateToPhysicalBase_device(+1);
+      propDN.rotateToPhysicalBase_device(-1);
+      propUP.applyBoundaries_device(source[3]);
+      propDN.applyBoundaries_device(source[3]);
+
+      {
 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	TIME(corr.contractMesons(propUP, propDN));
 	
@@ -126,14 +244,14 @@ int main(int argc, char **argv)
       // Storing only the smaller and then computing on the fly the other
       int nSmaller = std::min(mu_s.size(),mu_c.size());
       char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
-
+      
+      PLEGMA_Propagator<float> none(NONE);
       PLEGMA_Propagator<float> propS[nSmaller];
       for(int ismall=0; ismall < nSmaller; ismall++) {
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
 	mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
-	
-	TIME(computePropagator(propS[ismall], mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear));
+	TIME(computePropagator(propS[ismall], none, mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear, true));
       }
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
@@ -142,8 +260,8 @@ int main(int argc, char **argv)
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
 	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-	  TIME(computePropagator(propL, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear));
-	  
+	  TIME(computePropagator(propL, none, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear, true));
+
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
 	      PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
@@ -191,8 +309,8 @@ int main(int argc, char **argv)
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
 		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
 		free(dset1); free(dset2);
-		THREAD(corr.writeFile(twop_filename, corr_file_format));	      
-
+		THREAD(corr.writeFile(twop_filename, corr_file_format));
+	      
 		TIME(corr.contractMesons(propDN, propCH));
 		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
@@ -250,13 +368,13 @@ int main(int argc, char **argv)
 	    }
 	  }
 	}
-      } else if(run_ud) {
+      } else {
 #ifdef PLEGMA_UDSC_BARYONS
 	PLEGMA_Propagator<float> none(NONE);
 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
-	
 	char * group;
+	
 	asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
 	corr.setGroups(group);
 	free(group);

@@ -9,11 +9,11 @@
 #pragma once
 
 template<typename T>
-std::string convNumToStr(T num){
+std::string convNumToStr(T num,int prec=12){
   if(!std::is_floating_point<T>::value) PLEGMA_error("Only floating point types are allowed");
   std::stringstream ss;
   ss <<	std::fixed;
-  ss <<	std::setprecision(12);
+  ss <<	std::setprecision(prec);
   ss <<	num;
   std::string s = ss.str();
   std::replace(s.begin(), s.end(), '.', 'p');
@@ -66,10 +66,17 @@ inline std::string getDateAndTime(){
   return "Date: " + ss.str();
 }
 
-inline std::string basename(std::string str,char c){
+inline std::string splitStrFwd(std::string str,char c){
   size_t found = str.find_last_of(c);
   if(found == std::string::npos) PLEGMA_error("Cannot get the baseanem of string=%s with delimiter=%c\n",str.c_str(),c);
   std::string suff = str.substr(found+1,std::string::npos);
+  return suff;
+}
+
+inline std::string splitStrBwd(std::string str,char c){
+  size_t found = str.find_last_of(c);
+  if(found == std::string::npos) PLEGMA_error("Cannot get the baseanem of string=%s with delimiter=%c\n",str.c_str(),c);
+  std::string suff = str.substr(0,found);
   return suff;
 }
 
@@ -77,4 +84,22 @@ inline void cleanFile(std::string filename){
   std::ofstream file(filename);
   if(file.fail()) PLEGMA_error("Cannot open file to clean it: %s\n",filename.c_str());
   file.close();
+}
+
+template <typename T>
+std::string join(const T& v, const std::string& delim) {
+  std::stringstream s;
+    for (const auto& i : v) {
+      s << delim;
+      s << i;
+    }
+    return s.str();
+}
+
+
+template<typename T1,typename T2>
+T1 findAndReplace(T1 s, const T2& oldv, const T2& newv){
+  T1 sr=s;
+  std::replace( sr.begin(), sr.end(), oldv, newv);
+  return sr;
 }

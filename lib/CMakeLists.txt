@@ -9,10 +9,10 @@ set (PLEGMA_OBJS
   PLEGMA_Random.cu
   kernels/PLEGMA_baryons_NtoN.cu
   kernels/PLEGMA_seqSourceNucleon.cu
-  kernels/PLEGMA_contractPropOpProp_local.cu
-  kernels/PLEGMA_contractPropOpProp_noe.cu
-  kernels/PLEGMA_contractPropOpProp_oneD.cu
-  kernels/PLEGMA_contractPropOpProp_wilsonLine.cu
+  kernels/PLEGMA_threep_local.cu
+  kernels/PLEGMA_threep_noe.cu
+  kernels/PLEGMA_threep_oneD.cu
+  kernels/PLEGMA_threep_wilsonLine.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu

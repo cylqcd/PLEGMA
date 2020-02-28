@@ -16,14 +16,14 @@ PLEGMA_Su3field<Float>::PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag, GHOST_FLAG g
 template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
   cudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
-  	     this->bytes_total_length, cudaMemcpyDeviceToDevice);
+  	     this->Bytes_total(), cudaMemcpyDeviceToDevice);
   checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_host(PLEGMA_Gauge<Float> &u,int dir){
   memcpy(this->h_elem, u.H_elem()+dir*(this->field_length)*(this->total_length)*2,
-	 this->bytes_total_length);
+	 this->Bytes_total());
 }
 
 template<typename Float>
