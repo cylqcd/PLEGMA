@@ -32,7 +32,7 @@ PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum, int dimT):
 
 template<typename Float>
 template<typename T>
-PLEGMA_FT<Float>::PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4, bool accum ):
+PLEGMA_FT<Float>::PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4, bool accum, int dimT ):
   dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   for(auto &mom : moms){
