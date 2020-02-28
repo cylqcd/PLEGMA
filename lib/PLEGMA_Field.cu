@@ -896,16 +896,6 @@ void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int>
   trPmunu_k(*this,gauge,munu);
 }
 
-template<typename Float>
-void PLEGMA_Field<Float>::sumModVector(PLEGMA_Vector<Float> &Vi, bool accum){
-  if(!this->isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
-  if(!Vi.IsAllocDevice()) PLEGMA_error("This function needs allocation of input field on the device to work\n");
-
-  if(!accum) zero_device();
-  
-  sumModVector_k<Float,Float>(*this,Vi);
-}
-
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
 // Forcing initialization of the following cases
