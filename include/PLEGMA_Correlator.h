@@ -101,6 +101,9 @@ namespace plegma {
     site getSource() {
       return source;
     }
+    int getTotalT() {
+      return totalT;
+    }
     size_t nDatasets() const {
       return std::max(datasets.size(), (size_t) 1);
     }
