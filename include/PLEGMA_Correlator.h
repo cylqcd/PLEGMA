@@ -138,9 +138,18 @@ namespace plegma {
       corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomList, 3, false, localT()));
     }
     
-    std::vector<std::vector<int>> getFixMomList(){
+    std::vector<std::vector<int>> getMomList(){
       if(corr_space == MOMENTUM_SPACE) {
-	return corr_mom_space->MomList();
+	std::vector<std::vector<Float>> list =  corr_mom_space->MomList();
+	std::vector<std::vector<int>> casted(list.size());
+	for(auto &mom: list) {
+	  std::vector<int> tmp(mom.size());
+	  for(auto &imom: mom) {
+	    tmp.push_back((int) std::lround(imom));
+	  }
+	  casted.push_back(tmp);
+	}
+	return casted;
       } else {
 	return {};
       }
