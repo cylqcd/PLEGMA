@@ -4,12 +4,16 @@
 using namespace plegma;
 
 template<typename FloatOut, typename FloatPhi>
-__global__ void PhixGxPhi_kernel( FloatPhi *Phi0, KernelArr<GAMMAS_SCATT> listGammas, FloatPhi *Phi1, Float2<FloatOut> *d_partial_block, int it, int time_step, int3 source, tex_mom_list moms){
+__global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMMAS_SCATT> listGammas,
+				  vectorTex<FloatPhi> vectorPhi1,
+				  Float2<FloatOut> *d_partial_block, int it, int time_step, int maxT,
+				  int4 source, tex_mom_list moms){
 
   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
-  int vid = sid3D + (it+tid)*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC_localVolume3D;
   //int site_size = N_SPINS*N_SPINS*N_SPINS*N_COLS;
   
   register Float2<FloatOut> accum[16];
@@ -19,9 +23,6 @@ __global__ void PhixGxPhi_kernel( FloatPhi *Phi0, KernelArr<GAMMAS_SCATT> listGa
   
 
   if (sid3D < DGC_localVolume3D){
-    vector2<FloatPhi> vectorPhi0(Phi0);
-    vector2<FloatPhi> vectorPhi1(Phi1);
-    
     Float2<FloatPhi> phi0[N_SPINS][N_COLS];
     Float2<FloatPhi> phi1[N_SPINS][N_COLS];
     vectorPhi0.get(phi0,vid);
@@ -62,20 +63,22 @@ __global__ void PhixGxPhi_kernel( FloatPhi *Phi0, KernelArr<GAMMAS_SCATT> listGa
 
 
 template<typename FloatOut, typename FloatPhi>
-static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Vout,
+static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &corr,
 			    Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas,
-			    FloatPhi *Phi0, FloatPhi *Phi1){
+			    PLEGMA_Vector<FloatPhi>& Phi0, PLEGMA_Vector<FloatPhi>& Phi1){
 
+  int t_size = corr.localT(); if(t_size==0) return;
+  int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
-  size_t size = Vout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
-  size_t N_moms = Vout.getVolSize()/HGC_localL[3];//N_moms
-  int3 source = Vout.getSource3();
-  tex_mom_list moms = Vout.getTexMomList();
-  int site_size = Vout.getSiteSize();
+  size_t size = corr.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
+  size_t N_moms = corr.getVolSize()/HGC_localL[3];//N_moms
+  int4 source = corr.getSource();
+  auto moms = corr.getTexMomList();
+  int site_size = corr.getSiteSize();
   int nblockspert = ps.tp.grid.x/time_step;
   
   if(HGC_verbosity > 2){
-    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+    printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
     PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
   
@@ -104,21 +107,24 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
   if(HGC_verbosity > 2)
     PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
 
-  for(int it=0; it < HGC_localL[3]; it+=time_step) {
+  auto phiTex0 = toTexture<vectorTex>(Phi0);
+  auto phiTex1 = toTexture<vectorTex>(Phi1);
+  
+  for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*MIN(HGC_localL[3]-it, time_step);
+    grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
 
-    PhixGxPhi_kernel<FloatOut, FloatPhi><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi0, listGammas, Phi1, d_partial_block, it, MIN(HGC_localL[3]-it, time_step), source, moms);
+    PhixGxPhi_kernel<FloatOut, FloatPhi><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(*phiTex0, listGammas, *phiTex1, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms);
 
     cudaDeviceSynchronize();
 
     error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
     
     error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
 
-    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*MIN(HGC_localL[3]-it, time_step); tslicexmom++){
+    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*std::min(t_size-it, time_step); tslicexmom++){
       for(int f = 0 ; f < site_size; f++) {
 	result[(it*N_moms+tslicexmom)*site_size + f] = 0;
 	for(int j = 0 ; j < nblockspert; j++)
@@ -133,34 +139,37 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
 }
 
 template<typename FloatOut,typename FloatPhi>
-static void PhixGxPhi_k(PLEGMA_ScattCorrelator<FloatOut> &Vout,
+static void PhixGxPhi_k(PLEGMA_ScattCorrelator<FloatOut> &corr,
 		  PLEGMA_Vector<FloatPhi> &Phi0, std::vector<GAMMAS_SCATT> &Gammas,
 		  PLEGMA_Vector<FloatPhi> &Phi1){
 
   int site_size = Gammas.size();
   
-  if(Vout.getSiteSize() != site_size)
-    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
+  if(corr.getSiteSize() != site_size)
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
   int shared_size = Gammas.size()*sizeof(Float2<FloatOut>); //+
   PLEGMA_printf("site_size= %d\n", site_size);
   
   Float2<FloatOut> *result = NULL;
-  hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
+  hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume;
+  int myLocalT = corr.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  ps.tune_globally = true;
 
   std::string kerName="PhixGxPhi_gammas_";
   for(auto const& G: Gammas) {kerName+="g";}
 
   tuneAndRun( ps, kerName, PhixGxPhi_host<FloatOut,FloatPhi>,
-	      ps, Vout, result, Gammas, Phi0.D_elem(), Phi1.D_elem());
+	      ps, corr, result, Gammas, Phi0, Phi1);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
 
- hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
- 
+  hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatOut>));
 }

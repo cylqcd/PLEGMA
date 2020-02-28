@@ -62,12 +62,12 @@ namespace plegma {
   public:
     // these constructors does NOT ALLOCATE the memory PLEGMA_ScattCorrelator here, because
     // the dimension is not provided. It will be allocated when used.
-    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, int Q2_max);
+    PLEGMA_ScattCorrelator(site source, int Q2_max, int totalT=HGC_totalL[DIM_T]);
 //      PLEGMA_Correlator<Float>(CorrSpace,Q2_max) { ; }
 //
-    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<int> fixMomVec);
+    PLEGMA_ScattCorrelator(site source, std::vector<int> fixMomVec, int totalT=HGC_totalL[DIM_T]);
 //      PLEGMA_Correlator<Float>(CorrSpace,fixMomVec) { ; }
-    PLEGMA_ScattCorrelator(CORR_SPACE CorrSpace, std::vector<std::vector<int>> fixMomsVec);
+    PLEGMA_ScattCorrelator(site source, std::vector<std::vector<int>> fixMomsVec, int totalT=HGC_totalL[DIM_T]);
 
     ~PLEGMA_ScattCorrelator(){;}
 
@@ -143,8 +143,8 @@ void PLEGMA_ScattCorrelator<Float>::contract_GxV2( PLEGMA_ScattCorrelator<Float>
   const unsigned short N_GS1C=n_gammas*N_SPINS*N_COLS;
     
   size_t VOL_SIZE = srcV2.getVolSize();
-  Float* dest = this->corr;
-  Float* src = srcV2.corr;
+  Float* dest = this->H_elem();
+  Float* src = srcV2.H_elem();
   
   for(int v=0; v < VOL_SIZE; v++)
     for(int g=0; g < n_gammas; g++)
@@ -191,8 +191,8 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float
   const unsigned short N_GS1C=n_gammas*N_SPINS*N_COLS;
     
   size_t VOL_SIZE = srcV2.getVolSize();
-  Float* dest = this->corr;
-  Float* src = srcV2.corr;
+  Float* dest = this->H_elem();
+  Float* src = srcV2.H_elem();
   for(int v=0; v < VOL_SIZE; v++)
     for(int g=0; g < n_gammas; g++)
       for(int s=0; s < N_SPINS; s++)
@@ -228,8 +228,8 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrel
   const unsigned short N_GS2C=n_gammas*N_SPINS*N_SPINS*N_COLS;
 
   size_t VOL_SIZE = srcV2.getVolSize();
-  Float* dest = this->corr;
-  Float* src = srcV2.corr;
+  Float* dest = this->H_elem();
+  Float* src = srcV2.H_elem();
   for(int v=0; v < VOL_SIZE; v++)
     for(int g=0; g < n_gammas; g++)
       for(int s1=0; s1 < N_SPINS; s1++)

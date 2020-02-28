@@ -1,10 +1,20 @@
+#include <PLEGMA_kernel_utils.cuh>
+
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-#include <PLEGMA_scattreductionsT1.cu>
-#include <PLEGMA_scattreductionsT2.cu>
-#include <PLEGMA_scattreductionsWraps.cu>
+template<VRED V, typename FloatOut, typename FloatV, typename FloatP, typename ... Args>
+void V_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
+			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
+			KernelArr<GAMMAS_SCATT> &listGammas, FloatV *Phi, FloatP *S1, FloatP *S2=NULL);
+
+template<TRED T,typename FloatOut, typename FloatP>
+void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
+			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
+			KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f,
+			FloatP *S1, FloatP *S2, FloatP *S3 );
+
 
 // +++++++++++++++++++++++++++++++++++++++
 // +++++++++++| V reductions |++++++++++++
@@ -15,17 +25,19 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
 			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas,
 			       FloatV *Phi, Args*... S_fields){
 
+  int t_size = Vout.localT(); if(t_size==0) return;
+  int maxT = Vout.endT() - Vout.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
   size_t size = Vout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
   size_t N_moms = Vout.getVolSize()/HGC_localL[3];//N_moms
-  int3 source = Vout.getSource3(); 
-  tex_mom_list moms = Vout.getTexMomList();
+  int4 source = Vout.getSource(); 
+  auto moms = Vout.getTexMomList();
   int site_size = Vout.getSiteSize();
   int nblockspert = ps.tp.grid.x/time_step;
 
   //value of some quantities
   if(HGC_verbosity > 2){
-    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+    PLEGMA_printf("t_size = %d, maxT = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
     PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
 
@@ -52,10 +64,14 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   checkCudaError();
 
   //loop over the bunches of timeslices passed to device
-  for(int it=0; it < HGC_localL[3]; it+=time_step) {
+  for(int it=0; it < t_size; it+=time_step) {
+    dim3 grid = ps.tp.grid;
+    ps.tp.grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     
     //call the kernel wrapper
-    V_kernels_wrapper<V,FloatOut, FloatV, Args...>(ps, d_partial_block, it, time_step, source, moms, listGammas, Phi, S_fields... );
+    V_kernels_wrapper<V,FloatOut, FloatV, Args...>(ps, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas, Phi, S_fields... );
+    
+    ps.tp.grid.x = grid.x;
 
     //Syncronize (maybe useles) and look for errors (without stopping)
     cudaDeviceSynchronize();
@@ -63,13 +79,13 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
     if(error != cudaSuccess) { PLEGMA_printf("Error after V_kernels_wrapper, it=%d\n",it); break;}
 
     //copy partial summed 3dfourier back to host d_partial -> h_partial (device->host)
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
     
     error=cudaPeekAtLastError(); 
     if(error != cudaSuccess) { PLEGMA_printf("Error after copying back partial_block, it=%d\n",it); break;}
 
     //perform intermediate sum between results of different blocks with same timeslice
-    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*MIN(HGC_localL[3]-it, time_step); tslicexmom++){
+    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*std::min(t_size-it, time_step); tslicexmom++){
       for(int f = 0 ; f < site_size; f++) {
 	result[(it*N_moms+tslicexmom)*site_size + f] = 0;
 	for(int j = 0 ; j < nblockspert; j++)
@@ -104,8 +120,12 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume;
-
+  int myLocalT = Vout.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  ps.tune_globally = true;
+  
   std::string kerName="V_reductions_V"+std::to_string(int(V))+"_gammas_";
   for(auto const& G: Gammas) {kerName+="g";}
       
@@ -113,7 +133,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 	      ps, Vout, result, Gammas, Phi.D_elem(), S.D_elem() );
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
 
   hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 }
@@ -136,7 +156,11 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume;
+  int myLocalT = Vout.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  ps.tune_globally = true;
 
   std::string kerName="V_reductions_V"+std::to_string(int(V))+"_gammas_";
   for(auto const& G: Gammas) {kerName+="g";}
@@ -145,7 +169,7 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 	      ps, Vout, result, Gammas, Phi.D_elem(), S1.D_elem(), S2.D_elem());
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.getCorr(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
 
  hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
  
@@ -159,16 +183,18 @@ template<TRED T,typename FloatOut, typename FloatP>
 static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Tout,
 			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas_i, std::vector<GAMMAS_SCATT> &gammas_f, FloatP* S1, FloatP* S2, FloatP* S3 ){
 
+  int t_size = Tout.localT(); if(t_size==0) return;
+  int maxT = Tout.endT() - Tout.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
   size_t size = Tout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
   size_t N_moms = Tout.getVolSize()/HGC_localL[3];//N_moms
-  int3 source = Tout.getSource3();
-  tex_mom_list moms = Tout.getTexMomList();
+  int4 source = Tout.getSource(); 
+  auto moms = Tout.getTexMomList();
   int site_size = Tout.getSiteSize();
   int nblockspert = ps.tp.grid.x/time_step;
   
   if(HGC_verbosity > 2){
-    PLEGMA_printf("time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+    PLEGMA_printf("t_size = %d, maxT = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
     PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
   
@@ -200,19 +226,22 @@ static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   PLEGMA_printf("site_size= %d\n", listGammas_f.size*listGammas_i.size*N_SPINS*N_SPINS);
   PLEGMA_printf("OK till now\n");
 
-  for(int it=0; it < HGC_localL[3]; it+=time_step) {
-    
-    T_kernels_wrapper<T,FloatOut, FloatP>(ps, d_partial_block, it, time_step, source, moms, listGammas_i, listGammas_f, S1, S2, S3 );
+  for(int it=0; it < t_size; it+=time_step) {
+    dim3 grid = ps.tp.grid;
+    ps.tp.grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
 
+    T_kernels_wrapper<T,FloatOut, FloatP>(ps, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas_i, listGammas_f, S1, S2, S3 );
+
+    ps.tp.grid.x = grid.x;
     cudaDeviceSynchronize();
 
     error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*MIN(HGC_localL[3]-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
     
     error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
 
-    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*MIN(HGC_localL[3]-it, time_step); tslicexmom++){
+    for(size_t tslicexmom = 0 ; tslicexmom< N_moms*std::min(t_size-it, time_step); tslicexmom++){
       for(int f = 0 ; f < site_size; f++) {
 	      result[(it*N_moms+tslicexmom)*site_size + f] = 0;
 	      for(int j = 0 ; j < nblockspert; j++)
@@ -247,7 +276,11 @@ static void T_reductions(PLEGMA_ScattCorrelator<FloatOut> &Tout,
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-  ps.max_volume = HGC_localVolume;
+  int myLocalT = Tout.localT();
+  int maxLocalT = myLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
+  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  ps.tune_globally = true;
 
   std::string kerName="T_reductions_T"+std::to_string(int(T))+"_gammas_i_";
   for(auto const& G: Gammas_i) {kerName+="g";}
@@ -258,7 +291,7 @@ static void T_reductions(PLEGMA_ScattCorrelator<FloatOut> &Tout,
 	      ps, Tout, result, Gammas_i, Gammas_f, S1.D_elem(), S2.D_elem(), S3.D_elem());
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Tout.getCorr(), Tout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Tout.H_elem(), Tout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
 
  hostFree(result, Tout.getTotalSize()*sizeof(Float2<FloatOut>));
  
