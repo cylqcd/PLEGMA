@@ -353,6 +353,7 @@ writeHDF5(std::string filename, int timeshift) const{
 template class PLEGMA_FT<float>;
 template class PLEGMA_FT<double>;
 
+template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);

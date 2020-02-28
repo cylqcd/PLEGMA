@@ -64,9 +64,6 @@ namespace plegma {
        @params bool dimT = HGC_localL[DIM_T]: Size of the time dimension in case we want to transform only part of the vector
      **/
     template<typename T>
-    PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false);
-
-    template<typename T>
     PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
 
     template<typename T>
