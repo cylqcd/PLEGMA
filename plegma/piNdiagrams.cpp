@@ -490,7 +490,7 @@ int main(int argc, char **argv)
            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
            PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, sinkMom_Nucleon)
+           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1))
        };
 
 
