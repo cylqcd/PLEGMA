@@ -1,3 +1,4 @@
+#include <PLEGMA.h>
 /**
  *
  *  @brief vector(spin x color)  matrix(spin x spin)  vector(spin x color) 
