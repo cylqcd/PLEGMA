@@ -124,7 +124,7 @@ int main(int argc, char **argv)
     vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1);
 
     //In vectorAuxD2 we store the results for the inversion
-    vectorAuxD2.scaleVector(0.0);
+    vectorAuxD2.scale(0.0);
     
     if (timedilution){
       PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
@@ -287,18 +287,18 @@ int main(int argc, char **argv)
         }
 
       std::vector<int> mom={0,0,0};
-      PLEGMA_ScattCorrelator<float> diagramm(MOMENTUM_SPACE, mom);
+      PLEGMA_ScattCorrelator<float> diagramm(sourcePositions[isource], mom);
+ 
+      //int source[4]={sourcePositions[isource][0],
+      //               sourcePositions[isource][1],
+      //               sourcePositions[isource][2],
+      //               sourcePositions[isource][3]};
 
-      int source[4]={sourcePositions[isource][0],
-                     sourcePositions[isource][1],
-                     sourcePositions[isource][2],
-                     sourcePositions[isource][3]};
-
-      diagramm.setSource(source);
+      //diagramm.setSource(source);
 
 
-      PLEGMA_ScattCorrelator<float> reductionsT1(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
-      PLEGMA_ScattCorrelator<float> reductionsT2(MOMENTUM_SPACE, sourcemomentumList.uniq_p(3));
+      PLEGMA_ScattCorrelator<float> reductionsT1(sourcePositions[isource], sourcemomentumList.uniq_p(3),HGC_localL[3]);
+      PLEGMA_ScattCorrelator<float> reductionsT2(sourcePositions[isource], sourcemomentumList.uniq_p(3),HGC_localL[3]);
 
 
       reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
@@ -312,8 +312,8 @@ int main(int argc, char **argv)
       diagramm.D_diagramms( reductionsT1, reductionsT2, glist_source_delta_unpaired, glist_sink_delta_unpaired, outfilename);
 
       //N diagram
-      PLEGMA_ScattCorrelator<float> diagramm_nucleon(MOMENTUM_SPACE, mom);
-      diagramm_nucleon.setSource(source);
+      PLEGMA_ScattCorrelator<float> diagramm_nucleon(sourcePositions[isource], mom);
+      //diagramm_nucleon.setSource(source);
       
       reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
       reductionsT1.writeASCII("T1sourceforN");
@@ -340,8 +340,8 @@ int main(int argc, char **argv)
         //List of momenta corresponding to a fix value of p_i2
         momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
 
-        PLEGMA_ScattCorrelator<float> reductionsV2(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsV3(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2));
+        PLEGMA_ScattCorrelator<float> reductionsV2(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV3(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2));
 
         //Loop over the different gamma structure for the source meson
         for (auto gamma_i2 : glist_source_meson) {
@@ -421,11 +421,11 @@ int main(int argc, char **argv)
           //Compute triangle diagramms          
           
 
-          PLEGMA_ScattCorrelator<float> reductionsT1triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
+          PLEGMA_ScattCorrelator<float> reductionsT1triangle(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
          
-          PLEGMA_ScattCorrelator<float> reductionsT3triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
+          PLEGMA_ScattCorrelator<float> reductionsT3triangle(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
 
-          PLEGMA_ScattCorrelator<float> reductionsT5triangle(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(3));
+          PLEGMA_ScattCorrelator<float> reductionsT5triangle(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
           reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP);
           reductionsT1triangle.writeHDF5("T1sourceforT");
           reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP);
@@ -480,17 +480,17 @@ int main(int argc, char **argv)
        std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
 
        std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted = {
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2)),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(2))
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2))
          };
 
        std::array<PLEGMA_ScattCorrelator<float>,4> reductionsV2_diluted = {
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1)),
-           PLEGMA_ScattCorrelator<float>(MOMENTUM_SPACE, filtered_sourcemomentumList.uniq_p(1))
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1))
        };
 
 
