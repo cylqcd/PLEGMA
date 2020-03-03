@@ -257,6 +257,7 @@ static inline GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
     default: 
       PLEGMA_error("Gamma matrix multiplication with gamma is not implemented for the particular source gamma %d\n",source);
   }
+  return ID;
 }
 std::vector<GAMMAS_SCATT> apply_gamma5_scatt_gamma( std::vector<GAMMAS_SCATT> &source, LEFTRIGHT LR){
   std::vector<GAMMAS_SCATT> output;
