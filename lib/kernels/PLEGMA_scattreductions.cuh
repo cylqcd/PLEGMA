@@ -4,26 +4,27 @@ using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-template<VRED V, typename FloatOut, typename FloatV, typename FloatP, typename ... Args>
-void V_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
+template<typename FloatOut, typename FloatV, typename FloatP, typename ... Args>
+void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
-			KernelArr<GAMMAS_SCATT> &listGammas, FloatV *Phi, FloatP *S1, FloatP *S2=NULL);
+			KernelArr<GAMMAS_SCATT> &listGammas,
+			vectorTex<FloatV> &Phi, propTex<FloatP>& S1, propTex<FloatP>& S2);
 
-template<TRED T,typename FloatOut, typename FloatP>
-void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
+template<typename FloatOut, typename FloatP>
+void T_kernels_wrapper( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
 			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
 			KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f,
-			FloatP *S1, FloatP *S2, FloatP *S3 );
+			propTex<FloatP>& S1, propTex<FloatP>& S2, propTex<FloatP>& S3 );
 
 
 // +++++++++++++++++++++++++++++++++++++++
 // +++++++++++| V reductions |++++++++++++
 // +++++++++++++++++++++++++++++++++++++++
 
-template<VRED V,typename FloatOut, typename FloatV, typename ... Args>
-static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Vout,
+template<typename FloatOut, typename FloatV, typename FloatP>
+static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas,
-			       FloatV *Phi, Args*... S_fields){
+			       vectorTex<FloatV> &Phi, propTex<FloatP>& S1, propTex<FloatP>& S2){
 
   int t_size = Vout.localT(); if(t_size==0) return;
   int maxT = Vout.endT() - Vout.startT(); 
@@ -69,7 +70,7 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
     ps.tp.grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     
     //call the kernel wrapper
-    V_kernels_wrapper<V,FloatOut, FloatV, Args...>(ps, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas, Phi, S_fields... );
+    V_kernels_wrapper<FloatOut, FloatV, FloatP>(ps, V, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas, Phi, S1, S2 );
     
     ps.tp.grid.x = grid.x;
 
@@ -102,10 +103,10 @@ static void V_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
   
 }
 
-template<VRED V, typename FloatOut, typename FloatV, typename FloatP>
-static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
-		 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
-		 PLEGMA_Propagator<FloatP> &S){
+template<typename FloatOut, typename FloatV, typename FloatP>
+static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
+			 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
+			 PLEGMA_Propagator<FloatP> &S){
 
   int site_size = Gammas.size()*N_SPINS*N_COLS;
   
@@ -129,8 +130,10 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   std::string kerName="V_reductions_V"+std::to_string(int(V))+"_gammas_";
   for(auto const& G: Gammas) {kerName+="g";}
       
-  tuneAndRun( ps, kerName, V_reductions_host<V,FloatOut, FloatV, FloatP>,
-	      ps, Vout, result, Gammas, Phi.D_elem(), S.D_elem() );
+  auto vectorPhi = toTexture<vectorTex>(Phi);
+  auto propS = toTexture<propTex>(S);
+  tuneAndRun( ps, kerName, V_reductions_host<FloatOut, FloatV, FloatP>,
+	      ps, V, Vout, result, Gammas, *vectorPhi, *propS, *propS );
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
@@ -138,10 +141,10 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 }
 
-template<VRED V, typename FloatOut, typename FloatV, typename FloatP>
-static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
-		  PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
-		  PLEGMA_Propagator<FloatP> &S1,  PLEGMA_Propagator<FloatP> &S2){
+template<typename FloatOut, typename FloatV, typename FloatP>
+static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
+			 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
+			 PLEGMA_Propagator<FloatP> &S1,  PLEGMA_Propagator<FloatP> &S2){
 
   int site_size = Gammas.size()*N_SPINS*N_SPINS*N_SPINS*N_COLS;
   
@@ -165,8 +168,11 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
   std::string kerName="V_reductions_V"+std::to_string(int(V))+"_gammas_";
   for(auto const& G: Gammas) {kerName+="g";}
 
-  tuneAndRun( ps, kerName, V_reductions_host<V,FloatOut,FloatV,FloatP,FloatP>,
-	      ps, Vout, result, Gammas, Phi.D_elem(), S1.D_elem(), S2.D_elem());
+  auto vectorPhi = toTexture<vectorTex>(Phi);
+  auto propS1 = toTexture<propTex>(S1);
+  auto propS2 = toTexture<propTex>(S2);
+  tuneAndRun( ps, kerName, V_reductions_host<FloatOut,FloatV,FloatP>,
+	      ps, V, Vout, result, Gammas, *vectorPhi, *propS1, *propS2);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
@@ -179,9 +185,11 @@ static void V_reductions(PLEGMA_ScattCorrelator<FloatOut> &Vout,
 // +++++++++++| T reductions |++++++++++++
 // +++++++++++++++++++++++++++++++++++++++
 
-template<TRED T,typename FloatOut, typename FloatP>
-static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> &Tout,
-			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas_i, std::vector<GAMMAS_SCATT> &gammas_f, FloatP* S1, FloatP* S2, FloatP* S3 ){
+template<typename FloatOut, typename FloatP>
+static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator<FloatOut> &Tout,
+			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas_i,
+			       std::vector<GAMMAS_SCATT> &gammas_f,
+			       propTex<FloatP>& S1, propTex<FloatP>& S2, propTex<FloatP>& S3 ){
 
   int t_size = Tout.localT(); if(t_size==0) return;
   int maxT = Tout.endT() - Tout.startT(); 
@@ -230,7 +238,7 @@ static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
     dim3 grid = ps.tp.grid;
     ps.tp.grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
 
-    T_kernels_wrapper<T,FloatOut, FloatP>(ps, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas_i, listGammas_f, S1, S2, S3 );
+    T_kernels_wrapper<FloatOut, FloatP>(ps, T, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas_i, listGammas_f, S1, S2, S3 );
 
     ps.tp.grid.x = grid.x;
     cudaDeviceSynchronize();
@@ -257,11 +265,11 @@ static void T_reductions_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOu
 }
 
 
-template<TRED T, typename FloatOut, typename FloatP>
-static void T_reductions(PLEGMA_ScattCorrelator<FloatOut> &Tout,
-		  std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, 
-      PLEGMA_Propagator<FloatP> &S1, PLEGMA_Propagator<FloatP> &S2,
-		  PLEGMA_Propagator<FloatP> &S3){
+template<typename FloatOut, typename FloatP>
+static void T_reductions(TRED T, PLEGMA_ScattCorrelator<FloatOut> &Tout,
+			 std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, 
+			 PLEGMA_Propagator<FloatP> &S1, PLEGMA_Propagator<FloatP> &S2,
+			 PLEGMA_Propagator<FloatP> &S3){
 
   int site_size = Gammas_i.size()*Gammas_f.size()*N_SPINS*N_SPINS;
   
@@ -287,8 +295,11 @@ static void T_reductions(PLEGMA_ScattCorrelator<FloatOut> &Tout,
   kerName+="_gammas_f_";
   for(auto const& G: Gammas_f) {kerName+="g";}
 
-  tuneAndRun( ps, kerName, T_reductions_host<T,FloatOut,FloatP>,
-	      ps, Tout, result, Gammas_i, Gammas_f, S1.D_elem(), S2.D_elem(), S3.D_elem());
+  auto propS1 = toTexture<propTex>(S1);
+  auto propS2 = toTexture<propTex>(S2);
+  auto propS3 = toTexture<propTex>(S3);
+  tuneAndRun( ps, kerName, T_reductions_host<FloatOut,FloatP>,
+	      ps, T, Tout, result, Gammas_i, Gammas_f, *propS1, *propS2, *propS3);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Tout.H_elem(), Tout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);

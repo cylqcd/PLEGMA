@@ -66,9 +66,7 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
   this->shape_labels="gsc";
   this->initialize();
   
-  const VRED V=V_3;
-  
-  V_reductions<V,Float,Float,Float>( *this, Phi, Gammas, S);
+  V_reductions<Float,Float,Float>(V_3, *this, Phi, Gammas, S);
 }
 
 template<typename Float>
@@ -86,8 +84,7 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
   this->shape_labels="gsssc";
   this->initialize();
 
-  const VRED V=V_4;
-  V_reductions<V,Float,Float,Float>( *this, Phi, Gammas, S1, S2);
+  V_reductions<Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
 }
 
 template<typename Float>
@@ -105,8 +102,7 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   this->shape_labels="gsssc";
   this->initialize();
 
-  const VRED V=V_2;
-  V_reductions<V,Float,Float,Float>( *this, Phi, Gammas, S1, S2);
+  V_reductions<Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
 }
 
 template<typename Float>
@@ -1078,8 +1074,7 @@ void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std:
   this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
   this->initialize();
   
-  const TRED T=T_1;
-  T_reductions<T,Float,Float>( *this, Gammas_i, Gammas_f, S1, S2, S3);
+  T_reductions<Float,Float>( T_1, *this, Gammas_i, Gammas_f, S1, S2, S3);
 }
 
 template<typename Float>
@@ -1101,8 +1096,7 @@ void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std
   this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
   this->initialize();
 
-  const TRED T=T_2;
-  T_reductions<T,Float,Float>( *this, Gammas_i, Gammas_f, S1, S2, S3);
+  T_reductions<Float,Float>( T_2, *this, Gammas_i, Gammas_f, S1, S2, S3);
 }
 
 template<typename Float>
