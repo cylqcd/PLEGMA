@@ -4,8 +4,8 @@
 using namespace plegma;
 
 template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
-__global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
-			   FloatP *S1, FloatP *S2, Float2<FloatOut> *block2,
+__global__ void V4_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> listGammas,
+			   propTex<FloatP> propS1, propTex<FloatP> propS2, Float2<FloatOut> *block2,
 			   int it, int time_step, int maxT, int4 source, tex_mom_list moms){
 
   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
@@ -21,9 +21,6 @@ __global__ void V4_kernel( FloatV *Phi, KernelArr<GAMMAS_SCATT> listGammas,
   }
 
   if (sid3D < DGC_localVolume3D){
-    prop2<FloatP> propS1(S1), propS2(S2);
-    vector2<FloatV> vectorPhi(Phi);
-    
     Float2<FloatP> s1[N_SPINS][N_SPINS][N_COLS][N_COLS], s2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatV> phi[N_SPINS][N_COLS];
     propS1.get(s1,vid);

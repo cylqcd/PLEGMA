@@ -1,12 +1,16 @@
+#include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_ScattCorrelator.h>
+#include <PLEGMA_scattreductions.cuh>
 #include <PLEGMA_scattreductionsT1.cuh>
 #include <PLEGMA_scattreductionsT2.cuh>
 
 using namespace plegma;
 
-template<TRED T, unsigned int NGI, unsigned int NGF, typename FloatOut, typename FloatP>
-void T_kernels( ProfileStruct &ps, Float2<FloatOut> *block2,
+template<unsigned int NGI, unsigned int NGF, typename FloatOut, typename FloatP>
+void T_kernels( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
 		int it, int time_step, int maxT, int4 source, tex_mom_list moms,
-		KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f,  FloatP* S1, FloatP* S2, FloatP* S3){
+		KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f,
+		propTex<FloatP>& S1, propTex<FloatP>& S2, propTex<FloatP>& S3){
   
   if( T==T_1 )
     T1_kernel<FloatOut,FloatP,NGI,NGF><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(listGammas_i,listGammas_f, S1, S2, S3, block2, it, time_step, maxT, source, moms);
@@ -17,43 +21,43 @@ void T_kernels( ProfileStruct &ps, Float2<FloatOut> *block2,
 }
 
 
-template<TRED T,typename FloatOut, typename FloatP>
-void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
+template<typename FloatOut, typename FloatP>
+void T_kernels_wrapper( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
 			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
 			KernelArr<GAMMAS_SCATT> &listGammas_i, KernelArr<GAMMAS_SCATT> &listGammas_f,
-			FloatP *S1, FloatP *S2, FloatP *S3 ){
+			propTex<FloatP>& S1, propTex<FloatP>& S2, propTex<FloatP>& S3 ){
 
   switch(listGammas_i.size){
   case(1):
     switch(listGammas_f.size){
-    case(1): T_kernels<T,(unsigned int)1,(unsigned int)1,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-    case(2): T_kernels<T,(unsigned int)1,(unsigned int)2,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-    // case(3): T_kernels<T,(unsigned int)1,(unsigned int)3,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-    // case(4): T_kernels<T,(unsigned int)1,(unsigned int)4,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    case(1): T_kernels<(unsigned int)1,(unsigned int)1,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    case(2): T_kernels<(unsigned int)1,(unsigned int)2,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    // case(3): T_kernels<(unsigned int)1,(unsigned int)3,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    // case(4): T_kernels<(unsigned int)1,(unsigned int)4,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
     default: PLEGMA_error("not initialized for nGammas_f=%d\n",listGammas_f.size);
     }; break;
   case(2):
     switch(listGammas_f.size){
-    case(1): T_kernels<T,(unsigned int)2,(unsigned int)1,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-    case(2): T_kernels<T,(unsigned int)2,(unsigned int)2,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-    // case(3): T_kernels<T,(unsigned int)2,(unsigned int)3,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-    // case(4): T_kernels<T,(unsigned int)2,(unsigned int)4,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    case(1): T_kernels<(unsigned int)2,(unsigned int)1,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    case(2): T_kernels<(unsigned int)2,(unsigned int)2,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    // case(3): T_kernels<(unsigned int)2,(unsigned int)3,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    // case(4): T_kernels<(unsigned int)2,(unsigned int)4,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
     default: PLEGMA_error("not initialized for nGammas_f=%d\n",listGammas_f.size);
     }; break;
   // case(3):
   //   switch(listGammas_f.size){
-  //   case(1): T_kernels<T,(unsigned int)3,(unsigned int)1,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-  //   case(2): T_kernels<T,(unsigned int)3,(unsigned int)2,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-  //   case(3): T_kernels<T,(unsigned int)3,(unsigned int)3,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-  //   case(4): T_kernels<T,(unsigned int)3,(unsigned int)4,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(1): T_kernels<(unsigned int)3,(unsigned int)1,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(2): T_kernels<(unsigned int)3,(unsigned int)2,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(3): T_kernels<(unsigned int)3,(unsigned int)3,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(4): T_kernels<(unsigned int)3,(unsigned int)4,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
   //   default: PLEGMA_error("not initialized for nGammas_f=%d\n",listGammas_f.size);
   //   }; break;
   // case(4):
   //   switch(listGammas_f.size){
-  //   case(1): T_kernels<T,(unsigned int)4,(unsigned int)1,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-  //   case(2): T_kernels<T,(unsigned int)4,(unsigned int)2,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-  //   case(3): T_kernels<T,(unsigned int)4,(unsigned int)3,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-  //   case(4): T_kernels<T,(unsigned int)4,(unsigned int)4,FloatOut,FloatP>( ps, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(1): T_kernels<(unsigned int)4,(unsigned int)1,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(2): T_kernels<(unsigned int)4,(unsigned int)2,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(3): T_kernels<(unsigned int)4,(unsigned int)3,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+  //   case(4): T_kernels<(unsigned int)4,(unsigned int)4,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
   //   default: PLEGMA_error("not initialized for nGammas_f=%d\n",listGammas_f.size);
   //   }; break;
     
@@ -62,3 +66,14 @@ void T_kernels_wrapper( ProfileStruct &ps, Float2<FloatOut> *block2,
 }
 
 
+template
+void T_kernels_wrapper<float, float> ( ProfileStruct&, TRED, Float2<float>*,
+				       int, int, int, int4, tex_mom_list,
+				       KernelArr<GAMMAS_SCATT>&, KernelArr<GAMMAS_SCATT>&,
+				       propTex<float>&, propTex<float>&, propTex<float>&);
+
+template
+void T_kernels_wrapper<double, double> ( ProfileStruct&, TRED, Float2<double>*,
+				       int, int, int, int4, tex_mom_list,
+				       KernelArr<GAMMAS_SCATT>&, KernelArr<GAMMAS_SCATT>&,
+				       propTex<double>&, propTex<double>&, propTex<double>&);
