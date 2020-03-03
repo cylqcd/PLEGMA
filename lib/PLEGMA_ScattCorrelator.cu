@@ -240,9 +240,9 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   //write B1
   for(int i_m=0; i_m<imap.size(); i_m++){
     memset(temporary, 0, d_GGGTSS2*sizeof(Float));
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
     srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 2, true);
     x_e_cx<Float>( temporary, tmpreim, offset/2 );
@@ -270,9 +270,9 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
   this->datasets={"B2"};
   for(int i_m=0; i_m<imap.size(); i_m++){
     memset(temporary, 0, d_GGGTSS2*sizeof(Float));
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
     srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 0);
@@ -355,9 +355,9 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorre
     else {
       srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 0, false, true);
     }
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
     x_e_cx<Float>( temporary,  tmpreim, offset/2);
     for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
@@ -543,9 +543,9 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
 
     }
 
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
     x_e_cx<Float>( temporary2,  tmpreim, d_GGGGTSS2/2);
 
@@ -724,9 +724,9 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( momList &moms, momList &moms_re
   for( int i_mom=0; i_mom<moms_red.size(); ++i_mom){
     int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN)
     int i_pf2 = map[i_mom][2]; //position of pf2 in tempPP
-    const Float phase = 2*M_PI/(Float)HGC_totalL[0]*(moms_pf2[i_pf2][0]-mom_pi2[0])*this->source_position[0]+
-                        2*M_PI/(Float)HGC_totalL[1]*(moms_pf2[i_pf2][1]-mom_pi2[1])*this->source_position[1]+
-                        2*M_PI/(Float)HGC_totalL[2]*(moms_pf2[i_pf2][2]-mom_pi2[2])*this->source_position[2]; //not pi1 becayse i*pf1*sourcepos already multiplied in Nucleons results
+    const Float phase = 2*M_PI/(Float)HGC_totalL[0]*(moms_pf2[i_pf2][0]-mom_pi2[0])*this->source[0]+
+                        2*M_PI/(Float)HGC_totalL[1]*(moms_pf2[i_pf2][1]-mom_pi2[1])*this->source[1]+
+                        2*M_PI/(Float)HGC_totalL[2]*(moms_pf2[i_pf2][2]-mom_pi2[2])*this->source[2]; //not pi1 becayse i*pf1*sourcepos already multiplied in Nucleons results
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
 
@@ -803,9 +803,9 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
 
   
   for( int i_mom=0; i_mom<moms_pf1.size(); ++i_mom){
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_pf1[i_mom][0])*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]*(moms_pf1[i_mom][1])*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]*(moms_pf1[i_mom][2])*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_pf1[i_mom][0])*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]*(moms_pf1[i_mom][1])*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]*(moms_pf1[i_mom][2])*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
     for( int t=0; t<HGC_localL[3]; ++t){
@@ -877,9 +877,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
     
   for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
     
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0]-p_i2[0])*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1]-p_i2[1])*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2]-p_i2[2])*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0]-p_i2[0])*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1]-p_i2[1])*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2]-p_i2[2])*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
     for(int out_idx=0; out_idx<i_GGGT; ++out_idx){
@@ -1029,9 +1029,9 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   const int d_GGGGTSS2 = extG_i.size()*extG_f.size()*d_GGTSS2;
 
   for( int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0])*this->source_position[0]+
-                      2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1])*this->source_position[1]+
-                      2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2])*this->source_position[2];
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0])*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1])*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2])*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
     for( int t=0; t<HGC_localL[3]; ++t){

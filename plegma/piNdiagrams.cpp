@@ -289,26 +289,24 @@ int main(int argc, char **argv)
       std::vector<int> mom={0,0,0};
       PLEGMA_ScattCorrelator<float> diagramm(sourcePositions[isource], mom);
  
-      int source[4]={sourcePositions[isource][0],
-                     sourcePositions[isource][1],
-                     sourcePositions[isource][2],
-                     sourcePositions[isource][3]};
+      // int source[4]={sourcePositions[isource][0],
+      //                sourcePositions[isource][1],
+      //                sourcePositions[isource][2],
+      //                sourcePositions[isource][3]};
 
-      diagramm.setSource(source);
+      // diagramm.setSource(source);
+
+      site source=site({0,0,0,sourcePositions[isource][3]});
+      PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(3),HGC_localL[3]);
+      PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(3),HGC_localL[3]);
 
 
-      PLEGMA_ScattCorrelator<float> reductionsT1(sourcePositions[isource], sourcemomentumList.uniq_p(3),HGC_localL[3]);
-      PLEGMA_ScattCorrelator<float> reductionsT2(sourcePositions[isource], sourcemomentumList.uniq_p(3),HGC_localL[3]);
-
-
-      reductionsT1.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
       reductionsT1.writeHDF5("T1sourceforD");
 
 
-      reductionsT2.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
-      reductionsT2.writeASCII("T2sourceforD");
+      reductionsT2.writeHDF5("T2sourceforD");
 
 
       std::string outfilename="Ddiagramm_Antonino" ;
@@ -318,13 +316,11 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> diagramm_nucleon(sourcePositions[isource], mom);
       //diagramm_nucleon.setSource(source);
       
-      reductionsT1.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
-      reductionsT1.writeASCII("T1sourceforN");
+      reductionsT1.writeHDF5("T1sourceforN");
 
-      reductionsT2.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
-      reductionsT2.writeASCII("T2sourceforN");
+      reductionsT2.writeHDF5("T2sourceforN");
 
 
       outfilename = "Ndiagramm_Antonino";
@@ -345,8 +341,8 @@ int main(int argc, char **argv)
         //List of momenta corresponding to a fix value of p_i2
         momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
 
-        PLEGMA_ScattCorrelator<float> reductionsV2(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsV3(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2));
+        PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(2));
 
         //Loop over the different gamma structure for the source meson
         for (auto gamma_i2 : glist_source_meson) {
@@ -426,11 +422,11 @@ int main(int argc, char **argv)
           //Compute triangle diagramms          
           
 
-          PLEGMA_ScattCorrelator<float> reductionsT1triangle(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
+          PLEGMA_ScattCorrelator<float> reductionsT1triangle(source, filtered_sourcemomentumList.uniq_p(3));
          
-          PLEGMA_ScattCorrelator<float> reductionsT3triangle(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
+          PLEGMA_ScattCorrelator<float> reductionsT3triangle(source, filtered_sourcemomentumList.uniq_p(3));
 
-          PLEGMA_ScattCorrelator<float> reductionsT5triangle(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
+          PLEGMA_ScattCorrelator<float> reductionsT5triangle(source, filtered_sourcemomentumList.uniq_p(3));
           reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP);
           reductionsT1triangle.writeHDF5("T1sourceforT");
           reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP);
@@ -444,11 +440,9 @@ int main(int argc, char **argv)
 
           //Compute Diagram B1 and B2 
 
-          reductionsV3.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
           reductionsV3.writeHDF5("V3sourceforB1");
 
-          reductionsV2.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
           reductionsV2.writeHDF5("V2sourceforB1");
  
@@ -457,10 +451,8 @@ int main(int argc, char **argv)
 
           //Compute Diagram W1,W2
           
-          reductionsV3.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
           reductionsV3.writeHDF5("V3sourceforW12");
-          reductionsV2.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN);
           reductionsV2.writeHDF5("V2sourceforW12");
 
@@ -490,17 +482,17 @@ int main(int argc, char **argv)
        std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
 
        std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted = {
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2)),
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2)),
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2)),
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(2))
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)),
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2))
          };
 
        std::array<PLEGMA_ScattCorrelator<float>,4> reductionsV2_diluted = {
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1)),
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1)),
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1)),
-           PLEGMA_ScattCorrelator<float>(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(1))
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)),
+           PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1))
        };
 
 
@@ -582,11 +574,9 @@ int main(int argc, char **argv)
        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);       
        std::vector<GAMMAS_SCATT>  sourcemeson_t_gamma_5=apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);
        for (int i=0; i< 4; ++i){
-         reductionsV3_diluted[i].setSource({0,0,0,sourcePositions[isource][3]});
          reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP);
          reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
 
-         reductionsV2_diluted[i].setSource({0,0,0,sourcePositions[isource][3]});
          reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
@@ -600,7 +590,6 @@ int main(int argc, char **argv)
        //Diagram Z3,Z4	
        for (int i=0; i< 4; ++i){
 
-         reductionsV2_diluted[i].setSource({0,0,0,sourcePositions[isource][3]});
          reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
 
