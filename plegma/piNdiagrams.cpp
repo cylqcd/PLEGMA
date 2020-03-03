@@ -289,21 +289,24 @@ int main(int argc, char **argv)
       std::vector<int> mom={0,0,0};
       PLEGMA_ScattCorrelator<float> diagramm(sourcePositions[isource], mom);
  
-      //int source[4]={sourcePositions[isource][0],
-      //               sourcePositions[isource][1],
-      //               sourcePositions[isource][2],
-      //               sourcePositions[isource][3]};
+      int source[4]={sourcePositions[isource][0],
+                     sourcePositions[isource][1],
+                     sourcePositions[isource][2],
+                     sourcePositions[isource][3]};
 
-      //diagramm.setSource(source);
+      diagramm.setSource(source);
 
 
       PLEGMA_ScattCorrelator<float> reductionsT1(sourcePositions[isource], sourcemomentumList.uniq_p(3),HGC_localL[3]);
       PLEGMA_ScattCorrelator<float> reductionsT2(sourcePositions[isource], sourcemomentumList.uniq_p(3),HGC_localL[3]);
 
 
+      reductionsT1.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
-      reductionsT1.writeASCII("T1sourceforD");
+      reductionsT1.writeHDF5("T1sourceforD");
 
+
+      reductionsT2.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
       reductionsT2.writeASCII("T2sourceforD");
 
@@ -315,9 +318,11 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> diagramm_nucleon(sourcePositions[isource], mom);
       //diagramm_nucleon.setSource(source);
       
+      reductionsT1.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
       reductionsT1.writeASCII("T1sourceforN");
 
+      reductionsT2.setSource({0,0,0,sourcePositions[isource][3]});
       reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
       reductionsT2.writeASCII("T2sourceforN");
 
@@ -438,9 +443,12 @@ int main(int argc, char **argv)
 
 
           //Compute Diagram B1 and B2 
+
+          reductionsV3.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
           reductionsV3.writeHDF5("V3sourceforB1");
 
+          reductionsV2.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
           reductionsV2.writeHDF5("V2sourceforB1");
  
@@ -448,9 +456,11 @@ int main(int argc, char **argv)
           diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename);
 
           //Compute Diagram W1,W2
-           
+          
+          reductionsV3.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
           reductionsV3.writeHDF5("V3sourceforW12");
+          reductionsV2.setSource({0,0,0,sourcePositions[isource][3]});
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN);
           reductionsV2.writeHDF5("V2sourceforW12");
 
@@ -572,9 +582,11 @@ int main(int argc, char **argv)
        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);       
        std::vector<GAMMAS_SCATT>  sourcemeson_t_gamma_5=apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);
        for (int i=0; i< 4; ++i){
+         reductionsV3_diluted[i].setSource({0,0,0,sourcePositions[isource][3]});
          reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP);
          reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
 
+         reductionsV2_diluted[i].setSource({0,0,0,sourcePositions[isource][3]});
          reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
@@ -587,6 +599,8 @@ int main(int argc, char **argv)
       
        //Diagram Z3,Z4	
        for (int i=0; i< 4; ++i){
+
+         reductionsV2_diluted[i].setSource({0,0,0,sourcePositions[isource][3]});
          reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
 
