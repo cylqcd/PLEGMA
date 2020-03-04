@@ -29,8 +29,8 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
   int t_size = Vout.localT(); if(t_size==0) return;
   int maxT = Vout.endT() - Vout.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
-  size_t size = Vout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
-  size_t N_moms = Vout.getVolSize()/HGC_localL[3];//N_moms
+  size_t size = Vout.getTotalSize()/t_size*time_step;//N_moms*site_size*time_step
+  size_t N_moms = Vout.getVolSize()/t_size;//N_moms
   int4 source = Vout.getSource(); 
   auto moms = Vout.getTexMomList();
   int site_size = Vout.getSiteSize();
@@ -194,8 +194,8 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
   int t_size = Tout.localT(); if(t_size==0) return;
   int maxT = Tout.endT() - Tout.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
-  size_t size = Tout.getTotalSize()/HGC_localL[3]*time_step;//N_moms*site_size*time_step
-  size_t N_moms = Tout.getVolSize()/HGC_localL[3];//N_moms
+  size_t size = Tout.getTotalSize()/t_size*time_step;//N_moms*site_size*time_step
+  size_t N_moms = Tout.getVolSize()/t_size;//N_moms
   int4 source = Tout.getSource(); 
   auto moms = Tout.getTexMomList();
   int site_size = Tout.getSiteSize();
