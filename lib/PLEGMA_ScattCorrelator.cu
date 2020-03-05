@@ -864,10 +864,11 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
     PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(Gi1=%d),(extG1=%d),(Gi2=%d),(Gf1=%d),(extGf=%d),%d\n", this->getVolSize()*this->getSiteSize(),moms_tot.size(),
 		 n_gammas_i1, extGammas_i1.size(), aux_gammas_i2.size(), n_gammas_f1, n_gammas_extf, tot_size/2);
 
-  
-  const int i_GGGT = n_gammas_i1*aux_gammas_i2.size()*n_gammas_f1*this->localT();
+  const int N_moms = moms_tot.size();
+  const int TIME = this->localT();
+  const int i_GGG = n_gammas_i1*aux_gammas_i2.size()*n_gammas_f1;
   const int i_SS2 = N_SPINS*N_SPINS*2;
-  const int i_GGGTSS2 = i_GGGT*i_SS2;
+  const int i_GGGTSS2 = i_GGG*TIME*i_SS2;
   const int d_GGGGGTSS2 = extGammas_i1.size()*n_gammas_extf*i_GGGTSS2;
 
   Float *srcTs[3] = {T1.H_elem(),T3.H_elem(),T5.H_elem()};
@@ -875,30 +876,30 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   Float *dest = this->H_elem();
   Float *temp = (Float *)malloc(sizeof(Float)*i_SS2);
     
-  for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
+  for(int i_mom=0; i_mom<N_moms; ++i_mom){
     
     const Float phase=2*M_PI/(Float)HGC_totalL[0]*(moms_tot[i_mom][0]-p_i2[0])*this->source[0]+
                       2*M_PI/(Float)HGC_totalL[1]*(moms_tot[i_mom][1]-p_i2[1])*this->source[1]+
                       2*M_PI/(Float)HGC_totalL[2]*(moms_tot[i_mom][2]-p_i2[2])*this->source[2];
     const Float tmpreim[2]={cos(phase),sin(phase)};
 
-    for(int out_idx=0; out_idx<i_GGGT; ++out_idx){
+    for(int out_idx=0; out_idx<i_GGG; ++out_idx)
+      for(int time=0; time<TIME; ++time){
+	memset(temp,0,i_SS2*sizeof(Float));
 
-      memset(temp,0,i_SS2*sizeof(Float));
+	for(int ts=0; ts<3; ++ts)
+	  for(int int_idx=0; int_idx<i_SS2; ++int_idx)
+	    temp[int_idx] += srcTs[ts][ time*N_moms*i_GGG*i_SS2 + i_mom*i_GGG*i_SS2 + out_idx*i_SS2 + int_idx ]*2.; //2T1+2T3+2T5 for all moms x gamma_i1 x gamma_i2 x gamma_f 
 
-      for(int ts=0; ts<3; ++ts)
-	for(int int_idx=0; int_idx<i_SS2; ++int_idx)
-	  temp[int_idx] += srcTs[ts][ i_mom*i_GGGTSS2 + out_idx*i_SS2 + int_idx ]*2.; //2T1+2T3+2T5 for all moms x gamma_i1 x gamma_i2 x gamma_f 
-
-      //multiply second spin index with extGammas_i1
-      for(int ext_gi1=0; ext_gi1 < extGammas_i1.size(); ++ext_gi1){
-	//multiply first spin index with extGammas_f
-	for(int ext_gf=0; ext_gf < extGammas_f.size(); ++ext_gf){
-	  M_e_GNG<Float>( dest + i_mom*d_GGGGGTSS2 + (ext_gi1*n_gammas_extf+ext_gf)*i_GGGTSS2 + out_idx*i_SS2,
-			  extGammas_f[ext_gf], extGammas_i1[ext_gi1], temp);
+	//multiply second spin index with extGammas_i1
+	for(int ext_gi1=0; ext_gi1 < extGammas_i1.size(); ++ext_gi1){
+	  //multiply first spin index with extGammas_f
+	  for(int ext_gf=0; ext_gf < extGammas_f.size(); ++ext_gf){
+	    M_e_GNG<Float>( dest + i_mom*d_GGGGGTSS2 + (ext_gi1*n_gammas_extf+ext_gf)*i_GGGTSS2 + out_idx*TIME*i_SS2 +time*i_SS2,
+			    extGammas_f[ext_gf], extGammas_i1[ext_gi1], temp);
+	  }
 	}
       }
-    }
     x_e_cx<Float>( dest+i_mom*d_GGGGGTSS2,  tmpreim, d_GGGGGTSS2/2);
   }
 
