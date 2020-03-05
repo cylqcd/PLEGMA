@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     //In vectorAuxD2 we store the results for the inversion
     vectorAuxD2.scale(0.0);
     
-    if (timedilution){
+    if (1){
       PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
       for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
         //Step(3) pick out a particular timeslice from the source
@@ -145,6 +145,7 @@ int main(int argc, char **argv)
     } 
 
     vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
+    vectorStoc_source_arch.writeHDF5(outfile_V+"globalTfulltimedilution_source");
     vectorAuxD1.copy(vectorStoc_source_arch);
     vectorAuxD1.apply_gamma5();
     vectorStoc_source.copy(vectorAuxD1);
@@ -156,6 +157,7 @@ int main(int argc, char **argv)
     vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
     
     vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
+    vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
     vectorStoc_propag.copy(vectorAuxD1);
     vectorStoc_propag.apply_gamma5();
 
@@ -334,6 +336,44 @@ int main(int argc, char **argv)
       }
 
 
+      PLEGMA_Vector<float> vectortmp1;
+      PLEGMA_Vector<float> vectortmp2;
+          
+      PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 
+      std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
+
+      //Using the already generated stochastic source and project it to a time-slice
+      //Smearing was already performed
+      //Creating oet time-slice source
+      vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source);
+      //Transforming to physical base
+      vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
+      stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2,0);
+
+      for (int spinindex=0; spinindex<4; ++spinindex){
+        PLEGMA_Vector<double> vectorAuxD;
+
+        //tmp_time += MPI_Wtime()-start_time;       
+        stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
+        //Doing the zero momentum stochastic propagator with spin dilution
+        vectorInOut.copy(stochastic_source_spin_diluted_momzero);
+        //Doing the inversion
+        solver.solve(vectorInOut, vectorInOut);
+        //Rotate back immediately to the physical basis
+        vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+        //Gaussian smearing of the propagator
+        vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        stochastic_propagator_momzero[spinindex].copy(vectorInOut);
+        //tmp_time += MPI_Wtime()-start_time;
+        stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+        stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+        if (spinindex<3){
+          vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momzero,spinindex+1,spinindex);
+          stochastic_source_spin_diluted_momzero.copy(vectortmp1);
+        }
+      }
+
+
       //We first have a loop over all unique the source meson momentum p_i2 
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
 
@@ -414,6 +454,7 @@ int main(int argc, char **argv)
                vectorAuxPrint.absorb(propUPDN,isc/3,isc%3);
                vectorAuxPrint.unload();
                vectorAuxPrint.writeLIME(outfile_SEQ+"_s"+spin+"_c"+col);
+               vectorAuxPrint.writeHDF5(outfile_SEQ+"_s"+spin+"_c"+col);
              }
           }
 
@@ -478,7 +519,6 @@ int main(int argc, char **argv)
       
        //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
               
-       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
        std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
 
        std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted = {
@@ -497,10 +537,6 @@ int main(int argc, char **argv)
 
 
        PLEGMA_Vector<float> stochastic_source_spin_diluted_momp_i2; 
-       PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 
-       PLEGMA_Vector<float> vectortmp1;
-       PLEGMA_Vector<float> vectortmp2;
-          
        //Using the already generated stochastic source and project it to a time-slice
        //Smearing was already performed
        //Creating oet time-slice source
@@ -508,9 +544,6 @@ int main(int argc, char **argv)
        //Transforming to physical base
        vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
        
- 
-       stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2,0);
-
        //Multiplying by the appropriate momentum phase
 
        std::vector<int> tmp_4Dmom= momentum_i2 ; 
@@ -525,8 +558,6 @@ int main(int argc, char **argv)
          //tmp_time += MPI_Wtime()-start_time;       
          stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
-         //tmp_time += MPI_Wtime()-start_time;
-         stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));
  
          vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
          //Doing the inversion
@@ -543,29 +574,10 @@ int main(int argc, char **argv)
 
          //tmp_time += MPI_Wtime()-start_time;         
          stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
-
-         //Doing the same for zero momentum
-         vectorInOut.copy(stochastic_source_spin_diluted_momzero);
-
-         //Doing the inversion
-         solver.solve(vectorInOut, vectorInOut);
-
-         //Rotate back immediately to the physical basis
-         vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
-
-         //Gaussian smearing of the propagator
-         vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-         
-         stochastic_propagator_momzero[spinindex].copy(vectorInOut);
-         //tmp_time += MPI_Wtime()-start_time;
-
-         stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
          
          if (spinindex<3){
            vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momp_i2,spinindex+1,spinindex);
-           vectortmp2.dilutespindisplace(stochastic_source_spin_diluted_momzero,spinindex+1,spinindex);
            stochastic_source_spin_diluted_momp_i2.copy(vectortmp1);
-           stochastic_source_spin_diluted_momzero.copy(vectortmp2);
          }
 
        }      
