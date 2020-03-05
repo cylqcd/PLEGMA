@@ -297,8 +297,8 @@ int main(int argc, char **argv)
       // diagramm.setSource(source);
 
       site source=site({0,0,0,sourcePositions[isource][3]});
-      PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(3),HGC_localL[3]);
-      PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(3),HGC_localL[3]);
+      PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(3));
+      PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(3));
 
 
       reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
