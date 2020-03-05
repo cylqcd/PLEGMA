@@ -48,11 +48,43 @@ namespace plegma {
     //   std::vector<std::string> groups;
     //   std::string description;
     //////////////
-    std::vector<GAMMAS_SCATT> GList;
-    std::vector<GAMMAS_SCATT> GList2;
-    std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
-    size_t shape_size;               //     prod(shape)    = n_gammas*4*4*4*3
+    std::vector<std::vector<GAMMAS_SCATT>> GList;
+    std::string labels;    //     index_struct = "gsssc" (because spin first)
+    std::vector<int> offsets;
+    std::vector<int> ranges;
 
+    void setOffsets( int np=0 ){
+      int g_count=0;
+
+      ranges.clear();
+      
+      for( auto &l : labels ){
+	switch(l){
+	case("p"): if(np==0) PLEGMA_error( "p detected with np=0\n") else ranges.push_back(np); break;
+	case("t"): ranges.push_back( corr_mom_space->DimT() ); break;
+	case("m"): ranges.push_back( corr_mom_space->Nmoms() ); break;
+	case("g"): ranges.push_back( GList[g_count].size() ); g_count++; break;
+	case("s"): ranges.push_back( N_SPINS ); break;
+	case("c"): ranges.push_back( N_COLS ); break;
+	default: PLEGMA_error( "Label %c not recognized\n", l );
+	}	
+      }
+
+      offsets.clear();
+
+      for( int ir=1; ir<=ranges.size(); ++ir ){
+	int offset = std::accumulate(ranges.begin()+ir, ranges.end(), 2, std::multiplies<int>());
+	offsets.push_back(offset);
+      }
+    }
+
+    Float *corr(  std::initializer_list<int> idx ){
+      std::vector<int> tmp(offsets.size());      
+      std::transform(idx.begin(),idx.end(),offsets.begin(),tmp.begin(),std::multiplies<int>());
+      
+      return H_elem() + std::accumulate(tmp.begin(), tmp.end(), 0);
+    }
+    
     void absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta);
     void absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa);
     void contract_GxV2_checks( PLEGMA_ScattCorrelator<Float> &srcV2);
@@ -72,9 +104,9 @@ namespace plegma {
     ~PLEGMA_ScattCorrelator(){;}
 
     //functions that return values of protected variables
-    std::string Shape_labels() const{ return shape_labels; }
-    std::vector<GAMMAS_SCATT> getGList(){ return GList; }
-    std::vector<GAMMAS_SCATT> getGList2(){ return GList2; }
+    std::string getLabels() const{ return labels; }
+    std::vector<std::vector<GAMMAS_SCATT>> getGList(){ return GList; }
+
 
     //checks
     bool is_V24();
