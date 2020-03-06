@@ -45,7 +45,7 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
 	  Float2<FloatOut> factor = g[gId][nz_e];
 	  #pragma unroll
 	  for(int a=0; a<N_COLS; ++a)
-	    accum[n_g] = accum[n_g] + conj(phi0[alfa][a])*factor*phi1[beta][a];
+	    accum[n_g] = accum[n_g] + phi0[alfa][a]*factor*conj(phi1[beta][a]);
 	//****//     
 	}
       }
