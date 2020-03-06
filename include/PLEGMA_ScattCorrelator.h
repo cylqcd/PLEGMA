@@ -48,42 +48,45 @@ namespace plegma {
     //   std::vector<std::string> groups;
     //   std::string description;
     //////////////
-    std::vector<std::vector<GAMMAS_SCATT>> GList;
-    std::string labels;    //     index_struct = "gsssc" (because spin first)
-    std::vector<int> offsets;
-    std::vector<int> ranges;
 
-    void setOffsets( int np=0 ){
-      int g_count=0;
+    //std::vector<std::vector<GAMMAS_SCATT>> GList;
+    std::vector<GAMMAS_SCATT> GList;
+    std::vector<GAMMAS_SCATT> GList2;
+    std::string shape_labels;    //     index_struct = "gsssc" (because spin first)
 
-      ranges.clear();
+    
+    // std::vector<int> offsets;
+    // std::vector<int> ranges;
+    
+    // void setOffsets( int np=0 ){
+    //   int g_count=0;
+    //   ranges.clear();
       
-      for( auto &l : labels ){
-	switch(l){
-	case("p"): if(np==0) PLEGMA_error( "p detected with np=0\n") else ranges.push_back(np); break;
-	case("t"): ranges.push_back( corr_mom_space->DimT() ); break;
-	case("m"): ranges.push_back( corr_mom_space->Nmoms() ); break;
-	case("g"): ranges.push_back( GList[g_count].size() ); g_count++; break;
-	case("s"): ranges.push_back( N_SPINS ); break;
-	case("c"): ranges.push_back( N_COLS ); break;
-	default: PLEGMA_error( "Label %c not recognized\n", l );
-	}	
-      }
+    //   for( auto &l : labels ){
+    // 	switch(l){
+    // 	case("p"): if(np==0) PLEGMA_error( "p detected with np=0\n") else ranges.push_back(np); break;
+    // 	case("t"): ranges.push_back( corr_mom_space->DimT() ); break;
+    // 	case("m"): ranges.push_back( corr_mom_space->Nmoms() ); break;
+    // 	case("g"): ranges.push_back( GList[g_count].size() ); g_count++; break;
+    // 	case("s"): ranges.push_back( N_SPINS ); break;
+    // 	case("c"): ranges.push_back( N_COLS ); break;
+    // 	default: PLEGMA_error( "Label %c not recognized\n", l );
+    // 	}	
+    //   }
 
-      offsets.clear();
-
-      for( int ir=1; ir<=ranges.size(); ++ir ){
-	int offset = std::accumulate(ranges.begin()+ir, ranges.end(), 2, std::multiplies<int>());
-	offsets.push_back(offset);
-      }
-    }
-
-    Float *corr(  std::initializer_list<int> idx ){
-      std::vector<int> tmp(offsets.size());      
-      std::transform(idx.begin(),idx.end(),offsets.begin(),tmp.begin(),std::multiplies<int>());
+    //   offsets.clear();
+    //   for( int ir=1; ir<=ranges.size(); ++ir ){
+    // 	int offset = std::accumulate(ranges.begin()+ir, ranges.end(), 2, std::multiplies<int>());
+    // 	offsets.push_back(offset);
+    //   }
+    // }
+  
+    // Float* corr(  std::initializer_list<int> idx ) const {
+    //   if(offsets.size()<idx.size())
+    // 	PLEGMA_error("Number of indices (%d) greater than size of correlator\n",idx.size());
       
-      return H_elem() + std::accumulate(tmp.begin(), tmp.end(), 0);
-    }
+    //   return H_elem() + std::inner_product( idx.begin(), idx.end(), offsets.begin(), 0.0);
+    // }
     
     void absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta);
     void absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa);
@@ -104,13 +107,14 @@ namespace plegma {
     ~PLEGMA_ScattCorrelator(){;}
 
     //functions that return values of protected variables
-    std::string getLabels() const{ return labels; }
-    std::vector<std::vector<GAMMAS_SCATT>> getGList(){ return GList; }
-
-
+    std::string getLabels() const{ return shape_labels; }
+    //std::vector<std::vector<GAMMAS_SCATT>> getGList(){ return GList; }
+    std::vector<GAMMAS_SCATT> getGList(){ return GList; }
+    std::vector<GAMMAS_SCATT> getGList2(){ return GList2; }
+    
     //checks
-    bool is_V24();
-    bool is_V3();
+    bool check_reduction( VRED V );
+    bool check_reduction( TRED T );
 
     //reductions
     void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2);
@@ -136,7 +140,7 @@ namespace plegma {
     void V3V2reduction_matrix(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp=false, bool transpgamma=false, int n_gammas_i2=1, int g0=0) ;
 
     //diagrams
-    void B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_source, std::vector<GAMMAS_SCATT> Gammas_ext_sink, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile);
+    void B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_source, std::vector<GAMMAS_SCATT> Gammas_ext_sink, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagram_index);
 
     void W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_source, std::vector<GAMMAS_SCATT> Gammas_ext_sink, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index);
 

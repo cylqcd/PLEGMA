@@ -495,7 +495,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS_SCAT
 //#  Diagrams  #
 //##############
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_i, std::vector<GAMMAS_SCATT> Gammas_ext_f, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, int diagram_index) {
+void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_i, std::vector<GAMMAS_SCATT> Gammas_ext_f, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagram_index) {
 
   //allocate
   if((diagram_index!=1)&&(diagram_index!=2)) PLEGMA_error("diagram_index for B 1 or 2, detected: %d\n", diagram_index);
@@ -556,6 +556,8 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorre
       }
     }
   }
+
+  this->writeHDF5(outfile);
   
   free(temporary); 
 }

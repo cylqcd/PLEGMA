@@ -488,7 +488,9 @@ int main(int argc, char **argv)
           reductionsV2.writeHDF5("V2sourceforB1");
  
           outfilename="Bdiagramm_Antonino" ;
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename);
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1);
+	  
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2);
 
           //Compute Diagram W1,W2
           
