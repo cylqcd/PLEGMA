@@ -243,7 +243,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrel
 		dest[(v*N_GS2C+g*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
 		  src[(v*N_GS3C+g*N_S3C+s1*N_S2C+alfa*N_S1C+s2*N_COLS+c)*2+ri];
 	      } else {
-		dest[(v*N_GS2C+g*N_S1C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
+		dest[(v*N_GS2C+g*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri] =
 		  src[(v*N_GS3C+g*N_S3C+alfa*N_S2C+s1*N_S1C+s2*N_COLS+c)*2+ri];	
 	      }
 }
