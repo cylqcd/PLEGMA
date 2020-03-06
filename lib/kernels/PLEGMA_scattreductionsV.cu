@@ -22,7 +22,7 @@ void V_kernels( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
     PLEGMA_error("Unrecognized V reduction type\n");
 }
 
-template<typename FloatOut, typename FloatV, typename FloatP, typename ... Args>
+template<typename FloatOut, typename FloatV, typename FloatP>
 void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
 			KernelArr<GAMMAS_SCATT> &listGammas,

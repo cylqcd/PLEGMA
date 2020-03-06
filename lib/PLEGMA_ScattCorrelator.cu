@@ -9,10 +9,10 @@ using namespace plegma;
 //--------------------------------//
 //  class PLEGMA_ScattCorrelator  //
 //--------------------------------//
-// From PLEGMA_Correlator
-//
-// - initialize() -> check if nDatasets,nGroups,shape change realloc PLEGMA_FT
-// - finalize() -> delete corr_*_space;
+
+//##################
+//#  Constructors  #
+//##################
 
 template<typename Float>
 PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(site source, int Q2_max, int totalT):
@@ -26,103 +26,110 @@ template<typename Float>
 PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(site source, std::vector<std::vector<int>> fixMomsList, int totalT):
   PLEGMA_Correlator<Float>(MOMENTUM_SPACE,source,0,totalT) { this->setFixMomList(fixMomsList); }
 
-template<typename Float>
-bool PLEGMA_ScattCorrelator<Float>::is_V24() {
-  std::string exp_shape("gsssc");
 
-  //check getSiteSize()
-  if( this->shape.size() != 5 || this->shape_labels.compare(exp_shape)!=0 )
-    return false;
-  if( this->nDatasets()!=1 || this->nGroups()!=1 )
-    return false;
-
-  return true;
-}
-template<typename Float>
-bool PLEGMA_ScattCorrelator<Float>::is_V3() {
-  std::string exp_shape("gsc");
-
-  //check getSiteSize()
-  if( this->shape.size() != 3 || this->shape_labels.compare(exp_shape)!=0 )
-    return false;
-  if( this->nDatasets()!=1 || this->nGroups()!=1 )
-    return false;
-
-  return true;
-}
+//#########################
+//#  Auxiliary functions  #
+//#########################
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S){ 
-
-  int n_gammas= Gammas.size();
-
-  if(n_gammas<=0||n_gammas>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList=Gammas;
+bool PLEGMA_ScattCorrelator<Float>::check_reduction( VRED V ) {
+  std::string exp_shape = ( V==V_3 ) ? "gsc" : "gsssc";
   
-  this->datasets={"dataset_v3"};
-  this->groups={"group_v3"};
+  //check getSiteSize()
+  if( this->shape.size() != exp_shape.length() || this->shape_labels.compare(exp_shape)!=0 )
+    return false;
+  if( this->nDatasets()!=1 || this->nGroups()!=1 )
+    return false;
+
+  //Only 1 gamma list
+  if( (this->GList.empty()) || (!this->GList2.empty()) )
+    return false;
+  
+  return true;
+}
+
+template<typename Float>
+bool PLEGMA_ScattCorrelator<Float>::check_reduction( TRED T ) {
+  std::string exp_shape = "ggss";
+  //check getSiteSize()
+  if( this->shape.size() != exp_shape.length() || this->shape_labels.compare(exp_shape)!=0 )
+    return false;
+  if( this->nDatasets()!=1 || this->nGroups()!=1 )
+    return false;
+
+  //Only 1 gamma list
+  if( (this->GList.empty()) || (this->GList2.empty()) )
+    return false;
+  
+  return true;
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::contract_GxV2_checks( PLEGMA_ScattCorrelator<Float> &srcV2){
+  if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
+  
+  if( this->getMomList() != srcV2.getMomList() ) PLEGMA_error("src and dest must have same momenta\n");
+
+  //allocate
+  int n_gammas = srcV2.GList.size();
+  this->GList=srcV2.GList;
+  this->datasets={"absorbvectorfromV24"};
+  this->groups={"absorbvectorfromV24"};
+  this->shape={n_gammas,N_SPINS,N_COLS};
+  this->shape_labels="gsc";
+  this->initialize();
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta){
+  if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
+  
+  //check index ranges
+  if( alfa<0 || alfa>=N_SPINS ) PLEGMA_error("%d out of range\n", alfa);
+  if( beta<0 || beta>=N_SPINS ) PLEGMA_error("%d out of range\n", beta);
+
+  
+  //allocate
+  int n_gammas = srcV2.shape[0];
+
+  if( this->getMomList() != srcV2.getMomList() ) PLEGMA_error("src and dest must have same momenta. getMomList() detected.\n");
+  
+  this->GList=srcV2.GList;
+  this->datasets={"absorbvectorfromV24"};
+  this->groups={"absorbvectorfromV24"};
   this->shape={n_gammas,N_SPINS,N_COLS};
   this->shape_labels="gsc";
   this->initialize();
   
-  V_reductions<Float,Float,Float>(V_3, *this, Phi, Gammas, S);
+  size_t exp_size = srcV2.getVolSize()*n_gammas*N_SPINS*N_COLS;
+  if( this->getTotalSize() != exp_size )
+    PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
-
-  int n_gammas= Gammas.size();
-
-  if(n_gammas<=0||n_gammas>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList=Gammas;
+void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa){
+  if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
   
-  this->datasets={"dataset_v4"};
-  this->groups={"group_v4"};
-  this->shape={n_gammas,N_SPINS,N_SPINS,N_SPINS,N_COLS};
-  this->shape_labels="gsssc";
+  //check index ranges
+  if( alfa<0 || alfa>=N_SPINS ) PLEGMA_error("%d out of range\n", alfa);
+
+
+  //allocate
+  int n_gammas = srcV2.shape[0];
+
+  if( this->getMomList() != srcV2.getMomList() ) PLEGMA_error("src and dest must have same momenta\n");
+  
+  this->GList=srcV2.GList;
+  this->datasets={"absorbmatrixv24"};
+  this->groups={"absorbmatrixv24"};
+  this->shape={n_gammas,N_SPINS,N_SPINS,N_COLS};
+  this->shape_labels="gssc";
   this->initialize();
 
-  V_reductions<Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
+  size_t exp_size = srcV2.getVolSize()*n_gammas*N_SPINS*N_SPINS*N_COLS;
+  if( this->getTotalSize() != exp_size )
+    PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
 }
-
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
-
-  int n_gammas= Gammas.size();
-
-  if(n_gammas<=0||n_gammas>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList=Gammas;
-  
-  this->datasets={"dataset_v2"};
-  this->groups={"group_v2"};
-  this->shape={n_gammas,N_SPINS,N_SPINS,N_SPINS,N_COLS};
-  this->shape_labels="gsssc";
-  this->initialize();
-
-  V_reductions<Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
-}
-
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1) {
-
-  int n_gammas = Gammas.size();
-
-  if(n_gammas<=0||n_gammas>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList = Gammas;
-  
-  this->datasets={"PhixGxPhi"};
-  this->groups={"group_PhixGxPhi"};
-  this->shape={n_gammas};
-  this->shape_labels="g";
-  this->initialize();
-
-  PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
-}
-
 
 //create a list with the structure of hdf5 file for 4pt. Groups order is the same of arguments order. The printed momenta are p_i1, p_i2, p_f1, p_f2.
 void print_groups_names_4pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f1, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2 , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<std::string> &out){
@@ -203,183 +210,204 @@ void print_groups_names_3pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, 
 }
 
 
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_i, std::vector<GAMMAS_SCATT> Gammas_ext_f, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile) {
+//#####################
+//#  Main reductions  #
+//#####################
 
-  //allocate
-  //int n_gammas_f1 = srcV2.shape[0];
-  std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
-  this->datasets={"B1"};
-  print_groups_names_4pt(moms, Gammas_ext_i, Gammas_ext_f, Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
-  this->shape={N_SPINS,N_SPINS};
-  this->shape_labels="ss";
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S){ 
+
+  int n_gammas= Gammas.size();
+
+  if(n_gammas<=0||n_gammas>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList=Gammas;
+  this->GList2={};
+  
+  this->datasets={"dataset_v3"};
+  this->groups={"group_v3"};
+  this->shape={n_gammas,N_SPINS,N_COLS};
+  this->shape_labels="gsc";
   this->initialize();
   
-  if( this->getVolSize() != this->localT() )
-    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected getVolSize()=%d\n",this->getVolSize());
+  V_reductions<Float,Float,Float>(V_3, *this, Phi, Gammas, S);
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+
+  int n_gammas= Gammas.size();
+
+  if(n_gammas<=0||n_gammas>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList=Gammas;
+  this->GList2={};
   
-  if( this->getSiteSize() != moms.size()*Gammas_ext_i.size()*Gammas_ext_f.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
-    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
-		 this->getVolSize()*this->getSiteSize(),moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
-		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS);
+  this->datasets={"dataset_v4"};
+  this->groups={"group_v4"};
+  this->shape={n_gammas,N_SPINS,N_SPINS,N_SPINS,N_COLS};
+  this->shape_labels="gsssc";
+  this->initialize();
 
-  const int d_SS2= N_SPINS*N_SPINS*2;
-  const int d_G_ext_f = Gammas_ext_f.size();
-  const int d_G_ext_i = Gammas_ext_i.size();
-  const int d_GGGT     = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT();
-  const int d_GGGTSS2  = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
-  const int d_GGGGGTSS2= Gammas_ext_i.size()*Gammas_ext_f.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
+  V_reductions<Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+
+  int n_gammas= Gammas.size();
+
+  if(n_gammas<=0||n_gammas>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList=Gammas;
+  this->GList2={};
   
-  std::vector<std::array<int,3>> imap=moms.index_map();
-  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
-  
-  const int offset=d_GGGTSS2; 
-  Float *temporary=(Float *)malloc(sizeof(Float)*offset);
+  this->datasets={"dataset_v2"};
+  this->groups={"group_v2"};
+  this->shape={n_gammas,N_SPINS,N_SPINS,N_SPINS,N_COLS};
+  this->shape_labels="gsssc";
+  this->initialize();
 
- 
-  //write B1
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
-    const Float tmpreim[2]={cos(phase),sin(phase)};
-    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 2, true);
-    x_e_cx<Float>( temporary, tmpreim, offset/2 );
-
-    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
-      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){    
-        GAMMAS_SCATT gammaf2= Gammas_ext_f[g_i_ind];
-        GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
-
-        for (int internalind=0; internalind < d_GGGT; ++internalind){
-          //Doing the gamma multiplication for the final indices
-          M_e_GNG<Float>(this->H_elem()+i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
-                         gammaf2,
-                         gammai2,
-                         &temporary[internalind*d_SS2]);
-
-        }
-      }
-    }
-  }
-
-  this->writeHDF5(outfile);
-
-  //write B2
-  this->datasets={"B2"};
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
-    const Float tmpreim[2]={cos(phase),sin(phase)};
-
-    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 0);
-    x_e_cx<Float>( temporary,  tmpreim, offset/2);
-    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
-      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){
-        GAMMAS_SCATT gammaf2= Gammas_ext_f[g_i_ind];
-        GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
-
-        for (int internalind=0; internalind < d_GGGT; ++internalind){
-          //Doing the gamma multiplication for the final indices
-          M_e_GNG<Float>(this->H_elem()+ i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
-                         gammaf2,
-                         gammai2,
-                         &temporary[internalind*d_SS2]);
-
-        }
-      }
-    }
-
-  }
-  this->writeHDF5(outfile);
-  
-  free(temporary); 
+  V_reductions<Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
 }
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_source, std::vector<GAMMAS_SCATT> Gammas_ext_sink, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
+void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
+  
+  int n_gammas_i= Gammas_i.size();
+  int n_gammas_f= Gammas_f.size();
+  
+  if(n_gammas_i<=0||n_gammas_i>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList=Gammas_i;
+  
+  if(n_gammas_f<=0||n_gammas_f>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList2=Gammas_f;
+  
+  this->datasets={"dataset_t1"};
+  this->groups={"group_t1"};
+  this->shape_labels="ggss";
+  this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
+  this->initialize();
+  
+  T_reductions<Float,Float>( T_1, *this, Gammas_i, Gammas_f, S1, S2, S3);
+}
 
-  if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
-    PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
-
-  this->datasets={"W"+std::to_string(diagramm_index)};
-
-  std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
-  print_groups_names_4pt(moms, Gammas_ext_source, Gammas_ext_sink,  Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
-  this->shape={N_SPINS,N_SPINS};
-  this->shape_labels="ss";
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3){
+  
+  int n_gammas_i= Gammas_i.size();
+  int n_gammas_f= Gammas_f.size();
+   
+  if(n_gammas_i<=0||n_gammas_i>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList=Gammas_i;
+  
+  if(n_gammas_f<=0||n_gammas_f>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList2=Gammas_f;
+  
+  this->datasets={"dataset_t2"};
+  this->groups={"group_t2"};
+  this->shape_labels="ggss";
+  this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
   this->initialize();
 
-  if( this->getVolSize() != this->localT() )
-    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+  T_reductions<Float,Float>( T_2, *this, Gammas_i, Gammas_f, S1, S2, S3);
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1) {
+
+  int n_gammas = Gammas.size();
+
+  if(n_gammas<=0||n_gammas>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList = Gammas;
+  this->GList2={};
+  
+  this->datasets={"PhixGxPhi"};
+  this->groups={"group_PhixGxPhi"};
+  this->shape={n_gammas};
+  this->shape_labels="g";
+  this->initialize();
+
+  PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
+}
+
+
+//###############################
+//#  Combination of reductions  #
+//###############################
+
+//Contracts V3^a_c x Gammas_cd x V2^a_{abd}. Gammas_i list of gammas between V3, V2. 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpgamma, int n_gammas_i2, int g0) {
+  int n_gammas_i1 = Gammas_i1.size();
+  if ((n_gammas_i1 <= 0) || (n_gammas_i1 >16)){
+   PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  } 
+
+  if( !srcV2.check_reduction(V_2) ) PLEGMA_error("SrcV2 object does not seem a V2like object\n");
+  if( !this->check_reduction(V_3) ) PLEGMA_error("SrcV3 object does not seem a V3like object\n");
  
-  if( this->getSiteSize() != moms.size()*Gammas_ext_source.size()*Gammas_ext_sink.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
-    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(Gexti=%d),(Gextf=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
-		 this->getVolSize()*this->getSiteSize(),moms.size(),Gammas_ext_source.size(),Gammas_ext_sink.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
-		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS);
+  int n_gammas_f1 = srcV2.getGList().size();
+  int n_gammas_f2 = this->GList.size();
+  int TIME = this->localT();
+  
+  int Nmoms_f1 = srcV2.getVolSize()/TIME;
+  int Nmoms_f2 = this->getVolSize()/TIME;
 
-  std::vector<std::array<int,3>> imap=moms.index_map();
-  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
+  PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
+  
+  Float* srcf2 = this->H_elem();//V3
+  Float* srcf1; //V2
+  
 
-
-  const int d_SS2= N_SPINS*N_SPINS*2;
-  const int d_G_ext_f = Gammas_ext_sink.size();
-  const int d_G_ext_i = Gammas_ext_source.size();
-  const int d_GGGT     = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT();
-  const int d_GGGTSS2  = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
-  const int d_GGGGGTSS2= Gammas_ext_source.size()*Gammas_ext_sink.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
-
-  const int offset= d_GGGTSS2; 
-  Float *temporary=(Float *)malloc(sizeof(Float)*offset);
-
-
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
-    //write W1
-    if (diagramm_index == 1){
-      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 2, true, true );
-    }
-    //write W2
-    else if (diagramm_index == 2){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, temporary, 1, false);
-    }
-    //write W3
-    else if (diagramm_index == 3){
-      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, temporary, 1, false, true);
-    }
-    //write W4
-    else {
-      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 0, false, true);
-    }
-    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
-                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
-                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
-    const Float tmpreim[2]={cos(phase),sin(phase)};
-    x_e_cx<Float>( temporary,  tmpreim, offset/2);
-    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
-      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){
-        GAMMAS_SCATT gammaf2= Gammas_ext_sink[g_i_ind];
-        GAMMAS_SCATT gammai2= Gammas_ext_source[g_f_ind];
-
-        for (int internalind=0; internalind < d_GGGT; ++internalind){
-          //Doing the gamma multiplication for the final indices
-          M_e_GNG<Float>(this->H_elem()+ i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
-                         gammaf2,
-                         gammai2,
-                         &temporary[internalind*d_SS2]);
-
+  //
+  const int f2_MGSC2=Nmoms_f2*n_gammas_f2*N_SPINS*N_COLS*2;
+  const int f2_GSC2=n_gammas_f2*N_SPINS*N_COLS*2;
+  const int N_SC2=N_SPINS*N_COLS*2;
+  //
+  const int f1_MGSC2=Nmoms_f1*n_gammas_f1*N_SPINS*N_COLS*2;
+  const int f1_GSC2=n_gammas_f1*N_SPINS*N_COLS*2;
+  //
+  const int d_GGTSS2=n_gammas_f1*n_gammas_f2*TIME*N_SPINS*N_SPINS*2;
+  const int d_GTSS2=n_gammas_f2*TIME*N_SPINS*N_SPINS*2;
+  const int d_TSS2=TIME*N_SPINS*N_SPINS*2;
+  const int d_SS2=N_SPINS*N_SPINS*2;
+ 
+  int i_mom_f1 = indexmap[1];
+  int i_mom_f2 = indexmap[2];
+  for (int alfa=0; alfa < N_SPINS; ++alfa ){
+    for (int beta=0; beta < N_SPINS; ++beta ){
+      int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
+      switch(index_abs){
+      case 0: V3aux.absorb_fromV24<0>( srcV2, alfa, beta ); break;
+      case 1: V3aux.absorb_fromV24<1>( srcV2, alfa, beta ); break;
+      case 2: V3aux.absorb_fromV24<2>( srcV2, alfa, beta ); break;
+      }
+      srcf1 = V3aux.H_elem();
+      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+	for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+	    for(int t=0; t < TIME; ++t){
+	      V_M_V<Float>( srcf2 + t*f2_MGSC2 + i_mom_f2*f2_GSC2 + g3*N_SC2,
+	                    srcf1 + t*f1_MGSC2 + i_mom_f1*f1_GSC2 + g2*N_SC2, 
+		            Gammas_i1[g1], 
+                            transpgamma,
+		            dest + (g1*n_gammas_i2 + g0)*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins );
+	    }
+          }
         }
       }
     }
   }
-  this->writeHDF5(outfile);
-  free(temporary);
-
 }
+
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpgamma, int n_gammas_i2, int g0) {
   int n_gammas_i1 = Gammas_i1.size();
@@ -387,14 +415,16 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS_SCAT
    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
   }
 
-  if( !srcV2.is_V24() ) PLEGMA_error("SrcV2 object does not seem a V2like object\n");
-  if( !this->is_V3() ) PLEGMA_error("SrcV3 object does not seem a V3like object\n");
+  if( !srcV2.check_reduction(V_2) ) PLEGMA_error("SrcV2 object does not seem a V2like object\n");
+  if( !this->check_reduction(V_3) ) PLEGMA_error("SrcV3 object does not seem a V3like object\n");
 
   int n_gammas_f1 = srcV2.getGList().size();
   int n_gammas_f2 = this->GList.size();
 
-  int Nmoms_f1 = srcV2.getVolSize()/this->localT();
-  int Nmoms_f2 = this->getVolSize()/this->localT();
+  int TIME= this->localT();
+
+  int Nmoms_f1 = srcV2.getVolSize()/TIME;
+  int Nmoms_f2 = this->getVolSize()/TIME;
 
   
   PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
@@ -402,7 +432,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS_SCAT
   Float* srcf2 = this->H_elem();//V3
   Float* srcf1;//V2
 
-  int TIME=this->localT();
   //
   const int f2_MGSC2=Nmoms_f2*n_gammas_f2*N_SPINS*N_COLS*2;
   const int f2_GSC2=n_gammas_f2*N_SPINS*N_COLS*2;
@@ -461,6 +490,161 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS_SCAT
   free(temporary_colorvector);
 }
 
+
+//##############
+//#  Diagrams  #
+//##############
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::B_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_i, std::vector<GAMMAS_SCATT> Gammas_ext_f, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagram_index) {
+
+  //allocate
+  if((diagram_index!=1)&&(diagram_index!=2)) PLEGMA_error("diagram_index for B 1 or 2, detected: %d\n", diagram_index);
+  
+  std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
+  this->datasets={"B"+std::to_string(diagram_index)};
+  print_groups_names_4pt(moms, Gammas_ext_i, Gammas_ext_f, Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
+  this->shape={N_SPINS,N_SPINS};
+  this->shape_labels="ss";
+  this->initialize();
+
+  if( this->getVolSize() != this->localT() )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1. Detected getVolSize()=%d\n",this->getVolSize());
+  
+  if( this->getSiteSize() != moms.size()*Gammas_ext_i.size()*Gammas_ext_f.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
+    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
+		 this->getVolSize()*this->getSiteSize(),moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
+		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS);
+
+  const int d_SS2 = N_SPINS*N_SPINS*2;
+  const int d_G_ext_f = Gammas_ext_f.size();
+  const int d_G_ext_i = Gammas_ext_i.size();
+  const int d_GGGT    = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT();
+  const int d_GGGTSS2 = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
+  const int d_GGGGGTSS2 = Gammas_ext_i.size()*Gammas_ext_f.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
+  
+  std::vector<std::array<int,3>> imap=moms.index_map();
+  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
+  
+  const int offset=d_GGGTSS2; 
+  Float *temporary=(Float *)malloc(sizeof(Float)*offset);
+
+  int aux_idx = (diagram_index==1) ? 2 : 0;
+
+  //write B?
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+    srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, aux_idx, (diagram_index==1));
+    x_e_cx<Float>( temporary, tmpreim, offset/2 );
+
+    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
+      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){    
+        GAMMAS_SCATT gammaf2= Gammas_ext_f[g_i_ind];
+        GAMMAS_SCATT gammai2= Gammas_ext_i[g_f_ind];
+
+        for (int internalind=0; internalind < d_GGGT; ++internalind){
+          //Doing the gamma multiplication for the final indices
+          M_e_GNG<Float>(this->H_elem()+i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
+                         gammaf2,
+                         gammai2,
+                         &temporary[internalind*d_SS2]);
+
+        }
+      }
+    }
+  }
+
+  this->writeHDF5(outfile);
+  
+  free(temporary); 
+}
+
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::W_diagramms(momList &moms, PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<GAMMAS_SCATT> Gammas_ext_source, std::vector<GAMMAS_SCATT> Gammas_ext_sink, GAMMAS_SCATT G_i2, std::vector<GAMMAS_SCATT> &Gammas_i1, std::string &outfile, int diagramm_index){
+
+  if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
+    PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
+
+  this->datasets={"W"+std::to_string(diagramm_index)};
+
+  std::vector<GAMMAS_SCATT> aux_gammas_i2={G_i2};
+  print_groups_names_4pt(moms, Gammas_ext_source, Gammas_ext_sink,  Gammas_i1, aux_gammas_i2, srcV2.GList, srcV3.GList, this->groups);
+  this->shape={N_SPINS,N_SPINS};
+  this->shape_labels="ss";
+  this->initialize();
+
+  if( this->getVolSize() != this->localT() )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+ 
+  if( this->getSiteSize() != moms.size()*Gammas_ext_source.size()*Gammas_ext_sink.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
+    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(Gexti=%d),(Gextf=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
+		 this->getVolSize()*this->getSiteSize(),moms.size(),Gammas_ext_source.size(),Gammas_ext_sink.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
+		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS);
+
+  
+  std::vector<std::array<int,3>> imap=moms.index_map();
+  std::vector<std::vector<int>> mom_i1_list=moms.pi1();
+
+
+  const int d_SS2= N_SPINS*N_SPINS*2;
+  const int d_G_ext_f = Gammas_ext_sink.size();
+  const int d_G_ext_i = Gammas_ext_source.size();
+  const int d_GGGT     = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT();
+  const int d_GGGTSS2  = Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
+  const int d_GGGGGTSS2= Gammas_ext_source.size()*Gammas_ext_sink.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS*2;
+
+  const int offset= d_GGGTSS2; 
+  Float *temporary=(Float *)malloc(sizeof(Float)*offset);
+
+
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    memset(temporary, 0, d_GGGTSS2*sizeof(Float));
+    //write W1
+    if (diagramm_index == 1){
+      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 2, true, true );
+    }
+    //write W2
+    else if (diagramm_index == 2){
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, temporary, 1, false);
+    }
+    //write W3
+    else if (diagramm_index == 3){
+      srcV3.V3V2reduction_matrix( Gammas_i1, imap[i_m], srcV2, temporary, 1, false, true);
+    }
+    //write W4
+    else {
+      srcV3.V3V2reduction( Gammas_i1, imap[i_m], srcV2, temporary, 0, false, true);
+    }
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_i1_list[i_m][0]*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* mom_i1_list[i_m][1]*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* mom_i1_list[i_m][2]*this->source[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+    x_e_cx<Float>( temporary,  tmpreim, offset/2);
+    for (int g_i_ind=0; g_i_ind < d_G_ext_i ; ++ g_i_ind){
+      for (int g_f_ind=0; g_f_ind < d_G_ext_f ; ++ g_f_ind){
+        GAMMAS_SCATT gammaf2= Gammas_ext_sink[g_i_ind];
+        GAMMAS_SCATT gammai2= Gammas_ext_source[g_f_ind];
+
+        for (int internalind=0; internalind < d_GGGT; ++internalind){
+          //Doing the gamma multiplication for the final indices
+          M_e_GNG<Float>(this->H_elem()+ i_m*d_GGGGGTSS2+(g_i_ind*d_G_ext_f+g_f_ind)*d_GGGTSS2+internalind*d_SS2,
+                         gammaf2,
+                         gammai2,
+                         &temporary[internalind*d_SS2]);
+
+        }
+      }
+    }
+  }
+  this->writeHDF5(outfile);
+  free(temporary);
+
+}
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
                                                 momList &moms, 
@@ -481,6 +665,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(
   const int d_GGGGTSS2= tot_size/moms.size()/Gammas_ext_i.size()/Gammas_ext_f.size();
   const int d_GGGGTSS = d_GGGGTSS2/2;
   const int d_GGGGT   = Gammas_i1.size()*Gammas_i2.size()*srcV2[0].GList.size()*srcV3[0].GList.size()*this->localT();
+
   const int d_G_ext_i = Gammas_ext_i.size();
   const int d_G_ext_f = Gammas_ext_f.size();
   const int d_SS2 = N_SPINS*N_SPINS*2 ;
@@ -582,6 +767,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<int> mom_pi2, std::
  
   //size of temporal output for pion loop
   const int tot_size = G_i2.size()*G_f2.size()*this->localT()*2;
+
   std::vector<std::vector<int>> aux_mom = {mom_pi2 ,};
 
   print_groups_names_2pt("p_tot=", aux_mom, G_i2, G_f2, this->groups);
@@ -641,6 +827,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( momList &moms, momList &moms_re
 
   //size of temporal output for pion loop
   const int pp_size = moms_pf2.size()*G_i2.size()*G_f2.size()*this->localT()*2;
+
   Float *temp_pp = (Float*)malloc( pp_size*sizeof(Float) );
   memset( temp_pp, 0, pp_size*sizeof(Float) );
   
@@ -908,68 +1095,6 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
 
 }
 
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gammas_i1, std::array<int,3> &indexmap, PLEGMA_ScattCorrelator<Float> &srcV2, Float *dest, int index_abs, bool transp, bool transpgamma, int n_gammas_i2, int g0) {
-  int n_gammas_i1 = Gammas_i1.size();
-  if ((n_gammas_i1 <= 0) || (n_gammas_i1 >16)){
-   PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  } 
-
-  if( !srcV2.is_V24() ) PLEGMA_error("SrcV2 object does not seem a V2like object\n");
-  if( !this->is_V3() ) PLEGMA_error("SrcV3 object does not seem a V3like object\n");
- 
-  int n_gammas_f1 = srcV2.getGList().size();
-  int n_gammas_f2 = this->GList.size();
-
-  int Nmoms_f1 = srcV2.getVolSize()/this->localT();
-  int Nmoms_f2 = this->getVolSize()/this->localT();
-
-  PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
-  
-  Float* srcf2 = this->H_elem();//V3
-  Float* srcf1; //V2
-  
-  int TIME=this->localT();
-  //
-  const int f2_MGSC2=Nmoms_f2*n_gammas_f2*N_SPINS*N_COLS*2;
-  const int f2_GSC2=n_gammas_f2*N_SPINS*N_COLS*2;
-  const int N_SC2=N_SPINS*N_COLS*2;
-  //
-  const int f1_MGSC2=Nmoms_f1*n_gammas_f1*N_SPINS*N_COLS*2;
-  const int f1_GSC2=n_gammas_f1*N_SPINS*N_COLS*2;
-  //
-  const int d_GGTSS2=n_gammas_f1*n_gammas_f2*TIME*N_SPINS*N_SPINS*2;
-  const int d_GTSS2=n_gammas_f2*TIME*N_SPINS*N_SPINS*2;
-  const int d_TSS2=TIME*N_SPINS*N_SPINS*2;
-  const int d_SS2=N_SPINS*N_SPINS*2;
- 
-  int i_mom_f1 = indexmap[1];
-  int i_mom_f2 = indexmap[2];
-  for (int alfa=0; alfa < N_SPINS; ++alfa ){
-    for (int beta=0; beta < N_SPINS; ++beta ){
-      int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
-      switch(index_abs){
-      case 0: V3aux.absorb_fromV24<0>( srcV2, alfa, beta ); break;
-      case 1: V3aux.absorb_fromV24<1>( srcV2, alfa, beta ); break;
-      case 2: V3aux.absorb_fromV24<2>( srcV2, alfa, beta ); break;
-      }
-      srcf1=V3aux.H_elem();
-      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
-	for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
-	    for(int t=0; t < TIME; ++t){
-	      V_M_V<Float>( srcf2 + t*f2_MGSC2 + i_mom_f2*f2_GSC2 + g3*N_SC2,
-	                    srcf1 + t*f1_MGSC2 + i_mom_f1*f1_GSC2 + g2*N_SC2, 
-		            Gammas_i1[g1], 
-                            transpgamma,
-		            dest + (g1*n_gammas_i2 + g0)*d_GGTSS2 + g2*d_GTSS2 + g3*d_TSS2 + t*d_SS2 + spins );
-	    }
-          }
-        }
-      }
-    }
-  }
-}
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms(
@@ -1056,116 +1181,6 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms(
   this->writeHDF5(outfile);
 }
 
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T1(std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3) {
-  
-  int n_gammas_i= Gammas_i.size();
-  int n_gammas_f= Gammas_f.size();
-  
-  if(n_gammas_i<=0||n_gammas_i>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList=Gammas_i;
-  
-  if(n_gammas_f<=0||n_gammas_f>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList2=Gammas_f;
-  
-  this->datasets={"dataset_t1"};
-  this->groups={"group_t1"};
-  this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
-  this->initialize();
-  
-  T_reductions<Float,Float>( T_1, *this, Gammas_i, Gammas_f, S1, S2, S3);
-}
-
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3){
-  
-  int n_gammas_i= Gammas_i.size();
-  int n_gammas_f= Gammas_f.size();
-   
-  if(n_gammas_i<=0||n_gammas_i>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList=Gammas_i;
-  
-  if(n_gammas_f<=0||n_gammas_f>16)
-    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
-  this->GList2=Gammas_f;
-  
-  this->datasets={"dataset_t2"};
-  this->groups={"group_t2"};
-  this->shape={n_gammas_i,n_gammas_f, N_SPINS,N_SPINS};
-  this->initialize();
-
-  T_reductions<Float,Float>( T_2, *this, Gammas_i, Gammas_f, S1, S2, S3);
-}
-
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::contract_GxV2_checks( PLEGMA_ScattCorrelator<Float> &srcV2){
-  if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
-  
-  if( this->getMomList() != srcV2.getMomList() ) PLEGMA_error("src and dest must have same momenta\n");
-
-  //allocate
-  int n_gammas = srcV2.GList.size();
-  this->GList=srcV2.GList;
-  this->datasets={"absorbvectorfromV24"};
-  this->groups={"absorbvectorfromV24"};
-  this->shape={n_gammas,N_SPINS,N_COLS};
-  this->shape_labels="gsc";
-  this->initialize();
-}
-
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorb_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta){
-  if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
-  
-  //check index ranges
-  if( alfa<0 || alfa>=N_SPINS ) PLEGMA_error("%d out of range\n", alfa);
-  if( beta<0 || beta>=N_SPINS ) PLEGMA_error("%d out of range\n", beta);
-
-  
-  //allocate
-  int n_gammas = srcV2.shape[0];
-
-  if( this->getMomList() != srcV2.getMomList() ) PLEGMA_error("src and dest must have same momenta. getMomList() detected.\n");
-  
-  this->GList=srcV2.GList;
-  this->datasets={"absorbvectorfromV24"};
-  this->groups={"absorbvectorfromV24"};
-  this->shape={n_gammas,N_SPINS,N_COLS};
-  this->shape_labels="gsc";
-  this->initialize();
-  
-  size_t exp_size = srcV2.getVolSize()*n_gammas*N_SPINS*N_COLS;
-  if( this->getTotalSize() != exp_size )
-    PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
-}
-
-template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24_checks( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa){
-  if(!srcV2.is_V24()) PLEGMA_error("srcV2 seems not to have V2like shape\n");
-  
-  //check index ranges
-  if( alfa<0 || alfa>=N_SPINS ) PLEGMA_error("%d out of range\n", alfa);
-
-
-  //allocate
-  int n_gammas = srcV2.shape[0];
-
-  if( this->getMomList() != srcV2.getMomList() ) PLEGMA_error("src and dest must have same momenta\n");
-  
-  this->GList=srcV2.GList;
-  this->datasets={"absorbmatrixv24"};
-  this->groups={"absorbmatrixv24"};
-  this->shape={n_gammas,N_SPINS,N_SPINS,N_COLS};
-  this->shape_labels="gssc";
-  this->initialize();
-
-  size_t exp_size = srcV2.getVolSize()*n_gammas*N_SPINS*N_SPINS*N_COLS;
-  if( this->getTotalSize() != exp_size )
-    PLEGMA_error("total size %d != expected_size %d\n",this->getTotalSize(),exp_size);
-}
 
 
 

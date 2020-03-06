@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     //In vectorAuxD2 we store the results for the inversion
     vectorAuxD2.scale(0.0);
     
-    if (1){
+    if (timedilution){
       PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
       for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
         //Step(3) pick out a particular timeslice from the source
@@ -488,7 +488,9 @@ int main(int argc, char **argv)
           reductionsV2.writeHDF5("V2sourceforB1");
  
           outfilename="Bdiagramm_Antonino" ;
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename);
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1);
+	  
+          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2);
 
           //Compute Diagram W1,W2
           
@@ -548,7 +550,7 @@ int main(int argc, char **argv)
 
        std::vector<int> tmp_4Dmom= momentum_i2 ; 
        tmp_4Dmom.push_back(0);
-       vectortmp2.mulMomentumPhases(tmp_4Dmom,1);
+       vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
        stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp2,0);
  
        
