@@ -36,7 +36,7 @@ bool PLEGMA_ScattCorrelator<Float>::check_reduction( VRED V ) {
   std::string exp_shape = ( V==V_3 ) ? "gsc" : "gsssc";
   
   //check getSiteSize()
-  if( this->shape.size() != exp_shape.lenght() || this->shape_labels.compare(exp_shape)!=0 )
+  if( this->shape.size() != exp_shape.length() || this->shape_labels.compare(exp_shape)!=0 )
     return false;
   if( this->nDatasets()!=1 || this->nGroups()!=1 )
     return false;
@@ -52,7 +52,7 @@ template<typename Float>
 bool PLEGMA_ScattCorrelator<Float>::check_reduction( TRED T ) {
   std::string exp_shape = "ggss";
   //check getSiteSize()
-  if( this->shape.size() != exp_shape.lenght() || this->shape_labels.compare(exp_shape)!=0 )
+  if( this->shape.size() != exp_shape.length() || this->shape_labels.compare(exp_shape)!=0 )
     return false;
   if( this->nDatasets()!=1 || this->nGroups()!=1 )
     return false;
@@ -355,7 +355,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction(std::vector<GAMMAS_SCATT> &Gam
  
   int n_gammas_f1 = srcV2.getGList().size();
   int n_gammas_f2 = this->GList.size();
-  int TIME = localT();
+  int TIME = this->localT();
   
   int Nmoms_f1 = srcV2.getVolSize()/TIME;
   int Nmoms_f2 = this->getVolSize()/TIME;
@@ -421,7 +421,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix(std::vector<GAMMAS_SCAT
   int n_gammas_f1 = srcV2.getGList().size();
   int n_gammas_f2 = this->GList.size();
 
-  int TIME=localT();
+  int TIME= this->localT();
 
   int Nmoms_f1 = srcV2.getVolSize()/TIME;
   int Nmoms_f2 = this->getVolSize()/TIME;
