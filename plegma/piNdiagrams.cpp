@@ -328,6 +328,33 @@ int main(int argc, char **argv)
       outfilename = "Ndiagramm_Antonino";
       diagramm_nucleon.N_diagramms( reductionsT1, reductionsT2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, outfilename);
 
+      //Constructing list of momenta that contains for all P_tot all the unique combinations of pf1 pf2 that adds up to p_tot
+
+      momList sourcemomentumList_forTpiNsink;
+
+      //We first have a loop over all unique the source meson momentum p_i2 
+      for (auto momentum_tot : sourcemomentumList.uniq_p(3)) {
+        //List of momenta corresponding to a fix value of p_i2
+        momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_tot, 3));
+        std::vector<std::vector<int>> momlist_0=filtered_sourcemomentumList.pi(0);
+        std::vector<std::vector<int>> momlist_1=filtered_sourcemomentumList.pi(1);
+        std::vector<std::vector<int>> momlist_2=filtered_sourcemomentumList.pi(2);
+        for (int i=0; i< momlist_0.size(); ++i){
+          sourcemomentumList_forTpiNsink.add_mom( momlist_0[i], momlist_1[i], momlist_2[i] );
+        }
+      }      
+
+      PLEGMA_ScattCorrelator<float> reductionsV2_T(source, sourcemomentumList_forTpiNsink.uniq_p(1));
+      PLEGMA_ScattCorrelator<float> reductionsV3_T(source, sourcemomentumList_forTpiNsink.uniq_p(2));
+
+      reductionsV3_T.V3( vectorStoc_propag, glist_sink_meson, propUP);
+      reductionsV3_T.writeHDF5("V3sourceforTPINSINK");
+
+      reductionsV2_T.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+      reductionsV2_T.writeHDF5("V2sourceforTPINSINK");
+
+      outfilename = "Tdiagramm_piNsinkAntonino";
+      diagramm.T_diagramms_piNsink(sourcemomentumList_forTpiNsink, reductionsV2_T, reductionsV3_T, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, outfilename);
 
       // ensuring mu positive
       if(mu<0) {

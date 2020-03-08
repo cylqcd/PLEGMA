@@ -934,6 +934,100 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( momList &moms, momList &moms_re
   free( temp_pp );
   this->writeHDF5(outfile);
 }
+//T diagramm pion nucleon at the sink
+//V3 should have momentum list p_f2
+//V2 should have momentum list p_f1 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink(momList moms, PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f1,std::vector<GAMMAS_SCATT> &Gamma_i, std::string &outfile){
+
+  std::vector<std::vector<int>> moms_tot=moms.uniq_p(3);
+
+  std::vector<std::vector<int>> moms_pf1=srcV2.getMomList();
+  std::vector<std::vector<int>> moms_pf2=srcV3.getMomList();
+
+  const int n_gammas_f2 = srcV3.GList.size();
+  const int n_gammas_f1 = srcV2.GList.size();
+  const int n_gammas_i2 = Gamma_i.size();
+  const int n_gammas_extf1 = extG_f1.size();
+  const int n_gammas_exti1 = extG_i1.size();
+  const int tot_size = moms_tot.size()*extG_i1.size()*extG_f1.size()*n_gammas_f2*n_gammas_f1*n_gammas_i2*this->localT()*N_SPINS*N_SPINS*2;
+  const int src_size = this->localT()*moms_pf1.size()*n_gammas_f2*n_gammas_f1*N_SPINS*N_SPINS*2;
+
+
+  this->datasets={"TpiNsink"};
+
+  print_groups_names_3pt( moms, extG_i1, extG_f1, Gamma_i, srcV2.GList, srcV3.GList, this->groups);
+
+  this->shape={N_SPINS,N_SPINS};
+  this->shape_labels="ss";
+  this->initialize();
+
+  if( this->getVolSize() != this->localT() )
+    PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
+
+  if( this->getSiteSize()*2 != tot_size/this->localT() )
+    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(Gi1=%d),(extG1=%d),(Gf2=%d),(Gf1=%d),(extGf=%d),%d\n", this->getVolSize()*this->getSiteSize(),moms_tot.size(),
+                 n_gammas_i2, n_gammas_exti1, n_gammas_f2, n_gammas_f1, n_gammas_extf1, tot_size/2);
+
+  std::vector<std::array<int,3>> imap=moms.index_map();
+  std::vector<std::vector<int>> moms_tot_list=moms.pi(3);
+
+  const int N_moms = moms_tot_list.size();
+  const int TIME = this->localT();
+  const int i_GGG = n_gammas_f2*n_gammas_f1*n_gammas_i2;
+  const int i_GGGT = i_GGG*TIME;
+  const int i_SS2 = N_SPINS*N_SPINS*2;
+  const int i_GGGTSS2 = i_GGG*TIME*i_SS2;
+  const int d_GGGGGTSS2 = n_gammas_exti1*n_gammas_extf1*i_GGGTSS2;
+
+  const int offset=i_GGGTSS2;
+  Float *temporary1=(Float *)malloc(sizeof(Float)*offset);
+  Float *temporary2=(Float *)malloc(sizeof(Float)*offset);
+  Float *temporary3=(Float *)malloc(sizeof(Float)*offset);
+  Float *temporary =(Float *)malloc(sizeof(Float)*offset);
+
+
+  //write T diagramm piN at the sink
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    memset(temporary, 0, i_GGGTSS2*sizeof(Float));
+    const Float phase=2*M_PI/(Float)HGC_totalL[0]* moms_tot_list[i_m][0]*this->source[0]+
+                      2*M_PI/(Float)HGC_totalL[1]* moms_tot_list[i_m][1]*this->source[1]+
+                      2*M_PI/(Float)HGC_totalL[2]* moms_tot_list[i_m][2]*this->source[2];
+    const Float tmpreim[2]={cos(phase),sin(phase)};
+    srcV3.V3V2reduction_matrix( Gamma_i, imap[i_m], srcV2, temporary1, 1, false);
+    srcV3.V3V2reduction       ( Gamma_i, imap[i_m], srcV2, temporary2, 2, true);
+    srcV3.V3V2reduction       ( Gamma_i, imap[i_m], srcV2, temporary3, 0, false);
+
+    for (int i=0; i<offset ; ++i){
+      temporary[i]=2.*(temporary1[i]+temporary2[i]+temporary3[i]);
+    }
+
+    x_e_cx<Float>( temporary, tmpreim, offset/2 );
+
+    for (int g_i_ind=0; g_i_ind < n_gammas_exti1 ; ++ g_i_ind){
+      for (int g_f_ind=0; g_f_ind < n_gammas_extf1 ; ++ g_f_ind){
+        GAMMAS_SCATT gammaf2= extG_i1[g_i_ind];
+        GAMMAS_SCATT gammai2= extG_f1[g_f_ind];
+
+        for (int internalind=0; internalind < i_GGGT; ++internalind){
+          //Doing the gamma multiplication for the final indices
+          M_e_GNG<Float>(this->H_elem()+i_m*d_GGGGGTSS2+(g_i_ind*n_gammas_extf1+g_f_ind)*i_GGGTSS2+internalind*i_SS2,
+                         gammaf2,
+                         gammai2,
+                         &temporary[internalind*i_SS2]);
+
+        }
+      }
+    }
+  }//loop over total momentum
+
+  free( temporary1 );
+  free( temporary2 );
+  free( temporary3 ); 
+  free( temporary  );
+  this->writeHDF5(outfile);
+
+}
 
 //Nucleon correlator. This function should be called outside the p_i2 loop, with Ts computed using the entire list of unique p_f1s. N.B: we multiply the output by exp(i * x_sourcepos * p_f1);
 template<typename Float>
@@ -1059,7 +1153,6 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( momList &moms, PLEGMA_ScattCorr
   const int d_GGGGGTSS2 = extGammas_i1.size()*n_gammas_extf*i_GGGTSS2;
 
   Float *srcTs[3] = {T1.H_elem(),T3.H_elem(),T5.H_elem()};
-
   Float *dest = this->H_elem();
   Float *temp = (Float *)malloc(sizeof(Float)*i_SS2);
     

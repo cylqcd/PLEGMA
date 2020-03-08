@@ -148,6 +148,8 @@ namespace plegma {
 
     void T_diagramms( momList &moms, PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, GAMMAS_SCATT &G_i2, std::vector<GAMMAS_SCATT> &extGammas_i1, std::vector<GAMMAS_SCATT> &extGammas_f, std::string &outfile);
 
+    void T_diagramms_piNsink(momList moms, PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f1,std::vector<GAMMAS_SCATT> &Gamma_i, std::string &outfile);
+
     void M_diagramms( momList &moms, momList &moms_red, PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, std::string &outfile);
 
     void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, std::vector<GAMMAS_SCATT> &extG_i, std::vector<GAMMAS_SCATT> &extG_f, std::string &outfile);
@@ -157,7 +159,6 @@ namespace plegma {
     void P_diagramms( std::vector<int> mom_pi2, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, std::string &outfile);
 
   };
-
 
 }
 
