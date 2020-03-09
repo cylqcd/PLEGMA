@@ -855,7 +855,8 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( momList &moms, momList &moms_re
   const int d_GG = G_i2.size()*G_f2.size();
 
   //aux PLEGMA_SC for PhixGxPhi multiplications
-  PLEGMA_ScattCorrelator pipi_aux(this->getSource(), moms_pf2, this->getTotalT());
+  site source=site({0,0,0,this->getSource()[3]});
+  PLEGMA_ScattCorrelator pipi_aux(source, moms_pf2, this->getTotalT());
 
   //loop over G_i2
   for(int gi2=0; gi2<G_i2.size(); ++gi2){
