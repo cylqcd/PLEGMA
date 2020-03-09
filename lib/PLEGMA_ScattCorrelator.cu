@@ -198,7 +198,7 @@ void print_groups_names_4pt( momList &moms_red, std::vector<std::string> &groupN
 void print_groups_names_3pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f, std::vector<GAMMAS_SCATT> &G_i1 , std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f,  std::vector<std::string> &out){
   std::string tmp;
   out.clear();
-  for(auto &mom : moms.print_3pt() )
+  for(auto &mom : moms.print_3pt(false) )
     for( auto &g1e : extG_i1 )
       for( auto &g3e : extG_f )
 	for( auto &g1 : G_i1 )
@@ -208,6 +208,21 @@ void print_groups_names_3pt( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, 
 	      out.push_back(tmp);
 	    }
 }
+
+void print_groups_names_3pt_piNsink( momList &moms, std::vector<GAMMAS_SCATT> &extG_i1, std::vector<GAMMAS_SCATT> &extG_f, std::vector<GAMMAS_SCATT> &G_i , std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2,  std::vector<std::string> &out){
+  std::string tmp;
+  out.clear();
+  for(auto &mom : moms.print_3pt(true) )
+    for( auto &g1e : extG_i1 )
+      for( auto &g3e : extG_f )
+        for( auto &g1 : G_i ) 
+          for( auto &g2 : G_f1 ) 
+            for( auto &g3 : G_f2 ){
+              tmp = mom + "/" + GAMMAS_SCATT_STR[g1]+"-"+GAMMAS_SCATT_STR[g1e] + "/" + GAMMAS_SCATT_STR[g2] +"-"+GAMMAS_SCATT_STR[g3e] + "/" + GAMMAS_SCATT_STR[g3];
+              out.push_back(tmp);
+            } 
+}
+
 
 
 //#####################
@@ -956,7 +971,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink(momList moms, PLEGMA_Sca
 
   this->datasets={"TpiNsink"};
 
-  print_groups_names_3pt( moms, extG_i1, extG_f1, Gamma_i, srcV2.GList, srcV3.GList, this->groups);
+  print_groups_names_3pt_piNsink( moms, extG_i1, extG_f1, Gamma_i, srcV2.GList, srcV3.GList, this->groups);
 
   this->shape={N_SPINS,N_SPINS};
   this->shape_labels="ss";
