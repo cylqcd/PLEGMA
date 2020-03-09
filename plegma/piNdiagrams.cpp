@@ -648,7 +648,7 @@ int main(int argc, char **argv)
        std::vector<GAMMAS_SCATT> glist_sourcemeson_g5 = apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);       
        std::vector<GAMMAS_SCATT> glist_sinkmeson_g5 = apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        outfilename = "Pdiagramm_Antonino";
-       diagramm.P_diagramms( momentum_i2, glist_source_meson, glist_sink_meson, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
+       diagramm.P_diagramms( momentum_i2, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
        
        outfilename = "Mdiagramm_Antonino";
        diagramm.M_diagramms( sourcemomentumList, filtered_sourcemomentumList, diagramm_nucleon, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
