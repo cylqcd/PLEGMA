@@ -4,6 +4,15 @@
 using namespace plegma;
 using namespace quda;
 
+std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;                 \
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back()
+
+std::vector<std::thread> threads;
+//#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
+#define THREAD(fnc) TIME(fnc)
+
 extern int device;
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "time-dilution"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
@@ -116,12 +125,12 @@ int main(int argc, char **argv)
 
     //Step(2) Smearing all the time slice
     vectorAuxD1.copy(vectorStoc_source);
-    vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
+    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
     //Save the smeared source in order to reuse it for oet.
     vectorStoc_source_arch.copy(vectorAuxD2);
 
     //We rotate the source to the physical basis
-    vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1);
+    TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
 
     //In vectorAuxD2 we store the results for the inversion
     vectorAuxD2.scale(0.0);
@@ -132,7 +141,7 @@ int main(int argc, char **argv)
         //Step(3) pick out a particular timeslice from the source
         vectorInOut.absorbTimeslice(vectorAuxD1, timeidx);
         //Step(4) Solve
-        solver.solve(vectorInOut, vectorInOut);
+        TIME(solver.solve(vectorInOut, vectorInOut));
         //Step(5) absorbing the particular timeslice to a 4d vector
         vectorAuxD2.absorbTimeslice(vectorInOut, timeidx, false);
       }
@@ -140,31 +149,35 @@ int main(int argc, char **argv)
     else{
       PLEGMA_printf("#piNdiagramms: No time dilution is used n stochastic propagators\n");
       vectorInOut.copy(vectorAuxD1);
-      solver.solve(vectorInOut, vectorInOut);
+      TIME(solver.solve(vectorInOut, vectorInOut));
       vectorAuxD2.copy(vectorInOut);
     } 
 
-    vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
-    vectorStoc_source_arch.writeHDF5(outfile_V+"globalTfulltimedilution_source");
+    //vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
+    //vectorStoc_source_arch.writeHDF5(outfile_V+"globalTfulltimedilution_source");
     vectorAuxD1.copy(vectorStoc_source_arch);
     vectorAuxD1.apply_gamma5();
     vectorStoc_source.copy(vectorAuxD1);
 
     //Step(6) We rotate back the propagator to the physical basis
-    vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1);
+    TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
 
     //Step(7) Smearing all the time slice in the propagator
-    vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
+    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
     
-    vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
-    vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
+    //vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
+    //vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
     vectorStoc_propag.copy(vectorAuxD1);
     vectorStoc_propag.apply_gamma5();
 
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
 
-      int sequential_time_source=sourcePositions[isource][3];
+      PLEGMA_Gauge3D<double> smearedGauge3D;
+      smearedGauge3D.absorb(smearedGauge, sourcePositions[isource][DIM_T]);
+
+
+      int sequential_time_source=sourcePositions[isource][DIM_T];
 
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
@@ -190,32 +203,32 @@ int main(int argc, char **argv)
         PLEGMA_Vector<double> vectorInOut;
         PLEGMA_Vector<float> vectorAuxF;
         PLEGMA_Vector<double> vectorAuxD;
-        //Create the source
-        vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-
-        //Smearing on the source
-        start_time = MPI_Wtime();
-        vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-        tmp_time += MPI_Wtime()-start_time;
+        { // Smearing the source
+          PLEGMA_Vector3D<double> vector1, vector2;
+          vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+          vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+        }
 
         //Rotation to the physical basis
-        vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);       
+        TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));       
 
         //Inversion
         PLEGMA_printf("Going to invert UP for component %d\n", isc);
-        solver.solve(vectorAuxD, vectorAuxD);
+        TIME(solver.solve(vectorAuxD, vectorAuxD));
 
         //Rotation to the physical basis
-        vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1);
+        TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
 
         //Smearing at the sink
         start_time = MPI_Wtime();
-        vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
+        TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
         tmp_time += MPI_Wtime()-start_time;
 
         vectorAuxF.copy(vectorAuxD);
         propUP.absorb(vectorAuxF, isc/3, isc%3);
       }
+      /*
 
       if(outfile_upS!="")
         {
@@ -232,7 +245,7 @@ int main(int argc, char **argv)
           }
         }
 
-
+      */
       // ensuring mu negative
       if(mu>0) {
         mu*=-1.;
@@ -243,35 +256,34 @@ int main(int argc, char **argv)
         PLEGMA_Vector<double> vectorInOut;
         PLEGMA_Vector<float> vectorAuxF;
         PLEGMA_Vector<double> vectorAuxD;
-        //(1 step) creating the point source
-        vectorAuxD.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
 
-        start_time = MPI_Wtime();
-        //(2 step) doing the gaussian smearing on the source
-        vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        { // Smearing the source
+          PLEGMA_Vector3D<double> vector1, vector2;
+          vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+          vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+        }
 
         //(3 step) rotation to the physical basis
-        vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1);
+        TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1));
 
-        tmp_time += MPI_Wtime()-start_time;
         //(4 step) doing the inversion
         PLEGMA_printf("Going to invert DN for component %d\n", isc);
-        solver.solve(vectorAuxD, vectorAuxD);
+        TIME(solver.solve(vectorAuxD, vectorAuxD));
 
         start_time = MPI_Wtime();
         //(5 step) rotating to the physical base
-        vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1);
+        TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1));
 
         //(6 step) doing the smearing on the propagator
-        vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss);
-        tmp_time += MPI_Wtime()-start_time;
+        TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
 
         vectorAuxF.copy(vectorAuxD);
 
         propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
-
+      /*
       if(outfile_dnS!="")
         {
           PLEGMA_printf("Save propagator for the d quark\n");
@@ -286,18 +298,11 @@ int main(int argc, char **argv)
             vectorAuxPrint.writeHDF5(outfile_dnS+"_s"+spin+"_c"+col);
 
           }
-        }
+        }*/
 
       std::vector<int> mom={0,0,0};
       PLEGMA_ScattCorrelator<float> diagramm(sourcePositions[isource], mom);
  
-      // int source[4]={sourcePositions[isource][0],
-      //                sourcePositions[isource][1],
-      //                sourcePositions[isource][2],
-      //                sourcePositions[isource][3]};
-
-      // diagramm.setSource(source);
-
       site source=site({0,0,0,sourcePositions[isource][3]});
 
       PLEGMA_ScattCorrelator<float> diagramm_pion(source, mom);
@@ -305,33 +310,33 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(3));
 
 
-      reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
+      TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
       reductionsT1.writeHDF5("T1sourceforD");
 
 
-      reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
+      TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
       reductionsT2.writeHDF5("T2sourceforD");
 
 
       std::string outfilename="Ddiagramm_Antonino" ;
-      diagramm.D_diagramms( reductionsT1, reductionsT2, glist_source_delta_unpaired, glist_sink_delta_unpaired, outfilename);
+      TIME(diagramm.D_diagramms( reductionsT1, reductionsT2, glist_source_delta_unpaired, glist_sink_delta_unpaired, outfilename));
 
       //N diagram
       PLEGMA_ScattCorrelator<float> diagramm_nucleon(sourcePositions[isource], mom);
       //diagramm_nucleon.setSource(source);
       
-      reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
+      TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
       reductionsT1.writeHDF5("T1sourceforN");
 
-      reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
+      TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
       reductionsT2.writeHDF5("T2sourceforN");
 
 
       outfilename = "Ndiagramm_Antonino";
-      diagramm_nucleon.N_diagramms( reductionsT1, reductionsT2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, outfilename);
+      TIME(diagramm_nucleon.N_diagramms( reductionsT1, reductionsT2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, outfilename));
 
       //Constructing list of momenta that contains for all P_tot all the unique combinations of pf1 pf2 that adds up to p_tot
-
+      /*
       momList sourcemomentumList_forTpiNsink;
 
       //We first have a loop over all unique the source meson momentum p_i2 
@@ -356,7 +361,7 @@ int main(int argc, char **argv)
       reductionsV2_T.writeHDF5("V2sourceforTPINSINK");
 
       outfilename = "Tdiagramm_piNsinkAntonino";
-      diagramm.T_diagramms_piNsink(sourcemomentumList_forTpiNsink, reductionsV2_T, reductionsV3_T, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, outfilename);
+      diagramm.T_diagramms_piNsink(sourcemomentumList_forTpiNsink, reductionsV2_T, reductionsV3_T, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, outfilename);*/
 
       // ensuring mu positive
       if(mu<0) {
@@ -364,16 +369,17 @@ int main(int argc, char **argv)
         solver.UpdateSolver();
       }
 
-
+      PLEGMA_Vector<double> vectorStoc_source_oet;
       PLEGMA_Vector<float> vectortmp1;
       PLEGMA_Vector<float> vectortmp2;
           
       PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 
       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
 
-      //Using the already generated stochastic source and project it to a time-slice
-      //Smearing was already performed
-      //Creating oet time-slice source
+      vectorStoc_source.randInit(1234);
+      vectorStoc_source.stochastic_Z(nroots);
+
+
       vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source);
       //Transforming to physical base
       vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
@@ -383,19 +389,19 @@ int main(int argc, char **argv)
         PLEGMA_Vector<double> vectorAuxD;
 
         //tmp_time += MPI_Wtime()-start_time;       
-        stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
+        //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
         //Doing the zero momentum stochastic propagator with spin dilution
         vectorInOut.copy(stochastic_source_spin_diluted_momzero);
         //Doing the inversion
-        solver.solve(vectorInOut, vectorInOut);
+        TIME(solver.solve(vectorInOut, vectorInOut));
         //Rotate back immediately to the physical basis
         vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
         //Gaussian smearing of the propagator
-        vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+        TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
         stochastic_propagator_momzero[spinindex].copy(vectorInOut);
         //tmp_time += MPI_Wtime()-start_time;
-        stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
-        stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+        //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+        //stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
         if (spinindex<3){
           vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momzero,spinindex+1,spinindex);
           stochastic_source_spin_diluted_momzero.copy(vectortmp1);
@@ -431,14 +437,21 @@ int main(int argc, char **argv)
             start_time = MPI_Wtime();
 
             //Performing the smearing
-            vectorAuxD2.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
-            tmp_time += MPI_Wtime()-start_time;
+            // Smearing the source
+            {
+              PLEGMA_Vector3D<double> vector1, vector2;
+              vectorAuxF.absorb(propDN, isc/3, isc%3);
+              vectorAuxD.copy(vectorAuxF);
+              vector1.absorb( vectorAuxD, sequential_time_source );
+              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+              vectorAuxD2.absorb(vector2,sourcePositions[isource][DIM_T]);
+            }
 
             //Perform multiplication with gamma_i2
             vectorAuxD2.apply_gamma_scatt(gamma_i2);
 
             //Perform rotation to the physical basis
-            vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1);
+            TIME(vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1));
 
             
             vectorAuxF.copy(vectorAuxD);
@@ -458,21 +471,21 @@ int main(int argc, char **argv)
             vectorInOut.copy(vectorAuxF);
             PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
             //performing the inversion
-            solver.solve(vectorInOut, vectorInOut);
+            TIME(solver.solve(vectorInOut, vectorInOut));
             start_time = MPI_Wtime();
 
             //performing rotation to physical base
-            vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+            TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));
 
             //performing smearing
-            vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+            TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
             tmp_time += MPI_Wtime()-start_time;
 
             vectorAuxF.copy(vectorInOut);
             propUPDN.absorb(vectorAuxF, isc/3, isc%3);
           }
 
-
+          /*
           if(outfile_SEQ!="")
           {
              PLEGMA_printf("Save sequential propagator for the ud \n");
@@ -485,7 +498,7 @@ int main(int argc, char **argv)
                vectorAuxPrint.writeLIME(outfile_SEQ+"_s"+spin+"_c"+col);
                vectorAuxPrint.writeHDF5(outfile_SEQ+"_s"+spin+"_c"+col);
              }
-          }
+          }*/
 
           PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
 
@@ -497,51 +510,51 @@ int main(int argc, char **argv)
           PLEGMA_ScattCorrelator<float> reductionsT3triangle(source, filtered_sourcemomentumList.uniq_p(3));
 
           PLEGMA_ScattCorrelator<float> reductionsT5triangle(source, filtered_sourcemomentumList.uniq_p(3));
-          reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP);
+          TIME(reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP));
           reductionsT1triangle.writeHDF5("T1sourceforT");
-          reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP);
+          TIME(reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP));
           reductionsT3triangle.writeHDF5("T3sourceforT");
-          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN);
+          TIME(reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN));
           reductionsT5triangle.writeHDF5("T5sourceforT");
 
           outfilename="Tdiagramm_Antonino";
-          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_source_nucleon_unpaired, glist_sink_delta_unpaired,  outfilename);
+          TIME(diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_source_nucleon_unpaired, glist_sink_delta_unpaired,  outfilename));
 
 
           //Compute Diagram B1 and B2 
 
-          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
+          TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN));
           reductionsV3.writeHDF5("V3sourceforB1");
 
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP));
           reductionsV2.writeHDF5("V2sourceforB1");
  
           outfilename="Bdiagramm_Antonino" ;
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1);
+          TIME(diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1));
 	  
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2);
+          TIME(diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2));
 
           //Compute Diagram W1,W2
           
-          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
+          TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP));
           reductionsV3.writeHDF5("V3sourceforW12");
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN);
+          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN));
           reductionsV2.writeHDF5("V2sourceforW12");
 
           outfilename= "Wdiagramm_Antonino";
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1);
+          TIME(diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1));
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2);
+          TIME(diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2));
 
 
           //Compute Diagram W3,W4
           //
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
+          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP));
           reductionsV2.writeHDF5("V2sourceforW34");
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 3);
+          TIME(diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 3));
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 4);
+          TIME(diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 4));
 
        } //loop over gamma i2
          
@@ -573,7 +586,7 @@ int main(int argc, char **argv)
        //Creating oet time-slice source
        vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source);
        //Transforming to physical base
-       vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
+       TIME(vectortmp2.rotateToPhysicalBasis(vectortmp1,+1));
        
        //Multiplying by the appropriate momentum phase
 
@@ -587,24 +600,24 @@ int main(int argc, char **argv)
          PLEGMA_Vector<double> vectorAuxD;
 
          //tmp_time += MPI_Wtime()-start_time;       
-         stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
+         //stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
  
          vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
          //Doing the inversion
-         solver.solve(vectorInOut, vectorInOut);
+         TIME(solver.solve(vectorInOut, vectorInOut));
 
          //Rotate back immediately to the physical basis
-         vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+         TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));
 
          //performing smearing
-         vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
+         TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 
          //Saving the propagator
          stochastic_propagator_momp_i2[spinindex].copy(vectorInOut);
 
          //tmp_time += MPI_Wtime()-start_time;         
-         stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
+         //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
          
          if (spinindex<3){
            vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momp_i2,spinindex+1,spinindex);
@@ -617,31 +630,31 @@ int main(int argc, char **argv)
        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);       
        std::vector<GAMMAS_SCATT>  sourcemeson_t_gamma_5=apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);
        for (int i=0; i< 4; ++i){
-         reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP);
+         TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
          reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
 
-         reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
+         TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon, outfilename, 1);
+       TIME(diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon, outfilename, 1));
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon, outfilename, 2);
+       TIME(diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon, outfilename, 2));
  
       
        //Diagram Z3,Z4	
        for (int i=0; i< 4; ++i){
 
-         reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
+         TIME(reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
          reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
 
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 3);
+       TIME(diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 3));
 
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 4);
+       TIME(diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 4));
 
 
 
@@ -651,10 +664,10 @@ int main(int argc, char **argv)
        std::vector<GAMMAS_SCATT> glist_sinkmeson_g5 = apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        outfilename = "Pdiagramm_Antonino";
 
-       diagramm_pion.P_diagramms( momentum_i2, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
+       TIME(diagramm_pion.P_diagramms( momentum_i2, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename));
        
        outfilename = "Mdiagramm_Antonino";
-       diagramm.M_diagramms( sourcemomentumList, filtered_sourcemomentumList, diagramm_nucleon, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
+       TIME(diagramm.M_diagramms( sourcemomentumList, filtered_sourcemomentumList, diagramm_nucleon, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename));
 
 
       }//loop over unique set of momenta for p_i2
