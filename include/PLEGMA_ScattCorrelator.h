@@ -50,7 +50,7 @@ namespace plegma {
     //////////////
 
     std::vector<std::vector<GAMMAS_SCATT>> GList;
-    momList pList;
+    momList * pList;
     int N_p=0;
 
     std::string labels;    //     index_struct = "gsssc" (because spin first)
@@ -82,98 +82,70 @@ namespace plegma {
     // in 4pt functions the order of momenta is determined by momList
     // in 2pt functions by the order of momList.uniq_p( i ) where i is the momentum you take
     // in 3pt function the order of momenta is deretmined by momList.uniq_p(tot)
-
-    void setOffsets( ){
-      int g_count=0;
-      ranges.clear();
-      
-      for( auto &l : labels ){
-    	switch(l){
-    	case("p"): if(PList.empty()||N_p==0) PLEGMA_error( "p detected with PList empty\n") else ranges.push_back(N_p); break;
-    	case("t"): assert(corr_mom_space); ranges.push_back( corr_mom_space->DimT() ); break;
-    	case("m"): assert(corr_mom_space); ranges.push_back( corr_mom_space->Nmoms() ); break;
-    	case("g"): ranges.push_back( GList[g_count].size() ); g_count++; break;
-    	case("s"): ranges.push_back( N_SPINS ); break;
-    	case("c"): ranges.push_back( N_COLS ); break;
-    	default: PLEGMA_error( "Label %c not recognized\n", l );
-    	}	
-      }
-
-      offsets.clear();
-      for( int ir=1; ir<ranges.size(); ++ir ){
-    	int offset = std::accumulate(ranges.begin()+ir, ranges.end(), 2, std::multiplies<int>());
-    	offsets.push_back(offset);
-      }
-      offsets.push_back(2);
-    }
-  
-    Float* Corr(  std::initializer_list<int> idx ) const {
-      if(offsets.size()<idx.size())
-    	PLEGMA_error("Number of indices (%d) greater than size of correlator\n",idx.size());
-      
-      return H_elem() + std::inner_product( idx.begin(), idx.end(), offsets.begin(), 0.0);
-    }
-
-    momList getPList(){
-      momList res;
-      res = PList; 
-      return res;
-    }
     
-    void setPList( momList list_p ){
-      this->PList = list_p;
+    void setPList( momList &list_p ){
+      this->pList = &list_p;
     }
 
     int Nmoms(){
-      assert(corr_mom_space);
-      return corr_mom_space->Nmoms();
+      assert(this->corr_mom_space);
+      return this->corr_mom_space->Nmoms();
     }
       
     //checks
+    void setOffsets( );
+
+    Float* Corr(  std::initializer_list<int> idx ) const {
+      if(offsets.size()<idx.size())
+	PLEGMA_error("Number of indices (%d) greater than size of correlator\n",idx.size());
+  
+      return this->H_elem() + std::inner_product( idx.begin(), idx.end(), offsets.begin(), 0);
+    }
+
     bool check_reduction( VRED V );
     bool check_reduction( TRED T );
 
     //reductions
-    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2);
-    void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S);
-    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2);
-    void T1( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
-    void T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3);
-    void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1);
+    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
+    void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S );
+    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2 );
+    void T1( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3 );
+    void T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3 );
+    void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 );
 
 
     //manipulation
     template <int s_free>
-    void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta);
+    void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta );
     template <int s_fixed>
-    void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa);
+    void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa );
     
-    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma=false, Float* factor=NULL);
+    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma=false, Float* factor=NULL );
 
-    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma=false, Float* factor=NULL);
+    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma=false, Float* factor=NULL );
     
 
     //initialize_diagrams
-    void initialize_diagram( momList &momenta, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram, bool inM=false);//P
+    void initialize_diagram( momList &momenta, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram, bool inM=false );//P
     void initialize_diagram( momList &momenta, std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f,
-			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_f1, std::string name_of_diagram);//N,D
+			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_f1, std::string name_of_diagram );//N,D
     void initialize_diagram( momList &momenta, std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f,
-			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string name_of_diagram);//T
+			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string name_of_diagram );//T
     void initialize_diagram( momList &momenta, std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f,
-			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram);//B,W,Z,M
+			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram );//B,W,Z,M
 
     
     //diagrams
-    void B_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false);
-    void W_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false);
+    void B_diagramms( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false );
+    void W_diagramms( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false );
     void Z_diagramms( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
-    void M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum=false);
+    void M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum=false );
 
-    void T_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, int ig_i2, bool accum=false);
+    void T_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, int ig_i2, bool accum=false );
 
-    void P_diagramms( std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum=false, int pi=0);
-    void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false);
-    void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false);
+    void P_diagramms( std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum=false, int pi=0 );
+    void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
+    void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
 
     //others
     void applyBoundaryConditions( bool antiperiodic );
@@ -247,18 +219,18 @@ void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float
   int n_gammas = srcV2.GList[0].size();
   int n_momenta = srcV2.Nmoms();
 
-  for(int t=0; t < localT(); ++t)
-    for(int m=0; m < Nmoms(); v++)
-      for(int g=0; g < n_gammas; g++)
-	for(int s=0; s < N_SPINS; s++)
-	  for(int c=0; c < N_COLS; c++)
-	    for(int ri=0; ri<2; ri++)
+  for(int t=0; t < this->localT(); ++t)
+    for(int m=0; m < Nmoms(); ++m)
+      for(int g=0; g < n_gammas; ++g)
+	for(int s=0; s < N_SPINS; ++s)
+	  for(int c=0; c < N_COLS; ++c)
+	    for(int ri=0; ri<2; ++ri)
 	      if( s_free == 0){
-		this->Corr({t,m,g,s,c})[ri]  = src.Corr({t,m,g,s,alfa,beta,c})[ri];
+		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,s,alfa,beta,c})[ri];
 	      } else if ( s_free == 1 ){
-		this->Corr({t,m,g,s,c})[ri]  = src.Corr({t,m,g,alfa,s,beta,c})[ri];
+		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,alfa,s,beta,c})[ri];
 	      } else {
-		this->Corr({t,m,g,s,c})[ri]  = src.Corr({t,m,g,alfa,beta,s,c})[ri];
+		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,alfa,beta,s,c})[ri];
 	      } 
 }
 
@@ -273,13 +245,13 @@ void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrel
 
   int n_gammas = GList[0].size();
    
-  for(int t=0; t < localT(); ++t)
+  for(int t=0; t < this->localT(); ++t)
     for(int m=0; m < Nmoms(); ++m)
-      for(int g=0; g < n_gammas; g++)
-	for(int s1=0; s1 < N_SPINS; s1++)
-	  for( int s2=0; s2 < N_SPINS; s2++)
-	    for(int c=0; c < N_COLS; c++)
-	      for(int ri=0; ri<2; ri++)
+      for(int g=0; g < n_gammas; ++g)
+	for(int s1=0; s1 < N_SPINS; ++s1)
+	  for( int s2=0; s2 < N_SPINS; ++s2)
+	    for(int c=0; c < N_COLS; ++c)
+	      for(int ri=0; ri<2; ++ri)
 		if( s_fixed == 2){
 		  this->Corr({t,m,g,s1,s2,c})[ri] = srcV2.Corr({t,m,g,s1,s2,alfa,c})[ri];
 		} else if ( s_fixed == 1 ){

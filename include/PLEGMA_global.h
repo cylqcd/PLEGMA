@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
+#include <numeric>
 #include <array>
 #include <algorithm>
 #include <quda.h>
