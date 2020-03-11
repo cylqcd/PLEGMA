@@ -89,7 +89,7 @@ const std::string GAMMAS_SCATT_STR[35] = {"1",
                                           "Cg3g5",
                                           "C",
                                           "Cg5",
-                                          "Cgt",
+                                          "Cg4",
                                           "Cg5g4",
                                           "Cg4g5",
                                           "Cg5g4g5"};

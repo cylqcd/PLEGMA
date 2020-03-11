@@ -872,7 +872,8 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
   //mom_pi2 can be 1 mom or a list of moms
   
   //aux PLEGMA_SC for PhixGxPhi multiplications
-  PLEGMA_ScattCorrelator<Float> pipi_aux(this->getSource(), momlist, this->getTotalT());
+  site source=site({0,0,0,this->getSource()[3]});
+  PLEGMA_ScattCorrelator<Float> pipi_aux(source, momlist, this->getTotalT());
 
   int N_moms = pipi_aux.Nmoms();
   int n_gammas_i2 = this->GList[0].size();
