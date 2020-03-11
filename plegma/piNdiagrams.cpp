@@ -289,8 +289,11 @@ int main(int argc, char **argv)
         }
 
       std::vector<int> mom={0,0,0};
-      PLEGMA_ScattCorrelator<float> diagramm(sourcePositions[isource], mom);
- 
+      //D diagram
+      PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], mom);
+      //initialize diagram
+      corrD.initialize_diagram(sourcemomentumList,glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
+      
       // int source[4]={sourcePositions[isource][0],
       //                sourcePositions[isource][1],
       //                sourcePositions[isource][2],
@@ -302,21 +305,26 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(3));
       PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(3));
 
-
       reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
       reductionsT1.writeHDF5("T1sourceforD");
-
 
       reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
       reductionsT2.writeHDF5("T2sourceforD");
 
-
       std::string outfilename="Ddiagramm_Antonino" ;
-      diagramm.D_diagramms( reductionsT1, reductionsT2, glist_source_delta_unpaired, glist_sink_delta_unpaired, outfilename);
+      corrD.D_diagramms( reductionsT1, reductionsT2 );
+      corrD.apply_phase( sourcemomentumList.uniq_p(3) );
+      corrD.applyBoundaryConditions( true );
+      corrD.writeHDF5(outfilename);
 
       //N diagram
-      PLEGMA_ScattCorrelator<float> diagramm_nucleon(sourcePositions[isource], mom);
+      PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], mom);
+      //initialize diagram
+      corrN.initialize_diagram(sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N");
+      
       //diagramm_nucleon.setSource(source);
+      PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(1));
+      PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(1));
       
       reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
       reductionsT1.writeHDF5("T1sourceforN");
@@ -326,7 +334,10 @@ int main(int argc, char **argv)
 
 
       outfilename = "Ndiagramm_Antonino";
-      diagramm_nucleon.N_diagramms( reductionsT1, reductionsT2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, outfilename);
+      corrN.N_diagramms( reductionsT1, reductionsT2 );
+      corrN.apply_phase( sourcemomentumList.uniq_p(1) );
+      corrN.applyBoundaryConditions( true );
+      corrN.writeHDF5( outfilename );
 
 
       // ensuring mu positive
@@ -376,17 +387,43 @@ int main(int argc, char **argv)
 
       //We first have a loop over all unique the source meson momentum p_i2 
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
-
-
-        //List of momenta corresponding to a fix value of p_i2
+	//List of momenta corresponding to a fix value of p_i2
         momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
 
+	//diagrams
+	PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrW2(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrW3(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrW4(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrZ1(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrZ2(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], mom);
+
+	//initialize diagrams
+	corrB1.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
+	corrB2.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B2");
+	corrW1.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W1");
+	corrW2.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W2");
+	corrW3.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W3");
+	corrW4.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W4");
+	corrZ1.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z1");
+	corrZ2.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z2");
+	corrZ3.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z3");
+	corrZ4.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z4");
+	corrM.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "M");
+	corrT.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "T");
+	
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(2));
 
         //Loop over the different gamma structure for the source meson
-        for (auto gamma_i2 : glist_source_meson) {
-         
+        for (int i_gamma_i2=0; i_gamma_i2<glist_source_meson.size(); ++i_gamma_i2) {
+	  GAMMAS_SCATT gamma_i2 = glist_source_meson[i_gamma_i2];
           // Computing sequential propagators f1 <- i_2 <- i_1 
           // so the sequential source source time is fixed
           // and the momentum is also fixed to be momentum_i2
@@ -475,8 +512,7 @@ int main(int argc, char **argv)
           reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN);
           reductionsT5triangle.writeHDF5("T5sourceforT");
 
-          outfilename="Tdiagramm_Antonino";
-          diagramm.T_diagramms(filtered_sourcemomentumList, reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, gamma_i2, glist_source_nucleon_unpaired, glist_sink_delta_unpaired,  outfilename);
+          corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2);
 
 
           //Compute Diagram B1 and B2 
@@ -486,12 +522,10 @@ int main(int argc, char **argv)
 
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
           reductionsV2.writeHDF5("V2sourceforB1");
- 
-          outfilename="Bdiagramm_Antonino" ;
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1);
-	  
-          diagramm.B_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2);
 
+	  corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1);
+	  corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2);
+          
           //Compute Diagram W1,W2
           
           reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
@@ -499,20 +533,16 @@ int main(int argc, char **argv)
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN);
           reductionsV2.writeHDF5("V2sourceforW12");
 
-          outfilename= "Wdiagramm_Antonino";
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 1);
-
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 2);
-
+          corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1);
+	  corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2);
 
           //Compute Diagram W3,W4
           //
           reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
           reductionsV2.writeHDF5("V2sourceforW34");
 
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 3);
-
-          diagramm.W_diagramms(filtered_sourcemomentumList, reductionsV3, reductionsV2, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, gamma_i2, glist_source_nucleon, outfilename, 4);
+          corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3);
+	  corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4);
 
        } //loop over gamma i2
          
@@ -585,8 +615,7 @@ int main(int argc, char **argv)
        }      
 
        //Diagram Z1,Z2
-       std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);       
-       std::vector<GAMMAS_SCATT>  sourcemeson_t_gamma_5=apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);
+
        for (int i=0; i< 4; ++i){
          reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP);
          reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
@@ -594,11 +623,8 @@ int main(int argc, char **argv)
          reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
-
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon, outfilename, 1);
-
-
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon, outfilename, 2);
+       corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 );
+       corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 2 );
  
       
        //Diagram Z3,Z4	
@@ -609,24 +635,75 @@ int main(int argc, char **argv)
 
        }
 
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 3);
-
-
-       diagramm.Z_diagramms(filtered_sourcemomentumList, reductionsV3_diluted, reductionsV2_diluted, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, sourcemeson_t_gamma_5, glist_source_nucleon,  outfilename, 4);
-
-
+       corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 3 );
+       corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 );
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
-       
-       std::vector<GAMMAS_SCATT> glist_sourcemeson_g5 = apply_gamma5_scatt_gamma(glist_source_meson,RIGHT);       
-       std::vector<GAMMAS_SCATT> glist_sinkmeson_g5 = apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        outfilename = "Pdiagramm_Antonino";
-       diagramm.P_diagramms( momentum_i2, glist_source_meson, glist_sink_meson, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
+       corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2);
+       //write P
+       corrP.writeHDF5( outfilename );
        
+       corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 );
+
+       //write everything
+       //## B
+       outfilename = "Bdiagramm_Antonino";
+       corrB1.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrB1.applyBoundaryConditions( true );
+       corrB1.writeHDF5( outfilename );
+       corrB2.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrB2.applyBoundaryConditions( true );
+       corrB2.writeHDF5( outfilename );
+       //## W
+       outfilename = "Wdiagramm_Antonino";
+       corrW1.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrW1.applyBoundaryConditions( true );
+       corrW1.writeHDF5( outfilename );
+       corrW2.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrW2.applyBoundaryConditions( true );
+       corrW2.writeHDF5( outfilename );
+       corrW3.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrW3.applyBoundaryConditions( true );
+       corrW3.writeHDF5( outfilename );
+       corrW4.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrW4.applyBoundaryConditions( true );
+       corrW4.writeHDF5( outfilename );
+       //## Z
+       outfilename = "Zdiagramm_Antonino";
+       corrZ1.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrZ1.applyBoundaryConditions( true );
+       corrZ1.writeHDF5( outfilename );
+       corrZ2.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrZ2.applyBoundaryConditions( true );
+       corrZ2.writeHDF5( outfilename );
+       corrZ3.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrZ3.applyBoundaryConditions( true );
+       corrZ3.writeHDF5( outfilename );
+       corrZ4.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrZ4.applyBoundaryConditions( true );
+       corrZ4.writeHDF5( outfilename );
+       //## M
        outfilename = "Mdiagramm_Antonino";
-       diagramm.M_diagramms( sourcemomentumList, filtered_sourcemomentumList, diagramm_nucleon, glist_sourcemeson_g5, glist_sinkmeson_g5, stochastic_propagator_momzero, stochastic_propagator_momp_i2, outfilename);
+       corrM.apply_phase( filtered_sourcemomentumList.pi1() );
+       corrM.applyBoundaryConditions( true );
+       corrM.writeHDF5( outfilename );
 
+       //## T
+       outfilename = "Tdiagramm_Antonino";
+       std::vector<std::vector<int>> auxmomlist;
+       std::vector<int> ptmp(3);
 
+       for(auto &mtot : filtered_sourcemomentumList.uniq_p(3) ){
+	 for(int j=0; j<3; ++j)
+	   ptmp[j] = mtot[j]-filtered_sourcemomentumList.pi(0)[0][j];
+	 auxmomlist.push_back( ptmp );
+       }
+       
+       corrT.apply_phase( auxmomlist );
+       corrT.applyBoundaryConditions( true );
+       corrT.writeHDF5( outfilename );
+       
       }//loop over unique set of momenta for p_i2
 
     } //loop over source position

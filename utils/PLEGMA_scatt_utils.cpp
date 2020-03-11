@@ -96,10 +96,11 @@ template void x_e_cx<float>(  float *dest,  const float  floatcomplex[2], int si
 template void x_e_cx<double>( double *dest, const double floatcomplex[2], int size) ;
 
 template<typename Float>
-void M_e_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source ){
+void M_pe_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source, bool forcezero=false ){
   const int N2=N_SPINS*N_SPINS*2;
-  for (int i=0; i < N2; ++i)
-    dest[i]=0.;
+  if(forcezero)
+    for (int i=0; i < N2; ++i)
+      dest[i]=0.;
   for (int n_gamma_f=0; n_gamma_f<4; ++n_gamma_f) {    
     const int alfa =   gammaInd_scatt_host[Gamma_f][n_gamma_f][0];
     const int alfa0=   gammaInd_scatt_host[Gamma_f][n_gamma_f][1];
@@ -126,9 +127,9 @@ void M_e_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_
   }
 }
 
-template void M_e_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const float *source) ;
+template void M_pe_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const float *source, bool forcezero=false) ;
 
-template void M_e_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const double *source) ;
+template void M_pe_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const double *source, bool forcezero=false) ;
 
 static inline GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
 {

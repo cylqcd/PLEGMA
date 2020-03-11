@@ -16,6 +16,7 @@ namespace plegma {
     std::vector<std::vector<int>> *ps[4]={&p_i2,&p_f1,&p_f2,&p_tot};
 
   public:
+       
     momList() {;}
     
     momList( std::vector<int> &mom_list ){
@@ -57,7 +58,20 @@ namespace plegma {
       }
     }
 
+    momList& operator= (const momList &tc_momlist)
+    {
+      // do the copy
+      p_i2 = tc_momlist.p_i2; // can handle self-assignment
+      p_f1 = tc_momlist.p_f1; // can handle self-assignment
+      p_f2 = tc_momlist.p_f2; // can handle self-assignment
+      
+      // return the existing object so we can chain this operator
+      return *this;
+    }
+
     int size(){ return p_i2.size(); }
+
+    bool empty(){ return p_i2.empty(); }
 
     void add_mom( std::vector<int> &mom ){
       if(mom.size()%9!=0) PLEGMA_error("9 integers expected\n");
@@ -165,7 +179,7 @@ namespace plegma {
 	std::vector<int> p_i1={p_tot_u[n][0]-p_i2[0][0],p_tot_u[n][1]-p_i2[0][1],p_tot_u[n][2]-p_i2[0][2]};
         tmp ="pi1="+std::to_string(p_i1[0])+"_"+std::to_string(p_i1[1])+"_"+std::to_string(p_i1[2])+"_";
 	tmp += "pi2="+std::to_string(p_i2[0][0])+"_"+std::to_string(p_i2[0][1])+"_"+std::to_string(p_i2[0][2])+"_";
-	tmp += "ptot="+std::to_string(p_tot_u[n][0])+"_"+std::to_string(p_tot_u[n][1])+"_"+std::to_string(p_tot_u[n][2]);
+	tmp += "pf="+std::to_string(p_tot_u[n][0])+"_"+std::to_string(p_tot_u[n][1])+"_"+std::to_string(p_tot_u[n][2]);
 	out.push_back(tmp);
       }
       return out;
