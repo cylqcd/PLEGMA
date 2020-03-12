@@ -4,6 +4,12 @@
 using namespace plegma;
 using namespace quda;
 
+std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;                 \
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back()
+
+
 extern int device;
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "time-dilution"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
@@ -307,45 +313,46 @@ int main(int argc, char **argv)
 	PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(3));
 	PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(3));
 
-	reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
+	TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
 	reductionsT1.writeHDF5("T1sourceforD");
 
-	reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP);
+	TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
 	reductionsT2.writeHDF5("T2sourceforD");
 	//write D
 	outfilename="Ddiagramm_Antonino" ;
+
 	PLEGMA_printf("DEBUG: start D_diagram\n");
-	corrD.D_diagramms( reductionsT1, reductionsT2 );
+	TIME(corrD.D_diagramms( reductionsT1, reductionsT2 ));
 	PLEGMA_printf("DEBUG: start apply phase to D diagram\n");
-	corrD.apply_phase( sourcemomentumList.uniq_p(3) );
+	TIME(corrD.apply_phase( sourcemomentumList.uniq_p(3) ));
 	//PLEGMA_printf("DEBUG: apply bounds to D diagram\n");
-	//corrD.applyBoundaryConditions( true );
+	//TIME(corrD.applyBoundaryConditions( true ));
 	PLEGMA_printf("DEBUG: write D diagram\n");
-	corrD.writeHDF5(outfilename);
+	TIME(corrD.writeHDF5(outfilename));
 	PLEGMA_printf("DEBUG: write D diagram completed\n");
       }
 
       //N diagram
       PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], mom);
       //initialize diagram
-      corrN.initialize_diagram(sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N");
+      TIME(corrN.initialize_diagram(sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
       
       //diagramm_nucleon.setSource(source);
       PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(1));
       PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(1));
       
-      reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
+      TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
       reductionsT1.writeHDF5("T1sourceforN");
 
-      reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP);
+      TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
       reductionsT2.writeHDF5("T2sourceforN");
 
       //write N
       outfilename = "Ndiagramm_Antonino";
-      corrN.N_diagramms( reductionsT1, reductionsT2 );
-      corrN.apply_phase( sourcemomentumList.uniq_p(1) );
-      corrN.applyBoundaryConditions( true );
-      corrN.writeHDF5( outfilename );
+      TIME(corrN.N_diagramms( reductionsT1, reductionsT2 ));
+      TIME(corrN.apply_phase( sourcemomentumList.uniq_p(1) ));
+      TIME(corrN.applyBoundaryConditions( true ));
+      TIME(corrN.writeHDF5( outfilename ));
 
 
       // ensuring mu positive
@@ -513,44 +520,44 @@ int main(int argc, char **argv)
           PLEGMA_ScattCorrelator<float> reductionsT3triangle(source, filtered_sourcemomentumList.uniq_p(3));
 
           PLEGMA_ScattCorrelator<float> reductionsT5triangle(source, filtered_sourcemomentumList.uniq_p(3));
-          reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP);
+          TIME(reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP));
           reductionsT1triangle.writeHDF5("T1sourceforT");
-          reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP);
+          TIME(reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP));
           reductionsT3triangle.writeHDF5("T3sourceforT");
-          reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN);
+          TIME(reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN));
           reductionsT5triangle.writeHDF5("T5sourceforT");
 
-          corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2);
+          TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2));
 
 
           //Compute Diagram B1 and B2 
 
-          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN);
+          TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN));
           reductionsV3.writeHDF5("V3sourceforB1");
 
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP);
+          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP));
           reductionsV2.writeHDF5("V2sourceforB1");
 
-	  corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1);
-	  corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2);
+	  TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1));
+	  TIME(corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2));
           
           //Compute Diagram W1,W2
           
-          reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP);
+          TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP));
           reductionsV3.writeHDF5("V3sourceforW12");
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN);
+          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN));
           reductionsV2.writeHDF5("V2sourceforW12");
 
-          corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1);
-	  corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2);
+          TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1));
+	  TIME(corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2));
 
           //Compute Diagram W3,W4
           //
-          reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP);
+          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP));
           reductionsV2.writeHDF5("V2sourceforW34");
 
-          corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3);
-	  corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4);
+          TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3));
+	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
 
        } //loop over gamma i2
          
@@ -626,26 +633,26 @@ int main(int argc, char **argv)
        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        
        for (int i=0; i< 4; ++i){
-         reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP);
+         TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
          reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
 
-         reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
+         TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
        }
-       corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 );
-       corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 2 );
+       TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ));
+       TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 2 ));
  
       
        //Diagram Z3,Z4	
        for (int i=0; i< 4; ++i){
 
-         reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP);
+         TIME(reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
          reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
 
        }
 
-       corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 3 );
-       corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 );
+       TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 3 ));
+       TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 ));
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        
@@ -654,55 +661,55 @@ int main(int argc, char **argv)
 	 corrP.initialize_diagram(filtered_sourcemomentumList, glist_source_meson, glist_sink_meson, "P");
 
 	 outfilename = "Pdiagramm_Antonino";
-	 corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2);
+	 TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2));
 	 //write P
-	 corrP.writeHDF5( outfilename );
+	 TIME(corrP.writeHDF5( outfilename ));
        }
        
-       corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 );
+       TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
 
        //write everything
        //## B
        outfilename = "Bdiagramm_Antonino";
-       corrB1.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrB1.applyBoundaryConditions( true );
-       corrB1.writeHDF5( outfilename );
-       corrB2.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrB2.applyBoundaryConditions( true );
-       corrB2.writeHDF5( outfilename );
+       TIME(corrB1.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrB1.applyBoundaryConditions( true ));
+       TIME(corrB1.writeHDF5( outfilename ));
+       TIME(corrB2.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrB2.applyBoundaryConditions( true ));
+       TIME(corrB2.writeHDF5( outfilename ));
        //## W
        outfilename = "Wdiagramm_Antonino";
-       corrW1.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrW1.applyBoundaryConditions( true );
-       corrW1.writeHDF5( outfilename );
-       corrW2.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrW2.applyBoundaryConditions( true );
-       corrW2.writeHDF5( outfilename );
-       corrW3.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrW3.applyBoundaryConditions( true );
-       corrW3.writeHDF5( outfilename );
-       corrW4.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrW4.applyBoundaryConditions( true );
-       corrW4.writeHDF5( outfilename );
+       TIME(corrW1.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrW1.applyBoundaryConditions( true ));
+       TIME(corrW1.writeHDF5( outfilename ));
+       TIME(corrW2.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrW2.applyBoundaryConditions( true ));
+       TIME(corrW2.writeHDF5( outfilename ));
+       TIME(corrW3.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrW3.applyBoundaryConditions( true ));
+       TIME(corrW3.writeHDF5( outfilename ));
+       TIME(corrW4.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrW4.applyBoundaryConditions( true ));
+       TIME(corrW4.writeHDF5( outfilename ));
        //## Z
        outfilename = "Zdiagramm_Antonino";
-       corrZ1.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrZ1.applyBoundaryConditions( true );
-       corrZ1.writeHDF5( outfilename );
-       corrZ2.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrZ2.applyBoundaryConditions( true );
-       corrZ2.writeHDF5( outfilename );
-       corrZ3.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrZ3.applyBoundaryConditions( true );
-       corrZ3.writeHDF5( outfilename );
-       corrZ4.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrZ4.applyBoundaryConditions( true );
-       corrZ4.writeHDF5( outfilename );
+       TIME(corrZ1.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrZ1.applyBoundaryConditions( true ));
+       TIME(corrZ1.writeHDF5( outfilename ));
+       TIME(corrZ2.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrZ2.applyBoundaryConditions( true ));
+       TIME(corrZ2.writeHDF5( outfilename ));
+       TIME(corrZ3.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrZ3.applyBoundaryConditions( true ));
+       TIME(corrZ3.writeHDF5( outfilename ));
+       TIME(corrZ4.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrZ4.applyBoundaryConditions( true ));
+       TIME(corrZ4.writeHDF5( outfilename ));
        //## M
        outfilename = "Mdiagramm_Antonino";
-       corrM.apply_phase( filtered_sourcemomentumList.pi1() );
-       corrM.applyBoundaryConditions( true );
-       corrM.writeHDF5( outfilename );
+       TIME(corrM.apply_phase( filtered_sourcemomentumList.pi1() ));
+       TIME(corrM.applyBoundaryConditions( true ));
+       TIME(corrM.writeHDF5( outfilename ));
 
        //## T
        outfilename = "Tdiagramm_Antonino";
@@ -715,9 +722,9 @@ int main(int argc, char **argv)
 	 auxmomlist.push_back( ptmp );
        }
        
-       corrT.apply_phase( auxmomlist );
-       corrT.applyBoundaryConditions( true );
-       corrT.writeHDF5( outfilename );
+       TIME(corrT.apply_phase( auxmomlist ));
+       TIME(corrT.applyBoundaryConditions( true ));
+       TIME(corrT.writeHDF5( outfilename ));
        
       }//loop over unique set of momenta for p_i2
 
