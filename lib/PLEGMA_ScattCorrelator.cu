@@ -542,7 +542,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   this->datasets={name_of_diagram,};
 
   //Shape
-  this->shape={1,};
+  this->shape = { (int)(this->GList[0].size()), (int)(this->GList[1].size()) };
 
   //initialize
   this->initialize();
@@ -550,9 +550,10 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   if( this->getVolSize() != this->localT() )
     PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
-  // if( this->getSiteSize()*2 != tot_size/this->localT() )
-  //   PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=1),(Gi2=%d),(Gf2=%d)%d\n", this->getVolSize()*this->getSiteSize(),
-  // 		 G_i2.size(), G_f2.size(), tot_size/2);
+  int tot_size = this->N_p * this->localT() * this->GList[0].size() * this->GList[1].size();
+  if( this->getSiteSize() != tot_size/this->localT() )
+     PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=1),(Gi2=%d),(Gf2=%d)%d\n", this->getVolSize()*this->getSiteSize(),
+   		 this->GList[0].size(), this->GList[1].size(), tot_size);
 
   //Offsets
   this->labels="ptmgg";
@@ -604,7 +605,11 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   this->datasets={name_of_diagram,};
 
   //Shape
-  this->shape={N_SPINS,N_SPINS};
+  this->shape={(int)(this->GList[0].size()),
+	       (int)(this->GList[1].size()),
+	       (int)(this->GList[2].size()),
+	       (int)(this->GList[3].size()),
+	       N_SPINS,N_SPINS};
 
   //initialize
   this->initialize();
@@ -615,10 +620,11 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   //Offsets
   this->labels="ptmggggss";
   this->setOffsets();
-  
-  // if( this->getSiteSize()*2 != tot_size/this->localT() )
-  //   PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(extGi1=%d),(extGf1=%d),(Gi1=%d),(Gf1=%d),%d\n", this->getVolSize()*this->getSiteSize(), moms_tot.size(),
-  // 		 extG_i.size(), extG_f.size(), n_gammas_i, n_gammas_f, tot_size/2);
+
+  int tot_size = this->N_p * this->localT() * this->GList[0].size() * this->GList[1].size() * this->GList[2].size() * this->GList[3].size() *N_SPINS*N_SPINS;
+  if( this->getSiteSize() != tot_size/this->localT() )
+    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(extGi1=%d),(extGf1=%d),(Gi1=%d),(Gf1=%d),%d\n", this->getVolSize()*this->getSiteSize(),
+		 this->N_p, this->GList[0].size(), this->GList[1].size(), this->GList[2].size(), this->GList[3].size(), tot_size);
 
   assert(this->Nmoms()==1);
   this->clear_output(true);
@@ -660,7 +666,12 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   this->datasets = {name_of_diagram,};
 
   //Shape
-  this->shape={N_SPINS,N_SPINS};
+  this->shape={(int)(this->GList[0].size()),
+	       (int)(this->GList[1].size()),
+	       (int)(this->GList[2].size()),
+	       (int)(this->GList[3].size()),
+	       (int)(this->GList[4].size()),
+	       N_SPINS,N_SPINS};
 
   //initialize
   this->initialize();
@@ -725,7 +736,13 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   this->datasets = {name_of_diagram};
 
   //Shape
-  this->shape = {N_SPINS,N_SPINS};
+  this->shape={(int)(this->GList[0].size()),
+	       (int)(this->GList[1].size()),
+	       (int)(this->GList[2].size()),
+	       (int)(this->GList[3].size()),
+	       (int)(this->GList[4].size()),
+	       (int)(this->GList[5].size()),
+	       N_SPINS,N_SPINS};
 
   //initialize
   this->initialize();
