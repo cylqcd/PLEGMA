@@ -305,7 +305,7 @@ int main(int argc, char **argv)
       std::string outfilename;
 
       //D diagram
-      {
+      
 	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], mom);
 	//initialize diagram
 	corrD.initialize_diagram( sourcemomentumList, glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
@@ -329,27 +329,29 @@ int main(int argc, char **argv)
 	//TIME(corrD.applyBoundaryConditions( true ));
 	PLEGMA_printf("DEBUG: write D diagram\n");
 	TIME(corrD.writeHDF5(outfilename));
-	PLEGMA_printf("DEBUG: write D diagram completed\n");
-      }
+      
+
+      PLEGMA_printf("DEBUG: write D diagram done\n");
 
       //N diagram
       PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], mom);
       //initialize diagram
       TIME(corrN.initialize_diagram(sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
+      PLEGMA_printf("DEBUG: corrN initialized\n");
       
       //diagramm_nucleon.setSource(source);
-      PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(1));
-      PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(1));
+      PLEGMA_ScattCorrelator<float> reductionsT1N(source, sourcemomentumList.uniq_p(1));
+      PLEGMA_ScattCorrelator<float> reductionsT2N(source, sourcemomentumList.uniq_p(1));
       
-      TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+      TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
       reductionsT1.writeHDF5("T1sourceforN");
 
-      TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+      TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
       reductionsT2.writeHDF5("T2sourceforN");
 
       //write N
       outfilename = "Ndiagramm_Antonino";
-      TIME(corrN.N_diagramms( reductionsT1, reductionsT2 ));
+      TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
       TIME(corrN.apply_phase( sourcemomentumList.uniq_p(1) ));
       TIME(corrN.applyBoundaryConditions( true ));
       TIME(corrN.writeHDF5( outfilename ));
@@ -380,7 +382,7 @@ int main(int argc, char **argv)
         PLEGMA_Vector<double> vectorAuxD;
 
         //tmp_time += MPI_Wtime()-start_time;       
-        stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
+        //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
         //Doing the zero momentum stochastic propagator with spin dilution
         vectorInOut.copy(stochastic_source_spin_diluted_momzero);
         //Doing the inversion
@@ -391,8 +393,8 @@ int main(int argc, char **argv)
         vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
         stochastic_propagator_momzero[spinindex].copy(vectorInOut);
         //tmp_time += MPI_Wtime()-start_time;
-        stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
-        stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+        //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+        //stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
         if (spinindex<3){
           vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momzero,spinindex+1,spinindex);
           stochastic_source_spin_diluted_momzero.copy(vectortmp1);
@@ -603,7 +605,7 @@ int main(int argc, char **argv)
          PLEGMA_Vector<double> vectorAuxD;
 
          //tmp_time += MPI_Wtime()-start_time;       
-         stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
+         //stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
  
          vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
@@ -620,7 +622,7 @@ int main(int argc, char **argv)
          stochastic_propagator_momp_i2[spinindex].copy(vectorInOut);
 
          //tmp_time += MPI_Wtime()-start_time;         
-         stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
+         //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
          
          if (spinindex<3){
            vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momp_i2,spinindex+1,spinindex);

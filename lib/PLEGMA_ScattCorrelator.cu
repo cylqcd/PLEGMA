@@ -522,7 +522,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   for( auto &gi2: G_i2 )
     for( auto &gf2: G_f2 )
       tmp += GAMMAS_SCATT_STR[gi2]+"_"+GAMMAS_SCATT_STR[gf2]+", ";
-  this->description=tmp;
+  //this->description=tmp;
 
   //momList
   this->setPList( momenta );
@@ -583,7 +583,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
       for( auto &gi1: G_i1 )
 	for( auto &gf1: G_f1 )
 	  tmp += GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gf1]+"-"+GAMMAS_SCATT_STR[egf]+", ";
-  this->description=tmp;
+  //this->description=tmp;
     
   //momList
   this->setPList( momenta );
@@ -634,7 +634,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string name_of_diagram){
 
-  assert( name_of_diagram=="N" || name_of_diagram=="D");
+  assert( name_of_diagram=="T" );
 
  //Gamma list
   this->GList.clear();
@@ -652,7 +652,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
 	for( auto &gi2: G_i2 )
 	  for( auto &gf: G_f )
 	   tmp += GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gi2]+"_"+GAMMAS_SCATT_STR[gf]+"-"+GAMMAS_SCATT_STR[egf]+", ";
-  this->description=tmp;
+  //this->description=tmp;
   
   //momList
   this->setPList( momenta );
@@ -723,7 +723,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
 	  for( auto &gf1: G_f1 )
 	    for( auto &gf2: G_f2 )
 	      tmp += GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gi2]+"_"+GAMMAS_SCATT_STR[gf1]+"-"+GAMMAS_SCATT_STR[egf] + "_" + GAMMAS_SCATT_STR[gf2] + ", ";
-  this->description=tmp;
+  //this->description=tmp;
   
   //momList
   this->setPList( momenta );
@@ -1048,8 +1048,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T3.check_reduction(T_1)) PLEGMA_error("srcT3 seems not to have T1like shape\n");
   if(!T5.check_reduction(T_2)) PLEGMA_error("srcT5 seems not to have T2like shape\n");
-
+      
   if(!this->pList.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  PLEGMA_printf("DEBUG: Tdia checks ok");
 
   std::vector<std::vector<int>> moms_tot = this->pList.uniq_p(3);
   assert( this->N_p == moms_tot.size() );
@@ -1057,11 +1058,12 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   if( moms_tot != T1.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
   if( moms_tot != T3.getMomList() ) PLEGMA_error("T3 has not the the same mom list of T\n");
   if( moms_tot != T5.getMomList() ) PLEGMA_error("T5 has not the the same mom list of T\n");
-      
+  PLEGMA_printf("DEBUG: Tdia moms checks ok");
+  
   for(int i=0; i<2; ++i)
     if( (T1.GList[i]!=T3.GList[i]) || (T1.GList[i]!=T5.GList[i]) || (T1.GList[i]!=this->GList[(i+1)*2]) )
       PLEGMA_error("T1,T3,T5 and T wrong gamma list\n");
-
+  
 
   //n gammas
   int n_gammas_f = this->GList[4].size();
@@ -1084,7 +1086,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
 	    for( int gf=0; gf<n_gammas_f; ++gf ){
 	      for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
 		temp[spin] = (T1.Corr({t,i_mom,gi1,gf})[spin] + T3.Corr({t,i_mom,gi1,gf})[spin] + T5.Corr({t,i_mom,gi1,gf})[spin])*2;
-
+	      PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d) --- Tdia temp spin ok",i_mom,t,gei,gef,gi1,ig_i2,gf);
 	      M_pe_GNG<Float>( this->Corr({i_mom,t,1,gei,gef,gi1,ig_i2,gf}), eGamma_f, eGamma_i, temp);
 				  
 	    }//G_f
@@ -1200,7 +1202,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase( std::vector<std::vector<int>> m
   int in_dofs = tot_size/N_moms;
   
   assert( N_moms==this->ranges[0] );
-  assert( N_moms==this->pList.size() );
+  assert( N_moms==this->N_p );
  
   for(int i_m=0; i_m<N_moms; i_m++){
     Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_list[i_m][0]*this->source[0]+
