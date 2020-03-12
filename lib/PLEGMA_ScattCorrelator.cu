@@ -37,7 +37,7 @@ void PLEGMA_ScattCorrelator<Float>::setOffsets( ){
       
   for( auto &l : labels ){
     switch(l){
-    case('p'): if(pList->empty()||N_p==0) PLEGMA_error( "p detected with PList empty\n"); else ranges.push_back(N_p); break;
+    case('p'): if(pList.empty()||N_p==0) PLEGMA_error( "p detected with PList empty\n"); else ranges.push_back(N_p); break;
     case('t'): assert(this->corr_mom_space); ranges.push_back( this->corr_mom_space->DimT() ); break;
     case('m'): assert(this->corr_mom_space); ranges.push_back( this->corr_mom_space->Nmoms() ); break;
     case('g'): ranges.push_back( GList[g_count].size() ); g_count++; break;
@@ -70,7 +70,7 @@ bool PLEGMA_ScattCorrelator<Float>::check_reduction( VRED V ) {
     return false;
 
   //PList useless
-  if(! this->pList->empty() )
+  if( !this->pList.empty() )
     return false;
   return true;
 }
@@ -78,7 +78,6 @@ bool PLEGMA_ScattCorrelator<Float>::check_reduction( VRED V ) {
 template<typename Float>
 bool PLEGMA_ScattCorrelator<Float>::check_reduction( TRED T ) {
   std::string exp_shape = "tmggss";
-
   //check getSiteSize()
   if( this->shape.size()+2 != exp_shape.length() || this->labels.compare(exp_shape)!=0 )
     return false;
@@ -90,7 +89,7 @@ bool PLEGMA_ScattCorrelator<Float>::check_reduction( TRED T ) {
     return false;
 
   //PList useless
-  if(! this->pList->empty() )
+  if( !this->pList.empty() )
     return false;
   return true;
 }
@@ -360,7 +359,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 
   PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
   
-  std::vector<std::array<int,3>> imap = this->pList->index_map();
+  std::vector<std::array<int,3>> imap = this->pList.index_map();
 
   Float temp[2*N_SPINS*N_SPINS];
   
@@ -436,7 +435,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 
   PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
   
-  std::vector<std::array<int,3>> imap = this->pList->index_map();
+  std::vector<std::array<int,3>> imap = this->pList.index_map();
 
 
   Float temp_colorvector[N_COLS*2];
@@ -865,7 +864,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
   
   this->clear_output(!accum); 
 
-  std::vector<std::vector<int>> momlist = this->pList->uniq_p(pi);
+  std::vector<std::vector<int>> momlist = this->pList.uniq_p(pi);
   assert( this->N_p == momlist.size() );
   //++++++++ PION-PION +++++++++
 
@@ -912,14 +911,14 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum){
 
   //extract moms
-  if(!this->pList->check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
-  std::vector<int> mom_pi2 = this->pList->pi(0)[0]; 
-  std::vector<std::vector<int>> moms_pf2 = this->pList->uniq_p(2);
+  if(!this->pList.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  std::vector<int> mom_pi2 = this->pList.pi(0)[0]; 
+  std::vector<std::vector<int>> moms_pf2 = this->pList.uniq_p(2);
   //extract vector p_f1
-  std::vector<std::vector<int>> moms_pf1_red = this->pList->uniq_p(1); //list of pf1 momenta needed here
-  std::vector<std::vector<int>> moms_pf1 = CorrNucleon.pList->uniq_p(1); //list of pf1 in Nucleons PLEGMA_SC
-  std::vector<int> i_pf1s = CorrNucleon.pList->u_posix( 1, moms_pf1_red ); //list of positions of moms_pf1_red momenta in moms_pf1 array
-  std::vector<std::array<int,3>> map = this->pList->index_map();
+  std::vector<std::vector<int>> moms_pf1_red = this->pList.uniq_p(1); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pf1 = CorrNucleon.pList.uniq_p(1); //list of pf1 in Nucleons PLEGMA_SC
+  std::vector<int> i_pf1s = CorrNucleon.pList.u_posix( 1, moms_pf1_red ); //list of positions of moms_pf1_red momenta in moms_pf1 array
+  std::vector<std::array<int,3>> map = this->pList.index_map();
 
 
   //++++++++ PION-PION +++++++++
@@ -927,7 +926,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
   //aux PLEGMA_SC for PhixGxPhi multiplications
   PLEGMA_ScattCorrelator pipi_aux(this->getSource(), this->getMomList(), this->getTotalT());
 
-  pipi_aux.initialize_diagram( *(this->pList), this->GList[3], this->GList[5], "P", true ); //false m is pi2, true is pf2
+  pipi_aux.initialize_diagram( this->pList, this->GList[3], this->GList[5], "P", true ); //false m is pi2, true is pf2
 
   pipi_aux.P_diagramms( Phi_0, Phi_1, false, 2); // pf2, t, 1, gi2, gf2
 
@@ -946,7 +945,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
   int TIME = this->localT();
   
   //for each momentum in moms_red
-  for( int i_mom=0; i_mom < this->pList->size(); ++i_mom){
+  for( int i_mom=0; i_mom < this->pList.size(); ++i_mom){
     int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN)
     int i_pf2 = map[i_mom][2]; //position of pf2 in pionpion
     for( int t=0; t<TIME; ++t){
@@ -977,7 +976,7 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
 
-  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList->uniq_p(1) )
+  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList.uniq_p(1) )
     PLEGMA_error("T1,T2 have not the the same mom list of N\n");
 
   for(int i=0; i<2; ++i)
@@ -985,7 +984,7 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
       PLEGMA_error("T1,T2 wrong gamma list\n");
   
   //extract array mom
-  std::vector<std::vector<int>> moms_pf1 = this->pList->uniq_p(1);
+  std::vector<std::vector<int>> moms_pf1 = this->pList.uniq_p(1);
   assert( this->N_p == moms_pf1.size() );
     
   //size of final output for NN
@@ -1033,9 +1032,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   if(!T3.check_reduction(T_1)) PLEGMA_error("srcT3 seems not to have T1like shape\n");
   if(!T5.check_reduction(T_2)) PLEGMA_error("srcT5 seems not to have T2like shape\n");
 
-  if(!this->pList->check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  if(!this->pList.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
 
-  std::vector<std::vector<int>> moms_tot = this->pList->uniq_p(3);
+  std::vector<std::vector<int>> moms_tot = this->pList.uniq_p(3);
   assert( this->N_p == moms_tot.size() );
 
   if( moms_tot != T1.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
@@ -1083,18 +1082,23 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
  //checks between T1 T2
+  PLEGMA_printf("DEBUG: Enter D_diagrams\n");
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
-
-  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList->uniq_p(3) )
-    PLEGMA_error("T1,T2 have not the the same mom list of N\n");
-
+  PLEGMA_printf("DEBUG: checks on Tshapes done\n");
+  
+  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList.uniq_p(3) )
+    PLEGMA_error("T1,T2 have not the the same mom list of D\n");
+  PLEGMA_printf("DEBUG: checks on T momList done\n");
+ 
   for(int i=0; i<2; ++i)
     if((T1.GList[i]!=T2.GList[i])||(T1.GList[i]!=this->GList[i+2]))
       PLEGMA_error("T1,T2 wrong gamma list\n");
+  PLEGMA_printf("DEBUG: checks on GLists done\n");
+
   
   //extract array mom
-  std::vector<std::vector<int>> moms_tot = this->pList->uniq_p(3);
+  std::vector<std::vector<int>> moms_tot = this->pList.uniq_p(3);
   assert( this->N_p == moms_tot.size() );
     
   //size of final output for DD
@@ -1105,9 +1109,11 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   int TIME = this->localT();  
 
   Float temp[N_SPINS*N_SPINS*2];
+  PLEGMA_printf("DEBUG: Preparation done\n");
   
   //put output to zero
   this->clear_output(!accum); 
+  PLEGMA_printf("DEBUG: clear output done\n");
 
 
   for( int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
@@ -1120,10 +1126,10 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 	    for( int gf=0; gf<n_gammas_f; ++gf ){
 	      for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
 		temp[spin] = 4*T1.Corr({t,i_mom,gi,gf})[spin] + 2*T2.Corr({t,i_mom,gi,gf})[spin];
-
+	      PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- temp[spin] done\n",i_mom,t,gei,gef,gi,gf);
 	      //change in pe_GNG
 	      M_pe_GNG<Float>( this->Corr({i_mom,t,1,gei,gef,gi,gf}), extG_f1, extG_i1, temp );
-         
+	      PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- M_pe_GNG done\n",i_mom,t,gei,gef,gi,gf);
 	    }
 	  }
 	}
@@ -1140,24 +1146,30 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 //this must be used only if the source is the one used in PLEGMA_ScattCorrelator
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic ) {
+  PLEGMA_printf("DEBUG: applyBoundaryConditins started\n");
   if(!antiperiodic) return;
 
   std::size_t n_t = this->labels.find("t");
   assert(n_t!=std::string::npos);
 
+  PLEGMA_printf("DEBUG: t found\n");
+  
   int TIME = this->localT();
   int in_dofs = std::accumulate(ranges.begin()+n_t+1, ranges.end(), 2, std::multiplies<int>());
   int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
   int maxT = this->endT() - this->startT();
 
+  PLEGMA_printf("DEBUG: prel. done\n");
+  PLEGMA_printf("DEBUG: TIME:%d, in_dofs:%d, out_dofs:%d, maxT:%d\n", TIME, in_dofs, out_dofs, maxT);
+  
   for( int t=0; t<TIME; ++t){
     int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
     int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
     if( t_global < this->source[DIM_T] ){
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
-	for( int i_dofs=0; i_dofs<in_dofs; ++in_dofs){
-	  *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) *= -1.;
-	  *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) *= -1.;
+	for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
+	  *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
+	  //PLEGMA_printf("DEBUG: --- loop (%d,%d,%d) --- multiplication done\n",t,o_dofs,i_dofs);
 	}
       }
     }
@@ -1171,7 +1183,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase( std::vector<std::vector<int>> m
   int in_dofs = tot_size/N_moms;
   
   assert( N_moms==this->ranges[0] );
-  assert( N_moms==this->pList->size() );
+  assert( N_moms==this->pList.size() );
  
   for(int i_m=0; i_m<N_moms; i_m++){
     Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_list[i_m][0]*this->source[0]+

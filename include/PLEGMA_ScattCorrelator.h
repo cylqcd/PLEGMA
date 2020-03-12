@@ -1,6 +1,7 @@
 #pragma once
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_gammas.h>
+#include <utils/PLEGMA_scatt_utils.h>
 
 namespace plegma {
   enum VRED {V_2=2,V_3=3,V_4=4};
@@ -8,7 +9,7 @@ namespace plegma {
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Propagator;
-  class momList;
+
   
   /////////////////
   // This PLEGMA_ScattCorrelator Class allows to store a generic number of d.o.f
@@ -50,7 +51,7 @@ namespace plegma {
     //////////////
 
     std::vector<std::vector<GAMMAS_SCATT>> GList;
-    momList * pList;
+    momList pList;
     int N_p=0;
 
     std::string labels;    //     index_struct = "gsssc" (because spin first)
@@ -84,7 +85,7 @@ namespace plegma {
     // in 3pt function the order of momenta is deretmined by momList.uniq_p(tot)
     
     void setPList( momList &list_p ){
-      this->pList = &list_p;
+      this->pList = list_p;
     }
 
     int Nmoms(){

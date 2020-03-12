@@ -54,10 +54,16 @@ namespace plegma {
       p_i2 = tc_momlist.p_i2; // can handle self-assignment
       p_f1 = tc_momlist.p_f1; // can handle self-assignment
       p_f2 = tc_momlist.p_f2; // can handle self-assignment
-  
+      p_tot = tc_momlist.p_tot;
+
+      ps[0] = &p_i2;
+      ps[1] = &p_f1;
+      ps[2] = &p_f2;
+      ps[3] = &p_tot;
+
       // return the existing object so we can chain this operator
       return *this;
-    }
+      }
 
 
     int  size(){ return p_i2.size(); }

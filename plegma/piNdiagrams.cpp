@@ -144,8 +144,8 @@ int main(int argc, char **argv)
       vectorAuxD2.copy(vectorInOut);
     } 
 
-    vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
-    vectorStoc_source_arch.writeHDF5(outfile_V+"globalTfulltimedilution_source");
+    //vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
+    //vectorStoc_source_arch.writeHDF5(outfile_V+"globalTfulltimedilution_source");
     vectorAuxD1.copy(vectorStoc_source_arch);
     vectorAuxD1.apply_gamma5();
     vectorStoc_source.copy(vectorAuxD1);
@@ -156,8 +156,8 @@ int main(int argc, char **argv)
     //Step(7) Smearing all the time slice in the propagator
     vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss );
     
-    vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
-    vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
+    //vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
+    //vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
     vectorStoc_propag.copy(vectorAuxD1);
     vectorStoc_propag.apply_gamma5();
 
@@ -302,7 +302,7 @@ int main(int argc, char **argv)
       {
 	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], mom);
 	//initialize diagram
-	corrD.initialize_diagram(sourcemomentumList,glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
+	corrD.initialize_diagram( sourcemomentumList, glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
       
 	PLEGMA_ScattCorrelator<float> reductionsT1(source, sourcemomentumList.uniq_p(3));
 	PLEGMA_ScattCorrelator<float> reductionsT2(source, sourcemomentumList.uniq_p(3));
@@ -314,10 +314,15 @@ int main(int argc, char **argv)
 	reductionsT2.writeHDF5("T2sourceforD");
 	//write D
 	outfilename="Ddiagramm_Antonino" ;
+	PLEGMA_printf("DEBUG: start D_diagram\n");
 	corrD.D_diagramms( reductionsT1, reductionsT2 );
+	PLEGMA_printf("DEBUG: start apply phase to D diagram\n");
 	corrD.apply_phase( sourcemomentumList.uniq_p(3) );
-	corrD.applyBoundaryConditions( true );
+	//PLEGMA_printf("DEBUG: apply bounds to D diagram\n");
+	//corrD.applyBoundaryConditions( true );
+	PLEGMA_printf("DEBUG: write D diagram\n");
 	corrD.writeHDF5(outfilename);
+	PLEGMA_printf("DEBUG: write D diagram completed\n");
       }
 
       //N diagram
