@@ -386,6 +386,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 				  this->GList[2][g1], transpgamma, temp + spins);
 		  }//beta
 		}//alfa
+		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction V_M_V done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
 		if(factor!=NULL){
 		  Float aux;
 		  for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
@@ -398,7 +399,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		//multiplication with external gammas NB written here! mod in M_pe_GNG
 		M_pe_GNG<Float>( this->Corr({i_m,t,0,g_exti,g_extf,g1,g0,g2,g3}),
 				egammaf, egammai, temp );
-	
+		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction M_pe_GNG done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
 	      }//Gf2
 	    }//Gf1
 	  }//Gi1	
@@ -440,6 +441,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 
   Float temp_colorvector[N_COLS*2];
   Float temp[N_SPINS*N_SPINS*2];
+  //PLEGMA_printf("DEBUG: V3V2reduction_matrix - prel done\n");
 
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
@@ -456,13 +458,13 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		  for (int beta=0; beta < N_SPINS; ++beta ){
 		    int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
 		    switch(index_abs){
-		    case 0: V3aux.absorb_fromV24<0>( srcV2, alfa, beta ); break;
-		    case 1: V3aux.absorb_fromV24<1>( srcV2, alfa, beta ); break;
-		    case 2: V3aux.absorb_fromV24<2>( srcV2, alfa, beta ); break;
+		    case 0: V3aux.absorbspinmatrix_fromV24<0>( srcV2, alfa ); break;
+		    case 1: V3aux.absorbspinmatrix_fromV24<1>( srcV2, alfa ); break;
+		    case 2: V3aux.absorbspinmatrix_fromV24<2>( srcV2, alfa ); break;
 		    }
 		    //color vector from Tr[G_i1 V2]
 		    V_TR_MM<Float>( V3aux.Corr({t,i_mom_f1,g2}), this->GList[2][g1],
-                             transpgamma, temp);
+                             transpgamma, temp_colorvector);
 		    temp[spins]=0.;
 		    temp[spins+1]=0.;
 
@@ -477,6 +479,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		    }//coloridx
 		  }//beta
 		}//alfa
+		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction_matrix V_M_V done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
 		if(factor!=NULL){
 		  Float aux;
 		  for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
@@ -489,7 +492,8 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		//multiplication with external gammas NB: written here!!
 		M_pe_GNG<Float>( this->Corr({i_m,t,0,g_exti,g_extf,g1,g0,g2,g3}),
 				egammaf, egammai, temp );
-	
+		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction_matrix M_pe_GNG done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
+		
 	      }//Gf2
 	    }//Gf1
 	  }//Gi1	
@@ -817,7 +821,6 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
   if (diagramm_index == 1){
     this->V3V2reduction( srcV3, srcV2, 2, true, ig_i2, true );
   }
-
   else if (diagramm_index == 2){
     this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2);
   }
@@ -973,8 +976,8 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 	      for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
 		for( int gf2=0; gf2<n_gammas_f2; ++gf2){
 		  
-		  x_pe_cy( this->Corr({i_mom,t,0,gei,gef,gi1,gi2,gf1,gf2}), pipi_aux.Corr({i_pf2,t,1,gi2,gf2}),
-			   CorrNucleon.Corr({i_pf1,t,1,gei,gef,gi1,gf1}), N_SPINS*N_SPINS);
+		  x_pe_cy( this->Corr({i_mom,t,0,gei,gef,gi1,gi2,gf1,gf2}), pipi_aux.Corr({i_pf2,t,0,gi2,gf2}),
+			   CorrNucleon.Corr({i_pf1,t,0,gei,gef,gi1,gf1}), N_SPINS*N_SPINS);
 		}//G_f2
 	      }//G_f1
 	    }//G_i2
@@ -1050,7 +1053,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   if(!T5.check_reduction(T_2)) PLEGMA_error("srcT5 seems not to have T2like shape\n");
       
   if(!this->pList.check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
-  PLEGMA_printf("DEBUG: Tdia checks ok\n");
+  //PLEGMA_printf("DEBUG: Tdia checks ok\n");
 
   std::vector<std::vector<int>> moms_tot = this->pList.uniq_p(3);
   assert( this->N_p == moms_tot.size() );
@@ -1058,7 +1061,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   if( moms_tot != T1.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
   if( moms_tot != T3.getMomList() ) PLEGMA_error("T3 has not the the same mom list of T\n");
   if( moms_tot != T5.getMomList() ) PLEGMA_error("T5 has not the the same mom list of T\n");
-  PLEGMA_printf("DEBUG: Tdia moms checks ok\n");
+  //PLEGMA_printf("DEBUG: Tdia moms checks ok\n");
   
   for(int i=0; i<2; ++i)
     if( (T1.GList[i]!=T3.GList[i]) || (T1.GList[i]!=T5.GList[i]) || (T1.GList[i]!=this->GList[(i+1)*2]) )
@@ -1072,8 +1075,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   int n_extgammas_f = this->GList[1].size();
   int n_extgammas_i = this->GList[0].size();
   int TIME = this->localT();
-  PLEGMA_printf("DEBUG: T_diagram n_gammas: %d,%d,%d,%d,%d. ig2=%d \n",n_extgammas_i,n_extgammas_f,
-		n_gammas_i1,n_gammas_i2,n_gammas_f, ig_i2);
+  //PLEGMA_printf("DEBUG: T_diagram n_gammas: %d,%d,%d,%d,%d. ig2=%d \n",n_extgammas_i,n_extgammas_f,n_gammas_i1,n_gammas_i2,n_gammas_f, ig_i2);
 	      
   Float temp[N_SPINS*N_SPINS*2];
 
@@ -1090,7 +1092,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
 	      for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin){
 		temp[spin] = (T1.Corr({t,i_mom,gi1,gf})[spin] + T3.Corr({t,i_mom,gi1,gf})[spin] + T5.Corr({t,i_mom,gi1,gf})[spin])*2;
 	      }
-	      PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) --- Tdia temp spin ok\n",i_mom,t,gei,gef,gi1,ig_i2,gf);
+	      //PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) --- Tdia temp spin ok\n",i_mom,t,gei,gef,gi1,ig_i2,gf);
 	      M_pe_GNG<Float>( this->Corr({i_mom,t,0,gei,gef,gi1,ig_i2,gf}), eGamma_f, eGamma_i, temp);
 				  
 	    }//G_f
@@ -1105,19 +1107,19 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
  //checks between T1 T2
-  PLEGMA_printf("DEBUG: Enter D_diagrams\n");
+  //PLEGMA_printf("DEBUG: Enter D_diagrams\n");
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
-  PLEGMA_printf("DEBUG: checks on Tshapes done\n");
+  //PLEGMA_printf("DEBUG: checks on Tshapes done\n");
   
   if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList.uniq_p(3) )
     PLEGMA_error("T1,T2 have not the the same mom list of D\n");
-  PLEGMA_printf("DEBUG: checks on T momList done\n");
+  //PLEGMA_printf("DEBUG: checks on T momList done\n");
  
   for(int i=0; i<2; ++i)
     if((T1.GList[i]!=T2.GList[i])||(T1.GList[i]!=this->GList[i+2]))
       PLEGMA_error("T1,T2 wrong gamma list\n");
-  PLEGMA_printf("DEBUG: checks on GLists done\n");
+  //PLEGMA_printf("DEBUG: checks on GLists done\n");
 
   
   //extract array mom
@@ -1136,7 +1138,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   
   //put output to zero
   this->clear_output(!accum); 
-  PLEGMA_printf("DEBUG: clear output done\n");
+  //PLEGMA_printf("DEBUG: clear output done\n");
 
 
   for( int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
@@ -1149,10 +1151,10 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 	    for( int gf=0; gf<n_gammas_f; ++gf ){
 	      for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
 		temp[spin] = 4*T1.Corr({t,i_mom,gi,gf})[spin] + 2*T2.Corr({t,i_mom,gi,gf})[spin];
-	      PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- temp[spin] done\n",i_mom,t,gei,gef,gi,gf);
+	      //PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- temp[spin] done\n",i_mom,t,gei,gef,gi,gf);
 	      //change in pe_GNG
 	      M_pe_GNG<Float>( this->Corr({i_mom,t,0,gei,gef,gi,gf}), extG_f1, extG_i1, temp );
-	      PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- M_pe_GNG done\n",i_mom,t,gei,gef,gi,gf);
+	      //PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- M_pe_GNG done\n",i_mom,t,gei,gef,gi,gf);
 	    }
 	  }
 	}
@@ -1169,21 +1171,21 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 //this must be used only if the source is the one used in PLEGMA_ScattCorrelator
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic ) {
-  PLEGMA_printf("DEBUG: applyBoundaryConditins started\n");
+  //PLEGMA_printf("DEBUG: applyBoundaryConditins started\n");
   if(!antiperiodic) return;
 
   std::size_t n_t = this->labels.find("t");
   assert(n_t!=std::string::npos);
 
-  PLEGMA_printf("DEBUG: t found\n");
+  //PLEGMA_printf("DEBUG: t found\n");
   
   int TIME = this->localT();
   int in_dofs = std::accumulate(ranges.begin()+n_t+1, ranges.end(), 2, std::multiplies<int>());
   int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
   int maxT = this->endT() - this->startT();
 
-  PLEGMA_printf("DEBUG: prel. done\n");
-  PLEGMA_printf("DEBUG: TIME:%d, in_dofs:%d, out_dofs:%d, maxT:%d\n", TIME, in_dofs, out_dofs, maxT);
+  //PLEGMA_printf("DEBUG: prel. done\n");
+  //PLEGMA_printf("DEBUG: TIME:%d, in_dofs:%d, out_dofs:%d, maxT:%d\n", TIME, in_dofs, out_dofs, maxT);
   
   for( int t=0; t<TIME; ++t){
     int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;

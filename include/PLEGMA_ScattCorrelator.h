@@ -100,9 +100,9 @@ namespace plegma {
       if(offsets.size()<idx.size())
 	PLEGMA_error("Number of indices (%d) greater than size of correlator\n",idx.size());
       int check=std::inner_product( idx.begin(), idx.end(), offsets.begin(), 0);
-      if( check >= this->getTotalSize() ){
+      if( check >= this->getTotalSize()*2 ){
 	int i=0;
-	for(auto id: idx){ PLEGMA_printf("(%d/%d)-",id,ranges[i]); i++; }
+	for(auto &id: idx){ PLEGMA_printf("(%d/%d/offset:%d)-",id,ranges[i],offsets[i]); i++; }
 	PLEGMA_error("\n Error check:%d >= totsize:%d\n",check,this->getTotalSize());
       }
       return this->H_elem() + check;

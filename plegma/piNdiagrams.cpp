@@ -325,8 +325,8 @@ int main(int argc, char **argv)
 	TIME(corrD.D_diagramms( reductionsT1, reductionsT2 ));
 	PLEGMA_printf("DEBUG: start apply phase to D diagram\n");
 	TIME(corrD.apply_phase( sourcemomentumList.uniq_p(3) ));
-	//PLEGMA_printf("DEBUG: apply bounds to D diagram\n");
-	//TIME(corrD.applyBoundaryConditions( true ));
+	PLEGMA_printf("DEBUG: apply bounds to D diagram\n");
+	TIME(corrD.applyBoundaryConditions( true ));
 	PLEGMA_printf("DEBUG: write D diagram\n");
 	TIME(corrD.writeHDF5(outfilename));
       
@@ -550,9 +550,12 @@ int main(int argc, char **argv)
           TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN));
           reductionsV2.writeHDF5("V2sourceforW12");
 
+	  PLEGMA_printf("DEBUG: start W1_diagram\n");
           TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1));
+	  PLEGMA_printf("DEBUG: start W2_diagram\n");
 	  TIME(corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2));
-
+	  PLEGMA_printf("DEBUG: finish W2\n");
+          
           //Compute Diagram W3,W4
           //
           TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP));
@@ -658,15 +661,15 @@ int main(int argc, char **argv)
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        
-       {
-	 PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], mom);
-	 corrP.initialize_diagram(filtered_sourcemomentumList, glist_source_meson, glist_sink_meson, "P");
 
-	 outfilename = "Pdiagramm_Antonino";
-	 TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2));
-	 //write P
-	 TIME(corrP.writeHDF5( outfilename ));
-       }
+       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], mom);
+       corrP.initialize_diagram(filtered_sourcemomentumList, glist_source_meson, glist_sink_meson, "P");
+
+       outfilename = "Pdiagramm_Antonino";
+       TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2));
+       //write P
+       TIME(corrP.writeHDF5( outfilename ));
+       
        
        TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
 
