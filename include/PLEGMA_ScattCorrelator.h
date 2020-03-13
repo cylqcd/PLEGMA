@@ -99,8 +99,13 @@ namespace plegma {
     Float* Corr(  std::initializer_list<int> idx ) const {
       if(offsets.size()<idx.size())
 	PLEGMA_error("Number of indices (%d) greater than size of correlator\n",idx.size());
-  
-      return this->H_elem() + std::inner_product( idx.begin(), idx.end(), offsets.begin(), 0);
+      int check=std::inner_product( idx.begin(), idx.end(), offsets.begin(), 0);
+      if( check >= this->getTotalSize() ){
+	int i=0;
+	for(auto id: idx){ PLEGMA_printf("(%d/%d)-",id,ranges[i]); i++; }
+	PLEGMA_error("\n Error check:%d >= totsize:%d\n",check,this->getTotalSize());
+      }
+      return this->H_elem() + check;
     }
 
     bool check_reduction( VRED V );
