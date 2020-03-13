@@ -357,8 +357,8 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
   int Nmoms_f1 = srcV2.Nmoms();
   int Nmoms_f2 = srcV3.Nmoms();
 
-  PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
-  
+  //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
+  Float V3aux[N_SPINS*N_COLS*2];
   std::vector<std::array<int,3>> imap = this->pList.index_map();
 
   Float temp[2*N_SPINS*N_SPINS];
@@ -378,11 +378,11 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		  for (int beta=0; beta < N_SPINS; ++beta ){
 		    int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
 		    switch(index_abs){
-		    case 0: V3aux.absorb_fromV24<0>( srcV2, alfa, beta ); break;
-		    case 1: V3aux.absorb_fromV24<1>( srcV2, alfa, beta ); break;
-		    case 2: V3aux.absorb_fromV24<2>( srcV2, alfa, beta ); break;
+		    case 0: absorb_fromV24<0,Float>( V3aux, srcV2.Corr({t,i_mom_f1,g2}), alfa, beta ); break;
+		    case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr({t,i_mom_f1,g2}), alfa, beta ); break;
+		    case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr({t,i_mom_f1,g2}), alfa, beta ); break;
 		    }
-		    V_M_V<Float>( srcV3.Corr({t,i_mom_f2,g3}), V3aux.Corr({t,i_mom_f1,g2}),
+		    V_M_V<Float>( srcV3.Corr({t,i_mom_f2,g3}), V3aux,
 				  this->GList[2][g1], transpgamma, temp + spins);
 		  }//beta
 		}//alfa
@@ -434,7 +434,8 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   int Nmoms_f1 = srcV2.Nmoms();
   int Nmoms_f2 = srcV3.Nmoms();
 
-  PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
+  //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
+  Float V3aux[N_SPINS*N_SPINS*N_COLS*2];
   
   std::vector<std::array<int,3>> imap = this->pList.index_map();
 
@@ -458,13 +459,12 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		  for (int beta=0; beta < N_SPINS; ++beta ){
 		    int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
 		    switch(index_abs){
-		    case 0: V3aux.absorbspinmatrix_fromV24<0>( srcV2, alfa ); break;
-		    case 1: V3aux.absorbspinmatrix_fromV24<1>( srcV2, alfa ); break;
-		    case 2: V3aux.absorbspinmatrix_fromV24<2>( srcV2, alfa ); break;
+		    case 0: absorbspinmatrix_fromV24<0,Float>( V3aux, srcV2.Corr({t,i_mom_f1,g2}), alfa ); break;
+		    case 1: absorbspinmatrix_fromV24<1,Float>( V3aux, srcV2.Corr({t,i_mom_f1,g2}), alfa ); break;
+		    case 2: absorbspinmatrix_fromV24<2,Float>( V3aux, srcV2.Corr({t,i_mom_f1,g2}), alfa ); break;
 		    }
 		    //color vector from Tr[G_i1 V2]
-		    V_TR_MM<Float>( V3aux.Corr({t,i_mom_f1,g2}), this->GList[2][g1],
-                             transpgamma, temp_colorvector);
+		    V_TR_MM<Float>( V3aux, this->GList[2][g1], transpgamma, temp_colorvector);
 		    temp[spins]=0.;
 		    temp[spins+1]=0.;
 

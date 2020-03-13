@@ -121,10 +121,10 @@ namespace plegma {
 
 
     //manipulation
-    template <int s_free>
-    void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta );
-    template <int s_fixed>
-    void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa );
+    // template <int s_free>
+    // void absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa, int beta );
+    // template <int s_fixed>
+    // void absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2like, int alfa );
     
     void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma=false, Float* factor=NULL );
 
@@ -161,10 +161,53 @@ namespace plegma {
 
   };
 
-
+template <int s_free, typename Float>
+void absorb_fromV24( Float dest[N_SPINS*N_COLS*2], Float* src, int alfa, int beta ){
+  if( s_free == 0){
+    for(int s=0; s < N_SPINS; ++s)
+      for(int c=0; c < N_COLS; ++c)
+	for(int ri=0; ri<2; ++ri)
+	  dest[(s*N_COLS+c)*2+ri]  = src[(((s*N_SPINS+alfa)*N_SPINS+beta)*N_COLS+c)*2+ri];
+  } else if ( s_free == 1 ){
+    for(int s=0; s < N_SPINS; ++s)
+      for(int c=0; c < N_COLS; ++c)
+	for(int ri=0; ri<2; ++ri)
+	  dest[(s*N_COLS+c)*2+ri]  = src[(((alfa*N_SPINS+s)*N_SPINS+beta)*N_COLS+c)*2+ri];
+  } else {
+    for(int s=0; s < N_SPINS; ++s)
+      for(int c=0; c < N_COLS; ++c)
+	for(int ri=0; ri<2; ++ri)
+	  dest[(s*N_COLS+c)*2+ri]  = src[(((alfa*N_SPINS+beta)*N_SPINS+s)*N_COLS+c)*2+ri];
+  } 
 }
 
-using namespace plegma;
+template <int s_fixed, typename Float>
+void absorbspinmatrix_fromV24( Float dest[N_SPINS*N_SPINS*N_COLS*2], Float* src, int alfa ){
+  if( s_fixed == 2){
+    for(int s1=0; s1 < N_SPINS; ++s1)
+      for( int s2=0; s2 < N_SPINS; ++s2)
+	for(int c=0; c < N_COLS; ++c)
+	  for(int ri=0; ri<2; ++ri)
+	    dest[((s1*N_SPINS+s2)*N_COLS+c)*2+ri]  = src[(((s1*N_SPINS+s2)*N_SPINS+alfa)*N_COLS+c)*2+ri];
+  } else if ( s_fixed == 1 ){
+    for(int s1=0; s1 < N_SPINS; ++s1)
+      for( int s2=0; s2 < N_SPINS; ++s2)
+	for(int c=0; c < N_COLS; ++c)
+	  for(int ri=0; ri<2; ++ri)
+	    dest[((s1*N_SPINS+s2)*N_COLS+c)*2+ri]  = src[(((s1*N_SPINS+alfa)*N_SPINS+s2)*N_COLS+c)*2+ri];
+  } else {
+    for(int s1=0; s1 < N_SPINS; ++s1)
+      for( int s2=0; s2 < N_SPINS; ++s2)
+	for(int c=0; c < N_COLS; ++c)
+	  for(int ri=0; ri<2; ++ri)
+	    dest[((s1*N_SPINS+s2)*N_COLS+c)*2+ri]  = src[(((alfa*N_SPINS+s1)*N_SPINS+s2)*N_COLS+c)*2+ri];
+  }
+}
+
+  
+}
+
+//using namespace plegma;
 
 //template functions must be defined here
 /*
@@ -214,55 +257,56 @@ void PLEGMA_ScattCorrelator<Float>::contract_GxV2( PLEGMA_ScattCorrelator<Float>
 	}
 	}*/
 
-template<typename Float>
-template <int s_free>
-void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2,
-						    int alfa, int beta){
-  this->absorb_fromV24_checks(srcV2, alfa, beta);
-  if( s_free<0 || s_free>=3 )
-    PLEGMA_error("s_free %d out of range (0, 1 or 2)\n",s_free);
-    
-  int n_gammas = srcV2.GList[0].size();
-  int n_momenta = srcV2.Nmoms();
 
-  for(int t=0; t < this->localT(); ++t)
-    for(int m=0; m < Nmoms(); ++m)
-      for(int g=0; g < n_gammas; ++g)
-	for(int s=0; s < N_SPINS; ++s)
-	  for(int c=0; c < N_COLS; ++c)
-	    for(int ri=0; ri<2; ++ri)
-	      if( s_free == 0){
-		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,s,alfa,beta,c})[ri];
-	      } else if ( s_free == 1 ){
-		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,alfa,s,beta,c})[ri];
-	      } else {
-		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,alfa,beta,s,c})[ri];
-	      } 
-}
+// template<typename Float>
+// template <int s_free>
+// void PLEGMA_ScattCorrelator<Float>::absorb_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2,
+// 						    int alfa, int beta){
+//   this->absorb_fromV24_checks(srcV2, alfa, beta);
+//   if( s_free<0 || s_free>=3 )
+//     PLEGMA_error("s_free %d out of range (0, 1 or 2)\n",s_free);
+    
+//   int n_gammas = srcV2.GList[0].size();
+//   int n_momenta = srcV2.Nmoms();
+
+//   for(int t=0; t < this->localT(); ++t)
+//     for(int m=0; m < Nmoms(); ++m)
+//       for(int g=0; g < n_gammas; ++g)
+// 	for(int s=0; s < N_SPINS; ++s)
+// 	  for(int c=0; c < N_COLS; ++c)
+// 	    for(int ri=0; ri<2; ++ri)
+// 	      if( s_free == 0){
+// 		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,s,alfa,beta,c})[ri];
+// 	      } else if ( s_free == 1 ){
+// 		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,alfa,s,beta,c})[ri];
+// 	      } else {
+// 		this->Corr({t,m,g,s,c})[ri]  = srcV2.Corr({t,m,g,alfa,beta,s,c})[ri];
+// 	      } 
+// }
 
 //template functions must be defined here
-template<typename Float>
-template <int s_fixed>
-void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2, 
-                                                              int alfa ){
-  this->absorbspinmatrix_fromV24_checks(srcV2, alfa);
-  if( s_fixed<0 || s_fixed>=3 )
-    PLEGMA_error("s_fixed %d out of range (0, 1 or 2)\n",s_fixed);
+// template<typename Float>
+// template <int s_fixed>
+// void PLEGMA_ScattCorrelator<Float>::absorbspinmatrix_fromV24( PLEGMA_ScattCorrelator<Float> &srcV2, 
+//                                                               int alfa ){
+//   this->absorbspinmatrix_fromV24_checks(srcV2, alfa);
+//   if( s_fixed<0 || s_fixed>=3 )
+//     PLEGMA_error("s_fixed %d out of range (0, 1 or 2)\n",s_fixed);
 
-  int n_gammas = GList[0].size();
+//   int n_gammas = GList[0].size();
    
-  for(int t=0; t < this->localT(); ++t)
-    for(int m=0; m < Nmoms(); ++m)
-      for(int g=0; g < n_gammas; ++g)
-	for(int s1=0; s1 < N_SPINS; ++s1)
-	  for( int s2=0; s2 < N_SPINS; ++s2)
-	    for(int c=0; c < N_COLS; ++c)
-	      for(int ri=0; ri<2; ++ri)
-		if( s_fixed == 2){
-		  this->Corr({t,m,g,s1,s2,c})[ri] = srcV2.Corr({t,m,g,s1,s2,alfa,c})[ri];
-		} else if ( s_fixed == 1 ){
-		  this->Corr({t,m,g,s1,s2,c})[ri] = srcV2.Corr({t,m,g,s1,alfa,s2,c})[ri];
-		} else {
-		  this->Corr({t,m,g,s1,s2,c})[ri] = srcV2.Corr({t,m,g,alfa,s1,s2,c})[ri];
-		}
-}
+//   for(int t=0; t < this->localT(); ++t)
+//     for(int m=0; m < Nmoms(); ++m)
+//       for(int g=0; g < n_gammas; ++g)
+// 	for(int s1=0; s1 < N_SPINS; ++s1)
+// 	  for( int s2=0; s2 < N_SPINS; ++s2)
+// 	    for(int c=0; c < N_COLS; ++c)
+// 	      for(int ri=0; ri<2; ++ri)
+// 		if( s_fixed == 2){
+// 		  this->Corr({t,m,g,s1,s2,c})[ri] = srcV2.Corr({t,m,g,s1,s2,alfa,c})[ri];
+// 		} else if ( s_fixed == 1 ){
+// 		  this->Corr({t,m,g,s1,s2,c})[ri] = srcV2.Corr({t,m,g,s1,alfa,s2,c})[ri];
+// 		} else {
+// 		  this->Corr({t,m,g,s1,s2,c})[ri] = srcV2.Corr({t,m,g,alfa,s1,s2,c})[ri];
+// 		}
+// }
