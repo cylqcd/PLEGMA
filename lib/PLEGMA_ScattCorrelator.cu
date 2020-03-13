@@ -462,7 +462,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		    }
 		    //color vector from Tr[G_i1 V2]
 		    V_TR_MM<Float>( V3aux.Corr({t,i_mom_f1,g2}), this->GList[2][g1],
-                             transpgamma, temp);
+                             transpgamma, temp_colorvector);
 		    temp[spins]=0.;
 		    temp[spins+1]=0.;
 
