@@ -600,7 +600,7 @@ int main(int argc, char **argv)
 
        std::vector<int> tmp_4Dmom= momentum_i2 ; 
        tmp_4Dmom.push_back(0);
-       vectortmp2.mulMomentumPhases(tmp_4Dmom,1);
+       vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
        stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp2,0);
  
        
