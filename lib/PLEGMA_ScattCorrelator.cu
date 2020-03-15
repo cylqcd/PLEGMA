@@ -1157,7 +1157,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 		temp[spin] = 4*T1.Corr({t,i_mom,gi,gf})[spin] + 2*T2.Corr({t,i_mom,gi,gf})[spin];
 	      //PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- temp[spin] done\n",i_mom,t,gei,gef,gi,gf);
 	      //change in pe_GNG
-	      M_pe_GNG<Float>( this->Corr({t, i_mom,0,gei,gef,gi,gf}), extG_f1, extG_i1, temp );
+	      M_pe_GNG<Float>( this->Corr({t, i_mom,gei,gef,gi,gf}), extG_f1, extG_i1, temp );
 	      //PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- M_pe_GNG done\n",i_mom,t,gei,gef,gi,gf);
 	    }
 	  }
