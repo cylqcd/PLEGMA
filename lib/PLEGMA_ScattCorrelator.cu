@@ -516,9 +516,9 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
 
   //Gamma list
   this->GList.clear();
-  std::vector<GAMMAS_SCATT> tmpG = (inM) ? G_i2 : apply_gamma5_scatt_gamma(G_i2,RIGHT);
+  std::vector<GAMMAS_SCATT> tmpG =  apply_gamma5_scatt_gamma(G_i2,RIGHT);
   this->GList.push_back( tmpG );
-  tmpG = (inM) ? G_f2 : apply_gamma5_scatt_gamma(G_f2,RIGHT);
+  tmpG = apply_gamma5_scatt_gamma(G_f2,RIGHT);
   this->GList.push_back( tmpG );
 
   //Description
