@@ -306,7 +306,7 @@ int main(int argc, char **argv)
 
       //D diagram
       
-	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], sourcemomentumList.uniq_p(3));
 	//initialize diagram
 	corrD.initialize_diagram( sourcemomentumList, glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
       
@@ -334,7 +334,7 @@ int main(int argc, char **argv)
       PLEGMA_printf("DEBUG: write D diagram done\n");
 
       //N diagram
-      PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], mom);
+      PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], sourcemomentumList.uniq_p(1) );
       //initialize diagram
       TIME(corrN.initialize_diagram(sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
       PLEGMA_printf("DEBUG: corrN initialized\n");
@@ -712,6 +712,7 @@ int main(int argc, char **argv)
        TIME(corrZ4.writeHDF5( outfilename ));
        //## M
        outfilename = "Mdiagramm_Antonino";
+       TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrM.applyBoundaryConditions( true ));
        TIME(corrM.writeHDF5( outfilename ));
