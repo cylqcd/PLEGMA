@@ -401,25 +401,38 @@ int main(int argc, char **argv)
         }
       }
 
-
       //We first have a loop over all unique the source meson momentum p_i2 
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
 	//List of momenta corresponding to a fix value of p_i2
         momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
+        std::vector<std::vector<int>> momenta_f1=filtered_sourcemomentumList.pi(1);
+        std::vector<std::vector<int>> momenta_f2=filtered_sourcemomentumList.pi(2);
+        std::vector<std::vector<int>> mominput;
+        for(int i=0; i<momenta_f1.size();++i) {
+          mominput.push_back(std::vector<int>());
+          std::vector<int> momf1=momenta_f1[i];
+          for(auto &imom: momf1) {
+            mominput.back().push_back(imom);
+          }
+          std::vector<int> momf2=momenta_f2[i];
+          for(auto &imom: momf2) {
+            mominput.back().push_back(imom);
+          }
+        }
 
 	//diagrams
-	PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW2(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW3(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW4(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ1(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ2(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW2(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW3(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW4(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ1(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ2(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], mominput);
 	
 	//initialize diagrams
 	corrB1.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
