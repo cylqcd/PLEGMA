@@ -599,6 +599,8 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   //Groups
   this->groups.clear();  
   tmp="";
+  std::vector<std::vector<int>> p_mom_temporary=momenta.pi(0);
+  tmp= "pi2="+std::to_string(p_mom_temporary[0][0])+"_"+std::to_string(p_mom_temporary[0][1])+"_"+std::to_string(p_mom_temporary[0][2]); 
   this->groups.push_back(tmp);
   /*
   std::string prefix1 = (name_of_diagram=="N") ? "pi1=" : "pi=";
@@ -626,7 +628,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   //  PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
 
   //Offsets
-  this->labels="tpggggss";
+  this->labels="tmggggss";
   this->setOffsets();
              
   int tot_size = this->N_p * this->localT() * this->GList[0].size() * this->GList[1].size() * this->GList[2].size() * this->GList[3].size() *N_SPINS*N_SPINS;
@@ -672,7 +674,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   //Groups
   //d::string tmp="";
   //this->groups= momenta.print_3pt();
-  std::vector<std::vector<int>> mom_pi2=momenta.uniq_p(0);
+  std::vector<std::vector<int>> mom_pi2=momenta.pi(0);
   tmp ="pi2="+std::to_string(mom_pi2[0][0])+"_"+std::to_string(mom_pi2[0][1])+"_"+std::to_string(mom_pi2[0][2]);
   this->groups.push_back(tmp);
 
@@ -933,7 +935,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
       for( int im=0; im<N_moms; ++im)
 	for( int t=0; t<TIME; ++t)
 	  for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-	    x_pe_cy( this->Corr({im,t,0,gi2,gf2}), g, pipi_aux.Corr({t,im,gf2}), 1);
+	    x_pe_cy( this->Corr({t,im,gi2,gf2}), g, pipi_aux.Corr({t,im,gf2}), 1);
     }//nonzero elems G_i2
   }//loop over G_i2 matrix
   
@@ -1032,26 +1034,25 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
   
   //put output to zero
   this->clear_output(!accum);
+  for( int t=0; t<TIME; ++t){
+    for( int i_mom=0; i_mom<moms_pf1.size(); ++i_mom){
+      for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
+        for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
+	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
+	    temp[spin] = T1.Corr({t,i_mom,gi1,gf1})[spin] + T2.Corr({t,i_mom,gi1,gf1})[spin];
 
-  for( int i_mom=0; i_mom<moms_pf1.size(); ++i_mom){
-    for( int t=0; t<TIME; ++t){
-      for( int gei=0; gei<n_extgammas_i; ++gei ){ 
-	for( int gef=0; gef<n_extgammas_f; ++gef ){
-	  GAMMAS_SCATT extG_i1 = this->GList[0][gei];
-	  GAMMAS_SCATT extG_f1 = this->GList[1][gef];
-	  for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
-	    for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
-	      for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
-		temp[spin] = T1.Corr({t,i_mom,gi1,gf1})[spin] + T2.Corr({t,i_mom,gi1,gf1})[spin];
-
+          for( int gei=0; gei<n_extgammas_i; ++gei ){ 
+	    for( int gef=0; gef<n_extgammas_f; ++gef ){
+	      GAMMAS_SCATT extG_i1 = this->GList[0][gei];
+	      GAMMAS_SCATT extG_f1 = this->GList[1][gef];
 	      //change in pe_GNG
 	      M_pe_GNG<Float>( this->Corr({t,i_mom,gei,gef,gi1,gf1}), extG_f1, extG_i1, temp );
-	    }
-	  }
-	}
-      }
-    }
-  }
+	    } //G_extf
+	  } //G_exti
+	} //G_f1
+      } //G_i1
+    } //mom
+  } //T
 
 }
 
@@ -1094,27 +1095,27 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   Float temp[N_SPINS*N_SPINS*2];
 
   this->clear_output(!accum, 6, ig_i2); 
-    
-  for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
-    for(int t=0; t<TIME; ++t){
-      for( int gei=0; gei<n_extgammas_i; ++gei ){ 
-	for( int gef=0; gef<n_extgammas_f; ++gef ){
-	  GAMMAS_SCATT eGamma_i = this->GList[0][gei];
-	  GAMMAS_SCATT eGamma_f = this->GList[1][gef];
-	  for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
-	    for( int gf=0; gf<n_gammas_f; ++gf ){
-	      for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin){
-		temp[spin] = (T1.Corr({t,i_mom,gi1,gf})[spin] + T3.Corr({t,i_mom,gi1,gf})[spin] + T5.Corr({t,i_mom,gi1,gf})[spin])*2;
-	      }
-	      //PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) --- Tdia temp spin ok\n",i_mom,t,gei,gef,gi1,ig_i2,gf);
-	      M_pe_GNG<Float>( this->Corr({i_mom,t,0,gei,gef,gi1,ig_i2,gf}), eGamma_f, eGamma_i, temp);
+   
+ 
+  for(int t=0; t<TIME; ++t){
+    for(int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
+      for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
+        for( int gf=0; gf<n_gammas_f; ++gf ){
+	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin){
+            temp[spin] = (T1.Corr({t,i_mom,gi1,gf})[spin] + T3.Corr({t,i_mom,gi1,gf})[spin] + T5.Corr({t,i_mom,gi1,gf})[spin])*2;
+	  }
+          for( int gei=0; gei<n_extgammas_i; ++gei ){ 
+	    for( int gef=0; gef<n_extgammas_f; ++gef ){
+	      GAMMAS_SCATT eGamma_i = this->GList[0][gei];
+	      GAMMAS_SCATT eGamma_f = this->GList[1][gef];
+              M_pe_GNG<Float>( this->Corr({t,i_mom,gei,gef,gi1,ig_i2,gf}), eGamma_f, eGamma_i, temp);
 				  
-	    }//G_f
-	  }//G_i1
-	}//G_ext_f
-      }//G_ext_i
-    }//time
-  }//mom
+	    }//G_ext_f
+	  }//G_ext_i
+	}//G_f
+      }//G_i
+    }//mom
+  }//time
 }
 
 
@@ -1154,27 +1155,24 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   this->clear_output(!accum); 
   //PLEGMA_printf("DEBUG: clear output done\n");
 
+  for( int t=0; t<TIME; ++t){
+    for( int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
+      for( int gi=0; gi<n_gammas_i; ++gi ){
+        for( int gf=0; gf<n_gammas_f; ++gf ){
+	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
+            temp[spin] = 4*T1.Corr({t,i_mom,gi,gf})[spin] + 2*T2.Corr({t,i_mom,gi,gf})[spin];
 
-  for( int i_mom=0; i_mom<moms_tot.size(); ++i_mom){
-    for( int t=0; t<TIME; ++t){
-      for( int gei=0; gei<n_extgammas_i; ++gei ){ 
-	for( int gef=0; gef<n_extgammas_f; ++gef ){
-	  GAMMAS_SCATT extG_i1 = this->GList[0][gei];
-	  GAMMAS_SCATT extG_f1 = this->GList[1][gef];
-	  for( int gi=0; gi<n_gammas_i; ++gi ){
-	    for( int gf=0; gf<n_gammas_f; ++gf ){
-	      for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
-		temp[spin] = 4*T1.Corr({t,i_mom,gi,gf})[spin] + 2*T2.Corr({t,i_mom,gi,gf})[spin];
-	      //PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- temp[spin] done\n",i_mom,t,gei,gef,gi,gf);
-	      //change in pe_GNG
+          for( int gei=0; gei<n_extgammas_i; ++gei ){ 
+	    for( int gef=0; gef<n_extgammas_f; ++gef ){
+	      GAMMAS_SCATT extG_i1 = this->GList[0][gei];
+	      GAMMAS_SCATT extG_f1 = this->GList[1][gef];
 	      M_pe_GNG<Float>( this->Corr({t, i_mom,gei,gef,gi,gf}), extG_f1, extG_i1, temp );
-	      //PLEGMA_printf("DEBUG: --- loop(%d,%d,%d,%d,%d,%d) --- M_pe_GNG done\n",i_mom,t,gei,gef,gi,gf);
-	    }
-	  }
-	}
-      }
-    }
-  }
+	    } //G_extf
+	  } //G_exti
+	} //G_f
+      } //G_i
+    } //mom
+  } //T
 }
 
 

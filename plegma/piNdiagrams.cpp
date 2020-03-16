@@ -132,7 +132,7 @@ int main(int argc, char **argv)
     //In vectorAuxD2 we store the results for the inversion
     vectorAuxD2.scale(0.0);
     
-    if (1){
+    if (0){
       PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
       for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
         //Step(3) pick out a particular timeslice from the source
@@ -192,6 +192,28 @@ int main(int argc, char **argv)
         solver.UpdateSolver();
       }
 
+      PLEGMA_printf("Read propagator from:\n");
+      for(int isc = 0 ; isc < 12 ; isc++){
+        PLEGMA_Vector<float> vectorRead(BOTH);
+        std::string spin=std::to_string(isc/3);
+        std::string col=std::to_string(isc%3);
+        vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_up_s"+spin+"_c"+col,LIME_FORMAT);
+        vectorRead.load();
+        propUP.absorb(vectorRead, isc/3, isc%3);
+       }
+
+      PLEGMA_printf("Read propagator from:\n");
+      for(int isc = 0 ; isc < 12 ; isc++){
+        PLEGMA_Vector<float> vectorRead(BOTH);
+        std::string spin=std::to_string(isc/3);
+        std::string col=std::to_string(isc%3);
+        vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_dn_s"+spin+"_c"+col,LIME_FORMAT);
+        vectorRead.load();
+        propDN.absorb(vectorRead, isc/3, isc%3);
+       }
+
+
+/*
       for(int isc = 0 ; isc < 12 ; isc++){
         PLEGMA_Vector<double> vectorInOut;
         PLEGMA_Vector<float> vectorAuxF;
@@ -293,7 +315,7 @@ int main(int argc, char **argv)
 
           }
         }
-
+*/
       std::vector<int> mom={0,0,0};
       
       // int source[4]={sourcePositions[isource][0],
@@ -459,6 +481,7 @@ int main(int argc, char **argv)
           // and the momentum is also fixed to be momentum_i2
 
           //smearing the 3D propagators
+          /*
           PLEGMA_Propagator3D<float> propDN3D;      
           for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
@@ -525,7 +548,18 @@ int main(int argc, char **argv)
              }
           }
 
-          PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
+          PLEGMA_printf("Smearing time %lf sec\n",tmp_time);*/
+          PLEGMA_printf("Read propagator from:\n");
+          for(int isc = 0 ; isc < 12 ; isc++){
+            PLEGMA_Vector<float> vectorRead(BOTH);
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
+            vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_updn_s"+spin+"_c"+col,LIME_FORMAT);
+            vectorRead.load();
+            propUPDN.absorb(vectorRead, isc/3, isc%3);
+          }
+      
+
 
           //Compute triangle diagramms          
           
@@ -543,7 +577,6 @@ int main(int argc, char **argv)
           reductionsT5triangle.writeHDF5("T5sourceforT");
 
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2));
-
 
           //Compute Diagram B1 and B2 
 
@@ -578,6 +611,8 @@ int main(int argc, char **argv)
 	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
 
        } //loop over gamma i2
+
+
          
        std::string outfilename="Zdiagramm_Antonino" ;
 
@@ -681,10 +716,13 @@ int main(int argc, char **argv)
        outfilename = "Pdiagramm_Antonino";
        TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2));
        //write P
-       TIME(corrP.writeHDF5( outfilename ));
+       TIME(corrP.writeHDF5( outfilename ));       
        
-       
+  //     TIME(corrT.writeHDF5("temporary_Tdiagramm" ));
        TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
+
+
+    //   TIME(corrT.writeHDF5("temporary2_Tdiagramm" ));
 
        //write everything
        //## B
@@ -695,6 +733,9 @@ int main(int argc, char **argv)
        TIME(corrB2.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrB2.applyBoundaryConditions( true ));
        TIME(corrB2.writeHDF5( outfilename ));
+
+
+//       TIME(corrT.writeHDF5("temporary3_Tdiagramm" ));
        //## W
        outfilename = "Wdiagramm_Antonino";
        TIME(corrW1.apply_phase( filtered_sourcemomentumList.pi1() ));
@@ -710,6 +751,8 @@ int main(int argc, char **argv)
        TIME(corrW4.applyBoundaryConditions( true ));
        TIME(corrW4.writeHDF5( outfilename ));
        //## Z
+
+//       TIME(corrT.writeHDF5("temporary4_Tdiagramm" ));
        outfilename = "Zdiagramm_Antonino";
        TIME(corrZ1.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrZ1.applyBoundaryConditions( true ));
@@ -723,27 +766,29 @@ int main(int argc, char **argv)
        TIME(corrZ4.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrZ4.applyBoundaryConditions( true ));
        TIME(corrZ4.writeHDF5( outfilename ));
+
+
+       //## T
+       outfilename = "Tdiagramm_Antonino";
+       std::vector<std::vector<int>> auxmomlist;
+       for(auto &mtot : filtered_sourcemomentumList.uniq_p(3) ){
+         auxmomlist.push_back(std::vector<int>());
+         for(int j=0; j<3; ++j){
+           auxmomlist.back().push_back( mtot[j]-momentum_i2[j] );
+         }
+       }
+       
+       TIME(corrT.apply_phase( auxmomlist ));
+       TIME(corrT.applyBoundaryConditions( true ));
+
+       TIME(corrT.writeHDF5( outfilename ));
        //## M
        outfilename = "Mdiagramm_Antonino";
        TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrM.applyBoundaryConditions( true ));
+
        TIME(corrM.writeHDF5( outfilename ));
-
-       //## T
-       outfilename = "Tdiagramm_Antonino";
-       std::vector<std::vector<int>> auxmomlist;
-       std::vector<int> ptmp(3);
-
-       for(auto &mtot : filtered_sourcemomentumList.uniq_p(3) ){
-	 for(int j=0; j<3; ++j)
-	   ptmp[j] = mtot[j]-filtered_sourcemomentumList.pi(0)[0][j];
-	 auxmomlist.push_back( ptmp );
-       }
-       
-       TIME(corrT.apply_phase( auxmomlist ));
-       TIME(corrT.applyBoundaryConditions( true ));
-       TIME(corrT.writeHDF5( outfilename ));
        
       }//loop over unique set of momenta for p_i2
 
