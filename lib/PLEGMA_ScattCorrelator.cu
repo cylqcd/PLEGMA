@@ -541,6 +541,9 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
     tmp += "pf2=" + std::to_string(mom[0])+"_"+std::to_string(mom[1])+"_"+std::to_string(mom[2]);
     this->groups.push_back(tmp);
   }*/
+
+  tmp = "pi2=" + std::to_string(momlist[0][0])+"_"+std::to_string(momlist[0][1])+"_"+std::to_string(momlist[0][2])+"_";
+  tmp += "pf2=" + std::to_string(momlist[0][0])+"_"+std::to_string(momlist[0][1])+"_"+std::to_string(momlist[0][2]);
   this->groups.push_back(tmp);
   
 
@@ -992,8 +995,8 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 	      for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
 		for( int gf2=0; gf2<n_gammas_f2; ++gf2){
 		  
-		  x_pe_cy( this->Corr({i_mom,t,gei,gef,gi1,gi2,gf1,gf2}), pipi_aux.Corr({i_pf2,t,gi2,gf2}),
-			   CorrNucleon.Corr({i_pf1,t,gei,gef,gi1,gf1}), N_SPINS*N_SPINS);
+		  x_pe_cy( this->Corr({t,i_mom,gei,gef,gi1,gi2,gf1,gf2}), pipi_aux.Corr({t,i_pf2,gi2,gf2}),
+			   CorrNucleon.Corr({t,i_pf1,gei,gef,gi1,gf1}), N_SPINS*N_SPINS);
 		}//G_f2
 	      }//G_f1
 	    }//G_i2
