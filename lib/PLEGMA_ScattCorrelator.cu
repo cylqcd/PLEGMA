@@ -958,7 +958,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
   //++++++++ PION-PION +++++++++
 
   //aux PLEGMA_SC for PhixGxPhi multiplications
-  PLEGMA_ScattCorrelator pipi_aux(this->getSource(), this->getMomList(), this->getTotalT());
+  PLEGMA_ScattCorrelator pipi_aux(this->getSource(), moms_pf2, this->getTotalT());
 
   pipi_aux.initialize_diagram( this->pList, this->GList[3], this->GList[5], "P", true ); //false m is pi2, true is pf2
 

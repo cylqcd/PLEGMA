@@ -432,7 +432,7 @@ int main(int argc, char **argv)
 	PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], mominput);
 	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], mominput);
 	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], mominput);
-	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
 	
 	//initialize diagrams
 	corrB1.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
@@ -675,7 +675,7 @@ int main(int argc, char **argv)
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        
 
-       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], mom);
+       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], momentum_i2);
        corrP.initialize_diagram(filtered_sourcemomentumList, glist_source_meson, glist_sink_meson, "P");
 
        outfilename = "Pdiagramm_Antonino";
