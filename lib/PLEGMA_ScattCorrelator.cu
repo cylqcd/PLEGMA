@@ -516,11 +516,11 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
 
   //Gamma list
   this->GList.clear();
-  std::vector<GAMMAS_SCATT> tmpG =  apply_gamma5_scatt_gamma(G_i2,RIGHT);
+  std::vector<GAMMAS_SCATT> tmpG = (inM) ? G_i2 : apply_gamma5_scatt_gamma(G_i2,RIGHT);
   this->GList.push_back( tmpG );
-  tmpG = apply_gamma5_scatt_gamma(G_f2,RIGHT);
+  tmpG = (inM) ? G_f2 : apply_gamma5_scatt_gamma(G_f2,RIGHT);
   this->GList.push_back( tmpG );
-
+  
   //Description
   std::string tmp="";
   // for( auto &gi2: G_i2 )
@@ -713,16 +713,16 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
     if( letter=='B' ) assert( (number>'0') && (number<'3') );
     else assert( (number>'0') && (number<'5') );
   }
-  
+
   //Gamma list
   this->GList.clear();
   this->GList.push_back( eG_i );
   this->GList.push_back( eG_f );
   this->GList.push_back( G_i1 );
-  std::vector<GAMMAS_SCATT> tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_i2,RIGHT) : G_i2;
+  std::vector<GAMMAS_SCATT> tmpG = ((letter == 'Z') || (letter == 'M')) ? apply_gamma5_scatt_gamma(G_i2,RIGHT) : G_i2;
   this->GList.push_back( tmpG );
   this->GList.push_back( G_f1 );
-  tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_f2,LEFT) : G_f2;
+  tmpG = ((letter == 'Z') || (letter == 'M')) ? apply_gamma5_scatt_gamma(G_f2,LEFT) : G_f2;
   this->GList.push_back( tmpG );
 
   //Description
