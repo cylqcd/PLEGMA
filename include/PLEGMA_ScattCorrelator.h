@@ -96,16 +96,48 @@ namespace plegma {
     //checks
     void setOffsets( );
 
-    __inline__ Float* Corr(  std::initializer_list<int> idx ) const {
-      // if(offsets.size()<idx.size())
-      // 	PLEGMA_error("Number of indices (%d) greater than size of correlator\n",idx.size());
-      int check=std::inner_product( idx.begin(), idx.end(), offsets.begin(), 0);
-      // if( check >= this->getTotalSize()*2 ){
-      // 	int i=0;
-      // 	for(auto &id: idx){ PLEGMA_printf("(%d/%d/offset:%d)-",id,ranges[i],offsets[i]); i++; }
-      // 	PLEGMA_error("\n Error check:%d >= totsize:%d\n",check,this->getTotalSize());
-      // }
-      return this->H_elem() + check;
+    __inline__ Float* Corr( int i0 ) const {
+      return this->H_elem() + i0*offsets[0];
+    }
+    
+    __inline__ Float* Corr( int i0, int i1 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1];
+    }
+    
+    __inline__ Float* Corr( int i0, int i1, int i2 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2];
+    }
+
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3];
+    }
+
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4];
+    }
+    
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5];
+    }
+
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6];
+    }
+
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7];
+    }
+
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7] + i8*offsets[8];
+    }
+
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7]+ i8*offsets[8]+ i9*offsets[9];
+    }
+
+    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9, int i10 ) const {
+      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7] + i8*offsets[8] + i9*offsets[9]+ i10*offsets[10];
     }
 
     bool check_reduction( VRED V );

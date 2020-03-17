@@ -24,7 +24,7 @@ namespace plegma {
       }
     }
     
-     momList( std::string input_file){
+     momList( std::string &input_file){
       std::ifstream file;
       int tmp;
       std::vector<int> mom_list;

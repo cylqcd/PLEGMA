@@ -18,7 +18,8 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
   
   register Float2<FloatOut> accum[16];
   for(int i = 0 ; i < 16  ; i++){
-    accum[i] = 0.;
+    accum[i].x = 0.;
+    accum[i].x = 0.;
   }
   
 

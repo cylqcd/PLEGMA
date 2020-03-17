@@ -274,6 +274,7 @@ protected:
     H5Tset_size(type_id, attr_value.length());
     hid_t attr_id = H5Acreate2(obj_id, attr_name.c_str(), type_id, 
 			       attrdat_id, H5P_DEFAULT, H5P_DEFAULT);
+    
     H5Awrite(attr_id, type_id, attr_value.c_str());
     H5Aclose(attr_id);
     H5Tclose(type_id);
@@ -340,13 +341,20 @@ protected:
   
   template<typename T>
   inline void _write_dataset_parallel(std::string name, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start) {
+    //PLEGMA_printf("DEBUG: ###_write_dataset_parallel:\n");
+    //MPI_Barrier(comm);
     
     hid_t dataset_id = require_dataset<T>(name, shape);
-
+    //PLEGMA_printf("DEBUG: require dataset ok \n");
+    //MPI_Barrier(comm);
+    
     // Counting how many writings we need to do
     size_t my_n_writings = 1, n_writings = 1;
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
+    
+    //PLEGMA_printf("DEBUG: shape.size =%d, start.size =%d, lshape.size=%d\n", shape.size(), start.size(),lshape.size());
+    //MPI_Barrier(comm);
     for(size_t i=0; i<shape.size(); i++) {
       if(start[i] + lshape[i] > shape[i]) { // then i it's exceeding
 	int exceeding = std::min(lshape[i], start[i] + lshape[i] - shape[i]);
@@ -358,6 +366,7 @@ protected:
 	exceeding_shape.push_back(0);
       }
     }
+ 
     if(!exceeding_id.empty())
       my_n_writings = 1<<exceeding_id.size();
     MPI_Allreduce( &my_n_writings, &n_writings, 1, MPI_Type(n_writings), MPI_MAX, comm);
@@ -531,10 +540,20 @@ public:
 			     path+"/"+object.substr(0,check));
     if(HGC_verbosity > 2) PLEGMA_printf("Going to write attribute %s in path %s \n", attr_name.c_str(),
 					path.c_str());
+
     cd(path);
+    //PLEGMA_printf("DEBUG: cd to %s ok\n", path.c_str());
+    //MPI_Barrier(comm);
+
     _write_attribute(object, attr_name, attr_value);
+    //PLEGMA_printf("DEBUG: _write_attribute ok\n");
+    //MPI_Barrier(comm);
+
     if(HGC_verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
     cd("-");
+    //PLEGMA_printf("DEBUG: cd - ok\n");
+    //MPI_Barrier(comm);
+ 
   }
 
   /*
@@ -547,6 +566,9 @@ public:
   template<typename T>
   void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
 			    std::vector<hsize_t> start={}, std::string path=".") {
+    //PLEGMA_printf("DEBUG: ###write_dataset:\n");
+    //MPI_Barrier(comm);
+    
     // checking for / in name
     size_t check = name.rfind("/");
     if(check != std::string::npos)
@@ -565,18 +587,25 @@ public:
       PLEGMA_error("start cannot be empty in parallel writing\n");
     if( !start.empty() && start.size() != shape.size())
       PLEGMA_error("start has wrong size\n");
+    //PLEGMA_printf("DEBUG: Sanity check ok\n");
+    //MPI_Barrier(comm);
 
+    
     if(exists(name)) {
       PLEGMA_warning("An object with name %s already exists in %s. Skipping...", name.c_str(),
 		     pwd().c_str());
     } else {    
       int comm_size;
       MPI_Comm_size(comm, &comm_size);
-      if(lshape.empty() || comm_size == 1)
-	_write_dataset_single(name,buf,shape,start);
-      else
+      if(lshape.empty() || comm_size == 1){
+	//PLEGMA_printf("DEBUG: fork to write dataset single\n");
+	//MPI_Barrier(comm);
+	_write_dataset_single(name,buf,shape,start);}
+      else{
+	//PLEGMA_printf("DEBUG: fork to write dataset parallel\n");
+	//MPI_Barrier(comm);
 	_write_dataset_parallel(name,buf,shape,lshape,start);
-
+      }
       if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
 					  (lshape.empty() || comm_size == 1) ? "single" : "parallel");
     }
