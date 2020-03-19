@@ -1,3 +1,4 @@
+
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 
@@ -409,13 +410,13 @@ int main(int argc, char **argv)
         }
       }
 
-      /*
       //We first have a loop over all unique the source meson momentum p_i2 
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
 	//List of momenta corresponding to a fix value of p_i2
         momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
 
 	//diagrams
+	/*
 	PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], mom);
 	PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], mom);
 	PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], mom);
@@ -427,11 +428,12 @@ int main(int argc, char **argv)
 	PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], mom);
 	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], mom);
 	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], mom);
+	*/	
 	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], mom);
 	
 	//initialize diagrams
+	/*
 	corrB1.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
-	
 	corrB2.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B2");
 	corrW1.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W1");
 	corrW2.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W2");
@@ -442,6 +444,7 @@ int main(int argc, char **argv)
 	corrZ3.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z3");
 	corrZ4.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z4");
 	corrM.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "M");
+	*/
 	corrT.initialize_diagram(filtered_sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "T");
 	
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));
@@ -542,7 +545,7 @@ int main(int argc, char **argv)
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2));
 	  
           //Compute Diagram B1 and B2 
-
+	  /*
           TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN));
           //reductionsV3.writeHDF5("V3sourceforB1");
 
@@ -550,6 +553,7 @@ int main(int argc, char **argv)
           //reductionsV2.writeHDF5("V2sourceforB1");
 
 	  TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1));
+	  
 	  TIME(corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2));
           
           //Compute Diagram W1,W2
@@ -572,11 +576,11 @@ int main(int argc, char **argv)
 
           TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3));
 	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
-	  
+	  */
        } //loop over gamma i2
 
 	  
-             
+	/* 
        //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
               
        std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
@@ -680,7 +684,7 @@ int main(int argc, char **argv)
        
        
        TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
-
+	*/
        //write everything
        //## T
        outfilename = "Tdiagramm_Antonino";
@@ -698,7 +702,8 @@ int main(int argc, char **argv)
        TIME(corrT.applyBoundaryConditions( true ));
        
        TIME(corrT.writeHDF5( outfilename ));
-	
+
+       /*
        //## B
        outfilename = "Bdiagramm_Antonino";
        TIME(corrB1.apply_phase( filtered_sourcemomentumList.pi1() ));
@@ -741,8 +746,8 @@ int main(int argc, char **argv)
        TIME(corrM.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrM.applyBoundaryConditions( true ));
        TIME(corrM.writeHDF5( outfilename ));
-       
-       }//loop over unique set of momenta for p_i2*/
+       */
+       }//loop over unique set of momenta for p_i2
       
     } //loop over source position
 
