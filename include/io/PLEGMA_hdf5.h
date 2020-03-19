@@ -1,4 +1,7 @@
 #include <hdf5.h>
+#include <vector>
+#include <numeric>      // std::iota
+#include <algorithm>    // std::sort, std::stable_sort
 
 //TODO: This function should be overloaded for different data type
 template<typename T> inline hid_t datatype();
@@ -147,6 +150,18 @@ protected:
     std::vector<hsize_t> res;
     for(size_t i=0; i < shape.size(); i++) res.push_back(1);
     return res;
+  }
+
+
+  inline std::vector<size_t> sort_indexes(const std::vector<hsize_t> &v) {
+
+    std::vector<size_t> idx(v.size());
+    std::iota(idx.begin(), idx.end(), 0);
+
+    std::stable_sort(idx.begin(), idx.end(),
+		     [&v](size_t i1, size_t i2) {return v[i1] > v[i2];});
+
+    return idx;
   }
 
   // replace the first finding in a string
@@ -373,18 +388,43 @@ protected:
     if(HGC_verbosity > 2) PLEGMA_printf("%s: %d writing(s) are needed for writing the dataset\n", name.c_str(), n_writings);
 
     if(n_writings>1) {
+      std::vector<size_t> my_writings = {0};
+
+      // Sorting the writings by size
+      if(my_n_writings>1) {
+	std::vector<hsize_t> tmp_lshape = lshape;
+	std::vector<hsize_t> sizes;
+	for(size_t i=0; i<my_n_writings; i++) {
+	  for(size_t j=0; j<lshape.size(); j++)
+	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
+
+	  // checking which direction we shift in this iteration
+	  int j=0;
+	  while((i>>j) > 0) {
+	    if((i>>j) & 1) {
+	      int id = exceeding_id[j];
+	      tmp_lshape[id] = exceeding_shape[id];
+	    }
+	    j++;
+	  }
+	  sizes.push_back(product(tmp_lshape));
+	}
+	my_writings = sort_indexes(sizes);
+      }
+      
       // looping over the writings 
-      for(size_t i=0; i<n_writings; i++) {
+      for(size_t i0=0; i0<n_writings; i0++) {
 	// standard behaviour
 	T* tmp = buf;
 	std::vector<hsize_t> tmp_lshape = lshape;
 	std::vector<hsize_t> tmp_start = start;
 	// creating the shifted case
-	if(!exceeding_id.empty() && i < my_n_writings) {
+	if(!exceeding_id.empty() && i0 < my_n_writings) {
+	  size_t i = my_writings[i0];
 	  std::vector<hsize_t> shift = zeros_like(start);
 	  for(size_t j=0; j<lshape.size(); j++)
 	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
-
+	  
 	  // checking which direction we shift in this iteration
 	  int j=0;
 	  while((i>>j) > 0) {
@@ -399,14 +439,14 @@ protected:
 	    }
 	    j++;
 	  }
-
+	  
 	  // copying the part of the buffer to write
 	  hostMalloc(tmp, product(tmp_lshape)*sizeof(T));
 	  for(hsize_t i = 0; i<product(tmp_lshape); i++) {
 	    hsize_t j = to_id( add( from_id(i, tmp_lshape), shift), lshape);
 	    tmp[i] = buf[j];
 	  }
-	} else if(i >= my_n_writings) {
+	} else if(i0 >= my_n_writings) {
 	  // do a dummy write to keep the communications active
 	  tmp_lshape = zeros_like(lshape);
 	}
