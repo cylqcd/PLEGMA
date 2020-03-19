@@ -676,7 +676,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
   this->N_p = momlist.size();
 
   //Groups
-  //d::string tmp="";
+  std::string tmp="";
   //this->groups= momenta.print_3pt();
   std::vector<std::vector<int>> mom_pi2=momenta.pi(0);
   tmp ="pi2="+std::to_string(mom_pi2[0][0])+"_"+std::to_string(mom_pi2[0][1])+"_"+std::to_string(mom_pi2[0][2]);
@@ -695,10 +695,10 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( momList &momenta, std::v
 
   //initialize
   this->initialize();
-  assert( this->nGroups()==this->N_p );
-  assert( this->Nmoms()==1 );
+  //assert( this->nGroups()==this->N_p );
+  //assert( this->Nmoms()==1 );
 
-  int exp_site_size = this->N_p * this->GList[0].size() * this->GList[1].size() * this->GList[2].size() * this->GList[3].size() * this->GList[4].size() * N_SPINS * N_SPINS;
+  int exp_site_size =  this->GList[0].size() * this->GList[1].size() * this->GList[2].size() * this->GList[3].size() * this->GList[4].size() * N_SPINS * N_SPINS;
   int exp_site_size1 = this->nGroups();
   for( auto &s: this->shape )
     exp_site_size1 *= s;
