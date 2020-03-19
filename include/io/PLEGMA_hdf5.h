@@ -439,12 +439,29 @@ protected:
 	    }
 	    j++;
 	  }
+
+	  // Finding the first index that is not contiguous in memory
+	  size_t non_cont_id = tmp_lshape.size()-1;
+	  while(non_cont_id>0) {
+	    if(tmp_lshape[non_cont_id] == lshape[non_cont_id])
+	      non_cont_id --;
+	    else
+	      break;
+	  }
+
+	  hsize_t contiguous = product(std::vector<hsize_t>(tmp_lshape.begin()+non_cont_id+1, tmp_lshape.end()));
+
+	  hsize_t write_size = product(tmp_lshape);
+	  std::vector<hsize_t> cut_tmp_lshape = std::vector<hsize_t>(tmp_lshape.begin(), tmp_lshape.begin()+non_cont_id+1);
+	  std::vector<hsize_t> cut_lshape = std::vector<hsize_t>(lshape.begin(), lshape.begin()+non_cont_id+1);
+	  shift = std::vector<hsize_t>(shift.begin(), shift.begin()+non_cont_id+1);
+	  assert(product(cut_tmp_lshape)*contiguous == write_size);
 	  
 	  // copying the part of the buffer to write
-	  hostMalloc(tmp, product(tmp_lshape)*sizeof(T));
-	  for(hsize_t i = 0; i<product(tmp_lshape); i++) {
-	    hsize_t j = to_id( add( from_id(i, tmp_lshape), shift), lshape);
-	    tmp[i] = buf[j];
+	  hostMalloc(tmp, write_size*sizeof(T));
+	  for(hsize_t i = 0; i<product(cut_tmp_lshape); i++) {
+	    hsize_t j = to_id( add( from_id(i, cut_tmp_lshape), shift), cut_lshape);
+	    std::memcpy(tmp+i*contiguous, buf+j*contiguous, contiguous*sizeof(T));
 	  }
 	} else if(i0 >= my_n_writings) {
 	  // do a dummy write to keep the communications active
