@@ -137,7 +137,7 @@ int main(int argc, char **argv)
     //In vectorAuxD2 we store the results for the inversion
     vectorAuxD2.scale(0.0);
     
-    if (1){
+    if (0){
       PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
       for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
         //Step(3) pick out a particular timeslice from the source
@@ -197,6 +197,28 @@ int main(int argc, char **argv)
         solver.UpdateSolver();
       }
 
+      PLEGMA_printf("Read propagator from:\n");
+      for(int isc = 0 ; isc < 12 ; isc++){
+        PLEGMA_Vector<float> vectorRead(BOTH);
+        std::string spin=std::to_string(isc/3);
+        std::string col=std::to_string(isc%3);
+        vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_up_s"+spin+"_c"+col,LIME_FORMAT);
+        vectorRead.load();
+        propUP.absorb(vectorRead, isc/3, isc%3);
+       }
+
+      PLEGMA_printf("Read propagator from:\n");
+      for(int isc = 0 ; isc < 12 ; isc++){
+        PLEGMA_Vector<float> vectorRead(BOTH);
+        std::string spin=std::to_string(isc/3);
+        std::string col=std::to_string(isc%3);
+        vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_dn_s"+spin+"_c"+col,LIME_FORMAT);
+        vectorRead.load();
+        propDN.absorb(vectorRead, isc/3, isc%3);
+       }
+
+
+/*
       for(int isc = 0 ; isc < 12 ; isc++){
         PLEGMA_Vector<double> vectorInOut;
         PLEGMA_Vector<float> vectorAuxF;
@@ -298,7 +320,7 @@ int main(int argc, char **argv)
 
           }
         }
-
+*/
       std::vector<int> mom={0,0,0};
       
       // int source[4]={sourcePositions[isource][0],
@@ -311,7 +333,8 @@ int main(int argc, char **argv)
 
       //D diagram
       /*{
-	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], sourcemomentumList.uniq_p(3));
+
 	//initialize diagram
 	corrD.initialize_diagram( sourcemomentumList, glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
       
@@ -343,7 +366,7 @@ int main(int argc, char **argv)
 
       /*
       //N diagram
-      PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], mom);
+      PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], sourcemomentumList.uniq_p(1) );
       //initialize diagram
       TIME(corrN.initialize_diagram(sourcemomentumList, glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
       PLEGMA_printf("DEBUG: corrN initialized\n");
@@ -414,22 +437,36 @@ int main(int argc, char **argv)
       for (auto momentum_i2 : sourcemomentumList.uniq_p(0)) {
 	//List of momenta corresponding to a fix value of p_i2
         momList filtered_sourcemomentumList(sourcemomentumList.extract(momentum_i2, 0));
+        std::vector<std::vector<int>> momenta_f1=filtered_sourcemomentumList.pi(1);
+        std::vector<std::vector<int>> momenta_f2=filtered_sourcemomentumList.pi(2);
+        std::vector<std::vector<int>> mominput;
+        for(int i=0; i<momenta_f1.size();++i) {
+          mominput.push_back(std::vector<int>());
+          std::vector<int> momf1=momenta_f1[i];
+          for(auto &imom: momf1) {
+            mominput.back().push_back(imom);
+          }
+          std::vector<int> momf2=momenta_f2[i];
+          for(auto &imom: momf2) {
+            mominput.back().push_back(imom);
+          }
+        }
 
 	//diagrams
 	/*
-	PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW2(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW3(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrW4(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ1(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ2(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], mom);
-	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], mom);
-	*/	
-	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], mom);
+	PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW2(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW3(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrW4(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ1(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ2(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], mominput);
+	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], mominput);
+	*/
+	PLEGMA_ScattCorrelator<float> corrT(sourcePositions[isource], filtered_sourcemomentumList.uniq_p(3));
 	
 	//initialize diagrams
 	/*
@@ -458,6 +495,7 @@ int main(int argc, char **argv)
           // and the momentum is also fixed to be momentum_i2
 
           //smearing the 3D propagators
+          /*
           PLEGMA_Propagator3D<float> propDN3D;      
           for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
@@ -524,7 +562,18 @@ int main(int argc, char **argv)
              }
           }
 
-          PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
+          PLEGMA_printf("Smearing time %lf sec\n",tmp_time);*/
+          PLEGMA_printf("Read propagator from:\n");
+          for(int isc = 0 ; isc < 12 ; isc++){
+            PLEGMA_Vector<float> vectorRead(BOTH);
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
+            vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_updn_s"+spin+"_c"+col,LIME_FORMAT);
+            vectorRead.load();
+            propUPDN.absorb(vectorRead, isc/3, isc%3);
+          }
+      
+
 
           //Compute triangle diagramms          
           
@@ -543,7 +592,6 @@ int main(int argc, char **argv)
 	  //Compute Diagram T 
 
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2));
-	  
           //Compute Diagram B1 and B2 
 	  /*
           TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN));
@@ -578,7 +626,7 @@ int main(int argc, char **argv)
 	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
 	  */
        } //loop over gamma i2
-
+         
 	  
 	/* 
        //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
@@ -674,33 +722,35 @@ int main(int argc, char **argv)
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        
 
-       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], mom);
+       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], momentum_i2);
        corrP.initialize_diagram(filtered_sourcemomentumList, glist_source_meson, glist_sink_meson, "P");
 
        outfilename = "Pdiagramm_Antonino";
        TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2));
        //write P
-       TIME(corrP.writeHDF5( outfilename ));
+       TIME(corrP.writeHDF5( outfilename ));       
        
-       
+       //     TIME(corrT.writeHDF5("temporary_Tdiagramm" ));
        TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
 	*/
+
+
+	//   TIME(corrT.writeHDF5("temporary2_Tdiagramm" ));
+
        //write everything
        //## T
        outfilename = "Tdiagramm_Antonino";
-       
        std::vector<std::vector<int>> auxmomlist;
-       std::vector<int> ptmp(3);
-       
        for(auto &mtot : filtered_sourcemomentumList.uniq_p(3) ){
-	 for(int j=0; j<3; ++j)
-	   ptmp[j] = mtot[j]-filtered_sourcemomentumList.pi(0)[0][j];
-	 auxmomlist.push_back( ptmp );
+         auxmomlist.push_back(std::vector<int>());
+         for(int j=0; j<3; ++j){
+           auxmomlist.back().push_back( mtot[j]-momentum_i2[j] );
+         }
        }
        
        TIME(corrT.apply_phase( auxmomlist ));
        TIME(corrT.applyBoundaryConditions( true ));
-       
+
        TIME(corrT.writeHDF5( outfilename ));
 
        /*
@@ -712,6 +762,9 @@ int main(int argc, char **argv)
        TIME(corrB2.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrB2.applyBoundaryConditions( true ));
        TIME(corrB2.writeHDF5( outfilename ));
+
+
+//       TIME(corrT.writeHDF5("temporary3_Tdiagramm" ));
        //## W
        outfilename = "Wdiagramm_Antonino";
        TIME(corrW1.apply_phase( filtered_sourcemomentumList.pi1() ));
@@ -727,6 +780,8 @@ int main(int argc, char **argv)
        TIME(corrW4.applyBoundaryConditions( true ));
        TIME(corrW4.writeHDF5( outfilename ));
        //## Z
+
+//       TIME(corrT.writeHDF5("temporary4_Tdiagramm" ));
        outfilename = "Zdiagramm_Antonino";
        TIME(corrZ1.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrZ1.applyBoundaryConditions( true ));
@@ -743,11 +798,13 @@ int main(int argc, char **argv)
 
        //## M
        outfilename = "Mdiagramm_Antonino";
+       TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase( filtered_sourcemomentumList.pi1() ));
        TIME(corrM.applyBoundaryConditions( true ));
+
        TIME(corrM.writeHDF5( outfilename ));
        */
-       }//loop over unique set of momenta for p_i2
+      }//loop over unique set of momenta for p_i2
       
     } //loop over source position
 

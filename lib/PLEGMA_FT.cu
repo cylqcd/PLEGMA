@@ -36,7 +36,7 @@ PLEGMA_FT<Float>::PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4, bool a
   dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   for(auto &mom : moms){
-    if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
+    if( (mom.size() != dims) && (mom.size() != 2*dims) ) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT %d %d",mom.size(),dims);
     VFloat momF(mom.begin(),mom.end());
     momList.push_back(momF);
   }
