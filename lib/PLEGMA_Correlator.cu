@@ -403,9 +403,13 @@ writeHDF5(std::string filename) const {
   std::string top=(std::string) "/" + ssource; 
   free(ssource);
   
-  std::vector<hsize_t> momShape = { 3 };
+  std::vector<hsize_t> momShape;
   std::vector<int> mvec;
-  if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
+
+  if(corr_space == MOMENTUM_SPACE){
+    momShape = { corr_mom_space->MomList()[0].size() };
+    for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
+  }
   
   for(size_t g=0; g<nGroups(); g++){
     writer.cd(top + (groups.size()>0 ? groups[g] : "/"));

@@ -40,7 +40,7 @@ void PLEGMA_ScattCorrelator<Float>::setOffsets( ){
   int g_count=0;
   ranges.clear();
       
-  for( auto &l : labels ){
+  for( auto &l : this->labels ){
     switch(l){
     case('t'): assert(this->corr_mom_space); ranges.push_back( this->corr_mom_space->DimT() ); break;
     case('m'): assert(this->corr_mom_space); ranges.push_back( this->corr_mom_space->Nmoms() ); break;
@@ -560,7 +560,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   //Groups
   assert( this->pList().check_eq(0) );
-  this->groups={ this->pList().print({-1,0},{"pi1=","pi2="})[0], };
+  this->groups={ this->pList().print({0},{"pi2="})[0], };
   
   //Dataset
   this->datasets ={name_of_diagram,};
@@ -630,7 +630,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->description = tmp;
   
   //Groups
-  this->groups = {this->pList().print({-1,0},{"pi1=","pi2="})[0],};
+  this->groups = {this->pList().print({0},{"pi2="})[0],};
 
   //Dataset
   this->datasets = {name_of_diagram};
