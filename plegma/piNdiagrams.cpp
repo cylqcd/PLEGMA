@@ -369,18 +369,18 @@ int main(int argc, char **argv)
         solver.UpdateSolver();
       }
 
-      PLEGMA_Vector<double> vectorStoc_source_oet;
+      PLEGMA_Vector<float> vectorStoc_source_oet;
       PLEGMA_Vector<float> vectortmp1;
       PLEGMA_Vector<float> vectortmp2;
           
       PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 
       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
 
-      vectorStoc_source.randInit(1234);
-      vectorStoc_source.stochastic_Z(nroots);
+      vectorStoc_source_oet.randInit(1234);
+      vectorStoc_source_oet.stochastic_Z(nroots);
 
 
-      vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source);
+      vectortmp1.absorbTimeslice(vectorStoc_source_oet, sequential_time_source);
       //Transforming to physical base
       vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
       stochastic_source_spin_diluted_momzero.dilutespin(vectortmp2,0);
