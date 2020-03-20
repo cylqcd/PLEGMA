@@ -392,12 +392,13 @@ int main(int argc, char **argv)
       TIME(corrN.apply_phase());
       TIME(corrN.applyBoundaryConditions( true ));
       TIME(corrN.writeHDF5( outfilename ));
-    
+
       //P diagram
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
       momList list_mpi2(1,{mpi2,},{0,});
       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], list_mpi2);
       corrP.initialize_diagram(glist_source_meson, glist_sink_meson, "P");
+
 
       // ensuring mu positive
       if(mu<0) {
@@ -464,7 +465,6 @@ int main(int argc, char **argv)
 	PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], filtered_sourcemomentumList);
 	PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], filtered_sourcemomentumList);
 	
-
 	//T diagrams
 	std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(3);
 	std::vector<std::vector<int>> mpi2_filt;
