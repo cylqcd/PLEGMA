@@ -1,30 +1,19 @@
 #pragma once
 namespace plegma {
   class momList {
-    std::vector<std::vector<int>> p_i2;
-    std::vector<std::vector<int>> p_f1;
-    std::vector<std::vector<int>> p_f2;
-    std::vector<std::vector<int>> p_tot;
-    std::vector<std::vector<int>> *ps[4]={&p_i2,&p_f1,&p_f2,&p_tot};
-
+  private:
+    const int NLIST;
+  protected:
+    std::vector<std::vector<std::vector<int>>> ps;
+    std::vector<int> i_tot;  
   public:
-     momList() {;}
-    
-     momList( std::vector<int> &mom_list ){
-      if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
-      for(int i=0; i<mom_list.size(); i=i+9){
-	std::vector<int> p;
-	for(int j=0; j<3; j++){
-	  p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
-	  (*ps[j]).push_back(p);
-	}
-	int idx=(int)(i/9);
-	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
-	p_tot.push_back(p);
-      }
+    momList( int nlist=0, std::initializer_list<int> li_tot={} ) : NLIST(nlist), i_tot(li_tot), ps( std::vector<std::vector<std::vector<int>>>(NLIST) ) {;}
+
+    momList( int nlist, std::vector<int> &mom_list, std::initializer_list<int> li_tot ) : NLIST(nlist), i_tot(li_tot), ps( std::vector<std::vector<std::vector<int>>>(NLIST) ) {
+      read_momList( mom_list );
     }
-    
-     momList( std::string &input_file){
+
+    momList( int nlist, std::string &input_file, std::initializer_list<int> li_tot ) : NLIST(nlist), i_tot(li_tot), ps( std::vector<std::vector<std::vector<int>>>(NLIST) ) {
       std::ifstream file;
       int tmp;
       std::vector<int> mom_list;
@@ -35,92 +24,107 @@ namespace plegma {
 	mom_list.push_back(tmp); //add it to data vector 
       file.close();
 
-      if(mom_list.size()%9!=0) PLEGMA_error("n x 9 integers expected\n");
-      for(int i=0; i<mom_list.size(); i=i+9){
-	std::vector<int> p;
-	for(int j=0; j< 3; j++){
-	  p={mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]};
-	  (*ps[j]).push_back(p);
+      read_momList( mom_list );
+    }
+
+    momList( int nlist, std::initializer_list< std::vector<std::vector<int>> > list_ps, std::initializer_list<int> li_tot ) : NLIST(nlist), i_tot(li_tot), ps(list_ps){
+      assert( list_ps.size() == NLIST );
+    }
+
+    void read_momList( std::vector<int> &mom_list ){
+      assert( mom_list.size()%(3*NLIST)==0 );
+      for(int i=0; i<mom_list.size(); i=i+3*NLIST){
+	for(int j=0; j<NLIST; j++){
+	  ps[j].push_back( std::vector<int>({mom_list[i+j*3],mom_list[i+j*3+1],mom_list[i+j*3+2]}) );
 	}
-	int idx=(int)(i/9);
-	p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
-	p_tot.push_back(p);
       }
     }
 
-    momList&  operator= (const momList &tc_momlist)
-    {
-      // do the copy
-      p_i2 = tc_momlist.p_i2; // can handle self-assignment
-      p_f1 = tc_momlist.p_f1; // can handle self-assignment
-      p_f2 = tc_momlist.p_f2; // can handle self-assignment
-      p_tot = tc_momlist.p_tot;
+    int N_list(){ return NLIST; }
+    
+    std::vector<std::vector<int>> p_tot( ){
+      assert(!i_tot.empty());
+      std::vector<std::vector<int>> ptot;
+    
+      for( int i=0; i<this->size(); ++i){
+	std::vector<int> paux={0,0,0};
 
-      ps[0] = &p_i2;
-      ps[1] = &p_f1;
-      ps[2] = &p_f2;
-      ps[3] = &p_tot;
-
-      // return the existing object so we can chain this operator
-      return *this;
+	for( int k=0; k<3; ++k ){
+	  for( int j : i_tot ){
+	    assert( j<NLIST );
+	    paux[k] += ps[j][i][k];
+	  }
+	}
+	ptot.push_back( paux );
       }
+      return ptot;
+    }
+  
+    int  size(){ return ps[0].size(); }
 
+    bool empty(){ return ps[0].empty(); }
 
-    int  size(){ return p_i2.size(); }
-
-    bool  empty(){ return p_i2.empty(); }
-
-    void  add_mom( std::vector<int> &mom ){
-      if(mom.size()%9!=0) PLEGMA_error("9 integers expected\n");
-      std::vector<int> p;
-      for(int j=0; j<3; j++){
-	p={mom[j*3],mom[j*3+1],mom[j*3+2]};
-	(*ps[j]).push_back(p);
+    void add_mom( std::vector<int> &mom ){
+      assert( mom.size() == 3*NLIST );
+      std::vector<int> pt={0,0,0};
+      for(int j=0; j<NLIST; j++){
+	(ps[j]).push_back( std::vector<int>({mom[j*3],mom[j*3+1],mom[j*3+2]}) );
       }
-      int idx=p_i2.size()-1;
-      p = {p_f1[idx][0]+p_f2[idx][0],p_f1[idx][1]+p_f2[idx][1],p_f1[idx][2]+p_f2[idx][2]};
-      p_tot.push_back(p);
     }
 
-    void  add_mom( std::vector<int> &p1, std::vector<int> &p2, std::vector<int> &p3 ){
-      if(p1.size()!=3||p2.size()!=3||p3.size()!=3) PLEGMA_error("3dim vectors expected\n");
-      p_i2.push_back(p1);
-      p_f1.push_back(p2);
-      p_f2.push_back(p3);
-      std::vector<int> p={p2[0]+p3[0],p2[1]+p3[1],p2[2]+p3[2]};
-      p_tot.push_back(p);
+    void add_mom( std::vector<std::vector<int>> &p ){
+      for( auto &mom : p )
+	assert(mom.size()==3);
+      assert( p.size()==NLIST );
+    
+      for( int j=0; j<NLIST; ++j )
+	ps[j].push_back(p[j]);
+
     }
 
-    std::vector<std::vector<int>>  uniq_p(int p_i){
-      std::vector<std::vector<int>> out=(*ps[p_i]);
+    std::vector<std::vector<int>> uniq_p(int p_i){
+      assert(p_i<=NLIST);
+    
+      std::vector<std::vector<int>> out = (p_i==NLIST) ? p_tot(): ps[p_i];
       std::sort(out.begin(),out.end());
       auto new_end = std::unique(out.begin(),out.end());
       out.resize(new_end-out.begin());
       return out;
     }
 
-    bool  check_eq( int p_i ){
+    bool check_eq( int p_i ){
+      assert(p_i<NLIST);
       bool res = true;
-      std::vector<int> el0 = (*ps[p_i])[0];
-  
-      for( auto& mom: *(this->ps[p_i]) )
+      std::vector<int> el0 = ps[p_i][0];
+    
+      for( auto& mom: ps[p_i] )
 	if( el0 != mom )
 	  res = false;
       return res;
     }
 
-    momList  extract( std::vector<int> &mom, int p_i ){
-      momList out;
-      for(int j=0; j<p_i2.size(); j++)
-	if( (*ps[p_i])[j]==mom ) out.add_mom( p_i2[j], p_f1[j], p_f2[j]);
+    momList extract( std::vector<int> &mom, int p_i ){
+      momList out(NLIST);
+      out.i_tot = this->i_tot;
+
+      assert( p_i<NLIST );
+    
+      for(int i=0; i<this->size(); ++i){
+	if( this->ps[p_i][i]==mom ){
+	  std::vector<std::vector<int>> tmp(NLIST);
+	  for(int j=0; j<NLIST; ++j)
+	    tmp[j] = ps[j][i];
+	  out.add_mom( tmp );
+	}
+      }
       return out;
     }
 
-    std::vector<int>  u_posix( int p_i, std::vector<std::vector<int>> &moms){
+    std::vector<int> u_posix( int p_i, std::vector<std::vector<int>> &moms){
       int aux;
       std::vector<int> res;
-      std::vector<std::vector<int>> uniq_pi=uniq_p(p_i);
-  
+      std::vector<std::vector<int>> uniq_pi = uniq_p(p_i);
+
       for( auto& mom: moms ){
 	auto momf = std::find(uniq_pi.begin(), uniq_pi.end(), mom);
 	aux = (momf==uniq_pi.end()) ? -1 : momf-uniq_pi.begin();
@@ -129,73 +133,117 @@ namespace plegma {
       return res;
     }
 
-    std::vector<int>  u_posix( int p_i ){
-      int aux;
-      std::vector<int> res;
-      std::vector<std::vector<int>> uniq_pi=uniq_p(p_i);
-  
-      for( auto& mom: (*this->ps[p_i]) ){
-	auto momf = std::find(uniq_pi.begin(), uniq_pi.end(), mom);
-	aux = (momf==uniq_pi.end()) ? -1 : momf-uniq_pi.begin();
-	res.push_back(aux);
-      }
-      return res;
+    std::vector<int> u_posix( int p_i ){
+      assert(p_i<NLIST);
+      auto &moms = ps[p_i];
+    
+      return this->u_posix( p_i, moms );
     }
 
-    std::vector<std::array<int,3>>  index_map(){
-      std::vector<std::array<int,3>> res;
-      std::vector<int> aux1= u_posix(0);
-      std::vector<int> aux2= u_posix(1);
-      std::vector<int> aux3= u_posix(2);
-      //std::array<int,3> aux;
-      for(int i=0; i<p_i2.size(); i++)
-	res.push_back({aux1[i],aux2[i],aux3[i]});
+    std::vector<std::vector<int>> index_map(){
+      std::vector<std::vector<int>> res;
+
+      std::vector<std::vector<int>> auxs;
+      for(int j=0; j<NLIST; j++)
+	auxs.push_back( u_posix(j) );
+
+      for(int i=0; i<this->size(); i++){
+	std::vector<int> tmp;
+	for(int j=0; j<NLIST; j++)
+	  tmp.push_back(auxs[j][i]);
+	res.push_back(tmp);
+      }
+    
       return res;
     }
     
-    std::vector<std::vector<int>>  pi1(){
-      std::vector<std::vector<int>> p_i1;
-      for(int n=0; n<p_i2.size(); n++){
-	std::vector<int> tmp={p_f1[n][0]+p_f2[n][0]-p_i2[n][0],p_f1[n][1]+p_f2[n][1]-p_i2[n][1],p_f1[n][2]+p_f2[n][2]-p_i2[n][2]};
-	p_i1.push_back(tmp);
+    std::vector<std::vector<int>> tolist( std::initializer_list<int> p_i ){
+      std::vector<std::vector<int>> out;
+      for(int i=0; i<this->size(); ++i){
+	out.push_back(std::vector<int>());
+	for(int j : p_i){
+	  assert( j<NLIST );
+	  for(int k=0; k<3; ++k)
+	    out.back().push_back( ps[j][i][k] );
+	}
       }
+      
+      return out;
+    }
+
+    std::vector<std::vector<int>> tolist(){
+      std::vector<std::vector<int>> out;
+      for(int i=0; i<this->size(); ++i){
+	out.push_back(std::vector<int>());
+	for(int j=0; j<NLIST; ++j)
+	  for(int k=0; k<3; ++k)
+	    out.back().push_back( ps[j][i][k] );
+      }
+            
+      return out;
+    }
+
+    std::vector<std::vector<int>> pi1(){
+      assert(!i_tot.empty());
+    
+      if(NLIST==1)
+	return ps[0];
+    
+      //build i_left
+      std::vector<int> i_left;
+      for(int j=0; j<NLIST; ++j)
+	i_left.push_back(j);
+
+      std::vector<int>::iterator pend = i_left.end();
+      for( int j : i_tot ){
+	assert(j<NLIST);
+	pend = std::remove( i_left.begin(), pend, j);
+      }
+      i_left.resize( pend - i_left.begin() );
+
+      std::vector<std::vector<int>> p_i1 = this->p_tot();
+
+      if(!i_left.empty()){
+	for(int i=0; i<this->size(); ++i){
+	  for( int k=0; k<3; ++k){
+	    for( int j : i_left ){
+	      assert(j<NLIST);
+	      p_i1[i][k] -= ps[j][i][k];
+	    }
+	  }
+	}
+      }
+    
       return p_i1;
     }
 
-    std::vector<std::vector<int>>  pi(int p_i){
-      std::vector<std::vector<int>> pi=*(this->ps[p_i]);
-      return pi;
+    std::vector<std::vector<int>> pi(int p_i){
+      assert(p_i<NLIST);
+      return ps[p_i];
     }
 
-    std::vector<std::string>  print_3pt(){
-      std::vector<std::vector<int>> p_tot_u = uniq_p(3);
+    //0,1,2,...,NLIST-1 for ps[i], NLIST for ptot, -1 for p0
+    std::vector<std::string> print( std::vector<int> p_i, std::initializer_list<std::string> prefix ){
+      assert( prefix.size() == p_i.size() );
+      auto p_i1 = pi1();
+      auto ptot = p_tot();
       std::vector<std::string> out;
       std::string tmp;
-  
-      for(int n=0; n < p_tot_u.size(); n++){
-	std::vector<int> p_i1={p_tot_u[n][0]-p_i2[0][0],p_tot_u[n][1]-p_i2[0][1],p_tot_u[n][2]-p_i2[0][2]};
-	tmp ="pi1="+std::to_string(p_i1[0])+"_"+std::to_string(p_i1[1])+"_"+std::to_string(p_i1[2])+"_";
-	tmp += "pi2="+std::to_string(p_i2[0][0])+"_"+std::to_string(p_i2[0][1])+"_"+std::to_string(p_i2[0][2])+"_";
-	tmp += "pf="+std::to_string(p_tot_u[n][0])+"_"+std::to_string(p_tot_u[n][1])+"_"+std::to_string(p_tot_u[n][2]);
-	out.push_back(tmp);
-      }
-      return out;
-    }
-
-    std::vector<std::string>  print(){
-      std::vector<std::vector<int>> p_i1=pi1();
-      std::vector<std::string> out;
-      std::string tmp;
-      for(int n=0; n<p_i2.size(); n++){
-	tmp ="pi1="+std::to_string(p_i1[n][0])+"_"+std::to_string(p_i1[n][1])+"_"+std::to_string(p_i1[n][2])+"_";
-	tmp += "pi2="+std::to_string(p_i2[n][0])+"_"+std::to_string(p_i2[n][1])+"_"+std::to_string(p_i2[n][2])+"_";
-	tmp += "pf1="+std::to_string(p_f1[n][0])+"_"+std::to_string(p_f1[n][1])+"_"+std::to_string(p_f1[n][2])+"_";
-	tmp += "pf2="+std::to_string(p_f2[n][0])+"_"+std::to_string(p_f2[n][1])+"_"+std::to_string(p_f2[n][2]);
-	out.push_back(tmp);
-      }
-      return out;
-    }
     
+      for(int n=0; n<this->size(); ++n){
+	int j=0;
+	tmp = "";
+	for( auto &pre : prefix ){
+	  auto &mom = (p_i[j]==-1) ? p_i1 : ((p_i[j]==NLIST) ? ptot : ps[p_i[j]]);
+	  tmp += pre + std::to_string(mom[n][0])+"_"+std::to_string(mom[n][1])+"_"+std::to_string(mom[n][2]);
+	  if(j!=prefix.size()-1) tmp+="_";
+	  j++;
+	}
+	out.push_back(tmp);
+      }
+      return out;
+    }
+  
   };
 }
 
