@@ -286,50 +286,49 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 
   Float temp[2*N_SPINS*N_SPINS];
   
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    int i_mom_f1 = imap[i_m][1];
-    int i_mom_f2 = imap[i_m][2];
-    for(int t=0; t < TIME; ++t){
-      for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
-	for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){    
-	  GAMMAS_SCATT egammai = this->GList[0][g_exti];
-	  GAMMAS_SCATT egammaf = this->GList[1][g_extf];
-	  for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
-	    for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-	      for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
-		for (int alfa=0; alfa < N_SPINS; ++alfa ){
-		  for (int beta=0; beta < N_SPINS; ++beta ){
-		    int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
-		    switch(index_abs){
-		    case 0: absorb_fromV24<0,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
-		    case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
-		    case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
-		    }
-		    V_M_V<Float>( srcV3.Corr(t,i_mom_f2,g3), V3aux,
-				  this->GList[2][g1], transpgamma, temp + spins);
-		  }//beta
-		}//alfa
-		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction V_M_V done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
-		if(factor!=NULL){
-		  Float aux;
-		  for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
-		    aux = temp[2*ss+0]*factor[0] - temp[2*ss+1]*factor[1];
-		    temp[2*ss+1] = temp[2*ss+0]*factor[1] + temp[2*ss+1]*factor[0];
-		    temp[2*ss+0] = aux;
-		  }
+  for(int t=0; t < TIME; ++t){
+    for(int i_m=0; i_m<imap.size(); i_m++){
+      int i_mom_f1 = imap[i_m][1];
+      int i_mom_f2 = imap[i_m][2];
+      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+        for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+            for (int alfa=0; alfa < N_SPINS; ++alfa ){
+	      for (int beta=0; beta < N_SPINS; ++beta ){
+		int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
+		switch(index_abs){
+		case 0: absorb_fromV24<0,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
+		case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
+		case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
+                }
+		V_M_V<Float>( srcV3.Corr(t,i_mom_f2,g3), V3aux,
+		              this->GList[2][g1], transpgamma, temp + spins);
+              }//beta
+            }//alfa
+            if(factor!=NULL){
+	        Float aux;
+		for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
+		  aux = temp[2*ss+0]*factor[0] - temp[2*ss+1]*factor[1];
+		  temp[2*ss+1] = temp[2*ss+0]*factor[1] + temp[2*ss+1]*factor[0];
+		  temp[2*ss+0] = aux;
 		}
+            }
+            for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
+              for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
+                GAMMAS_SCATT egammai = this->GList[0][g_exti];
+                GAMMAS_SCATT egammaf = this->GList[1][g_extf];
 		
 		//multiplication with external gammas NB written here! mod in M_pe_GNG
 		M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g0,g2,g3),
 				egammaf, egammai, temp );
 		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction M_pe_GNG done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
-	      }//Gf2
-	    }//Gf1
-	  }//Gi1	
-	}//Gextf
-      }//Gexti
-    }//time
-  }//mom
+	      }//Gextf
+	    }//Gexti
+	  }//Gf2	
+	}//Gf1
+      }//Gi1
+    }//mom
+  }//time
 }
 
 
@@ -339,7 +338,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   //checks
   std::string exp_shape="tmggggggss";
   if( this->labels!=exp_shape )
-    PLEGMA_error("V3V2reduction_matrix Expected shape ptmggggggss not the one detected (%s)\n",+this->labels.c_str());
+    PLEGMA_error("V3V2reduction_matrix Expected shape tmggggggss not the one detected (%s)\n",+this->labels.c_str());
   
   if( !srcV2.check_reduction(V_2) ) PLEGMA_error("SrcV2 object does not seem a V2like object\n");
   if( !srcV3.check_reduction(V_3) ) PLEGMA_error("SrcV3 object does not seem a V3like object\n");
@@ -367,63 +366,65 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   Float temp[N_SPINS*N_SPINS*2];
   //PLEGMA_printf("DEBUG: V3V2reduction_matrix - prel done\n");
 
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    int i_mom_f1 = imap[i_m][1];
-    int i_mom_f2 = imap[i_m][2];
-    for(int t=0; t < TIME; ++t){
-      for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
-	for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){    
-	  GAMMAS_SCATT egammai = this->GList[0][g_exti];
-	  GAMMAS_SCATT egammaf = this->GList[1][g_extf];
-	  for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
-	    for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-	      for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
-		for (int alfa=0; alfa < N_SPINS; ++alfa ){
-		  for (int beta=0; beta < N_SPINS; ++beta ){
-		    int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
-		    switch(index_abs){
-		    case 0: absorbspinmatrix_fromV24<0,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
-		    case 1: absorbspinmatrix_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
-		    case 2: absorbspinmatrix_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
-		    }
-		    //color vector from Tr[G_i1 V2]
-		    V_TR_MM<Float>( V3aux, this->GList[2][g1], transpgamma, temp_colorvector);
-		    temp[spins]=0.;
-		    temp[spins+1]=0.;
 
-		    //colorvector x V3
-		    for (int coloridx=0; coloridx<3; ++coloridx){
-		      temp[spins+0] +=
-			+temp_colorvector[2*coloridx+0]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[0]
-			-temp_colorvector[2*coloridx+1]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[1];
-		      temp[spins+1] +=
-			+temp_colorvector[2*coloridx+1]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[0]
-			+temp_colorvector[2*coloridx+0]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[1];
-		    }//coloridx
-		  }//beta
-		}//alfa
-		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction_matrix V_M_V done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
-		if(factor!=NULL){
-		  Float aux;
-		  for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
-		    aux = temp[2*ss+0]*factor[0] - temp[2*ss+1]*factor[1];
-		    temp[2*ss+1] = temp[2*ss+0]*factor[1] + temp[2*ss+1]*factor[0];
-		    temp[2*ss+0] = aux;
-		  }
+  for(int t=0; t < TIME; ++t){
+    for(int i_m=0; i_m<imap.size(); i_m++){
+      int i_mom_f1 = imap[i_m][1];
+      int i_mom_f2 = imap[i_m][2];
+      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+	for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+            for (int alfa=0; alfa < N_SPINS; ++alfa ){
+              for (int beta=0; beta < N_SPINS; ++beta ){
+		int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
+		switch(index_abs){
+		case 0: absorbspinmatrix_fromV24<0,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
+		case 1: absorbspinmatrix_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
+		case 2: absorbspinmatrix_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
 		}
+		//color vector from Tr[G_i1 V2]
+		V_TR_MM<Float>( V3aux, this->GList[2][g1], transpgamma, temp_colorvector);
+		temp[spins]=0.;
+		temp[spins+1]=0.;
+
+		//colorvector x V3
+		for (int coloridx=0; coloridx<3; ++coloridx){
+		  temp[spins+0] +=
+	            +temp_colorvector[2*coloridx+0]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[0]
+	            -temp_colorvector[2*coloridx+1]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[1];
+		  temp[spins+1] +=
+	            +temp_colorvector[2*coloridx+1]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[0]
+		    +temp_colorvector[2*coloridx+0]*srcV3.Corr(t,i_mom_f2,g3,beta,coloridx)[1];
+		}//coloridx
+	      }//beta
+	    }//alfa
+		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction_matrix V_M_V done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
+	    if(factor!=NULL){
+              Float aux;
+	      for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
+		aux = temp[2*ss+0]*factor[0] - temp[2*ss+1]*factor[1];
+		temp[2*ss+1] = temp[2*ss+0]*factor[1] + temp[2*ss+1]*factor[0];
+		temp[2*ss+0] = aux;
+	      }
+	    }
+
+            for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
+	      for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){    
+	        GAMMAS_SCATT egammai = this->GList[0][g_exti];
+	        GAMMAS_SCATT egammaf = this->GList[1][g_extf];
 
 		//multiplication with external gammas NB: written here!!
 		M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g0,g2,g3),
 				egammaf, egammai, temp );
 		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction_matrix M_pe_GNG done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
 		
-	      }//Gf2
-	    }//Gf1
-	  }//Gi1	
-	}//Gextf
-      }//Gexti
-    }//time
-  }//mom
+	      }//Gextf
+	    }//Gexti
+	  }//Gf2	
+	}//Gf1
+      }//Gi1
+    }//mom
+  }//time
 }
 
 
@@ -460,10 +461,9 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   //initialize
   this->initialize();
-  
+
   //if( this->getVolSize() != this->localT() )
   //  PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
-
   // int tot_size = this->N_p * this->localT() * this->GList[0].size() * this->GList[1].size();
   // if( this->getSiteSize() != tot_size/(this->Nmoms()*this->localT()) )
   //    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=1),(Gi2=%d),(Gf2=%d)%d\n", this->getVolSize()*this->getSiteSize(),
