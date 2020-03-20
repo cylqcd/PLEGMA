@@ -53,6 +53,15 @@ void PLEGMA_ScattCorrelator<Float>::setOffsets( ){
     offsets.push_back(offset);
   }
   offsets.push_back(2);
+  PLEGMA_printf("Offsets\n");
+  for (int i;i< offsets.size(); ++i){
+    PLEGMA_printf("i = %d offsets[i]=%d\n", i, offsets[i]);
+  }
+  printf("Ranges\n");
+  for (int i; i< ranges.size(); i++){
+    PLEGMA_printf("i= %d ranges[i]= %d\n", i, ranges[i]);
+  }
+
 }
   
 template<typename Float>
