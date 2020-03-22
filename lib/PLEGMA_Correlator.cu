@@ -383,6 +383,7 @@ writeHDF5(std::string filename) const {
   int nWriters = writeSize==0 ? 0 : ((corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1);
   int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
   size_t corrShift = writeSize==0 ? 0 : use_multiple_writers(shape, lshape, start, nWriters, id);
+  
   if(id >= nWriters) lshape[0] = 0; // not writing
   if(nWriters>1) {
     if(HGC_verbosity > 3) {
@@ -402,12 +403,18 @@ writeHDF5(std::string filename) const {
   std::string top=(std::string) "/" + ssource; 
   free(ssource);
   
-  std::vector<hsize_t> momShape = { 3 };
+  std::vector<hsize_t> momShape;
   std::vector<int> mvec;
-  if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
+
+  if(corr_space == MOMENTUM_SPACE){
+    momShape = { corr_mom_space->MomList()[0].size() };
+    for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
+  }
   
   for(size_t g=0; g<nGroups(); g++){
     writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
+    //PLEGMA_printf("DEBUG: - Change directory for group: %d\n",g);
+    //MPI_Barrier(*comm);
     if(corr_space == MOMENTUM_SPACE) {
       writer.write_dataset("mvec", mvec, momShape);
     }
@@ -415,7 +422,11 @@ writeHDF5(std::string filename) const {
       Float *writeBuf = H_elem() + (g*nDatasets()+d)*writeSize + corrShift;
       std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
       writer.write_dataset(dataset, writeBuf, shape, lshape, start);
+      //PLEGMA_printf("DEBUG: -- dataset %d written\n",d);
+      //MPI_Barrier(*comm);
       writer.write_attribute(dataset, "description", descr);
+      //PLEGMA_printf("DEBUG: -- attribute to dataset %d written\n",g);
+      //MPI_Barrier(*comm);
     }
   }
 }
