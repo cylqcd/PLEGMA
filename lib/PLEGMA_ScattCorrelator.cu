@@ -594,12 +594,12 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->clear_output(true);
 }
 
-//4pt --> "B1","B2","W1","W2","W3","W4","Z1","Z2","Z3","Z4","M",  6Gammas
+//4pt --> "B1","B2","W1","W2","W3","W4","Z1","Z2","Z3","Z4","M","TpiNsink"  6Gammas
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
   
   char letter = name_of_diagram.at(0);
-  assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z') );
+  assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z') || (letter=='T') );
   if( letter != 'M' ){
     char number = name_of_diagram.at(1);
     if( letter=='B' ) assert( (number>'0') && (number<'3') );
@@ -876,7 +876,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 //V3 should have momentum list p_f2
 //V2 should have momentum list p_f1 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3, int diagram_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagram_index, bool accum){
 
 
   //checks between srcV2 srcV3

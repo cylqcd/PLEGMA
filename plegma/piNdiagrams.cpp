@@ -384,13 +384,23 @@ int main(int argc, char **argv)
       {
          
         momList filtered_sourcemomentumList_piNsink = sourcemomentumList.extract(mom, 0);
+        PLEGMA_printf("Momentum filtering done\n");
 
         std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_piNsink.uniq_p(3);
-        PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], mptot_filt);
-        corrT_piNsink.initialize_diagram(glist_sink_nucleon_unpaired, glist_source_delta_unpaired, glist_source_delta, glist_source_meson_T, glist_sink_nucleon,  glist_sink_meson, "T"); 
+
+        std::vector<std::vector<int>> mpi2_filt;
+        mpi2_filt.assign(mptot_filt.size(),mom);
+        momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+        PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], list_mpi2ptot);
+
+        PLEGMA_printf("Filteringsasa\n");
+        corrT_piNsink.initialize_diagram(glist_sink_nucleon_unpaired, glist_source_delta_unpaired, glist_source_delta, glist_source_meson_T, glist_sink_nucleon,  glist_sink_meson, "T1"); 
+ 
+        PLEGMA_printf("initialization done\n");
 
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_piNsink.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList_piNsink.uniq_p(2));
+
 
         TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP));
         reductionsV3.writeHDF5("V3sourceforTpiNsink");
