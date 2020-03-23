@@ -876,30 +876,26 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 //V3 should have momentum list p_f2
 //V2 should have momentum list p_f1 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagram_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, bool accum){
 
 
   //checks between srcV2 srcV3
   //if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
   //if(!srcV3.check_reduction(V_3)) PLEGMA_error("srcV3 seems not to have V3like shape\n");
+  Float factor[2];
+  factor[0]=2.;
+  factor[1]=0.;
 
   this->clear_output(!accum, 5, 0);
 
-  if (diagram_index == 1){
 
-    this->V3V2reduction( srcV3, srcV2, 1,  false, 0);
+  this->V3V2reduction( srcV3, srcV2, 1,  false, 0, false, factor);
 
-  }
-  else if (diagram_index == 2){
 
-    this->V3V2reduction_matrix( srcV3, srcV2, 2, true, 0);
+  this->V3V2reduction_matrix( srcV3, srcV2, 2, true, 0, false, factor);
 
-  }
-  else{
 
-    this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0);
-
-  }
+  this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, false, factor);
 
 }
 //Nucleon correlator. This function should be called outside the p_i2 loop, with Ts computed using the entire list of unique p_f1s. N.B: we multiply the output by exp(i * x_sourcepos * p_f1);

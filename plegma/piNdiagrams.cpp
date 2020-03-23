@@ -410,11 +410,7 @@ int main(int argc, char **argv)
 
         outfilename=outdiagramPrefix+confnumber+"_TpiNsink";
 
-        TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2,  1));
-
-        TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2,  2));
-
-        TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2,  3));
+        TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2));
 
         TIME(corrT_piNsink.apply_phase());
         TIME(corrT_piNsink.applyBoundaryConditions( true ));

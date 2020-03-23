@@ -170,7 +170,7 @@ namespace plegma {
     void T_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, int ig_i2, bool accum=false );
 
 
-    void T_diagramms_piNsink(PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3, int diagram_index, bool accum=false);
+    void T_diagramms_piNsink(PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3, bool accum=false);
 
     void P_diagramms( std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, int i_pi2, bool accum=false );
     void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
