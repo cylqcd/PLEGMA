@@ -512,8 +512,8 @@ int main(int argc, char **argv)
         //stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
         if (spinindex<3){
           vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momzero,spinindex+1,spinindex);
-          stochastic_source_spin_diluted_momzero.rotateToPhysicalBasis(vectortmp1,+1);
-          //stochastic_source_spin_diluted_momzero.copy(vectortmp1);
+          //stochastic_source_spin_diluted_momzero.rotateToPhysicalBasis(vectortmp1,+1);
+          stochastic_source_spin_diluted_momzero.copy(vectortmp1);
         }
       }
 
