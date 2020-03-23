@@ -488,10 +488,10 @@ int main(int argc, char **argv)
       }
 
       //Dilution
-      vectortmp1.dilutespin(vectortmp2,0);
-
+      vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
+      
       //Transforming to physical base
-      stochastic_source_spin_diluted_momzero.rotateToPhysicalBasis(vectortmp1,+1);
+      stochastic_source_spin_diluted_momzero.dilutespin(vectortmp1,0);
 
       for (int spinindex=0; spinindex<4; ++spinindex){
         PLEGMA_Vector<double> vectorAuxD;
