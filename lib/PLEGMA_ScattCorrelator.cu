@@ -4,6 +4,7 @@
 #include <PLEGMA_scattreductions.cuh>
 #include <PLEGMA_scattreductionsPiPi.cuh>
 #include <PLEGMA_utils.h>
+#include <omp.h>
 using namespace plegma;
 
 //--------------------------------//
@@ -281,15 +282,17 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
   int Nmoms_f2 = srcV3.Nmoms();
 
   //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
-  Float V3aux[N_SPINS*N_COLS*2];
   auto imap = this->pList().index_map();
-
-  Float temp[2*N_SPINS*N_SPINS];
   
-  for(int t=0; t < TIME; ++t){
-    for(int i_m=0; i_m<imap.size(); i_m++){
-      int i_mom_f1 = imap[i_m][1];
-      int i_mom_f2 = imap[i_m][2];
+    
+
+  #pragma omp parallel for
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    Float V3aux[N_SPINS*N_COLS*2];
+    Float temp[2*N_SPINS*N_SPINS];
+    int i_mom_f1 = imap[i_m][1];
+    int i_mom_f2 = imap[i_m][2];
+    for(int t=0; t < TIME; ++t){
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
         for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
 	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
@@ -357,20 +360,21 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   int Nmoms_f2 = srcV3.Nmoms();
 
   //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
-  Float V3aux[N_SPINS*N_SPINS*N_COLS*2];
-  
+    
   auto imap = this->pList().index_map();
 
 
-  Float temp_colorvector[N_COLS*2];
-  Float temp[N_SPINS*N_SPINS*2];
   //PLEGMA_printf("DEBUG: V3V2reduction_matrix - prel done\n");
 
+  #pragma omp parallel for
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    int i_mom_f1 = imap[i_m][1];
+    int i_mom_f2 = imap[i_m][2];
+    Float V3aux[N_SPINS*N_SPINS*N_COLS*2];
+    Float temp_colorvector[N_COLS*2];
+    Float temp[N_SPINS*N_SPINS*2];
 
-  for(int t=0; t < TIME; ++t){
-    for(int i_m=0; i_m<imap.size(); i_m++){
-      int i_mom_f1 = imap[i_m][1];
-      int i_mom_f2 = imap[i_m][2];
+    for(int t=0; t < TIME; ++t){  
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
 	for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
 	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2

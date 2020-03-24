@@ -1,6 +1,7 @@
 
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <omp.h>
 
 using namespace plegma;
 using namespace quda;
@@ -48,7 +49,6 @@ int main(int argc, char **argv)
   initializePLEGMA();
   double start_time, tmp_time;
   {
-    
     // Reading from Lime file and loading to device
     PLEGMA_Gauge<double> gauge;
     gauge.readFile(latfile, LIME_FORMAT);
@@ -59,6 +59,7 @@ int main(int argc, char **argv)
     PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
     momList sourcemomentumList(3,pathListMomenta,{1,2});
     PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
+
     if(sourcemomentumList.empty())
       PLEGMA_error("momentumList empty");
 
@@ -350,8 +351,6 @@ int main(int argc, char **argv)
 	//reductionsT2.writeHDF5("T2sourceforD");
 
 	//write D
-	outfilename="Ddiagramm_Antonino" ;
-	
 	PLEGMA_printf("DEBUG: 5th -- start D_diagram\n");
 	TIME(corrD.D_diagramms( reductionsT1, reductionsT2 ));
 	PLEGMA_printf("DEBUG: 5th -- start apply phase to D diagram\n");
@@ -359,7 +358,7 @@ int main(int argc, char **argv)
 	PLEGMA_printf("DEBUG: 5th -- apply bounds to D diagram\n");
 	TIME( corrD.applyBoundaryConditions( true ) );
 	PLEGMA_printf("DEBUG: 5th -- write D diagram\n");
-	TIME( corrD.writeHDF5(outfilename) );
+	TIME( corrD.writeHDF5("Ddiagramm_Antonino") );
 
       }
       
@@ -387,11 +386,10 @@ int main(int argc, char **argv)
       //reductionsT2.writeHDF5("T2sourceforN");
 
       //write N
-      outfilename = "Ndiagramm_Antonino";
       TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
       TIME(corrN.apply_phase());
       TIME(corrN.applyBoundaryConditions( true ));
-      TIME(corrN.writeHDF5( outfilename ));
+      TIME(corrN.writeHDF5("Ndiagramm_Antonino"));
 
       //P diagram
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
@@ -624,7 +622,7 @@ int main(int argc, char **argv)
           //Compute Diagram W3,W4
           //
           TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP));
-          reductionsV2.writeHDF5("V2sourceforW34");
+          //reductionsV2.writeHDF5("V2sourceforW34");
 
           TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3));
 	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
@@ -724,7 +722,6 @@ int main(int argc, char **argv)
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        
-       outfilename = "Pdiagramm_Antonino";
        TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2, i_mpi2));
        
        //     TIME(corrT.writeHDF5("temporary_Tdiagramm" ));
@@ -734,67 +731,62 @@ int main(int argc, char **argv)
 
        //write everything
        //## T
-       outfilename = "Tdiagramm_Antonino";
-       
        TIME(corrT.apply_phase());
        TIME(corrT.applyBoundaryConditions( true ));
 
-       TIME(corrT.writeHDF5( outfilename ));
+       TIME(corrT.writeHDF5( "Tdiagramm_Antonino" ));
 
        
        //## B
-       outfilename = "Bdiagramm_Antonino";
        TIME(corrB1.apply_phase());
        TIME(corrB1.applyBoundaryConditions( true ));
-       TIME(corrB1.writeHDF5( outfilename ));
+       TIME(corrB1.writeHDF5( "Bdiagramm_Antonino" ));
        TIME(corrB2.apply_phase());
        TIME(corrB2.applyBoundaryConditions( true ));
-       TIME(corrB2.writeHDF5( outfilename ));
+       TIME(corrB2.writeHDF5("Bdiagramm_Antonino" ));
 
 
 //       TIME(corrT.writeHDF5("temporary3_Tdiagramm" ));
        //## W
-       outfilename = "Wdiagramm_Antonino";
        TIME(corrW1.apply_phase());
        TIME(corrW1.applyBoundaryConditions( true ));
-       TIME(corrW1.writeHDF5( outfilename ));
+       TIME(corrW1.writeHDF5("Wdiagramm_Antonino"));
        TIME(corrW2.apply_phase());
        TIME(corrW2.applyBoundaryConditions( true ));
-       TIME(corrW2.writeHDF5( outfilename ));
+       TIME(corrW2.writeHDF5("Wdiagramm_Antonino"));
        TIME(corrW3.apply_phase());
        TIME(corrW3.applyBoundaryConditions( true ));
-       TIME(corrW3.writeHDF5( outfilename ));
+       TIME(corrW3.writeHDF5("Wdiagramm_Antonino"));
        TIME(corrW4.apply_phase());
        TIME(corrW4.applyBoundaryConditions( true ));
-       TIME(corrW4.writeHDF5( outfilename ));
+       TIME(corrW4.writeHDF5("Wdiagramm_Antonino"));
        //## Z
 
 //       TIME(corrT.writeHDF5("temporary4_Tdiagramm" ));
-       outfilename = "Zdiagramm_Antonino";
        TIME(corrZ1.apply_phase());
        TIME(corrZ1.applyBoundaryConditions( true ));
-       TIME(corrZ1.writeHDF5( outfilename ));
+       TIME(corrZ1.writeHDF5("Zdiagramm_Antonino"));
        TIME(corrZ2.apply_phase());
        TIME(corrZ2.applyBoundaryConditions( true ));
-       TIME(corrZ2.writeHDF5( outfilename ));
+       TIME(corrZ2.writeHDF5("Zdiagramm_Antonino"));
        TIME(corrZ3.apply_phase());
        TIME(corrZ3.applyBoundaryConditions( true ));
-       TIME(corrZ3.writeHDF5( outfilename ));
+       TIME(corrZ3.writeHDF5("Zdiagramm_Antonino"));
        TIME(corrZ4.apply_phase());
        TIME(corrZ4.applyBoundaryConditions( true ));
-       TIME(corrZ4.writeHDF5( outfilename ));
+       TIME(corrZ4.writeHDF5("Zdiagramm_Antonino"));
 
        //## M
-       outfilename = "Mdiagramm_Antonino";
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase());
        TIME(corrM.applyBoundaryConditions( true ));
-       TIME(corrM.writeHDF5( outfilename ));
+       TIME(corrM.writeHDF5("Mdiagramm_Antonino"));
       
       }//loop over unique set of momenta for p_i2
        
       //write P
-      TIME(corrP.writeHDF5( outfilename ));
+      //outfilename = ;
+      TIME(corrP.writeHDF5( "Pdiagramm_Antonino" ));
 
     } //loop over source position
 
