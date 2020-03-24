@@ -103,7 +103,7 @@ namespace plegma {
       return res;
     }
 
-    momList extract( std::vector<int> &mom, int p_i ){
+    momList extract( std::vector<int> mom, int p_i ){
       momList out(NLIST);
       out.i_tot = this->i_tot;
 

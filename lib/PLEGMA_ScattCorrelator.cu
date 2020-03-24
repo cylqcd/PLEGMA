@@ -535,19 +535,23 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->clear_output(true);
 }
 
-//3pt --> "T", 5Gammas
+//3pt --> "T", 5Gammas, "T1" 5Gammas +1 fake (cause V3V2reductions works only for 4pt)
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string name_of_diagram){
 
-  assert( name_of_diagram=="T" );
+  assert( (name_of_diagram=="T") || (name_of_diagram=="T1") );
 
  //Gamma list
   this->GList.clear();
   this->GList.push_back( eG_i );
   this->GList.push_back( eG_f );
   this->GList.push_back( G_i1 );
-  this->GList.push_back( G_i2 );
-  this->GList.push_back( G_f );
+  if(name_of_diagram=="T1"){
+    std::vector<GAMMAS_SCATT> fake_glist={ID,};
+    this->GList.push_back( fake_glist );
+  }
+  this->GList.push_back( G_i2 );//or Gf1
+  this->GList.push_back( G_f );//or Gf2
 
   //Description
   std::string tmp="";
@@ -560,21 +564,23 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->description=tmp;
   
   //momList
+  assert( this->pList().check_eq(0) );
 
   //Groups
-  assert( this->pList().check_eq(0) );
-  this->groups={ this->pList().print({0},{"pi2="})[0], };
+  if(name_of_diagram=="T1")
+    this->groups = {"",};
+  else
+    this->groups ={ this->pList().print({0},{"pi2="})[0], };
   
   //Dataset
-  this->datasets ={name_of_diagram,};
+  this->datasets = {name_of_diagram,};
 
   //Shape
-  this->shape={(int)(this->GList[0].size())*
-	       (int)(this->GList[1].size())*
-	       (int)(this->GList[2].size())*
-	       (int)(this->GList[3].size())*
-	       (int)(this->GList[4].size()),
-	       N_SPINS*N_SPINS};
+  int ngammas=1;
+  for( auto& g : this->GList )
+    ngammas*=g.size();
+    
+  this->shape = { ngammas, N_SPINS*N_SPINS };
 
   //initialize
   this->initialize();
@@ -592,7 +598,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
  // 		  this->nGroups(), this->GList[0].size(), this->GList[1].size(), this->GList[2].size(), this->GList[3].size(), this->GList[4].size(), exp_site_size,  exp_site_size1);
 
   //Offsets
-  this->labels="tmgggggss";
+  this->labels=(name_of_diagram=="T1") ? "tmggggggss" : "tmgggggss";
   this->setOffsets();
 
   this->clear_output(true);
@@ -603,7 +609,7 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
   
   char letter = name_of_diagram.at(0);
-  assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z') || (letter=='T') );
+  assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z'));
   if( letter != 'M' ){
     char number = name_of_diagram.at(1);
     if( letter=='B' ) assert( (number>'0') && (number<'3') );
@@ -884,13 +890,13 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
 
 
   //checks between srcV2 srcV3
-  //if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
-  //if(!srcV3.check_reduction(V_3)) PLEGMA_error("srcV3 seems not to have V3like shape\n");
+  if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
+  if(!srcV3.check_reduction(V_3)) PLEGMA_error("srcV3 seems not to have V3like shape\n");
   Float factor[2];
   factor[0]=2.;
   factor[1]=0.;
 
-  this->clear_output(!accum, 5, 0);
+  this->clear_output(!accum);
 
 
   this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor);
