@@ -1,6 +1,7 @@
 
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <omp.h>
 
 using namespace plegma;
 using namespace quda;
@@ -53,7 +54,6 @@ int main(int argc, char **argv)
   initializePLEGMA();
   double start_time, tmp_time;
   {
-    
     // Reading from Lime file and loading to device
     PLEGMA_Gauge<double> gauge;
     gauge.readFile(latfile, LIME_FORMAT);
@@ -72,6 +72,7 @@ int main(int argc, char **argv)
     PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
     momList sourcemomentumList(3,pathListMomenta,{1,2});
     PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
+
     if(sourcemomentumList.empty())
       PLEGMA_error("momentumList empty");
 
@@ -441,10 +442,11 @@ int main(int argc, char **argv)
       TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
       reductionsT2N.writeHDF5("T2sourceforN");
 
+      //write N
       TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
       TIME(corrN.apply_phase());
       TIME(corrN.applyBoundaryConditions( true ));
-      TIME(corrN.writeHDF5( outfilename ));
+      TIME(corrN.writeHDF5(outfilename));
 
       PLEGMA_printf("DEBUG: write N diagram done\n");
 
@@ -700,7 +702,7 @@ int main(int argc, char **argv)
           //Compute Diagram W3,W4
           
           TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP));
-          reductionsV2.writeHDF5("V2sourceforW34");
+          //reductionsV2.writeHDF5("V2sourceforW34");
 
           TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3));
 	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
@@ -809,11 +811,11 @@ int main(int argc, char **argv)
        //write everything
        //## T
        outfilename = outdiagramPrefix+confnumber+"_T";
-       
+     
        TIME(corrT.apply_phase());
        TIME(corrT.applyBoundaryConditions( true ));
 
-       TIME(corrT.writeHDF5( outfilename ));
+       TIME(corrT.writeHDF5(outfilename));
 
        
        //## B
@@ -828,27 +830,29 @@ int main(int argc, char **argv)
 
        //## W
        outfilename = outdiagramPrefix+confnumber+"_W";
+
        TIME(corrW1.apply_phase());
        TIME(corrW1.applyBoundaryConditions( true ));
-       TIME(corrW1.writeHDF5( outfilename ));
+       TIME(corrW1.writeHDF5(outfilename));
        TIME(corrW2.apply_phase());
        TIME(corrW2.applyBoundaryConditions( true ));
-       TIME(corrW2.writeHDF5( outfilename ));
+       TIME(corrW2.writeHDF5(outfilename));
        TIME(corrW3.apply_phase());
        TIME(corrW3.applyBoundaryConditions( true ));
-       TIME(corrW3.writeHDF5( outfilename ));
+       TIME(corrW3.writeHDF5(outfilename));
        TIME(corrW4.apply_phase());
        TIME(corrW4.applyBoundaryConditions( true ));
-       TIME(corrW4.writeHDF5( outfilename ));
+       TIME(corrW4.writeHDF5(outfilename));
        //## Z
 
        outfilename = outdiagramPrefix+confnumber+"_Z";
+
        TIME(corrZ1.apply_phase());
        TIME(corrZ1.applyBoundaryConditions( true ));
        TIME(corrZ1.writeHDF5( outfilename ));
        TIME(corrZ2.apply_phase());
        TIME(corrZ2.applyBoundaryConditions( true ));
-       TIME(corrZ2.writeHDF5( outfilename ));
+       TIME(corrZ2.writeHDF5( outfilename  ));
        TIME(corrZ3.apply_phase());
        TIME(corrZ3.applyBoundaryConditions( true ));
        TIME(corrZ3.writeHDF5( outfilename ));
@@ -858,6 +862,7 @@ int main(int argc, char **argv)
 
        //## M
        outfilename = outdiagramPrefix+confnumber+"_M";
+
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase());
        TIME(corrM.applyBoundaryConditions( true ));
@@ -866,6 +871,7 @@ int main(int argc, char **argv)
       }//loop over unique set of momenta for p_i2
        
       //write P
+
       outfilename = outdiagramPrefix+confnumber+"_P";
       TIME(corrP.writeHDF5( outfilename ));
 

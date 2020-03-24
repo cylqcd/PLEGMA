@@ -472,6 +472,21 @@ set(CMAKE_CXX_FLAGS_DEVICEDEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas 
 set(CMAKE_CXX_FLAGS_DEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
     "Flags used by the C++ compiler during full (host+device) debug builds.")
 
+OPTION(USE_OpenMP "Use OpenMP" ON)
+IF(USE_OpenMP)
+    FIND_PACKAGE(OpenMP)
+    IF( OPENMP_FOUND )
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+   	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler ${OpenMP_CXX_FLAGS}")
+    ENDIF()
+ENDIF()
+
+
+
+
+
 #define C FLAGS
 set(CMAKE_C_FLAGS_DEVEL "-Wall -O3"  CACHE STRING
     "Flags used by the C compiler during regular development builds.")
