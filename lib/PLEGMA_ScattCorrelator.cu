@@ -893,13 +893,13 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   this->clear_output(!accum, 5, 0);
 
 
-  this->V3V2reduction( srcV3, srcV2, 1,  false, 0, false, factor);
+  this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor);
 
 
-  this->V3V2reduction_matrix( srcV3, srcV2, 2, true, 0, false, factor);
+  this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor);
 
 
-  this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, false, factor);
+  this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor);
 
 }
 //Nucleon correlator. This function should be called outside the p_i2 loop, with Ts computed using the entire list of unique p_f1s. N.B: we multiply the output by exp(i * x_sourcepos * p_f1);
