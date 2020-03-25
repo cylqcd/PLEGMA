@@ -386,11 +386,8 @@ int main(int argc, char **argv)
 	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
         PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], list_pf1pf2comb);
 
-        PLEGMA_printf("Filteringsasa\n");
         corrT_piNsink.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T1"); 
  
-        PLEGMA_printf("initialization done\n");
-
         PLEGMA_ScattCorrelator<float> reductionsV2(source, list_pf1pf2comb.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV3(source, list_pf1pf2comb.uniq_p(2));
 
