@@ -448,6 +448,26 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   
   //Description
   std::string tmp="";
+  tmp+="/";
+  for( int i=0; i<G_i2.size();++i ){
+    if (i==(G_i2.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_i2[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_i2[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_f2.size();++i ){
+    if (i==(G_f2.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_f2[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_f2[i]]+",";
+    }
+  }
+  tmp+="/S1/S2/";
+
   // for( auto &gi2: G_i2 )
   //   for( auto &gf2: G_f2 )
   //     tmp += GAMMAS_SCATT_STR[gi2]+"_"+GAMMAS_SCATT_STR[gf2]+", ";
@@ -493,11 +513,51 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   //Description
   std::string tmp="";
-  // for( auto &egi: eG_i )
-  //   for( auto &egf: eG_f )
-  //     for( auto &gi1: G_i1 )
-  // 	for( auto &gf1: G_f1 )
-  // 	  tmp += GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gf1]+"-"+GAMMAS_SCATT_STR[egf]+", ";
+  for( int i=0; i<eG_i.size();++i ){
+    if (i==(eG_i.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[eG_i[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[eG_i[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<eG_f.size();++i ){
+    if (i==(eG_f.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[eG_f[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[eG_f[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_i1.size();++i ){
+    if (i==(G_i1.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_i1[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_i1[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_f1.size();++i ){
+    if (i==(G_f1.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_f1[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_f1[i]]+",";
+    }
+  }
+  tmp+="/S1/S2/";
+
+
+  //std::string tmp1="";
+  //for( auto egi: eG_i )
+  //  for( auto egf: eG_f )
+  //     for( auto gi1: G_i1 )
+  // 	for( auto gf1: G_f1 )
+  //  	  tmp1+= GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gf1]+"-"+GAMMAS_SCATT_STR[egf]+", ";
+  //PLEGMA_printf("Description %s\n", tmp1.c_str());
   this->description=tmp;
     
   //momList
@@ -555,6 +615,54 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   //Description
   std::string tmp="";
+  for( int i=0; i<eG_i.size();++i ){
+    if (i==(eG_i.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[eG_i[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[eG_i[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<eG_f.size();++i ){
+    if (i==(eG_f.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[eG_f[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[eG_f[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_i1.size();++i ){
+    if (i==(G_i1.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_i1[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_i1[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_i2.size();++i ){
+    if (i==(G_i2.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_i2[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_i2[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_f.size();++i ){
+    if (i==(G_f.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_f[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_f[i]]+",";
+    }
+  }
+  tmp+="/S1/S2/";
+
+
+
   // for( auto &egi: eG_i )
   //   for( auto &egf: eG_f )
   //     for( auto &gi1: G_i1 )
@@ -629,6 +737,61 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   //Description
   std::string tmp="";
+  for( int i=0; i<eG_i.size();++i ){
+    if (i==(eG_i.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[eG_i[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[eG_i[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<eG_f.size();++i ){
+    if (i==(eG_f.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[eG_f[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[eG_f[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_i1.size();++i ){
+    if (i==(G_i1.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_i1[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_i1[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_i2.size();++i ){
+    if (i==(G_i2.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_i2[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_i2[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_f1.size();++i ){
+    if (i==(G_f1.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_f1[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_f1[i]]+",";
+    }
+  }
+  tmp+="/";
+  for( int i=0; i<G_f2.size();++i ){
+    if (i==(G_f2.size()-1)){
+     tmp+=GAMMAS_SCATT_STR[G_f2[i]];
+    }
+    else{
+     tmp+= GAMMAS_SCATT_STR[G_f2[i]]+",";
+    }
+  }
+  tmp+="/S1/S2/";
+
   // for( auto &egi: eG_i )
   //   for( auto &egf: eG_f )
   //     for( auto &gi1: G_i1 )
