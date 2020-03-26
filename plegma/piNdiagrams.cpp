@@ -170,7 +170,7 @@ int main(int argc, char **argv)
       vectorAuxD2.copy(vectorInOut);
     } 
 
-    //vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
+    vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
     //vectorStoc_source_arch.writeHDF5(outfile_V+"globalTfulltimedilution_source");
     vectorAuxD1.copy(vectorStoc_source_arch);
     vectorAuxD1.apply_gamma5();
@@ -182,7 +182,7 @@ int main(int argc, char **argv)
     //Step(7) Smearing all the time slice in the propagator
     TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
     
-    //vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
+    vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
     //vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
     vectorStoc_propag.copy(vectorAuxD1);
     vectorStoc_propag.apply_gamma5();
@@ -200,7 +200,10 @@ int main(int argc, char **argv)
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
                     sourcePositions[isource][2], sourcePositions[isource][3]);
 
-    
+      std::string sourcepositiontext="";
+      sourcepositiontext ="x"+std::to_string(sourcePositions[isource][0])+"y"+std::to_string(sourcePositions[isource][1]);
+      sourcepositiontext+="z"+std::to_string(sourcePositions[isource][2])+"t"+std::to_string(sourcePositions[isource][3]);
+
       //Create Propagator
       PLEGMA_Propagator<float> propUP(BOTH);
       PLEGMA_Propagator<float> propDN(BOTH);
@@ -277,8 +280,8 @@ int main(int argc, char **argv)
 
             vectorAuxPrint.absorb(propUP,isc/3,isc%3);
             vectorAuxPrint.unload();
-            vectorAuxPrint.writeLIME(outfile_upS+"_s"+spin+"_c"+col);
-            vectorAuxPrint.writeHDF5(outfile_upS+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeLIME(outfile_upS+sourcepositiontext+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeHDF5(outfile_upS+sourcepositiontext+"_s"+spin+"_c"+col);
           }
         }
  
@@ -330,8 +333,8 @@ int main(int argc, char **argv)
 
             vectorAuxPrint.absorb(propDN,isc/3,isc%3);
             vectorAuxPrint.unload();
-            vectorAuxPrint.writeLIME(outfile_dnS+"_s"+spin+"_c"+col);
-            vectorAuxPrint.writeHDF5(outfile_dnS+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeLIME(outfile_dnS+sourcepositiontext+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeHDF5(outfile_dnS+sourcepositiontext+"_s"+spin+"_c"+col);
 
           }
         }
@@ -510,6 +513,12 @@ int main(int argc, char **argv)
 	auto &momentum_i2 =  mpi2[i_mpi2];
 	//List of momenta corresponding to a fix value of p_i2
         momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+
+
+        std::string pi2x=std::to_string(momentum_i2[0]);
+        std::string pi2y=std::to_string(momentum_i2[1]);
+        std::string pi2z=std::to_string(momentum_i2[2]);
+
  
 	// 4pt diagrams
 	
@@ -628,8 +637,8 @@ int main(int argc, char **argv)
                std::string col=std::to_string(isc%3);
                vectorAuxPrint.absorb(propUPDN,isc/3,isc%3);
                vectorAuxPrint.unload();
-               vectorAuxPrint.writeLIME(outfile_SEQ+"_s"+spin+"_c"+col);
-               vectorAuxPrint.writeHDF5(outfile_SEQ+"_s"+spin+"_c"+col);
+               vectorAuxPrint.writeLIME(outfile_SEQ+sourcepositiontext+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+spin+"_c"+col);
+               //vectorAuxPrint.writeHDF5(outfile_SEQ+"_s"+spin+"_c"+col);
              }
           }
           
@@ -655,21 +664,21 @@ int main(int argc, char **argv)
 
           PLEGMA_ScattCorrelator<float> reductionsT5triangle(source,  mptot_filt);
           TIME(reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP));
-          reductionsT1triangle.writeHDF5("T1sourceforT");
+          reductionsT1triangle.writeHDF5("T1sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
           TIME(reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP));
-          reductionsT3triangle.writeHDF5("T3sourceforT");
+          reductionsT3triangle.writeHDF5("T3sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
           TIME(reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN));
-          reductionsT5triangle.writeHDF5("T5sourceforT");
+          reductionsT5triangle.writeHDF5("T5sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 	  
 	  //Compute Diagram T 
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2));
           //Compute Diagram B1 and B2 
 	  
           TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN));
-          reductionsV3.writeHDF5("V3sourceforB1");
+          reductionsV3.writeHDF5("V3sourceforB1_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
           TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP));
-          reductionsV2.writeHDF5("V2sourceforB1");
+          reductionsV2.writeHDF5("V2sourceforB1_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
 	  TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1));
 	  
@@ -678,9 +687,9 @@ int main(int argc, char **argv)
           //Compute Diagram W1,W2
           
           TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP));
-          reductionsV3.writeHDF5("V3sourceforW12");
+          reductionsV3.writeHDF5("V3sourceforW12_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
           TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN));
-          reductionsV2.writeHDF5("V2sourceforW12");
+          reductionsV2.writeHDF5("V2sourceforW12_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
 	  //PLEGMA_printf("DEBUG: start W1_diagram\n");
           TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1));
@@ -691,7 +700,7 @@ int main(int argc, char **argv)
           //Compute Diagram W3,W4
           
           TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP));
-          //reductionsV2.writeHDF5("V2sourceforW34");
+          reductionsV2.writeHDF5("V2sourceforW34_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
           TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3));
 	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
@@ -755,7 +764,7 @@ int main(int argc, char **argv)
          stochastic_propagator_momp_i2[spinindex].copy(vectorInOut);
 
          //tmp_time += MPI_Wtime()-start_time;         
-         //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
+         stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum_pi2"+sourcepositiontext+pi2x+"_"+pi2y+"_"+pi2z+std::to_string(spinindex));
          
          if (spinindex<3){
            vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momp_i2,spinindex+1,spinindex);
@@ -769,10 +778,10 @@ int main(int argc, char **argv)
        
        for (int i=0; i< 4; ++i){
          TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
-         reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
+         reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
 
          TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
-         reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
+         reductionsV2_diluted[i].writeHDF5("V4sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
        }
 
        TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ));
@@ -783,7 +792,7 @@ int main(int argc, char **argv)
        for (int i=0; i< 4; ++i){
 
          TIME(reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
-         reductionsV2_diluted[i].writeHDF5("V2sourceforZ"+std::to_string(i));
+         reductionsV2_diluted[i].writeHDF5("V2sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
 
        }
 
