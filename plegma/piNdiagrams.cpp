@@ -27,6 +27,8 @@ int main(int argc, char **argv)
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   bool timedilution;
+  int n_stochastic_samples;
+  int nroots=4;
   std::string outfile_V="";
   std::string outfile_upS="";
   std::string outfile_dnS="";
@@ -44,6 +46,7 @@ int main(int argc, char **argv)
   HGC_options->set("outPropDN", "Path for saving the dn propagator used", verbosity, outfile_dnS);
   HGC_options->set("outPropSeq", "Path for saving the sequential propagator used", verbosity, outfile_SEQ);
   HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
+  HGC_options->set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
   HGC_options->set("outV3", "Path for saving the result of V2_reduction", verbosity, outfile_V3);
   HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
   HGC_options->set("outV4", "Path for saving the result of V4_reduction", verbosity, outfile_V4);
@@ -54,11 +57,29 @@ int main(int argc, char **argv)
   initializePLEGMA();
   double start_time, tmp_time;
   {
-    // Reading from Lime file and loading to device
-    PLEGMA_Gauge<double> gauge;
-    gauge.readFile(latfile, LIME_FORMAT);
-    gauge.load();
-    gauge.calculatePlaq();
+
+    //Storing only the smeared gauge
+    PLEGMA_Gauge<double> smearedGauge;
+
+    {
+      // Reading from Lime file and loading to device
+      PLEGMA_Gauge<double> gauge;
+      gauge.readFile(latfile, LIME_FORMAT);
+      gauge.calculatePlaq();
+
+      // Loading to QUDA and computing plaquette also there
+      initGaugeQuda(gauge, true);
+      plaqQuda();
+
+      // Smearing
+      TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
+      PLEGMA_printf("Plaquette after smearing:\n");
+      smearedGauge.calculatePlaq();
+    }
+
+    updateOptions(LIGHT);
+    TIME(QUDA_solver solver(mu));
+
 
     //Get the confnumber for latfile
     std::istringstream iss(latfile);
@@ -93,37 +114,27 @@ int main(int argc, char **argv)
     std::vector<GAMMAS_SCATT> glist_sink_delta_unpaired={ID};
 
     
-    // Loading to QUDA and computing plaquette also there
-    initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
-    plaqQuda();
-
-    PLEGMA_Gauge<double> contractGauge;
-    contractGauge.copy(gauge);
-
-    // Smearing
-    PLEGMA_Gauge<double> smearedGauge;
-    smearedGauge.APEsmearing(contractGauge, nsmearAPE, alphaAPE, 3);
-    PLEGMA_printf("Plaquette after smearing:\n");
-    smearedGauge.calculatePlaq();
-   
-    // apply boundary conditions since is needed for the covariant derivative
-    applyBoundaryConditions(contractGauge,true);
-    //ensuring mu positive
-    QUDA_solver solver(mu);
-
     std::string smearType = ((nsmearGauss>0) ? "SS" : "LL");
     std::string smearString = smearType + "_" + "gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) + "aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
 
 
     //Computing time-diluted stochastic propagators and stochastic source
 
-    PLEGMA_Vector<float> vectorStoc_source(BOTH);
-    PLEGMA_Vector<float> vectorStoc_propag(BOTH);
-    PLEGMA_Vector<float> vectorStoc_source_arch(BOTH); 
-    PLEGMA_Vector<double> vectorAuxD1(BOTH);
-    PLEGMA_Vector<double> vectorAuxD2(BOTH);
-    PLEGMA_Vector<double> vectorInOut;
-    PLEGMA_printf("Build vector from scratch\n");
+    std::vector<PLEGMA_Vector<double>*> stochastic_sources;
+    std::vector<PLEGMA_Vector<double>*> stochastic_propags;
+
+    for(int i=0; i< n_stochastic_samples; ++i) {
+      stochastic_sources.push_back(new PLEGMA_Vector<double>(HOST));
+      stochastic_propags.push_back(new PLEGMA_Vector<double>(HOST));
+    }
+
+    PLEGMA_Vector<double> vectorStoc_source_oet;
+    vectorStoc_source_oet.randInit(1234);
+
+    //PLEGMA_Vector<float> vectorStoc_source(BOTH);
+    //PLEGMA_Vector<float> vectorStoc_propag(BOTH);
+    //PLEGMA_Vector<double> vectorInOut;
+    PLEGMA_printf("Start producing stochastic vectors and propagators\n");
     //Note that we replace the f1<-f2 DN propagator with a stochastic one
     //in two steps actually
     //DN(x_f1 <- x_f2 ) = \phihat(x_f2)(x_f1)\xi^{dagger}(x_f2)(x_f2)
@@ -134,58 +145,69 @@ int main(int argc, char **argv)
     //=gamma_5*U(x_f2 <- x_f1)^dagger*gamma_5
     //=gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
     //Here we compute phi and xi
-    int nroots=4;
-    //Step(1) Creating the time-diluted stochastic source
-    vectorStoc_source.randInit(1234);
-    vectorStoc_source.stochastic_Z(nroots);
+    //Producing the stochastic source
+    {
+      
+      PLEGMA_Vector<double> vectorAuxD1(BOTH);
+      PLEGMA_Vector<double> vectorAuxD2(BOTH);
+      PLEGMA_Vector<double> vectorInOut;
+      PLEGMA_Vector<double> vectorSource(BOTH);
+      vectorSource.randInit(1234);
+      for (int i=0; i<n_stochastic_samples; ++i){
+        //Step(1) Creating the time-diluted stochastic source
+        vectorSource.stochastic_Z(nroots);
+      
+        //Step(2) Save it on the host memory
+        vectorAuxD1.copy(vectorSource);
+        vectorAuxD1.apply_gamma5();
+        vectorAuxD1.unload();
+        stochastic_sources[i]->copy(vectorAuxD1);
+        vectorAuxD1.load();
+     
+        //Step(3) Smearing all the time slice
+        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+ 
+        //Step(4) We rotate the source to the physical basis
+        TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
+
+        //In vectorAuxD2 we store the results for the inversion
+        vectorAuxD2.scale(0.0);
+    
+        if (timedilution){
+          PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
+          for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+            //Step(5) pick out a particular timeslice from the source
+            vectorInOut.absorbTimeslice(vectorAuxD1, timeidx);
+            //Step(6) Solve
+            TIME(solver.solve(vectorInOut, vectorInOut));
+            //Step(7) absorbing the particular timeslice to a 4d vector
+            vectorAuxD2.absorbTimeslice(vectorInOut, timeidx, false);
+          }
+        }
+        else{
+          PLEGMA_printf("#piNdiagramms: No time dilution is used n stochastic propagators\n");
+          vectorInOut.copy(vectorAuxD1);
+          TIME(solver.solve(vectorInOut, vectorInOut));
+          vectorAuxD2.copy(vectorInOut);
+        } 
     
 
-    //Step(2) Smearing all the time slice
-    vectorAuxD1.copy(vectorStoc_source);
-    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
-    //Save the smeared source in order to reuse it for oet.
-    vectorStoc_source_arch.copy(vectorAuxD2);
+        //Step(6) We rotate back the propagator to the physical basis
+        TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
 
-    //We rotate the source to the physical basis
-    TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
+        //Step(7) Smearing all the time slice in the propagator
+        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
-    //In vectorAuxD2 we store the results for the inversion
-    vectorAuxD2.scale(0.0);
-    
-    if (timedilution){
-      PLEGMA_printf("#piNdiagramms: Full time dilution is turned on\n");
-      for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-        //Step(3) pick out a particular timeslice from the source
-        vectorInOut.absorbTimeslice(vectorAuxD1, timeidx);
-        //Step(4) Solve
-        TIME(solver.solve(vectorInOut, vectorInOut));
-        //Step(5) absorbing the particular timeslice to a 4d vector
-        vectorAuxD2.absorbTimeslice(vectorInOut, timeidx, false);
-      }
+        //Step(8) Save the propagator on the disk
+        vectorAuxD2.unload();
+        stochastic_propags[i]->copy(vectorAuxD2);
+        vectorAuxD2.load();
+        
+        //vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
+        //vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
+      } //loop over the stochastic samples
+
     }
-    else{
-      PLEGMA_printf("#piNdiagramms: No time dilution is used n stochastic propagators\n");
-      vectorInOut.copy(vectorAuxD1);
-      TIME(solver.solve(vectorInOut, vectorInOut));
-      vectorAuxD2.copy(vectorInOut);
-    } 
-
-    //vectorStoc_source_arch.writeLIME(outfile_V+"globalTfulltimedilution_source");
-    //vectorStoc_source_arch.writeHDF5(outfile_V+"globalTfulltimedilution_source");
-    vectorAuxD1.copy(vectorStoc_source_arch);
-    vectorAuxD1.apply_gamma5();
-    vectorStoc_source.copy(vectorAuxD1);
-
-    //Step(6) We rotate back the propagator to the physical basis
-    TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
-
-    //Step(7) Smearing all the time slice in the propagator
-    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
-    
-    //vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_propagator");
-    //vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_propagator");
-    vectorStoc_propag.copy(vectorAuxD1);
-    vectorStoc_propag.apply_gamma5();
 
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -235,11 +257,11 @@ int main(int argc, char **argv)
         vectorRead.load();
         propDN.absorb(vectorRead, isc/3, isc%3);
        }
-*/
+*/ 
     
       for(int isc = 0 ; isc < 12 ; isc++){
         PLEGMA_Vector<double> vectorInOut;
-        PLEGMA_Vector<float> vectorAuxF;
+        PLEGMA_Vector<float>  vectorAuxF;
         PLEGMA_Vector<double> vectorAuxD;
         { // Smearing the source
           PLEGMA_Vector3D<double> vector1, vector2;
@@ -393,17 +415,27 @@ int main(int argc, char **argv)
 
         PLEGMA_ScattCorrelator<float> reductionsV2(source, list_pf1pf2comb.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV3(source, list_pf1pf2comb.uniq_p(2));
+ 
+        for (int i=0; i<n_stochastic_samples; ++i){
+          PLEGMA_Vector<float> stochastic_propagator;
+          PLEGMA_Vector<float> stochastic_source;
 
+          stochastic_propagator.copy(*stochastic_propags[i]);
+          stochastic_source.copy(*stochastic_sources[i]);
 
-        TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP));
-        reductionsV3.writeHDF5("V3sourceforTpiNsink");
+          stochastic_propagator.load();
+          stochastic_source.load();
 
-        TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP));
-        reductionsV2.writeHDF5("V2sourceforTpiNsink");
+          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
+          reductionsV3.writeHDF5("V3sourceforTpiNsink"+std::to_string(i));
 
+          TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
+          reductionsV2.writeHDF5("V2sourceforTpiNsink"+std::to_string(i));
+
+          TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2, true));
+
+        }                
         outfilename=outdiagramPrefix+confnumber+"_TpiNsink";
-
-        TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2));
 
         TIME(corrT_piNsink.apply_phase());
         TIME(corrT_piNsink.applyBoundaryConditions( true ));
@@ -424,22 +456,24 @@ int main(int argc, char **argv)
       TIME(corrN.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
       PLEGMA_printf("DEBUG: corrN initialized\n");
       
-      //diagramm_nucleon.setSource(source);
-      PLEGMA_ScattCorrelator<float> reductionsT1N(source, mpf1);
-      PLEGMA_ScattCorrelator<float> reductionsT2N(source, mpf1);
+      //Computing T reductions+recombination
+      { 
+        PLEGMA_ScattCorrelator<float> reductionsT1N(source, mpf1);
+        PLEGMA_ScattCorrelator<float> reductionsT2N(source, mpf1);
       
-      TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-      reductionsT1N.writeHDF5("T1sourceforN");
+        TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+        reductionsT1N.writeHDF5("T1sourceforN");
 
-      TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-      reductionsT2N.writeHDF5("T2sourceforN");
+        TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+        reductionsT2N.writeHDF5("T2sourceforN");
 
-      //write N
-      TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
-      TIME(corrN.apply_phase());
-      TIME(corrN.applyBoundaryConditions( true ));
-      TIME(corrN.writeHDF5(outfilename));
+        //write N
+        TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
+        TIME(corrN.apply_phase());
+        TIME(corrN.applyBoundaryConditions( true ));
+        TIME(corrN.writeHDF5(outfilename));
 
+      }
       PLEGMA_printf("DEBUG: write N diagram done\n");
 
 
@@ -455,56 +489,56 @@ int main(int argc, char **argv)
         solver.UpdateSolver();
       }
 
-      PLEGMA_Vector<float> vectorStoc_source_oet;
-      PLEGMA_Vector<float> vectortmp1;
-      PLEGMA_Vector<float> vectortmp2;
-          
-      PLEGMA_Vector<float> stochastic_source_spin_diluted_momzero; 
-      std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
-
-      vectorStoc_source_oet.randInit(1234);
+      //We draw a different random vector for every source position
       vectorStoc_source_oet.stochastic_Z(nroots);
-
-
-      vectortmp1.absorbTimeslice(vectorStoc_source_oet, sequential_time_source);
-      { // Smearing the source
-          PLEGMA_Vector3D<float> vector1f;
-          PLEGMA_Vector3D<double> vector1, vector2;
-          vector1f.absorb(vectortmp1, sourcePositions[isource][DIM_T]);
-          vector1.copy(vector1f);
-          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-          vector1f.copy(vector2);
-          vectortmp2.absorb(vector1f,sourcePositions[isource][DIM_T]);
-      }
-
-      //Dilution
-      vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
       
-      //Transforming to physical base
-      stochastic_source_spin_diluted_momzero.dilutespin(vectortmp1,0);
+      //Store zero momentum oet propagators
+      std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
+      {
+         PLEGMA_Vector<double> vectortmp1;
+         PLEGMA_Vector<double> vectortmp2;          
+ 
+         vectortmp1.absorbTimeslice(vectorStoc_source_oet, sequential_time_source);
 
-      for (int spinindex=0; spinindex<4; ++spinindex){
-        PLEGMA_Vector<double> vectorAuxD;
+         {  // Smearing the source
+            
+            PLEGMA_Vector3D<double> vector1, vector2;
+            vector1.absorb(vectortmp1, sourcePositions[isource][DIM_T]);
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            vectortmp1.absorb(vector2,sourcePositions[isource][DIM_T]);
+         }
+ 
+         //Transforming to physical base
+         vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
+ 
+          //Dilution     
+         vectortmp1.dilutespin(vectortmp2,0);
 
-        //tmp_time += MPI_Wtime()-start_time;       
-        //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
-        //Doing the zero momentum stochastic propagator with spin dilution
-        vectorInOut.copy(stochastic_source_spin_diluted_momzero);
-        //Doing the inversion
-        TIME(solver.solve(vectorInOut, vectorInOut));
-        //Rotate back immediately to the physical basis
-        vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
-        //Gaussian smearing of the propagator
-        TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
-        stochastic_propagator_momzero[spinindex].copy(vectorInOut);
-        //tmp_time += MPI_Wtime()-start_time;
-        //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
-        //stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
-        if (spinindex<3){
-          vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momzero,spinindex+1,spinindex);
-          //stochastic_source_spin_diluted_momzero.rotateToPhysicalBasis(vectortmp1,+1);
-          stochastic_source_spin_diluted_momzero.copy(vectortmp1);
-        }
+         //Save the smeared,transformed and diluted source for non-zero momentum oet.
+         vectorStoc_source_oet.copy(vectortmp1);
+
+         for (int spinindex=0; spinindex<4; ++spinindex){
+           vectortmp2.copy(vectorStoc_source_oet);
+           //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
+           //Doing the zero momentum stochastic propagator with spin dilution
+           //Doing the inversion
+           TIME(solver.solve(vectortmp2, vectortmp2));
+           //Rotate back immediately to the physical basis
+           vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
+           //Gaussian smearing of the propagator
+           TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
+           stochastic_propagator_momzero[spinindex].copy(vectortmp2);
+           //tmp_time += MPI_Wtime()-start_time;
+           //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+           //stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+           if (spinindex<3){
+             vectortmp1.dilutespindisplace(vectorStoc_source_oet,spinindex+1,spinindex);
+             vectorStoc_source_oet.copy(vectortmp1);
+           }
+         }
+         
+         vectortmp1.dilutespindisplace(vectorStoc_source_oet,0,3);
+         vectorStoc_source_oet.copy(vectortmp1);
       }
 
       //We first have a loop over all unique the source meson momentum p_i2 
@@ -666,38 +700,52 @@ int main(int argc, char **argv)
 	  
 	  //Compute Diagram T 
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2));
-          //Compute Diagram B1 and B2 
+
+
+          for (int i=0; i<n_stochastic_samples; ++i){
+            //Compute Diagram B1 and B2
+            PLEGMA_Vector<float> stochastic_propagator;
+            PLEGMA_Vector<float> stochastic_source;
+
+            stochastic_propagator.copy(*stochastic_propags[i]);
+            stochastic_source.copy(*stochastic_sources[i]);
+
+            stochastic_propagator.load();
+            stochastic_source.load();
+ 
 	  
-          TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUPDN));
-          reductionsV3.writeHDF5("V3sourceforB1");
+            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUPDN));
+            reductionsV3.writeHDF5("V3sourceforB1"+std::to_string(i));
 
-          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUP));
-          reductionsV2.writeHDF5("V2sourceforB1");
+            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
+            reductionsV2.writeHDF5("V2sourceforB1"+std::to_string(i));
 
-	  TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1));
+	    TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1, true));
 	  
-	  TIME(corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2));
+	    TIME(corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2, true));
           
-          //Compute Diagram W1,W2
+            //Compute Diagram W1,W2
           
-          TIME(reductionsV3.V3( vectorStoc_propag, glist_sink_meson, propUP));
-          reductionsV3.writeHDF5("V3sourceforW12");
-          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUP, propUPDN));
-          reductionsV2.writeHDF5("V2sourceforW12");
+            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
+            reductionsV3.writeHDF5("V3sourceforW12"+std::to_string(i)+"sample");
+            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
+            reductionsV2.writeHDF5("V2sourceforW12"+std::to_string(i)+"sample");
 
-	  //PLEGMA_printf("DEBUG: start W1_diagram\n");
-          TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1));
-	  //PLEGMA_printf("DEBUG: start W2_diagram\n");
-	  TIME(corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2));
-	  //PLEGMA_printf("DEBUG: finish W2\n");
+	    //PLEGMA_printf("DEBUG: start W1_diagram\n");
+            TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1, true));
+	    //PLEGMA_printf("DEBUG: start W2_diagram\n");
+	    TIME(corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2, true));
+	    //PLEGMA_printf("DEBUG: finish W2\n");
           
-          //Compute Diagram W3,W4
+            //Compute Diagram W3,W4
           
-          TIME(reductionsV2.V2( vectorStoc_source, glist_sink_nucleon, propUPDN, propUP));
-          //reductionsV2.writeHDF5("V2sourceforW34");
+            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUPDN, propUP));
+            //reductionsV2.writeHDF5("V2sourceforW34");
 
-          TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3));
-	  TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4));
+            TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3, true));
+	    TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4, true));
+
+          } //loop over stochastic samples
 	  
        } //loop over gamma i2
          
@@ -721,50 +769,40 @@ int main(int argc, char **argv)
        };
 
 
-       PLEGMA_Vector<float> stochastic_source_spin_diluted_momp_i2; 
-       //Using the already generated stochastic source and project it to a time-slice
-       //Smearing was already performed
-       //Creating oet time-slice source
-       vectortmp1.absorbTimeslice(vectorStoc_source_arch, sequential_time_source);
-       //Transforming to physical base
-       TIME(vectortmp2.rotateToPhysicalBasis(vectortmp1,+1));
+
+       {
+          PLEGMA_Vector<double> vectortmp1;
+          PLEGMA_Vector<double> vectortmp2;
+
+          //Multiplying by the appropriate momentum phase
+          std::vector<int> tmp_4Dmom= momentum_i2 ; 
+          tmp_4Dmom.push_back(0);
+          vectorStoc_source_oet.mulMomentumPhases(tmp_4Dmom,-1);
        
-       //Multiplying by the appropriate momentum phase
-
-       std::vector<int> tmp_4Dmom= momentum_i2 ; 
-       tmp_4Dmom.push_back(0);
-       vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
-       stochastic_source_spin_diluted_momp_i2.dilutespin(vectortmp2,0);
- 
+          for (int spinindex=0; spinindex<4; ++spinindex){
+            //tmp_time += MPI_Wtime()-start_time;       
+            //stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
-       for (int spinindex=0; spinindex<4; ++spinindex){
-         PLEGMA_Vector<double> vectorAuxD;
+            vectortmp1.copy(vectorStoc_source_oet);
+            //Doing the inversion
+            TIME(solver.solve(vectortmp1, vectortmp1));
 
-         //tmp_time += MPI_Wtime()-start_time;       
-         //stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
-       
- 
-         vectorInOut.copy(stochastic_source_spin_diluted_momp_i2);
-         //Doing the inversion
-         TIME(solver.solve(vectorInOut, vectorInOut));
+            //Rotate back immediately to the physical basis
+            TIME(vectortmp2.rotateToPhysicalBasis(vectortmp1,+1));
 
-         //Rotate back immediately to the physical basis
-         TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));
+            //performing smearing
+            TIME(vectortmp1.gaussianSmearing(vectortmp2, smearedGauge, nsmearGauss, alphaGauss));
 
-         //performing smearing
-         TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
+            //Saving the propagator
+            stochastic_propagator_momp_i2[spinindex].copy(vectortmp1);
 
-         //Saving the propagator
-         stochastic_propagator_momp_i2[spinindex].copy(vectorInOut);
-
-         //tmp_time += MPI_Wtime()-start_time;         
-         //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
+            //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_fini_momentum"+std::to_string(spinindex));
          
-         if (spinindex<3){
-           vectortmp1.dilutespindisplace(stochastic_source_spin_diluted_momp_i2,spinindex+1,spinindex);
-           stochastic_source_spin_diluted_momp_i2.copy(vectortmp1);
-         }
-
+            if (spinindex<3){
+              vectortmp1.dilutespindisplace(vectorStoc_source_oet,spinindex+1,spinindex);
+              vectorStoc_source_oet.copy(vectortmp1);
+            }
+          }
        }
 
        //Diagram Z1,Z2
@@ -772,10 +810,10 @@ int main(int argc, char **argv)
        
        for (int i=0; i< 4; ++i){
          TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
-         reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i));
+         reductionsV3_diluted[i].writeHDF5("V3sourceforZ"+std::to_string(i)+"spin");
 
          TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
-         reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i));
+         reductionsV2_diluted[i].writeHDF5("V4sourceforZ"+std::to_string(i)+"spin");
        }
 
        TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ));
@@ -868,6 +906,12 @@ int main(int argc, char **argv)
       TIME(corrP.writeHDF5( outfilename ));
 
     } //loop over source position
+
+    for(int i=0; i< n_stochastic_samples; ++i) {
+      stochastic_sources.pop_back();
+      stochastic_propags.pop_back();
+    }
+
 
   } 
   finalize();
