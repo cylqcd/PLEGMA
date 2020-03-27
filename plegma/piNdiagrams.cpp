@@ -162,7 +162,7 @@ int main(int argc, char **argv)
         vectorAuxD1.apply_gamma5();
         vectorAuxD1.unload();
         vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i));
-        stochastic_sources[i]->copy(vectorAuxD1);
+        stochastic_sources[i]->copy(vectorAuxD1,HOST);
         vectorAuxD1.load();
      
         //Step(3) Smearing all the time slice
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
         //Step(8) Save the propagator on the disk
         vectorAuxD2.unload();
         vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i));
-        stochastic_propags[i]->copy(vectorAuxD2);
+        stochastic_propags[i]->copy(vectorAuxD2,HOST);
         vectorAuxD2.load();
         
       } //loop over the stochastic samples
@@ -421,7 +421,7 @@ int main(int argc, char **argv)
           PLEGMA_Vector<float> stochastic_source;
 
           stochastic_propagator.copy(*stochastic_propags[i]);
-          stochastic_source.copy(*stochastic_sources[i]);
+          stochastic_source.copy(*stochastic_sources[i],HOST);
 
           stochastic_propagator.load();
           stochastic_source.load();
@@ -713,8 +713,8 @@ int main(int argc, char **argv)
             PLEGMA_Vector<float> stochastic_propagator;
             PLEGMA_Vector<float> stochastic_source;
 
-            stochastic_propagator.copy(*stochastic_propags[i]);
-            stochastic_source.copy(*stochastic_sources[i]);
+            stochastic_propagator.copy(*stochastic_propags[i],HOST);
+            stochastic_source.copy(*stochastic_sources[i],HOST);
 
             stochastic_propagator.load();
             stochastic_source.load();
