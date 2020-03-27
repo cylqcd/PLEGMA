@@ -16,7 +16,7 @@ std::vector<std::thread> threads;
 #define THREAD(fnc) TIME(fnc)
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "time-dilution"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "time-dilution","nstochSamples"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
 
 int main(int argc, char **argv)
