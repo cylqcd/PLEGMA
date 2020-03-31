@@ -161,7 +161,7 @@ int main(int argc, char **argv)
         vectorAuxD1.copy(vectorSource);
         vectorAuxD1.apply_gamma5();
         vectorAuxD1.unload();
-        vectorAuxD1.writeHDF5(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i));
+        vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i));
         stochastic_sources[i]->copy(vectorAuxD1,HOST);
         vectorAuxD1.load();
      
@@ -420,7 +420,7 @@ int main(int argc, char **argv)
           PLEGMA_Vector<float> stochastic_propagator;
           PLEGMA_Vector<float> stochastic_source;
 
-          stochastic_propagator.copy(*stochastic_propags[i]);
+          stochastic_propagator.copy(*stochastic_propags[i],HOST);
           stochastic_source.copy(*stochastic_sources[i],HOST);
 
           stochastic_propagator.load();
@@ -529,7 +529,7 @@ int main(int argc, char **argv)
            TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
            stochastic_propagator_momzero[spinindex].copy(vectortmp2);
            //tmp_time += MPI_Wtime()-start_time;
-           //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+           stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"zero_propagator_"+sourcepositiontext+std::to_string(spinindex));
            //stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
            if (spinindex<3){
              vectortmp1.dilutespindisplace(vectorStoc_source_oet,spinindex+1,spinindex);
@@ -780,43 +780,56 @@ int main(int argc, char **argv)
        {
           PLEGMA_Vector<double> vectortmp1;
           PLEGMA_Vector<double> vectortmp2;
+          PLEGMA_Vector<double> vectorSource_finite_mom;
 
           //Multiplying by the appropriate momentum phase
+          vectorSource_finite_mom.copy(vectorStoc_source_oet);
           std::vector<int> tmp_4Dmom= momentum_i2 ; 
           tmp_4Dmom.push_back(0);
-          vectorStoc_source_oet.mulMomentumPhases(tmp_4Dmom,-1);
+          vectorSource_finite_mom.mulMomentumPhases(tmp_4Dmom,-1);
+          
+          if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
        
-          for (int spinindex=0; spinindex<4; ++spinindex){
-            //tmp_time += MPI_Wtime()-start_time;       
-            //stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
+            for (int spinindex=0; spinindex<4; ++spinindex){
+              //tmp_time += MPI_Wtime()-start_time;       
+              //stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
-            vectortmp1.copy(vectorStoc_source_oet);
-            //Doing the inversion
-            TIME(solver.solve(vectortmp1, vectortmp1));
+              vectortmp1.copy(vectorSource_finite_mom);
+              //Doing the inversion
+              TIME(solver.solve(vectortmp1, vectortmp1));
 
-            //Rotate back immediately to the physical basis
-            TIME(vectortmp2.rotateToPhysicalBasis(vectortmp1,+1));
+              //Rotate back immediately to the physical basis
+              TIME(vectortmp2.rotateToPhysicalBasis(vectortmp1,+1));
 
-            //performing smearing
-            TIME(vectortmp1.gaussianSmearing(vectortmp2, smearedGauge, nsmearGauss, alphaGauss));
+              //performing smearing
+              TIME(vectortmp1.gaussianSmearing(vectortmp2, smearedGauge, nsmearGauss, alphaGauss));
 
-            //Saving the propagator
-            stochastic_propagator_momp_i2[spinindex].copy(vectortmp1);
-            stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
+              //Saving the propagator
+              stochastic_propagator_momp_i2[spinindex].copy(vectortmp1);
+              stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
          
-            if (spinindex<3){
-              vectortmp1.dilutespindisplace(vectorStoc_source_oet,spinindex+1,spinindex);
-              vectorStoc_source_oet.copy(vectortmp1);
+              if (spinindex<3){
+                vectortmp1.dilutespindisplace(vectorSource_finite_mom,spinindex+1,spinindex);
+                vectorSource_finite_mom.copy(vectortmp1);
+              }
             }
           }
        }
-
+         
        //Diagram Z1,Z2
        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        
        for (int i=0; i< 4; ++i){
-         TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
-         reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
+         if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+  
+           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
+           reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
+
+         }
+         else{
+           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momzero[i], gamma_5_t_sinkmeson, propUP));
+           reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
+         }
 
          TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
          reductionsV2_diluted[i].writeHDF5("V4sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
