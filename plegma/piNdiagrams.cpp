@@ -164,6 +164,7 @@ int main(int argc, char **argv)
         vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i));
         stochastic_sources[i]->copy(vectorAuxD1,HOST);
         vectorAuxD1.load();
+        vectorAuxD1.copy(vectorSource);
      
         //Step(3) Smearing all the time slice
         TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
@@ -557,6 +558,8 @@ int main(int argc, char **argv)
 	// 4pt diagrams
 	
 	PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB1_source0(sourcePositions[isource], filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB1_source1(sourcePositions[isource], filtered_sourcemomentumList);
 	PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], filtered_sourcemomentumList);
 	PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], filtered_sourcemomentumList);
 	PLEGMA_ScattCorrelator<float> corrW2(sourcePositions[isource], filtered_sourcemomentumList);
@@ -579,6 +582,10 @@ int main(int argc, char **argv)
 	//initialize diagrams
 	
 	corrB1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
+        corrB1_source0.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
+        corrB1_source1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
+
+
 	corrB2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B2");
 	corrW1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W1");
 	corrW2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W2");
@@ -728,6 +735,13 @@ int main(int argc, char **argv)
 
 
 	    TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1, true));
+            if (i == 0){
+              TIME(corrB1_source0.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1));
+            }
+            else{
+              TIME(corrB1_source1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1));
+            }
+
 	  
 	    TIME(corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2, true));
           
@@ -876,10 +890,21 @@ int main(int argc, char **argv)
 
        
        //## B
+       
        outfilename = outdiagramPrefix+confnumber+"_B";
        TIME(corrB1.apply_phase());
        TIME(corrB1.applyBoundaryConditions( true ));
        TIME(corrB1.writeHDF5( outfilename ));
+       outfilename = outdiagramPrefix+confnumber+"_Bsource0";
+       TIME(corrB1_source0.apply_phase());
+       TIME(corrB1_source0.applyBoundaryConditions( true ));
+       TIME(corrB1_source0.writeHDF5( outfilename ));
+       outfilename = outdiagramPrefix+confnumber+"_Bsource1";
+       TIME(corrB1_source1.apply_phase());
+       TIME(corrB1_source1.applyBoundaryConditions( true ));
+       TIME(corrB1_source1.writeHDF5( outfilename ));
+
+       outfilename = outdiagramPrefix+confnumber+"_B";
        TIME(corrB2.apply_phase());
        TIME(corrB2.applyBoundaryConditions( true ));
        TIME(corrB2.writeHDF5( outfilename ));
