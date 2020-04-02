@@ -200,6 +200,8 @@ int main(int argc, char **argv)
         //Step(7) Smearing all the time slice in the propagator
         TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
+        vectorAuxD2.apply_gamma5();
+
         //Step(8) Save the propagator on the disk
         vectorAuxD2.unload();
         vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i));
