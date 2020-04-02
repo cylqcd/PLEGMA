@@ -851,10 +851,18 @@ int main(int argc, char **argv)
        TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 ));
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
+       if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+         TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2, i_mpi2));
        
-       TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2, i_mpi2));
        
-       TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
+         TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
+       }
+       else{
+         TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momzero, i_mpi2));
+
+
+         TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momzero ));
+       }
 	
 
        //write everything
