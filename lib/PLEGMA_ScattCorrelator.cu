@@ -466,7 +466,6 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
      tmp+= GAMMAS_SCATT_STR[G_f2[i]]+",";
     }
   }
-  tmp+="/S1/S2/";
 
   // for( auto &gi2: G_i2 )
   //   for( auto &gf2: G_f2 )
