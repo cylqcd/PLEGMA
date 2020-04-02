@@ -88,6 +88,7 @@ with h5py.File(output, "a") as fo:
                  gamma_f2_index=gamma_f2_s.index(gamma_f2_input.encode())
                  index_gamma=gamma_exti_index*gamma_extf_len*gamma_i1_len*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_extf_index*gamma_i1_len*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_i1_index*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_i2_index*gamma_f1_len*gamma_f2_len+gamma_f1_index*gamma_f2_len+gamma_f2_index
                  print(index_gamma)
-                 data = fp[grpname+diagramindex][:,index_momentum,:index_gamma:,:]
+                 print(index_momentum)
+                 data = fp[grpname+diagramindex][:,index_momentum,index_gamma,:]
                  grp = fo.require_group("/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/")
                  grp.create_dataset(diagramindex, data.shape, dtype = data.dtype, data = data)
