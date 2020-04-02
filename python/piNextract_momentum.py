@@ -2,14 +2,21 @@
 #
 # The steps followed are :
 # - Specify the momentum pi2,pf1,pf2 with 9 component
+# - Specify the type of the gamma structure, as detailed in the attributes of the dataset
 # - Specify the diagram possible choices B1,B2,W1,W2,W3,W4,Z1,Z2,Z3,Z4
 # - Specify the output hdf5 file
 # - Specify the input hdf5 files
 #
-# Run this as 'python3 piNextract_momentum.py 0 0 0 1 1 1 2 2 2 B1 filtered.h5 Diagramm0000_B.h5'
+# Run this as 'python3 piNextract_momentum.py 0 0 0 1 1 1 2 2 2 1 1 Cg5 g5 Cg5 g5 B1 filtered.h5 Diagramm0000_B.h5'
 # 0 0 0 is pi2 momentum
 # 1 1 1 is pf1 momentum
 # 2 2 2 is pf2 momentum
+# 1 external gamma_i
+# 1 external gamma_f
+# Cg5 gamma_i1
+# g5  gamma_i2
+# Cg5 gamma_f1
+# g5  gamma_f2
 # B1 diagram
 # filtered.h5 output file
 # Diagramm0000_B.h5 input file
