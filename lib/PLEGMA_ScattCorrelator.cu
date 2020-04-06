@@ -1122,6 +1122,9 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
 
 
 //here pi2 and Gamma_i2 are looped outside in the building of the sequential propagator. NB for moms I expect that pi2 is the same! The T reduction contains ptot.
+//Here we assume that the nucleon interpolator is anti-symmetric and the delta interpolator is symmetric
+//This is true for delta++ and I=3/2, I_3=3/2 pion-nucleon scattering
+//Please take care of your signs!
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, int ig_i2, bool accum){
 
@@ -1160,7 +1163,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin){
-            temp[spin] = (T1.Corr(t,i_mom,gi1,gf)[spin] + T3.Corr(t,i_mom,gi1,gf)[spin] + T5.Corr(t,i_mom,gi1,gf)[spin])*2;
+            temp[spin] = (T1.Corr(t,i_mom,gi1,gf)[spin] - T3.Corr(t,i_mom,gi1,gf)[spin] + T5.Corr(t,i_mom,gi1,gf)[spin])*2;
 	  }
           for( int gei=0; gei<n_extgammas_i; ++gei ){ 
 	    for( int gef=0; gef<n_extgammas_f; ++gef ){
