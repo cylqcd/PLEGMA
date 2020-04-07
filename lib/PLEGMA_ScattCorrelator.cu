@@ -1033,7 +1033,11 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 	    for( int gi2=0; gi2<n_gammas_i2; ++gi2 ){
 	      for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
 		for( int gf2=0; gf2<n_gammas_f2; ++gf2){
-		  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pipi_aux.Corr(t,i_pf2,gi2,gf2),
+                  Float *pion_pointer=pipi_aux.Corr(t,i_pf2,gi2,gf2);
+                  Float pion_contribution[2];
+                  pion_contribution[0]=-1.* pion_pointer[0];
+                  pion_contribution[1]=-1.* pion_pointer[1];
+		  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
 			   CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
 		}//G_f2
 	      }//G_f1
