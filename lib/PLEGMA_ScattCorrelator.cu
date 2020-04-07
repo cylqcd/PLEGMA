@@ -1300,6 +1300,14 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase(){
 }
 
 template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
+
+  int in_dofs=ranges[0]*offsets[0];
+  x_e_sx<Float>( this->H_elem() , 1./n_stoch, in_dofs);
+}
+
+
+template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::clear_output(bool tozero, int n_index, int i){
 
   if(!tozero)

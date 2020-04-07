@@ -35,6 +35,19 @@ template void x_e_cx<float>(  float *dest,  const float  floatcomplex[2], int si
 
 template void x_e_cx<double>( double *dest, const double floatcomplex[2], int size) ;
 
+template<typename Float>
+void x_e_sx( Float *dest, const Float floatreal,  int size ){
+  for (int i=0; i<size; ++i){
+    Float tmpre=floatreal*dest[i];
+    dest[i]= tmpre;
+  }
+}
+template void x_e_sx<float>(  float *dest,  const float  floatreal, int size) ;
+
+template void x_e_sx<double>( double *dest, const double floatreal, int size) ;
+
+ 
+
 static inline GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
 {
   switch(LR){

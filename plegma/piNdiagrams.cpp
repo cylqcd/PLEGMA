@@ -448,6 +448,7 @@ int main(int argc, char **argv)
 
         TIME(corrT_piNsink.apply_phase());
         TIME(corrT_piNsink.applyBoundaryConditions( true ));
+        TIME(corrT_piNsink.normalize_nstoch(n_stochastic_samples));
         TIME(corrT_piNsink.writeHDF5( outfilename ));
 
       }
@@ -902,19 +903,21 @@ int main(int argc, char **argv)
        outfilename = outdiagramPrefix+confnumber+"_B";
        TIME(corrB1.apply_phase());
        TIME(corrB1.applyBoundaryConditions( true ));
+       TIME(corrB1.normalize_nstoch(n_stochastic_samples));
        TIME(corrB1.writeHDF5( outfilename ));
-       outfilename = outdiagramPrefix+confnumber+"_Bsource0";
-       TIME(corrB1_source0.apply_phase());
-       TIME(corrB1_source0.applyBoundaryConditions( true ));
-       TIME(corrB1_source0.writeHDF5( outfilename ));
-       outfilename = outdiagramPrefix+confnumber+"_Bsource1";
-       TIME(corrB1_source1.apply_phase());
-       TIME(corrB1_source1.applyBoundaryConditions( true ));
-       TIME(corrB1_source1.writeHDF5( outfilename ));
+       //outfilename = outdiagramPrefix+confnumber+"_Bsource0";
+       //TIME(corrB1_source0.apply_phase());
+       //TIME(corrB1_source0.applyBoundaryConditions( true ));
+       //TIME(corrB1_source0.writeHDF5( outfilename ));
+       //outfilename = outdiagramPrefix+confnumber+"_Bsource1";
+       //TIME(corrB1_source1.apply_phase());
+       //TIME(corrB1_source1.applyBoundaryConditions( true ));
+       //TIME(corrB1_source1.writeHDF5( outfilename ));
 
        outfilename = outdiagramPrefix+confnumber+"_B";
        TIME(corrB2.apply_phase());
        TIME(corrB2.applyBoundaryConditions( true ));
+       TIME(corrB2.normalize_nstoch(n_stochastic_samples));
        TIME(corrB2.writeHDF5( outfilename ));
 
 
@@ -923,15 +926,19 @@ int main(int argc, char **argv)
 
        TIME(corrW1.apply_phase());
        TIME(corrW1.applyBoundaryConditions( true ));
+       TIME(corrW1.normalize_nstoch(n_stochastic_samples));
        TIME(corrW1.writeHDF5(outfilename));
        TIME(corrW2.apply_phase());
        TIME(corrW2.applyBoundaryConditions( true ));
+       TIME(corrW2.normalize_nstoch(n_stochastic_samples));
        TIME(corrW2.writeHDF5(outfilename));
        TIME(corrW3.apply_phase());
        TIME(corrW3.applyBoundaryConditions( true ));
+       TIME(corrW3.normalize_nstoch(n_stochastic_samples));
        TIME(corrW3.writeHDF5(outfilename));
        TIME(corrW4.apply_phase());
        TIME(corrW4.applyBoundaryConditions( true ));
+       TIME(corrW4.normalize_nstoch(n_stochastic_samples));
        TIME(corrW4.writeHDF5(outfilename));
        //## Z
 

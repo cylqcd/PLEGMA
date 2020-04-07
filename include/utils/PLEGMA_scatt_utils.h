@@ -347,6 +347,7 @@ __inline__ void M_pe_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_
 
 template<typename Float> void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size );
 template<typename Float> void x_e_cx( Float *dest, const Float floatcomplex[2], int size );
+template<typename Float> void x_e_sx( Float *dest, const Float floatreal, int size );
 
 std::vector<GAMMAS_SCATT> apply_gamma5_scatt_gamma( std::vector<GAMMAS_SCATT> &source, LEFTRIGHT LR);
 

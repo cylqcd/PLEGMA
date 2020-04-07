@@ -179,6 +179,7 @@ namespace plegma {
     //others
     void applyBoundaryConditions( bool antiperiodic );
     void apply_phase( );
+    void normalize_nstoch(int n_stoch);
     void clear_output( bool tozero, int n_index, int i );
     void clear_output( bool tozero );
 
