@@ -153,10 +153,13 @@ int main(int argc, char **argv)
         vectorSource.stochastic_Z(nroots);
       
         //Step(2) Save it on the host memory
+        {
+          PLEGMA_Vector<float> vectorAuxF;
+          vectorAuxF.copy(vectorSource);
+          vectorAuxF.unload();
+          vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
+        }
         vectorAuxD1.copy(vectorSource);
-        vectorAuxD1.unload();
-        vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
-        vectorAuxD1.load();
         vectorAuxD1.apply_gamma5();
 
         vectorAuxD1.unload();
@@ -198,13 +201,17 @@ int main(int argc, char **argv)
         //Step(7) Smearing all the time slice in the propagator
         TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
-        vectorAuxD2.unload();
-        vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
-        vectorAuxD2.load();
+        //Step(8) Save the propagator to the disk
+        {
+          PLEGMA_Vector<float> vectorAuxF;
+          vectorAuxF.copy(vectorAuxD2);
+          vectorAuxF.unload();
+          vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
+        }
 
         vectorAuxD2.apply_gamma5();
 
-        //Step(8) Save the propagator on the disk
+        //Step(9) Save the propagator to the host memory
         vectorAuxD2.unload();
         stochastic_propags[i]->copy(vectorAuxD2,HOST);
         vectorAuxD2.load();
