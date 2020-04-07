@@ -37,8 +37,6 @@ int main(int argc, char **argv)
   std::string outfile_V3;
   std::string outfile_V2;
   std::string outfile_V4;
-//  std::string path_V="";
-//  std::string path_P="";
 
   HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
@@ -50,12 +48,9 @@ int main(int argc, char **argv)
   HGC_options->set("outV3", "Path for saving the result of V2_reduction", verbosity, outfile_V3);
   HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
   HGC_options->set("outV4", "Path for saving the result of V4_reduction", verbosity, outfile_V4);
-//  HGC_options->set("loadVector", "Path for loading V", verbosity, path_V);
-//  HGC_options->set("loadProp", "Path for loading P", verbosity, path_P);
 
   //=========================================================================================================//
   initializePLEGMA();
-  double start_time, tmp_time;
   {
 
     //Storing only the smeared gauge
@@ -160,7 +155,7 @@ int main(int argc, char **argv)
         //Step(2) Save it on the host memory
         vectorAuxD1.copy(vectorSource);
         vectorAuxD1.unload();
-        vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i));
+        vectorAuxD1.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
         vectorAuxD1.load();
         vectorAuxD1.apply_gamma5();
 
@@ -204,7 +199,7 @@ int main(int argc, char **argv)
         TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
         vectorAuxD2.unload();
-        vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i));
+        vectorAuxD2.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
         vectorAuxD2.load();
 
         vectorAuxD2.apply_gamma5();
@@ -240,36 +235,11 @@ int main(int argc, char **argv)
       PLEGMA_Propagator<float> propDN(BOTH);
       PLEGMA_Propagator<float> propUPDN(BOTH);
 
-      //to measure the smearing time
-      tmp_time = 0;
-
-
       // ensuring mu positive
       if(mu<0) {
         mu*=-1.;
         solver.UpdateSolver();
       }
-/*
-      PLEGMA_printf("Read propagator from:\n");
-      for(int isc = 0 ; isc < 12 ; isc++){
-        PLEGMA_Vector<float> vectorRead(BOTH);
-        std::string spin=std::to_string(isc/3);
-        std::string col=std::to_string(isc%3);
-        vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_up_s"+spin+"_c"+col,LIME_FORMAT);
-        vectorRead.load();
-        propUP.absorb(vectorRead, isc/3, isc%3);
-       }
-
-      PLEGMA_printf("Read propagator from:\n");
-      for(int isc = 0 ; isc < 12 ; isc++){
-        PLEGMA_Vector<float> vectorRead(BOTH);
-        std::string spin=std::to_string(isc/3);
-        std::string col=std::to_string(isc%3);
-        vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_dn_s"+spin+"_c"+col,LIME_FORMAT);
-        vectorRead.load();
-        propDN.absorb(vectorRead, isc/3, isc%3);
-       }
-*/ 
     
       for(int isc = 0 ; isc < 12 ; isc++){
         PLEGMA_Vector<double> vectorInOut;
@@ -293,14 +263,12 @@ int main(int argc, char **argv)
         TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
 
         //Smearing at the sink
-        start_time = MPI_Wtime();
         TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
-        tmp_time += MPI_Wtime()-start_time;
 
         vectorAuxF.copy(vectorAuxD);
         propUP.absorb(vectorAuxF, isc/3, isc%3);
       }
-
+      /*
       if(outfile_upS!="")
         {
           PLEGMA_printf("Save propagator for the up quark\n");
@@ -311,11 +279,11 @@ int main(int argc, char **argv)
 
             vectorAuxPrint.absorb(propUP,isc/3,isc%3);
             vectorAuxPrint.unload();
-            vectorAuxPrint.writeLIME(outfile_upS+sourcepositiontext+"_s"+spin+"_c"+col);
-            vectorAuxPrint.writeHDF5(outfile_upS+sourcepositiontext+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeLIME(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+            //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
           }
         }
- 
+       */
       // ensuring mu negative
       if(mu>0) {
         mu*=-1.;
@@ -324,7 +292,7 @@ int main(int argc, char **argv)
 
       for(int isc = 0 ; isc < 12 ; isc++){
         PLEGMA_Vector<double> vectorInOut;
-        PLEGMA_Vector<float> vectorAuxF;
+        PLEGMA_Vector<float>  vectorAuxF;
         PLEGMA_Vector<double> vectorAuxD;
 
         { // Smearing the source
@@ -341,7 +309,6 @@ int main(int argc, char **argv)
         PLEGMA_printf("Going to invert DN for component %d\n", isc);
         TIME(solver.solve(vectorAuxD, vectorAuxD));
 
-        start_time = MPI_Wtime();
         //(5 step) rotating to the physical base
         TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1));
 
@@ -353,7 +320,7 @@ int main(int argc, char **argv)
         propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
-      
+      /*
       if(outfile_dnS!="")
         {
           PLEGMA_printf("Save propagator for the d quark\n");
@@ -364,19 +331,14 @@ int main(int argc, char **argv)
 
             vectorAuxPrint.absorb(propDN,isc/3,isc%3);
             vectorAuxPrint.unload();
-            vectorAuxPrint.writeLIME(outfile_dnS+sourcepositiontext+"_s"+spin+"_c"+col);
-            vectorAuxPrint.writeHDF5(outfile_dnS+sourcepositiontext+"_s"+spin+"_c"+col);
+            vectorAuxPrint.writeLIME(outfile_dnS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+            //vectorAuxPrint.writeHDF5(outfile_dnS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
 
           }
-        }
+        }*/
 
       std::vector<int> mom={0,0,0};
       
-      // int source[4]={sourcePositions[isource][0],
-      //                sourcePositions[isource][1],
-      //                sourcePositions[isource][2],
-      //                sourcePositions[isource][3]};
-
       site source=site({0,0,0,sourcePositions[isource][3]});
       std::string outfilename;
 
@@ -401,13 +363,9 @@ int main(int argc, char **argv)
 	//write D
 	outfilename=outdiagramPrefix+confnumber+"_D";
 	
-	PLEGMA_printf("DEBUG: 5th -- start D_diagram\n");
-	TIME(corrD.D_diagramms( reductionsT1, reductionsT2 ));
-	PLEGMA_printf("DEBUG: 5th -- start apply phase to D diagram\n");
+	TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
 	TIME( corrD.apply_phase() );
-	PLEGMA_printf("DEBUG: 5th -- apply bounds to D diagram\n");
 	TIME( corrD.applyBoundaryConditions( true ) );
-	PLEGMA_printf("DEBUG: 5th -- write D diagram\n");
 	TIME( corrD.writeHDF5(outfilename) );
 
       }
@@ -464,7 +422,6 @@ int main(int argc, char **argv)
 
       //initialize diagram
       TIME(corrN.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
-      PLEGMA_printf("DEBUG: corrN initialized\n");
       
       //Computing T reductions+recombination
       { 
@@ -484,7 +441,6 @@ int main(int argc, char **argv)
         TIME(corrN.writeHDF5(outfilename));
 
       }
-      PLEGMA_printf("DEBUG: write N diagram done\n");
 
 
       //P diagram
@@ -538,9 +494,7 @@ int main(int argc, char **argv)
            //Gaussian smearing of the propagator
            TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
            stochastic_propagator_momzero[spinindex].copy(vectortmp2);
-           //tmp_time += MPI_Wtime()-start_time;
-           stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+"zero_propagator_"+sourcepositiontext+std::to_string(spinindex));
-           //stochastic_propagator_momzero[spinindex].writeHDF5(outfile_V+"propagator_zero_momentum"+std::to_string(spinindex));
+           //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+confnumber+"propagator_"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
              vectortmp1.dilutespindisplace(vectorStoc_source_oet,spinindex+1,spinindex);
              vectorStoc_source_oet.copy(vectortmp1);
@@ -622,7 +576,6 @@ int main(int argc, char **argv)
             PLEGMA_Vector<double> vectorAuxD2;
             vectorAuxF.absorb(propDN,isc/3, isc%3);
             vectorAuxD.copy(vectorAuxF);
-            start_time = MPI_Wtime();
 
             //Performing the smearing
             // Smearing the source
@@ -660,20 +613,18 @@ int main(int argc, char **argv)
             PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
             //performing the inversion
             TIME(solver.solve(vectorInOut, vectorInOut));
-            start_time = MPI_Wtime();
 
             //performing rotation to physical base
             TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));
 
             //performing smearing
             TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
-            tmp_time += MPI_Wtime()-start_time;
 
             vectorAuxF.copy(vectorInOut);
             propUPDN.absorb(vectorAuxF, isc/3, isc%3);
           }
 
-          
+          /*
           if(outfile_SEQ!="")
           {
              PLEGMA_printf("Save sequential propagator for the ud \n");
@@ -683,23 +634,11 @@ int main(int argc, char **argv)
                std::string col=std::to_string(isc%3);
                vectorAuxPrint.absorb(propUPDN,isc/3,isc%3);
                vectorAuxPrint.unload();
-               vectorAuxPrint.writeLIME(outfile_SEQ+sourcepositiontext+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+spin+"_c"+col);
+               vectorAuxPrint.writeLIME(outfile_SEQ+confnumber+sourcepositiontext+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+spin+"_c"+col);
                //vectorAuxPrint.writeHDF5(outfile_SEQ+"_s"+spin+"_c"+col);
              }
-          }
-          
-          /*
-          PLEGMA_printf("Smearing time %lf sec\n",tmp_time);
-          PLEGMA_printf("Read propagator from:\n");
-          for(int isc = 0 ; isc < 12 ; isc++){
-            PLEGMA_Vector<float> vectorRead(BOTH);
-            std::string spin=std::to_string(isc/3);
-            std::string col=std::to_string(isc%3);
-            vectorRead.readFile("/cyclamen/home/fpittler/runs/plegma_develop_all_momenta_tuning_new/data/propagator/propagator_updn_s"+spin+"_c"+col,LIME_FORMAT);
-            vectorRead.load();
-            propUPDN.absorb(vectorRead, isc/3, isc%3);
           }*/
-      
+           
 
 
           //Compute triangle diagramms          
@@ -750,11 +689,8 @@ int main(int argc, char **argv)
             TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
             //reductionsV2.writeHDF5("V2sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-	    //PLEGMA_printf("DEBUG: start W1_diagram\n");
             TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1, true));
-	    //PLEGMA_printf("DEBUG: start W2_diagram\n");
 	    TIME(corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2, true));
-	    //PLEGMA_printf("DEBUG: finish W2\n");
           
             //Compute Diagram W3,W4
           
@@ -803,8 +739,6 @@ int main(int argc, char **argv)
           if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
        
             for (int spinindex=0; spinindex<4; ++spinindex){
-              //tmp_time += MPI_Wtime()-start_time;       
-              //stochastic_source_spin_diluted_momp_i2.writeLIME(outfile_V+"source_fini_momentum"+std::to_string(spinindex));
        
               vectortmp1.copy(vectorSource_finite_mom);
               //Doing the inversion
@@ -818,7 +752,7 @@ int main(int argc, char **argv)
 
               //Saving the propagator
               stochastic_propagator_momp_i2[spinindex].copy(vectortmp1);
-              stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+"propagator_"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
+              //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+confnumber+"propagator_"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
          
               if (spinindex<3){
                 vectortmp1.dilutespindisplace(vectorSource_finite_mom,spinindex+1,spinindex);
