@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
 	      free(dset1); free(dset2);
 	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 
-	      if(!only_ch and run_ud) {
+	      if(!only_ch) {
 		TIME(corr.contractMesons(propUP, propST));
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]s[%+1.1e]", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
 		THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      }
 
-	      if(!only_st and run_ud) {
+	      if(!only_st) {
 		TIME(corr.contractMesons(propUP, propCH));
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
@@ -339,7 +339,7 @@ int main(int argc, char **argv) {
 	    free(group);
 	    THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
-	    if(!only_ch && !only_st && run_ud) {
+	    if(!only_ch && !only_st) {
 	      char *dset1, *dset2;
 	      TIME(corr.contractMesons(propUP, (cSmaller=='s') ? propCH : propST));
 	      if(cSmaller=='s') {
