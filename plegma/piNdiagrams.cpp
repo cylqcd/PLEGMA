@@ -98,8 +98,8 @@ int main(int argc, char **argv)
     std::vector<GAMMAS_SCATT> glist_sink_delta={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4,CG_1_G_4_G_5,CG_2_G_4_G_5,CG_3_G_4_G_5};
     std::vector<GAMMAS_SCATT> glist_source_nucleon={CG_5,C,CG_5_G_4,CG_4};
     std::vector<GAMMAS_SCATT> glist_sink_nucleon={CG_5,C,CG_5_G_4,CG_4};
-    std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired={ID,G_5};
-    std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID,G_5};
+    std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired={ID};
+    std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID};
     std::vector<GAMMAS_SCATT> glist_source_meson_T={ID};
 
     std::vector<GAMMAS_SCATT> glist_sink_meson={G_5};
