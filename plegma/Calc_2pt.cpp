@@ -56,7 +56,16 @@ int main(int argc, char **argv)
       PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
     }
-    updateOptions(LIGHT);
+    if(run_ud) {
+      updateOptions(LIGHT);
+      mu = mu_ud;
+    } else if(mu_s.size()>0) {
+      updateOptions(STRANGE);
+      mu = mu_s[0];
+    } else {
+      updateOptions(CHARM);
+      mu = mu_c[0];
+    }
     TIME(QUDA_solver solver(mu));
     std::vector<std::thread> threads;
 
