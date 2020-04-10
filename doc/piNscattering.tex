@@ -1,0 +1,602 @@
+\documentclass{article}[12pt]
+
+\usepackage{amsfonts}
+\usepackage[intlimits]{amsmath}
+\usepackage{cite}
+\usepackage{epsfig}
+
+\addtolength{\hoffset}{-1.5cm}
+\addtolength{\textwidth}{3cm}
+
+%\usepackage[magyar]{babel}
+\title{$I=\frac{1}{2}$ $\pi N$ scattering}
+\begin{document}
+\maketitle
+In this note we discuss $I=\frac{1}{2},I_3=+\frac{\pi}{2}$ pion nucleon 
+scattering in lattice qcd. We first construct the interpolating
+for the $\pi N$ interacting states using the Clebsch-Gordan coefficients:
+(constructed using the isospin 1 pion and the isospin 1/2 nucleon)
+\begin{equation}
+\vert \pi N, I=\frac{1}{2},I_{3}=\frac{1}{2}\rangle=+\sqrt{\frac{2}{3}}\vert 1,+1\rangle\vert \frac{1}{2} -\frac{1}{2}\rangle
+                                                   -\sqrt{\frac{1}{3}}\vert 1, 0\rangle\vert \frac{1}{2} +\frac{1}{2}\rangle
+\end{equation}
+\begin{equation}
+\vert \pi N, I=\frac{1}{2},I_{3}=\frac{1}{2}\rangle=+\sqrt{\frac{2}{3}}\pi_+ n
+                                                   -\sqrt{\frac{1}{3}}\pi_0 p
+\end{equation}
+We use the following interpolating operators for mesons and baryons:
+\begin{eqnarray}
+\pi_+=\bar{d}\Gamma_M u \\
+\pi_+^{\dagger}=\bar{u}\Gamma_M d\\
+\pi_0=\sqrt{\frac{1}{2}}\left(\bar{u}\Gamma_M u-\bar{d}\Gamma_M d\right)\\
+\pi_0^{\dagger}=\sqrt{\frac{1}{2}}\left(\bar{u}\Gamma_M u-\bar{d}\Gamma_M d\right)\\
+p=N_{+}=(u^t\Gamma_N d)u \\
+p^{\dagger}=N_{+}^{\dagger}=(\bar{d}^t\Gamma_N\bar{u})\bar{u}\\
+n=N_{-}=(d^t\Gamma_N u)d \\
+n^{\dagger}=N_{-}^{\dagger}=(\bar{u}^t\Gamma_N\bar{d})\bar{d}\\
+\end{eqnarray}
+Summarizing we have the following interpolating operator
+for $piN$ state in the $I=\frac{1}{2},I_3=\frac{1}{2}$ channel:
+\begin{eqnarray}
+\vert\pi N,I=\frac{1}{2},I_3=\frac{1}{2}\rangle =
+\sqrt{\frac{2}{3}}(dud)\times(\bar{d}u)-\sqrt{\frac{1}{6}}(udu)\times(uu)+
+\sqrt{\frac{1}{6}}(udu)\times(dd)\\
+\langle \pi N,I=\frac{1}{2},I_3=\frac{1}{2}\vert =
+\sqrt{\frac{2}{3}}(\bar{u}\bar{d}\bar{d})\times(\bar{u}d)-\sqrt{\frac{1}{6}}(\bar{d}\bar{u}\bar{u})\times(\bar{u}\bar{u})+
+\sqrt{\frac{1}{6}}(\bar{d}\bar{u}\bar{u})\times(\bar{d}\bar{d})
+\end{eqnarray}
+Thus we have to calculate the following contractions:
+\begin{eqnarray}
+       \frac{2}{3}(dud)-\bar{d}u \times \bar{u}d-(\bar{u}\bar{d}\bar{d}) \\
+\sqrt{\frac{1}{9}}(dud)-\bar{d}u \times \bar{u}u-(\bar{d}\bar{u}\bar{u}) \\
+\sqrt{\frac{1}{9}}(dud)-\bar{d}u \times \bar{d}d-(\bar{d}\bar{u}\bar{u}) \\
+\sqrt{\frac{1}{9}}(udu)-\bar{u}u \times \bar{u}d-(\bar{u}\bar{d}\bar{d}) \\
+       \frac{1}{6}(udu)-\bar{u}u \times \bar{u}u-(\bar{d}\bar{u}\bar{u}) \\
+       \frac{1}{6}(udu)-\bar{u}u \times \bar{d}d-(\bar{d}\bar{u}\bar{u}) \\
+\sqrt{\frac{1}{9}}(udu)-\bar{d}d \times \bar{u}d-(\bar{u}\bar{d}\bar{d}) \\
+       \frac{1}{6}(udu)-\bar{d}d \times \bar{u}u-(\bar{d}\bar{u}\bar{u}) \\
+       \frac{1}{6}(udu)-\bar{d}d \times \bar{d}d-(\bar{d}\bar{u}\bar{u}) 
+\end{eqnarray}
+In the following sections we look all the diagramms occur in the above 
+contractions.
+\section{$(dud)-\bar{d}u \times \bar{u}d-(\bar{u}\bar{d}\bar{d}) $}
+\begin{itemize}
+\item B diagramms
+\begin{enumerate}
+\item B1 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1})\Gamma_{i1}^tU(x_{f1},x_{i1})^t\Gamma_{f1}^tD(x_{f1},x_{i1}) 
+\end{eqnarray}
+$$
+B_{1\alpha,\beta}=b1_{\xi}^{m}\left(\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)b1_{\phi}^{m}\left(\alpha,\gamma,\beta\right)
+$$
+$$
+b1_{\xi}^{m}\left(\delta\right)=\xi^{\dagger}\Gamma_{f2}T_{fii}^{ud}\left(x_{f2},x_{i1}\right)^{,m}_{,\delta}
+$$
+$$
+b1_{\phi}^{m}\left(\alpha,\gamma,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}U\right)_{\kappa,\gamma}D\left(x_{f1},x_{i1}\right)_{\kappa,\beta}
+$$
+$$
+B_1\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2},T_{fii}^{ud}\right)^{m}_{\delta}\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}^{m}_{4}\left(\phi,\Gamma_{f1}U,D\right)_{\alpha,\gamma,\beta}
+$$
+\item B2 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1})\mathrm{Tr}(\Gamma_{f1}U(x_{f1},x_{i1})\Gamma_{i1}D(x_{f1},x_{i1})^t)
+\end{eqnarray}
+$$
+B_{2\alpha,\beta}=b2_{\xi}^{n}\left(\beta\right)\Gamma_{i1}\left(\gamma,\delta\right)b2_{\phi}^{n}\left(\alpha,\gamma,\delta\right)
+$$
+$$
+b2_{\xi}^{n}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}T_{fii}^{ud}\left(x_{f2},x_{i1}\right)^{,n}_{,\beta}
+$$
+$$
+b2_{\phi}^{n}\left(\alpha,\gamma,\delta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_\alpha \Gamma_{f1}U\left(x_{f1},x_{i1}\right)^{bl}_{\kappa,\gamma}D\left(x_{f1},x_{i1}\right)^{ma}_{\kappa,\delta}
+$$
+$$
+B_2\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2},T_{fii}^{ud}\right)^{n}_{\beta}\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{4}\left(\phi,\Gamma_{f1}U,D\right)^{n}_{\alpha,\gamma,\delta}
+$$
+\item B3 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\mathrm{Tr}\left(D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1})\Gamma_{i1}^tU(x_{f1},x_{i1})^t\Gamma_{f1}^t\right)
+\end{eqnarray}
+$$
+B_{3\alpha,\beta}=b3_{\xi}^{l}\left(\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)b3_{\phi}^{l}\left(\gamma,\alpha,\beta\right)
+$$
+$$
+b3_{\xi}^{l}\left(\delta\right)=\xi^{\dagger}\Gamma_{f2}T_{fii}^{ud}\left(x_{f2},x_{i1}\right)^{,l}_{,\delta}
+$$
+$$
+b3_{\phi}^{l}\left(\gamma,\alpha,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\Gamma_{f1}U_{\kappa,\gamma}^{bm}\left(x_{f1},x_{i1}\right)D^{cn}_{\alpha,\beta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+B_3\left(\alpha,\beta\right)={\mathcal V}_2\left(\phi,\Gamma_{f1}U\left(x_{f1},x_{i1}\right),D\left(x_{f1},x_{i1}\right)\right)^{l}_{\gamma,\alpha,\beta}\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2},U\left(x_{f2},x_{i1}\right)\right)^{l}_{\delta}
+$$
+\item B4 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}^tU(x_{f1},x_{i1})^t\Gamma_{f1}^tD(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1}) 
+\end{eqnarray}
+$$
+B_{4\alpha,\beta}=b4_{\xi}^m\left(\beta\right)b4_{\phi}^m\left(\gamma,\alpha,\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)
+$$
+$$
+b4_{\xi}^{m}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}T_{fii}^{ud}\left(x_{f2},x_{i1}\right)^{,b}_{\beta}
+$$
+$$
+b4_{\phi}^{b}\left(\gamma,\alpha,\delta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}U^{bl}\right)_{\kappa,\gamma}D^{cm}_{\alpha,\delta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+B_{4\alpha,\beta}=\left(\Gamma_{i1}\right)_{\gamma,\delta}{\mathcal V}_{3}^{m}\left(
+\xi,\Gamma_{f2},T_{fii}^{ud}\right)^{m}_{\beta}{\mathcal V}_{2}^{m}\left(\phi,\Gamma_{f1}U,D\right)_{\gamma,\alpha,\delta}
+$$
+\end{enumerate}
+\item W diagramms
+\begin{enumerate}
+\item W1 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}D(x_{i2},x_{i1})^t\Gamma_{i2}^tU(x_{f1},x_{i2})^t\Gamma_{f1}^tD(x_{f1},x_{i1})
+\end{eqnarray}
+$$
+W_{1\alpha,\beta}=w1_{\phi}^{l}\left(\alpha,\delta,\beta\right)\Gamma_{i1}\left(\gamma,\delta\right)w1_{\xi}^{l}\left(\gamma\right)
+$$
+$$
+w1_{\xi}^{l}\left(\gamma\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\gamma}
+$$
+$$
+w2_{\phi}^{l}\left(\alpha,\delta,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{mb}_{\kappa,\delta}D^{an}_{\kappa,\beta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{1\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\alpha,\delta,\beta}
+$$
+\item W2 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f1},x_{f2})\Gamma_{i1}D(x_{f1},x_{i1})^t\Gamma_{f1}U(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1})
+\end{eqnarray}
+$$
+W_{2\alpha,\beta}=w2_{\phi}^{l}\left(\alpha,\beta,\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)w2_{\xi}^{l}\left(\gamma\right)
+$$
+$$
+w2_{\xi}^{l}\left(\gamma\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\gamma}
+$$
+$$
+w2_{\phi}^{l}\left(\alpha,\beta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}D^{ma}_{\kappa,\gamma}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{an}_{\kappa,\beta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{2\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\alpha,\beta,\delta}
+$$
+\item W3 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\mathrm{Tr}(D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}D(x_{i2},x_{i1})^t\Gamma_{i2}^tU(x_{f1},x_{i2})^t\Gamma_{f1}^t)
+\end{eqnarray}
+$$
+W_{3\alpha,\beta}=w3_{\phi}^{l}\left(\delta,\alpha,\beta\right)\left(\Gamma_{i1}\right)_{\gamma,\delta}w3_{\xi}^{l}\left(\gamma\right)
+$$
+$$
+w3_{\xi}^{l}\left(\gamma\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\gamma}
+$$
+$$
+w3_{\phi}^{l}\left(\delta,\alpha,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{bm}_{\kappa,\delta}D^{cn}_{\alpha,\beta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{3\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\delta,\alpha,\beta}
+$$
+\item W4 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}^tU(x_{f2},x_{i1})^t\Gamma_{f2}^tD(x_{f1},x_{f2})^t\Gamma_{f1}U(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1})
+\end{eqnarray}
+$$
+W_{4\alpha,\beta}=w4_{\phi}^{l}\left(\beta,\alpha,\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)w4_{\xi}^{l}\left(\gamma\right)
+$$
+$$
+w4_{\xi}^{l}\left(\gamma\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\gamma}
+$$
+$$
+w4_{\phi}^{l}\left(\beta,\alpha,\delta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{bn}_{\kappa,\beta}D^{cm}_{\alpha,\delta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{4\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\beta,\alpha,\delta}
+$$
+\end{enumerate}
+\item Z diagramms
+\begin{enumerate}
+\item Z1 diagram
+\begin{eqnarray}
+D(x_{f1},x_{i1})\mathrm{Tr}(\Gamma_{f1}U(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}D\left(x_{f1},x_{i1}\right)^t)
+\end{eqnarray}
+$$
+Z_{1\alpha,\beta}=z_{1\xi}^{l}\left(\gamma\right)\Gamma_{i1}\left(\gamma,\delta\right)z_{1\phi}^{l}\left(\delta,\alpha,\beta\right)
+$$
+$$
+z_{1\xi}^{l}\left(\gamma\right)=
+\phi^{t_{i2},-\vec{p}_{i2},\kappa}\left(x_{f2}\right)^{\dagger}\left(\gamma_5\Gamma_{f2}\right)U\left(x_{f2},x_{i1}\right)^{.,l}_{.,\gamma}
+$$
+$$
+z_{1\phi}^{l}\left(\delta,\alpha,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{t_{i2},-\vec{p}_{i2},\lambda}_{\alpha_1}\Gamma_{f1}^{t}D^{am}_{\alpha_1,\delta}\left(\Gamma_{i2}\gamma_5\right)^{\lambda,\kappa}D^{cn}_{\alpha,\beta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+Z_{1\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}^{l}_{2}\left(\phi^{t_{i2},0,\lambda},\Gamma_{f1}^tD,D\right)_{\delta,\alpha,\beta}{\mathcal V}^{l}_{3}\left(\phi^{t_{i2},-\vec{p}_{i2},\kappa},\gamma_5\Gamma_{f2}U\right)_{\gamma}\left(\Gamma_{i2}\gamma_5\right)_{\lambda,\kappa}
+$$
+\item Z2 diagram
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}^tU(x_{f2},x_{i1})^t\Gamma_{f2}^tD(x_{i2},x_{f2})^t\Gamma_{i2}^tU(x_{f1},x_{i2})^t\Gamma_{f1}^tD(x_{f1},x_{i1})
+\end{eqnarray}
+$$
+Z_{2\alpha,\beta}=z_{2\xi}^{l}\left(\gamma\right)\Gamma_{i1}\left(
+\gamma,\delta\right)z_{2\phi}^{l}\left(\beta,\alpha,\delta\right)
+$$
+$$
+z_{2\xi}^{l}\left(\gamma\right)=\phi^{t_{i2},-\vec{p}_{i2},\kappa}\left(x_{f2}\right)^{\dagger}\left(\gamma_5\Gamma_{f2}\right)U\left(x_{f2},x_{i1}\right)^{.,l}_{.,\gamma}
+$$
+$$
+z_{2\phi}^{l}\left(\beta,\alpha,\delta\right)=\phi^{t_{i2},0,\lambda}\left(x_{f1}\right)^{b}_{\alpha_1}D_{\alpha_1,\beta}^{a,c}\left(x_{f1},x_{i1}\right)D^{cm}_{\alpha,\delta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+Z_{2\alpha,\beta}=\left(\Gamma_{i1}\right)_{\gamma,\delta}{\mathcal V}_{3}^{l}\left(\phi^{\left(t_{i2},-\vec{p_{i2}},\kappa\right)},\gamma_5\Gamma_{f2}U\right)_{\gamma}{\mathcal V}_{2}^{l}\left(\phi^{t_{i2},0,\lambda,\Gamma_{f1}^{t}D,D}\right)_{\beta,\alpha,\delta}\left(\Gamma_{i2}\gamma_5\right)_{\lambda,\kappa}
+$$
+\end{enumerate}
+\item Disconnected \\
+This diagramms are the product of the baryon and the meson 2pt function. In this case the $N_{-}$ and $\pi^{+}$. 
+\begin{enumerate}
+\item $N_1$ $\pi^+$
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}^tU(x_{f1},x_{i1})^t\Gamma_{f1}^tD(x_{f1},x_{i1})\mathrm{Tr}(\Gamma_{f2}U(x_{f2},x_{f1})\Gamma_{i2}D(x_{i2},x_{f2}))
+\end{eqnarray}
+The baryon part is computed using ${\mathcal T}_1$ reductions:
+$$
+{\mathcal T}_1\left(D,U\Gamma_{i1},\Gamma_{f1}^tD\right)
+$$
+\item $N_2$ $\pi^+$
+\begin{eqnarray}
+D(x_{f1},x_{i1})\mathrm{Tr}(D(x_{f1},x_{i1})\Gamma_{i1}^tU(x_{f1},x_{i1})^t\Gamma_{f1}^t)\mathrm{Tr}(\Gamma_{f2}U(x_{f2},x_{f1})\Gamma_{i2}D(x_{i2},x_{f2}))
+\end{eqnarray}
+The baryon part is computed using ${\mathcal T}_2$ reductions:
+$$
+{\mathcal T}_2\left(D,U\Gamma_{i1},\Gamma_{f1}^tD\right)
+$$
+\end{enumerate}
+\end{itemize}
+\section{$(dud)-\bar{d}u \times \bar{u}u-(\bar{d}\bar{u}\bar{u}) $}
+\begin{itemize}
+\item B diagrams
+\begin{enumerate}
+\item B1 diagram
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i2})\Gamma_{i2}U(x_{i2},x_{i1})\Gamma_{i1}^tD(x_{f1},x_{i1})^t\Gamma_{f1}^tU(x_{f1},x_{i1}) 
+\end{eqnarray}
+$$
+B_{1\alpha,\beta}=b1_{\xi}^{m}\left(\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)b2_{\phi}^{m}\left(\alpha,\gamma,\beta\right)
+$$
+$$
+b1_{\xi}^{m}\left(\delta\right)=\xi^{\dagger}\Gamma_{f2}T_{fii}^{uu}\left(x_{f2},x_{i1}\right)^{,m}_{,\delta}
+$$
+$$
+b1_{\phi}^{m}\left(\alpha,\gamma,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}D\right)_{\kappa,\gamma}U\left(x_{f1},x_{i1}\right)_{\kappa,\beta}
+$$
+$$
+B_1\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2},T_{fii}^{uu}\right)^{m}_{\delta}\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{4}\left(\phi,\Gamma_{f1}D,U\right)_{\alpha,\gamma,\beta}
+$$
+\item B2 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i2})\Gamma_{i2}U(x_{i2},x_{i1})\mathrm{Tr}(D(x_{f1},x_{i1})\Gamma_{i1}\left(\Gamma_{f1}U(x_{f1},x_{i1})\right)^t)
+\end{eqnarray}
+$$
+B_{2\alpha,\beta}=b2_{\xi}^{n}\left(\beta\right)\Gamma_{i1}\left(\gamma,\delta\right)b2_{\phi}^{n}\left(\alpha,\gamma,\delta\right)
+$$
+$$
+b2_{\xi}^{n}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}T_{fii}^{uu}\left(x_{f2},x_{i1}\right)^{,n}_{,\beta}
+$$
+$$
+b2_{\phi}^{n}\left(\alpha,\delta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_\alpha \Gamma_{f1}U\left(x_{f1},x_{i1}\right)^{ma}_{\kappa,\delta}D\left(x_{f1},x_{i1}\right)^{al}_{\kappa,\gamma}
+$$
+$$
+B_2\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2},T_{fii}^{uu}\right)^{n}_{\beta}\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{4}\left(\phi,\Gamma_{f1}U,D\right)^{n}_{\alpha,\delta,\gamma}
+$$
+\item B3 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{i2},x_{i1})^t\Gamma_{i2}^tU(x_{f2},x_{i2})^t\Gamma_{f2}^tD(x_{f1},x_{f2})^t\Gamma_{f1}U(x_{f1},x_{i1})
+\end{eqnarray}
+$$
+B_{3\alpha,\beta}=b3_{\xi}^{l}\left(\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)b3_{\phi}^{l}\left(\gamma,\alpha,\beta\right)
+$$
+$$
+b3_{\xi}^{l}\left(\delta\right)=\xi^{\dagger}_{\lambda}\Gamma_{f2}T_{fii}^{ud}\left(x_{f2},x_{i1}\right)^{l}_{\lambda,\delta}
+$$
+$$
+b3_{\phi}^{l}\left(\beta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\Gamma_{f1}U_{\kappa,\beta}^{bm}\left(x_{f1},x_{i1}\right)D^{cn}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+B_3\left(\alpha,\beta\right)={\mathcal V}_2\left(\phi,\Gamma_{f1}U\left(x_{f1},x_{i1}\right),D\left(x_{f1},x_{i1}\right)\right)^{l}_{\beta,\alpha,\gamma}\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\left(x_{f2},x_{i1}\right)\right)^{l}_{\gamma}
+$$
+\item B4 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f1},x_{i1})^t\Gamma_{f1}^tD(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i2})\Gamma_{i2}U(x_{i2},x_{i1}) 
+\end{eqnarray}
+$$
+B_{4\alpha,\beta}=b4_{\xi}^m\left(\beta\right)b4_{\phi}^m\left(\gamma,\alpha,\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)
+$$
+$$
+b4_{\xi}^{m}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}T_{fii}^{uu}\left(x_{f2},x_{i1}\right)^{,b}_{\beta}
+$$
+$$
+b4_{\phi}^{b}\left(\delta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}U^{bl}\right)_{\kappa,\delta}D^{cm}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+B_{4\alpha,\beta}=\left(\Gamma_{i1}\right)_{\gamma,\delta}{\mathcal V}_{3}^{m}\left(
+\xi,\Gamma_{f2},T_{fii}^{uu}\right)^{m}_{\beta}{\mathcal V}_{2}^{m}\left(\phi,\Gamma_{f1}U,D\right)_{\delta,\alpha,\gamma}
+$$
+\end{enumerate}
+\item W diagramms
+\begin{enumerate}
+\item W1 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\mathrm{Tr}\left(U\left(x_{f1},x_{i2}\right)\Gamma_{i2}U(x_{i2},x_{i1})\Gamma_{i1}^tD(x_{f1},x_{i1})^t\Gamma_{f1}\right)
+\end{eqnarray}
+$$
+W_{1\alpha,\beta}=w1_{\phi}^{l}\left(\alpha,\gamma,\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)w1_{\xi}^{l}\left(\beta\right)
+$$
+$$
+w1_{\xi}^{l}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\beta}
+$$
+$$
+w2_{\phi}^{l}\left(\alpha,\gamma,\delta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{mb}_{\kappa,\gamma}D^{an}_{\kappa,\delta}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{1\alpha,\beta}=\Gamma_{i1}\left(\delta,\gamma\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\alpha,\gamma,\delta}
+$$
+\item W2 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f1},x_{i1})\Gamma_{i1}^tD(x_{f1},x_{i1})^t\Gamma_{f1}U(x_{f1},x_{i2})\Gamma_{i2}U(x_{i2},x_{i1})
+\end{eqnarray}
+$$
+W_{2\alpha,\beta}=w2_{\phi}^{l}\left(\alpha,\beta,\gamma\right)\Gamma_{i1}\left(\gamma,\delta\right)w2_{\xi}^{l}\left(\delta\right)
+$$
+$$
+w2_{\xi}^{l}\left(\delta\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\delta}
+$$
+$$
+w2_{\phi}^{l}\left(\alpha,\beta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{ma}_{\kappa,\beta}D^{an}_{\kappa,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{2\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\alpha,\beta,\gamma}
+$$
+\item W3 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{i2},x_{i1})^t\Gamma_{i2}^tU(x_{f1},x_{i2})^t\Gamma_{f1}^tD(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})
+\end{eqnarray}
+$$
+W_{3\alpha,\beta}=w1_{\phi}^{l}\left(\delta,\alpha,\gamma\right)\Gamma_{i1}\left(\gamma,\delta\right)w1_{\xi}^{l}\left(\beta\right)
+$$
+$$
+w3_{\xi}^{l}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\beta}
+$$
+$$
+w3_{\phi}^{l}\left(\delta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{bm}_{\kappa,\delta}D^{cn}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{3\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\delta,\alpha,\gamma}
+$$
+\item W4 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f2},x_{i1})^t\Gamma_{f2}^tD(x_{f1},x_{f2})^t\Gamma_{f1}U(x_{f1},x_{i2})\Gamma_{i2}U(x_{i2},x_{i1})
+\end{eqnarray}
+$$
+W_{4\alpha,\beta}=w4_{\phi}^{l}\left(\beta,\alpha,\delta,\right)\Gamma_{i1}\left(\gamma,\delta\right)w4_{\xi}^{l}\left(\delta\right)
+$$
+$$
+w4_{\xi}^{l}\left(\delta\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\delta}
+$$
+$$
+w4_{\phi}^{l}\left(\beta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{bn}_{\kappa,\beta}D^{cm}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{4\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\beta,\alpha,\gamma}
+$$
+\end{enumerate}
+\item Disconnected
+\begin{enumerate}
+\item disc1
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}^tD\left(x_{f1},x_{i1}\right)^t\Gamma_{f1}U\left(x_{f1},x_{i1}\right)\mathrm{Tr}\left(U\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)
+\end{eqnarray}
+$$
+disc1_{\alpha,\beta}={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\delta}^{l}{\mathcal V}_4\left(\phi,\Gamma_{f1}U,D\right)_{\alpha,\beta,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+$$
+\item disc2 
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\mathrm{Tr}\left(\Gamma_{f1}U\left(x_{f1},x_{i1}\right)\Gamma_{i1}^tD\left(x_{f1},x_{i1}\right)^t\right)\mathrm{Tr}\left(U\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)\
+\end{eqnarray}
+$$
+disc2_{\alpha,\beta}={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\beta}^{l}{\mathcal V}_4\left(\phi,\Gamma_{f1}U,D\right)_{\alpha,\delta,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+$$
+\item disc3
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f2},x_{i1})^t\Gamma_{f2}^tD\left(x_{f1},x_{f2}\right)^t\Gamma_{f1}U\left(x_{f1},x_{i1}\right)\mathrm{Tr}\left(U\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)
+\end{eqnarray}
+$$
+disc3\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\delta}^{l}{\mathcal V}_2\left(\phi,\Gamma_{f1}U,D\right)_{\beta,\alpha,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+%disc3\left(\alpha,\beta\right)={\mathcal T_1}\left(D, T_{ffi}^{uu}\Gamma_{i1}^t,\Gamma_{f1}U\right)\times\mathrm{loop}
+$$
+\item disc4 
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f1},x_{i1})^t\Gamma_{f1}^tD\left(x_{f1},x_{f2}\right)\Gamma_{f2}U\left(x_{f2},x_{i1}\right)\mathrm{Tr}\left(U\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)
+\end{eqnarray}
+$$
+%disc4\left(\alpha,\beta\right)={\mathcal T_1}\left(D, U\Gamma_{i1}^t,\Gamma_{f1}T_{ffi}^{du}\right)\times\mathrm{loop}
+disc4\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\beta}^{l}{\mathcal V}_2\left(\phi,\Gamma_{f1}U,D\right)_{\delta,\alpha,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+$$
+\end{enumerate}
+\end{itemize}
+\section{$dud-\bar{d}u-\bar{d}d-\bar{d}\bar{u}\bar{u}$}
+\begin{itemize}
+\item W diagramms
+\begin{enumerate}
+\item W1 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}^tD(x_{i2},x_{i1})^t\Gamma_{i2}^tD(x_{f1},x_{i2})^t\Gamma_{f1}U(x_{f1},x_{i1})
+\end{eqnarray}
+$$
+W_{1\alpha,\beta}=w1_{\phi}^{l}\left(\alpha,\beta,\gamma\right)\Gamma_{i1}\left(\gamma,\delta\right)w1_{\xi}^{l}\left(\delta\right)
+$$
+$$
+w1_{\xi}^{l}\left(\delta\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\delta}
+$$
+$$
+w1_{\phi}^{l}\left(\alpha,\beta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}U\right)^{mb}_{\kappa,\beta}\left(T_{fii}^{dd}\right)^{an}_{\kappa,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{1\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\alpha,\beta,\gamma}
+$$
+\item W2 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\mathrm{Tr}\left(\Gamma_{f1}U(x_{f1},x_{i1})\Gamma_{i1}^tD(x_{f2},x_{i1})^t\Gamma_{i2}^tD(x_{f1},x_{i2})^t\right)
+\end{eqnarray}
+$$
+W_{2\alpha,\beta}=w2_{\phi}^{l}\left(\alpha,\delta,\gamma\right)\Gamma_{i1}\left(\gamma,\delta\right)w2_{\xi}^{l}\left(\beta\right)
+$$
+$$
+w2_{\xi}^{l}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\beta}
+$$
+$$
+w2_{\phi}^{l}\left(\alpha,\delta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}U\right)^{ma}_{\kappa,\delta}\left(T_{fii}^{dd}\right)^{an}_{\kappa,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{2\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\alpha,\delta,\gamma}
+$$
+\item W3 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1})\Gamma_{i1}U(x_{f2},x_{i1})^t\Gamma_{f2}^tD(x_{f1},x_{f2})^t\Gamma_{f1}U(x_{f1},x_{i1})
+\end{eqnarray}
+$$
+W_{3\alpha,\beta}=w3_{\phi}^{l}\left(\beta,\alpha,\gamma\right)\left(\Gamma_{i1}\right)_{\gamma,\delta}w3_{\xi}^{l}\left(\gamma\right)
+$$
+$$
+w3_{\xi}^{l}\left(\gamma\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\gamma}
+$$
+$$
+w3_{\phi}^{l}\left(\beta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}U\right)^{bm}_{\kappa,\beta}\left(T_{fii}^{dd}\right)^{cn}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{3\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\beta,\alpha,\gamma}
+$$
+\item W4 diagramm
+\begin{eqnarray}
+D(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{i1})\Gamma_{i1}U(x_{f1},x_{i1})^t\Gamma_{f1}^tD(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})
+\end{eqnarray}
+$$
+W_{4\alpha,\beta}=w4_{\phi}^{l}\left(\delta,\alpha,\gamma,\right)\Gamma_{i1}\left(\gamma,\delta\right)w4_{\xi}^{l}\left(\beta\right)
+$$
+$$
+w4_{\xi}^{l}\left(\beta\right)=\xi^{\dagger}\Gamma_{f2}U\left(x_{f2},x_{i1}\right)^{,l}_{,\beta}
+$$
+$$
+w4_{\phi}^{l}\left(\delta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}U\right)^{bn}_{\kappa,\delta}\left(T_{fii}^{dd}\right)^{cm}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+W_{4\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\delta,\alpha,\gamma}
+$$
+\end{enumerate}
+\item Z diagramms
+\begin{enumerate}
+\item Z1 diagram
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f2},x_{i1})^t\Gamma_{f2}^tD(x_{i2},x_{f2})^t\Gamma_{i2}^tD(x_{f1},x_{i2})^t\Gamma_{f1}U(x_{f1},x_{i1})
+\end{eqnarray}
+$$
+Z_{1\alpha,\beta}=z_{1\xi}^{l}\left(\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)z_{1\phi}^{l}\left(\beta,\alpha,\gamma\right)
+$$
+$$
+z_{1\xi}^{l}\left(\delta\right)=
+\phi^{t_{i2},-\vec{p}_{i2},\kappa}\left(x_{f2}\right)^{\dagger}\left(\gamma_5\Gamma_{f2}\right)U\left(x_{f2},x_{i1}\right)^{.,l}_{.,\delta}
+$$
+$$
+z_{1\phi}^{l}\left(\beta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\left(\gamma_5\phi\right)^{t_{i2},-\vec{p}_{i2},\lambda}_{\alpha_1}\Gamma_{f1}U^{am}_{\alpha_1,\beta}\left(\gamma_5\Gamma_{i2}\gamma_5\right)^{\lambda,\kappa}D^{cn}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+Z_{1\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}^{l}_{2}\left(\gamma_5\phi^{t_{i2},0,\lambda},\Gamma_{f1}U,D\right)_{\beta,\alpha,\gamma}{\mathcal V}^{l}_{3}\left(\phi^{t_{i2},-\vec{p}_{i2},\kappa},\gamma_5\Gamma_{f2}U\right)_{\delta}\left(\gamma_5\Gamma_{i2}\gamma_5\right)_{\lambda,\kappa}
+$$
+\item Z2 diagram
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f1},x_{i1})^t\Gamma_{f1}^tD(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})
+\end{eqnarray}
+$$
+Z_{2\alpha,\beta}=z_{2\xi}^{l}\left(\beta\right)\Gamma_{i1}\left(
+\gamma,\delta\right)z_{2\phi}^{l}\left(\delta,\alpha,\gamma\right)
+$$
+$$
+z_{2\xi}^{l}\left(\beta\right)=\phi^{t_{i2},-\vec{p}_{i2},\kappa}\left(x_{f2}\right)^{\dagger}\left(\gamma_5\Gamma_{f2}\right)U\left(x_{f2},x_{i1}\right)^{.,l}_{.,\beta}
+$$
+$$
+z_{2\phi}^{l}\left(\delta,\alpha,\gamma\right)=\left(\gamma_5\phi\right)^{t_{i2},0,\lambda}\left(x_{f1}\right)^{b}_{\alpha_1}\Gamma_{f1}U_{\alpha_1,\delta}^{a,c}\left(x_{f1},x_{i1}\right)D^{cm}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+Z_{2\alpha,\beta}=\left(\Gamma_{i1}\right)_{\gamma,\delta}{\mathcal V}_{3}^{l}\left(\phi^{\left(t_{i2},-\vec{p_{i2}},\kappa\right)},\gamma_5\Gamma_{f2}U\right)_{\beta}{\mathcal V}_{2}^{l}\left(\gamma_5\phi\right)^{t_{i2},0,\lambda}\left(\Gamma_{f1}U,D\right)_{\delta,\alpha,\gamma}\left(\gamma_5\Gamma_{i2}\gamma_5\right)_{\lambda,\kappa}
+$$
+\item Z3 diagram
+\begin{eqnarray}
+D(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}^tD(x_{f1},x_{i1})^t\Gamma_{f1}U(x_{f1},x_{i1})
+\end{eqnarray}
+$$
+Z_{3\alpha,\beta}=z_{1\xi}^{l}\left(\delta\right)\Gamma_{i1}\left(\gamma,\delta\right)z_{1\phi}^{l}\left(\alpha,\beta,\gamma\right)
+$$
+$$
+z_{3\xi}^{l}\left(\delta\right)=
+\phi^{t_{i2},-\vec{p}_{i2},\kappa}\left(x_{f2}\right)^{\dagger}\left(\gamma_5\Gamma_{f2}\right)U\left(x_{f2},x_{i1}\right)^{.,l}_{.,\delta}
+$$
+$$
+z_{3\phi}^{l}\left(\alpha,\beta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\left(\gamma_5\phi\right)^{t_{i2},-\vec{p}_{i2},\lambda}_{\alpha}\Gamma_{f1}U^{am}_{\alpha_1,\beta}\left(\gamma_5\Gamma_{i2}\gamma_5\right)^{\lambda,\kappa}D^{cn}_{\alpha_1,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+Z_{3\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}^{l}_{4}\left(\gamma_5\phi^{t_{i2},0,\lambda},\Gamma_{f1}U,D\right)_{\alpha,\beta,\gamma}{\mathcal V}^{l}_{3}\left(\phi^{t_{i2},-\vec{p}_{i2},\kappa},\gamma_5\Gamma_{f2}U\right)_{\delta}\left(\gamma_5\Gamma_{i2}\gamma_5\right)_{\lambda,\kappa}
+$$
+\item Z4 diagram
+\begin{eqnarray}
+D(x_{f1},x_{i2})\Gamma_{i2}D(x_{i2},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\mathrm{Tr}\left(\Gamma_{f1}U(x_{f1},x_{i1})\Gamma_{i1}^tD(x_{f1},x_{i1})^t\right)
+\end{eqnarray}
+$$
+Z_{4\alpha,\beta}=z_{4\xi}^{l}\left(\beta\right)\Gamma_{i1}\left(
+\gamma,\delta\right)z_{4\phi}^{l}\left(\alpha,\delta,\gamma\right)
+$$
+$$
+z_{4\xi}^{l}\left(\beta\right)=\phi^{t_{i2},-\vec{p}_{i2},\kappa}\left(x_{f2}\right)^{\dagger}\left(\gamma_5\Gamma_{f2}\right)U\left(x_{f2},x_{i1}\right)^{.,l}_{.,\beta}
+$$
+$$
+z_{4\phi}^{l}\left(\alpha,\delta,\gamma\right)=\left(\gamma_5\phi\right)^{t_{i2},0,\lambda}\left(x_{f1}\right)^{b}_{\alpha}\Gamma_{f1}U_{\alpha_1,\delta}^{a,c}\left(x_{f1},x_{i1}\right)D^{cm}_{\alpha_1,\gamma}\left(x_{f1},x_{i1}\right)
+$$
+$$
+Z_{4\alpha,\beta}=\left(\Gamma_{i1}\right)_{\gamma,\delta}{\mathcal V}_{3}^{l}\left(\phi^{\left(t_{i2},-\vec{p_{i2}},\kappa\right)},\gamma_5\Gamma_{f2}U\right)_{\beta}{\mathcal V}_{4}^{l}\left(\left(\gamma_5\phi\right)^{t_{i2},0,\lambda},\Gamma_{f1}U,D\right)_{\alpha,\delta,\gamma}\left(\gamma_5\Gamma_{i2}\gamma_5\right)_{\lambda,\kappa}
+$$
+\end{enumerate}
+\item Disconnected
+\begin{enumerate}
+\item disc1
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}^tD\left(x_{f1},x_{i1}\right)^t\Gamma_{f1}U\left(x_{f1},x_{i1}\right)\mathrm{Tr}\left(D\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)
+\end{eqnarray}
+$$
+disc1_{\alpha,\beta}={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\delta}^{l}{\mathcal V}_4\left(\phi,\Gamma_{f1}U,D\right)_{\alpha,\beta,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+$$
+\item disc2
+\begin{eqnarray}
+D(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\mathrm{Tr}\left(\Gamma_{f1}U\left(x_{f1},x_{i1}\right)\Gamma_{i1}^tD\left(x_{f1},x_{i1}\right)^t\right)\mathrm{Tr}\left(D\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)\
+\end{eqnarray}
+$$
+disc2_{\alpha,\beta}={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\beta}^{l}{\mathcal V}_4\left(\phi,\Gamma_{f1}U,D\right)_{\alpha,\delta,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+$$
+\item disc3
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f2},x_{i1})^t\Gamma_{f2}^tD\left(x_{f1},x_{f2}\right)^t\Gamma_{f1}U\left(x_{f1},x_{i1}\right)\mathrm{Tr}\left(D\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)
+\end{eqnarray}
+$$
+disc3\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\delta}^{l}{\mathcal V}_2\left(\phi,\Gamma_{f1}U,D\right)_{\beta,\alpha,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+%disc3\left(\alpha,\beta\right)={\mathcal T_1}\left(D, T_{ffi}^{uu}\Gamma_{i1}^t,\Gamma_{f1}U\right)\times\mathrm{loop}
+$$
+\item disc4
+\begin{eqnarray}
+D(x_{f1},x_{i1})\Gamma_{i1}U(x_{f1},x_{i1})^t\Gamma_{f1}^tD\left(x_{f1},x_{f2}\right)\Gamma_{f2}U\left(x_{f2},x_{i1}\right)\mathrm{Tr}\left(D\left(x_{i2},x_{i2}\right)\Gamma_{i2}\right)
+\end{eqnarray}
+$$
+%disc4\left(\alpha,\beta\right)={\mathcal T_1}\left(D, U\Gamma_{i1}^t,\Gamma_{f1}T_{ffi}^{du}\right)\times\mathrm{loop}
+disc4\left(\alpha,\beta\right)={\mathcal V}_{3}\left(\xi,\Gamma_{f2}U\right)_{\beta}^{l}{\mathcal V}_2\left(\phi,\Gamma_{f1}U,D\right)_{\delta,\alpha,\gamma}^l\Gamma_{i1}\left(\gamma,\delta\right)\times \mathrm{loop}
+$$
+\end{enumerate}
+\end{itemize}
+\end{document}
