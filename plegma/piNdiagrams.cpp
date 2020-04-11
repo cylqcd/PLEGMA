@@ -234,7 +234,7 @@ int main(int argc, char **argv)
                     sourcePositions[isource][2], sourcePositions[isource][3]);
 
       char *ssource;
-      asprintf(&ssource,"/sx%02dsy%02dsz%02dst%02d/", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+      asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
       std::string sourcepositiontext= (std::string)"_" + ssource; 
       free(ssource);
   
