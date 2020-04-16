@@ -16,7 +16,7 @@ std::vector<std::thread> threads;
 #define THREAD(fnc) TIME(fnc)
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "time-dilution","nstochSamples"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "readStochSamples","time-dilution","nstochSamples"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
 
 int main(int argc, char **argv)
@@ -27,6 +27,7 @@ int main(int argc, char **argv)
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   bool timedilution;
+  bool readstochastic;
   int n_stochastic_samples;
   int nroots=4;
   std::string outfile_V="";
@@ -37,7 +38,7 @@ int main(int argc, char **argv)
   std::string outfile_V3;
   std::string outfile_V2;
   std::string outfile_V4;
-
+  HGC_options->set("readStochSamples", "Flag for switching read/building stochastic propagators", verbosity, readstochastic);
   HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
   HGC_options->set("outPropUP", "Path for saving the up propagator used", verbosity, outfile_upS);
@@ -141,7 +142,7 @@ int main(int argc, char **argv)
     //=gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
     //Here we compute phi and xi
     //Producing the stochastic source
-    {
+    if (readstochastic==0){
       
       PLEGMA_Vector<double> vectorAuxD1(BOTH);
       PLEGMA_Vector<double> vectorAuxD2(BOTH);
@@ -218,6 +219,25 @@ int main(int argc, char **argv)
         
       } //loop over the stochastic samples
 
+    }
+    else{
+      for (int i=0; i<n_stochastic_samples; ++i){
+        std::string inputfilename=outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
+        PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
+        PLEGMA_Vector<float> vectorRead(BOTH);
+        vectorRead.readFile(inputfilename,LIME_FORMAT);
+        vectorRead.load();
+        vectorRead.apply_gamma5();
+        vectorRead.unload();
+        stochastic_sources[i]->copy(vectorRead,HOST);
+        inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
+        PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
+        vectorRead.readFile(inputfilename,LIME_FORMAT);
+        vectorRead.load();
+        vectorRead.apply_gamma5();
+        vectorRead.unload();
+        stochastic_propags[i]->copy(vectorRead,HOST);
+      }
     }
 
     //loop over the soure positions
