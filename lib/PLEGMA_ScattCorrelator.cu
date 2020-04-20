@@ -1024,6 +1024,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
   int TIME = this->localT();
   
   //for each momentum in moms_red
+  #pragma omp parallel for
   for( int i_mom=0; i_mom < this->pList().size(); ++i_mom){
     int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN)
     int i_pf2 = map[i_mom][2]; //position of pf2 in pionpion
@@ -1103,6 +1104,7 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
   //put output to zero
   this->clear_output(!accum);
   for( int t=0; t<TIME; ++t){
+    #pragma omp parallel for
     for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
@@ -1164,6 +1166,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   this->clear_output(!accum, 5, ig_i2); 
 
   for(int t=0; t<TIME; ++t){
+    #pragma omp parallel for
     for(int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
@@ -1221,6 +1224,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   //PLEGMA_printf("DEBUG: clear output done\n");
 
   for( int t=0; t<TIME; ++t){
+    #pragma omp parallel for
     for( int i_mom=0; i_mom<Nmoms(); ++i_mom){
       for( int gi=0; gi<n_gammas_i; ++gi ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
@@ -1288,6 +1292,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase(){
 
   std::vector<std::vector<int>> mom_list=this->pList().pi1(); 
 
+  #pragma omp parallel for
   for( int i_m=0; i_m<N_moms; ++i_m){
       Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_list[i_m][0]*this->source[0]+
 	2*M_PI/(Float)HGC_totalL[1]* mom_list[i_m][1]*this->source[1]+
