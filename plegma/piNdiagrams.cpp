@@ -16,7 +16,7 @@ std::vector<std::thread> threads;
 #define THREAD(fnc) TIME(fnc)
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "readStochSamples","time-dilution","nstochSamples"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "readStochSamples","time-dilution","nstochSamples","confnumber"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
 
 int main(int argc, char **argv)
@@ -30,6 +30,7 @@ int main(int argc, char **argv)
   bool readstochastic;
   int n_stochastic_samples;
   int nroots=4;
+  int confnumber_int;
   std::string outfile_V="";
   std::string outfile_upS="";
   std::string outfile_dnS="";
@@ -38,6 +39,7 @@ int main(int argc, char **argv)
   std::string outfile_V3;
   std::string outfile_V2;
   std::string outfile_V4;
+  HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
   HGC_options->set("readStochSamples", "Flag for switching read/building stochastic propagators", verbosity, readstochastic);
   HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
@@ -78,12 +80,10 @@ int main(int argc, char **argv)
 
 
     //Get the confnumber for latfile
-    std::istringstream iss(latfile);
-    std::string tokenforfilename;
-    while (std::getline(iss, tokenforfilename, '/')){}
-    std::istringstream iss2(tokenforfilename);
-    std::string confnumber;
-    while (std::getline(iss2, confnumber, '.')){}
+    char *ssource;
+    asprintf(&ssource,"%04d", confnumber_int);
+    std::string confnumber= ssource;
+    free(ssource);
 
     //Reading the momentum lists
     PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
@@ -253,7 +253,6 @@ int main(int argc, char **argv)
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
                     sourcePositions[isource][2], sourcePositions[isource][3]);
 
-      char *ssource;
       asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
       std::string sourcepositiontext= (std::string)"_" + ssource; 
       free(ssource);
