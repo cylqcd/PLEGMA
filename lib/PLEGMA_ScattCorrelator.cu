@@ -595,7 +595,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   if(name_of_diagram=="T1")
     this->groups = {"",};
   else
-    this->groups ={ this->pList().print({0},{"pi2="})[0], };
+    this->groups ={ this->pList().to_string({0},{"pi2="})[0], };
   
   //Dataset
   this->datasets = {name_of_diagram,};
@@ -666,7 +666,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->description = tmp;
   
   //Groups
-  this->groups = {this->pList().print({0},{"pi2="})[0],};
+  this->groups = {this->pList().to_string({0},{"pi2="})[0],};
 
   //Dataset
   this->datasets = {name_of_diagram};

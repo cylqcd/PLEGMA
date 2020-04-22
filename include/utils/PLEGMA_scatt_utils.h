@@ -223,7 +223,7 @@ namespace plegma {
     }
 
     //0,1,2,...,NLIST-1 for ps[i], NLIST for ptot, -1 for p0
-    std::vector<std::string> print( std::vector<int> p_i, std::initializer_list<std::string> prefix ){
+    std::vector<std::string> to_string( std::vector<int> p_i, std::initializer_list<std::string> prefix ){
       assert( prefix.size() == p_i.size() );
       auto p_i1 = pi1();
       auto ptot = p_tot();
