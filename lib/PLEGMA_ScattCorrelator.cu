@@ -955,12 +955,12 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
   int n_gammas_f1 = this->GList[3].size();
   int TIME = this->localT();  
 
-  Float temp[N_SPINS*N_SPINS*2];
   
   //put output to zero
   this->clear_output(!accum);
   for( int t=0; t<TIME; ++t){
     #pragma omp parallel for
+    Float temp[N_SPINS*N_SPINS*2];
     for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
@@ -1017,12 +1017,11 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   int TIME = this->localT();
   PLEGMA_printf("DEBUG: T_diagram n_gammas: %d,%d,%d,%d,%d. ig2=%d \n",n_extgammas_i,n_extgammas_f,n_gammas_i1,n_gammas_i2,n_gammas_f, ig_i2);
 	      
-  Float temp[N_SPINS*N_SPINS*2];
-
   this->clear_output(!accum, 5, ig_i2); 
 
   for(int t=0; t<TIME; ++t){
     #pragma omp parallel for
+    Float temp[N_SPINS*N_SPINS*2];
     for(int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
@@ -1046,20 +1045,16 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
- //checks between T1 T2
-  //PLEGMA_printf("DEBUG: Enter D_diagrams\n");
+  //checks between T1 T2
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
-  //PLEGMA_printf("DEBUG: checks on Tshapes done\n");
   
   if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList().pi(0) )
     PLEGMA_error("T1,T2 have not the the same mom list of D\n");
-  //PLEGMA_printf("DEBUG: checks on T momList done\n");
  
   for(int i=0; i<2; ++i)
     if((T1.GList[i]!=T2.GList[i])||(T1.GList[i]!=this->GList[i+2]))
       PLEGMA_error("T1,T2 wrong gamma list\n");
-  //PLEGMA_printf("DEBUG: checks on GLists done\n");
 
   
   //extract array mom
@@ -1071,17 +1066,14 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   int n_gammas_i = this->GList[2].size();
   int n_gammas_f = this->GList[3].size();
   int TIME = this->localT();  
-
-  Float temp[N_SPINS*N_SPINS*2];
-  PLEGMA_printf("DEBUG: Preparation done\n");
-  
+ 
   //put output to zero
   this->clear_output(!accum); 
-  //PLEGMA_printf("DEBUG: clear output done\n");
 
   for( int t=0; t<TIME; ++t){
     #pragma omp parallel for
-    for( int i_mom=0; i_mom<Nmoms(); ++i_mom){
+    Float temp[N_SPINS*N_SPINS*2];
+    for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
       for( int gi=0; gi<n_gammas_i; ++gi ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
@@ -1101,7 +1093,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 }
 
 
-//#####################
+//####################(
 //#  Other functions  #
 //#####################
 
