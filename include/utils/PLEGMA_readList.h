@@ -3,14 +3,22 @@
  * Functions that read from file the lists needed by PLEGMA_params.
  */
 
-inline void readConfsList() {
-  std::ifstream file(pathListGaugeConfs.c_str(),std::ifstream::in);
-  if(file.fail()) PLEGMA_error("Cannot open file to read confs list: %s\n",pathListGaugeConfs.c_str());
+inline void readListStr(std::string listName, std::vector<std::string> &stdVec) {
+  std::ifstream file(listName.c_str(),std::ifstream::in);
+  if(file.fail()) PLEGMA_error("Cannot open file to read list of strings: %s\n",listName.c_str());
   std::string str;
   while(file >> str){
-    listGaugeConfs.push_back(str);
+    stdVec.push_back(str);
   }
   file.close();
+}
+
+inline void readConfsList(){
+  readListStr(pathListGaugeConfs,listGaugeConfs);
+}
+
+inline void readVecsList(){
+  readListStr(pathListVecs,listVecs);
 }
 
 inline void readSourceList() {

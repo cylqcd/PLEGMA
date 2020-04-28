@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
   bool run_ud = true;
-  HGC_options->set("run-ud", "Wheater to run or not light quark flavors", verbosity, run_ud);
+  HGC_options->set("run-ud", "Whether to run or not light quark flavors", verbosity, run_ud);
   HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
   HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
   HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
@@ -45,7 +45,6 @@ int main(int argc, char **argv)
       // Reading from Lime file and loading to device
       PLEGMA_Gauge<double> gauge;
       gauge.readFile(latfile, LIME_FORMAT);
-      gauge.load();
       gauge.calculatePlaq();
       
       // Loading to QUDA and computing plaquette also there
@@ -57,7 +56,16 @@ int main(int argc, char **argv)
       PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
     }
-    updateOptions(LIGHT);
+    if(run_ud) {
+      updateOptions(LIGHT);
+      mu = mu_ud;
+    } else if(mu_s.size()>0) {
+      updateOptions(STRANGE);
+      mu = mu_s[0];
+    } else {
+      updateOptions(CHARM);
+      mu = mu_c[0];
+    }
     TIME(QUDA_solver solver(mu));
     std::vector<std::thread> threads;
 
@@ -131,19 +139,19 @@ int main(int argc, char **argv)
       PLEGMA_Propagator<float> propS[nSmaller];
       for(int ismall=0; ismall < nSmaller; ismall++) {
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
-	mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
+	double run_mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
 	
-	TIME(computePropagator(propS[ismall], mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear));
+	TIME(computePropagator(propS[ismall], run_mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear));
       }
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
       if(nLarger > 0) {
 	PLEGMA_Propagator<float> propL;
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
-	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
+	  double run_mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-	  TIME(computePropagator(propL, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear));
+	  TIME(computePropagator(propL, run_mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear));
 	  
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
@@ -170,7 +178,7 @@ int main(int argc, char **argv)
 	      free(dset1); free(dset2);
 	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 
-	      if(!only_ch) {
+	      if(!only_ch && run_ud) {
 		TIME(corr.contractMesons(propUP, propST));
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]s[%+1.1e]", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
@@ -186,7 +194,7 @@ int main(int argc, char **argv)
 		THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      }
 
-	      if(!only_st) {
+	      if(!only_st && run_ud) {
 		TIME(corr.contractMesons(propUP, propCH));
 		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
 		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
@@ -222,7 +230,7 @@ int main(int argc, char **argv)
 	    free(group);
 	    THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
-	    if(!only_ch && !only_st) {
+	    if(!only_ch && !only_st && run_ud) {
 	      char *dset1, *dset2;
 	      TIME(corr.contractMesons(propUP, (cSmaller=='s') ? propCH : propST));
 	      if(cSmaller=='s') {

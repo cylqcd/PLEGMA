@@ -33,7 +33,7 @@ define(double csw, 0.1);
 define(double anisotropy, 1.0);
 define(QudaTwistFlavorType twist_flavor, QUDA_TWIST_SINGLET);
 define(bool compute_clover, false);
-define(QudaMassNormalization normalization, QUDA_KAPPA_NORMALIZATION); // mass normalization of Dirac operators
+define(QudaMassNormalization normalization, QUDA_MASS_NORMALIZATION); // mass normalization of Dirac operators
 define(QudaDagType dagger, QUDA_DAG_NO);
 define(bool isEven, true);
 

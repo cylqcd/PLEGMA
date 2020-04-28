@@ -184,7 +184,7 @@ void plegma::PLEGMA_end() {
     PLEGMA_printf("Waiting for HDF5 to finish the writing\n");
     while(HDF5::isWriting()) sleep(0.001);
   }
-  MPI_Comm_free(&HGC_fullComm);
-  MPI_Comm_free(&HGC_spaceComm);
-  MPI_Comm_free(&HGC_timeComm);
+  if(HGC_fullComm != MPI_COMM_NULL) MPI_Comm_free(&HGC_fullComm);
+  if(HGC_spaceComm != MPI_COMM_NULL) MPI_Comm_free(&HGC_spaceComm);
+  if(HGC_timeComm != MPI_COMM_NULL) MPI_Comm_free(&HGC_timeComm);
 }

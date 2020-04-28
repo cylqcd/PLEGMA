@@ -7,6 +7,25 @@
 using namespace plegma;
 using namespace quda;
 
+template<typename Float>
+static __global__ void rotate_uk_ch_kernel(vector2<Float> vec){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<Float> Sin[N_SPINS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_COLS]; 
+  if (sid >= vec.volume()) return;
+  vec.get(Sin,sid);
+  U_uk_ch_g5g4(Sout,Sin);
+  vec.set(Sout,sid);
+}
+
+template<typename Float>
+void rotate_uk_ch_k(vector2<Float> vec){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (vec.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
+  rotate_uk_ch_kernel<<<gridDim,blockDim>>>(vec);
+}
+
+
 template<LEFTRIGHT LF,typename Float>
 static __global__ void apply_gamma_vector_kernel(vector2<Float> vec, GAMMAS r){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;

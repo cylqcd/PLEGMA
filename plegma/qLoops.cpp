@@ -27,9 +27,9 @@ static primme_preset_method getMethod(std::string str){
 
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC", "Eig-PolyDeg", "Eig-amin",
 					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV",
-#ifdef HAVE_ARPACK
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
 					   "Eig-NkV", "Eig-logFile",
-#elif HAVE_PRIMME
+#elif defined(HAVE_PRIMME)
 					   "Eig-printLevel", "Eig-method-PRIMME",
 #endif
 					   "nsrc", "maxQsq", "rng-seed", "corr-file-format"
@@ -37,37 +37,51 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 
 
 static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
-		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
+		      std::string filenamePrefix, std::string confID, FILE_FORMAT format, int isc=-1){
+  using sv=std::vector<std::string>;
+  std::string fname_base;
+  if(format != ASCII_FORMAT && format != HDF5_FORMAT) PLEGMA_error("This executable can write only in ascii and hdf5 format");
+  std::string suffix = (format == ASCII_FORMAT)? ".dat": ".h5";
+  if(isc >= 0)
+    fname_base = join(sv({"Conf"+confID,"Ns"+std::to_string(isc)}),"/");
+  else
+    fname_base = join(sv({"Conf"+confID}),"/");
+  
+
   qLoops.load(qLoops.H_loc());
   ft[0]->apply(qLoops,FT_GEMV);
+  std::string fnameUl = fname_base + join(sv({"localLoops","loop"}),"/");
+  ft[0]->writeFile( (format == HDF5_FORMAT)? filenamePrefix+suffix+fnameUl: filenamePrefix+findAndReplace(fnameUl,'/','_')+suffix, format);
 
-  ft[0]->writeFile(filenamePrefix + "local_loops." + confID + ".dat", format);
 
   if(qLoops.IsOneD())
     for(int mu = 0 ; mu < N_DIMS ; mu++){
+      std::string fnameOneD = fname_base + join(sv({"oneD","dir"+std::to_string(mu),"loop"}),"/");
+      std::string fnameOneDC = fname_base + join(sv({"oneDC","dir"+std::to_string(mu),"loop"}),"/");
       qLoops.load(qLoops.H_oneD()[mu]);
       ft[0]->apply(qLoops,FT_GEMV);
       ft[0]->scale(0.25); // put the 1/4 of the symmetric covariant derivative
-      ft[0]->writeFile(filenamePrefix + "oneD_" + std::to_string(mu) + "_loops." + confID + ".dat", format);
+      ft[0]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameOneD: filenamePrefix+findAndReplace(fnameOneD,'/','_')+suffix, format);
 
       qLoops.load(qLoops.H_oneDC()[mu]);
       ft[0]->apply(qLoops,FT_GEMV);
       ft[0]->scale(0.25);
-      ft[0]->writeFile(filenamePrefix + "oneDC_" + std::to_string(mu) + "_loops." + confID + ".dat", format);      
+      ft[0]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameOneDC: filenamePrefix+findAndReplace(fnameOneDC,'/','_')+suffix, format);      
     }
 
   int count=0;
   if(qLoops.IsTwoD()){
     for(auto munu : qLoops.get_twoD_index()){
       int mu=std::get<0>(munu), nu=std::get<1>(munu);
+      std::string fnameTwoD = fname_base + join(sv({"twoD","dirs"+std::to_string(mu)+std::to_string(nu),"loop"}),"/");
       qLoops.load(qLoops.H_twoD()[count]);
       ft[1]->apply(qLoops,FT_GEMV);
       if(mu != 3 && nu != 3) ft[1]->scale(0.25);
       else ft[1]->scale(0.125);
-      ft[1]->writeFile(filenamePrefix + "twoD_" + std::to_string(mu) + std::to_string(nu) + "_loops." + confID + ".dat", format);
+      ft[1]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameTwoD: filenamePrefix+findAndReplace(fnameTwoD,'/','_')+suffix, format);
       count++;
     }
-  }
+  }  
 }
 
 int main(int argc, char **argv)
@@ -100,6 +114,11 @@ int main(int argc, char **argv)
   HGC_options->set("readEigenVectors", "Where we want to read EigenVectors from file", verbosity, isReadEigenVecs);
   HGC_options->set("writeEigenVectors", "Where we want to read EigenVectors from file", verbosity, isWriteEigenVecs);
   HGC_options->set("prefixEigenVecsFile", "Path with prefix for the filenames of the eigenvectors", verbosity, fnameEigenVecsPrefix);
+#ifdef QUDAEIG
+  int batched_rotate = 1;
+  HGC_options->set("batched-rotate", "The size of the batch during Ritz rotation", verbosity, batched_rotate);
+#endif
+
   bool oneDLoops = true;
   bool accumFlag = true;
   bool twoDLoops = false;
@@ -108,10 +127,14 @@ int main(int argc, char **argv)
   HGC_options->set("twoD-loops", "Whether we want to use two covariant derivative for the quark loops calculation", verbosity, twoDLoops);
   HGC_options->set("accum-loops", "Accumulate loops over the stochastic source vectors", verbosity, accumFlag);
   HGC_options->set("dump-step", "If accumulation is ON, Every how many stochastic vector to dump results", verbosity, NdumpStep);
-  if(!accumFlag) NdumpStep =1;
-  if(accumFlag && (NdumpStep<1)) PLEGMA_error("dump-step should be >= 1");
   bool debugMode = false;
   HGC_options->set("debug-mode", "If debug mode is enabled, run 1 source with units everywhere for check", verbosity, debugMode);
+
+  //=========================================================================================================//
+  initializePLEGMA();
+
+  if(!accumFlag) NdumpStep =1;
+  if(accumFlag && (NdumpStep<1)) PLEGMA_error("dump-step should be >= 1");
 
   if(Eig_NeV <= 0 && lowModesRecon){
     PLEGMA_warning("You enabled Low modes reconstruction but NeV is <= 0. Switching off Low modes reconstruction");
@@ -122,14 +145,11 @@ int main(int argc, char **argv)
     PLEGMA_warning("The Low modes reconstruction is off forcing number of eigenvalues to zero");
     Eig_NeV = 0;
   }
-  //=========================================================================================================//
-  initializePLEGMA();
 
   
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFile(latfile, LIME_FORMAT);
-  gauge.load();
   gauge.calculatePlaq();
 
   // Loading to QUDA and computing plaquette also there
@@ -155,7 +175,10 @@ int main(int argc, char **argv)
     eigParam.spectrumPart = Eig_spectrumPart;
     eigParam.tol = Eig_tol;
     eigParam.maxIters = Eig_maxIters;
-#if defined(HAVE_ARPACK)
+#ifdef QUDAEIG
+    eigParam.batched_rotate = batched_rotate;
+#endif
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
     eigParam.NkV = Eig_NkV;
     eigParam.logFile = Eig_logFile;
 #elif defined(HAVE_PRIMME)
@@ -234,8 +257,8 @@ int main(int argc, char **argv)
 
 #if defined(HAVE_EIGENSOLVER)
   if(lowModesRecon){
-    dumpLoops(qloops_std, ft, loopsPrefix + "/exact_part_std_", confID, corr_file_format);
-    dumpLoops(qloops_gen, ft, loopsPrefix + "/exact_part_gen_", confID, corr_file_format);
+    dumpLoops(qloops_std, ft, loopsPrefix + "/exact_part_std", confID, corr_file_format);
+    dumpLoops(qloops_gen, ft, loopsPrefix + "/exact_part_gen", confID, corr_file_format);
   }
 #endif
 
@@ -276,8 +299,8 @@ int main(int argc, char **argv)
 
     double t1=MPI_Wtime();
     if((isrc+1)%NdumpStep == 0){
-      dumpLoops(qloops_std, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
-      dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
+      dumpLoops(qloops_std, ft, loopsPrefix + "/stoch_part_std", confID, corr_file_format,isrc);
+      dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_gen", confID, corr_file_format,isrc);
     }
     double t2=MPI_Wtime();
     PLEGMA_printf("FT and dump data time is %f\n",t2-t1);
@@ -308,116 +331,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-
-
-
-
-
-
-
-  // // ensuring mu negative
-  // if(mu>0) mu*=-1.;
-  // QUDA_solver *solverDN = new QUDA_solver(mu);
-  // PLEGMA_Vector<double> source(DEVICE);
-  // PLEGMA_Vector<double> phi;
-  // PLEGMA_Vector<double> tmp;
-  // //  bool isOneD = true;
-  // PLEGMA_QLoops<double> loops_std(BOTH,oneDLoops);
-  // QudaInvertParam inv_params = solverDN->getInvParams();
-  // // just put units to the whole for debugging
-  // source.setUnit((std::vector<int>) {0,1,2,3,4,5,6,7,8,9,10,11});
-  // solverDN->solve(phi,source);
-  // // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
-  // phi.scaleVector(1./(2.*inv_params.kappa)); 
-
-  // gauge.communicateGhost();
-  // loops_std.oneEnd_trick(phi,phi,tmp,gauge,-1.,accumFlag); //standard one-end trick
-
-  // std::string prefix = "/onyx/noether/h/khadjiyiannakou/runs/";
-  // PLEGMA_FT<double> ft(1, 3);
-
-  // // do the FT and write to File std trick
-  // loops_std.load(loops_std.H_loc());
-  // ft.apply(loops_std);
-  // ft.writeFile(prefix + "std_local_loops_FT.0000.dat", ASCII_FORMAT);
-  // if(isOneD)
-  //   for(int mu = 0 ; mu < 4 ; mu++){
-  //     loops_std.load(loops_std.H_oneD()[mu]);
-  //     ft.apply(loops_std);
-  //     ft.scale(0.25);
-  //     ft.writeFile(prefix + "std_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);
-
-  //     loops_std.load(loops_std.H_oneDC()[mu]);
-  //     ft.apply(loops_std);
-  //     ft.scale(0.25);
-  //     ft.writeFile(prefix + "std_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);      
-  //   }
-  
-
-  // PLEGMA_QLoops<double> loops_gen(BOTH,oneDLoops);
-  // PLEGMA_Vector<double> phi_r;
-  // QUDA_dirac *D = nullptr;
-  // if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
-  //   D = new QUDA_dirac(QUDA_CLOVER_WILSON_DSLASH);
-  // else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
-  //   D = new QUDA_dirac(QUDA_WILSON_DSLASH);
-  // else
-  //   PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
-
-  // D->apply<M>(phi_r,phi);
-  // phi_r.apply_gamma5();
-  // loops_gen.oneEnd_trick(phi, phi_r, tmp, gauge, +1., accumFlag); //generalized one-end trick
-
-  // // do the FT and write to File std trick
-  // loops_gen.load(loops_gen.H_loc());
-  // ft.apply(loops_gen);
-  // ft.writeFile(prefix + "gen_local_loops_FT.0000.dat", ASCII_FORMAT);
-  // if(isOneD)
-  //   for(int mu = 0 ; mu < 4 ; mu++){
-  //     loops_gen.load(loops_gen.H_oneD()[mu]);
-  //     ft.apply(loops_gen);
-  //     ft.scale(0.25);
-  //     ft.writeFile(prefix + "gen_oneD_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);
-
-  //     loops_gen.load(loops_gen.H_oneDC()[mu]);
-  //     ft.apply(loops_gen);
-  //     ft.scale(0.25);
-  //     ft.writeFile(prefix + "gen_oneDC_" + std::to_string(mu) + "_loops_FT.0000.dat", ASCII_FORMAT);      
-  //   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// #ifdef CHECK_HPROP
-//   PLEGMA_Hprobing hprop(3);
-//   PLEGMA_Vector<double> vectorAuxD;
-//   PLEGMA_Vector<double> vectorAuxDD;
-//   vectorAuxD.setUnit((std::vector<int>) {0});
-//   FILE *ptr_test = NULL;
-//   std::string strM = "/onyx/noether/h/khadjiyiannakou/runs/Hhad";
-//   for(int ih = 0; ih < hprop.get_NHad(); ih++){
-//     ptr_test = fopen((strM+std::to_string(ih)).c_str(),"w");
-//     vectorAuxDD.applyHpropColoring4D(vectorAuxD,hprop,ih,(std::vector<int>) {0});
-//     vectorAuxDD.unload();
-//     for (int i = 0; i < vectorAuxDD.Total_length(); ++i) {
-//       fprintf(ptr_test,"%d %d\n",(int) vectorAuxDD.H_elem()[i*2],(int) vectorAuxDD.H_elem()[i*2+1] );
-//     }
-//     fclose(ptr_test);
-//   }
-//   exit(-1);
-// #endif // 

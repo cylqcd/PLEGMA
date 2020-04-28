@@ -112,7 +112,7 @@ int main(int argc, char **argv){
   if(HGC_verbosity > 1) PLEGMA_printf("Will work on %d confs",listGaugeConfs.size());
   for(int iconf=0; iconf < listGaugeConfs.size(); iconf++){
     double t1=MPI_Wtime();
-    std::string confStr=basename(listGaugeConfs[iconf],'.');
+    std::string confStr=splitStrFwd(listGaugeConfs[iconf],'.');
     gauge1.readFile(listGaugeConfs[iconf], LIME_FORMAT);
     PLEGMA_printf("Unsmeared Plaquette is: ");
     gauge1.calculatePlaq();

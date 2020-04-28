@@ -5,7 +5,7 @@
 namespace plegma {
   template<class returnT, class ...argsT>
   class IO {
-    FILE_FORMAT deduce_type(std::string filename) {
+    FILE_FORMAT deduce_type(std::string filename) const{
       std::vector<std::string> hdf5{".h5", ".hdf5"};
       for( auto ext: hdf5 ) {
 	size_t pos = filename.rfind(ext);
