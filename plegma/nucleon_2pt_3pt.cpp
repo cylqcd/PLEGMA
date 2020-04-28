@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
 
       char * src_string;
       asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", source[0], source[1], source[2], source[3]);
-      twop_filename = given_twop_filename + src_string;
+      twop_filename = given_twop_filename + src_string + ".h5";
       threep_filename = given_threep_filename + src_string;
       free(src_string);
       
@@ -133,8 +133,13 @@ int main(int argc, char **argv) {
 	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
 	PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
 
-	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
-	TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
+	bool computed_light = false;
+	// If twop_filename exists we hold the computation of the light props
+	if(access( twop_filename.c_str(), F_OK ) == -1) {
+	  TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
+	  TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
+	  computed_light = true;
+	}
 	
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 	for(size_t its = 0; its < tSinks.size(); its++){
@@ -156,7 +161,18 @@ int main(int argc, char **argv) {
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
 	  for(size_t iproj = 0; iproj < Projs.size(); iproj++){
 	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
-	      std::string filename = threep_filename + "_" + Projs[iproj] + "_dt" + std::to_string(tsinkMtsource) + "_" + fl;
+	      std::string filename = threep_filename + "_" + Projs[iproj] + "_dt" + std::to_string(tsinkMtsource) + "_" + fl + ".h5";
+	      if(access( filename.c_str(), F_OK ) != -1) {
+		PLEGMA_printf("File %s already exists. Skipping...", filename.c_str());
+		return;
+	      }
+	      if(not computed_light) {
+		TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
+		TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
+		propUP3D.absorb(propUP, global_fixSinkTime);
+		propDN3D.absorb(propDN, global_fixSinkTime);
+		computed_light = true;
+	      }
 	      PLEGMA_Propagator<float> seqProp;
 	      // ensuring mu positive
 	      if(mu != run_mu) {
@@ -222,21 +238,38 @@ int main(int argc, char **argv) {
 	}
 #endif
       }
+      // If twop_filename exists we skip the rest
+      if(access( twop_filename.c_str(), F_OK ) != -1) {
+	PLEGMA_printf("File %s already exists. Skipping...", twop_filename.c_str());
+	continue;
+      }
+      
       propUP.rotateToPhysicalBase_device(+1);
       propDN.rotateToPhysicalBase_device(-1);
       propUP.applyBoundaries_device(source[3]);
       propDN.applyBoundaries_device(source[3]);
-
+      
       {
 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-	TIME(corr.contractMesons(propUP, propDN));
-	
-	char *dset1, *dset2;
-	asprintf(&dset1, "twop_mesons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
-	asprintf(&dset2, "twop_mesons_d[%+1.1e]u[%+1.1e]", -1*mu_ud, mu_ud);
-	corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-	free(dset1); free(dset2);
+	TIME(corr.contractMesonsNew(propUP, propDN));
+	char *dset;
+	asprintf(&dset, "twop_mesons_new_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
+	corr.setDatasets((std::vector<std::string>) {dset});
+	free(dset);
 	THREAD(corr.writeFile(twop_filename, corr_file_format));
+
+	TIME(corr.contractMesonsNew(propUP, propUP));
+	asprintf(&dset, "twop_mesons_new_u[%+1.1e]u[%+1.1e]", mu_ud, mu_ud);
+	corr.setDatasets((std::vector<std::string>) {dset});
+	free(dset);
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
+
+	TIME(corr.contractMesonsNew(propDN, propDN));
+	asprintf(&dset, "twop_mesons_new_d[%+1.1e]d[%+1.1e]", -mu_ud, -mu_ud);
+	corr.setDatasets((std::vector<std::string>) {dset});
+	free(dset);
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
+
 	
 	TIME(corr.contractBaryons(propUP, propDN));
 	THREAD(corr.writeFile(twop_filename, corr_file_format));
@@ -280,43 +313,50 @@ int main(int argc, char **argv) {
 	      free(group);
 	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
-	      TIME(corr.contractMesons(propST, propCH));
-	      char *dset1, *dset2;
-	      asprintf(&dset1, "twop_mesons_s[%+1.1e]c[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
-	      asprintf(&dset2, "twop_mesons_c[%+1.1e]s[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
-	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-	      free(dset1); free(dset2);
+	      TIME(corr.contractMesonsNew(propST, propCH));
+	      char *dset;
+	      asprintf(&dset, "twop_mesons_new_s[%+1.1e]c[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
+	      corr.setDatasets((std::vector<std::string>) {dset});
+	      free(dset);
+	      THREAD(corr.writeFile(twop_filename, corr_file_format));
+
+	      TIME(corr.contractMesonsNew(propST, propST));
+	      asprintf(&dset, "twop_mesons_new_s[%+1.1e]s[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
+	      corr.setDatasets((std::vector<std::string>) {dset});
+	      free(dset);
+	      THREAD(corr.writeFile(twop_filename, corr_file_format));
+
+	      TIME(corr.contractMesonsNew(propCH, propCH));
+	      asprintf(&dset, "twop_mesons_new_c[%+1.1e]c[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
+	      corr.setDatasets((std::vector<std::string>) {dset});
+	      free(dset);
 	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 
 	      if(!only_ch) {
-		TIME(corr.contractMesons(propUP, propST));
-		asprintf(&dset1, "twop_mesons_u[%+1.1e]s[%+1.1e]", mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
-		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
-		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-		free(dset1); free(dset2);
+		TIME(corr.contractMesonsNew(propST, propUP));
+		asprintf(&dset, "twop_mesons_new_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
+		corr.setDatasets((std::vector<std::string>) {dset});
+		free(dset);
 		THREAD(corr.writeFile(twop_filename, corr_file_format));
-	      
-		TIME(corr.contractMesons(propDN, propST));
-		asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge]);
-		asprintf(&dset2, "twop_mesons_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -1*mu_ud);
-		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-		free(dset1); free(dset2);
+
+		TIME(corr.contractMesonsNew(propST, propDN));
+		asprintf(&dset, "twop_mesons_new_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -mu_ud);
+		corr.setDatasets((std::vector<std::string>) {dset});
+		free(dset);
 		THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      }
 
 	      if(!only_st) {
-		TIME(corr.contractMesons(propUP, propCH));
-		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
-		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
-		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-		free(dset1); free(dset2);
+		TIME(corr.contractMesonsNew(propCH, propUP));
+		asprintf(&dset, "twop_mesons_new_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
+		corr.setDatasets((std::vector<std::string>) {dset});
+		free(dset);
 		THREAD(corr.writeFile(twop_filename, corr_file_format));
-	      
-		TIME(corr.contractMesons(propDN, propCH));
-		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[cSmaller=='c'? ismall:ilarge]);
-		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -1*mu_ud);
-		corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-		free(dset1); free(dset2);
+
+		TIME(corr.contractMesonsNew(propCH, propDN));
+		asprintf(&dset, "twop_mesons_new_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -mu_ud);
+		corr.setDatasets((std::vector<std::string>) {dset});
+		free(dset);
 		THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      }
 	    }
@@ -341,30 +381,25 @@ int main(int argc, char **argv) {
 	    THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
 	    if(!only_ch && !only_st) {
-	      char *dset1, *dset2;
-	      TIME(corr.contractMesons(propUP, (cSmaller=='s') ? propCH : propST));
+	      TIME(corr.contractMesonsNew((cSmaller=='s') ? propCH : propST, propUP));
+	      char *dset;
 	      if(cSmaller=='s') {
-		asprintf(&dset1, "twop_mesons_u[%+1.1e]c[%+1.1e]", mu_ud, mu_c[ilarge]);
-		asprintf(&dset2, "twop_mesons_c[%+1.1e]u[%+1.1e]", mu_c[ilarge], mu_ud);
+		asprintf(&dset, "twop_mesons_new_c[%+1.1e]u[%+1.1e]", mu_c[ilarge], mu_ud);
 	      } else {
-		asprintf(&dset1, "twop_mesons_u[%+1.1e]s[%+1.1e]", mu_ud, mu_s[ilarge]);
-		asprintf(&dset2, "twop_mesons_s[%+1.1e]u[%+1.1e]", mu_s[ilarge], mu_ud);
+		asprintf(&dset, "twop_mesons_new_s[%+1.1e]u[%+1.1e]", mu_s[ilarge], mu_ud);
 	      }
-
-	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-	      free(dset1); free(dset2);
+	      corr.setDatasets((std::vector<std::string>) {dset});
+	      free(dset);
 	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 	      
-	      TIME(corr.contractMesons(propDN, (cSmaller=='s') ? propCH : propST));
+	      TIME(corr.contractMesonsNew((cSmaller=='s') ? propCH : propST, propDN));
 	      if(cSmaller=='s') {
-		asprintf(&dset1, "twop_mesons_d[%+1.1e]c[%+1.1e]", -1*mu_ud, mu_c[ilarge]);
-		asprintf(&dset2, "twop_mesons_c[%+1.1e]d[%+1.1e]", mu_c[ilarge], -1*mu_ud);
+		asprintf(&dset, "twop_mesons_new_c[%+1.1e]d[%+1.1e]", mu_c[ilarge], -mu_ud);
 	      } else {
-		asprintf(&dset1, "twop_mesons_d[%+1.1e]s[%+1.1e]", -1*mu_ud, mu_s[ilarge]);
-		asprintf(&dset2, "twop_mesons_s[%+1.1e]d[%+1.1e]", mu_s[ilarge], -1*mu_ud);
+		asprintf(&dset, "twop_mesons_new_s[%+1.1e]d[%+1.1e]", mu_s[ilarge], -mu_ud);		
 	      }
-	      corr.setDatasets((std::vector<std::string>) {dset1, dset2});
-	      free(dset1); free(dset2);
+	      corr.setDatasets((std::vector<std::string>) {dset});
+	      free(dset);
 	      THREAD(corr.writeFile(twop_filename, corr_file_format));
 	    }
 	  }
