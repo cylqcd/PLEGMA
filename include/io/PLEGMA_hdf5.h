@@ -599,17 +599,11 @@ public:
 					path.c_str());
 
     cd(path);
-    //PLEGMA_printf("DEBUG: cd to %s ok\n", path.c_str());
-    //MPI_Barrier(comm);
 
     _write_attribute(object, attr_name, attr_value);
-    //PLEGMA_printf("DEBUG: _write_attribute ok\n");
-    //MPI_Barrier(comm);
 
     if(HGC_verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
     cd("-");
-    //PLEGMA_printf("DEBUG: cd - ok\n");
-    //MPI_Barrier(comm);
  
   }
 
@@ -623,8 +617,6 @@ public:
   template<typename T>
   void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
 			    std::vector<hsize_t> start={}, std::string path=".") {
-    //PLEGMA_printf("DEBUG: ###write_dataset:\n");
-    //MPI_Barrier(comm);
     
     // checking for / in name
     size_t check = name.rfind("/");
@@ -644,8 +636,6 @@ public:
       PLEGMA_error("start cannot be empty in parallel writing\n");
     if( !start.empty() && start.size() != shape.size())
       PLEGMA_error("start has wrong size\n");
-    //PLEGMA_printf("DEBUG: Sanity check ok\n");
-    //MPI_Barrier(comm);
 
     
     if(exists(name)) {
@@ -655,12 +645,8 @@ public:
       int comm_size;
       MPI_Comm_size(comm, &comm_size);
       if(lshape.empty() || comm_size == 1){
-	//PLEGMA_printf("DEBUG: fork to write dataset single\n");
-	//MPI_Barrier(comm);
 	_write_dataset_single(name,buf,shape,start);}
       else{
-	//PLEGMA_printf("DEBUG: fork to write dataset parallel\n");
-	//MPI_Barrier(comm);
 	_write_dataset_parallel(name,buf,shape,lshape,start);
       }
       if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),

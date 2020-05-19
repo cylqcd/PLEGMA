@@ -413,8 +413,6 @@ writeHDF5(std::string filename) const {
   
   for(size_t g=0; g<nGroups(); g++){
     writer.cd(top + (groups.size()>0 ? groups[g] : "/"));
-    //PLEGMA_printf("DEBUG: - Change directory for group: %d\n",g);
-    //MPI_Barrier(*comm);
     if(corr_space == MOMENTUM_SPACE) {
       writer.write_dataset("mvec", mvec, momShape);
     }
@@ -422,11 +420,7 @@ writeHDF5(std::string filename) const {
       Float *writeBuf = H_elem() + (g*nDatasets()+d)*writeSize + corrShift;
       std::string dataset = datasets.size() > 0 ? datasets[d] : "arr";
       writer.write_dataset(dataset, writeBuf, shape, lshape, start);
-      //PLEGMA_printf("DEBUG: -- dataset %d written\n",d);
-      //MPI_Barrier(*comm);
       writer.write_attribute(dataset, "description", descr);
-      //PLEGMA_printf("DEBUG: -- attribute to dataset %d written\n",g);
-      //MPI_Barrier(*comm);
     }
   }
 }

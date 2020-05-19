@@ -6,6 +6,9 @@
 #include <PLEGMA_gaussian_smearing.cuh> 
 #include <PLEGMA_seqSourceNucleon.cuh> 
 #include <PLEGMA_covD.cuh>
+#ifdef PLEGMA_SCATTERING_CONTRACTIONS
+#include <PLEGMA_gammas_scatt.cuh>
+#endif
 using namespace plegma;
 using namespace quda;
 //---------------------------//
@@ -103,12 +106,12 @@ template<typename Float>
 void  PLEGMA_Vector<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
   apply_gamma_vector(LR,toField2<vector2>(*this),gMat);
 }
-
+#ifdef PLEGMA_SCATTERING_CONTRACTIONS
 template<typename Float>
 void  PLEGMA_Vector<Float>::apply_gamma_scatt(GAMMAS_SCATT gMat,LEFTRIGHT LR){
   apply_gamma_scatt_vector(LR,toField2<vector2>(*this),gMat);
 }
-
+#endif
 template<typename Float>
 void PLEGMA_Vector<Float>::rotate_uk_ch(){
   rotate_uk_ch_k(toField2<vector2>(*this));

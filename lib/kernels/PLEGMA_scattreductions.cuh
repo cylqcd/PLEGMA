@@ -231,9 +231,9 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
   cudaMemcpy(listGammas_i.array, gammas_i.data(), gammas_i.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
   cudaMemcpy(listGammas_f.array, gammas_f.data(), gammas_f.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
   checkCudaError();
-  PLEGMA_printf("site_size= %d\n", listGammas_f.size*listGammas_i.size*N_SPINS*N_SPINS);
-  PLEGMA_printf("OK till now\n");
-
+  if(HGC_verbosity > 2){
+    PLEGMA_printf("site_size= %d\n", listGammas_f.size*listGammas_i.size*N_SPINS*N_SPINS);
+  }
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
     ps.tp.grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);

@@ -358,12 +358,9 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   
   int Nmoms_f1 = srcV2.Nmoms();
   int Nmoms_f2 = srcV3.Nmoms();
-
-  //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
     
   auto imap = this->pList().index_map();
 
-  //PLEGMA_printf("DEBUG: V3V2reduction_matrix - prel done\n");
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -401,7 +398,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		}//coloridx
 	      }//beta
 	    }//alfa
-		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction_matrix V_M_V done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
 	    if(factor!=NULL){
               Float aux;
 	      for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
@@ -419,7 +415,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		//multiplication with external gammas NB: written here!!
 		M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g0,g2,g3),
 				egammaf, egammai, temp );
-		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction_matrix M_pe_GNG done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
 		
 	      }//Gextf
 	    }//Gexti
@@ -445,34 +440,31 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->GList.clear();
   this->GList.push_back( apply_gamma5_scatt_gamma(G_i2,RIGHT) );
   this->GList.push_back( apply_gamma5_scatt_gamma(G_f2,LEFT) );
-  
+
   //Description
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {G_i2, G_f2};
   std::string tmp="";
-  tmp+="{";
-  for( int i=0; i<G_i2.size();++i ){
-    if (i==(G_i2.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_i2[i]];
+  for (auto gv : tmpvector){
+    tmp+="{";
+    for( int i=0; i<gv.size();++i ){
+      if (i==(gv.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[gv[i]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+      }
+    }
+    if (gv==tmpvector[tmpvector.size()-1]){
+      tmp+="}";
     }
     else{
-     tmp+= GAMMAS_SCATT_STR[G_i2[i]]+",";
+      tmp+="},";
     }
   }
-  tmp+="},{";
-  for( int i=0; i<G_f2.size();++i ){
-    if (i==(G_f2.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_f2[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_f2[i]]+",";
-    }
-  }
-  tmp+="}";
+  tmp+="/S1/S2/";
 
-  // for( auto &gi2: G_i2 )
-  //   for( auto &gf2: G_f2 )
-  //     tmp += GAMMAS_SCATT_STR[gi2]+"_"+GAMMAS_SCATT_STR[gf2]+", ";
-  this->description=tmp;
-
+  this->description = tmp;
+  
   //Groups
   this->groups = {""};
   
@@ -484,13 +476,6 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   //initialize
   this->initialize();
-
-  //if( this->getVolSize() != this->localT() )
-  //  PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
-  // int tot_size = this->N_p * this->localT() * this->GList[0].size() * this->GList[1].size();
-  // if( this->getSiteSize() != tot_size/(this->Nmoms()*this->localT()) )
-  //    PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=1),(Gi2=%d),(Gf2=%d)%d\n", this->getVolSize()*this->getSiteSize(),
-  //  		 this->GList[0].size(), this->GList[1].size(), tot_size);
 
   //Offsets
   this->labels="tmgg";
@@ -512,54 +497,29 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->GList.push_back( G_f1 );
 
   //Description
-  std::string tmp="{";
-  for( int i=0; i<eG_i.size();++i ){
-    if (i==(eG_i.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[eG_i[i]];
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_f1};
+  std::string tmp="";
+  for (auto gv : tmpvector){
+    tmp+="{";
+    for( int i=0; i<gv.size();++i ){
+      if (i==(gv.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[gv[i]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+      }
+    }
+    if (gv==tmpvector[tmpvector.size()-1]){
+      tmp+="}";
     }
     else{
-     tmp+= GAMMAS_SCATT_STR[eG_i[i]]+",";
+      tmp+="},";
     }
   }
-  tmp+="},{";
-  for( int i=0; i<eG_f.size();++i ){
-    if (i==(eG_f.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[eG_f[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[eG_f[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_i1.size();++i ){
-    if (i==(G_i1.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_i1[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_i1[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_f1.size();++i ){
-    if (i==(G_f1.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_f1[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_f1[i]]+",";
-    }
-  }
-  tmp+="}/S1/S2/";
+  tmp+="/S1/S2/";
 
+  this->description = tmp;
 
-  //std::string tmp1="";
-  //for( auto egi: eG_i )
-  //  for( auto egf: eG_f )
-  //     for( auto gi1: G_i1 )
-  // 	for( auto gf1: G_f1 )
-  //  	  tmp1+= GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gf1]+"-"+GAMMAS_SCATT_STR[egf]+", ";
-  //PLEGMA_printf("Description %s\n", tmp1.c_str());
-  this->description=tmp;
-    
   //momList
 
   //Groups
@@ -578,19 +538,10 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //initialize
   this->initialize();
   
-  //if( this->getVolSize() != this->localT() )
-  //  PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
-
   //Offsets
   this->labels="tmggggss";
   this->setOffsets();
              
-  // int tot_size = this->N_p * this->localT() * this->GList[0].size() * this->GList[1].size() * this->GList[2].size() * this->GList[3].size() *N_SPINS*N_SPINS;
-  // if( this->getSiteSize() != tot_size/(this->N_p * this->localT() ) ){
-  //   PLEGMA_printf("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(extGi1=%d),(extGf1=%d),(Gi1=%d),(Gf1=%d),%d\n", this->getVolSize()*this->getSiteSize(),
-  // 		 this->N_p, this->GList[0].size(), this->GList[1].size(), this->GList[2].size(), this->GList[3].size(), tot_size);
-  //   PLEGMA_error("%d %d\n",  this->getSiteSize(), this->getVolSize());
-  // }
 
   this->clear_output(true);
 }
@@ -614,61 +565,27 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->GList.push_back( G_f );//or Gf2
 
   //Description
-  std::string tmp="{";
-  for( int i=0; i<eG_i.size();++i ){
-    if (i==(eG_i.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[eG_i[i]];
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_i2, G_f};
+  std::string tmp="";
+  for (auto gv : tmpvector){
+    tmp+="{";
+    for( int i=0; i<gv.size();++i ){
+      if (i==(gv.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[gv[i]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+      }
+    }
+    if (gv==tmpvector[tmpvector.size()-1]){
+      tmp+="}";
     }
     else{
-     tmp+= GAMMAS_SCATT_STR[eG_i[i]]+",";
+      tmp+="},";
     }
   }
-  tmp+="},{";
-  for( int i=0; i<eG_f.size();++i ){
-    if (i==(eG_f.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[eG_f[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[eG_f[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_i1.size();++i ){
-    if (i==(G_i1.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_i1[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_i1[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_i2.size();++i ){
-    if (i==(G_i2.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_i2[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_i2[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_f.size();++i ){
-    if (i==(G_f.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_f[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_f[i]]+",";
-    }
-  }
-  tmp+="}/S1/S2/";
+  tmp+="/S1/S2/";
 
-
-
-  // for( auto &egi: eG_i )
-  //   for( auto &egf: eG_f )
-  //     for( auto &gi1: G_i1 )
-  // 	for( auto &gi2: G_i2 )
-  // 	  for( auto &gf: G_f )
-  // 	   tmp += GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gi2]+"_"+GAMMAS_SCATT_STR[gf]+"-"+GAMMAS_SCATT_STR[egf]+", ";
   this->description=tmp;
   
   //momList
@@ -678,7 +595,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   if(name_of_diagram=="T1")
     this->groups = {"",};
   else
-    this->groups ={ this->pList().print({0},{"pi2="})[0], };
+    this->groups ={ this->pList().to_string({0},{"pi2="})[0], };
   
   //Dataset
   this->datasets = {name_of_diagram,};
@@ -693,18 +610,6 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //initialize
   this->initialize();
  
- //  int exp_site_size = this->N_p * this->GList[0].size() * this->GList[1].size() * this->GList[2].size() * this->GList[3].size() * this->GList[4].size() * N_SPINS * N_SPINS;
- //  int exp_site_size1 = this->nGroups();
- //  for( auto &s: this->shape )
- //    exp_site_size1 *= s;
-  
- // // if( this->getVolSize() != this->localT() )
- // //   PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
-
- //  if( this->getSiteSize() != exp_site_size || exp_site_size!=exp_site_size1 )
- //     PLEGMA_error("I did some mistakes. getSiteSize()=%d; exp_site_size= (mom=%d,ngroups=%d),(extGi1=%d),(extGf1=%d),(Gi1=%d),(Gi2=%d),(Gf1=%d) %d, exp_site_size1=%d\n", this->getSiteSize(), this->N_p,
- // 		  this->nGroups(), this->GList[0].size(), this->GList[1].size(), this->GList[2].size(), this->GList[3].size(), this->GList[4].size(), exp_site_size,  exp_site_size1);
-
   //Offsets
   this->labels=(name_of_diagram=="T1") ? "tmggggggss" : "tmgggggss";
   this->setOffsets();
@@ -735,74 +640,33 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_f2,LEFT) : G_f2;
   this->GList.push_back( tmpG );
 
-  //Description
-  std::string tmp="{";
-  for( int i=0; i<eG_i.size();++i ){
-    if (i==(eG_i.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[eG_i[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[eG_i[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<eG_f.size();++i ){
-    if (i==(eG_f.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[eG_f[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[eG_f[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_i1.size();++i ){
-    if (i==(G_i1.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_i1[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_i1[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_i2.size();++i ){
-    if (i==(G_i2.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_i2[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_i2[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_f1.size();++i ){
-    if (i==(G_f1.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_f1[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_f1[i]]+",";
-    }
-  }
-  tmp+="},{";
-  for( int i=0; i<G_f2.size();++i ){
-    if (i==(G_f2.size()-1)){
-     tmp+=GAMMAS_SCATT_STR[G_f2[i]];
-    }
-    else{
-     tmp+= GAMMAS_SCATT_STR[G_f2[i]]+",";
-    }
-  }
-  tmp+="}/S1/S2/";
 
-  // for( auto &egi: eG_i )
-  //   for( auto &egf: eG_f )
-  //     for( auto &gi1: G_i1 )
-  // 	for( auto &gi2: G_i2 )
-  // 	  for( auto &gf1: G_f1 )
-  // 	    for( auto &gf2: G_f2 )
-  // 	      tmp += GAMMAS_SCATT_STR[gi1]+"-"+GAMMAS_SCATT_STR[egi]+"_"+GAMMAS_SCATT_STR[gi2]+"_"+GAMMAS_SCATT_STR[gf1]+"-"+GAMMAS_SCATT_STR[egf] + "_" + GAMMAS_SCATT_STR[gf2] + ", ";
+  //Description
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_i2, G_f1, G_f2};
+  std::string tmp="";
+  for (auto gv : tmpvector){
+    tmp+="{";
+    for( int i=0; i<gv.size();++i ){
+      if (i==(gv.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[gv[i]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+      }
+    }
+    if (gv==tmpvector[tmpvector.size()-1]){
+      tmp+="}";
+    }
+    else{
+      tmp+="},";
+    }
+  }
+  tmp+="/S1/S2/";
+
   this->description = tmp;
   
   //Groups
-  this->groups = {this->pList().print({0},{"pi2="})[0],};
+  this->groups = {this->pList().to_string({0},{"pi2="})[0],};
 
   //Dataset
   this->datasets = {name_of_diagram};
@@ -819,14 +683,6 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //initialize
   this->initialize();
   
-  //if( this->getVolSize() != this->localT() )
-  //  PLEGMA_error("PLEGMA_SC for writing must have N_moms=1\n");
-
-  // if( this->getSiteSize() != moms.size()*Gammas_ext_i.size()*Gammas_ext_f.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*N_SPINS*N_SPINS )
-  //   PLEGMA_error("I did some mistakes. getVolSize()*getSiteSize()=%d; expected= (mom=%d),(Gi1=%d),(Gf2=%d),(Gf1=%d)%d\n",
-  // 		 this->getVolSize()*this->getSiteSize(),moms.size(),Gammas_i1.size(),srcV2.GList.size(),srcV3.GList.size(),
-  // 		 moms.size()*Gammas_i1.size()*srcV2.GList.size()*srcV3.GList.size()*this->localT()*N_SPINS*N_SPINS);
-
   //Offsets
   this->labels="tmggggggss";
   this->setOffsets();
@@ -1024,6 +880,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
   int TIME = this->localT();
   
   //for each momentum in moms_red
+  #pragma omp parallel for
   for( int i_mom=0; i_mom < this->pList().size(); ++i_mom){
     int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN)
     int i_pf2 = map[i_mom][2]; //position of pf2 in pionpion
@@ -1098,12 +955,13 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
   int n_gammas_f1 = this->GList[3].size();
   int TIME = this->localT();  
 
-  Float temp[N_SPINS*N_SPINS*2];
   
   //put output to zero
   this->clear_output(!accum);
   for( int t=0; t<TIME; ++t){
+    #pragma omp parallel for
     for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
+      Float temp[N_SPINS*N_SPINS*2];
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
@@ -1159,12 +1017,12 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   int TIME = this->localT();
   PLEGMA_printf("DEBUG: T_diagram n_gammas: %d,%d,%d,%d,%d. ig2=%d \n",n_extgammas_i,n_extgammas_f,n_gammas_i1,n_gammas_i2,n_gammas_f, ig_i2);
 	      
-  Float temp[N_SPINS*N_SPINS*2];
-
   this->clear_output(!accum, 5, ig_i2); 
 
   for(int t=0; t<TIME; ++t){
+    #pragma omp parallel for
     for(int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
+      Float temp[N_SPINS*N_SPINS*2];
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin){
@@ -1187,20 +1045,16 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
- //checks between T1 T2
-  //PLEGMA_printf("DEBUG: Enter D_diagrams\n");
+  //checks between T1 T2
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
-  //PLEGMA_printf("DEBUG: checks on Tshapes done\n");
   
   if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList().pi(0) )
     PLEGMA_error("T1,T2 have not the the same mom list of D\n");
-  //PLEGMA_printf("DEBUG: checks on T momList done\n");
  
   for(int i=0; i<2; ++i)
     if((T1.GList[i]!=T2.GList[i])||(T1.GList[i]!=this->GList[i+2]))
       PLEGMA_error("T1,T2 wrong gamma list\n");
-  //PLEGMA_printf("DEBUG: checks on GLists done\n");
 
   
   //extract array mom
@@ -1212,16 +1066,14 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   int n_gammas_i = this->GList[2].size();
   int n_gammas_f = this->GList[3].size();
   int TIME = this->localT();  
-
-  Float temp[N_SPINS*N_SPINS*2];
-  PLEGMA_printf("DEBUG: Preparation done\n");
-  
+ 
   //put output to zero
   this->clear_output(!accum); 
-  //PLEGMA_printf("DEBUG: clear output done\n");
 
   for( int t=0; t<TIME; ++t){
-    for( int i_mom=0; i_mom<Nmoms(); ++i_mom){
+    #pragma omp parallel for
+    for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
+      Float temp[N_SPINS*N_SPINS*2];
       for( int gi=0; gi<n_gammas_i; ++gi ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
@@ -1241,7 +1093,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 }
 
 
-//#####################
+//####################(
 //#  Other functions  #
 //#####################
 
@@ -1288,6 +1140,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase(){
 
   std::vector<std::vector<int>> mom_list=this->pList().pi1(); 
 
+  #pragma omp parallel for
   for( int i_m=0; i_m<N_moms; ++i_m){
       Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_list[i_m][0]*this->source[0]+
 	2*M_PI/(Float)HGC_totalL[1]* mom_list[i_m][1]*this->source[1]+
