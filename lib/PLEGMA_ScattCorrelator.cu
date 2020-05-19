@@ -697,15 +697,74 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum) {
 
-  if((diagram_index!=1)&&(diagram_index!=2)) PLEGMA_error("diagram_index for B 1 or 2, detected: %d\n", diagram_index);
   if(ig_i2 >= this->GList[3].size()) PLEGMA_error("ig_i2 = %d but Gi2 list size is %d\n", ig_i2, this->GList[3].size() );
 
   this->clear_output(!accum, 5, ig_i2); 
   
-  int aux_idx = (diagram_index==1) ? 2 : 0;
-
-  this->V3V2reduction( srcV3, srcV2, aux_idx, (diagram_index==1), ig_i2);
-
+  switch( diagram_index ){
+    case 1:
+      this->V3V2reduction(        srcV3, srcV2, 2, 1, ig_i2);
+      break;
+    case 2:
+      this->V3V2reduction(        srcV3, srcV2, 0, 0, ig_i2);
+      break;
+    case 3:
+      this->V3V2reduction(        srcV3, srcV2, 0, 0, ig_i2, true);
+      break;
+    case 4:
+      this->V3V2reduction(        srcV3, srcV2, 1, 0, ig_i2, true);
+      break;
+    case 5:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, 1, ig_i2);
+      break;
+    case 6:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, 1, ig_i2);
+      break;
+    case 7:
+      this->V3V2reduction(        srcV3, srcV2, 2, 1, ig_i2);
+      break;
+    case 8:
+      this->V3V2reduction(        srcV3, srcV2, 0, 0, ig_i2);
+      break;
+    case 9:
+      this->V3V2reduction(        srcV3, srcV2, 2, 1, ig_i2);
+      break;
+    case 10:
+      this->V3V2reduction(        srcV3, srcV2, 2, 0, ig_i2, true);
+      break;
+    case 11:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, 1, ig_i2, true);
+      break;
+    case 12:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, 1, ig_i2, true);
+      break;
+    case 13:
+      this->V3V2reduction( srcV3, srcV2, 1, 0, ig_i2, true);
+      break;
+    case 14:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, 1, ig_i2);
+      break;
+    case 15:
+      this->V3V2reduction(        srcV3, srcV2, 0, 0, ig_i2, true);
+      break;
+    case 16:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, 1, ig_i2);
+      break;
+    case 17:
+      this->V3V2reduction(        srcV3, srcV2, 2, 0, ig_i2, true);
+      break;
+    case 18:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, 1, ig_i2, true);
+      break;
+    case 19:
+      this->V3V2reduction(        srcV3, srcV2, 2, 1, ig_i2, true);
+      break;
+    case 20:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, 1, ig_i2, true);
+      break;
+    default:
+      PLEGMA_error("This value of B diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+  }
 }
 
 
