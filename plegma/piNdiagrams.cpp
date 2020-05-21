@@ -466,8 +466,6 @@ int main(int argc, char **argv)
         TIME(corrN.writeHDF5(outfilename));
 
       }
-
-
       //P diagram
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
       momList list_mpi2(1,{mpi2,},{0,});
@@ -479,6 +477,38 @@ int main(int argc, char **argv)
         mu*=-1.;
         solver.UpdateSolver();
       }
+
+
+      //We can compute V2 contractions for B and V3 contraction for W first
+      //without having to compute it for all the iterations in the loop
+      //over the sequential momentum
+      //Provided we have the same pf1,pf2 pairs for all pi2 sequential momentum
+      momList filtered_sourcemomentumList = sourcemomentumList.extract(mpi2[0], 0);
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_withoutsequential;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_withoutsequential;
+
+      for(int i=0; i< n_stochastic_samples; ++i) {
+        reductionsV2_withoutsequential.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)));
+        reductionsV3_withoutsequential.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)));
+      }
+
+      for (int i=0; i<n_stochastic_samples; ++i){
+
+        PLEGMA_Vector<float> stochastic_propagator;
+        PLEGMA_Vector<float> stochastic_source;
+            
+        stochastic_propagator.copy(*stochastic_propags[i],HOST);
+        stochastic_source.copy(*stochastic_sources[i],HOST);
+            
+        stochastic_propagator.load();
+        stochastic_source.load();
+
+
+        TIME(reductionsV2_withoutsequential[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
+        TIME(reductionsV3_withoutsequential[i]->V3( stochastic_propagator, glist_sink_meson,   propUP));
+
+      }
+
 
       //We draw a different random vector for every source position
       vectorStoc_source_oet.stochastic_Z(nroots);
@@ -535,7 +565,7 @@ int main(int argc, char **argv)
 
 	auto &momentum_i2 =  mpi2[i_mpi2];
 	//List of momenta corresponding to a fix value of p_i2
-        momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+        //filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 
 
         std::string pi2x=std::to_string(momentum_i2[0]);
@@ -699,31 +729,31 @@ int main(int argc, char **argv)
             TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUPDN));
             //reductionsV3.writeHDF5("V3sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
+            //TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
             //reductionsV2.writeHDF5("V2sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
 
-	    TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1, true));
+	    TIME(corrB1.B_diagramms(reductionsV3, *reductionsV2_withoutsequential[i], i_gamma_i2, 1, true));
 	  
-	    TIME(corrB2.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 2, true));
+	    TIME(corrB2.B_diagramms(reductionsV3, *reductionsV2_withoutsequential[i], i_gamma_i2, 2, true));
           
             //Compute Diagram W1,W2
           
-            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
+            //TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
             //reductionsV3.writeHDF5("V3sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
             TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
             //reductionsV2.writeHDF5("V2sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-            TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1, true));
-	    TIME(corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2, true));
+            TIME(corrW1.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 1, true));
+	    TIME(corrW2.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 2, true));
           
             //Compute Diagram W3,W4
           
             TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUPDN, propUP));
             //reductionsV2.writeHDF5("V2sourceforW34_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-            TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3, true));
-	    TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4, true));
+            TIME(corrW3.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 3, true));
+	    TIME(corrW4.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 4, true));
 
           } //loop over stochastic samples
 	  
@@ -910,13 +940,19 @@ int main(int argc, char **argv)
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
       TIME(corrP.writeHDF5( outfilename ));
 
+
+      for(int i=0; i< n_stochastic_samples; ++i) {
+        reductionsV2_withoutsequential.pop_back();
+        reductionsV3_withoutsequential.pop_back();
+      }
+
     } //loop over source position
+
 
     for(int i=0; i< n_stochastic_samples; ++i) {
       stochastic_sources.pop_back();
       stochastic_propags.pop_back();
     }
-
 
   } 
   finalize();
