@@ -11,4 +11,6 @@ PLEGMA is a GPU-enabled, memory distributed software package for lattice QCD cal
 ## Usage
 To use PLEGMA in a new project contact [K. Hadjiyiannakou](https://github.com/khadjiyiannakou) or [G. Koutsou](https://github.com/g-koutsou) 
 
-The software is based on [QKXTM](https://github.com/ETMC-QUDA/quda-QKXTM-Multigrid-PlugIn)
+## Links
+- The software is based on [QKXTM](https://github.com/ETMC-QUDA/quda-QKXTM-Multigrid-PlugIn)
+- Uses [QUDA](https://github.com/lattice/quda)
