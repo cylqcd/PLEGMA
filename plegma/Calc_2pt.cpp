@@ -56,7 +56,16 @@ int main(int argc, char **argv)
       PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
     }
-    updateOptions(LIGHT);
+    if(run_ud) {
+      updateOptions(LIGHT);
+      mu = mu_ud;
+    } else if(mu_s.size()>0) {
+      updateOptions(STRANGE);
+      mu = mu_s[0];
+    } else {
+      updateOptions(CHARM);
+      mu = mu_c[0];
+    }
     TIME(QUDA_solver solver(mu));
     std::vector<std::thread> threads;
 
@@ -130,19 +139,19 @@ int main(int argc, char **argv)
       PLEGMA_Propagator<float> propS[nSmaller];
       for(int ismall=0; ismall < nSmaller; ismall++) {
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
-	mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
+	double run_mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
 	
-	TIME(computePropagator(propS[ismall], mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear));
+	TIME(computePropagator(propS[ismall], run_mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear));
       }
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
       if(nLarger > 0) {
 	PLEGMA_Propagator<float> propL;
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
-	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
+	  double run_mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-	  TIME(computePropagator(propL, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear));
+	  TIME(computePropagator(propL, run_mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear));
 	  
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {

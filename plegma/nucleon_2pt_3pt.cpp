@@ -249,18 +249,18 @@ int main(int argc, char **argv) {
       PLEGMA_Propagator<float> propS[nSmaller];
       for(int ismall=0; ismall < nSmaller; ismall++) {
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
-	mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
+	double run_mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
 	int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
-	TIME(computePropagator(propS[ismall], none, mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear, true));
+	TIME(computePropagator(propS[ismall], none, run_mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear, true));
       }
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
       if(nLarger > 0) {
 	PLEGMA_Propagator<float> propL;
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
-	  mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
+	  double run_mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-	  TIME(computePropagator(propL, none, mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear, true));
+	  TIME(computePropagator(propL, none, run_mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear, true));
 
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
