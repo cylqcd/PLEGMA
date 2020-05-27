@@ -1,5 +1,5 @@
 #include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_gammas_scatt.cuh>
+#include <../../include/PLEGMA_gammas.h>
 
 using namespace plegma;
 
