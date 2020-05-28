@@ -484,12 +484,24 @@ int main(int argc, char **argv)
       //over the sequential momentum
       //Provided we have the same pf1,pf2 pairs for all pi2 sequential momentum
       momList filtered_sourcemomentumList = sourcemomentumList.extract(mpi2[0], 0);
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_withoutsequential;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_withoutsequential;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1D_U;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1D_D;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1U_D;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1U_U;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_GAMMAF2U;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_GAMMAF2D;
+      
+      std::vector<int> zero_mom_list={0,0,0,0,0,0,0,0,0};
+      momList piN12_zero(3,{zero_mom_list,},{1,2});
 
       for(int i=0; i< n_stochastic_samples; ++i) {
-        reductionsV2_withoutsequential.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)));
-        reductionsV3_withoutsequential.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)));
+        reductionsV2_GAMMAF1U_U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)));
+        reductionsV2_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductionsV2_GAMMAF1D_U.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductionsV2_GAMMAF1D_D.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductionsV3_GAMMAF2U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)));
+        reductionsV3_GAMMAF2D.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+
       }
 
       for (int i=0; i<n_stochastic_samples; ++i){
@@ -504,8 +516,12 @@ int main(int argc, char **argv)
         stochastic_source.load();
 
 
-        TIME(reductionsV2_withoutsequential[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-        TIME(reductionsV3_withoutsequential[i]->V3( stochastic_propagator, glist_sink_meson,   propUP));
+        TIME(reductionsV2_GAMMAF1U_D[i]->V2( stochastic_source,     glist_sink_nucleon, propDN, propUP));
+        TIME(reductionsV2_GAMMAF1D_U[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propDN));
+        TIME(reductionsV2_GAMMAF1D_D[i]->V2( stochastic_source,     glist_sink_nucleon, propDN, propDN));
+        TIME(reductionsV2_GAMMAF1U_U[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
+        TIME(reductionsV3_GAMMAF2U[i]->V3( stochastic_propagator, glist_sink_meson,   propUP));
+        TIME(reductionsV3_GAMMAF2D[i]->V3( stochastic_propagator, glist_sink_meson,   propDN));
 
       }
 
@@ -558,6 +574,121 @@ int main(int argc, char **argv)
          
          vectortmp1.dilutespindisplace(vectorStoc_source_oet,0,3);
          vectorStoc_source_oet.copy(vectortmp1);
+      }
+      //We first compute sequential propagators UU, DD, DU needed only
+      //for the iso-spin 1/2 case
+      {
+        PLEGMA_ScattCorrelator<float> reductionsV3_GAMMAF2TUU(  source, piN12_zero);
+        PLEGMA_ScattCorrelator<float> reductionsV2_GAMMAF1TUU_U(source, piN12_zero);
+        PLEGMA_ScattCorrelator<float> reductionsV2_GAMMAF1T_TUU(source, piN12_zero);
+        PLEGMA_ScattCorrelator<float> reductionsV2_GAMMAF1TUU_D(source, piN12_zero);
+
+
+
+        PLEGMA_ScattCorrelator<float> corrB3(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrB4(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrB5(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrB6(sourcePositions[isource], piN12_zero);
+
+        PLEGMA_ScattCorrelator<float> corrB17(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrB18(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrB19(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrB20(sourcePositions[isource], piN12_zero);
+
+        PLEGMA_ScattCorrelator<float> corrW13(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW14(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW15(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW16(sourcePositions[isource], piN12_zero);
+
+        PLEGMA_ScattCorrelator<float> corrW29(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW30(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW31(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW32(sourcePositions[isource], piN12_zero);
+
+
+        corrB3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B3");
+        corrB4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B4");
+        corrB5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B5");
+        corrB6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B6");
+
+        corrB17.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B17");
+        corrB18.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B18");
+        corrB19.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B19");
+        corrB20.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B20");
+
+        corrW13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W13");
+        corrW14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W14");
+        corrW15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W15");
+        corrW16.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W16");
+
+        corrW29.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W29");
+        corrW30.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W30");
+        corrW31.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W31");
+        corrW32.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W32");
+
+        PLEGMA_Propagator3D<float> propUP3D;
+        for(int isc = 0 ; isc < 12 ; isc++){
+          PLEGMA_Vector<double> vectorAuxD;
+          PLEGMA_Vector<float> vectorAuxF;
+          PLEGMA_Vector<double> vectorAuxD2;
+          vectorAuxF.absorb(propUP,isc/3, isc%3);
+          vectorAuxD.copy(vectorAuxF);
+
+          //Performing the smearing
+          // Smearing the source
+          {
+            PLEGMA_Vector3D<double> vector1, vector2;
+            vectorAuxF.absorb(propDN, isc/3, isc%3);
+            vectorAuxD.copy(vectorAuxF);
+            vector1.absorb( vectorAuxD, sequential_time_source );
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            vectorAuxD2.absorb(vector2,sourcePositions[isource][DIM_T]);
+          }
+          //Perform multiplication with gamma_i2
+          vectorAuxD2.apply_gamma_scatt(gamma_i2);
+          //Perform rotation to the physical basis
+          TIME(vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1));
+          vectorAuxF.copy(vectorAuxD);
+          propUP3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
+
+          for (int i=0; i<n_stochastic_samples; ++i){
+            PLEGMA_Vector<float> stochastic_propagator;
+            PLEGMA_Vector<float> stochastic_source;
+            stochastic_propagator.copy(*stochastic_propags[i],HOST);
+            stochastic_source.copy(*stochastic_sources[i],HOST);
+            stochastic_propagator.load();
+            stochastic_source.load();
+            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUPUP));
+            TIME(corrB1.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 1, true));
+            TIME(corrB2.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 2, true));
+            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
+            TIME(corrW1.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true));
+            TIME(corrW2.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true));
+                                                                                                                                                                         TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUPDN, propUP));
+            TIME(corrW3.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true));
+            TIME(corrW4.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true));
+          }//loop over stochastic samples
+
+        }
+        //Computing sequential propagators UU T_fii with insertion
+        //gamma_i2 and momentum (0,0,0)
+        for(int isc = 0 ; isc < 12 ; isc++){
+          PLEGMA_Vector<double> vectorInOut;
+          PLEGMA_Vector<float> vectorAuxF;
+          PLEGMA_Vector<double> vectorAuxD;
+                                                                                                                                                                       vectorAuxF.absorb(propDN3D, sequential_time_source, isc/3, isc%3);
+          vectorInOut.copy(vectorAuxF);
+          //PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
+          //performing the inversion
+          TIME(solver.solve(vectorInOut, vectorInOut));
+          //performing rotation to physical base
+          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));
+          //performing smearing
+          TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
+          vectorAuxF.copy(vectorInOut);
+          propUPUP.absorb(vectorAuxF, isc/3, isc%3);
+        }
+
       }
 
       //We first have a loop over all unique the source meson momentum p_i2 
@@ -733,9 +864,9 @@ int main(int argc, char **argv)
             //reductionsV2.writeHDF5("V2sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
 
-	    TIME(corrB1.B_diagramms(reductionsV3, *reductionsV2_withoutsequential[i], i_gamma_i2, 1, true));
+	    TIME(corrB1.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 1, true));
 	  
-	    TIME(corrB2.B_diagramms(reductionsV3, *reductionsV2_withoutsequential[i], i_gamma_i2, 2, true));
+	    TIME(corrB2.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 2, true));
           
             //Compute Diagram W1,W2
           
@@ -744,16 +875,16 @@ int main(int argc, char **argv)
             TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
             //reductionsV2.writeHDF5("V2sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-            TIME(corrW1.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 1, true));
-	    TIME(corrW2.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 2, true));
+            TIME(corrW1.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true));
+	    TIME(corrW2.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true));
           
             //Compute Diagram W3,W4
           
             TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUPDN, propUP));
             //reductionsV2.writeHDF5("V2sourceforW34_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-            TIME(corrW3.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 3, true));
-	    TIME(corrW4.W_diagramms( *reductionsV3_withoutsequential[i], reductionsV2, i_gamma_i2, 4, true));
+            TIME(corrW3.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true));
+	    TIME(corrW4.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true));
 
           } //loop over stochastic samples
 	  
@@ -942,8 +1073,12 @@ int main(int argc, char **argv)
 
 
       for(int i=0; i< n_stochastic_samples; ++i) {
-        reductionsV2_withoutsequential.pop_back();
-        reductionsV3_withoutsequential.pop_back();
+        reductionsV2_GAMMAF1D_D.pop_back();
+        reductionsV2_GAMMAF1D_U.pop_back();
+        reductionsV2_GAMMAF1U_D.pop_back();
+        reductionsV2_GAMMAF1U_U.pop_back();
+        reductionsV3_GAMMAF2U.pop_back();
+        reductionsV3_GAMMAF2D.pop_back();
       }
 
     } //loop over source position
