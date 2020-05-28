@@ -13,7 +13,6 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
   int tid = blockIdx.x/grid3D;
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
-  //int site_size = N_SPINS*N_COLS;
 
   register Float2<FloatOut> accum[N_GAMMAS_SCATT*N_SPINS*N_COLS];
   for(int i = 0 ; i <N_GAMMAS_SCATT*N_SPINS*N_COLS  ; i++){

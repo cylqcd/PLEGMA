@@ -844,7 +844,8 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum){
 
   //extract moms
-  if(!this->pList().check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  assert(this->pList().check_eq(0));
+  
   std::vector<int> mom_pi2 = this->pList().pi(0)[0]; 
   std::vector<std::vector<int>> moms_pf2 = this->pList().uniq_p(2);
   //extract vector p_f1
@@ -1172,11 +1173,6 @@ void PLEGMA_ScattCorrelator<Float>::clear_output(bool tozero){
   int tot_size = 2*this->getTotalSize();
   memset( this->H_elem(), 0, tot_size*sizeof(Float) );
 }
-
-
-//V3_a^l*G_ab*V3_b^l
-//template<typename Float>
-//void PLEGMA_ScattCorrelator<Float>::V3V3reduction( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta){
 
 template class PLEGMA_ScattCorrelator<float>;
 template class PLEGMA_ScattCorrelator<double>;
