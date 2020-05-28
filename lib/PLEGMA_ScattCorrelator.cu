@@ -324,7 +324,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		//multiplication with external gammas NB written here! mod in M_pe_GNG
 		M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g0,g2,g3),
 				egammaf, egammai, temp );
-		//PLEGMA_printf("DEBUG: --- loop (%d,%d,%d,%d,%d,%d,%d) ---  V3V2reduction M_pe_GNG done\n",i_m,t,g_exti,g_extf,g1,g2,g3);
 	      }//Gextf
 	    }//Gexti
 	  }//Gf2	
@@ -996,8 +995,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   if(!T3.check_reduction(T_1)) PLEGMA_error("srcT3 seems not to have T1like shape\n");
   if(!T5.check_reduction(T_2)) PLEGMA_error("srcT5 seems not to have T2like shape\n");
       
-  if(!this->pList().check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
-  //PLEGMA_printf("DEBUG: Tdia checks ok\n");
+  assert(this->pList().check_eq(0));
 
   if( this->pList().pi(1) != T1.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
   if( T1.getMomList() != T3.getMomList() ) PLEGMA_error("T3 has not the the same mom list of T\n");
@@ -1015,7 +1013,6 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   int n_extgammas_f = this->GList[1].size();
   int n_extgammas_i = this->GList[0].size();
   int TIME = this->localT();
-  PLEGMA_printf("DEBUG: T_diagram n_gammas: %d,%d,%d,%d,%d. ig2=%d \n",n_extgammas_i,n_extgammas_f,n_gammas_i1,n_gammas_i2,n_gammas_f, ig_i2);
 	      
   this->clear_output(!accum, 5, ig_i2); 
 
@@ -1100,22 +1097,16 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 //this must be used only if the source is the one used in PLEGMA_ScattCorrelator
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic ) {
-  //PLEGMA_printf("DEBUG: applyBoundaryConditins started\n");
   if(!antiperiodic) return;
 
   std::size_t n_t = this->labels.find("t");
   assert(n_t!=std::string::npos);
-
-  //PLEGMA_printf("DEBUG: t found\n");
-  
+ 
   int TIME = this->localT();
   int in_dofs = std::accumulate(ranges.begin()+n_t+1, ranges.end(), 2, std::multiplies<int>());
   int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
   int maxT = this->endT() - this->startT();
-
-  //PLEGMA_printf("DEBUG: prel. done\n");
-  //PLEGMA_printf("DEBUG: TIME:%d, in_dofs:%d, out_dofs:%d, maxT:%d\n", TIME, in_dofs, out_dofs, maxT);
-  
+ 
   for( int t=0; t<TIME; ++t){
     int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
     int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
@@ -1123,7 +1114,6 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic )
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
 	for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
 	  *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
-	  //PLEGMA_printf("DEBUG: --- loop (%d,%d,%d) --- multiplication done\n",t,o_dofs,i_dofs);
 	}
       }
     }
