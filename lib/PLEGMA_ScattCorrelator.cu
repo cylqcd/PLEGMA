@@ -924,11 +924,11 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
   for (int g2=0; g2<this->GList[3].size(); ++g2 ){
     GAMMAS_SCATT gammai2 = this->GList[3][g2];
     for (int n=0; n<4; ++n){
-      int kappa = gammaInd_scatt_host[gammai2][n][0]; 
-      int lambda =  gammaInd_scatt_host[gammai2][n][1];
+      int kappa = gammaInd_scatt[gammai2][n][0]; 
+      int lambda =  gammaInd_scatt[gammai2][n][1];
       Float g[2];
-      g[1] = gamma_scatt_host[gammai2][n][1];
-      g[0] = gamma_scatt_host[gammai2][n][0];
+      g[1] = gamma_scatt[gammai2][n][1];
+      g[0] = gamma_scatt[gammai2][n][0];
 
       //Z1
       if (diagramm_index==1){
@@ -987,11 +987,11 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
   for(int gi2=0; gi2<n_gammas_i2; ++gi2){
     GAMMAS_SCATT G_i2=this->GList[0][gi2];
     for(int nz_e=0; nz_e<4; ++nz_e){
-      int alfa = gammaInd_scatt_host[G_i2][nz_e][0]; 
-      int beta = gammaInd_scatt_host[G_i2][nz_e][1];
+      int alfa = gammaInd_scatt[G_i2][nz_e][0]; 
+      int beta = gammaInd_scatt[G_i2][nz_e][1];
       Float g[2];
-      g[1] = gamma_scatt_host[G_i2][nz_e][1];
-      g[0] = gamma_scatt_host[G_i2][nz_e][0];
+      g[1] = gamma_scatt[G_i2][nz_e][1];
+      g[0] = gamma_scatt[G_i2][nz_e][0];
 
       //PhixGf2xPhi
       pipi_aux.PhiPhi( Phi_0[beta], this->GList[1], Phi_1[alfa]); //T x N_moms x n_gammas_f2

@@ -90,48 +90,19 @@ namespace plegma {
     //checks
     void setOffsets( );
 
-    __inline__ Float* Corr( int i0 ) const {
-      return this->H_elem() + i0*offsets[0];
-    }
-    
-    __inline__ Float* Corr( int i0, int i1 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1];
-    }
-    
-    __inline__ Float* Corr( int i0, int i1, int i2 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2];
+    template<int N>
+    __inline__ long sum_offsets(int iN) const {
+      return iN*offsets[N];
     }
 
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3];
+    template<int N, typename ... Args>
+    __inline__ long sum_offsets(int iN, Args... others) const {
+      return iN*offsets[N] + sum_offsets<N+1>(others...);
     }
 
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4];
-    }
-    
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5];
-    }
-
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6];
-    }
-
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7];
-    }
-
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7] + i8*offsets[8];
-    }
-
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7]+ i8*offsets[8]+ i9*offsets[9];
-    }
-
-    __inline__ Float* Corr( int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9, int i10 ) const {
-      return this->H_elem() + i0*offsets[0] + i1*offsets[1] + i2*offsets[2] + i3*offsets[3] + i4*offsets[4] + i5*offsets[5] + i6*offsets[6] + i7*offsets[7] + i8*offsets[8] + i9*offsets[9]+ i10*offsets[10];
+    template<typename ... Args>
+    __inline__ Float* Corr( Args... is ) const {
+      return this->H_elem() + sum_offsets<0>(is...);
     }
 
     bool check_reduction( VRED V );

@@ -265,18 +265,18 @@ __inline__ void V_M_V( Float * V1, Float * V2, GAMMAS_SCATT gamma, bool transp, 
    *(Dest+1)=0.;
    #pragma unroll
    for(int nz_e = 0 ; nz_e < 4 ; nz_e++){  
-     int beta0= (!transp) ? gammaInd_scatt_host[gamma][nz_e][0] : gammaInd_scatt_host[gamma][nz_e][1];
-     int beta1= (!transp) ? gammaInd_scatt_host[gamma][nz_e][1] : gammaInd_scatt_host[gamma][nz_e][0];
+     int beta0= (!transp) ? gammaInd_scatt[gamma][nz_e][0] : gammaInd_scatt[gamma][nz_e][1];
+     int beta1= (!transp) ? gammaInd_scatt[gamma][nz_e][1] : gammaInd_scatt[gamma][nz_e][0];
      #pragma unroll
      for (int nz_c = 0; nz_c < 3; nz_c++) {
-       *(Dest+0)+= +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   -V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0];
-       *(Dest+1)+= -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   +V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt_host[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1];
+       *(Dest+0)+= +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   -V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0];
+       *(Dest+1)+= -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   +V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1];
      }
    }
 }
@@ -301,12 +301,12 @@ __inline__ void V_TR_MM( Float * V1, GAMMAS_SCATT gamma,bool transp, Float *Dest
   for (int nz_c=0; nz_c < 3 ; nz_c++){
     #pragma unroll
     for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
-      int beta0=(!transp) ? gammaInd_scatt_host[gamma][nz_e_inner][0] : gammaInd_scatt_host[gamma][nz_e_inner][1];
-      int beta1=(!transp) ? gammaInd_scatt_host[gamma][nz_e_inner][1] : gammaInd_scatt_host[gamma][nz_e_inner][0];
-      *(Dest+2*nz_c+0)+=+gamma_scatt_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                        -gamma_scatt_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-      *(Dest+2*nz_c+1)+=+gamma_scatt_host[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                        +gamma_scatt_host[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
+      int beta0=(!transp) ? gammaInd_scatt[gamma][nz_e_inner][0] : gammaInd_scatt[gamma][nz_e_inner][1];
+      int beta1=(!transp) ? gammaInd_scatt[gamma][nz_e_inner][1] : gammaInd_scatt[gamma][nz_e_inner][0];
+      *(Dest+2*nz_c+0)+=+gamma_scatt[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
+                        -gamma_scatt[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
+      *(Dest+2*nz_c+1)+=+gamma_scatt[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
+                        +gamma_scatt[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
     }
   }
   
@@ -320,17 +320,17 @@ __inline__ void M_pe_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_
     for (int i=0; i < N2; ++i)
       dest[i]=0.;
   for (int n_gamma_f=0; n_gamma_f<4; ++n_gamma_f) {    
-    const int alfa =   gammaInd_scatt_host[Gamma_f][n_gamma_f][0];
-    const int alfa0=   gammaInd_scatt_host[Gamma_f][n_gamma_f][1];
+    const int alfa =   gammaInd_scatt[Gamma_f][n_gamma_f][0];
+    const int alfa0=   gammaInd_scatt[Gamma_f][n_gamma_f][1];
     Float gf[2];
-    gf[1]=gamma_scatt_host[Gamma_f][n_gamma_f][1];
-    gf[0]=gamma_scatt_host[Gamma_f][n_gamma_f][0];
+    gf[1]=gamma_scatt[Gamma_f][n_gamma_f][1];
+    gf[0]=gamma_scatt[Gamma_f][n_gamma_f][0];
     for (int n_gamma_i=0; n_gamma_i<4; ++n_gamma_i){
-      const int beta=    gammaInd_scatt_host[Gamma_i][n_gamma_i][1];
-      const int beta0=   gammaInd_scatt_host[Gamma_i][n_gamma_i][0];
+      const int beta=    gammaInd_scatt[Gamma_i][n_gamma_i][1];
+      const int beta0=   gammaInd_scatt[Gamma_i][n_gamma_i][0];
       Float gi[2];
-      gi[1]=gamma_scatt_host[Gamma_i][n_gamma_i][1];
-      gi[0]=gamma_scatt_host[Gamma_i][n_gamma_i][0];
+      gi[1]=gamma_scatt[Gamma_i][n_gamma_i][1];
+      gi[0]=gamma_scatt[Gamma_i][n_gamma_i][0];
       dest[(alfa*N_SPINS+beta)*2+0]+=
                 +gi[0]*source[(alfa0*N_SPINS+beta0)*2+0]*gf[0]
                 -gi[1]*source[(alfa0*N_SPINS+beta0)*2+1]*gf[0]
