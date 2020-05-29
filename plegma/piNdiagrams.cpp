@@ -260,7 +260,7 @@ int main(int argc, char **argv)
       //Create Propagator
       PLEGMA_Propagator<float> propUP(BOTH);
       PLEGMA_Propagator<float> propDN(BOTH);
-      PLEGMA_Propagator<float> propUPDN(BOTH);
+      PLEGMA_Propagator<float> propTS(BOTH);
 
       // ensuring mu positive
       if(mu<0) {
@@ -525,8 +525,9 @@ int main(int argc, char **argv)
 
       }
 
-
-      //We draw a different random vector for every source position
+      //We first construct the zero-momentum oet propagators
+      //In the first step we draw a new random vector (different 
+      //one for every source position)
       vectorStoc_source_oet.stochastic_Z(nroots);
       
       //Store zero momentum oet propagators
@@ -575,13 +576,14 @@ int main(int argc, char **argv)
          vectortmp1.dilutespindisplace(vectorStoc_source_oet,0,3);
          vectorStoc_source_oet.copy(vectortmp1);
       }
-      //We first compute sequential propagators UU, DD, DU needed only
+      //Next we compute the diagrams needed only for I=1/2 I_z=1/2
+      //We are doing this only at zero momentum, this means the sequential
+      //momentum and the momentum in the Fourier trafo is also set to zero
+      //Compute sequential propagators UU, DD, DU needed only
       //for the iso-spin 1/2 case
       {
-        PLEGMA_ScattCorrelator<float> reductionsV3_GAMMAF2TUU(  source, piN12_zero);
-        PLEGMA_ScattCorrelator<float> reductionsV2_GAMMAF1TUU_U(source, piN12_zero);
-        PLEGMA_ScattCorrelator<float> reductionsV2_GAMMAF1T_TUU(source, piN12_zero);
-        PLEGMA_ScattCorrelator<float> reductionsV2_GAMMAF1TUU_D(source, piN12_zero);
+        PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zero);
+        PLEGMA_ScattCorrelator<float> reductionsV2(source, piN12_zero);
 
 
 
@@ -594,6 +596,11 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> corrB18(sourcePositions[isource], piN12_zero);
         PLEGMA_ScattCorrelator<float> corrB19(sourcePositions[isource], piN12_zero);
         PLEGMA_ScattCorrelator<float> corrB20(sourcePositions[isource], piN12_zero);
+
+        PLEGMA_ScattCorrelator<float> corrW5(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW6(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW7(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW8(sourcePositions[isource], piN12_zero);
 
         PLEGMA_ScattCorrelator<float> corrW13(sourcePositions[isource], piN12_zero);
         PLEGMA_ScattCorrelator<float> corrW14(sourcePositions[isource], piN12_zero);
@@ -616,6 +623,12 @@ int main(int argc, char **argv)
         corrB19.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B19");
         corrB20.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B20");
 
+        corrW5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W5");
+        corrW6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W6");
+        corrW7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W7");
+        corrW8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W8");
+
+
         corrW13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W13");
         corrW14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W14");
         corrW15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W15");
@@ -626,7 +639,7 @@ int main(int argc, char **argv)
         corrW31.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W31");
         corrW32.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W32");
 
-        PLEGMA_Propagator3D<float> propUP3D;
+        PLEGMA_Propagator3D<float> propTS3D;
         for(int isc = 0 ; isc < 12 ; isc++){
           PLEGMA_Vector<double> vectorAuxD;
           PLEGMA_Vector<float> vectorAuxF;
@@ -645,40 +658,21 @@ int main(int argc, char **argv)
             vectorAuxD2.absorb(vector2,sourcePositions[isource][DIM_T]);
           }
           //Perform multiplication with gamma_i2
-          vectorAuxD2.apply_gamma_scatt(gamma_i2);
+          vectorAuxD2.apply_gamma_scatt(G_5);
           //Perform rotation to the physical basis
           TIME(vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1));
           vectorAuxF.copy(vectorAuxD);
-          propUP3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
-
-          for (int i=0; i<n_stochastic_samples; ++i){
-            PLEGMA_Vector<float> stochastic_propagator;
-            PLEGMA_Vector<float> stochastic_source;
-            stochastic_propagator.copy(*stochastic_propags[i],HOST);
-            stochastic_source.copy(*stochastic_sources[i],HOST);
-            stochastic_propagator.load();
-            stochastic_source.load();
-            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUPUP));
-            TIME(corrB1.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 1, true));
-            TIME(corrB2.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 2, true));
-            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
-            TIME(corrW1.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true));
-            TIME(corrW2.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true));
-                                                                                                                                                                         TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUPDN, propUP));
-            TIME(corrW3.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true));
-            TIME(corrW4.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true));
-          }//loop over stochastic samples
-
+          propTS3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
         }
         //Computing sequential propagators UU T_fii with insertion
-        //gamma_i2 and momentum (0,0,0)
+        //gamma_i2=gamma_5 and momentum (0,0,0)
         for(int isc = 0 ; isc < 12 ; isc++){
           PLEGMA_Vector<double> vectorInOut;
           PLEGMA_Vector<float> vectorAuxF;
           PLEGMA_Vector<double> vectorAuxD;
-                                                                                                                                                                       vectorAuxF.absorb(propDN3D, sequential_time_source, isc/3, isc%3);
+          vectorAuxF.absorb(propTS3D, sequential_time_source, isc/3, isc%3);
           vectorInOut.copy(vectorAuxF);
-          //PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
+          PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
           //performing the inversion
           TIME(solver.solve(vectorInOut, vectorInOut));
           //performing rotation to physical base
@@ -686,8 +680,171 @@ int main(int argc, char **argv)
           //performing smearing
           TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
           vectorAuxF.copy(vectorInOut);
-          propUPUP.absorb(vectorAuxF, isc/3, isc%3);
+	  propTS.absorb(vectorAuxF, isc/3, isc%3);
         }
+
+        for (int i=0; i<n_stochastic_samples; ++i){
+          PLEGMA_Vector<float> stochastic_propagator;
+          PLEGMA_Vector<float> stochastic_source;
+          stochastic_propagator.copy(*stochastic_propags[i],HOST);
+          stochastic_source.copy(*stochastic_sources[i],HOST);
+          stochastic_propagator.load();
+          stochastic_source.load();
+
+          //For computing the B diagrams we compute the V3 factor
+          //using the sequential propagator
+          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
+
+          TIME(corrB3.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], 0, 3, true));
+          TIME(corrB4.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_U[i], 0, 4, true));
+          TIME(corrB5.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], 0, 5, true));
+          TIME(corrB6.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_U[i], 0, 6, true));
+          TIME(corrB17.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_D[i],0, 17, true));
+          TIME(corrB18.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_D[i],0, 18, true));
+          TIME(corrB19.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_D[i],0, 19, true));
+          TIME(corrB20.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_D[i],0, 20, true));
+
+          //For computing the W diagrams we compute the V2 factor using the sequential
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS));
+
+          TIME(corrW13.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 13, true));
+          TIME(corrW15.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 15, true));
+
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP));
+
+          TIME(corrW14.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 14, true));
+          TIME(corrW16.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 16, true));
+
+          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propDN, propTS));
+
+          TIME(corrW5.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 5, true));
+          TIME(corrW7.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 7, true));
+
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propDN, propTS));
+
+          TIME(corrW6.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 6, true));
+          TIME(corrW8.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 8, true));
+
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propDN));
+
+          TIME(corrW31.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 31, true));
+          TIME(corrW32.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 32, true));
+
+          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propTS, propDN));
+
+          TIME(corrW29.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 29, true));
+          TIME(corrW30.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 30, true));
+
+        }//loop over stochastic samples
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
+        TIME(corrB3.apply_phase());
+        TIME(corrB3.applyBoundaryConditions( true ));
+        TIME(corrB3.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB3.writeHDF5( outfilename ));
+        TIME(corrB4.apply_phase());
+        TIME(corrB4.applyBoundaryConditions( true ));
+        TIME(corrB4.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB4.writeHDF5( outfilename ));
+        TIME(corrB5.apply_phase());
+        TIME(corrB5.applyBoundaryConditions( true ));
+        TIME(corrB5.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB5.writeHDF5( outfilename ));
+        TIME(corrB6.apply_phase());
+        TIME(corrB6.applyBoundaryConditions( true ));
+        TIME(corrB6.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB6.writeHDF5( outfilename ));
+        TIME(corrB7.apply_phase());
+        TIME(corrB7.applyBoundaryConditions( true ));
+        TIME(corrB7.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB7.writeHDF5( outfilename ));
+        TIME(corrB8.apply_phase());
+        TIME(corrB8.applyBoundaryConditions( true ));
+        TIME(corrB8.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB8.writeHDF5( outfilename ));
+        TIME(corrB17.apply_phase());
+        TIME(corrB17.applyBoundaryConditions( true ));
+        TIME(corrB17.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB17.writeHDF5( outfilename ));
+        TIME(corrB18.apply_phase());
+        TIME(corrB18.applyBoundaryConditions( true ));
+        TIME(corrB18.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB18.writeHDF5( outfilename ));
+        TIME(corrB19.apply_phase());
+        TIME(corrB19.applyBoundaryConditions( true ));
+        TIME(corrB19.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB19.writeHDF5( outfilename ));
+        TIME(corrB20.apply_phase());
+        TIME(corrB20.applyBoundaryConditions( true ));
+        TIME(corrB20.normalize_nstoch(n_stochastic_samples));
+        TIME(corrB20.writeHDF5( outfilename ));
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
+
+        TIME(corrW5.apply_phase());
+        TIME(corrW5.applyBoundaryConditions( true ));
+        TIME(corrW5.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW5.writeHDF5( outfilename ));
+        TIME(corrW6.apply_phase());
+        TIME(corrW6.applyBoundaryConditions( true ));
+        TIME(corrW6.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW6.writeHDF5( outfilename ));
+        TIME(corrW7.apply_phase());
+        TIME(corrW7.applyBoundaryConditions( true ));
+        TIME(corrW7.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW7.writeHDF5( outfilename ));
+        TIME(corrW8.apply_phase());
+        TIME(corrW8.applyBoundaryConditions( true ));
+        TIME(corrW8.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW8.writeHDF5( outfilename ));
+        TIME(corrW13.apply_phase());
+        TIME(corrW13.applyBoundaryConditions( true ));
+        TIME(corrW13.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW13.writeHDF5( outfilename ));
+        TIME(corrW14.apply_phase());
+        TIME(corrW14.applyBoundaryConditions( true ));
+        TIME(corrW14.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW14.writeHDF5( outfilename ));
+        TIME(corrW15.apply_phase());
+        TIME(corrW15.applyBoundaryConditions( true ));
+        TIME(corrW15.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW15.writeHDF5( outfilename ));
+        TIME(corrW16.apply_phase());
+        TIME(corrW16.applyBoundaryConditions( true ));
+        TIME(corrW16.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW16.writeHDF5( outfilename ));
+        TIME(corrW29.apply_phase());
+        TIME(corrW29.applyBoundaryConditions( true ));
+        TIME(corrW29.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW29.writeHDF5( outfilename ));
+        TIME(corrW30.apply_phase());
+        TIME(corrW30.applyBoundaryConditions( true ));
+        TIME(corrW30.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW30.writeHDF5( outfilename ));
+        TIME(corrW31.apply_phase());
+        TIME(corrW31.applyBoundaryConditions( true ));
+        TIME(corrW31.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW31.writeHDF5( outfilename ));
+        TIME(corrW32.apply_phase());
+        TIME(corrW32.applyBoundaryConditions( true ));
+        TIME(corrW32.normalize_nstoch(n_stochastic_samples));
+        TIME(corrW32.writeHDF5( outfilename ));
+
+      }//end of loop for sequential UU
+
+      //start for DD
+      {
+        PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zero);
+        PLEGMA_ScattCorrelator<float> reductionsV2(source, piN12_zero);
+
+
+
+        PLEGMA_ScattCorrelator<float> corrB7(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrB8(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW33(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW34(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW35(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW36(sourcePositions[isource], piN12_zero);
 
       }
 
@@ -698,11 +855,9 @@ int main(int argc, char **argv)
 	//List of momenta corresponding to a fix value of p_i2
         //filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 
-
         std::string pi2x=std::to_string(momentum_i2[0]);
         std::string pi2y=std::to_string(momentum_i2[1]);
         std::string pi2z=std::to_string(momentum_i2[2]);
-
  
 	// 4pt diagrams
 	
