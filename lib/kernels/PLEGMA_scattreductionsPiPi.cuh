@@ -14,7 +14,6 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
   int tid = blockIdx.x/grid3D;
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
-  //int site_size = N_SPINS*N_SPINS*N_SPINS*N_COLS;
   
   register Float2<FloatOut> accum[16];
   for(int i = 0 ; i < 16  ; i++){

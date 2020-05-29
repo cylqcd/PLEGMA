@@ -24,31 +24,6 @@ namespace plegma {
   template<typename Float>
   class PLEGMA_ScattCorrelator : public PLEGMA_Correlator<Float>  {
   protected:
-    //////////////
-    // from PLEGMA_Correlator:
-    //////////////
-    //   // Allocation
-    //   bool isAlloc;
-    //   PLEGMA_Field<Float>* corr_pos_space;
-    //   PLEGMA_FT<Float>* corr_mom_space;
-    //   Float* corr;
-
-    //   // Correlator info
-    //   CORR_SPACE corr_space;
-    //   int Q2_max;
-    //   std::vector<int> fixMomVec ;
-    //   size_t vol_size;
-    //   std::vector<int> shape;
-
-    //   // Allocated site_size = n_datasets * n_groups * prod(shape) (slowest to fastest running index)
-    //   int site_size;
-    //   std::array<int,4> source_position;
-
-    //   // Writing informations
-    //   std::vector<std::string> datasets;
-    //   std::vector<std::string> groups;
-    //   std::string description;
-    //////////////
 
     std::vector<std::vector<GAMMAS_SCATT>> GList;
     momList plist;
