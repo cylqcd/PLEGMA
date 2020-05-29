@@ -1,5 +1,5 @@
 \documentclass{article}[12pt]
-
+\usepackage{lscape}
 \usepackage{amsfonts}
 \usepackage[intlimits]{amsmath}
 \usepackage{cite}
@@ -1063,6 +1063,7 @@ $$
 $$
 \end{itemize}
 \end{itemize}
+\begin{landscape}
 \section{Summary table}
 \begin{tabular}{ c c c c c c c }
 Diagram index & ${\mathcal V}_3$ & ${\mathcal V}_{2/4}$ & Reduction[R]/ReductionMatrix[M] & IndexAbs & Transp & Transgamma \\
@@ -1086,6 +1087,9 @@ B17& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathca
 B18& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\delta}$ & M & 0 & true  & false \\
 B19& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
 B20& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\delta}$ & M & 1 & true  & false \\
+\end{tabular}
+
+\begin{tabular}{ c c c c c c c }
 W1 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{ud}_{fii})_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
 W2 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{ud}_{fii})_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
 W3 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{ud}_{fii}, U)_{\gamma\alpha\delta}$ & M & 1 & false  & false \\
@@ -1123,4 +1127,5 @@ W34& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_4(\ga
 W35& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   U, T^{dd}_{fii})_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
 W36& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   U, T^{dd}_{fii})_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
 \end{tabular}
+\end{landscape}
 \end{document}
