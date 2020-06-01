@@ -1197,7 +1197,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin){
-            temp[spin] = (T1.Corr(t,i_mom,gi1,gf)[spin] - T3.Corr(t,i_mom,gi1,gf)[spin] + T5.Corr(t,i_mom,gi1,gf)[spin])*2;
+            temp[spin] = (+1.*T1.Corr(t,i_mom,gi1,gf)[spin]*(gammaTranspSign_scatt[this->GList[4][gf]]+1.) 
+                          +1.*T3.Corr(t,i_mom,gi1,gf)[spin]*(gammaTranspSign_scatt[this->GList[4][gf]]+1.)*(gammaTranspSign_scatt[this->GList[2][gi1]])
+                          +1.*T5.Corr(t,i_mom,gi1,gf)[spin]*(gammaTranspSign_scatt[this->GList[4][gf]]+1.));
 	  }
           for( int gei=0; gei<n_extgammas_i; ++gei ){ 
 	    for( int gef=0; gef<n_extgammas_f; ++gef ){
