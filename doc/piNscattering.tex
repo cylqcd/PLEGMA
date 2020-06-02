@@ -58,7 +58,26 @@ Thus we have to calculate the following contractions:
        \frac{1}{6}(udu)-\bar{d}d \times \bar{d}d-(\bar{d}\bar{u}\bar{u}) 
 \end{eqnarray}
 In the following sections we look all the diagramms occur in the above 
-contractions.
+contractions. In order to compute the diagrams we estimate the sink to
+sink propagators stochastically. In the stochastic inversion we only invert
+for the UP quark and we are using 12 stochastic random vector with full-time
+dilution. Including the spin half and three-half case we have two
+different possibilities for the sink to sink propagator:
+\begin{enumerate}
+\item $U\left(x_{f1},x_{f2}\right)$: We have the following stochastic part in the reductions
+\begin{itemize}
+\item ${\mathcal V}_3(\xi, \Gamma_{f2}P)$, where $P$ is a point or sequential source propagator, and $\xi$ 
+is the stochastic source
+\item ${\mathcal V}_2(\phi, \Gamma_{f1}P_1,P_2)$, where $P_1,P_2$ are point or sequential source propagators, and $\phi$
+is the stochastic $UP$ propagator computed from $xi$.
+\end{itemize}
+\item $D\left(x_{f1},x_{f2}\right)$
+\item $U\left(x_{f1},x_{f2}\right)$: We have the following stochastic part in the reductions
+\begin{itemize}
+\item ${\mathcal V}_3(\gamma_5\phi, \Gamma_{f2}P)$
+\item ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}P_1,P_2)$
+\end{itemize}
+\end{enumerate}
 \section{$(dud)-\bar{d}u \times \bar{u}d-(\bar{u}\bar{d}\bar{d}) $}
 \begin{itemize}
 \item B diagramms
@@ -145,7 +164,7 @@ $$
 w25_{\phi}^{l}\left(\alpha,\delta,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{mb}_{\kappa,\delta}D^{an}_{\kappa,\beta}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{25\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\alpha,\delta,\beta}
+W_{25\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\phi,\gamma_5\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{4}\left(\gamma_5\xi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\alpha,\delta,\beta}
 $$
 \item W26 diagramm
 \begin{eqnarray}
@@ -161,7 +180,7 @@ $$
 w26_{\phi}^{l}\left(\alpha,\beta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}D^{ma}_{\kappa,\gamma}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{an}_{\kappa,\beta}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{26\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\alpha,\beta,\delta}
+W_{26\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\phi,\gamma_5\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{4}\left(\gamma_5\xi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\alpha,\beta,\delta}
 $$
 \item W27 diagramm
 \begin{eqnarray}
@@ -177,7 +196,7 @@ $$
 w28_{\phi}^{l}\left(\delta,\alpha,\beta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{bm}_{\kappa,\delta}D^{cn}_{\alpha,\beta}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{28\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\delta,\alpha,\beta}
+W_{28\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\phi,\gamma_5\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\xi,\gamma_5\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\delta,\alpha,\beta}
 $$
 \item W28 diagramm
 \begin{eqnarray}
@@ -193,7 +212,7 @@ $$
 w28_{\phi}^{l}\left(\beta,\alpha,\delta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{ud}\right)^{bn}_{\kappa,\beta}D^{cm}_{\alpha,\delta}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{28\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\beta,\alpha,\delta}
+W_{28\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\phi,\gamma_5\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\gamma_5\xi,\Gamma_{f1}T_{fii}^{ud},D\right)^{l}_{\beta,\alpha,\delta}
 $$
 \end{enumerate}
 \item Z diagramms
@@ -342,7 +361,7 @@ $$
 w29_{\phi}^{l}\left(\alpha,\gamma,\delta\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{mb}_{\kappa,\gamma}D^{an}_{\kappa,\delta}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{29\alpha,\beta}=\Gamma_{i1}\left(\delta,\gamma\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\alpha,\delta,\gamma}
+W_{29\alpha,\beta}=\Gamma_{i1}\left(\delta,\gamma\right){\mathcal V}_{3}\left(\gamma_5\phi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{4}\left(\gamma_5\xi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\alpha,\delta,\gamma}
 $$
 \item W30 diagramm
 \begin{eqnarray}
@@ -358,7 +377,7 @@ $$
 w30_{\phi}^{l}\left(\alpha,\beta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{ma}_{\kappa,\beta}D^{an}_{\kappa,\gamma}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{2\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\alpha,\beta,\gamma}
+W_{30\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\gamma_5\phi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{4}\left(\gamma_5\xi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\alpha,\beta,\gamma}
 $$
 \item W31 diagramm
 \begin{eqnarray}
@@ -374,7 +393,7 @@ $$
 w31_{\phi}^{l}\left(\delta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{bm}_{\kappa,\delta}D^{cn}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{31\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\delta,\alpha,\gamma}
+W_{31\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\gamma_5\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{2}\left(\gamma_5\xi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\delta,\alpha,\gamma}
 $$
 \item W32 diagramm
 \begin{eqnarray}
@@ -390,7 +409,7 @@ $$
 w32_{\phi}^{l}\left(\beta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}T_{fii}^{uu}\right)^{bn}_{\kappa,\beta}D^{cm}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{32\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\beta,\alpha,\gamma}
+W_{32\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\gamma_5\phi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{2}\left(\gamma_5\xi,\Gamma_{f1}T_{fii}^{uu},D\right)^{l}_{\beta,\alpha,\gamma}
 $$
 \end{enumerate}
 \item Disconnected D1ii
@@ -445,7 +464,7 @@ $$
 w33_{\phi}^{l}\left(\alpha,\beta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}U\right)^{mb}_{\kappa,\beta}\left(T_{fii}^{dd}\right)^{an}_{\kappa,\gamma}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{33\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\alpha,\beta,\gamma}
+W_{33\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left( \gamma_5\phi,\Gamma_{f2},U\right)^{l}_{\delta}{\mathcal V}_{4}\left(\gamma_5\xi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\alpha,\beta,\gamma}
 $$
 \item W34 diagramm
 \begin{eqnarray}
@@ -461,7 +480,7 @@ $$
 w34_{\phi}^{l}\left(\alpha,\delta,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{c}_{\alpha}\left(\Gamma_{f1}U\right)^{ma}_{\kappa,\delta}\left(T_{fii}^{dd}\right)^{an}_{\kappa,\gamma}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{34\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{4}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\alpha,\delta,\gamma}
+W_{34\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\gamma_5\phi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{4}\left(\gamma_5\xi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\alpha,\delta,\gamma}
 $$
 \item W35 diagramm
 \begin{eqnarray}
@@ -477,7 +496,7 @@ $$
 w35_{\phi}^{l}\left(\beta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}U\right)^{bm}_{\kappa,\beta}\left(T_{fii}^{dd}\right)^{cn}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{35\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\beta,\alpha,\gamma}
+W_{35\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\gamma_5\phi,\Gamma_{f2},U\right)^{l}_{\gamma}{\mathcal V}_{2}\left(\gamma_5\xi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\beta,\alpha,\gamma}
 $$
 \item W36 diagramm
 \begin{eqnarray}
@@ -493,7 +512,7 @@ $$
 w36_{\phi}^{l}\left(\delta,\alpha,\gamma\right)=\epsilon_{abc}\epsilon_{lmn}\phi^{a}_{\kappa}\left(\Gamma_{f1}U\right)^{bn}_{\kappa,\delta}\left(T_{fii}^{dd}\right)^{cm}_{\alpha,\gamma}\left(x_{f1},x_{i1}\right)
 $$
 $$
-W_{36\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\xi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{2}\left(\phi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\delta,\alpha,\gamma}
+W_{36\alpha,\beta}=\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_{3}\left(\gamma_5\phi,\Gamma_{f2},U\right)^{l}_{\beta}{\mathcal V}_{2}\left(\gamma_5\xi,\Gamma_{f1}U,T_{fii}^{dd}\right)^{l}_{\delta,\alpha,\gamma}
 $$
 \end{enumerate}
 \item Z diagramms
@@ -606,42 +625,42 @@ $$
 \begin{itemize}
 \item B3 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\delta}
-{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\gamma\alpha\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\delta}
+{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)_{\gamma\alpha\beta}
 $$
 \item B4 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\delta}
-{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\alpha\gamma\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\delta}
+{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)_{\alpha\gamma\beta}
 $$
 \item B5 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\beta}
-{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\gamma\alpha\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\beta}
+{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)_{\gamma\alpha\delta}
 $$
 \item B6 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\beta}
-{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\alpha\gamma\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\beta}
+{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)_{\alpha\gamma\delta}
 $$
 \end{itemize}
 \item W diagrams
 \begin{itemize}
 \item W5 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi}^{(t_f)},\gamma_5\Gamma_{f2}U\right)_{\beta}{\mathcal V}_4\left(\gamma_5\xi^{(t_f)},\Gamma_{f1}D,T^{uu}_{fii}\right)_{\alpha\gamma\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\beta}{\mathcal V}_4\left(\phi,\Gamma_{f1}D,T^{uu}_{fii}\right)_{\alpha\gamma\delta}
 $$
 \item W6 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi}^{(t_f)},\gamma_5\Gamma_{f2}U\right)_{\beta}{\mathcal V}_2\left(\gamma_5\xi^{(t_f)},\Gamma_{f1}D,T^{uu}_{fii}\right)_{\gamma\alpha\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\beta}{\mathcal V}_2\left(\phi,\Gamma_{f1}D,T^{uu}_{fii}\right)_{\gamma\alpha\delta}
 $$
 \item W7 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi}^{(t_f)},\gamma_5\Gamma_{f2}U\right)_{\delta}{\mathcal V}_4\left(\gamma_5\xi^{(t_f)},\Gamma_{f1}D,T^{uu}_{fii}\right)_{\alpha\gamma\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\delta}{\mathcal V}_4\left(\phi,\Gamma_{f1}D,T^{uu}_{fii}\right)_{\alpha\gamma\beta}
 $$
 \item W8 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi}^{(t_f)},\gamma_5\Gamma_{f2}U\right)_{\delta}{\mathcal V}_2\left(\gamma_5\xi^{(t_f)},\Gamma_{f1}D,T^{uu}_{fii}\right)_{\gamma\alpha\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\delta}{\mathcal V}_2\left(\phi,\Gamma_{f1}D,T^{uu}_{fii}\right)_{\gamma\alpha\beta}
 $$
 \end{itemize}
 \item Z diagrams
@@ -736,19 +755,19 @@ $$
 \begin{itemize}
 \item W9
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}U\right)_\delta{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\gamma\alpha\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_\delta{\mathcal V}_2\left(\phi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\gamma\alpha\beta}
 $$
 \item W10
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}U\right)_\delta{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\alpha\gamma\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_\delta{\mathcal V}_4\left(\phi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\alpha\gamma\beta}
 $$
 \item W11
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}U\right)_\beta{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\gamma\alpha\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_\beta{\mathcal V}_2\left(\phi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\gamma\alpha\delta}
 $$
 \item W12
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}U\right)_\beta{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\alpha\gamma\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_\beta{\mathcal V}_4\left(\phi,\Gamma_{f1}^tT^{dd}_{fii},U\right)_{\alpha\gamma\delta}
 $$
 \end{itemize}
 \item D1ff diagrams
@@ -949,38 +968,38 @@ $$
 \begin{itemize}
 \item B9 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\delta{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\beta\alpha\gamma}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\delta{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)_{\beta\alpha\gamma}
 $$
 \item B10 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\delta{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\alpha\beta\gamma}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\delta{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)_{\alpha\beta\gamma}
 $$
 \item B11 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\beta{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\delta\alpha\gamma}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\beta{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)_{\delta\alpha\gamma}
 $$
 \item B12 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\beta{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}D,U\right)_{\alpha\delta\gamma}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\beta{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)_{\alpha\delta\gamma}
 $$
 \end{itemize}
 \item W type diagrams
 \begin{itemize}
 \item W17 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\alpha\beta\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_4\left(\phi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\alpha\beta\delta}
 $$
 \item W18 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\beta\alpha\delta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_2\left(\phi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\beta\alpha\delta}
 $$
 \item W19 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_4\left(\gamma_5\xi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\alpha\delta\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_4\left(\phi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\alpha\delta\beta}
 $$
 \item W20 diagram
 $$
-\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\hat{\phi},\gamma_5\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_2\left(\gamma_5\xi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\delta\alpha\beta}
+\Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\Gamma_{f2}T^{ud}\right)_\gamma{\mathcal V}_2\left(\phi,\Gamma_{f1}D,T^{ud}_{fii}\right)_{\delta\alpha\beta}
 $$
 \end{itemize}
 \item D1ff diagrams
@@ -1069,16 +1088,16 @@ $$
 Diagram index & ${\mathcal V}_3$ & ${\mathcal V}_{2/4}$ & Reduction[R]/ReductionMatrix[M] & IndexAbs & Transp & Transgamma \\
 B1 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\beta\alpha\delta}$  & R & 2 & true & false  \\ 
 B2 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\delta\alpha\beta}$  & R & 0 & false & false \\
-B3 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  D,U)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
-B4 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  D,U)_{\alpha\gamma\beta}$  & R & 1 & false & true  \\
-B5 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  D,U)_{\gamma\alpha\delta}$ & M & 1 & true & false  \\
-B6 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  D,U)_{\alpha\gamma\delta}$ & M & 0 & true & false  \\
+B3 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
+B4 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\gamma\beta}$  & R & 1 & false & true  \\
+B5 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\gamma\alpha\delta}$ & M & 1 & true & false  \\
+B6 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\gamma\delta}$ & M & 0 & true & false  \\
 B7 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{dd}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\beta\alpha\delta}$  & R & 2 & true & false  \\
 B8 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{dd}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\delta\alpha\beta}$  & R & 0 & false & false \\
-B9 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  D,U)_{\beta\alpha\gamma}$  & R & 2 & true  & true  \\
-B10& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  D,U)_{\alpha\beta\gamma}$  & R & 2 & false & true  \\
-B11& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  D,U)_{\delta\alpha\gamma}$ & M & 1 & true  & true  \\
-B12& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  D,U)_{\alpha\delta\gamma}$ & M & 0 & true  & false \\
+B9 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\beta\alpha\gamma}$  & R & 2 & true  & true  \\
+B10& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\beta\gamma}$  & R & 2 & false & true  \\
+B11& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\delta\alpha\gamma}$ & M & 1 & true  & true  \\
+B12& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\delta\gamma}$ & M & 0 & true  & false \\
 B13& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\beta}$  & R & 1 & false & true  \\
 B14& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\delta}$ & M & 0 & true  & false \\
 B15& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
@@ -1094,22 +1113,22 @@ W1 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\ga
 W2 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{ud}_{fii})_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
 W3 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{ud}_{fii}, U)_{\gamma\alpha\delta}$ & M & 1 & false  & false \\
 W4 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{ud}_{fii}, U)_{\gamma\alpha\beta}$  & R & 0 & false  & true \\
-W5 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1} U, T^{uu}_{fii})_{\alpha\gamma\delta}$   & M & 2 & true   & true \\
-W6 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1} U, T^{uu}_{fii})_{\gamma\alpha\delta}$   & M & 1 & false  & true \\
-W7 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1} U, T^{uu}_{fii})_{\alpha\gamma\beta}$    & R & 1 & false  & true \\
-W8 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1} U, T^{uu}_{fii})_{\gamma\alpha\beta}$    & R & 0 & false  & true \\
-W9 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
-W10& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
-W11& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\gamma\alpha\delta}$ & M & 1 & false  & false \\
-W12& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\gamma\alpha\beta}$  & R & 0 & false  & true \\
+W5 & ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_4(\phi, \Gamma_{f1} U, T^{uu}_{fii})_{\alpha\gamma\delta}$   & M & 2 & true   & true \\
+W6 & ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\phi, \Gamma_{f1} U, T^{uu}_{fii})_{\gamma\alpha\delta}$   & M & 1 & false  & true \\
+W7 & ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1} U, T^{uu}_{fii})_{\alpha\gamma\beta}$    & R & 1 & false  & true \\
+W8 & ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1} U, T^{uu}_{fii})_{\gamma\alpha\beta}$    & R & 0 & false  & true \\
+W9 & ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
+W10& ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
+W11& ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\phi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\gamma\alpha\delta}$ & M & 1 & false  & false \\
+W12& ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_4(\phi, \Gamma_{f1}^t T^{dd}_{fii}, U)_{\gamma\alpha\beta}$  & R & 0 & false  & true \\
 W13& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}D)_{\gamma}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{uu}_{fii}, U)_{\delta\alpha\beta}$  & R & 0 & false  & false \\
 W14& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}D)_{\gamma}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{uu}_{fii})_{\beta\alpha\delta}$  & R & 2 & true   & false \\
 W15& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}D)_{\gamma}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{uu}_{fii}, U)_{\beta\alpha\delta}$  & R & 2 & true   & false \\
 W16& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}D)_{\gamma}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{uu}_{fii})_{\delta\alpha\beta}$  & R & 0 & false  & false \\
-W17& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}   D, T^{ud}_{fii})_{\alpha\beta\delta}$  & R & 2 & false  & false \\
-W18& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   D, T^{ud}_{fii})_{\beta\alpha\delta}$  & R & 2 & true   & false \\
-W19& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}   D, T^{ud}_{fii})_{\alpha\delta\beta}$  & R & 1 & false  & false \\
-W20& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   D, T^{ud}_{fii})_{\delta\alpha\beta}$  & R & 0 & false  & false \\
+W17& ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}   D, T^{ud}_{fii})_{\alpha\beta\delta}$  & R & 2 & false  & false \\
+W18& ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}   D, T^{ud}_{fii})_{\beta\alpha\delta}$  & R & 2 & true   & false \\
+W19& ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}   D, T^{ud}_{fii})_{\alpha\delta\beta}$  & R & 1 & false  & false \\
+W20& ${\mathcal V}_3(\xi,\Gamma_{f2}U)_{\gamma}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}   D, T^{ud}_{fii})_{\delta\alpha\beta}$  & R & 0 & false  & false \\
 W21& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}D)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{ud}_{fii}, U)_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
 W22& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}D)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{ud}_{fii})_{\gamma\alpha\delta}$ & M & 1 & false  & false \\
 W23& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}D)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t T^{ud}_{fii}, U)_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
