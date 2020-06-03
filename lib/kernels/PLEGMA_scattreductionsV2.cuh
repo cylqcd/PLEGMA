@@ -3,10 +3,10 @@
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
+template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT, bool CONJ_V>
 __global__ void V2_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> listGammas,
 			   propTex<FloatP> propS1, propTex<FloatP> propS2, Float2<FloatOut> *block2,
-			   int it, int time_step, int maxT, int4 source, tex_mom_list moms,bool CONJ_V){
+			   int it, int time_step, int maxT, int4 source, tex_mom_list moms){
 
   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
