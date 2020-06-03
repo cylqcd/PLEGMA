@@ -32,7 +32,7 @@ void produceOutput( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename ){
   TIME(source.apply_phase());
   TIME(source.applyBoundaryConditions( true ));
-  TIME(source.writeHDF5( outfilename ));
+  TIME(source.writeHDF5( outputFilename ));
 }
 
 int main(int argc, char **argv)
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
           vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
         }
         vectorAuxD1.copy(vectorSource);
-        vectorAuxD1.apply_gamma5();
+        //vectorAuxD1.apply_gamma5();
 
         vectorAuxD1.unload();
         stochastic_sources[i]->copy(vectorAuxD1,HOST);
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
           vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
         }
 
-        vectorAuxD2.apply_gamma5();
+        //vectorAuxD2.apply_gamma5();
 
         //Step(9) Save the propagator to the host memory
         vectorAuxD2.unload();
@@ -242,16 +242,16 @@ int main(int argc, char **argv)
         PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
         PLEGMA_Vector<float> vectorRead(BOTH);
         vectorRead.readFile(inputfilename,LIME_FORMAT);
-        vectorRead.load();
-        vectorRead.apply_gamma5();
-        vectorRead.unload();
+        //vectorRead.load();
+        //vectorRead.apply_gamma5();
+        //vectorRead.unload();
         stochastic_sources[i]->copy(vectorRead,HOST);
         inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
         PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
         vectorRead.readFile(inputfilename,LIME_FORMAT);
-        vectorRead.load();
-        vectorRead.apply_gamma5();
-        vectorRead.unload();
+        //vectorRead.load();
+        //vectorRead.apply_gamma5();
+        //vectorRead.unload();
         stochastic_propags[i]->copy(vectorRead,HOST);
       }
     }
@@ -432,7 +432,9 @@ int main(int argc, char **argv)
           stochastic_source.copy(*stochastic_sources[i],HOST);
 
           stochastic_propagator.load();
+          stochastic_propagator.apply_gamma5();
           stochastic_source.load();
+          stochastic_source.apply_gamma5();
 
           TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
           //reductionsV3.writeHDF5("V3sourceforTpiNsink"+std::to_string(i));
@@ -500,38 +502,41 @@ int main(int argc, char **argv)
       //over the sequential momentum
       //Provided we have the same pf1,pf2 pairs for all pi2 sequential momentum
       momList filtered_sourcemomentumList = sourcemomentumList.extract(mpi2[0], 0);
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1D_U;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1D_D;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1U_D;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1U_U;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV2_GAMMAF1U_U_zero_mom;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV4_GAMMAF1U_U_zero_mom;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_GAMMAF2U;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_GAMMAF2D;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_GAMMAF2U_zero_mom;
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductionsV3_GAMMAF2D_zero_mom;
-
-      
+     
+ 
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V2_GAMMAF1D_U_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V4_GAMMAF1D_U_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V4_GAMMAF1U_D_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V3_GAMMAF2U_zero_mom;
+     
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_U;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2D_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_U_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_D_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1D_U_zero_mom;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1U_D_zero_mom;
+ 
       std::vector<int> zero_mom_list={0,0,0,0,0,0,0,0,0};
       momList piN12_zero(3,{zero_mom_list,},{1,2});
 
       for(int i=0; i< n_stochastic_samples; ++i) {
-        reductionsV2_GAMMAF1U_U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)));
+        reductions_DD_V2_GAMMAF1U_U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(1)));
 
-        reductionsV2_GAMMAF1D_U.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
-        reductionsV4_GAMMAF1D_U.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
-        reductionsV2_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
-        reductionsV4_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
-        reductionsV2_GAMMAF1D_D.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_UU_V2_GAMMAF1D_U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_UU_V4_GAMMAF1D_U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_UU_V4_GAMMAF1U_D_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_UU_V3_GAMMAF2U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_UU_V3_GAMMAF2U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
 
-        reductionsV2_GAMMAF1U_U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
-        reductionsV4_GAMMAF1U_U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_DD_V3_GAMMAF2U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_DD_V3_GAMMAF2U.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
 
-        reductionsV3_GAMMAF2U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)));
-        reductionsV3_GAMMAF2D.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
-
-        reductionsV3_GAMMAF2U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
-        reductionsV3_GAMMAF2D_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_DD_V2_GAMMAF1U_U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)));
+        reductions_DD_V2_GAMMAF1U_U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_DD_V4_GAMMAF1U_D_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
+        reductions_DD_V3_GAMMAF2D_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zero));
 
       }
 
@@ -545,24 +550,64 @@ int main(int argc, char **argv)
             
         stochastic_propagator.load();
         stochastic_source.load();
+        //For U(xf1,xf2)
+        //B3,B5,B9,B11
+        //D1ii1,D1ii3,D1ii5,D1ii7
+        TIME(reductions_UU_V2_GAMMAF1D_U_zero_mom[i]->V2( stochastic_propagator,     glist_sink_nucleon, propDN, propUP));
 
-        TIME(reductionsV2_GAMMAF1U_D[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propDN));
-        TIME(reductionsV4_GAMMAF1U_D[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propDN));
+        //B4,B6
+        //D1ii2,D1ii4,D1ii6,D1ii8
+        TIME(reductions_UU_V4_GAMMAF1D_U_zero_mom[i]->V4( stochastic_propagator,     glist_sink_nucleon, propDN, propUP));
 
-        TIME(reductionsV2_GAMMAF1D_U[i]->V2( stochastic_source,     glist_sink_nucleon, propDN, propUP));
-        TIME(reductions44_GAMMAF1D_U[i]->V2( stochastic_source,     glist_sink_nucleon, propDN, propUP));
+        //B10,B12
+        TIME(reductions_UU_V4_GAMMAF1U_D_zero_mom[i]->V4( stochastic_propagator,     glist_sink_nucleon, propUP, propDN));
+ 
+        //W5,W6,W7,W8
+        //D1ii1,D1ii2,D1ii3,D1ii4
+        //W9,W10,W11,W12
+        //D1ii5,D1ii6,D1ii7,D1ii8
+        TIME(reductions_UU_V3_GAMMAF2U_zero_mom[i]->V3( stochastic_source, glist_sink_meson,   propUP));
 
-        TIME(reductionsV2_GAMMAF1D_D[i]->V2( stochastic_source,     glist_sink_nucleon, propDN, propDN));
-        TIME(reductionsV2_GAMMAF1U_U[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-       
-        TIME(reductionsV2_GAMMAF1U_U_zero_mom[i]->V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-        TIME(reductionsV4_GAMMAF1U_U_zero_mom[i]->V4( stochastic_source,     glist_sink_nucleon, propUP, propUP));
+        //For D(xf1,xf2)
 
-        TIME(reductionsV3_GAMMAF2U[i]->V3( stochastic_propagator, glist_sink_meson,   propUP));
-        TIME(reductionsV3_GAMMAF2D[i]->V3( stochastic_propagator, glist_sink_meson,   propDN));
+        stochastic_propagator.apply_gamma5(); 
 
-        TIME(reductionsV3_GAMMAF2U_zero_mom[i]->V3( stochastic_propagator, glist_sink_meson,   propUP));
-        TIME(reductionsV3_GAMMAF2D_zero_mom[i]->V3( stochastic_propagator, glist_sink_meson,   propDN));
+        //W25,W26,W27,W28
+        //W29,W30,W31,W32
+        //D1ii13,D1ii14
+        //D1ii15,D1ii16
+        //W33,W34,W35,W36
+        //D1ii17,D1ii18
+        //D1ii19,D1ii20
+        TIME(reductions_DD_V3_GAMMAF2U_zero_mom[i]->V3( stochastic_source, glist_sink_meson,   propUP));
+
+ 
+
+        //W13,W14,W15,16
+        //W21,W22,W23,W24
+        //D1ii9,D1ii10
+        //D1ii11,D1ii12
+        TIME(reductions_DD_V3_GAMMAF2D_zero_mom[i]->V3( stochastic_propagator, glist_sink_meson,   propDN));
+
+        //W1,W2,W3,W4
+        TIME(reductions_DD_V3_GAMMAF2U[i]->V3( stochastic_propagator, glist_sink_meson,   propUP));
+
+
+        stochastic_source.apply_gamma5();
+        //D1ii9,D1ii10
+        //D1ii11,D1ii12
+        //B7,B8
+        TIME(reductions_DD_V2_GAMMAF1U_U_zero_mom[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP));
+
+
+        //B13,B14,B17,B18
+        TIME(reductions_DD_V4_GAMMAF1U_D_zero_mom[i]->V4( stochastic_source, glist_sink_nucleon, propUP, propDN));
+
+        //B15,B16,B19,B20
+        TIME(reductions_DD_V2_GAMMAF1D_U_zero_mom[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP));
+
+        //B1,B2
+        TIME(reductions_DD_V2_GAMMAF1U_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP));
 
       }
 
@@ -730,49 +775,58 @@ int main(int argc, char **argv)
           stochastic_propagator.load();
           stochastic_source.load();
 
+
           //For computing the B diagrams we compute the V3 factor
-          //using the sequential propagator
+          //using the sequential propagator for U(xf1,xf2) type
+          TIME(reductionsV3.V3( stochastic_source, glist_sink_meson,   propTS));
+
+          TIME(corrB3.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U_zero_mom[i], 0, 3, true));
+          TIME(corrB4.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0, 4, true));
+          TIME(corrB5.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U_zero_mom[i], 0, 5, true));
+          TIME(corrB6.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0, 6, true));
+
+          
+          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propDN, propTS));
+
+          TIME(corrW5.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 5, true));
+          TIME(corrW7.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 7, true));
+
+          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propDN, propTS));
+
+          TIME(corrW6.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 6, true));
+          TIME(corrW8.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 8, true));
+
+
+          //for D(xf1,xf2) type
+          stochastic_propagator.apply_gamma5();
           TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
 
-          TIME(corrB3.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U_zero_mom[i], 0, 3, true));
-          TIME(corrB4.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_U_zero_mom[i], 0, 4, true));
-          TIME(corrB5.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U_zero_mom[i], 0, 5, true));
-          TIME(corrB6.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_U_zero_mom[i], 0, 6, true));
-          TIME(corrB17.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_D[i],0, 17, true));
-          TIME(corrB18.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_D[i],0, 18, true));
-          TIME(corrB19.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_D[i],0, 19, true));
-          TIME(corrB20.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_D[i],0, 20, true));
+          TIME(corrB17.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i],0, 17, true));
+          TIME(corrB18.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i],0, 18, true));
+          TIME(corrB19.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D_zero_mom[i],0, 19, true));
+          TIME(corrB20.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D_zero_mom[i],0, 20, true));
 
           //For computing the W diagrams we compute the V2 factor using the sequential
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS));
-
-          TIME(corrW13.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 13, true));
-          TIME(corrW15.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 15, true));
-
+          stochastic_source.apply_gamma5();
           TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP));
 
-          TIME(corrW14.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 14, true));
-          TIME(corrW16.W_diagramms( *reductionsV3_GAMMAF2D[i], reductionsV2,0, 16, true));
+          TIME(corrW13.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 13, true));
+          TIME(corrW15.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 15, true));
 
-          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propDN, propTS));
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS));
 
-          TIME(corrW5.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 5, true));
-          TIME(corrW7.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 7, true));
-
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propDN, propTS));
-
-          TIME(corrW6.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 6, true));
-          TIME(corrW8.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 8, true));
+          TIME(corrW14.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 14, true));
+          TIME(corrW16.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 16, true));
 
           TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propDN));
 
-          TIME(corrW31.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 31, true));
-          TIME(corrW32.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 32, true));
+          TIME(corrW31.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 31, true));
+          TIME(corrW32.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 32, true));
 
           TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propTS, propDN));
 
-          TIME(corrW29.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 29, true));
-          TIME(corrW30.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 30, true));
+          TIME(corrW29.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 29, true));
+          TIME(corrW30.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 30, true));
 
         }//loop over stochastic samples
 
@@ -812,6 +866,12 @@ int main(int argc, char **argv)
 
         PLEGMA_ScattCorrelator<float> corrB7(sourcePositions[isource], piN12_zero);
         PLEGMA_ScattCorrelator<float> corrB8(sourcePositions[isource], piN12_zero);
+
+        PLEGMA_ScattCorrelator<float> corrW9(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW10(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW11(sourcePositions[isource], piN12_zero);
+        PLEGMA_ScattCorrelator<float> corrW12(sourcePositions[isource], piN12_zero);
+
         PLEGMA_ScattCorrelator<float> corrW33(sourcePositions[isource], piN12_zero);
         PLEGMA_ScattCorrelator<float> corrW34(sourcePositions[isource], piN12_zero);
         PLEGMA_ScattCorrelator<float> corrW35(sourcePositions[isource], piN12_zero);
@@ -819,6 +879,11 @@ int main(int argc, char **argv)
 
         corrB7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B7");
         corrB8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B8");
+
+        corrW9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W9");
+        corrW10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W10");
+        corrW11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W11");
+        corrW12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W12");
 
         corrW33.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W33");
         corrW34.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W34");
@@ -873,23 +938,36 @@ int main(int argc, char **argv)
           stochastic_propagator.load();
           stochastic_source.load();
 
+          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propTS, propUP));
+
+          TIME( corrW9.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0,  9, true));
+          TIME(corrW11.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 11, true));
+
+          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propTS, propUP));
+
+          TIME(corrW10.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 10, true));
+          TIME(corrW12.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 12, true));
+
+
           //For computing the B diagrams we compute the V3 factor
           //using the sequential propagator
+          stochastic_propagator.apply_gamma5();
           TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
 
-          TIME(corrB7.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], 0, 7, true));
-          TIME(corrB8.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_U[i], 0, 8, true));
+          TIME(corrB7.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U_zero_mom[i], 0, 7, true));
+          TIME(corrB8.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U_zero_mom[i], 0, 8, true));
 
           //For computing the W diagrams we compute the V2 factor using the sequential
+          stochastic_source.apply_gamma5();
           TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propUP, propTS));
           
-          TIME(corrW33.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 33, true));
-          TIME(corrW34.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 34, true));
+          TIME(corrW33.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 33, true));
+          TIME(corrW34.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 34, true));
 
           TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS));
  
-          TIME(corrW35.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 35, true));
-          TIME(corrW36.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2,0, 36, true));
+          TIME(corrW35.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 35, true));
+          TIME(corrW36.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 36, true));
 
         }//loop over stochastic samples
 
@@ -950,7 +1028,7 @@ int main(int argc, char **argv)
 	corrZ2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z2");
 	corrZ3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z3");
 	corrZ4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z4");
-	corrM.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "M");
+	corrM.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "M");
 	
 	
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));
@@ -1032,6 +1110,8 @@ int main(int argc, char **argv)
              }
           }*/
 
+          //case sequential UD for spin1/2
+ 
           if ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)) {
 
             PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zero);
@@ -1098,50 +1178,85 @@ int main(int argc, char **argv)
               stochastic_propagator.load();
               stochastic_source.load();
 
-              TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
+              TIME(reductionsV3.V3( stochastic_source, glist_sink_meson,   propTS));
 
-              TIME(corrB9.B_diagramms( reductionsV3, *reductionsV2_GAMMAF1D_U_zero_mom[i], 0, 9, true));
-              TIME(corrB10.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1D_U_zero_mom[i], 0,10, true));
-              TIME(corrB11.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1D_U_zero_mom[i], 0,11, true));
-              TIME(corrB12.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1D_U_zero_mom[i], 0,12, true));
+              TIME( corrB9.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U_zero_mom[i], 0, 9, true));
+              TIME(corrB10.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0,10, true));
+              TIME(corrB11.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U_zero_mom[i], 0,11, true));
+              TIME(corrB12.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0,12, true));
 
-              TIME(corrB13.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_D_zero_mom[i], 0,13, true));
-              TIME(corrB14.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_D_zero_mom[i], 0,14, true));
-              TIME(corrB15.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_D_zero_mom[i], 0,15, true));
-              TIME(corrB16.B_diagramms(reductionsV3, *reductionsV4_GAMMAF1U_D_zero_mom[i], 0,16, true));
 
               TIME(reductionsV2.V4( stochastic_propagator, glist_sink_meson, propDN, propTS));
 
-              TIME(corrW17.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 17, true));
-              TIME(corrW19.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 19, true));
+              TIME(corrW17.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 17, true));
+              TIME(corrW19.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 19, true));
 
               TIME(reductionsV2.V2( stochastic_propagator, glist_sink_meson, propDN, propTS));
 
-              TIME(corrW18.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 18, true));
-              TIME(corrW20.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 20, true));
+              TIME(corrW18.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 18, true));
+              TIME(corrW20.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 20, true));
 
-              TIME(reductionsV2.V2( stochastic_propagator, glist_sink_meson, propUP, propTS));
+              stochastic_propagator.apply_gamma5();
+              TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
 
-              TIME(corrW22.W_diagramms( *reductionsV3_GAMMAF2_D_zero_mom, reductionsV2, 0, 22, true));
-              TIME(corrW24.W_diagramms( *reductionsV3_GAMMAF2_D_zero_mom, reductionsV2, 0, 24, true));
+              TIME(corrB13.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D_zero_mom[i], 0,13, true));
+              TIME(corrB14.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i], 0,14, true));
+              TIME(corrB15.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i], 0,15, true));
+              TIME(corrB16.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i], 0,16, true));
 
-              TIME(reductionsV2.V2( stochastic_propagator, glist_sink_meson, propTS, propUP));
+              stochastic_source.apply_gamma5();
+              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propUP, propTS));
 
-              TIME(corrW21.W_diagramms( *reductionsV3_GAMMAF2_D_zero_mom, reductionsV2, 0, 21, true));
-              TIME(corrW23.W_diagramms( *reductionsV3_GAMMAF2_D_zero_mom, reductionsV2, 0, 23, true));
+              TIME(corrW22.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 22, true));
+              TIME(corrW24.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 24, true));
 
-              TIME(reductionsV2.V4( stochastic_propagator, glist_sink_meson, propTS, propDN));
+              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propTS, propUP));
 
-              TIME(corrW25.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 25, true));
-              TIME(corrW26.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 26, true));
+              TIME(corrW21.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 21, true));
+              TIME(corrW23.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 23, true));
 
-              TIME(reductionsV2.V4( stochastic_propagator, glist_sink_meson, propTS, propDN));
+              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN));
 
-              TIME(corrW27.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 27, true));
-              TIME(corrW28.W_diagramms( *reductionsV3_GAMMAF2_U_zero_mom, reductionsV2, 0, 28, true));
+              TIME(corrW25.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 25, true));
+              TIME(corrW26.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 26, true));
+
+              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN));
+
+              TIME(corrW27.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 27, true));
+              TIME(corrW28.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 28, true));
 
             }
-  
+
+            outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
+
+            produceOutput(corrB9,  outfilename, n_stochastic_samples);
+            produceOutput(corrB10, outfilename, n_stochastic_samples);
+            produceOutput(corrB11, outfilename, n_stochastic_samples);
+            produceOutput(corrB12, outfilename, n_stochastic_samples);
+
+            produceOutput(corrB13, outfilename, n_stochastic_samples);
+            produceOutput(corrB14, outfilename, n_stochastic_samples);
+            produceOutput(corrB15, outfilename, n_stochastic_samples);
+            produceOutput(corrB16, outfilename, n_stochastic_samples);
+
+            outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
+
+            produceOutput(corrW17, outfilename, n_stochastic_samples);
+            produceOutput(corrW18, outfilename, n_stochastic_samples);
+            produceOutput(corrW19, outfilename, n_stochastic_samples);
+            produceOutput(corrW20, outfilename, n_stochastic_samples);
+
+            produceOutput(corrW21, outfilename, n_stochastic_samples);
+            produceOutput(corrW22, outfilename, n_stochastic_samples);
+            produceOutput(corrW23, outfilename, n_stochastic_samples);
+            produceOutput(corrW24, outfilename, n_stochastic_samples);
+
+            produceOutput(corrW25, outfilename, n_stochastic_samples);
+            produceOutput(corrW26, outfilename, n_stochastic_samples);
+            produceOutput(corrW27, outfilename, n_stochastic_samples);
+            produceOutput(corrW28, outfilename, n_stochastic_samples);
+ 
+ 
           }
 
           //Compute triangle diagramms          
@@ -1151,11 +1266,11 @@ int main(int argc, char **argv)
           PLEGMA_ScattCorrelator<float> reductionsT3triangle(source,  mptot_filt);
 
           PLEGMA_ScattCorrelator<float> reductionsT5triangle(source,  mptot_filt);
-          TIME(reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP));
+          TIME(reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propTS, propUP, propUP));
           //reductionsT1triangle.writeHDF5("T1sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
-          TIME(reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP));
+          TIME(reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP, propTS, propUP));
           //reductionsT3triangle.writeHDF5("T3sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
-          TIME(reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN));
+          TIME(reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP, propUP, propTS));
           //reductionsT5triangle.writeHDF5("T5sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 	  
 	  //Compute Diagram T 
@@ -1171,36 +1286,39 @@ int main(int argc, char **argv)
 
             stochastic_propagator.load();
             stochastic_source.load();
+
+            stochastic_source.apply_gamma5();
+            stochastic_propagator.apply_gamma5();
  
 	  
-            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUPDN));
+            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
             //reductionsV3.writeHDF5("V3sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             //TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
             //reductionsV2.writeHDF5("V2sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
 
-	    TIME(corrB1.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 1, true));
+	    TIME(corrB1.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], i_gamma_i2, 1, true));
 	  
-	    TIME(corrB2.B_diagramms(reductionsV3, *reductionsV2_GAMMAF1U_U[i], i_gamma_i2, 2, true));
+	    TIME(corrB2.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], i_gamma_i2, 2, true));
           
             //Compute Diagram W1,W2
           
             //TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
             //reductionsV3.writeHDF5("V3sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
-            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
+            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propTS));
             //reductionsV2.writeHDF5("V2sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-            TIME(corrW1.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true));
-	    TIME(corrW2.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true));
+            TIME(corrW1.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true));
+	    TIME(corrW2.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true));
           
             //Compute Diagram W3,W4
           
-            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUPDN, propUP));
+            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP));
             //reductionsV2.writeHDF5("V2sourceforW34_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
-            TIME(corrW3.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true));
-	    TIME(corrW4.W_diagramms( *reductionsV3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true));
+            TIME(corrW3.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true));
+	    TIME(corrW4.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true));
 
           } //loop over stochastic samples
 	  
@@ -1326,59 +1444,33 @@ int main(int argc, char **argv)
        //## B
        
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-       TIME(corrB1.apply_phase());
-       TIME(corrB1.applyBoundaryConditions( true ));
-       TIME(corrB1.normalize_nstoch(n_stochastic_samples));
-       TIME(corrB1.writeHDF5( outfilename ));
-       TIME(corrB2.apply_phase());
-       TIME(corrB2.applyBoundaryConditions( true ));
-       TIME(corrB2.normalize_nstoch(n_stochastic_samples));
-       TIME(corrB2.writeHDF5( outfilename ));
+
+       produceOutput(corrB1, outfilename, n_stochastic_samples);
+       produceOutput(corrB2, outfilename, n_stochastic_samples);
 
 
        //## W
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-       TIME(corrW1.apply_phase());
-       TIME(corrW1.applyBoundaryConditions( true ));
-       TIME(corrW1.normalize_nstoch(n_stochastic_samples));
-       TIME(corrW1.writeHDF5(outfilename));
-       TIME(corrW2.apply_phase());
-       TIME(corrW2.applyBoundaryConditions( true ));
-       TIME(corrW2.normalize_nstoch(n_stochastic_samples));
-       TIME(corrW2.writeHDF5(outfilename));
-       TIME(corrW3.apply_phase());
-       TIME(corrW3.applyBoundaryConditions( true ));
-       TIME(corrW3.normalize_nstoch(n_stochastic_samples));
-       TIME(corrW3.writeHDF5(outfilename));
-       TIME(corrW4.apply_phase());
-       TIME(corrW4.applyBoundaryConditions( true ));
-       TIME(corrW4.normalize_nstoch(n_stochastic_samples));
-       TIME(corrW4.writeHDF5(outfilename));
+       produceOutput(corrW1, outfilename, n_stochastic_samples);
+       produceOutput(corrW2, outfilename, n_stochastic_samples);
+       produceOutput(corrW3, outfilename, n_stochastic_samples);
+       produceOutput(corrW4, outfilename, n_stochastic_samples);
+
        //## Z
 
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
-       TIME(corrZ1.apply_phase());
-       TIME(corrZ1.applyBoundaryConditions( true ));
-       TIME(corrZ1.writeHDF5( outfilename ));
-       TIME(corrZ2.apply_phase());
-       TIME(corrZ2.applyBoundaryConditions( true ));
-       TIME(corrZ2.writeHDF5( outfilename  ));
-       TIME(corrZ3.apply_phase());
-       TIME(corrZ3.applyBoundaryConditions( true ));
-       TIME(corrZ3.writeHDF5( outfilename ));
-       TIME(corrZ4.apply_phase());
-       TIME(corrZ4.applyBoundaryConditions( true ));
-       TIME(corrZ4.writeHDF5( outfilename ));
+       produceOutput(corrZ1, outfilename);
+       produceOutput(corrZ2, outfilename);
+       produceOutput(corrZ3, outfilename);
+       produceOutput(corrZ4, outfilename);
 
        //## M
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
 
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
-       TIME(corrM.apply_phase());
-       TIME(corrM.applyBoundaryConditions( true ));
-       TIME(corrM.writeHDF5( outfilename ));
+       produceOutput(corrM, outfilename);
       
       }//loop over unique set of momenta for p_i2
        
@@ -1389,12 +1481,21 @@ int main(int argc, char **argv)
 
 
       for(int i=0; i< n_stochastic_samples; ++i) {
-        reductionsV2_GAMMAF1D_D.pop_back();
-        reductionsV2_GAMMAF1D_U.pop_back();
-        reductionsV2_GAMMAF1U_D.pop_back();
-        reductionsV2_GAMMAF1U_U.pop_back();
-        reductionsV3_GAMMAF2U.pop_back();
-        reductionsV3_GAMMAF2D.pop_back();
+
+        reductions_UU_V2_GAMMAF1D_U_zero_mom.pop_back();
+        reductions_UU_V4_GAMMAF1D_U_zero_mom.pop_back();
+        reductions_UU_V4_GAMMAF1U_D_zero_mom.pop_back();
+        reductions_UU_V3_GAMMAF2U_zero_mom.pop_back();
+
+        reductions_DD_V3_GAMMAF2U.pop_back();
+        reductions_DD_V2_GAMMAF1U_U.pop_back();
+        reductions_DD_V3_GAMMAF2D_zero_mom.pop_back();
+        reductions_DD_V3_GAMMAF2U_zero_mom.pop_back();
+        reductions_DD_V2_GAMMAF1U_U_zero_mom.pop_back();
+        reductions_DD_V2_GAMMAF1U_D_zero_mom.pop_back();
+        reductions_DD_V2_GAMMAF1D_U_zero_mom.pop_back();
+        reductions_DD_V4_GAMMAF1U_D_zero_mom.pop_back();
+
       }
 
     } //loop over source position
