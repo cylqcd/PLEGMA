@@ -937,21 +937,22 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
       g[1] = gamma_scatt[gammai2][n][1];
       g[0] = gamma_scatt[gammai2][n][0];
 
-      //Z1
-      if (diagramm_index==1){
-	this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);
-      }
-      //Z2
-      else if (diagramm_index ==2){
-	this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
-      }
-      //Z3
-      else if (diagramm_index ==3){
-	this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);
-      }
-      //Z4
-      else {
-	this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
+      switch (diagramm_index){
+        case 1:
+	  this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);
+          break;
+        case 2:          
+	  this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
+          break;
+        case 3:
+	  this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);
+          break;
+        case 4:
+	  this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
+          break;
+        case 5:
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);
+          break;
       }
 
     }//n -> nonzero elems of Gi2
