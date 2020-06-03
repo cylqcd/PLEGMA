@@ -3,7 +3,7 @@
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
+template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT,bool CONJ_V>
 __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> listGammas,
 			   propTex<FloatP> propS, Float2<FloatOut> *block2,
 			   int it, int time_step, int maxT, int4 source, tex_mom_list moms){
@@ -31,32 +31,64 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
     g = (Float2<float> (*)[4]) plegma::gamma_scatt;
     gammasIdx = gammaInd_scatt;
 
-    #pragma unroll
-    for(int i_g = 0 ; i_g < N_GAMMAS_SCATT; i_g++){
-      int gId=listGammas.array[i_g];
+    if(CONJ_V){
+      //loops
+      #pragma unroll
+      for(int i_g = 0 ; i_g < N_GAMMAS_SCATT; i_g++){
+	int gId=listGammas.array[i_g];
       
-      #pragma unroll //for loop over nonzero entries
-      for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
-	int alpha0=gammasIdx[gId][nz_e][0];
-	int alpha1=gammasIdx[gId][nz_e][1];
-	Float2<FloatOut> factor=g[gId][nz_e];
+        #pragma unroll //for loop over nonzero entries
+	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+	  int alpha0=gammasIdx[gId][nz_e][0];
+	  int alpha1=gammasIdx[gId][nz_e][1];
+	  Float2<FloatOut> factor=g[gId][nz_e];
 	
-        #pragma unroll
-	for(int beta = 0 ; beta < N_SPINS ; beta++){
           #pragma unroll
-	  for(int a = 0 ; a < N_COLS ; a++){
+	  for(int beta = 0 ; beta < N_SPINS ; beta++){
             #pragma unroll
-	    for(int b = 0 ; b < N_COLS ; b++){
-	      accum[(i_g*N_SPINS + beta)*N_COLS+b] =
-		accum[(i_g*N_SPINS + beta)*N_COLS+b]
-		+ conj(phi[alpha0][a])*factor*s[alpha1][beta][a][b];
+	    for(int a = 0 ; a < N_COLS ; a++){
+              #pragma unroll
+	      for(int b = 0 ; b < N_COLS ; b++){
+		accum[(i_g*N_SPINS + beta)*N_COLS+b] =
+		  accum[(i_g*N_SPINS + beta)*N_COLS+b]
+		  + conj(phi[alpha0][a])*factor*s[alpha1][beta][a][b];
+	      }
 	    }
 	  }
 	}
       }
+      //
+    }
+    else{
+
+      //loops
+      #pragma unroll
+      for(int i_g = 0 ; i_g < N_GAMMAS_SCATT; i_g++){
+	int gId=listGammas.array[i_g];
+      
+        #pragma unroll //for loop over nonzero entries
+	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+	  int alpha0=gammasIdx[gId][nz_e][0];
+	  int alpha1=gammasIdx[gId][nz_e][1];
+	  Float2<FloatOut> factor=g[gId][nz_e];
+	
+          #pragma unroll
+	  for(int beta = 0 ; beta < N_SPINS ; beta++){
+            #pragma unroll
+	    for(int a = 0 ; a < N_COLS ; a++){
+              #pragma unroll
+	      for(int b = 0 ; b < N_COLS ; b++){
+		accum[(i_g*N_SPINS + beta)*N_COLS+b] =
+		  accum[(i_g*N_SPINS + beta)*N_COLS+b]
+		  + phi[alpha0][a]*factor*s[alpha1][beta][a][b];
+	      }
+	    }
+	  }
+	}
+      }
+      //
     }
   }
-      
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z};

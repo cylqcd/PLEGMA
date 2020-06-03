@@ -102,7 +102,7 @@ bool PLEGMA_ScattCorrelator<Float>::check_reduction( TRED T ) {
 //#####################
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S){ 
+void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S, bool conj_v){ 
 
   int n_gammas= Gammas.size();
   this->GList.clear();
@@ -121,11 +121,11 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
   
-  V_reductions<Float,Float,Float>(V_3, *this, Phi, Gammas, S);
+  V_reductions<Float,Float,Float>(V_3, *this, Phi, Gammas, S, conj_v);
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, bool conj_v) {
 
   int n_gammas= Gammas.size();
   this->GList.clear();
@@ -144,11 +144,11 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
 
-  V_reductions<Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
+  V_reductions<Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2, conj_v);
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2) {
+void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, bool conj_v) {
 
   int n_gammas= Gammas.size();
   this->GList.clear();
@@ -167,7 +167,7 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
 
-  V_reductions<Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
+  V_reductions<Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2, conj_v);
 }
 
 
