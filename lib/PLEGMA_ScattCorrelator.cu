@@ -789,10 +789,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
       this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true);
       break;
     case 2:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true);//has to be checked
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false);//has to be checked
       break;
     case 3:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false);//has to be checked
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true);//has to be checked
       break;
     case 4:
       this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true);
@@ -894,8 +894,8 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
       this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true);
       break;
     default:
-      PLEGMA_error("This value of B diagram index does not exists, please check your inputs in piNdiagramms.cpp");
-  }
+      PLEGMA_error("This value of W diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+  }//switch (diagram_index)
 
 
  /*
@@ -951,9 +951,56 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
 	  this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
           break;
         case 5:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g);
+          break;
+        case 6:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);
+          break;
+        case 7:
           this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);
           break;
-      }
+        case 8:
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
+          break;
+        case 9:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, true, g);
+          break;
+        case 10:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
+          break;
+        case 11:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, false, g);
+          break;
+        case 12:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g);
+          break;
+        case 13:
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g);
+          break;
+        case 14:
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
+          break;
+        case 15:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);
+          break;
+        case 16:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, true, g);
+          break;
+        case 17:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, false, g);
+          break;
+        case 18:
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 2, false, g2, false, g);
+          break;
+        case 19:
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, false, g2, true, g);
+          break;
+        case 20:
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g);
+          break;
+        default:
+          PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+      }//switch (Diagram index)
 
     }//n -> nonzero elems of Gi2
   }//loop over G_i2 matrix
