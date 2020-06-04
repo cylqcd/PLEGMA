@@ -553,20 +553,20 @@ int main(int argc, char **argv)
         //For U(xf1,xf2)
         //B3,B5,B9,B11
         //D1ii1,D1ii3,D1ii5,D1ii7
-        TIME(reductions_UU_V2_GAMMAF1D_U_zero_mom[i]->V2( stochastic_propagator,     glist_sink_nucleon, propDN, propUP));
+        TIME(reductions_UU_V2_GAMMAF1D_U_zero_mom[i]->V2( stochastic_propagator,     glist_sink_nucleon, propDN, propUP, false));
 
         //B4,B6
         //D1ii2,D1ii4,D1ii6,D1ii8
-        TIME(reductions_UU_V4_GAMMAF1D_U_zero_mom[i]->V4( stochastic_propagator,     glist_sink_nucleon, propDN, propUP));
+        TIME(reductions_UU_V4_GAMMAF1D_U_zero_mom[i]->V4( stochastic_propagator,     glist_sink_nucleon, propDN, propUP, false));
 
         //B10,B12
-        TIME(reductions_UU_V4_GAMMAF1U_D_zero_mom[i]->V4( stochastic_propagator,     glist_sink_nucleon, propUP, propDN));
+        TIME(reductions_UU_V4_GAMMAF1U_D_zero_mom[i]->V4( stochastic_propagator,     glist_sink_nucleon, propUP, propDN, false));
  
         //W5,W6,W7,W8
         //D1ii1,D1ii2,D1ii3,D1ii4
         //W9,W10,W11,W12
         //D1ii5,D1ii6,D1ii7,D1ii8
-        TIME(reductions_UU_V3_GAMMAF2U_zero_mom[i]->V3( stochastic_source, glist_sink_meson,   propUP));
+        TIME(reductions_UU_V3_GAMMAF2U_zero_mom[i]->V3( stochastic_source, glist_sink_meson,   propUP, true));
 
         //For D(xf1,xf2)
 
@@ -579,7 +579,7 @@ int main(int argc, char **argv)
         //W33,W34,W35,W36
         //D1ii17,D1ii18
         //D1ii19,D1ii20
-        TIME(reductions_DD_V3_GAMMAF2U_zero_mom[i]->V3( stochastic_source, glist_sink_meson,   propUP));
+        TIME(reductions_DD_V3_GAMMAF2U_zero_mom[i]->V3( stochastic_propagator, glist_sink_meson,   propUP, true));
 
  
 
@@ -587,27 +587,27 @@ int main(int argc, char **argv)
         //W21,W22,W23,W24
         //D1ii9,D1ii10
         //D1ii11,D1ii12
-        TIME(reductions_DD_V3_GAMMAF2D_zero_mom[i]->V3( stochastic_propagator, glist_sink_meson,   propDN));
+        TIME(reductions_DD_V3_GAMMAF2D_zero_mom[i]->V3( stochastic_propagator, glist_sink_meson,   propDN, true));
 
         //W1,W2,W3,W4
-        TIME(reductions_DD_V3_GAMMAF2U[i]->V3( stochastic_propagator, glist_sink_meson,   propUP));
+        TIME(reductions_DD_V3_GAMMAF2U[i]->V3( stochastic_propagator, glist_sink_meson,   propUP, true));
 
 
         stochastic_source.apply_gamma5();
         //D1ii9,D1ii10
         //D1ii11,D1ii12
         //B7,B8
-        TIME(reductions_DD_V2_GAMMAF1U_U_zero_mom[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP));
+        TIME(reductions_DD_V2_GAMMAF1U_U_zero_mom[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false));
 
 
         //B13,B14,B17,B18
-        TIME(reductions_DD_V4_GAMMAF1U_D_zero_mom[i]->V4( stochastic_source, glist_sink_nucleon, propUP, propDN));
+        TIME(reductions_DD_V4_GAMMAF1U_D_zero_mom[i]->V4( stochastic_source, glist_sink_nucleon, propUP, propDN, false));
 
         //B15,B16,B19,B20
-        TIME(reductions_DD_V2_GAMMAF1D_U_zero_mom[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP));
+        TIME(reductions_DD_V2_GAMMAF1D_U_zero_mom[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false));
 
         //B1,B2
-        TIME(reductions_DD_V2_GAMMAF1U_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP));
+        TIME(reductions_DD_V2_GAMMAF1U_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false));
 
       }
 
@@ -778,7 +778,7 @@ int main(int argc, char **argv)
 
           //For computing the B diagrams we compute the V3 factor
           //using the sequential propagator for U(xf1,xf2) type
-          TIME(reductionsV3.V3( stochastic_source, glist_sink_meson,   propTS));
+          TIME(reductionsV3.V3( stochastic_source, glist_sink_meson,   propTS, true));
 
           TIME(corrB3.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U_zero_mom[i], 0, 3, true));
           TIME(corrB4.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0, 4, true));
@@ -786,12 +786,12 @@ int main(int argc, char **argv)
           TIME(corrB6.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0, 6, true));
 
           
-          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propDN, propTS));
+          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false));
 
           TIME(corrW5.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 5, true));
           TIME(corrW7.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 7, true));
 
-          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propDN, propTS));
+          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false));
 
           TIME(corrW6.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 6, true));
           TIME(corrW8.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 8, true));
@@ -799,7 +799,7 @@ int main(int argc, char **argv)
 
           //for D(xf1,xf2) type
           stochastic_propagator.apply_gamma5();
-          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
+          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true));
 
           TIME(corrB17.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i],0, 17, true));
           TIME(corrB18.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i],0, 18, true));
@@ -808,22 +808,22 @@ int main(int argc, char **argv)
 
           //For computing the W diagrams we compute the V2 factor using the sequential
           stochastic_source.apply_gamma5();
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP));
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false));
 
           TIME(corrW13.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 13, true));
           TIME(corrW15.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 15, true));
 
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS));
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false));
 
           TIME(corrW14.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 14, true));
           TIME(corrW16.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2,0, 16, true));
 
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propDN));
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propDN, false));
 
           TIME(corrW31.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 31, true));
           TIME(corrW32.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 32, true));
 
-          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propTS, propDN));
+          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propTS, propDN, false));
 
           TIME(corrW29.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 29, true));
           TIME(corrW30.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 30, true));
@@ -938,12 +938,12 @@ int main(int argc, char **argv)
           stochastic_propagator.load();
           stochastic_source.load();
 
-          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propTS, propUP));
+          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propTS, propUP, false));
 
           TIME( corrW9.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0,  9, true));
           TIME(corrW11.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 11, true));
 
-          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propTS, propUP));
+          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propTS, propUP, false));
 
           TIME(corrW10.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 10, true));
           TIME(corrW12.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 12, true));
@@ -952,19 +952,19 @@ int main(int argc, char **argv)
           //For computing the B diagrams we compute the V3 factor
           //using the sequential propagator
           stochastic_propagator.apply_gamma5();
-          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
+          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true));
 
           TIME(corrB7.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U_zero_mom[i], 0, 7, true));
           TIME(corrB8.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U_zero_mom[i], 0, 8, true));
 
           //For computing the W diagrams we compute the V2 factor using the sequential
           stochastic_source.apply_gamma5();
-          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propUP, propTS));
+          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propUP, propTS, false));
           
           TIME(corrW33.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 33, true));
           TIME(corrW34.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 34, true));
 
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS));
+          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false));
  
           TIME(corrW35.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 35, true));
           TIME(corrW36.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2,0, 36, true));
@@ -1178,7 +1178,7 @@ int main(int argc, char **argv)
               stochastic_propagator.load();
               stochastic_source.load();
 
-              TIME(reductionsV3.V3( stochastic_source, glist_sink_meson,   propTS));
+              TIME(reductionsV3.V3( stochastic_source, glist_sink_meson,   propTS, true ));
 
               TIME( corrB9.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U_zero_mom[i], 0, 9, true));
               TIME(corrB10.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0,10, true));
@@ -1186,18 +1186,18 @@ int main(int argc, char **argv)
               TIME(corrB12.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U_zero_mom[i], 0,12, true));
 
 
-              TIME(reductionsV2.V4( stochastic_propagator, glist_sink_meson, propDN, propTS));
+              TIME(reductionsV2.V4( stochastic_propagator, glist_sink_meson, propDN, propTS, false));
 
               TIME(corrW17.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 17, true));
               TIME(corrW19.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 19, true));
 
-              TIME(reductionsV2.V2( stochastic_propagator, glist_sink_meson, propDN, propTS));
+              TIME(reductionsV2.V2( stochastic_propagator, glist_sink_meson, propDN, propTS, false));
 
               TIME(corrW18.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 18, true));
               TIME(corrW20.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 20, true));
 
               stochastic_propagator.apply_gamma5();
-              TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
+              TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true));
 
               TIME(corrB13.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D_zero_mom[i], 0,13, true));
               TIME(corrB14.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i], 0,14, true));
@@ -1205,22 +1205,22 @@ int main(int argc, char **argv)
               TIME(corrB16.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D_zero_mom[i], 0,16, true));
 
               stochastic_source.apply_gamma5();
-              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propUP, propTS));
+              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propUP, propTS, false));
 
               TIME(corrW22.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 22, true));
               TIME(corrW24.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 24, true));
 
-              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propTS, propUP));
+              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propTS, propUP, false));
 
               TIME(corrW21.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 21, true));
               TIME(corrW23.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 23, true));
 
-              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN));
+              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN, false));
 
               TIME(corrW25.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 25, true));
               TIME(corrW26.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 26, true));
 
-              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN));
+              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN, false));
 
               TIME(corrW27.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 27, true));
               TIME(corrW28.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 28, true));
@@ -1291,7 +1291,7 @@ int main(int argc, char **argv)
             stochastic_propagator.apply_gamma5();
  
 	  
-            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS));
+            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true));
             //reductionsV3.writeHDF5("V3sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             //TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
@@ -1306,7 +1306,7 @@ int main(int argc, char **argv)
           
             //TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
             //reductionsV3.writeHDF5("V3sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
-            TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propTS));
+            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false));
             //reductionsV2.writeHDF5("V2sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             TIME(corrW1.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true));
@@ -1314,7 +1314,7 @@ int main(int argc, char **argv)
           
             //Compute Diagram W3,W4
           
-            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP));
+            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false));
             //reductionsV2.writeHDF5("V2sourceforW34_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             TIME(corrW3.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true));
@@ -1388,16 +1388,16 @@ int main(int argc, char **argv)
        for (int i=0; i< 4; ++i){
          if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
   
-           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
+           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP, true));
            //reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
 
          }
          else{
-           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momzero[i], gamma_5_t_sinkmeson, propUP));
+           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momzero[i], gamma_5_t_sinkmeson, propUP, true));
            //reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
          }
 
-         TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
+         TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP, false));
          //reductionsV2_diluted[i].writeHDF5("V4sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
        }
 
@@ -1408,7 +1408,7 @@ int main(int argc, char **argv)
        //Diagram Z3,Z4	
        for (int i=0; i< 4; ++i){
 
-         TIME(reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
+         TIME(reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP, false));
          //reductionsV2_diluted[i].writeHDF5("V2sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
 
        }
