@@ -130,14 +130,25 @@ int main(int argc, char **argv)
     std::string smearString = smearType + "_" + "gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) + "aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
 
 
+    std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_u_zero_mom;
+    std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_u_fini_mom;
+    std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_d_zero_mom;
+
+    for(int i=0; i< 4; ++i) {
+      stochastic_oet_prop_u_fini_mom.push_back(new PLEGMA_Vector<float>(HOST));
+      stochastic_oet_prop_u_zero_mom.push_back(new PLEGMA_Vector<float>(HOST));
+      stochastic_oet_prop_d_zero_mom.push_back(new PLEGMA_Vector<float>(HOST));
+    }
+
+
     //Computing time-diluted stochastic propagators and stochastic source
 
-    std::vector<PLEGMA_Vector<double>*> stochastic_sources;
-    std::vector<PLEGMA_Vector<double>*> stochastic_propags;
+    std::vector<PLEGMA_Vector<float>*> stochastic_sources;
+    std::vector<PLEGMA_Vector<float>*> stochastic_propags;
 
     for(int i=0; i< n_stochastic_samples; ++i) {
-      stochastic_sources.push_back(new PLEGMA_Vector<double>(HOST));
-      stochastic_propags.push_back(new PLEGMA_Vector<double>(HOST));
+      stochastic_sources.push_back(new PLEGMA_Vector<float>(HOST));
+      stochastic_propags.push_back(new PLEGMA_Vector<float>(HOST));
     }
 
     PLEGMA_Vector<double> vectorStoc_source_oet;
@@ -617,10 +628,17 @@ int main(int argc, char **argv)
       vectorStoc_source_oet.stochastic_Z(nroots);
       
       //Store zero momentum oet propagators
-      std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
       {
+
+         //Doing for +mu for the UP propagator spin dilution oet
+         if(mu<0) {
+           mu*=-1.;
+           solver.UpdateSolver();
+         }
+
          PLEGMA_Vector<double> vectortmp1;
          PLEGMA_Vector<double> vectortmp2;          
+         PLEGMA_Vector<double> vectorSave_diluted;
  
          vectortmp1.absorbTimeslice(vectorStoc_source_oet, sequential_time_source);
 
@@ -631,18 +649,21 @@ int main(int argc, char **argv)
             TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
             vectortmp1.absorb(vector2,sourcePositions[isource][DIM_T]);
          }
- 
-         //Transforming to physical base
-         vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
- 
-          //Dilution     
-         vectortmp1.dilutespin(vectortmp2,0);
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
          vectorStoc_source_oet.copy(vectortmp1);
+  
+         //Transforming to physical base for the UP quark
+         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,+1);
+ 
+         //Dilution     
+         vectortmp1.dilutespin(vectortmp2,0);
+
+         //Save the smeared,transformed and diluted source for non-zero momentum oet.
+         vectorSave_diluted.copy(vectortmp1);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectorStoc_source_oet);
+           vectortmp2.copy(vectorSave_diluted);
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
@@ -651,17 +672,52 @@ int main(int argc, char **argv)
            vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
            //Gaussian smearing of the propagator
            TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
-           stochastic_propagator_momzero[spinindex].copy(vectortmp2);
+           vectortmp2.unload();
+           stochastic_oet_prop_u_zero_mom[spinindex]->copy(vectortmp2,HOST);
+           vectortmp2.load();
+
            //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+confnumber+"propagator_"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
-             vectortmp1.dilutespindisplace(vectorStoc_source_oet,spinindex+1,spinindex);
-             vectorStoc_source_oet.copy(vectortmp1);
+             vectortmp1.dilutespindisplace(vectorSave_diluted,spinindex+1,spinindex);
+             vectorSave_diluted.copy(vectortmp1);
            }
          }
          
-         vectortmp1.dilutespindisplace(vectorStoc_source_oet,0,3);
-         vectorStoc_source_oet.copy(vectortmp1);
+         //Doing for -mu for the DN propagator spin dilution oet
+         if(mu>0) {
+           mu*=-1.;
+           solver.UpdateSolver();
+         }
+
+         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,-1);
+
+         //Dilution     
+         vectortmp1.dilutespin(vectortmp2,0);
+
+         //Save the smeared,transformed and diluted source for non-zero momentum oet.
+         vectorSave_diluted.copy(vectortmp1);
+
+         for (int spinindex=0; spinindex<4; ++spinindex){
+           vectortmp2.copy(vectorSave_diluted);
+           //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
+           //Doing the zero momentum stochastic propagator with spin dilution
+           //Doing the inversion
+           TIME(solver.solve(vectortmp2, vectortmp2));
+           //Rotate back immediately to the physical basis
+           vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
+           //Gaussian smearing of the propagator
+           TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
+           vectortmp2.unload();
+           stochastic_oet_prop_d_zero_mom[spinindex]->copy(vectortmp2,HOST);
+           vectortmp2.load();
+           if (spinindex<3){
+             vectortmp1.dilutespindisplace(vectorSave_diluted,spinindex+1,spinindex);
+             vectorSave_diluted.copy(vectortmp1);
+           }
+         }
       }
+
+
       //Next we compute the diagrams needed only for I=1/2 I_z=1/2
       //We are doing this only at zero momentum, this means the sequential
       //momentum and the momentum in the Fourier trafo is also set to zero
@@ -1325,10 +1381,8 @@ int main(int argc, char **argv)
        } //loop over gamma i2
          
 	  
-       //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
+       //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,4
               
-       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momp_i2;
-
        std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted = {
            PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)),
            PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2)),
@@ -1350,8 +1404,14 @@ int main(int argc, char **argv)
           PLEGMA_Vector<double> vectortmp2;
           PLEGMA_Vector<double> vectorSource_finite_mom;
 
+          //Transforming to physical base for the UP quark
+          vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,+1);
+
+          //Dilution     
+          vectortmp1.dilutespin(vectortmp2,0);         
+
           //Multiplying by the appropriate momentum phase
-          vectorSource_finite_mom.copy(vectorStoc_source_oet);
+          vectorSource_finite_mom.copy(vectortmp1);
           std::vector<int> tmp_4Dmom= momentum_i2 ; 
           tmp_4Dmom.push_back(0);
           vectorSource_finite_mom.mulMomentumPhases(tmp_4Dmom,-1);
@@ -1371,7 +1431,10 @@ int main(int argc, char **argv)
               TIME(vectortmp1.gaussianSmearing(vectortmp2, smearedGauge, nsmearGauss, alphaGauss));
 
               //Saving the propagator
-              stochastic_propagator_momp_i2[spinindex].copy(vectortmp1);
+              vectortmp1.unload();
+              stochastic_oet_prop_u_fini_mom[spinindex]->copy(vectortmp1,HOST);
+              vectortmp1.load();
+
               //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+confnumber+"propagator_"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
          
               if (spinindex<3){
@@ -1382,52 +1445,281 @@ int main(int argc, char **argv)
           }
        }
          
+       //Z diagram in case of zero momentum pi2 : we calculate I=1/2 as well
        //Diagram Z1,Z2
        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        
-       for (int i=0; i< 4; ++i){
-         if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
-  
-           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP, true));
-           //reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
+       if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
+         PLEGMA_ScattCorrelator<float> corrZ5(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ6(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ7(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ8(sourcePositions[isource], piN12_zero);
 
+         PLEGMA_ScattCorrelator<float> corrZ9(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ10(sourcePositions[isource], piN12_zero);
+
+         PLEGMA_ScattCorrelator<float> corrZ11(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ12(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ13(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ14(sourcePositions[isource], piN12_zero);
+
+         PLEGMA_ScattCorrelator<float> corrZ15(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ16(sourcePositions[isource], piN12_zero);
+
+         PLEGMA_ScattCorrelator<float> corrZ17(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ18(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ19(sourcePositions[isource], piN12_zero);
+         PLEGMA_ScattCorrelator<float> corrZ20(sourcePositions[isource], piN12_zero);
+
+         corrZ5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z5");
+         corrZ6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z6");
+         corrZ7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z7");
+         corrZ8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z8");
+         corrZ9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z9");
+         corrZ10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z10");
+         corrZ11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z11");
+         corrZ12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z12");
+         corrZ13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z13");
+         corrZ14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z14");
+         corrZ15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z15");
+         corrZ16.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z16");
+         corrZ17.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z17");
+         corrZ18.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z18");
+         corrZ19.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z19");
+         corrZ20.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z20");
+       
+         for (int i=0; i< 4; ++i){
+           PLEGMA_Vector<float> st_oet_u_zero;
+
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+
+           st_oet_u_zero.load();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true));
+
+           TIME(reductionsV2_diluted[i].V4( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false));
          }
-         else{
-           TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momzero[i], gamma_5_t_sinkmeson, propUP, true));
-           //reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
+
+         TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ));
+         TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 2 ));
+
+         //Diagram Z6,Z8
+         for (int i=0; i<4; ++i){
+           PLEGMA_Vector<float> st_oet_d_zero;
+           st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST);
+           st_oet_d_zero.load();
+           TIME(reductionsV3_diluted[i].V3( st_oet_d_zero, gamma_5_t_sinkmeson, propUP, true));
          }
 
-         TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP, false));
-         //reductionsV2_diluted[i].writeHDF5("V4sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
-       }
+         TIME(corrZ6.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 6 ));
+         TIME(corrZ8.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 8 ));
 
-       TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ));
-       TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 2 ));
- 
       
-       //Diagram Z3,Z4	
-       for (int i=0; i< 4; ++i){
+         //Diagram Z12,Z14
+         for (int i=0; i<4; ++i){
+           PLEGMA_Vector<float> st_oet_u_zero;
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+           st_oet_u_zero.load();
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propDN, true));
+         }
 
-         TIME(reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP, false));
-         //reductionsV2_diluted[i].writeHDF5("V2sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
+         TIME(corrZ12.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 12 ));
+         TIME(corrZ14.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 14 ));
+
+         //Diagram Z3,Z4	
+         for (int i=0; i< 4; ++i){
+           PLEGMA_Vector<float> st_oet_u_zero;
+
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+
+           st_oet_u_zero.load();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true));
+  
+           TIME(reductionsV2_diluted[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false));
+
+         }
+
+         TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 3 ));
+         TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 ));
+
+         //Diagram Z5,Z7
+
+         for (int i=0; i< 4; ++i){
+
+           PLEGMA_Vector<float> st_oet_d_zero;
+           st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST);
+           st_oet_d_zero.load();
+           TIME(reductionsV3_diluted[i].V3( st_oet_d_zero, gamma_5_t_sinkmeson, propUP, true));
+
+         }
+
+
+         TIME(corrZ5.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 5 ));
+         TIME(corrZ7.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 7 ));
+
+       
+         //Diagram Z11,Z13
+         for (int i=0; i<4; ++i){
+           PLEGMA_Vector<float> st_oet_u_zero;
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+           st_oet_u_zero.load();
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propDN, true));
+         } 
+
+         TIME(corrZ12.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 12 ));
+         TIME(corrZ14.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 14 ));
+
+         //Diagram Z9,Z10
+
+         for (int i=0; i< 4; ++i){
+
+           PLEGMA_Vector<float> st_oet_d_zero;
+           PLEGMA_Vector<float> st_oet_u_zero;
+
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+           st_oet_u_zero.load();
+
+           st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST);
+           st_oet_d_zero.load();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propDN, true));
+
+           TIME(reductionsV2_diluted[i].V2( st_oet_d_zero, glist_sink_nucleon, propUP, propUP, false));
+
+
+         }
+
+
+         TIME(corrZ9.Z_diagramms(  reductionsV3_diluted, reductionsV2_diluted, 9 ));
+         TIME(corrZ10.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 10 ));
+
+         //Diagram Z15,Z16
+         for (int i=0; i< 4; ++i){
+
+           PLEGMA_Vector<float> st_oet_u_zero;
+
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+           st_oet_u_zero.load();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true));
+
+           TIME(reductionsV2_diluted[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propDN, false));
+
+         }
+
+
+         TIME(corrZ15.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 15 ));
+         TIME(corrZ16.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 16 ));
+
+         //Diagram Z17,Z18
+         for (int i=0; i< 4; ++i){
+
+           PLEGMA_Vector<float> st_oet_d_zero;
+           PLEGMA_Vector<float> st_oet_u_zero;
+
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+           st_oet_u_zero.load();
+
+           st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST); 
+           st_oet_d_zero.load();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true));
+
+           TIME(reductionsV2_diluted[i].V2( st_oet_d_zero, glist_sink_nucleon, propUP, propDN, false));
+
+         }
+
+
+         TIME(corrZ17.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 17 ));
+         TIME(corrZ18.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 18 ));
+
+         //Diagram Z19,Z20
+         for (int i=0; i< 4; ++i){
+
+           PLEGMA_Vector<float> st_oet_d_zero;
+
+           st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST);
+           st_oet_d_zero.load();
+
+           TIME(reductionsV2_diluted[i].V4( st_oet_d_zero, glist_sink_nucleon, propUP, propDN, false));
+
+         }
+
+         TIME(corrZ19.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 19 ));
+         TIME(corrZ20.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 20 ));
+
+         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
+
+         produceOutput(corrZ5, outfilename);
+         produceOutput(corrZ6, outfilename);
+         produceOutput(corrZ7, outfilename);
+         produceOutput(corrZ8, outfilename);
+
+         produceOutput(corrZ9, outfilename);
+         produceOutput(corrZ10, outfilename);
+
+         produceOutput(corrZ11, outfilename);
+         produceOutput(corrZ12, outfilename);
+         produceOutput(corrZ13, outfilename);
+         produceOutput(corrZ14, outfilename);
+
+         produceOutput(corrZ15, outfilename);
+         produceOutput(corrZ16, outfilename);
+
+         produceOutput(corrZ17, outfilename);
+         produceOutput(corrZ18, outfilename);
+         produceOutput(corrZ19, outfilename);
+         produceOutput(corrZ20, outfilename);
+
+       }
+       else{
+         for (int i=0; i< 4; ++i){
+           PLEGMA_Vector<float> st_oet_u_fini;
+           PLEGMA_Vector<float> st_oet_u_zero;
+
+           st_oet_u_fini.copy(*stochastic_oet_prop_u_fini_mom[i],HOST);
+           st_oet_u_fini.load();
+
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+           st_oet_u_zero.load();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_fini, gamma_5_t_sinkmeson, propUP, true));
+
+           TIME(reductionsV2_diluted[i].V4( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false));
+         }
+
+         TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ));
+         TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 2 ));
+
+         for (int i=0; i< 4; ++i){
+           PLEGMA_Vector<float> st_oet_u_zero;
+
+           st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
+           st_oet_u_zero.load();
+
+           TIME(reductionsV2_diluted[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false));
+
+         }
+
+         TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 3 ));
+         TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 ));
 
        }
 
-       TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 3 ));
-       TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 ));
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
-         TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momp_i2, i_mpi2));
+         TIME(corrP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom, i_mpi2));
        
        
-         TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momp_i2 ));
+         TIME(corrM.M_diagramms( corrN, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom ));
        }
        else{
-         TIME(corrP.P_diagramms( stochastic_propagator_momzero, stochastic_propagator_momzero, i_mpi2));
+         TIME(corrP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2));
 
 
-         TIME(corrM.M_diagramms( corrN, stochastic_propagator_momzero, stochastic_propagator_momzero ));
+         TIME(corrM.M_diagramms( corrN, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom ));
        }
 	
 
@@ -1499,6 +1791,13 @@ int main(int argc, char **argv)
       }
 
     } //loop over source position
+
+
+    for(int i=0; i< 4; ++i) {
+      stochastic_oet_prop_d_zero_mom.pop_back();
+      stochastic_oet_prop_u_zero_mom.pop_back();
+      stochastic_oet_prop_u_fini_mom.pop_back();
+    }
 
 
     for(int i=0; i< n_stochastic_samples; ++i) {

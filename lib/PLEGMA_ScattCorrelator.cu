@@ -1010,7 +1010,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 //GList only 2 gammas G_i2, G_f2
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, int i_pi2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum){
 
   assert(i_pi2<this->pList().size());
   
@@ -1047,9 +1047,17 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
       Float g[2];
       g[1] = gamma_scatt[G_i2][nz_e][1];
       g[0] = gamma_scatt[G_i2][nz_e][0];
+      PLEGMA_Vector<Float> phi0beta;
+      PLEGMA_Vector<Float> phi1alfa;
+      phi0beta.copy(*Phi_0[beta],HOST);
+      phi0beta.load();
+      phi1alfa.copy(*Phi_1[alfa],HOST);
+      phi1alfa.load();
+      
+
 
       //PhixGf2xPhi
-      pipi_aux.PhiPhi( Phi_0[beta], this->GList[1], Phi_1[alfa]); //T x N_moms x n_gammas_f2
+      pipi_aux.PhiPhi( phi0beta, this->GList[1], phi1alfa); //T x N_moms x n_gammas_f2
 
       if(i_pi2==-1){
 	for( int im=0; im<N_moms; ++im)
@@ -1070,7 +1078,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum){
+void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, bool accum){
 
   //extract moms
   assert(this->pList().check_eq(0));
