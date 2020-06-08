@@ -31,6 +31,8 @@ int main(int argc, char **argv)
   int n_stochastic_samples;
   int nroots=4;
   int confnumber_int;
+  int rand_seed1=1234;
+  int rand_seed2=1234;
   std::string outfile_V="";
   std::string outfile_upS="";
   std::string outfile_dnS="";
@@ -51,6 +53,8 @@ int main(int argc, char **argv)
   HGC_options->set("outV3", "Path for saving the result of V2_reduction", verbosity, outfile_V3);
   HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
   HGC_options->set("outV4", "Path for saving the result of V4_reduction", verbosity, outfile_V4);
+  HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
+  HGC_options->set("seed2", "Seed for intiialization of stochastic sources", verbosity, rand_seed2);
 
   //=========================================================================================================//
   initializePLEGMA();
@@ -125,7 +129,7 @@ int main(int argc, char **argv)
     }
 
     PLEGMA_Vector<double> vectorStoc_source_oet;
-    vectorStoc_source_oet.randInit(1234);
+    vectorStoc_source_oet.randInit(rand_seed1);
 
     //PLEGMA_Vector<float> vectorStoc_source(BOTH);
     //PLEGMA_Vector<float> vectorStoc_propag(BOTH);
@@ -148,7 +152,7 @@ int main(int argc, char **argv)
       PLEGMA_Vector<double> vectorAuxD2(BOTH);
       PLEGMA_Vector<double> vectorInOut;
       PLEGMA_Vector<double> vectorSource(BOTH);
-      vectorSource.randInit(1234);
+      vectorSource.randInit(rand_seed2);
       for (int i=0; i<n_stochastic_samples; ++i){
         //Step(1) Creating the time-diluted stochastic source
         vectorSource.stochastic_Z(nroots);
