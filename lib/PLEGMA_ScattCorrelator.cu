@@ -629,11 +629,12 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
   
   char letter = name_of_diagram.at(0);
-  assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z'));
-  if( letter != 'M' ){
+  assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z') || (letter=='D') );
+  if( (letter != 'M') && (letter != 'D') ){
     char number = name_of_diagram.at(1);
-    if( letter=='B' ) assert( (number>'0') && (number<'3') );
-    else assert( (number>'0') && (number<'5') );
+    if( letter=='B' ) assert( (number>'0') && (number<'20') );
+    if( letter=='W' ) assert( (number>'0') && (number<'36') );
+    if( letter=='Z' ) assert( (number>'0') && (number<'20') );
   }
 
   //Gamma list
