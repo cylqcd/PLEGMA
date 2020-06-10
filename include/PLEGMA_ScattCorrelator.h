@@ -121,6 +121,8 @@ namespace plegma {
     void P_diagramms( std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, int i_pi2, bool accum=false );
     void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
     void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
+    void O_diagramms( PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
+
 
     //others
     void applyBoundaryConditions( bool antiperiodic );

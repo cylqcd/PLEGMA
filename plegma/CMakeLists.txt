@@ -96,6 +96,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams piNdiagrams.cpp)
   target_link_libraries(piNdiagrams ${PLEGMA_LIBS})
+  cuda_add_executable(omegamass omegamass.cpp)
+  target_link_libraries(omegamass ${PLEGMA_LIBS})
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 cuda_add_executable(gaugeFixing EXCLUDE_FROM_ALL gaugeFixing.cpp)
