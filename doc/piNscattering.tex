@@ -1,5 +1,5 @@
 \documentclass{article}[12pt]
-\usepackage{lscape}
+\usepackage{pdflscape}
 \usepackage{amsfonts}
 \usepackage[intlimits]{amsmath}
 \usepackage{cite}
@@ -39,11 +39,11 @@ Summarizing we have the following interpolating operator
 for $piN$ state in the $I=\frac{1}{2},I_3=\frac{1}{2}$ channel:
 \begin{eqnarray}
 \vert\pi N,I=\frac{1}{2},I_3=\frac{1}{2}\rangle =
-\sqrt{\frac{2}{3}}(dud)\times(\bar{d}u)-\sqrt{\frac{1}{6}}(udu)\times(uu)+
-\sqrt{\frac{1}{6}}(udu)\times(dd)\\
+\sqrt{\frac{2}{3}}(dud)\times(\bar{d}u)-\sqrt{\frac{1}{6}}(udu)\times(\bar{u}u)+
+\sqrt{\frac{1}{6}}(udu)\times(\bar{d}d)\\
 \langle \pi N,I=\frac{1}{2},I_3=\frac{1}{2}\vert =
-\sqrt{\frac{2}{3}}(\bar{u}\bar{d}\bar{d})\times(\bar{u}d)-\sqrt{\frac{1}{6}}(\bar{d}\bar{u}\bar{u})\times(\bar{u}\bar{u})+
-\sqrt{\frac{1}{6}}(\bar{d}\bar{u}\bar{u})\times(\bar{d}\bar{d})
+\sqrt{\frac{2}{3}}(\bar{u}\bar{d}\bar{d})\times(\bar{u}d)-\sqrt{\frac{1}{6}}(\bar{d}\bar{u}\bar{u})\times(\bar{u}u)+
+\sqrt{\frac{1}{6}}(\bar{d}\bar{u}u)\times(\bar{d}d)
 \end{eqnarray}
 Thus we have to calculate the following contractions:
 \begin{eqnarray}
@@ -71,8 +71,7 @@ is the stochastic source
 \item ${\mathcal V}_2(\phi, \Gamma_{f1}P_1,P_2)$, where $P_1,P_2$ are point or sequential source propagators, and $\phi$
 is the stochastic $UP$ propagator computed from $xi$.
 \end{itemize}
-\item $D\left(x_{f1},x_{f2}\right)$
-\item $U\left(x_{f1},x_{f2}\right)$: We have the following stochastic part in the reductions
+\item $D\left(x_{f1},x_{f2}\right)$: We have the following stochastic part in the reductions
 \begin{itemize}
 \item ${\mathcal V}_3(\gamma_5\phi, \Gamma_{f2}P)$
 \item ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}P_1,P_2)$
@@ -1082,6 +1081,7 @@ $$
 $$
 \end{itemize}
 \end{itemize}
+{
 \begin{landscape}
 \section{Summary table}
 \begin{tabular}{ c c c c c c c }
@@ -1107,7 +1107,10 @@ B18& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathca
 B19& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
 B20& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\delta}$ & M & 1 & true  & false \\
 \end{tabular}
-
+\end{landscape}
+}
+{
+\begin{landscape}
 \begin{tabular}{ c c c c c c c }
 W1 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{ud}_{fii})_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
 W2 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^t U, T^{ud}_{fii})_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
@@ -1147,4 +1150,5 @@ W35& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\ga
 W36& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   U, T^{dd}_{fii})_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
 \end{tabular}
 \end{landscape}
+}
 \end{document}
