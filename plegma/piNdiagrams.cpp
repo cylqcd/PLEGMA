@@ -1707,6 +1707,54 @@ int main(int argc, char **argv)
 
        }
 
+       if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
+
+         PLEGMA_ScattCorrelator<float> corrD1if12(sourcePositions[isource], piN12_zero);
+
+         PLEGMA_ScattCorrelator<float> corrD1if34(sourcePositions[isource], piN12_zero);
+
+         PLEGMA_ScattCorrelator<float> corrD1if56(sourcePositions[isource], piN12_zero);
+
+         PLEGMA_ScattCorrelator<float> corrNucleon(sourcePositions[isource], piN12_zero);
+
+         TIME(corrD1if34.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1if34");
+
+         TIME(corrD1if12.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1if12");
+
+         TIME(corrD1if56.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1if56");
+
+         TIME(corrNucleon.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
+
+         PLEGMA_ScattCorrelator<float> reductionsT1(source, piN12_zero);
+         PLEGMA_ScattCorrelator<float> reductionsT2(source, piN12_zero);
+
+         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+ 
+         TIME(corrNucleon.N_diagramms( reductionsT1, reductionsT2 ));
+         TIME(corrNucleon.apply_phase());
+         TIME(corrNucleon.applyBoundaryConditions( true ));
+
+ 
+         TIME(corrD1if56.M_diagramms( corrNucleon, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom));
+
+         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+
+         TIME(corrNucleon.N_diagramms( reductionsT1, reductionsT2 ));
+         TIME(corrNucleon.apply_phase());
+         TIME(corrNucleon.applyBoundaryConditions( true ));
+
+         TIME(corrD1if34.M_diagrams( corrNucleon, stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom));
+         TIME(corrD1if12.M_diagrams( corrNucleon, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom));
+
+         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
+         produceOutput(corrD1if12, outfilename);
+         produceOutput(corrD1if34, outfilename);
+         produceOutput(corrD1if56, outfilename);
+
+       }
+
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
