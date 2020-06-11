@@ -1089,8 +1089,11 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   } //T
 }
 
+//This routine converts a T reduction into a diagramm format
+//In particular: adds the necessary external gamma structure
+//and perform the correct ordering
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::O_diagramms( PLEGMA_ScattCorrelator<Float> &T2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorrelator<Float> &T2, bool accum){
   //checks between T2
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
 
@@ -1098,7 +1101,7 @@ void PLEGMA_ScattCorrelator<Float>::O_diagramms( PLEGMA_ScattCorrelator<Float> &
     PLEGMA_error("T2 must have a mom list\n");
 
   //extract array mom
-  assert( this->Nmoms() == T1.Nmoms() );
+  assert( this->Nmoms() == T2.Nmoms() );
 
   //size of final output for DD
   int n_extgammas_i = this->GList[0].size();

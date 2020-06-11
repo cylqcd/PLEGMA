@@ -248,7 +248,7 @@ int main(int argc, char **argv)
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNDN";
 
         TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propDN, propDN));
-        TIME( corrD.O_diagramms( reductionsT2 ));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
         TIME( corrD.apply_phase() );
         TIME( corrD.applyBoundaryConditions( true ) );
         TIME( corrD.writeHDF5(outfilename) );
@@ -257,7 +257,7 @@ int main(int argc, char **argv)
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPUP";
 
         TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
-        TIME( corrD.O_diagramms( reductionsT2 ));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
         TIME( corrD.apply_phase() );
         TIME( corrD.applyBoundaryConditions( true ) );
         TIME( corrD.writeHDF5(outfilename) );
