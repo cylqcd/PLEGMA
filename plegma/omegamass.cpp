@@ -277,6 +277,23 @@ int main(int argc, char **argv)
         TIME( corrD.applyBoundaryConditions( true ) );
         TIME( corrD.writeHDF5(outfilename) );
 
+        //write DN,DN,UP
+
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNUP_T1";
+        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propDN, propUP));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+        TIME( corrD.apply_phase() );
+        TIME( corrD.applyBoundaryConditions( true ) );
+        TIME( corrD.writeHDF5(outfilename) );
+
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNUP_T2";
+        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propDN, propUP));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+        TIME( corrD.apply_phase() );
+        TIME( corrD.applyBoundaryConditions( true ) );
+        TIME( corrD.writeHDF5(outfilename) );
+
+
         //write DN,UP,UP
 
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPUP_T1";
