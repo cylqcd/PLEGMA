@@ -276,7 +276,7 @@ int main(int argc, char **argv)
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }
 
-  finalize();
+  //finalize();
   return 0;
 }
 
