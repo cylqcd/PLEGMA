@@ -12,6 +12,18 @@ template void x_pe_cy<float>(  float *dest,  float  *floatcomplex, float  *tempo
 template void x_pe_cy<double>( double *dest, double *floatcomplex, double *temporary, int size) ;
 
 template<typename Float>
+void x_pe_y( Float *dest, Float *temporary, int size ){
+  for (int i=0; i<size; ++i){
+    dest[2*i+0]+= temporary[2*i+0];
+    dest[2*i+1]+= temporary[2*i+1];
+  }
+}
+template void x_pe_y<float>(  float *dest,  float  *temporary, int size) ;
+
+template void x_pe_y<double>( double *dest, double *temporary, int size) ;
+
+
+template<typename Float>
 void x_e_cx( Float *dest, const Float floatcomplex[2],  int size ){
   for (int i=0; i<size; ++i){
     Float tmpre=floatcomplex[0]*dest[2*i+0]-floatcomplex[1]*dest[2*i+1];

@@ -437,6 +437,59 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 //#  Initialize diagrams  #
 //#########################
 
+//1pt --> "L", 1Gammas
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
+
+  assert( name_of_diagram=="L" );
+
+  //Gamma list
+  this->GList.clear();
+  this->GList.push_back( G_f2 ) ;
+
+  //Description
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {G_f2};
+  std::string tmp="";
+  for (auto gv : tmpvector){
+    tmp+="{";
+    for( int i=0; i<gv.size();++i ){
+      if (i==(gv.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[gv[i]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+      }
+    }
+    if (gv==tmpvector[tmpvector.size()-1]){
+      tmp+="}";
+    }
+    else{
+      tmp+="},";
+    }
+  }
+
+  this->description = tmp;
+
+  //Groups
+  this->groups = {""};
+
+  //Dataset
+  this->datasets = {name_of_diagram,};
+
+  //Shape
+  this->shape = { (int)(this->GList[0].size()) };
+
+  //initialize
+  this->initialize();
+
+  //Offsets
+  this->labels="tmg";
+  this->setOffsets();
+
+  this->clear_output(true);
+}
+
+
 //2pt --> "P", 2Gammas
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
@@ -1014,21 +1067,21 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum){
 
   assert(i_pi2<this->pList().size());
-  
+
   std::vector<std::vector<int>> momlist(this->pList().pi(0));
   if(i_pi2!=-1)
     momlist = std::vector<std::vector<int>>(1,this->pList().pi(0)[i_pi2]);
- 
+
   if(i_pi2==-1)
     this->clear_output(!accum);
-  else    
-    this->clear_output(!accum,1,i_pi2); 
+  else
+    this->clear_output(!accum,1,i_pi2);
 
-  
+
   //++++++++ PION-PION +++++++++
 
   //mom_pi2 can be 1 mom or a list of moms
-  
+
   //aux PLEGMA_SC for PhixGxPhi multiplications
   site source=site({0,0,0,this->getSource()[3]});
   PLEGMA_ScattCorrelator<Float> pipi_aux(source, momlist, this->getTotalT());
@@ -1043,7 +1096,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
   for(int gi2=0; gi2<n_gammas_i2; ++gi2){
     GAMMAS_SCATT G_i2=this->GList[0][gi2];
     for(int nz_e=0; nz_e<4; ++nz_e){
-      int alfa = gammaInd_scatt[G_i2][nz_e][0]; 
+      int alfa = gammaInd_scatt[G_i2][nz_e][0];
       int beta = gammaInd_scatt[G_i2][nz_e][1];
       Float g[2];
       g[1] = gamma_scatt[G_i2][nz_e][1];
@@ -1054,26 +1107,84 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
       phi0beta.load();
       phi1alfa.copy(*Phi_1[alfa],HOST);
       phi1alfa.load();
-      
+
 
 
       //PhixGf2xPhi
       pipi_aux.PhiPhi( phi0beta, this->GList[1], phi1alfa); //T x N_moms x n_gammas_f2
 
       if(i_pi2==-1){
-	for( int im=0; im<N_moms; ++im)
-	  for( int t=0; t<TIME; ++t)
-	    for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-	      x_pe_cy( this->Corr(t,im,gi2,gf2), g, pipi_aux.Corr(t,im,gf2), 1);
+        for( int im=0; im<N_moms; ++im)
+          for( int t=0; t<TIME; ++t)
+            for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+              x_pe_cy( this->Corr(t,im,gi2,gf2), g, pipi_aux.Corr(t,im,gf2), 1);
       }
       else{
-	for( int t=0; t<TIME; ++t)
-	  for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-	    x_pe_cy( this->Corr(t,i_pi2,gi2,gf2), g, pipi_aux.Corr(t,0,gf2), 1);
-      }	
+        for( int t=0; t<TIME; ++t)
+          for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+            x_pe_cy( this->Corr(t,i_pi2,gi2,gf2), g, pipi_aux.Corr(t,0,gf2), 1);
+      }
     }//nonzero elems G_i2
   }//loop over G_i2 matrix
+
+}
+
+
+//here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! 
+//Phi_0[r] is the stochastic vector at zero momentum
+//Phi_1[r] is the stochastic vector at zero momentum
+//GList only 1 gamma G_i
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum){
+
+  assert(i_pi2<this->pList().size());
   
+  std::vector<std::vector<int>> momlist(this->pList().pi(0));
+  if(i_pi2!=-1)
+    momlist = std::vector<std::vector<int>>(1,this->pList().pi(0)[i_pi2]);
+ 
+  if(i_pi2==-1)
+    this->clear_output(!accum);
+  else    
+    this->clear_output(!accum,1,i_pi2); 
+
+  //mom_pi2 can be 1 mom or a list of moms
+  
+  //aux PLEGMA_SC for PhixGxPhi multiplications
+  site source=site({0,0,0,0});
+  PLEGMA_ScattCorrelator<Float> pipi_aux(source, momlist, this->getTotalT());
+
+  int N_moms = pipi_aux.Nmoms();
+  assert( N_moms==1 || i_pi2==-1 );
+  int n_gammas_f2 = this->GList[0].size();
+  int TIME = this->localT();
+
+  //number of samples
+  int nsamples=Phi_0.size();
+  //loop over G_i2
+  for(int nr=0; nr<nsamples; ++nr){
+    PLEGMA_Vector<Float> phi0;
+    PLEGMA_Vector<Float> phi1;
+    phi0.copy(*Phi_0[nr],HOST);
+    phi0.load();
+    phi1.copy(*Phi_1[nr],HOST);
+    phi1.load();
+      
+    //PhixGf2xPhi
+    pipi_aux.PhiPhi( phi0, this->GList[1], phi1); //T x N_moms x n_gammas_f2
+
+    if(i_pi2==-1){
+      for( int im=0; im<N_moms; ++im)
+        for( int t=0; t<TIME; ++t)
+          for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+            x_pe_y( this->Corr(t,im,gf2), pipi_aux.Corr(t,im,gf2), 1);
+    }
+    else{
+      for( int t=0; t<TIME; ++t)
+	 for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+	    x_pe_y( this->Corr(t,i_pi2,gf2),  pipi_aux.Corr(t,0,gf2), 1);
+    }	
+  }//loop over stochastic samples 
 }
 
 
