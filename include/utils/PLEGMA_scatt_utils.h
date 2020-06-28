@@ -2,10 +2,14 @@
 namespace plegma {
   class momList {
   private:
-    const int NLIST;
+    const int NLIST;//number of list of independent three momenta, for example in two particle 
+                    //scattering for the pi-N -->> pi-N correlation function NLIST should be 3:
+                    //pi2,pf1,pf2
+                    //for the nucleon and pion two-point function NLIST should be 1:pf1
   protected:
-    std::vector<std::vector<std::vector<int>>> ps;
-    std::vector<int> i_tot;  
+    std::vector<std::vector<std::vector<int>>> ps;//the momentum list
+    std::vector<int> i_tot;  //indices of momenta in list of momentum, that defines
+                             //the total momentum
   public:
     momList( int nlist=0, std::initializer_list<int> li_tot={} ) : NLIST(nlist), i_tot(li_tot), ps( std::vector<std::vector<std::vector<int>>>(NLIST) ) {;}
 
@@ -25,11 +29,21 @@ namespace plegma {
       file.close();
 
       read_momList( mom_list );
-    }
+    } //constructor used for reading the momenta used in piNdiagramms.cpp:
+      //for example: momList sourcemomentumList(3,pathListMomenta,{1,2});
+      //here 3 stands for pi2,pf1,pf2; 
+      //     pathListMomenta is the name of the file that contains the three momenta-s
+      //{1,2} stands for columns pf1,pf2: momentum for the nucleon and the pion at the 
+      //final state, sum of these defines the total momentum
 
     momList( int nlist, std::initializer_list< std::vector<std::vector<int>> > list_ps, std::initializer_list<int> li_tot ) : NLIST(nlist), i_tot(li_tot), ps(list_ps){
       assert( list_ps.size() == NLIST );
-    }
+    } //initialization used for N diagrams: momList list_mpf1(1,{mpf1,},{0,});
+      //1, we have only one list of momenta that is mpf1 and it defines the total momentum as well 
+      //contains a list of three momentum
+      //initialization used for T diagrams: momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});      //for T diagram we have for independent momenta: pion at the source and nucleon at 
+      //the sink:that is the total momentum
+
 
     void read_momList( std::vector<int> &mom_list ){
       assert( mom_list.size()%(3*NLIST)==0 );
