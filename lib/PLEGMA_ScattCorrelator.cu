@@ -266,7 +266,7 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
 //Contracts V3^a_c x Gammas_cd x V2^a_{abd}. Gammas_i list of gammas between V3, V2. 
 //called by aux PLEGMA_ScattCorrelator with shape PTGGGGGGSS
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma, Float* factor) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma, Float* factor,PLEGMA_ScattCorrelator<Float>* const &Loop) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -324,6 +324,21 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		  temp[2*ss+0] = aux;
 		}
             }
+            if(&Loop!=NULL){
+              Float *loop_pointer=Loop->Corr(t,i_mom_f2,g0);
+              Float loop_contribution[2];
+              loop_contribution[0]= loop_pointer[0];
+              loop_contribution[1]= loop_pointer[1];
+
+              for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
+                Float realpart,imagpart;
+                realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
+                imagpart=temp[2*spin]*loop_contribution[1]+temp[2*spin+1]*loop_contribution[0];
+                temp[2*spin+0]=realpart;
+                temp[2*spin+1]=imagpart;
+              }
+            }
+
             for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
               for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
                 GAMMAS_SCATT egammai = this->GList[0][g_exti];
@@ -343,7 +358,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma, Float* factor) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma, Float* factor, PLEGMA_ScattCorrelator<Float>* const &Loop) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -413,6 +428,20 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		temp[2*ss+0] = aux;
 	      }
 	    }
+            if(&Loop!=NULL){
+              Float *loop_pointer=Loop->Corr(t,0,g0);
+              Float loop_contribution[2];
+              loop_contribution[0]= loop_pointer[0];
+              loop_contribution[1]= loop_pointer[1];
+
+              for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
+                Float realpart,imagpart;
+                realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
+                imagpart=temp[2*spin]*loop_contribution[1]+temp[2*spin+1]*loop_contribution[0];
+                temp[2*spin+0]=realpart;
+                temp[2*spin+1]=imagpart;
+              }
+            }
 
             for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
 	      for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){    
@@ -677,7 +706,8 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->clear_output(true);
 }
 
-//4pt --> "B1","B2","W1","W2","W3","W4","Z1","Z2","Z3","Z4","M","TpiNsink"  6Gammas
+//4pt --> "B1","B2","W1","W2","W3","W4","Z1","Z2","Z3","Z4","M","TpiNsink" "D" 6Gammas
+//note that here D stands for disconnected
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
   
@@ -755,6 +785,52 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 //##############
 //#  Diagrams  #
 //##############
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, const int ig_i2, const int sampleindex, const int diagram_index, bool accum) {
+
+  if(ig_i2 >= this->GList[3].size()) PLEGMA_error("ig_i2 = %d but Gi2 list size is %d\n", ig_i2, this->GList[3].size() );
+
+  this->clear_output(!accum, 5, ig_i2);
+
+  std::vector<std::vector<int>> momlist={{0,0,0},};
+  
+  this->clear_output(!accum);
+ 
+  //aux PLEGMA_SC for PhixGxPhi multiplications
+  site source=site({0,0,0,0});
+  PLEGMA_ScattCorrelator<Float> pipi_aux(source, momlist, this->getTotalT());
+
+  int N_moms = pipi_aux.Nmoms();
+  assert( N_moms==1 );
+  int TIME = this->localT();
+
+  PLEGMA_Vector<Float> phi0;
+  PLEGMA_Vector<Float> phi1;
+  phi0.copy(*Phi_0[sampleindex],HOST);
+  phi0.load();
+  phi1.copy(*Phi_1[sampleindex],HOST);
+  phi1.load();
+
+  //PhixGf2xPhi
+  pipi_aux.PhiPhi( phi0, this->GList[3], phi1); //T x N_moms x n_gammas_i2
+  switch( diagram_index ){
+    case 1:
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true, NULL, &pipi_aux);
+      break;
+    case 2:
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true, NULL, &pipi_aux);
+      break;
+    case 3:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false,NULL, &pipi_aux);
+      break;
+    case 4:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false,NULL, &pipi_aux);
+      break;
+    default:
+      PLEGMA_error("This value of D1ii diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+  }
+
+}
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum) {
 
@@ -1281,6 +1357,78 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor);
 
 }
+//LT diagramms, Loop at the sink multiplied by T diagramm at the
+//T is build up from a T1 and a T2 reduction
+//source
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, PLEGMA_ScattCorrelator<Float> &Loop, bool accum){
+
+  //checks between T1 T2
+  if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
+  if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T2like shape\n");
+
+  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList().pi(0) )
+    PLEGMA_error("T1,T2 have not the the same mom list of N\n");
+  assert( Nmoms()==this->pList().pi(0).size() );
+
+  for(int i=0; i<2; ++i)
+    if((T1.GList[i]!=T2.GList[i])||(T1.GList[i]!=this->GList[i+2]))
+      PLEGMA_error("T1,T2 wrong gamma list\n");
+
+  //size of final output for NN
+  int n_extgammas_i = this->GList[0].size();
+  int n_extgammas_f = this->GList[1].size();
+  int n_gammas_i1 = this->GList[2].size();
+  int n_gammas_i2 = this->GList[3].size();
+  int n_gammas_f1 = this->GList[4].size();
+  int n_gammas_f2 = this->GList[5].size();
+  int TIME = this->localT();
+
+
+  //put output to zero
+  this->clear_output(!accum);
+  auto imap = this->pList().index_map();
+
+  #pragma omp parallel for
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    int i_mom_f1 = imap[i_m][1];
+    int i_mom_f2 = imap[i_m][2];
+    for( int t=0; t<TIME; ++t){
+      for (int gf2=0; gf2<n_gammas_f2; ++gf2){
+        Float temp[N_SPINS*N_SPINS*2];
+        for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
+          for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
+            Float *loop_pointer=Loop.Corr(t,i_mom_f2,gf2);
+            Float loop_contribution[2];
+            loop_contribution[0]= loop_pointer[0];
+            loop_contribution[1]= loop_pointer[1];
+
+            for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
+              temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + T2.Corr(t,i_mom_f1*gi1,gf1)[spin]);
+            for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
+              Float realpart,imagpart;
+              realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
+              imagpart=temp[2*spin]*loop_contribution[1]+temp[2*spin+1]*loop_contribution[0];
+              temp[2*spin+0]=realpart;
+              temp[2*spin+1]=imagpart;
+            }
+
+            for( int gei=0; gei<n_extgammas_i; ++gei ){
+              for( int gef=0; gef<n_extgammas_f; ++gef ){
+                GAMMAS_SCATT extG_i1 = this->GList[0][gei];
+                GAMMAS_SCATT extG_f1 = this->GList[1][gef];
+                //change in pe_GNG
+                M_pe_GNG<Float>( this->Corr(t,i_m,gei,gef,gi1,gf1), extG_f1, extG_i1, temp );
+              } //Gextf
+            } //G_exti
+          } //G_f1
+        } //G_i1
+      } //G_gf2
+    } //mom
+  } //T
+
+}
+
 //Nucleon correlator. This function should be called outside the p_i2 loop, with Ts computed using the entire list of unique p_f1s. N.B: we multiply the output by exp(i * x_sourcepos * p_f1);
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
