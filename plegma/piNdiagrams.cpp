@@ -52,9 +52,6 @@ int main(int argc, char **argv)
   std::string outfile_dnS="";
   std::string outfile_SEQ="";
   std::string outdiagramPrefix="";
-  std::string outfile_V3;
-  std::string outfile_V2;
-  std::string outfile_V4;
   HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
   HGC_options->set("readStochSamples", "Flag for switching read/building stochastic propagators", verbosity, readstochastic);
   HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
@@ -64,14 +61,23 @@ int main(int argc, char **argv)
   HGC_options->set("outPropSeq", "Path for saving the sequential propagator used", verbosity, outfile_SEQ);
   HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
   HGC_options->set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
-  HGC_options->set("outV3", "Path for saving the result of V2_reduction", verbosity, outfile_V3);
-  HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
-  HGC_options->set("outV4", "Path for saving the result of V4_reduction", verbosity, outfile_V4);
 
   //=========================================================================================================//
   initializePLEGMA();
   {
-
+    /*******************************************************************************
+     *
+     *
+     *  Initialization: (1) reading the sourcepositions and the source momentum list 
+     *                  (2) reading the gaugefield uploading the quda
+     *                      produce the smeared gauge field
+     *                      only the smeared gauge field will be stored in PLEGMA
+     *                  (3) setting up the list of gammas
+     *                      (1) we use three triplets for the delta Cgi, Cgigt, Cgigtg5
+     *                      (2) we use C,Cg5, Cg4,Cg5g4 for the nucleon
+     *                      (3) we use g5 for meson(pion)
+     *
+     *******************************************************************************/
     //Storing only the smeared gauge
     PLEGMA_Gauge<double> smearedGauge;
 
@@ -117,7 +123,6 @@ int main(int argc, char **argv)
     std::vector<GAMMAS_SCATT> glist_sink_nucleon={CG_5,C,CG_5_G_4,CG_4};
     std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired={ID};
     std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID};
-    std::vector<GAMMAS_SCATT> glist_source_meson_T={ID};
 
     std::vector<GAMMAS_SCATT> glist_sink_meson={G_5};
     std::vector<GAMMAS_SCATT> glist_source_meson={G_5};
@@ -129,6 +134,18 @@ int main(int argc, char **argv)
     std::string smearType = ((nsmearGauss>0) ? "SS" : "LL");
     std::string smearString = smearType + "_" + "gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) + "aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
 
+/******************************************************************************************
+*
+*  In the first part of the code we compute 
+*      (1) the stochastic propagators for nstoch random volume sources using full-time dilution
+*      (2) allocate space for zero momentum (u,d) and finite momentum (u) oet propagators
+*      (3) compute loops for the pi0 using the stochastic propagators and sources produced by 
+*          time dilution, note that this is needed for the 
+*  Note that in both cases we store a standard vector of PLEGMA_Vectors on the host, 
+*  and need to load to the device in case we need them
+*
+*
+*******************************************************************************************/
 
     std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_u_zero_mom;
     std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_u_fini_mom;
@@ -154,27 +171,29 @@ int main(int argc, char **argv)
     PLEGMA_Vector<double> vectorStoc_source_oet;
     vectorStoc_source_oet.randInit(1234);
 
-    //PLEGMA_Vector<float> vectorStoc_source(BOTH);
-    //PLEGMA_Vector<float> vectorStoc_propag(BOTH);
-    //PLEGMA_Vector<double> vectorInOut;
     PLEGMA_printf("Start producing stochastic vectors and propagators\n");
     //Note that we replace the f1<-f2 DN propagator with a stochastic one
     //in two steps actually
     //DN(x_f1 <- x_f2 ) = \phihat(x_f2)(x_f1)\xi^{dagger}(x_f2)(x_f2)
     //where x_f2 is the source
     //      x_f1 is the sink
-    //so \phihat(x_f2)(x_f1) is the x_f1 coordinate of the stochastic 
-    //propagator created at x_f2 for the down quark
-    //=gamma_5*U(x_f2 <- x_f1)^dagger*gamma_5
-    //=gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
-    //Here we compute phi and xi
+    //      phihat is the DN propagator obtained by acting on xi
+    //      xi is the stochastic source
+    //In practice however we invert for the UP type flavour and use 
+    //the gamma_5 trick:
+    //DN(x_f1 <- x_f2) =gamma_5*U(x_f2 <- x_f1)^dagger*gamma_5
+    //-->>
+    //gamma_5*\xi(x_f1)(x_f1)*\phi(x_f2)(x_f1)^dagger*gamma_5
+    //In the following lines we compute phi and xi
+    //Note that in the following we do not apply gamma_5 to xi and
+    //phi, because we also construct U(x_f1, x_f2) for the I=1/2 case
     //Producing the stochastic source
     if (readstochastic==0){
       
-      PLEGMA_Vector<double> vectorAuxD1(BOTH);
-      PLEGMA_Vector<double> vectorAuxD2(BOTH);
-      PLEGMA_Vector<double> vectorInOut;
-      PLEGMA_Vector<double> vectorSource(BOTH);
+      PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
+      PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
+      PLEGMA_Vector<double> vectorInOut; //temporary vector using in solve
+      PLEGMA_Vector<double> vectorSource(BOTH);//For storing the source 
       vectorSource.randInit(1234);
       for (int i=0; i<n_stochastic_samples; ++i){
         //Step(1) Creating the time-diluted stochastic source
@@ -188,7 +207,6 @@ int main(int argc, char **argv)
           vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
         }
         vectorAuxD1.copy(vectorSource);
-        //vectorAuxD1.apply_gamma5();
 
         vectorAuxD1.unload();
         stochastic_sources[i]->copy(vectorAuxD1,HOST);
@@ -237,8 +255,6 @@ int main(int argc, char **argv)
           vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
         }
 
-        //vectorAuxD2.apply_gamma5();
-
         //Step(9) Save the propagator to the host memory
         vectorAuxD2.unload();
         stochastic_propags[i]->copy(vectorAuxD2,HOST);
@@ -253,21 +269,17 @@ int main(int argc, char **argv)
         PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
         PLEGMA_Vector<float> vectorRead(BOTH);
         vectorRead.readFile(inputfilename,LIME_FORMAT);
-        //vectorRead.load();
-        //vectorRead.apply_gamma5();
-        //vectorRead.unload();
         stochastic_sources[i]->copy(vectorRead,HOST);
         inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
         PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
         vectorRead.readFile(inputfilename,LIME_FORMAT);
-        //vectorRead.load();
-        //vectorRead.apply_gamma5();
-        //vectorRead.unload();
         stochastic_propags[i]->copy(vectorRead,HOST);
       }
     }
 
     //Creating loops for zero momentum
+    //for the I=1/2 case we consider only momentum for the nucleon
+    //and not for the pion, so compute the pi0 loops for only the zero momentum case
 
     site source_stoch=site({0,0,0,0});
     std::vector<int> zero_mom_list_pion={0,0,0};
@@ -283,6 +295,31 @@ int main(int argc, char **argv)
 
     TIME(Loop_DN.Loop_diagramms( stochastic_propags, stochastic_sources, 0));
     TIME(Loop_UP.Loop_diagramms( stochastic_sources, stochastic_propags, 0));
+
+
+    std::string outfilename;
+
+    outfilename = outdiagramPrefix+confnumber+"_LoopUP";
+    TIME(Loop_UP.normalize_nstoch(n_stochastic_samples));
+    TIME(Loop_UP.writeHDF5( outfilename ));
+
+    outfilename = outdiagramPrefix+confnumber+"_LoopDN";
+    TIME(Loop_DN.normalize_nstoch(n_stochastic_samples));
+    TIME(Loop_DN.writeHDF5( outfilename ));
+
+/********************************************************************************************
+*
+*
+*   In the second part of the code we compute point source propagators for
+*   UP and DN flavour and perform all the contractions necessary for I=3/2 and 1/2
+*   that does not require sequential source propagator and allocate space for the 
+*   sequential propagator
+*   Producing diagrams (1) N (Nucleon 2pt)
+*                      (2) D (Delta 2pt) 
+*                      (3) delta -->> pi + N (2pt)
+*   Producing factors requiring only D or U for momenta pf1,pf2 or {0,0,0}
+*
+*********************************************************************************************/
 
 
 
@@ -414,7 +451,6 @@ int main(int argc, char **argv)
       std::vector<int> mom={0,0,0};
       
       site source=site({0,0,0,sourcePositions[isource][3]});
-      std::string outfilename;
 
       //D diagram
       {
@@ -443,48 +479,6 @@ int main(int argc, char **argv)
 	TIME( corrD.writeHDF5(outfilename) );
 
       }
-      
-      //T diagram piN sink
-
-      {
-	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
-        PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], list_pf1pf2comb);
-
-        corrT_piNsink.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T1"); 
- 
-        PLEGMA_ScattCorrelator<float> reductionsV2(source, list_pf1pf2comb.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsV3(source, list_pf1pf2comb.uniq_p(2));
- 
-        for (int i=0; i<n_stochastic_samples; ++i){
-          PLEGMA_Vector<float> stochastic_propagator;
-          PLEGMA_Vector<float> stochastic_source;
-
-          stochastic_propagator.copy(*stochastic_propags[i],HOST);
-          stochastic_source.copy(*stochastic_sources[i],HOST);
-
-          stochastic_propagator.load();
-          stochastic_propagator.apply_gamma5();
-          stochastic_source.load();
-          stochastic_source.apply_gamma5();
-
-          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
-          //reductionsV3.writeHDF5("V3sourceforTpiNsink"+std::to_string(i));
-
-          TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-          //reductionsV2.writeHDF5("V2sourceforTpiNsink"+std::to_string(i));
-
-          TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2, true));
-
-        }                
-        outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_TpiNsink";
-
-        TIME(corrT_piNsink.apply_phase());
-        TIME(corrT_piNsink.applyBoundaryConditions( true ));
-        TIME(corrT_piNsink.normalize_nstoch(n_stochastic_samples));
-        TIME(corrT_piNsink.writeHDF5( outfilename ));
-
-      }
-
       
       //N diagram
 
@@ -538,7 +532,8 @@ int main(int argc, char **argv)
       momList filtered_sourcemomentumList_pi20 = sourcemomentumList.extract(filter, 0);
      
       //Here the prefix UU means that reduction is based phi and xi, without the gamma_5
-      //We replace U(x_f2,x_f1) with phi(x_f2) xi^dagger(x_f1) 
+      //We replace U(x_f2,x_f1) with phi(x_f2) xi^dagger(x_f1)
+      //phi goes to V2 reduction and xi goes to V3 reduction 
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V2_GAMMAF1D_U;
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V4_GAMMAF1D_U;
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V4_GAMMAF1U_D;
@@ -546,7 +541,9 @@ int main(int argc, char **argv)
      
       //Here the prefix DD means that reduction is based phi*g5 and xi*g5
       //We replace D(x_f2,x_f1) with xi(x_f2)*gamma_5* phi^dagger(x_f1) *gamma_5
+      //phi goes to V3 reduction and xi goes to V2 reduction 
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U;
+      //we need these only at zero momentum pf2
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2D_zero_mom;
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U_zero_mom;
 
@@ -739,22 +736,69 @@ int main(int argc, char **argv)
          }
       }
 
+      //T diagram piN sink
+      //Details eq 51-56 in Marcus's notes
+      {
+        //extract all the momenta that corresponds to pi2==(0,0,0)
+	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], list_pf1pf2comb);
+
+        corrT_piNsink.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T1"); 
+
+        //we compute the V2 reduction here, because we do not need it in any other place
+ 
+        PLEGMA_ScattCorrelator<float> reductionsV2(source, list_pf1pf2comb.uniq_p(1));
+ 
+        for (int i=0; i<n_stochastic_samples; ++i){
+          PLEGMA_Vector<float> stochastic_source;
+
+          stochastic_source.copy(*stochastic_sources[i],HOST);
+
+          stochastic_source.load();
+          stochastic_source.apply_gamma5();
+
+
+          TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
+          //reductionsV2.writeHDF5("V2sourceforTpiNsink"+std::to_string(i));
+
+          TIME(corrT_piNsink.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U[i], reductionsV2, true));
+
+        }                
+        outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_TpiNsink";
+
+        TIME(corrT_piNsink.apply_phase());
+        TIME(corrT_piNsink.applyBoundaryConditions( true ));
+        TIME(corrT_piNsink.normalize_nstoch(n_stochastic_samples));
+        TIME(corrT_piNsink.writeHDF5( outfilename ));
+
+      }
+
 
       //We need the pi-N 4pt functions only at zero pion momentum and non-zero nucleon momentum
       //therefore we filter further the momentumlist corresponding to pi2==0 to also pf2==0
       momList filtered_sourcemomentumList_pi20pf20 = filtered_sourcemomentumList_pi20.extract(filter,2);
-
-
-
-      //Next we compute the diagrams needed only for I=1/2 I_z=1/2
-      //We are doing this only at zero momentum, this means the sequential
-      //momentum and the momentum in the Fourier trafo is also set to zero
-      //Compute sequential propagators UU, DD, DU needed only
-      //for the iso-spin 1/2 case
+/**********************************************************************************************
+*
+*
+*      In the third section we compute sequential propagators (uu,dd, ud)
+*      and all the diagrams needed for I=1/2 I_z=1/2 and I=3/2 I_z=3/2
+*      For the I=1/2 case we only consider zero momentum for the pion, 
+*      this means the sequential momentum and the momentum in V3 reduction is 
+*      set to zero, however we have all the possible momenta for pf1
+*      In the I=3/2 case we consider all the momentum for the pion as well
+*
+*
+***********************************************************************************************/
       //uu case
       {
         PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20.uniq_p(1));
+
+        PLEGMA_ScattCorrelator<float> corrD1ii1(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii2(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii3(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii4(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
 
         PLEGMA_ScattCorrelator<float> corrB3(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrB4(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
@@ -781,11 +825,22 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> corrW31(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrW32(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-        PLEGMA_ScattCorrelator<float> corrD1ff12(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-        PLEGMA_ScattCorrelator<float> corrD1ff34(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ff13(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ff24(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ff710(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ff89(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-        TIME(corrD1ff34.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff34"));
-        TIME(corrD1ff12.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff12"));
+
+        TIME(corrD1ff24.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff24"));
+        TIME(corrD1ff13.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff13"));
+        TIME(corrD1ff710.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff710"));
+        TIME(corrD1ff89.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff89"));
+
+
+        TIME(corrD1ii1.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii1"));
+        TIME(corrD1ii2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii2"));
+        TIME(corrD1ii3.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii3"));
+        TIME(corrD1ii4.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii4"));
 
 
         corrB3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B3");
@@ -856,12 +911,22 @@ int main(int argc, char **argv)
         }
 
         for (int i=0; i<n_stochastic_samples; ++i){
+          //Computing diagrams containing loops first
+
+          TIME(corrD1ii1.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 1, true));          
+          TIME(corrD1ii2.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 2, true));          
+          TIME(corrD1ii3.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 3, true));
+          TIME(corrD1ii4.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 4, true)); 
+
+ 
           PLEGMA_Vector<float> stochastic_propagator;
           PLEGMA_Vector<float> stochastic_source;
           stochastic_propagator.copy(*stochastic_propags[i],HOST);
           stochastic_source.copy(*stochastic_sources[i],HOST);
           stochastic_propagator.load();
           stochastic_source.load();
+
+          
 
 
           //For computing the B diagrams we compute the V3 factor
@@ -926,10 +991,15 @@ int main(int argc, char **argv)
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP));
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP));
 
+        TIME(corrD1ff24.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
+        TIME(corrD1ff710.LT_diagramms( reductionsT1, reductionsT2, Loop_DN ));
+
+
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propTS));
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propTS));
 
-
+        TIME(corrD1ff13.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
+        TIME(corrD1ff89.LT_diagramms( reductionsT1, reductionsT2, Loop_DN ));
 
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
@@ -959,6 +1029,14 @@ int main(int argc, char **argv)
         produceOutput(corrW31, outfilename, n_stochastic_samples);
         produceOutput(corrW32, outfilename, n_stochastic_samples);
 
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
+        produceOutput(corrD1ff13, outfilename);
+        produceOutput(corrD1ff24, outfilename);
+        produceOutput(corrD1ff710, outfilename);
+        produceOutput(corrD1ff89, outfilename);
+
+
+
       }//end of loop for sequential UU
 
       //start for DD
@@ -978,6 +1056,14 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> corrW34(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrW35(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrW36(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+        PLEGMA_ScattCorrelator<float> corrD1ff56(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ff1112(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+
+        TIME(corrD1ff56.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff56"));
+
+        TIME(corrD1ff1112.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff1112"));
 
         corrB7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B7");
         corrB8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B8");
@@ -1014,7 +1100,7 @@ int main(int argc, char **argv)
           vectorAuxF.copy(vectorAuxD);
           propTS3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
         }
-        //Computing sequential propagators UU T_fii with insertion
+        //Computing sequential propagators DD T_fii with insertion
         //gamma_i2=gamma_5 and momentum (0,0,0)
         for(int isc = 0 ; isc < 12 ; isc++){
           PLEGMA_Vector<double> vectorInOut;
@@ -1032,6 +1118,19 @@ int main(int argc, char **argv)
           vectorAuxF.copy(vectorInOut);
           propTS.absorb(vectorAuxF, isc/3, isc%3);
         }
+
+        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20.uniq_p(3);
+
+        PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
+        PLEGMA_ScattCorrelator<float> reductionsT2(source,  mptot_filt);
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propUP));
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propUP));
+
+        TIME(corrD1ff56.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
+        TIME(corrD1ff1112.LT_diagramms( reductionsT1, reductionsT2, Loop_DN ));
+
+
         for (int i=0; i<n_stochastic_samples; ++i){
           PLEGMA_Vector<float> stochastic_propagator;
           PLEGMA_Vector<float> stochastic_source;
@@ -1082,6 +1181,11 @@ int main(int argc, char **argv)
         produceOutput(corrW34, outfilename, n_stochastic_samples);
         produceOutput(corrW35, outfilename, n_stochastic_samples);
         produceOutput(corrW36, outfilename, n_stochastic_samples);
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
+        produceOutput(corrD1ff56, outfilename);
+        produceOutput(corrD1ff1112, outfilename);
+
 
       }//end for DD
 
@@ -1661,7 +1765,7 @@ int main(int argc, char **argv)
 
            TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true));
 
-           TIME(reductionsV2_diluted_zero_pf2[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propDN, false));
+           TIME(reductionsV2_diluted[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propDN, false));
 
          }
 
