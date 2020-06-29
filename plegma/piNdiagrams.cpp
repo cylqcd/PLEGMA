@@ -314,7 +314,7 @@ int main(int argc, char **argv)
 *   UP and DN flavour and perform all the contractions necessary for I=3/2 and 1/2
 *   that does not require sequential source propagator and allocate space for the 
 *   sequential propagator
-*   Producing diagrams (1) N (Nucleon 2pt)
+*   Producing diagrams (1) N (Nucleon 2pt) (including both N+ with U,D,U and N- with D,U,D
 *                      (2) D (Delta 2pt) 
 *                      (3) delta -->> pi + N (2pt)
 *   Producing factors requiring only D or U for momenta pf1,pf2 or {0,0,0}
@@ -509,6 +509,33 @@ int main(int argc, char **argv)
         TIME(corrN.writeHDF5(outfilename));
 
       }
+
+      //For the I=1/2 case we need the N- as well
+      {
+        PLEGMA_ScattCorrelator<float> corrNM(sourcePositions[isource], list_mpf1 );
+
+        //initialize diagram
+        TIME(corrN.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N-"));
+
+        //Computing T reductions+recombination
+
+        PLEGMA_ScattCorrelator<float> reductionsT1N(source, mpf1);
+        PLEGMA_ScattCorrelator<float> reductionsT2N(source, mpf1);
+
+        TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+        //reductionsT1N.writeHDF5("T1sourceforN");
+
+        TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+        //reductionsT2N.writeHDF5("T2sourceforN");
+
+        //write N
+        TIME(corrNM.N_diagramms( reductionsT1N, reductionsT2N ));
+        TIME(corrNM.apply_phase());
+        TIME(corrNM.applyBoundaryConditions( true ));
+        TIME(corrNM.writeHDF5(outfilename));
+
+      }
+
       //P diagram
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
       momList list_mpi2(1,{mpi2,},{0,});
@@ -627,17 +654,14 @@ int main(int argc, char **argv)
         //D1ii9,D1ii10
         //D1ii11,D1ii12
         //B7,B8
+        //B1,B2
         TIME(reductions_DD_V2_GAMMAF1U_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false));
-
 
         //B13,B14,B17,B18
         TIME(reductions_DD_V4_GAMMAF1U_D[i]->V4( stochastic_source, glist_sink_nucleon, propUP, propDN, false));
 
         //B15,B16,B19,B20
         TIME(reductions_DD_V2_GAMMAF1D_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false));
-
-        //B1,B2
-        TIME(reductions_DD_V2_GAMMAF1U_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false));
 
       }
 
@@ -745,23 +769,11 @@ int main(int argc, char **argv)
 
         corrT_piNsink.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T1"); 
 
-        //we compute the V2 reduction here, because we do not need it in any other place
- 
-        PLEGMA_ScattCorrelator<float> reductionsV2(source, list_pf1pf2comb.uniq_p(1));
- 
+        //we have already all the factors computed
+  
         for (int i=0; i<n_stochastic_samples; ++i){
-          PLEGMA_Vector<float> stochastic_source;
 
-          stochastic_source.copy(*stochastic_sources[i],HOST);
-
-          stochastic_source.load();
-          stochastic_source.apply_gamma5();
-
-
-          TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-          //reductionsV2.writeHDF5("V2sourceforTpiNsink"+std::to_string(i));
-
-          TIME(corrT_piNsink.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U[i], reductionsV2, true));
+          TIME(corrT_piNsink.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U[i], *reductions_DD_V2_GAMMAF1U_U[i], true));
 
         }                
         outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_TpiNsink";
@@ -773,10 +785,112 @@ int main(int argc, char **argv)
 
       }
 
-
       //We need the pi-N 4pt functions only at zero pion momentum and non-zero nucleon momentum
       //therefore we filter further the momentumlist corresponding to pi2==0 to also pf2==0
       momList filtered_sourcemomentumList_pi20pf20 = filtered_sourcemomentumList_pi20.extract(filter,2);
+
+      
+      //Loop diagram at the source
+      {
+
+        PLEGMA_ScattCorrelator<float> corrD1ii1(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii2(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii3(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii4(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+        PLEGMA_ScattCorrelator<float> corrD1ii5(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii6(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii7(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii8(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+        PLEGMA_ScattCorrelator<float> corrD1ii9(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii10(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+        PLEGMA_ScattCorrelator<float> corrD1ii13(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii14(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii15(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii16(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+        PLEGMA_ScattCorrelator<float> corrD1ii17(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii18(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii19(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+        PLEGMA_ScattCorrelator<float> corrD1ii20(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+
+
+        TIME(corrD1ii1.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii1"));
+        TIME(corrD1ii2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii2"));
+        TIME(corrD1ii3.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii3"));
+        TIME(corrD1ii4.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii4"));
+
+        TIME(corrD1ii5.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii5"));
+        TIME(corrD1ii6.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii6"));
+        TIME(corrD1ii7.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii7"));
+        TIME(corrD1ii8.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii8"));
+
+        TIME(corrD1ii9.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii9"));
+        TIME(corrD1ii10.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii10"));
+
+        TIME(corrD1ii13.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii13"));
+        TIME(corrD1ii14.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii14"));
+        TIME(corrD1ii15.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii15"));
+        TIME(corrD1ii16.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii16"));
+
+        TIME(corrD1ii17.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii17"));
+        TIME(corrD1ii18.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii18"));
+        TIME(corrD1ii19.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii19"));
+        TIME(corrD1ii20.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii20"));
+
+
+
+
+        for (int i=0; i<n_stochastic_samples; ++i){
+
+          TIME(corrD1ii1.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 1, true));          
+          TIME(corrD1ii2.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 2, true));          
+          TIME(corrD1ii3.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 3, true));
+          TIME(corrD1ii4.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 4, true)); 
+          TIME(corrD1ii5.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 5, true));
+          TIME(corrD1ii6.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 6, true));
+          TIME(corrD1ii7.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 7, true));
+          TIME(corrD1ii8.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 8, true));
+          TIME(corrD1ii9.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], stochastic_sources, stochastic_propags, 0,  i, 9, true));
+          TIME(corrD1ii10.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], stochastic_sources, stochastic_propags, 0,  i, 10, true));
+          TIME(corrD1ii13.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 13, true));          
+          TIME(corrD1ii14.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 14, true));
+          TIME(corrD1ii15.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 15, true));
+          TIME(corrD1ii16.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 16, true));
+          TIME(corrD1ii17.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 17, true));
+          TIME(corrD1ii18.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 18, true));
+          TIME(corrD1ii19.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 19, true));
+          TIME(corrD1ii20.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 20, true));
+
+        } //stochastic samples
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ii";
+
+        produceOutput(corrD1ii1, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii2, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii3, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii4, outfilename, n_stochastic_samples);
+
+        produceOutput(corrD1ii5, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii6, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii7, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii8, outfilename, n_stochastic_samples);
+
+        produceOutput(corrD1ii9, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii10, outfilename, n_stochastic_samples);
+
+        produceOutput(corrD1ii13, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii14, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii15, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii16, outfilename, n_stochastic_samples);
+
+
+      } //diagrams containing loop at the source
+
+
 /**********************************************************************************************
 *
 *
@@ -793,12 +907,6 @@ int main(int argc, char **argv)
       {
         PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20.uniq_p(1));
-
-        PLEGMA_ScattCorrelator<float> corrD1ii1(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-        PLEGMA_ScattCorrelator<float> corrD1ii2(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-        PLEGMA_ScattCorrelator<float> corrD1ii3(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-        PLEGMA_ScattCorrelator<float> corrD1ii4(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-
 
         PLEGMA_ScattCorrelator<float> corrB3(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrB4(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
@@ -831,16 +939,11 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> corrD1ff89(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
 
-        TIME(corrD1ff24.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff24"));
-        TIME(corrD1ff13.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff13"));
-        TIME(corrD1ff710.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff710"));
-        TIME(corrD1ff89.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff89"));
+        TIME(corrD1ff24.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff2-4"));
+        TIME(corrD1ff13.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff1-3"));
+        TIME(corrD1ff710.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff7-10"));
+        TIME(corrD1ff89.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff8-9"));
 
-
-        TIME(corrD1ii1.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii1"));
-        TIME(corrD1ii2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii2"));
-        TIME(corrD1ii3.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii3"));
-        TIME(corrD1ii4.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii4"));
 
 
         corrB3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B3");
@@ -913,10 +1016,6 @@ int main(int argc, char **argv)
         for (int i=0; i<n_stochastic_samples; ++i){
           //Computing diagrams containing loops first
 
-          TIME(corrD1ii1.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 1, true));          
-          TIME(corrD1ii2.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 2, true));          
-          TIME(corrD1ii3.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 3, true));
-          TIME(corrD1ii4.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 4, true)); 
 
  
           PLEGMA_Vector<float> stochastic_propagator;
@@ -1348,6 +1447,12 @@ int main(int argc, char **argv)
             PLEGMA_ScattCorrelator<float> corrW27(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
             PLEGMA_ScattCorrelator<float> corrW28(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
+            PLEGMA_ScattCorrelator<float> corrD1ff1314(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+            PLEGMA_ScattCorrelator<float> corrD1ff1516(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+            PLEGMA_ScattCorrelator<float> corrD1ff1718(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+            PLEGMA_ScattCorrelator<float> corrD1ff1920(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
 
             corrB9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B9");
             corrB10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B10");
@@ -1374,6 +1479,37 @@ int main(int argc, char **argv)
             corrW27.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W27");
             corrW28.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W28");
 
+            TIME(corrD1ff1314.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff13-14"));
+            TIME(corrD1ff1516.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff15-16"));
+
+            TIME(corrD1ff1718.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff17-18"));
+            TIME(corrD1ff1516.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff19-20"));
+
+
+            std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20.uniq_p(3);
+
+            PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
+            PLEGMA_ScattCorrelator<float> reductionsT2(source,  mptot_filt);
+
+            TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propDN));
+            TIME(reductionsT2.T1(glist_source_nucleon, glist_sink_nucleon, propTS, propUP, propDN));
+
+            TIME(corrD1ff1314.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
+            TIME(corrD1ff1718.LT_diagramms( reductionsT1, reductionsT2, Loop_DN ));
+
+            TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propTS));
+            TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP));
+
+            TIME(corrD1ff1516.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
+            TIME(corrD1ff1920.LT_diagramms( reductionsT1, reductionsT2, Loop_DN ));
+
+
+            outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
+
+            produceOutput(corrD1ff1314, outfilename);
+            produceOutput(corrD1ff1516, outfilename);
+            produceOutput(corrD1ff1718, outfilename);
+            produceOutput(corrD1ff1920, outfilename);
 
 
             for (int i=0; i<n_stochastic_samples; ++i){
