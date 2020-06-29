@@ -23,6 +23,7 @@ int main(int argc, char **argv)
 {
   initializeOptions(argc, argv, true, listOpt);
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+  std::vector<double> mu_s;
   double mu_ud = mu;
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
@@ -31,7 +32,12 @@ int main(int argc, char **argv)
   int n_stochastic_samples;
   int nroots=4;
   int confnumber_int;
+  bool run_ud = true;
   std::string outdiagramPrefix="";
+  HGC_options->set("run-ud", "Whether to run '+' **AND** '-' flavors or only '+' flavor", verbosity, run_ud);
+  HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
+
+
   HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
   HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
   PLEGMA_printf("Initialization");
@@ -59,7 +65,8 @@ int main(int argc, char **argv)
       smearedGauge.calculatePlaq();
     }
 
-    updateOptions(LIGHT);
+    updateOptions(STRANGE);
+    mu = mu_s[0];
     TIME(QUDA_solver solver(mu));
 
 
@@ -108,226 +115,251 @@ int main(int argc, char **argv)
   
       //Create Propagator
       PLEGMA_Propagator<float> propUP(BOTH);
-      PLEGMA_Propagator<float> propDN(BOTH);
 
-      // ensuring mu positive
-      if(mu<0) {
-        mu*=-1.;
-        solver.UpdateSolver();
-      }
+      int nSmaller = mu_s.size();
+
+      //loop over all the strange quarks
+      for (int ismall=0; ismall<nSmaller;++ismall){
+
+        mu=mu_s[ismall];
+
+        // ensuring mu positive
+        if(mu<0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
     
-      for(int isc = 0 ; isc < 12 ; isc++){
-        PLEGMA_Vector<double> vectorInOut;
-        PLEGMA_Vector<float>  vectorAuxF;
-        PLEGMA_Vector<double> vectorAuxD;
-        { // Smearing the source
-          PLEGMA_Vector3D<double> vector1, vector2;
-          vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-          vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+        for(int isc = 0 ; isc < 12 ; isc++){
+          PLEGMA_Vector<double> vectorInOut;
+          PLEGMA_Vector<float>  vectorAuxF;
+          PLEGMA_Vector<double> vectorAuxD;
+          { // Smearing the source
+            PLEGMA_Vector3D<double> vector1, vector2;
+            vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+          }
+
+          //Rotation to the physical basis
+          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));       
+
+          //Inversion
+          PLEGMA_printf("Going to invert UP for component %d\n", isc);
+          TIME(solver.solve(vectorAuxD, vectorAuxD));
+
+          //Rotation to the physical basis
+          TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
+
+          //Smearing at the sink
+          TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
+
+          vectorAuxF.copy(vectorAuxD);
+          propUP.absorb(vectorAuxF, isc/3, isc%3);
         }
+  
+        site source=site({0,0,0,sourcePositions[isource][3]});
+        std::string outfilename;
 
-        //Rotation to the physical basis
-        TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));       
+        //D diagram
+        {
+          std::vector<std::vector<int>> mtot = sourcemomentumList.uniq_p(3);
+	  momList list_mtot(1,{mtot,},{0,});
+	  PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], list_mtot);
 
-        //Inversion
-        PLEGMA_printf("Going to invert UP for component %d\n", isc);
-        TIME(solver.solve(vectorAuxD, vectorAuxD));
-
-        //Rotation to the physical basis
-        TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
-
-        //Smearing at the sink
-        TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
-
-        vectorAuxF.copy(vectorAuxD);
-        propUP.absorb(vectorAuxF, isc/3, isc%3);
-      }
-
-      if(mu>0) {
-        mu*=-1.;
-        solver.UpdateSolver();
-      }
-
-      for(int isc = 0 ; isc < 12 ; isc++){
-        PLEGMA_Vector<double> vectorInOut;
-        PLEGMA_Vector<float>  vectorAuxF;
-        PLEGMA_Vector<double> vectorAuxD;
-        { // Smearing the source
-          PLEGMA_Vector3D<double> vector1, vector2;
-          vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-          vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
-        }
-
-        //Rotation to the physical basis for the DN quark
-        TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1));
-
-        //Inversion
-        PLEGMA_printf("Going to invert UP for component %d\n", isc);
-        TIME(solver.solve(vectorAuxD, vectorAuxD));
-
-        //Rotation to the physical basis for the DN quark
-        TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1));
-
-        //Smearing at the sink
-        TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
-
-        vectorAuxF.copy(vectorAuxD);
-        propDN.absorb(vectorAuxF, isc/3, isc%3);
-      }
-
-
-
-      std::vector<int> mom={0,0,0};
+	  //initialize diagram
+	
+          char *dset1;
+          asprintf(&dset1, "Oms[%+1.1e]", mu);
+	  corrD.initialize_diagram( glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,dset1);
       
-      site source=site({0,0,0,sourcePositions[isource][3]});
-      std::string outfilename;
-
-      //D diagram
-      {
-	std::vector<std::vector<int>> mtot = sourcemomentumList.uniq_p(3);
-	momList list_mtot(1,{mtot,},{0,});
-	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], list_mtot);
-
-	//initialize diagram
-	corrD.initialize_diagram( glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
-      
-	PLEGMA_ScattCorrelator<float> reductionsT1(source, mtot);
-	PLEGMA_ScattCorrelator<float> reductionsT2(source, mtot);
+	  PLEGMA_ScattCorrelator<float> reductionsT1(source, mtot);
+	  PLEGMA_ScattCorrelator<float> reductionsT2(source, mtot);
 
 
-	//write UP,UP,UP
+	  //write UP,UP,UP
 
-	outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPUP_T1";
-	TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+	  TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
+          TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
 
-	outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPUP_T2";
-	TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+          TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
 
-        //write DN,DN,DN
+          TIME( corrD.apply_phase() );
+          TIME( corrD.applyBoundaryConditions( true ) );
+          TIME( corrD.writeHDF5(outfilename) );
+       
+	  outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_O";
+ 
+          TIME( corrD.apply_phase() );
+          TIME( corrD.applyBoundaryConditions( true ) );
+          TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNDN_T1";
-        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propDN, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+          //if we invert both + and - flavors
+          //then we write out every possible factors to build
+          //diagram for the delta with Cgi, Cgigt insertions
+          //in particular you can build up from the factors
+          //all the isospin combinations
+          if (run_ud == true){
+            //write UP,UP,UP
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPUP_T1";
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNDN_T2";
-        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propDN, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPUP_T2";
+            TIME( corrD.writeHDF5(outfilename) );
 
-        //write UP,DN,UP
+            PLEGMA_Propagator<float> propDN(BOTH);
+            //ensuring mu negative
+            if(mu>0) {
+              mu*=-1.;
+              solver.UpdateSolver();
+            }
+            for(int isc = 0 ; isc < 12 ; isc++){
+              PLEGMA_Vector<double> vectorInOut;
+              PLEGMA_Vector<float>  vectorAuxF;
+              PLEGMA_Vector<double> vectorAuxD;
+              { // Smearing the source
+                PLEGMA_Vector3D<double> vector1, vector2;
+                vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
+                TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+                vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+              }
+              //Rotation to the physical basis
+              TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));
+              //Inversion
+              PLEGMA_printf("Going to invert DN for component %d\n", isc);
+              TIME(solver.solve(vectorAuxD, vectorAuxD));
+              //Rotation to the physical basis
+              TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
+              //Smearing at the sink
+              TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
+              vectorAuxF.copy(vectorAuxD);
+              propDN.absorb(vectorAuxF, isc/3, isc%3);
+            }
+            //write DN,DN,DN
+          
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNDN_T1";
+            TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propDN, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNUP_T1";
-        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNDN_T2";
+            TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propDN, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNUP_T2";
-        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            //write UP,DN,UP
 
-        //write DN,UP,DN
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNUP_T1";
+            TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPDN_T1";
-        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNUP_T2";
+            TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
+ 
+            //write DN,UP,DN
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPDN_T2";
-        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPDN_T1";
+            TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        //write UP,UP,DN
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPDN_T2";
+            TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPDN_T1";
-        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            //write UP,UP,DN
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPDN_T2";
-        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPDN_T1";
+            TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        //write DN,DN,UP
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPDN_T2";
+            TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNUP_T1";
-        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propDN, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            //write DN,DN,UP
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNUP_T2";
-        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propDN, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNUP_T1";
+            TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propDN, propUP));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNDNUP_T2";
+            TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propDN, propUP));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        //write DN,UP,UP
+            //write DN,UP,UP
+          
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPUP_T1";
+            TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPUP_T1";
-        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPUP_T2";
+            TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DNUPUP_T2";
-        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            //write UP,DN,DN
 
-        //write UP,DN,DN
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNDN_T1";
-        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNDN_T1";
+            TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNDN_T2";
-        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propDN, propDN));
-        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
-        TIME( corrD.apply_phase() );
-        TIME( corrD.applyBoundaryConditions( true ) );
-        TIME( corrD.writeHDF5(outfilename) );
+            outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPDNDN_T2";
+            TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propDN, propDN));
+            TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+            TIME( corrD.apply_phase() );
+            TIME( corrD.applyBoundaryConditions( true ) );
+            TIME( corrD.writeHDF5(outfilename) );
 
-      }    
+          
+          }//if run_ud
 
-    } //loop over source position
+        }//loop over D diagram
+
+      } //loop over source position
+
+    }//loop over strange quarks
 
   } 
   finalize();
