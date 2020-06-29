@@ -844,7 +844,8 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::array<PLEGMA_Vector<Float>,4> &Phi_0, std::array<PLEGMA_Vector<Float>,4> &Phi_1, bool accum){
 
   //extract moms
-  if(!this->pList().check_eq(0)) PLEGMA_error("Mmmmmh something is not going as expected\n");
+  assert(this->pList().check_eq(0));
+  
   std::vector<int> mom_pi2 = this->pList().pi(0)[0]; 
   std::vector<std::vector<int>> moms_pf2 = this->pList().uniq_p(2);
   //extract vector p_f1
@@ -1023,7 +1024,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin){
-            temp[spin] = (T1.Corr(t,i_mom,gi1,gf)[spin] - T3.Corr(t,i_mom,gi1,gf)[spin] + T5.Corr(t,i_mom,gi1,gf)[spin])*2;
+            temp[spin] = (+1.*T1.Corr(t,i_mom,gi1,gf)[spin]*(gammaTranspSign_scatt[this->GList[4][gf]]+1.) 
+                          +1.*T3.Corr(t,i_mom,gi1,gf)[spin]*(gammaTranspSign_scatt[this->GList[4][gf]]+1.)*(gammaTranspSign_scatt[this->GList[2][gi1]])
+                          +1.*T5.Corr(t,i_mom,gi1,gf)[spin]*(gammaTranspSign_scatt[this->GList[4][gf]]+1.));
 	  }
           for( int gei=0; gei<n_extgammas_i; ++gei ){ 
 	    for( int gef=0; gef<n_extgammas_f; ++gef ){
@@ -1219,11 +1222,6 @@ void PLEGMA_ScattCorrelator<Float>::clear_output(bool tozero){
   int tot_size = 2*this->getTotalSize();
   memset( this->H_elem(), 0, tot_size*sizeof(Float) );
 }
-
-
-//V3_a^l*G_ab*V3_b^l
-//template<typename Float>
-//void PLEGMA_ScattCorrelator<Float>::V3V3reduction( PLEGMA_ScattCorrelator<Float> &srcV2, int alfa, int beta){
 
 template class PLEGMA_ScattCorrelator<float>;
 template class PLEGMA_ScattCorrelator<double>;

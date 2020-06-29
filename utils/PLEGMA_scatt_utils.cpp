@@ -1,15 +1,4 @@
 #include <PLEGMA.h>
-// template void V_M_V<float>( float * V1, float * V2, GAMMAS_SCATT gamma, bool transp, float *Dest );
-
-// template void V_M_V<double>( double * V1, double * V2, GAMMAS_SCATT gamma, bool transp, double *Dest );
-
-// template void V_TR_MM<float>( float * V1, GAMMAS_SCATT gamma, bool transp, float *Dest );
-
-// template void V_TR_MM<double>( double * V1, GAMMAS_SCATT gamma, bool transp, double *Dest );
-
-// template void M_pe_GNG<float>( float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const float *source, bool forcezero) ;
-
-// template void M_pe_GNG<double>( double *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const double *source, bool forcezero) ;
 
 template<typename Float>
 void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size ){
