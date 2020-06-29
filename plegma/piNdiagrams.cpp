@@ -1498,11 +1498,6 @@ int main(int argc, char **argv)
  
 	  
             TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true));
-            //reductionsV3.writeHDF5("V3sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
-
-            //TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-            //reductionsV2.writeHDF5("V2sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
-
 
 	    TIME(corrB1.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], i_gamma_i2, 1, true));
 	  
@@ -1510,10 +1505,7 @@ int main(int argc, char **argv)
           
             //Compute Diagram W1,W2
           
-            //TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
-            //reductionsV3.writeHDF5("V3sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
             TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false));
-            //reductionsV2.writeHDF5("V2sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             TIME(corrW1.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true));
 	    TIME(corrW2.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true));
@@ -1521,7 +1513,6 @@ int main(int argc, char **argv)
             //Compute Diagram W3,W4
           
             TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false));
-            //reductionsV2.writeHDF5("V2sourceforW34_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             TIME(corrW3.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true));
 	    TIME(corrW4.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true));

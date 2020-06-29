@@ -922,10 +922,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
       this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false);//has to be checked
       break;
     case 3:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true);//has to be checked
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true);//has to be checked
       break;
     case 4:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true);
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true);
       break;
     case 5:
       this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2);
