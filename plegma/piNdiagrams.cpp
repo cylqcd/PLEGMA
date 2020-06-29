@@ -47,6 +47,8 @@ int main(int argc, char **argv)
   int n_stochastic_samples;
   int nroots=4;
   int confnumber_int;
+  int rand_seed1=1234;
+  int rand_seed2=1234;
   std::string outfile_V="";
   std::string outfile_upS="";
   std::string outfile_dnS="";
@@ -61,6 +63,8 @@ int main(int argc, char **argv)
   HGC_options->set("outPropSeq", "Path for saving the sequential propagator used", verbosity, outfile_SEQ);
   HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
   HGC_options->set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
+  HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
+  HGC_options->set("seed2", "Seed for intiialization of stochastic sources", verbosity, rand_seed2);
 
   //=========================================================================================================//
   initializePLEGMA();
@@ -169,7 +173,7 @@ int main(int argc, char **argv)
     }
 
     PLEGMA_Vector<double> vectorStoc_source_oet;
-    vectorStoc_source_oet.randInit(1234);
+    vectorStoc_source_oet.randInit(rand_seed1);
 
     PLEGMA_printf("Start producing stochastic vectors and propagators\n");
     //Note that we replace the f1<-f2 DN propagator with a stochastic one
@@ -194,7 +198,8 @@ int main(int argc, char **argv)
       PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
       PLEGMA_Vector<double> vectorInOut; //temporary vector using in solve
       PLEGMA_Vector<double> vectorSource(BOTH);//For storing the source 
-      vectorSource.randInit(1234);
+      vectorSource.randInit(rand_seed2);
+
       for (int i=0; i<n_stochastic_samples; ++i){
         //Step(1) Creating the time-diluted stochastic source
         vectorSource.stochastic_Z(nroots);
