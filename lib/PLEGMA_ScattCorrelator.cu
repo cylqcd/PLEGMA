@@ -258,6 +258,34 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
   PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
 }
 
+template<typename Float>
+std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
+  const int  size_of_glist =this->GList.size();
+  int size_timeslice= this->Nmoms();
+  for (int i=0; i< size_of_glist; ++i){
+    size_timeslice *= this->GList[i].size();
+  }
+  std::size_t n_t = this->labels.find("s");
+  if (n_t!=std::string::npos){
+    size_timeslice *= 32;
+  }
+  else{
+    size_timeslice *= 2;
+  }
+  std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*size_timeslice), free);
+  if (this->hasSource(DIM_T)){
+    const int t_source_local= this->source[DIM_T]%HGC_localL[DIM_T];
+    memcpy(&ptr, this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
+    int coords[4];
+    for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
+    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+    int mpiErr = MPI_Bcast(&ptr, size_timeslice*sizeof(Float), MPI_Type<Float>(), rankHas, HGC_fullComm);
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  return ptr;
+}
+
 
 //###############################
 //#  Combination of reductions  #
@@ -382,6 +410,10 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   int Nmoms_f2 = srcV3.Nmoms();
     
   auto imap = this->pList().index_map();
+ 
+  if(Loop!=NULL && this->hasSource(DIM_T)){
+    
+  }
 
 
   #pragma omp parallel for
@@ -833,7 +865,7 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
     case 8:
       this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, NULL, &pipi_aux);//checked FP
       break;
-    case 13;
+    case 13:
     case 17:
       this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true, NULL, &pipi_aux);//checked FP
       break;

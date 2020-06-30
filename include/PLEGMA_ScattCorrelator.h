@@ -130,6 +130,8 @@ namespace plegma {
     void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
 
     //others
+    std::shared_ptr<Float> get_source_time_slice( );
+    void multiply_by_time_slice(std::shared_ptr<Float>&);
     void applyBoundaryConditions( bool antiperiodic );
     void apply_phase( );
     void normalize_nstoch(int n_stoch);
