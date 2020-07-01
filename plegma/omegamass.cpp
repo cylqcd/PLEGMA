@@ -122,10 +122,14 @@ int main(int argc, char **argv)
       for (int ismall=0; ismall<nSmaller;++ismall){
 
         mu=mu_s[ismall];
+        PLEGMA_printf("Strange=%e\n", mu);
 
         // ensuring mu positive
         if(mu<0) {
           mu*=-1.;
+          solver.UpdateSolver();
+        }
+        else{
           solver.UpdateSolver();
         }
     
