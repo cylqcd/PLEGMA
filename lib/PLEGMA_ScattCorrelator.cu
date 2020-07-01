@@ -5,6 +5,7 @@
 #include <PLEGMA_scattreductionsPiPi.cuh>
 #include <PLEGMA_utils.h>
 #include <omp.h>
+#include  <memory>
 using namespace plegma;
 
 //--------------------------------//
@@ -319,8 +320,9 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 
   //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
   auto imap = this->pList().index_map();
-  
-    
+
+
+  std::shared_ptr<Float> Loop_pointer=  (&Loop != NULL)?  Loop->get_source_time_slice() : nullptr ;
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -353,10 +355,9 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		}
             }
             if(&Loop!=NULL){
-              Float *loop_pointer=Loop->Corr(t,i_mom_f2,g0);
               Float loop_contribution[2];
-              loop_contribution[0]= loop_pointer[0];
-              loop_contribution[1]= loop_pointer[1];
+              loop_contribution[0] = Loop_pointer.get()[0];
+              loop_contribution[1] = Loop_pointer.get()[1];
 
               for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
                 Float realpart,imagpart;
@@ -410,11 +411,8 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   int Nmoms_f2 = srcV3.Nmoms();
     
   auto imap = this->pList().index_map();
- 
-  if(Loop!=NULL && this->hasSource(DIM_T)){
-    
-  }
 
+  std::shared_ptr<Float> Loop_pointer=  (&Loop != NULL)?  Loop->get_source_time_slice() : nullptr ;
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -461,10 +459,9 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 	      }
 	    }
             if(&Loop!=NULL){
-              Float *loop_pointer=Loop->Corr(t,0,g0);
               Float loop_contribution[2];
-              loop_contribution[0]= loop_pointer[0];
-              loop_contribution[1]= loop_pointer[1];
+              loop_contribution[0]= Loop_pointer.get()[0];
+              loop_contribution[1]= Loop_pointer.get()[1];
 
               for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
                 Float realpart,imagpart;
@@ -865,6 +862,14 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
     case 8:
       this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, NULL, &pipi_aux);//checked FP
       break;
+    case 9:
+    case 11:
+      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, NULL, &pipi_aux);//checked FP
+      break;
+    case 10:
+    case 12:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, NULL, &pipi_aux);//checked FP
+      break;
     case 13:
     case 17:
       this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true, NULL, &pipi_aux);//checked FP
@@ -1240,6 +1245,10 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
 //Phi_0[r] is the stochastic vector at zero momentum
 //Phi_1[r] is the stochastic vector at zero momentum
 //GList only 1 gamma G_i
+//if i_pi2 == -1 we compute the loop for all momenta in this->pList()
+//if i_pi2 != -1 we compute the loop only for the i_pi2 momentum in this->pList() 
+//Note that the arguments are pointers to PLEGMA_Vectors on the host, they
+//have to be loaded to the device to start the contractions
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum){
 
@@ -1277,7 +1286,7 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( std::vector<PLEGMA_Vector<Fl
     phi1.load();
       
     //PhixGf2xPhi
-    pipi_aux.PhiPhi( phi0, this->GList[1], phi1); //T x N_moms x n_gammas_f2
+    pipi_aux.PhiPhi( phi0, this->GList[0], phi1); //T x N_moms x n_gammas_f2
 
     if(i_pi2==-1){
       for( int im=0; im<N_moms; ++im)
@@ -1288,7 +1297,7 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( std::vector<PLEGMA_Vector<Fl
     else{
       for( int t=0; t<TIME; ++t)
 	 for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-	    x_pe_y( this->Corr(t,i_pi2,gf2),  pipi_aux.Corr(t,0,gf2), 1);
+	    x_pe_y( this->Corr(t,i_pi2,gf2),  pipi_aux.Corr(t,i_pi2,gf2), 1);
     }	
   }//loop over stochastic samples 
 }
