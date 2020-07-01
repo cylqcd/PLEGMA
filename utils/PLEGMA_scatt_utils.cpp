@@ -1,5 +1,5 @@
 #include <PLEGMA.h>
-
+//vectorOut <- vectorOut + c * vectorIn 
 template<typename Float>
 void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size ){
   for (int i=0; i<size; ++i){
@@ -11,6 +11,7 @@ template void x_pe_cy<float>(  float *dest,  float  *floatcomplex, float  *tempo
 
 template void x_pe_cy<double>( double *dest, double *floatcomplex, double *temporary, int size) ;
 
+//vectorOut <- vectorOut + vectorIn 
 template<typename Float>
 void x_pe_y( Float *dest, Float *temporary, int size ){
   for (int i=0; i<size; ++i){
@@ -22,7 +23,7 @@ template void x_pe_y<float>(  float *dest,  float  *temporary, int size) ;
 
 template void x_pe_y<double>( double *dest, double *temporary, int size) ;
 
-
+//vectorOut <- c * vectorOut
 template<typename Float>
 void x_e_cx( Float *dest, const Float floatcomplex[2],  int size ){
   for (int i=0; i<size; ++i){
@@ -35,7 +36,7 @@ void x_e_cx( Float *dest, const Float floatcomplex[2],  int size ){
 template void x_e_cx<float>(  float *dest,  const float  floatcomplex[2], int size) ;
 
 template void x_e_cx<double>( double *dest, const double floatcomplex[2], int size) ;
-
+//vectorOut <- s * vectorOut
 template<typename Float>
 void x_e_sx( Float *dest, const Float floatreal,  int size ){
   for (int i=0; i<size; ++i){
