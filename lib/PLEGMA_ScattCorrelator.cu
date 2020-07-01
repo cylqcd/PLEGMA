@@ -487,7 +487,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_f1, std::string name_of_diagram){
 
-  assert( name_of_diagram=="N" || name_of_diagram=="D");
+  //assert( name_of_diagram=="N" || name_of_diagram=="D");
   //Gamma list
   this->GList.clear();
   this->GList.push_back( eG_i );
