@@ -92,9 +92,9 @@ namespace plegma {
     void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 );
 
     //manipulation
-    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma=false, Float* factor=NULL, PLEGMA_ScattCorrelator<Float>* const &Loop=NULL );
+    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma=false, Float* factor=NULL);
 
-    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma=false, Float* factor=NULL, PLEGMA_ScattCorrelator<Float>* const &Loop=NULL );
+    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma=false, Float* factor=NULL);
     
 
     //initialize_diagrams

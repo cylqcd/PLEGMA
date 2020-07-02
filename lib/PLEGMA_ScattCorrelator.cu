@@ -258,7 +258,16 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
 
   PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
 }
-
+//This routine filters the source time-slice from a PLEGMA_ScattCorrelator
+//object: i.e. it return all the momenta, gamma, spin, real-imag components
+//at the source-time slice. We particulary use it for diagrams with loop at
+//the source, here now with zero momentum and with one gamma structure
+//
+//To do: (1)check it
+//       (2)generalize it to the case, where the ScattCorrelator object is not
+//          as long as the time-extent of the Lattice
+//       (3)genarlize it to a other time-slices
+//
 template<typename Float>
 std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   const int  size_of_glist =this->GList.size();
@@ -276,7 +285,7 @@ std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*size_timeslice), free);
   if (this->hasSource(DIM_T)){
     const int t_source_local= this->source[DIM_T]%HGC_localL[DIM_T];
-    memcpy(&ptr, this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
+    memcpy(ptr.get(), this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
     int coords[4];
     for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
     int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
@@ -295,7 +304,7 @@ std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
 //Contracts V3^a_c x Gammas_cd x V2^a_{abd}. Gammas_i list of gammas between V3, V2. 
 //called by aux PLEGMA_ScattCorrelator with shape PTGGGGGGSS
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma, Float* factor,PLEGMA_ScattCorrelator<Float>* const &Loop) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma, Float* factor) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -321,8 +330,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
   //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
   auto imap = this->pList().index_map();
 
-
-  std::shared_ptr<Float> Loop_pointer=  (&Loop != NULL)?  Loop->get_source_time_slice() : nullptr ;
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -354,19 +361,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		  temp[2*ss+0] = aux;
 		}
             }
-            if(&Loop!=NULL){
-              Float loop_contribution[2];
-              loop_contribution[0] = Loop_pointer.get()[0];
-              loop_contribution[1] = Loop_pointer.get()[1];
-
-              for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
-                Float realpart,imagpart;
-                realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
-                imagpart=temp[2*spin]*loop_contribution[1]+temp[2*spin+1]*loop_contribution[0];
-                temp[2*spin+0]=realpart;
-                temp[2*spin+1]=imagpart;
-              }
-            }
 
             for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
               for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
@@ -387,7 +381,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma, Float* factor, PLEGMA_ScattCorrelator<Float>* const &Loop) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma, Float* factor) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -411,8 +405,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   int Nmoms_f2 = srcV3.Nmoms();
     
   auto imap = this->pList().index_map();
-
-  std::shared_ptr<Float> Loop_pointer=  (&Loop != NULL)?  Loop->get_source_time_slice() : nullptr ;
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -458,19 +450,6 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		temp[2*ss+0] = aux;
 	      }
 	    }
-            if(&Loop!=NULL){
-              Float loop_contribution[2];
-              loop_contribution[0]= Loop_pointer.get()[0];
-              loop_contribution[1]= Loop_pointer.get()[1];
-
-              for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
-                Float realpart,imagpart;
-                realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
-                imagpart=temp[2*spin]*loop_contribution[1]+temp[2*spin+1]*loop_contribution[0];
-                temp[2*spin+0]=realpart;
-                temp[2*spin+1]=imagpart;
-              }
-            }
 
             for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
 	      for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){    
@@ -826,8 +805,9 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
   this->clear_output(!accum);
  
   //aux PLEGMA_SC for PhixGxPhi multiplications
-  site source=site({0,0,0,0});
+  site source=site({0,0,0,this->source[DIM_T]});
   PLEGMA_ScattCorrelator<Float> pipi_aux(source, momlist, this->getTotalT());
+  PLEGMA_printf("saaaaaaaaaa %d %d\n",ig_i2,sampleindex);
 
   int N_moms = pipi_aux.Nmoms();
   assert( N_moms==1 );
@@ -842,49 +822,54 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
 
   //PhixGf2xPhi
   pipi_aux.PhiPhi( phi0, this->GList[3], phi1); //T x N_moms x n_gammas_i2
+
+  std::shared_ptr<Float> Loop_pointer=  pipi_aux.get_source_time_slice();
+  Float loopcontribution[2];
+  loopcontribution[0]=Loop_pointer.get()[0];
+  loopcontribution[1]=Loop_pointer.get()[1];
   //Diagrams (1,5), (2,6), (3,7) and (4,8) are structurally the same the 
   //only difference between them is the type of loop(pipi_aux): UP and 
   //DN in the former respectively in the latter
   switch( diagram_index ){
     case 1:
     case 5:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true, loopcontribution);//checked FP
       break;
     case 2:
     case 6:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true, loopcontribution);//checked FP
       break;
     case 3:
     case 7:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true, loopcontribution);//checked FP
       break;
     case 4:
     case 8:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, loopcontribution);//checked FP
       break;
     case 9:
     case 11:
-      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, loopcontribution);//checked FP
       break;
     case 10:
     case 12:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution);//checked FP
       break;
     case 13:
     case 17:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true, loopcontribution);//checked FP
       break;
     case 14:
     case 18:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution);//checked FP
       break;
     case 15:
     case 19:
-      this->V3V2reduction( srcV3, srcV2, 2, true, ig_i2,  true, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true, ig_i2,  true, loopcontribution);//checked FP
       break;
     case 16:
     case 20:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, NULL, &pipi_aux);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, loopcontribution);//checked FP
       break;
     default:
       PLEGMA_error("This value of D1ii diagram index does not exists, please check your inputs in piNdiagramms.cpp");
@@ -1276,6 +1261,7 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( std::vector<PLEGMA_Vector<Fl
 
   //number of samples
   int nsamples=Phi_0.size();
+  PLEGMA_printf("Number of samples in Loops %d\n",nsamples);
   //loop over G_i2
   for(int nr=0; nr<nsamples; ++nr){
     PLEGMA_Vector<Float> phi0;
@@ -1386,9 +1372,11 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
 
   this->clear_output(!accum);
 
+  PLEGMA_printf("V3V2reduction_matrix is not working\n"); 
 
   this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor);
 
+  PLEGMA_printf("V3V2reduction_matrix is not working\n"); 
 
   this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor);
 
