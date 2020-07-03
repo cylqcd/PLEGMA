@@ -201,7 +201,7 @@ int main(int argc, char **argv)
           TIME( corrD.writeHDF5(outfilename) );
 
           outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPUP_T2";
-          TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+          TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
 
           TIME( corrD.apply_phase() );
           TIME( corrD.applyBoundaryConditions( true ) );
