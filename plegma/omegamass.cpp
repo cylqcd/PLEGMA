@@ -187,15 +187,26 @@ int main(int argc, char **argv)
 
           TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
 
+          outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_O";
+
           TIME( corrD.apply_phase() );
           TIME( corrD.applyBoundaryConditions( true ) );
           TIME( corrD.writeHDF5(outfilename) );
        
-	  outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_O";
- 
+	  outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPUP_T1";
+          TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+
           TIME( corrD.apply_phase() );
           TIME( corrD.applyBoundaryConditions( true ) );
           TIME( corrD.writeHDF5(outfilename) );
+
+          outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_UPUPUP_T2";
+          TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+
+          TIME( corrD.apply_phase() );
+          TIME( corrD.applyBoundaryConditions( true ) );
+          TIME( corrD.writeHDF5(outfilename) );
+
 
           //if we invert both + and - flavors
           //then we write out every possible factors to build
