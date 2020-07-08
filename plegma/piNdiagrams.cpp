@@ -298,9 +298,12 @@ int main(int argc, char **argv)
     Loop_UP.initialize_diagram( glist_sink_meson, "L");
     Loop_DN.initialize_diagram( glist_sink_meson, "L");
 
+    for (int i=0; i<n_stochastic_samples; ++i){
+      
+      TIME(Loop_DN.Loop_diagramms( stochastic_propags[i], stochastic_sources[i], 0, true));
+      TIME(Loop_UP.Loop_diagramms( stochastic_sources[i], stochastic_propags[i], 0, true));
 
-    TIME(Loop_DN.Loop_diagramms( stochastic_propags, stochastic_sources, 0));
-    TIME(Loop_UP.Loop_diagramms( stochastic_sources, stochastic_propags, 0));
+    }
 
 
     std::string outfilename;
@@ -888,33 +891,71 @@ int main(int argc, char **argv)
         TIME(corrD1ii19.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii19"));
         TIME(corrD1ii20.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ii20"));
 
+        float *Loop_UP_source=(float *)malloc(2*sizeof(float)*glist_source_meson.size());
+        float *Loop_DN_source=(float *)malloc(2*sizeof(float)*glist_source_meson.size());
 
+        for (int j=0; j< 2*glist_source_meson.size(); ++j){
+          Loop_UP_source[j]=0;
+          Loop_DN_source[j]=0;
+        }
 
+        PLEGMA_ScattCorrelator<float> Loop_UP_temporary(source_stoch, piN12_zeropion);
+        PLEGMA_ScattCorrelator<float> Loop_DN_temporary(source_stoch, piN12_zeropion);
+
+        Loop_UP_temporary.initialize_diagram( glist_sink_meson, "L");
+        Loop_DN_temporary.initialize_diagram( glist_sink_meson, "L");
 
         for (int i=0; i<n_stochastic_samples; ++i){
 
-          TIME(corrD1ii1.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 1, true));          
-          TIME(corrD1ii2.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 2, true));          
-          TIME(corrD1ii3.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 3, true));
-          TIME(corrD1ii4.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_sources, stochastic_propags, 0,  i, 4, true)); 
-          TIME(corrD1ii5.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 5, true));
-          TIME(corrD1ii6.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 6, true));
-          TIME(corrD1ii7.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 7, true));
-          TIME(corrD1ii8.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], stochastic_propags, stochastic_sources, 0,  i, 8, true));
-          TIME(corrD1ii9.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], stochastic_sources, stochastic_propags, 0,  i, 9, true));
-          TIME(corrD1ii10.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], stochastic_sources, stochastic_propags, 0,  i, 10, true));
-          TIME(corrD1ii11.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], stochastic_propags, stochastic_sources, 0,  i, 11, true));
-          TIME(corrD1ii12.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], stochastic_propags, stochastic_sources, 0,  i, 12, true));
-          TIME(corrD1ii13.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 13, true));          
-          TIME(corrD1ii14.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 14, true));
-          TIME(corrD1ii15.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 15, true));
-          TIME(corrD1ii16.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_sources, stochastic_propags, 0,  i, 16, true));
-          TIME(corrD1ii17.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 17, true));
-          TIME(corrD1ii18.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 18, true));
-          TIME(corrD1ii19.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 19, true));
-          TIME(corrD1ii20.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], stochastic_propags, stochastic_sources, 0,  i, 20, true));
+
+          TIME(Loop_UP_temporary.Loop_diagramms( stochastic_propags[i], stochastic_sources[i], 0, false));
+          TIME(Loop_DN_temporary.Loop_diagramms( stochastic_sources[i], stochastic_propags[i], 0, false));
+
+          std::shared_ptr<float> Loop_UP_sp=Loop_UP_temporary.get_source_time_slice();
+
+          std::shared_ptr<float> Loop_DN_sp=Loop_DN_temporary.get_source_time_slice();
+
+          for (int j=0; j< glist_source_meson.size(); ++j){
+            Loop_UP_source[2*j+0]+=Loop_UP_sp.get()[2*j+0];
+            Loop_UP_source[2*j+1]+=Loop_UP_sp.get()[2*j+1];
+            Loop_DN_source[2*j+0]+=Loop_DN_sp.get()[2*j+0];
+            Loop_DN_source[2*j+1]+=Loop_DN_sp.get()[2*j+1];
+          }
+
+          for (int j=0; j< 2*glist_source_meson.size(); ++j){
+            Loop_UP_source[j]/=n_stochastic_samples;
+            Loop_DN_source[j]/=n_stochastic_samples;
+          }
+
+        }
+
+        for (int i=0; i<n_stochastic_samples; ++i){
+
+          TIME(corrD1ii1.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], Loop_UP_source, 0, 1, true));          
+          TIME(corrD1ii2.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], Loop_UP_source, 0, 2, true));          
+          TIME(corrD1ii3.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], Loop_UP_source, 0, 3, true));
+          TIME(corrD1ii4.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], Loop_UP_source, 0, 4, true)); 
+          TIME(corrD1ii5.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], Loop_DN_source, 0, 5, true));
+          TIME(corrD1ii6.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], Loop_DN_source, 0, 6, true));
+          TIME(corrD1ii7.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], Loop_DN_source, 0, 7, true));
+          TIME(corrD1ii8.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], Loop_DN_source, 0, 8, true));
+          TIME(corrD1ii9.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], Loop_UP_source, 0, 9, true));
+          TIME(corrD1ii10.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i],Loop_UP_source, 0, 10, true));
+          TIME(corrD1ii11.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i],Loop_DN_source, 0, 11, true));
+          TIME(corrD1ii12.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i],Loop_DN_source, 0, 12, true));
+          TIME(corrD1ii13.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i],Loop_UP_source, 0, 13, true));          
+          TIME(corrD1ii14.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i],Loop_UP_source, 0, 14, true));
+          TIME(corrD1ii15.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i],Loop_UP_source, 0, 15, true));
+          TIME(corrD1ii16.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i],Loop_UP_source, 0, 16, true));
+          TIME(corrD1ii17.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i],Loop_DN_source, 0, 17, true));
+          TIME(corrD1ii18.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i],Loop_DN_source, 0, 18, true));
+          TIME(corrD1ii19.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i],Loop_DN_source, 0, 19, true));
+          TIME(corrD1ii20.D1ii_diagramms(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i],Loop_DN_source, 0, 20, true));
 
         } //stochastic samples
+
+        free(Loop_DN_source);
+        free(Loop_UP_source);
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ii";
 
@@ -1140,7 +1181,7 @@ int main(int argc, char **argv)
 
         }//loop over stochastic samples
 
-        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20.uniq_p(3);
+        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20pf20.uniq_p(3);
 
         PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
         PLEGMA_ScattCorrelator<float> reductionsT2(source,  mptot_filt);
