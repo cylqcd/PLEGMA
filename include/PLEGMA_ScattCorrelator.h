@@ -87,7 +87,26 @@ namespace plegma {
     void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S, bool conj_v=true );
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
+    /**
+     *  @brief performs T1 type reduction to compute baryon 2pt functions
+     *  T1_{alpha,beta}=\epsilon_{a,b,c}\epsilon_{l,m,n}S1^{c,l}_{alpha,alpha0}\Gamma_{i}_{alpha0,alpha1}S2^{b,m}_{beta0,alpha1}\Gamma_{f}_{beta0,beta1}S3^{a,n}_{beta1,beta} 
+     *  @param std::vector<GAMMAS_SCATT> &Gammas_i: list of gammas at the source for the contractions
+     *  @param std::vector<GAMMAS_SCATT> &Gammas_f: list of gammas at the sink for the contractions
+     *  @param PLEGMA_Propagator<Float> &S1: propagator to the sink spin index
+     *  @param PLEGMA_Propagator<Float> &S2: propagator 2: it will be transposed in the code
+     *  @param PLEGMA_Propagator<Float> &S3: propagator from the source spin index
+     *
+    **/
     void T1( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3 );
+    /**
+     *  @brief performs T2 type reduction to compute baryon 2pt functions
+     *  T2_{alpha,beta}=\epsilon_{a,b,c}\epsilon_{l,m,n}S2^{c,l}_{alpha,beta}\Gamma_{i}_{alpha0,alpha1}S2^{b,m}_{beta0,alpha1}\Gamma_{f}_{beta0,beta1}S3^{a,n}_{beta1,alpha0} 
+     *  @param std::vector<GAMMAS_SCATT> &Gammas_i: list of gammas at the source for the contractions
+     *  @param std::vector<GAMMAS_SCATT> &Gammas_f: list of gammas at the sink for the contractions
+     *  @param PLEGMA_Propagator<Float> &S1: propagator to the sink spin from the source spin index
+     *  @param PLEGMA_Propagator<Float> &S2: propagator 2: it will be transposed in the code
+     *  @param PLEGMA_Propagator<Float> &S3: propagator 3: won't be transposed
+    **/
     void T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3 );
     void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 );
 
@@ -115,7 +134,7 @@ namespace plegma {
     void Z_diagramms( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
     void M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, bool accum=false );
     void LT_diagramms( PLEGMA_ScattCorrelator<Float> &T1reduction, PLEGMA_ScattCorrelator<Float> &T2reduction, PLEGMA_ScattCorrelator<Float> &Loop, bool accum=false );
-    void D1ii_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, const int ig_i2, const int sampleindex, const int diagram_index, bool accum=false);
+    void D1ii_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, Float * loopcontribution,  const int ig_i2, const int diagram_index, bool accum=false);
 
 
 
@@ -124,12 +143,13 @@ namespace plegma {
 
     void T_diagramms_piNsink(PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3, bool accum=false);
 
-    void Loop_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum=true);
+    void Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2, bool accum=false);
     void P_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum=false );
     void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
     void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
 
     //others
+    std::shared_ptr<Float> average_all_time_slices( );
     std::shared_ptr<Float> get_source_time_slice( );
     void multiply_by_time_slice(std::shared_ptr<Float>&);
     void applyBoundaryConditions( bool antiperiodic );
