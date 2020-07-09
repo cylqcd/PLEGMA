@@ -52,6 +52,7 @@ with h5py.File(output, "a") as fo:
     for _file in sys.argv[18:]:
         print("Opening "+_file)
         with h5py.File(_file, "r") as fp:
+            _dir = _file.split("Diagramm")[-1].split("_")[0]
             for src in fp.keys():
                  print(src)
                  grpname = "/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/"
@@ -93,5 +94,5 @@ with h5py.File(output, "a") as fo:
                  print(index_gamma)
                  print(index_momentum)
                  data = fp[grpname+diagramindex][:,index_momentum,index_gamma,:]
-                 grp = fo.require_group("/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/")
+                 grp = fo.require_group("/"+_dir+"/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/")
                  grp.create_dataset(diagramindex, data.shape, dtype = data.dtype, data = data)
