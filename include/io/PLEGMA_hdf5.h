@@ -230,7 +230,7 @@ protected:
 	auto it = vp.begin();
 	auto pit = path_str.begin();
 	// checking until the paths match
-	while(*it == *pit && it != vp.end() && pit != path_str.end()) {
+	while(it != vp.end() && pit != path_str.end() && *it == *pit  ) {
 	  it = vp.erase(it);
 	  pit++;
 	}
