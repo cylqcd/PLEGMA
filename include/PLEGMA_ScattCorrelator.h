@@ -84,7 +84,40 @@ namespace plegma {
     bool check_reduction( TRED T );
 
     //reductions
+    /**
+     *
+     *  @brief performs V2 type reduction produces three spinor and and color indices tensor from a fermion vector and two fermion 
+     *         propagator. It is used for forming diagrams to 2 hadron 2 pt correlation function where the sink to sink propagator 
+     *         is replaced by a stochastic one.
+     *         Formula:
+     *         V2_{Gamma}^{alfa0,alfa1,alfa2}_{n}=\eps_{a,b,c}\eps_{l,m,n}Gamma^{beta0,beta1}*phi^{beta0}_{c}*S1^{beta1,alfa0}_{b,m}*S2^{alfa1,alfa2}_{a,l}
+     *  @params PLEGMA_Vector<Float> &Phi When the propagator that should be replaced is a DD type, then this should be gamma_5 *
+     *                               stochastic source, when it is UU type then is should be the stochastic propagator itself
+     *                               without gamma_5 multiplication
+     *  @params std::vector<GAMMAS_SCATT> &Gammas list of gammas with which the stochastic vector (argument above) will be multiplied
+     *  @params PLEGMA_Propagator<Float> &S1 fermion propagator
+     *  @params PLEGMA_Propagator<Float> &S2 fermion propagator
+     *  @params bool conj_v=false perform /or not to perform a conjugation on the fermion vector
+     *          in most cases we do set this to false
+     *
+     **/
     void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
+    /**
+     *
+     *  @brief performs V3 type reduction produces one spin and one color indices tensor from a fermion vector and a fermion propagator
+     *         It is used for forming diagrams for 2 hadron 2pt correlation function where the sink to sink propagator is replaced by
+     *         a stochastic one
+     *         Formula:
+     *         V3_{Gamma}^{beta}_{b}=conj(phi)^{alpha0}_{a}*Gamma_{alpha0,alpha1}*S^{alpha1,beta}_{a,b}
+     *  @params PLEGMA_Vector<Float> &Phi When the propagator that should be replaced is a DD type, then this should be gamma_5 *
+     *                                    stochastic propagator, when it is UU type then is should be the stochastic source itself
+     *                                    without gamma_5 multiplication
+     *  @params std::vector<GAMMAS_SCATT> &Gammas list of gammas with which the stochastic vector (argument above) will be multiplied
+     *  @params PLEGMA_Propagator<Float> &S1 fermion propagator
+     *  @params bool conj_v=false perform /or not to perform a conjugation on the fermion vector
+     *                      in most cases we do set this to true
+     *
+     **/
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S, bool conj_v=true );
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
     /**
