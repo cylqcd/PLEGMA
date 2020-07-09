@@ -295,6 +295,39 @@ std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   MPI_Barrier(MPI_COMM_WORLD);
   return ptr;
 }
+//This routine sum over the time direction a particular PLEGMA_ScattCorrelator object
+template<typename Float>
+std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::average_all_time_slices(){
+  const int  size_of_glist =this->GList.size();
+  int size_timeslice= this->Nmoms();
+  for (int i=0; i< size_of_glist; ++i){
+    size_timeslice *= this->GList[i].size();
+  }
+  std::size_t n_t = this->labels.find("s");
+  if (n_t!=std::string::npos){
+    size_timeslice *= 32;
+  }
+  else{
+    size_timeslice *= 2;
+  }
+  Float *localsum=(Float *)malloc(sizeof(Float)*size_timeslice);
+  std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*size_timeslice), free);
+  for(int j=0; j<size_timeslice; ++j)
+      localsum[j]=0; 
+  int TIME = this->localT();
+  for (int i=0; i<TIME; ++i){
+    for(int j=0; j<size_timeslice; ++j)
+      localsum[j]+=this->Corr(i)[j];
+  }
+  for (int j=0; j<size_timeslice; ++j)
+    ptr.get()[j]=localsum[j];
+
+  MPI_Allreduce( localsum, ptr.get(), size_timeslice, MPI_Type(localsum[0]), MPI_SUM, HGC_timeComm);
+  MPI_Barrier(MPI_COMM_WORLD);
+  free(localsum);
+  return ptr;
+}
+
 
 
 //###############################
@@ -794,39 +827,12 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 //#  Diagrams  #
 //##############
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, const int ig_i2, const int sampleindex, const int diagram_index, bool accum) {
+void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, Float *loopcontribution, const int ig_i2, const int diagram_index, bool accum) {
 
   if(ig_i2 >= this->GList[3].size()) PLEGMA_error("ig_i2 = %d but Gi2 list size is %d\n", ig_i2, this->GList[3].size() );
 
   this->clear_output(!accum, 5, ig_i2);
 
-  std::vector<std::vector<int>> momlist={{0,0,0},};
-  
-  this->clear_output(!accum);
- 
-  //aux PLEGMA_SC for PhixGxPhi multiplications
-  site source=site({0,0,0,this->source[DIM_T]});
-  PLEGMA_ScattCorrelator<Float> pipi_aux(source, momlist, this->getTotalT());
-  PLEGMA_printf("saaaaaaaaaa %d %d\n",ig_i2,sampleindex);
-
-  int N_moms = pipi_aux.Nmoms();
-  assert( N_moms==1 );
-  int TIME = this->localT();
-
-  PLEGMA_Vector<Float> phi0;
-  PLEGMA_Vector<Float> phi1;
-  phi0.copy(*Phi_0[sampleindex],HOST);
-  phi0.load();
-  phi1.copy(*Phi_1[sampleindex],HOST);
-  phi1.load();
-
-  //PhixGf2xPhi
-  pipi_aux.PhiPhi( phi0, this->GList[3], phi1); //T x N_moms x n_gammas_i2
-
-  std::shared_ptr<Float> Loop_pointer=  pipi_aux.get_source_time_slice();
-  Float loopcontribution[2];
-  loopcontribution[0]=Loop_pointer.get()[0];
-  loopcontribution[1]=Loop_pointer.get()[1];
   //Diagrams (1,5), (2,6), (3,7) and (4,8) are structurally the same the 
   //only difference between them is the type of loop(pipi_aux): UP and 
   //DN in the former respectively in the latter
@@ -1235,7 +1241,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
 //Note that the arguments are pointers to PLEGMA_Vectors on the host, they
 //have to be loaded to the device to start the contractions
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2, bool accum){
 
   assert(i_pi2<this->pList().size());
   
@@ -1259,33 +1265,28 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( std::vector<PLEGMA_Vector<Fl
   int n_gammas_f2 = this->GList[0].size();
   int TIME = this->localT();
 
-  //number of samples
-  int nsamples=Phi_0.size();
-  PLEGMA_printf("Number of samples in Loops %d\n",nsamples);
   //loop over G_i2
-  for(int nr=0; nr<nsamples; ++nr){
-    PLEGMA_Vector<Float> phi0;
-    PLEGMA_Vector<Float> phi1;
-    phi0.copy(*Phi_0[nr],HOST);
-    phi0.load();
-    phi1.copy(*Phi_1[nr],HOST);
-    phi1.load();
+  PLEGMA_Vector<Float> phi0;
+  PLEGMA_Vector<Float> phi1;
+  phi0.copy(*Phi_0,HOST);
+  phi0.load();
+  phi1.copy(*Phi_1,HOST);
+  phi1.load();
       
-    //PhixGf2xPhi
-    pipi_aux.PhiPhi( phi0, this->GList[0], phi1); //T x N_moms x n_gammas_f2
+  //PhixGf2xPhi
+  pipi_aux.PhiPhi( phi0, this->GList[0], phi1); //T x N_moms x n_gammas_f2
 
-    if(i_pi2==-1){
-      for( int im=0; im<N_moms; ++im)
-        for( int t=0; t<TIME; ++t)
-          for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-            x_pe_y( this->Corr(t,im,gf2), pipi_aux.Corr(t,im,gf2), 1);
-    }
-    else{
+  if(i_pi2==-1){
+    for( int im=0; im<N_moms; ++im)
       for( int t=0; t<TIME; ++t)
-	 for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-	    x_pe_y( this->Corr(t,i_pi2,gf2),  pipi_aux.Corr(t,i_pi2,gf2), 1);
-    }	
-  }//loop over stochastic samples 
+        for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+          x_pe_y( this->Corr(t,im,gf2), pipi_aux.Corr(t,im,gf2), 1);
+    }
+  else{
+    for( int t=0; t<TIME; ++t)
+      for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+        x_pe_y( this->Corr(t,i_pi2,gf2),  pipi_aux.Corr(t,i_pi2,gf2), 1);
+  }	
 }
 
 
@@ -1372,14 +1373,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
 
   this->clear_output(!accum);
 
-  PLEGMA_printf("V3V2reduction_matrix is not working\n"); 
-
   this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor);
 
-  PLEGMA_printf("V3V2reduction_matrix is not working\n"); 
-
   this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor);
-
 
   this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor);
 
@@ -1394,12 +1390,12 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T2like shape\n");
 
-  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList().pi(0) )
+  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList().pi(1) )
     PLEGMA_error("T1,T2 have not the the same mom list of N\n");
   assert( Nmoms()==this->pList().pi(0).size() );
 
   for(int i=0; i<2; ++i)
-    if((T1.GList[i]!=T2.GList[i])||(T1.GList[i]!=this->GList[i+2]))
+    if((T1.GList[i]!=T2.GList[i])||(T1.GList[i]!=this->GList[2*i+2]))
       PLEGMA_error("T1,T2 wrong gamma list\n");
 
   //size of final output for NN
@@ -1420,6 +1416,7 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
     int i_mom_f2 = imap[i_m][2];
+    PLEGMA_printf("IMOM f1 %d f2 %d\n", i_mom_f1, i_mom_f2 );
     for( int t=0; t<TIME; ++t){
       for (int gf2=0; gf2<n_gammas_f2; ++gf2){
         Float temp[N_SPINS*N_SPINS*2];
@@ -1432,7 +1429,7 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
 
             for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
               temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + T2.Corr(t,i_mom_f1,gi1,gf1)[spin]);
-            for(int spin=0; spin<N_SPINS*N_SPINS*2;spin+=2){
+            for(int spin=0; spin<N_SPINS*N_SPINS; ++spin){
               Float realpart,imagpart;
               realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
               imagpart=temp[2*spin]*loop_contribution[1]+temp[2*spin+1]*loop_contribution[0];
