@@ -116,6 +116,7 @@ int main(int argc, char **argv)
       //Create Propagator
       PLEGMA_Propagator<float> propUP(BOTH);
 
+
       int nSmaller = mu_s.size();
 
       //loop over all the strange quarks
@@ -160,7 +161,29 @@ int main(int argc, char **argv)
           vectorAuxF.copy(vectorAuxD);
           propUP.absorb(vectorAuxF, isc/3, isc%3);
         }
-  
+
+        {
+
+           site& source_calc = sourcePositions[isource];
+
+           PLEGMA_Propagator<float> propDN(NONE);
+
+
+           PLEGMA_Correlator<float> corr(corr_space, source_calc, 1);
+
+           TIME(corr.contractBaryonsUDSC(propDN, propDN, propUP, propDN, false, false));
+           char * group;
+
+           asprintf(&group, "baryons_udsc_omega/Oms[%+1.1e]", mu);
+           corr.setGroups(group);
+           free(group);
+           std::string twopf= twop_filename + confnumber;
+           THREAD(corr.writeFile(twopf, corr_file_format));
+
+ 
+        }
+
+
         site source=site({0,0,0,sourcePositions[isource][3]});
         std::string outfilename;
 
@@ -184,6 +207,8 @@ int main(int argc, char **argv)
 
 	  TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
           TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
+
+
 
           TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
 
