@@ -81,7 +81,6 @@ int main(int argc, char **argv)
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFile(latfile, LIME_FORMAT);
-  gauge.load();
   gauge.calculatePlaq();
 
   // Loading to QUDA and computing plaquette also there

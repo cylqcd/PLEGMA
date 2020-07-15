@@ -284,10 +284,10 @@ static void traceMulFmunuSu3FmunuSu3_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<Floa
 				       PLEGMA_Su3field<FloatB> &B, PLEGMA_Fmunu<FloatC> &C,  std::pair<int,int> munu_r,
 				       PLEGMA_Su3field<FloatD> &D){
   assert(F.checkVolume(A,B,C,D));
-  long int lshift = ((long int) A.munuToIndx(munu_l)) * N_COLS * N_COLS * HGC_localVolume * 2;
-  long int rshift = ((long int) C.munuToIndx(munu_r)) * N_COLS * N_COLS * HGC_localVolume * 2;
-  su3_2<Float> RA((Float2<Float>*) A.D_elem()+lshift, A.Field_length(), A.is4D(), false);
-  su3_2<Float> RC((Float2<Float>*) C.D_elem()+rshift, C.Field_length(), C.is4D(), false);
+  long int lshift = ((long int) A.munuToIndx(munu_l)) * N_COLS * N_COLS * A.Total_length();
+  long int rshift = ((long int) C.munuToIndx(munu_r)) * N_COLS * N_COLS * C.Total_length();
+  su3_2<Float> RA((Float2<Float>*) A.D_elem()+lshift, B.Field_length(), A.is4D(), false);
+  su3_2<Float> RC((Float2<Float>*) C.D_elem()+rshift, B.Field_length(), C.is4D(), false);
 
   ProfileStruct ps(RA.volume());
   tuneAndRun(ps, "traceMulFmunuSu3FmunuSu3_kernel", traceMulFmunuSu3FmunuSu3_kernel<Float,FloatA,FloatB,FloatC,FloatD>, F.D_elem(), RA, toField2<su3_2>(B), RC, toField2<su3_2>(D));
