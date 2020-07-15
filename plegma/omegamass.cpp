@@ -97,42 +97,40 @@ int main(int argc, char **argv)
     std::string smearString = smearType + "_" + "gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) + "aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
 
 
+    int nSmaller = mu_s.size();
+    //loop over all the strange quarks
+    for (int ismall=0; ismall<nSmaller;++ismall){
 
-    //loop over the soure positions
-    for(int isource = 0 ; isource < numSourcePositions; isource++){
+      mu=mu_s[ismall];
+      PLEGMA_printf("Strange=%e\n", mu);
 
-      PLEGMA_Gauge3D<double> smearedGauge3D;
-      smearedGauge3D.absorb(smearedGauge, sourcePositions[isource][DIM_T]);
-      int sequential_time_source=sourcePositions[isource][DIM_T];
+      // ensuring mu positive
+      if(mu<0) {
+        mu*=-1.;
+        solver.UpdateSolver();
+      }
+      else{
+        solver.UpdateSolver();
+      }
 
-      PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
+      //loop over the soure positions
+      for(int isource = 0 ; isource < numSourcePositions; isource++){
+
+        PLEGMA_Gauge3D<double> smearedGauge3D;
+        smearedGauge3D.absorb(smearedGauge, sourcePositions[isource][DIM_T]);
+        int sequential_time_source=sourcePositions[isource][DIM_T];
+
+        PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
                     sourcePositions[isource][2], sourcePositions[isource][3]);
 
-      asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
-      std::string sourcepositiontext= (std::string)"_" + ssource; 
-      free(ssource);
+        asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+        std::string sourcepositiontext= (std::string)"_" + ssource; 
+        free(ssource);
   
-      //Create Propagator
-      PLEGMA_Propagator<float> propUP(BOTH);
+        //Create Propagator
+        PLEGMA_Propagator<float> propUP(BOTH);
 
-
-      int nSmaller = mu_s.size();
-
-      //loop over all the strange quarks
-      for (int ismall=0; ismall<nSmaller;++ismall){
-
-        mu=mu_s[ismall];
-        PLEGMA_printf("Strange=%e\n", mu);
-
-        // ensuring mu positive
-        if(mu<0) {
-          mu*=-1.;
-          solver.UpdateSolver();
-        }
-        else{
-          solver.UpdateSolver();
-        }
     
         for(int isc = 0 ; isc < 12 ; isc++){
           PLEGMA_Vector<double> vectorInOut;
@@ -279,6 +277,11 @@ int main(int argc, char **argv)
               TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
               vectorAuxF.copy(vectorAuxD);
               propDN.absorb(vectorAuxF, isc/3, isc%3);
+            }
+            //ensuring mu positive
+            if(mu<0) {
+                mu*=-1.;
+                solver.UpdateSolver();
             }
             //write DN,DN,DN
           
