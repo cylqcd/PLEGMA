@@ -120,4 +120,44 @@ static const CONSTANT short int gammaTranspSign_scatt[35] =
       -1,// Cgtg5
       +1,// Cg5gtg5 
      };
+
+// gamma4 * G.T.conjugate() * gamma4 = gammaAdjointSign * G
+static const CONSTANT short int gammaAdjointSign_scatt[35] = 
+     {
+       +1,// 1
+       -1,// g1
+       -1,// g2
+       -1,// g3
+       +1,// g4
+       -1,// g5
+       +1,// Cgx
+       -1,// Cgy
+       +1,// Cgz
+       +1,// Cgxgt
+       -1,// Cgygt
+       +1,// Cgzgt
+       -1,// Cgxgtg5
+       +1,// Cgygtg5
+       -1,// Cgzgtg5
+       -1,// g5g1
+       -1,// g1g5
+       -1,// g5g2
+       -1,// g2g5
+       -1,// g5g3
+       -1,// g3g5
+       +1,// g5g4
+       +1,// g4g5
+       +1,// g5Cgx
+       +1,// Cgxg5
+       -1,// g5Cgy
+       -1,// Cgyg5
+       +1,// g5Cgz
+       +1,// Cgzg5
+       -1,// C
+       +1,// Cg5
+       +1,// Cgt
+       +1,// Cg5gt
+       +1,// Cgtg5
+       +1,// Cg5gtg5
+     };
 }
