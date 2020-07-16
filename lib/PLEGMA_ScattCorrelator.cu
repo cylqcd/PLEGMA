@@ -1181,6 +1181,49 @@ void PLEGMA_ScattCorrelator<Float>::clear_output(bool tozero){
   memset( this->H_elem(), 0, tot_size*sizeof(Float) );
 }
 
+// multiply data per sign coming from transposition of one Gamma matrix   (G.T=sign*G)
+// signs depend on GList[gi][:] and that axis is multiplied accordingly
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::apply_sign_transp(int gi){
+  std::size_t n_g = this->labels.find('g');
+  assert(n_g!=std::string::npos);
+  n_g += gi;
+
+  int N_gammas = this->GList[gi].size();
+  int in_dofs  = std::accumulate(ranges.begin()+n_g+1, ranges.end(), 2, std::multiplies<int>());
+  int out_dofs = ranges[0]*offsets[0]/N_gammas/in_dofs;
+  auto sign_arr = gammaTranspSign_scatt;
+  
+  for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
+    for( int i_g=0; i_g < N_gammas; ++i ){
+      Float sign=sign_arr[this->GList[gi][i_g]];
+      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
+    }
+  }
+}
+
+// multiply data per sign coming from adjoint of one Gamma matrix   (g4*G.T.conj()*g4=sign*G)
+// signs depend on GList[gi][:] and that axis is multiplied accordingly
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::apply_sign_adj(int gi){
+  std::size_t n_g = this->labels.find('g');
+  assert(n_g!=std::string::npos);
+  n_g += gi;
+
+  int N_gammas = this->GList[gi].size();
+  int in_dofs  = std::accumulate(ranges.begin()+n_g+1, ranges.end(), 2, std::multiplies<int>());
+  int out_dofs = ranges[0]*offsets[0]/N_gammas/in_dofs;
+  auto sign_arr = gammaAdjointSign_scatt;
+  
+  for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
+    for( int i_g=0; i_g < N_gammas; ++i ){
+      Float sign=sign_arr[this->GList[gi][i_g]];
+      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
+    }
+  }
+}
+
+
 template class PLEGMA_ScattCorrelator<float>;
 template class PLEGMA_ScattCorrelator<double>;
 
