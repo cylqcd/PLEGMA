@@ -1076,9 +1076,13 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
       Float temp[N_SPINS*N_SPINS*2];
       for( int gi=0; gi<n_gammas_i; ++gi ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
+	  int coeffT1=gammaTranspSign_scatt[this->GList[3][gf]]+1+gammaTranspSign_scatt[this->GList[3][gf]]*gammaTranspSign_scatt[this->GList[2][gi]]+gammaTranspSign_scatt[this->GList[2][gi]];
+	  int coeffT2=gammaTranspSign_scatt[this->GList[3][gf]]*gammaTranspSign_scatt[this->GList[2][gi]]+gammaTranspSign_scatt[this->GList[2][gi]];
+	  //TMP CHECKS
+	  assert(coeffT1==4);
+	  assert(coeffT2==2);
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
-            temp[spin] = 4*T1.Corr(t,i_mom,gi,gf)[spin] + 2*T2.Corr(t,i_mom,gi,gf)[spin];
-
+            temp[spin] = coeffT1*T1.Corr(t,i_mom,gi,gf)[spin] + coeffT2*T2.Corr(t,i_mom,gi,gf)[spin];
           for( int gei=0; gei<n_extgammas_i; ++gei ){ 
 	    for( int gef=0; gef<n_extgammas_f; ++gef ){
 	      GAMMAS_SCATT extG_i1 = this->GList[0][gei];
