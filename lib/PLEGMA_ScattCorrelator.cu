@@ -964,8 +964,9 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
       Float temp[N_SPINS*N_SPINS*2];
       for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
         for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
+	  int coeffT = gammaTranspSign_scatt[this->GList[3][gf1]]*gammaTranspSign_scatt[this->GList[2][gi1]];
 	  for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
-	    temp[spin] = T1.Corr(t,i_mom,gi1,gf1)[spin] + T2.Corr(t,i_mom,gi1,gf1)[spin];
+	    temp[spin] = coeffT*(T1.Corr(t,i_mom,gi1,gf1)[spin] + T2.Corr(t,i_mom,gi1,gf1)[spin]);
 
           for( int gei=0; gei<n_extgammas_i; ++gei ){ 
 	    for( int gef=0; gef<n_extgammas_f; ++gef ){
