@@ -57,42 +57,43 @@ with h5py.File(output, "a") as fo:
                  print(src)
                  grpname = "/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/"
                  print(grpname)
-                 data2 = fp[grpname+"mvec"][:,:]
-                 index_momentum = np.where((data2 == (int(pi2x), int(pi2y), int(pi2z), int(pf1x), int(pf1y), int(pf1z), int(pf2x), int(pf2y), int(pf2z))).all(axis=1))
-                 pstr=fp[grpname+diagramindex].attrs["description"]
-                 lpstr=pstr.split()
-                 llpstr=lpstr[1]
-                 lllpstr=llpstr.split('/'.encode())
-                 gamma_text= (lllpstr[3])
-                 gamma_text_separate=gamma_text.split('},{'.encode())
-                 texttmp=gamma_text_separate[0].split('{'.encode())
-                 gamma_exti_s=texttmp[1].split(','.encode())
-                 gamma_exti_len  =len(gamma_exti_s)
-                 gamma_exti_index=gamma_exti_s.index(gamma_exti_input.encode())
-                 gamma_extf= (gamma_text_separate[1])
-                 gamma_extf_s=gamma_extf.split(','.encode());
-                 gamma_extf_len  =len(gamma_extf_s)
-                 gamma_extf_index=gamma_extf_s.index(gamma_extf_input.encode())
-                 gamma_i1=   (gamma_text_separate[2])
-                 gamma_i1_s=gamma_i1.split(','.encode());
-                 gamma_i1_len  =len(gamma_i1_s)
-                 gamma_i1_index=gamma_i1_s.index(gamma_i1_input.encode())
-                 gamma_i2=   (gamma_text_separate[3])
-                 gamma_i2_s=gamma_i2.split(','.encode());
-                 gamma_i2_len  =len(gamma_i2_s)
-                 gamma_i2_index=gamma_i2_s.index(gamma_i2_input.encode())
-                 gamma_f1=   (gamma_text_separate[4])
-                 gamma_f1_s=gamma_f1.split(','.encode());
-                 gamma_f1_len  =len(gamma_f1_s)
-                 gamma_f1_index=gamma_f1_s.index(gamma_f1_input.encode())
-                 texttmp=gamma_text_separate[5].split('}'.encode())
-                 gamma_f2=   (texttmp[0])
-                 gamma_f2_s=gamma_f2.split(','.encode());
-                 gamma_f2_len  =len(gamma_f2_s)
-                 gamma_f2_index=gamma_f2_s.index(gamma_f2_input.encode())
-                 index_gamma=gamma_exti_index*gamma_extf_len*gamma_i1_len*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_extf_index*gamma_i1_len*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_i1_index*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_i2_index*gamma_f1_len*gamma_f2_len+gamma_f1_index*gamma_f2_len+gamma_f2_index
-                 print(index_gamma)
-                 print(index_momentum)
-                 data = fp[grpname+diagramindex][:,index_momentum,index_gamma,:]
-                 grp = fo.require_group("/"+_dir+"/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/")
-                 grp.create_dataset(diagramindex, data.shape, dtype = data.dtype, data = data)
+                 if ((grpname+"mvec") in fp):
+                   data2 = fp[grpname+"mvec"][:,:]
+                   index_momentum = np.where((data2 == (int(pi2x), int(pi2y), int(pi2z), int(pf1x), int(pf1y), int(pf1z), int(pf2x), int(pf2y), int(pf2z))).all(axis=1))
+                   pstr=fp[grpname+diagramindex].attrs["description"]
+                   lpstr=pstr.split()
+                   llpstr=lpstr[1]
+                   lllpstr=llpstr.split('/'.encode())
+                   gamma_text= (lllpstr[3])
+                   gamma_text_separate=gamma_text.split('},{'.encode())
+                   texttmp=gamma_text_separate[0].split('{'.encode())
+                   gamma_exti_s=texttmp[1].split(','.encode())
+                   gamma_exti_len  =len(gamma_exti_s)
+                   gamma_exti_index=gamma_exti_s.index(gamma_exti_input.encode())
+                   gamma_extf= (gamma_text_separate[1])
+                   gamma_extf_s=gamma_extf.split(','.encode());
+                   gamma_extf_len  =len(gamma_extf_s)
+                   gamma_extf_index=gamma_extf_s.index(gamma_extf_input.encode())
+                   gamma_i1=   (gamma_text_separate[2])
+                   gamma_i1_s=gamma_i1.split(','.encode());
+                   gamma_i1_len  =len(gamma_i1_s)
+                   gamma_i1_index=gamma_i1_s.index(gamma_i1_input.encode())
+                   gamma_i2=   (gamma_text_separate[3])
+                   gamma_i2_s=gamma_i2.split(','.encode());
+                   gamma_i2_len  =len(gamma_i2_s)
+                   gamma_i2_index=gamma_i2_s.index(gamma_i2_input.encode())
+                   gamma_f1=   (gamma_text_separate[4])
+                   gamma_f1_s=gamma_f1.split(','.encode());
+                   gamma_f1_len  =len(gamma_f1_s)
+                   gamma_f1_index=gamma_f1_s.index(gamma_f1_input.encode())
+                   texttmp=gamma_text_separate[5].split('}'.encode())
+                   gamma_f2=   (texttmp[0])
+                   gamma_f2_s=gamma_f2.split(','.encode());
+                   gamma_f2_len  =len(gamma_f2_s)
+                   gamma_f2_index=gamma_f2_s.index(gamma_f2_input.encode())
+                   index_gamma=gamma_exti_index*gamma_extf_len*gamma_i1_len*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_extf_index*gamma_i1_len*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_i1_index*gamma_i2_len*gamma_f1_len*gamma_f2_len+gamma_i2_index*gamma_f1_len*gamma_f2_len+gamma_f1_index*gamma_f2_len+gamma_f2_index
+                   print(index_gamma)
+                   print(index_momentum)
+                   data = fp[grpname+diagramindex][:,index_momentum,index_gamma,:]
+                   grp = fo.require_group("/"+_dir+"/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/")
+                   grp.create_dataset(diagramindex, data.shape, dtype = data.dtype, data = data)
