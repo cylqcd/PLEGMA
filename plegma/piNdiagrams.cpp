@@ -831,6 +831,10 @@ int main(int argc, char **argv)
       //We need the pi-N 4pt functions only at zero pion momentum and non-zero nucleon momentum
       //therefore we filter further the momentumlist corresponding to pi2==0 to also pf2==0
       momList filtered_sourcemomentumList_pi20pf20 = filtered_sourcemomentumList_pi20.extract(filter,2);
+      std::vector<std::string> stringarray=filtered_sourcemomentumList_pi20pf20.to_string( {0,1,2}, {"pi2=","pf1=","pf2="} );
+      for (int i=0; i<stringarray.size(); ++i){
+        PLEGMA_printf("%s\n", stringarray[i].c_str());
+      }
 
       
       //Loop diagram at the source
@@ -1181,7 +1185,14 @@ int main(int argc, char **argv)
 
         }//loop over stochastic samples
 
-        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20pf20.uniq_p(3);
+        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20pf20.uniq_p(1);
+
+        for (auto gv1: mptot_filt){
+          for (auto gv2: gv1){
+            PLEGMA_printf("Component %d\t",gv2);
+          }
+          PLEGMA_printf("\n");
+        }
 
         PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
         PLEGMA_ScattCorrelator<float> reductionsT2(source,  mptot_filt);
@@ -1582,7 +1593,7 @@ int main(int argc, char **argv)
             TIME(corrD1ff1516.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff15-16"));
 
             TIME(corrD1ff1718.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff17-18"));
-            TIME(corrD1ff1516.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff19-20"));
+            TIME(corrD1ff1920.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff19-20"));
 
 
             std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20.uniq_p(3);
@@ -1627,12 +1638,12 @@ int main(int argc, char **argv)
               TIME(corrB12.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U[i], 0, 12, true));
 
 
-              TIME(reductionsV2.V4( stochastic_propagator, glist_sink_meson, propDN, propTS, false));
+              TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false));
 
               TIME(corrW17.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 17, true));
               TIME(corrW19.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 19, true));
 
-              TIME(reductionsV2.V2( stochastic_propagator, glist_sink_meson, propDN, propTS, false));
+              TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false));
 
               TIME(corrW18.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 18, true));
               TIME(corrW20.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 20, true));
@@ -1646,22 +1657,22 @@ int main(int argc, char **argv)
               TIME(corrB16.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0,16, true));
 
               stochastic_source.apply_gamma5();
-              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propUP, propTS, false));
+              TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false));
 
               TIME(corrW22.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 22, true));
               TIME(corrW24.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 24, true));
 
-              TIME(reductionsV2.V2( stochastic_source, glist_sink_meson, propTS, propUP, false));
+              TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false));
 
               TIME(corrW21.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 21, true));
               TIME(corrW23.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 23, true));
 
-              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN, false));
+              TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propTS, propDN, false));
 
               TIME(corrW25.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 25, true));
               TIME(corrW26.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 26, true));
 
-              TIME(reductionsV2.V4( stochastic_source, glist_sink_meson, propTS, propDN, false));
+              TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propTS, propDN, false));
 
               TIME(corrW27.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 27, true));
               TIME(corrW28.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 28, true));

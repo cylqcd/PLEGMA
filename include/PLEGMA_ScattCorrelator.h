@@ -206,6 +206,10 @@ namespace plegma {
     void multiply_by_time_slice(std::shared_ptr<Float>&);
     void applyBoundaryConditions( bool antiperiodic );
     void apply_phase( );
+    void apply_sign_transp(int gi);
+    void apply_sign_adj(int gi);
+
+
     void normalize_nstoch(int n_stoch);
     void clear_output( bool tozero, int n_index, int i );
     void clear_output( bool tozero );

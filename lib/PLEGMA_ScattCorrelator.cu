@@ -756,9 +756,13 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z') || (letter=='D') );
   if( (letter != 'M') && (letter != 'D') ){
     char number = name_of_diagram.at(1);
-    if( letter=='B' ) assert( (number>'0') && (number<'20') );
-    if( letter=='W' ) assert( (number>'0') && (number<'36') );
-    if( letter=='Z' ) assert( (number>'0') && (number<'20') );
+    assert(name_of_diagram.length()>1);
+    char namecopy[10];
+    name_of_diagram.copy(namecopy,name_of_diagram.length(), 1);
+    int diagram_index=atoi(namecopy);   
+    if( letter=='B' ) assert( (diagram_index>0) && (diagram_index<20) );
+    if( letter=='W' ) assert( (diagram_index>0) && (diagram_index<36) );
+    if( letter=='Z' ) assert( (diagram_index>0) && (diagram_index<20) );
   }
 
   //Gamma list
@@ -1414,9 +1418,10 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
+    int i_mom_i2 = imap[i_m][0];
     int i_mom_f1 = imap[i_m][1];
     int i_mom_f2 = imap[i_m][2];
-    PLEGMA_printf("IMOM f1 %d f2 %d\n", i_mom_f1, i_mom_f2 );
+    PLEGMA_printf("IMOM i2 %d f1 %d f2 %d\n", i_mom_i2, i_mom_f1, i_mom_f2 );
     for( int t=0; t<TIME; ++t){
       for (int gf2=0; gf2<n_gammas_f2; ++gf2){
         Float temp[N_SPINS*N_SPINS*2];
@@ -1716,7 +1721,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_transp(int gi){
   auto sign_arr = gammaTranspSign_scatt;
   
   for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
-    for( int i_g=0; i_g < N_gammas; ++i ){
+    for( int i_g=0; i_g < N_gammas; ++i_g ){
       Float sign=sign_arr[this->GList[gi][i_g]];
       x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
     }
@@ -1737,7 +1742,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_adj(int gi){
   auto sign_arr = gammaAdjointSign_scatt;
   
   for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
-    for( int i_g=0; i_g < N_gammas; ++i ){
+    for( int i_g=0; i_g < N_gammas; ++i_g ){
       Float sign=sign_arr[this->GList[gi][i_g]];
       x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
     }
