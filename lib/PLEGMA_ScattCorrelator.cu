@@ -1442,7 +1442,7 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
                 GAMMAS_SCATT extG_i1 = this->GList[0][gei];
                 GAMMAS_SCATT extG_f1 = this->GList[1][gef];
                 //change in pe_GNG
-                M_pe_GNG<Float>( this->Corr(t,i_m,gei,gef,gi1,gf1), extG_f1, extG_i1, temp );
+                M_pe_GNG<Float>( this->Corr(t,i_m,gei,gef,gi1,0,gf1,0), extG_f1, extG_i1, temp );
               } //Gextf
             } //G_exti
           } //G_f1

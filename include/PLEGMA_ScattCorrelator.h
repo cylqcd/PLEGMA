@@ -119,6 +119,25 @@ namespace plegma {
      *
      **/
     void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S, bool conj_v=true );
+    /**
+     *
+     *  @brief performs V4 type reduction produces three spin and one color indices tensor from a fermion vector and two fermion
+     *         propagators. It is used for forming diagrams for 2 hadron 2pt correlation function where the sink to sink 
+     *         propagator is replaced by a stochastic one
+     *         Formula
+     *         V4_{Gamma}^{alpha0,alpha1,alpha2}_{l}=\eps_{abc}\eps_{lmn}\phi^{alpha0}_{a}S1^{beta1,alpha1}_{b,m}\Gamma^t^{beta1,beta0}*
+     *                                               S2^{beta1,alpha2}
+     *  @params PLEGMA_Vector<Float> &Phi When the propagator that should be replaced is a DD type, then this should be gamma_5 *
+     *                                    stochastic propagator, when it is UU type then is should be the stochastic source itself
+     *                                    without gamma_5 multiplication
+     *  @params std::vector<GAMMAS_SCATT> &Gammas list of gammas with which the stochastic vector (argument above) will be multiplied
+     *  @params PLEGMA_Propagator<Float> &S1 fermion propagator
+     *  @params PLEGMA_Propagator<Float> &S2 fermion propagator
+     *  @params bool conj_v=false perform /or not to perform a conjugation on the fermion vector 
+     *                      in most cases we do set this to false
+     *
+     *
+     **/
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
     /**
      *  @brief performs T1 type reduction to compute baryon 2pt functions
