@@ -128,7 +128,9 @@ namespace plegma {
     void normalize_nstoch(int n_stoch);
     void clear_output( bool tozero, int n_index, int i );
     void clear_output( bool tozero );
-
+    void apply_sign_transp(int gi);
+    void apply_sign_adj(int gi);
+    void apply_sign( std::string name_of_diagram );
 
   };
 

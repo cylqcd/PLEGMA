@@ -396,6 +396,7 @@ int main(int argc, char **argv)
 	
 	TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
 	TIME( corrD.apply_phase() );
+	TIME( corrD.apply_sign("D") );
 	TIME( corrD.applyBoundaryConditions( true ) );
 	TIME( corrD.writeHDF5(outfilename) );
 
@@ -434,6 +435,7 @@ int main(int argc, char **argv)
         outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_TpiNsink";
 
         TIME(corrT_piNsink.apply_phase());
+        TIME(corrT_piNsink.apply_sign("T1"));
         TIME(corrT_piNsink.applyBoundaryConditions( true ));
         TIME(corrT_piNsink.normalize_nstoch(n_stochastic_samples));
         TIME(corrT_piNsink.writeHDF5( outfilename ));
@@ -463,12 +465,7 @@ int main(int argc, char **argv)
         TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
         //reductionsT2N.writeHDF5("T2sourceforN");
 
-        //write N
         TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
-        TIME(corrN.apply_phase());
-        TIME(corrN.applyBoundaryConditions( true ));
-        TIME(corrN.writeHDF5(outfilename));
-
       }
 
 
@@ -845,19 +842,21 @@ int main(int argc, char **argv)
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
      
        TIME(corrT.apply_phase());
+       TIME(corrT.apply_sign("T"));
        TIME(corrT.applyBoundaryConditions( true ));
 
        TIME(corrT.writeHDF5(outfilename));
-
        
        //## B
        
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
        TIME(corrB1.apply_phase());
+       TIME(corrB1.apply_sign("B"));
        TIME(corrB1.applyBoundaryConditions( true ));
        TIME(corrB1.normalize_nstoch(n_stochastic_samples));
        TIME(corrB1.writeHDF5( outfilename ));
        TIME(corrB2.apply_phase());
+       TIME(corrB2.apply_sign("B"));
        TIME(corrB2.applyBoundaryConditions( true ));
        TIME(corrB2.normalize_nstoch(n_stochastic_samples));
        TIME(corrB2.writeHDF5( outfilename ));
@@ -867,18 +866,22 @@ int main(int argc, char **argv)
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
        TIME(corrW1.apply_phase());
+       TIME(corrW1.apply_sign("W"));
        TIME(corrW1.applyBoundaryConditions( true ));
        TIME(corrW1.normalize_nstoch(n_stochastic_samples));
        TIME(corrW1.writeHDF5(outfilename));
        TIME(corrW2.apply_phase());
+       TIME(corrW2.apply_sign("W"));
        TIME(corrW2.applyBoundaryConditions( true ));
        TIME(corrW2.normalize_nstoch(n_stochastic_samples));
        TIME(corrW2.writeHDF5(outfilename));
        TIME(corrW3.apply_phase());
+       TIME(corrW3.apply_sign("W"));
        TIME(corrW3.applyBoundaryConditions( true ));
        TIME(corrW3.normalize_nstoch(n_stochastic_samples));
        TIME(corrW3.writeHDF5(outfilename));
        TIME(corrW4.apply_phase());
+       TIME(corrW4.apply_sign("W"));
        TIME(corrW4.applyBoundaryConditions( true ));
        TIME(corrW4.normalize_nstoch(n_stochastic_samples));
        TIME(corrW4.writeHDF5(outfilename));
@@ -887,15 +890,19 @@ int main(int argc, char **argv)
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
        TIME(corrZ1.apply_phase());
+       TIME(corrZ1.apply_sign("Z"));
        TIME(corrZ1.applyBoundaryConditions( true ));
        TIME(corrZ1.writeHDF5( outfilename ));
        TIME(corrZ2.apply_phase());
+       TIME(corrZ2.apply_sign("Z"));
        TIME(corrZ2.applyBoundaryConditions( true ));
        TIME(corrZ2.writeHDF5( outfilename  ));
        TIME(corrZ3.apply_phase());
+       TIME(corrZ3.apply_sign("Z"));
        TIME(corrZ3.applyBoundaryConditions( true ));
        TIME(corrZ3.writeHDF5( outfilename ));
        TIME(corrZ4.apply_phase());
+       TIME(corrZ4.apply_sign("Z"));
        TIME(corrZ4.applyBoundaryConditions( true ));
        TIME(corrZ4.writeHDF5( outfilename ));
 
@@ -904,14 +911,22 @@ int main(int argc, char **argv)
 
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase());
+       TIME(corrM.apply_sign("M"));
        TIME(corrM.applyBoundaryConditions( true ));
        TIME(corrM.writeHDF5( outfilename ));
-      
+
+       //## N
+       TIME(corrN.apply_phase());
+       TIME(corrN.apply_sign("N"));
+       TIME(corrN.applyBoundaryConditions( true ));
+       TIME(corrN.writeHDF5(outfilename));
+
       }//loop over unique set of momenta for p_i2
        
       //write P
 
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+      TIME(corrP.apply_sign("P"));
       TIME(corrP.writeHDF5( outfilename ));
 
     } //loop over source position
