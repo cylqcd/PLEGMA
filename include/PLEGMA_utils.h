@@ -19,7 +19,7 @@ void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLi
 void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
 void finalizeGaugeQuda();
 void plaqQuda();
-void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut, PLEGMA_Gauge<double> &gaugeIn, double overelaxPar=1.5, double tolerance=1e-12,
+void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut, PLEGMA_Gauge<double> &gaugeIn, int type, double overelaxPar=1.5, double tolerance=1e-12,
 			   int maxiter=10000,int verbosePerSteps=1, int reunit_interval=1, int stop_theta=0);
 
 //============= QUDA_params.cpp ===================================//

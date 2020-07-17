@@ -118,7 +118,7 @@ int main(int argc, char **argv){
     gauge1.calculatePlaq();
     if(!isGFixed){
       double t3=MPI_Wtime();
-      if(overelaxType == "exact") gFixingLandauOVR_QUDA(gauge2,gauge1,overelaxPar,tolerance,10000,10000);
+      if(overelaxType == "exact") gFixingLandauOVR_QUDA(gauge2,gauge1,4,overelaxPar,tolerance,10000,10000);
       else if (overelaxType == "stoch") gauge2.gFixingLandau(gauge1,stochoverelaxPar,tolerance);
       else PLEGMA_error("Overrelaxation type %s not implemented",overelaxType.c_str());
       double t4=MPI_Wtime();
