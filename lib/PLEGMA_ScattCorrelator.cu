@@ -8,6 +8,13 @@
 #include  <memory>
 using namespace plegma;
 
+bool gammas_isSym( std::vector<GAMMAS_SCATT> &Gammas ){
+  bool res = true;
+  for( auto &g : Gammas )
+    if ( gammaTranspSign_scatt[g] == -1 ) res=false;
+  return res;
+}
+
 //--------------------------------//
 //  class PLEGMA_ScattCorrelator  //
 //--------------------------------//
@@ -1363,6 +1370,8 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
     }//time
   }//mom
 }
+
+
 //T diagramm pion nucleon at the sink
 //V3 should have momentum list p_f2
 //V2 should have momentum list p_f1 
@@ -1373,18 +1382,27 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   //checks between srcV2 srcV3
   if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
   if(!srcV3.check_reduction(V_3)) PLEGMA_error("srcV3 seems not to have V3like shape\n");
-  Float factor[2];
-  factor[0]=2.;
-  factor[1]=0.;
 
   this->clear_output(!accum);
 
-  this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor);
+  if( gammas_isSym( this->GList[2] ) ){ //Symm G_i1
+      Float factor[2] = {2.,0.};
+      this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor );
+  
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor );
 
-  this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor);
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor );
+    }
+  else{
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false );
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, true );
+    
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, false );
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, true  );
 
-  this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor);
-
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, false );
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, true  );
+  }
 }
 //LT diagramms, Loop at the sink multiplied by T diagramm at the
 //T is build up from a T1 and a T2 reduction
@@ -1724,7 +1742,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_transp(int gi){
   for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
     for( int i_g=0; i_g < N_gammas; ++i_g ){
       Float sign=sign_arr[this->GList[gi][i_g]];
-      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
+      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2 );
     }
   }
 }
@@ -1750,6 +1768,87 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_adj(int gi){
   }
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram){
+
+  if ( name_of_diagram == "D" ){
+    Float overall_sign = -1.; // epsilon in adjoint interp
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
+    apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
+  }
+  else if( name_of_diagram == "N"){
+    Float overall_sign = -1.; // epsilon in adjoint interp
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
+  }
+  else if( name_of_diagram == "P"){
+    //Float overall_sign = 1.; // i at sink, -i at source
+    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_i2 (Pion-source)
+  }
+  else if( name_of_diagram == "T"){
+    Float overall_sign[2] = {0.,1.}; //-i from pion at source, -1 coming from epsilon in adj interp of N
+    x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
+    apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
+  }
+  else if(  name_of_diagram == "T1"){
+    Float overall_sign[2] = {0.,1.}; //i from pion at sink, -1 comig from epsilon in adj interp of D, -1 from eqs. (51-56)
+    x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
+    apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
+  }
+  else if( name_of_diagram == "B"){
+    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (20),(23)
+    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
+    apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
+    apply_sign_transp(4);  // transposition G_f1 (Nucleon-sink)
+  }
+  else if( name_of_diagram == "W"){
+    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (28),(31),(34),(37)
+    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
+    apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
+    apply_sign_transp(4);    // transposition G_f1 (Nucleon-sink)
+  }
+  else if( name_of_diagram == "Z"){
+    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (41),(44),(47),(50)
+    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
+    apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
+  }
+  else if( name_of_diagram == "M"){ // ??????? is N called after or before phase multiplication of M !!!!!!! In the following like we call signs for N after the M_diagram call.
+    //Float overall_sign = 1.; // i from pion at sink, -i from pion at source, -1 from epsilon in adj interp of N,  -1 from eq. (13)
+    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    
+    apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
+
+    apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
+  }
+  else if( name_of_diagram == "D1ii"){
+    apply_sign_adj(0);	     // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
+    apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
+  }
+  if ( name_of_diagram == "D1ff" ){
+    Float overall_sign = -1.; // epsilon in adjoint interp
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
+    apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
+  }
+
+  else{
+    PLEGMA_error("Error! %s not recognized!\n",name_of_diagram.c_str());
+  }
+}
 
 template class PLEGMA_ScattCorrelator<float>;
 template class PLEGMA_ScattCorrelator<double>;

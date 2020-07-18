@@ -20,17 +20,21 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
 
 void produceOutput( PLEGMA_ScattCorrelator<float> source,
-                    std::string outputFilename, 
+                    std::string outputFilename,
+                    std::string diagram_name, 
                     int n_stochastic_samples ){
   TIME(source.apply_phase());
+  TIME(source.apply_sign(diagram_name));
   TIME(source.applyBoundaryConditions( true ));
   TIME(source.normalize_nstoch(n_stochastic_samples));
   TIME(source.writeHDF5( outputFilename ));
 
 }
 void produceOutput( PLEGMA_ScattCorrelator<float> source,
-                    std::string outputFilename ){
+                    std::string outputFilename,
+                    std::string diagram_name ){
   TIME(source.apply_phase());
+  TIME(source.apply_sign(diagram_name));
   TIME(source.applyBoundaryConditions( true ));
   TIME(source.writeHDF5( outputFilename ));
 }
@@ -484,6 +488,7 @@ int main(int argc, char **argv)
 	
 	TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
 	TIME( corrD.apply_phase() );
+	TIME( corrD.apply_sign("D") );
 	TIME( corrD.applyBoundaryConditions( true ) );
 	TIME( corrD.writeHDF5(outfilename) );
 
@@ -511,12 +516,7 @@ int main(int argc, char **argv)
         TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
         //reductionsT2N.writeHDF5("T2sourceforN");
 
-        //write N
         TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
-        TIME(corrN.apply_phase());
-        TIME(corrN.applyBoundaryConditions( true ));
-        TIME(corrN.writeHDF5(outfilename));
-
       }
 
       //For the I=1/2 case we need the N- as well
@@ -822,6 +822,7 @@ int main(int argc, char **argv)
         outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_TpiNsink";
 
         TIME(corrT_piNsink.apply_phase());
+        TIME(corrT_piNsink.apply_sign("T1"));
         TIME(corrT_piNsink.applyBoundaryConditions( true ));
         TIME(corrT_piNsink.normalize_nstoch(n_stochastic_samples));
         TIME(corrT_piNsink.writeHDF5( outfilename ));
@@ -963,31 +964,31 @@ int main(int argc, char **argv)
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ii";
 
-        produceOutput(corrD1ii1, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii2, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii3, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii4, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii1, outfilename, "D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii2, outfilename, "D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii3, outfilename, "D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii4, outfilename, "D1ii", n_stochastic_samples);
 
-        produceOutput(corrD1ii5, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii6, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii7, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii8, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii5, outfilename, "D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii6, outfilename, "D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii7, outfilename, "D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii8, outfilename, "D1ii", n_stochastic_samples);
 
-        produceOutput(corrD1ii9, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii10, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii9, outfilename, "D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii10, outfilename,"D1ii", n_stochastic_samples);
 
-        produceOutput(corrD1ii11, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii12, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii11, outfilename,"D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii12, outfilename,"D1ii", n_stochastic_samples);
 
-        produceOutput(corrD1ii13, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii14, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii15, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii16, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii13, outfilename,"D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii14, outfilename,"D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii15, outfilename,"D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii16, outfilename,"D1ii", n_stochastic_samples);
 
-        produceOutput(corrD1ii17, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii18, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii19, outfilename, n_stochastic_samples);
-        produceOutput(corrD1ii20, outfilename, n_stochastic_samples);
+        produceOutput(corrD1ii17, outfilename,"D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii18, outfilename,"D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii19, outfilename,"D1ii", n_stochastic_samples);
+        produceOutput(corrD1ii20, outfilename,"D1ii", n_stochastic_samples);
 
 
 
@@ -1213,36 +1214,36 @@ int main(int argc, char **argv)
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-        produceOutput(corrB3, outfilename, n_stochastic_samples);
-        produceOutput(corrB4, outfilename, n_stochastic_samples);
-        produceOutput(corrB5, outfilename, n_stochastic_samples);
-        produceOutput(corrB6, outfilename, n_stochastic_samples);
+        produceOutput(corrB3, outfilename, "B", n_stochastic_samples);
+        produceOutput(corrB4, outfilename, "B", n_stochastic_samples);
+        produceOutput(corrB5, outfilename, "B", n_stochastic_samples);
+        produceOutput(corrB6, outfilename, "B", n_stochastic_samples);
  
-        produceOutput(corrB17, outfilename, n_stochastic_samples);
-        produceOutput(corrB18, outfilename, n_stochastic_samples);
-        produceOutput(corrB19, outfilename, n_stochastic_samples);
-        produceOutput(corrB20, outfilename, n_stochastic_samples);
+        produceOutput(corrB17, outfilename, "B", n_stochastic_samples);
+        produceOutput(corrB18, outfilename, "B", n_stochastic_samples);
+        produceOutput(corrB19, outfilename, "B", n_stochastic_samples);
+        produceOutput(corrB20, outfilename, "B", n_stochastic_samples);
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-        produceOutput(corrW5, outfilename, n_stochastic_samples);
-        produceOutput(corrW6, outfilename, n_stochastic_samples);
-        produceOutput(corrW7, outfilename, n_stochastic_samples);
-        produceOutput(corrW8, outfilename, n_stochastic_samples);
-        produceOutput(corrW13, outfilename, n_stochastic_samples);
-        produceOutput(corrW14, outfilename, n_stochastic_samples);
-        produceOutput(corrW15, outfilename, n_stochastic_samples);
-        produceOutput(corrW16, outfilename, n_stochastic_samples);
-        produceOutput(corrW29, outfilename, n_stochastic_samples);
-        produceOutput(corrW30, outfilename, n_stochastic_samples);
-        produceOutput(corrW31, outfilename, n_stochastic_samples);
-        produceOutput(corrW32, outfilename, n_stochastic_samples);
+        produceOutput(corrW5, outfilename, "W", n_stochastic_samples);
+        produceOutput(corrW6, outfilename, "W", n_stochastic_samples);
+        produceOutput(corrW7, outfilename, "W", n_stochastic_samples);
+        produceOutput(corrW8, outfilename, "W", n_stochastic_samples);
+        produceOutput(corrW13, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW14, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW15, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW16, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW29, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW30, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW31, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW32, outfilename,"W", n_stochastic_samples);
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
-        produceOutput(corrD1ff13, outfilename);
-        produceOutput(corrD1ff24, outfilename);
-        produceOutput(corrD1ff710, outfilename);
-        produceOutput(corrD1ff89, outfilename);
+        produceOutput(corrD1ff13, outfilename, "D1ff");
+        produceOutput(corrD1ff24, outfilename, "D1ff");
+        produceOutput(corrD1ff710, outfilename,"D1ff");
+        produceOutput(corrD1ff89, outfilename, "D1ff");
 
 
 
@@ -1382,18 +1383,18 @@ int main(int argc, char **argv)
         }//loop over stochastic samples
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-        produceOutput(corrB7, outfilename, n_stochastic_samples);
-        produceOutput(corrB8, outfilename, n_stochastic_samples);
+        produceOutput(corrB7, outfilename, "B", n_stochastic_samples);
+        produceOutput(corrB8, outfilename, "B", n_stochastic_samples);
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
-        produceOutput(corrW33, outfilename, n_stochastic_samples);
-        produceOutput(corrW34, outfilename, n_stochastic_samples);
-        produceOutput(corrW35, outfilename, n_stochastic_samples);
-        produceOutput(corrW36, outfilename, n_stochastic_samples);
+        produceOutput(corrW33, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW34, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW35, outfilename,"W", n_stochastic_samples);
+        produceOutput(corrW36, outfilename,"W", n_stochastic_samples);
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
-        produceOutput(corrD1ff56, outfilename);
-        produceOutput(corrD1ff1112, outfilename);
+        produceOutput(corrD1ff56, outfilename, "D1ff");
+        produceOutput(corrD1ff1112, outfilename,"D1ff");
 
 
       }//end for DD
@@ -1616,10 +1617,10 @@ int main(int argc, char **argv)
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
 
-            produceOutput(corrD1ff1314, outfilename);
-            produceOutput(corrD1ff1516, outfilename);
-            produceOutput(corrD1ff1718, outfilename);
-            produceOutput(corrD1ff1920, outfilename);
+            produceOutput(corrD1ff1314, outfilename, "D1ff")
+            produceOutput(corrD1ff1516, outfilename, "D1ff");
+            produceOutput(corrD1ff1718, outfilename, "D1ff");
+            produceOutput(corrD1ff1920, outfilename, "D1ff");
 
 
             for (int i=0; i<n_stochastic_samples; ++i){
@@ -1681,32 +1682,32 @@ int main(int argc, char **argv)
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-            produceOutput(corrB9,  outfilename, n_stochastic_samples);
-            produceOutput(corrB10, outfilename, n_stochastic_samples);
-            produceOutput(corrB11, outfilename, n_stochastic_samples);
-            produceOutput(corrB12, outfilename, n_stochastic_samples);
+            produceOutput(corrB9,  outfilename, "B", n_stochastic_samples);
+            produceOutput(corrB10, outfilename, "B", n_stochastic_samples);
+            produceOutput(corrB11, outfilename, "B", n_stochastic_samples);
+            produceOutput(corrB12, outfilename, "B", n_stochastic_samples);
 
-            produceOutput(corrB13, outfilename, n_stochastic_samples);
-            produceOutput(corrB14, outfilename, n_stochastic_samples);
-            produceOutput(corrB15, outfilename, n_stochastic_samples);
-            produceOutput(corrB16, outfilename, n_stochastic_samples);
+            produceOutput(corrB13, outfilename, "B", n_stochastic_samples);
+            produceOutput(corrB14, outfilename, "B", n_stochastic_samples);
+            produceOutput(corrB15, outfilename, "B", n_stochastic_samples);
+            produceOutput(corrB16, outfilename, "B", n_stochastic_samples);
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-            produceOutput(corrW17, outfilename, n_stochastic_samples);
-            produceOutput(corrW18, outfilename, n_stochastic_samples);
-            produceOutput(corrW19, outfilename, n_stochastic_samples);
-            produceOutput(corrW20, outfilename, n_stochastic_samples);
+            produceOutput(corrW17, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW18, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW19, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW20, outfilename, "W", n_stochastic_samples);
 
-            produceOutput(corrW21, outfilename, n_stochastic_samples);
-            produceOutput(corrW22, outfilename, n_stochastic_samples);
-            produceOutput(corrW23, outfilename, n_stochastic_samples);
-            produceOutput(corrW24, outfilename, n_stochastic_samples);
+            produceOutput(corrW21, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW22, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW23, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW24, outfilename, "W", n_stochastic_samples);
 
-            produceOutput(corrW25, outfilename, n_stochastic_samples);
-            produceOutput(corrW26, outfilename, n_stochastic_samples);
-            produceOutput(corrW27, outfilename, n_stochastic_samples);
-            produceOutput(corrW28, outfilename, n_stochastic_samples);
+            produceOutput(corrW25, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW26, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW27, outfilename, "W", n_stochastic_samples);
+            produceOutput(corrW28, outfilename, "W", n_stochastic_samples);
  
  
           }
@@ -2049,26 +2050,26 @@ int main(int argc, char **argv)
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
-         produceOutput(corrZ5, outfilename);
-         produceOutput(corrZ6, outfilename);
-         produceOutput(corrZ7, outfilename);
-         produceOutput(corrZ8, outfilename);
+         produceOutput(corrZ5, outfilename, "Z");
+         produceOutput(corrZ6, outfilename, "Z");
+         produceOutput(corrZ7, outfilename, "Z");
+         produceOutput(corrZ8, outfilename, "Z");
 
-         produceOutput(corrZ9, outfilename);
-         produceOutput(corrZ10, outfilename);
+         produceOutput(corrZ9, outfilename, "Z");
+         produceOutput(corrZ10, outfilename,"Z");
 
-         produceOutput(corrZ11, outfilename);
-         produceOutput(corrZ12, outfilename);
-         produceOutput(corrZ13, outfilename);
-         produceOutput(corrZ14, outfilename);
+         produceOutput(corrZ11, outfilename,"Z");
+         produceOutput(corrZ12, outfilename,"Z");
+         produceOutput(corrZ13, outfilename,"Z");
+         produceOutput(corrZ14, outfilename,"Z");
 
-         produceOutput(corrZ15, outfilename);
-         produceOutput(corrZ16, outfilename);
+         produceOutput(corrZ15, outfilename,"Z");
+         produceOutput(corrZ16, outfilename,"Z");
 
-         produceOutput(corrZ17, outfilename);
-         produceOutput(corrZ18, outfilename);
-         produceOutput(corrZ19, outfilename);
-         produceOutput(corrZ20, outfilename);
+         produceOutput(corrZ17, outfilename,"Z");
+         produceOutput(corrZ18, outfilename,"Z");
+         produceOutput(corrZ19, outfilename,"Z");
+         produceOutput(corrZ20, outfilename,"Z");
 
        }
        else{
@@ -2174,47 +2175,49 @@ int main(int argc, char **argv)
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
      
        TIME(corrT.apply_phase());
+       TIME(corrT.apply_sign("T"));
        TIME(corrT.applyBoundaryConditions( true ));
 
        TIME(corrT.writeHDF5(outfilename));
-
        
        //## B
        
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-       produceOutput(corrB1, outfilename, n_stochastic_samples);
-       produceOutput(corrB2, outfilename, n_stochastic_samples);
-
+       produceOutput(corrB1, outfilename, n_stochastic_samples,"B");
+       produceOutput(corrB2, outfilename, n_stochastic_samples,"B");
 
        //## W
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-       produceOutput(corrW1, outfilename, n_stochastic_samples);
-       produceOutput(corrW2, outfilename, n_stochastic_samples);
-       produceOutput(corrW3, outfilename, n_stochastic_samples);
-       produceOutput(corrW4, outfilename, n_stochastic_samples);
+       produceOutput(corrW1, outfilename, n_stochastic_samples, "W");
+       produceOutput(corrW2, outfilename, n_stochastic_samples, "W");
+       produceOutput(corrW3, outfilename, n_stochastic_samples, "W");
+       produceOutput(corrW4, outfilename, n_stochastic_samples, "W");
 
        //## Z
 
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
-       produceOutput(corrZ1, outfilename);
-       produceOutput(corrZ2, outfilename);
-       produceOutput(corrZ3, outfilename);
-       produceOutput(corrZ4, outfilename);
+       produceOutput(corrZ1, outfilename,"Z");
+       produceOutput(corrZ2, outfilename,"Z");
+       produceOutput(corrZ3, outfilename,"Z");
+       produceOutput(corrZ4, outfilename,"Z");
 
        //## M
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
 
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
-       produceOutput(corrM, outfilename);
+
+       produceOutput(corrM, outfilename,"M");
+       produceOutput(corrN, outfilename,"N");
       
       }//loop over unique set of momenta for p_i2
        
       //write P
 
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+      TIME(corrP.apply_sign("P"));
       TIME(corrP.writeHDF5( outfilename ));
 
 
