@@ -757,12 +757,14 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   if( (letter != 'M') && (letter != 'D') ){
     char number = name_of_diagram.at(1);
     assert(name_of_diagram.length()>1);
-    char namecopy[10];
-    name_of_diagram.copy(namecopy,name_of_diagram.length(), 1);
-    int diagram_index=atoi(namecopy);   
-    if( letter=='B' ) assert( (diagram_index>0) && (diagram_index<20) );
-    if( letter=='W' ) assert( (diagram_index>0) && (diagram_index<36) );
-    if( letter=='Z' ) assert( (diagram_index>0) && (diagram_index<20) );
+    char *namecopy;
+    asprintf(&namecopy,"%s",name_of_diagram.c_str()+1);
+    int diagram_index=atoi(namecopy); 
+    free(namecopy);
+    
+    if( letter=='B' ) assert( (diagram_index>0) && (diagram_index<21) );
+    if( letter=='W' ) assert( (diagram_index>0) && (diagram_index<37) );
+    if( letter=='Z' ) assert( (diagram_index>0) && (diagram_index<21) );
   }
 
   //Gamma list
@@ -1083,8 +1085,8 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
                                                 std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),
 						int diagramm_index, bool accum ){
 
-  if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
-    PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
+  if( (diagramm_index <1) || (diagramm_index >20 ) )
+    PLEGMA_error("diagramm_index %d out of range (1..20)\n",diagramm_index);
 
   this->clear_output(!accum); 
 
@@ -1421,7 +1423,6 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
     int i_mom_i2 = imap[i_m][0];
     int i_mom_f1 = imap[i_m][1];
     int i_mom_f2 = imap[i_m][2];
-    PLEGMA_printf("IMOM i2 %d f1 %d f2 %d\n", i_mom_i2, i_mom_f1, i_mom_f2 );
     for( int t=0; t<TIME; ++t){
       for (int gf2=0; gf2<n_gammas_f2; ++gf2){
         Float temp[N_SPINS*N_SPINS*2];
