@@ -1617,7 +1617,7 @@ int main(int argc, char **argv)
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
 
-            produceOutput(corrD1ff1314, outfilename, "D1ff")
+            produceOutput(corrD1ff1314, outfilename, "D1ff");
             produceOutput(corrD1ff1516, outfilename, "D1ff");
             produceOutput(corrD1ff1718, outfilename, "D1ff");
             produceOutput(corrD1ff1920, outfilename, "D1ff");
@@ -2148,9 +2148,9 @@ int main(int argc, char **argv)
          TIME(corrD1if12.M_diagramms( corrNucleon, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom));
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
-         produceOutput(corrD1if12, outfilename);
-         produceOutput(corrD1if34, outfilename);
-         produceOutput(corrD1if56, outfilename);
+         produceOutput(corrD1if12, outfilename,"D1if");
+         produceOutput(corrD1if34, outfilename,"D1if");
+         produceOutput(corrD1if56, outfilename,"D1if");
 
        }
 
@@ -2184,16 +2184,16 @@ int main(int argc, char **argv)
        
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-       produceOutput(corrB1, outfilename, n_stochastic_samples,"B");
-       produceOutput(corrB2, outfilename, n_stochastic_samples,"B");
+       produceOutput(corrB1, outfilename, "B", n_stochastic_samples);
+       produceOutput(corrB2, outfilename, "B", n_stochastic_samples);
 
        //## W
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-       produceOutput(corrW1, outfilename, n_stochastic_samples, "W");
-       produceOutput(corrW2, outfilename, n_stochastic_samples, "W");
-       produceOutput(corrW3, outfilename, n_stochastic_samples, "W");
-       produceOutput(corrW4, outfilename, n_stochastic_samples, "W");
+       produceOutput(corrW1, outfilename, "W", n_stochastic_samples);
+       produceOutput(corrW2, outfilename, "W", n_stochastic_samples);
+       produceOutput(corrW3, outfilename, "W", n_stochastic_samples);
+       produceOutput(corrW4, outfilename, "W", n_stochastic_samples);
 
        //## Z
 
