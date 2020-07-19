@@ -64,8 +64,12 @@ void finalizeComms()
 #endif
 }
 
-void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, double overelaxPar,double tolerance,
+void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, int type, double overelaxPar,double tolerance,
 			   int maxiter, int verbosePerSteps, int reunit_interval, int stop_theta){
+  if(type == 3 && HGC_verbosity>1) PLEGMA_printf("Gauge fixing using Coulomb gauge\n");
+  if(type == 4 && HGC_verbosity>1) PLEGMA_printf("Gauge fixing using Landau gauge\n");
+  if(type != 3 && type != 4) PLEGMA_error("Choose type 3 for Coulomb and type 4 for Landau\n");
+    
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
   gauge_param.type = QUDA_WILSON_LINKS;
@@ -74,7 +78,7 @@ void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &
   double* buf[N_DIMS];
   for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gaugeIn.Bytes_total()/N_DIMS);
   unpackGaugeToEvenOdd(buf, gaugeIn);
-  computeGaugeFixingOVRQuda(buf,4,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param,nullptr);
+  computeGaugeFixingOVRQuda(buf,type,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param,nullptr);
   packGaugeToNormal(gaugeOut,buf);
   gaugeOut.load();
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gaugeIn.Bytes_total()/N_DIMS);
