@@ -1838,13 +1838,12 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram){
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
   }
-  if ( name_of_diagram == "D1ff" ){
+  else if ( name_of_diagram == "D1ff" ){
     Float overall_sign = -1.; // epsilon in adjoint interp
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
   }
-
   else{
     PLEGMA_error("Error! %s not recognized!\n",name_of_diagram.c_str());
   }
