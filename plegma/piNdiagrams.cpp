@@ -844,7 +844,7 @@ int main(int argc, char **argv)
           std::shared_ptr<float> Loop_UP_sp=Loop_UP_temporary.get_source_time_slice();
 
           for (int j=0; j< glist_source_meson.size(); ++j){
-            Loop_UPDN_source[2*j+0]+=2*Loop_UP_sp.get()[2*j+0]
+            Loop_UPDN_source[2*j+0]+=2*Loop_UP_sp.get()[2*j+0];
             Loop_UPDN_source[2*j+1]=0.;
           }
 
@@ -1460,11 +1460,8 @@ int main(int argc, char **argv)
             corrW27.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W27");
             corrW28.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W28");
 
-            TIME(corrD1ff1314.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff13-14"));
-            TIME(corrD1ff1516.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff15-16"));
-
-            TIME(corrD1ff1718.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff17-18"));
-            TIME(corrD1ff1920.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff19-20"));
+            TIME(corrD1ff13141718.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff13-14-17-18"));
+            TIME(corrD1ff15161920.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff15-16-19-20"));
 
 
             std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20.uniq_p(3);
@@ -1480,7 +1477,7 @@ int main(int argc, char **argv)
             TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propTS));
             TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP));
 
-            TIME(corrD1ff15161920.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
+            TIME(corrD1ff15161920.LT_diagramms( reductionsT1, reductionsT2, Loop_UPDN ));
 
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
