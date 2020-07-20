@@ -1515,10 +1515,10 @@ int main(int argc, char **argv)
               stochastic_propagator.apply_gamma5();
               TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true));
 
-              TIME(corrB13.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D[i], 0,13, true));
+              TIME(corrB13.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0,13, true));
               TIME(corrB14.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0,14, true));
-              TIME(corrB15.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0,15, true));
-              TIME(corrB16.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0,16, true));
+              TIME(corrB15.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D[i], 0,15, true));
+              TIME(corrB16.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D[i], 0,16, true));
 
               stochastic_source.apply_gamma5();
               TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false));
@@ -1642,14 +1642,6 @@ int main(int argc, char **argv)
            PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList.uniq_p(2))
          };
 
-       //We need V3 reductions only for pf2={0,0,0} for diagrams Z5--Z20
-       std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted_zero_pf2 = {
-           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion),
-           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion),
-           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion),
-           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion)
-         };
-
 
        //We need V2 reductions for all the possible nucleon momenta pf1
        std::array<PLEGMA_ScattCorrelator<float>,4> reductionsV2_diluted = {
@@ -1712,6 +1704,14 @@ int main(int argc, char **argv)
        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        
        if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
+
+         //We need V3 reductions only for pf2={0,0,0} for diagrams Z5--Z20
+         std::array<PLEGMA_ScattCorrelator<float> ,4> reductionsV3_diluted_zero_pf2 = {
+           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion),
+           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion),
+           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion),
+           PLEGMA_ScattCorrelator<float>(source, piN12_zeropion)
+         };
          PLEGMA_ScattCorrelator<float> corrZ5(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
          PLEGMA_ScattCorrelator<float> corrZ6(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
          PLEGMA_ScattCorrelator<float> corrZ7(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
