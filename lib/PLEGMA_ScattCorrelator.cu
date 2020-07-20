@@ -1448,8 +1448,8 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
           for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
             Float *loop_pointer=Loop.Corr(t,i_mom_f2,gf2);
             Float loop_contribution[2];
-            loop_contribution[0]= loop_pointer[0];
-            loop_contribution[1]= loop_pointer[1];
+            loop_contribution[0]= 2*loop_pointer[0];
+            loop_contribution[1]= 0;
 
             for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
               temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + T2.Corr(t,i_mom_f1,gi1,gf1)[spin]);

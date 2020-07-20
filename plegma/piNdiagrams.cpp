@@ -503,7 +503,7 @@ int main(int argc, char **argv)
       { 
         PLEGMA_ScattCorrelator<float> reductionsT1N(source, mpf1);
         PLEGMA_ScattCorrelator<float> reductionsT2N(source, mpf1);
-        //First we compute N+ (proton) (we need for M diagram (N+p+))
+        //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
         TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
 
         TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
@@ -1079,13 +1079,6 @@ int main(int argc, char **argv)
 
         std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20pf20.uniq_p(1);
 
-        for (auto gv1: mptot_filt){
-          for (auto gv2: gv1){
-            PLEGMA_printf("Component %d\t",gv2);
-          }
-          PLEGMA_printf("\n");
-        }
-
         PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
         PLEGMA_ScattCorrelator<float> reductionsT2(source,  mptot_filt);
 
@@ -1439,12 +1432,8 @@ int main(int argc, char **argv)
             PLEGMA_ScattCorrelator<float> corrW27(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
             PLEGMA_ScattCorrelator<float> corrW28(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-            PLEGMA_ScattCorrelator<float> corrD1ff1314(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-            PLEGMA_ScattCorrelator<float> corrD1ff1516(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-
-            PLEGMA_ScattCorrelator<float> corrD1ff1718(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-            PLEGMA_ScattCorrelator<float> corrD1ff1920(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-
+            PLEGMA_ScattCorrelator<float> corrD1ff13141718(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+            PLEGMA_ScattCorrelator<float> corrD1ff15161920(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
             corrB9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B9");
             corrB10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B10");
@@ -1486,22 +1475,18 @@ int main(int argc, char **argv)
             TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propDN));
             TIME(reductionsT2.T1(glist_source_nucleon, glist_sink_nucleon, propTS, propUP, propDN));
 
-            TIME(corrD1ff1314.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
-            TIME(corrD1ff1718.LT_diagramms( reductionsT1, reductionsT2, Loop_DN ));
+            TIME(corrD1ff13141718.LT_diagramms( reductionsT1, reductionsT2, Loop_UPDN ));
 
             TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propTS));
             TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP));
 
-            TIME(corrD1ff1516.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
-            TIME(corrD1ff1920.LT_diagramms( reductionsT1, reductionsT2, Loop_DN ));
+            TIME(corrD1ff15161920.LT_diagramms( reductionsT1, reductionsT2, Loop_UP ));
 
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
 
-            produceOutput(corrD1ff1314, outfilename, "D1ff");
-            produceOutput(corrD1ff1516, outfilename, "D1ff");
-            produceOutput(corrD1ff1718, outfilename, "D1ff");
-            produceOutput(corrD1ff1920, outfilename, "D1ff");
+            produceOutput(corrD1ff13141718, outfilename, "D1ff");
+            produceOutput(corrD1ff15161920, outfilename, "D1ff");
 
 
             for (int i=0; i<n_stochastic_samples; ++i){
