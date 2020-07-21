@@ -1166,12 +1166,62 @@ W36& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\ga
 \section{2pt functions}
 In this section we perform contractions for the delta two point function
 projecting to isospin 1/2. 
-\section{$I=1/2$}
 The contractions for $\vert 1/2, +1/2\rangle$
 \begin{itemize}
 \item $$+2/3\langle(uu)d\left(x_f\right)(\bar{u}\bar{u})\bar{d}\left(x_i\right)\rangle=+4/3T_2\left(D,U,U\right)$$
 \item $$-1/3\langle(uu)d\left(x_f\right)(\bar{u}\bar{d})\bar{u}\left(x_i\right)\rangle=-2/3T_1\left(D,U,U\right)$$
 \item $$-1/3\langle(ud)u\left(x_f\right)(\bar{u}\bar{u})\bar{d}\left(x_i\right)\rangle=-2/3T_1\left(U,U,D\right)$$
 \item $$+1/6\langle(ud)u\left(x_f\right)(\bar{u}\bar{d})\bar{u}\left(x_i\right)\rangle=+1/6(T_1\left(U,D,D+\right)+T_2\left(U,D,U\right))$$
+\end{itemize}
+\section{Triangle diagrams}
+In this section we compute all the triangle diagrams where piN is at the sink for the $I=1/2$ case
+\subsection{$udu-\bar{u}u-\bar{d}\bar{u}\bar{u}$}
+\begin{itemize}
+\item T7
+$$U(x_{f1},x_{f2}\Gamma_{f2} U(x_{f2},x_{i1})\Gamma_{i1}^tD^t(x_{f1},x_{i1})\Gamma_f1^tU(x_{f1},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi, \Gamma_{f2}U\right)_{\delta}{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)\_{\alpha,\gamma,\beta}$$
+\item T8
+$$U(x_{f1},x_{f2}\Gamma_{f2} U(x_{f2},x_{i1})\mathrm{Tr}\left(U(x_{f1},x_{i1})\Gamma_{i1}^tD^t(x_{f1},x_{i1})\Gamma_{f1}^t\right)$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi, \Gamma_{f2}U\right)_{\beta}{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)\_{\alpha,\gamma,\delta}$$
+\end{itemize}
+\item T9
+$$U(x_{f1},x_{i1}\mathrm{Tr} \left(U(x_{f1},x_{f2})\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}^tD^t(x_{f1},x_{i1})\Gamma_{f1}^t\right)$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi, \Gamma_{f2}U\right)_{\delta}{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)\_{\gamma,\alpha,\beta}$$
+\item T10
+$$U(x_{f1},x_{i1}\Gamma_{i1}^t D(x_{f1},x_{i1})^t\Gamma_{f1}^tU(x_{f1},x_{f2})\Gamma_{f2}^tU(x_{f2},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi, \Gamma_{f2}U\right)_{\beta}{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)\_{\gamma,\alpha,\delta}$$
+\end{itemize}
+\subsection{$udu-\bar{d}d-\bar{d}\bar{u}\bar{u}$}
+\begin{itemize}
+\item T11
+$$U(x_{f1},x_{i1}\mathrm{Tr}\left(U(x_{f1},x_{i1})\Gamma_{i1}^tD(x_{f2},x_{i1})^t\Gamma_{f2}^tD(x_{f1},x_{i2})\Gamma_{f1}^t\right)$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\phi,\gamma_5 \Gamma_{f2}U\right)_{\gamma}{\mathcal V}_2\left(\xi,\gamma_5\Gamma_{f1}U,U\right)\_{\delta,\alpha,\beta}$$
+\item T12
+$$U(x_{f1},x_{i1}\Gamma_{i1}^tD(x_{f2},x_{i1})^t\Gamma_{f2}^tD(x_{f1},x_{i2})^t\Gamma_{f1}^tU(x_{f1},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\phi,\gamma_5 \Gamma_{f2}U\right)_{\gamma}{\mathcal V}_2\left(\xi,\gamma_5\Gamma_{f1}U,U\right)\_{\beta,\alpha,\delta}$$
+\end{itemize}
+\subsection{$udu-\bar{u}u-\bar{u}\bar{u}\bar{d}$}
+\begin{itemize}
+\item T13
+$$U(x_{f1},x_{f2}\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}U(x_{f1},x_{i1})^t\Gamma_{f1}D(x_{f1},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\gamma}{\mathcal V}_4\left(\phi,\Gamma_{f1}U,U\right)\_{\alpha,\delta,\beta}$$
+\item T14
+$$U(x_{f1},x_{f2}\Gamma_{f2}U(x_{f2},x_{i1})\Gamma_{i1}^tU(x_{f1},x_{i1})^t\Gamma_{f1}D(x_{f1},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\delta}{\mathcal V}_4\left(\phi,\Gamma_{f1}U,U\right)\_{\alpha,\gamma,\beta}$$
+\item T15
+$$U(x_{f1},x_{i1}\Gamma_{i1}U(x_{f2},x_{i1})^t\Gamma_{f2}^tU(x_{f1},x_{f2})^t\Gamma_{f1}D(x_{f1},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\delta}{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)\_{\beta,\alpha,\gamma}$$
+\item T16
+$$U(x_{f1},x_{i1}\Gamma_{i1}^tU(x_{f2},x_{i1})^t\Gamma_{f2}^tU(x_{f1},x_{f2})^t\Gamma_{f1}D(x_{f1},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\xi,\Gamma_{f2}U\right)_{\gamma}{\mathcal V}_2\left(\phi,\Gamma_{f1}D,U\right)\_{\beta,\alpha,\delta}$$
+\end{itemize}
+\subsection{$udu-\bar{d}d-\bar{u}\bar{u}\bar{d}$}
+\begin{itemize}
+\item T17
+$$U(x_{f1},x_{i1}\Gamma_{i1}U(x_{f1},x_{i1})^t\Gamma_{f1}D(x_{f1},x_{f2})\Gamma_{f2}D(x_{f2},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\phi,\gamma_5\Gamma_{f2}U\right)_{\beta}{\mathcal V}_2\left(\xi,\gamma_5\Gamma_{f1}^tU,U\right)\_{\delta,\alpha,\gamma}$$
+\item T18
+$$U(x_{f1},x_{i1}\Gamma_{i1}^tU(x_{f1},x_{i1})^t\Gamma_{f1}D(x_{f1},x_{f2})\Gamma_{f2}D(x_{f2},x_{i1})$$
+$${\Gamma_{i1}}_{\gamma,\delta}{\mathcal V}_3\left(\phi,\gamma_5\Gamma_{f2}U\right)_{\beta}{\mathcal V}_2\left(\xi,\gamma_5\Gamma_{f1}^tU,U\right)\_{\gamma,\alpha,\delta$$
 \end{itemize}
 \end{document}

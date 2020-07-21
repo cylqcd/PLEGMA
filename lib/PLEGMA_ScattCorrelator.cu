@@ -1376,6 +1376,62 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 //V3 should have momentum list p_f2
 //V2 should have momentum list p_f1 
 template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagram_index, bool accum){
+
+
+  //checks between srcV2 srcV3
+  if(!srcV2.check_reduction(V_2)) PLEGMA_error("srcV2 seems not to have V2like shape\n");
+  if(!srcV3.check_reduction(V_3)) PLEGMA_error("srcV3 seems not to have V3like shape\n");
+
+  this->clear_output(!accum);
+
+  Float factor[2] = {2.,0.};
+  switch (diagram_index) {
+    case 1:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor );
+      break;
+    case 3:
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor );
+      break;
+    case 5:
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor );
+      break;
+    case 7:
+      this->V3V2reduction( srcV3, srcV2, 1, false, 0, true);
+      break;
+    case 8:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, true);
+      break;
+    case 9:
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, true);
+      break;
+    case 10:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, true);
+      break;
+    case 11:
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false);
+      break;
+    case 12:
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false);
+      break;
+    case 13:
+      this->V3V2reduction( srcV3, srcV2, 1, false, 0, false, factor);
+      break;
+    case 15:
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, true, factor);
+      break;
+    case 17:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, false, factor);
+      break;
+    default:
+      PLEGMA_error("This value of T-piNsink diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+
+  }
+}
+//T diagramm pion nucleon at the sink
+//V3 should have momentum list p_f2
+//V2 should have momentum list p_f1
+template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, bool accum){
 
 
@@ -1388,7 +1444,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   if( gammas_isSym( this->GList[2] ) ){ //Symm G_i1
       Float factor[2] = {2.,0.};
       this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor );
-  
+
       this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor );
 
       this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor );
@@ -1396,14 +1452,16 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   else{
     this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false );
     this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, true );
-    
+
     this->V3V2reduction( srcV3, srcV2, 2, true, 0, false );
     this->V3V2reduction( srcV3, srcV2, 2, true, 0, true  );
 
     this->V3V2reduction( srcV3, srcV2, 0, false, 0, false );
     this->V3V2reduction( srcV3, srcV2, 0, false, 0, true  );
   }
+
 }
+
 //LT diagramms, Loop at the sink multiplied by T diagramm at the
 //T is build up from a T1 and a T2 reduction
 //source
