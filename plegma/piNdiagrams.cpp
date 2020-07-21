@@ -801,25 +801,109 @@ int main(int argc, char **argv)
         PLEGMA_printf("Start calculating T piN sink\n");
         //extract all the momenta that corresponds to pi2==(0,0,0)
 	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
-        PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], list_pf1pf2comb);
+        //for the I=1/2 case we compute only at zero pion momentum
+        momList list_pf1        = sourcemomentumList.extract({0,0,0}, 2);
 
-        corrT_piNsink.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T1"); 
+        //udu- dbaru - ubarubarubar: N+pi+ <- Delta++
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_1(sourcePositions[isource], list_pf1pf2comb);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_3(sourcePositions[isource], list_pf1pf2comb);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_5(sourcePositions[isource], list_pf1pf2comb);
+
+        //udu- ubaru - dbarubarubar: N_+pi0 <- Delta_1/2 1
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_7(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_8(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_9(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_10(sourcePositions[isource], list_pf);
+
+        //udu- dbard - dbarubarubar: N_+pi0 <- Delta_1/2 1
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_11(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_12(sourcePositions[isource], list_pf);
+
+        //udu- ubaru - dbarubarubar: N_+pi0 <- Delta_1/2 2
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_13(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_15(sourcePositions[isource], list_pf);
+        //udu- dbard - dbarubarubar: N_+pi0 <- Delta_1/2 2
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_17(sourcePositions[isource], list_pf);
+
+        //dud- dbaru - dbarubarubar: N_0pi+ <- Delta_1/2 1
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_19(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_20(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_21(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_22(sourcePositions[isource], list_pf);
+
+        //dud- dbaru - dbarubarubar: N_0pi+ <- Delta_1/2 2
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_23(sourcePositions[isource], list_pf);
+        PLEGMA_ScattCorrelator<float> corrT_piNsink_25(sourcePositions[isource], list_pf);
+
+
+
+        corrT_piNsink_1.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson,  "T1"); 
+        corrT_piNsink_3.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson,  "T3");
+        corrT_piNsink_5.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson,  "T5");
+        corrT_piNsink_7.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson,  "T7");
+        corrT_piNsink_8.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson,  "T8");
+        corrT_piNsink_9.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson,  "T9");
+        corrT_piNsink_10.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T10");
+        corrT_piNsink_11.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T11");
+        corrT_piNsink_12.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T12");
+        corrT_piNsink_13.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T13");
+        corrT_piNsink_15.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T15");
+        corrT_piNsink_17.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T17");
+        corrT_piNsink_19.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T19");
+        corrT_piNsink_20.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T20");
+        corrT_piNsink_21.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T21");
+        corrT_piNsink_22.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T22");
+        corrT_piNsink_23.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T23");
+        corrT_piNsink_25.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T25");
+
+
         PLEGMA_printf("Initialization done\n");
 
         //we have already all the factors computed
   
         for (int i=0; i<n_stochastic_samples; ++i){
 
-          TIME(corrT_piNsink.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U[i], *reductions_DD_V2_GAMMAF1U_U[i], true));
+          TIME(corrT_piNsink_1.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U[i], *reductions_DD_V2_GAMMAF1U_U[i], 1, true));
+          TIME(corrT_piNsink_3.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U[i], *reductions_DD_V2_GAMMAF1U_U[i], 3, true));
+          TIME(corrT_piNsink_5.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U[i], *reductions_DD_V2_GAMMAF1U_U[i], 5, true));
+          TIME(corrT_piNsink_7.T_diagramms_piNsink(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], 7, true));
+          TIME(corrT_piNsink_8.T_diagramms_piNsink(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], 8, true));
+          TIME(corrT_piNsink_9.T_diagramms_piNsink(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], 9, true));
+          TIME(corrT_piNsink_10.T_diagramms_piNsink(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], 10, true));
+          TIME(corrT_piNsink_11.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1D_U[i], 11, true));
+          TIME(corrT_piNsink_12.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1D_U[i], 12, true));
+          TIME(corrT_piNsink_13.T_diagramms_piNsink(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1D_U[i], 13, true));
+          TIME(corrT_piNsink_15.T_diagramms_piNsink(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], 15, true));
+          TIME(corrT_piNsink_17.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i], 17, true));
+          TIME(corrT_piNsink_19.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], 19, true));
+          TIME(corrT_piNsink_20.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], 20, true));
+          TIME(corrT_piNsink_21.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i], 21, true));
+          TIME(corrT_piNsink_22.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i], 22, true));
+          TIME(corrT_piNsink_23.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V4_GAMMAF1U_D[i], 23, true));
+          TIME(corrT_piNsink_25.T_diagramms_piNsink(*reductions_DD_V3_GAMMAF2U_zero_mom[i], *reductions_DD_V2_GAMMAF1U_D[i], 25, true));
+
 
         }                
         outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_TpiNsink";
 
-        TIME(corrT_piNsink.apply_phase());
-        TIME(corrT_piNsink.apply_sign("T1"));
-        TIME(corrT_piNsink.applyBoundaryConditions( true ));
-        TIME(corrT_piNsink.normalize_nstoch(n_stochastic_samples));
-        TIME(corrT_piNsink.writeHDF5( outfilename ));
+        produceOutput(corrT_piNsink_1, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_3, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_5, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_7, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_8, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_9, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_10, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_11, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_12, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_13, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_15, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_17, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_19, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_20, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_21, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_22, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_23, outfilename, "T1", n_stochastic_samples);
+        produceOutput(corrT_piNsink_25, outfilename, "T1", n_stochastic_samples);
 
       }
 
@@ -827,7 +911,7 @@ int main(int argc, char **argv)
       //therefore we filter further the momentumlist corresponding to pi2==0 to also pf2==0
       momList filtered_sourcemomentumList_pi20pf20 = filtered_sourcemomentumList_pi20.extract(filter,2);
       std::vector<std::string> stringarray=filtered_sourcemomentumList_pi20pf20.to_string( {0,1,2}, {"pi2=","pf1=","pf2="} );
-      for (int i=0; i<stringarray.size(); ++i){
+      for (int i=0; i<stringarray.size(); ++i)
         PLEGMA_printf("%s\n", stringarray[i].c_str());
       }
 
