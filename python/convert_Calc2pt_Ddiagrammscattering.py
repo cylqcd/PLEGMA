@@ -51,7 +51,7 @@ with h5py.File(output, "a") as fo:
                     data12 = fp[grpname][:,13,14,15,:]
                     datapp = -1*data1+-1*data2 + data5+ data6+-1*data9 +-1*data10
                     datamm = -1*data3+-1*data4 + data7+ data8+-1*data11+-1*data12
-                    grp = fo.require_group("/"+_dir+"_SS_gN25a4p_aN50a0p5/"+src+"baryons_u[+2.5e-03]d[-2.5e-03]s[+1.5e-02]")
+                    grp = fo.require_group("/"+_dir+"_SS_gN25a4p_aN50a0p5/"+src+"/baryons_u[+2.5e-03]d[-2.5e-03]s[+1.5e-02]")
                     dset=grp.create_dataset("OmegaMn/Pp_Cgi_Cgi", datapp.shape, dtype = datapp.dtype, data = datapp)
                     #dset.attrs['description']="shape: /time/moms/{1},{1},{cg1,cg2,cg3,cg1g4,cg2g4,cg3g4}{cg1,cg2,cg3,cg1g4,cg2g4,cg3g4}/S1/S2//re-im"
                     dset=grp.create_dataset("OmegaMn/Pm_Cgi_Cgi", datamm.shape, dtype = datamm.dtype, data = datamm)
@@ -118,7 +118,7 @@ with h5py.File(output, "a") as fo:
                     data12 = fp[grpname][:,13,14,15,:]
                     datapp = -1*data1+-1*data2 + data5+ data6+-1*data9 +-1*data10
                     datamm = -1*data3+-1*data4 + data7+ data8+-1*data11+-1*data12
-                    grp = fo.require_group("/"+_dir+"_SS_gN25a4p_aN50a0p5/"+src+"baryons_u[+2.5e-03]d[-2.5e-03]s[+1.8e-02]_only-s")
+                    grp = fo.require_group("/"+_dir+"_SS_gN25a4p_aN50a0p5/"+src+"/baryons_u[+2.5e-03]d[-2.5e-03]s[+1.8e-02]_only-s")
                     dset=grp.create_dataset("OmegaMn/Pp_Cgi_Cgi", datapp.shape, dtype = datapp.dtype, data = datapp)
                     #dset.attrs['description']="shape: /time/moms/{1},{1},{cg1,cg2,cg3,cg1g4,cg2g4,cg3g4}{cg1,cg2,cg3,cg1g4,cg2g4,cg3g4}/S1/S2//re-im"
                     dset=grp.create_dataset("OmegaMn/Pm_Cgi_Cgi", datamm.shape, dtype = datamm.dtype, data = datamm)
@@ -185,7 +185,7 @@ with h5py.File(output, "a") as fo:
                     data12 = fp[grpname][:,13,14,15,:]
                     datapp = -1*data1+-1*data2 + data5+ data6+-1*data9 +-1*data10
                     datamm = -1*data3+-1*data4 + data7+ data8+-1*data11+-1*data12
-                    grp = fo.require_group("/"+_dir+"_SS_gN25a4p_aN50a0p5/"+src+"baryons_u[+2.5e-03]d[-2.5e-03]s[+2.2e-02]_only-s")
+                    grp = fo.require_group("/"+_dir+"_SS_gN25a4p_aN50a0p5/"+src+"/baryons_u[+2.5e-03]d[-2.5e-03]s[+2.2e-02]_only-s")
                     dset=grp.create_dataset("OmegaMn/Pp_Cgi_Cgi", datapp.shape, dtype = datapp.dtype, data = datapp)
                     #dset.attrs['description']="shape: /time/moms/{1},{1},{cg1,cg2,cg3,cg1g4,cg2g4,cg3g4}{cg1,cg2,cg3,cg1g4,cg2g4,cg3g4}/S1/S2//re-im"
                     dset=grp.create_dataset("OmegaMn/Pm_Cgi_Cgi", datamm.shape, dtype = datamm.dtype, data = datamm)
