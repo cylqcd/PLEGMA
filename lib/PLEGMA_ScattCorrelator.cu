@@ -1441,6 +1441,10 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
     int i_mom_i2 = imap[i_m][0];
     int i_mom_f1 = imap[i_m][1];
     int i_mom_f2 = imap[i_m][2];
+    #pragma omp critical
+    {
+      PLEGMA_printf("IMOM thread: %d im %d i2 %d f1 %d f2 %d\n", omp_get_thread_num(), i_m, i_mom_i2, i_mom_f1, i_mom_f2 );
+    }
     for( int t=0; t<TIME; ++t){
       for (int gf2=0; gf2<n_gammas_f2; ++gf2){
         Float temp[N_SPINS*N_SPINS*2];
@@ -1642,6 +1646,51 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
   } //T
 }
 
+//This routine converts a T reduction into a diagramm format
+//In particular: adds the necessary external gamma structure
+//and perform the correct ordering
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorrelator<Float> &T2, bool accum){
+  //checks between T2
+  if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
+
+  if( T2.getMomList()!=this->pList().pi(0) )
+    PLEGMA_error("T2 must have a mom list\n");
+
+  //extract array mom
+  assert( this->Nmoms() == T2.Nmoms() );
+
+  //size of final output for DD
+  int n_extgammas_i = this->GList[0].size();
+  int n_extgammas_f = this->GList[1].size();
+  int n_gammas_i = this->GList[2].size();
+  int n_gammas_f = this->GList[3].size();
+  int TIME = this->localT();
+
+  //put output to zero
+  this->clear_output(!accum);
+
+  for( int t=0; t<TIME; ++t){
+    #pragma omp parallel for
+    for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
+      Float temp[N_SPINS*N_SPINS*2];
+      for( int gi=0; gi<n_gammas_i; ++gi ){
+        for( int gf=0; gf<n_gammas_f; ++gf ){
+          for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
+            temp[spin] = T2.Corr(t,i_mom,gi,gf)[spin];
+
+          for( int gei=0; gei<n_extgammas_i; ++gei ){
+            for( int gef=0; gef<n_extgammas_f; ++gef ){
+              GAMMAS_SCATT extG_i1 = this->GList[0][gei];
+              GAMMAS_SCATT extG_f1 = this->GList[1][gef];
+              M_pe_GNG<Float>( this->Corr(t,i_mom,gei,gef,gi,gf), extG_f1, extG_i1, temp );
+            } //G_extf
+          } //G_exti
+        } //G_f
+      } //G_i
+    } //mom
+  } //T
+}
 
 //####################(
 //#  Other functions  #

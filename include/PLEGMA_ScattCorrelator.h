@@ -199,6 +199,8 @@ namespace plegma {
     void P_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum=false );
     void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
     void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
+    void convertTreductiontoDiagram( PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
+
 
     //others
     std::shared_ptr<Float> average_all_time_slices( );

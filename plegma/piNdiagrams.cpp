@@ -460,6 +460,8 @@ int main(int argc, char **argv)
 
       //D diagram
       {
+
+        //For I=3/2 I_3=+3/2
 	std::vector<std::vector<int>> mtot = sourcemomentumList.uniq_p(3);
 	momList list_mtot(1,{mtot,},{0,});
 	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], list_mtot);
@@ -482,6 +484,42 @@ int main(int argc, char **argv)
 	TIME( corrD.apply_sign("D") );
 	TIME( corrD.applyBoundaryConditions( true ) );
 	TIME( corrD.writeHDF5(outfilename) );
+
+        //For I=1/2 I_3=+1/2
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_DNUPUP_T2";
+        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+        TIME( corrD.apply_phase() );
+        TIME( corrD.applyBoundaryConditions( true ) );
+        TIME( corrD.writeHDF5(outfilename) );
+
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_DNUPUP_T1";
+        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+        TIME( corrD.apply_phase() );
+        TIME( corrD.applyBoundaryConditions( true ) );
+        TIME( corrD.writeHDF5(outfilename) );
+
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPUPDN_T1";
+        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+        TIME( corrD.apply_phase() );
+        TIME( corrD.applyBoundaryConditions( true ) );
+        TIME( corrD.writeHDF5(outfilename) );
+
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPDNUP_T1";
+        TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT1 ));
+        TIME( corrD.apply_phase() );
+        TIME( corrD.applyBoundaryConditions( true ) );
+        TIME( corrD.writeHDF5(outfilename) );
+
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPDNUP_T2";
+        TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
+        TIME( corrD.convertTreductiontoDiagram( reductionsT2 ));
+        TIME( corrD.apply_phase() );
+        TIME( corrD.applyBoundaryConditions( true ) );
+        TIME( corrD.writeHDF5(outfilename) );
 
       }
       
