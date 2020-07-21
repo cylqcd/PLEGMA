@@ -802,7 +802,7 @@ int main(int argc, char **argv)
         //extract all the momenta that corresponds to pi2==(0,0,0)
 	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
         //for the I=1/2 case we compute only at zero pion momentum
-        momList list_pf1        = sourcemomentumList.extract({0,0,0}, 2);
+        momList list_pf        = sourcemomentumList.extract({0,0,0}, 2);
 
         //udu- dbaru - ubarubarubar: N+pi+ <- Delta++
         PLEGMA_ScattCorrelator<float> corrT_piNsink_1(sourcePositions[isource], list_pf1pf2comb);
@@ -911,7 +911,7 @@ int main(int argc, char **argv)
       //therefore we filter further the momentumlist corresponding to pi2==0 to also pf2==0
       momList filtered_sourcemomentumList_pi20pf20 = filtered_sourcemomentumList_pi20.extract(filter,2);
       std::vector<std::string> stringarray=filtered_sourcemomentumList_pi20pf20.to_string( {0,1,2}, {"pi2=","pf1=","pf2="} );
-      for (int i=0; i<stringarray.size(); ++i)
+      for (int i=0; i<stringarray.size(); ++i){
         PLEGMA_printf("%s\n", stringarray[i].c_str());
       }
 
