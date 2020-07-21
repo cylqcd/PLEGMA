@@ -1423,14 +1423,32 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
     case 17:
       this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, false, factor);
       break;
+    case 19:
+      this->V3V2reduction( srcV3, srcV2, 2, false, 0, true);
+      break;
+    case 20:
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, false);
+      break;
+    case 21:
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, true);
+      break;
+    case 22:
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, false);
+      break;
+    case 23:
+      this->V3V2reduction( srcV3, srcV2, 1, false, 0, false);
+      break;
+    case 25:
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false);
+      break;
     default:
       PLEGMA_error("This value of T-piNsink diagram index does not exists, please check your inputs in piNdiagramms.cpp");
-
   }
 }
 //T diagramm pion nucleon at the sink
 //V3 should have momentum list p_f2
 //V2 should have momentum list p_f1
+/*
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, bool accum){
 
@@ -1461,7 +1479,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   }
 
 }
-
+*/
 //LT diagramms, Loop at the sink multiplied by T diagramm at the
 //T is build up from a T1 and a T2 reduction
 //source
