@@ -685,7 +685,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
 //3pt --> "T", 5Gammas, "T1" 5Gammas +1 fake (cause V3V2reductions works only for 4pt)
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string name_of_diagram){
+void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string isospin, std::string name_of_diagram){
 
  //assert( (name_of_diagram=="T") || (name_of_diagram=="T1") );
 
@@ -694,7 +694,8 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->GList.push_back( eG_i );
   this->GList.push_back( eG_f );
   this->GList.push_back( G_i1 );
-  if(name_of_diagram!="T"){
+  std::size_t found = name_of_diagram.find("Tseq");
+  if (found==std::string::npos){
     std::vector<GAMMAS_SCATT> fake_glist={ID,};
     this->GList.push_back( fake_glist );
   }
@@ -729,10 +730,10 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   assert( this->pList().check_eq(0) );
 
   //Groups
-  if(name_of_diagram!="T")
-    this->groups = {"",};
+  if (found!=std::string::npos)
+    this->groups = {isospin,};
   else
-    this->groups ={ this->pList().to_string({0},{"pi2="})[0], };
+    this->groups ={isospin, this->pList().to_string({0},{"pi2="})[0], };
   
   //Dataset
   this->datasets = {name_of_diagram,};
@@ -748,7 +749,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->initialize();
  
   //Offsets
-  this->labels=(name_of_diagram!="T") ? "tmggggggss" : "tmgggggss";
+  this->labels=( found==std::string::npos ) ? "tmggggggss" : "tmgggggss";
   this->setOffsets();
 
   this->clear_output(true);
@@ -757,7 +758,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 //4pt --> "B1","B2","W1","W2","W3","W4","Z1","Z2","Z3","Z4","M","TpiNsink" "D" 6Gammas
 //note that here D stands for disconnected
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
+void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string isospin, std::string name_of_diagram){
   
   char letter = name_of_diagram.at(0);
   assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z') || (letter=='D') );
@@ -811,7 +812,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->description = tmp;
   
   //Groups
-  this->groups = {this->pList().to_string({0},{"pi2="})[0],};
+  this->groups = {isospin, this->pList().to_string({0},{"pi2="})[0],};
 
   //Dataset
   this->datasets = {name_of_diagram};
