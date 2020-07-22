@@ -802,7 +802,7 @@ int main(int argc, char **argv)
         //extract all the momenta that corresponds to pi2==(0,0,0)
 	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
         //for the I=1/2 case we compute only at zero pion momentum
-        momList list_pf        = sourcemomentumList.extract({0,0,0}, 2);
+        momList list_pf        = list_pf1pf2comb.extract({0,0,0}, 2);
 
         //udu- dbaru - ubarubarubar: N+pi+ <- Delta++
         PLEGMA_ScattCorrelator<float> corrT_piNsink_1(sourcePositions[isource], list_pf1pf2comb);

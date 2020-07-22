@@ -687,14 +687,14 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string name_of_diagram){
 
-  assert( (name_of_diagram=="T") || (name_of_diagram=="T1") );
+ //assert( (name_of_diagram=="T") || (name_of_diagram=="T1") );
 
  //Gamma list
   this->GList.clear();
   this->GList.push_back( eG_i );
   this->GList.push_back( eG_f );
   this->GList.push_back( G_i1 );
-  if(name_of_diagram=="T1"){
+  if(name_of_diagram!="T"){
     std::vector<GAMMAS_SCATT> fake_glist={ID,};
     this->GList.push_back( fake_glist );
   }
@@ -729,7 +729,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   assert( this->pList().check_eq(0) );
 
   //Groups
-  if(name_of_diagram=="T1")
+  if(name_of_diagram!="T")
     this->groups = {"",};
   else
     this->groups ={ this->pList().to_string({0},{"pi2="})[0], };
@@ -748,7 +748,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->initialize();
  
   //Offsets
-  this->labels=(name_of_diagram=="T1") ? "tmggggggss" : "tmgggggss";
+  this->labels=(name_of_diagram!="T") ? "tmggggggss" : "tmgggggss";
   this->setOffsets();
 
   this->clear_output(true);
