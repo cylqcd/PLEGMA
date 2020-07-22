@@ -1027,6 +1027,28 @@ int main(int argc, char **argv)
 ***********************************************************************************************/
       //uu case
       {
+        std::vector<int> momentum_i2={0,0,0}
+        momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(3);
+        std::vector<std::vector<int>> mpi2_filt;
+        mpi2_filt.assign(mptot_filt.size(),momentum_i2);
+        momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+        PLEGMA_ScattCorrelator<float> corrT15(sourcePositions[isource], list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrT17(sourcePositions[isource], list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrT21(sourcePositions[isource], list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrT22(sourcePositions[isource], list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrT23(sourcePositions[isource], list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrT24(sourcePositions[isource], list_mpi2ptot);
+
+        corrT15.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq15");
+        corrT17.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq17");
+        corrT21.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq21");
+        corrT22.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq22");
+        corrT23.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq23");
+        corrT24.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq24");
+
+
+
         PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20.uniq_p(1));
 
@@ -1199,6 +1221,8 @@ int main(int argc, char **argv)
 
         }//loop over stochastic samples
 
+
+        //D1ff type diagrams
         std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_pi20pf20.uniq_p(1);
 
         PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
@@ -1209,12 +1233,38 @@ int main(int argc, char **argv)
 
         TIME(corrD1ff24710.LT_diagramms( reductionsT1, reductionsT2, Loop_UPDN ));
 
-
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propTS));
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propTS));
 
         TIME(corrD1ff1389.LT_diagramms( reductionsT1, reductionsT2, Loop_UPDN ));
 
+        //Triangle diagrams
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propDN, propTS, propUP));
+        TIME( corrT15.convertTreductiontoDiagram( reductionsT1 ));
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propDN, propUP, propTS));
+        TIME( corrT17.convertTreductiontoDiagram( reductionsT1 ));
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propTS, propDN, propUP));
+        TIME( corrT21.convertTreductiontoDiagram( reductionsT1 ));
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propUP, propDN, propTS));
+        TIME( corrT23.convertTreductiontoDiagram( reductionsT1 ));
+
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propTS, propDN, propUP));
+        TIME( corrT22.convertTreductiontoDiagram( reductionsT2 ));
+
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propUP, propTS, propDN));
+        TIME( corrT24.convertTreductiontoDiagram( reductionsT2 ));
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+
+        produceOutput(corrT15, outfilename, "T");
+        produceOutput(corrT17, outfilename, "T");
+        produceOutput(corrT21, outfilename, "T");
+        produceOutput(corrT22, outfilename, "T");
+        produceOutput(corrT23, outfilename, "T");
+        produceOutput(corrT24, outfilename, "T");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
@@ -1251,6 +1301,17 @@ int main(int argc, char **argv)
 
       //start for DD
       {
+
+        std::vector<int> momentum_i2={0,0,0}
+        momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(3);
+        std::vector<std::vector<int>> mpi2_filt;
+        mpi2_filt.assign(mptot_filt.size(),momentum_i2);
+        momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+        PLEGMA_ScattCorrelator<float> corrT19(sourcePositions[isource], list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrT25(sourcePositions[isource], list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrT26(sourcePositions[isource], list_mpi2ptot);
+
         PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
         PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20.uniq_p(1));
 
@@ -1268,6 +1329,12 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> corrW36(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
         PLEGMA_ScattCorrelator<float> corrD1ff561112(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+
+        corrT19.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq19");
+        corrT25.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq25");
+        corrT26.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq26");
+
 
 
         TIME(corrD1ff561112.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "D1ff5-6-11-12"));
@@ -1337,6 +1404,17 @@ int main(int argc, char **argv)
 
         TIME(corrD1ff561112.LT_diagramms( reductionsT1, reductionsT2, Loop_UPDN ));
 
+         //Triangle diagrams
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propTS, propUP, propUP));
+        TIME( corrT19.convertTreductiontoDiagram( reductionsT1 ));
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propUP, propTS, propUP));
+        TIME( corrT25.convertTreductiontoDiagram( reductionsT1 ));
+
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propUP, propTS, propUP));
+        TIME( corrT26.convertTreductiontoDiagram( reductionsT2 ));
+
+
 
         for (int i=0; i<n_stochastic_samples; ++i){
           PLEGMA_Vector<float> stochastic_propagator;
@@ -1378,6 +1456,12 @@ int main(int argc, char **argv)
           TIME(corrW36.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 36, true));
 
         }//loop over stochastic samples
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+
+        produceOutput(corrT19, outfilename, "T");
+        produceOutput(corrT25, outfilename, "T");
+        produceOutput(corrT26, outfilename, "T");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
         produceOutput(corrB7, outfilename, "B", n_stochastic_samples);
@@ -1525,6 +1609,13 @@ int main(int argc, char **argv)
           //case sequential UD for spin1/2
  
           if ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)) {
+        
+            PLEGMA_ScattCorrelator<float> corrT7(sourcePositions[isource], list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT9(sourcePositions[isource], list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT11(sourcePositions[isource], list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT12(sourcePositions[isource], list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT13(sourcePositions[isource], list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT14(sourcePositions[isource], list_mpi2ptot);
 
             PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
             PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20pf20.uniq_p(1));
@@ -1556,6 +1647,13 @@ int main(int argc, char **argv)
 
             PLEGMA_ScattCorrelator<float> corrD1ff13141718(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
             PLEGMA_ScattCorrelator<float> corrD1ff15161920(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+
+            corrT7.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq7");
+            corrT9.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq9");
+            corrT11.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq11");
+            corrT12.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq12");
+            corrT13.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq13");
+            corrT14.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "Tseq14");
 
             corrB9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B9");
             corrB10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B10");
@@ -1601,12 +1699,38 @@ int main(int argc, char **argv)
 
             TIME(corrD1ff15161920.LT_diagramms( reductionsT1, reductionsT2, Loop_UPDN ));
 
+            TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propDN, propUP, propTS));
+            TIME( corrT7.convertTreductiontoDiagram( reductionsT1 ));
+
+            TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_delta, propDN, propUP, propTS));
+            TIME( corrT9.convertTreductiontoDiagram( reductionsT2 ));
+
+            TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propTS, propUP, propDN));
+            TIME( corrT11.convertTreductiontoDiagram( reductionsT1 ));
+            
+            TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_delta, propTS, propDN, propUP));
+            TIME( corrT12.convertTreductiontoDiagram( reductionsT2 ));
+
+            TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propUP, propTS, propDN));
+            TIME( corrT13.convertTreductiontoDiagram( reductionsT1 ));
+
+            TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propUP, propDN, propTS));
+            TIME( corrT14.convertTreductiontoDiagram( reductionsT1 ));
+
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
 
             produceOutput(corrD1ff13141718, outfilename, "D1ff");
             produceOutput(corrD1ff15161920, outfilename, "D1ff");
 
+            outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+
+            produceOutput(corrT7, outfilename,  "T");
+            produceOutput(corrT9, outfilename,  "T");
+            produceOutput(corrT11, outfilename, "T");
+            produceOutput(corrT12, outfilename, "T");
+            produceOutput(corrT13, outfilename, "T");
+            produceOutput(corrT14, outfilename, "T");
 
             for (int i=0; i<n_stochastic_samples; ++i){
               PLEGMA_Vector<float> stochastic_propagator;
@@ -1695,7 +1819,7 @@ int main(int argc, char **argv)
             produceOutput(corrW28, outfilename, "W", n_stochastic_samples);
  
  
-          }
+          }//end of loop momentum pion == (0,0,0)
 
           //Compute triangle diagramms          
           
