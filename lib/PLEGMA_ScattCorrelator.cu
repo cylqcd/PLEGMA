@@ -732,9 +732,12 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Groups
   if (found!=std::string::npos)
     this->groups = {isospin,};
-  else
-    this->groups ={isospin, this->pList().to_string({0},{"pi2="})[0], };
-  
+  else{
+    char *temporary;
+    asprintf(&temporary,"%s/pi2=",isospin.c_str());
+    this->groups ={this->pList().to_string({0},{temporary})[0], };
+    free(temporary);
+  }
   //Dataset
   this->datasets = {name_of_diagram,};
 
@@ -812,7 +815,10 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->description = tmp;
   
   //Groups
-  this->groups = {isospin, this->pList().to_string({0},{"pi2="})[0],};
+  char *temporary;
+  asprintf(&temporary,"%s/pi2=",isospin.c_str());
+  this->groups = {this->pList().to_string({0},{temporary})[0],};
+  free(temporary);
 
   //Dataset
   this->datasets = {name_of_diagram};
