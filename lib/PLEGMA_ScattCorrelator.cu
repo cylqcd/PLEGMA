@@ -730,7 +730,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   assert( this->pList().check_eq(0) );
 
   //Groups
-  if (found!=std::string::npos)
+  if (found==std::string::npos)
     this->groups = {isospin,};
   else{
     char *temporary;
@@ -1737,8 +1737,8 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
   //checks between T2
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
 
-  if( T2.getMomList()!=this->pList().pi(0) )
-    PLEGMA_error("T2 must have a mom list\n");
+  //if( T2.getMomList()!=this->pList().pi(0) )
+  //  PLEGMA_error("T2 must have a mom list\n");
 
   //extract array mom
   assert( this->Nmoms() == T2.Nmoms() );

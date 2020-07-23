@@ -1027,12 +1027,13 @@ int main(int argc, char **argv)
 ***********************************************************************************************/
       //uu case
       {
-        std::vector<int> momentum_i2={0,0,0};
-        momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
-        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(3);
+
+        std::vector<int> momentum_i2 = {0,0,0};
         std::vector<std::vector<int>> mpi2_filt;
+        std::vector<std::vector<int>> mptot_filt = sourcemomentumList.uniq_p(3);
         mpi2_filt.assign(mptot_filt.size(),momentum_i2);
         momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+
         PLEGMA_ScattCorrelator<float> corrT15(sourcePositions[isource], list_mpi2ptot);
         PLEGMA_ScattCorrelator<float> corrT17(sourcePositions[isource], list_mpi2ptot);
         PLEGMA_ScattCorrelator<float> corrT21(sourcePositions[isource], list_mpi2ptot);
@@ -1223,8 +1224,8 @@ int main(int argc, char **argv)
 
 
         //D1ff type diagrams
-        PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
-        PLEGMA_ScattCorrelator<float> reductionsT2(source,  mptot_filt);
+        PLEGMA_ScattCorrelator<float> reductionsT1(source,  list_mpi2ptot.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsT2(source,  list_mpi2ptot.uniq_p(1));
 
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP));
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP));
@@ -1256,14 +1257,14 @@ int main(int argc, char **argv)
         TIME( corrT24.convertTreductiontoDiagram( reductionsT2 ));
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
-
+        
         produceOutput(corrT15, outfilename, "T");
         produceOutput(corrT17, outfilename, "T");
         produceOutput(corrT21, outfilename, "T");
         produceOutput(corrT22, outfilename, "T");
         produceOutput(corrT23, outfilename, "T");
         produceOutput(corrT24, outfilename, "T");
-
+        
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
         produceOutput(corrB3, outfilename, "B", n_stochastic_samples);
@@ -1299,13 +1300,12 @@ int main(int argc, char **argv)
 
       //start for DD
       {
-
         std::vector<int> momentum_i2={0,0,0};
-        momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
-        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(3);
         std::vector<std::vector<int>> mpi2_filt;
+        std::vector<std::vector<int>> mptot_filt = sourcemomentumList.uniq_p(3);
         mpi2_filt.assign(mptot_filt.size(),momentum_i2);
         momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+
         PLEGMA_ScattCorrelator<float> corrT19(sourcePositions[isource], list_mpi2ptot);
         PLEGMA_ScattCorrelator<float> corrT25(sourcePositions[isource], list_mpi2ptot);
         PLEGMA_ScattCorrelator<float> corrT26(sourcePositions[isource], list_mpi2ptot);
@@ -1392,8 +1392,8 @@ int main(int argc, char **argv)
           propTS.absorb(vectorAuxF, isc/3, isc%3);
         }
 
-        PLEGMA_ScattCorrelator<float> reductionsT1(source,  mptot_filt);
-        PLEGMA_ScattCorrelator<float> reductionsT2(source,  mptot_filt);
+        PLEGMA_ScattCorrelator<float> reductionsT1(source,  list_mpi2ptot.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsT2(source,  list_mpi2ptot.uniq_p(1));
 
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propUP));
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propUP));
@@ -1475,7 +1475,7 @@ int main(int argc, char **argv)
 
       }//end for DD
 
-      //We first have a loop over all unique the source meson momentum p_i2 
+      ///We first have a loop over all unique the source meson momentum p_i2 
       for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
 
 	auto &momentum_i2 =  mpi2[i_mpi2];
@@ -1605,13 +1605,17 @@ int main(int argc, char **argv)
           //case sequential UD for spin1/2
  
           if ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)) {
-        
+            std::vector<std::vector<int>> mpi2_filt;
+            std::vector<std::vector<int>> mtot_filt = sourcemomentumList.uniq_p(3);
+            mpi2_filt.assign(mptot_filt.size(),momentum_i2);
+            momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+    
             PLEGMA_ScattCorrelator<float> corrT7(sourcePositions[isource], list_mpi2ptot);
             PLEGMA_ScattCorrelator<float> corrT9(sourcePositions[isource], list_mpi2ptot);
-            PLEGMA_ScattCorrelator<float> corrT11(sourcePositions[isource], list_mpi2ptot);
-            PLEGMA_ScattCorrelator<float> corrT12(sourcePositions[isource], list_mpi2ptot);
-            PLEGMA_ScattCorrelator<float> corrT13(sourcePositions[isource], list_mpi2ptot);
-            PLEGMA_ScattCorrelator<float> corrT14(sourcePositions[isource], list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT11(sourcePositions[isource],list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT12(sourcePositions[isource],list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT13(sourcePositions[isource],list_mpi2ptot);
+            PLEGMA_ScattCorrelator<float> corrT14(sourcePositions[isource],list_mpi2ptot);
 
             PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
             PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20pf20.uniq_p(1));
