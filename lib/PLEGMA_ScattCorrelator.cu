@@ -1271,6 +1271,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram){
     x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
+    apply_sign_transp(4);  // transposition G_f1 (Nucleon-sink) //N.B. there is also G_i2 in this->GList because otherwise reduceV2V3 wouldn't work for T1. It's the identity, see-->initilaize_diagram for T1.
   }
   else if( name_of_diagram == "B"){
     //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (20),(23)
