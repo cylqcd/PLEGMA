@@ -215,7 +215,7 @@ namespace plegma {
     void clear_output( bool tozero );
     void apply_sign_transp(int gi);
     void apply_sign_adj(int gi);
-    void apply_sign( std::string name_of_diagram );
+    void apply_sign( std::string name_of_diagram, bool apply_trans=true );
 
   };
 
