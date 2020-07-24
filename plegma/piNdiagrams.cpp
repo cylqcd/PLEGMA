@@ -532,13 +532,6 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], list_mpi2);
       corrP.initialize_diagram(glist_source_meson, glist_sink_meson, "P");
 
-      // ensuring mu positive
-      if(mu<0) {
-        mu*=-1.;
-        solver.UpdateSolver();
-      }
-
-
       //We can compute V2 contractions for B and V3 contraction for W first
       //without having to compute it for all the iterations in the loop
       //over the sequential momentum
@@ -1271,6 +1264,14 @@ int main(int argc, char **argv)
 
       //start for DD
       {
+
+
+        // ensuring mu negative
+        if(mu>0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
+
         std::vector<int> momentum_i2={0,0,0};
         std::vector<std::vector<int>> mpi2_filt;
         std::vector<std::vector<int>> mptot_filt = sourcemomentumList.uniq_p(3);
@@ -1445,6 +1446,14 @@ int main(int argc, char **argv)
 
 
       }//end for DD
+
+
+      //Ensuring mu is positive
+      if(mu<0) {
+        mu*=-1.;
+        solver.UpdateSolver();
+      }
+
 
       ///We first have a loop over all unique the source meson momentum p_i2 
       for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
