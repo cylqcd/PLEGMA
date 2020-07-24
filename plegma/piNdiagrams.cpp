@@ -444,9 +444,6 @@ int main(int argc, char **argv)
 
       
       //N diagram
-
-      outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_N";
-
       std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
       momList list_mpf1(1,{mpf1,},{0,});
       PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], list_mpf1 );
@@ -916,6 +913,7 @@ int main(int argc, char **argv)
        TIME(corrM.writeHDF5( outfilename ));
 
        //## N
+       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
        TIME(corrN.apply_phase());
        TIME(corrN.apply_sign("N"));
        TIME(corrN.applyBoundaryConditions( true ));
