@@ -993,6 +993,12 @@ int main(int argc, char **argv)
       //uu case
       {
 
+        //Ensuring that mu is positive
+        if(mu<0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
+ 
         std::vector<int> momentum_i2 = {0,0,0};
         std::vector<std::vector<int>> mpi2_filt;
         std::vector<std::vector<int>> mptot_filt = sourcemomentumList.uniq_p(3);
@@ -1107,7 +1113,7 @@ int main(int argc, char **argv)
           PLEGMA_Vector<double> vectorAuxD;
           vectorAuxF.absorb(propTS3D, sequential_time_source, isc/3, isc%3);
           vectorInOut.copy(vectorAuxF);
-          PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
+          PLEGMA_printf("Going to invert UP for sequential propagator UP  for component %d\n", isc);
           //performing the inversion
           TIME(solver.solve(vectorInOut, vectorInOut),"ISOSPIN12");
           //performing rotation to physical base
