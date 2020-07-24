@@ -265,7 +265,7 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
 //Contracts V3^a_c x Gammas_cd x V2^a_{abd}. Gammas_i list of gammas between V3, V2. 
 //called by aux PLEGMA_ScattCorrelator with shape PTGGGGGGSS
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma, Float* factor) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma_i1, Float* factor, bool transpgamma_f1) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -311,8 +311,13 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
 		case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
                 }
+		//if true multiply by sigma_T(G_f1)
+		if(transpgamma_f1){
+		  for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
+		    V3aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+		}
 		V_M_V<Float>( srcV3.Corr(t,i_mom_f2,g3), V3aux,
-		              this->GList[2][g1], transpgamma, temp + spins);
+		              this->GList[2][g1], transpgamma_i1, temp + spins);
               }//beta
             }//alfa
             if(factor!=NULL){
@@ -342,7 +347,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma, Float* factor) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma_i1, Float* factor, bool transpgamma_f1) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -388,8 +393,14 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		case 1: absorbspinmatrix_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
 		case 2: absorbspinmatrix_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
 		}
+		//if true multiply by sigma_T(G_f1)
+		if(transpgamma_f1){
+		  for(int ssc=0; ssc<N_SPINS*N_SPINS*N_COLS*2; ++ssc)
+		    V3aux[ssc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+		}
+
 		//color vector from Tr[G_i1 V2]
-		V_TR_MM<Float>( V3aux, this->GList[2][g1], transpgamma, temp_colorvector);
+		V_TR_MM<Float>( V3aux, this->GList[2][g1], transpgamma_i1, temp_colorvector);
 		temp[spins]=0.;
 		temp[spins+1]=0.;
 
@@ -710,7 +721,9 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &s
   
   int aux_idx = (diagram_index==1) ? 2 : 0;
 
-  this->V3V2reduction( srcV3, srcV2, aux_idx, (diagram_index==1), ig_i2);
+  Float factor[2]={-1.,0.};//-1 from eqs. (20),(23)
+  
+  this->V3V2reduction( srcV3, srcV2, aux_idx, (diagram_index==1), ig_i2, false, factor, true); //last true because of transp(G_f1)
 
 }
 
@@ -724,21 +737,22 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
 
   this->clear_output(!accum, 5, ig_i2); 
 
-  
+  Float factor[2]={-1.,0.};//-1 from eqs. (28),(31),(34),(37)  
+
   //write W1
   if (diagramm_index == 1){
-    this->V3V2reduction( srcV3, srcV2, 2, true, ig_i2, true );
+    this->V3V2reduction( srcV3, srcV2, 2, true, ig_i2, true, factor, true );//last true because of transp(G_f1)
   }
   else if (diagramm_index == 2){
-    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2);
+    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, true);//last true because of transp(G_f1)
   }
   //write W3
   else if (diagramm_index == 3){
-    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true);
+    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true, factor, true);//last true because of transp(G_f1)
   }
   //write W4
   else {
-    this->V3V2reduction( srcV3, srcV2, 0, false, ig_i2, true);
+    this->V3V2reduction( srcV3, srcV2, 0, false, ig_i2, true, factor, true);//last true because of transp(G_f1)
   }
 }
 
@@ -761,7 +775,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
       int lambda =  gammaInd_scatt[gammai2][n][1];
       Float g[2];
       g[1] = gamma_scatt[gammai2][n][1];
-      g[0] = gamma_scatt[gammai2][n][0];
+      g[0] = -gamma_scatt[gammai2][n][0]; //-1 from eqs. (41),(44),(47),(50)
 
       //Z1
       if (diagramm_index==1){
@@ -802,7 +816,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
     this->clear_output(!accum,1,i_pi2); 
 
   
-  //++++++++ PION-PION +++++++++
+  //++++++++ MESON-MESON +++++++++
 
   //mom_pi2 can be 1 mom or a list of moms
   
@@ -824,7 +838,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
       int beta = gammaInd_scatt[G_i2][nz_e][1];
       Float g[2];
       g[1] = gamma_scatt[G_i2][nz_e][1];
-      g[0] = gamma_scatt[G_i2][nz_e][0];
+      g[0] = -gamma_scatt[G_i2][nz_e][0]; //-1 from eq.(13)
 
       //PhixGf2xPhi
       pipi_aux.PhiPhi( Phi_0[beta], this->GList[1], Phi_1[alfa]); //T x N_moms x n_gammas_f2
@@ -870,7 +884,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 
   pipi_aux.initialize_diagram( this->GList[3], this->GList[5], "P"); //false m is pi2, true is pf2
 
-  pipi_aux.P_diagramms( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2
+  pipi_aux.P_diagramms( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2 //-1 from eq. (13) is inside P_diagram
 
   
   //++++++++++ NN x PIPI ++++++++++++
@@ -898,12 +912,16 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 	    for( int gi2=0; gi2<n_gammas_i2; ++gi2 ){
 	      for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
 		for( int gf2=0; gf2<n_gammas_f2; ++gf2){
-                  Float *pion_pointer=pipi_aux.Corr(t,i_pf2,gi2,gf2);
-                  Float pion_contribution[2];
-                  pion_contribution[0]=-1.* pion_pointer[0];
-                  pion_contribution[1]=-1.* pion_pointer[1];
-		  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
-			   CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
+                  //Float *pion_pointer=pipi_aux.Corr(t,i_pf2,gi2,gf2);
+                  //Float pion_contribution[2];
+                  //pion_contribution[0]=-1.* pion_pointer[0];
+                  //pion_contribution[1]=-1.* pion_pointer[1];
+		  //x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
+		  //	   CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
+		  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2),
+			   pipi_aux.Corr(t,i_pf2,gi2,gf2),
+		  	   CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
+			   N_SPINS*N_SPINS);
 		}//G_f2
 	      }//G_f1
 	    }//G_i2
@@ -929,22 +947,23 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   this->clear_output(!accum);
 
   if( gammas_isSym( this->GList[2] ) ){ //Symm G_i1
-      Float factor[2] = {2.,0.};
-      this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor );
-  
-      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor );
-
-      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor );
-    }
-  else{
-    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false );
-    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, true );
+    Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor, true ); //last true because of transp(G_f1)
     
-    this->V3V2reduction( srcV3, srcV2, 2, true, 0, false );
-    this->V3V2reduction( srcV3, srcV2, 2, true, 0, true  );
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor, true ); //last true because of transp(G_f1)
+    
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true ); //last true because of transp(G_f1)
+  }
+  else{
+    Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor, true ); //last true because of transp(G_f1)
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, true, factor, true );  //last true because of transp(G_f1)
+    
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor, true ); //last true because of transp(G_f1)
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, true, factor, true );  //last true because of transp(G_f1)
 
-    this->V3V2reduction( srcV3, srcV2, 0, false, 0, false );
-    this->V3V2reduction( srcV3, srcV2, 0, false, 0, true  );
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true ); //last true because of transp(G_f1)
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, true, factor, true  ); //last true because of transp(G_f1)
   }
 }
 
@@ -1243,13 +1262,13 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram){
 
   if ( name_of_diagram == "D" ){
-    Float overall_sign = -1.; // epsilon in adjoint interp
+    Float overall_sign = -1.; // -1 epsilon in adjoint interp
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
   }
   else if( name_of_diagram == "N"){
-    Float overall_sign = -1.; // epsilon in adjoint interp
+    Float overall_sign = -1.; // -1 epsilon in adjoint interp
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
@@ -1267,42 +1286,38 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram){
     apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
   }
   else if(  name_of_diagram == "T1"){
-    Float overall_sign[2] = {0.,1.}; //i from pion at sink, -1 comig from epsilon in adj interp of D, -1 from eqs. (51-56)
+    Float overall_sign[2] = {0.,-1.}; //i from pion at sink, -1 comig from epsilon in adj interp of D
     x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
-    apply_sign_transp(4);  // transposition G_f1 (Nucleon-sink) //N.B. there is also G_i2 in this->GList because otherwise reduceV2V3 wouldn't work for T1. It's the identity, see-->initilaize_diagram for T1.
   }
   else if( name_of_diagram == "B"){
-    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (20),(23)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N 
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
-    apply_sign_transp(4);  // transposition G_f1 (Nucleon-sink)
   }
   else if( name_of_diagram == "W"){
-    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (28),(31),(34),(37)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
-    apply_sign_transp(4);    // transposition G_f1 (Nucleon-sink)
   }
   else if( name_of_diagram == "Z"){
-    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (41),(44),(47),(50)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
   }
   else if( name_of_diagram == "M"){ // ??????? is N called after or before phase multiplication of M !!!!!!! In the following like we call signs for N after the M_diagram call.
-    //Float overall_sign = 1.; // i from pion at sink, -i from pion at source, -1 from epsilon in adj interp of N,  -1 from eq. (13)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // i from pion at sink, -i from pion at source, -1 from epsilon in adj interp of N
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     
     apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
-
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
   }
   else{
