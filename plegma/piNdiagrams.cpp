@@ -905,22 +905,21 @@ int main(int argc, char **argv)
 
        //## M
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
-
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase());
        TIME(corrM.apply_sign("M"));
        TIME(corrM.applyBoundaryConditions( true ));
        TIME(corrM.writeHDF5( outfilename ));
 
-       //## N
-       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
-       TIME(corrN.apply_phase());
-       TIME(corrN.apply_sign("N"));
-       TIME(corrN.applyBoundaryConditions( true ));
-       TIME(corrN.writeHDF5(outfilename));
-
       }//loop over unique set of momenta for p_i2
-       
+
+      //## N
+      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
+      TIME(corrN.apply_phase());
+      TIME(corrN.apply_sign("N"));
+      TIME(corrN.applyBoundaryConditions( true ));
+      TIME(corrN.writeHDF5(outfilename));
+      
       //write P
 
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
