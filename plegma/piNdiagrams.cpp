@@ -496,9 +496,6 @@ int main(int argc, char **argv)
       }
       
       //N diagram
-
-      outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_N";
-
       std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
       momList list_mpf1(1,{mpf1,},{0,});
       PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1 );
@@ -2261,8 +2258,6 @@ int main(int argc, char **argv)
 
        //## M
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
-
-       //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
 
        TIME(produceOutput(corrM, outfilename,"M", true),"ISOSPIN32");
       
