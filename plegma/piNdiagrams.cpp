@@ -459,38 +459,27 @@ int main(int argc, char **argv)
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_DNUPUP_T2";
         TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propUP), "ISOSPIN12");
         TIME( corrD.convertTreductiontoDiagram( reductionsT2 ), "ISOSPIN12");
-        TIME( corrD.apply_phase() ,"ISOSPIN12" );
-        TIME( corrD.applyBoundaryConditions( true ) ,"ISOSPIN12");
-        TIME( corrD.writeHDF5(outfilename), "ISOSPIN12" );
+        TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_DNUPUP_T1";
         TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propUP), "ISOSPIN12");
         TIME( corrD.convertTreductiontoDiagram( reductionsT1 ), "ISOSPIN12");
-        TIME( corrD.apply_phase(), "ISOSPIN12" );
-        TIME( corrD.applyBoundaryConditions( true ) , "ISOSPIN12");
-        TIME( corrD.writeHDF5(outfilename) , "ISOSPIN12" );
+        TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPUPDN_T1";
         TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propDN), "ISOSPIN12");
         TIME( corrD.convertTreductiontoDiagram( reductionsT1 ), "ISOSPIN12");
-        TIME( corrD.apply_phase(), "ISOSPIN12" );
-        TIME( corrD.applyBoundaryConditions( true ), "ISOSPIN12" );
-        TIME( corrD.writeHDF5(outfilename) , "ISOSPIN12");
+        TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPDNUP_T1";
         TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propUP), "ISOSPIN12");
         TIME( corrD.convertTreductiontoDiagram( reductionsT1 ), "ISOSPIN12");
-        TIME( corrD.apply_phase() , "ISOSPIN12");
-        TIME( corrD.applyBoundaryConditions( true ) , "ISOSPIN12");
-        TIME( corrD.writeHDF5(outfilename) , "ISOSPIN12" );
+        TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPDNUP_T2";
         TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propDN), "ISOSPIN12");
         TIME( corrD.convertTreductiontoDiagram( reductionsT2 ), "ISOSPIN12");
-        TIME( corrD.apply_phase() , "ISOSPIN12");
-        TIME( corrD.applyBoundaryConditions( true ), "ISOSPIN12" );
-        TIME( corrD.writeHDF5(outfilename),  "ISOSPIN12" );
-
+        TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
       }
       
       //N diagram
@@ -953,18 +942,18 @@ int main(int argc, char **argv)
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ii";
 
-        TIME(produceOutput(corrD1ii1, outfilename, "D1ii", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii2, outfilename, "D1ii", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii3, outfilename, "D1ii", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii4, outfilename, "D1ii", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii1, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii2, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii3, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii4, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
 
-        TIME(produceOutput(corrD1ii9, outfilename, "D1ii", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii10, outfilename,"D1ii", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii9, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii10, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
 
-        TIME(produceOutput(corrD1ii13, outfilename,"D1ii", n_stochastic_samples),"ISOSPIN12");//Because of V4
-        TIME(produceOutput(corrD1ii14, outfilename,"D1ii", n_stochastic_samples),"ISOSPIN12");//Because of V4
-        TIME(produceOutput(corrD1ii15, outfilename,"D1ii", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii16, outfilename,"D1ii", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii13, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//Because of V4
+        TIME(produceOutput(corrD1ii14, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//Because of V4
+        TIME(produceOutput(corrD1ii15, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii16, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
 
       } //diagrams containing loop at the source
 
@@ -1118,17 +1107,12 @@ int main(int argc, char **argv)
         for (int i=0; i<n_stochastic_samples; ++i){
           //Computing diagrams containing loops first
 
-
- 
           PLEGMA_Vector<float> stochastic_propagator;
           PLEGMA_Vector<float> stochastic_source;
           stochastic_propagator.copy(*stochastic_propags[i],HOST);
           stochastic_source.copy(*stochastic_sources[i],HOST);
           stochastic_propagator.load();
           stochastic_source.load();
-
-          
-
 
           //For computing the B diagrams we compute the V3 factor
           //using the sequential propagator for U(xf1,xf2) type
@@ -1155,7 +1139,7 @@ int main(int argc, char **argv)
           stochastic_propagator.apply_gamma5();
           TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true),"ISOSPIN12");
 
-          TIME(corrB17.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1D_U[i], 0, 17, true),"ISOSPIN12");
+          TIME(corrB17.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0, 17, true),"ISOSPIN12");
           TIME(corrB18.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0, 18, true),"ISOSPIN12");
           TIME(corrB19.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D[i], 0, 19, true),"ISOSPIN12");
           TIME(corrB20.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D[i], 0, 20, true),"ISOSPIN12");
@@ -1229,34 +1213,34 @@ int main(int argc, char **argv)
         
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-        TIME(produceOutput(corrB3, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB4, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB5, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB6, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB3, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB4, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB5, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB6, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
  
-        TIME(produceOutput(corrB17, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB18, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB19, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB20, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB17, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB18, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB19, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB20, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-        TIME(produceOutput(corrW5, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW6, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW7, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW8, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW13, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW14, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW15, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW16, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW29, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW30, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW31, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW32, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW5, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW6, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW7, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW8, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW13, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW14, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW15, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW16, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW29, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW30, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW31, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW32, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
-        TIME(produceOutput(corrD1ff1389, outfilename,  "D1ff"),"ISOSPIN12");
-        TIME(produceOutput(corrD1ff24710, outfilename, "D1ff"),"ISOSPIN12");
+        TIME(produceOutput(corrD1ff1389, outfilename,  "4pt"),"ISOSPIN12");
+        TIME(produceOutput(corrD1ff24710, outfilename, "4pt"),"ISOSPIN12");
 
       }//end of loop for sequential UU
 
@@ -1430,17 +1414,17 @@ int main(int argc, char **argv)
         TIME(produceOutput(corrT26, outfilename, "T"),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-        TIME(produceOutput(corrB7, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB8, outfilename, "B", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB7, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB8, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
-        TIME(produceOutput(corrW33, outfilename,"W", n_stochastic_samples),"ISOSPIN12");//because of V4
-        TIME(produceOutput(corrW34, outfilename,"W", n_stochastic_samples),"ISOSPIN12");//because of V4
-        TIME(produceOutput(corrW35, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW36, outfilename,"W", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW33, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW34, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW35, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW36, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
-        TIME(produceOutput(corrD1ff561112, outfilename, "D1ff"),"ISOSPIN12");
+        TIME(produceOutput(corrD1ff561112, outfilename, "4pt"),"ISOSPIN12");
 
 
       }//end for DD
@@ -1698,8 +1682,8 @@ int main(int argc, char **argv)
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
 
-            TIME(produceOutput(corrD1ff13141718, outfilename, "D1ff"),"ISOSPIN12");
-            TIME(produceOutput(corrD1ff15161920, outfilename, "D1ff"),"ISOSPIN12");
+            TIME(produceOutput(corrD1ff13141718, outfilename, "4pt"),"ISOSPIN12");
+            TIME(produceOutput(corrD1ff15161920, outfilename, "4pt"),"ISOSPIN12");
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
@@ -1769,32 +1753,32 @@ int main(int argc, char **argv)
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-            TIME(produceOutput(corrB9,  outfilename, "B",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB10, outfilename, "B",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB11, outfilename, "B",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB12, outfilename, "B",n_stochastic_samples),"ISOSPIN12");//because of V4
+            TIME(produceOutput(corrB9,  outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB10, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB11, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB12, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");//because of V4
 
-            TIME(produceOutput(corrB13, outfilename, "B",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB14, outfilename, "B",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB15, outfilename, "B",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB16, outfilename, "B",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB13, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB14, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB15, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB16, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-            TIME(produceOutput(corrW17, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW18, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW19, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW20, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW17, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW18, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW19, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW20, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
 
-            TIME(produceOutput(corrW21, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW22, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW23, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW24, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW21, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW22, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW23, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW24, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
 
-            TIME(produceOutput(corrW25, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW26, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW27, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW28, outfilename, "W", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW25, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW26, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW27, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW28, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
  
  
           }//end of loop momentum pion == (0,0,0)
@@ -2137,26 +2121,26 @@ int main(int argc, char **argv)
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
-         TIME(produceOutput(corrZ5, outfilename, "Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ6, outfilename, "Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ7, outfilename, "Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ8, outfilename, "Z"),"ISOSPIN12");
+         TIME(produceOutput(corrZ5, outfilename, "4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ6, outfilename, "4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ7, outfilename, "4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ8, outfilename, "4pt"),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ9, outfilename, "Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ10, outfilename,"Z"),"ISOSPIN12");
+         TIME(produceOutput(corrZ9, outfilename, "4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ10, outfilename,"4pt"),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ11, outfilename,"Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ12, outfilename,"Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ13, outfilename,"Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ14, outfilename,"Z"),"ISOSPIN12");
+         TIME(produceOutput(corrZ11, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ12, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ13, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ14, outfilename,"4pt"),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ15, outfilename,"Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ16, outfilename,"Z"),"ISOSPIN12");
+         TIME(produceOutput(corrZ15, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ16, outfilename,"4pt"),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ17, outfilename,"Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ18, outfilename,"Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ19, outfilename,"Z"),"ISOSPIN12");
-         TIME(produceOutput(corrZ20, outfilename,"Z"),"ISOSPIN12");
+         TIME(produceOutput(corrZ17, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ18, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ19, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ20, outfilename,"4pt"),"ISOSPIN12");
 
        }
        else{
@@ -2213,9 +2197,9 @@ int main(int argc, char **argv)
          TIME(corrD1if12.M_diagramms( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom),"ISOSPIN12");
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
-         TIME(produceOutput(corrD1if12, outfilename,"M"),"ISOSPIN12");
-         TIME(produceOutput(corrD1if34, outfilename,"M"),"ISOSPIN12");
-         TIME(produceOutput(corrD1if56, outfilename,"M"),"ISOSPIN12");
+         TIME(produceOutput(corrD1if12, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrD1if34, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrD1if56, outfilename,"4pt"),"ISOSPIN12");
 
        }
 
@@ -2249,46 +2233,41 @@ int main(int argc, char **argv)
        
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-       TIME(produceOutput(corrB1, outfilename, "B", n_stochastic_samples),"ISOSPIN32");
-       TIME(produceOutput(corrB2, outfilename, "B", n_stochastic_samples),"ISOSPIN32");
+       TIME(produceOutput(corrB1, outfilename, "4pt", n_stochastic_samples),"ISOSPIN32");
+       TIME(produceOutput(corrB2, outfilename, "4pt", n_stochastic_samples),"ISOSPIN32");
 
        //## W
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-       TIME(produceOutput(corrW1, outfilename, "W", n_stochastic_samples),"ISOSPIN32");
-       TIME(produceOutput(corrW2, outfilename, "W", n_stochastic_samples),"ISOSPIN32");
-       TIME(produceOutput(corrW3, outfilename, "W", n_stochastic_samples),"ISOSPIN32");
-       TIME(produceOutput(corrW4, outfilename, "W", n_stochastic_samples),"ISOSPIN32");
+       TIME(produceOutput(corrW1, outfilename, "4pt", n_stochastic_samples),"ISOSPIN32");
+       TIME(produceOutput(corrW2, outfilename, "4pt", n_stochastic_samples),"ISOSPIN32");
+       TIME(produceOutput(corrW3, outfilename, "4pt", n_stochastic_samples),"ISOSPIN32");
+       TIME(produceOutput(corrW4, outfilename, "4pt", n_stochastic_samples),"ISOSPIN32");
 
        //## Z
 
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
-       TIME(produceOutput(corrZ1, outfilename,"Z"),"ISOSPIN32");
-       TIME(produceOutput(corrZ2, outfilename,"Z"),"ISOSPIN32");
-       TIME(produceOutput(corrZ3, outfilename,"Z"),"ISOSPIN32");
-       TIME(produceOutput(corrZ4, outfilename,"Z"),"ISOSPIN32");
+       TIME(produceOutput(corrZ1, outfilename,"4pt"),"ISOSPIN32");
+       TIME(produceOutput(corrZ2, outfilename,"4pt"),"ISOSPIN32");
+       TIME(produceOutput(corrZ3, outfilename,"4pt"),"ISOSPIN32");
+       TIME(produceOutput(corrZ4, outfilename,"4pt"),"ISOSPIN32");
 
        //## M
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
 
-       TIME(produceOutput(corrM, outfilename,"M"),"ISOSPIN32");
+       TIME(produceOutput(corrM, outfilename,"4pt"),"ISOSPIN32");
       
       }//loop over unique set of momenta for p_i2
-
-      //## N
-      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
-      TIME(corrN.apply_phase());
-      TIME(corrN.apply_sign("N"));
-      TIME(corrN.applyBoundaryConditions( true ));
-      TIME(corrN.writeHDF5(outfilename));
-      
+ 
       //write P
 
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
       TIME(corrP.apply_sign("P"),"ISOSPIN32");
       TIME(corrP.writeHDF5( outfilename ),"ISOSPIN32");
 
+      //## N
+      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
       TIME(produceOutput(corrNP, outfilename,"N"),"ISOSPIN32");
       TIME(produceOutput(corrN0, outfilename,"N"),"ISOSPIN12");
 
