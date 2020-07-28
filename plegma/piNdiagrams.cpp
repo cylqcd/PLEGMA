@@ -54,6 +54,7 @@ int main(int argc, char **argv)
   int confnumber_int;
   int rand_seed1=1234;
   int rand_seed2=1234;
+  std::string outfilename;
   std::string outfile_V="";
   std::string outfile_upS="";
   std::string outfile_dnS="";
@@ -308,12 +309,7 @@ int main(int argc, char **argv)
 
     }
 
-
-    std::string outfilename;
-
-    outfilename = outdiagramPrefix+confnumber+"_LoopUPDN";
     TIME(Loop_UPDN.normalize_nstoch(n_stochastic_samples),"ISOSPIN12");
-    TIME(Loop_UPDN.writeHDF5( outfilename ),"ISOSPIN12");
 
 /********************************************************************************************
 *
@@ -2290,6 +2286,11 @@ int main(int argc, char **argv)
       }
 
     } //loop over source position
+
+
+    std::string outfilename;
+    outfilename = outdiagramPrefix+confnumber+"_LoopUPDN";
+    TIME(produceOutput(Loop_UPDN, outfilename,"L"),"ISOSPIN32");
 
 
     for(int i=0; i< 4; ++i) {

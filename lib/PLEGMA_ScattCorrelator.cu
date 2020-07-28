@@ -1973,6 +1973,10 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram ){
     apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
   }
+  else if( name_of_diagram == "L"){
+    Float overall_sign[2] = {0.,-1.}; //i from pion interpolating operator, -1 from the fermion loop
+    x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+  }
   else{
     PLEGMA_error("Error! %s not recognized!\n",name_of_diagram.c_str());
   }
