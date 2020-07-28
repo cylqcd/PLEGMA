@@ -344,7 +344,7 @@ std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::average_all_time_slices(){
 //Contracts V3^a_c x Gammas_cd x V2^a_{abd}. Gammas_i list of gammas between V3, V2. 
 //called by aux PLEGMA_ScattCorrelator with shape PTGGGGGGSS
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma, Float* factor) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma_i1, Float* factor, bool transpgamma_f1) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -389,8 +389,13 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 		case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
 		case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
                 }
+		//if true multiply by sigma_T(G_f1)
+		if(transpgamma_f1){
+		  for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
+		    V3aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+		}
 		V_M_V<Float>( srcV3.Corr(t,i_mom_f2,g3), V3aux,
-		              this->GList[2][g1], transpgamma, temp + spins);
+		              this->GList[2][g1], transpgamma_i1, temp + spins);
               }//beta
             }//alfa
             if(factor!=NULL){
@@ -421,7 +426,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma, Float* factor) {
+void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma_i1, Float* factor, bool transpgamma_f1) {
 
   //checks
   std::string exp_shape="tmggggggss";
@@ -466,8 +471,14 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 		case 1: absorbspinmatrix_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
 		case 2: absorbspinmatrix_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa ); break;
 		}
+		//if true multiply by sigma_T(G_f1)
+		if(transpgamma_f1){
+		  for(int ssc=0; ssc<N_SPINS*N_SPINS*N_COLS*2; ++ssc)
+		    V3aux[ssc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+		}
+
 		//color vector from Tr[G_i1 V2]
-		V_TR_MM<Float>( V3aux, this->GList[2][g1], transpgamma, temp_colorvector);
+		V_TR_MM<Float>( V3aux, this->GList[2][g1], transpgamma_i1, temp_colorvector);
 		temp[spins]=0.;
 		temp[spins+1]=0.;
 
@@ -856,46 +867,39 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
   //Diagrams (1,5), (2,6), (3,7) and (4,8) are structurally the same the 
   //only difference between them is the type of loop(pipi_aux): UP and 
   //DN in the former respectively in the latter
+
+  //Here there are no additional signs that have to be included due
+  //the rearrangement of fermions fields in the contraction.
   switch( diagram_index ){
     case 1:
-    case 5:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true, loopcontribution);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true, loopcontribution, false);//checked FP
       break;
     case 2:
-    case 6:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true, loopcontribution);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true, loopcontribution, false);//checked FP
       break;
     case 3:
-    case 7:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true, loopcontribution);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true, loopcontribution, false);//checked FP
       break;
     case 4:
-    case 8:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, loopcontribution);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, loopcontribution, false);//checked FP
       break;
     case 9:
-    case 11:
-      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, loopcontribution);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, loopcontribution, true);//checked FP
       break;
     case 10:
-    case 12:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution, true);//checked FP
       break;
     case 13:
-    case 17:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true, loopcontribution);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true, loopcontribution, false);//checked FP
       break;
     case 14:
-    case 18:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution, false);//checked FP
       break;
     case 15:
-    case 19:
-      this->V3V2reduction(        srcV3, srcV2, 2, true, ig_i2,  true, loopcontribution);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true, ig_i2,  true, loopcontribution, false);//checked FP
       break;
     case 16:
-    case 20:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, loopcontribution);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, loopcontribution, false);//checked FP
       break;
     default:
       PLEGMA_error("This value of D1ii diagram index does not exists, please check your inputs in piNdiagramms.cpp");
@@ -908,71 +912,75 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &s
   if(ig_i2 >= this->GList[3].size()) PLEGMA_error("ig_i2 = %d but Gi2 list size is %d\n", ig_i2, this->GList[3].size() );
 
   this->clear_output(!accum, 5, ig_i2); 
+
+  Float factor[2]={-1.,0.};//-1 from eqs. (20),(23), ....
   
   switch( diagram_index ){
     case 1:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2);  //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, false, factor, true);  //checked FP
       break;
     case 2:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2);  //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, false, factor, true);  //checked FP
       break;
     case 3:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true,  factor, false); //checked FP
       break;
     case 4:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true,  factor, false); //checked FP
       break;
     case 5:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true); //checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true,  factor, false); //checked FP
       break;
     case 6:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true); //checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true,  factor, false); //checked FP
       break;
     case 7:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, false, factor, true);//checked FP
       break;
     case 8:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, false, factor, true);//checked FP
       break;
     case 9:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true,  factor, false);//checked FP
       break;
     case 10:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 11:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     case 12:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, factor, false);//checked FP
       break;
     case 13:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 14:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 15:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 16:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 17:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true,  factor, false); //checked FP
       break;
     case 18:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false); //checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, factor, false); //checked FP
       break;
     case 19:
-      this->V3V2reduction(        srcV3, srcV2, 2, true , ig_i2, true); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true , ig_i2, true,  factor, false); //checked FP
       break;
     case 20:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     default:
       PLEGMA_error("This value of B diagram index does not exists, please check your inputs in piNdiagramms.cpp");
   }
+  //Note that the last true or false indicates the of transp(G_f1).
+
 }
 
 
@@ -985,106 +993,108 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
 
   this->clear_output(!accum, 5, ig_i2); 
 
+  Float factor[2]={-1.,0.};//-1 from eqs. (28),(31),(34),(37), ....
+
   switch( diagram_index ){
     case 1:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true,  factor, true); //checked FP
       break;
     case 2:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, true);//checked FP
       break;
     case 3:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true,  factor, true);//checked FP
       break;
     case 4:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true,  factor, true);//checked FP
       break;
     case 5:
     case 12:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 6:
     case 11:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 7:
     case 10:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 8:
     case 9:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 13:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, false, factor, true); //checked FP
       break;
     case 14:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, false, factor, true); //checked FP
       break;
     case 15:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, false, factor, true); //checked FP
       break;
     case 16:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, false, factor, true); //checked FP
       break;
     case 17:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, false, factor, false); //checked FP
       break;
     case 18:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, false, factor, false); //checked FP
       break;
     case 19:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, false, factor, false); //checked FP
       break;
     case 20:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, false, factor, false); //checked FP
       break;
     case 21:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2); //checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, true); //checked FP
       break;
     case 22:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true); //checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true,  factor, true); //checked FP
       break;
     case 23:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true,  factor, true); //checked FP
       break;
     case 24:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true,  factor, true);//checked FP
       break;
     case 25:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, false, factor, false); //checked FP
       break;
     case 26:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, false, factor, false); //checked FP
       break;
     case 27:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, false, factor, false); //checked FP
       break;
     case 28:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2); //checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, false, factor, false); //checked FP
       break;
     case 29:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 30:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 31:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     case 32:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true,  factor, false);//checked FP
       break;
     case 33:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 34:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, factor, false);//checked FP
       break;
     case 35:
-      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, true,  factor, false);//checked FP
       break;
     case 36:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     default:
       PLEGMA_error("This value of W diagram index does not exists, please check your inputs in piNdiagramms.cpp");
@@ -1110,69 +1120,69 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
       int kappa = gammaInd_scatt[gammai2][n][0]; 
       int lambda =  gammaInd_scatt[gammai2][n][1];
       Float g[2];
-      g[1] = gamma_scatt[gammai2][n][1];
-      g[0] = gamma_scatt[gammai2][n][0];
+      g[1] = -gamma_scatt[gammai2][n][1];
+      g[0] = -gamma_scatt[gammai2][n][0]; //-1 from eqs. (41),(44),(47),(50)
 
       switch (diagramm_index){
         case 1:
-	  this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g); //checked FP
+	  this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g, false); //checked FP
           break;
         case 2:          
-	  this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);//checked FP
+	  this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g, false);//checked FP
           break;
         case 3:
-	  this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);//checked FP
+	  this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g, false);//checked FP
           break;
         case 4:
-	  this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);//checked FP
+	  this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g, false);//checked FP
           break;
         case 5:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);//checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g, false);//checked FP
           break;
         case 6:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);//checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g, false);//checked FP
           break;
         case 7:
-          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g);//checked FP
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g, false);//checked FP
           break;
         case 8:
-          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g);//checked FP
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, true, g, false);//checked FP
           break;
         case 9:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, false, g); //checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, false, g, true); //checked FP
           break;
         case 10:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g); //checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, true); //checked FP
           break;
         case 11:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  true, g); //checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  true, g, false); //checked FP
           break;
         case 12:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 1, false, g2, true, g); //checked FP 
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, false, g2, true, g, false); //checked FP 
           break;
         case 13:
-          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g); //checked FP
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g, false); //checked FP
           break;
         case 14:
-          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g); //checked FP
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, false); //checked FP
           break;
         case 15:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g); //checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, true); //checked FP
           break;
         case 16:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  false, g); //checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  false, g, true); //checked FP
           break;
         case 17:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, false, g);//checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, false, g, false);//checked FP
           break;
         case 18:
-          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g);//checked FP
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g, false);//checked FP
           break;
         case 19:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, false, g2, true, g); //checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, false, g2, true, g, false); //checked FP
           break;
         case 20:
-          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g);//checked FP
+          this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, false);//checked FP
           break;
         default:
           PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagramms.cpp");
@@ -1198,9 +1208,8 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
     this->clear_output(!accum);
   else
     this->clear_output(!accum,1,i_pi2);
-
-
-  //++++++++ PION-PION +++++++++
+ 
+  //++++++++ MESON-MESON +++++++++
 
   //mom_pi2 can be 1 mom or a list of moms
 
@@ -1221,15 +1230,15 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
       int alfa = gammaInd_scatt[G_i2][nz_e][0];
       int beta = gammaInd_scatt[G_i2][nz_e][1];
       Float g[2];
-      g[1] = gamma_scatt[G_i2][nz_e][1];
-      g[0] = gamma_scatt[G_i2][nz_e][0];
+      g[1] = -gamma_scatt[G_i2][nz_e][1];
+      g[0] = -gamma_scatt[G_i2][nz_e][0]; //-1 from eq.(13)
+
       PLEGMA_Vector<Float> phi0beta;
       PLEGMA_Vector<Float> phi1alfa;
       phi0beta.copy(*Phi_0[beta],HOST);
       phi0beta.load();
       phi1alfa.copy(*Phi_1[alfa],HOST);
       phi1alfa.load();
-
 
 
       //PhixGf2xPhi
@@ -1334,7 +1343,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 
   pipi_aux.initialize_diagram( this->GList[3], this->GList[5], "P"); //false m is pi2, true is pf2
 
-  pipi_aux.P_diagramms( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2
+  pipi_aux.P_diagramms( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2 //-1 from eq. (13) is inside P_diagram
 
   
   //++++++++++ NN x PIPI ++++++++++++
@@ -1362,12 +1371,16 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 	    for( int gi2=0; gi2<n_gammas_i2; ++gi2 ){
 	      for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
 		for( int gf2=0; gf2<n_gammas_f2; ++gf2){
-                  Float *pion_pointer=pipi_aux.Corr(t,i_pf2,gi2,gf2);
-                  Float pion_contribution[2];
-                  pion_contribution[0]=-1.* pion_pointer[0];
-                  pion_contribution[1]=-1.* pion_pointer[1];
-		  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
-			   CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
+                  //Float *pion_pointer=pipi_aux.Corr(t,i_pf2,gi2,gf2);
+                  //Float pion_contribution[2];
+                  //pion_contribution[0]=-1.* pion_pointer[0];
+                  //pion_contribution[1]=-1.* pion_pointer[1];
+		  //x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
+		  //	   CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
+		  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2),
+			   pipi_aux.Corr(t,i_pf2,gi2,gf2),
+		  	   CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
+			   N_SPINS*N_SPINS);
 		}//G_f2
 	      }//G_f1
 	    }//G_i2
@@ -1392,61 +1405,77 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
 
   this->clear_output(!accum);
 
-  Float factor[2] = {2.,0.};
   switch (diagram_index) {
     case 1:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor );
+      Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor, true );
       break;
     case 3:
-      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor );
+      Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor, true );
       break;
     case 5:
-      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor );
+      Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true );
       break;
     case 7:
-      this->V3V2reduction( srcV3, srcV2, 1, false, 0, true);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 1, false, 0, true, factor, false);
       break;
     case 8:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, true);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, true, factor, false);
       break;
     case 9:
-      this->V3V2reduction( srcV3, srcV2, 0, false, 0, true);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, true, factor, false);
       break;
     case 10:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, true);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, true, factor, false);
       break;
     case 11:
-      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true);
       break;
     case 12:
-      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor, true);
       break;
     case 13:
-      this->V3V2reduction( srcV3, srcV2, 1, false, 0, false, factor);
+      Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 1, false, 0, false, factor, false);
       break;
     case 15:
-      this->V3V2reduction( srcV3, srcV2, 2, true, 0, true, factor);
+      Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, true, factor, false);
       break;
     case 17:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, false, factor);
+      Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, false, factor, true);
       break;
     case 19:
-      this->V3V2reduction( srcV3, srcV2, 2, false, 0, true);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 2, false, 0, true, factor, false);
       break;
     case 20:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, false);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, false, factor, false);
       break;
     case 21:
-      this->V3V2reduction( srcV3, srcV2, 2, true, 0, true);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 2, true, 0, true, factor, false);
       break;
     case 22:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, false);
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, false, factor, false);
       break;
     case 23:
-      this->V3V2reduction( srcV3, srcV2, 1, false, 0, false);
+      Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 1, false, 0, false, factor, true);
       break;
     case 25:
-      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false);
+      Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)...
+      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true);
       break;
     default:
       PLEGMA_error("This value of T-piNsink diagram index does not exists, please check your inputs in piNdiagramms.cpp");
@@ -1467,22 +1496,23 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
   this->clear_output(!accum);
 
   if( gammas_isSym( this->GList[2] ) ){ //Symm G_i1
-      Float factor[2] = {2.,0.};
-      this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor );
-
-      this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor );
-
-      this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor );
-    }
+    Float factor[2] = {-2.,0.};// -1 from eqs. (51-56)
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor, true ); //last true because of transp(G_f1)
+    
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor, true ); //last true because of transp(G_f1)
+    
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true ); //last true because of transp(G_f1)
+  }
   else{
-    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false );
-    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, true );
+    Float factor[2] = {-1.,0.};// -1 from eqs. (51-56)
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, false, factor, true ); //last true because of transp(G_f1)
+    this->V3V2reduction_matrix( srcV3, srcV2, 1,  false, 0, true, factor, true );  //last true because of transp(G_f1)
+    
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, false, factor, true ); //last true because of transp(G_f1)
+    this->V3V2reduction( srcV3, srcV2, 2, true, 0, true, factor, true );  //last true because of transp(G_f1)
 
-    this->V3V2reduction( srcV3, srcV2, 2, true, 0, false );
-    this->V3V2reduction( srcV3, srcV2, 2, true, 0, true  );
-
-    this->V3V2reduction( srcV3, srcV2, 0, false, 0, false );
-    this->V3V2reduction( srcV3, srcV2, 0, false, 0, true  );
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true ); //last true because of transp(G_f1)
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, true, factor, true  ); //last true because of transp(G_f1)
   }
 
 }
@@ -1901,16 +1931,16 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_adj(int gi){
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram, bool apply_trans){
+void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram ){
 
   if ( name_of_diagram == "D" ){
-    Float overall_sign = -1.; // epsilon in adjoint interp
+    Float overall_sign = -1.; // -1 epsilon in adjoint interp
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
   }
   else if( name_of_diagram == "N"){
-    Float overall_sign = -1.; // epsilon in adjoint interp
+    Float overall_sign = -1.; // -1 epsilon in adjoint interp
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
@@ -1928,60 +1958,44 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram, bool
     apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
   }
   else if(  name_of_diagram == "T1"){
-    Float overall_sign[2] = {0.,1.}; //i from pion at sink, -1 comig from epsilon in adj interp of D, -1 from eqs. (51-56)
+    Float overall_sign[2] = {0.,-1.}; //i from pion at sink, -1 comig from epsilon in adj interp of D
     x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
-    if (apply_trans==true){
-    apply_sign_transp(4);  // transposition G_f1 (Nucleon-sink) //N.B. there is also G_i2 in this->GList because otherwise reduceV2V3 wouldn't work for T1. It's the identity, see-->initilaize_diagram for T1.
-    }
   }
   else if( name_of_diagram == "B"){
-    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (20),(23)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N 
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
-    if (apply_trans==true){
-      apply_sign_transp(4);  // transposition G_f1 (Nucleon-sink)
-    }
   }
   else if( name_of_diagram == "W"){
-    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (28),(31),(34),(37)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
-    if (apply_trans== true) {
-     apply_sign_transp(4);    // transposition G_f1 (Nucleon-sink)
-    }
   }
   else if( name_of_diagram == "Z"){
-    //Float overall_sign = 1.; // -1 coming from epsilon in adj interp of N, -1 from eqs. (41),(44),(47),(50)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
-    if (apply_trans==false){
-     apply_sign_transp(4);
-    }
   }
   else if( name_of_diagram == "M"){ // ??????? is N called after or before phase multiplication of M !!!!!!! In the following like we call signs for N after the M_diagram call.
-    //Float overall_sign = 1.; // i from pion at sink, -i from pion at source, -1 from epsilon in adj interp of N,  -1 from eq. (13)
-    //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    Float overall_sign = -1.; // i from pion at sink, -i from pion at source, -1 from epsilon in adj interp of N
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     
     apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
-
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
   }
   else if( name_of_diagram == "D1ii"){
     apply_sign_adj(0);	     // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
     apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
-    if (apply_trans == true){
-     apply_sign_transp(4);    // transposition G_f1 (Nucleon-sink)
-    }
   }
   else if ( name_of_diagram == "D1ff" ){
     Float overall_sign = -1.; // epsilon in adjoint interp
