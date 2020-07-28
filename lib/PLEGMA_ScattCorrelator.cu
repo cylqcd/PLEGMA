@@ -774,7 +774,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
       int kappa = gammaInd_scatt[gammai2][n][0]; 
       int lambda =  gammaInd_scatt[gammai2][n][1];
       Float g[2];
-      g[1] = gamma_scatt[gammai2][n][1];
+      g[1] = -gamma_scatt[gammai2][n][1]; //-1 from eqs. (41),(44),(47),(50)
       g[0] = -gamma_scatt[gammai2][n][0]; //-1 from eqs. (41),(44),(47),(50)
 
       //Z1
@@ -837,7 +837,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::array<PLEGMA_Vector<Float>
       int alfa = gammaInd_scatt[G_i2][nz_e][0]; 
       int beta = gammaInd_scatt[G_i2][nz_e][1];
       Float g[2];
-      g[1] = gamma_scatt[G_i2][nz_e][1];
+      g[1] = -gamma_scatt[G_i2][nz_e][1]; //-1 from eq.(13)
       g[0] = -gamma_scatt[G_i2][nz_e][0]; //-1 from eq.(13)
 
       //PhixGf2xPhi
