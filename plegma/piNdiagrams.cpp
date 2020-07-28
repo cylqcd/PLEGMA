@@ -846,23 +846,23 @@ int main(int argc, char **argv)
         }                
         outfilename=outdiagramPrefix+confnumber+sourcepositiontext+"_TpiNsink";
 
-        TIME(produceOutput(corrT_piNsink_1, outfilename, "T1", n_stochastic_samples), "ISOSPIN32");
-        TIME(produceOutput(corrT_piNsink_3, outfilename, "T1", n_stochastic_samples), "ISOSPIN32");
-        TIME(produceOutput(corrT_piNsink_5, outfilename, "T1", n_stochastic_samples), "ISOSPIN32");
-        TIME(produceOutput(corrT_piNsink_7, outfilename, "T1", n_stochastic_samples), "ISOSPIN12");//Due to V4 already included
-        TIME(produceOutput(corrT_piNsink_8, outfilename, "T1", n_stochastic_samples), "ISOSPIN12");//Due to V4 already included
-        TIME(produceOutput(corrT_piNsink_9, outfilename, "T1", n_stochastic_samples), "ISOSPIN12");
+        TIME(produceOutput(corrT_piNsink_1, outfilename,  "T1",n_stochastic_samples), "ISOSPIN32");
+        TIME(produceOutput(corrT_piNsink_3, outfilename,  "T1",n_stochastic_samples), "ISOSPIN32");
+        TIME(produceOutput(corrT_piNsink_5, outfilename,  "T1",n_stochastic_samples), "ISOSPIN32");
+        TIME(produceOutput(corrT_piNsink_7, outfilename,  "T1",n_stochastic_samples), "ISOSPIN12");
+        TIME(produceOutput(corrT_piNsink_8, outfilename,  "T1",n_stochastic_samples), "ISOSPIN12");
+        TIME(produceOutput(corrT_piNsink_9, outfilename,  "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_10, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_11, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_12, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
-        TIME(produceOutput(corrT_piNsink_13, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");//Due to V4 already included
+        TIME(produceOutput(corrT_piNsink_13, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_15, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_17, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
-        TIME(produceOutput(corrT_piNsink_19, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");//Due to V4 already included
-        TIME(produceOutput(corrT_piNsink_20, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");//Due to V4 already included
+        TIME(produceOutput(corrT_piNsink_19, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
+        TIME(produceOutput(corrT_piNsink_20, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_21, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_22, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
-        TIME(produceOutput(corrT_piNsink_23, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");//Due to V4 already included
+        TIME(produceOutput(corrT_piNsink_23, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
         TIME(produceOutput(corrT_piNsink_25, outfilename, "T1",n_stochastic_samples), "ISOSPIN12");
 
       }
