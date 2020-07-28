@@ -1181,22 +1181,22 @@ int main(int argc, char **argv)
 
         //Triangle diagrams
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propDN, propTS, propUP),"ISOSPIN12");
-        TIME(corrT15.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+        TIME(corrT15.convertTreductiontoDiagram( reductionsT1, false, false, false ),"ISOSPIN12");
 
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propDN, propUP, propTS),"ISOSPIN12");
-        TIME( corrT17.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+        TIME( corrT17.convertTreductiontoDiagram( reductionsT1, false, false, false ),"ISOSPIN12");
 
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propTS, propDN, propUP),"ISOSPIN12");
-        TIME( corrT21.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+        TIME( corrT21.convertTreductiontoDiagram( reductionsT1, false, true, true ),"ISOSPIN12");
 
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propUP, propDN, propTS),"ISOSPIN12");
-        TIME( corrT23.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+        TIME( corrT23.convertTreductiontoDiagram( reductionsT1, false, true, true ),"ISOSPIN12");
 
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propTS, propDN, propUP),"ISOSPIN12");
-        TIME( corrT22.convertTreductiontoDiagram( reductionsT2 ),"ISOSPIN12");
+        TIME( corrT22.convertTreductiontoDiagram( reductionsT2, false, true, true ),"ISOSPIN12");
 
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propUP, propTS, propDN),"ISOSPIN12");
-        TIME( corrT24.convertTreductiontoDiagram( reductionsT2 ),"ISOSPIN12");
+        TIME( corrT24.convertTreductiontoDiagram( reductionsT2, falsem true, true ),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
         
@@ -1352,7 +1352,7 @@ int main(int argc, char **argv)
 
          //Triangle diagrams
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propTS, propUP, propUP),"ISOSPIN12");
-        TIME( corrT19.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+        TIME( corrT19.convertTreductiontoDiagram( reductionsT1, false, false, false ),"ISOSPIN12");
 
         TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_delta, propUP, propTS, propUP),"ISOSPIN12");
         TIME( corrT25.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
@@ -1658,22 +1658,22 @@ int main(int argc, char **argv)
             TIME(corrD1ff15161920.LT_diagramms( reductionsT1, reductionsT2, Loop_UPDN ),"ISOSPIN12");
 
             TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propDN, propUP, propTS),"ISOSPIN12");
-            TIME( corrT7.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+            TIME( corrT7.convertTreductiontoDiagram( reductionsT1, false, true, false ),"ISOSPIN12");
 
             TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_delta, propDN, propUP, propTS),"ISOSPIN12");
-            TIME( corrT9.convertTreductiontoDiagram( reductionsT2 ),"ISOSPIN12");
+            TIME( corrT9.convertTreductiontoDiagram( reductionsT2, false, true, false ),"ISOSPIN12");
 
             TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propTS, propUP, propDN),"ISOSPIN12");
-            TIME( corrT11.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+            TIME( corrT11.convertTreductiontoDiagram( reductionsT1, false, true, false ),"ISOSPIN12");
             
             TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_delta, propTS, propDN, propUP),"ISOSPIN12");
-            TIME( corrT12.convertTreductiontoDiagram( reductionsT2 ),"ISOSPIN12");
+            TIME( corrT12.convertTreductiontoDiagram( reductionsT2, false, false, true ),"ISOSPIN12");
 
             TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propUP, propTS, propDN),"ISOSPIN12");
-            TIME( corrT13.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+            TIME( corrT13.convertTreductiontoDiagram( reductionsT1, false, false, false ),"ISOSPIN12");
 
             TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propUP, propDN, propTS),"ISOSPIN12");
-            TIME( corrT14.convertTreductiontoDiagram( reductionsT1 ),"ISOSPIN12");
+            TIME( corrT14.convertTreductiontoDiagram( reductionsT1, false, false, false),"ISOSPIN12");
 
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";

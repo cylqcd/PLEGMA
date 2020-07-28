@@ -1765,7 +1765,7 @@ void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &
 //In particular: adds the necessary external gamma structure
 //and perform the correct ordering
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorrelator<Float> &T2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorrelator<Float> &T2, bool accum, bool transp_i1, bool transp_f1){
   //checks between T2
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
 
@@ -1791,8 +1791,13 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
       Float temp[N_SPINS*N_SPINS*2];
       for( int gi=0; gi<n_gammas_i; ++gi ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
+          int coeffT = 1;
+          if( transp_i1 == true)
+             coeffT*=gammaTranspSign_scatt[this->GList[2][gi]];
+          if( transp_f1 == true)
+             coeffT*=gammaTranspSign_scatt[this->GList[3][gf]];
           for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
-            temp[spin] = T2.Corr(t,i_mom,gi,gf)[spin];
+            temp[spin] = coeffT*T2.Corr(t,i_mom,gi,gf)[spin];
 
           for( int gei=0; gei<n_extgammas_i; ++gei ){
             for( int gef=0; gef<n_extgammas_f; ++gef ){
