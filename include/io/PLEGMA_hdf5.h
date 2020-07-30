@@ -123,8 +123,8 @@ protected:
     return product;
   }
   inline hsize_t to_id(std::vector<hsize_t> ids, std::vector<hsize_t> shape){
-    hsize_t id = ids[0];
-    for(size_t i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i];
+    hsize_t id = ids[0]%shape[0];
+    for(size_t i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i]%shape[i];
     return id;
   }
   inline std::vector<hsize_t> from_id(hsize_t id, std::vector<hsize_t> shape){
@@ -139,6 +139,11 @@ protected:
   inline std::vector<hsize_t> add(std::vector<hsize_t> shape1, std::vector<hsize_t> shape2){
     std::vector<hsize_t> res;
     for(size_t i=0; i < shape1.size(); i++) res.push_back(shape1[i] + shape2[i]);
+    return res;
+  }
+  inline std::vector<hsize_t> sub(std::vector<hsize_t> shape1, std::vector<hsize_t> shape2){
+    std::vector<hsize_t> res;
+    for(size_t i=0; i < shape1.size(); i++) res.push_back(shape1[i] - shape2[i]);
     return res;
   }
   inline std::vector<hsize_t> zeros_like(std::vector<hsize_t> shape){
@@ -333,15 +338,53 @@ protected:
       bool needs_shift = false;
       T* tmp = buf;
       if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
+      if (!start.empty()){
+        for(int i=0; i<start.size();++i)
+          PLEGMA_printf("DEBUG _write_dataset_single %d\n",start[i]);
+      }
+      if (!shape.empty()){
+        for(int i=0; i<shape.size();++i)
+          PLEGMA_printf("DEBUG _write_dataset_single shape %d\n",shape[i]);
+      }
+
       
       // Shifting the data accordingly to start
       if(needs_shift) {
 	hostMalloc(tmp, product(shape)*sizeof(T));
-	for(hsize_t i = 0; i<product(shape); i++) {
-	  hsize_t j = to_id( add( from_id(i, shape), start), shape);
-	  tmp[i] = buf[j];
+
+	// Finding the first index that is not contiguous in memory 
+	size_t non_cont_id = shape.size()-1;
+	while(non_cont_id>0) {
+	  if(start[non_cont_id] == 0)
+	    non_cont_id --;
+	  else
+	    break;
 	}
+
+        hsize_t contiguous = product(std::vector<hsize_t>(shape.begin()+non_cont_id+1, shape.end()));
+        std::vector<hsize_t> cut_start = std::vector<hsize_t>(start.begin(), start.begin()+non_cont_id+1);
+        std::vector<hsize_t> cut_shape = std::vector<hsize_t>(shape.begin(), shape.begin()+non_cont_id+1);
+	std::vector<hsize_t> shift = sub(cut_shape,cut_start);
+        assert(product(cut_shape)*contiguous == product(shape));
+
+        if (!cut_start.empty()){
+          for(int i=0; i<cut_start.size();++i)
+            PLEGMA_printf("DEBUG _write_dataset_single %d\n",cut_start[i]);
+        }
+        if (!cut_shape.empty()){
+          for(int i=0; i<cut_shape.size();++i)
+            PLEGMA_printf("DEBUG _write_dataset_single shape %d\n",cut_shape[i]);
+        }
+        PLEGMA_printf("DEBUG_continuous %d\n", contiguous);
+
+        for(hsize_t i = 0; i<product(cut_shape); i++) {
+          hsize_t j = to_id( add( from_id(i, cut_shape), shift), cut_shape);
+          printf("DEBUG i=%d j=%d contiguous=%d sizeof(T)=%d\n",i,j,contiguous,sizeof(T));
+          std::memcpy(tmp+i*contiguous, buf+j*contiguous, contiguous*sizeof(T));
+        }
+        PLEGMA_printf("DEBUG Copy already performed\n");
       }
+
 
       _write_dataset_parallel(dataset_id, tmp, shape, shape, zeros_like(shape), true);
 
