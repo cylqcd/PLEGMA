@@ -6,6 +6,11 @@
 using namespace plegma;
 using namespace quda;
 
+std::vector<double> runtime_inside;
+#define TIME_INSIDE(fnc)  runtime_inside.push_back(MPI_Wtime()); fnc; \
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime_inside.back()); \
+  runtime_inside.pop_back()
+
 std::vector<double> runtime;
 #define TIME(fnc,isospin)  runtime.push_back(MPI_Wtime()); fnc;                 \
   PLEGMA_printf("TIME "#isospin" for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
@@ -23,21 +28,21 @@ void produceOutput( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
                     int n_stochastic_samples ){
-  source.apply_phase();
-  source.apply_sign(diagram_name);
-  source.applyBoundaryConditions( true );
-  source.normalize_nstoch(n_stochastic_samples);
-  source.writeHDF5( outputFilename );
+  TIME_INSIDE(source.apply_phase());
+  TIME_INSIDE(source.apply_sign(diagram_name));
+  TIME_INSIDE(source.applyBoundaryConditions( true ));
+  TIME_INSIDE(source.normalize_nstoch(n_stochastic_samples));
+  TIME_INSIDE(source.writeHDF5( outputFilename ));
 
 }
 void produceOutput( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name
                   ){
-  source.apply_phase();
-  source.apply_sign(diagram_name);
-  source.applyBoundaryConditions( true );
-  source.writeHDF5( outputFilename );
+  TIME_INSIDE(source.apply_phase());
+  TIME_INSIDE(source.apply_sign(diagram_name));
+  TIME_INSIDE(source.applyBoundaryConditions( true ));
+  TIME_INSIDE(source.writeHDF5( outputFilename ));
 }
 
 int main(int argc, char **argv)
@@ -952,8 +957,6 @@ int main(int argc, char **argv)
         TIME(produceOutput(corrD1ii16, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
 
       } //diagrams containing loop at the source
-
-
 /**********************************************************************************************
 *
 *
@@ -1196,7 +1199,7 @@ int main(int argc, char **argv)
         TIME( corrT22.convertTreductiontoDiagram( reductionsT2, false, true, true ),"ISOSPIN12");
 
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propUP, propTS, propDN),"ISOSPIN12");
-        TIME( corrT24.convertTreductiontoDiagram( reductionsT2, falsem true, true ),"ISOSPIN12");
+        TIME( corrT24.convertTreductiontoDiagram( reductionsT2, false, true, true ),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
         

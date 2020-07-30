@@ -290,16 +290,13 @@ std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
     size_timeslice *= 2;
   }
   std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*size_timeslice), free);
-  if (this->hasSource(DIM_T)){
-    const int t_source_local= this->source[DIM_T]%HGC_localL[DIM_T];
-    memcpy(ptr.get(), this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
-    int coords[4];
-    for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
-    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
-    int mpiErr = MPI_Bcast(&ptr, size_timeslice*sizeof(Float), MPI_Type<Float>(), rankHas, HGC_fullComm);
-    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
+  const int t_source_local= this->source[DIM_T]%HGC_localL[DIM_T];
+  memcpy(ptr.get(), this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
+  int coords[4];
+  for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
+  int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+  int mpiErr = MPI_Bcast(&ptr, size_timeslice*sizeof(Float), MPI_Type<Float>(), rankHas, HGC_fullComm);
+  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
   return ptr;
 }
 //This routine sum over the time direction a particular PLEGMA_ScattCorrelator object
