@@ -743,6 +743,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
   if (diagramm_index == 1){
     this->V3V2reduction( srcV3, srcV2, 2, true, ig_i2, true, factor, true );//last true because of transp(G_f1)
   }
+  //write W2
   else if (diagramm_index == 2){
     this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, true);//last true because of transp(G_f1)
   }
@@ -1249,10 +1250,14 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_adj(int gi){
   int in_dofs  = std::accumulate(ranges.begin()+n_g+1, ranges.end(), 2, std::multiplies<int>());
   int out_dofs = ranges[0]*offsets[0]/N_gammas/in_dofs;
   auto sign_arr = gammaAdjointSign_scatt;
+
+  PLEGMA_printf("Apply_sign_adj: gi=%d, N_gammas=%d, indofs=%d, outdofs=%d\n",gi,N_gammas, in_dofs, out_dofs);
+  PLEGMA_printf("Apply_sign_adj: gi=%d, begin_arr= [",gi);
   
-  for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
-    for( int i_g=0; i_g < N_gammas; ++i_g ){
-      Float sign=sign_arr[this->GList[gi][i_g]];
+  for( int i_g=0; i_g < N_gammas; ++i_g ){
+    Float sign=sign_arr[this->GList[gi][i_g]];
+    PLEGMA_printf("(%s->%f),", GAMMAS_SCATT_STR[this->GList[gi][i_g]].c_str(), sign);
+    for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
       x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
     }
   }
@@ -1264,61 +1269,61 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram){
   if ( name_of_diagram == "D" ){
     Float overall_sign = -1.; // -1 epsilon in adjoint interp
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
-    apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
+    this->apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
+    this->apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
   }
   else if( name_of_diagram == "N"){
     Float overall_sign = -1.; // -1 epsilon in adjoint interp
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
-    apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
+    this->apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
+    this->apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
   }
   else if( name_of_diagram == "P"){
     //Float overall_sign = 1.; // i at sink, -i at source
     //x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);     // adjoint G_i2 (Pion-source)
+    this->apply_sign_adj(0);     // adjoint G_i2 (Pion-source)
   }
   else if( name_of_diagram == "T"){
     Float overall_sign[2] = {0.,1.}; //-i from pion at source, -1 coming from epsilon in adj interp of N
     x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
-    apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
-    apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
+    this->apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
+    this->apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
+    this->apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
   }
   else if(  name_of_diagram == "T1"){
     Float overall_sign[2] = {0.,-1.}; //i from pion at sink, -1 comig from epsilon in adj interp of D
     x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
-    apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
+    this->apply_sign_adj(0);     // adjoint G_ei (Delta-extsource)
+    this->apply_sign_adj(2);     // adjoint G_i1 (Delta-source)
   }
   else if( name_of_diagram == "B"){
     Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N 
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
-    apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
-    apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
+    this->apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
+    this->apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
+    this->apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
   }
   else if( name_of_diagram == "W"){
     Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
-    apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
-    apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
+    this->apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
+    this->apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
+    this->apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
   }
   else if( name_of_diagram == "Z"){
     Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
-    apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
-    apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
-    apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
+    this->apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
+    this->apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
+    this->apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
   }
   else if( name_of_diagram == "M"){ // ??????? is N called after or before phase multiplication of M !!!!!!! In the following like we call signs for N after the M_diagram call.
     Float overall_sign = -1.; // i from pion at sink, -i from pion at source, -1 from epsilon in adj interp of N
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     
-    apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
-    apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
-    apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
+    this->apply_sign_adj(0);       // adjoint G_ei (Nucleon-extsource)
+    this->apply_sign_adj(2);       // adjoint G_i1 (Nucleon-source)
+    this->apply_sign_adj(3);       // adjoint G_i2 (Pion-source)
   }
   else{
     PLEGMA_error("Error! %s not recognized!\n",name_of_diagram.c_str());
