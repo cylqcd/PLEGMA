@@ -867,36 +867,39 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
 
   //Here there are no additional signs that have to be included due
   //the rearrangement of fermions fields in the contraction.
+
+  Float factor[2]={-1.*loopcontribution[0],-1.*loopcontribution[1]};//-1 from eqs. (20),(23), ....
+  
   switch( diagram_index ){
     case 1:
-      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true, loopcontribution, false);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, true, factor, false);//checked FP
       break;
     case 2:
-      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true, loopcontribution, false);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 1, false, ig_i2, true, factor, false);//checked FP
       break;
     case 3:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true, loopcontribution, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, true, factor, false);//checked FP
       break;
     case 4:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, loopcontribution, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, factor, false);//checked FP
       break;
     case 9:
-      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, loopcontribution, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, factor true);//checked FP
       break;
     case 10:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution, true);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, factor, true);//checked FP
       break;
     case 13:
-      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true, loopcontribution, false);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true,  factor, false);//checked FP
       break;
     case 14:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, loopcontribution, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, factor, false);//checked FP
       break;
     case 15:
-      this->V3V2reduction(        srcV3, srcV2, 2, true, ig_i2,  true, loopcontribution, false);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2, true, ig_i2,  true,  factor, false);//checked FP
       break;
     case 16:
-      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, loopcontribution, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     default:
       PLEGMA_error("This value of D1ii diagram index does not exists, please check your inputs in piNdiagramms.cpp");
@@ -1306,12 +1309,14 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0
     for( int im=0; im<N_moms; ++im)
       for( int t=0; t<TIME; ++t)
         for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-          x_pe_y( this->Corr(t,im,gf2), pipi_aux.Corr(t,im,gf2), 1);
+          x_pe_sy( this->Corr(t,im,gf2), -2, pipi_aux.Corr(t,im,gf2), 1); //the sign minus -1 is coming from the fermion loop
+          this->Corr(t,im,gf2)[1]=0;
     }
   else{
     for( int t=0; t<TIME; ++t)
       for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-        x_pe_y( this->Corr(t,i_pi2,gf2),  pipi_aux.Corr(t,i_pi2,gf2), 1);
+        x_pe_sy( this->Corr(t,i_pi2,gf2), -2,  pipi_aux.Corr(t,i_pi2,gf2), 1);//the sign minus -1 is coming from the fermion loop
+        this->Corr(t,i_pi2,gf2)[1]=0;
   }	
 }
 
@@ -1564,8 +1569,8 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
           for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
             Float *loop_pointer=Loop.Corr(t,i_mom_f2,gf2);
             Float loop_contribution[2];
-            loop_contribution[0]= 2*loop_pointer[0];
-            loop_contribution[1]= 0;
+            loop_contribution[0]= loop_pointer[0];
+            loop_contribution[1]= loop_pointer[1];
 
             for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
               temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + T2.Corr(t,i_mom_f1,gi1,gf1)[spin]);
@@ -1976,7 +1981,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram ){
     apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
   }
   else if( name_of_diagram == "L"){
-    Float overall_sign[2] = {0.,-1.}; //i from pion interpolating operator, -1 from the fermion loop
+    Float overall_sign[2] = {0.,1.}; //i from pion interpolating operator
     x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
   }
   else{

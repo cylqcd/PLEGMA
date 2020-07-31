@@ -899,20 +899,20 @@ int main(int argc, char **argv)
           Loop_UPDN_source[j]=0;
         }
 
-        PLEGMA_ScattCorrelator<float> Loop_UP_temporary(source_stoch, piN12_zeropion); 
+        PLEGMA_ScattCorrelator<float> Loop_UPDN_temporary(source_stoch, piN12_zeropion); 
 
-        Loop_UP_temporary.initialize_diagram( glist_sink_meson, "L"); 
+        Loop_UPDN_temporary.initialize_diagram( glist_sink_meson, "L"); 
 
         for (int i=0; i<n_stochastic_samples; ++i){
 
 
-          TIME(Loop_UP_temporary.Loop_diagramms( stochastic_sources[i], stochastic_propags[i], 0, false),"ISOSPIN12");
+          TIME(Loop_UPDN_temporary.Loop_diagramms( stochastic_sources[i], stochastic_propags[i], 0, false),"ISOSPIN12");
 
-          std::shared_ptr<float> Loop_UP_sp=Loop_UP_temporary.get_source_time_slice();
+          std::shared_ptr<float> Loop_UPDN_sp=Loop_UPDN_temporary.get_source_time_slice();
 
           for (int j=0; j< glist_source_meson.size(); ++j){
-            Loop_UPDN_source[2*j+0]+=2*Loop_UP_sp.get()[2*j+0];
-            Loop_UPDN_source[2*j+1]=0.;
+            Loop_UPDN_source[2*j+0]+=Loop_UPDN_sp.get()[2*j+0];
+            Loop_UPDN_source[2*j+1]+=Loop_UPDN_sp.get()[2*j+1].;
           }
 
         }

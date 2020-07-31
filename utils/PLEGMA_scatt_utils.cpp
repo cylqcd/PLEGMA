@@ -11,6 +11,19 @@ template void x_pe_cy<float>(  float *dest,  float  *floatcomplex, float  *tempo
 
 template void x_pe_cy<double>( double *dest, double *floatcomplex, double *temporary, int size) ;
 
+//vectorOut <- vectorOut + s * vectorIn 
+template<typename Float>
+void x_pe_sy( Float *dest, Float floatnumber, Float *temporary, int size ){
+  for (int i=0; i<size; ++i){
+    dest[2*i+0]+= floatnumber*temporary[2*i+0];
+    dest[2*i+1]+= floatnumber*temporary[2*i+1];
+  }
+}
+template void x_pe_sy<float>(  float *dest,  float  floatnumber, float  *temporary, int size) ;
+
+template void x_pe_sy<double>( double *dest, double floatnumber, double *temporary, int size) ;
+
+
 //vectorOut <- vectorOut + vectorIn 
 template<typename Float>
 void x_pe_y( Float *dest, Float *temporary, int size ){
