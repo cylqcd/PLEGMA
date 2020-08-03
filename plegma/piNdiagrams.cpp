@@ -912,7 +912,7 @@ int main(int argc, char **argv)
 
           for (int j=0; j< glist_source_meson.size(); ++j){
             Loop_UPDN_source[2*j+0]+=Loop_UPDN_sp.get()[2*j+0];
-            Loop_UPDN_source[2*j+1]+=Loop_UPDN_sp.get()[2*j+1].;
+            Loop_UPDN_source[2*j+1]+=Loop_UPDN_sp.get()[2*j+1];
           }
 
         }

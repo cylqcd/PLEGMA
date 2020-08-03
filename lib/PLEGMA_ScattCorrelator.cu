@@ -865,10 +865,8 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
   //only difference between them is the type of loop(pipi_aux): UP and 
   //DN in the former respectively in the latter
 
-  //Here there are no additional signs that have to be included due
-  //the rearrangement of fermions fields in the contraction.
-
-  Float factor[2]={-1.*loopcontribution[0],-1.*loopcontribution[1]};//-1 from eqs. (20),(23), ....
+  float signofFactor=-1.; 
+  Float factor[2]={signofFactor*loopcontribution[0],signofFactor*loopcontribution[1]};//-1 from eqs. (20),(23), ....
   
   switch( diagram_index ){
     case 1:
@@ -884,7 +882,7 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
       this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true, factor, false);//checked FP
       break;
     case 9:
-      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, factor true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, factor, true);//checked FP
       break;
     case 10:
       this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, factor, true);//checked FP
@@ -1305,18 +1303,24 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0
   //PhixGf2xPhi
   pipi_aux.PhiPhi( phi0, this->GList[0], phi1); //T x N_moms x n_gammas_f2
 
+  Float factor=-2.;
   if(i_pi2==-1){
-    for( int im=0; im<N_moms; ++im)
-      for( int t=0; t<TIME; ++t)
-        for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-          x_pe_sy( this->Corr(t,im,gf2), -2, pipi_aux.Corr(t,im,gf2), 1); //the sign minus -1 is coming from the fermion loop
+    for( int im=0; im<N_moms; ++im){
+      for( int t=0; t<TIME; ++t){
+        for( int gf2=0; gf2<n_gammas_f2; ++gf2){
+          x_pe_sy( this->Corr(t,im,gf2), factor, pipi_aux.Corr(t,im,gf2), 1); //the sign minus -1 is coming from the fermion loop
           this->Corr(t,im,gf2)[1]=0;
+        }
+      }
     }
+  }
   else{
-    for( int t=0; t<TIME; ++t)
-      for( int gf2=0; gf2<n_gammas_f2; ++gf2)
-        x_pe_sy( this->Corr(t,i_pi2,gf2), -2,  pipi_aux.Corr(t,i_pi2,gf2), 1);//the sign minus -1 is coming from the fermion loop
+    for( int t=0; t<TIME; ++t){
+      for( int gf2=0; gf2<n_gammas_f2; ++gf2){
+        x_pe_sy( this->Corr(t,i_pi2,gf2), factor,  pipi_aux.Corr(t,i_pi2,gf2), 1);//the sign minus -1 is coming from the fermion loop
         this->Corr(t,i_pi2,gf2)[1]=0;
+      }
+    }
   }	
 }
 
