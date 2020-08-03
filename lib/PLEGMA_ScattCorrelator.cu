@@ -791,11 +791,11 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->GList.push_back( eG_i );
   this->GList.push_back( eG_f );
   this->GList.push_back( G_i1 );
-  std::vector<GAMMAS_SCATT> tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_i2,RIGHT) : G_i2;
-  this->GList.push_back( tmpG );
+  //std::vector<GAMMAS_SCATT> tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_i2,RIGHT) : G_i2;
+  this->GList.push_back( G_i2 );
   this->GList.push_back( G_f1 );
-  tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_f2,LEFT) : G_f2;
-  this->GList.push_back( tmpG );
+  //tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_f2,LEFT) : G_f2;
+  this->GList.push_back( G_f2 );
 
 
   //Description
@@ -1112,14 +1112,15 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
 
   this->clear_output(!accum); 
 
-  for (int g2=0; g2<this->GList[3].size(); ++g2 ){
-    GAMMAS_SCATT gammai2 = this->GList[3][g2];
+  std::vector<GAMMAS_SCATT> G_i2_t_gamma5_list = apply_gamma5_scatt_gamma(this->GList[3],RIGHT);
+  for (int g2=0; g2< G_i2_t_gamma5_list.size(); ++g2 ){
+    GAMMAS_SCATT gammai2_t_gamma5 = G_i2_t_gamma5_list[g2];
     for (int n=0; n<4; ++n){
-      int kappa = gammaInd_scatt[gammai2][n][0]; 
-      int lambda =  gammaInd_scatt[gammai2][n][1];
+      int kappa = gammaInd_scatt[gammai2_t_gamma5][n][0]; 
+      int lambda =gammaInd_scatt[gammai2_t_gamma5][n][1];
       Float g[2];
-      g[1] = -gamma_scatt[gammai2][n][1]; //-1 from eqs. (41),(44),(47),(50)
-      g[0] = -gamma_scatt[gammai2][n][0]; //-1 from eqs. (41),(44),(47),(50)
+      g[1] = -gamma_scatt[gammai2_t_gamma5][n][1]; //-1 from eqs. (41),(44),(47),(50)
+      g[0] = -gamma_scatt[gammai2_t_gamma5][n][0]; //-1 from eqs. (41),(44),(47),(50)
 
       switch (diagramm_index){
         case 1:

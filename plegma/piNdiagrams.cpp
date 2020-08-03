@@ -1908,7 +1908,7 @@ int main(int argc, char **argv)
          
        //Z diagram in case of zero momentum pi2 : we calculate I=1/2 as well
        //Diagram Z1,Z2
-       std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
+       //std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
        
        if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
 
@@ -1964,9 +1964,11 @@ int main(int argc, char **argv)
 
            st_oet_u_zero.load();
 
-           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
-
            TIME(reductionsV2_diluted[i].V4( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false),"ISOSPIN32");
+
+           st_oet_u_zero.apply_gamma5();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, glist_sink_meson, propUP, true),"ISOSPIN32");
          }
 
          TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ),"ISOSPIN32");
@@ -1977,7 +1979,10 @@ int main(int argc, char **argv)
            PLEGMA_Vector<float> st_oet_d_zero;
            st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST);
            st_oet_d_zero.load();
-           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_d_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN12");
+
+           st_oet_d_zero.apply_gamma5();
+
+           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_d_zero, glist_sink_meson, propUP, true),"ISOSPIN12");
          }
 
          TIME(corrZ6.Z_diagramms( reductionsV3_diluted_zero_pf2, reductionsV2_diluted, 6 ),"ISOSPIN12");
@@ -1989,7 +1994,10 @@ int main(int argc, char **argv)
            PLEGMA_Vector<float> st_oet_u_zero;
            st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
            st_oet_u_zero.load();
-           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propDN, true),"ISOSPIN12");
+
+           st_oet_u_zero.apply_gamma5();
+
+           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, glist_sink_meson, propDN, true),"ISOSPIN12");
          }
 
          TIME(corrZ12.Z_diagramms( reductionsV3_diluted_zero_pf2, reductionsV2_diluted, 12 ),"ISOSPIN12");
@@ -2003,9 +2011,12 @@ int main(int argc, char **argv)
 
            st_oet_u_zero.load();
 
-           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
-  
            TIME(reductionsV2_diluted[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false),"ISOSPIN32");
+
+           st_oet_u_zero.apply_gamma5();
+
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_zero, glist_sink_meson, propUP, true),"ISOSPIN32");
+  
 
          }
 
@@ -2019,7 +2030,9 @@ int main(int argc, char **argv)
            PLEGMA_Vector<float> st_oet_d_zero;
            st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST);
            st_oet_d_zero.load();
-           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_d_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN12");
+
+           st_oet_d_zero.apply_gamma5();
+           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_d_zero, glist_sink_meson, propUP, true),"ISOSPIN12");
 
          }
 
@@ -2033,7 +2046,8 @@ int main(int argc, char **argv)
            PLEGMA_Vector<float> st_oet_u_zero;
            st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
            st_oet_u_zero.load();
-           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propDN, true),"ISOSPIN12");
+           st_oet_u_zero.apply_gamma5();
+           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, glist_sink_meson, propDN, true),"ISOSPIN12");
          } 
 
          TIME(corrZ11.Z_diagramms( reductionsV3_diluted_zero_pf2, reductionsV2_diluted, 12 ),"ISOSPIN12");
@@ -2049,10 +2063,12 @@ int main(int argc, char **argv)
            st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
            st_oet_u_zero.load();
 
+           st_oet_u_zero.apply_gamma5();
+
            st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST);
            st_oet_d_zero.load();
 
-           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propDN, true),"ISOSPIN12");
+           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, glist_sink_meson, propDN, true),"ISOSPIN12");
 
            TIME(reductionsV2_diluted[i].V2( st_oet_d_zero, glist_sink_nucleon, propUP, propUP, false),"ISOSPIN12");
 
@@ -2071,9 +2087,12 @@ int main(int argc, char **argv)
            st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
            st_oet_u_zero.load();
 
-           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN12");
-
            TIME(reductionsV2_diluted[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propDN, false),"ISOSPIN12");
+
+           st_oet_u_zero.apply_gamma5();
+
+           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, glist_sink_meson, propUP, true),"ISOSPIN12");
+
 
          }
 
@@ -2089,11 +2108,12 @@ int main(int argc, char **argv)
 
            st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
            st_oet_u_zero.load();
+           st_oet_u_zero.apply_gamma5();
 
            st_oet_d_zero.copy(*stochastic_oet_prop_d_zero_mom[i],HOST); 
            st_oet_d_zero.load();
 
-           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN12");
+           TIME(reductionsV3_diluted_zero_pf2[i].V3( st_oet_u_zero, glist_sink_meson, propUP, true),"ISOSPIN12");
 
            TIME(reductionsV2_diluted[i].V2( st_oet_d_zero, glist_sink_nucleon, propUP, propDN, false),"ISOSPIN12");
 
@@ -2150,10 +2170,12 @@ int main(int argc, char **argv)
            st_oet_u_fini.copy(*stochastic_oet_prop_u_fini_mom[i],HOST);
            st_oet_u_fini.load();
 
+           st_oet_u_fini.apply_gamma5();
+
            st_oet_u_zero.copy(*stochastic_oet_prop_u_zero_mom[i],HOST);
            st_oet_u_zero.load();
 
-           TIME(reductionsV3_diluted[i].V3( st_oet_u_fini, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_fini, glist_sink_meson  , propUP, true),"ISOSPIN32");
 
            TIME(reductionsV2_diluted[i].V4( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false),"ISOSPIN32");
          }
