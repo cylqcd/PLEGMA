@@ -111,8 +111,8 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG 
 # using dirs in LD_LIBRARY_PATh for searching for libraries
 string(REPLACE ":" ";" LIBRARY_DIRS $ENV{LD_LIBRARY_PATH})
 
-set(DEFAULT_GPU_ARCH sm_60)
-set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60)")
+set(DEFAULT_GPU_ARCH sm_70)
+set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60, sm_70)")
 set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60)
 
 # max threads
@@ -511,7 +511,7 @@ set(PLEGMA_ALIGNMENT 64 CACHE STRING "Alignment size for allocations done with m
 mark_as_advanced(PLEGMA_ALIGNMENT)
 add_definitions(-DPLEGMA_ALIGNMENT=${PLEGMA_ALIGNMENT})
 
-check_symbol_exists(memalign malloc.h HAVE_MEMALIGN)
+#check_symbol_exists(memalign malloc.h HAVE_MEMALIGN)
 if(HAVE_MEMALIGN)
   add_definitions(-DPLEGMA_HAVE_MEMALIGN)
 else()

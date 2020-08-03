@@ -33,7 +33,10 @@ int main(int argc, char **argv)
   int nroots=4;
   int confnumber_int;
   bool run_ud = true;
+  int device_id;
   std::string outdiagramPrefix="";
+  HGC_options->set("device-id", "which device we want to run (if you do not want to specify put -2 here", verbosity, device_id);
+
   HGC_options->set("run-ud", "Whether to run '+' **AND** '-' flavors or only '+' flavor", verbosity, run_ud);
   HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
 
@@ -43,7 +46,7 @@ int main(int argc, char **argv)
   PLEGMA_printf("Initialization");
 
   //=========================================================================================================//
-  initializePLEGMA();
+  initializePLEGMA(device_id);
   {
 
     //Storing only the smeared gauge
