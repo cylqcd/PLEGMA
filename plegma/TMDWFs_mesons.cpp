@@ -48,7 +48,18 @@ int main(int argc, char **argv)
   for(size_t i=0; i < z.size() ; i ++)
     if(z[i]/z_mod-sinkMom[i]/P_mod!=0)
       PLEGMA_error("The parameter z and the momentum have to be parallel\n");
-  
+
+  ///This first implementation requires z and sinkMom to have just one non-zero component
+  auto IsNonZero = [](int i) { return i!=0;}; 
+
+  int ZsNonZero = std::count_if (z.begin(), z.end(), IsNonZero);
+
+  if(ZsNonZero>1) PLEGMA_error("At the moment just one non-zero component of the vector z is allowed\n");
+
+  int PNonZero = std::count_if (sinkMom.begin(), sinkMom.end(), IsNonZero);
+
+  if(PNonZero>1) PLEGMA_error("At the moment just one non-zero component of the momentum vector is allowed\n");
+
   
   {
     // Reading from Lime file and loading to device
