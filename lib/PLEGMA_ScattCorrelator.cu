@@ -1913,7 +1913,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_transp(int gi){
   for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
     for( int i_g=0; i_g < N_gammas; ++i_g ){
       Float sign=sign_arr[this->GList[gi][i_g]];
-      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2 );
+      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs );
     }
   }
 }
@@ -1934,7 +1934,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_adj(int gi){
   for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
     for( int i_g=0; i_g < N_gammas; ++i_g ){
       Float sign=sign_arr[this->GList[gi][i_g]];
-      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
+      x_e_sx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs);
     }
   }
 }

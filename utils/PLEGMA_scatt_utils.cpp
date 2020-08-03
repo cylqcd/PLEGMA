@@ -53,8 +53,10 @@ template void x_e_cx<double>( double *dest, const double floatcomplex[2], int si
 template<typename Float>
 void x_e_sx( Float *dest, const Float floatreal,  int size ){
   for (int i=0; i<size; ++i){
-    Float tmpre=floatreal*dest[i];
-    dest[i]= tmpre;
+    Float tmpim=floatreal*dest[2*i+1];
+    Float tmpre=floatreal*dest[2*i+0];
+    dest[2*i+1]= tmpim;
+    dest[2*i+0]= tmpre;
   }
 }
 template void x_e_sx<float>(  float *dest,  const float  floatreal, int size) ;
