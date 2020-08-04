@@ -1246,7 +1246,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
       //PhixGf2xPhi
       //pipi_aux.PhiPhi( Phi_0[beta], this->GList[1], Phi_1[alfa]); //T x N_moms x n_gammas_f2
       std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
-      pipi_aux.PhiPhi( Phi_0[beta], tmpGf2, Phi_1[alfa]); //T x N_moms x n_gammas_f2
+      pipi_aux.PhiPhi( phi0beta, tmpGf2, phi1alfa); //T x N_moms x n_gammas_f2
     
       if(i_pi2==-1){
         for( int im=0; im<N_moms; ++im)
@@ -1878,9 +1878,8 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase(){
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
-
   int in_dofs=ranges[0]*offsets[0];
-  x_e_sx<Float>( this->H_elem() , 1./n_stoch, in_dofs);
+  x_e_sx<Float>( this->H_elem() , 1./n_stoch, in_dofs/2);
 }
 
 

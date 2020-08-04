@@ -595,8 +595,11 @@ int main(int argc, char **argv)
 
           reductions_DD_V3_GAMMAF2U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zeropion));
           reductions_DD_V3_GAMMAF2D_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zeropion));
-          reductions_DD_V3_GAMMAF2U.push_back(         new PLEGMA_ScattCorrelator<float>(source, sourcemomentumList.uniq_p(0)));
-
+#endif
+#if defined(PLEGMA_SCATTERING_SPIN32)
+          reductions_DD_V3_GAMMAF2U.push_back(         new PLEGMA_ScattCorrelator<float>(source, sourcemomentumList.uniq_p(2)));
+#endif
+#if defined(PLEGMA_SCATTERING_SPIN12)
           reductions_DD_V4_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
           reductions_DD_V2_GAMMAF1D_U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
           reductions_DD_V2_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
@@ -1057,8 +1060,8 @@ int main(int argc, char **argv)
 
 
 
-        PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
-        PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV3_12(source, piN12_zeropion);
+        PLEGMA_ScattCorrelator<float> reductionsV2_12(source, filtered_sourcemomentumList_pi20.uniq_p(1));
 
         PLEGMA_ScattCorrelator<float> corrB3(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrB4(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
@@ -1172,55 +1175,55 @@ int main(int argc, char **argv)
 
           //For computing the B diagrams we compute the V3 factor
           //using the sequential propagator for U(xf1,xf2) type
-          TIME(reductionsV3.V3( stochastic_source, glist_sink_meson,   propTS, true),"ISOSPIN12");
+          TIME(reductionsV3_12.V3( stochastic_source, glist_sink_meson,   propTS, true),"ISOSPIN12");
 
-          TIME(corrB3.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i], 0, 3, true),"ISOSPIN12");
-          TIME(corrB4.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U[i], 0, 4, true),"ISOSPIN12");
-          TIME(corrB5.B_diagramms(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i], 0, 5, true),"ISOSPIN12");
-          TIME(corrB6.B_diagramms(reductionsV3, *reductions_UU_V4_GAMMAF1D_U[i], 0, 6, true),"ISOSPIN12");
+          TIME(corrB3.B_diagramms(reductionsV3_12, *reductions_UU_V2_GAMMAF1D_U[i], 0, 3, true),"ISOSPIN12");
+          TIME(corrB4.B_diagramms(reductionsV3_12, *reductions_UU_V4_GAMMAF1D_U[i], 0, 4, true),"ISOSPIN12");
+          TIME(corrB5.B_diagramms(reductionsV3_12, *reductions_UU_V2_GAMMAF1D_U[i], 0, 5, true),"ISOSPIN12");
+          TIME(corrB6.B_diagramms(reductionsV3_12, *reductions_UU_V4_GAMMAF1D_U[i], 0, 6, true),"ISOSPIN12");
 
           
-          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V4( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false),"ISOSPIN12");
 
-          TIME(corrW5.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 5, true),"ISOSPIN12");
-          TIME(corrW7.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 7, true),"ISOSPIN12");
+          TIME(corrW5.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 5, true),"ISOSPIN12");
+          TIME(corrW7.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 7, true),"ISOSPIN12");
 
-          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V2( stochastic_propagator, glist_sink_nucleon, propDN, propTS, false),"ISOSPIN12");
 
-          TIME(corrW6.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 6, true),"ISOSPIN12");
-          TIME(corrW8.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 8, true),"ISOSPIN12");
+          TIME(corrW6.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 6, true),"ISOSPIN12");
+          TIME(corrW8.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 8, true),"ISOSPIN12");
 
 
           //for D(xf1,xf2) type
           stochastic_propagator.apply_gamma5();
-          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true),"ISOSPIN12");
+          TIME(reductionsV3_12.V3( stochastic_propagator, glist_sink_meson,   propTS, true),"ISOSPIN12");
 
-          TIME(corrB17.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0, 17, true),"ISOSPIN12");
-          TIME(corrB18.B_diagramms(reductionsV3, *reductions_DD_V4_GAMMAF1U_D[i], 0, 18, true),"ISOSPIN12");
-          TIME(corrB19.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D[i], 0, 19, true),"ISOSPIN12");
-          TIME(corrB20.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_D[i], 0, 20, true),"ISOSPIN12");
+          TIME(corrB17.B_diagramms(reductionsV3_12, *reductions_DD_V4_GAMMAF1U_D[i], 0, 17, true),"ISOSPIN12");
+          TIME(corrB18.B_diagramms(reductionsV3_12, *reductions_DD_V4_GAMMAF1U_D[i], 0, 18, true),"ISOSPIN12");
+          TIME(corrB19.B_diagramms(reductionsV3_12, *reductions_DD_V2_GAMMAF1U_D[i], 0, 19, true),"ISOSPIN12");
+          TIME(corrB20.B_diagramms(reductionsV3_12, *reductions_DD_V2_GAMMAF1U_D[i], 0, 20, true),"ISOSPIN12");
 
           //For computing the W diagrams we compute the V2 factor using the sequential
           stochastic_source.apply_gamma5();
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN12");
 
-          TIME(corrW13.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 13, true),"ISOSPIN12");
-          TIME(corrW15.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 15, true),"ISOSPIN12");
+          TIME(corrW13.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2_12, 0, 13, true),"ISOSPIN12");
+          TIME(corrW15.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2_12, 0, 15, true),"ISOSPIN12");
 
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN12");
 
-          TIME(corrW14.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 14, true),"ISOSPIN12");
-          TIME(corrW16.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2, 0, 16, true),"ISOSPIN12");
+          TIME(corrW14.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2_12, 0, 14, true),"ISOSPIN12");
+          TIME(corrW16.W_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], reductionsV2_12, 0, 16, true),"ISOSPIN12");
 
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propDN, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V2( stochastic_source, glist_sink_nucleon, propTS, propDN, false),"ISOSPIN12");
 
-          TIME(corrW31.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 31, true),"ISOSPIN12");
-          TIME(corrW32.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 32, true),"ISOSPIN12");
+          TIME(corrW31.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 31, true),"ISOSPIN12");
+          TIME(corrW32.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 32, true),"ISOSPIN12");
 
-          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propTS, propDN, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V4( stochastic_source, glist_sink_nucleon, propTS, propDN, false),"ISOSPIN12");
 
-          TIME(corrW29.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 29, true),"ISOSPIN12");
-          TIME(corrW30.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 30, true),"ISOSPIN12");
+          TIME(corrW29.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 29, true),"ISOSPIN12");
+          TIME(corrW30.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 30, true),"ISOSPIN12");
 
         }//loop over stochastic samples
 
@@ -1320,8 +1323,8 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> corrT25(sourcePositions[isource], list_mpi2ptot);
         PLEGMA_ScattCorrelator<float> corrT26(sourcePositions[isource], list_mpi2ptot);
 
-        PLEGMA_ScattCorrelator<float> reductionsV3(source, piN12_zeropion);
-        PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV3_12(source, piN12_zeropion);
+        PLEGMA_ScattCorrelator<float> reductionsV2_12(source, filtered_sourcemomentumList_pi20.uniq_p(1));
 
         PLEGMA_ScattCorrelator<float> corrB7(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrB8(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
@@ -1430,36 +1433,36 @@ int main(int argc, char **argv)
           stochastic_propagator.load();
           stochastic_source.load();
 
-          TIME(reductionsV2.V2( stochastic_propagator, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V2( stochastic_propagator, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN12");
 
-          TIME( corrW9.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0,  9, true),"ISOSPIN12");
-          TIME(corrW11.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 11, true),"ISOSPIN12");
+          TIME( corrW9.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0,  9, true),"ISOSPIN12");
+          TIME(corrW11.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 11, true),"ISOSPIN12");
 
-          TIME(reductionsV2.V4( stochastic_propagator, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V4( stochastic_propagator, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN12");
 
-          TIME(corrW10.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 10, true),"ISOSPIN12");
-          TIME(corrW12.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 12, true),"ISOSPIN12");
+          TIME(corrW10.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 10, true),"ISOSPIN12");
+          TIME(corrW12.W_diagramms( *reductions_UU_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 12, true),"ISOSPIN12");
 
 
           //For computing the B diagrams we compute the V3 factor
           //using the sequential propagator
           stochastic_propagator.apply_gamma5();
-          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true),"ISOSPIN12");
+          TIME(reductionsV3_12.V3( stochastic_propagator, glist_sink_meson,   propTS, true),"ISOSPIN12");
 
-          TIME(corrB7.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], 0, 7, true),"ISOSPIN12");
-          TIME(corrB8.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], 0, 8, true),"ISOSPIN12");
+          TIME(corrB7.B_diagramms(reductionsV3_12, *reductions_DD_V2_GAMMAF1U_U[i], 0, 7, true),"ISOSPIN12");
+          TIME(corrB8.B_diagramms(reductionsV3_12, *reductions_DD_V2_GAMMAF1U_U[i], 0, 8, true),"ISOSPIN12");
 
           //For computing the W diagrams we compute the V2 factor using the sequential
           stochastic_source.apply_gamma5();
-          TIME(reductionsV2.V4( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V4( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN12");
           
-          TIME(corrW33.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 33, true),"ISOSPIN12");
-          TIME(corrW34.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 34, true),"ISOSPIN12");
+          TIME(corrW33.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 33, true),"ISOSPIN12");
+          TIME(corrW34.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 34, true),"ISOSPIN12");
 
-          TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN12");
+          TIME(reductionsV2_12.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN12");
  
-          TIME(corrW35.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 35, true),"ISOSPIN12");
-          TIME(corrW36.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2, 0, 36, true),"ISOSPIN12");
+          TIME(corrW35.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 35, true),"ISOSPIN12");
+          TIME(corrW36.W_diagramms( *reductions_DD_V3_GAMMAF2U_zero_mom[i], reductionsV2_12, 0, 36, true),"ISOSPIN12");
 
         }//loop over stochastic samples
 
