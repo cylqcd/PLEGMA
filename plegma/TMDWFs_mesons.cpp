@@ -44,9 +44,10 @@ int main(int argc, char **argv)
 
   double z_mod = sqrt(pow(z[0],2)+pow(z[1],2)+pow(z[2],2));
   double P_mod = sqrt(pow(sinkMom[0],2)+pow(sinkMom[1],2)+pow(sinkMom[2],2));
+
   
   for(size_t i=0; i < z.size() ; i ++)
-    if(z[i]/z_mod-sinkMom[i]/P_mod!=0)
+    if(z[i]/z_mod-sinkMom[i]/P_mod!=0 && z_mod!=0)
       PLEGMA_error("The parameter z and the momentum have to be parallel\n");
 
   ///This first implementation requires z and sinkMom to have just one non-zero component
@@ -205,7 +206,7 @@ int main(int argc, char **argv)
       //Apply here stout smearing if needed
       PLEGMA_Su3field<float> WL;
       TIME(computeStaple(WL,gaugeWL));
-
+      
 
       //Apply shift to propagator
       auto shiftPropagator = [&](PLEGMA_Propagator<float>* propF){
@@ -230,8 +231,8 @@ int main(int argc, char **argv)
       PLEGMA_Propagator<float> shifted_propUP(BOTH);
       shifted_propUP.copy(propUP);
       TIME(shiftPropagator(&shifted_propUP));
-
-      
+      shifted_propUP.rotateToPhysicalBase_device(+1);
+      shifted_propUP.applyBoundaries_device(source[3]);
 			     
       propUP.rotateToPhysicalBase_device(+1);
       propDN.rotateToPhysicalBase_device(-1);
@@ -239,7 +240,8 @@ int main(int argc, char **argv)
       propDN.applyBoundaries_device(source[3]);
     
       PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-      TIME(corr.contractMesons(propUP, propDN));
+      corr.setFixMomVec(sinkMom);
+      TIME(corr.contractTMDWFMesons(propUP,shifted_propUP,WL));
       THREAD(corr.writeFile(twop_filename, corr_file_format));
     
     }

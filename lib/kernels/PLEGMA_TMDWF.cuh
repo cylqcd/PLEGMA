@@ -8,10 +8,11 @@ const __device__ float mesons_TMDWF_values[N_TMDWF_MESONS][16] = {1,1,-1,-1,1,1,
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
-					propTex<FloatB> texProp2,
-					Float2<FloatC> *block2,
-					int it, int time_step, int maxT, int4 source,
-					bool runFT, tex_mom_list moms){
+					      propTex<FloatB> texProp2,
+					      su3Tex<float> TexStaple,
+					      Float2<FloatC> *block2,
+					      int it, int time_step, int maxT, int4 source,
+					      bool runFT, tex_mom_list moms){
 
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
@@ -31,6 +32,8 @@ __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     texProp1.get(prop1,vid);
     texProp2.get(prop2,vid);
+    Float2<float> staple[N_COLS][N_COLS];
+    TexStaple.get(staple,vid);
 #pragma unroll
     for(int ip = 0 ; ip < N_TMDWF_MESONS ; ip++){
 #pragma unroll
@@ -44,8 +47,11 @@ __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
 	for(int a = 0 ; a < N_COLS ; a++){
 #pragma unroll
 	  for(int b = 0 ; b < N_COLS ; b++){
-	    accum[ip] = accum[ip] + value * prop1[alpha][beta][a][b] * conj(prop2[delta][gamma][a][b]);
-	    accum[N_TMDWF_MESONS+ip] = accum[N_TMDWF_MESONS+ip] + value * prop1[alpha][beta][a][b] * conj(prop2[delta][gamma][a][b]);
+#pragma unroll
+	    for(int c = 0 ; c < N_COLS ; c++){
+	      accum[ip] = accum[ip] + value * prop1[alpha][beta][c][a] * conj(prop2[gamma][delta][b][a]) * staple[b][c];
+	      accum[N_TMDWF_MESONS+ip] = accum[N_TMDWF_MESONS+ip] + value * prop1[alpha][beta][c][a] * conj(prop2[gamma][delta][b][a]) * staple[b][c];
+	    }
 	  }
 	}
       }
@@ -66,8 +72,9 @@ __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
 
 template<typename FloatA, typename FloatB, typename FloatC>
 void contract_TMDWF_mesons_host( ProfileStruct &ps,
-			   PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
-			   PLEGMA_Correlator<FloatC>& corr, Float2<FloatC> *result){
+				 PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
+				 PLEGMA_Correlator<FloatC>& corr, PLEGMA_Su3field<float>& staple,
+				 Float2<FloatC> *result){
 
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
@@ -98,12 +105,13 @@ void contract_TMDWF_mesons_host( ProfileStruct &ps,
 
   auto propTex1 = toTexture<propTex>(prop1);
   auto propTex2 = toTexture<propTex>(prop2);
+  auto stapleTex = toTexture<su3Tex>(staple);
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     contract_TMDWF_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
+      (*propTex1, *propTex2, *stapleTex  ,d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
@@ -130,7 +138,7 @@ void contract_TMDWF_mesons_host( ProfileStruct &ps,
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void contract_TMDWF_mesons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
-			    PLEGMA_Correlator<FloatC>& corr){
+				  PLEGMA_Correlator<FloatC>& corr, PLEGMA_Su3field<float>& staple){
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size = 2*N_TMDWF_MESONS;
   
@@ -153,7 +161,7 @@ static void contract_TMDWF_mesons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propa
   ps.tune_globally = true;
   
   tuneAndRun( ps, "contract_TMDWF_mesons", contract_TMDWF_mesons_host<FloatA,FloatB,FloatC>,
-	      ps, prop1, prop2, corr, result);
+	      ps, prop1, prop2, corr, staple, result);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);

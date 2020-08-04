@@ -53,7 +53,8 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
-	       PLEGMA_Propagator<Float> &prop2 ){
+		    PLEGMA_Propagator<Float> &prop2,
+		    PLEGMA_Su3field<float> &staple){
 
   shape = {1};
   datasets =  {"twop_meson_1", "twop_meson_2"};
@@ -61,7 +62,7 @@ contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
   description = "g4 ";
   
   initialize();
-  contract_TMDWF_mesons(prop1,prop2,*this);
+  contract_TMDWF_mesons(prop1,prop2,*this, staple);
 }
 
 
