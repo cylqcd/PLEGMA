@@ -299,6 +299,7 @@ int main(int argc, char **argv)
         stochastic_propags[i]->copy(vectorRead,HOST);
       }
     }
+#if 0
 #ifdef PLEGMA_SCATTERING_SPIN12
     //Creating loops for zero momentum
     //for the I=1/2 case we consider only momentum for the nucleon
@@ -582,9 +583,7 @@ int main(int argc, char **argv)
       for(int i=0; i< n_stochastic_samples; ++i) {
         try
         {
-#if defined(PLEGMA_SCATTERING_SPIN12) || defined(PLEGMA_SCATTERING_SPIN32)
           reductions_DD_V2_GAMMAF1U_U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
-#endif
 
 #if defined(PLEGMA_SCATTERING_SPIN12)
           reductions_UU_V2_GAMMAF1D_U.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
@@ -2050,7 +2049,6 @@ int main(int argc, char **argv)
          TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ),"ISOSPIN32");
          TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 2 ),"ISOSPIN32");
 #endif
-#if defined(PLEGMA_SCATTERING_SPIN32)
 
          //Diagram Z6,Z8
 #if defined(PLEGMA_SCATTERING_SPIN12)
@@ -2282,8 +2280,11 @@ int main(int argc, char **argv)
 
          TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 3 ),"ISOSPIN32");
          TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 4 ),"ISOSPIN32");
-
+#endif
        }
+
+
+#if defined(PLEGMA_SCATTERING_SPIN12)
 
        if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
 
@@ -2310,7 +2311,10 @@ int main(int argc, char **argv)
          TIME(produceOutput(corrD1if56, outfilename,"4pt"),"ISOSPIN12");
 
        }
+#endif
 
+
+#if defined(PLEGMA_SCATTERING_SPIN32)
 
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
@@ -2418,6 +2422,7 @@ int main(int argc, char **argv)
       stochastic_oet_prop_u_fini_mom.pop_back();
 #endif
     }
+#endif
 
     for(int i=0; i< n_stochastic_samples; ++i) {
       stochastic_sources.pop_back();
