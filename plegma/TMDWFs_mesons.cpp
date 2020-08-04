@@ -60,6 +60,17 @@ int main(int argc, char **argv)
 
   if(PNonZero>1) PLEGMA_error("At the moment just one non-zero component of the momentum vector is allowed\n");
 
+  signed short int z_dir = 0;
+  signed short int b_dir = 0;
+  for(size_t i=0; i < z.size() ; i ++){
+    if(z[i]!=0)
+      z_dir = i;
+    if(b[i]!=0)
+      b_dir = i;
+  }
+  
+  
+  
   
   {
     // Reading from Lime file and loading to device
@@ -82,8 +93,7 @@ int main(int argc, char **argv)
 
     
     float SourcePhase;
-    PLEGMA_Su3field<float> su3;
-    PLEGMA_Su3field<float> WL;
+   
 
     
     PLEGMA_printf("Sink Momentum px %d, py %d, pz %d, pt %d\n",
@@ -157,13 +167,45 @@ int main(int argc, char **argv)
       TIME(computePropagator(propDN, propDN_SL, mu<0 ? mu : -mu));
 
 
-      // auto computeStaple = [&](){
+      
+      
 
-      // 			     PLEGMA_Gauge<float> gaugeWL;
-      // 			     gaugeWL.copy(gauge);
-      // 			     su3.absorbDir_device(gaugeWL, WilsDir);
-      // 			     WL.setUnit( (std::vector<int>) {0,4,8});
-			     
+      auto computeStaple = [&](PLEGMA_Su3field<float>& staple,PLEGMA_Gauge<float>& gaugeF){
+
+			     staple.setUnit( (std::vector<int>) {0,4,8});
+
+			     {
+			       PLEGMA_Su3field<float> su3;
+			       PLEGMA_Su3field<float> tmp;
+			       su3.absorbDir_device(gaugeF, z_dir);
+			       for(int j=0;j<l;j++)
+				 staple.wilsonLineUpdate(su3, tmp, z_dir);
+			     }
+
+			     {
+			       PLEGMA_Su3field<float> su3;
+			       PLEGMA_Su3field<float> tmp;
+			       su3.absorbDir_device(gaugeF, b_dir);
+			       for(int j=0;j<b[b_dir];j++)
+				 staple.wilsonLineUpdate(su3, tmp, 4+b_dir);
+			     }
+
+			     {
+			       PLEGMA_Su3field<float> su3;
+			       PLEGMA_Su3field<float> tmp;
+			       su3.absorbDir_device(gaugeF, z_dir);
+			       for(int j=0;j<l+z[z_dir];j++)
+				 staple.wilsonLineUpdate(su3, tmp, 4+z_dir);
+			     }
+			   };
+
+      //If stout smearing is needed we have to allocate a new gauge field
+      PLEGMA_Gauge<float> gaugeWL;
+      gaugeWL.copy(gauge);
+      //Apply here stout smearing if needed
+      PLEGMA_Su3field<float> WL;
+      TIME(computeStaple(WL,gaugeWL));
+      
 			     
       propUP.rotateToPhysicalBase_device(+1);
       propDN.rotateToPhysicalBase_device(-1);
