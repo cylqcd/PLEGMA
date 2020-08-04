@@ -299,7 +299,7 @@ int main(int argc, char **argv)
         stochastic_propags[i]->copy(vectorRead,HOST);
       }
     }
-#if 0
+
 #ifdef PLEGMA_SCATTERING_SPIN12
     //Creating loops for zero momentum
     //for the I=1/2 case we consider only momentum for the nucleon
@@ -315,6 +315,7 @@ int main(int argc, char **argv)
 
     Loop_UPDN.initialize_diagram( glist_sink_meson, "L");
 
+
     for (int i=0; i<n_stochastic_samples; ++i){
       
       TIME(Loop_UPDN.Loop_diagramms( stochastic_propags[i], stochastic_sources[i], 0, true),"ISOSPIN12");
@@ -322,6 +323,7 @@ int main(int argc, char **argv)
     }
 
     TIME(Loop_UPDN.normalize_nstoch(n_stochastic_samples),"ISOSPIN12");
+
 #endif
 
 /********************************************************************************************
@@ -338,7 +340,7 @@ int main(int argc, char **argv)
 *
 *********************************************************************************************/
 
-#if defined(PLEGMA_SCATTERING_SPIN32) || defined(PLEGMA_SCATTERING_SPIN12)
+//#if defined(PLEGMA_SCATTERING_SPIN32) || defined(PLEGMA_SCATTERING_SPIN12)
 
 
     //loop over the soure positions
@@ -2404,7 +2406,7 @@ int main(int argc, char **argv)
 
     } //end of loop over source position
 
-#endif
+//#endif
 
 #ifdef PLEGMA_SCATTERING_SPIN12
     std::string outfilename;
@@ -2422,7 +2424,6 @@ int main(int argc, char **argv)
       stochastic_oet_prop_u_fini_mom.pop_back();
 #endif
     }
-#endif
 
     for(int i=0; i< n_stochastic_samples; ++i) {
       stochastic_sources.pop_back();
