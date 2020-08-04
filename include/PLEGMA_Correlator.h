@@ -170,6 +170,10 @@ namespace plegma {
     }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
+
+    void contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
+			PLEGMA_Propagator<Float> &prop2);
+    
     
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2);
