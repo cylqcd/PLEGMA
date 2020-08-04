@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 
     for(int isource=0;isource<numSourcePositions;isource++) {
       site& source = sourcePositions[isource];
-    
+      
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
@@ -205,6 +205,32 @@ int main(int argc, char **argv)
       //Apply here stout smearing if needed
       PLEGMA_Su3field<float> WL;
       TIME(computeStaple(WL,gaugeWL));
+
+
+      //Apply shift to propagator
+      auto shiftPropagator = [&](PLEGMA_Propagator<float>* propF){
+
+			       PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);
+			       PLEGMA_Propagator<float> *propExchange = nullptr;
+			       propF->unload();
+
+			       for(int j=0;j<z[z_dir];j++){
+				 propExchange = propIn; propIn = propF; propF = propExchange;
+				 TIME(propF->shift(*propIn, 4+z_dir));
+			       }
+
+			       for(int j=0;j<b[b_dir];j++){
+				 propExchange = propIn; propIn = propF; propF = propExchange;
+				 TIME(propF->shift(*propIn, 4+b_dir));
+			       }
+			       
+			   };
+
+
+      PLEGMA_Propagator<float> shifted_propUP(BOTH);
+      shifted_propUP.copy(propUP);
+      TIME(shiftPropagator(&shifted_propUP));
+
       
 			     
       propUP.rotateToPhysicalBase_device(+1);
