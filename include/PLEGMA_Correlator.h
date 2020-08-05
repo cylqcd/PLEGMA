@@ -173,7 +173,8 @@ namespace plegma {
 
     void contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
 			     PLEGMA_Propagator<Float> &prop2,
-			     PLEGMA_Su3field<float> &staple);
+			     PLEGMA_Su3field<float> &staple,
+			     int l);
     
     
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,

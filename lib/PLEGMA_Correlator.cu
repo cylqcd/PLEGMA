@@ -54,10 +54,13 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
 		    PLEGMA_Propagator<Float> &prop2,
-		    PLEGMA_Su3field<float> &staple){
+		    PLEGMA_Su3field<float> &staple, int l){
 
   shape = {1};
-  datasets =  {"twop_meson_1", "twop_meson_2"};
+  char d1[50],d2[50];
+  sprintf(d1,"twop_meson_1_l_%d",l);
+  sprintf(d2,"twop_meson_2_l_%d",l);
+  datasets =  {d1, d2};
   groups =  {"mesons"};
   description = "g4 ";
   

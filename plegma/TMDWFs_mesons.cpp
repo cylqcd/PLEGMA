@@ -24,8 +24,8 @@ int main(int argc, char **argv)
 
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
 
-  size_t l = 1;
-  HGC_options->set("l-wave-function", "Wave function limit parameter l", verbosity, l);
+  std::vector<size_t> ls = {0,};
+  HGC_options->set("ls-wave-function", "Wave function limit parameter l", verbosity, ls);
   
   std::vector<int> b = {0,0,0};
   HGC_options->set("b-wave-function", "Wave function displacement parameter b", verbosity, b);
@@ -33,11 +33,13 @@ int main(int argc, char **argv)
   std::vector<int> z = {0,0,0};
   HGC_options->set("z-wave-function", "Wave function parameter z", verbosity, z);
 
+
   
   //=========================================================================================================//
   initializePLEGMA();
 
-  if(l<0) PLEGMA_error("The wave function limit parameter l has to be positive\n");
+  for(auto l:ls)
+    if(l<0) PLEGMA_error("The wave function limit parameter l has to be positive\n");
   for(size_t i=0; i < b.size() ; i ++)
     if(b[i]*sinkMom[i]!=0)
       PLEGMA_error("The displacement parameter b and the momentum have to be perpendicular\n");
@@ -171,7 +173,7 @@ int main(int argc, char **argv)
       
       
 
-      auto computeStaple = [&](PLEGMA_Su3field<float>& staple,PLEGMA_Gauge<float>& gaugeF){
+      auto computeStaple = [&](PLEGMA_Su3field<float>& staple,PLEGMA_Gauge<float>& gaugeF,int l_d){
 
 			     staple.setUnit( (std::vector<int>) {0,4,8});
 
@@ -179,7 +181,7 @@ int main(int argc, char **argv)
 			       PLEGMA_Su3field<float> su3;
 			       PLEGMA_Su3field<float> tmp;
 			       su3.absorbDir_device(gaugeF, z_dir);
-			       for(int j=0;j<l;j++)
+			       for(int j=0;j<l_d;j++)
 				 staple.wilsonLineUpdate(su3, tmp, z_dir);
 			     }
 
@@ -195,19 +197,12 @@ int main(int argc, char **argv)
 			       PLEGMA_Su3field<float> su3;
 			       PLEGMA_Su3field<float> tmp;
 			       su3.absorbDir_device(gaugeF, z_dir);
-			       for(int j=0;j<l+z[z_dir];j++)
+			       for(int j=0;j<l_d+z[z_dir];j++)
 				 staple.wilsonLineUpdate(su3, tmp, 4+z_dir);
 			     }
 			   };
 
-      //If stout smearing is needed we have to allocate a new gauge field
-      PLEGMA_Gauge<float> gaugeWL;
-      gaugeWL.copy(gauge);
-      //Apply here stout smearing if needed
-      PLEGMA_Su3field<float> WL;
-      TIME(computeStaple(WL,gaugeWL));
       
-
       //Apply shift to propagator
       auto shiftPropagator = [&](PLEGMA_Propagator<float>* propF){
 
@@ -232,17 +227,34 @@ int main(int argc, char **argv)
       shifted_propUP.copy(propUP);
       TIME(shiftPropagator(&shifted_propUP));
       shifted_propUP.rotateToPhysicalBase_device(+1);
-      shifted_propUP.applyBoundaries_device(source[3]);
-			     
       propUP.rotateToPhysicalBase_device(+1);
-      propDN.rotateToPhysicalBase_device(-1);
+      shifted_propUP.applyBoundaries_device(source[3]);
       propUP.applyBoundaries_device(source[3]);
-      propDN.applyBoundaries_device(source[3]);
+      
+      for(auto l:ls){
+	//If stout smearing is needed we have to allocate a new gauge field
+	PLEGMA_Gauge<float> gaugeWL;
+	gaugeWL.copy(gauge);
+	//Apply here stout smearing if needed
+	PLEGMA_Su3field<float> WL;
+	TIME(computeStaple(WL,gaugeWL,l));
+	
+	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+	corr.setFixMomVec(sinkMom);
+	TIME(corr.contractTMDWFMesons(propUP,shifted_propUP,WL,l));
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
+      }
+
+      
+      // propUP.rotateToPhysicalBase_device(+1);
+      // propDN.rotateToPhysicalBase_device(-1);
+      // propUP.applyBoundaries_device(source[3]);
+      // propDN.applyBoundaries_device(source[3]);
     
-      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-      corr.setFixMomVec(sinkMom);
-      TIME(corr.contractTMDWFMesons(propUP,shifted_propUP,WL));
-      THREAD(corr.writeFile(twop_filename, corr_file_format));
+      // PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+      // corr.setFixMomVec(sinkMom);
+      // TIME(corr.contractTMDWFMesons(propUP,shifted_propUP,WL));
+      // THREAD(corr.writeFile(twop_filename, corr_file_format));
     
     }
   
