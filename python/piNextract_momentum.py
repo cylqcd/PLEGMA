@@ -7,7 +7,7 @@
 # - Specify the output hdf5 file
 # - Specify the input hdf5 files
 #
-# Run this as 'python3 piNextract_momentum.py 0 0 0 1 1 1 2 2 2 1 1 Cg5 g5 Cg5 g5 B1 filtered.h5 Diagramm0000_B.h5'
+# Run this as 'python3 piNextract_momentum.py 0 0 0 1 1 1 2 2 2 1 1 Cg5 g5 Cg5 g5 B1 32 filtered.h5 Diagramm0000_B.h5'
 # 0 0 0 is pi2 momentum
 # 1 1 1 is pf1 momentum
 # 2 2 2 is pf2 momentum
@@ -47,7 +47,8 @@ gamma_i2_input=sys.argv[13]
 gamma_f1_input=sys.argv[14]
 gamma_f2_input=sys.argv[15]
 diagramindex = sys.argv[16]
-output = sys.argv[17]
+isospin = sys.argv[17]
+output = sys.argv[18]
 with h5py.File(output, "a") as fo:
     for _file in sys.argv[18:]:
         print("Opening "+_file)
@@ -55,7 +56,7 @@ with h5py.File(output, "a") as fo:
             _dir = _file.split("Diagramm")[-1].split("_")[0]
             for src in fp.keys():
                  print(src)
-                 grpname = "/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/"
+                 grpname = "/"+src+"/"+isospin+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/"
                  print(grpname)
                  if ((grpname+"mvec") in fp):
                    data2 = fp[grpname+"mvec"][:,:]
@@ -95,5 +96,5 @@ with h5py.File(output, "a") as fo:
                    print(index_gamma)
                    print(index_momentum)
                    data = fp[grpname+diagramindex][:,index_momentum,index_gamma,:]
-                   grp = fo.require_group("/"+_dir+"/"+src+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/")
+                   grp = fo.require_group("/"+_dir+"/"+src+"/"+isospin+"/pi2="+pi2x+"_"+pi2y+"_"+pi2z+"/")
                    grp.create_dataset(diagramindex, data.shape, dtype = data.dtype, data = data)

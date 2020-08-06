@@ -535,24 +535,24 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Description
   std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {G_f2};
   std::string tmp="";
-  for (auto gv : tmpvector){
+  for (int i=0; i<tmpvector.size(); ++i){
     tmp+="{";
-    for( int i=0; i<gv.size();++i ){
-      if (i==(gv.size()-1)){
-        tmp+= GAMMAS_SCATT_STR[gv[i]];
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
       }
       else{
-        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
       }
     }
-    if (gv==tmpvector[tmpvector.size()-1]){
+    if (i==(tmpvector.size()-1)){
       tmp+="}";
     }
     else{
       tmp+="},";
     }
   }
-
   this->description = tmp;
 
   //Groups
@@ -591,17 +591,18 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Description
   std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {G_i2, G_f2};
   std::string tmp="";
-  for (auto gv : tmpvector){
+  for (int i=0; i<tmpvector.size(); ++i){
     tmp+="{";
-    for( int i=0; i<gv.size();++i ){
-      if (i==(gv.size()-1)){
-        tmp+= GAMMAS_SCATT_STR[gv[i]];
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
       }
       else{
-        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
       }
     }
-    if (gv==tmpvector[tmpvector.size()-1]){
+    if (i==(tmpvector.size()-1)){
       tmp+="}";
     }
     else{
@@ -646,17 +647,18 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Description
   std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_f1};
   std::string tmp="";
-  for (auto gv : tmpvector){
+  for (int i=0; i<tmpvector.size(); ++i){
     tmp+="{";
-    for( int i=0; i<gv.size();++i ){
-      if (i==(gv.size()-1)){
-        tmp+= GAMMAS_SCATT_STR[gv[i]];
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
       }
       else{
-        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
       }
     }
-    if (gv==tmpvector[tmpvector.size()-1]){
+    if (i==(tmpvector.size()-1)){
       tmp+="}";
     }
     else{
@@ -715,25 +717,24 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Description
   std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_i2, G_f};
   std::string tmp="";
-  for (auto gv : tmpvector){
+  for (int i=0; i<tmpvector.size(); ++i){
     tmp+="{";
-    for( int i=0; i<gv.size();++i ){
-      if (i==(gv.size()-1)){
-        tmp+= GAMMAS_SCATT_STR[gv[i]];
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
       }
       else{
-        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
       }
     }
-    if (gv==tmpvector[tmpvector.size()-1]){
+    if (i==(tmpvector.size()-1)){
       tmp+="}";
     }
     else{
       tmp+="},";
     }
   }
-  tmp+="/S1/S2/";
-
   this->description=tmp;
   
   //momList
@@ -803,17 +804,18 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Description
   std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_i2, G_f1, G_f2};
   std::string tmp="";
-  for (auto gv : tmpvector){
+  for (int i=0; i<tmpvector.size(); ++i){
     tmp+="{";
-    for( int i=0; i<gv.size();++i ){
-      if (i==(gv.size()-1)){
-        tmp+= GAMMAS_SCATT_STR[gv[i]];
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
       }
       else{
-        tmp+= GAMMAS_SCATT_STR[gv[i]]+",";
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
       }
     }
-    if (gv==tmpvector[tmpvector.size()-1]){
+    if (i==(tmpvector.size()-1)){
       tmp+="}";
     }
     else{
