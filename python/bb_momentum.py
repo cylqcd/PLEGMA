@@ -73,25 +73,20 @@ with open(output, 'w') as fo:
                    gamma_extf_s=gamma_extf.split(','.encode());
                    gamma_extf_len  =len(gamma_extf_s)
                    gamma_extf_index=gamma_extf_s.index(gamma_extf_input.encode())
-
-                   gamma_text = gamma_text_separate[2].split('}{'.encode())
-
-                   gamma_i1=   (gamma_text[0])
-                   gamma_i1_s=gamma_i1.split(','.encode());
-                   gamma_i1_len  =len(gamma_i1_s)
-                   gamma_i1_index=gamma_i1_s.index(gamma_i1_input.encode())
-                   gamma_f1=   (gamma_text[1])
-                   gamma_f1_s=gamma_f1.split(','.encode());
-                   gamma_f1_len  =len(gamma_f1_s)
-                   gamma_f1_index=gamma_f1_s.index(gamma_f1_input.encode())
+                   gamma_text = gamma_text_separate[2].split(','.encode())
+                   gamma_i1=   (gamma_text)
+                   gamma_i1_len  =len(gamma_i1)
+                   gamma_i1_index=gamma_i1.index(gamma_i1_input.encode())
+                   gamma_text = gamma_text_separate[3].split(','.encode())
+                   gamma_f1=   (gamma_text)
+                   gamma_f1_len  =len(gamma_f1)
+                   gamma_f1_index=gamma_f1.index(gamma_f1_input.encode())
 
                    index_gamma = gamma_exti_index * gamma_extf_len * gamma_i1_len * gamma_f1_len + gamma_extf_index * gamma_i1_len * gamma_f1_len + gamma_i1_index * gamma_f1_len + gamma_f1_index
-                   print(index_gamma)
-                   print(index_momentum)
                    data = fp[grpname+diagramindex][:,index_momentum,index_gamma,:]
-                   # grp = fo.require_group("/"+_dir+"/"+src+"/")
-                   # grp.create_dataset(diagramindex, data.shape, dtype = data.dtype, data = data)
-
+                   #print(data)
+                   #grp = fo.require_group("/"+_dir+"/"+src+"/")
+                   #grp.create_dataset(diagramindex, data.shape, dtype = data.dtype, data = data)
                    for t in range( len(data) ) :
                            print ( "# t = "+str(t), file=fo ) 
                            np.savetxt(fo,  data[t][0] )
