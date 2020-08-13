@@ -203,7 +203,7 @@ namespace plegma {
 
     //others
     std::shared_ptr<Float> average_all_time_slices( );
-    std::shared_ptr<Float> get_source_time_slice( );
+    Float *get_source_time_slice( );
     void multiply_by_time_slice(std::shared_ptr<Float>&);
     void applyBoundaryConditions( bool antiperiodic );
     void apply_phase( );

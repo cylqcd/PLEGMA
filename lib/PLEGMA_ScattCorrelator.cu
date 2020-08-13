@@ -276,7 +276,7 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
 //       (3)genarlize it to a other time-slices
 //
 template<typename Float>
-std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
+Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   const int  size_of_glist =this->GList.size();
   int size_timeslice= this->Nmoms();
   for (int i=0; i< size_of_glist; ++i){
@@ -289,14 +289,17 @@ std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   else{
     size_timeslice *= 2;
   }
-  std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*size_timeslice), free);
+  Float *ptr=((Float *)malloc(sizeof(Float)*size_timeslice));
   const int t_source_local= this->source[DIM_T]%HGC_localL[DIM_T];
-  memcpy(ptr.get(), this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
+  memcpy(ptr, this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
   int coords[4];
   for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
   int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
-  int mpiErr = MPI_Bcast(&ptr, size_timeslice*sizeof(Float), MPI_Type<Float>(), rankHas, HGC_fullComm);
+
+  int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+  MPI_Barrier(HGC_fullComm);
+  PLEGMA_printf("DEBUG ptr global %e %e\n",ptr[0],ptr[1]);
   return ptr;
 }
 //This routine sum over the time direction a particular PLEGMA_ScattCorrelator object
