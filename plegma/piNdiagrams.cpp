@@ -1017,7 +1017,7 @@ int main(int argc, char **argv)
           TIME(corrD1ii1.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], Loop_UPDN_source, 0, 1, true),"ISOSPIN12");          
           TIME(corrD1ii2.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1U_D[i], Loop_UPDN_source, 0, 2, true),"ISOSPIN12");          
           TIME(corrD1ii3.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], Loop_UPDN_source, 0, 3, true),"ISOSPIN12");
-          TIME(corrD1ii4.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1U_U[i], Loop_UPDN_source, 0, 4, true),"ISOSPIN12"); 
+          TIME(corrD1ii4.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1U_D[i], Loop_UPDN_source, 0, 4, true),"ISOSPIN12"); 
 
           TIME(corrD1ii9.D1ii_diagramms( *reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i],Loop_UPDN_source, 0, 9, true),"ISOSPIN12");
           TIME(corrD1ii10.D1ii_diagramms(*reductions_DD_V3_GAMMAF2D_zero_mom[i], *reductions_DD_V2_GAMMAF1U_U[i],Loop_UPDN_source, 0, 10, true),"ISOSPIN12");
