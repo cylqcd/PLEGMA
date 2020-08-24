@@ -641,7 +641,7 @@ $$
 \item B4 diagram
 $$
 \Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\delta}
-{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)_{\alpha\gamma\beta}
+{\mathcal V}_4\left(\phi,\Gamma_{f1}^tU,D\right)_{\alpha\beta\gamma}
 $$
 \item B5 diagram
 $$
@@ -651,7 +651,7 @@ $$
 \item B6 diagram
 $$
 \Gamma_{i1}\left(\gamma,\delta\right){\mathcal V}_3\left(\xi,\gamma_5\Gamma_{f2}T^{uu}_{fii}\right)_{\beta}
-{\mathcal V}_4\left(\phi,\Gamma_{f1}D,U\right)_{\alpha\gamma\delta}
+{\mathcal V}_4\left(\phi,\Gamma_{f1}^tU,D\right)_{\alpha\delta\gamma}
 $$
 \end{itemize}
 \item W diagrams
@@ -1096,28 +1096,28 @@ $$
 {
 \begin{landscape}
 \section{Summary table}
-\begin{tabular}{ c c c c c c c }
-Diagram index & ${\mathcal V}_3$ & ${\mathcal V}_{2/4}$ & Reduction[R]/ReductionMatrix[M] & IndexAbs & Transp & Transgamma \\
-B1 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\beta\alpha\delta}$  & R & 2 & true & false  \\ 
-B2 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\delta\alpha\beta}$  & R & 0 & false & false \\
-B3 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
-B4 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\gamma\beta}$  & R & 1 & false & true  \\
-B5 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\gamma\alpha\delta}$ & M & 1 & true & false  \\
-B6 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\gamma\delta}$ & M & 0 & true & false  \\
-B7 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{dd}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\beta\alpha\delta}$  & R & 2 & true & false  \\
-B8 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{dd}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\delta\alpha\beta}$  & R & 0 & false & false \\
-B9 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\beta\alpha\gamma}$  & R & 2 & true  & true  \\
-B10& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\beta\gamma}$  & R & 2 & false & true  \\
-B11& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\delta\alpha\gamma}$ & M & 1 & true  & true  \\
-B12& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}  D,U)_{\alpha\delta\gamma}$ & M & 0 & true  & false \\
-B13& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\beta}$  & R & 1 & false & true  \\
-B14& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\delta}$ & M & 0 & true  & false \\
-B15& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
-B16& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\delta}$ & M & 1 & true  & false \\
-B17& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\beta}$  & R & 1 & false & true  \\
-B18& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\delta}$ & M & 0 & true  & false \\
-B19& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\beta}$  & R & 0 & false & true  \\
-B20& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\delta}$ & M & 1 & true  & false \\
+\begin{tabular}{ c c c c c c c c}
+Diagram index & ${\mathcal V}_3$ & ${\mathcal V}_{2/4}$ & Reduction[R]/ReductionMatrix[M] & IndexAbs & Transp & Transgammai1 & Transgammaf1 \\
+B1 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\beta\alpha\delta}$  & R & 2 & true  & false & true \\ 
+B2 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\delta\alpha\beta}$  & R & 0 & false & false & true\\
+B3 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\gamma\alpha\beta}$  & R & 0 & false & true & false \\
+B4 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_4(\phi, \Gamma_{f1}^tU,D)_{\alpha\beta\gamma}$  & R & 1 & false & true & false \\
+B5 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\gamma\alpha\delta}$ & M & 1 & false & true & false \\
+B6 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}^tU,D)_{\alpha\delta\gamma}$ & M & 0 & false & true & false \\
+B7 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{dd}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\beta\alpha\delta}$  & R & 2 & true  & false & true \\
+B8 & ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{dd}_{fii})_{\gamma}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}^tU,U)_{\delta\alpha\beta}$  & R & 0 & false & false & true \\
+B9 & ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\beta\alpha\gamma}$  & R & 2 & true  & true & false \\
+B10& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_4(\phi, \Gamma_{f1}^tU,D)_{\alpha\gamma\beta}$  & R & 1 & false & true & true \\
+B11& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_2(\phi, \Gamma_{f1}  D,U)_{\delta\alpha\gamma}$ & M & 1 & false  &false& false \\
+B12& ${\mathcal V}_3(\xi,\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\phi, \Gamma_{f1}^tU,D)_{\alpha\gamma\delta}$ & M & 0 & false  & true & true \\
+B13& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\beta}$  & R & 1 & false & true & false  \\
+B14& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\delta}$ & M & 0 & true  & false & false \\
+B15& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\beta}$  & R & 0 & false & true  & false \\
+B16& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{ud}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\delta}$ & M & 1 & true  & false & false \\
+B17& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\beta}$  & R & 1 & false & true & false\\
+B18& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}  U,D)_{\alpha\gamma\delta}$ & M & 0 & true  & false & false \\
+B19& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\delta}$ & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\beta}$  & R & 0 & false & true  & false \\
+B20& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}T^{uu}_{fii})_{\beta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}  U,D)_{\gamma\alpha\delta}$ & M & 1 & true  & false & false  \\
 \end{tabular}
 \end{landscape}
 }
