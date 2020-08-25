@@ -398,7 +398,7 @@ int main(int argc, char **argv)
         vectorAuxF.copy(vectorAuxD);
         propUP.absorb(vectorAuxF, isc/3, isc%3);
       }
-
+/*
       if(outfile_upS!="")
         {
           PLEGMA_printf("Save propagator for the up quark\n");
@@ -413,7 +413,7 @@ int main(int argc, char **argv)
           }
         }
 
-
+*/
       // ensuring mu negative
       if(mu>0) {
         mu*=-1.;
@@ -449,7 +449,7 @@ int main(int argc, char **argv)
 
         propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
-      if(outfile_dnS!="")
+/*      if(outfile_dnS!="")
         {
           PLEGMA_printf("Save propagator for the dn quark\n");
           PLEGMA_Vector<float> vectorAuxPrint(BOTH);
@@ -462,7 +462,7 @@ int main(int argc, char **argv)
             vectorAuxPrint.writeLIME(outfile_dnS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
           }
         }
-
+*/
       std::vector<int> mom={0,0,0};
       
       site source=site({0,0,0,sourcePositions[isource][3]});
@@ -747,7 +747,7 @@ int main(int argc, char **argv)
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
          vectorStoc_source_oet.copy(vectortmp1);
-         vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"oet_source"+sourcepositiontext);
+        // vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"oet_source"+sourcepositiontext);
   
          //Transforming to physical base for the UP quark
          vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,+1);
@@ -772,7 +772,7 @@ int main(int argc, char **argv)
            stochastic_oet_prop_u_zero_mom[spinindex]->copy(vectortmp2,HOST);
            vectortmp2.load();
 
-           vectortmp2.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
+          // vectortmp2.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
              vectortmp1.dilutespindisplace(vectorSave_diluted,spinindex+1,spinindex);
              vectorSave_diluted.copy(vectortmp1);
@@ -806,7 +806,7 @@ int main(int argc, char **argv)
            vectortmp2.unload();
            stochastic_oet_prop_d_zero_mom[spinindex]->copy(vectortmp2,HOST);
            vectortmp2.load();
-           vectortmp2.writeLIME(outfile_V+confnumber+"propagator_dn"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
+           //vectortmp2.writeLIME(outfile_V+confnumber+"propagator_dn"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
              vectortmp1.dilutespindisplace(vectorSave_diluted,spinindex+1,spinindex);
              vectorSave_diluted.copy(vectortmp1);
@@ -1194,7 +1194,7 @@ int main(int argc, char **argv)
           vectorAuxF.copy(vectorInOut);
 	  propTS.absorb(vectorAuxF, isc/3, isc%3);
         }
-
+/*
         if(outfile_SEQ!="")
         {
           PLEGMA_printf("Save propagator for the UPUP quark\n");
@@ -1209,7 +1209,7 @@ int main(int argc, char **argv)
           }
         }
 
-
+*/
         for (int i=0; i<n_stochastic_samples; ++i){
           //Computing diagrams containing loops first
 
@@ -1451,7 +1451,7 @@ int main(int argc, char **argv)
           vectorAuxF.copy(vectorInOut);
           propTS.absorb(vectorAuxF, isc/3, isc%3);
         }
-
+/*
         if(outfile_SEQ!="")
         {
           PLEGMA_printf("Save propagator for the DNDN quark\n");
@@ -1465,7 +1465,7 @@ int main(int argc, char **argv)
             vectorAuxPrint.writeLIME(outfile_SEQ+"DNDN"+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
           }
         }
-
+*/
 
         PLEGMA_ScattCorrelator<float> reductionsT1(source,  list_mpi2ptot.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsT2(source,  list_mpi2ptot.uniq_p(1));
@@ -1675,7 +1675,7 @@ int main(int argc, char **argv)
             propTS.absorb(vectorAuxF, isc/3, isc%3);
           }
 
-          
+         /* 
           if(outfile_SEQ!="")
           {
              PLEGMA_printf("Save sequential propagator for the ud \n");
@@ -1689,7 +1689,7 @@ int main(int argc, char **argv)
                //vectorAuxPrint.writeHDF5(outfile_SEQ+"_s"+spin+"_c"+col);
              }
           }
-
+*/
           //case sequential UD for spin1/2
 #if defined(PLEGMA_SCATTERING_SPIN12)
  
@@ -2030,7 +2030,7 @@ int main(int argc, char **argv)
               stochastic_oet_prop_u_fini_mom[spinindex]->copy(vectortmp1,HOST);
               vectortmp1.load();
 
-              vectortmp1.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
+              //vectortmp1.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
          
               if (spinindex<3){
                 vectortmp1.dilutespindisplace(vectorSource_finite_mom,spinindex+1,spinindex);
