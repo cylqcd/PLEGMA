@@ -1156,7 +1156,7 @@ W29& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_4(\ga
 W30& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}   T^{uu}_{fii}, D)_{\alpha\beta\gamma}$  & R & 2 & false  & true \\
 W31& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   T^{uu}_{fii}, D)_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
 W32& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   T^{uu}_{fii}, D)_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
-W33& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}   U, T^{uu}_{fii})_{\alpha\beta\gamma}$  & R & 2 & false  & true \\
+W33& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}   U, T^{dd}_{fii})_{\alpha\beta\gamma}$  & R & 2 & false  & true \\
 W34& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_4(\gamma_5\xi, \Gamma_{f1}   U, T^{dd}_{fii})_{\alpha\delta\gamma}$ & M & 0 & false  & true \\
 W35& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\delta}$  & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   U, T^{dd}_{fii})_{\beta\alpha\gamma}$  & R & 2 & true   & true \\
 W36& ${\mathcal V}_3(\phi,\gamma_5\Gamma_{f2}U)_{\beta}$   & ${\mathcal V}_2(\gamma_5\xi, \Gamma_{f1}   U, T^{dd}_{fii})_{\delta\alpha\gamma}$ & M & 1 & false  & true \\
@@ -1351,5 +1351,148 @@ $$
 $$
 U(x_{f1},x_{i1})\mathrm{Tr}\left(\Gamma_{f1}^tU(x_{f1},x_{i1})\Gamma_{i1}^tD(x_{i2},x_{i1})^t\Gamma_{i2}^tD(x_{f1},x_{i2})^t\right)
 $$
+\end{itemize}
+\section{Summary on factors}
+\subsection{Factors without sequential propagator involved}
+\begin{itemize}
+\item ${\mathcal V}_3\left(\xi, \Gamma_{f2} U\right)$:
+\begin{itemize}
+\item W5,6,7,8,9,10,11,12,17,18,19,20
+\item D1ii1,2,3,4,5,6,7,8
+\item TpiNsink7,8,9,10,13,15
+\end{itemize}
+\item ${\mathcal V}_3\left(\gamma_5\phi, \Gamma_{f2} U\right)$
+\begin{itemize}
+\item W1,2,3,4,25,26,27,28,29,30,31,32,33,34,35,36
+\item D1ii 13,14,15,16
+\item TpiNsink 19,20,21,22,23,25
+\end{itemize}
+\item ${\mathcal V}_3\left(\gamma_5\phi, \Gamma_{f2} D\right)$
+\begin{itemize}
+\item W13,14,15,16,21,22,23,24
+\item D1ii9,10
+\item TpiNsink11,12,17
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} U, U\right)$
+\begin{itemize}
+\item B1,2,7,8
+\item D1ii9,10
+\item TpiNsink1,3,5,11,12,17
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} U, D\right)$
+\begin{itemize}
+\item B15,16,19,20
+\item D1ii15,16
+\item TpiNsink21,22,25
+\end{itemize}
+\item ${\mathcal V}_4\left(\gamma_5\xi, \Gamma_{f1} U, D\right)$
+\begin{itemize}
+\item B13,14,17,18
+\item D1ii13,14
+\item TpiNsink19,20,23
+\end{itemize}
+\item ${\mathcal V}_2\left(\phi, \Gamma_{f1}D, U\right)$
+\begin{itemize}
+\item B3,5,9,11
+\item D1ii1,3
+\item TpiNsink9,10,15
+\end{itemize}
+\item ${\mathcal V}_4\left(\phi, \Gamma_{f1}U, D\right)$
+\begin{itemize}
+\item B4,6,10,12
+\item D1ii2,4
+\item TpiNsink7,8,13
+\end{itemize}
+\end{itemize}
+\subsection{Factors involving UD sequential propagator}
+\begin{itemize}
+\item ${\mathcal V}_3\left(\xi, \Gamma_{f2} T_{ud}\right)$
+\begin{itemize}
+\item B9,10,11,12
+\end{itemize}
+\item ${\mathcal V}_3\left(\gamma_5\phi, \Gamma_{f2} T_{ud}\right)$
+\begin{itemize}
+\item B13,14,15,16
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} T_{ud}, U\right)$
+\begin{itemize}
+\item W3,4,21,23
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} T_{ud}, D\right)$
+\begin{itemize}
+\item W27,28
+\end{itemize}
+\item ${\mathcal V}_4\left(\gamma_5\xi, \Gamma_{f1} T_{ud}, D\right)$
+\begin{itemize}
+\item W25,26
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} U, T_{ud}\right)$
+\begin{itemize}
+\item W1,2,22,24
+\end{itemize}
+\item ${\mathcal V}_2\left(\phi, \Gamma_{f1} D, T_{ud} \right)$
+\begin{itemize}
+\item W18,20
+\end{itemize}
+\item ${\mathcal V}_4\left(\phi, \Gamma_{f1} D, T_{ud} \right)$
+\begin{itemize}
+\item W17,19
+\end{itemize}
+\end{itemize}
+\subsection{Factors involving UU sequential propagator}
+\begin{itemize}
+\item ${\mathcal V}_3\left(\xi, \Gamma_{f2} T_{uu}\right)$
+\begin{itemize}
+\item B3,4,5,6
+\end{itemize}
+\item ${\mathcal V}_3\left(\gamma_5\phi, \Gamma_{f2} T_{uu}\right)$
+\begin{itemize}
+\item B17,18,19,20
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} T_{uu}, D\right)$
+\begin{itemize}
+\item W31,32
+\end{itemize}
+\item ${\mathcal V}_4\left(\gamma_5\xi, \Gamma_{f1} T_{uu}, D\right)$
+\begin{itemize}
+\item W33,34
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} U, T_{uu} \right)$
+\begin{itemize}
+\item W16,14
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, \Gamma_{f1} T_{uu}, U\right)$
+\begin{itemize}
+\item W13,15
+\end{itemize}
+\item ${\mathcal V}_4\left(\phi, \Gamma_{f1}U,  T_{uu}\right)$
+\begin{itemize}
+\item W5,7
+\end{itemize}
+\item ${\mathcal V}_2\left(\phi, \Gamma_{f1}U,  T_{uu}\right)$
+\begin{itemize}
+\item W6,8
+\end{itemize}
+\subsection{Factors involving DD sequential propagator}
+\begin{itemize}
+\item ${\mathcal V}_3\left(\gamma_5\phi, \Gamma_{f2} T_{DD}\right)$
+\begin{itemize}
+\item B7,B8
+\end{itemize}
+\item ${\mathcal V}_2\left(\phi, \Gamma_{f1}T_{dd},  U\right)$
+\begin{itemize}
+\item W9,11
+\end{itemize}
+\item ${\mathcal V}_4\left(\phi, \Gamma_{f1}T_{dd},  U\right)$
+\begin{itemize}
+\item W10,12
+\end{itemize}
+\item ${\mathcal V}_2\left(\gamma_5\xi, U, \Gamma_{f1}T_{dd}\right)$
+\begin{itemize}
+\item W35,36
+\end{itemize}
+\item ${\mathcal V}_4\left(\gamma_5\xi, U, \Gamma_{f1}T_{dd}\right)$
+\begin{itemize}
+\item W33,34
 \end{itemize}
 \end{document}
