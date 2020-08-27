@@ -1639,6 +1639,11 @@ int main(int argc, char **argv)
         TIME(produceOutput(corrB8, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
+        TIME(produceOutput(corrW9, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW10, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW11, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW12, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+
         TIME(produceOutput(corrW33, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
         TIME(produceOutput(corrW34, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
         TIME(produceOutput(corrW35, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
