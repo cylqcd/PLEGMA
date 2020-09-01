@@ -893,7 +893,7 @@ int main(int argc, char **argv)
         st_oet_d_zero.load();
 
 
-        TIME(reductionsV2_diluted_STOCHU_DN_DN[i].V4( st_oet_u_zero, glist_sink_nucleon, propDN, propDN, false),"ISOSPIN12");
+        TIME(reductionsV2_diluted_STOCHU_DN_DN[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propDN, false),"ISOSPIN12");
         TIME(reductionsV2_diluted_STOCHU_DN_UP[i].V2( st_oet_u_zero, glist_sink_nucleon, propDN, propUP, false),"ISOSPIN32");
         TIME(reductionsV2_diluted_STOCHD_UP_UP[i].V2( st_oet_d_zero, glist_sink_nucleon, propUP, propUP, false),"ISOSPIN12");
         TIME(reductionsV2_diluted_STOCHD_UP_DN[i].V2( st_oet_d_zero, glist_sink_nucleon, propUP, propDN, false),"ISOSPIN12");
@@ -2224,8 +2224,8 @@ int main(int argc, char **argv)
        
          //Diagram Z11,Z13
 
-         TIME(corrZ11.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 12 ),"ISOSPIN12");
-         TIME(corrZ13.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 14 ),"ISOSPIN12");
+         TIME(corrZ11.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 11 ),"ISOSPIN12");
+         TIME(corrZ13.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 13 ),"ISOSPIN12");
 
          //Diagram Z9,Z10
          TIME(corrZ9.Z_diagramms(  reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHD_UP_UP, 9 ),"ISOSPIN12");
