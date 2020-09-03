@@ -1078,7 +1078,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
       this->V3V2reduction(        srcV3, srcV2, 2, true,  ig_i2, false, factor, false); //checked FP
       break;
     case 29:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, true,  factor, false);//checked FP
+      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false,  factor, false);//checked FP
       break;
     case 30:
       this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true,  factor, false);//checked FP
