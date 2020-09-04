@@ -1179,7 +1179,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
           this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  false, g, true); //checked FP
           break;
         case 17:
-          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, false, g, false);//checked FP
+          this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, true, g, false);//checked FP
           break;
         case 18:
           this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g, false);//checked FP
