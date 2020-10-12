@@ -131,9 +131,6 @@ int main(int argc, char **argv)
     PLEGMA_Vector<double> vectorStoc_source_oet;
     vectorStoc_source_oet.randInit(rand_seed1);
 
-    //PLEGMA_Vector<float> vectorStoc_source(BOTH);
-    //PLEGMA_Vector<float> vectorStoc_propag(BOTH);
-    //PLEGMA_Vector<double> vectorInOut;
     PLEGMA_printf("Start producing stochastic vectors and propagators\n");
     //Note that we replace the f1<-f2 DN propagator with a stochastic one
     //in two steps actually
@@ -299,22 +296,6 @@ int main(int argc, char **argv)
         vectorAuxF.copy(vectorAuxD);
         propUP.absorb(vectorAuxF, isc/3, isc%3);
       }
-      /*
-      if(outfile_upS!="")
-        {
-          PLEGMA_printf("Save propagator for the up quark\n");
-          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
-          for(int isc = 0 ; isc < 12 ; isc++){
-            std::string spin=std::to_string(isc/3);
-            std::string col=std::to_string(isc%3);
-
-            vectorAuxPrint.absorb(propUP,isc/3,isc%3);
-            vectorAuxPrint.unload();
-            vectorAuxPrint.writeLIME(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
-            //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
-          }
-        }
-       */
       // ensuring mu negative
       if(mu>0) {
         mu*=-1.;
@@ -351,23 +332,6 @@ int main(int argc, char **argv)
         propDN.absorb(vectorAuxF, isc/3, isc%3);
       }
 
-      /*
-      if(outfile_dnS!="")
-        {
-          PLEGMA_printf("Save propagator for the d quark\n");
-          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
-          for(int isc = 0 ; isc < 12 ; isc++){
-            std::string spin=std::to_string(isc/3);
-            std::string col=std::to_string(isc%3);
-
-            vectorAuxPrint.absorb(propDN,isc/3,isc%3);
-            vectorAuxPrint.unload();
-            vectorAuxPrint.writeLIME(outfile_dnS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
-            //vectorAuxPrint.writeHDF5(outfile_dnS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
-
-          }
-        }*/
-
       std::vector<int> mom={0,0,0};
       
       site source=site({0,0,0,sourcePositions[isource][3]});
@@ -386,10 +350,8 @@ int main(int argc, char **argv)
 	PLEGMA_ScattCorrelator<float> reductionsT2(source, mtot);
 
 	TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
-	//reductionsT1.writeHDF5("T1sourceforD");
 
 	TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
-	//reductionsT2.writeHDF5("T2sourceforD");
 
 	//write D
 	outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_D";
@@ -424,10 +386,8 @@ int main(int argc, char **argv)
           stochastic_source.load();
 
           TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
-          //reductionsV3.writeHDF5("V3sourceforTpiNsink"+std::to_string(i));
 
           TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-          //reductionsV2.writeHDF5("V2sourceforTpiNsink"+std::to_string(i));
 
           TIME(corrT_piNsink.T_diagramms_piNsink(reductionsV3, reductionsV2, true));
 
@@ -457,10 +417,8 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> reductionsT2N(source, mpf1);
       
         TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-        //reductionsT1N.writeHDF5("T1sourceforN");
 
         TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-        //reductionsT2N.writeHDF5("T2sourceforN");
 
         TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
       }
@@ -519,12 +477,12 @@ int main(int argc, char **argv)
            stochastic_propagator_momzero[spinindex].copy(vectortmp2);
            //stochastic_propagator_momzero[spinindex].writeLIME(outfile_V+confnumber+"propagator_"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
-             vectortmp1.dilutespindisplace(vectorStoc_source_oet,spinindex+1,spinindex);
+             vectortmp1.diluteSpinDisplace(vectorStoc_source_oet,spinindex+1,spinindex);
              vectorStoc_source_oet.copy(vectortmp1);
            }
          }
          
-         vectortmp1.dilutespindisplace(vectorStoc_source_oet,0,3);
+         vectortmp1.diluteSpinDisplace(vectorStoc_source_oet,0,3);
          vectorStoc_source_oet.copy(vectortmp1);
       }
 
@@ -645,23 +603,7 @@ int main(int argc, char **argv)
 
             vectorAuxF.copy(vectorInOut);
             propUPDN.absorb(vectorAuxF, isc/3, isc%3);
-          }
-
-          /*
-          if(outfile_SEQ!="")
-          {
-             PLEGMA_printf("Save sequential propagator for the ud \n");
-             PLEGMA_Vector<float> vectorAuxPrint(BOTH);
-             for(int isc = 0 ; isc < 12 ; isc++){
-               std::string spin=std::to_string(isc/3);
-               std::string col=std::to_string(isc%3);
-               vectorAuxPrint.absorb(propUPDN,isc/3,isc%3);
-               vectorAuxPrint.unload();
-               vectorAuxPrint.writeLIME(outfile_SEQ+confnumber+sourcepositiontext+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+spin+"_c"+col);
-               //vectorAuxPrint.writeHDF5(outfile_SEQ+"_s"+spin+"_c"+col);
-             }
-          }*/
-           
+          } 
 
 
           //Compute triangle diagramms          
@@ -672,11 +614,8 @@ int main(int argc, char **argv)
 
           PLEGMA_ScattCorrelator<float> reductionsT5triangle(source,  mptot_filt);
           TIME(reductionsT1triangle.T1(glist_source_nucleon, glist_sink_delta, propUPDN, propUP  , propUP));
-          //reductionsT1triangle.writeHDF5("T1sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
           TIME(reductionsT3triangle.T1(glist_source_nucleon, glist_sink_delta, propUP  , propUPDN, propUP));
-          //reductionsT3triangle.writeHDF5("T3sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
           TIME(reductionsT5triangle.T2(glist_source_nucleon, glist_sink_delta, propUP  , propUP, propUPDN));
-          //reductionsT5triangle.writeHDF5("T5sourceforT_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 	  
 	  //Compute Diagram T 
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2));
@@ -695,11 +634,8 @@ int main(int argc, char **argv)
  
 	  
             TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUPDN));
-            //reductionsV3.writeHDF5("V3sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-            //reductionsV2.writeHDF5("V2sourceforB1_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
-
 
 	    TIME(corrB1.B_diagramms(reductionsV3, reductionsV2, i_gamma_i2, 1, true));
 	  
@@ -708,9 +644,7 @@ int main(int argc, char **argv)
             //Compute Diagram W1,W2
           
             TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
-            //reductionsV3.writeHDF5("V3sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
             TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUPDN));
-            //reductionsV2.writeHDF5("V2sourceforW12_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             TIME(corrW1.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 1, true));
 	    TIME(corrW2.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 2, true));
@@ -718,7 +652,6 @@ int main(int argc, char **argv)
             //Compute Diagram W3,W4
           
             TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUPDN, propUP));
-            //reductionsV2.writeHDF5("V2sourceforW34_sample"+std::to_string(i)+"_pi2"+pi2x+"_"+pi2y+"_"+pi2z);
 
             TIME(corrW3.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 3, true));
 	    TIME(corrW4.W_diagramms( reductionsV3, reductionsV2, i_gamma_i2, 4, true));
@@ -775,10 +708,9 @@ int main(int argc, char **argv)
 
               //Saving the propagator
               stochastic_propagator_momp_i2[spinindex].copy(vectortmp1);
-              //stochastic_propagator_momp_i2[spinindex].writeLIME(outfile_V+confnumber+"propagator_"+sourcepositiontext+"mompi2_"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(spinindex));
          
               if (spinindex<3){
-                vectortmp1.dilutespindisplace(vectorSource_finite_mom,spinindex+1,spinindex);
+                vectortmp1.diluteSpinDisplace(vectorSource_finite_mom,spinindex+1,spinindex);
                 vectorSource_finite_mom.copy(vectortmp1);
               }
             }
@@ -792,16 +724,13 @@ int main(int argc, char **argv)
          if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
   
            TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
-           //reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
 
          }
          else{
            TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momzero[i], gamma_5_t_sinkmeson, propUP));
-           //reductionsV3_diluted[i].writeHDF5("V3sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
          }
 
          TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
-         //reductionsV2_diluted[i].writeHDF5("V4sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
        }
 
        TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted, 1 ));
@@ -812,7 +741,6 @@ int main(int argc, char **argv)
        for (int i=0; i< 4; ++i){
 
          TIME(reductionsV2_diluted[i].V2( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
-         //reductionsV2_diluted[i].writeHDF5("V2sourceforZ_pi2"+pi2x+"_"+pi2y+"_"+pi2z+"_s"+std::to_string(i));
 
        }
 

@@ -228,7 +228,7 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::dilutespindisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2){
+void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2){
   Float *pointer_src = NULL;
   if( (spin1 >= N_SPINS) || (spin2>=N_SPINS) ) PLEGMA_error("The spin index you provided exceed the total spin content\n");
   this->zero_device();

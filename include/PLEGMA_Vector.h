@@ -78,7 +78,7 @@ namespace plegma {
        @param int spin1 target spin index
        @param int spin2 original spin index
      **/
-    void dilutespindisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
+    void diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
     
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
     void apply_gamma5();
