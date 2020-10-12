@@ -101,6 +101,9 @@ namespace plegma {
     site getSource() {
       return source;
     }
+    int getTotalT() {
+      return totalT;
+    }
     size_t nDatasets() const {
       return std::max(datasets.size(), (size_t) 1);
     }
@@ -132,6 +135,26 @@ namespace plegma {
     void setFixMomVec(std::vector<int>& fixMomVec) {
       assert(corr_space == MOMENTUM_SPACE);
       corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomVec, 3, false, localT()));
+    }
+    void setFixMomList(std::vector<std::vector<int>>& fixMomList) {
+      assert(corr_space == MOMENTUM_SPACE);
+      corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomList, 3, false, localT()));
+    }
+   
+    std::vector<std::vector<int>> getMomList(){
+      if(corr_space == MOMENTUM_SPACE) {
+        std::vector<std::vector<Float>> list =  corr_mom_space->MomList();
+        std::vector<std::vector<int>> casted;
+        for(auto &mom: list) {
+          casted.push_back(std::vector<int>());
+          for(auto &imom: mom) {
+            casted.back().push_back((int) std::lround(imom));
+          }
+        }
+        return casted;
+      } else {
+        return {};
+      }
     }
 
     std::shared_ptr<tex_mom_list> getTexMomList() const {

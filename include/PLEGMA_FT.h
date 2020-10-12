@@ -65,8 +65,12 @@ namespace plegma {
      **/
     template<typename T>
     PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
-    
+
+    template<typename T>
+    PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
+
     ~PLEGMA_FT() {};
+    
     /**
        @brief First time a field is provided for transformation the FT object allocates memory. If field with same dof is provided then uses the same buffer otherwise has to reallocate memory for the new field.
        @params int newDof: The dof of the field we want to transform

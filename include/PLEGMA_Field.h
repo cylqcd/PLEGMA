@@ -11,6 +11,8 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Fmunu;
   template<typename Float>  class PLEGMA_Su3field;
   template<typename Float>  class PLEGMA_Gauge;
+  
+
   ////////////////////////
   // CLASS: PLEGMA_Field //
   ////////////////////////
@@ -141,6 +143,8 @@ namespace plegma {
     void cscale(std::complex<Float> val);
     
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
+
+    void absorbTimeslice(PLEGMA_Field<Float> &srcfield, int global_it, bool forcetozero=true);
 
     void TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
 			    PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r, PLEGMA_Su3field<Float> &Wr);
