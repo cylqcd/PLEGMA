@@ -14,7 +14,8 @@ __global__ void threep_oneD_device(Float2<FloatC>* block2,
 				   propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
 				   gaugeTex<FloatG> gaugeTex, KernelArr<GAMMAS> listGammas,
 				   int it, int time_step, int maxT, int4 source,
-				   int signProps, bool runFT, tex_mom_list moms){
+				   int signProps, bool runFT, tex_mom_list moms,
+				   int mu, int nu, int c1, int c2){
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
@@ -33,28 +34,37 @@ __global__ void threep_oneD_device(Float2<FloatC>* block2,
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatC> R[N_SPINS][N_SPINS];
     Float2<FloatG> su3[N_COLS][N_COLS];
-    
+    bool notZfac=(mu<0) && (nu<0) && (c1<0) && (c2<0);
     #pragma unroll
     for(int dir = 0; dir < N_DIMS; dir++) {
       // term x, x, x+dir
       prop1Tex.get(prop1,vid); gaugeTex.get(su3,dir,vid); prop2Tex.get<Plus>(prop2,vid,dir);
-      partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+      if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+      else open_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       //term x, x-dir, x-dir
       gaugeTex.get<Minus>(su3,dir,vid,dir); prop2Tex.get<Minus>(prop2,vid,dir);
-      partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+      if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+      else open_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       //term x+dir, x, x
       prop1Tex.get<Plus>(prop1,vid,dir); gaugeTex.get(su3,dir,vid); prop2Tex.get(prop2,vid);
-      partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+      if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3);
+      else open_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       //term x-dir, x-dir, x
       prop1Tex.get<Minus>(prop1,vid,dir); gaugeTex.get<Minus>(su3,dir,vid,dir);
-      partial_trace_mul_Prop_G_Prop<true,ACC_PLUS,false>(R,prop1,prop2,su3);
+      if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_PLUS,false>(R,prop1,prop2,su3);
+      else open_mul_Prop_G_Prop<true,ACC_PLUS,false>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       for(int iop = 0; iop < listGammas.size; iop++){
 	int opId=listGammas.array[iop];
-	accum[dir*listGammas.size + iop] = 0.25*((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
+	if(notZfac){
+	  accum[dir*listGammas.size + iop] = 0.25*((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
+	}
+	else{
+	  accum[dir*listGammas.size + iop] = trace_gamma_S<true>(opId,NOROT,R);
+	}
       }
     }
   }
@@ -74,15 +84,19 @@ __global__ void threep_oneD_device(Float2<FloatC>* block2,
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
 static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Correlator<FloatC> &corr,
 			     PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatA>& prop2,
-			     int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas){
+			     int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas,
+			     int mu, int nu, int c1, int c2){
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
-  size_t size = corr.getTotalSize()/t_size*time_step;
-  int site_size = corr.getSiteSize();
+  int divS;
+  if((mu<0) && (nu<0) && (c1<0) && (c2<0)) divS =1;
+  else divS=N_SPINS*N_SPINS*N_COLS*N_COLS;
+  size_t size = corr.getTotalSize()/divS/t_size*time_step;
+  int site_size = corr.getSiteSize()/divS;
   int4 source = corr.getSource();
   auto moms = corr.getTexMomList();
 
@@ -115,7 +129,7 @@ static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
     threep_oneD_device<FloatC,FloatA, FloatB, FloatG>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (d_partial_block, *propTex1, *propTex2, *gaugetex, listGammas, it, t_step, maxT,
-       source, signProps, runFT, *moms);
+       source, signProps, runFT, *moms, mu,nu,c1,c2);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
@@ -146,7 +160,7 @@ static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
 
 template<typename FloatC,typename FloatA,typename FloatB,typename FloatG>
 void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
-		 int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas){
+		 int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(gammas.size() <= 0)
     PLEGMA_error("Error the container of gamma matrices cannot be zero");
@@ -155,8 +169,10 @@ void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
 
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   int site_size = N_DIMS*gammas.size();
-  if(corr.getSiteSize() != site_size)
-    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+
+  if(!isZfac)
+    if(corr.getSiteSize() != site_size)
+      PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
   
   ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
   int myLocalT = corr.localT();
@@ -170,10 +186,22 @@ void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
     hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   else
     result = (Float2<FloatC> *) corr.H_elem();
-  
-  tuneAndRun( ps, "threep_oneD", threep_oneD_host<FloatC,FloatA,FloatB,FloatG>,
-	      ps, result, corr, prop1, prop2, signProps, gauge, gammas );
-  
+
+  if(isZfac){
+        Float2<FloatC> *rmove = NULL;
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+      for(int nu = 0 ; nu < N_SPINS; nu++)
+	for(int c1 = 0 ; c1 < N_COLS; c1++)
+	  for(int c2 = 0 ; c2 < N_COLS; c2++){
+	    rmove = result + ((mu*N_SPINS+nu)*N_COLS*N_COLS + c1*N_COLS+c2)*corr.getVolSize()*N_DIMS*gammas.size();
+	    tuneAndRun( ps, "threep_oneD_Zfac", threep_oneD_host<FloatC,FloatA,FloatB,FloatG>,
+			ps, rmove, corr, prop1, prop2, signProps, gauge, gammas,mu, nu, c1, c2 );
+	  }
+  }
+  else{
+    tuneAndRun( ps, "threep_oneD", threep_oneD_host<FloatC,FloatA,FloatB,FloatG>,
+		ps, result, corr, prop1, prop2, signProps, gauge, gammas,-1, -1, -1, -1 );
+  }
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
 		  MPI_SUM, HGC_spaceComm);
@@ -184,6 +212,6 @@ void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
 #endif
 }
 
-template void threep_oneD<float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Gauge<float>& gauge, std::vector<GAMMAS>& gammas);
-template void threep_oneD<double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, PLEGMA_Gauge<double>& gauge, std::vector<GAMMAS>& gammas);
+template void threep_oneD<float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Gauge<float>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+template void threep_oneD<double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, PLEGMA_Gauge<double>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
 
