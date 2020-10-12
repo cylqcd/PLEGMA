@@ -91,8 +91,17 @@ target_link_libraries(quark_rms ${PLEGMA_LIBS})
 cuda_add_executable(Zfac_Vgg EXCLUDE_FROM_ALL Zfac_Vgg.cpp)
 target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})
 
+
 cuda_add_executable(Zfac EXCLUDE_FROM_ALL Zfac.cpp)
 target_link_libraries(Zfac ${PLEGMA_LIBS})
+
+if (PLEGMA_SCATTERING_CONTRACTIONS)
+  cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
+  target_link_libraries(testScattReductions ${PLEGMA_LIBS})
+  cuda_add_executable(piNdiagrams piNdiagrams.cpp)
+  target_link_libraries(piNdiagrams ${PLEGMA_LIBS})
+endif(PLEGMA_SCATTERING_CONTRACTIONS)
+
 
 cuda_add_executable(gaugeFixing EXCLUDE_FROM_ALL gaugeFixing.cpp)
 target_link_libraries(gaugeFixing ${PLEGMA_LIBS})

@@ -95,6 +95,7 @@ namespace plegma {
     }
   }
 
+
   template<typename Float>
   __inline__ __device__ void U_uk_ch_g5g4(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS]){
     Float nrm=1./sqrt(2.);
