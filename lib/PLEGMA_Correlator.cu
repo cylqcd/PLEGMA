@@ -128,15 +128,16 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 			  PLEGMA_Propagator<Float> &fwdProp,
-			  int signProps, std::vector<GAMMAS> gammas ){
-  shape = {(int) gammas.size()};
+			  int signProps, std::vector<GAMMAS> gammas, bool isZfac ){
+  if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,(int) gammas.size()};
+  else shape = {(int) gammas.size()};
   datasets = {"threep"};
   groups =  {"Local"};
   description = getGammasString(gammas);
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_local(*this,bwdProp,fwdProp,signProps,gammas);
+  threep_local(*this,bwdProp,fwdProp,signProps,gammas,isZfac);
 }
 
 
@@ -145,8 +146,9 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
-			 int signProps, std::vector<GAMMAS> gammas){
-  shape = {N_DIMS, (int) gammas.size()};
+			 int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS,(int) gammas.size()};
+  else  shape = {N_DIMS, (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"OneD"};
   description = "x,y,z,t / "+getGammasString(gammas);
@@ -158,7 +160,7 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost();
   fwdProp.communicateGhost();
   
-  threep_oneD(*this,bwdProp,fwdProp,signProps,gauge,gammas);
+  threep_oneD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 template<typename Float>
