@@ -173,34 +173,74 @@ int main(int argc, char **argv)
       
       
 
-      auto computeStaple = [&](PLEGMA_Su3field<float>& staple,PLEGMA_Gauge<float>& gaugeF,int l_d){
+      auto computeStaple = [&](PLEGMA_Su3field<float>& staple,PLEGMA_Gauge<float> &gIn,int l_d){
 
-			     staple.setUnit( (std::vector<int>) {0,4,8});
+      			     staple.setUnit( (std::vector<int>) {0,4,8});
+			     PLEGMA_Gauge<float> *gaugeExchange = nullptr;
+      			     PLEGMA_Gauge<float> *gaugeIn = new PLEGMA_Gauge<float>(BOTH);
+      			     PLEGMA_Gauge<float> *gaugeF = new PLEGMA_Gauge<float>(BOTH);
+      			     gaugeF->copy(gIn);
+      			     {
+      			       PLEGMA_Su3field<float> su3;
+      			       PLEGMA_Su3field<float> tmp;
+      			       su3.absorbDir_device(*gaugeF, z_dir);
+      			       for(int j=0;j<l_d;j++){
+      				 gaugeExchange = gaugeIn; gaugeIn = gaugeF; gaugeF = gaugeExchange;
+      				 gaugeF->shift(*gaugeIn,z_dir);
+      				 staple.wilsonLineUpdate(su3, tmp, z_dir);
+      			       }
+      			     }
 
-			     {
-			       PLEGMA_Su3field<float> su3;
-			       PLEGMA_Su3field<float> tmp;
-			       su3.absorbDir_device(gaugeF, z_dir);
-			       for(int j=0;j<l_d;j++)
-				 staple.wilsonLineUpdate(su3, tmp, z_dir);
-			     }
+      			     {
+      			       PLEGMA_Su3field<float> su3;
+      			       PLEGMA_Su3field<float> tmp;
+      			       su3.absorbDir_device(*gaugeF, b_dir);
+      			       for(int j=0;j<b[b_dir];j++){
+      				 gaugeExchange = gaugeIn; gaugeIn = gaugeF; gaugeF = gaugeExchange;
+      				 gaugeF->shift(*gaugeIn,4+b_dir);
+      				 staple.wilsonLineUpdate(su3, tmp, 4+b_dir);
+      			       }
+      			     }
+			     
+      			     {
+      			       PLEGMA_Su3field<float> su3;
+      			       PLEGMA_Su3field<float> tmp;
+      			       su3.absorbDir_device(*gaugeF, z_dir);
+      			       for(int j=0;j<l_d+z[z_dir];j++)
+      				 staple.wilsonLineUpdate(su3, tmp, 4+z_dir);
+      			     }
+			     delete gaugeIn;
+			     delete gaugeF;
+      			   };
 
-			     {
-			       PLEGMA_Su3field<float> su3;
-			       PLEGMA_Su3field<float> tmp;
-			       su3.absorbDir_device(gaugeF, b_dir);
-			       for(int j=0;j<b[b_dir];j++)
-				 staple.wilsonLineUpdate(su3, tmp, 4+b_dir);
-			     }
 
-			     {
-			       PLEGMA_Su3field<float> su3;
-			       PLEGMA_Su3field<float> tmp;
-			       su3.absorbDir_device(gaugeF, z_dir);
-			       for(int j=0;j<l_d+z[z_dir];j++)
-				 staple.wilsonLineUpdate(su3, tmp, 4+z_dir);
-			     }
-			   };
+      auto computeStaplePath = [&](PLEGMA_Su3field<float>& staple,PLEGMA_Gauge<float> &gIn,int l_d){
+
+				 staple.setUnit( (std::vector<int>) {0,4,8});
+				 PLEGMA_Su3field<float> tmp(BOTH);
+				 PLEGMA_Su3field<float> *u_s[4];
+				 for(int idir = 0; idir < 4 ; idir++){
+				   u_s[idir] = new PLEGMA_Su3field<float>(BOTH);
+				   u_s[idir]->absorbDir_device(gIn,idir);
+				 }
+
+				 int len_path = 2*l_d+z[z_dir]+b[b_dir];
+				 if(len_path>0){
+				   int spath[len_path];
+				   for(int i=0;i<l_d;i++)
+				     spath[i]=z_dir;
+				   for(int i=l_d;i<l_d+b[b_dir];i++)
+				     spath[i]=4+b_dir;
+				   for(int i=l_d+b[b_dir];i<len_path;i++)
+				     spath[i]=4+z_dir;
+				   std::vector<int> vspath(spath,spath+len_path);
+				   staple.path(vspath, u_s, tmp);
+				 }
+				 for(int idir = 0; idir < 4 ; idir++){
+				   delete u_s[idir];
+				 }
+
+			       };
 
       
       //Apply shift to propagator
@@ -238,7 +278,7 @@ int main(int argc, char **argv)
 	//Apply here stout smearing if needed
 	PLEGMA_Su3field<float> WL;
 	TIME(computeStaple(WL,gaugeWL,l));
-	
+	//TIME(computeStaplePath(WL,gaugeWL,l));
 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 	corr.setFixMomVec(sinkMom);
 	TIME(corr.contractTMDWFMesons(propUP,shifted_propUP,WL,l));
