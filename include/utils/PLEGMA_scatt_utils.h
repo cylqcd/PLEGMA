@@ -349,5 +349,7 @@ template<typename Float> void x_pe_cy( Float *dest, Float *floatcomplex, Float *
 template<typename Float> void x_e_cx( Float *dest, const Float floatcomplex[2], int size );
 template<typename Float> void x_e_sx( Float *dest, const Float floatreal, int size );
 
+GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR);
 std::vector<GAMMAS_SCATT> apply_gamma5_scatt_gamma( std::vector<GAMMAS_SCATT> &source, LEFTRIGHT LR);
+
 

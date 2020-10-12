@@ -92,9 +92,9 @@ namespace plegma {
     void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 );
 
     //manipulation
-    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma=false, Float* factor=NULL );
+    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false );
 
-    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transpgamma=false, Float* factor=NULL );
+    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false );
     
 
     //initialize_diagrams
@@ -130,7 +130,9 @@ namespace plegma {
     void normalize_nstoch(int n_stoch);
     void clear_output( bool tozero, int n_index, int i );
     void clear_output( bool tozero );
-
+    void apply_sign_transp(int gi);
+    void apply_sign_adj(int gi);
+    void apply_sign( std::string name_of_diagram );
 
   };
 

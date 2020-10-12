@@ -149,7 +149,6 @@ static void PhixGxPhi_k(PLEGMA_ScattCorrelator<FloatOut> &corr,
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
   int shared_size = Gammas.size()*sizeof(Float2<FloatOut>); //+
-  PLEGMA_printf("site_size= %d\n", site_size);
   
   Float2<FloatOut> *result = NULL;
   hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size

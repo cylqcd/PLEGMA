@@ -37,10 +37,10 @@ template void x_e_sx<double>( double *dest, const double floatreal, int size) ;
 
  
 
-static inline GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
+GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
 {
   switch(LR){
-  case(LEFT):
+  case(RIGHT):
     switch (source){
     case(C):
       return CG_5;
@@ -101,7 +101,7 @@ static inline GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
       break;    
     }
     break;
-  case(RIGHT):
+  case(LEFT):
     switch (source){
     case(C):
       return CG_5;
