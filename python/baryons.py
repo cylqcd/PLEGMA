@@ -71,6 +71,10 @@ Cgx = C.dot(gx)
 Cgy = C.dot(gy)
 Cgz = C.dot(gz)
 
+g5gx = g5.dot(gx)
+g5gy = g5.dot(gy)
+g5gz = g5.dot(gz)
+
 gxgy = gx.dot(gy)
 gygx = gy.dot(gx)
 gygz = gy.dot(gz)
@@ -83,6 +87,12 @@ all_gammas = {}
 all_gammas[1 / 2] = {
     "Pp-Cg5-Cg5": [(Pplus, Cg5, Cg5.conj())],
     "Pm-Cg5-Cg5": [(Pminus, Cg5, Cg5.conj())],
+    "Ppg5gx-Cg5-Cg5": [(Pplus.dot(g5gx), Cg5, Cg5.conj())],
+    "Pmg5gx-Cg5-Cg5": [(Pminus.dot(g5gx), Cg5, Cg5.conj())],
+    "Ppg5gy-Cg5-Cg5": [(Pplus.dot(g5gy), Cg5, Cg5.conj())],
+    "Pmg5gy-Cg5-Cg5": [(Pminus.dot(g5gy), Cg5, Cg5.conj())],
+    "Ppg5gz-Cg5-Cg5": [(Pplus.dot(g5gz), Cg5, Cg5.conj())],
+    "Pmg5gz-Cg5-Cg5": [(Pminus.dot(g5gz), Cg5, Cg5.conj())],
     "Pp-igtCg5-igtCg5": [(Pplus, igtCg5, igtCg5.conj())],
     "Pm-igtCg5-igtCg5": [(Pminus, igtCg5, igtCg5.conj())],
     "g5Ppg5-C-C": [(g5.dot(Pplus).dot(g5.conj()), C, C.conj())],
@@ -98,6 +108,36 @@ all_gammas[3 / 2] = {
         (Pminus, Cgx, Cgx.conj()),
         (Pminus, Cgy, Cgy.conj()),
         (Pminus, Cgz, Cgz.conj())
+    ],
+    "Ppg5gx-Cgi-Cgi": [
+        (Pplus.dot(g5gx), Cgx, Cgx.conj()),
+        (Pplus.dot(g5gx), Cgy, Cgy.conj()),
+        (Pplus.dot(g5gx), Cgz, Cgz.conj())
+    ],
+    "Pmg5gx-Cgi-Cgi": [
+        (Pminus.dot(g5gx), Cgx, Cgx.conj()),
+        (Pminus.dot(g5gx), Cgy, Cgy.conj()),
+        (Pminus.dot(g5gx), Cgz, Cgz.conj())
+    ],
+    "Ppg5gy-Cgi-Cgi": [
+        (Pplus.dot(g5gy), Cgx, Cgx.conj()),
+        (Pplus.dot(g5gy), Cgy, Cgy.conj()),
+        (Pplus.dot(g5gy), Cgz, Cgz.conj())
+    ],
+    "Pmg5gy-Cgi-Cgi": [
+        (Pminus.dot(g5gy), Cgx, Cgx.conj()),
+        (Pminus.dot(g5gy), Cgy, Cgy.conj()),
+        (Pminus.dot(g5gy), Cgz, Cgz.conj())
+    ],
+    "Ppg5gz-Cgi-Cgi": [
+        (Pplus.dot(g5gz), Cgx, Cgx.conj()),
+        (Pplus.dot(g5gz), Cgy, Cgy.conj()),
+        (Pplus.dot(g5gz), Cgz, Cgz.conj())
+    ],
+    "Pmg5gz-Cgi-Cgi": [
+        (Pminus.dot(g5gz), Cgx, Cgx.conj()),
+        (Pminus.dot(g5gz), Cgy, Cgy.conj()),
+        (Pminus.dot(g5gz), Cgz, Cgz.conj())
     ],
     "Ppgigj-Cgi-Cgj": [
         (Pplus.dot(gxgy), Cgx, Cgy.conj()),
