@@ -1,5 +1,4 @@
 # PLEGMA
-Authors: [K. Hadjannakou](https://github.com/khadjiyiannakou), [S. Bacchio](https://github.com/sbacchio), [D. Nole](https://github.com/davidenole), [S. Paul](https://github.com/srijitpaul)
 
 PLEGMA is a GPU-enabled, memory distributed software package for lattice QCD calculations, implementing:
 - Two point correlation functions for hadrons
@@ -9,7 +8,7 @@ PLEGMA is a GPU-enabled, memory distributed software package for lattice QCD cal
 - Topological charge calculation with fermionic definitions
 
 ## Usage
-PLEGMA is developed within the hadron structure group of the Extended Twisted Mass collaboration for the sole purpose of being used in agreed upon collaborative projects. 
+PLEGMA is developed within the hadron structure group of the Extended Twisted Mass collaboration for the sole purpose of being used in agreed upon collaborative projects. See [LICENSE](LICENSE) for more details. 
 
 To use PLEGMA in any other new project contact [K. Hadjiyiannakou](https://github.com/khadjiyiannakou) or [G. Koutsou](https://github.com/g-koutsou) 
 
