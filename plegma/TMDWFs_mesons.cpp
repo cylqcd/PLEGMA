@@ -107,10 +107,10 @@ int main(int argc, char **argv)
     
   
     //Momentum smearing: put the momentum phase to smeared gauge field
-    std::complex<double> momSmScale[N_DIMS];
-    std::complex<double> I(0,1);
-    for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sinkMom[i]/HGC_totalL[i])*I);
-    TIME(smearedGauge.scaleDirWise(momSmScale));
+    // std::complex<double> momSmScale[N_DIMS];
+    // std::complex<double> I(0,1);
+    // for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sinkMom[i]/HGC_totalL[i])*I);
+    // TIME(smearedGauge.scaleDirWise(momSmScale));
   
   
     // ensuring mu positive
@@ -118,13 +118,13 @@ int main(int argc, char **argv)
     TIME(QUDA_solver solver(mu));
 
     PLEGMA_Propagator<float> propUP(BOTH);
-    PLEGMA_Propagator<float> propDN(BOTH);
+    //PLEGMA_Propagator<float> propDN(BOTH);
     PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
-    PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
+    //PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
   
     
-    PLEGMA_Gauge<double> *AuxSinkGauge;
-    AuxSinkGauge = &smearedGauge;
+    // PLEGMA_Gauge<double> *AuxSinkGauge;
+    // AuxSinkGauge = &smearedGauge;
 
     for(int isource=0;isource<numSourcePositions;isource++) {
       site& source = sourcePositions[isource];
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
 			       };
     
       TIME(computePropagator(propUP, propUP_SL, mu>0 ? mu : -mu));
-      TIME(computePropagator(propDN, propDN_SL, mu<0 ? mu : -mu));
+      //TIME(computePropagator(propDN, propDN_SL, mu<0 ? mu : -mu));
 
 
       
@@ -244,6 +244,10 @@ int main(int argc, char **argv)
 				   for(int i=l_d+b[b_dir];i<len_path;i++)
 				     spath[i]=z_dir;
 				   std::vector<int> vspath(spath,spath+len_path);
+				   PLEGMA_printf("PATH: ");
+				   for(int i=0;i<len_path;i++)
+				     PLEGMA_printf("%d\t",vspath[i]);
+				   PLEGMA_printf("\n");
 				   staple.path(vspath, u_s, tmp);
 				 }
 				 for(int idir = 0; idir < 4 ; idir++){
@@ -256,7 +260,7 @@ int main(int argc, char **argv)
       //Apply shift to propagator
       auto shiftPropagator = [&](PLEGMA_Propagator<float>* propF,PLEGMA_Propagator<float>* propIn,PLEGMA_Propagator<float>* propExchange){
 
-			       propF->unload();
+			       //			       propF->unload();
 
 			       for(int j=0;j<z[z_dir];j++){
 				 propExchange = propIn; propIn = propF; propF = propExchange;
@@ -267,7 +271,7 @@ int main(int argc, char **argv)
 				 propExchange = propIn; propIn = propF; propF = propExchange;
 				 TIME(propF->shift(*propIn, b_dir));
 			       }
-			       propF->load();
+			       // propF->load();
 			     };
 
 
