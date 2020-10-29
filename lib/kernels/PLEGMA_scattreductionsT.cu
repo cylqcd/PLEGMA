@@ -52,7 +52,7 @@ void T_kernels_wrapper( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
   case(6):
     switch(listGammas_f.size){
     case(6): T_kernels<(unsigned int)6,(unsigned int)6,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
-  default: PLEGMA_error("not initialized for nGammas_i=%d\n",listGammas_i.size);
+    default: PLEGMA_error("not initialized for nGammas_i=%d\n",listGammas_i.size);}
   }
 }
 
