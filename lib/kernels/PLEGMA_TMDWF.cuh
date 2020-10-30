@@ -4,7 +4,7 @@ const int N_TMDWF_MESONS=1;
 // TODO: This is hard to extend. These variables should replaced by compile-time functions.
 const __device__ short int mesons_TMDWF_indices[N_TMDWF_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,0,2,2,0,0,3,3,1,1,0,0,1,1,1,1,1,1,2,2,1,1,3,3,2,2,0,0,2,2,1,1,2,2,2,2,2,2,3,3,3,3,0,0,3,3,1,1,3,3,2,2,3,3,3,3};
 
-const __device__ float mesons_TMDWF_values[N_TMDWF_MESONS][16] = {1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1};
+const __device__ float mesons_TMDWF_values[N_TMDWF_MESONS][16] = {-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,1,1,1,1,1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
