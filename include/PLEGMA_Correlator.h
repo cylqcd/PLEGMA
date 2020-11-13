@@ -217,6 +217,11 @@ namespace plegma {
 				  PLEGMA_Gauge<Float> &gauge,
 				  int signProps, std::vector<GAMMAS> gammas);
     
+    void contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
+				  PLEGMA_Propagator<Float> &fwdProp,
+				  PLEGMA_Gauge<Float> &gauge,
+				  int signProps, std::vector<GAMMAS> gammas);
+    
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,
 				 PLEGMA_Gauge<Float> &gauge, int signProps);
