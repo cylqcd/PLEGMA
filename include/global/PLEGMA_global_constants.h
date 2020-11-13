@@ -78,12 +78,16 @@ global_both(int, totalL, N_DIMS);
 global_both(int, procPosition, N_DIMS);
 global_both(size_t, sideGhost, N_DIMS, DIR_BOTH);
 global_both(size_t, cornerGhost, N_DIMS, N_DIMS, DIR_BOTH, DIR_BOTH);
+global_both(size_t, vertexGhost, N_DIMS, N_DIMS, N_DIMS, DIR_BOTH, DIR_BOTH, DIR_BOTH);
 global_both(size_t, sideGhostVolume);
 global_both(size_t, cornerGhostVolume);
+global_both(size_t, vertexGhostVolume);
 global_both(size_t, sideGhostVolume3D);
 global_both(size_t, cornerGhostVolume3D);
+global_both(size_t, vertexGhostVolume3D);
 global_both(size_t, surface3D, N_DIMS);
 global_both(size_t, surface2D, N_DIMS, N_DIMS);
+global_both(size_t, surface1D, N_DIMS, N_DIMS, N_DIMS);
 
 // for mpi use global variables (host only)
 global_both(bool, dimBreak, N_DIMS);
