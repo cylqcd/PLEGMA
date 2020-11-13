@@ -34,6 +34,7 @@ __global__ void threep_threeD_device(Float2<FloatC>* block2,
     Float2<FloatC> R[N_SPINS][N_SPINS];
     Float2<FloatG> su3_1[N_COLS][N_COLS];
     Float2<FloatG> su3_2[N_COLS][N_COLS];
+    Float2<FloatG> su3_3[N_COLS][N_COLS];
     short dir_index = 0;
     #pragma unroll
     for(int dir1 = 0; dir1 < N_DIMS; dir1++) {
