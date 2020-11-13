@@ -401,6 +401,30 @@ namespace plegma {
       }
     if(isGdag) Gdag(D);
   }
+  
+  template<bool isLeftTrans, ACCUM_TYPE aty, bool isG1dag, bool isG2dag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G1_G2_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+							       Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							       Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							       Float2<FloatD> D1[N_COLS][N_COLS],
+							       Float2<FloatD> D2[N_COLS][N_COLS]){
+    Float2<FloatD> D[N_COLS][N_COLS];
+    #pragma unroll
+    for(int a = 0; a < N_COLS; a++)
+      #pragma unroll
+      for(int b = 0; b < N_COLS; b++)
+        #pragma unroll
+	for(int c = 0; c < N_COLS; c++)
+	  if(isG1dag and not isG2dag)
+	    D[a][c] = conj(D1[b][a])*D2[b][c];
+	  else if(not isG1dag and isG2dag)
+	    D[a][c] = D1[a][b]*conj(D2[c][b]);
+	  else if(isG1dag and isG2dag)
+	    D[a][c] = conj(D1[b][a])*conj(D2[c][b]);
+	  else
+	    D[a][c] = D1[a][b]*D2[b][c];
+    partial_trace_mul_Prop_G_Prop<isLeftTrans,aty,false>(A,B,C,D);
+  }
 
   template<typename FloatA, typename FloatB>
     __inline__ __device__ FloatA real_trace_mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
