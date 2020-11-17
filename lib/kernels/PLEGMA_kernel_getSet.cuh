@@ -124,35 +124,35 @@ namespace plegma {
 
     inline __host__ __device__ size_t cornerGhostL(const short& dir1, const short& dir2) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_surface2D[dir1][dir2] : (DGC_surface2D[dir1][dir2]/DGC_localL[DIM_T]);
+      return is4D ? DGC_surface2D[OFF2(dir1,dir2)] : (DGC_surface2D[OFF2(dir1,dir2)]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_surface2D[dir1][dir2] : (HGC_surface2D[dir1][dir2]/HGC_localL[DIM_T]);
+      return is4D ? HGC_surface2D[OFF2(dir1,dir2)] : (HGC_surface2D[OFF2(dir1,dir2)]/HGC_localL[DIM_T]);
       #endif
     }
 
     inline __host__ __device__ size_t vertexGhostL(const short& dir1, const short& dir2, const short& dir3) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_surface1D[dir1][dir2][dir3] : (DGC_surface1D[dir1][dir2][dir3]/DGC_localL[DIM_T]);
+      return is4D ? DGC_surface1D[OFF3(dir1,dir2,dir3)] : (DGC_surface1D[OFF3(dir1,dir2,dir3)]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_surface1D[dir1][dir2][dir3] : (HGC_surface1D[dir1][dir2][dir3]/HGC_localL[DIM_T]);
+      return is4D ? HGC_surface1D[OFF3(dir1,dir2,dir3)] : (HGC_surface1D[OFF3(dir1,dir2,dir3)]/HGC_localL[DIM_T]);
       #endif
     }
 
     inline __host__ __device__ size_t cornerGhostShift(const short& dir1, const short& dir2,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_cornerGhost[dir1][dir2][sign1][sign2] : (DGC_cornerGhost[dir1][dir2][sign1][sign2]/DGC_localL[DIM_T]);
+      return is4D ? DGC_cornerGhost[OFF2(dir1,dir2)][sign1][sign2] : (DGC_cornerGhost[OFF2(dir1,dir2)][sign1][sign2]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_cornerGhost[dir1][dir2][sign1][sign2] : (HGC_cornerGhost[dir1][dir2][sign1][sign2]/HGC_localL[DIM_T]);
+      return is4D ? HGC_cornerGhost[OFF2(dir1,dir2)][sign1][sign2] : (HGC_cornerGhost[OFF2(dir1,dir2)][sign1][sign2]/HGC_localL[DIM_T]);
       #endif
     }
 
     inline __host__ __device__ size_t vertexGhostShift(const short& dir1, const short& dir2, const short& dir3,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_vertexGhost[dir1][dir2][dir3][sign1][sign2][sign3] : (DGC_vertexGhost[dir1][dir2][dir3][sign1][sign2][sign3]/DGC_localL[DIM_T]);
+      return is4D ? DGC_vertexGhost[OFF3(dir1,dir2,dir3)][sign1][sign2][sign3] : (DGC_vertexGhost[OFF3(dir1,dir2,dir3)][sign1][sign2][sign3]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_vertexGhost[dir1][dir2][dir3][sign1][sign2][sign3] : (HGC_vertexGhost[dir1][dir2][dir3][sign1][sign2][sign3]/HGC_localL[DIM_T]);
+      return is4D ? HGC_vertexGhost[OFF3(dir1,dir2,dir3)][sign1][sign2][sign3] : (HGC_vertexGhost[OFF3(dir1,dir2,dir3)][sign1][sign2][sign3]/HGC_localL[DIM_T]);
       #endif
     }
 

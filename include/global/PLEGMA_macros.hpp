@@ -77,3 +77,17 @@
 #define EQUAL(...) BOOST_PP_IF(IS_EMPTY(__VA_ARGS__),		\
 			       NOTHING,				\
 			       __EQUAL) (__VA_ARGS__)
+
+
+// Use the following for accessing off-diagonal terms of matrices with only off-diagonal stored
+#define _OFF2(i,j) ((i*(i-1))/2 + j)
+#define OFF2(i,j) (i>j ? _OFF2(i,j) : _OFF2(j,i))
+
+#define _OFF3(i,j,k) ((i*(i-1)*(i-2))/6 + (j*(j-1))/2 + k)
+#define OFF3(i,j,k) (i>j && j>k ? _OFF3(i,j,k) : \
+		    (i>k && k>j ? _OFF3(i,k,j) : \
+		    (j>i && i>k ? _OFF3(j,i,k) : \
+		    (j>k && k>i ? _OFF3(j,k,i) : \
+		    (k>i && i>j ? _OFF3(k,i,j) : \
+		                  _OFF3(k,j,i))))))
+
