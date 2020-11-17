@@ -7,7 +7,7 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 14)
 include(CheckIncludeFileCXX)
-
+include(CheckSymbolExists)
 
 if(${CMAKE_VERSION} VERSION_GREATER "3.12.0") 
   cmake_policy(SET CMP0074 NEW)
