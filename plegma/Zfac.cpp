@@ -19,9 +19,13 @@ int main(int argc, char **argv)
 
   // Read the configurations //
   // Warning gauge fixing is needed //
+  PLEGMA_printf("Test0\n");
   PLEGMA_Gauge<double> gauge;
+  PLEGMA_printf("Test00\n");
   gauge.readFile(latfile, LIME_FORMAT);
+  PLEGMA_printf("Test1\n");
   gauge.calculatePlaq();
+  PLEGMA_printf("Test2\n");
   initGaugeQuda(gauge, boundaryCond == "antiperiodic");
   plaqQuda();
   std::string confStr=splitStrFwd(latfile,'.');
@@ -86,6 +90,9 @@ int main(int argc, char **argv)
 
     corr.contractNucleonThrp_oneD(lprop,rprop,gauge,0,gammas,true);
     corr.writeFile(filesPrefix+"VoneD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
+
+    corr.contractNucleonThrp_twoD(lprop,rprop,gauge,0,gammas,true);
+    corr.writeFile(filesPrefix+"VtwoD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
   }
 
     
