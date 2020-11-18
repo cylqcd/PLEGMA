@@ -188,7 +188,7 @@ void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
     result = (Float2<FloatC> *) corr.H_elem();
 
   if(isZfac){
-        Float2<FloatC> *rmove = NULL;
+    Float2<FloatC> *rmove = NULL;
     for(int mu = 0 ; mu < N_SPINS; mu++)
       for(int nu = 0 ; nu < N_SPINS; nu++)
 	for(int c1 = 0 ; c1 < N_COLS; c1++)
