@@ -125,17 +125,18 @@ int main(int argc, char **argv) {
   }
 
   if(run({"threep"})) {
-    PLEGMA_Gauge<float> gauge(BOTH, FIRST_CORNER);
-    PLEGMA_Propagator<float> prop_a(BOTH, FIRST_CORNER),  prop_b(BOTH, FIRST_CORNER);
+    PLEGMA_Gauge<float> gauge(BOTH, FIRST_VERTEX);
+    PLEGMA_Propagator<float> prop_a(BOTH, FIRST_VERTEX),  prop_b(BOTH, FIRST_VERTEX);
     site source;
     source.fill(0);
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
     std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
     
     // Benchmark three point functions 
+
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas,false);
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, false);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_twoD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, false);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_twoD,"Contraction third derivative",prop_a, prop_b, gauge, +1, gammas, false);
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1);
   }
   
