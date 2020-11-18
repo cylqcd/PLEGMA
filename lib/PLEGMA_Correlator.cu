@@ -169,8 +169,9 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
 			 PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
-			 int signProps, std::vector<GAMMAS> gammas){
-  shape = {N_DIMS*(N_DIMS-1), (int) gammas.size()};
+			 int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1), (int) gammas.size()};
+  else shape = {N_DIMS*(N_DIMS-1), (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"TwoD"};
   description = "xy,xz,xt,yx,yz,yt,zx,zy,zt,tx,ty,tz / "+getGammasString(gammas);
@@ -182,7 +183,7 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   
-  threep_twoD(*this,bwdProp,fwdProp,signProps,gauge,gammas);
+  threep_twoD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 template<typename Float>
