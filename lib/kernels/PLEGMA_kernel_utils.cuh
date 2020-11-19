@@ -349,14 +349,16 @@ namespace plegma {
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	if(aty == ACC_ZERO) {A[mu][nu].x=0.; A[mu][nu].y=0.;}
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) {
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
 #pragma unroll
 	for(int rho = 0 ; rho < N_SPINS; rho++)
 #pragma unroll
 	  for(int a = 0; a < N_COLS; a++)
 #pragma unroll
 	    for(int b = 0; b < N_COLS; b++){
-	      if(aty == ACC_ZERO || aty == ACC_PLUS){
+	      if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
 		if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * C[nu][rho][b][a];
 		else A[mu][nu] +=  B[rho][mu][a][b] * C[nu][rho][b][a];
 	      }
@@ -371,17 +373,19 @@ namespace plegma {
 
   template<bool isLeftTrans, ACCUM_TYPE aty,typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void open_mul_Prop_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
-							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+						Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
 						Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
 						int s1, int s2, int c1, int c2){
 #pragma unroll
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	if(aty == ACC_ZERO) {A[mu][nu].x=0.; A[mu][nu].y=0.;}
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) {
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
 #pragma unroll
 	for(int b = 0; b < N_COLS; b++){
-	  if(aty == ACC_ZERO || aty == ACC_PLUS){
+	  if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
 	    if(isLeftTrans) A[mu][nu] +=  B[mu][s1][b][c1] * C[nu][s2][b][c2];
 	    else A[mu][nu] +=  B[s1][mu][c1][b] * C[nu][s2][b][c2];
 	  }
@@ -393,13 +397,13 @@ namespace plegma {
 	
       }
   }
-
+  
   template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
   __inline__ __device__ void open_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
-							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
-							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
-							   Float2<FloatD> D[N_COLS][N_COLS],
-							   int s1, int s2, int c1, int c2){
+						  Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+						  Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+						  Float2<FloatD> D[N_COLS][N_COLS],
+						  int s1,int s2,int c1, int c2){
     if(isGdag) Gdag(D);
 #pragma unroll
     for(int mu = 0 ; mu < N_SPINS; mu++)
@@ -423,12 +427,16 @@ namespace plegma {
       }
     if(isGdag) Gdag(D);
   }
-  
+    
   template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
   __inline__ __device__ void partial_trace_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
-							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
-							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
-							 Float2<FloatD> D[N_COLS][N_COLS]){
+							   Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							   Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							   Float2<FloatD> D[N_COLS][N_COLS],
+							   int s1=-1,int s2=-1,int c1=-1, int c2=-1){
+    if ((s1>=0) && (s2>=0) && (c1>=0) && (c2>=0)) {
+      return open_mul_Prop_G_Prop<isLeftTrans,aty,isGdag>(A,B,C,D,s1,s2,c1,c2);
+    }
     if(isGdag) Gdag(D);
 #pragma unroll
     for(int mu = 0 ; mu < N_SPINS; mu++)
@@ -463,7 +471,7 @@ namespace plegma {
 							       Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
 							       Float2<FloatD> D1[N_COLS][N_COLS],
 							       Float2<FloatD> D2[N_COLS][N_COLS],
-							       int mu=-1,int nu=-1,int c1=-1, int c2=-1){
+							       int s1=-1,int s2=-1,int c1=-1, int c2=-1){
     Float2<FloatD> D[N_COLS][N_COLS];
     #pragma unroll
     for(int a = 0; a < N_COLS; a++)
@@ -479,9 +487,7 @@ namespace plegma {
 	    D[a][c] = conj(D1[b][a])*conj(D2[c][b]);
 	  else
 	    D[a][c] = D1[a][b]*D2[b][c];
-    bool notZfac=(mu<0) && (nu<0) && (c1<0) && (c2<0);
-    if(notZfac) partial_trace_mul_Prop_G_Prop<isLeftTrans,aty,false>(A,B,C,D);
-    else open_mul_Prop_G_Prop<isLeftTrans,aty,false>(A,B,C,D,mu,nu,c1,c2);
+    partial_trace_mul_Prop_G_Prop<isLeftTrans,aty,false>(A,B,C,D,s1,s2,c1,c2);
   }
 
   template<bool isLeftTrans, ACCUM_TYPE aty, bool isG1dag, bool isG2dag, bool isG3dag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
@@ -490,7 +496,8 @@ namespace plegma {
 								  Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
 								  Float2<FloatD> D1[N_COLS][N_COLS],
 								  Float2<FloatD> D2[N_COLS][N_COLS],
-								  Float2<FloatD> D3[N_COLS][N_COLS]){
+								  Float2<FloatD> D3[N_COLS][N_COLS],
+								  int s1=-1,int s2=-1,int c1=-1, int c2=-1){
     Float2<FloatD> D[N_COLS][N_COLS];
     #pragma unroll
     for(int a = 0; a < N_COLS; a++)
@@ -506,7 +513,7 @@ namespace plegma {
 	    D[a][c] = conj(D1[b][a])*conj(D2[c][b]);
 	  else
 	    D[a][c] = D1[a][b]*D2[b][c];
-    partial_trace_mul_Prop_G1_G2_Prop<isLeftTrans,aty,false,isG3dag>(A,B,C,D,D3);
+    partial_trace_mul_Prop_G1_G2_Prop<isLeftTrans,aty,false,isG3dag>(A,B,C,D,D3,s1,s2,c1,c2);
   }
 
 

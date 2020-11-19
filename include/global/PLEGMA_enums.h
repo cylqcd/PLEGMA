@@ -102,7 +102,7 @@ static inline std::string getGammasString(std::vector<GAMMAS> gammas) {
   return s;
 }
 
-enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS};
+enum ACCUM_TYPE{ACC_ZERO, ACC_PLUS, ACC_MINUS, ZERO_PLUS, ZERO_MINUS}; // ZERO_PLUS == ACC_ZERO
 enum LEFTRIGHT {LEFT, RIGHT};
 enum TOPO_CHARGE_DEF {PLAQUETTE,CLOVER,IMP_CLOVER};
 
