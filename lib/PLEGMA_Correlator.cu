@@ -189,10 +189,11 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
-			 PLEGMA_Propagator<Float> &fwdProp,
-			 PLEGMA_Gauge<Float> &gauge,
-			 int signProps, std::vector<GAMMAS> gammas){
-  shape = {N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
+			   PLEGMA_Propagator<Float> &fwdProp,
+			   PLEGMA_Gauge<Float> &gauge,
+			   int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
+  else shape = {N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"ThreeD"};
   description = "xyz,xyt,xzy,xzt,xty,xtz,yxz,yxt,yzx,yzt,ytx,ytz,zxy,zxt,zyx,zyt,ztx,zty,txy,txz,tyx,tyz,tzx,tzy / "+getGammasString(gammas);
@@ -204,7 +205,7 @@ contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   
-  threep_threeD(*this,bwdProp,fwdProp,signProps,gauge,gammas);
+  threep_threeD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 
