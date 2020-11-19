@@ -19,7 +19,7 @@ def get_pos(pos):
     for d, v in enumerate(pos):
         if v == 0:
             continue
-        x += get_sign(v) + "dir%d" % (d + 1)
+        x += get_sign(v) + (f"dir{d+1}" if N > 1 else "dir")
     return x
 
 
@@ -54,7 +54,7 @@ def get_dirs(pos):
     for d, v in enumerate(pos):
         if v == 0:
             continue
-        dirs += ",dir%d" % (d + 1)
+        dirs += ",dir%d" % (d + 1) if N > 1 else ",dir"
     return dirs
 
 
@@ -82,7 +82,9 @@ def get_data_line(left, gauge, right, old=None):
     for i, g in enumerate(gauge):
         line += (
             comment(
-                f"gaugeTex.get{get_shift(g)}(su3_{i+1},dir{i+1},vid{get_dirs(g)});",
+                f"gaugeTex.get{get_shift(g)}(su3_{i+1},dir{i+1},vid{get_dirs(g)});"
+                if N > 1
+                else "gaugeTex.get{get_shift(g)}(su3,dir,vid{get_dirs(g)});",
                 g,
                 old[1][i] if old else None,
             )
@@ -96,12 +98,19 @@ def get_data_line(left, gauge, right, old=None):
     return line
 
 
-def get_comp_line(sign, dagger):
+def get_comp_line(sign, dagger, first):
     line = get_tab()
-    line += "partial_trace_mul_Prop_" + "_".join((f"G{i+1}" for i in range(N)))
-    line += "_Prop<true," + ("ACC_MINUS" if sign < 0 else "ACC_PLUS") + ","
+    line += "partial_trace_mul_Prop_"
+    line += "_".join((f"G{i+1}" for i in range(N))) if N > 1 else "G"
+    line += (
+        "_Prop<true,"
+        + ("ZERO_" if first else "ACC_")
+        + ("MINUS," if sign < 0 else "PLUS,")
+    )
     line += ",".join(("true" if d else "false" for d in dagger))
-    line += ">(R,prop1,prop2," + ",".join((f"su3_{i+1}" for i in range(N))) + ");"
+    line += ">(R,prop1,prop2,"
+    line += ",".join((f"su3_{i+1}" for i in range(N))) if N > 1 else "su3"
+    line += ",mu,nu,c1,c2);"
     return line
 
 
@@ -112,7 +121,7 @@ for perm in permutations(product(*([dirs] * N))):
     old = None
     COMMENTED = 0
     text = []
-    for term in perm:
+    for n, term in enumerate(perm):
         sign = 1
         left = [0] * N
         right = [0] * N
@@ -150,7 +159,7 @@ for perm in permutations(product(*([dirs] * N))):
 
         text.append(get_comment(sign, left, gauge, dagger, right))
         text.append(get_data_line(left, gauge, right, old))
-        text.append(get_comp_line(sign, dagger))
+        text.append(get_comp_line(sign, dagger, True if n == 0 else False))
         text.append("")
         old = [left, gauge, right]
 

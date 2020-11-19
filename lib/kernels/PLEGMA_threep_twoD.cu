@@ -23,6 +23,7 @@ __global__ void threep_twoD_device(Float2<FloatC>* block2,
   // and we need to start from it when we go over maxT
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
+  bool notZfac = (mu<0) && (nu<0) && (c1<0) && (c2<0);
   
   Float2<FloatC> accum[N_DIMS*(N_DIMS-1)*N_SPINS*N_SPINS];
   #pragma unroll
@@ -35,7 +36,6 @@ __global__ void threep_twoD_device(Float2<FloatC>* block2,
     Float2<FloatC> R[N_SPINS][N_SPINS];
     Float2<FloatG> su3_1[N_COLS][N_COLS];
     Float2<FloatG> su3_2[N_COLS][N_COLS];
-    bool notZfac=(mu<0) && (nu<0) && (c1<0) && (c2<0);
     short dir_index = 0;
     #pragma unroll
     for(int dir1 = 0; dir1 < N_DIMS; dir1++) {
@@ -47,83 +47,67 @@ __global__ void threep_twoD_device(Float2<FloatC>* block2,
         // The order has been optmized such that 18 data accesses have been commented out
         // + term x, x, x+dir1, x+dir1+dir2
         prop1Tex.get(prop1,vid); gaugeTex.get(su3_1,dir1,vid); gaugeTex.get<Plus>(su3_2,dir2,vid,dir1); prop2Tex.get<PlusPlus>(prop2,vid,dir1,dir2);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ZERO_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // - term x, x, x+dir1-dir2^, x+dir1-dir2
         /*prop1Tex.get(prop1,vid);*/ /*gaugeTex.get(su3_1,dir1,vid);*/ gaugeTex.get<PlusMinus>(su3_2,dir2,vid,dir1,dir2); prop2Tex.get<PlusMinus>(prop2,vid,dir1,dir2);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // - term x+dir2, x+dir2, x+dir1^, x+dir1
         prop1Tex.get<Plus>(prop1,vid,dir2); gaugeTex.get<Plus>(su3_1,dir1,vid,dir2); gaugeTex.get<Plus>(su3_2,dir2,vid,dir1); prop2Tex.get<Plus>(prop2,vid,dir1);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // + term x-dir2, x-dir2, x+dir1-dir2, x+dir1
         prop1Tex.get<Minus>(prop1,vid,dir2); gaugeTex.get<Minus>(su3_1,dir1,vid,dir2); gaugeTex.get<PlusMinus>(su3_2,dir2,vid,dir1,dir2); /*prop2Tex.get<Plus>(prop2,vid,dir1);*/
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // - term x, x-dir1^, x-dir1, x-dir1+dir2
         prop1Tex.get(prop1,vid); gaugeTex.get<Minus>(su3_1,dir1,vid,dir1); gaugeTex.get<Minus>(su3_2,dir2,vid,dir1); prop2Tex.get<MinusPlus>(prop2,vid,dir1,dir2);
-	if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // + term x, x-dir1^, x-dir1-dir2^, x-dir1-dir2
         /*prop1Tex.get(prop1,vid);*/ /*gaugeTex.get<Minus>(su3_1,dir1,vid,dir1);*/ gaugeTex.get<MinusMinus>(su3_2,dir2,vid,dir1,dir2); prop2Tex.get<MinusMinus>(prop2,vid,dir1,dir2);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // + term x+dir2, x-dir1+dir2^, x-dir1^, x-dir1
         prop1Tex.get<Plus>(prop1,vid,dir2); gaugeTex.get<MinusPlus>(su3_1,dir1,vid,dir1,dir2); gaugeTex.get<Minus>(su3_2,dir2,vid,dir1); prop2Tex.get<Minus>(prop2,vid,dir1);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // - term x-dir2, x-dir1-dir2^, x-dir1-dir2, x-dir1
         prop1Tex.get<Minus>(prop1,vid,dir2); gaugeTex.get<MinusMinus>(su3_1,dir1,vid,dir1,dir2); gaugeTex.get<MinusMinus>(su3_2,dir2,vid,dir1,dir2); /*prop2Tex.get<Minus>(prop2,vid,dir1);*/
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // - term x+dir1, x^, x, x+dir2
         prop1Tex.get<Plus>(prop1,vid,dir1); gaugeTex.get(su3_1,dir1,vid); gaugeTex.get(su3_2,dir2,vid); prop2Tex.get<Plus>(prop2,vid,dir2);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // + term x+dir1, x^, x-dir2^, x-dir2
         /*prop1Tex.get<Plus>(prop1,vid,dir1);*/ /*gaugeTex.get(su3_1,dir1,vid);*/ gaugeTex.get<Minus>(su3_2,dir2,vid,dir2); prop2Tex.get<Minus>(prop2,vid,dir2);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
-	
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+
         // - term x-dir1, x-dir1, x-dir2^, x-dir2
         prop1Tex.get<Minus>(prop1,vid,dir1); gaugeTex.get<Minus>(su3_1,dir1,vid,dir1); /*gaugeTex.get<Minus>(su3_2,dir2,vid,dir2);*/ /*prop2Tex.get<Minus>(prop2,vid,dir2);*/
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // + term x-dir1, x-dir1, x, x+dir2
         /*prop1Tex.get<Minus>(prop1,vid,dir1);*/ /*gaugeTex.get<Minus>(su3_1,dir1,vid,dir1);*/ gaugeTex.get(su3_2,dir2,vid); prop2Tex.get<Plus>(prop2,vid,dir2);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // + term x+dir1+dir2, x+dir2^, x^, x
         prop1Tex.get<PlusPlus>(prop1,vid,dir1,dir2); gaugeTex.get<Plus>(su3_1,dir1,vid,dir2); /*gaugeTex.get(su3_2,dir2,vid);*/ prop2Tex.get(prop2,vid);
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,true,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // - term x-dir1+dir2, x-dir1+dir2, x^, x
         prop1Tex.get<MinusPlus>(prop1,vid,dir1,dir2); gaugeTex.get<MinusPlus>(su3_1,dir1,vid,dir1,dir2); /*gaugeTex.get(su3_2,dir2,vid);*/ /*prop2Tex.get(prop2,vid);*/
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,false,true>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // - term x+dir1-dir2, x-dir2^, x-dir2, x
         prop1Tex.get<PlusMinus>(prop1,vid,dir1,dir2); gaugeTex.get<Minus>(su3_1,dir1,vid,dir2); gaugeTex.get<Minus>(su3_2,dir2,vid,dir2); /*prop2Tex.get(prop2,vid);*/
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_MINUS,true,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // + term x-dir1-dir2, x-dir1-dir2, x-dir2, x
         prop1Tex.get<MinusMinus>(prop1,vid,dir1,dir2); gaugeTex.get<MinusMinus>(su3_1,dir1,vid,dir1,dir2); /*gaugeTex.get<Minus>(su3_2,dir2,vid,dir2);*/ /*prop2Tex.get(prop2,vid);*/
-        if(notZfac) partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2);
-	else partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
+        partial_trace_mul_Prop_G1_G2_Prop<true,ACC_PLUS,false,false>(R,prop1,prop2,su3_1,su3_2,mu,nu,c1,c2);
 
         // END REGION
 	
