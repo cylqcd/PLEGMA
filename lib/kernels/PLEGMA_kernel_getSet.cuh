@@ -277,7 +277,7 @@ namespace plegma {
       bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
       if(!minus1_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
       bool minus2_ghost = IS_MINUS_GHOST(dirMinus2, id);
-      if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus1, id);
+      if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
 
       if(minus1_ghost && minus2_ghost){
 	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
