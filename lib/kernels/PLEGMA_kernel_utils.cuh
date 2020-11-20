@@ -554,10 +554,10 @@ namespace plegma {
       for(int mu=0; mu<N_SPINS; mu++)
         #pragma unroll
         for(int j=0; j<N_COLS; j++) {
-          if(accum==ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) outV[mu][j] = 0.;
+          if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS) outV[mu][j] = 0.;
           #pragma unroll
           for(int k=0; k<N_COLS; k++) {
-            if(accum==ACC_MINUS || aty == ZERO_MINUS) outV[mu][j] -= G[j][k]*inV[mu][k];
+            if(accum==ACC_MINUS || accum == ZERO_MINUS) outV[mu][j] -= G[j][k]*inV[mu][k];
             else outV[mu][j] += G[j][k]*inV[mu][k];
           }
         }
@@ -571,10 +571,10 @@ namespace plegma {
      for(int mu=0; mu<N_SPINS; mu++)
        #pragma unroll
        for(int j=0; j<N_COLS; j++) {
-	 if(accum==ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) outV[mu][j] = 0.;
+	 if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS) outV[mu][j] = 0.;
          #pragma unroll
 	 for(int k=0; k<N_COLS; k++) {
-	   if(accum==ACC_MINUS || aty == ZERO_MINUS) outV[mu][j] -= conj(G[k][j])*inV[mu][k];
+	   if(accum==ACC_MINUS || accum == ZERO_MINUS) outV[mu][j] -= conj(G[k][j])*inV[mu][k];
 	   else outV[mu][j] += conj(G[k][j])*inV[mu][k];
 	 }
        }
