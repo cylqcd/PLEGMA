@@ -409,12 +409,14 @@ namespace plegma {
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	if(aty == ACC_ZERO){ A[mu][nu].x=0.; A[mu][nu].y=0.;}
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) {
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
 #pragma unroll
 	for(int b = 0; b < N_COLS; b++)
 #pragma unroll
 	  for(int c = 0; c < N_COLS; c++){
-	    if(aty == ACC_ZERO || aty == ACC_PLUS){
+	    if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
 	      if(isLeftTrans) A[mu][nu] +=  B[mu][s1][b][c1] * D[b][c] * C[nu][s2][c][c2];
 	      else A[mu][nu] += B[s1][mu][c1][b] * D[b][c] * C[nu][s2][c][c2];
 	    }
@@ -442,7 +444,9 @@ namespace plegma {
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	if(aty == ACC_ZERO){ A[mu][nu].x=0.; A[mu][nu].y=0.;}
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
 #pragma unroll
 	for(int rho = 0 ; rho < N_SPINS; rho++)
 #pragma unroll
@@ -451,7 +455,7 @@ namespace plegma {
 	    for(int b = 0; b < N_COLS; b++)
 #pragma unroll
 	      for(int c = 0; c < N_COLS; c++){
-		if(aty == ACC_ZERO || aty == ACC_PLUS){
+		if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
 		  if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
 		  else A[mu][nu] += B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
 		}
@@ -550,10 +554,10 @@ namespace plegma {
       for(int mu=0; mu<N_SPINS; mu++)
         #pragma unroll
         for(int j=0; j<N_COLS; j++) {
-          if(accum==ACC_ZERO) outV[mu][j] = 0.;
+          if(accum==ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) outV[mu][j] = 0.;
           #pragma unroll
           for(int k=0; k<N_COLS; k++) {
-            if(accum==ACC_MINUS) outV[mu][j] -= G[j][k]*inV[mu][k];
+            if(accum==ACC_MINUS || aty == ZERO_MINUS) outV[mu][j] -= G[j][k]*inV[mu][k];
             else outV[mu][j] += G[j][k]*inV[mu][k];
           }
         }
@@ -567,10 +571,10 @@ namespace plegma {
      for(int mu=0; mu<N_SPINS; mu++)
        #pragma unroll
        for(int j=0; j<N_COLS; j++) {
-	 if(accum==ACC_ZERO) outV[mu][j] = 0.;
+	 if(accum==ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) outV[mu][j] = 0.;
          #pragma unroll
 	 for(int k=0; k<N_COLS; k++) {
-	   if(accum==ACC_MINUS) outV[mu][j] -= conj(G[k][j])*inV[mu][k];
+	   if(accum==ACC_MINUS || aty == ZERO_MINUS) outV[mu][j] -= conj(G[k][j])*inV[mu][k];
 	   else outV[mu][j] += conj(G[k][j])*inV[mu][k];
 	 }
        }
