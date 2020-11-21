@@ -19,25 +19,24 @@ int main(int argc, char **argv)
 
   // Read the configurations //
   // Warning gauge fixing is needed //
-  PLEGMA_printf("Test0\n");
   PLEGMA_Gauge<double> gauge;
-  PLEGMA_printf("Test00\n");
   gauge.readFile(latfile, LIME_FORMAT);
-  PLEGMA_printf("Test1\n");
   gauge.calculatePlaq();
-  PLEGMA_printf("Test2\n");
   initGaugeQuda(gauge, boundaryCond == "antiperiodic");
   plaqQuda();
   std::string confStr=splitStrFwd(latfile,'.');
   if(boundaryCond == "antiperiodic") applyBoundaryConditions(gauge,true);
+  PLEGMA_Gauge<float> fgauge(BOTH,FIRST_VERTEX);
+  fgauge.copy(gauge);
   /////////////////////////////
 
   if(mu < 0) mu = -mu; // we invert only for up quark with UKQCD conventions
   QUDA_solver solver(mu);
   PLEGMA_Vector<double> vecIn;
   PLEGMA_Vector<double> vecOut;
-  PLEGMA_Propagator<double> rprop;
-  PLEGMA_Propagator<double> lprop;
+  PLEGMA_Vector<float> vecAux;
+  PLEGMA_Propagator<float> rprop(BOTH,FIRST_VERTEX);
+  PLEGMA_Propagator<float> lprop(BOTH,FIRST_VERTEX);
   for(int i = 0; i < numSourcePositions; i++){ // iterate over the momenta we want to do
     site& sS = sourcePositions[i];
     std::vector<int> mom= {sS[0],sS[1],sS[2],sS[3]};
@@ -57,11 +56,12 @@ int main(int argc, char **argv)
       solver.solve(vecOut,vecIn);
       vecOut.apply_gamma(G5,LEFT);
       vecOut.apply_gamma(G4,LEFT);
-      rprop.absorb(vecOut, isc/3, isc%3); // propagator in g0 convention in UKQCD (implicit flavor flip from g5g4)
+      vecAux.copy(vecOut);
+      rprop.absorb(vecAux, isc/3, isc%3); // propagator in g0 convention in UKQCD (implicit flavor flip from g5g4)
     }
     rprop.rotateToPhysicalBase_device(-1); // propagator in g0 convention in chiral (flipped flavor sign)
     // compute the prop in momentum space
-    PLEGMA_FT<double> ft((std::vector<double>) {(double)mom[0], (double)mom[1], (double)mom[2], mom[3]+0.5},4,false); // half twist in temporal direction
+    PLEGMA_FT<float> ft((std::vector<float>) {(float)mom[0], (float)mom[1], (float)mom[2], mom[3]+0.5},4,false); // half twist in temporal direction
     //    rprop.scale(1./HGC_totalVolume);
     ft.apply(rprop, FT_GEMV,-1);
     //    rprop.scale(HGC_totalVolume);
@@ -81,17 +81,18 @@ int main(int argc, char **argv)
     lprop.rotateToPhysicalBase_device(+1);
     lprop.rotateToPhysicalBase_device(+1);
     lprop.conjugate(); // this is to make the dagger, trans is in the code
+
     site source({0,0,0,0});
     std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};     
 
-    PLEGMA_Correlator<double> corr(MOMENTUM_SPACE, source, 0, HGC_totalL[3]);
+    PLEGMA_Correlator<float> corr(MOMENTUM_SPACE, source, 0, HGC_totalL[3]);
     corr.contractNucleonThrp_local(lprop,rprop,0,gammas,true);
     corr.writeFile(filesPrefix+"Vloc_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
 
-    corr.contractNucleonThrp_oneD(lprop,rprop,gauge,0,gammas,true);
+    corr.contractNucleonThrp_oneD(lprop,rprop,fgauge,0,gammas,true);
     corr.writeFile(filesPrefix+"VoneD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
 
-    corr.contractNucleonThrp_twoD(lprop,rprop,gauge,0,gammas,true);
+    corr.contractNucleonThrp_twoD(lprop,rprop,fgauge,0,gammas,true);
     corr.writeFile(filesPrefix+"VtwoD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
   }
 
