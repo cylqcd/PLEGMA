@@ -86,7 +86,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 	      HGC_surface1D[OFF3(i,j,k)] *= (l!=i && l!=j && l!=k) ? HGC_localL[l] : 1;
 	  }
 	  else {
-	    HGC_surface2D[OFF3(i,j,k)] = 0;
+	    HGC_surface1D[OFF3(i,j,k)] = 0;
 	  }
 	}
     
