@@ -92,7 +92,7 @@ cuda_add_executable(Zfac_Vgg EXCLUDE_FROM_ALL Zfac_Vgg.cpp)
 target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})
 
 
-cuda_add_executable(Zfac EXCLUDE_FROM_ALL Zfac.cpp)
+cuda_add_executable(Zfac Zfac.cpp)
 target_link_libraries(Zfac ${PLEGMA_LIBS})
 
 if (PLEGMA_SCATTERING_CONTRACTIONS)
