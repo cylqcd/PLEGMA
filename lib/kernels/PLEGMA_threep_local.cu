@@ -64,19 +64,17 @@ template<typename FloatC,typename FloatA, typename FloatB>
 static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
 			      PLEGMA_Correlator<FloatC> &corr,
 			      PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatA>& prop2,
-			      int signProps, std::vector<GAMMAS>& gammas,
-			      int mu, int nu, int c1, int c2){
+			      int signProps, std::vector<GAMMAS>& gammas, bool isZfac ){
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
-  int divS;
-  if((mu<0) && (nu<0) && (c1<0) && (c2<0)) divS =1;
-  else divS=N_SPINS*N_SPINS*N_COLS*N_COLS;
-  size_t size = corr.getTotalSize()/divS/t_size*time_step;
-  int site_size = corr.getSiteSize()/divS;
+  int extra=1;
+  if(isZfac) extra=N_SPINS*N_SPINS*N_COLS*N_COLS;
+  size_t size = corr.getTotalSize()/extra/t_size*time_step;
+  int site_size = corr.getSiteSize()/extra;
   int4 source = corr.getSource();
   auto moms = corr.getTexMomList();
 
@@ -102,31 +100,40 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
-    int t_step = std::min(t_size-it, time_step);
-    dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*t_step;
-    threep_local_device<FloatC,FloatA, FloatB>
-      <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms, mu,nu,c1,c2);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+    for(int et=0; et < extra; et++) {
+      int mu=-1, nu=-1, c1=-1, c2=-1;
+      if(extra>1) {
+	mu=et/N_SPINS/N_COLS/N_COLS;
+	nu=(et/N_COLS/N_COLS)%N_SPINS;
+	c1=(et/N_COLS)%N_COLS;
+	c2=et%N_COLS;
+      }	
+      int t_step = std::min(t_size-it, time_step);
+      dim3 grid = ps.tp.grid;
+      grid.x = (grid.x/time_step)*t_step;
+      threep_local_device<FloatC,FloatA, FloatB>
+	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
+	(d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms, mu,nu,c1,c2);
+      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+      cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    if(runFT==true){
-      int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*t_step; v++)
-	for(int i = 0 ; i < site_size; i++) {
-	  result[(it*volume+v)*site_size+i] = 0;
+      if(runFT==true){
+	int accumX = ps.tp.grid.x/time_step;
+	for(size_t v = 0 ; v < volume*t_step; v++)
+	  for(int i = 0 ; i < site_size; i++) {
+	    result[((it*volume+v)*extra+et)*site_size+i] = 0;
 	    for(int j = 0 ; j < accumX; j++)
-	      result[(it*volume+v)*site_size+i] +=
+	      result[((it*volume+v)*extra+et)*site_size+i] +=
 		h_partial_block[(v*site_size+i)*accumX+j];
-	}
-    } else {
-      for(size_t v = 0 ; v < volume*t_step; v++)
-	for(int i = 0 ; i < site_size; i++)
-	  result[(it*volume+v)*site_size+i] +=
-	    h_partial_block[v*site_size+i];
+	  }
+      } else {
+	for(size_t v = 0 ; v < volume*t_step; v++)
+	  for(int i = 0 ; i < site_size; i++)
+	    result[((it*volume+v)*extra+et)*site_size+i] +=
+	      h_partial_block[v*site_size+i];
+      }
     }
   }
 
@@ -147,10 +154,13 @@ void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pr
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   int site_size = gammas.size();
 
-  if(!isZfac)
-    if(corr.getSiteSize() != gammas.size())
-      PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+  if(isZfac)
+    site_size *= N_SPINS*N_SPINS*N_COLS*N_COLS;
+      
+  if(corr.getSiteSize() != site_size)
+    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
+  site_size = gammas.size();
   ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
@@ -164,21 +174,8 @@ void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pr
   else
     result = (Float2<FloatC> *) corr.H_elem();
 
-  if(isZfac){
-    Float2<FloatC> *rmove = NULL;
-    for(int mu = 0 ; mu < N_SPINS; mu++)
-      for(int nu = 0 ; nu < N_SPINS; nu++)
-	for(int c1 = 0 ; c1 < N_COLS; c1++)
-	  for(int c2 = 0 ; c2 < N_COLS; c2++){
-	    rmove = result + ((mu*N_SPINS+nu)*N_COLS*N_COLS + c1*N_COLS+c2)*corr.getVolSize()*gammas.size();
-	    tuneAndRun( ps, "threep_local_Zfac", threep_local_host<FloatC,FloatA,FloatB>,
-			ps, rmove, corr, prop1, prop2, signProps, gammas, mu, nu, c1, c2);      
-	  }
-  }
-  else {
-    tuneAndRun( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
-		ps, result, corr, prop1, prop2, signProps, gammas, -1, -1, -1, -1);      
-  }
+  tuneAndRun( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
+	      ps, result, corr, prop1, prop2, signProps, gammas, isZfac);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
