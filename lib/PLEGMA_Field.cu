@@ -93,7 +93,7 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localVol, GHOST_FLAG ghost_flag, bool isPinnedHost, bool checkErr):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), h_ext_ghost_vertex_r(NULL), h_ext_ghost_vertex_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(CUSTOM)
 {
   initialize(alloc_flag, site_size, localVol);
@@ -102,7 +102,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, siz
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag, bool isPinnedHost, bool checkErr):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), randstate_ptr(NULL), 
+  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), h_ext_ghost_vertex_r(NULL), h_ext_ghost_vertex_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(classT)
 {
   if(HGC_init_PLEGMA_flag == false) 
@@ -233,7 +233,7 @@ void PLEGMA_Field<Float>::create_device(){
     hostMalloc(h_ext_ghost_s, Bytes_ghost());
 #endif
   }
-  if(ghost_flag == FIRST_CORNER){
+  if(ghost_flag >= FIRST_CORNER){
 #ifdef HAVE_PINNED_GHOST
     cudaMallocHost((void**)&h_ext_ghost_corner_r, Bytes_ghostCorner());
     cudaMallocHost((void**)&h_ext_ghost_corner_s, Bytes_ghostCorner());
@@ -241,7 +241,15 @@ void PLEGMA_Field<Float>::create_device(){
     hostMalloc(h_ext_ghost_corner_r, Bytes_ghostCorner());
     hostMalloc(h_ext_ghost_corner_s, Bytes_ghostCorner());
 #endif
-
+  }
+  if(ghost_flag >= FIRST_VERTEX){
+#ifdef HAVE_PINNED_GHOST
+    cudaMallocHost((void**)&h_ext_ghost_vertex_r, Bytes_ghostVertex());
+    cudaMallocHost((void**)&h_ext_ghost_vertex_s, Bytes_ghostVertex());
+#else    
+    hostMalloc(h_ext_ghost_vertex_r, Bytes_ghostVertex());
+    hostMalloc(h_ext_ghost_vertex_s, Bytes_ghostVertex());
+#endif
   }
   if(checkErr) checkCudaError();
   isAllocDevice = true;
@@ -272,7 +280,7 @@ void PLEGMA_Field<Float>::destroy_device(){
     hostFree(h_ext_ghost_s,Bytes_ghost()); h_ext_ghost_s=NULL;
 #endif
   }
-  if(ghost_flag == FIRST_CORNER){
+  if(ghost_flag >= FIRST_CORNER){
 #ifdef HAVE_PINNED_GHOST
     cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
     cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
@@ -280,7 +288,15 @@ void PLEGMA_Field<Float>::destroy_device(){
     hostFree(h_ext_ghost_corner_r,Bytes_ghostCorner()); h_ext_ghost_corner_r=NULL;
     hostFree(h_ext_ghost_corner_s,Bytes_ghostCorner()); h_ext_ghost_corner_s=NULL;
 #endif
-
+  }
+  if(ghost_flag >= FIRST_VERTEX){
+#ifdef HAVE_PINNED_GHOST
+    cudaFreeHost(h_ext_ghost_vertex_r); h_ext_ghost_vertex_r=NULL;
+    cudaFreeHost(h_ext_ghost_vertex_s); h_ext_ghost_vertex_s=NULL;
+#else
+    hostFree(h_ext_ghost_vertex_r,Bytes_ghostVertex()); h_ext_ghost_vertex_r=NULL;
+    hostFree(h_ext_ghost_vertex_s,Bytes_ghostVertex()); h_ext_ghost_vertex_s=NULL;
+#endif
   }
   if(checkErr) checkCudaError();
   isAllocDevice=false;
@@ -439,7 +455,6 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
   }
 }
 
-
 template<typename Float>
 void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
@@ -449,6 +464,8 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
     PLEGMA_error("First corner ghosts have not been allocated.\n");
   if(dir<-1 || dir>=N_DIMS)
     PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
+  if(sign<0 || sign>DIR_BOTH)
+    PLEGMA_error("Directions should be an orientation enum");
 
   bool isAll = (dir<0) ? true:false;
   bool runT = Total_length()==HGC_localVolume;
@@ -460,7 +477,6 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
     for(short i=0; i<N_DIMS; i++)
       for(short j=i+1; j<N_DIMS; j++)
 	if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
-
 	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
