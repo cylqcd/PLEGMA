@@ -124,7 +124,7 @@ static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
   for(int it=0; it < t_size; it+=time_step) {
     for(int et=0; et < extra; et++) {
       int mu=-1, nu=-1, c1=-1, c2=-1;
-      if(extra>1) {
+      if(isZfac) {
 	mu=et/N_SPINS/N_COLS/N_COLS;
 	nu=(et/N_COLS/N_COLS)%N_SPINS;
 	c1=(et/N_COLS)%N_COLS;
