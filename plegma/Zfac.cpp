@@ -90,6 +90,9 @@ int main(int argc, char **argv)
 
     corr.contractNucleonThrp_twoD(lprop,rprop,gauge,0,gammas,true);
     corr.writeFile(filesPrefix+"VtwoD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
+    
+    corr.contractNucleonThrp_threeD(lprop,rprop,gauge,0,gammas,true);
+    corr.writeFile(filesPrefix+"VthreeD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
   }
 
     
