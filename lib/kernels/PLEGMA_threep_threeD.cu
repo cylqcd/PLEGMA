@@ -385,7 +385,6 @@ static void threep_threeD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA
       int t_step = std::min(t_size-it, time_step);
       dim3 grid = ps.tp.grid;
       grid.x = (grid.x/time_step)*t_step;
-      PLEGMA_printf("Running for %d, %d, %d\n", dir1,dir2,dir3);
       threep_threeD_device<FloatC,FloatA, FloatB, FloatG>
 	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	(d_partial_block, *propTex1, *propTex2, *gaugetex, listGammas, it, t_step, maxT,
