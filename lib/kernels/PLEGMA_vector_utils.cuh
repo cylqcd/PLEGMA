@@ -7,108 +7,78 @@
 using namespace plegma;
 using namespace quda;
 
-template<LEFTRIGHT LF,typename Float>
-static __global__ void apply_gamma_vector_kernel(Float *inOut, GAMMAS r){
+template<typename Float>
+static __global__ void rotate_uk_ch_kernel(vector2<Float> vec){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  vector2<Float> vec(inOut);
   Float2<Float> Sin[N_SPINS][N_COLS];
   Float2<Float> Sout[N_SPINS][N_COLS]; 
-  if (sid >= DGC_localVolume) return;
+  if (sid >= vec.volume()) return;
+  vec.get(Sin,sid);
+  U_uk_ch_g5g4(Sout,Sin);
+  vec.set(Sout,sid);
+}
+
+template<typename Float>
+void rotate_uk_ch_k(vector2<Float> vec){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (vec.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
+  rotate_uk_ch_kernel<<<gridDim,blockDim>>>(vec);
+}
+
+
+template<LEFTRIGHT LF,typename Float>
+static __global__ void apply_gamma_vector_kernel(vector2<Float> vec, GAMMAS r){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<Float> Sin[N_SPINS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_COLS]; 
+  if (sid >= vec.volume()) return;
   vec.get(Sin,sid);
   gammaV<LF>(Sout,Sin,r);
   vec.set(Sout,sid);
 }
 
 template<typename Float>
-static void apply_gamma_vector(LEFTRIGHT LR,Float *inOut,GAMMAS r){
+static void apply_gamma_vector(LEFTRIGHT LR,vector2<Float> inOut,GAMMAS r){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (inOut.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   switch(LR){
   case(LEFT):
-    apply_gamma_vector_kernel<LEFT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    apply_gamma_vector_kernel<LEFT><<<gridDim,blockDim>>>(inOut, r);
     break;
   case(RIGHT):
-    apply_gamma_vector_kernel<RIGHT><<<gridDim,blockDim>>>((Float*) inOut, r);
+    apply_gamma_vector_kernel<RIGHT><<<gridDim,blockDim>>>(inOut, r);
     break;
   }
   checkCudaError();
 }
 
 template<typename Float>
-static __global__ void apply_gamma5_vector_kernel(Float *inOut){
+static __global__ void apply_gamma5_vector_kernel(vector2<Float> vec){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  Float2<Float> *inOut2 = (Float2<Float> *) inOut;
-  if (sid >= DGC_localVolume) return;
-    
+  if (sid >= vec.volume()) return;
+
+  vec.setSid(sid);
   #pragma unroll
   for(int c1 = 0 ; c1 < N_COLS ; c1++){
     Float2<Float> spinor[4];
     // inline shuffling
     #pragma unroll
     for(int mu = 0 ; mu < N_SPINS ; mu++)
-      spinor[(mu+2)%4] = inOut2[(mu*N_COLS+c1)*DGC_localVolume + sid];
+      spinor[(mu+2)%4] = vec.get(mu, c1);
     // replacing
     #pragma unroll
     for(int mu = 0 ; mu < N_SPINS ; mu++)
-      inOut2[(mu*N_COLS+c1)*DGC_localVolume + sid] = spinor[mu];
-  }
-
-}
-
-template<typename Float>
-void apply_gamma5_vector(Float *inOut){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  apply_gamma5_vector_kernel<<<gridDim,blockDim>>>(inOut);
-}
-
-
-
-  
-template<typename Float>
-static __global__ void conjugate_vector_kernel(Float *inOut){
-
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
-
-  #pragma unroll
-  for(int i = 0 ; i < N_SPINS*N_COLS ; i++)
-    inOut[(i*DGC_localVolume + sid)*2 + 1] *= -1.;
-}
-
-template<typename Float>
-void conjugate_vector(Float *inOut){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  conjugate_vector_kernel<<<gridDim,blockDim>>>(inOut);
-  checkCudaError();
-}
-
-template<typename Float>
-__inline__ __global__ void scale_vector_kernel(Float a, Float* inOut){
-  int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
-
-  #pragma unroll
-  for(int i = 0 ; i < N_SPINS*N_COLS ; i++) {
-    inOut[(i*DGC_localVolume + sid)*2 + 0] *= a;
-    inOut[(i*DGC_localVolume + sid)*2 + 1] *= a;
+      vec.set(mu, c1, spinor[mu]);
   }
 }
 
 template<typename Float>
-void scale_vector(Float a, Float* inOut){
+void apply_gamma5_vector(vector2<Float> vec){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-
-  scale_vector_kernel<<<gridDim,blockDim>>>( a, inOut);
-  checkCudaError();
+  dim3 gridDim( (vec.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
+  apply_gamma5_vector_kernel<<<gridDim,blockDim>>>(vec);
 }
 
-template<typename Float>
-void norm2_device(Float norm, Float* in){
-
-}
 
 template<typename FloatIn, typename FloatOut, bool outEvenB, bool outOddB> 
 static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *outOdd){
@@ -278,7 +248,7 @@ struct computeRMS{
     Float2<Float> e[N_SPINS*N_COLS];
     Float2<Float> *w = &(thrust::get<1>(t));
 #pragma unroll
-    for(int i = 0 ; i < N_SPINS*N_COLS; i++) e[i] = *(w+i*DGC_localVolume);
+    for(int i = 0 ; i < N_SPINS*N_COLS; i++) e[i] = *(w+i*DGC_localVolume3D);
     Float val =0;
 #pragma unroll
     for(int i = 0 ; i < N_SPINS*N_COLS ; i++) val += e[i].x*e[i].x  + e[i].y*e[i].y; 
@@ -287,7 +257,7 @@ struct computeRMS{
 };
 
 template<typename Float>
-static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std::vector<Float> &absPsi, int my_it, int *sourceposition){
+static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &listR2, std::vector<Float> &absPsi, const site& sourceposition){
   int *d_listR2 = nullptr;
   Float *d_absPsi = nullptr;
   if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");
@@ -295,16 +265,14 @@ static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std
   cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); checkCudaError();
   cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkCudaError();
   cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkCudaError();
-  int V = HGC_localVolume;
-  int V3 = V/HGC_localL[3];
   thrust::counting_iterator<int> first(0);
-  thrust::counting_iterator<int> last = first + V3;
+  thrust::counting_iterator<int> last = first + HGC_localVolume3D;
   typedef thrust::device_ptr<Float2<Float> > DpF2;
-  DpF2 y( (Float2<Float>*) (vec.D_elem() + my_it*V3*2) );
+  DpF2 y( (Float2<Float>*) vec.D_elem());
   typedef thrust::tuple<thrust::counting_iterator<int>,DpF2> tplIntDev2;
   typedef thrust::zip_iterator<tplIntDev2> zipTplIntDev2;
   zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
-  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+V3));
+  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+HGC_localVolume3D));
   thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
   cudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), cudaMemcpyDeviceToHost); checkCudaError();
   cudaFree(d_listR2);
@@ -312,26 +280,22 @@ static void compute_rms(PLEGMA_Vector<Float> &vec, std::vector<int> &listR2, std
 }
 
 template<typename FloatVo, typename FloatS, typename FloatVi>
-static __global__ void mulGV_kernel(FloatVo *Vo, FloatS *u, FloatVi *Vi){
+static __global__ void mulGV_kernel(vector2<FloatVo> Vo, su3_2<FloatS> u, vector2<FloatVi> Vi){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= Vo.volume()) return;
   Float2<FloatVo> lVo[N_SPINS][N_COLS];
   Float2<FloatVi> lVi[N_SPINS][N_COLS];
   Float2<FloatS> lu[N_COLS][N_COLS];
 
-  vector2<FloatVo> RVo(Vo);
-  vector2<FloatVi> RVi(Vi);
-  su3_2<FloatS> Ru(u);
-
-  RVi.get(lVi,sid);
-  Ru.get(lu,sid);
+  Vi.get(lVi,sid);
+  u.get(lu,sid);
   mul_G_V(lVo,lu,lVi);
-  RVo.set(lVo,sid);
+  Vo.set(lVo,sid);
 }
 
 template<typename FloatVo, typename FloatS, typename FloatVi>
-static void mulGV_k(PLEGMA_Vector<FloatVo> &Vo, PLEGMA_Su3field<FloatS> &u, PLEGMA_Vector<FloatVi> &Vi){
-  ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps,"mulGV_kernel", mulGV_kernel<FloatVo,FloatS,FloatVi>, Vo.D_elem(), u.D_elem(), Vi.D_elem());
+static void mulGV_k(vector2<FloatVo> Vo, su3_2<FloatS> u, vector2<FloatVi> Vi){
+  ProfileStruct ps(Vo.volume());
+  tuneAndRun(ps,"mulGV_kernel", mulGV_kernel<FloatVo,FloatS,FloatVi>, Vo, u, Vi);
   checkCudaError();
 }

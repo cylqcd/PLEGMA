@@ -84,9 +84,9 @@ void setGaugeParam(QudaGaugeParam &gauge_param) {
   int y_face_size = gauge_param.X[0]*gauge_param.X[2]*gauge_param.X[3]/2;
   int z_face_size = gauge_param.X[0]*gauge_param.X[1]*gauge_param.X[3]/2;
   int t_face_size = gauge_param.X[0]*gauge_param.X[1]*gauge_param.X[2]/2;
-  int pad_size =MAX(x_face_size, y_face_size);
-  pad_size = MAX(pad_size, z_face_size);
-  pad_size = MAX(pad_size, t_face_size);
+  int pad_size =std::max(x_face_size, y_face_size);
+  pad_size = std::max(pad_size, z_face_size);
+  pad_size = std::max(pad_size, t_face_size);
   gauge_param.ga_pad = pad_size;    
 #endif
 }
@@ -205,6 +205,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.setup_inv_type[i] = setup_inv[i];
     mg_param.num_setup_iter[i] = num_setup_iter[i];
     mg_param.setup_tol[i] = setup_tol;
+    mg_param.setup_maxiter[i] = setup_maxiter;
     mg_param.spin_block_size[i] = 1;
     mg_param.n_vec[i] = nvec[i] == 0 ? 24 : nvec[i]; // default to 24 vectors if not set
     mg_param.precision_null[i] = prec_null; // precision to store the null-space basis

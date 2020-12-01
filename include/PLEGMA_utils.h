@@ -8,6 +8,7 @@
 #include <utils/QUDA_params.h>
 #include <utils/QUDA_types.h>
 #include <utils/QUDA_interface.h>
+#include <functional>
 
 using namespace plegma;
 
@@ -18,7 +19,7 @@ void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLi
 void updateGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic = true, QudaLinkType type = QUDA_WILSON_LINKS);
 void finalizeGaugeQuda();
 void plaqQuda();
-void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut, PLEGMA_Gauge<double> &gaugeIn, double overelaxPar=1.5, double tolerance=1e-12,
+void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut, PLEGMA_Gauge<double> &gaugeIn, int type, double overelaxPar=1.5, double tolerance=1e-12,
 			   int maxiter=10000,int verbosePerSteps=1, int reunit_interval=1, int stop_theta=0);
 
 //============= QUDA_params.cpp ===================================//
@@ -33,6 +34,7 @@ void setEigMultigridParam(QudaMultigridParam &mg_param, QudaEigParam *mg_eig_par
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 extern const std::vector<std::string> listAvailOptPLEGMA;
 void initializeOptions(int argc, char **argv, bool withQuda=true, std::vector<std::string> listOptPLEGMA = listAvailOptPLEGMA);
+void updateOptions(std::string filename, std::vector<std::string>& listOpt, std::function<void(Options&)> add_options = nullptr);
 void updateOptions(WHICHFLAVOR fl);
 void initializePLEGMA();
 void finalize();

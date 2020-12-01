@@ -41,13 +41,12 @@ __device__ void calculatestaples(Float2<FloatG> U[N_COLS][N_COLS], gauge2<FloatG
 }
 
 template<typename FloatG, typename FloatE>
-__global__ void ZUpdate( FloatG* w_dpointer, FloatG* z_dpointer, FloatE e_work, FloatE e_save ){
+__global__ void ZUpdate( gauge2<FloatG> W_in, gauge2<FloatG> Z, FloatE e_work, FloatE e_save ){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
 
-  if (sid < DGC_localVolume) {
+  if (sid < W_in.volume()) {
     Float2<FloatG> V_i[N_COLS][N_COLS], staple[N_COLS][N_COLS], aux[N_COLS][N_COLS];
-    gauge2<FloatG> W_in(w_dpointer), Z(z_dpointer);
       
     #pragma unroll
     for( int dir=0; dir<N_DIMS; dir++)
@@ -80,13 +79,12 @@ __global__ void ZUpdate( FloatG* w_dpointer, FloatG* z_dpointer, FloatE e_work, 
 }
 
 template<typename FloatG>
-__global__ void WUpdate( FloatG* w_dpointer, FloatG* z_dpointer ){
+__global__ void WUpdate( gauge2<FloatG> W, gauge2<FloatG> Z ){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
 
-  if (sid < DGC_localVolume) {
+  if (sid < W.volume()) {
     Float2<FloatG> Z_i[N_COLS][N_COLS], W_i[N_COLS][N_COLS], W_f[N_COLS][N_COLS];
-    gauge2<FloatG> Z(z_dpointer), W(w_dpointer);
       
     #pragma unroll
     for( int dir=0; dir<N_DIMS; dir++)
@@ -104,82 +102,47 @@ __global__ void WUpdate( FloatG* w_dpointer, FloatG* z_dpointer ){
 }
 
 template<typename FloatG, typename FloatE>
-__inline__ void GFlow_substep( FloatG* w_dpointer, FloatG* z_dpointer, FloatE e_work, FloatE e_save )
+__inline__ void GFlow_substep( gauge2<FloatG> W, gauge2<FloatG> Z, FloatE e_work, FloatE e_save )
 {
   dim3 blockDim( THREADS_PER_BLOCK, 1, 1 );
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x, 1, 1);
+  dim3 gridDim( (W.volume() + blockDim.x -1)/blockDim.x, 1, 1);
   //FloatG* debug_array;
   
-  #ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-  #endif
-
-  ZUpdate<FloatG,FloatE><<<gridDim,blockDim>>>( w_dpointer, z_dpointer, e_work, e_save );
+  ZUpdate<FloatG,FloatE><<<gridDim,blockDim>>>( W, Z, e_work, e_save );
   cudaDeviceSynchronize();
 
-  WUpdate<FloatG><<<gridDim,blockDim>>>( w_dpointer, z_dpointer );
+  WUpdate<FloatG><<<gridDim,blockDim>>>( W, Z );
   checkCudaError();
-
-  #ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for GW substep kernel is %f ms\n",elapsedTime);
-  #endif
 }
 
 
 template<typename FloatG>
-__global__ void unitarize_dev_kernel( FloatG* d_pointer ){
+__global__ void unitarize_dev_kernel( gauge2<FloatG> gauge ){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
 
-  if (sid < DGC_localVolume) {
+  if (sid < gauge.volume()) {
     Float2<FloatG> U[N_COLS][N_COLS];
-    gauge2<FloatG> Ufield(d_pointer);
       
     #pragma unroll
     for( int dir=0; dir<N_DIMS; dir++)
       {
-	Ufield.get(U, dir, sid);
+	gauge.get(U, dir, sid);
 	enforce_unitarity( U );
-      	Ufield.set(U, dir, sid);
+      	gauge.set(U, dir, sid);
       }
   }
 }
 
 
 template<typename FloatG>
-__inline__ void unitarize_dev( FloatG* d_dpointer )
+__inline__ void unitarize_dev( gauge2<FloatG> gauge )
 {
   dim3 blockDim( THREADS_PER_BLOCK, 1, 1 );
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x, 1, 1);
+  dim3 gridDim( (gauge.volume() + blockDim.x -1)/blockDim.x, 1, 1);
   
-  #ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-  #endif
-
-  unitarize_dev_kernel<<<gridDim,blockDim>>>( d_dpointer );
+  unitarize_dev_kernel<<<gridDim,blockDim>>>( gauge );
   checkCudaError();
-
-  #ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for unitarization kernel is %f ms\n",elapsedTime);
-  #endif
 }
 
 //#####################################################################################
@@ -187,16 +150,15 @@ __inline__ void unitarize_dev( FloatG* d_dpointer )
 //#####################################################################################
 
 template<typename FloatG>
-static __global__ void calcPlaqStaplesDef_kernel( FloatG* dpointer, FloatG* partial_plaq ){
+static __global__ void calcPlaqStaplesDef_kernel( gauge2<FloatG> gaugep, FloatG* partial_plaq ){
   __shared__ FloatG shared_cache[THREADS_PER_BLOCK];
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
 
-  if (sid < DGC_localVolume) {
+  if (sid < gaugep.volume()) {
     FloatG trace = 0.;
     
     Float2<FloatG> S[N_COLS][N_COLS], U[N_COLS][N_COLS];
-    gauge2<FloatG> gaugep(dpointer);
 
     for( int dir=0; dir<N_DIMS; dir++){
       gaugep.get( U, dir, sid );
@@ -219,37 +181,20 @@ static __global__ void calcPlaqStaplesDef_kernel( FloatG* dpointer, FloatG* part
 }
 
 template<typename FloatG>
-static FloatG calcPlaqStaplesDef( FloatG* d_pointer ){
+static FloatG calcPlaqStaplesDef(gauge2<FloatG> gaugep){
 
   FloatG plaquette = 0.;
   FloatG globalPlaquette = 0.;
   FloatG *d_partial_plaq = NULL;
   FloatG *h_partial_plaq = NULL;
   dim3 blockDim( THREADS_PER_BLOCK, 1, 1 );
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x, 1, 1);
+  dim3 gridDim( (gaugep.volume() + blockDim.x -1)/blockDim.x, 1, 1);
    
   h_partial_plaq = (FloatG*) malloc(gridDim.x * sizeof(FloatG) );
   if(h_partial_plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
   cudaMalloc((void**)&d_partial_plaq, gridDim.x * sizeof(FloatG));
 
-  #ifdef TIMING_REPORT
-  cudaEvent_t start,stop;
-  float elapsedTime;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
-  #endif
-
-  calcPlaqStaplesDef_kernel<FloatG><<<gridDim,blockDim>>>( d_pointer, d_partial_plaq );
-
-  #ifdef TIMING_REPORT
-  cudaEventRecord(stop,0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsedTime,start,stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  printfQuda("Elapsed time for plaquette kernel is %f ms\n",elapsedTime);
-  #endif
+  calcPlaqStaplesDef_kernel<FloatG><<<gridDim,blockDim>>>( gaugep, d_partial_plaq );
 
   cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDim.x * sizeof(FloatG) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_plaq);
@@ -259,6 +204,6 @@ static FloatG calcPlaqStaplesDef( FloatG* d_pointer ){
     plaquette += h_partial_plaq[i];
   free(h_partial_plaq);
 
-  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , MPI_COMM_WORLD);  
+  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , HGC_fullComm);  
   return globalPlaquette/(HGC_totalVolume*N_COLS*24);
 }

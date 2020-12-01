@@ -8,6 +8,7 @@
 #define define(var,...) extern var 
 #endif
 
+
 // Main paramters -- read by plegmaOptions
 define(int dims[N_DIMS], {8,8,8,16});
 define(int procs[N_DIMS], {1,1,1,1});
@@ -27,8 +28,10 @@ define(std::vector<GAMMAS> gammas, {});
 define(int numSourcePositions, 1);
 define(std::string pathListGaugeConfs);
 define(std::vector<std::string> listGaugeConfs);
+define(std::string pathListVecs);
+define(std::vector<std::string> listVecs);
 define(std::string pathListSourcePositions);
-define(int (*sourcePositions)[N_DIMS], NULL);
+define(std::vector<site> sourcePositions, {});
 define(int maxQsq, 64);
 define(FILE_FORMAT corr_file_format, HDF5_FORMAT);
 define(CORR_SPACE corr_space, MOMENTUM_SPACE);
@@ -37,8 +40,7 @@ define(std::string threep_filename, "./threep");
 define(std::vector<int> tSinks, {});
 define(std::vector<std::string> Projs, {});
 define(int rng_seed, 123456);
-define(std::string inputUP,"");
-define(std::string inputDN,"");
+define(std::string inputLIGHT,"");
 define(std::string inputST,"");
 define(std::string inputCH,"");
 
@@ -50,7 +52,7 @@ define(double Eig_amax, 4.5);
 define(std::string Eig_spectrumPart, "SR");
 define(double Eig_tol, 1e-05);
 define(int Eig_maxIters, 100000);
-#if defined(HAVE_ARPACK)
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
 define(int Eig_NkV, 2*Eig_NeV);
 define(std::string Eig_logFile, "./logfile.out");
 #elif defined(HAVE_PRIMME)

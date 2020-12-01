@@ -64,8 +64,12 @@ void finalizeComms()
 #endif
 }
 
-void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, double overelaxPar,double tolerance,
+void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, int type, double overelaxPar,double tolerance,
 			   int maxiter, int verbosePerSteps, int reunit_interval, int stop_theta){
+  if(type == 3 && HGC_verbosity>1) PLEGMA_printf("Gauge fixing using Coulomb gauge\n");
+  if(type == 4 && HGC_verbosity>1) PLEGMA_printf("Gauge fixing using Landau gauge\n");
+  if(type != 3 && type != 4) PLEGMA_error("Choose type 3 for Coulomb and type 4 for Landau\n");
+    
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
   gauge_param.type = QUDA_WILSON_LINKS;
@@ -74,7 +78,7 @@ void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &
   double* buf[N_DIMS];
   for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gaugeIn.Bytes_total()/N_DIMS);
   unpackGaugeToEvenOdd(buf, gaugeIn);
-  computeGaugeFixingOVRQuda(buf,4,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param,nullptr);
+  computeGaugeFixingOVRQuda(buf,type,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param,nullptr);
   packGaugeToNormal(gaugeOut,buf);
   gaugeOut.load();
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gaugeIn.Bytes_total()/N_DIMS);
@@ -151,6 +155,7 @@ QUDA_solver::QUDA_solver(double mu) {
   inv_param = newQudaInvertParam();
 
   if(use_mg) inv_param.preconditioner = mg_preconditioner;
+  else inv_param.preconditioner = nullptr;
 
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
@@ -271,24 +276,25 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   current->smoother = param->smoother[level];
   
   if(level < mg_levels-1 && level < QUDA_MAX_MG_LEVEL-1){
-    if(changeBlock(current->geoBlockSize, param->geo_block_size[level])) {
-      delete (mg->*get(MG_Coarse()));
-      mg->*get(MG_Coarse())=nullptr;
-      delete (mg->*get(MG_CoarseParam()));
-      mg->*get(MG_CoarseParam())=nullptr;
+    MG* &coarse = mg->*get(MG_Coarse());
+    MGParam* &coarseParam = mg->*get(MG_CoarseParam());
+    if(changeBlock(coarseParam->geoBlockSize, param->geo_block_size[level+1])) {
+      delete coarse;
+      coarse=nullptr;
+      delete coarseParam;
+      coarseParam=nullptr;
       delete (mg->*get(MG_Transfer()));
       mg->*get(MG_Transfer())=nullptr;
       return;
     }
-    if((mg->*get(MG_CoarseParam()))->Nvec != param->n_vec[level]) {
-      delete (mg->*get(MG_Coarse()));
-      mg->*get(MG_Coarse())=nullptr;
-      delete (mg->*get(MG_CoarseParam()));
-      mg->*get(MG_CoarseParam())=nullptr;
+    if(coarseParam->Nvec != param->n_vec[level+1]) {
+      delete coarse;
+      coarse=nullptr;
+      delete coarseParam;
+      coarseParam=nullptr;
       return;
     }
-    
-    updateMultigridParam(mg->*get(MG_Coarse()), mg->*get(MG_CoarseParam()), param, level+1);
+    updateMultigridParam(coarse, coarseParam, param, level+1);
   }
 }
 
@@ -312,14 +318,18 @@ void QUDA_solver::UpdateSolver()
   checkInvertParam(&inv_param);
 
   if(use_mg){
-  if(((multigrid_solver*) mg_preconditioner)->mgParam->Nvec != mg_param.n_vec[0]) {
-    destroyMultigridQuda(mg_preconditioner);
-    mg_preconditioner = newMultigridQuda(&mg_param);
-  } else {
+    inv_param.preconditioner = mg_preconditioner;
     multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
-    updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
-    updateMultigridQuda(mg_preconditioner, &mg_param);
-  }}
+    if( changeBlock(mg->mgParam->geoBlockSize, mg_param.geo_block_size[0]) ||
+	mg->mgParam->Nvec != mg_param.n_vec[0]) {
+      destroyMultigridQuda(mg_preconditioner);
+      mg_preconditioner = newMultigridQuda(&mg_param);
+    } else {
+      updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
+      updateMultigridQuda(mg_preconditioner, &mg_param);
+    }
+  }
+  else inv_param.preconditioner = nullptr;
   
   bool pc_solve = true;
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
@@ -376,7 +386,7 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
   vectorOut.copyFromQUDA( x, flag_eo);
   if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION || 
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
-    vectorOut.scaleVector(2*inv_param.kappa);
+    vectorOut.scale(2*inv_param.kappa);
   }
 }
 
@@ -445,7 +455,7 @@ void QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, Qu
   Pin.copyToQUDA(in);
   apply<type>();
   Pout.copyFromQUDA(out);
-  if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) Pout.scaleVector(1./(2*inv_param.kappa));
+  if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION) Pout.scale(1./(2*inv_param.kappa));
 }
 
 template void QUDA_dirac::apply<M>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);

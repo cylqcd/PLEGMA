@@ -31,7 +31,7 @@ namespace plegma {
       /*! Constructor */
       PLEGMA_RNG(int seedin, int rng_sizes);
       /*! free array */
-      virtual ~PLEGMA_RNG();
+      ~PLEGMA_RNG();
       /*! @brief return curand rng array size */
       int Size() const { return rng_size;};
       int Rank_Offset(){ return rank_offset;};

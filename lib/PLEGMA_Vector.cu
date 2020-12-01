@@ -4,6 +4,7 @@
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
+#include <PLEGMA_seqSourceNucleon.cuh> 
 #include <PLEGMA_covD.cuh>
 using namespace plegma;
 using namespace quda;
@@ -19,37 +20,50 @@ template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
 					    int nsmearGauss, Float alphaGauss){
-  gauge.communicateSideGhost();
-  vecIn.communicateSideGhost();
+  
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
     PLEGMA_warning("VecIn is not allocated on BOTH; gaussianSmearing will overwrite the device memory.\n");
   }
-  
-  gaugeTex<Float> texGauge;
-  vectorTex<Float> texVecIn, texVecOut;
-  texVecOut.tex = this->createTexObject();
-  texVecIn.tex = vecIn.createTexObject();
-  texGauge.tex = gauge.createTexObject();
-  
+
+  assert(this->checkVolume(vecIn, gauge));
+  auto texGauge = toTexture<gaugeTex>(gauge);
+  auto texVecIn = toTexture<vectorTex>(vecIn);
+  auto texVecOut = toTexture<vectorTex>(*this);
+
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
-      gaussian_smearing(this->D_elem(),texVecIn,texGauge, alphaGauss);
-      this->communicateSideGhost();
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) {
+	  gauge.communicateSideGhost(dir, DIR_BOTH, START);
+	}
+	vecIn.communicateSideGhost(dir, DIR_BOTH, START);
+      }
+      gaussian_smearing_no_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) {
+	  gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
+	}
+	vecIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
+      }
+      gaussian_smearing_only_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss);
     }
     else{
-      gaussian_smearing(vecIn.D_elem(),texVecOut,texGauge, alphaGauss);
-      vecIn.communicateSideGhost();
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, DIR_BOTH, START);
+      }
+      gaussian_smearing_no_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, DIR_BOTH, FINISH);
+      }
+      gaussian_smearing_only_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss);
     }
   }
   if( (nsmearGauss%2) == 0)
     cudaMemcpy(this->D_elem(),vecIn.D_elem(),
-	       PLEGMA_Field<Float>::bytes_total_length,cudaMemcpyDeviceToDevice);
+	       this->Bytes_total(),cudaMemcpyDeviceToDevice);
   
-  this->destroyTexObject(texVecOut.tex);
-  vecIn.destroyTexObject(texVecIn.tex);
-  gauge.destroyTexObject(texGauge.tex);
   checkCudaError();
 
   if(vecIn.IsAllocHost()) {
@@ -60,54 +74,35 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
 template<typename Float>
 void PLEGMA_Vector<Float>::copyToQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_to_QUDA(PLEGMA_Field<Float>::d_elem, *qudaVector, isEv);
+  copy_to_QUDA(this->d_elem, *qudaVector, isEv);
 }
 
 template<typename Float>
 void PLEGMA_Vector<Float>::copyFromQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_from_QUDA(PLEGMA_Field<Float>::d_elem, *qudaVector, isEv);
-}
-
-template<typename Float>
-void  PLEGMA_Vector<Float>::scaleVector(Float a){
-  scale_vector(a,PLEGMA_Field<Float>::d_elem);
-}
-
-template<typename Float>
-void  PLEGMA_Vector<Float>::conjugate(){
-  conjugate_vector(PLEGMA_Field<Float>::d_elem);
+  copy_from_QUDA(this->d_elem, *qudaVector, isEv);
 }
 
 template<typename Float>
 void  PLEGMA_Vector<Float>::apply_gamma5(){
-  apply_gamma5_vector(PLEGMA_Field<Float>::d_elem);
+  apply_gamma5_vector(toField2<vector2>(*this));
 }
 
 
 template<typename Float> 
 void  PLEGMA_Vector<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
-  apply_gamma_vector(LR,PLEGMA_Field<Float>::d_elem,gMat);
+  apply_gamma_vector(LR,toField2<vector2>(*this),gMat);
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::norm2Host(){
-  Float res = 0.;
-  Float globalRes;
-
-  for(int i = 0 ; i < N_SPINS*N_COLS*HGC_localVolume ; i++){
-    res += PLEGMA_Field<Float>::h_elem[i*2 + 0]*PLEGMA_Field<Float>::h_elem[i*2 + 0] + PLEGMA_Field<Float>::h_elem[i*2 + 1]*PLEGMA_Field<Float>::h_elem[i*2 + 1];
-  }
-
-  int rc = MPI_Allreduce(&res, &globalRes , 1, sizeof(Float)==4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  if( rc != MPI_SUCCESS ) PLEGMA_error("Error in MPI reduction for plaquette");
-  PLEGMA_printf("Vector norm2 is %e\n",globalRes);
+void PLEGMA_Vector<Float>::rotate_uk_ch(){
+  rotate_uk_ch_k(toField2<vector2>(*this));
 }
 
 // vec4D <- Prop3D
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -115,9 +110,9 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
@@ -130,7 +125,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;
@@ -138,9 +133,9 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      cudaMemset(PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
        	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
        	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
@@ -157,7 +152,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
   int V4 = HGC_localVolume;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
+      pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
       pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2);
       cudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
     }
@@ -212,36 +207,37 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
 
 
 template<typename Float>
-void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color, ALLOCATION_FLAG where){
+void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG where){
+  if(where == EVERY) where = this->allocation;
   for(int i = 0; i < N_DIMS; i++)
     if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
   
   this->zero_where(where);
   int my_src[N_DIMS];
   size_t id=0;
-  Float temp[1];
-  temp[0] = 1.0;
-
   for(int i = N_DIMS-1; i >= 0; i--) {
-    my_src[i] = (sourceposition[i] - comm_coords(HGC_default_topo)[i] * HGC_localL[i]);
+    my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
 
     // if out of the local lattice we break
-    if((my_src[i]<0) || (my_src[i]>=HGC_localL[i]))
-      return;
+    if((my_src[i]<0) || (my_src[i]>=HGC_localL[i])) return;
 
     id = id * HGC_localL[i] + my_src[i];
   }
+  // This make it work also for vector3D
+  id = id % this->Total_length();
 
+  Float temp[1];
+  temp[0] = 1.0;
   if( where == BOTH ){
     this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*HGC_localVolume + id)*2), temp,sizeof(Float),
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else if (where == HOST){
-    this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
+    this->h_elem[((spin*N_COLS+color)*this->Total_length() + id)*2] = 1.0; 
   }
   else if (where == DEVICE){
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*HGC_localVolume + id)*2), temp,sizeof(Float),
+    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
                 cudaMemcpyHostToDevice ); 
   }
   else{
@@ -249,86 +245,21 @@ void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color,
   }
 }
 
-template<typename Float>
-void PLEGMA_Vector<Float>::pointSource(int *sourceposition, int spin, int color){
-  pointSource(sourceposition,spin,color,this->allocation);
-}
-
 
 template<typename Float>
 void PLEGMA_Vector<Float>::covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr){
   // to increase efficiency the communication of the ghost for the the vector should happen before calling this function
   if(dirOr < 0 || dirOr > 7) PLEGMA_error("Wrong direction is given");
-  vectorTex<Float> texVecIn;
-  texVecIn.tex= vecIn.createTexObject();
-  gaugeTex<Float> texGaugeIn;
-  texGaugeIn.tex = gauge.createTexObject();
-  covD_k<Float,Float,Float>(this->D_elem(), texVecIn, texGaugeIn, dirOr);
-  vecIn.destroyTexObject(texVecIn.tex);
-  gauge.destroyTexObject(texGaugeIn.tex);
-}
-
-template<typename FloatC, typename FloatA>
-void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
-template<typename Float>
-void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  this->zero_device();
-  if(is_myIt){
-    genericTex<Float> texProp;
-    texProp.tex = prop.createTexObject();
-    contractNucleonSeqSource<Float,Float>(*this, texProp, proj, particle, my_it, c_nu, c_c2);
-    prop.destroyTexObject(texProp.tex);
-  }
-  comm_barrier();
-}
-
-template<typename FloatC, typename FloatA, typename FloatB>
-void contractNucleonSeqSource(PLEGMA_Vector<FloatC> &vec, genericTex<FloatA> prop1, genericTex<FloatB> prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int timeslice, int c_nu, int c_c2);
-template<typename Float>
-void PLEGMA_Vector<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int global_it, int c_nu, int c_c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  this->zero_device();
-  if(is_myIt){
-    genericTex<Float> texProp1;
-    texProp1.tex = prop1.createTexObject();
-    genericTex<Float> texProp2;
-    texProp2.tex = prop2.createTexObject();
-    contractNucleonSeqSource<Float,Float,Float>(*this, texProp1,texProp2, proj, particle, my_it, c_nu, c_c2);
-    prop1.destroyTexObject(texProp1.tex);
-    prop2.destroyTexObject(texProp2.tex);
-  }
-  comm_barrier();
-}
-
-template<typename Float>
-std::vector<Float> PLEGMA_Vector<Float>::rms(std::vector<int> listR2, int *sourceposition){
-  if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
-  for(int i = 0; i < N_DIMS; i++)
-    if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
-  int my_it = sourceposition[3] - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int coords[4];
-  for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
-  std::vector<Float> absPsi_loc(listR2.size(),0.0);
-  std::vector<Float> absPsi(listR2.size(),0.0);
-  if(is_myIt) compute_rms(*this,listR2,absPsi_loc,my_it,sourceposition);
-  comm_barrier();
-  int mpiErr = MPI_Allreduce(absPsi_loc.data(), absPsi.data(), listR2.size(), MPI_Type<Float>(), MPI_SUM, HGC_spaceComm);
-  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-  int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
-  mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, MPI_COMM_WORLD);
-  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
-  return absPsi;
+  assert(this->checkVolume(vecIn, gauge));
+  auto texVecIn = toTexture<vectorTex>(vecIn);
+  auto texGaugeIn = toTexture<gaugeTex>(gauge);
+  covD_k<Float,Float,Float>(toField2<vector2>(*this), *texVecIn, *texGaugeIn, dirOr);
 }
 
 template<typename Float>
 void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u){
-  mulGV_k(*this, u, vecIn);
+  assert(this->checkVolume(vecIn, u));
+  mulGV_k(toField2<vector2>(*this), toField2<su3_2>(u), toField2<vector2>(vecIn));
 }
 
 
@@ -355,12 +286,7 @@ namespace plegma{
   //----------------------------------//
   // class PLEGMA_Vector3D //
   //----------------------------------//
-  template<typename Float>
-  PLEGMA_Vector3D<Float>::
-  PLEGMA_Vector3D(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag):
-    PLEGMA_Field3D<Float>(alloc_flag, VECTOR3D, ghost_flag){
-  }
-
+  
   // vec3D <- Prop3D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int nu , int c2){
@@ -370,7 +296,7 @@ namespace plegma{
     Float *pointer_dst = NULL;
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V3*2 + c1*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
@@ -381,7 +307,7 @@ namespace plegma{
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
     if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+    int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     this->activeTimeSlice = is_myIt;
     int V3 = HGC_localVolume/HGC_localL[3];
@@ -390,7 +316,7 @@ namespace plegma{
     Float *pointer_dst = NULL;
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++){
-	pointer_dst = (PLEGMA_Field<Float>::d_elem + mu*N_COLS*V3*2 + c1*V3*2);
+	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
 	if(is_myIt){
 	  pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	  cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
@@ -401,7 +327,47 @@ namespace plegma{
     checkCudaError();
   }
 
+  template<typename Float>
+  std::vector<Float> PLEGMA_Vector3D<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
+    if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
+    for(int i = 0; i < N_DIMS; i++)
+      if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
+    std::vector<Float> absPsi_loc(listR2.size(),0.0);
+    std::vector<Float> absPsi(listR2.size(),0.0);
+    if(this->includesActiveTimeSlice()) {
+      compute_rms(*this,listR2,absPsi_loc,sourceposition);
+      int mpiErr = MPI_Allreduce(absPsi_loc.data(), absPsi.data(), listR2.size(), MPI_Type<Float>(), MPI_SUM, HGC_spaceComm);
+      if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
+    }
+    
+    int coords[4];
+    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
+    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+    int mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+    return absPsi;
+  }
+
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2){
+    this->activeTimeSlice = prop.activeTimeSlice;
+    this->zero_device();
+
+    auto texProp = toTexture<propTex>(prop);
+    contractNucleonSeqSource<Float,Float>(toField2<vector2>(*this), *texProp, proj, particle, c_nu, c_c2);
+  }
+  
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2){
+    this->activeTimeSlice = prop1.activeTimeSlice;
+    this->zero_device();
+
+    auto texProp1 = toTexture<propTex>(prop1);
+    auto texProp2 = toTexture<propTex>(prop2);
+    contractNucleonSeqSource<Float,Float,Float>(toField2<vector2>(*this), *texProp1, *texProp2, proj, particle, c_nu, c_c2);
+  }
+  
+  
   template class PLEGMA_Vector3D<float>;
   template class PLEGMA_Vector3D<double>;
-
 }

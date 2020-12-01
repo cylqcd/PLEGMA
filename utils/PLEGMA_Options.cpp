@@ -4,11 +4,11 @@
 #include <functional>
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "twop-filename",
-						     "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
-#ifdef HAVE_ARPACK
+						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq",
+						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
+#if  defined(HAVE_ARPACK) || defined(QUDAEIG)
 						     ,"Eig-NkV", "Eig-logFile"
-#elif HAVE_PRIMME
+#elif defined(HAVE_PRIMME)
 						     ,"Eig-printLevel", "Eig-method-PRIMME"
 #endif
 						     ,"Eig-isACC", "Eig-PolyDeg", "Eig-amin", "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters"
@@ -55,10 +55,15 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
     isFound = opt.set("src-filename", "Filename of source positions", verbosity, pathListSourcePositions);
     if(isFound) readSourceList();
   }
-  // List of configurations-----------------------------------------------------------------------------
+  // List of configurations or vectors-----------------------------------------------------------------------------
   if(isInList(list,"load-gauge-list-filename")){
     isFound = opt.set("load-gauge-list-filename", "Filename of the list of the configuration to analyze", verbosity, pathListGaugeConfs);
     if(isFound) readConfsList();
+  }
+
+  if(isInList(list,"load-list-vectors")){
+    isFound = opt.set("load-list-vectors", "Filename of the list of the vectors to proccess", verbosity, pathListVecs);
+    if(isFound) readVecsList();
   }
   
   if(isInList(list,"rng-seed")) opt.set("rng-seed", "A seed for the random number generator", verbosity, rng_seed);
@@ -101,10 +106,10 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
   if(isInList(list, "sinkMom")) opt.set("sinkMom", "Sink momentum boosted nucleon", verbosity, sinkMom);
   // Eigensolver ------------------------------------------------------------------------------------------
   if(isInList(list, "Eig-NeV")) opt.set("Eig-NeV", "Number of eigenpairs to compute", verbosity, Eig_NeV);
-#ifdef HAVE_ARPACK
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
   if(isInList(list, "Eig-NkV")) opt.set("Eig-NkV", "Number of vectors for the Krylov subspace", verbosity, Eig_NkV);
   if(isInList(list, "Eig-logFile")) opt.set("Eig-logFile", "Path for the logfile of the eigensolver", verbosity, Eig_logFile);
-#elif HAVE_PRIMME
+#elif defined(HAVE_PRIMME)
   if(isInList(list, "Eig-printLevel")) opt.set("Eig-printLevel", "Print Level for the PRIMEE eigenSolver", verbosity, Eig_printLevel);
   if(isInList(list, "Eig-method-PRIMME")) opt.set("Eig-method-PRIMME", "The method for eigensolver from PRIMME see manual for all", verbosity, Eig_method);
 #endif
@@ -161,17 +166,17 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-prec", "Precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec = get_prec(tmpString.c_str());
 
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_sloppy == QUDA_INVALID_PRECISION ? prec : prec_sloppy);
   isFound=opt.set("Q-prec-sloppy", "Sloppy precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_sloppy = get_prec(tmpString.c_str());
   if (prec_sloppy == QUDA_INVALID_PRECISION) prec_sloppy = prec;
   
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_precondition == QUDA_INVALID_PRECISION ? prec : prec_precondition);
   isFound=opt.set("Q-prec-precondition", "Preconditioner precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_precondition = get_prec(tmpString.c_str());
   if (prec_precondition == QUDA_INVALID_PRECISION) prec_precondition = prec_sloppy;
 
-  tmpString = get_prec_str(prec);
+  tmpString = get_prec_str(prec_null == QUDA_INVALID_PRECISION ? prec : prec_null);
   isFound=opt.set("Q-prec-null", "NUll-vector precision in the GPU, options (double,single,half)", verbosity, tmpString);
   if(isFound)prec_null = get_prec(tmpString.c_str());
   if (prec_null == QUDA_INVALID_PRECISION) prec_null = prec_precondition;
@@ -180,12 +185,12 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-recon", "Type of link reconstruction, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon  = get_recon(tmpString.c_str());
 
-  tmpString = get_recon_str(link_recon);
+  tmpString = get_recon_str(link_recon_sloppy == QUDA_RECONSTRUCT_INVALID ? link_recon : link_recon_sloppy);
   isFound=opt.set("Q-recon-sloppy", "Type of link reconstruction for sloppy, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon_sloppy  = get_recon(tmpString.c_str());
   if (link_recon_sloppy == QUDA_RECONSTRUCT_INVALID) link_recon_sloppy = link_recon;
 
-  tmpString = get_recon_str(link_recon);
+  tmpString = get_recon_str(link_recon_precondition == QUDA_RECONSTRUCT_INVALID ? link_recon : link_recon_precondition);
   isFound=opt.set("Q-recon-precondition", "Type of link reconstruction for precon, options (8,9,12,13,18)", verbosity, tmpString);
   if(isFound)link_recon_precondition  = get_recon(tmpString.c_str());
   if (link_recon_precondition == QUDA_RECONSTRUCT_INVALID) link_recon_precondition = link_recon_sloppy;
@@ -280,13 +285,14 @@ void qudaOptions(Options &opt){
   map_to_array_MG<QudaInverterType>(tpl_int_string, setup_inv, get_solver_type);
 
   opt.set("Q-mg-setup-tol", "The tolerance to use for the setup of multigrid", verbosity, setup_tol);
+  opt.set("Q-mg-setup-maxiter", "The number of max iteration to use for the setup of multigrid", verbosity, setup_maxiter);
   opt.set("Q-mg-omega", "The over/under relaxation factor for the smoother of multigrid", verbosity, omega);
 
   default_map_MG(tpl_int_string, (std::string) "mr");
   isFound=opt.set("Q-mg-smoother", "The smoother to use for multigrid, usage(level,inv)", verbosity, tpl_int_string);
   map_to_array_MG<QudaInverterType>(tpl_int_string, smoother_type, get_solver_type);
 
-  default_map_MG(tpl_int_site, (site) (std::array<int,4>) {2,2,2,2});
+  default_map_MG(tpl_int_site, (site) (std::array<int,N_DIMS>) {2,2,2,2});
   tpl_int_site[0] = site({4,4,4,4});
   isFound=opt.set("Q-mg-block-size", "Set the geometric block size for the each multigrid level's transfer operator", verbosity, tpl_int_site);
   { // custom map_to_array for site tuple. If needed more often create function.
@@ -297,8 +303,8 @@ void qudaOptions(Options &opt){
       site val = it->second;
       if(lvl < 0 || lvl >= QUDA_MAX_MG_LEVEL) PLEGMA_error("ERROR: invalid multigrid level %d", lvl);
       for(int j=0; j<N_DIMS; j++) {
-	mg_block_size[lvl][j]=val.x[j];
-	mg_block_volume[lvl]*=val.x[j];
+	mg_block_size[lvl][j]=val[j];
+	mg_block_volume[lvl]*=val[j];
       }
       it++;
     }
@@ -426,7 +432,7 @@ void qudaOptions(Options &opt){
   opt.set("Q-mg-pre-orth", "If orthonormalize the vector before inverting in the setup of multigrid", verbosity, pre_orthonormalize);
   opt.set("Q-mg-post-orth", "If orthonormalize the vector after inverting in the setup of multigrid", verbosity, post_orthonormalize);
 
-  isFound=opt.set("Light-params-infile", "Name of the input file containing inverter input parameters for light quarks", verbosity, inputUP);
+  isFound=opt.set("Light-params-infile", "Name of the input file containing inverter input parameters for light quarks", verbosity, inputLIGHT);
 
   isFound=opt.set("Strange-params-infile", "Name of the input file containing inverter input parameters for quark strange", verbosity, inputST);
   
