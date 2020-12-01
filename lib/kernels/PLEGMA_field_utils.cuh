@@ -4,7 +4,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_Random.h>
 #include <PLEGMA_Fmunu.h>
-#include <PLEGMA_Fmunu.h>
+#include <PLEGMA_Vector.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_Gauge.h>
 using namespace plegma;

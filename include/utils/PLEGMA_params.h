@@ -31,6 +31,7 @@ define(std::vector<std::string> listGaugeConfs);
 define(std::string pathListVecs);
 define(std::vector<std::string> listVecs);
 define(std::string pathListSourcePositions);
+define(std::string pathListMomenta);
 define(std::vector<site> sourcePositions, {});
 define(int maxQsq, 64);
 define(FILE_FORMAT corr_file_format, HDF5_FORMAT);

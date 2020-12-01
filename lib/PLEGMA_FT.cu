@@ -31,6 +31,18 @@ PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum, int dimT):
 }
 
 template<typename Float>
+template<typename T>
+PLEGMA_FT<Float>::PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4, bool accum, int dimT ):
+  dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
+  if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
+  for(auto &mom : moms){
+    if(mom.size()%dims != 0) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT %d %d",mom.size(),dims);
+    VFloat momF(mom.begin(),mom.end());
+    momList.push_back(momF);
+  }
+}
+
+template<typename Float>
 void PLEGMA_FT<Float>::zero(){
   if(h_elem) memset(h_elem.get(), 0, Nmoms()*dimT*dof*2*sizeof(Float));
 }
@@ -340,9 +352,12 @@ writeHDF5(std::string filename, int timeshift) const{
 
 template class PLEGMA_FT<float>;
 template class PLEGMA_FT<double>;
+
 template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
+template PLEGMA_FT<float>::PLEGMA_FT<int>( std::vector<std::vector<int>> &,int,bool,int);
+template PLEGMA_FT<double>::PLEGMA_FT<int>( std::vector<std::vector<int>> &,int,bool,int);

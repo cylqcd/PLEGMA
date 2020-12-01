@@ -25,6 +25,14 @@ if(PLEGMA_UDSC_BARYONS)
     kernels/PLEGMA_baryons_udsc_arrays.cu
   )
 endif()
+if(PLEGMA_SCATTERING_CONTRACTIONS)
+  LIST(APPEND PLEGMA_OBJS
+    PLEGMA_ScattCorrelator.cu
+    kernels/PLEGMA_scattreductionsT.cu
+    kernels/PLEGMA_scattreductionsV.cu
+  )
+endif()
+    
 
 if(PLEGMA_LIGHT_BARYONS)
   LIST(APPEND PLEGMA_OBJS
