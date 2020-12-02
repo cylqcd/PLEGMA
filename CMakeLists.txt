@@ -511,7 +511,7 @@ set(PLEGMA_ALIGNMENT 64 CACHE STRING "Alignment size for allocations done with m
 mark_as_advanced(PLEGMA_ALIGNMENT)
 add_definitions(-DPLEGMA_ALIGNMENT=${PLEGMA_ALIGNMENT})
 
-check_symbol_exists(memalign malloc.h HAVE_MEMALIGN)
+#########check_symbol_exists(memalign malloc.h HAVE_MEMALIGN)
 if(HAVE_MEMALIGN)
   add_definitions(-DPLEGMA_HAVE_MEMALIGN)
 else()

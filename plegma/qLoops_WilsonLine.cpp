@@ -6,13 +6,15 @@ using namespace plegma;
 using namespace quda;
 
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC", "Eig-PolyDeg", "Eig-amin",
-					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV"
-#ifdef HAVE_ARPACK
-					   ,"Eig-NkV", "Eig-logFile"
-#elif HAVE_PRIMME
-					   "Eig-printLevel", "Eig-method-PRIMME"
+					   "Eig-amax", "Eig-spectrumPart", "Eig-tol", "Eig-maxIters", "Eig-NeV",
+#if defined(HAVE_ARPACK)
+					   "Eig-NkV", "Eig-logFile",
+#elif defined(HAVE_PRIMME)
+					   "Eig-printLevel", "Eig-method-PRIMME",
+#elif defined(QUDAEIG)
+					   "Eig-NkV", "Eig-logFile",
 #endif
-					   ,"nsrc", "maxQsq", "rng-seed", "corr-file-format"
+					   "nsrc", "maxQsq", "rng-seed", "corr-file-format"
 };
 
 
@@ -59,6 +61,11 @@ int main(int argc, char **argv)
   HGC_options->set("readEigenVectors", "Where we want to read EigenVectors from file", verbosity, isReadEigenVecs);
   HGC_options->set("writeEigenVectors", "Where we want to read EigenVectors from file", verbosity, isWriteEigenVecs);
   HGC_options->set("prefixEigenVecsFile", "Path with prefix for the filenames of the eigenvectors", verbosity, fnameEigenVecsPrefix);
+#ifdef QUDAEIG
+  int batched_rotate = 1;
+  HGC_options->set("batched-rotate", "The size of the batch during Ritz rotation", verbosity, batched_rotate);
+#endif
+
   int NdumpStep = 1;
   HGC_options->set("dump-step", "If accumulation is ON, Every how many stochastic vector to dump results", verbosity, NdumpStep);
   if(NdumpStep<1) PLEGMA_error("dump-step should be >= 1");
@@ -115,7 +122,10 @@ int main(int argc, char **argv)
     eigParam.spectrumPart = Eig_spectrumPart;
     eigParam.tol = Eig_tol;
     eigParam.maxIters = Eig_maxIters;
-#if defined(HAVE_ARPACK)
+#ifdef QUDAEIG
+    eigParam.batched_rotate = batched_rotate;
+#endif
+#if defined(HAVE_ARPACK) || defined(QUDAEIG)
     eigParam.NkV = Eig_NkV;
     eigParam.logFile = Eig_logFile;
 #elif defined(HAVE_PRIMME)

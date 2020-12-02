@@ -245,9 +245,9 @@ void EigSolver::initEigSolver(){
   else if(p.spectrumPart == "LR") eig_param.spectrum = QUDA_SPECTRUM_LR_EIG;
   else PLEGMA_error("Not implemented");
   eig_param.location = QUDA_CUDA_FIELD_LOCATION;
-  eig_param.nConv = p.NeV;
-  eig_param.nEv = p.NeV;
-  eig_param.nKr = p.NkV;
+  eig_param.n_conv = p.NeV;
+  eig_param.n_ev = p.NeV;
+  eig_param.n_kr = p.NkV;
   eig_param.tol = p.tol;
   eig_param.batched_rotate = p.batched_rotate;
   eig_param.require_convergence = QUDA_BOOLEAN_TRUE;
