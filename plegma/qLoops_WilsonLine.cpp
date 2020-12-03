@@ -30,9 +30,19 @@ int main(int argc, char **argv)
   int k_probing = 0;
   bool spinColorDil = false;
   bool lowModesRecon = false;
+  bool asymProbing = false;
+  HGC_options->set("asymmetric-probing", "Whether we want asymmetric probing",verbosity,asymProbing);
+  int muAsymProb = 1;
+  HGC_options->set("mu-asym-probing", "Multiplicative factor probing length",verbosity,muAsymProb);
+  if(muAsymProb!=1 && !asymProbing)
+    PLEGMA_error("The multiplicative factor is not 1 while the asymmetric probing will be not employed");
+  if(!(ceil(log2(muAsymProb))==floor(log2(muAsymProb))))
+    PLEGMA_error("The multiplicative factor of the probing length with asymmetric probing has to be a power of 2");
+  
   HGC_options->set("k-probing", "Hierarchical probing, with distance D=2**k (Options:0,1,2,3,...) (0 means No probing)",verbosity,k_probing);
   int hadamLow=0;
-  int Nhadam = (k_probing>0) ? 2*std::pow(2,N_DIMS*(k_probing-1)) : 1;
+  int Nhadam =  (k_probing>0) ? 2*std::pow(2,(N_DIMS-1)*(k_probing-1)+(k_probing-1+log2(muAsymProb))) : 1;
+  PLEGMA_printf("Number of Hadamard vectors %d",Nhadam);
   int hadamHgh = Nhadam;
   std::string loopsPrefix="./";
   HGC_options->set("output-path", "Path to the directory to dump results", verbosity, loopsPrefix);
