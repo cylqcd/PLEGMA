@@ -227,7 +227,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
-						   PLEGMA_FT<Float> **FTs){
+						   PLEGMA_FT<Float> **FTs, int extWilsDir){
   if(&x_l == &x_r) PLEGMA_error("The function with Wilson line needs different left from right locations");
   if(isOneD || isTwoD) PLEGMA_error("oneD or twoD cannot be computed with this function");
   if(!x_r.IsAllocHost())PLEGMA_error("You need to allocate also host memory for the x_r");
@@ -247,7 +247,11 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
   int L=HGC_totalL[0];
   if(L%2 != 0) PLEGMA_error("If spatial extent is not multiple of 2 then it will not work");
   int Lo2 = L/2;
-  for(int wilsDir = 0 ; wilsDir < 3; wilsDir++){
+
+  int minWilsDir = extWilsDir==-1 ? 0 : extWilsDir;
+  int maxWilsDir = extWilsDir==-1 ? 3 : extWilsDir+1;
+  
+  for(int wilsDir = minWilsDir ; wilsDir < maxWilsDir; wilsDir++){
     su3.absorbDir_device(gauge,wilsDir);
     WL.setUnit((std::vector<int>) {0,4,8});
     vec_ptr = &x_r;

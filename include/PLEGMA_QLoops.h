@@ -50,10 +50,11 @@ namespace plegma{
        @param Float val, Used to scale the results
        @param PLEGMA_Gauge<Float> &gauge, Gauge field to be used for the Wilson line
        @param PLEGMA_FT<Float> *FTs, An array of FTs to store data after FT. The size of the should be 3*Ls where Ls is the spatial extend
-     **/
+       @param extWilsDir direction of the Wilson line. If this parameter is passed to the function the one end-trick is performed
+              along the extWilsDir only. Otherwise, it will be performed in all the spatial directions
+    **/
     void oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
-				 PLEGMA_FT<Float> **FTs);
-    
+				 PLEGMA_FT<Float> **FTs, int extWilsDir = -1);
     /**
        @brief Computes the one-end trick (can do up to two derivatives) for disconnected quark loops as x_l^dag \gamma_5 \Gamma c_r.
        In case of standard one-end trick x_l = x_r = x while for generalized one-end trick x_l = x and x_r = \gamma_5 D_C x
