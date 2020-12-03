@@ -56,10 +56,14 @@ namespace plegma {
     int* h_arrVc; // array to hold the coloring of the lattice on HOST
     int* d_arrVc; // array to hold the coloring of the lattice on Device
     int* arrlc; // array to hold the elementary coloring block
+    int dirAsymProb; // Direction where we want asymmetric probing;
+    int muAsymProb; // Multiplicative factor probing length for asymmetric probing
     void createElemColBlock(){for(int i = 0; i < Nc; i++) arrlc[i]=i;}
     void createColLattice(){
       std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
       std::vector<int> lu = {Lu,Lu,Lu,Lu};
+      if(this->dirAsymProb!=-1)
+	lu[dirAsymProb] *= this->muAsymProb;
       std::vector<int> bx(d);
       std::vector<int> lx(d);
       for(size_t i=0; i < HGC_localVolume; i++){
@@ -74,16 +78,24 @@ namespace plegma {
     }
     //  void checkColoring();
   public:
-    PLEGMA_Hprobing(int k_probing, int d=4):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr){
+    PLEGMA_Hprobing(int k_probing, int d=4, int dirAsymProb = -1, int muAsymProb = 1):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr), dirAsymProb(dirAsymProb),muAsymProb(muAsymProb){
       if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
       if(d != 4) PLEGMA_error("Hierarchical probing supports only 4D coloring up to now");
       if(k<=0) PLEGMA_error("The index of the Hprobing should greater than zero");
-      Nc = 2*std::pow(2,d*(k-1));
+      Nc = 2*std::pow(2,(d-1)*(k-1) + (k-1 + log2(muAsymProb)));
       D = std::pow(2,k);
       Lu = std::pow(2,k-1);
       PLEGMA_printf("Number of colors for hierarchical probing is %d\n",Nc);
-      PLEGMA_printf("Distance of neigbors is %d\n",D);
-      PLEGMA_printf("The extent of the elementary symmetric color block is %d\n",Lu);
+
+      if(dirAsymProb!=-1){
+	PLEGMA_printf("Distance of neighbors is %d along the direction %d and %d along the remaining ones\n",muAsymProb*D,dirAsymProb,D);
+	PLEGMA_printf("The extent of the elementary symmetric color block is %d along the direction %d and %d along the remaining ones\n",muAsymProb*Lu,dirAsymProb,Lu);
+      }
+      else{
+	PLEGMA_printf("Distance of neighbors is %d\n",D);
+	PLEGMA_printf("The extent of the elementary symmetric color block is %d\n",Lu);
+      }
+
       for(int i = 0 ; i < d ; i++){
 	if(D >= HGC_localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
 	if( (HGC_localL[i] % (2*Lu)) != 0 )

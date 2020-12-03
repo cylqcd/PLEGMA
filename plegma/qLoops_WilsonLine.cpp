@@ -186,12 +186,10 @@ int main(int argc, char **argv)
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
       checkCudaError();      
       phi_r.copy(phi);
-      for(int wilsDir = 0 ; wilsDir < 3; wilsDir++)
-	qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1./eigVal,gaugeStout,ft_std,wilsDir);
+      qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1./eigVal,gaugeStout,ft_std);
       D->apply<M>(phi_r,phi);
       phi_r.apply_gamma5();
-      for(int wilsDir = 0 ; wilsDir < 3; wilsDir++)
-	qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gaugeStout,ft_gen,wilsDir);
+      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gaugeStout,ft_gen);
     }
 #endif
 
