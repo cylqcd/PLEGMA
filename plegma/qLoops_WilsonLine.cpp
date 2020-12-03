@@ -225,6 +225,11 @@ int main(int argc, char **argv)
   for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
     if(debugMode) source.setUnit(indDof);
     else source.stochastic_Z(4); // hardcoded 4 roots of one
+    for(int wilsDir= asymProbing? 0 : -1; wilsDir<asymProbing?3 : 0; wilsDir++){
+      if(asymProbing && k_probing>0){
+	delete hprop;
+	hprop = new PLEGMA_Hprobing(k_probing,wilsDir,muAsymProb);
+      }
     for(int ih = hadamLow; ih < hadamHgh; ih++){
 	for(int isc = 0; isc < Nsc; isc++){
 	  if(spinColorDil){ sourceDil->dilutespincolor(source,isc/N_COLS,isc%N_COLS);}
@@ -239,16 +244,16 @@ int main(int argc, char **argv)
 	    eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
 #endif
 	  phi_r.copy(phi);
-	  qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1,gaugeStout,ft_std);
+	  qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1,gaugeStout,ft_std,wilsDir);
 	  
 	  D->apply<M>(phi_r,phi);
 	  phi_r.apply_gamma5();
-	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gaugeStout,ft_gen);
+	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gaugeStout,ft_gen,wilsDir);
 	  double t2=MPI_Wtime();
 	  PLEGMA_printf("Contraction time is %f\n",t2-t1);
 	} // for loop isc
       } // for loop ih
-
+    } // for loop wilsDir 
     double t1=MPI_Wtime();
     if((isrc+1)%NdumpStep == 0){
       dumpLoops(ft_std, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
