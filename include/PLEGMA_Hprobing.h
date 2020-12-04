@@ -78,7 +78,7 @@ namespace plegma {
     }
     //  void checkColoring();
   public:
-    PLEGMA_Hprobing(int k_probing, int d=4, int dirAsymProb = -1, int muAsymProb = 1):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr), dirAsymProb(dirAsymProb),muAsymProb(muAsymProb){
+    PLEGMA_Hprobing(int k_probing, int dirAsymProb = -1, int muAsymProb = 1, int d=4):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr), dirAsymProb(dirAsymProb),muAsymProb(muAsymProb){
       if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
       if(d != 4) PLEGMA_error("Hierarchical probing supports only 4D coloring up to now");
       if(k<=0) PLEGMA_error("The index of the Hprobing should greater than zero");
