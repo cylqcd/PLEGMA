@@ -225,12 +225,14 @@ int main(int argc, char **argv)
   for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
     if(debugMode) source.setUnit(indDof);
     else source.stochastic_Z(4); // hardcoded 4 roots of one
-    for(int wilsDir= asymProbing? 0 : -1; wilsDir<asymProbing?3 : 0; wilsDir++){
+    int wilsDirMin = asymProbing? 0 : -1;
+    int wilsDirMax = asymProbing?3 : 0;
+    for(int wilsDir= wilsDirMin; wilsDir<wilsDirMax; wilsDir++){
       if(asymProbing && k_probing>0){
 	delete hprop;
 	hprop = new PLEGMA_Hprobing(k_probing,wilsDir,muAsymProb);
       }
-    for(int ih = hadamLow; ih < hadamHgh; ih++){
+      for(int ih = hadamLow; ih < hadamHgh; ih++){
 	for(int isc = 0; isc < Nsc; isc++){
 	  if(spinColorDil){ sourceDil->dilutespincolor(source,isc/N_COLS,isc%N_COLS);}
 	  if(spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(*sourceDil,*hprop,ih,indDof);}
