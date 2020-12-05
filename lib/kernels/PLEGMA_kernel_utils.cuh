@@ -482,7 +482,7 @@ namespace plegma {
       #pragma unroll
       for(int b = 0; b < N_COLS; b++)
         #pragma unroll
-	for(int c = 0; c < N_COLS; c++)
+	for(int c = 0; c < N_COLS; c++) {
 	  if(isG1dag and not isG2dag)
 	    D[a][c] = conj(D1[b][a])*D2[b][c];
 	  else if(not isG1dag and isG2dag)
@@ -491,6 +491,7 @@ namespace plegma {
 	    D[a][c] = conj(D1[b][a])*conj(D2[c][b]);
 	  else
 	    D[a][c] = D1[a][b]*D2[b][c];
+	}
     partial_trace_mul_Prop_G_Prop<isLeftTrans,aty,false>(A,B,C,D,s1,s2,c1,c2);
   }
 
@@ -508,7 +509,7 @@ namespace plegma {
       #pragma unroll
       for(int b = 0; b < N_COLS; b++)
         #pragma unroll
-	for(int c = 0; c < N_COLS; c++)
+	for(int c = 0; c < N_COLS; c++) {
 	  if(isG1dag and not isG2dag)
 	    D[a][c] = conj(D1[b][a])*D2[b][c];
 	  else if(not isG1dag and isG2dag)
@@ -517,6 +518,7 @@ namespace plegma {
 	    D[a][c] = conj(D1[b][a])*conj(D2[c][b]);
 	  else
 	    D[a][c] = D1[a][b]*D2[b][c];
+	}
     partial_trace_mul_Prop_G1_G2_Prop<isLeftTrans,aty,false,isG3dag>(A,B,C,D,D3,s1,s2,c1,c2);
   }
 

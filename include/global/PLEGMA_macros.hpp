@@ -83,6 +83,10 @@
 #define _OFF2(i,j) ((i*(i-1))/2 + j)
 #define OFF2(i,j) (i>j ? _OFF2(i,j) : _OFF2(j,i))
 
+#define _OFF2SIGN(i,j,mu,nu) ((((i*(i-1))/2 + j)*2 + mu)*2 + nu)
+#define OFF2SIGN(i,j,mu,nu) (i>j ? _OFF2SIGN(i,j,mu,nu) : _OFF2SIGN(j,i,nu,mu))
+
+
 #define _OFF3(i,j,k) ((i*(i-1)*(i-2))/6 + (j*(j-1))/2 + k)
 #define OFF3(i,j,k) (i>j && j>k ? _OFF3(i,j,k) : \
 		    (i>k && k>j ? _OFF3(i,k,j) : \
@@ -90,4 +94,12 @@
 		    (j>k && k>i ? _OFF3(j,k,i) : \
 		    (k>i && i>j ? _OFF3(k,i,j) : \
 		                  _OFF3(k,j,i))))))
+
+#define _OFF3SIGN(i,j,k,mu,nu,ku) (((((i*(i-1)*(i-2))/6 + (j*(j-1))/2 + k)*2 + mu)*2 + nu)*2 + ku)
+#define OFF3SIGN(i,j,k,mu,nu,ku) (i>j && j>k ? _OFF3SIGN(i,j,k,mu,nu,ku) :	\
+				 (i>k && k>j ? _OFF3SIGN(i,k,j,mu,ku,nu) :	\
+				 (j>i && i>k ? _OFF3SIGN(j,i,k,nu,mu,ku) :	\
+				 (j>k && k>i ? _OFF3SIGN(j,k,i,nu,ku,mu) :	\
+				 (k>i && i>j ? _OFF3SIGN(k,i,j,ku,mu,nu) :	\
+				               _OFF3SIGN(k,j,i,ku,nu,mu))))))
 

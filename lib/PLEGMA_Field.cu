@@ -5,6 +5,7 @@
 #include <PLEGMA_Random.h>
 #include <vector>
 #include <algorithm>
+#include <time.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_FT.cuh>
 #include <utils/PLEGMA_auxiliary.h>
@@ -483,9 +484,9 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 		  // collecting elements from device
 		  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2);
 		  
-		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2(i,j)][s1][s2]/scaleT*field_length*2;
-		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[OFF2(i,j)][s1][s2]/scaleT*field_length*2;
-		  Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2(i,j)][s1][s2]/scaleT+total_length+ghost_length)*field_length*2;
+		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+		  Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
 		  int disp[N_DIMS] = {0};
 		  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
 
@@ -523,8 +524,8 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 	      for(short s1 = 0; s1 < DIR_BOTH; s1++)
 		for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		  if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
-		    Float *hostCorner = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2(i,j)][s1][s2]/scaleT*field_length*2;
-		    Float *device = d_elem+(HGC_cornerGhost[OFF2(i,j)][s1][s2]/scaleT+total_length+ghost_length)*field_length*2;
+		    Float *hostCorner = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+		    Float *device = d_elem+(HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
 		    cudaMemcpy(device, hostCorner, HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
 			       cudaMemcpyHostToDevice);
 		    if(checkErr) checkCudaError();
@@ -561,9 +562,9 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		    // collecting elements from device
 		    copy_vertex_to_ghost(toField2<pFloat2>(*this), i, j, k, s1, s2, s3);
 		  
-		    Float *pointer_receive = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3(i,j,k)][s1][s2][s3]/scaleT*field_length*2;
-		    Float *pointer_send = h_ext_ghost_vertex_s + HGC_vertexGhost[OFF3(i,j,k)][s1][s2][s3]/scaleT*field_length*2;
-		    Float *pointer_device = d_elem + (HGC_vertexGhost[OFF3(i,j,k)][s1][s2][s3]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
+		    Float *pointer_receive = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
+		    Float *pointer_send = h_ext_ghost_vertex_s + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
+		    Float *pointer_device = d_elem + (HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
 		    int disp[N_DIMS] = {0};
 		    size_t nbytes = HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float);
 
@@ -605,8 +606,8 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		  for(short s3 = 0; s3 < DIR_BOTH; s3++)
 		    if(sign == s1 || sign == s2 || sign == s3 || sign==DIR_BOTH) {
-		      Float *hostVertex = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3(i,j,k)][s1][s2][s3]/scaleT*field_length*2;
-		      Float *device = d_elem+(HGC_vertexGhost[OFF3(i,j,k)][s1][s2][s3]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
+		      Float *hostVertex = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
+		      Float *device = d_elem+(HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
 		      cudaMemcpy(device, hostVertex, HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float),
 				 cudaMemcpyHostToDevice);
 		      if(checkErr) checkCudaError();
@@ -647,6 +648,22 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr){
 }
 
 template<typename Float>
+void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr1, short dirOr2){
+  // we have to make sure that we have the ghost
+  assert(dirOr1!=dirOr2);
+  Fin.communicateGhost(-1, DIR_BOTH, FIRST_CORNER);
+  shiftField(Fin,*this,dirOr1,dirOr2);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr1, short dirOr2, short dirOr3){
+  // we have to make sure that we have the ghost
+  assert(dirOr1!=dirOr2 && dirOr2!=dirOr3 && dirOr1!=dirOr3);
+  Fin.communicateGhost(-1, DIR_BOTH, FIRST_VERTEX);
+  shiftField(Fin,*this,dirOr1,dirOr2,dirOr3);
+}
+
+template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
 
   randstate_ptr = new PLEGMA_RNG(seed, total_length);
@@ -680,6 +697,8 @@ void PLEGMA_Field<Float>::random(DIST sampling){
   this->zero_device();
   //printf("Array of random numbers not allocated, array size: %d !\nExiting...\n",this->field_length * this->total_length);
   int rng_size = this->total_length;
+  if(randstate_ptr==NULL)
+    randInit(time(NULL));
   set_random<Float>( *randstate_ptr, *this, this->field_length, rng_size, sampling);    
 }
 

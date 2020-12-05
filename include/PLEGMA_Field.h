@@ -127,6 +127,8 @@ namespace plegma {
     void unload() const;
     
     void shift(PLEGMA_Field &Fin, short dirOr);
+    void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2);
+    void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2, short dirOr3);
     void randInit(int seed);
     void destroy_randstate();
     void stochastic_Z(int n=2);

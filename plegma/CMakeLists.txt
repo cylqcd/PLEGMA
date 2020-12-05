@@ -91,6 +91,8 @@ target_link_libraries(quark_rms ${PLEGMA_LIBS})
 cuda_add_executable(Zfac_Vgg EXCLUDE_FROM_ALL Zfac_Vgg.cpp)
 target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})
 
+cuda_add_executable(testShifts EXCLUDE_FROM_ALL testShifts.cpp)
+target_link_libraries(testShifts ${PLEGMA_LIBS})
 
 cuda_add_executable(Zfac Zfac.cpp)
 target_link_libraries(Zfac ${PLEGMA_LIBS})

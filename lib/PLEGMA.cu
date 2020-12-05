@@ -100,7 +100,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
       for(int j=0; j<i; j++)
 	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
 	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
-	    HGC_cornerGhost[OFF2(i,j)][dir1][dir2] = 0;
+	    HGC_cornerGhost[OFF2SIGN(i,j,dir1,dir2)] = 0;
     HGC_cornerGhostVolume=0; 
     HGC_cornerGhostVolume3D=0;
    
@@ -110,7 +110,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 	  for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
 	    for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
 	      for(int dir3 = 0; dir3 < DIR_BOTH; dir3++)
-		HGC_vertexGhost[OFF3(i,j,k)][dir1][dir2][dir3] = 0;
+		HGC_vertexGhost[OFF3SIGN(i,j,k,dir1,dir2,dir3)] = 0;
     HGC_vertexGhostVolume=0; 
     HGC_vertexGhostVolume3D=0;
    
@@ -131,13 +131,13 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
       for(int j=0; j<i; j++)
 	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
 	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++) {
-	    HGC_cornerGhost[OFF2(i,j)][dir1][dir2] = lastIndex;
+	    HGC_cornerGhost[OFF2SIGN(i,j,dir1,dir2)] = lastIndex;
 	    if( HGC_dimBreak[i] && HGC_dimBreak[j] ) {
 	      lastIndex += HGC_surface2D[OFF2(i,j)];
 	    }
 	  }
     HGC_cornerGhostVolume = lastIndex;
-    HGC_cornerGhostVolume3D = HGC_cornerGhost[OFF2(DIM_T,0)][0][0]/HGC_localL[DIM_T];
+    HGC_cornerGhostVolume3D = HGC_cornerGhost[OFF2SIGN(DIM_T,0,0,0)]/HGC_localL[DIM_T];
 
     lastIndex = 0;
     for(int i=2; i<N_DIMS; i++)
@@ -146,13 +146,13 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 	  for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
 	    for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
 	      for(int dir3 = 0; dir3 < DIR_BOTH; dir3++) {
-		HGC_vertexGhost[OFF3(i,j,k)][dir1][dir2][dir3] = lastIndex;
+		HGC_vertexGhost[OFF3SIGN(i,j,k,dir1,dir2,dir3)] = lastIndex;
 		if( HGC_dimBreak[i] && HGC_dimBreak[j] && HGC_dimBreak[k] ) {
 		  lastIndex += HGC_surface1D[OFF3(i,j,k)];
 		}
 	      }
     HGC_vertexGhostVolume = lastIndex;
-    HGC_vertexGhostVolume3D = HGC_vertexGhost[OFF3(DIM_T,0,0)][0][0][0]/HGC_localL[DIM_T];
+    HGC_vertexGhostVolume3D = HGC_vertexGhost[OFF3SIGN(DIM_T,0,0,0,0,0)]/HGC_localL[DIM_T];
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)
