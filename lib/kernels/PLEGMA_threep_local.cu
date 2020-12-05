@@ -174,8 +174,10 @@ void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pr
   else
     result = (Float2<FloatC> *) corr.H_elem();
 
-  tuneAndRun( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
-	      ps, result, corr, prop1, prop2, signProps, gammas, isZfac);
+  tune( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
+	ps, result, corr, prop1, prop2, signProps, gammas, false);
+  run( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
+       ps, result, corr, prop1, prop2, signProps, gammas, isZfac);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),

@@ -198,8 +198,10 @@ void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
   else
     result = (Float2<FloatC> *) corr.H_elem();
 
-  tuneAndRun( ps, "threep_oneD", threep_oneD_host<FloatC,FloatA,FloatB,FloatG>,
-	      ps, result, corr, prop1, prop2, signProps, gauge, gammas, isZfac);
+  tune( ps, "threep_oneD", threep_oneD_host<FloatC,FloatA,FloatB,FloatG>,
+	ps, result, corr, prop1, prop2, signProps, gauge, gammas, false);
+  run( ps, "threep_oneD", threep_oneD_host<FloatC,FloatA,FloatB,FloatG>,
+       ps, result, corr, prop1, prop2, signProps, gauge, gammas, isZfac);
   
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
