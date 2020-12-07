@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2, false);
 
     // Benchmark shift routine 
-    PLEGMA_benchmark(&prop_b,&PLEGMA_Field<float>::shift,"Shift routine", prop_a, 2);
+    PLEGMA_benchmark(&prop_b,static_cast<void (PLEGMA_Field<float>::*)(PLEGMA_Field<float> &, short  )>(&PLEGMA_Field<float>::shift),"Shift routine", prop_a, 2);
 
     // Benchmark stout smearing
     PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::stoutSmearing,"Stout smearing (1 step)",gauge, 1,0.4,3);
