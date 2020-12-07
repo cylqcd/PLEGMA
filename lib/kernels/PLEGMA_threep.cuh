@@ -19,7 +19,17 @@ void threep_twoD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
 
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
-void threep_threeD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+void threep_threeD_part1(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+void threep_threeD_part2(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+void threep_threeD_part3(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+void threep_threeD_part4(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+
 
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>

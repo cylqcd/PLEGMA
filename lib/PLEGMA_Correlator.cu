@@ -205,7 +205,10 @@ contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   
-  threep_threeD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part1(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part2(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part3(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part4(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 
