@@ -208,6 +208,7 @@ namespace plegma {
        @return void
      **/    
     void absorb(const PLEGMA_Field<Float> &field, int global_it);
+    std::complex<Float> dot(PLEGMA_Field3D<Float> &fieldIn);
   };
 }
 #endif

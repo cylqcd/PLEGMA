@@ -3,6 +3,15 @@
 #include <comm_quda.h>
 #include <functional>
 
+/*************************************
+ * PLEGMA options are possible options for PLEGMA executables.
+ * The corresponding variables for these options are globally defined 
+ *  and set to default values in PLEGMA_params.h
+ * plegmaOptions takes Options object and set selected PLEGMA params in it
+ * qudaOptions takes Options object and set QUDA params in it
+ ************************************/
+
+
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq",
 						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"

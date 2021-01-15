@@ -94,5 +94,8 @@ target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})
 cuda_add_executable(gaugeFixing EXCLUDE_FROM_ALL gaugeFixing.cpp)
 target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
 
-cuda_add_executable(invert EXCLUDE_FROM_ALL invert.cpp)
+cuda_add_executable(invert invert.cpp)
 target_link_libraries(invert ${PLEGMA_LIBS})
+
+cuda_add_executable(Zfac_GI Zfac_GI.cpp)
+target_link_libraries(Zfac_GI ${PLEGMA_LIBS})

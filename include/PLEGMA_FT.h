@@ -124,6 +124,7 @@ namespace plegma {
     }
     std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift = 0) const;
 
+    virtual void store3DFTs(std::complex<Float> *Ts, int timeshift = 0) const;
     virtual void writeASCII(std::string filename, int timeshift = 0) const;
     virtual void writeHDF5(std::string filename, int timeshift = 0) const;
 };

@@ -6,6 +6,10 @@
 using namespace std;
 using namespace quda;
 
+/*
+ * It contins wrapper functions of QUDA features we need (e.g. solvers & Dirac op)
+ */
+
 // HACK definition missing in quda headers, but available in the library
 // define (static) checkGaugeParam() and checkInvertParam()
 #define CHECK_PARAM
