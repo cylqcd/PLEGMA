@@ -116,8 +116,8 @@ void  PLEGMA_Vector<Float>::apply_gamma_scatt(GAMMAS_SCATT gMat,LEFTRIGHT LR){
 }
 #endif
 template<typename Float>
-void PLEGMA_Vector<Float>::rotate_uk_ch(){
-  rotate_uk_ch_k(toField2<vector2>(*this));
+void PLEGMA_Vector<Float>::rotate_uk_ch_g5g4(){
+  rotate_uk_ch_g5g4_k(toField2<vector2>(*this));
 }
 
 // vec4D <- Prop3D

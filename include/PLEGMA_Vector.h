@@ -88,7 +88,7 @@ namespace plegma {
     /**
        @brief Performs the similarity transformation of gamma matrices from tmLQCD to QUDA-UKQCD and vice versa
      **/
-    void rotate_uk_ch();
+    void rotate_uk_ch_g5g4();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };
