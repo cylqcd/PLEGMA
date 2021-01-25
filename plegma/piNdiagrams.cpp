@@ -365,7 +365,7 @@ int main(int argc, char **argv)
       }
       
       //T diagram piN sink
-
+/*
       {
 	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
         PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], list_pf1pf2comb);
@@ -402,7 +402,7 @@ int main(int argc, char **argv)
 
       }
 
-      
+  */    
       //N diagram
       std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
       momList list_mpf1(1,{mpf1,},{0,});
