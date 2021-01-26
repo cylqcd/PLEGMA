@@ -217,7 +217,9 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift) const{
   }
   
   if(comm_rank() == 0){
-    FILE *ptr = fopen(filename.c_str(), "w");
+    FILE *ptr;
+    if(true) ptr = fopen(filename.c_str(), "a");//I was not sure if I add a new arg
+    else ptr = fopen(filename.c_str(), "w");
     if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
     int T = (dimT != 1)?HGC_totalL[DIM_T]:1;
     for(int idf = 0 ; idf < dof; idf++)

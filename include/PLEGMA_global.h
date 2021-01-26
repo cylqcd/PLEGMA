@@ -24,6 +24,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <assert.h>
 #include <fstream>
 #include <map>

@@ -125,8 +125,8 @@ int main(int argc, char **argv) {
   }
 
   if(run({"threep"})) {
-    PLEGMA_Gauge<float> gauge;
-    PLEGMA_Propagator<float> prop_a,  prop_b;
+    PLEGMA_Gauge<float> gauge(BOTH, FIRST_CORNER);
+    PLEGMA_Propagator<float> prop_a(BOTH, FIRST_CORNER),  prop_b(BOTH, FIRST_CORNER);
     site source;
     source.fill(0);
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
@@ -135,6 +135,7 @@ int main(int argc, char **argv) {
     // Benchmark three point functions 
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas);
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_twoD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas);
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1);
   }
   
@@ -152,7 +153,7 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing (scale 1 dir)",momSmScale);
 
     // Benchmark contraction  3pt
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, 0, (std::string)"");
 
     // Benchmark Wilson line update 
     PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2, false);
@@ -173,7 +174,7 @@ int main(int argc, char **argv) {
     // Benchmark standard one-end trick
     // Since the function is overloaded we need to select one version of it
     PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, double , bool  )>
-		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
+    		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
 
     
     // Benchmark standard one-end trick

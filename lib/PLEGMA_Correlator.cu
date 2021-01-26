@@ -3,6 +3,7 @@
 #include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
+#include <PLEGMA_mesonsNew.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <PLEGMA_threep.cuh>
 #include <functional>
@@ -46,6 +47,20 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   
   initialize();
   contract_mesons(prop1,prop2,*this);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2 ){
+
+  shape = {10};
+  datasets =  {"twop_meson"};
+  groups =  {"mesons"};
+  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
+  
+  initialize();
+  contract_mesons_new(prop1,prop2,*this);
 }
 
 
@@ -161,6 +176,29 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
   threep_oneD(*this,bwdProp,fwdProp,signProps,gauge,gammas);
 }
 
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
+			 PLEGMA_Propagator<Float> &fwdProp,
+			 PLEGMA_Gauge<Float> &gauge,
+			 int signProps, std::vector<GAMMAS> gammas){
+  shape = {N_DIMS*(N_DIMS-1), (int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"TwoD"};
+  description = "xy,xz,xt,yx,yz,yt,zx,zy,zt,tx,ty,tz / "+getGammasString(gammas);
+  initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+  gauge.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
+  bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
+  fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
+  
+  threep_twoD(*this,bwdProp,fwdProp,signProps,gauge,gammas);
+}
+
+
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
@@ -184,10 +222,12 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Propagator<Float> &fwdProp,
 			       PLEGMA_Su3field<Float> &su3,
-			       int signProps, std::vector<GAMMAS> gammas){
+			       int signProps, std::vector<GAMMAS> gammas,
+			       int z, std::string quark ){
   shape = {(int) gammas.size()};
-  datasets = {"threep"};
-  groups =  {"wilsonLine"};
+  datasets = {"z_"+std::to_string(z)};
+  groups =  {quark.c_str()};
+
   description = getGammasString(gammas);
   initialize();
   

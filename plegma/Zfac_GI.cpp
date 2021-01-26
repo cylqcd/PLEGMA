@@ -31,16 +31,23 @@ int main(int argc, char **argv)
   //==========================================================================================================//
   initializePLEGMA();
 
-  if ( doG_GG ) {
-    // Assume: for the moment that temporal direction is not divided
+  if ( doG_GG ) { // Here we compute the gluon loops, or trace of squares of Field Strength Tensor (FST)
+    // gLoops off diagonal elements with FST definition
+    /* Clover definition of gluon loops off diagonals
+     * Definition \mathcal{O}_i = unknown * \Tr[\sum_\mu F_{i,\mu} * F_{3,\mu}]
+     * FST indices cannot be same
+     * unknown is a factor which will be figured out later
+     */
+
     if ( nsmearStout%nsmearStep != 0 )
       PLEGMA_error("nsmear-stout-Gprop must be divisible by nsmear-step-Gprop\n");
 
     // setup output
     int n_s_dim = (is3D)?2:1;
     std::string sd = (isS4D)?"S4D":"4D";
-    std::string outName3 = pathOut + "G_GG_3DStoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
-    std::string outName4 = pathOut + "G_GG_"+sd+"StoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
+    std::string outName3 = pathOut + "T_G_3DStoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
+    std::string outName4 = pathOut + "T_G_"+sd+"StoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
+    /*
     int rank = 0;
     MPI_Initialized(&rank);
     if(rank) {
@@ -56,6 +63,7 @@ int main(int argc, char **argv)
       fpt4.open(outName4, std::ios::trunc);
       fpt4.precision(8);
     }
+    */
 
     std::vector<std::pair<int,int>> pairs;
     for ( int i=0; i<N_DIMS-1; i++)
@@ -70,8 +78,7 @@ int main(int argc, char **argv)
     PLEGMA_Fmunu<double> fmunu;
     PLEGMA_Su3field<double> one3x3; 
     one3x3.setUnit((std::vector<int>) {0,4,8});
-    //std::complex<double> T[listGaugeConfs.size()][2][nsmearStout/nsmearStep+1][dims[3]][3];
-    std::complex<double> T[n_s_dim][nsmearStout/nsmearStep+1][pairs.size()][HGC_totalL[DIM_T]];
+    //std::complex<double> T[n_s_dim][nsmearStout/nsmearStep+1][pairs.size()][HGC_totalL[DIM_T]];
 
     if(HGC_verbosity > 1) PLEGMA_printf("Will work on %d confs",listGaugeConfs.size());
     for(int iconf=0; iconf < listGaugeConfs.size(); iconf++){
@@ -106,11 +113,15 @@ int main(int argc, char **argv)
 	      }
 	    }
 	    ft3D.apply(trace2,FT_GEMV);
-	    ft3D.store3DFTs(T[i_s][n/nsmearStep][p], 0 );
+	    if(s_dim == 3)
+	      ft3D.writeASCII(outName3, 0);
+	    else if(s_dim == 4)
+	      ft3D.writeASCII(outName4, 0);
+	    //ft3D.store3DFTs(T[i_s][n/nsmearStep][p], 0 );
 	  }
 	}
       }
-
+      /*
       if ( rank == 0 ){
 	int gT = HGC_totalL[DIM_T];
 	std::complex<double> G_GG = 0;
@@ -126,56 +137,17 @@ int main(int argc, char **argv)
 		  fpt4 << iconf << " " << 4 << " " << n << " " << t0 << " " << ts << " " << std::scientific << G_GG.real()/factor << " " << G_GG.imag()/factor << std::endl;
 	      }
       }
+      */
 	
       double t2=MPI_Wtime();
       PLEGMA_printf("conf.%s completed in %f secs\n",confStr.c_str(),t2-t1);
     }
     /*
-    //write to a file
-    std::string outName2 = pathOut + "G_GG_3D4DStoutSmearing" + std::to_string(nsmearStout)+"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout)+"Nconfs"+std::to_string(listGaugeConfs.size())+"ASCII";
-   
-    int rank = 0;
-    MPI_Initialized(&rank);
-    if(rank) {
-      // sum up
-      MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-      }
-    if(rank==0) {
-      std::ofstream fpt2(outName2);
-      //double factor = (double) 2*6*HGC_totalVolume/2;
-      fpt2.precision(8);
-      for(int s_dim=0; s_dim<2; s_dim++ )
-	for (int n=0; n<=nsmearStout;n+=nsmearStep)
-	  for(int iconf=0; iconf < listGaugeConfs.size(); iconf++){
-	    std::complex<double> T0[dims[3]][pairs.size()];
-	    std::string confStr=splitStrFwd(listGaugeConfs[iconf],'.');
-	    for ( int p=0; p<3; p++ ) {
-	      std::ifstream infile(pathOut+"tmp/"+"G_GG_conf"+confStr+"dim"+std::to_string(3+s_dim)+"stout"+std::to_string(n)+"pair"+std::to_string(p));
-	      std::string line;
-	      for(int t=0; t < dims[3]; t++){
-		double tmp, a, b;
-		std::getline(infile, line);
-		std::istringstream iss(line);
-		for(int k=0;k<5;k++) iss >> tmp;
-		iss >> a >> b;
-		T0[t][p] = std::complex<double>(a,b);
-	      }
-	      infile.close();
-	    }
-	    for(int t0=0; t0 < dims[3]; t0++)
-	      for(int ts=0; ts < dims[3]; ts++) {
-		std::complex<double> G_GG = 0;
-		//for ( int p=0; p<3; p++ ) G_GG += T[iconf][s_dim][n/nsmearStep][t0+ts][p]*T[iconf][s_dim][n/nsmearStep][t0][p];
-		for ( int p=0; p<pairs.size(); p++ ) G_GG += T0[(t0+ts)%dims[3]][p]*T0[t0][p];
-		fpt2 << s_dim+3 << " " << n << " " << iconf << " " << t0 << " " << ts << " " << std::scientific << G_GG.real()/factor << " " << G_GG.imag()/factor << std::endl;
-	      }
-	  }
-      fpt2.close();
-    }*/
     if(rank==0) {
       fpt4.close();
       if (is3D) fpt3.close();
     }
+    */
   }
 
   if ( doG_FF ) {
