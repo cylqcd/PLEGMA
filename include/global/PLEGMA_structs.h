@@ -51,30 +51,30 @@ struct pointer_holder {
   const size_t size;
   const size_t bytes;
   void * hostPointer;
-  void * devPointer;
+  void ** devPointer;
   const std::string var_name;
   const std::string type_name;
   const char type_char;
   
-  template<typename hostT, typename deviceT>
-  pointer_holder(const std::string& name, const size_t& size, hostT *host, deviceT *device=nullptr ) :
-    size(size), bytes(sizeof(hostT)), hostPointer((void*) host), devPointer((void*) device),
+  template<typename hostT>
+  pointer_holder(const std::string& name, const size_t& size, hostT *host, void ** device) :
+    size(size), bytes(sizeof(hostT)), hostPointer((void*) host), devPointer(device),
     var_name(name), type_name(plegma::type_name<hostT>()), type_char(plegma::type_char<hostT>()) { }
 
   void copyToDeviceConstant() {
     if(devPointer != nullptr) {
-      cudaMemcpyToSymbol( *((char**) devPointer), hostPointer, bytes*size);
+      cudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
       checkCudaError();
     }
   }
   void copyFromDeviceConstant() {
-    if(devPointer != nullptr) {
-      cudaMemcpyFromSymbol(hostPointer, *((char**) devPointer), bytes*size);
+    if(false and devPointer != nullptr) {
+      cudaMemcpyFromSymbol(hostPointer, *devPointer, bytes*size, 0, cudaMemcpyDeviceToHost);
       checkCudaError();
     }
   }
   bool checkDeviceConstant() {
-    if(devPointer != nullptr) {
+    if(false and devPointer != nullptr) {
       char tmp[bytes*size];
       memcpy(tmp,hostPointer,bytes*size);
       copyFromDeviceConstant();
@@ -94,7 +94,7 @@ struct pointer_holder {
     std::string line = var_name + " = (type: " + type_name + ", size: " + std::to_string(size) + (size==1 ? ", value:" : ", values:");
     char* tmp = (char*) hostPointer;
     for(size_t i = 0; i<size; i++) {
-      line+= " " + type_print((void*)(tmp + bytes*i), type_char, bytes);
+      line += " " + type_print((void*)(tmp + bytes*i), type_char, bytes);
     }
     line += ");\n";
     return line;
@@ -105,8 +105,8 @@ struct pointer_holder {
 struct global_vars {
   std::vector<pointer_holder> globals;
 
-  template<typename hostT, typename deviceT>
-  void add(const std::string& name, const size_t& size, hostT *host, deviceT *device = nullptr) {
+  template<typename hostT>
+  void add(const std::string& name, const size_t& size, hostT *host, void ** device = nullptr) {
     globals.push_back(pointer_holder(name, size, host, device));
   }
   void copyToDevice() {
@@ -123,13 +123,10 @@ struct global_vars {
   void print() {
     PLEGMA_printf("\nGlobal constants available only on host:\n");
     for(size_t i = 0; i < globals.size(); i++) {
-#ifdef __NVCC__
       if(globals[i].devPointer != nullptr) continue;
-#endif
       std::string line = "HGC_" + globals[i].get_value();
       PLEGMA_printf("%s",line.c_str());
     }
-#ifdef __NVCC__
     PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
     for(int i = 0; i < globals.size(); i++) {
       if(globals[i].devPointer == nullptr) continue;
@@ -145,7 +142,6 @@ struct global_vars {
 	PLEGMA_printf("%s",line.c_str());
       }
     }
-#endif
     PLEGMA_printf("\n\n");
   }
 };

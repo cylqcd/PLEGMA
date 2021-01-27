@@ -7,7 +7,7 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 14)
 include(CheckIncludeFileCXX)
-
+include(CheckSymbolExists)
 
 if(${CMAKE_VERSION} VERSION_GREATER "3.12.0") 
   cmake_policy(SET CMP0074 NEW)
@@ -149,8 +149,11 @@ set(PLEGMA_LIGHT_BARYONS FALSE CACHE BOOL "compile contractions for all light ba
 if(PLEGMA_LIGHT_BARYONS)
   add_definitions(-DPLEGMA_LIGHT_BARYONS)
 endif()
-
-set(PLEGMA_UDSC_BARYONS TRUE CACHE BOOL "compile contractions for all u,d,s and c baryons")
+set(PLEGMA_SCATTERING_CONTRACTIONS FALSE CACHE BOOL "compile contractions for pi-N scattering I=3/2")
+if (PLEGMA_SCATTERING_CONTRACTIONS)
+  add_definitions(-DPLEGMA_SCATTERING_CONTRACTIONS)
+endif()
+set(PLEGMA_UDSC_BARYONS FALSE CACHE BOOL "compile contractions for all u,d,s and c baryons")
 if(PLEGMA_UDSC_BARYONS)
   add_definitions(-DPLEGMA_UDSC_BARYONS)
 endif()
@@ -471,6 +474,21 @@ set(CMAKE_CXX_FLAGS_DEVICEDEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas 
     "Flags used by the C++ compiler during device-debug builds.")
 set(CMAKE_CXX_FLAGS_DEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
     "Flags used by the C++ compiler during full (host+device) debug builds.")
+
+OPTION(USE_OpenMP "Use OpenMP" ON)
+IF(USE_OpenMP)
+    FIND_PACKAGE(OpenMP)
+    IF( OPENMP_FOUND )
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+   	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler ${OpenMP_CXX_FLAGS}")
+    ENDIF()
+ENDIF()
+
+
+
+
 
 #define C FLAGS
 set(CMAKE_C_FLAGS_DEVEL "-Wall -O3"  CACHE STRING

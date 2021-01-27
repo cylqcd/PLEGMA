@@ -69,14 +69,14 @@ int main(int argc, char **argv)
 	}
 
 	if(invertConv == "tmLQCD"){
-	  vIn.rotate_uk_ch();
+	  vIn.rotate_uk_ch_g5g4();
 	  if(boundaryCond == "antiperiodic") vIn.mulThetaPhase(1.,true);
 	}
 	solver.solve(vOut,vIn);
       
 	if(invertConv == "tmLQCD"){
 	  if(boundaryCond == "antiperiodic") vOut.mulThetaPhase(1.,false);
-	  vOut.rotate_uk_ch();
+	  vOut.rotate_uk_ch_g5g4();
 	}
 
 	vOut.writeLIME(outName);

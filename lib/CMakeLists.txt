@@ -13,6 +13,10 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_threep_noe.cu
   kernels/PLEGMA_threep_oneD.cu
   kernels/PLEGMA_threep_twoD.cu
+  kernels/PLEGMA_threep_threeD_part1.cu
+  kernels/PLEGMA_threep_threeD_part2.cu
+  kernels/PLEGMA_threep_threeD_part3.cu
+  kernels/PLEGMA_threep_threeD_part4.cu
   kernels/PLEGMA_threep_wilsonLine.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
@@ -26,6 +30,14 @@ if(PLEGMA_UDSC_BARYONS)
     kernels/PLEGMA_baryons_udsc_arrays.cu
   )
 endif()
+if(PLEGMA_SCATTERING_CONTRACTIONS)
+  LIST(APPEND PLEGMA_OBJS
+    PLEGMA_ScattCorrelator.cu
+    kernels/PLEGMA_scattreductionsT.cu
+    kernels/PLEGMA_scattreductionsV.cu
+  )
+endif()
+    
 
 if(PLEGMA_LIGHT_BARYONS)
   LIST(APPEND PLEGMA_OBJS
