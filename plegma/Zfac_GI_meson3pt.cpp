@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
 	      }
 	      for(int mu_rho = 1; mu_rho<N_DIMS; mu_rho++){
 		PLEGMA_Propagator<float> seqProp(BOTH, FIRST_CORNER);
-	      PLEGMA_Propagator<float> seqPropGamma(BOTH, FIRST_CORNER);
+		PLEGMA_Propagator<float> seqPropGamma(BOTH, FIRST_CORNER);
 	      for(int nu = 0 ; nu < 4 ; nu++)
 		for(int c2 = 0 ; c2 < 3 ; c2++){
 		  PLEGMA_Vector<double> vectorInOut;
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
 		    PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
 		    PLEGMA_Vector3D<float> vectorAuxF;
 		    vectorAuxF.absorb(prop, nu, c2);
-		    seqProp.apply_gamma(gammas[mu_rho]);
+		    vectorAuxF.apply_gamma(gammas[mu_rho]);
 		    vectorAuxF.mulMomentumPhases(sinkMom,+1); // put momentum at the sink
 		    std::complex<float> Isingle(0,1);
 		    float phase = 2.*PI*(((float) sinkMom[0] * source[0])/HGC_totalL[0]
@@ -214,9 +214,9 @@ int main(int argc, char **argv) {
 		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
 		  }
 		  double norm = vectorInOut.norm();
-		  vectorInOut.scale(-1/norm);// due to \gamma_5\gamma_mu_rho\gamma_5 = -\gamma_mu_rho
+		  vectorInOut.scale(1/norm);
 		  TIME(solver.solve(vectorInOut, vectorInOut));
-		  vectorInOut.scale(norm);
+		  vectorInOut.scale(-norm);// due to \gamma_5\gamma_mu_rho\gamma_5 = -\gamma_mu_rho
 		  PLEGMA_Vector<float> vectorAuxF;
 		  vectorAuxF.copy(vectorInOut);
 		  seqProp.absorb(vectorAuxF, nu, c2);
@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
 		seqPropGamma.copy(seqProp,BOTH);
 		seqPropGamma.apply_gamma(G5,RIGHT);
 		seqPropGamma.apply_gamma(gammas[nu_rho],RIGHT);
-	      seqPropGamma.conjugate();
+		seqPropGamma.conjugate();
 				     
 	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
 
