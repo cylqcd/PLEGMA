@@ -227,7 +227,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
-						   PLEGMA_FT<Float> **FTs, int extWilsDir, int WL_max_l){
+						   PLEGMA_FT<Float> **FTs, int extWilsDir, int  just_dir){
   if(&x_l == &x_r) PLEGMA_error("The function with Wilson line needs different left from right locations");
   if(isOneD || isTwoD) PLEGMA_error("oneD or twoD cannot be computed with this function");
   if(!x_r.IsAllocHost())PLEGMA_error("You need to allocate also host memory for the x_r");
@@ -246,21 +246,25 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
   if(!(HGC_totalL[0] == HGC_totalL[1] && HGC_totalL[1] == HGC_totalL[2])) PLEGMA_error("Spatial total volume should be symmetric for this to work");
   int L=HGC_totalL[0];
   if(L%2 != 0) PLEGMA_error("If spatial extent is not multiple of 2 then it will not work");
-  int Lo2 = WL_max_l==-1? L/2 : WL_max_l;
+  int Lo2 = L/2;
 
   int minWilsDir = extWilsDir==-1 ? 0 : extWilsDir;
   int maxWilsDir = extWilsDir==-1 ? 3 : extWilsDir+1;
+  if(just_dir!=-1){
+    minWilsDir = just_dir;
+    maxWilsDir = just_dir + 1;}
   
   for(int wilsDir = minWilsDir ; wilsDir < maxWilsDir; wilsDir++){
     su3.absorbDir_device(gauge,wilsDir);
     WL.setUnit((std::vector<int>) {0,4,8});
     vec_ptr = &x_r;
+    int shiftFT = just_dir == -1 ? wilsDir : 0;
     for(int i = 0 ; i < Lo2;i++){
       vecTmp.mulGV(*vec_ptr,WL);
       contractG5(x_l,vecTmp);
       this->cscale(cr);
-      if(!FTs[wilsDir*L+i]->IsAccum()) PLEGMA_error("We need accumulation on here");
-      FTs[wilsDir*L+i]->apply(*this,FT_GEMV);
+      if(!FTs[shiftFT*L+i]->IsAccum()) PLEGMA_error("We need accumulation on here");
+      FTs[shiftFT*L+i]->apply(*this,FT_GEMV);
       vecExchange=vecIn; vecIn=vec_ptr; vec_ptr = vecExchange; 
       WL.wilsonLineUpdate(su3,tmp,4+wilsDir);
       vec_ptr->shift(*vecIn,4+wilsDir);
@@ -273,8 +277,8 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
       vecTmp.mulGV(*vec_ptr,WL);
       contractG5(x_l,vecTmp);
       this->cscale(cr);
-      if(!FTs[wilsDir*L+i+Lo2]->IsAccum()) PLEGMA_error("We need accumulation on here");
-      FTs[wilsDir*L+i+Lo2]->apply(*this,FT_GEMV);
+      if(!FTs[shiftFT*L+i+Lo2]->IsAccum()) PLEGMA_error("We need accumulation on here");
+      FTs[shiftFT*L+i+Lo2]->apply(*this,FT_GEMV);
       vecExchange=vecIn; vecIn=vec_ptr; vec_ptr = vecExchange;
       WL.wilsonLineUpdate(su3,tmp,wilsDir);
       vec_ptr->shift(*vecIn,wilsDir);
