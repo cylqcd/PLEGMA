@@ -227,7 +227,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
-						   PLEGMA_FT<Float> **FTs, int extWilsDir){
+						   PLEGMA_FT<Float> **FTs, int extWilsDir, int WL_max_l){
   if(&x_l == &x_r) PLEGMA_error("The function with Wilson line needs different left from right locations");
   if(isOneD || isTwoD) PLEGMA_error("oneD or twoD cannot be computed with this function");
   if(!x_r.IsAllocHost())PLEGMA_error("You need to allocate also host memory for the x_r");
@@ -246,7 +246,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
   if(!(HGC_totalL[0] == HGC_totalL[1] && HGC_totalL[1] == HGC_totalL[2])) PLEGMA_error("Spatial total volume should be symmetric for this to work");
   int L=HGC_totalL[0];
   if(L%2 != 0) PLEGMA_error("If spatial extent is not multiple of 2 then it will not work");
-  int Lo2 = L/2;
+  int Lo2 = WL_max_l==-1? L/2 : WL_max_l;
 
   int minWilsDir = extWilsDir==-1 ? 0 : extWilsDir;
   int maxWilsDir = extWilsDir==-1 ? 3 : extWilsDir+1;

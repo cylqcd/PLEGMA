@@ -17,9 +17,13 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 
 
 static void dumpLoops(PLEGMA_FT<double> **ft,
- 		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
-  for(int idir=0; idir < 3; idir++)
-    for(int i =0; i < HGC_totalL[0]; i++)
+ 		      std::string filenamePrefix, std::string confID, FILE_FORMAT format, int WL_just_dir=-1, int WL_max_l=-1){
+  
+  int minDir = WL_just_dir==-1? 0 : WL_just_dir;
+  int maxDir = WL_just_dir==-1? 3 : WL_just_dir+1;
+  int max_z = WL_max_l==-1?HGC_totalL[0]:WL_max_l*2; 
+  for(int idir=minDir; idir < maxDir; idir++)
+    for(int i =0; i < max_z; i++)
       ft[idir*HGC_totalL[0]+i]->writeFile(filenamePrefix + "_dir" + std::to_string(idir) + "_z" + std::to_string(i) + "_" + confID + ".dat" ,format);
 }
 
@@ -38,7 +42,14 @@ int main(int argc, char **argv)
     PLEGMA_error("The multiplicative factor is not 1 while the asymmetric probing will be not employed");
   if(!(ceil(log2(muAsymProb))==floor(log2(muAsymProb))))
     PLEGMA_error("The multiplicative factor of the probing length with asymmetric probing has to be a power of 2");
+ 
+  int WL_just_dir = -1;
+  HGC_options->set("WL-dir", "Direction of the Wilson line (-1 means all directions)",verbosity,WL_just_dir);
   
+  int WL_max_l = -1;
+  HGC_options->set("WL-max-l", "Maximum Wilson line length (-1 means L/2)",verbosity,WL_max_l);
+  
+
   HGC_options->set("k-probing", "Hierarchical probing, with distance D=2**k (Options:0,1,2,3,...) (0 means No probing)",verbosity,k_probing);
   int hadamLow=0;
   int Nhadam =  (k_probing>0) ? 2*std::pow(2,(N_DIMS-1)*(k_probing-1)+(k_probing-1+log2(muAsymProb))) : 1;
@@ -143,7 +154,14 @@ int main(int argc, char **argv)
   }
   if(!(HGC_totalL[0] == HGC_totalL[1] && HGC_totalL[1] == HGC_totalL[2])) PLEGMA_error("Spatial total volume should be symmetric for this to work");
 
-  int sizeFT=3*HGC_totalL[0]; 
+  int sizeFT=3*HGC_totalL[0];
+  if(WL_just_dir!=-1)
+    sizeFT = HGC_totalL[0]; 
+  else if(WL_max_l!=-1 && WL_just_dir!=-1)
+    sizeFT = WL_max_l*2;
+  else if(WL_max_l!=-1 && WL_just_dir==-1)
+    sizeFT = WL_max_l*2*3;
+
   PLEGMA_FT<double> **ft_std = new PLEGMA_FT<double>*[sizeFT];
   PLEGMA_FT<double> **ft_gen = new PLEGMA_FT<double>*[sizeFT];
   for(int i = 0 ; i< sizeFT; i++){
@@ -186,10 +204,10 @@ int main(int argc, char **argv)
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
       checkCudaError();      
       phi_r.copy(phi);
-      qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1./eigVal,gaugeStout,ft_std);
+      qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1./eigVal,gaugeStout,ft_std,-1,WL_max_l);
       D->apply<M>(phi_r,phi);
       phi_r.apply_gamma5();
-      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gaugeStout,ft_gen);
+      qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1./eigVal,gaugeStout,ft_gen,-1,WL_max_l);
     }
 #endif
 
@@ -199,8 +217,8 @@ int main(int argc, char **argv)
 
 #if defined(HAVE_EIGENSOLVER)
   if(lowModesRecon){
-    dumpLoops(ft_std, loopsPrefix + "/exact_part_std_", confID, corr_file_format);
-    dumpLoops(ft_gen, loopsPrefix + "/exact_part_gen_", confID, corr_file_format);
+    dumpLoops(ft_std, loopsPrefix + "/exact_part_std_", confID, corr_file_format, WL_just_dir,WL_max_l);
+    dumpLoops(ft_gen, loopsPrefix + "/exact_part_gen_", confID, corr_file_format, WL_just_dir,WL_max_l);
 
     for(int i = 0 ; i < sizeFT; i++){
       ft_std[i]->zero();
@@ -227,6 +245,8 @@ int main(int argc, char **argv)
     else source.stochastic_Z(4); // hardcoded 4 roots of one
     int wilsDirMin = asymProbing? 0 : -1;
     int wilsDirMax = asymProbing?3 : 0;
+    wilsDirMin = WL_just_dir==-1? wilsDirMin : WL_just_dir;
+    wilsDirMax = WL_just_dir==-1? wilsDirMax : WL_just_dir+1;
     for(int wilsDir= wilsDirMin; wilsDir<wilsDirMax; wilsDir++){
       if(asymProbing && k_probing>0){
 	delete hprop;
@@ -246,11 +266,11 @@ int main(int argc, char **argv)
 	    eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
 #endif
 	  phi_r.copy(phi);
-	  qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1,gaugeStout,ft_std,wilsDir);
+	  qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1,gaugeStout,ft_std,wilsDir,WL_max_l);
 	  
 	  D->apply<M>(phi_r,phi);
 	  phi_r.apply_gamma5();
-	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gaugeStout,ft_gen,wilsDir);
+	  qloops_gen.oneEnd_trick_wilsonLine(phi,phi_r,+1,gaugeStout,ft_gen,wilsDir,WL_max_l);
 	  double t2=MPI_Wtime();
 	  PLEGMA_printf("Contraction time is %f\n",t2-t1);
 	} // for loop isc
@@ -258,8 +278,8 @@ int main(int argc, char **argv)
     } // for loop wilsDir 
     double t1=MPI_Wtime();
     if((isrc+1)%NdumpStep == 0){
-      dumpLoops(ft_std, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format);
-      dumpLoops(ft_gen, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format);
+      dumpLoops(ft_std, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_std_", confID, corr_file_format, WL_just_dir, WL_max_l);
+      dumpLoops(ft_gen, loopsPrefix + "/stoch_part_Src" + std::to_string(isrc) + "_gen_", confID, corr_file_format, WL_just_dir, WL_max_l);
     }
     double t2=MPI_Wtime();
     PLEGMA_printf("FT and dump data time is %f\n",t2-t1);

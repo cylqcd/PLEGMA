@@ -54,7 +54,7 @@ namespace plegma{
               along the extWilsDir only. Otherwise, it will be performed in all the spatial directions
     **/
     void oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r, Float val , PLEGMA_Gauge<Float> &gauge,
-				 PLEGMA_FT<Float> **FTs, int extWilsDir = -1);
+				 PLEGMA_FT<Float> **FTs, int extWilsDir = -1, int WL_max_l=-1);
     /**
        @brief Computes the one-end trick (can do up to two derivatives) for disconnected quark loops as x_l^dag \gamma_5 \Gamma c_r.
        In case of standard one-end trick x_l = x_r = x while for generalized one-end trick x_l = x and x_r = \gamma_5 D_C x
