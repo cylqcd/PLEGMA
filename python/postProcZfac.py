@@ -52,8 +52,9 @@ with open('%s/p_propagator_p%d_%d_%d_%d.%s.dat'%(tuple([args['outputPath']]+momT
 with h5.File('%s/Vloc_px%dpy%dpz%dpt%d_conf_%s.h5'%(tuple([args['inputPath']]+mom+[args['confID']])),'r') as fp:
     A=(fp['/sx00sy00sz00st00/Local/threep'][()]).squeeze()
     A=A.flatten()
-    A=A.reshape(4,4,3,3,T,16,2)
-    Vloc=np.sum(A,axis=4)
+    A=A.reshape(T,4,4,3,3,16,2)
+    #A=A.reshape(4,4,3,3,T,16,2)
+    Vloc=np.sum(A,axis=0)
     Vloc=Vloc[...,0]+I*Vloc[...,1]
 VlocM={}
 VlocM['s']=Vloc[...,0]
@@ -102,8 +103,9 @@ with open('%s/Vertex_%s_p%d_%d_%d_%d.%s.dat'%(tuple([args['outputPath']]+['t']+m
 with h5.File('%s/VoneD_px%dpy%dpz%dpt%d_conf_%s.h5'%(tuple([args['inputPath']] + mom + [args['confID']])),'r') as fp:
     A=(fp['/sx00sy00sz00st00/OneD/threep'][()]).squeeze()
     A=A.flatten() # {48, 1, 4, 4, 3, 3, 4, 16, 2}
-    A=A.reshape(4,4,3,3,T,4,16,2)
-    VOneD=np.sum(A,axis=4)
+    A=A.reshape(T,4,4,3,3,4,16,2)
+    #    A=A.reshape(4,4,3,3,T,4,16,2)
+    VOneD=np.sum(A,axis=0)
     VOneD=VOneD[...,0]+I*VOneD[...,1]
 VOneDM={}
 
@@ -149,3 +151,83 @@ with open('%s/Vertex_%sD_p%d_%d_%d_%d.%s.dat'%(tuple([args['outputPath']]+['t']+
 
 ###############################################################################################
 
+################### Vertex with two derivatives ##################
+with h5.File('%s/VtwoD_px%dpy%dpz%dpt%d_conf_%s.h5'%(tuple([args['inputPath']] + mom + [args['confID']])),'r') as fp:
+    A=(fp['/sx00sy00sz00st00/TwoD/threep'][()]).squeeze()
+    A=A.flatten() # {48, 1, 4, 4, 3, 3, 12, 16, 2}
+    A=A.reshape(T,4,4,3,3,12,16,2)
+    #    A=A.reshape(4,4,3,3,T,4,16,2)
+    VTwoD=np.sum(A,axis=0)
+    VTwoD=VTwoD[...,0]+I*VTwoD[...,1]
+VTwoDM={}
+VTwoDM['v']=[-VTwoD[...,4], VTwoD[...,1], VTwoD[...,2], VTwoD[...,3]] # gt,gx,gy,gz
+VTwoDM['a']=[-VTwoD[...,9], VTwoD[...,6], VTwoD[...,7], VTwoD[...,8]]
+# PLEGMA directions: (0,1,2,3) -> (x,y,z,t)
+# qcd conventions: (0,1,2,3) -> (t,x,y,z)
+mapDirs={}
+for et in range(12):
+    dir1 = int(et/(4-1)) % 4
+    dir2 = et % (4-1)
+    if dir2 >= dir1: dir2+=1
+    mapDirs[(dir1,dir2)]=et
+
+for ff in ['v','a']:
+    with open('%s/Vertex_%sDD_p%d_%d_%d_%d.%s.dat'%(tuple([args['outputPath']]+[ff]+momT+[args['confID']])),'w') as fp:
+        for mu in range(4):
+            for nu in range(4):
+                for tau in range(4):
+                    if mu != nu and mu != tau and nu != tau:
+                        Ver=np.transpose(np.array([matr(U.T) * matr( (VTwoDM[ff][mu][...,mapDirs[((nu+3)%4,(tau+3)%4)]]).reshape(4,4,9)[:,:,i] ) *matr(U) for i in range(9)]), (1,2,0))
+                        for mu1 in range(4):
+                            for nu1 in range(4):
+                                for c1 in range(3):
+                                    for c2 in range(3):
+                                        fp.write('%d %d %d %d %d %d %d %+e %+e\n' % (mu,nu,tau,mu1,nu1,c1,c2,
+                                                                              Ver[mu1,nu1,c1*3+c2].real/(8*4*V),
+                                                                              Ver[mu1,nu1,c1*3+c2].imag/(8*4*V)))
+
+################### Vertex with two derivatives ##################
+with h5.File('%s/VthreeD_px%dpy%dpz%dpt%d_conf_%s.h5'%(tuple([args['inputPath']] + mom + [args['confID']])),'r') as fp:
+    A=(fp['/sx00sy00sz00st00/ThreeD/threep'][()]).squeeze()
+    A=A.flatten() # {48, 1, 4, 4, 3, 3, 12, 16, 2}
+    A=A.reshape(T,4,4,3,3,24,16,2)
+    #    A=A.reshape(4,4,3,3,T,4,16,2)
+    VThreeD=np.sum(A,axis=0)
+    VThreeD=VThreeD[...,0]+I*VThreeD[...,1]
+VThreeDM={}
+VThreeDM['v']=[-VThreeD[...,4], VThreeD[...,1], VThreeD[...,2], VThreeD[...,3]] # gt,gx,gy,gz
+VThreeDM['a']=[-VThreeD[...,9], VThreeD[...,6], VThreeD[...,7], VThreeD[...,8]]
+# PLEGMA directions: (0,1,2,3) -> (x,y,z,t)
+# qcd conventions: (0,1,2,3) -> (t,x,y,z)
+mapDirsx={}
+for et in range(24):
+    dir1 = int(et/(4-1)/(4-2)) % 4
+    dir2 = int(et/(4-2)) % (4-1);
+    dir3 = et % (4-2);
+    if dir2>=dir1: dir2+=1
+    if dir3>=dir1:
+        dir3+=1
+        if dir3>=dir2:
+            dir3+=1
+    elif dir3>=dir2:
+        dir3+=1
+        if dir3>=dir1:
+            dir3+=1
+    mapDirsx[(dir1,dir2,dir3)]=et
+
+
+for ff in ['v','a']:
+    with open('%s/Vertex_%sDDD_p%d_%d_%d_%d.%s.dat'%(tuple([args['outputPath']]+[ff]+momT+[args['confID']])),'w') as fp:
+        for mu in range(4):
+            for nu in range(4):
+                for tau in range(4):
+                    for rho in range(4):
+                        if mu not in [nu,tau,rho] and nu not in [mu,tau,rho] and tau not in [mu,nu,rho] and rho not in [mu,nu,tau]:
+                            Ver=np.transpose(np.array([matr(U.T) * matr( (VThreeDM[ff][mu][...,mapDirsx[((nu+3)%4,(tau+3)%4,(rho+3)%4)]]).reshape(4,4,9)[:,:,i] ) *matr(U) for i in range(9)]), (1,2,0))
+                            for mu1 in range(4):
+                                for nu1 in range(4):
+                                    for c1 in range(3):
+                                        for c2 in range(3):
+                                            fp.write('%d %d %d %d %d %d %d %d %+e %+e\n' % (mu,nu,tau,rho,mu1,nu1,c1,c2,
+                                                                                  Ver[mu1,nu1,c1*3+c2].real/V,
+                                                                                         Ver[mu1,nu1,c1*3+c2].imag/V))
