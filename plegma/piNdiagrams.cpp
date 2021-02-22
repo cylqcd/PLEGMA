@@ -612,13 +612,17 @@ int main(int argc, char **argv)
 
             //Performing the smearing
             // Smearing the source
+	    for (int icoherentsource=0; i<ncoherentSource;++icoherentsource)
             {
+              PLEGMA_Gauge3D<double> smearedGauge3D;
+	      int id_coherent_timeslice=sourcePositions[isource][DIM_T]+icoherentsource*HGC_totalL[DIM_T]/ncoherentSource;
+              smearedGauge3D.absorb(smearedGauge, id_coherent_timeslice);
               PLEGMA_Vector3D<double> vector1, vector2;
               vectorAuxF.absorb(propDN, isc/3, isc%3);
               vectorAuxD.copy(vectorAuxF);
-              vector1.absorb( vectorAuxD, sequential_time_source );
+              vector1.absorb( vectorAuxD,  id_coherent_timeslice);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-              vectorAuxD2.absorb(vector2,sourcePositions[isource][DIM_T]);
+              vectorAuxD2.absorb(vector2,id_coherent_timeslice);
             }
 
             //Perform multiplication with gamma_i2
