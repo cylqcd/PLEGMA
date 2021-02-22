@@ -28,6 +28,7 @@ int main(int argc, char **argv)
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   bool timedilution;
   bool readstochastic;
+  int n_coherent_source;
   int n_stochastic_samples;
   int nroots=4;
   int confnumber_int;
@@ -44,6 +45,7 @@ int main(int argc, char **argv)
   HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
   HGC_options->set("readStochSamples", "Flag for switching read/building stochastic propagators", verbosity, readstochastic);
   HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
+  HGC_options->set("ncoherentSource", "Flag for switching time-dilution in stochastic propagators", verbosity, n_coherent_source);
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
   HGC_options->set("outPropUP", "Path for saving the up propagator used", verbosity, outfile_upS);
   HGC_options->set("outPropDN", "Path for saving the dn propagator used", verbosity, outfile_dnS);
@@ -244,125 +246,161 @@ int main(int argc, char **argv)
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
 
-      PLEGMA_Gauge3D<double> smearedGauge3D;
-      smearedGauge3D.absorb(smearedGauge, sourcePositions[isource][DIM_T]);
-
-
-      int sequential_time_source=sourcePositions[isource][DIM_T];
-
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
                     sourcePositions[isource][2], sourcePositions[isource][3]);
+      for(int icoherentsource; icoherentsource < ncoherentSource; ++icoherentSource){
+	PLEGMA_printf("\n ### Calculations for coherent-source-numbedr %d - timeslice %03d begin now ###\n\n",
+                    icoherentsource, sourcePositions[isource][3]+icoherentsource*HGC_totalL[DIM_T]/ncoherentSource);
+      }
 
-      asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
-      std::string sourcepositiontext= (std::string)"_" + ssource; 
-      free(ssource);
+      int sequential_time_source=sourcePositions[isource][DIM_T];
   
       //Create Propagator
-      PLEGMA_Propagator<float> propUP(BOTH);
+      PLEGMA_Propagator<float> propUP(BOTH); //To be saved for all the coherent sources.
       PLEGMA_Propagator<float> propDN(BOTH);
-      PLEGMA_Propagator<float> propUPDN(BOTH);
 
-      // ensuring mu positive
-      if(mu<0) {
-        mu*=-1.;
-        solver.UpdateSolver();
-      }
-    
-      for(int isc = 0 ; isc < 12 ; isc++){
-        PLEGMA_Vector<double> vectorInOut;
-        PLEGMA_Vector<float>  vectorAuxF;
-        PLEGMA_Vector<double> vectorAuxD;
-        { // Smearing the source
-          PLEGMA_Vector3D<double> vector1, vector2;
-          vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-          vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+      std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
+      momList list_mpf1(1,{mpf1,},{0,});
+      PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], list_mpf1 );
+
+      for(int icoherentsource=0;icoherentsource < ncoherentSource; ++icoherentSource){
+
+        PLEGMA_Propagator propUP_coherent;
+        PLEGMA_Propagator propDN_coherent;
+
+        int id_coherent_timeslice = sourcePositions[isource][DIM_T]+icoherentsource*HGC_totalL[DIM_T]/ncoherentSource; 
+        asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], id_coherent_timeslice);
+        std::string sourcepositiontext= (std::string)"_" + ssource; 
+        free(ssource);
+
+        PLEGMA_Gauge3D<double> smearedGauge3D;
+        smearedGauge3D.absorb(smearedGauge, id_coherent_timeslice);
+
+        // ensuring mu positive
+        if(mu<0) {
+          mu*=-1.;
+          solver.UpdateSolver();
         }
 
-        //Rotation to the physical basis
-        TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));       
+        site src;
+        src=site({sourcePositions[isource][0],
+                  sourcePositions[isource][1],
+	          sourcePositions[isource][2],
+	          id_coherent_timeslice});
+        for(int isc = 0 ; isc < 12 ; isc++){
+          PLEGMA_Vector<double> vectorInOut;
+          PLEGMA_Vector<float>  vectorAuxF;
+          PLEGMA_Vector<double> vectorAuxD;
+          { // Smearing the source
+            PLEGMA_Vector3D<double> vector1, vector2;
+            vector1.pointSource(src, isc/3, isc%3, DEVICE);
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            vectorInOut.absorb(vector2,id_coherent_timeslice);
+          }
 
-        //Inversion
-        PLEGMA_printf("Going to invert UP for component %d\n", isc);
-        TIME(solver.solve(vectorAuxD, vectorAuxD));
+          //Rotation to the physical basis
+          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));       
 
-        //Rotation to the physical basis
-        TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
+          //Inversion
+          PLEGMA_printf("Going to invert UP for component %d\n", isc);
+          TIME(solver.solve(vectorAuxD, vectorAuxD));
 
-        //Smearing at the sink
-        TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
+          //Rotation to the physical basis
+          TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
 
-        vectorAuxF.copy(vectorAuxD);
-        propUP.absorb(vectorAuxF, isc/3, isc%3);
-      }
-      // ensuring mu negative
-      if(mu>0) {
-        mu*=-1.;
-        solver.UpdateSolver();
-      }
+          //Smearing at the sink
+          TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
 
-      for(int isc = 0 ; isc < 12 ; isc++){
-        PLEGMA_Vector<double> vectorInOut;
-        PLEGMA_Vector<float>  vectorAuxF;
-        PLEGMA_Vector<double> vectorAuxD;
+          vectorAuxF.copy(vectorAuxD);
+          propUP_coherent.absorb(vectorAuxF, isc/3, isc%3);
+          const int t_upper=(id_coherent_timeslice+HGC_totalL[DIM_T]/(2*ncoherentSource))%HGC_totalL[DIM_T];
+          const int t_lower=(id_coherent_timeslice-HGC_totalL[DIM_T]/(2*ncoherentSource)+HGC_totalL[DIM_T])%(HGC_totalL[DIM_T]);
 
-        { // Smearing the source
-          PLEGMA_Vector3D<double> vector1, vector2;
-          vector1.pointSource(sourcePositions[isource], isc/3, isc%3, DEVICE);
-          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-          vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+          PLEGMA_Vector<float>  vectorAuxF2;
+          vectorAuxF2.absorb(propUP, isc/3, isc%3);
+          for (int timeslice=t_lower; timeslice < t_upper; ++timeslice ){
+            vectorAuxF2.absorbTimeslice(vectorAuxF,timeslice);
+          }
+          propUP.absorb(vectorAuxF2, isc/3, isc%3);
+
+        }
+        // ensuring mu negative
+        if(mu>0) {
+          mu*=-1.;
+          solver.UpdateSolver();
         }
 
-        //(3 step) rotation to the physical basis
-        TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1));
+        for(int isc = 0 ; isc < 12 ; isc++){
+          PLEGMA_Vector<double> vectorInOut;
+          PLEGMA_Vector<float>  vectorAuxF;
+          PLEGMA_Vector<double> vectorAuxD;
 
-        //(4 step) doing the inversion
-        PLEGMA_printf("Going to invert DN for component %d\n", isc);
-        TIME(solver.solve(vectorAuxD, vectorAuxD));
+          {  // Smearing the source
+            PLEGMA_Vector3D<double> vector1, vector2;
+            vector1.pointSource(src, isc/3, isc%3, DEVICE);
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            vectorInOut.absorb(vector2,id_coherent_timeslice);
+          }
 
-        //(5 step) rotating to the physical base
-        TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1));
+          //(3 step) rotation to the physical basis
+          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1));
 
-        //(6 step) doing the smearing on the propagator
-        TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
+          //(4 step) doing the inversion
+          PLEGMA_printf("Going to invert DN for component %d\n", isc);
+          TIME(solver.solve(vectorAuxD, vectorAuxD));
 
-        vectorAuxF.copy(vectorAuxD);
+          //(5 step) rotating to the physical base
+          TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1));
 
-        propDN.absorb(vectorAuxF, isc/3, isc%3);
-      }
+          //(6 step) doing the smearing on the propagator
+          TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
 
-      std::vector<int> mom={0,0,0};
+          vectorAuxF.copy(vectorAuxD);
+
+          propDN_coherent.absorb(vectorAuxF, isc/3, isc%3);
+	  const int t_upper=(id_coherent_timeslice+HGC_totalL[DIM_T]/(2*ncoherentSource))%HGC_totalL[DIM_T];
+          const int t_lower=(id_coherent_timeslice-HGC_totalL[DIM_T]/(2*ncoherentSource)+HGC_totalL[DIM_T])%(HGC_totalL[DIM_T]);
+
+	  PLEGMA_Vector<float>  vectorAuxF2;
+          vectorAuxF2.absorb(propDN, isc/3, isc%3);
+	  for (int timeslice=t_lower; timeslice < t_upper; ++timeslice ){
+	    vectorAuxF2.absorbTimeslice(vectorAuxF,timeslice);    
+	  }
+	  propDN.absorb(vectorAuxF2, isc/3, isc%3);
+       }
+
+       std::vector<int> mom={0,0,0};
       
-      site source=site({0,0,0,sourcePositions[isource][3]});
-      std::string outfilename;
+       site source=site({0,0,0, id_coherent_timeslice);
+       std::string outfilename;
 
-      //D diagram
-      {
-	std::vector<std::vector<int>> mtot = sourcemomentumList.uniq_p(3);
-	momList list_mtot(1,{mtot,},{0,});
-	PLEGMA_ScattCorrelator<float> corrD(sourcePositions[isource], list_mtot);
+       //D diagram
+       {
+	  std::vector<std::vector<int>> mtot = sourcemomentumList.uniq_p(3);
+	  momList list_mtot(1,{mtot,},{0,});
+	  PLEGMA_ScattCorrelator<float> corrD(src,list_mtot);
 
-	//initialize diagram
-	corrD.initialize_diagram( glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
+	  //initialize diagram
+	  corrD.initialize_diagram( glist_source_delta_unpaired, glist_sink_delta_unpaired,glist_source_delta, glist_sink_delta,"D");
       
-	PLEGMA_ScattCorrelator<float> reductionsT1(source, mtot);
-	PLEGMA_ScattCorrelator<float> reductionsT2(source, mtot);
+	  PLEGMA_ScattCorrelator<float> reductionsT1(source, mtot);
+	  PLEGMA_ScattCorrelator<float> reductionsT2(source, mtot);
 
-	TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
+	  TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propUP_coherent));
 
-	TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
+	  TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propUP_coherent));
 
-	//write D
-	outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_D";
+	  //write D
+	  outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_D";
 	
-	TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
-	TIME( corrD.apply_phase() );
-	TIME( corrD.apply_sign("D") );
-	TIME( corrD.applyBoundaryConditions( true ) );
-	TIME( corrD.writeHDF5(outfilename) );
+	  TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
+	  TIME( corrD.apply_phase() );
+	  TIME( corrD.apply_sign("D") );
+	  TIME( corrD.applyBoundaryConditions( true ) );
+	  TIME( corrD.writeHDF5(outfilename) );
 
-      }
+        }
       
       //T diagram piN sink
 /*
@@ -404,25 +442,34 @@ int main(int argc, char **argv)
 
   */    
       //N diagram
-      std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
-      momList list_mpf1(1,{mpf1,},{0,});
-      PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], list_mpf1 );
+        std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
+        momList list_mpf1(1,{mpf1,},{0,});
+        PLEGMA_ScattCorrelator<float> corrN_coherent(src, list_mpf1 );
 
-      //initialize diagram
-      TIME(corrN.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
+        //initialize diagram
+        TIME(corrN.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
       
-      //Computing T reductions+recombination
-      { 
-        PLEGMA_ScattCorrelator<float> reductionsT1N(source, mpf1);
-        PLEGMA_ScattCorrelator<float> reductionsT2N(source, mpf1);
+        //Computing T reductions+recombination
+        { 
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source, mpf1);
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source, mpf1);
       
-        TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_coherent, propDN_coherent, propUP_coherent));
 
-        TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_coherent, propDN_coherent, propUP_coherent));
 
-        TIME(corrN.N_diagramms( reductionsT1N, reductionsT2N ));
+          TIME(corrN_coherent.N_diagramms( reductionsT1N, reductionsT2N ));
+
+          outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N";
+
+          TIME( corrN_coherent.apply_phase() );
+          TIME( corrN_coherent.apply_sign("N") );
+          TIME( corrN_coherent.applyBoundaryConditions( true ) );
+          TIME( corrN_coherent.writeHDF5(outfilename) );
+
+        }
+
       }
-
 
       //P diagram
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
@@ -435,6 +482,8 @@ int main(int argc, char **argv)
         mu*=-1.;
         solver.UpdateSolver();
       }
+
+
 
       //We draw a different random vector for every source position
       vectorStoc_source_oet.stochastic_Z(nroots);
@@ -485,6 +534,9 @@ int main(int argc, char **argv)
          vectortmp1.diluteSpinDisplace(vectorStoc_source_oet,0,3);
          vectorStoc_source_oet.copy(vectortmp1);
       }
+
+
+      PLEGMA_Propagator<float> propUPDN(BOTH);
 
       //We first have a loop over all unique the source meson momentum p_i2 
       for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
