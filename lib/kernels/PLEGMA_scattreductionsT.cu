@@ -30,6 +30,8 @@ void T_kernels_wrapper( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
   switch(listGammas_i.size){
   case(1):
     switch(listGammas_f.size){
+    case(1): T_kernels<(unsigned int)1,(unsigned int)1,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+
     case(3): T_kernels<(unsigned int)1,(unsigned int)3,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
 //    case(4): T_kernels<(unsigned int)1,(unsigned int)4,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
 //    case(9): T_kernels<(unsigned int)1,(unsigned int)9,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
