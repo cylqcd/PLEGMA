@@ -516,7 +516,7 @@ int main(int argc, char **argv)
       //We draw a different random vector for every source position
       vectorStoc_source_oet.stochastic_Z(nroots);
       
-      //Store zero momentum oet propagators
+      //Store zero momentum oet propagators: also for the oet propagators we produce coherent sources
       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
       {
          PLEGMA_Vector<double> vectortmp1;
@@ -869,7 +869,7 @@ int main(int argc, char **argv)
      
        TIME(corrT.apply_phase());
        TIME(corrT.apply_sign("T"));
-       TIME(corrT.applyBoundaryConditions( true ));
+       TIME(corrT.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
 
        TIME(corrT.writeHDF5(outfilename));
        
@@ -878,12 +878,12 @@ int main(int argc, char **argv)
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
        TIME(corrB1.apply_phase());
        TIME(corrB1.apply_sign("B"));
-       TIME(corrB1.applyBoundaryConditions( true ));
+       TIME(corrB1.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrB1.normalize_nstoch(n_stochastic_samples));
        TIME(corrB1.writeHDF5( outfilename ));
        TIME(corrB2.apply_phase());
        TIME(corrB2.apply_sign("B"));
-       TIME(corrB2.applyBoundaryConditions( true ));
+       TIME(corrB2.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrB2.normalize_nstoch(n_stochastic_samples));
        TIME(corrB2.writeHDF5( outfilename ));
 
@@ -893,22 +893,22 @@ int main(int argc, char **argv)
 
        TIME(corrW1.apply_phase());
        TIME(corrW1.apply_sign("W"));
-       TIME(corrW1.applyBoundaryConditions( true ));
+       TIME(corrW1.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrW1.normalize_nstoch(n_stochastic_samples));
        TIME(corrW1.writeHDF5(outfilename));
        TIME(corrW2.apply_phase());
        TIME(corrW2.apply_sign("W"));
-       TIME(corrW2.applyBoundaryConditions( true ));
+       TIME(corrW2.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrW2.normalize_nstoch(n_stochastic_samples));
        TIME(corrW2.writeHDF5(outfilename));
        TIME(corrW3.apply_phase());
        TIME(corrW3.apply_sign("W"));
-       TIME(corrW3.applyBoundaryConditions( true ));
+       TIME(corrW3.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrW3.normalize_nstoch(n_stochastic_samples));
        TIME(corrW3.writeHDF5(outfilename));
        TIME(corrW4.apply_phase());
        TIME(corrW4.apply_sign("W"));
-       TIME(corrW4.applyBoundaryConditions( true ));
+       TIME(corrW4.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrW4.normalize_nstoch(n_stochastic_samples));
        TIME(corrW4.writeHDF5(outfilename));
        //## Z
@@ -917,19 +917,19 @@ int main(int argc, char **argv)
 
        TIME(corrZ1.apply_phase());
        TIME(corrZ1.apply_sign("Z"));
-       TIME(corrZ1.applyBoundaryConditions( true ));
+       TIME(corrZ1.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrZ1.writeHDF5( outfilename ));
        TIME(corrZ2.apply_phase());
        TIME(corrZ2.apply_sign("Z"));
-       TIME(corrZ2.applyBoundaryConditions( true ));
+       TIME(corrZ2.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrZ2.writeHDF5( outfilename  ));
        TIME(corrZ3.apply_phase());
        TIME(corrZ3.apply_sign("Z"));
-       TIME(corrZ3.applyBoundaryConditions( true ));
+       TIME(corrZ3.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrZ3.writeHDF5( outfilename ));
        TIME(corrZ4.apply_phase());
        TIME(corrZ4.apply_sign("Z"));
-       TIME(corrZ4.applyBoundaryConditions( true ));
+       TIME(corrZ4.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
        TIME(corrZ4.writeHDF5( outfilename ));
 
        //## M
@@ -937,7 +937,7 @@ int main(int argc, char **argv)
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase());
        TIME(corrM.apply_sign("M"));
-       TIME(corrM.applyBoundaryConditions( true ));
+       TIME(corrM.applyBoundaryConditions( true,  n_coherent_source, attract_source_table));
        TIME(corrM.writeHDF5( outfilename ));
 
       }//loop over unique set of momenta for p_i2
