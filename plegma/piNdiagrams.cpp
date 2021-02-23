@@ -645,8 +645,7 @@ int main(int argc, char **argv)
           // and the momentum is also fixed to be momentum_i2
 
           //smearing the 3D propagators
-          
-          PLEGMA_Propagator3D<float> propDN3D;      
+	  
           for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
             PLEGMA_Vector<float> vectorAuxF;
@@ -657,53 +656,46 @@ int main(int argc, char **argv)
             //Performing the smearing
             // Smearing the source
 	    for (int icoherentsource=0; icoherentsource < n_coherent_source;++icoherentsource)
-            {
+	    {
               PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, coherent_source_table[icoherentsource]);
-              PLEGMA_Vector3D<double> vector1, vector2;
+                
+	      PLEGMA_Vector3D<double> vector1, vector2;
               vectorAuxF.absorb(propDN, isc/3, isc%3);
               vectorAuxD.copy(vectorAuxF);
               vector1.absorb( vectorAuxD, coherent_source_table[icoherentsource]);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+
+              vector2.mulMomentumPhases(momentum_i2,1);
+	        
 	      vectorAuxD.absorb(vector2,coherent_source_table[icoherentsource]);
               vectorAuxD2.absorbTimeslice(vectorAuxD,coherent_source_table[icoherentsource], false);
-            }
 
+            }//loop over coherent source
+	     
             //Perform multiplication with gamma_i2
             vectorAuxD2.apply_gamma_scatt(gamma_i2);
 
             //Perform rotation to the physical basis
             TIME(vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1));
 
-            
-            vectorAuxF.copy(vectorAuxD);
-            propDN3D.absorb(vectorAuxF, sequential_time_source, isc/3, isc%3);
-          }
- 
-          propDN3D.mulMomentumPhases(momentum_i2,1);
 
-          //Computing sequential propagators UD T_fii with insertion
-          //gamma_i2 and momentum SinkMom
-          for(int isc = 0 ; isc < 12 ; isc++){
-            PLEGMA_Vector<double> vectorInOut;
-            PLEGMA_Vector<float> vectorAuxF;
-            PLEGMA_Vector<double> vectorAuxD;
-          
-            vectorAuxF.absorb(propDN3D, sequential_time_source, isc/3, isc%3);
-            vectorInOut.copy(vectorAuxF);
+            //Computing sequential propagators UD T_fii with insertion
+            //gamma_i2 and momentum SinkMom
             PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
             //performing the inversion
-            TIME(solver.solve(vectorInOut, vectorInOut));
+            TIME(solver.solve(vectorAuxD, vectorAuxD));
 
             //performing rotation to physical base
-            TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));
+            TIME(vectorAuxD2.rotateToPhysicalBasis(vectorAuxD,+1));
 
             //performing smearing
-            TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
+            TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
 
-            vectorAuxF.copy(vectorInOut);
+            vectorAuxF.copy(vectorAuxD);
             propUPDN.absorb(vectorAuxF, isc/3, isc%3);
-          } 
+	    
+          } //loop over isc 
 
 
           //Compute triangle diagramms          
