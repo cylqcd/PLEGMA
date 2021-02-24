@@ -248,39 +248,38 @@ int main(int argc, char **argv)
 
       //Creating look up tables for the coherent time-slice sources
       int *coherent_source_table=NULL;
-      int *attract_source_table=NULL;
-      int **attract_look_up_table=NULL;
-      if (n_coherent_source > 1){
+      int *coherent_source_table_timeslice=NULL;
+      int **coherent_look_up_table=NULL;
+      //if (n_coherent_source > 1){
 
-	coherent_source_table=(int *)malloc(sizeof(int)*HGC_totalL[DIM_T]);
-	for (int i_coherent_source=-1; i_coherent_source < n_coherent_source; ++i_coherent_source){
-          coherent_source_table[i_coherent_source]=sourcePositions[isource][DIM_T]+i_coherent_source*HGC_totalL[DIM_T]/n_coherent_source;
+      coherent_source_table=(int *)malloc(sizeof(int)*n_coherent_source);
+      for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
+        coherent_source_table[i_coherent_source]=(sourcePositions[isource][DIM_T]+i_coherent_source*HGC_totalL[DIM_T]/n_coherent_source)%HGC_totalL[DIM_T];
+      }
+      coherent_source_table_timeslice=(int *)malloc(sizeof(int)*HGC_totalL[DIM_T]);
+      for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
+        for (int i=0; i<=HGC_totalL[DIM_T]/(2*n_coherent_source); ++i){
+          coherent_source_table_timeslice[(coherent_source_table[i_coherent_source]+i)%HGC_totalL[DIM_T]]=i_coherent_source;
+        }
+        for (int i=1; i<(HGC_totalL[DIM_T]/(2*n_coherent_source));++i){
+	  coherent_source_table_timeslice[(coherent_source_table[i_coherent_source]-i+HGC_totalL[DIM_T])%HGC_totalL[DIM_T]]=i_coherent_source;
+        }
+      }
+      coherent_look_up_table=(int **)malloc(sizeof(int*)*n_coherent_source);
+      for (int i=0; i<n_coherent_source; ++i){
+        int k=0;
+        coherent_look_up_table[i]=(int *)malloc(sizeof(int)*HGC_totalL[DIM_T]/n_coherent_source);
+        for (int j=0; j<=HGC_totalL[DIM_T]/(2*n_coherent_source); ++j){
+	  coherent_look_up_table[i][k]=(coherent_source_table[i]+j)%HGC_totalL[DIM_T];
+	  k++;
 	}
-	attract_source_table=(int *)malloc(sizeof(int)*HGC_totalL[DIM_T]);
-	for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
-	  for (int i=0; i<HGC_totalL[DIM_T]/(2*n_coherent_source); ++i){
-	    attract_source_table[(coherent_source_table[i_coherent_source]+i)%HGC_totalL[DIM_T]]=i_coherent_source;
-	  }
-	  for (int i=1; i<(HGC_totalL[DIM_T]/(2*n_coherent_source));++i){
-	    attract_source_table[(coherent_source_table[i_coherent_source]-i+HGC_totalL[DIM_T])%HGC_totalL[DIM_T]]=i_coherent_source;
-          }
+	for (int j=1;j<(HGC_totalL[DIM_T]/(2*n_coherent_source));++j){
+          coherent_look_up_table[i][k]=(coherent_source_table[i]-j+HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
+          k++;    
 	}
-	attract_look_up_table=(int **)malloc(sizeof(int*)*n_coherent_source);
-	for (int i=0; i<n_coherent_source; ++i){
-	  int k=0;
-	  attract_look_up_table[i]=(int *)malloc(sizeof(int)*HGC_totalL[DIM_T]/n_coherent_source);
-	  for (int j=0; j<HGC_totalL[DIM_T]/(2*n_coherent_source); ++j){
-	    attract_look_up_table[i][k]=(coherent_source_table[i]+j)%HGC_totalL[DIM_T];
-	    k++;
-	  }
-	  for (int j=1;j<(HGC_totalL[DIM_T]/(2*n_coherent_source));++j){
-            attract_look_up_table[i][k]=(coherent_source_table[i]-j+HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
-	  }
-
-	}
-
       }
 
+      //Calculations for source-position Calculations for source-position 
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
                     sourcePositions[isource][2], sourcePositions[isource][3]);
@@ -288,9 +287,7 @@ int main(int argc, char **argv)
 	PLEGMA_printf("\n ### Calculations for coherent-source-numbedr %d - timeslice %03d begin now ###\n\n",
                     icoherentsource, sourcePositions[isource][3]+icoherentsource*HGC_totalL[DIM_T]/n_coherent_source);
       }
-
-      int sequential_time_source=sourcePositions[isource][DIM_T];
-  
+ 
       //Create Propagator
       PLEGMA_Propagator<float> propUP(BOTH); //To be saved for all the coherent sources.
       PLEGMA_Propagator<float> propDN(BOTH);
@@ -299,7 +296,6 @@ int main(int argc, char **argv)
       momList list_mpf1(1,{mpf1,},{0,});
       PLEGMA_ScattCorrelator<float> corrN(sourcePositions[isource], list_mpf1 );
       TIME(corrN.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
-
 
 
       for(int icoherentsource=0;icoherentsource < n_coherent_source; ++icoherentsource){
@@ -354,7 +350,7 @@ int main(int argc, char **argv)
 
         }
         for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
-          propUP.absorbTimeslice(propUP_coherent, attract_look_up_table[icoherentsource][timeslice], false);
+          propUP.absorbTimeslice(propUP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
         }
         // ensuring mu negative
         if(mu>0) {
@@ -392,7 +388,7 @@ int main(int argc, char **argv)
           propDN_coherent.absorb(vectorAuxF, isc/3, isc%3);
         }
         for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
-	  propDN.absorbTimeslice(propDN_coherent, attract_look_up_table[icoherentsource][timeslice], false);
+	  propDN.absorbTimeslice(propDN_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
         } 
 
         std::vector<int> mom={0,0,0};
@@ -466,7 +462,7 @@ int main(int argc, char **argv)
       }
 
   */    
-      //N diagram
+        //N diagram
         std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
         momList list_mpf1(1,{mpf1,},{0,});
         PLEGMA_ScattCorrelator<float> corrN_coherent(src, list_mpf1 );
@@ -493,11 +489,11 @@ int main(int argc, char **argv)
           TIME( corrN_coherent.writeHDF5(outfilename) );
 
           for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
-            corrN.absorbTimeslice(corrN_coherent, attract_look_up_table[icoherentsource][timeslice], false);
+            corrN.absorbTimeslice(corrN_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
 	  }
         } //End computing N diagramm
 
-      } //End of loop on coherent sources
+     } //End of loop on coherent sources
 
       //P diagram
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
@@ -536,20 +532,21 @@ int main(int argc, char **argv)
               smearedGauge3D.absorb(smearedGauge, coherent_source_table[i_coherent_source]);
 
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-              vectortmp1.absorbTimeslice(vector2,coherent_source_table[i_coherent_source],false);
+              vectortmp1.absorb(vector2,coherent_source_table[i_coherent_source]);
+              vectortmp2.absorbTimeslice(vectortmp1,coherent_source_table[i_coherent_source],false);
 
 	    }
 
          }
  
          //Transforming to physical base
-         vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
+         vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
  
           //Dilution     
-         vectortmp1.dilutespin(vectortmp2,0);
+         vectortmp2.dilutespin(vectortmp1,0);
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
-         vectorStoc_source_oet.copy(vectortmp1);
+         vectorStoc_source_oet.copy(vectortmp2);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
            vectortmp2.copy(vectorStoc_source_oet);
@@ -861,7 +858,7 @@ int main(int argc, char **argv)
      
        TIME(corrT.apply_phase());
        TIME(corrT.apply_sign("T"));
-       TIME(corrT.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrT.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
 
        TIME(corrT.writeHDF5(outfilename));
        
@@ -870,12 +867,12 @@ int main(int argc, char **argv)
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
        TIME(corrB1.apply_phase());
        TIME(corrB1.apply_sign("B"));
-       TIME(corrB1.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrB1.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrB1.normalize_nstoch(n_stochastic_samples));
        TIME(corrB1.writeHDF5( outfilename ));
        TIME(corrB2.apply_phase());
        TIME(corrB2.apply_sign("B"));
-       TIME(corrB2.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrB2.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrB2.normalize_nstoch(n_stochastic_samples));
        TIME(corrB2.writeHDF5( outfilename ));
 
@@ -885,22 +882,22 @@ int main(int argc, char **argv)
 
        TIME(corrW1.apply_phase());
        TIME(corrW1.apply_sign("W"));
-       TIME(corrW1.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrW1.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrW1.normalize_nstoch(n_stochastic_samples));
        TIME(corrW1.writeHDF5(outfilename));
        TIME(corrW2.apply_phase());
        TIME(corrW2.apply_sign("W"));
-       TIME(corrW2.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrW2.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrW2.normalize_nstoch(n_stochastic_samples));
        TIME(corrW2.writeHDF5(outfilename));
        TIME(corrW3.apply_phase());
        TIME(corrW3.apply_sign("W"));
-       TIME(corrW3.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrW3.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrW3.normalize_nstoch(n_stochastic_samples));
        TIME(corrW3.writeHDF5(outfilename));
        TIME(corrW4.apply_phase());
        TIME(corrW4.apply_sign("W"));
-       TIME(corrW4.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrW4.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrW4.normalize_nstoch(n_stochastic_samples));
        TIME(corrW4.writeHDF5(outfilename));
        //## Z
@@ -909,19 +906,19 @@ int main(int argc, char **argv)
 
        TIME(corrZ1.apply_phase());
        TIME(corrZ1.apply_sign("Z"));
-       TIME(corrZ1.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrZ1.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrZ1.writeHDF5( outfilename ));
        TIME(corrZ2.apply_phase());
        TIME(corrZ2.apply_sign("Z"));
-       TIME(corrZ2.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrZ2.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrZ2.writeHDF5( outfilename  ));
        TIME(corrZ3.apply_phase());
        TIME(corrZ3.apply_sign("Z"));
-       TIME(corrZ3.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrZ3.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrZ3.writeHDF5( outfilename ));
        TIME(corrZ4.apply_phase());
        TIME(corrZ4.apply_sign("Z"));
-       TIME(corrZ4.applyBoundaryConditions( true, n_coherent_source, attract_source_table));
+       TIME(corrZ4.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice));
        TIME(corrZ4.writeHDF5( outfilename ));
 
        //## M
@@ -929,7 +926,7 @@ int main(int argc, char **argv)
        //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase());
        TIME(corrM.apply_sign("M"));
-       TIME(corrM.applyBoundaryConditions( true,  n_coherent_source, attract_source_table));
+       TIME(corrM.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice));
        TIME(corrM.writeHDF5( outfilename ));
 
       }//loop over unique set of momenta for p_i2
@@ -940,6 +937,12 @@ int main(int argc, char **argv)
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
       TIME(corrP.apply_sign("P"));
       TIME(corrP.writeHDF5( outfilename ));
+
+      free(coherent_source_table);
+      free(coherent_source_table_timeslice);
+      for (int i=0; i<n_coherent_source;++i)
+        free(coherent_look_up_table[i]);
+      free(coherent_look_up_table);
 
     } //loop over source position
 
