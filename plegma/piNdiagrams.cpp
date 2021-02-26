@@ -483,14 +483,13 @@ int main(int argc, char **argv)
 
           outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N";
 
+          for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
+            corrN.absorbTimeslice(corrN_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
+          }
           TIME( corrN_coherent.apply_phase() );
           TIME( corrN_coherent.apply_sign("N") );
           TIME( corrN_coherent.applyBoundaryConditions( true ) );
-          TIME( corrN_coherent.writeHDF5(outfilename) );
-
-          for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
-            corrN.absorbTimeslice(corrN_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
-	  }
+          TIME( corrN_coherent.writeHDF5(outfilename) ); 
         } //End computing N diagramm
 
      } //End of loop on coherent sources
@@ -923,7 +922,6 @@ int main(int argc, char **argv)
 
        //## M
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
-       //TIME(corrM.writeHDF5( "mdiagrammwithoutphase" ));
        TIME(corrM.apply_phase());
        TIME(corrM.apply_sign("M"));
        TIME(corrM.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice));
