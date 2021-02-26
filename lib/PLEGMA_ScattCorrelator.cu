@@ -1210,12 +1210,12 @@ void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float> &srcCorr, int global_it, bool forcetozero){
 
-  if( this->pList().pi(1) != srcCorr.getMomList() ) PLEGMA_error("ScattCorrelator has not the the same mom list of srcCorr\n");
+//  if( this->pList().pi(1) != srcCorr.getMomList() ) PLEGMA_error("ScattCorrelator has not the the same mom list of srcCorr\n");
 
-  if(this->GList.size() !=srcCorr.GList.size())  PLEGMA_error("ScattCorrelator has not the the same length of GList list of srcCorr\n");
-  for(int i=0; i<(this->GList.size()); ++i)
-    if((this->GList[i]!=srcCorr.GList[i]))
-      PLEGMA_error("ScattCorrelator, srcCorr wrong gamma list\n");
+//  if(this->GList.size() !=srcCorr.GList.size())  PLEGMA_error("ScattCorrelator has not the the same length of GList list of srcCorr\n");
+//  for(int i=0; i<(this->GList.size()); ++i)
+//    if((this->GList[i]!=srcCorr.GList[i]))
+//      PLEGMA_error("ScattCorrelator, srcCorr wrong gamma list\n");
 
 
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
