@@ -7,6 +7,8 @@ parser = argparse.ArgumentParser(prog='postProcZfac.py', description='Transform 
 parser.add_argument('--inputPath', help='The path where I can find the input of the files', default = '/cyclamen/home/khadjiyiannakou/runs_Zfac_b1.726_3D/')
 parser.add_argument('--outputPath', help='The path where I can write the output files', default='/cyclamen/home/khadjiyiannakou/runs_Zfac_b1.726_3D/')
 parser.add_argument('--momentum', help='Give the momentum in order PX,PY,PZ,PT', default='2,2,2,2')
+parser.add_argument('--T', help='Time extent',default=48)
+parser.add_argument('--L', help='Spatial extent',default=24)
 parser.add_argument('--confID', help='The ID of the configuration', default='0700')
 
 args= vars(parser.parse_args())
@@ -21,8 +23,8 @@ g5=np.array([[0,0,1,0],[0,0,0,1],[1,0,0,0],[0,1,0,0]])
 g4=np.array([[1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,-1]])
 U=matr(U)*matr(g4)
 #print(U)
-L=24
-T=48
+L=int(args['L'])
+T=int(args['T'])
 V=L**3*T
 
 Gdprop=(np.loadtxt('%s/GpropMom_px%dpy%dpz%dpt%d_conf_%s.dat'%(tuple([args['inputPath']]+mom+[args['confID']])),usecols=(5,6))).reshape(4,4,9,2)
