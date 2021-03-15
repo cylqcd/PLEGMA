@@ -15,46 +15,64 @@
                       (i==1 ? LEXIC_TZX(id[3],id[2],id[0],DGC_localL) : \
 		      (i==2 ? LEXIC_TYX(id[3],id[1],id[0],DGC_localL) : \
 		              LEXIC_ZYX(id[2],id[1],id[0],DGC_localL))))
-#define LEXIC_NOX(j,id)( j==1 ? LEXIC_TZ(id[3],id[2],DGC_localL) : \
-			 ( j==2 ? LEXIC_TY(id[3],id[1],DGC_localL) : \
+#define LEXIC_NOX(j,id)( j==1 ? LEXIC_TZ(id[3],id[2],DGC_localL) :	\
+		       ( j==2 ? LEXIC_TY(id[3],id[1],DGC_localL) :	\
 			   LEXIC_ZY(id[2],id[1],DGC_localL) ) )
-#define	LEXIC_NOY(j,id)( j==0 ? LEXIC_TZ(id[3],id[2],DGC_localL) : \
-			 ( j==2 ? LEXIC_TX(id[3],id[0],DGC_localL) : \
+#define	LEXIC_NOY(j,id)( j==0 ? LEXIC_TZ(id[3],id[2],DGC_localL) :	\
+		       ( j==2 ? LEXIC_TX(id[3],id[0],DGC_localL) :	\
 			   LEXIC_ZX(id[2],id[0],DGC_localL) ) )
-#define LEXIC_NOZ(j,id)( j==0 ? LEXIC_TY(id[3],id[1],DGC_localL) : \
-			 ( j==1 ? LEXIC_TX(id[3],id[0],DGC_localL) : \
+#define LEXIC_NOZ(j,id)( j==0 ? LEXIC_TY(id[3],id[1],DGC_localL) :	\
+		       ( j==1 ? LEXIC_TX(id[3],id[0],DGC_localL) :	\
 			   LEXIC_YX(id[1],id[0],DGC_localL) ) )
-#define LEXIC_NOT(j,id)( j==0 ? LEXIC_ZY(id[2],id[1],DGC_localL) : \
-			 ( j==1 ? LEXIC_ZX(id[2],id[0],DGC_localL) : \
+#define LEXIC_NOT(j,id)( j==0 ? LEXIC_ZY(id[2],id[1],DGC_localL) :      \
+		       ( j==1 ? LEXIC_ZX(id[2],id[0],DGC_localL) : 	\
 			   LEXIC_YX(id[1],id[0],DGC_localL)  ) )
 
 #define LEXIC_ID_3D4D(id,is4D) (is4D ? LEXIC_ID(id) : LEXIC_ZYX(id[2],id[1],id[0],DGC_localL))
 
 // assuming i!=j
-#define LEXIC_2D(i,j,id)( i==0 ? LEXIC_NOX(j,id) :   \
+#define LEXIC_2D(i,j,id)( i==0 ? LEXIC_NOX(j,id) :			\
 			( i==1 ? LEXIC_NOY(j,id) :			\
 			( i==2 ? LEXIC_NOZ(j,id) : LEXIC_NOT(j,id) )))
-#define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]+1)%DGC_localL[0],DGC_localL) : \
-                        (i==1 ? LEXIC(id[3],id[2],(id[1]+1)%DGC_localL[1],id[0],DGC_localL) : \
-                        (i==2 ? LEXIC(id[3],(id[2]+1)%DGC_localL[2],id[1],id[0],DGC_localL) : \
-			        LEXIC((id[3]+1)%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
-#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],(id[0]+DGC_localL[0]-1)%DGC_localL[0],DGC_localL) : \
-                         (i==1 ? LEXIC(id[3],id[2],(id[1]+DGC_localL[1]-1)%DGC_localL[1],id[0],DGC_localL) : \
-                         (i==2 ? LEXIC(id[3],(id[2]+DGC_localL[2]-1)%DGC_localL[2],id[1],id[0],DGC_localL) : \
-			         LEXIC((id[3]+DGC_localL[3]-1)%DGC_localL[3],id[2],id[1],id[0],DGC_localL))))
+// assuming i!=j!=k
+#define LEXIC_1D(i,j,k,id)( i!=0 && j!=0 && k!=0 ? id[0] :		\
+			  ( i!=1 && j!=1 && k!=1 ? id[1] :		\
+			  ( i!=2 && j!=2 && k!=2 ? id[2] : id[3] )))
 
-#define LEXIC_3D_PLUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],(id[0]+1)%DGC_localL[0],DGC_localL) : \
-			   (i==1 ? LEXIC_ZYX(id[2],(id[1]+1)%DGC_localL[1],id[0],DGC_localL) : \
-			           LEXIC_ZYX((id[2]+1)%DGC_localL[2],id[1],id[0],DGC_localL)))
-#define LEXIC_3D_MINUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],(id[0]+DGC_localL[0]-1)%DGC_localL[0],DGC_localL) : \
-			    (i==1 ? LEXIC_ZYX(id[2],(id[1]+DGC_localL[1]-1)%DGC_localL[1],id[0],DGC_localL) : \
-			            LEXIC_ZYX((id[2]+DGC_localL[2]-1)%DGC_localL[2],id[1],id[0],DGC_localL)))
+#define ID_PLUS(i,id) ((id[i]+1)%DGC_localL[i])
+#define ID_MINUS(i,id) ((id[i]+DGC_localL[i]-1)%DGC_localL[i])
+
+#define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],ID_PLUS(i,id),DGC_localL) : \
+                        (i==1 ? LEXIC(id[3],id[2],ID_PLUS(i,id),id[0],DGC_localL) : \
+                        (i==2 ? LEXIC(id[3],ID_PLUS(i,id),id[1],id[0],DGC_localL) : \
+			        LEXIC(ID_PLUS(i,id),id[2],id[1],id[0],DGC_localL))))
+#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],ID_MINUS(i,id),DGC_localL) : \
+                         (i==1 ? LEXIC(id[3],id[2],ID_MINUS(i,id),id[0],DGC_localL) : \
+                         (i==2 ? LEXIC(id[3],ID_MINUS(i,id),id[1],id[0],DGC_localL) : \
+			         LEXIC(ID_MINUS(i,id),id[2],id[1],id[0],DGC_localL))))
+
+#define LEXIC_3D_PLUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],ID_PLUS(i,id),DGC_localL) : \
+			   (i==1 ? LEXIC_ZYX(id[2],ID_PLUS(i,id),id[0],DGC_localL) : \
+			           LEXIC_ZYX(ID_PLUS(i,id),id[1],id[0],DGC_localL)))
+#define LEXIC_3D_MINUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],ID_MINUS(i,id),DGC_localL) : \
+			    (i==1 ? LEXIC_ZYX(id[2],ID_MINUS(i,id),id[0],DGC_localL) : \
+			            LEXIC_ZYX(ID_MINUS(i,id),id[1],id[0],DGC_localL)))
 
 #define LEXIC_3D4D_PLUS(i,id,is4D) (is4D ? LEXIC_PLUS(i,id) : LEXIC_3D_PLUS(i,id))
 #define LEXIC_3D4D_MINUS(i,id,is4D) (is4D ? LEXIC_MINUS(i,id) : LEXIC_3D_MINUS(i,id))
 
+#define IS_MINUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == 0)
+#define IS_PLUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == (DGC_localL[i]-1))
+
+
 namespace plegma {
-  enum get_from { Me, Plus, Minus, PlusPlus, MinusMinus, PlusMinus, MinusPlus, PlusNoGhost, MinusNoGhost, PlusOnlyGhost, MinusOnlyGhost};
+  enum get_from { Me,
+		  Plus, Minus,
+		  PlusPlus, MinusMinus, PlusMinus, MinusPlus,
+		  PlusNoGhost, MinusNoGhost, PlusOnlyGhost, MinusOnlyGhost,
+		  PlusPlusPlus, MinusMinusPlus, PlusMinusPlus, MinusPlusPlus,
+		  PlusPlusMinus, MinusMinusMinus, PlusMinusMinus, MinusPlusMinus,
+  };
 
   struct sidStride {
     const bool is4D;
@@ -106,18 +124,35 @@ namespace plegma {
 
     inline __host__ __device__ size_t cornerGhostL(const short& dir1, const short& dir2) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_surface2D[dir1][dir2] : (DGC_surface2D[dir1][dir2]/DGC_localL[DIM_T]);
+      return is4D ? DGC_surface2D[OFF2(dir1,dir2)] : (DGC_surface2D[OFF2(dir1,dir2)]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_surface2D[dir1][dir2] : (HGC_surface2D[dir1][dir2]/HGC_localL[DIM_T]);
+      return is4D ? HGC_surface2D[OFF2(dir1,dir2)] : (HGC_surface2D[OFF2(dir1,dir2)]/HGC_localL[DIM_T]);
+      #endif
+    }
+
+    inline __host__ __device__ size_t vertexGhostL(const short& dir1, const short& dir2, const short& dir3) const {
+      #ifdef __CUDA_ARCH__
+      return is4D ? DGC_surface1D[OFF3(dir1,dir2,dir3)] : (DGC_surface1D[OFF3(dir1,dir2,dir3)]/DGC_localL[DIM_T]);
+      #else
+      return is4D ? HGC_surface1D[OFF3(dir1,dir2,dir3)] : (HGC_surface1D[OFF3(dir1,dir2,dir3)]/HGC_localL[DIM_T]);
       #endif
     }
 
     inline __host__ __device__ size_t cornerGhostShift(const short& dir1, const short& dir2,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2) const {
       #ifdef __CUDA_ARCH__
-      return is4D ? DGC_cornerGhost[dir1][dir2][sign1][sign2] : (DGC_cornerGhost[dir1][dir2][sign1][sign2]/DGC_localL[DIM_T]);
+      return is4D ? DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/DGC_localL[DIM_T]);
       #else
-      return is4D ? HGC_cornerGhost[dir1][dir2][sign1][sign2] : (HGC_cornerGhost[dir1][dir2][sign1][sign2]/HGC_localL[DIM_T]);
+      return is4D ? HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/HGC_localL[DIM_T]);
+      #endif
+    }
+
+    inline __host__ __device__ size_t vertexGhostShift(const short& dir1, const short& dir2, const short& dir3,
+					  const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) const {
+      #ifdef __CUDA_ARCH__
+      return is4D ? DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/DGC_localL[DIM_T]);
+      #else
+      return is4D ? HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/HGC_localL[DIM_T]);
       #endif
     }
 
@@ -136,6 +171,9 @@ namespace plegma {
     template<get_from src>
     inline __device__ void shift(const short& dir1, const short& dir2);
     
+    template<get_from src>
+    inline __device__ void shift(const short& dir1, const short& dir2, const short& dir3);
+    
     inline __host__ __device__ void accessSideGhost(const size_t& sid3D, const short& dir, const ORIENTATION& sign) {
       this->stride = sideGhostL(dir);
       this->sid = (volume()+sideGhostShift(dir, sign))*site_size + sid3D;
@@ -145,14 +183,18 @@ namespace plegma {
       this->stride = cornerGhostL(dir1, dir2);
       this->sid = (volume()+sideGhostVolume()+cornerGhostShift(dir1,dir2,sign1,sign2))*site_size + sid2D;
     }
+
+    inline __host__ __device__ void accessVertexGhost(const size_t& sid1D, const short& dir1, const short& dir2, const short& dir3, const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) {
+      this->stride = vertexGhostL(dir1, dir2, dir3);
+      this->sid = (volume()+sideGhostVolume()+cornerGhostVolume()+vertexGhostShift(dir1,dir2,dir3,sign1,sign2,sign3))*site_size + sid1D;
+    }
 };
 
 
   template<>
   inline __device__ void sidStride::shift<Plus>(const short& dirPlus) {
     size_t id[4] = GET_ID(sid);
-    bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
-    if(plus_ghost) {
+    if(IS_PLUS_GHOST(dirPlus, id)) {
       this->accessSideGhost(LEXIC_3D(dirPlus,id), dirPlus, DIR_PLUS);
     } else {
       this->sid = LEXIC_3D4D_PLUS(dirPlus, id, is4D);
@@ -161,8 +203,7 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<Minus>(const short& dirMinus) {
     size_t id[4] = GET_ID(sid);
-    bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    if(minus_ghost) {
+    if(IS_MINUS_GHOST(dirMinus, id)) {
       this->accessSideGhost(LEXIC_3D(dirMinus,id), dirMinus, DIR_MINUS);
     } else {
       this->sid = LEXIC_3D4D_MINUS(dirMinus, id, is4D);
@@ -171,8 +212,7 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<PlusOnlyGhost>(const short& dirPlus) {
     size_t id[4] = GET_ID(sid);
-    bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
-    if(plus_ghost) {
+    if(IS_PLUS_GHOST(dirPlus, id)) {
       this->accessSideGhost(LEXIC_3D(dirPlus,id), dirPlus, DIR_PLUS);
     } else {
       this->returnZero = true;
@@ -181,8 +221,7 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<MinusOnlyGhost>(const short& dirMinus) {
     size_t id[4] = GET_ID(sid);
-    bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    if(minus_ghost) {
+    if(IS_MINUS_GHOST(dirMinus, id)) {
       this->accessSideGhost(LEXIC_3D(dirMinus,id), dirMinus, DIR_MINUS);
     } else {
       this->returnZero = true;
@@ -192,8 +231,7 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<PlusNoGhost>(const short& dirPlus) {
     size_t id[4] = GET_ID(sid);
-    bool plus_ghost = (DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1));
-    if(plus_ghost) {
+    if(IS_PLUS_GHOST(dirPlus, id)) {
       this->returnZero = true;
     } else {
       this->sid = LEXIC_3D4D_PLUS(dirPlus, id, is4D);
@@ -202,8 +240,7 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<MinusNoGhost>(const short& dirMinus) {
     size_t id[4] = GET_ID(sid);
-    bool minus_ghost = (DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0);
-    if(minus_ghost) {
+    if(IS_MINUS_GHOST(dirMinus, id)) {
       this->returnZero = true;
     } else {
       this->sid = LEXIC_3D4D_MINUS(dirMinus, id, is4D);
@@ -215,10 +252,10 @@ namespace plegma {
       printf(" !!! ERROR: in PlusPlus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
-      bool plus1_ghost = DGC_dimBreak[dirPlus1] == true && id[dirPlus1] == (DGC_localL[dirPlus1]-1);
-      if(!plus1_ghost) id[dirPlus1] = (id[dirPlus1] + 1)%DGC_localL[dirPlus1]; 
-      bool plus2_ghost = DGC_dimBreak[dirPlus2] == true && id[dirPlus2] == (DGC_localL[dirPlus1]-1);
-      if(!plus2_ghost) id[dirPlus2] = (id[dirPlus2] + 1)%DGC_localL[dirPlus2];
+      bool plus1_ghost = IS_PLUS_GHOST(dirPlus1, id);
+      if(!plus1_ghost) id[dirPlus1] = ID_PLUS(dirPlus1, id);
+      bool plus2_ghost = IS_PLUS_GHOST(dirPlus2, id);
+      if(!plus2_ghost) id[dirPlus2] = ID_PLUS(dirPlus2, id);
 
       if(plus1_ghost && plus2_ghost){
 	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
@@ -237,10 +274,10 @@ namespace plegma {
       printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
-      bool minus1_ghost = DGC_dimBreak[dirMinus1] == true && id[dirMinus1] == 0;
-      if(!minus1_ghost) id[dirMinus1] = (id[dirMinus1] + DGC_localL[dirMinus1] - 1)%DGC_localL[dirMinus1]; 
-      bool minus2_ghost = DGC_dimBreak[dirMinus2] == true && id[dirMinus2] == 0;
-      if(!minus2_ghost) id[dirMinus2] = (id[dirMinus2] + DGC_localL[dirMinus2] - 1)%DGC_localL[dirMinus2];
+      bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
+      if(!minus1_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
+      bool minus2_ghost = IS_MINUS_GHOST(dirMinus2, id);
+      if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
 
       if(minus1_ghost && minus2_ghost){
 	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
@@ -259,10 +296,10 @@ namespace plegma {
       return;
     } else {
       size_t id[4] = GET_ID(sid);
-      bool plus_ghost = DGC_dimBreak[dirPlus] == true && id[dirPlus] == (DGC_localL[dirPlus]-1);
-      if(!plus_ghost) id[dirPlus] = (id[dirPlus] + 1)%DGC_localL[dirPlus]; 
-      bool minus_ghost = DGC_dimBreak[dirMinus] == true && id[dirMinus] == 0;
-      if(!minus_ghost) id[dirMinus] = (id[dirMinus] + DGC_localL[dirMinus] - 1)%DGC_localL[dirMinus];
+      bool plus_ghost = IS_PLUS_GHOST(dirPlus, id);
+      if(!plus_ghost) id[dirPlus] = ID_PLUS(dirPlus, id);
+      bool minus_ghost = IS_MINUS_GHOST(dirMinus, id);
+      if(!minus_ghost) id[dirMinus] = ID_MINUS(dirMinus, id);
 
       if(plus_ghost && minus_ghost){
 	this->accessCornerGhost(LEXIC_2D(dirPlus,dirMinus,id), dirPlus, dirMinus, DIR_PLUS, DIR_MINUS);
@@ -278,6 +315,152 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<MinusPlus>(const short& dirMinus, const short& dirPlus) {
     this->shift<PlusMinus>(dirPlus, dirMinus);
+  }
+
+  template<>
+  inline __device__ void sidStride::shift<PlusPlusPlus>(const short& dirPlus1, const short& dirPlus2, const short& dirPlus3) {
+    if(dirPlus1 == dirPlus2 || dirPlus1 == dirPlus3 || dirPlus3 == dirPlus2) {
+      printf(" !!! ERROR: in PlusPlusPlus we cannot access the second neighbour !!!");
+    } else {
+      size_t id[4] = GET_ID(sid);
+      bool plus1_ghost = IS_PLUS_GHOST(dirPlus1, id);
+      if(!plus1_ghost) id[dirPlus1] = ID_PLUS(dirPlus1, id);
+      bool plus2_ghost = IS_PLUS_GHOST(dirPlus2, id);
+      if(!plus2_ghost) id[dirPlus2] = ID_PLUS(dirPlus2, id);
+      bool plus3_ghost = IS_PLUS_GHOST(dirPlus3, id);
+      if(!plus3_ghost) id[dirPlus3] = ID_PLUS(dirPlus3, id);
+
+      if(plus1_ghost && plus2_ghost && plus3_ghost){
+	this->accessVertexGhost(LEXIC_1D(dirPlus1,dirPlus2,dirPlus3,id), dirPlus1, dirPlus2, dirPlus3, DIR_PLUS, DIR_PLUS, DIR_PLUS);
+      } else if(plus1_ghost && plus2_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
+      } else if(plus1_ghost && plus3_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus3,id), dirPlus1, dirPlus3, DIR_PLUS, DIR_PLUS);
+      } else if(plus2_ghost && plus3_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirPlus2,dirPlus3,id), dirPlus2, dirPlus3, DIR_PLUS, DIR_PLUS);
+      } else if(plus1_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+      } else if(plus2_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
+      } else if(plus3_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirPlus3,id), dirPlus3, DIR_PLUS);
+      } else {
+	this->sid = LEXIC_ID_3D4D(id,is4D);
+      }
+    }
+  }
+  template<>
+  inline __device__ void sidStride::shift<PlusPlusMinus>(const short& dirPlus1, const short& dirPlus2, const short& dirMinus) {
+    if(dirPlus1 == dirPlus2 || dirPlus1 == dirMinus || dirMinus == dirPlus2) {
+      printf(" !!! ERROR: in PlusPlusMinus we cannot access the second neighbour !!!");
+    } else {
+      size_t id[4] = GET_ID(sid);
+      bool plus1_ghost = IS_PLUS_GHOST(dirPlus1, id);
+      if(!plus1_ghost) id[dirPlus1] = ID_PLUS(dirPlus1, id);
+      bool plus2_ghost = IS_PLUS_GHOST(dirPlus2, id);
+      if(!plus2_ghost) id[dirPlus2] = ID_PLUS(dirPlus2, id);
+      bool minus_ghost = IS_MINUS_GHOST(dirMinus, id);
+      if(!minus_ghost) id[dirMinus] = ID_MINUS(dirMinus, id);
+
+      if(plus1_ghost && plus2_ghost && minus_ghost){
+	this->accessVertexGhost(LEXIC_1D(dirPlus1,dirPlus2,dirMinus,id), dirPlus1, dirPlus2, dirMinus, DIR_PLUS, DIR_PLUS, DIR_MINUS);
+      } else if(plus1_ghost && plus2_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
+      } else if(plus1_ghost && minus_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirMinus,id), dirPlus1, dirMinus, DIR_PLUS, DIR_MINUS);
+      } else if(plus2_ghost && minus_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirPlus2,dirMinus,id), dirPlus2, dirMinus, DIR_PLUS, DIR_MINUS);
+      } else if(plus1_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+      } else if(plus2_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
+      } else if(minus_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirMinus,id), dirMinus, DIR_MINUS);
+      } else {
+	this->sid = LEXIC_ID_3D4D(id,is4D);
+      }
+    }
+  }
+  template<>
+  inline __device__ void sidStride::shift<PlusMinusPlus>(const short& dirPlus1, const short& dirMinus, const short& dirPlus2) {
+    this->shift<PlusPlusMinus>(dirPlus1, dirPlus2, dirMinus);
+  }
+  template<>
+  inline __device__ void sidStride::shift<MinusPlusPlus>(const short& dirMinus, const short& dirPlus1, const short& dirPlus2) {
+    this->shift<PlusPlusMinus>(dirPlus1, dirPlus2, dirMinus);
+  }
+  
+  template<>
+  inline __device__ void sidStride::shift<MinusMinusMinus>(const short& dirMinus1, const short& dirMinus2, const short& dirMinus3) {
+    if(dirMinus1 == dirMinus2 || dirMinus1 == dirMinus3 || dirMinus3 == dirMinus2) {
+      printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
+    } else {
+      size_t id[4] = GET_ID(sid);
+      bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
+      if(!minus1_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
+      bool minus2_ghost = IS_MINUS_GHOST(dirMinus2, id);
+      if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
+      bool minus3_ghost = IS_MINUS_GHOST(dirMinus3, id);
+      if(!minus3_ghost) id[dirMinus3] = ID_MINUS(dirMinus3, id);
+
+      if(minus1_ghost && minus2_ghost && minus3_ghost){
+	this->accessVertexGhost(LEXIC_1D(dirMinus1,dirMinus2,dirMinus3,id), dirMinus1, dirMinus2, dirMinus3, DIR_MINUS, DIR_MINUS, DIR_MINUS);
+      } else if(minus1_ghost && minus2_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
+      } else if(minus1_ghost && minus3_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus3,id), dirMinus1, dirMinus3, DIR_MINUS, DIR_MINUS);
+      } else if(minus2_ghost && minus3_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirMinus2,dirMinus3,id), dirMinus2, dirMinus3, DIR_MINUS, DIR_MINUS);
+      } else if(minus1_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+      } else if(minus2_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
+      } else if(minus3_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirMinus3,id), dirMinus3, DIR_MINUS);
+      } else {
+	this->sid = LEXIC_ID_3D4D(id,is4D);
+      }
+    }
+  }
+  template<>
+  inline __device__ void sidStride::shift<MinusMinusPlus>(const short& dirMinus1, const short& dirMinus2, const short& dirPlus) {
+    if(dirMinus1 == dirMinus2 || dirMinus1 == dirPlus || dirPlus == dirMinus2) {
+      printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
+    } else {
+      size_t id[4] = GET_ID(sid);
+      bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
+      if(!minus1_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
+      bool minus2_ghost = IS_MINUS_GHOST(dirMinus2, id);
+      if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
+      bool plus_ghost = IS_PLUS_GHOST(dirPlus, id);
+      if(!plus_ghost) id[dirPlus] = ID_PLUS(dirPlus, id);
+
+      if(minus1_ghost && minus2_ghost && plus_ghost){
+	this->accessVertexGhost(LEXIC_1D(dirMinus1,dirMinus2,dirPlus,id), dirMinus1, dirMinus2, dirPlus, DIR_MINUS, DIR_MINUS, DIR_PLUS);
+      } else if(minus1_ghost && minus2_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
+      } else if(minus1_ghost && plus_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirPlus,id), dirMinus1, dirPlus, DIR_MINUS, DIR_PLUS);
+      } else if(minus2_ghost && plus_ghost){
+	this->accessCornerGhost(LEXIC_2D(dirMinus2,dirPlus,id), dirMinus2, dirPlus, DIR_MINUS, DIR_PLUS);
+      } else if(minus1_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+      } else if(minus2_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
+      } else if(plus_ghost) {
+	this->accessSideGhost(LEXIC_3D(dirPlus,id), dirPlus, DIR_PLUS);
+      } else {
+	this->sid = LEXIC_ID_3D4D(id,is4D);
+      }
+    }
+  }
+  template<>
+  inline __device__ void sidStride::shift<MinusPlusMinus>(const short& dirMinus1, const short& dirPlus, const short& dirMinus2) {
+    this->shift<MinusMinusPlus>(dirMinus1, dirMinus2, dirPlus);
+  }
+  template<>
+  inline __device__ void sidStride::shift<PlusMinusMinus>(const short& dirPlus, const short& dirMinus1, const short& dirMinus2) {
+    this->shift<MinusMinusPlus>(dirMinus1, dirMinus2, dirPlus);
   }
 
   template<typename Float>

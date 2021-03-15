@@ -13,7 +13,7 @@ __global__ void threep_local_device(Float2<FloatC>* block2,
 				    propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
 				    KernelArr<GAMMAS> listGammas,
 				    int it, int time_step, int maxT, int4 source,
-				    int signProps, bool runFT, tex_mom_list moms){
+				    int signProps, bool runFT, tex_mom_list moms, int mu, int nu, int c1, int c2){
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
@@ -33,11 +33,17 @@ __global__ void threep_local_device(Float2<FloatC>* block2,
     Float2<FloatC> R[N_SPINS][N_SPINS];
     prop1Tex.get(prop1,vid);
     prop2Tex.get(prop2,vid);
-    partial_trace_mul_Prop_Prop<true,ACC_ZERO>(R,prop1,prop2);
+    bool notZfac=(mu<0) && (nu<0) && (c1<0) && (c2<0);
+    if(notZfac) partial_trace_mul_Prop_Prop<true,ACC_ZERO>(R,prop1,prop2);
+    else open_mul_Prop_Prop<true,ACC_ZERO>(R,prop1,prop2,mu,nu,c1,c2);
   
     for(int iop = 0; iop < listGammas.size; iop++){
       int opId=listGammas.array[iop];
-      accum[iop]=((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
+      if(notZfac){
+	accum[iop]=((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));}
+      else{
+	accum[iop]=trace_gamma_S<true>(opId,NOROT,R);
+      }
     }
   }
 
@@ -58,15 +64,17 @@ template<typename FloatC,typename FloatA, typename FloatB>
 static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
 			      PLEGMA_Correlator<FloatC> &corr,
 			      PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatA>& prop2,
-			      int signProps, std::vector<GAMMAS>& gammas){
+			      int signProps, std::vector<GAMMAS>& gammas, bool isZfac ){
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
   int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
-  size_t size = corr.getTotalSize()/t_size*time_step;
-  int site_size = corr.getSiteSize();
+  int extra=1;
+  if(isZfac) extra=N_SPINS*N_SPINS*N_COLS*N_COLS;
+  size_t size = corr.getTotalSize()/extra/t_size*time_step;
+  int site_size = corr.getSiteSize()/extra;
   int4 source = corr.getSource();
   auto moms = corr.getTexMomList();
 
@@ -92,31 +100,40 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
-    int t_step = std::min(t_size-it, time_step);
-    dim3 grid = ps.tp.grid;
-    grid.x = (grid.x/time_step)*t_step;
-    threep_local_device<FloatC,FloatA, FloatB>
-      <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+    for(int et=0; et < extra; et++) {
+      int mu=-1, nu=-1, c1=-1, c2=-1;
+      if(isZfac) {
+	mu=et/N_SPINS/N_COLS/N_COLS;
+	nu=(et/N_COLS/N_COLS)%N_SPINS;
+	c1=(et/N_COLS)%N_COLS;
+	c2=et%N_COLS;
+      }	
+      int t_step = std::min(t_size-it, time_step);
+      dim3 grid = ps.tp.grid;
+      grid.x = (grid.x/time_step)*t_step;
+      threep_local_device<FloatC,FloatA, FloatB>
+	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
+	(d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms, mu,nu,c1,c2);
+      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+      cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    if(runFT==true){
-      int accumX = ps.tp.grid.x/time_step;
-      for(size_t v = 0 ; v < volume*t_step; v++)
-	for(int i = 0 ; i < site_size; i++) {
-	  result[(it*volume+v)*site_size+i] = 0;
+      if(runFT==true){
+	int accumX = ps.tp.grid.x/time_step;
+	for(size_t v = 0 ; v < volume*t_step; v++)
+	  for(int i = 0 ; i < site_size; i++) {
+	    result[((it*volume+v)*extra+et)*site_size+i] = 0;
 	    for(int j = 0 ; j < accumX; j++)
-	      result[(it*volume+v)*site_size+i] +=
+	      result[((it*volume+v)*extra+et)*site_size+i] +=
 		h_partial_block[(v*site_size+i)*accumX+j];
-	}
-    } else {
-      for(size_t v = 0 ; v < volume*t_step; v++)
-	for(int i = 0 ; i < site_size; i++)
-	  result[(it*volume+v)*site_size+i] +=
-	    h_partial_block[v*site_size+i];
+	  }
+      } else {
+	for(size_t v = 0 ; v < volume*t_step; v++)
+	  for(int i = 0 ; i < site_size; i++)
+	    result[((it*volume+v)*extra+et)*site_size+i] +=
+	      h_partial_block[v*site_size+i];
+      }
     }
   }
 
@@ -127,7 +144,7 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
 }
 
 template<typename FloatC,typename FloatA, typename FloatB>
-void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, std::vector<GAMMAS>& gammas) {
+void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, std::vector<GAMMAS>& gammas, bool isZfac) {
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(gammas.size() <= 0)
     PLEGMA_error("Error the container of gamma matrices cannot be zero");
@@ -136,9 +153,14 @@ void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pr
   
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   int site_size = gammas.size();
-  if(corr.getSiteSize() != gammas.size())
+
+  if(isZfac)
+    site_size *= N_SPINS*N_SPINS*N_COLS*N_COLS;
+      
+  if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
+  site_size = gammas.size();
   ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
@@ -151,9 +173,11 @@ void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pr
     hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   else
     result = (Float2<FloatC> *) corr.H_elem();
-  
-  tuneAndRun( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
-	      ps, result, corr, prop1, prop2, signProps, gammas);
+
+  tune( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
+	ps, result, corr, prop1, prop2, signProps, gammas, false);
+  run( ps, "threep_local", threep_local_host<FloatC,FloatA,FloatB>,
+       ps, result, corr, prop1, prop2, signProps, gammas, isZfac);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
@@ -165,5 +189,5 @@ void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pr
 #endif
 }
 
-template void threep_local<float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, std::vector<GAMMAS>& gammas);
-template void threep_local<double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, std::vector<GAMMAS>& gammas);
+template void threep_local<float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, std::vector<GAMMAS>& gammas, bool isZfac);
+template void threep_local<double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, std::vector<GAMMAS>& gammas, bool isZfac);

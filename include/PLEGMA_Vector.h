@@ -71,14 +71,24 @@ namespace plegma {
     void dilutecolor(PLEGMA_Vector<Float> &vecIn, int color);
     
     void dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color);
+
+    /**
+       @brief Moves a spincomponent to another one, used for creating sources in spin dilution
+       @param PLEGMA_Vector<Float> vecIn input vector (assumed to be non-zero only at one spin component
+       @param int spin1 target spin index
+       @param int spin2 original spin index
+     **/
+    void diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
     
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
+    void rotateToPhysicalBasis(PLEGMA_Vector<Float> &vecIn, int sgn);
+    void apply_gamma_scatt( GAMMAS_SCATT gMat, LEFTRIGHT LR = LEFT);
     /**
        @brief Performs the similarity transformation of gamma matrices from tmLQCD to QUDA-UKQCD and vice versa
      **/
-    void rotate_uk_ch();
+    void rotate_uk_ch_g5g4();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };

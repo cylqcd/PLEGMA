@@ -95,6 +95,7 @@ namespace plegma {
     }
   }
 
+
   template<typename Float>
   __inline__ __device__ void U_uk_ch_g5g4(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS]){
     Float nrm=1./sqrt(2.);
@@ -340,6 +341,18 @@ namespace plegma {
     }
   }
 
+  template<bool isDagB, bool isDagC, typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ void mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){
+    if(isDagB and isDagC)
+      mul_Gdag_Gdag(a,b,c);
+    else if(isDagB)
+      mul_Gdag_G(a,b,c);
+    else if(isDagC)
+      mul_G_Gdag(a,b,c);
+    else
+      mul_G_G(a,b,c);
+  }
+
   template<bool isLeftTrans, ACCUM_TYPE aty,typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void partial_trace_mul_Prop_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
 							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
@@ -348,14 +361,16 @@ namespace plegma {
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	if(aty == ACC_ZERO) {A[mu][nu].x=0.; A[mu][nu].y=0.;}
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) {
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
 #pragma unroll
 	for(int rho = 0 ; rho < N_SPINS; rho++)
 #pragma unroll
 	  for(int a = 0; a < N_COLS; a++)
 #pragma unroll
 	    for(int b = 0; b < N_COLS; b++){
-	      if(aty == ACC_ZERO || aty == ACC_PLUS){
+	      if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
 		if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * C[nu][rho][b][a];
 		else A[mu][nu] +=  B[rho][mu][a][b] * C[nu][rho][b][a];
 	      }
@@ -368,17 +383,82 @@ namespace plegma {
       }
   }
 
+  template<bool isLeftTrans, ACCUM_TYPE aty,typename FloatA, typename FloatB, typename FloatC>
+  __inline__ __device__ void open_mul_Prop_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+						Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+						Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+						int s1, int s2, int c1, int c2){
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) {
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
+#pragma unroll
+	for(int b = 0; b < N_COLS; b++){
+	  if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
+	    if(isLeftTrans) A[mu][nu] +=  B[mu][s1][b][c1] * C[nu][s2][b][c2];
+	    else A[mu][nu] +=  B[s1][mu][c1][b] * C[nu][s2][b][c2];
+	  }
+	  else{
+	    if(isLeftTrans) A[mu][nu] -=  B[mu][s1][b][c1] * C[nu][s2][b][c2];
+	    else A[mu][nu] -=  B[s1][mu][c1][b] * C[nu][s2][b][c2];		
+	  }
+	}
+	
+      }
+  }
+  
   template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
-  __inline__ __device__ void partial_trace_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
-							 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
-							 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
-							 Float2<FloatD> D[N_COLS][N_COLS]){
+  __inline__ __device__ void open_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+						  Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+						  Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+						  Float2<FloatD> D[N_COLS][N_COLS],
+						  int s1,int s2,int c1, int c2){
     if(isGdag) Gdag(D);
 #pragma unroll
     for(int mu = 0 ; mu < N_SPINS; mu++)
 #pragma unroll
       for(int nu = 0 ; nu < N_SPINS; nu++){
-	if(aty == ACC_ZERO){ A[mu][nu].x=0.; A[mu][nu].y=0.;}
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS) {
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
+#pragma unroll
+	for(int b = 0; b < N_COLS; b++)
+#pragma unroll
+	  for(int c = 0; c < N_COLS; c++){
+	    if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
+	      if(isLeftTrans) A[mu][nu] +=  B[mu][s1][b][c1] * D[b][c] * C[nu][s2][c][c2];
+	      else A[mu][nu] += B[s1][mu][c1][b] * D[b][c] * C[nu][s2][c][c2];
+	    }
+	    else{
+	      if(isLeftTrans) A[mu][nu] -=  B[mu][s1][b][c1] * D[b][c] * C[nu][s2][c][c2];
+	      else A[mu][nu] -= B[s1][mu][c1][b] * D[b][c] * C[nu][s2][c][c2];
+	    }
+	  }
+	
+      }
+    if(isGdag) Gdag(D);
+  }
+    
+  template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+							   Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							   Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							   Float2<FloatD> D[N_COLS][N_COLS],
+							   int s1=-1,int s2=-1,int c1=-1, int c2=-1){
+    if ((s1>=0) && (s2>=0) && (c1>=0) && (c2>=0)) {
+      return open_mul_Prop_G_Prop<isLeftTrans,aty,isGdag>(A,B,C,D,s1,s2,c1,c2);
+    }
+    if(isGdag) Gdag(D);
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
 #pragma unroll
 	for(int rho = 0 ; rho < N_SPINS; rho++)
 #pragma unroll
@@ -387,7 +467,7 @@ namespace plegma {
 	    for(int b = 0; b < N_COLS; b++)
 #pragma unroll
 	      for(int c = 0; c < N_COLS; c++){
-		if(aty == ACC_ZERO || aty == ACC_PLUS){
+		if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
 		  if(isLeftTrans) A[mu][nu] +=  B[mu][rho][b][a] * D[b][c] * C[nu][rho][c][a];
 		  else A[mu][nu] += B[rho][mu][a][b] * D[b][c] * C[nu][rho][c][a];
 		}
@@ -400,7 +480,35 @@ namespace plegma {
       }
     if(isGdag) Gdag(D);
   }
+  
+  template<bool isLeftTrans, ACCUM_TYPE aty, bool isG1dag, bool isG2dag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G1_G2_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+							       Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							       Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+							       Float2<FloatD> D1[N_COLS][N_COLS],
+							       Float2<FloatD> D2[N_COLS][N_COLS],
+							       int s1=-1,int s2=-1,int c1=-1, int c2=-1){
+    Float2<FloatD> D[N_COLS][N_COLS];
+    mul_G_G<isG1dag,isG2dag>(D,D1,D2);
+    partial_trace_mul_Prop_G_Prop<isLeftTrans,aty,false>(A,B,C,D,s1,s2,c1,c2);
+  }
 
+  template<bool isLeftTrans, ACCUM_TYPE aty, bool isG1dag, bool isG2dag, bool isG3dag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G1_G2_G3_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
+								  Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+								  Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+								  Float2<FloatD> D1[N_COLS][N_COLS],
+								  Float2<FloatD> D2[N_COLS][N_COLS],
+								  Float2<FloatD> D3[N_COLS][N_COLS],
+								  int s1=-1,int s2=-1,int c1=-1, int c2=-1){
+    Float2<FloatD> D[N_COLS][N_COLS];
+    mul_G_G<isG1dag,isG2dag>(D,D1,D2);
+    partial_trace_mul_Prop_G1_G2_Prop<isLeftTrans,aty,false,isG3dag>(A,B,C,D,D3,s1,s2,c1,c2);
+  }
+
+
+
+  
   template<typename FloatA, typename FloatB>
     __inline__ __device__ FloatA real_trace_mul_G_G(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS]){
       FloatA tr=0.;
@@ -432,10 +540,10 @@ namespace plegma {
       for(int mu=0; mu<N_SPINS; mu++)
         #pragma unroll
         for(int j=0; j<N_COLS; j++) {
-          if(accum==ACC_ZERO) outV[mu][j] = 0.;
+          if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS) outV[mu][j] = 0.;
           #pragma unroll
           for(int k=0; k<N_COLS; k++) {
-            if(accum==ACC_MINUS) outV[mu][j] -= G[j][k]*inV[mu][k];
+            if(accum==ACC_MINUS || accum == ZERO_MINUS) outV[mu][j] -= G[j][k]*inV[mu][k];
             else outV[mu][j] += G[j][k]*inV[mu][k];
           }
         }
@@ -449,10 +557,10 @@ namespace plegma {
      for(int mu=0; mu<N_SPINS; mu++)
        #pragma unroll
        for(int j=0; j<N_COLS; j++) {
-	 if(accum==ACC_ZERO) outV[mu][j] = 0.;
+	 if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS) outV[mu][j] = 0.;
          #pragma unroll
 	 for(int k=0; k<N_COLS; k++) {
-	   if(accum==ACC_MINUS) outV[mu][j] -= conj(G[k][j])*inV[mu][k];
+	   if(accum==ACC_MINUS || accum == ZERO_MINUS) outV[mu][j] -= conj(G[k][j])*inV[mu][k];
 	   else outV[mu][j] += conj(G[k][j])*inV[mu][k];
 	 }
        }

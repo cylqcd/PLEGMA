@@ -6,8 +6,14 @@
 #include <PLEGMA_gaussian_smearing.cuh> 
 #include <PLEGMA_seqSourceNucleon.cuh> 
 #include <PLEGMA_covD.cuh>
+#ifdef PLEGMA_SCATTERING_CONTRACTIONS
+#include <PLEGMA_gammas.h>
+#include <kernels/PLEGMA_gammas_scatt.cuh>
+#endif
+
 using namespace plegma;
 using namespace quda;
+
 //---------------------------//
 // class PLEGMA_Vector //
 //---------------------------//
@@ -87,15 +93,31 @@ void  PLEGMA_Vector<Float>::apply_gamma5(){
   apply_gamma5_vector(toField2<vector2>(*this));
 }
 
+template<typename Float>
+void PLEGMA_Vector<Float>::rotateToPhysicalBasis(PLEGMA_Vector<Float> &vecIn, int sgn){
+  PLEGMA_Vector<Float> temporary;
+  temporary.copy(vecIn);
+  temporary.apply_gamma5();
+  temporary.cscale((std::complex<Float>) {0.,(Float)sgn});
+  temporary.add(vecIn);
+  temporary.scale(1./sqrt(2.));
+  this->copy(temporary);
+   
+}
 
 template<typename Float> 
 void  PLEGMA_Vector<Float>::apply_gamma(GAMMAS gMat,LEFTRIGHT LR){
   apply_gamma_vector(LR,toField2<vector2>(*this),gMat);
 }
-
+#ifdef PLEGMA_SCATTERING_CONTRACTIONS
 template<typename Float>
-void PLEGMA_Vector<Float>::rotate_uk_ch(){
-  rotate_uk_ch_k(toField2<vector2>(*this));
+void  PLEGMA_Vector<Float>::apply_gamma_scatt(GAMMAS_SCATT gMat,LEFTRIGHT LR){
+  apply_gamma_scatt_vector(LR,toField2<vector2>(*this),gMat);
+}
+#endif
+template<typename Float>
+void PLEGMA_Vector<Float>::rotate_uk_ch_g5g4(){
+  rotate_uk_ch_g5g4_k(toField2<vector2>(*this));
 }
 
 // vec4D <- Prop3D
@@ -204,6 +226,20 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
     }
   checkCudaError();
 }
+
+template<typename Float>
+void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2){
+  Float *pointer_src = NULL;
+  if( (spin1 >= N_SPINS) || (spin2>=N_SPINS) ) PLEGMA_error("The spin index you provided exceed the total spin content\n");
+  this->zero_device();
+  for(int c1 = 0 ; c1 < N_COLS ; c1++){
+    pointer_src = (vecIn.D_elem() + (c1 + spin2*N_COLS)*HGC_localVolume*2);
+    cudaMemcpy((this->d_elem + ((c1 + spin1*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      
+  }
+  checkCudaError();
+}
+
 
 
 template<typename Float>

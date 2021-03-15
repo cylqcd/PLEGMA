@@ -7,7 +7,7 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-sto
 
 static void dumpLoops(PLEGMA_FT<double> **ft,
  		      std::string filenamePrefix, std::string confID, FILE_FORMAT format){
-  for(int itype = 0 ; itype < 4; itype++)
+  for(int itype = 0 ; itype < 5; itype++)
     for(int idir=0; idir < 3; idir++)
       for(int i =0; i < HGC_totalL[0]; i++)
 	ft[itype*3*HGC_totalL[0]+idir*HGC_totalL[0]+i]->writeFile(filenamePrefix + "/gLoops_WilsonLine_OperType" + std::to_string(itype)
@@ -38,7 +38,7 @@ static pairedSinged makePairCheck(int mu, int nu){
 static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp, int wilsDir, PLEGMA_Fmunu<double> &fmunu_l,
 			    PLEGMA_Su3field<double> &Wl,
 			    PLEGMA_Fmunu<double> &fmunu_r, PLEGMA_Su3field<double> &Wr, int type){
-  if(type <0 || type > 3) PLEGMA_error("Type not implemented");
+  if(type <0 || type > 4) PLEGMA_error("Type not implemented");
   std::vector<pairedSinged> munu_l;
   std::vector<pairedSinged> munu_r;
   std::complex<double> signC = {-1.,0.}; 
@@ -55,6 +55,11 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
     munu_l.push_back( makePairCheck(3,(wilsDir+1)%3) ); munu_r.push_back( makePairCheck(wilsDir,(wilsDir+1)%3) );
     munu_l.push_back( makePairCheck(3,(wilsDir+2)%3) ); munu_r.push_back( makePairCheck(wilsDir,(wilsDir+2)%3) );	
     break;
+  case(4):
+    munu_l.push_back( makePairCheck( (wilsDir+1)%3,3) ); munu_r.push_back( makePairCheck((wilsDir+1)%3,3) );
+    munu_l.push_back( makePairCheck( (wilsDir+2)%3,3) ); munu_r.push_back( makePairCheck((wilsDir+2)%3,3) );
+    munu_l.push_back( makePairCheck( (wilsDir+1)%3,(wilsDir+2)%3) ); munu_r.push_back( makePairCheck((wilsDir+1)%3,(wilsDir+2)%3) );
+    break;    
   }
 
   if(type != 0){
@@ -64,6 +69,10 @@ static void computeWithType(PLEGMA_Field<double> &out,PLEGMA_Field<double> &tmp,
     if(munu_l[1].sign * munu_r[1].sign == -1) tmp.cscale(signC);
     out.add(tmp,(std::complex<double>) {1.,0.});
     out.cscale((std::complex<double>) {0.5,0.}); //average the two contributions
+    if(type == 4){
+      tmp.TrFmunuSu3FmunuSu3(fmunu_l,munu_l[2].munu,Wl,fmunu_r,munu_r[2].munu,Wr);
+      out.add(tmp,(std::complex<double>) {-1.,0.});
+    }
   }
   else{
     out.zero_device();
@@ -210,6 +219,7 @@ int main(int argc, char **argv){
    * T1 &=& \;\; \frac{1}{2} \sum_i F_{i3}(x+n\hat{k}) W(x+n\hat{k},x) F_{i3}(x) \;\;\;\; if \;\; k \neq i \\
    * T2 &=& \;\; \frac{1}{2} \sum_i F_{ki}(x+n\hat{k}) W(x+n\hat{k},x) F_{ki}(x) \;\;\;\; if \;\; k \neq i \\
    * T3 &=& \;\; \frac{1}{2} \sum_i F_{3i}(x+n\hat{k}) W(x+n\hat{k},x) F_{ki}(x) \;\;\;\; if \;\; k \neq i 
+   * T4 &=& \;\; \frac{1}{2} \sum_i F_{i3}(x+n\hat{k}) W(x+n\hat{k},x) F_{i3}(x) [if k \neq i] - \sum_{ij} F_{ij}(x+n\hat{k}) W(x+n\hat{k},x) F_{ij}(x) [if i \neq j \neq k] \\
    */
   if(IsGloopsWline){
 
@@ -232,7 +242,7 @@ int main(int argc, char **argv){
     int Lo2 = L/2;
 
     
-    int sizeFT=4*3*HGC_totalL[0]; // Four type of Operator, 3 directions of Wilson Line, L length of Wilson Line fwd/bwd
+    int sizeFT=5*3*HGC_totalL[0]; // Five types of Operator, 3 directions of Wilson Line, L length of Wilson Line fwd/bwd
     PLEGMA_FT<double> **FTs = new PLEGMA_FT<double>*[sizeFT];
     for(int i = 0 ; i< sizeFT; i++) FTs[i] = new PLEGMA_FT<double>(maxQsq,3);
   
@@ -243,7 +253,7 @@ int main(int argc, char **argv){
       Wr.setUnit((std::vector<int>) {0,4,8});
       fmunu_ptr = &fmunu_r;
       for(int i = 0 ; i < Lo2;i++){
-    	for(int itype = 0 ; itype < 4 ; itype++){
+    	for(int itype = 0 ; itype < 5 ; itype++){
     	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,Wl,*fmunu_ptr,Wr,itype);
     	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i;
     	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
@@ -261,7 +271,7 @@ int main(int argc, char **argv){
       Wr.setUnit((std::vector<int>) {0,4,8});
       fmunu_ptr->copy(fmunu_l);
       for(int i = 0 ; i < Lo2;i++){
-    	for(int itype = 0 ; itype < 4 ; itype++){
+    	for(int itype = 0 ; itype < 5 ; itype++){
     	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,Wl,*fmunu_ptr,Wr,itype);
     	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i+Lo2;
     	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
