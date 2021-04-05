@@ -4,6 +4,7 @@
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_mesonsNew.cuh>
+#include <PLEGMA_mesonsAll.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <PLEGMA_threep.cuh>
 #include <functional>
@@ -52,17 +53,38 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
-		  PLEGMA_Propagator<Float> &prop2 ){
+                  PLEGMA_Propagator<Float> &prop2 ){
 
   shape = {10};
   datasets =  {"twop_meson"};
   groups =  {"mesons"};
   description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
-  
+
   initialize();
   contract_mesons_new(prop1,prop2,*this);
 }
 
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2 ){
+
+  shape = {34};
+  datasets =  {"twop_meson"};
+  groups =  {"mesons"};
+  description = "pseudoscalar, scalar";
+  for ( int p=0; p<2; p++ ) {
+    std::string va = p?"":"g5";
+    for ( int i=1; i<5; i++ ) {
+      for ( int j=1; j<5; j++ ) {
+	description += ", (" + va + "g" + std::to_string(i) + "," + va + "g" + std::to_string(j) +  ")";
+      }
+    }
+  }
+  
+  initialize();
+  contract_mesons_all(prop1,prop2,*this);
+}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::

@@ -46,8 +46,14 @@ int main(int argc, char **argv) {
     {
       // Reading from Lime file and loading to device
       PLEGMA_Gauge<double> gauge;
-      gauge.readFile(latfile, LIME_FORMAT);
-      gauge.load();
+      if ( latfile == "unit" ) {
+        gauge.setUnit((std::vector<int>) {0,4,8, 9,13,17, 18,22,26, 27,31,35});
+	gauge.unload();//I think this is not necessary
+      }
+      else {
+        gauge.readFile(latfile, LIME_FORMAT);
+	gauge.load();
+      }
       gauge.calculatePlaq();
       
       // Loading to QUDA and computing plaquette also there
@@ -133,6 +139,7 @@ int main(int argc, char **argv) {
 	PLEGMA_Propagator<float> propUP_SL(BOTH, FIRST_CORNER);
 	//PLEGMA_Propagator<float> propST_SL(BOTH, FIRST_CORNER);
 
+	PLEGMA_printf("mu: %g\n",mu_ud);
 	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, nsmearGauss));
 	//TIME(computePropagator(propST, propST_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s));
 	// Correcting the smearing for up
@@ -157,12 +164,12 @@ int main(int argc, char **argv) {
 	  vectorAuxF.copy(vectorAuxD);
 	  propST_wrong_smear.absorb(vectorAuxF, isc/3, isc%3);
 	  }*/
-	
+
 	for(size_t its = 0; its < tSinks.size(); its++){
 	  int tsinkMtsource = tSinks[its];
 	  if(tsinkMtsource >= HGC_totalL[3])
 	    PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
-	  int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
+	  //int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;//this is for nucleon
 	  int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
 	  // 3D propagators at t_sink
@@ -192,70 +199,70 @@ int main(int argc, char **argv) {
 		mu = run_mu;
 		solver.UpdateSolver();
 	      }
+	      // Note: interpolating op's are rotated to physical basis so that there are extra G5 multiplying G_mu_rho and G_nu_rho
 	      for(int mu_rho = 1; mu_rho<N_DIMS; mu_rho++){
 		PLEGMA_Propagator<float> seqProp(BOTH, FIRST_CORNER);
-		PLEGMA_Propagator<float> seqPropGamma(BOTH, FIRST_CORNER);
-	      for(int nu = 0 ; nu < 4 ; nu++)
-		for(int c2 = 0 ; c2 < 3 ; c2++){
-		  PLEGMA_Vector<double> vectorInOut;
-		  {
-		    PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
-		    PLEGMA_Vector3D<float> vectorAuxF;
-		    vectorAuxF.absorb(prop, nu, c2);
-		    vectorAuxF.apply_gamma(gammas[mu_rho]);
-		    vectorAuxF.mulMomentumPhases(sinkMom,+1); // put momentum at the sink
-		    std::complex<float> Isingle(0,1);
-		    float phase = 2.*PI*(((float) sinkMom[0] * source[0])/HGC_totalL[0]
-					 + ((float) sinkMom[1] * source[1])/HGC_totalL[1]
-					 + ((float) sinkMom[2] * source[2])/HGC_totalL[2]);
-		    vectorAuxF.cscale(std::exp<float>(-phase*Isingle)); // put momentum from the point source
-		    vectorAuxD1.copy(vectorAuxF);
-		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
-		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+		for(int nu = 0 ; nu < 4 ; nu++)
+		  for(int c2 = 0 ; c2 < 3 ; c2++){
+		    PLEGMA_Vector<double> vectorInOut;
+		    {
+		      PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
+		      PLEGMA_Vector3D<float> vectorAuxF;
+		      vectorAuxF.absorb(prop, nu, c2);
+		      vectorAuxF.apply_gamma(gammas[mu_rho]);
+		      vectorAuxF.apply_gamma(G5);
+		      vectorAuxF.mulMomentumPhases(sinkMom,+1); // put momentum at the sink
+		      std::complex<float> Isingle(0,1);
+		      float phase = 2.*PI*(((float) sinkMom[0] * source[0])/HGC_totalL[0]
+					   + ((float) sinkMom[1] * source[1])/HGC_totalL[1]
+					   + ((float) sinkMom[2] * source[2])/HGC_totalL[2]);
+		      vectorAuxF.cscale(std::exp<float>(-phase*Isingle)); // put momentum from the point source
+		      vectorAuxD1.copy(vectorAuxF);
+		      TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
+		      vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+		    }
+		    double norm = vectorInOut.norm();
+		    vectorInOut.scale(1/norm);
+		    TIME(solver.solve(vectorInOut, vectorInOut));
+		    vectorInOut.scale(norm);
+		    PLEGMA_Vector<float> vectorAuxF;
+		    vectorAuxF.copy(vectorInOut);
+		    seqProp.absorb(vectorAuxF, nu, c2);
 		  }
-		  double norm = vectorInOut.norm();
-		  vectorInOut.scale(1/norm);
-		  TIME(solver.solve(vectorInOut, vectorInOut));
-		  vectorInOut.scale(-norm);// due to \gamma_5\gamma_mu_rho\gamma_5 = -\gamma_mu_rho
-		  PLEGMA_Vector<float> vectorAuxF;
-		  vectorAuxF.copy(vectorInOut);
-		  seqProp.absorb(vectorAuxF, nu, c2);
-		}
-	      seqProp.apply_gamma(G5);
-	      for(int nu_rho = 1; nu_rho<N_DIMS; nu_rho++){
-		std::string filename = filename0 + std::to_string(mu_rho) + std::to_string(nu_rho);
-		seqPropGamma.copy(seqProp,BOTH);
-		seqPropGamma.apply_gamma(G5,RIGHT);
-		seqPropGamma.apply_gamma(gammas[nu_rho],RIGHT);
-		seqPropGamma.conjugate();
+		seqProp.apply_gamma(G5);
+		for(int nu_rho = 1; nu_rho<N_DIMS; nu_rho++){
+		  std::string filename = filename0 + std::to_string(mu_rho) + std::to_string(nu_rho);
+		  PLEGMA_Propagator<float> seqPropGamma(BOTH, FIRST_CORNER);
+		  seqPropGamma.copy(seqProp,BOTH);
+		  seqPropGamma.apply_gamma(gammas[nu_rho],RIGHT);
+		  seqPropGamma.conjugate();
 				     
-	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
-
-	      // LOCAL contractions
-	      /*
-	      TIME(corr.contractNucleonThrp_local(seqPropGamma, propF, signProps, gammas));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-	      THREAD(corr.writeFile(filename, corr_file_format));
-	      */
-	      if( mu_rho != nu_rho ){	  
-	      // ONED contractions
-	      std::vector<GAMMAS> gammas_T = {gammas[mu_rho], gammas[nu_rho]};
-	      TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas_T)); //need only D_nu_rho for gammas[mu_rho] & D_mu_rho for gammas[nu_rho]
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      THREAD(corr.writeFile( filename, corr_file_format));
+		  PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
+		  
+		  // LOCAL contractions
+		  TIME(corr.contractNucleonThrp_local(seqPropGamma, propF, signProps, gammas));
+		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
+		  THREAD(corr.writeFile(filename, corr_file_format));
+		  if( mu_rho != nu_rho ){	  
+		    // ONED contractions
+		    std::vector<GAMMAS> gammas_T = {gammas[mu_rho], gammas[nu_rho]};//need only D_nu_rho for gammas[mu_rho] & D_mu_rho for gammas[nu_rho]
+		    TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas_T)); 
+		    //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+		    THREAD(corr.writeFile( filename, corr_file_format));
+		  }
+		  // noe contractions
+		  TIME(corr.contractNucleonThrp_noe(seqPropGamma, propF, contractGauge, signProps));
+		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+		  THREAD(corr.writeFile( filename, corr_file_format));
+		  
+		  // TWOD contractions
+		  /*
+		    TIME(corr.contractNucleonThrp_twoD(seqPropGamma, propF, contractGauge, signProps, gammas));
+		    //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+		    THREAD(corr.writeFile( filename, corr_file_format));
+		  */
+		}
 	      }
-	      // noe contractions
-	      TIME(corr.contractNucleonThrp_noe(seqPropGamma, propF, contractGauge, signProps));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      THREAD(corr.writeFile( filename, corr_file_format));
-	      
-	      // TWOD contractions
-	      /*
-	      TIME(corr.contractNucleonThrp_twoD(seqPropGamma, propF, contractGauge, signProps, gammas));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      THREAD(corr.writeFile( filename, corr_file_format));
-	      */
-	      }}
 	    };
 	    TIME(computeThreep(-mu_ud, propUP3D, propUP_SL, nsmearGauss, LIGHT, "_up_rho"));
 	    //TIME(computeThreep(-mu_ud, propST3D, propUP_SL, nsmearGauss, LIGHT, "_up_kaon"));

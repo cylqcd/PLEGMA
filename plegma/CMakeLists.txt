@@ -123,5 +123,8 @@ target_link_libraries(Zfac_GI ${PLEGMA_LIBS})
 cuda_add_executable(Zfac_GI_meson3pt Zfac_GI_meson3pt.cpp)
 target_link_libraries(Zfac_GI_meson3pt ${PLEGMA_LIBS})
 
+cuda_add_executable(mesons_2pt  mesons_2pt.cpp)
+target_link_libraries(mesons_2pt ${PLEGMA_LIBS})
+
 cuda_add_executable(mesons_simple mesons_simple.cpp)
 target_link_libraries(mesons_simple ${PLEGMA_LIBS})
