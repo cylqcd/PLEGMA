@@ -205,12 +205,22 @@ namespace plegma {
     
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
-				   int signProps, std::vector<GAMMAS> gammas);
+				   int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
     
     void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 				  PLEGMA_Propagator<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
-				  int signProps, std::vector<GAMMAS> gammas);
+				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+    
+    void contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
+				  PLEGMA_Propagator<Float> &fwdProp,
+				  PLEGMA_Gauge<Float> &gauge,
+				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+    
+    void contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
+				  PLEGMA_Propagator<Float> &fwdProp,
+				  PLEGMA_Gauge<Float> &gauge,
+				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
     
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,

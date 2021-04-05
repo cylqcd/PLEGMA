@@ -78,7 +78,7 @@ namespace plegma {
        @param int spin1 target spin index
        @param int spin2 original spin index
      **/
-    void dilutespindisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
+    void diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
     
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
     void apply_gamma5();
@@ -88,7 +88,7 @@ namespace plegma {
     /**
        @brief Performs the similarity transformation of gamma matrices from tmLQCD to QUDA-UKQCD and vice versa
      **/
-    void rotate_uk_ch();
+    void rotate_uk_ch_g5g4();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };

@@ -1834,30 +1834,35 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
 //#####################
 
 //this must be used only if the source is the one used in PLEGMA_ScattCorrelator
+
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic ) {
+void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic, int n_coherent_source, int *attract_look_up_table ) {
   if(!antiperiodic) return;
 
   std::size_t n_t = this->labels.find("t");
   assert(n_t!=std::string::npos);
- 
+
   int TIME = this->localT();
   int in_dofs = std::accumulate(ranges.begin()+n_t+1, ranges.end(), 2, std::multiplies<int>());
   int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
   int maxT = this->endT() - this->startT();
- 
+
+  if (n_coherent_source >1 && attract_look_up_table==NULL) PLEGMA_error("attract_look_up_table must be created before using this function\n");
+
   for( int t=0; t<TIME; ++t){
     int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
     int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
-    if( t_global < this->source[DIM_T] ){
+    int source_num= n_coherent_source > 1 ? attract_look_up_table[t_global] : this->source[DIM_T];
+    if( t_global < source_num ){
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
-	for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
-	  *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
-	}
+        for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
+          *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
+        }
       }
     }
   }
 }
+
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::apply_phase(){
@@ -1885,6 +1890,50 @@ template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
   int in_dofs=ranges[0]*offsets[0];
   x_e_sx<Float>( this->H_elem() , 1./n_stoch, in_dofs/2);
+}
+
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float> &srcCorr, int global_it, bool forcetozero){
+
+//  if( this->pList().pi(1) != srcCorr.getMomList() ) PLEGMA_error("ScattCorrelator has not the the same mom list of srcCorr\n");
+
+//  if(this->GList.size() !=srcCorr.GList.size())  PLEGMA_error("ScattCorrelator has not the the same length of GList list of srcCorr\n");
+//  for(int i=0; i<(this->GList.size()); ++i)
+//    if((this->GList[i]!=srcCorr.GList[i]))
+//      PLEGMA_error("ScattCorrelator, srcCorr wrong gamma list\n");
+
+
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+
+  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+
+  if (forcetozero == true){
+
+    int tot_size = 2*this->getTotalSize();
+  memset( this->H_elem(), 0, tot_size*sizeof(Float) );
+
+  }
+
+  if (is_myIt){
+    std::size_t n_t = this->labels.find("t");
+    assert(n_t!=std::string::npos);
+
+    int TIME = this->localT();
+    int in_dofs = std::accumulate(ranges.begin()+n_t+1, ranges.end(), 2, std::multiplies<int>());
+    int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
+
+    for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
+      for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
+        *(this->H_elem() + o_dofs*TIME*in_dofs + my_it*in_dofs  + i_dofs) = *(srcCorr.H_elem() + o_dofs*TIME*in_dofs + my_it*in_dofs  + i_dofs);
+       
+      }
+    }
+  }
+  comm_barrier();
+
 }
 
 

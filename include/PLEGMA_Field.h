@@ -25,6 +25,7 @@ namespace plegma {
     size_t total_length;        
     size_t ghost_length;
     size_t ghost_corner_length;
+    size_t ghost_vertex_length;
     
     Float *h_elem;
     Float *d_elem;
@@ -32,6 +33,8 @@ namespace plegma {
     Float *h_ext_ghost_s;
     Float *h_ext_ghost_corner_r;
     Float *h_ext_ghost_corner_s;
+    Float *h_ext_ghost_vertex_r;
+    Float *h_ext_ghost_vertex_s;
     PLEGMA_RNG *randstate_ptr;
     
     GHOST_FLAG ghost_flag;
@@ -76,11 +79,13 @@ namespace plegma {
     size_t Total_length() const { return total_length;} // the length of the field (local)
     size_t Ghost_length() const { return ghost_length;} // the length of the ghost
     size_t GhostCorner_length() const { return ghost_corner_length;} // the length of the ghost for corners
-    size_t TotalPlusGhost_length() const { return Total_length()+Ghost_length()+GhostCorner_length();} // total + ghost
+    size_t GhostVertex_length() const { return ghost_vertex_length;} // the length of the ghost for vertex
+    size_t TotalPlusGhost_length() const { return Total_length()+Ghost_length()+GhostCorner_length()+GhostVertex_length();} // total + ghost
 
     size_t Bytes_total() const { return this->Total_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghost() const { return this->Ghost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_ghostVertex() const { return this->GhostVertex_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_total_plus_ghost() const { return this->TotalPlusGhost_length()*this->Field_length()*2*sizeof(Float); }
 
     template<class... Args>
@@ -102,6 +107,7 @@ namespace plegma {
     void printInfo();
     void communicateSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateVertexGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, GHOST_FLAG which_ghost=ALL_GHOSTS, ACTION action=DO_ALL);
 
     std::vector<int> getSiteShape() const {return site_shape;}
@@ -121,6 +127,8 @@ namespace plegma {
     void unload() const;
     
     void shift(PLEGMA_Field &Fin, short dirOr);
+    void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2);
+    void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2, short dirOr3);
     void randInit(int seed);
     void destroy_randstate();
     void stochastic_Z(int n=2);

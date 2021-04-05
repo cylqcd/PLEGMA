@@ -116,8 +116,8 @@ void  PLEGMA_Vector<Float>::apply_gamma_scatt(GAMMAS_SCATT gMat,LEFTRIGHT LR){
 }
 #endif
 template<typename Float>
-void PLEGMA_Vector<Float>::rotate_uk_ch(){
-  rotate_uk_ch_k(toField2<vector2>(*this));
+void PLEGMA_Vector<Float>::rotate_uk_ch_g5g4(){
+  rotate_uk_ch_g5g4_k(toField2<vector2>(*this));
 }
 
 // vec4D <- Prop3D
@@ -228,7 +228,7 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::dilutespindisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2){
+void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2){
   Float *pointer_src = NULL;
   if( (spin1 >= N_SPINS) || (spin2>=N_SPINS) ) PLEGMA_error("The spin index you provided exceed the total spin content\n");
   this->zero_device();
