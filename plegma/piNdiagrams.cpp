@@ -27,11 +27,26 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE
 void produceOutput( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
-                    int n_stochastic_samples ){
+                    int n_stochastic_samples,
+                    int n_coherent_source,
+                    int *coherent_source_table_timeslice ){
   TIME_INSIDE(source.apply_phase());
   TIME_INSIDE(source.apply_sign(diagram_name));
-  TIME_INSIDE(source.applyBoundaryConditions( true ));
+  TIME_INSIDE(source.applyBoundaryConditions( true ,  n_coherent_source, coherent_source_table_timeslice));
   TIME_INSIDE(source.normalize_nstoch(n_stochastic_samples));
+  TIME_INSIDE(source.writeHDF5( outputFilename ));
+
+}
+
+void produceOutput( PLEGMA_ScattCorrelator<float> source,
+                    std::string outputFilename,
+                    std::string diagram_name,
+                    int n_coherent_source, 
+                    int *coherent_source_table_timeslice 
+                  ){
+  TIME_INSIDE(source.apply_phase());
+  TIME_INSIDE(source.apply_sign(diagram_name));
+  TIME_INSIDE(source.applyBoundaryConditions( true, n_coherent_source, coherent_source_table_timeslice ));
   TIME_INSIDE(source.writeHDF5( outputFilename ));
 
 }
@@ -393,11 +408,11 @@ int main(int argc, char **argv)
       std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
       momList list_mpf1(1,{mpf1,},{0,});
       PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1 );
-      TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
+      TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"),"ISOSPIN32");
 
 #ifdef PLEGMA_SCATTERING_SPIN12
       PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1 );
-      TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
+      TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"),"ISOSPIN12");
 #endif
 
 
@@ -431,22 +446,22 @@ int main(int argc, char **argv)
           { // Smearing the source
             PLEGMA_Vector3D<double> vector1, vector2;
             vector1.pointSource(src, isc/3, isc%3, DEVICE);
-            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
             vectorInOut.absorb(vector2,coherent_source_table[icoherentsource]);
           }
 
           //Rotation to the physical basis
-          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1));       
+          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1),"ISOSPIN32");       
 
           //Inversion
           PLEGMA_printf("Going to invert UP for component %d\n", isc);
-          TIME(solver.solve(vectorAuxD, vectorAuxD));
+          TIME(solver.solve(vectorAuxD, vectorAuxD),"ISOSPIN32");
 
           //Rotation to the physical basis
-          TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1));
+          TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,+1),"ISOSPIN32");
 
           //Smearing at the sink
-          TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
+          TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
 
           vectorAuxF.copy(vectorAuxD);
           propUP_coherent.absorb(vectorAuxF, isc/3, isc%3);
@@ -469,22 +484,22 @@ int main(int argc, char **argv)
           {  // Smearing the source
             PLEGMA_Vector3D<double> vector1, vector2;
             vector1.pointSource(src, isc/3, isc%3, DEVICE);
-            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
             vectorInOut.absorb(vector2,coherent_source_table[icoherentsource]);
           }
 
           //(3 step) rotation to the physical basis
-          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1));
+          TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,-1),"ISOSPIN32");
 
           //(4 step) doing the inversion
           PLEGMA_printf("Going to invert DN for component %d\n", isc);
-          TIME(solver.solve(vectorAuxD, vectorAuxD));
+          TIME(solver.solve(vectorAuxD, vectorAuxD),"ISOSPIN32");
 
           //(5 step) rotating to the physical base
-          TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1));
+          TIME(vectorInOut.rotateToPhysicalBasis(vectorAuxD,-1),"ISOSPIN32");
 
           //(6 step) doing the smearing on the propagator
-          TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
+          TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
 
           vectorAuxF.copy(vectorAuxD);
 
@@ -512,9 +527,9 @@ int main(int argc, char **argv)
 	  PLEGMA_ScattCorrelator<float> reductionsT1(source, mtot);
 	  PLEGMA_ScattCorrelator<float> reductionsT2(source, mtot);
 
-	  TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propUP_coherent));
+	  TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propUP_coherent),"ISOSPIN32");
 
-	  TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propUP_coherent));
+	  TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propUP_coherent),"ISOSPIN32");
 
 	  //write D
 	  outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_D";
@@ -525,8 +540,7 @@ int main(int argc, char **argv)
 	  TIME( corrD.applyBoundaryConditions( true ),"ISOSPIN32" );
 	  TIME( corrD.writeHDF5(outfilename),"ISOSPIN32" );
 
-
-          #ifdef PLEGMA_SCATTERING_SPIN12
+#ifdef PLEGMA_SCATTERING_SPIN12
           //For I=1/2 I_3=+1/2
           outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_DNUPUP_T2";
           TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN_coherent, propUP_coherent, propUP_coherent), "ISOSPIN12");
@@ -556,36 +570,7 @@ int main(int argc, char **argv)
 
         }
       
-      //T diagram piN sink
-/*
-      {
-	momList list_pf1pf2comb = sourcemomentumList.extract({0,0,0}, 0);
-        PLEGMA_ScattCorrelator<float> corrT_piNsink(sourcePositions[isource], list_pf1pf2comb);
-
-        corrT_piNsink.initialize_diagram(glist_source_delta_unpaired, glist_sink_nucleon_unpaired, glist_source_delta, glist_sink_nucleon,  glist_sink_meson, "T1"); 
- 
-        PLEGMA_ScattCorrelator<float> reductionsV2(source, list_pf1pf2comb.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsV3(source, list_pf1pf2comb.uniq_p(2));
- 
-        for (int i=0; i<n_stochastic_samples; ++i){
-          PLEGMA_Vector<float> stochastic_propagator;
-          PLEGMA_Vector<float> stochastic_source;
-
-          stochastic_propagator.copy(*stochastic_propags[i],HOST);
-          stochastic_source.copy(*stochastic_sources[i],HOST);
-
-          stochastic_propagator.load();
-          stochastic_source.load();
-
-          TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propUP));
-
-          TIME(reductionsV2.V2( stochastic_source,     glist_sink_nucleon, propUP, propUP));
-
-      }
-
-  */    
-      
-      //N diagram
+        //N diagram
         std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
         momList list_mpf1(1,{mpf1,},{0,});
         PLEGMA_ScattCorrelator<float> corrNP_coherent(src, list_mpf1 );
@@ -615,10 +600,10 @@ int main(int argc, char **argv)
             corrNP.absorbTimeslice(corrNP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
           }
 
-          TIME( corrNP_coherent.apply_phase() );
-          TIME( corrNP_coherent.apply_sign("N") );
-          TIME( corrNP_coherent.applyBoundaryConditions( true ) );
-          TIME( corrNP_coherent.writeHDF5(outfilename) );
+          TIME( corrNP_coherent.apply_phase(),"ISOSPIN32" );
+          TIME( corrNP_coherent.apply_sign("N"),"ISOSPIN32" );
+          TIME( corrNP_coherent.applyBoundaryConditions( true ),"ISOSPIN32" );
+          TIME( corrNP_coherent.writeHDF5(outfilename),"ISOSPIN32" );
 
 
 #ifdef PLEGMA_SCATTERING_SPIN12 
@@ -630,15 +615,15 @@ int main(int argc, char **argv)
           TIME(corrN0_coherent.N_diagramms( reductionsT1N, reductionsT2N ),"ISOSPIN12");
 
           for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
-            corrN0.absorbTimeslice(corrNO_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
+            corrN0.absorbTimeslice(corrN0_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
           }
 
 #endif
 
-          TIME( corrN0_coherent.apply_phase() );
-          TIME( corrN0_coherent.apply_sign("N") );
-          TIME( corrN0_coherent.applyBoundaryConditions( true ) );
-          TIME( corrN0_coherent.writeHDF5(outfilename) );
+          TIME( corrN0_coherent.apply_phase(),"ISOSPIN12" );
+          TIME( corrN0_coherent.apply_sign("N"),"ISOSPIN12" );
+          TIME( corrN0_coherent.applyBoundaryConditions( true ),"ISOSPIN12" );
+          TIME( corrN0_coherent.writeHDF5(outfilename) ,"ISOSPIN12");
 
         }
 
@@ -683,6 +668,9 @@ int main(int argc, char **argv)
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_U;//implemented
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_D;//implemented
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1U_D;//implemented
+
+      site source=site({0,0,0,sourcePositions[isource][DIM_T]});
+
  
       for(int i=0; i< n_stochastic_samples; ++i) {
         try
@@ -697,9 +685,8 @@ int main(int argc, char **argv)
           reductions_DD_V3_GAMMAF2U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zeropion));
           reductions_DD_V3_GAMMAF2D_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zeropion));
 #endif
-#if defined(PLEGMA_SCATTERING_SPIN32)
           reductions_DD_V3_GAMMAF2U.push_back(         new PLEGMA_ScattCorrelator<float>(source, sourcemomentumList.uniq_p(2)));
-#endif
+
 #if defined(PLEGMA_SCATTERING_SPIN12)
           reductions_DD_V4_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
           reductions_DD_V2_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
@@ -764,19 +751,15 @@ int main(int argc, char **argv)
         TIME(reductions_DD_V3_GAMMAF2D_zero_mom[i]->V3( stochastic_propagator, glist_sink_meson,   propDN, true), "ISOSPIN12");
 #endif
 
-#if defined(PLEGMA_SCATTERING_SPIN32)
         //W1,W2,W3,W4
         TIME(reductions_DD_V3_GAMMAF2U[i]->V3( stochastic_propagator, glist_sink_meson,   propUP, true), "ISOSPIN32");
-#endif
 
         stochastic_source.apply_gamma5();
         //D1ii9,D1ii10
         //D1ii11,D1ii12
         //B7,B8
         //B1,B2
-#if defined(PLEGMA_SCATTERING_SPIN12) || defined(PLEGMA_SCATTERING_SPIN32)
         TIME(reductions_DD_V2_GAMMAF1U_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false), "ISOSPIN32");
-#endif
 
 #ifdef PLEGMA_SCATTERING_SPIN12
         //D1ii13,14,B13,B14,B17,B18
@@ -817,7 +800,7 @@ int main(int argc, char **argv)
 	      PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, coherent_source_table[i_coherent_source]);
 
-              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
               vectortmp1.absorb(vector2,coherent_source_table[i_coherent_source]);
               vectortmp2.absorbTimeslice(vectortmp1,coherent_source_table[i_coherent_source],false);
 
@@ -827,22 +810,19 @@ int main(int argc, char **argv)
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
          vectorStoc_source_oet.copy(vectortmp1);
-        // vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"oet_source"+sourcepositiontext);
+         // vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"oet_source"+sourcepositiontext);
   
          //Transforming to physical base for the UP quark
-         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,+1);
- 
-         //Transforming to physical base
-         vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
+         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,+1); 
  
           //Dilution     
-         vectortmp2.dilutespin(vectortmp1,0);
+         vectortmp1.dilutespin(vectortmp2,0);
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
-         vectorStoc_source_oet.copy(vectortmp2);
+         vectortmp3.copy(vectortmp2);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectorSave_diluted);
+           vectortmp2.copy(vectortmp3);
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
@@ -858,13 +838,13 @@ int main(int argc, char **argv)
           // vectortmp2.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
 
-             vectortmp1.diluteSpinDisplace(vectorStoc_source_oet,spinindex+1,spinindex);
-             vectorStoc_source_oet.copy(vectortmp1);
+             vectortmp1.diluteSpinDisplace(vectortmp3,spinindex+1,spinindex);
+             vectortmp3.copy(vectortmp1);
            }
          }
          
-         vectortmp1.diluteSpinDisplace(vectorStoc_source_oet,0,3);
-         vectorStoc_source_oet.copy(vectortmp1);
+         //vectortmp1.diluteSpinDisplace(vectortmp3,0,3);
+         //vectortmp3.copy(vectortmp1);
           
          //Doing for -mu for the DN propagator spin dilution oet
          if(mu>0) {
@@ -895,7 +875,7 @@ int main(int argc, char **argv)
            vectortmp2.load();
            //vectortmp2.writeLIME(outfile_V+confnumber+"propagator_dn"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
-             vectortmp1.dilutespindisplace(vectorSave_diluted,spinindex+1,spinindex);
+             vectortmp1.diluteSpinDisplace(vectorStoc_source_oet,spinindex+1,spinindex);
              vectortmp3.copy(vectortmp1);
            }
          }
@@ -1218,20 +1198,24 @@ int main(int argc, char **argv)
         
         free(Loop_UPDN_source);
 
+        asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+        std::string sourcepositiontext= (std::string)"_" + ssource;
+        free(ssource);
+
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ii";
 
-        TIME(produceOutput(corrD1ii1, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii2, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii3, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii4, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii1, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii2, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii3, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii4, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-        TIME(produceOutput(corrD1ii9, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii10, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii9, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii10, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-        TIME(produceOutput(corrD1ii13, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//Because of V4
-        TIME(produceOutput(corrD1ii14, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//Because of V4
-        TIME(produceOutput(corrD1ii15, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrD1ii16, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii13, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");//Because of V4
+        TIME(produceOutput(corrD1ii14, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");//Because of V4
+        TIME(produceOutput(corrD1ii15, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrD1ii16, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
       } //diagrams containing loop at the source
 #endif
@@ -1356,7 +1340,7 @@ int main(int argc, char **argv)
             vectorAuxF.absorb(propDN, isc/3, isc%3);
             vectorAuxD.copy(vectorAuxF);
             vector1.absorb( vectorAuxD, coherent_source_table[icoherentsource]);
-            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN12");
 
             vector2.mulMomentumPhases(momentum_i2,1);
 
@@ -1497,41 +1481,46 @@ int main(int argc, char **argv)
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propUP, propTS, propDN),"ISOSPIN12");
         TIME( corrT24.convertTreductiontoDiagram( reductionsT2, false, true, true ),"ISOSPIN12");
 
+        asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+        std::string sourcepositiontext= (std::string)"_" + ssource;
+        free(ssource);
+
+
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
         
-        TIME(produceOutput(corrT15, outfilename, "T"),"ISOSPIN12");
-        TIME(produceOutput(corrT17, outfilename, "T"),"ISOSPIN12");
-        TIME(produceOutput(corrT21, outfilename, "T"),"ISOSPIN12");
-        TIME(produceOutput(corrT22, outfilename, "T"),"ISOSPIN12");
-        TIME(produceOutput(corrT23, outfilename, "T"),"ISOSPIN12");
-        TIME(produceOutput(corrT24, outfilename, "T"),"ISOSPIN12");
+        TIME(produceOutput(corrT15, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrT17, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrT21, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrT22, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrT23, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrT24, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
         
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-        TIME(produceOutput(corrB3, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB4, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB5, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB6, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB3, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrB4, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrB5, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrB6, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
  
-        TIME(produceOutput(corrB17, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB18, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB19, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB20, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB17, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrB18, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrB19, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrB20, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-        TIME(produceOutput(corrW5, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW6, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW7, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW8, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW13, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW14, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW15, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW16, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW29, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW30, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW31, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW32, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW5, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW6, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW7, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW8, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW13, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW14, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW15, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW16, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW29, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW30, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW31, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW32, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
         TIME(produceOutput(corrD1ff1389, outfilename,  "4pt"),"ISOSPIN12");
@@ -1616,7 +1605,7 @@ int main(int argc, char **argv)
             vectorAuxF.absorb(propDN, isc/3, isc%3);
             vectorAuxD.copy(vectorAuxF);
             vector1.absorb( vectorAuxD, coherent_source_table[icoherentsource]);
-            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN12");
 
             vector2.mulMomentumPhases(momentum_i2,1);
 
@@ -1719,29 +1708,33 @@ int main(int argc, char **argv)
 
         }//loop over stochastic samples
 
+        asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+        std::string sourcepositiontext= (std::string)"_" + ssource;
+        free(ssource);
+
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
-        TIME(produceOutput(corrT19, outfilename, "T"),"ISOSPIN12");
-        TIME(produceOutput(corrT25, outfilename, "T"),"ISOSPIN12");
-        TIME(produceOutput(corrT26, outfilename, "T"),"ISOSPIN12");
+        TIME(produceOutput(corrT19, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrT25, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrT26, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-        TIME(produceOutput(corrB7, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrB8, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrB7, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrB8, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
-        TIME(produceOutput(corrW9, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
-        TIME(produceOutput(corrW10, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
-        TIME(produceOutput(corrW11, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW12, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW9, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW10, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW11, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW12, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-        TIME(produceOutput(corrW33, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
-        TIME(produceOutput(corrW34, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");//because of V4
-        TIME(produceOutput(corrW35, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
-        TIME(produceOutput(corrW36, outfilename,"4pt", n_stochastic_samples),"ISOSPIN12");
+        TIME(produceOutput(corrW33, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW34, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");//because of V4
+        TIME(produceOutput(corrW35, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+        TIME(produceOutput(corrW36, outfilename,"4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
-        TIME(produceOutput(corrD1ff561112, outfilename, "4pt"),"ISOSPIN12");
+        TIME(produceOutput(corrD1ff561112, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
 
       }//end for DD
@@ -1813,17 +1806,6 @@ int main(int argc, char **argv)
 	corrM.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MNPPP");
 	
 	
-	corrB1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B1");
-	corrB2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "B2");
-	corrW1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W1");
-	corrW2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W2");
-	corrW3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W3");
-	corrW4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "W4");
-	corrZ1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z1");
-	corrZ2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z2");
-	corrZ3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z3");
-	corrZ4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "Z4");
-	corrM.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "M");
 	
         site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
@@ -1842,6 +1824,7 @@ int main(int argc, char **argv)
             PLEGMA_Vector<double> vectorAuxD;
             PLEGMA_Vector<float> vectorAuxF;
             PLEGMA_Vector<double> vectorAuxD2;
+
             // Performing the smearing
             // Smearing the source
 	    for (int icoherentsource=0; icoherentsource < n_coherent_source;++icoherentsource)
@@ -1852,16 +1835,12 @@ int main(int argc, char **argv)
 	      PLEGMA_Vector3D<double> vector1, vector2;
               vectorAuxF.absorb(propDN, isc/3, isc%3);
               vectorAuxD.copy(vectorAuxF);
-              vector1.absorb( vectorAuxD, sequential_time_source );
-              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
-              vectorAuxD2.absorb(vector2,sourcePositions[isource][DIM_T]);
-            }
               vector1.absorb( vectorAuxD, coherent_source_table[icoherentsource]);
-              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
 
               vector2.mulMomentumPhases(momentum_i2,1);
-	        
-	      vectorAuxD.absorb(vector2,coherent_source_table[icoherentsource]);
+
+              vectorAuxD.absorb(vector2,coherent_source_table[icoherentsource]);
               vectorAuxD2.absorbTimeslice(vectorAuxD,coherent_source_table[icoherentsource], false);
 
             }//loop over coherent source
@@ -1878,15 +1857,15 @@ int main(int argc, char **argv)
             PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
             //performing the inversion
 
-            TIME(solver.solve(vectorInOut, vectorInOut),"ISOSPIN32");
+            TIME(solver.solve(vectorAuxD, vectorAuxD),"ISOSPIN32");
 
             //performing rotation to physical base
-            vectorAuxD.rotateToPhysicalBasis(vectorInOut,+1);
+            vectorAuxD2.rotateToPhysicalBasis(vectorAuxD,+1);
 
             //performing smearing
-            TIME(vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
+            TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
 
-            vectorAuxF.copy(vectorInOut);
+            vectorAuxF.copy(vectorAuxD);
             propTS.absorb(vectorAuxF, isc/3, isc%3);
           }
 
@@ -1920,18 +1899,6 @@ int main(int argc, char **argv)
             PLEGMA_ScattCorrelator<float> corrT12(sourcePositions[isource],list_mpi2ptot);
             PLEGMA_ScattCorrelator<float> corrT13(sourcePositions[isource],list_mpi2ptot);
             PLEGMA_ScattCorrelator<float> corrT14(sourcePositions[isource],list_mpi2ptot);
-            TIME(solver.solve(vectorAuxD, vectorAuxD));
-
-            //performing rotation to physical base
-            TIME(vectorAuxD2.rotateToPhysicalBasis(vectorAuxD,+1));
-
-            //performing smearing
-            TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
-
-            vectorAuxF.copy(vectorAuxD);
-            propUPDN.absorb(vectorAuxF, isc/3, isc%3);
-	    
-          } //loop over isc 
 
             PLEGMA_ScattCorrelator<float> reductionsV3_zero(source, piN12_zeropion);
             //PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList_pi20pf20.uniq_p(1));
@@ -2037,17 +2004,17 @@ int main(int argc, char **argv)
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
 
-            TIME(produceOutput(corrD1ff13141718, outfilename, "4pt"),"ISOSPIN12");
-            TIME(produceOutput(corrD1ff15161920, outfilename, "4pt"),"ISOSPIN12");
+            TIME(produceOutput(corrD1ff13141718, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrD1ff15161920, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
-            TIME(produceOutput(corrT7, outfilename,  "T"),"ISOSPIN12");
-            TIME(produceOutput(corrT9, outfilename,  "T"),"ISOSPIN12");
-            TIME(produceOutput(corrT11, outfilename, "T"),"ISOSPIN12");
-            TIME(produceOutput(corrT12, outfilename, "T"),"ISOSPIN12");
-            TIME(produceOutput(corrT13, outfilename, "T"),"ISOSPIN12");
-            TIME(produceOutput(corrT14, outfilename, "T"),"ISOSPIN12");
+            TIME(produceOutput(corrT7, outfilename,  "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrT9, outfilename,  "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrT11, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrT12, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrT13, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrT14, outfilename, "T",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
             for (int i=0; i<n_stochastic_samples; ++i){
               PLEGMA_Vector<float> stochastic_propagator;
@@ -2119,32 +2086,32 @@ int main(int argc, char **argv)
             }
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
-            TIME(produceOutput(corrB9,  outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB10, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB11, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB12, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");//because of V4
+            TIME(produceOutput(corrB9,  outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrB10, outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrB11, outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrB12, outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");//because of V4
 
-            TIME(produceOutput(corrB13, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB14, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB15, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrB16, outfilename, "4pt",n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrB13, outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrB14, outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrB15, outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrB16, outfilename, "4pt",n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
 
-            TIME(produceOutput(corrW17, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW18, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW19, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW20, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW17, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW18, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW19, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW20, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-            TIME(produceOutput(corrW21, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW22, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW23, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW24, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW21, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW22, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW23, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW24, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-            TIME(produceOutput(corrW25, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW26, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW27, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
-            TIME(produceOutput(corrW28, outfilename, "4pt", n_stochastic_samples),"ISOSPIN12");
+            TIME(produceOutput(corrW25, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW26, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW27, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+            TIME(produceOutput(corrW28, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
  
           }//end of seq momentum pion == (0,0,0)
           else {
@@ -2361,26 +2328,26 @@ int main(int argc, char **argv)
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
-         TIME(produceOutput(corrZ5, outfilename, "4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ6, outfilename, "4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ7, outfilename, "4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ8, outfilename, "4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ5, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ6, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ7, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ8, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ9, outfilename, "4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ10, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ9, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ10, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ11, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ12, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ13, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ14, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ11, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ12, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ13, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ14, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ15, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ16, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ15, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ16, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-         TIME(produceOutput(corrZ17, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ18, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ19, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrZ20, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrZ17, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ18, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ19, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrZ20, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
 #endif //defined(PLEGMA_SCATTERING_SPIN12)
 
@@ -2406,18 +2373,6 @@ int main(int argc, char **argv)
          TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 3 ),"ISOSPIN32");
          TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 4 ),"ISOSPIN32");
         
-         for (int i=0; i< 4; ++i){
-           if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
-  
-             TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momp_i2[i], gamma_5_t_sinkmeson, propUP));
-
-           }
-           else{
-             TIME(reductionsV3_diluted[i].V3( stochastic_propagator_momzero[i], gamma_5_t_sinkmeson, propUP));
-           }
-
-           TIME(reductionsV2_diluted[i].V4( stochastic_propagator_momzero[i], glist_sink_nucleon, propDN, propUP));
-         }
 
 
 #if defined(PLEGMA_SCATTERING_SPIN12)
@@ -2442,9 +2397,9 @@ int main(int argc, char **argv)
          TIME(corrD1if12.M_diagramms( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom),"ISOSPIN12");
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
-         TIME(produceOutput(corrD1if12, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrD1if34, outfilename,"4pt"),"ISOSPIN12");
-         TIME(produceOutput(corrD1if56, outfilename,"4pt"),"ISOSPIN12");
+         TIME(produceOutput(corrD1if12, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrD1if34, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+         TIME(produceOutput(corrD1if56, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
        }
 #endif
@@ -2488,7 +2443,7 @@ int main(int argc, char **argv)
        TIME(produceOutput(corrW1, outfilename, "4pt", n_stochastic_samples,  n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
        TIME(produceOutput(corrW2, outfilename, "4pt", n_stochastic_samples,  n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
        TIME(produceOutput(corrW3, outfilename, "4pt", n_stochastic_samples,  n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-       TIME(produceOutput(corrW4, outfilename, "4pt", n_stochastic_samples), n_coherent_source, coherent_source_table_timeslice,"ISOSPIN32");
+       TIME(produceOutput(corrW4, outfilename, "4pt", n_stochastic_samples,  n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 
        //## Z
 
@@ -2537,7 +2492,6 @@ int main(int argc, char **argv)
 //#endif
 
 #ifdef PLEGMA_SCATTERING_SPIN12
-    std::string outfilename;
     outfilename = outdiagramPrefix+confnumber+"_LoopUPDN";
     TIME(produceOutput(Loop_UPDN, outfilename,"L"),"ISOSPIN32");
 #endif
