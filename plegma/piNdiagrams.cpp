@@ -579,9 +579,9 @@ int main(int argc, char **argv)
 #endif
 
         //initialize diagram
-        corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP");
+        corrNP_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP");
 #ifdef PLEGMA_SCATTERING_SPIN12
-        corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0");
+        corrN0_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0");
 #endif
 
       
@@ -592,9 +592,12 @@ int main(int argc, char **argv)
           //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
           TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_coherent, propDN_coherent, propUP_coherent), "ISOSPIN32");
 
+          PLEGMA_printf("Nucleon T2 reduction\n");
           TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_coherent, propDN_coherent, propUP_coherent), "ISOSPIN32");
+          PLEGMA_printf("Nucleon T2 reduction ready\n");
 
           TIME(corrNP_coherent.N_diagramms( reductionsT1N, reductionsT2N ),"ISOSPIN32");
+          PLEGMA_printf("Nucleon diagram ready\n");
 
           for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
             corrNP.absorbTimeslice(corrNP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
@@ -656,18 +659,17 @@ int main(int argc, char **argv)
       //Here the prefix DD means that reduction is based phi*g5 and xi*g5
       //We replace D(x_f2,x_f1) with xi(x_f2)*gamma_5* phi^dagger(x_f1) *gamma_5
       //phi goes to V3 reduction and xi goes to V2 reduction 
-#ifdef PLEGMA_SCATTERING_SPIN32
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U;
-#endif
       //we need these only at zero momentum pf2
 #ifdef PLEGMA_SCATTERING_SPIN12
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2D_zero_mom;//implemented
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U_zero_mom;//implemented
+
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_D;//implemented
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1U_D;//implemented
 #endif
 
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_U;//implemented
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_D;//implemented
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1U_D;//implemented
 
       site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
@@ -684,14 +686,12 @@ int main(int argc, char **argv)
 
           reductions_DD_V3_GAMMAF2U_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zeropion));
           reductions_DD_V3_GAMMAF2D_zero_mom.push_back(new PLEGMA_ScattCorrelator<float>(source, piN12_zeropion));
-#endif
-          reductions_DD_V3_GAMMAF2U.push_back(         new PLEGMA_ScattCorrelator<float>(source, sourcemomentumList.uniq_p(2)));
 
-#if defined(PLEGMA_SCATTERING_SPIN12)
           reductions_DD_V4_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
           reductions_DD_V2_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source, filtered_sourcemomentumList_pi20.uniq_p(1)));
 #endif
 
+          reductions_DD_V3_GAMMAF2U.push_back(         new PLEGMA_ScattCorrelator<float>(source, sourcemomentumList.uniq_p(2)));
 
         }
         catch(std::bad_alloc&){
@@ -2114,46 +2114,42 @@ int main(int argc, char **argv)
             TIME(produceOutput(corrW28, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
  
           }//end of seq momentum pion == (0,0,0)
-          else {
 #endif
-            for (int i=0; i<n_stochastic_samples; ++i){
-              /*Compute Diagram B1 and B2*/
-              PLEGMA_Vector<float> stochastic_propagator;
-              PLEGMA_Vector<float> stochastic_source;
+          for (int i=0; i<n_stochastic_samples; ++i){
+            /*Compute Diagram B1 and B2*/
+            PLEGMA_Vector<float> stochastic_propagator;
+            PLEGMA_Vector<float> stochastic_source;
             
-              stochastic_propagator.copy(*stochastic_propags[i],HOST);
-              stochastic_source.copy(*stochastic_sources[i],HOST);
+            stochastic_propagator.copy(*stochastic_propags[i],HOST);
+            stochastic_source.copy(*stochastic_sources[i],HOST);
             
-              stochastic_propagator.load();
-              stochastic_source.load();
+            stochastic_propagator.load();
+            stochastic_source.load();
 
-              stochastic_source.apply_gamma5();
-              stochastic_propagator.apply_gamma5();
+            stochastic_source.apply_gamma5();
+            stochastic_propagator.apply_gamma5();
  
             
-              TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true),"ISOSPIN32");
+            TIME(reductionsV3.V3( stochastic_propagator, glist_sink_meson,   propTS, true),"ISOSPIN32");
 
-              TIME(corrB1.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], i_gamma_i2, 1, true),"ISOSPIN32");
+            TIME(corrB1.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], i_gamma_i2, 1, true),"ISOSPIN32");
+        
+            TIME(corrB2.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], i_gamma_i2, 2, true),"ISOSPIN32");
           
-              TIME(corrB2.B_diagramms(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i], i_gamma_i2, 2, true),"ISOSPIN32");
+            /*Compute Diagram W1,W2*/
           
-              /*Compute Diagram W1,W2*/
-          
-              TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN32");
+            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propUP, propTS, false),"ISOSPIN32");
 
-              TIME(corrW1.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true),"ISOSPIN32");
-              TIME(corrW2.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true),"ISOSPIN32");
+            TIME(corrW1.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 1, true),"ISOSPIN32");
+            TIME(corrW2.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 2, true),"ISOSPIN32");
           
-              /*Compute Diagram W3,W4*/
+            /*Compute Diagram W3,W4*/
           
-              TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN32");
+            TIME(reductionsV2.V2( stochastic_source, glist_sink_nucleon, propTS, propUP, false),"ISOSPIN32");
 
-              TIME(corrW3.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true),"ISOSPIN32");
-              TIME(corrW4.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true),"ISOSPIN32");
-            } /*loop over stochastic samples*/
-#ifdef PLEGMA_SCATTERING_SPIN12
-          }
-#endif
+            TIME(corrW3.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true),"ISOSPIN32");
+            TIME(corrW4.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true),"ISOSPIN32");
+          } /*loop over stochastic samples*/
 
           //Compute triangle diagramms          
       
@@ -2173,7 +2169,7 @@ int main(int argc, char **argv)
 	  
 	  //Compute Diagram T 
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2),"ISOSPIN32");
-
+           
        } //loop over gamma i2
          
 	  
@@ -2352,28 +2348,26 @@ int main(int argc, char **argv)
 #endif //defined(PLEGMA_SCATTERING_SPIN12)
 
        }
-       else{
 
-         for (int i=0; i< 4; ++i){
-           PLEGMA_Vector<float> st_oet_u_fini;
-           PLEGMA_Vector<float> st_oet_u_zero;
+       for (int i=0; i< 4; ++i){
+         PLEGMA_Vector<float> st_oet_u_fini;
+         PLEGMA_Vector<float> st_oet_u_zero;
 
-           st_oet_u_fini.copy(*stochastic_oet_prop_u_fini_mom[i],HOST);
-           st_oet_u_fini.load();
+         st_oet_u_fini.copy(*stochastic_oet_prop_u_fini_mom[i],HOST);
+         st_oet_u_fini.load();
 
-           st_oet_u_fini.apply_gamma5();
+         st_oet_u_fini.apply_gamma5();
 
-           TIME(reductionsV3_diluted[i].V3( st_oet_u_fini, glist_sink_meson  , propUP, true),"ISOSPIN32");
+         TIME(reductionsV3_diluted[i].V3( st_oet_u_fini, glist_sink_meson  , propUP, true),"ISOSPIN32");
 
-         }
+       }
 
-         TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 1 ),"ISOSPIN32");
-         TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 2 ),"ISOSPIN32");
+       TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 1 ),"ISOSPIN32");
+       TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 2 ),"ISOSPIN32");
 
-         TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 3 ),"ISOSPIN32");
-         TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 4 ),"ISOSPIN32");
+       TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 3 ),"ISOSPIN32");
+       TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 4 ),"ISOSPIN32");
         
-
 
 #if defined(PLEGMA_SCATTERING_SPIN12)
 
@@ -2487,6 +2481,13 @@ int main(int argc, char **argv)
 
       }
 
+
+      free(coherent_source_table);
+      free(coherent_source_table_timeslice);
+      for (int i=0; i<n_coherent_source;++i)
+        free(coherent_look_up_table[i]);
+      free(coherent_look_up_table);
+
     } //end of loop over source position
 
 //#endif
@@ -2504,13 +2505,6 @@ int main(int argc, char **argv)
       stochastic_oet_prop_u_zero_mom.pop_back();
       stochastic_oet_prop_u_fini_mom.pop_back();
     }
-      free(coherent_source_table);
-      free(coherent_source_table_timeslice);
-      for (int i=0; i<n_coherent_source;++i)
-        free(coherent_look_up_table[i]);
-      free(coherent_look_up_table);
-
-    } //loop over source position
 
     for(int i=0; i< n_stochastic_samples; ++i) {
       stochastic_sources.pop_back();
