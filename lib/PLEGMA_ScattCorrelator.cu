@@ -1835,6 +1835,8 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
 
 //this must be used only if the source is the one used in PLEGMA_ScattCorrelator
 
+//attract_look_up_table contains the global coordinates with respect to the
+//coherent sources applied
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic, int n_coherent_source, int *attract_look_up_table ) {
   if(!antiperiodic) return;
