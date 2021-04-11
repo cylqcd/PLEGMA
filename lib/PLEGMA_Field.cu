@@ -1064,6 +1064,9 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
 
 template<typename Float>
 std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
+  // TODO: need to think about appropriate communicator
+  if (HGC_localVolume != HGC_totalVolume)
+    PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
   return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
 }
 
