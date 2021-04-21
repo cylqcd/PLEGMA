@@ -129,7 +129,7 @@ namespace plegma {
       assert(corr_space == MOMENTUM_SPACE);
       corr_mom_space.reset(new PLEGMA_FT<Float>(Q2_max, 3, false, localT()));
     }
-    void setFixMomVec(std::vector<int>& fixMomVec) {
+    void setFixMomVec(std::vector<float>& fixMomVec) {
       assert(corr_space == MOMENTUM_SPACE);
       corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomVec, 3, false, localT()));
     }

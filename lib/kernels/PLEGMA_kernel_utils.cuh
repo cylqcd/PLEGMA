@@ -527,7 +527,8 @@ namespace plegma {
     Float phase;
     Float2<Float> expon;
     for(int imom = 0 ; imom < nMoms ; imom++){
-      int4 momv = texMomList.get(imom);
+      float4 momv = texMomList.get(imom);
+      
       phase = momv.x*id[0]/((Float) DGC_totalL[0]) + momv.y*id[1]/((Float) DGC_totalL[1]) + momv.z*id[2]/((Float) DGC_totalL[2]);
       phase *=  2. * PI;
       expon.x = cos(phase);

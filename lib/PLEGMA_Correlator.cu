@@ -292,7 +292,7 @@ writeASCII(std::string filename_out) const {
 	int it_shift = (it + source[3])%HGC_totalL[3];
 	for(int imom=0; imom<Nmoms; imom++) {
 	  int ipos = (it_shift*Nmoms + imom)*getSiteSize();
-	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, (int) round(momV[imom][0]),(int) round(momV[imom][1]),(int) round(momV[imom][2]));
+	  fprintf(ptr_out, "%f  %+f  %+f  %+f ", it, momV[imom][0],momV[imom][1],momV[imom][2]);
 	  for(int is = 0; is<getSiteSize(); is++)
 	    fprintf(ptr_out, "%+e %+eI ", corrGlobal[ipos*2+is*2], corrGlobal[ipos*2+is*2+1]);
 	  fprintf(ptr_out, "\n");

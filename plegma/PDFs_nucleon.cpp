@@ -43,10 +43,10 @@ int main(int argc, char **argv)
     The source momentum is given by delta/2-p, while the sink momentum by delta/2+p.
   */
 
-  std::vector<int> PMom = {0,0,0};
+  std::vector<float> PMom = {0,0,0};
   HGC_options->set("P-momentum", "If added to the momentum transfer delta gives the sink momentum", verbosity, PMom);
 
-  std::vector<int> DeltaMom = {0,0,0};
+  std::vector<float> DeltaMom = {0,0,0};
   HGC_options->set("Delta-momentum", "Square root of the momentum transfer", verbosity, DeltaMom);
 
   std::string aux_str = "proton";
@@ -85,18 +85,20 @@ int main(int argc, char **argv)
 
 
     
-  std::vector<int> HalfDelta = {0,0,0}; 
-  std::vector<int> sinkMom = {0,0,0};
-  std::vector<int> sourceMom = {0,0,0};
+  std::vector<float> HalfDelta = {0,0,0}; 
+  std::vector<float> sinkMom = {0,0,0};
+  std::vector<float> sourceMom = {0,0,0};
   float SourcePhase;
   
   // Compute the source and sink momenta
   
-  std::transform(DeltaMom.begin(), DeltaMom.end(), HalfDelta.begin(), [](int &c) { return (int)(c/2);});
-  std::transform(PMom.begin(), PMom.end(), HalfDelta.begin(), sinkMom.begin(), std::plus<int>());
-  std::transform(PMom.begin(), PMom.end(), HalfDelta.begin(), sourceMom.begin(), std::minus<int>());
+  std::transform(DeltaMom.begin(), DeltaMom.end(), HalfDelta.begin(), [](float &c) { return (float)(c/2);});
+  std::transform(PMom.begin(), PMom.end(), HalfDelta.begin(), sinkMom.begin(), std::plus<float>());
+  std::transform(PMom.begin(), PMom.end(), HalfDelta.begin(), sourceMom.begin(), std::minus<float>());
+  sourceMom[3] = 0.;
+  sinkMom[3] = 0.;
   
-  PLEGMA_printf("Source Momentum px %d, py %d, pz %d, pt %d\nSink Momentum px %d, py %d, pz %d, pt %d\n",
+  PLEGMA_printf("Source Momentum px %f, py %f, pz %f, pt %f\nSink Momentum px %f, py %f, pz %f, pt %f\n",
 		sourceMom[0],sourceMom[1],sourceMom[2],sourceMom[3],sinkMom[0],sinkMom[1],sinkMom[2],sinkMom[3]);
   if(isGPD && maxQsq < sourceMom[0]*sourceMom[0]+sourceMom[1]*sourceMom[1]+sourceMom[2]*sourceMom[2])
    PLEGMA_error("maxQsq does not include the source momentum\n");
@@ -110,8 +112,10 @@ int main(int argc, char **argv)
   //Momentum smearing: put the momentum phase to smeared gauge field
   std::complex<double> momSmScale[N_DIMS];
   std::complex<double> I(0,1);
+
   for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sourceMom[i]/HGC_totalL[i])*I);
   TIME(smearedGauge.scaleDirWise(momSmScale));
+
   
   for(int i = 0 ; i < N_DIMS; i++) momSmScale[i] = std::exp(-(xiMomSm*2.*PI*sinkMom[i]/HGC_totalL[i])*I);
   if(isGPD) smearedGauge_sink->scaleDirWise(momSmScale);
@@ -151,6 +155,7 @@ int main(int argc, char **argv)
 				   vector1.pointSource(source, isc/3, isc%3, DEVICE);
 				   TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
 				   vectorInOut.absorb(vector2,source[DIM_T]);
+				   
 				 }
 				 // Inverting
 				 PLEGMA_printf("Going to invert %s for component %d\n",
@@ -170,9 +175,10 @@ int main(int argc, char **argv)
 				 }
 			       }
 			     };
-    
+
     TIME(computePropagator(propUP, propUP_SL, mu>0 ? mu : -mu));
     TIME(computePropagator(propDN, propDN_SL, mu<0 ? mu : -mu));
+
     
     for(int ts=0;ts<tSinks.size();ts++) {
       PLEGMA_Correlator<float> corrThrpWL(corr_space,source,0,tSinks[ts]+1);
@@ -343,6 +349,7 @@ int main(int argc, char **argv)
     propDN.applyBoundaries_device(source[3]);
     
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+    corr.setFixMomVec(sinkMom);
     TIME(corr.contractMesons(propUP, propDN));
     THREAD(corr.writeFile(twop_filename, corr_file_format));
     

@@ -38,11 +38,11 @@ struct tex_mom_list {
   tex_mom_list(size_t Nmoms, cudaTextureObject_t tex, void* devPtr) :
     Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
   
-  inline __device__ int4 get(const size_t &i) const {
+  inline __device__ float4 get(const size_t &i) const {
 #ifdef __NVCC__
-    return tex1Dfetch<int4>(tex,i);
+    return tex1Dfetch<float4>(tex,i);
 #else
-    return make_int4(0,0,0,0);
+    return make_float4(0,0,0,0);
 #endif
   };
 };
