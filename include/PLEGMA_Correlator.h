@@ -3,6 +3,7 @@
 #include <PLEGMA_io.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_FT.h>
+#include <utils/PLEGMA_params.h>
 
 namespace plegma {
 
@@ -129,11 +130,16 @@ namespace plegma {
       assert(corr_space == MOMENTUM_SPACE);
       corr_mom_space.reset(new PLEGMA_FT<Float>(Q2_max, 3, false, localT()));
     }
-    void setFixMomVec(std::vector<float>& fixMomVec) {
+
+    void setMomList(std::vector<std::vector<float>> MomList = {}) {
       assert(corr_space == MOMENTUM_SPACE);
-      corr_mom_space.reset(new PLEGMA_FT<Float>(fixMomVec, 3, false, localT()));
+      if(MomList.size()==0)
+	corr_mom_space.reset(new PLEGMA_FT<Float>(listMomenta, 3, false, localT()));
+      else
+	corr_mom_space.reset(new PLEGMA_FT<Float>(MomList, 3, false, localT()));
     }
 
+    
     std::shared_ptr<tex_mom_list> getTexMomList() const {
       if(corr_space == MOMENTUM_SPACE) {
 	return corr_mom_space->getTexMomList();

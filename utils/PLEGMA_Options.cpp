@@ -4,7 +4,7 @@
 #include <functional>
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq",
+						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq","momlist-filename",
 						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
 #if  defined(HAVE_ARPACK) || defined(QUDAEIG)
 						     ,"Eig-NkV", "Eig-logFile"
@@ -80,6 +80,10 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
 
   // Correlators ------------------------------------------------------------------------------------------
   if(isInList(list,"maxQsq")) opt.set("maxQsq", "Maximum Qsq for the Fourier Transform", verbosity, maxQsq);
+  if(isInList(list, "momlist-filename")){
+    opt.set("momlist-filename", "Filename of list of momenta", verbosity, pathListMomenta);
+    if(isFound) readMomList();
+  }
   if(isInList(list,"twop-filename")) opt.set("twop-filename", "File name for two-point functions, extension will be added", verbosity, twop_filename);
   if(isInList(list,"threep-filename")) opt.set("threep-filename", "File name for three-point functions, extension will be added", verbosity, threep_filename);
 

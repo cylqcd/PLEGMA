@@ -428,7 +428,7 @@ writeHDF5(std::string filename) const {
   free(ssource);
   
   std::vector<hsize_t> momShape = { 3 };
-  std::vector<int> mvec;
+  std::vector<float> mvec;
   if(corr_space == MOMENTUM_SPACE) for(auto mv: corr_mom_space->MomList()) for(auto m: mv) mvec.push_back(m);
   
   for(size_t g=0; g<nGroups(); g++){

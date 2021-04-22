@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
   static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 					     "nsrc", "src-filename", "maxQsq", "twop-filename","threep-filename",  "corr-file-format",
-					     "corr-space", "tSinks","Projs","xiMomSm","gammas"};
+					     "corr-space", "tSinks","Projs","xiMomSm","gammas","momlist-filename"};
 
   initializeOptions(argc, argv, true, listOpt);
 
@@ -53,6 +53,9 @@ int main(int argc, char **argv)
   HGC_options->set("which-particle", "Choice of the nucleon interpolator to insert in the three point function (neutron,proton)", verbosity, aux_str);
   WHICHPARTICLE nucleon = get_particle(aux_str.c_str());
 
+  bool FormFactor = false;
+  HGC_options->set("form-factors", "True if interested in the form factors, false GPDs", verbosity, FormFactor);
+  
   
   //=========================================================================================================//
   initializePLEGMA();
@@ -182,7 +185,7 @@ int main(int argc, char **argv)
     
     for(int ts=0;ts<tSinks.size();ts++) {
       PLEGMA_Correlator<float> corrThrpWL(corr_space,source,0,tSinks[ts]+1);
-      corrThrpWL.setFixMomVec(DeltaMom);
+      corrThrpWL.setMomList();
       int signPer = (tSinks[ts] + source[3]) >= HGC_totalL[3] ? -1 : +1;
       int global_fixSinkTime = (tSinks[ts] + source[3])%HGC_totalL[3]; 
 
@@ -273,41 +276,43 @@ int main(int argc, char **argv)
 			       PLEGMA_Gauge<float> gaugeWL;
 			       gaugeWL.copy(gauge);
 
-			       {
-				 PLEGMA_Correlator<float> corrQsq(corr_space,source,maxQsq,tSinks[ts]+1);
+			       // {
+			       // 	 PLEGMA_Correlator<float> corrQsq(corr_space,source,maxQsq,tSinks[ts]+1);
 			       
-				 // LOCAL contractions
-				 TIME(corrQsq.contractNucleonThrp_local(seqPropOut, *propF, signProps, gammas));
-				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;      
-				 THREAD(corrQsq.writeFile(filename, corr_file_format));
+			       // 	 // LOCAL contractions
+			       // 	 TIME(corrQsq.contractNucleonThrp_local(seqPropOut, *propF, signProps, gammas));
+			       // 	 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;      
+			       // 	 THREAD(corrQsq.writeFile(filename, corr_file_format));
 			       
-				 // oneD contractions
-				 TIME(corrQsq.contractNucleonThrp_oneD(seqPropOut, *propF, gaugeWL, signProps, gammas));
-				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
-				 THREAD(corrQsq.writeFile( filename, corr_file_format));
+			       // 	 // oneD contractions
+			       // 	 TIME(corrQsq.contractNucleonThrp_oneD(seqPropOut, *propF, gaugeWL, signProps, gammas));
+			       // 	 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
+			       // 	 THREAD(corrQsq.writeFile( filename, corr_file_format));
 			       
-				 // noe contractions
-				 TIME(corrQsq.contractNucleonThrp_noe(seqPropOut, *propF, gaugeWL, signProps));
-				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
-				 THREAD(corrQsq.writeFile( filename, corr_file_format));
+			       // 	 // noe contractions
+			       // 	 TIME(corrQsq.contractNucleonThrp_noe(seqPropOut, *propF, gaugeWL, signProps));
+			       // 	 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
+			       // 	 THREAD(corrQsq.writeFile( filename, corr_file_format));
 	      
-				 // twoD contractions
-				 TIME(corrQsq.contractNucleonThrp_twoD(seqPropOut, *propF, gaugeWL, signProps, gammas));
-				 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
-				 THREAD(corrQsq.writeFile( filename, corr_file_format));
-			       }
+			       // 	 // twoD contractions
+			       // 	 TIME(corrQsq.contractNucleonThrp_twoD(seqPropOut, *propF, gaugeWL, signProps, gammas));
+			       // 	 if(signPer < 0) for(size_t iv = 0 ; iv < corrQsq.getTotalSize()*2; iv++) corrQsq.H_elem()[iv] *= signPer;
+			       // 	 THREAD(corrQsq.writeFile( filename, corr_file_format));
+			       // }
 			       
 			       PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);
 			       PLEGMA_Propagator<float> *propExchange = nullptr;
 			       propF->unload();
 			       
 			       //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
+			       int max_z = FormFactor? 1: HGC_totalL[WilsDir]/2;
+			       PLEGMA_printf("Maximum Wilson line length %d\n",max_z);
 			       for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
 				 std::string suff = "_stout_"+std::to_string(stIt*stepStout);
 				 if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
 				 su3.absorbDir_device(gaugeWL, WilsDir);
 				 WL.setUnit( (std::vector<int>) {0,4,8});
-				 for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
+				 for(int i = 0 ; i < max_z;i++){ 
 				   TIME(corrThrpWL.contractNucleonThrp_wilsonLine(seqPropOut, *propF, WL, signProps, gammas, i,fl_str));
 				   if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.H_elem())[iv] *= signPer;
 				   THREAD(corrThrpWL.writeHDF5(threep_filename + suff + "_ts_" + std::to_string(tSinks[ts])  + "_Proj_" + proj_str)); 
@@ -320,7 +325,7 @@ int main(int argc, char **argv)
 				 propF->load();
 				 su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 				 WL.setUnit( (std::vector<int>) {0,4,8});
-				 for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
+				 for(int i = 0 ; i < max_z;i++){ // HGC_totalL[2] only for z direction
 				   TIME(corrThrpWL.contractNucleonThrp_wilsonLine(seqPropOut, *propF, WL, signProps, gammas ,-i,fl_str));
 				   if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) (corrThrpWL.H_elem())[iv] *= signPer;
 				   THREAD(corrThrpWL.writeHDF5(threep_filename + suff  +  "_ts_" + std::to_string(tSinks[ts]) + "_Proj_" + proj_str));
@@ -349,7 +354,14 @@ int main(int argc, char **argv)
     propDN.applyBoundaries_device(source[3]);
     
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-    corr.setFixMomVec(sinkMom);
+    if(FormFactor){
+      std::vector<std::vector<float>> inverse_mom = listMomenta;
+      for(int i=0;i<listMomenta.size();i++)
+	for(int j=0;j<listMomenta[i].size();j++)
+	  inverse_mom[i][j] *= -1;
+      corr.setMomList(inverse_mom);}
+    else
+      corr.setMomList({sinkMom,});
     TIME(corr.contractMesons(propUP, propDN));
     THREAD(corr.writeFile(twop_filename, corr_file_format));
     
