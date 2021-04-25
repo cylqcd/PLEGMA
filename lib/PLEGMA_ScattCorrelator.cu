@@ -1573,10 +1573,10 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
     int i_mom_i2 = imap[i_m][0];
     int i_mom_f1 = imap[i_m][1];
     int i_mom_f2 = imap[i_m][2];
-    #pragma omp critical
-    {
-      PLEGMA_printf("IMOM thread: %d im %d i2 %d f1 %d f2 %d\n", omp_get_thread_num(), i_m, i_mom_i2, i_mom_f1, i_mom_f2 );
-    }
+//    #pragma omp critical
+//    {
+//      PLEGMA_printf("IMOM thread: %d im %d i2 %d f1 %d f2 %d\n", omp_get_thread_num(), i_m, i_mom_i2, i_mom_f1, i_mom_f2 );
+//    }
     for( int t=0; t<TIME; ++t){
       for (int gf2=0; gf2<n_gammas_f2; ++gf2){
         Float temp[N_SPINS*N_SPINS*2];
@@ -1795,8 +1795,10 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
   //size of final output for DD
   int n_extgammas_i = this->GList[0].size();
   int n_extgammas_f = this->GList[1].size();
-  int n_gammas_i = this->GList[2].size();
-  int n_gammas_f = this->GList[3].size();
+  int n_gammas_i1 = this->GList[2].size();
+  int n_gammas_f = this->GList[4].size();
+  int n_gammas_i2 = this->GList[3].size();
+
   int TIME = this->localT();
 
   //put output to zero
@@ -1806,13 +1808,13 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
     #pragma omp parallel for
     for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
       Float temp[N_SPINS*N_SPINS*2];
-      for( int gi=0; gi<n_gammas_i; ++gi ){
+      for( int gi=0; gi<n_gammas_i1; ++gi ){
         for( int gf=0; gf<n_gammas_f; ++gf ){
           int coeffT = 1;
           if( transp_i1 == true)
              coeffT*=gammaTranspSign_scatt[this->GList[2][gi]];
           if( transp_f1 == true)
-             coeffT*=gammaTranspSign_scatt[this->GList[3][gf]];
+             coeffT*=gammaTranspSign_scatt[this->GList[4][gf]];
           for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
             temp[spin] = coeffT*T2.Corr(t,i_mom,gi,gf)[spin];
 
