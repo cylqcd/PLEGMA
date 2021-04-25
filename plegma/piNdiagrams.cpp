@@ -470,6 +470,20 @@ int main(int argc, char **argv)
         for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
           propUP.absorbTimeslice(propUP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
         }
+        /*if(outfile_upS!="")
+        {
+          PLEGMA_printf("Save propagator for the up quark\n");
+          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
+          for(int isc = 0 ; isc < 12 ; isc++){
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
+
+            vectorAuxPrint.absorb(propUP,isc/3,isc%3);
+            vectorAuxPrint.unload();
+            vectorAuxPrint.writeLIME(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+            //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+          }
+        }*/
         // ensuring mu negative
         if(mu>0) {
           mu*=-1.;
@@ -579,6 +593,8 @@ int main(int argc, char **argv)
 #endif
 
         //initialize diagram
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N";
+
         corrNP_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP");
 #ifdef PLEGMA_SCATTERING_SPIN12
         corrN0_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0");
@@ -760,6 +776,12 @@ int main(int argc, char **argv)
         //B7,B8
         //B1,B2
         TIME(reductions_DD_V2_GAMMAF1U_U[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propUP, false), "ISOSPIN32");
+/*        char *temporary;
+        asprintf(&temporary,"sx%02dsy%02dsz%02dst%03d_%d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3],i);
+        std::string text= (std::string)"V2DDname_UU" + temporary;
+        free(temporary);
+        reductions_DD_V2_GAMMAF1U_U[i]->writeHDF5(text);
+*/
 
 #ifdef PLEGMA_SCATTERING_SPIN12
         //D1ii13,14,B13,B14,B17,B18
@@ -786,16 +808,16 @@ int main(int argc, char **argv)
 
          PLEGMA_Vector<double> vectortmp1;
          PLEGMA_Vector<double> vectortmp2;          
-	 PLEGMA_Vector<double> vectortmp3;
+	 PLEGMA_Vector<double> vectorSave_diluted;
  
 
          {  // Smearing the source
             
-            PLEGMA_Vector3D<double> vector1, vector2;
-	    for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
 
-              vectortmp2.absorbTimeslice(vectorStoc_source_oet, coherent_source_table[i_coherent_source]);
-              vector1.absorb(vectortmp2, coherent_source_table[i_coherent_source]);
+	    for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
+              vectortmp1.absorbTimeslice(vectorStoc_source_oet, coherent_source_table[i_coherent_source]);
+              PLEGMA_Vector3D<double> vector1, vector2;
+              vector1.absorb(vectortmp1, coherent_source_table[i_coherent_source]);
 
 	      PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, coherent_source_table[i_coherent_source]);
@@ -809,7 +831,7 @@ int main(int argc, char **argv)
          }
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
-         vectorStoc_source_oet.copy(vectortmp1);
+         vectorStoc_source_oet.copy(vectortmp2);
          // vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"oet_source"+sourcepositiontext);
   
          //Transforming to physical base for the UP quark
@@ -819,10 +841,10 @@ int main(int argc, char **argv)
          vectortmp1.dilutespin(vectortmp2,0);
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
-         vectortmp3.copy(vectortmp2);
+         vectorSave_diluted.copy(vectortmp1);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectortmp3);
+           vectortmp2.copy(vectorSave_diluted);
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
@@ -838,8 +860,8 @@ int main(int argc, char **argv)
           // vectortmp2.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
 
-             vectortmp1.diluteSpinDisplace(vectortmp3,spinindex+1,spinindex);
-             vectortmp3.copy(vectortmp1);
+             vectortmp1.diluteSpinDisplace(vectorSave_diluted,spinindex+1,spinindex);
+             vectorSave_diluted.copy(vectortmp1);
            }
          }
          
@@ -858,10 +880,10 @@ int main(int argc, char **argv)
          vectortmp1.dilutespin(vectortmp2,0);
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
-         vectortmp3.copy(vectortmp1);
+         vectorSave_diluted.copy(vectortmp1);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectortmp3);
+           vectortmp2.copy(vectorSave_diluted);
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
@@ -875,8 +897,8 @@ int main(int argc, char **argv)
            vectortmp2.load();
            //vectortmp2.writeLIME(outfile_V+confnumber+"propagator_dn"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
-             vectortmp1.diluteSpinDisplace(vectorStoc_source_oet,spinindex+1,spinindex);
-             vectortmp3.copy(vectortmp1);
+             vectortmp1.diluteSpinDisplace(vectorSave_diluted,spinindex+1,spinindex);
+             vectorSave_diluted.copy(vectortmp1);
            }
          }
       }
@@ -1337,7 +1359,7 @@ int main(int argc, char **argv)
             smearedGauge3D.absorb(smearedGauge, coherent_source_table[icoherentsource]);
 
             PLEGMA_Vector3D<double> vector1, vector2;
-            vectorAuxF.absorb(propDN, isc/3, isc%3);
+            vectorAuxF.absorb(propUP, isc/3, isc%3);
             vectorAuxD.copy(vectorAuxF);
             vector1.absorb( vectorAuxD, coherent_source_table[icoherentsource]);
             TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN12");
@@ -1478,7 +1500,7 @@ int main(int argc, char **argv)
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propTS, propDN, propUP),"ISOSPIN12");
         TIME( corrT22.convertTreductiontoDiagram( reductionsT2, false, true, true ),"ISOSPIN12");
 
-        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propUP, propTS, propDN),"ISOSPIN12");
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_delta, propUP, propDN, propTS),"ISOSPIN12");
         TIME( corrT24.convertTreductiontoDiagram( reductionsT2, false, true, true ),"ISOSPIN12");
 
         asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
@@ -1999,7 +2021,7 @@ int main(int argc, char **argv)
             TIME( corrT13.convertTreductiontoDiagram( reductionsT1, false, false, false ),"ISOSPIN12");
 
             TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_delta, propUP, propDN, propTS),"ISOSPIN12");
-            TIME( corrT14.convertTreductiontoDiagram( reductionsT1, false, false, false),"ISOSPIN12");
+            TIME( corrT14.convertTreductiontoDiagram( reductionsT1, false, false, true),"ISOSPIN12");
 
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
@@ -2114,7 +2136,7 @@ int main(int argc, char **argv)
             TIME(produceOutput(corrW28, outfilename, "4pt", n_stochastic_samples,n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
  
           }//end of seq momentum pion == (0,0,0)
-#endif
+#else
           for (int i=0; i<n_stochastic_samples; ++i){
             /*Compute Diagram B1 and B2*/
             PLEGMA_Vector<float> stochastic_propagator;
@@ -2150,6 +2172,7 @@ int main(int argc, char **argv)
             TIME(corrW3.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 3, true),"ISOSPIN32");
             TIME(corrW4.W_diagramms( *reductions_DD_V3_GAMMAF2U[i], reductionsV2, i_gamma_i2, 4, true),"ISOSPIN32");
           } /*loop over stochastic samples*/
+#endif
 
           //Compute triangle diagramms          
       
