@@ -2263,143 +2263,155 @@ int main(int argc, char **argv)
        //Diagram Z1,Z2
        //std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
       
- 
-       if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
 
-         //We need V3 reductions only for pf2={0,0,0} for diagrams Z5--Z20
+       //We need V3 reductions only for pf2={0,0,0} for diagrams Z5--Z20
 #if defined(PLEGMA_SCATTERING_SPIN12)
 
-         PLEGMA_ScattCorrelator<float> corrZ5(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ6(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ7(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ8(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ5(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ6(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ7(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ8(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-         PLEGMA_ScattCorrelator<float> corrZ9(sourcePositions[isource],  filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ10(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ9(sourcePositions[isource],  filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ10(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-         PLEGMA_ScattCorrelator<float> corrZ11(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ12(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ13(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ14(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ11(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ12(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ13(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ14(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-         PLEGMA_ScattCorrelator<float> corrZ15(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ16(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ15(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ16(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-         PLEGMA_ScattCorrelator<float> corrZ17(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ18(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ19(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-         PLEGMA_ScattCorrelator<float> corrZ20(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ17(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ18(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ19(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+       PLEGMA_ScattCorrelator<float> corrZ20(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-         corrZ5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z5");
-         corrZ6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z6");
-         corrZ7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z7");
-         corrZ8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z8");
-         corrZ9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z9");
-         corrZ10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z10");
-         corrZ11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z11");
-         corrZ12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z12");
-         corrZ13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z13");
-         corrZ14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z14");
-         corrZ15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z15");
-         corrZ16.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z16");
-         corrZ17.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z17");
-         corrZ18.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z18");
-         corrZ19.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z19");
-         corrZ20.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z20");
-#endif
+       corrZ5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z5");
+       corrZ6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z6");
+       corrZ7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z7");
+       corrZ8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z8");
+       corrZ9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z9");
+       corrZ10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z10");
+       corrZ11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z11");
+       corrZ12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z12");
+       corrZ13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z13");
+       corrZ14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z14");
+       corrZ15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z15");
+       corrZ16.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z16");
+       corrZ17.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z17");
+       corrZ18.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z18");
+       corrZ19.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z19");
+       corrZ20.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "Z20");       
+
+       TIME(corrZ1.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV4_diluted_STOCHU_DN_UP, 1 ),"ISOSPIN32");
+       TIME(corrZ2.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV4_diluted_STOCHU_DN_UP, 2 ),"ISOSPIN32");
+
+       //Diagram Z6,Z8
+       TIME(corrZ6.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 6 ),"ISOSPIN12");
+       TIME(corrZ8.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 8 ),"ISOSPIN12");
+
+      
+       //Diagram Z12,Z14
+       TIME(corrZ12.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 12 ),"ISOSPIN12");
+       TIME(corrZ14.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 14 ),"ISOSPIN12");
+
+       //Diagram Z3,Z4	
+       TIME(corrZ3.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV2_diluted_STOCHU_DN_UP, 3 ),"ISOSPIN32");
+       TIME(corrZ4.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV2_diluted_STOCHU_DN_UP, 4 ),"ISOSPIN32");
+         
+       //Diagram Z5,Z7
+       TIME(corrZ5.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 5 ),"ISOSPIN12");
+       TIME(corrZ7.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 7 ),"ISOSPIN12");
        
+       //Diagram Z11,Z13
+       TIME(corrZ11.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 11 ),"ISOSPIN12");
+       TIME(corrZ13.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 13 ),"ISOSPIN12");
+
+       //Diagram Z9,Z10
+       TIME(corrZ9.Z_diagramms(  reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHD_UP_UP, 9 ),"ISOSPIN12");
+       TIME(corrZ10.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHD_UP_UP, 10 ),"ISOSPIN12");
+
+       //Diagram Z15,Z16
+       TIME(corrZ15.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHU_DN_DN, 15 ),"ISOSPIN12");
+       TIME(corrZ16.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHU_DN_DN, 16 ),"ISOSPIN12");
+
+       //Diagram Z17,Z18
+       TIME(corrZ17.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHD_UP_DN, 17 ),"ISOSPIN12");
+       TIME(corrZ18.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHD_UP_DN, 18 ),"ISOSPIN12");
+
+       //Diagram Z19,Z20
+       TIME(corrZ19.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV4_diluted_STOCHD_UP_DN, 19 ),"ISOSPIN12");
+       TIME(corrZ20.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV4_diluted_STOCHD_UP_DN, 20 ),"ISOSPIN12");
+
+       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
+
+       TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+       TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+       TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+       TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+
+       TIME(produceOutput(corrZ5, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ6, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ7, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ8, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
+       TIME(produceOutput(corrZ9, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ10, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
+       TIME(produceOutput(corrZ11, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ12, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ13, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ14, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
+       TIME(produceOutput(corrZ15, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ16, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
+       TIME(produceOutput(corrZ17, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ18, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ19, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+       TIME(produceOutput(corrZ20, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
+#else //defined(PLEGMA_SCATTERING_SPIN12)
+
+       if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
 
          TIME(corrZ1.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV4_diluted_STOCHU_DN_UP, 1 ),"ISOSPIN32");
          TIME(corrZ2.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV4_diluted_STOCHU_DN_UP, 2 ),"ISOSPIN32");
 
-         //Diagram Z6,Z8
-#if defined(PLEGMA_SCATTERING_SPIN12)
-         TIME(corrZ6.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 6 ),"ISOSPIN12");
-         TIME(corrZ8.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 8 ),"ISOSPIN12");
-
-      
-         //Diagram Z12,Z14
-         TIME(corrZ12.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 12 ),"ISOSPIN12");
-         TIME(corrZ14.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV4_diluted_STOCHU_DN_UP, 14 ),"ISOSPIN12");
-#endif
-
-         //Diagram Z3,Z4	
          TIME(corrZ3.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV2_diluted_STOCHU_DN_UP, 3 ),"ISOSPIN32");
          TIME(corrZ4.Z_diagramms( reductionsV3_diluted_STOCHU_UP, reductionsV2_diluted_STOCHU_DN_UP, 4 ),"ISOSPIN32");
-         
-         //Diagram Z5,Z7
-#if defined(PLEGMA_SCATTERING_SPIN12)
-
-         TIME(corrZ5.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 5 ),"ISOSPIN12");
-         TIME(corrZ7.Z_diagramms( reductionsV3_diluted_STOCHD_UP_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 7 ),"ISOSPIN12");
-       
-         //Diagram Z11,Z13
-
-         TIME(corrZ11.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 11 ),"ISOSPIN12");
-         TIME(corrZ13.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHU_DN_UP, 13 ),"ISOSPIN12");
-
-         //Diagram Z9,Z10
-         TIME(corrZ9.Z_diagramms(  reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHD_UP_UP, 9 ),"ISOSPIN12");
-         TIME(corrZ10.Z_diagramms( reductionsV3_diluted_STOCHU_DN_zerof2, reductionsV2_diluted_STOCHD_UP_UP, 10 ),"ISOSPIN12");
-
-         //Diagram Z15,Z16
-         TIME(corrZ15.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHU_DN_DN, 15 ),"ISOSPIN12");
-         TIME(corrZ16.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHU_DN_DN, 16 ),"ISOSPIN12");
-
-         //Diagram Z17,Z18
-         TIME(corrZ17.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHD_UP_DN, 17 ),"ISOSPIN12");
-         TIME(corrZ18.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV2_diluted_STOCHD_UP_DN, 18 ),"ISOSPIN12");
-
-         //Diagram Z19,Z20
-         TIME(corrZ19.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV4_diluted_STOCHD_UP_DN, 19 ),"ISOSPIN12");
-         TIME(corrZ20.Z_diagramms( reductionsV3_diluted_STOCHU_UP_zerof2, reductionsV4_diluted_STOCHD_UP_DN, 20 ),"ISOSPIN12");
-
-         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
-
-         TIME(produceOutput(corrZ5, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ6, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ7, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ8, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-
-         TIME(produceOutput(corrZ9, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ10, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-
-         TIME(produceOutput(corrZ11, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ12, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ13, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ14, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-
-         TIME(produceOutput(corrZ15, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ16, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-
-         TIME(produceOutput(corrZ17, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ18, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ19, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrZ20, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-
-#endif //defined(PLEGMA_SCATTERING_SPIN12)
 
        }
+       else {
 
-       for (int i=0; i< 4; ++i){
-         PLEGMA_Vector<float> st_oet_u_fini;
-         PLEGMA_Vector<float> st_oet_u_zero;
+         for (int i=0; i< 4; ++i){
+           PLEGMA_Vector<float> st_oet_u_fini;
+           PLEGMA_Vector<float> st_oet_u_zero;
 
-         st_oet_u_fini.copy(*stochastic_oet_prop_u_fini_mom[i],HOST);
-         st_oet_u_fini.load();
+           st_oet_u_fini.copy(*stochastic_oet_prop_u_fini_mom[i],HOST);
+           st_oet_u_fini.load();
 
-         st_oet_u_fini.apply_gamma5();
+           st_oet_u_fini.apply_gamma5();
 
-         TIME(reductionsV3_diluted[i].V3( st_oet_u_fini, glist_sink_meson  , propUP, true),"ISOSPIN32");
+           TIME(reductionsV3_diluted[i].V3( st_oet_u_fini, glist_sink_meson  , propUP, true),"ISOSPIN32");
 
-       }
+         }
 
-       TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 1 ),"ISOSPIN32");
-       TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 2 ),"ISOSPIN32");
+         TIME(corrZ1.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 1 ),"ISOSPIN32");
+         TIME(corrZ2.Z_diagramms( reductionsV3_diluted, reductionsV4_diluted_STOCHU_DN_UP, 2 ),"ISOSPIN32");
 
-       TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 3 ),"ISOSPIN32");
-       TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 4 ),"ISOSPIN32");
+         TIME(corrZ3.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 3 ),"ISOSPIN32");
+         TIME(corrZ4.Z_diagramms( reductionsV3_diluted, reductionsV2_diluted_STOCHU_DN_UP, 4 ),"ISOSPIN32");
         
+      }
+
+      TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+      TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+      TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+      TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+#endif
 
 #if defined(PLEGMA_SCATTERING_SPIN12)
 
