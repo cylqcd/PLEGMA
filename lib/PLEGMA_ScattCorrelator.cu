@@ -299,7 +299,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
   MPI_Barrier(HGC_fullComm);
-  PLEGMA_printf("DEBUG ptr global %e %e\n",ptr[0],ptr[1]);
+//  PLEGMA_printf("DEBUG ptr global %e %e\n",ptr[0],ptr[1]);
   return ptr;
 }
 //This routine sum over the time direction a particular PLEGMA_ScattCorrelator object

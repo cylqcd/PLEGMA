@@ -338,14 +338,14 @@ protected:
       bool needs_shift = false;
       T* tmp = buf;
       if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
-      if (!start.empty()){
+     /* if (!start.empty()){
         for(int i=0; i<start.size();++i)
           PLEGMA_printf("DEBUG _write_dataset_single %d\n",start[i]);
       }
       if (!shape.empty()){
         for(int i=0; i<shape.size();++i)
           PLEGMA_printf("DEBUG _write_dataset_single shape %d\n",shape[i]);
-      }
+      }*/
 
       
       // Shifting the data accordingly to start
@@ -366,7 +366,7 @@ protected:
         std::vector<hsize_t> cut_shape = std::vector<hsize_t>(shape.begin(), shape.begin()+non_cont_id+1);
 	std::vector<hsize_t> shift = sub(cut_shape,cut_start);
         assert(product(cut_shape)*contiguous == product(shape));
-
+/*
         if (!cut_start.empty()){
           for(int i=0; i<cut_start.size();++i)
             PLEGMA_printf("DEBUG _write_dataset_single %d\n",cut_start[i]);
@@ -376,13 +376,13 @@ protected:
             PLEGMA_printf("DEBUG _write_dataset_single shape %d\n",cut_shape[i]);
         }
         PLEGMA_printf("DEBUG_continuous %d\n", contiguous);
-
+*/
         for(hsize_t i = 0; i<product(cut_shape); i++) {
           hsize_t j = to_id( add( from_id(i, cut_shape), shift), cut_shape);
-          printf("DEBUG i=%d j=%d contiguous=%d sizeof(T)=%d\n",i,j,contiguous,sizeof(T));
+//          printf("DEBUG i=%d j=%d contiguous=%d sizeof(T)=%d\n",i,j,contiguous,sizeof(T));
           std::memcpy(tmp+i*contiguous, buf+j*contiguous, contiguous*sizeof(T));
         }
-        PLEGMA_printf("DEBUG Copy already performed\n");
+  //      PLEGMA_printf("DEBUG Copy already performed\n");
       }
 
 
