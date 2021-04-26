@@ -1691,7 +1691,6 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
   
   //n gammas
   int n_gammas_f = this->GList[4].size();
-  int n_gammas_i2 = this->GList[3].size();
   int n_gammas_i1 = this->GList[2].size();
   int n_extgammas_f = this->GList[1].size();
   int n_extgammas_i = this->GList[0].size();
@@ -1796,14 +1795,23 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
   int n_extgammas_i = this->GList[0].size();
   int n_extgammas_f = this->GList[1].size();
   int n_gammas_i1 = this->GList[2].size();
-  int n_gammas_f = this->GList[4].size();
-  int n_gammas_i2 = this->GList[3].size();
+  int n_gammas_f;
+  if (ig_i2 == -1){
+    n_gammas_f = this->GList[3].size();
+  }
+  else{
+    n_gammas_f = this->GList[4].size();
+  }
 
   int TIME = this->localT();
 
   //put output to zero
-  this->clear_output(!accum,5,ig_i2);
-
+  if (ig_i2 == -1){
+    this->clear_output(!accum);
+  }
+  else{
+    this->clear_output(!accum,5,ig_i2);
+  }
   for( int t=0; t<TIME; ++t){
     #pragma omp parallel for
     for( int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
@@ -1822,7 +1830,12 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
             for( int gef=0; gef<n_extgammas_f; ++gef ){
               GAMMAS_SCATT extG_i1 = this->GList[0][gei];
               GAMMAS_SCATT extG_f1 = this->GList[1][gef];
-              M_pe_GNG<Float>( this->Corr(t,i_mom,gei,gef,gi1,ig_i2,gf), extG_f1, extG_i1, temp );
+              if (ig_i2 == -1){
+                M_pe_GNG<Float>( this->Corr(t,i_mom,gei,gef,gi1,gf), extG_f1, extG_i1, temp );
+              }
+              else{
+                M_pe_GNG<Float>( this->Corr(t,i_mom,gei,gef,gi1,ig_i2,gf), extG_f1, extG_i1, temp );
+              }
             } //G_extf
           } //G_exti
         } //G_f
