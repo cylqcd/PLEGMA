@@ -29,13 +29,13 @@ int main(int argc, char **argv)
   HGC_options->set("alpha-stout-Gprop", "Coefficient for the stout smearing for Gprop",verbosity,alphaStout);
   bool isS4D = false;
   HGC_options->set("Spatial4D", "True if we apply 4D Stout Smearing only to spatial links", verbosity, isS4D);
-  bool is3D = false;
-  HGC_options->set("add3D", "True if we need G_GG with 3D Stout Smearing as well", verbosity, is3D);
+  bool add3D = false;
+  HGC_options->set("add3D", "True if we need G_GG with 3D Stout Smearing as well", verbosity, add3D);
   //==========================================================================================================//
   initializePLEGMA();
 
-  if ( doG_GG ) { // Here we compute the gluon loops, or trace of squares of Field Strength Tensor (FST)
-    // gLoops off diagonal elements with FST definition
+  if ( doG_GG ) {
+    /***  Here we compute the off-dialgonal elements of gluon loops, or trace of squares of Field Strength Tensor (FST)  ***/
     /* Clover definition of gluon loops off diagonals
      * Definition \mathcal{O}_i = unknown * \Tr[\sum_\mu F_{i,\mu} * F_{3,\mu}]
      * FST indices cannot be same
@@ -46,11 +46,27 @@ int main(int argc, char **argv)
       PLEGMA_error("nsmear-stout-Gprop must be divisible by nsmear-step-Gprop\n");
 
     // setup output
-    int n_s_dim = (is3D)?2:1;
+    /*   If add3D == true, we compute gluon loops with 3D smearing as well as 4D
+     *   If isS4D == true, 4D smearing is performed but only for the spatial indicies
+     */
+    int n_s_dim = (add3D)?2:1;
     std::string sd = (isS4D)?"S4D":"4D";
     std::string outName3 = pathOut + "T_G_3DStoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
     std::string outName4 = pathOut + "T_G_"+sd+"StoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
 
+    // initialize the files: I append data later
+    FILE *fp = NULL;
+    if(comm_rank() == 0){
+      if (add3D) {
+	fp = fopen(outName3.c_str(),"w");
+	if(fp == NULL) PLEGMA_error("Cannot open file:%s for writting\n",outName3.c_str());
+	fclose(fp);
+      }
+      fp = fopen(outName4.c_str(),"w");
+      if(fp == NULL) PLEGMA_error("Cannot open file:%s for writting\n",outName4.c_str());
+      fclose(fp);
+    }
+    
     std::vector<std::pair<int,int>> pairs;
     for ( int i=0; i<N_DIMS-1; i++)
       for ( int j=0; j<N_DIMS-1; j++ )
@@ -74,7 +90,7 @@ int main(int argc, char **argv)
       gauge.calculatePlaq();
 
       for ( int i_s = 0; i_s < n_s_dim; i_s++ ){
-	int s_dim = (is3D && i_s == 0)?3:4;// smearing dimension: assume n_s_dim = 1 or 2
+	int s_dim = (add3D && i_s == 0)?3:4;// smearing dimension: assume n_s_dim = 1 or 2
 	for(int n=nsmearStoutStart; n<=nsmearStout;n+=nsmearStep){
 	  if((n-nsmearStoutStart)%(2*nsmearStep) == 0){
 	    if((n-nsmearStoutStart)==0) {
@@ -86,6 +102,7 @@ int main(int argc, char **argv)
 	  else{
 	    gauge1.stoutSmearing(gauge2,nsmearStep,alphaStout,s_dim,isS4D);
 	  }
+	  
 	  fmunu.compute_leaves(((n-nsmearStoutStart)%(2*nsmearStep)==0)?gauge2:gauge1);
 	  for(int p =0 ; p<pairs.size(); p++){ // for each pair (i,j), compute T_ij
 	    int i = pairs[p].first, j = pairs[p].second;
@@ -101,11 +118,14 @@ int main(int argc, char **argv)
 	      }
 	    }
 	    ft3D.apply(trace2,FT_GEMV);
+	    
+	    //std::string tmp = "_"+std::to_string(iconf)+"_"+std::to_string(n)+"_"+std::to_string(p);
 	    if(s_dim == 3)
-	      ft3D.writeASCII(outName3, 0, iconf);
+	      ft3D.writeASCII(outName3, 0, true);
 	    else if(s_dim == 4)
-	      ft3D.writeASCII(outName4, 0, iconf);
-	    //ft3D.store3DFTs(T[i_s][n/nsmearStep][p], 0 );
+	      ft3D.writeASCII(outName4, 0, true);
+	      //ft3D.store3DFTs(T[i_s][n/nsmearStep][p], 0 );
+	    //PLEGMA_printf("%d %d %d\n",iconf,n,p);}
 	  }
 	}
       }

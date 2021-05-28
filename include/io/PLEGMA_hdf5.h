@@ -123,13 +123,13 @@ protected:
     return product;
   }
   inline hsize_t to_id(std::vector<hsize_t> ids, std::vector<hsize_t> shape){
-    hsize_t id = ids[0];
-    for(size_t i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i];
+    hsize_t id = ids[0]%shape[0];
+    for(size_t i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i]%shape[i];
     return id;
   }
   inline std::vector<hsize_t> from_id(hsize_t id, std::vector<hsize_t> shape){
     std::vector<hsize_t> ids;
-    for (auto s = shape.rbegin(); s != shape.rend(); ++s ) { 
+    for (auto s = shape.rbegin(); s != shape.rend(); s++ ) { 
       ids.push_back(id % *s);
       id /= *s;
     }
@@ -331,7 +331,7 @@ protected:
     // In this function only one processor writes
     if(getRank() == 0) {
       bool needs_shift = false;
-      T* tmp = buf;
+      T* tmp;// = buf; // if I do it, somehow precision is lost
       if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
       
       // Shifting the data accordingly to start
@@ -339,15 +339,17 @@ protected:
 	hostMalloc(tmp, product(shape)*sizeof(T));
 	for(hsize_t i = 0; i<product(shape); i++) {
 	  hsize_t j = to_id( add( from_id(i, shape), start), shape);
-	  tmp[i] = buf[j];
+	  tmp[j] = buf[i];
 	}
+      } else {
+	tmp = buf;
       }
 
       _write_dataset_parallel(dataset_id, tmp, shape, shape, zeros_like(shape), true);
 
       if(needs_shift) {
 	hostFree(tmp, product(shape)*sizeof(T));
-      }
+      }      
     } else {
       _write_dataset_parallel(dataset_id, buf, shape, ones_like(shape), start.empty() ? zeros_like(shape) : start, true);
     }

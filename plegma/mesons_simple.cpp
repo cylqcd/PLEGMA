@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     initGaugeQuda(gauge, true);
     plaqQuda();
     
-    
+#if 0
     PLEGMA_Vector3D<double> tmp3;
     PLEGMA_Vector<double> tmp, tmp43;
     tmp.randInit(rng_seed);PLEGMA_printf("1\n");
@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
             }
     tmp3.absorb(tmp,0);
     PLEGMA_printf("norm2 (4D: %g) (3D: %g)\n",tmp.norm(),tmp3.norm());
+#endif
     updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));
 
@@ -87,7 +88,7 @@ int main(int argc, char **argv) {
 				   PLEGMA_Vector<double> vectorAuxF;
 				   vectorAuxF.copy(vectorInOut);
 				   prop.absorb(vectorAuxF, isc/3, isc%3);
-				   // Test
+				   // Test oneD
 				   /*
 				   PLEGMA_Vector<double> vectorTd, vectorTdt;
 				   for(int dir=0;dir<N_DIMS;dir++){
@@ -113,12 +114,15 @@ int main(int argc, char **argv) {
 
       PLEGMA_Propagator<double> propUP;
       TIME(computePropagator(propUP));
-      //propUP.rotateToPhysicalBase_device(mu/abs(mu));
+      propUP.rotateToPhysicalBase_device(mu/abs(mu));
+      
       PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-      //TIME(corr.contractMesonsNew(propUP, propUP));
-      TIME(corr.contractMesons(propUP, propUP));
-      //corr.setDatasets((std::vector<std::string>) {"twop_meson_uu"});
-      //propUP.writeFile(twop_filename, corr_file_format);
+      TIME(corr.contractMesonsNew(propUP, propUP));
+      corr.setDatasets((std::vector<std::string>) {"twop_meson_uu"});
+      // or
+      //TIME(corr.contractMesons(propUP, propUP));
+      
+      THREAD(propUP.writeFile(twop_filename, corr_file_format));
       THREAD(corr.writeFile(twop_filename, corr_file_format));
     }
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}

@@ -229,9 +229,9 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift, bool appe
   }
   
   if(comm_rank() == 0){
-    FILE *ptr;
-    if(append) ptr = fopen(filename.c_str(), "a");
-    else       ptr = fopen(filename.c_str(), "w");
+    // If append==true, the file needs to be initialized before calling this method instad of initializing it using append==false
+    //  Othereise, the order will be messed, and some iterms will be missing.
+    FILE *ptr = append?fopen(filename.c_str(), "a"):fopen(filename.c_str(), "w");
     if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
     int T = (dimT != 1)?HGC_totalL[DIM_T]:1;
     for(int idf = 0 ; idf < dof; idf++)
