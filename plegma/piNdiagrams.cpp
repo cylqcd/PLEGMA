@@ -655,6 +655,7 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], list_mpi2);
       corrP.initialize_diagram(glist_source_meson, glist_sink_meson, "P");
 
+
       //We can compute V2 contractions for B and V3 contraction for W first
       //without having to compute it for all the iterations in the loop
       //over the sequential momentum
@@ -2423,6 +2424,17 @@ int main(int argc, char **argv)
 
          PLEGMA_ScattCorrelator<float> corrD1if56(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
+         std::vector<std::vector<int>> mpi2_pizero = filtered_sourcemomentumList_pi20pf20.uniq_p(0);
+         momList list_mpi2_pizero(1,{mpi2_pizero,},{0,});
+
+
+         PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2_pizero);
+         PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2_pizero);
+
+
+         corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P01UP");
+         corrP0DN.initialize_diagram(glist_source_meson, glist_sink_meson, "P01DN");
+
          TIME(corrD1if34.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP01"),"ISOSPIN12");
 
          TIME(corrD1if12.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP02"),"ISOSPIN12");
@@ -2438,6 +2450,15 @@ int main(int argc, char **argv)
          TIME(produceOutput(corrD1if12, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
          TIME(produceOutput(corrD1if34, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
          TIME(produceOutput(corrD1if56, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
+         TIME(corrP0UP.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+         TIME(corrP0DN.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
+         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+         TIME(corrP0UP.apply_sign("P"),"ISOSPIN32");
+         TIME(corrP0UP.writeHDF5( outfilename ),"ISOSPIN32");
+         TIME(corrP0DN.apply_sign("P"),"ISOSPIN32");
+         TIME(corrP0DN.writeHDF5( outfilename ),"ISOSPIN32");
+
 
        }
 #endif
