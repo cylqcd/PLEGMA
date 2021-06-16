@@ -102,6 +102,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams piNdiagrams.cpp)
   target_link_libraries(piNdiagrams ${PLEGMA_LIBS})
+  cuda_add_executable(checking_Doet checking_Doet.cpp)
+  target_link_libraries(checking_Doet ${PLEGMA_LIBS})
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 
