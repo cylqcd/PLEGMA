@@ -2430,10 +2430,15 @@ int main(int argc, char **argv)
 
          PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2_pizero);
          PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2_pizero);
+         PLEGMA_ScattCorrelator<float> corrPPDN(sourcePositions[isource], list_mpi2_pizero);
+         PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2_pizero);
 
 
-         corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P01UP");
-         corrP0DN.initialize_diagram(glist_source_meson, glist_sink_meson, "P01DN");
+         corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P0UP");
+         corrP0DN.initialize_diagram(glist_source_meson, glist_sink_meson, "P0DN");
+         corrPPUP.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+         corrPPDN.initialize_diagram(glist_source_meson, glist_sink_meson, "PPDN");
+
 
          TIME(corrD1if34.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP01"),"ISOSPIN12");
 
@@ -2453,11 +2458,19 @@ int main(int argc, char **argv)
 
          TIME(corrP0UP.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
          TIME(corrP0DN.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
+         TIME(corrPPUP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+         TIME(corrPPDN.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
+
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
          TIME(corrP0UP.apply_sign("P"),"ISOSPIN32");
          TIME(corrP0UP.writeHDF5( outfilename ),"ISOSPIN32");
          TIME(corrP0DN.apply_sign("P"),"ISOSPIN32");
          TIME(corrP0DN.writeHDF5( outfilename ),"ISOSPIN32");
+         TIME(corrPPUP.apply_sign("P"),"ISOSPIN32");
+         TIME(corrPPUP.writeHDF5( outfilename ),"ISOSPIN32");
+         TIME(corrPPDN.apply_sign("P"),"ISOSPIN32");
+         TIME(corrPPDN.writeHDF5( outfilename ),"ISOSPIN32");
+
 
 
        }
