@@ -836,8 +836,6 @@ int main(int argc, char **argv)
          vectorStoc_source_oet.copy(vectortmp2);
          // vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"oet_source"+sourcepositiontext);
   
-         //Transforming to physical base for the UP quark
-         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,+1); 
  
           //Dilution     
          vectortmp1.dilutespin(vectortmp2,0);
@@ -846,7 +844,8 @@ int main(int argc, char **argv)
          vectorSave_diluted.copy(vectortmp1);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectorSave_diluted);
+           //Transforming to physical base for the UP quark
+           vectortmp2.rotateToPhysicalBasis(vectorSave_diluted,+1); 
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
@@ -876,7 +875,6 @@ int main(int argc, char **argv)
            solver.UpdateSolver();
          }
 
-         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,-1);
 
          //Dilution     
          vectortmp1.dilutespin(vectortmp2,0);
@@ -885,7 +883,8 @@ int main(int argc, char **argv)
          vectorSave_diluted.copy(vectortmp1);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectorSave_diluted);
+           //Transforming to physical base for the DN quark
+           vectortmp2.rotateToPhysicalBasis(vectorSave_diluted,-1);
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
