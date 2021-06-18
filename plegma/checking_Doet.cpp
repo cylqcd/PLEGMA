@@ -216,6 +216,11 @@ int main(int argc, char **argv)
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
 
+
+      asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2],  sourcePositions[isource][3]);
+      std::string sourcepositiontext= (std::string)"_" + ssource;  
+      free(ssource);
+
       //Creating look up tables for the coherent time-slice sources
       int *coherent_source_table=NULL;
       int *coherent_source_table_timeslice=NULL;
@@ -257,7 +262,7 @@ int main(int argc, char **argv)
 	PLEGMA_printf("\n ### Calculations for coherent-source-numbedr %d - timeslice %03d begin now ###\n\n",
                     icoherentsource, sourcePositions[isource][3]+icoherentsource*HGC_totalL[DIM_T]/n_coherent_source);
       }
- 
+#if 1 
       //Create Propagator
       PLEGMA_Propagator<float> propUP(BOTH); //To be saved for all the coherent sources.
       PLEGMA_Propagator<float> propDN(BOTH);
@@ -328,7 +333,7 @@ int main(int argc, char **argv)
         for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
           propUP.absorbTimeslice(propUP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
         }
-        /*if(outfile_upS!="")
+        if(outfile_upS!="")
         {
           PLEGMA_printf("Save propagator for the up quark\n");
           PLEGMA_Vector<float> vectorAuxPrint(BOTH);
@@ -341,7 +346,7 @@ int main(int argc, char **argv)
             vectorAuxPrint.writeLIME(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
             //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
           }
-        }*/
+        }
         // ensuring mu negative
         if(mu>0) {
           mu*=-1.;
@@ -380,7 +385,20 @@ int main(int argc, char **argv)
         for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
 	  propDN.absorbTimeslice(propDN_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
         } 
+        if(outfile_dnS!="")
+        {
+          PLEGMA_printf("Save propagator for the up quark\n");
+          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
+          for(int isc = 0 ; isc < 12 ; isc++){
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
 
+            vectorAuxPrint.absorb(propUP,isc/3,isc%3);
+            vectorAuxPrint.unload();
+            vectorAuxPrint.writeLIME(outfile_dnS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+            //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+          }
+        }
       }
       site& source = sourcePositions[isource];
       PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
@@ -406,7 +424,7 @@ int main(int argc, char **argv)
 	
       TIME(corr.contractBaryons(propUP, propDN),"ISOSPIN32");
       corr.writeFile(twop_filename, corr_file_format);
-
+#endif
       std::vector<int> mom={0,0,0};
       std::string outfilename;
 
@@ -459,17 +477,18 @@ int main(int argc, char **argv)
          vectorStoc_source_oet.copy(vectortmp2);
          // vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"oet_source"+sourcepositiontext);
   
-         //Transforming to physical base for the UP quark
-         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,+1); 
- 
           //Dilution     
          vectortmp1.dilutespin(vectortmp2,0);
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
          vectorSave_diluted.copy(vectortmp1);
+         vectorStoc_source_oet.writeLIME(outfile_V+confnumber+"source_oet"+sourcepositiontext+"mompi2_0_0_0_s");
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectorSave_diluted);
+
+           //Transforming to physical base for the UP quark
+           vectortmp2.rotateToPhysicalBasis(vectorSave_diluted,+1); 
+ 
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
@@ -482,7 +501,7 @@ int main(int argc, char **argv)
            stochastic_oet_prop_u_zero_mom[spinindex]->copy(vectortmp2,HOST);
            vectortmp2.load();
 
-          // vectortmp2.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
+           vectortmp2.writeLIME(outfile_V+confnumber+"propagator_up"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
 
              vectortmp1.diluteSpinDisplace(vectorSave_diluted,spinindex+1,spinindex);
@@ -499,7 +518,6 @@ int main(int argc, char **argv)
            solver.UpdateSolver();
          }
 
-         vectortmp2.rotateToPhysicalBasis(vectorStoc_source_oet,-1);
 
          //Dilution     
          vectortmp1.dilutespin(vectortmp2,0);
@@ -508,7 +526,7 @@ int main(int argc, char **argv)
          vectorSave_diluted.copy(vectortmp1);
 
          for (int spinindex=0; spinindex<4; ++spinindex){
-           vectortmp2.copy(vectorSave_diluted);
+           vectortmp2.rotateToPhysicalBasis(vectorSave_diluted,-1);
            //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_zero_momentum"+std::to_string(spinindex));         
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
@@ -520,7 +538,7 @@ int main(int argc, char **argv)
            vectortmp2.unload();
            stochastic_oet_prop_d_zero_mom[spinindex]->copy(vectortmp2,HOST);
            vectortmp2.load();
-           //vectortmp2.writeLIME(outfile_V+confnumber+"propagator_dn"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
+           vectortmp2.writeLIME(outfile_V+confnumber+"propagator_dn"+sourcepositiontext+"mompi2_0_0_0_s"+std::to_string(spinindex));
            if (spinindex<3){
              vectortmp1.diluteSpinDisplace(vectorSave_diluted,spinindex+1,spinindex);
              vectorSave_diluted.copy(vectortmp1);
@@ -595,9 +613,6 @@ int main(int argc, char **argv)
          TIME(corrPPUP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
          TIME(corrPPDN.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
 
-         asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2],  sourcePositions[isource][3]);
-         std::string sourcepositiontext= (std::string)"_" + ssource;  
-         free(ssource);
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
          TIME(corrP0UP.apply_sign("P"),"ISOSPIN32");
