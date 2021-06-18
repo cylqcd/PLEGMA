@@ -69,6 +69,9 @@ int main(int argc, char **argv)
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   bool timedilution;
   bool readstochastic;
+  bool do_contraction_std;
+  bool do_stochastic; 
+  bool do_stochastic_oet;
   int n_coherent_source;
   int n_stochastic_samples;
   int nroots=4;
@@ -81,6 +84,9 @@ int main(int argc, char **argv)
   std::string outfile_dnS="";
   std::string outfile_SEQ="";
   std::string outdiagramPrefix="";
+  HGC_options->set("contractionstoch", "We are performing stochastic contraction for the piN-piN diagrams B,W,D1ii,D1ff,T", verbosity, do_stochastic);
+  HGC_options->set("contractionstd", "We are performing std contractions for nucleon and delta in both isospin channels", verbosity, do_contraction_std);
+  HGC_options->set("contractionoet", "We are performing oet contraction for Z diagrams and for pions", verbosity, do_stochastic_oet);
   HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
   HGC_options->set("readStochSamples", "Flag for switching read/building stochastic propagators", verbosity, readstochastic);
   HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
@@ -206,6 +212,8 @@ int main(int argc, char **argv)
     PLEGMA_Vector<double> vectorStoc_source_oet;
     vectorStoc_source_oet.randInit(rand_seed1);
 
+    if (do_stochastic==true){
+
     PLEGMA_printf("Start producing stochastic vectors and propagators\n");
     //Note that we replace the f1<-f2 DN propagator with a stochastic one
     //in two steps actually
@@ -312,7 +320,7 @@ int main(int argc, char **argv)
         stochastic_propags[i]->copy(vectorRead,HOST);
       }
     }
-
+    } //end of if (do_stochastic)
 #ifdef PLEGMA_SCATTERING_SPIN12
     //Creating loops for zero momentum
     //for the I=1/2 case we consider only momentum for the nucleon
@@ -326,6 +334,7 @@ int main(int argc, char **argv)
  
     PLEGMA_ScattCorrelator<float> Loop_UPDN(source_stoch, piN12_zeropion);
 
+    if (do_stochastic==true){
     Loop_UPDN.initialize_diagram( glist_sink_meson, "L");
 
 
@@ -338,6 +347,7 @@ int main(int argc, char **argv)
     TIME(Loop_UPDN.normalize_nstoch(n_stochastic_samples),"ISOSPIN12");
 
 #endif
+    } //end of if(do_stochastic)
 
 /********************************************************************************************
 *
@@ -361,7 +371,6 @@ int main(int argc, char **argv)
       int *coherent_source_table=NULL;
       int *coherent_source_table_timeslice=NULL;
       int **coherent_look_up_table=NULL;
-      //if (n_coherent_source > 1){
 
       coherent_source_table=(int *)malloc(sizeof(int)*n_coherent_source);
       for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
@@ -416,7 +425,8 @@ int main(int argc, char **argv)
 #endif
 
 
-      for(int icoherentsource=0;icoherentsource < n_coherent_source; ++icoherentsource){
+      for(int icoherentsource=0;icoherentsource < n_coherent_source; ++icoherentsource)
+      {
 
         PLEGMA_Propagator<float> propUP_coherent;
         PLEGMA_Propagator<float> propDN_coherent;
@@ -529,7 +539,10 @@ int main(int argc, char **argv)
         site source=site({0,0,0, coherent_source_table[icoherentsource]});
         std::string outfilename;
 
+         
+
         //D diagram
+        if (do_contraction_std == true)
         {
 	  std::vector<std::vector<int>> mtot = sourcemomentumList.uniq_p(3);
 	  momList list_mtot(1,{mtot,},{0,});
@@ -586,6 +599,7 @@ int main(int argc, char **argv)
         }
       
         //N diagram
+        if (do_contraction_std==true){
         std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
         momList list_mpf1(1,{mpf1,},{0,});
         PLEGMA_ScattCorrelator<float> corrNP_coherent(src, list_mpf1 );
@@ -645,7 +659,8 @@ int main(int argc, char **argv)
           TIME( corrN0_coherent.applyBoundaryConditions( true ),"ISOSPIN12" );
           TIME( corrN0_coherent.writeHDF5(outfilename) ,"ISOSPIN12");
 
-        }
+        }//end of T reduction 
+        }//end of if(do_contraction_std)
 
       } //End of loop on coherent sources
 
@@ -691,7 +706,8 @@ int main(int argc, char **argv)
 
       site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
- 
+        
+      if (do_stochastic==true){
       for(int i=0; i< n_stochastic_samples; ++i) {
         try
         {
@@ -793,13 +809,15 @@ int main(int argc, char **argv)
         TIME(reductions_DD_V2_GAMMAF1U_D[i]->V2( stochastic_source, glist_sink_nucleon, propUP, propDN, false), "ISOSPIN12");
 #endif
 
-      }
+      } //end of for stochastic_sample
+      } //end of if(do_stochastic)
 
       //We draw a different random vector for every source position
       vectorStoc_source_oet.stochastic_Z(nroots);
       
       //Store zero momentum oet propagators: also for the oet propagators we produce coherent sources
       std::array<PLEGMA_Vector<float>,4> stochastic_propagator_momzero;
+      if (do_stochastic_oet==true)
       {
 
          //Doing for +mu for the UP propagator spin dilution oet
@@ -902,7 +920,7 @@ int main(int argc, char **argv)
              vectorSave_diluted.copy(vectortmp1);
            }
          }
-      }
+      }//end of do_stochastic_oet
 
       //zero momentum oet contractions
       std::array<PLEGMA_ScattCorrelator<float>,4> reductionsV3_diluted = {
@@ -978,6 +996,7 @@ int main(int argc, char **argv)
       };
 
 
+      if (do_stochastic_oet==true){
       for (int i=0; i< 4; ++i){
         PLEGMA_Vector<float> st_oet_u_zero;
         PLEGMA_Vector<float> st_oet_d_zero;
@@ -1006,7 +1025,7 @@ int main(int argc, char **argv)
 
 
       }
-
+      }
 
 #if 0
       //T diagram piN sink
@@ -1137,7 +1156,7 @@ int main(int argc, char **argv)
       
 #if defined(PLEGMA_SCATTERING_SPIN12)     
       //Loop diagram at the source
-      if (1){
+      if (do_stochastic){
 
         PLEGMA_ScattCorrelator<float> corrD1ii1(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
         PLEGMA_ScattCorrelator<float> corrD1ii2(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
@@ -1254,7 +1273,9 @@ int main(int argc, char **argv)
 *
 *
 ***********************************************************************************************/
+
 #if defined(PLEGMA_SCATTERING_SPIN12)
+      if (do_stochastic==true)
       //uu case
       {
 
@@ -1557,7 +1578,7 @@ int main(int argc, char **argv)
       }//end of loop for sequential UU
 
       //start for DD
-      {
+      if (do_stochastic==true){
 
 
         // ensuring mu negative
@@ -1770,7 +1791,7 @@ int main(int argc, char **argv)
        } //end of loop i_gamma_i2
 
 
-      }//end for DD
+      }//end for DD do_stochastic==true
 #endif
 
 
@@ -1843,6 +1864,7 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(2));
 
         //Loop over the different gamma structure for the source meson
+        if (do_stochastic==true){
         for (int i_gamma_i2=0; i_gamma_i2<glist_source_meson.size(); ++i_gamma_i2) {
 	  GAMMAS_SCATT gamma_i2 = glist_source_meson[i_gamma_i2];
           // Computing sequential propagators f1 <- i_2 <- i_1 
@@ -2203,16 +2225,15 @@ int main(int argc, char **argv)
           TIME(corrT.T_diagramms(reductionsT1triangle, reductionsT3triangle, reductionsT5triangle, i_gamma_i2),"ISOSPIN32");
            
        } //loop over gamma i2
-         
-	  
+       } //if (do_stochastic==true)
+  
        //Producing spin diluted stochastic propagators for diagram Z1,Z2,Z3,Z4
              
        //We need V3 reductions for all the possible pf2 for diagrams Z1,Z2,Z3,Z4 
 
        //We need V2 reductions for all the possible nucleon momenta pf1
 
-
-
+       if (do_stochastic_oet==true){
        {
           PLEGMA_Vector<double> vectortmp1;
           PLEGMA_Vector<double> vectortmp2;
@@ -2372,7 +2393,6 @@ int main(int argc, char **argv)
        TIME(produceOutput(corrZ18, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
        TIME(produceOutput(corrZ19, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
        TIME(produceOutput(corrZ20, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-
 #else //defined(PLEGMA_SCATTERING_SPIN12)
 
        if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
@@ -2412,86 +2432,98 @@ int main(int argc, char **argv)
       TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
       TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 #endif
-
+      }//do_stochastic_oet
 #if defined(PLEGMA_SCATTERING_SPIN12)
 
        if  ((momentum_i2[0] == 0) && (momentum_i2[1] == 0) && (momentum_i2[2] == 0)){
 
-         PLEGMA_ScattCorrelator<float> corrD1if12(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+         if ((do_contraction_std==true) && (do_stochastic_oet==true)){
+           PLEGMA_ScattCorrelator<float> corrD1if12(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-         PLEGMA_ScattCorrelator<float> corrD1if34(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
+           PLEGMA_ScattCorrelator<float> corrD1if34(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
-         PLEGMA_ScattCorrelator<float> corrD1if56(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
-
-         std::vector<std::vector<int>> mpi2_pizero = filtered_sourcemomentumList_pi20pf20.uniq_p(0);
-         momList list_mpi2_pizero(1,{mpi2_pizero,},{0,});
+           PLEGMA_ScattCorrelator<float> corrD1if56(sourcePositions[isource], filtered_sourcemomentumList_pi20pf20);
 
 
-         PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2_pizero);
-         PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2_pizero);
-         PLEGMA_ScattCorrelator<float> corrPPDN(sourcePositions[isource], list_mpi2_pizero);
-         PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2_pizero);
+           TIME(corrD1if34.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP01"),"ISOSPIN12");
+
+           TIME(corrD1if12.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP02"),"ISOSPIN12");
+
+           TIME(corrD1if56.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MN0PP"),"ISOSPIN12");
 
 
-         corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P0UP");
-         corrP0DN.initialize_diagram(glist_source_meson, glist_sink_meson, "P0DN");
-         corrPPUP.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
-         corrPPDN.initialize_diagram(glist_source_meson, glist_sink_meson, "PPDN");
+           TIME(corrD1if56.M_diagramms( corrN0, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom),"ISOSPIN12");
+           TIME(corrD1if34.M_diagramms( corrNP, stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom),"ISOSPIN12");
+           TIME(corrD1if12.M_diagramms( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom),"ISOSPIN12");
+
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
+           TIME(produceOutput(corrD1if12, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+           TIME(produceOutput(corrD1if34, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+           TIME(produceOutput(corrD1if56, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
+         
+         }
+         
+         if (do_stochastic_oet==true){
+           std::vector<std::vector<int>> mpi2_pizero = filtered_sourcemomentumList_pi20pf20.uniq_p(0);
+           momList list_mpi2_pizero(1,{mpi2_pizero,},{0,});
+
+           PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2_pizero);
+           PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2_pizero);
+           PLEGMA_ScattCorrelator<float> corrPPDN(sourcePositions[isource], list_mpi2_pizero);
+           PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2_pizero);
 
 
-         TIME(corrD1if34.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP01"),"ISOSPIN12");
+           corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P0UP");
+           corrP0DN.initialize_diagram(glist_source_meson, glist_sink_meson, "P0DN");
+           corrPPUP.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+           corrPPDN.initialize_diagram(glist_source_meson, glist_sink_meson, "PPDN");
 
-         TIME(corrD1if12.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP02"),"ISOSPIN12");
-
-         TIME(corrD1if56.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MN0PP"),"ISOSPIN12");
 
  
-         TIME(corrD1if56.M_diagramms( corrN0, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom),"ISOSPIN12");
-         TIME(corrD1if34.M_diagramms( corrNP, stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom),"ISOSPIN12");
-         TIME(corrD1if12.M_diagramms( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom),"ISOSPIN12");
 
-         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
-         TIME(produceOutput(corrD1if12, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrD1if34, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
-         TIME(produceOutput(corrD1if56, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+           TIME(corrP0UP.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+           TIME(corrP0DN.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
+           TIME(corrPPUP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+           TIME(corrPPDN.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
 
-         TIME(corrP0UP.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
-         TIME(corrP0DN.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
-         TIME(corrPPUP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
-         TIME(corrPPDN.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+           TIME(corrP0UP.apply_sign("P"),"ISOSPIN32");
+           TIME(corrP0UP.writeHDF5( outfilename ),"ISOSPIN32");
+           TIME(corrP0DN.apply_sign("P"),"ISOSPIN32");
+           TIME(corrP0DN.writeHDF5( outfilename ),"ISOSPIN32");
+           TIME(corrPPUP.apply_sign("P"),"ISOSPIN32");
+           TIME(corrPPUP.writeHDF5( outfilename ),"ISOSPIN32");
+           TIME(corrPPDN.apply_sign("P"),"ISOSPIN32");
+           TIME(corrPPDN.writeHDF5( outfilename ),"ISOSPIN32");
 
-         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
-         TIME(corrP0UP.apply_sign("P"),"ISOSPIN32");
-         TIME(corrP0UP.writeHDF5( outfilename ),"ISOSPIN32");
-         TIME(corrP0DN.apply_sign("P"),"ISOSPIN32");
-         TIME(corrP0DN.writeHDF5( outfilename ),"ISOSPIN32");
-         TIME(corrPPUP.apply_sign("P"),"ISOSPIN32");
-         TIME(corrPPUP.writeHDF5( outfilename ),"ISOSPIN32");
-         TIME(corrPPDN.apply_sign("P"),"ISOSPIN32");
-         TIME(corrPPDN.writeHDF5( outfilename ),"ISOSPIN32");
-
-
-
-       }
+       }//stochastic oet true
+       }//momentum i2==0
 #endif
-
+     
        //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
        if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
-         TIME(corrP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom, i_mpi2),"ISOSPIN32");
 
-         TIME(corrM.M_diagramms( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom ),"ISOSPIN32");
-       
+         if (do_stochastic_oet==true){
+         TIME(corrP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom, i_mpi2),"ISOSPIN32");
+         }
+         if ((do_stochastic_oet==true) && (do_contraction_std==true)){
+           TIME(corrM.M_diagramms( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom ),"ISOSPIN32");
+         }
        }
        else{
+         if (do_stochastic_oet==true){
          TIME(corrP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
-
-
+         }
+         if ((do_stochastic_oet==true) && (do_contraction_std==true)){
          TIME(corrM.M_diagramms( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom ),"ISOSPIN32");
+         }
        }
 	
 
        //write everything
-       //## T
+       //## T 
+       if (do_stochastic==true){
 
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
      
@@ -2501,8 +2533,9 @@ int main(int argc, char **argv)
 
        TIME(corrT.writeHDF5(outfilename),"ISOSPIN32");
        
+     
        //## B
-       
+         
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
 
        TIME(produceOutput(corrB1, outfilename, "4pt", n_stochastic_samples, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
@@ -2515,34 +2548,37 @@ int main(int argc, char **argv)
        TIME(produceOutput(corrW2, outfilename, "4pt", n_stochastic_samples,  n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
        TIME(produceOutput(corrW3, outfilename, "4pt", n_stochastic_samples,  n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
        TIME(produceOutput(corrW4, outfilename, "4pt", n_stochastic_samples,  n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-
+       }
        //## Z
 
+
+       if (do_stochastic_oet==true){
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
        TIME(produceOutput(corrZ1, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
        TIME(produceOutput(corrZ2, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
        TIME(produceOutput(corrZ3, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
        TIME(produceOutput(corrZ4, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-
+       }
        //## M
+       if ((do_stochastic==true) && (do_stochastic_oet==true)){
        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
 
        TIME(produceOutput(corrM, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-      
+       }
       }//loop over unique set of momenta for p_i2
- 
       //write P
-
+      if (do_stochastic_oet==true){
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
       TIME(corrP.apply_sign("P"),"ISOSPIN32");
       TIME(corrP.writeHDF5( outfilename ),"ISOSPIN32");
-
+      }
+      if (do_contraction_std==true){
       //## N
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
       TIME(produceOutput(corrNP, outfilename,"N"),"ISOSPIN32");
       TIME(produceOutput(corrN0, outfilename,"N"),"ISOSPIN12");
-      
+      }
       for(int i=0; i< n_stochastic_samples; ++i) {
 
         reductions_UU_V2_GAMMAF1D_U.pop_back();
@@ -2568,12 +2604,12 @@ int main(int argc, char **argv)
     } //end of loop over source position
 
 //#endif
-
+    if (do_stochastic==true){
 #ifdef PLEGMA_SCATTERING_SPIN12
     outfilename = outdiagramPrefix+confnumber+"_LoopUPDN";
     TIME(produceOutput(Loop_UPDN, outfilename,"L"),"ISOSPIN32");
 #endif
-
+    }
 
     for(int i=0; i< 4; ++i) {
 #ifdef PLEGMA_SCATTERING_SPIN12
