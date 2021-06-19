@@ -21,7 +21,7 @@ std::vector<double> runtime;
 //#define THREAD(fnc) TIME(fnc)
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "readStochSamples","time-dilution","nstochSamples","confnumber"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "readStochSamples","time-dilution","nstochSamples","confnumber","contractionstoch","contractionstd","contractionoet"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
 
 void produceOutput( PLEGMA_ScattCorrelator<float> source,
@@ -895,7 +895,7 @@ int main(int argc, char **argv)
 
 
          //Dilution     
-         vectortmp1.dilutespin(vectortmp2,0);
+         vectortmp1.dilutespin(vectorStoc_source_oet,0);
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
          vectorSave_diluted.copy(vectortmp1);
