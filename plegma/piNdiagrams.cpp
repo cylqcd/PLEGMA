@@ -335,16 +335,18 @@ int main(int argc, char **argv)
     PLEGMA_ScattCorrelator<float> Loop_UPDN(source_stoch, piN12_zeropion);
 
     if (do_stochastic==true){
-    Loop_UPDN.initialize_diagram( glist_sink_meson, "L");
+      Loop_UPDN.initialize_diagram( glist_sink_meson, "L");
 
+      for (int i=0; i<n_stochastic_samples; ++i){
+       
+        TIME(Loop_UPDN.Loop_diagramms( stochastic_propags[i], stochastic_sources[i], 0, false, true),"ISOSPIN12");
 
-    for (int i=0; i<n_stochastic_samples; ++i){
-      
-      TIME(Loop_UPDN.Loop_diagramms( stochastic_propags[i], stochastic_sources[i], 0, true),"ISOSPIN12");
+      }
 
-    }
+      TIME(Loop_UPDN.normalize_nstoch(n_stochastic_samples),"ISOSPIN12");
 
-    TIME(Loop_UPDN.normalize_nstoch(n_stochastic_samples),"ISOSPIN12");
+      outfilename = outdiagramPrefix+confnumber+"_LoopUPDN_UP";
+      TIME(produceOutput(Loop_UPDN, outfilename,"L"),"ISOSPIN32");
 
 #endif
     } //end of if(do_stochastic)
@@ -1193,19 +1195,12 @@ int main(int argc, char **argv)
           Loop_UPDN_source[j]=0.0;
         }
 
-        PLEGMA_ScattCorrelator<float> Loop_UPDN_temporary(source, piN12_zeropion); 
-
-        Loop_UPDN_temporary.initialize_diagram( glist_sink_meson, "L"); 
-
 
         for (int i=0; i<n_stochastic_samples; ++i){
 
 
-          TIME(Loop_UPDN_temporary.Loop_diagramms( stochastic_sources[i], stochastic_propags[i], 0, false),"ISOSPIN12");
-
-
           float *Loop_UPDN_sp;
-          Loop_UPDN_sp=Loop_UPDN_temporary.get_source_time_slice();
+          Loop_UPDN_sp=Loop_UPDN.get_source_time_slice();
 
           for (int j=0; j< glist_source_meson.size(); ++j){
             Loop_UPDN_source[2*j+0]+=Loop_UPDN_sp[2*j+0];
@@ -1213,15 +1208,6 @@ int main(int argc, char **argv)
           }
           free(Loop_UPDN_sp);
 
-
-        }
-
-        for (int j=0; j< 2*glist_source_meson.size(); ++j){
-          Loop_UPDN_source[j]/=n_stochastic_samples;
-        }
-
-        
-        for (int i=0; i<n_stochastic_samples; ++i){
 
           TIME(corrD1ii1.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V2_GAMMAF1D_U[i], Loop_UPDN_source, 0, 1, true),"ISOSPIN12");          
           TIME(corrD1ii2.D1ii_diagramms(*reductions_UU_V3_GAMMAF2U_zero_mom[i], *reductions_UU_V4_GAMMAF1U_D[i], Loop_UPDN_source, 0, 2, true),"ISOSPIN12");          
@@ -2604,12 +2590,6 @@ int main(int argc, char **argv)
     } //end of loop over source position
 
 //#endif
-    if (do_stochastic==true){
-#ifdef PLEGMA_SCATTERING_SPIN12
-    outfilename = outdiagramPrefix+confnumber+"_LoopUPDN";
-    TIME(produceOutput(Loop_UPDN, outfilename,"L"),"ISOSPIN32");
-#endif
-    }
 
     for(int i=0; i< 4; ++i) {
 #ifdef PLEGMA_SCATTERING_SPIN12
