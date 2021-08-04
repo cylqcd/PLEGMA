@@ -1278,8 +1278,12 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
 //if i_pi2 != -1 we compute the loop only for the i_pi2 momentum in this->pList() 
 //Note that the arguments are pointers to PLEGMA_Vectors on the host, they
 //have to be loaded to the device to start the contractions
+//Note that here we explicitely assume you want to compute pi0 loops <uu>-<dd> with gamma5 insertion
+//by setting the real part of the loop to zero explicitely and multiply the imaginary part by 2.
+//it is assumed therefore that we call it with the propagator as the first argument and with the
+//stochastic source as the second one.
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2, bool dn, bool accum){
 
   assert(i_pi2<this->pList().size());
   
@@ -1308,8 +1312,14 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0
   PLEGMA_Vector<Float> phi1;
   phi0.copy(*Phi_0,HOST);
   phi0.load();
+  if (dn){
+   phi0.apply_gamma5();
+  }
   phi1.copy(*Phi_1,HOST);
   phi1.load();
+  if (dn){
+   phi1.apply_gamma5();
+  }
       
   //PhixGf2xPhi
   pipi_aux.PhiPhi( phi0, this->GList[0], phi1); //T x N_moms x n_gammas_f2
@@ -1320,7 +1330,7 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0
       for( int t=0; t<TIME; ++t){
         for( int gf2=0; gf2<n_gammas_f2; ++gf2){
           x_pe_sy( this->Corr(t,im,gf2), factor, pipi_aux.Corr(t,im,gf2), 1); //the sign minus -1 is coming from the fermion loop
-          this->Corr(t,im,gf2)[1]=0;
+          this->Corr(t,im,gf2)[0]=0;
         }
       }
     }
@@ -1329,7 +1339,7 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0
     for( int t=0; t<TIME; ++t){
       for( int gf2=0; gf2<n_gammas_f2; ++gf2){
         x_pe_sy( this->Corr(t,i_pi2,gf2), factor,  pipi_aux.Corr(t,i_pi2,gf2), 1);//the sign minus -1 is coming from the fermion loop
-        this->Corr(t,i_pi2,gf2)[1]=0;
+        this->Corr(t,i_pi2,gf2)[0]=0;
       }
     }
   }	
