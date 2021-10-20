@@ -128,3 +128,6 @@ target_link_libraries(mesons_2pt ${PLEGMA_LIBS})
 
 cuda_add_executable(mesons_simple mesons_simple.cpp)
 target_link_libraries(mesons_simple ${PLEGMA_LIBS})
+
+cuda_add_executable(Zfac_diagGI Zfac_diagGI.cpp)
+target_link_libraries(Zfac_diagGI ${PLEGMA_LIBS})

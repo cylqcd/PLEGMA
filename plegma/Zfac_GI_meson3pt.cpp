@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
-      // prop_SS: smearing both at source(nSmear0, alphaGauss)  and sink(nSmear1, alphaGauss)
-      // prop_SL: smearing only at the source(nSmear0, alphaGauss)
+      //: prop_SS: smearing both at source(nSmear0, alphaGauss)  and sink(nSmear1, alphaGauss)
+      //: prop_SL: smearing only at the source(nSmear0, alphaGauss)
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
 				   double run_mu, WHICHFLAVOR fl, int nSmear0, int nSmear1) {
 				 // ensuring mu value
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
       twop_filename = given_twop_filename + src_string;
       threep_filename = given_threep_filename + src_string;
       free(src_string);
-      
+
       //PLEGMA_Propagator<float> propUP_wrong_smear;
       PLEGMA_Propagator<float> propUP;
       //PLEGMA_Propagator<float> propST_wrong_smear;
@@ -144,6 +144,7 @@ int main(int argc, char **argv) {
 	PLEGMA_printf("mu: %g\n",mu_ud);
 	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, nsmearGauss));
 	//TIME(computePropagator(propST, propST_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s));
+	
 	// Correcting the smearing for up
 	/*
 	for(int isc = 0 ; isc < 12 ; isc++){
@@ -182,6 +183,7 @@ int main(int argc, char **argv) {
 	  //propST3D.absorb(propST, global_fixSinkTime);
 	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
+	  std::string meson_index[4] = {'5', '1', '2', '3'};
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
 	  for(size_t imom = 0; imom < sourceMom.size()/3; imom++){
 	    std::vector<int> sinkMom = {sourceMom[imom*3],sourceMom[imom*3+1],sourceMom[imom*3+2]};
@@ -202,7 +204,7 @@ int main(int argc, char **argv) {
 		solver.UpdateSolver();
 	      }
 	      // Note: interpolating op's are rotated to physical basis so that there are extra G5 multiplying G_mu_rho and G_nu_rho
-	      for(int mu_rho = 1; mu_rho<N_DIMS; mu_rho++){
+	      for(int mu_rho = 0; mu_rho<N_DIMS; mu_rho++){
 		PLEGMA_Propagator<float> seqProp(BOTH, FIRST_CORNER);
 		for(int nu = 0 ; nu < 4 ; nu++)
 		  for(int c2 = 0 ; c2 < 3 ; c2++){
@@ -232,8 +234,8 @@ int main(int argc, char **argv) {
 		    seqProp.absorb(vectorAuxF, nu, c2);
 		  }
 		seqProp.apply_gamma(G5);
-		for(int nu_rho = 1; nu_rho<N_DIMS; nu_rho++){
-		  std::string filename = filename0 + std::to_string(mu_rho) + std::to_string(nu_rho);
+		for(int nu_rho = 0; nu_rho<N_DIMS; nu_rho++){
+		  std::string filename = filename0 + meson_index[mu_rho] + meson_index[nu_rho];
 		  PLEGMA_Propagator<float> seqPropGamma(BOTH, FIRST_CORNER);
 		  seqPropGamma.copy(seqProp,BOTH);
 		  seqPropGamma.apply_gamma(gammas[nu_rho],RIGHT);
@@ -245,24 +247,18 @@ int main(int argc, char **argv) {
 		  TIME(corr.contractNucleonThrp_local(seqPropGamma, propF, signProps, gammas));
 		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 		  THREAD(corr.writeFile(filename, corr_file_format));
-		  if( mu_rho != nu_rho ){	  
-		    // ONED contractions
-		    std::vector<GAMMAS> gammas_T = {gammas[mu_rho], gammas[nu_rho]};//need only D_nu_rho for gammas[mu_rho] & D_mu_rho for gammas[nu_rho]
-		    TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas_T)); 
-		    //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-		    THREAD(corr.writeFile( filename, corr_file_format));
-		  }
+		  // ONED contractions
+		  TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas));
+		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+		  THREAD(corr.writeFile( filename, corr_file_format));
 		  // noe contractions
 		  TIME(corr.contractNucleonThrp_noe(seqPropGamma, propF, contractGauge, signProps));
 		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 		  THREAD(corr.writeFile( filename, corr_file_format));
-		  
 		  // TWOD contractions
-		  /*
-		    TIME(corr.contractNucleonThrp_twoD(seqPropGamma, propF, contractGauge, signProps, gammas));
-		    //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-		    THREAD(corr.writeFile( filename, corr_file_format));
-		  */
+		  TIME(corr.contractNucleonThrp_twoD(seqPropGamma, propF, contractGauge, signProps, gammas));
+		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+		  THREAD(corr.writeFile( filename, corr_file_format));
 		}
 	      }
 	    };
@@ -283,7 +279,7 @@ int main(int argc, char **argv) {
 
       {
 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-	TIME(corr.contractMesonsNew(propUP, propUP));
+	TIME(corr.contractMesonsAll(propUP, propUP));
 	corr.setDatasets((std::vector<std::string>) {"twop_meson_uu"});
 	THREAD(corr.writeFile(twop_filename, corr_file_format));
 	/*

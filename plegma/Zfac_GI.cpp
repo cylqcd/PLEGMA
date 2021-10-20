@@ -40,21 +40,21 @@ int main(int argc, char **argv)
      * Definition \mathcal{O}_i = unknown * \Tr[\sum_\mu F_{i,\mu} * F_{3,\mu}]
      * FST indices cannot be same
      * unknown is a factor which will be figured out later
-     */
+     ************************************************************************************************************************/
 
     if ( (nsmearStout-nsmearStoutStart)%nsmearStep != 0 )
       PLEGMA_error("nsmear-stout-Gprop must be divisible by nsmear-step-Gprop\n");
 
-    // setup output
-    /*   If add3D == true, we compute gluon loops with 3D smearing as well as 4D
+    /***  Smearing Options  **********************************************************
+     *   If add3D == true, we compute gluon loops with 3D smearing as well as 4D
      *   If isS4D == true, 4D smearing is performed but only for the spatial indicies
-     */
+     *********************************************************************************/
     int n_s_dim = (add3D)?2:1;
     std::string sd = (isS4D)?"S4D":"4D";
     std::string outName3 = pathOut + "T_G_3DStoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
     std::string outName4 = pathOut + "T_G_"+sd+"StoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
 
-    // initialize the files: I append data later
+    // create empty files: I append data later
     FILE *fp = NULL;
     if(comm_rank() == 0){
       if (add3D) {
@@ -75,7 +75,6 @@ int main(int argc, char **argv)
 
     PLEGMA_Gauge<double> gauge, gauge1, gauge2;
     PLEGMA_Field<double> trace1(BOTH,SCALAR), trace2(BOTH,SCALAR); // could this be DEVICE?
-    PLEGMA_Field3D<double> tr3D(BOTH,SCALAR);
     PLEGMA_FT<double> ft3D(0,3,false,dims[3]); // this performs 3D FT on each time slice
     PLEGMA_Fmunu<double> fmunu;
     PLEGMA_Su3field<double> one3x3; 
@@ -89,8 +88,9 @@ int main(int argc, char **argv)
       PLEGMA_printf("Unsmeared Plaquette is: ");
       gauge.calculatePlaq();
 
-      for ( int i_s = 0; i_s < n_s_dim; i_s++ ){
+      for ( int i_s = 0; i_s < n_s_dim; i_s++ ){ // loop over smearing options
 	int s_dim = (add3D && i_s == 0)?3:4;// smearing dimension: assume n_s_dim = 1 or 2
+	// Smear the gauge and compute FST
 	for(int n=nsmearStoutStart; n<=nsmearStout;n+=nsmearStep){
 	  if((n-nsmearStoutStart)%(2*nsmearStep) == 0){
 	    if((n-nsmearStoutStart)==0) {
@@ -102,9 +102,10 @@ int main(int argc, char **argv)
 	  else{
 	    gauge1.stoutSmearing(gauge2,nsmearStep,alphaStout,s_dim,isS4D);
 	  }
-	  
 	  fmunu.compute_leaves(((n-nsmearStoutStart)%(2*nsmearStep)==0)?gauge2:gauge1);
-	  for(int p =0 ; p<pairs.size(); p++){ // for each pair (i,j), compute T_ij
+	  
+	  // for each pair (i,j), compute T_ij
+	  for(int p =0 ; p<pairs.size(); p++){ 
 	    int i = pairs[p].first, j = pairs[p].second;
 	    double sign;
 	    trace2.zero_device();

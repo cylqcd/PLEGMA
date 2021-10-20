@@ -331,20 +331,20 @@ protected:
     // In this function only one processor writes
     if(getRank() == 0) {
       bool needs_shift = false;
-      T* tmp;// = buf; // if I do it, somehow precision is lost
+
+      T* tmp = buf;
       if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
-      
+
       // Shifting the data accordingly to start
       if(needs_shift) {
 	hostMalloc(tmp, product(shape)*sizeof(T));
+
 	for(hsize_t i = 0; i<product(shape); i++) {
 	  hsize_t j = to_id( add( from_id(i, shape), start), shape);
 	  tmp[j] = buf[i];
 	}
-      } else {
-	tmp = buf;
       }
-
+      
       _write_dataset_parallel(dataset_id, tmp, shape, shape, zeros_like(shape), true);
 
       if(needs_shift) {
