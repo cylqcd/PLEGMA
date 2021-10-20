@@ -24,10 +24,12 @@ int main(int argc, char **argv) {
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int startSource = 0;
+  int endSource = numSourcePositions;
   auto add_options = [&](Options& options) {
     options.set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
     options.set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
     options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
+    options.set("end-src", "The index of the source position where to stop the calculation", verbosity, endSource);
 		     };
   add_options(*HGC_options);
   //=========================================================================================================//
@@ -70,7 +72,7 @@ int main(int argc, char **argv) {
     TIME(QUDA_solver solver(mu));
 
     std::string given_twop_filename = twop_filename;
-    for(int isource = startSource; isource < numSourcePositions; isource++){
+    for(int isource = startSource; isource < endSource; isource++){
       site& source = sourcePositions[isource];
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
                     isource, source[0], source[1], source[2], source[3]);

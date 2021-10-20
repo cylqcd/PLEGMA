@@ -144,6 +144,7 @@ int main(int argc, char **argv) {
 	PLEGMA_printf("mu: %g\n",mu_ud);
 	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, nsmearGauss));
 	//TIME(computePropagator(propST, propST_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s));
+	
 	// Correcting the smearing for up
 	/*
 	for(int isc = 0 ; isc < 12 ; isc++){
@@ -245,24 +246,18 @@ int main(int argc, char **argv) {
 		  TIME(corr.contractNucleonThrp_local(seqPropGamma, propF, signProps, gammas));
 		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 		  THREAD(corr.writeFile(filename, corr_file_format));
-		  if( mu_rho != nu_rho ){	  
-		    // ONED contractions
-		    std::vector<GAMMAS> gammas_T = {gammas[mu_rho], gammas[nu_rho]};//need only D_nu_rho for gammas[mu_rho] & D_mu_rho for gammas[nu_rho]
-		    TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas_T)); 
-		    //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-		    THREAD(corr.writeFile( filename, corr_file_format));
-		  }
+		  // ONED contractions
+		  TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas)); 
+		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+		  THREAD(corr.writeFile( filename, corr_file_format));
 		  // noe contractions
 		  TIME(corr.contractNucleonThrp_noe(seqPropGamma, propF, contractGauge, signProps));
 		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 		  THREAD(corr.writeFile( filename, corr_file_format));
-		  
 		  // TWOD contractions
-		  /*
-		    TIME(corr.contractNucleonThrp_twoD(seqPropGamma, propF, contractGauge, signProps, gammas));
-		    //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-		    THREAD(corr.writeFile( filename, corr_file_format));
-		  */
+		  TIME(corr.contractNucleonThrp_twoD(seqPropGamma, propF, contractGauge, signProps, gammas));
+		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+		  THREAD(corr.writeFile( filename, corr_file_format));
 		}
 	      }
 	    };
@@ -283,7 +278,7 @@ int main(int argc, char **argv) {
 
       {
 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-	TIME(corr.contractMesonsNew(propUP, propUP));
+	TIME(corr.contractMesonsAll(propUP, propUP));
 	corr.setDatasets((std::vector<std::string>) {"twop_meson_uu"});
 	THREAD(corr.writeFile(twop_filename, corr_file_format));
 	/*
