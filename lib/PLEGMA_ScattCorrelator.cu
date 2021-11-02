@@ -134,6 +134,49 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
     V_reductions<false,Float,Float,Float>(V_3, *this, Phi, Gammas, S);
 }
 
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V5( PLEGMA_Vector<Float> &Phi1,  PLEGMA_Vector<Float> &Phi2, bool conj_v){
+
+  this->GList.clear();
+
+
+  this->datasets={"dataset_v5"};
+  this->groups={"group_v5"};
+  this->shape={N_SPINS,N_SPINS,N_COLS};
+  this->labels="tmssc";
+  this->initialize();
+  this->setOffsets();
+
+  for(int i=0; i<3; ++i)
+    assert(this->source[i]==0);
+  if(conj_v)
+    V_reductions<true,Float,Float,Float>(V_5, *this, Phi1, Phi2);
+  else
+    V_reductions<false,Float,Float,Float>(V_5, *this, Phi1, Phi2);
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V6( PLEGMA_Vector<Float> &Phi1,  PLEGMA_Vector<Float> &Phi2, PLEGMA_Propagator<Float> &S, bool conj_v){
+
+  this->GList.clear();
+
+
+  this->datasets={"dataset_v6"};
+  this->groups={"group_v6"};
+  this->shape={N_SPINS,N_SPINS,N_SPINS,N_SPINS,N_COLS};
+  this->labels="tmssssc";
+  this->initialize();
+  this->setOffsets();
+
+  for(int i=0; i<3; ++i)
+    assert(this->source[i]==0);
+  if(conj_v)
+    V_reductions<true,Float,Float,Float>(V_6, *this, Phi1, Phi2, S);
+  else
+    V_reductions<false,Float,Float,Float>(V_6, *this, Phi1, Phi2, S);
+}
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, bool conj_v) {
 

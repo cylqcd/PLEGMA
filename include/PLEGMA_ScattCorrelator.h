@@ -4,7 +4,7 @@
 #include <utils/PLEGMA_scatt_utils.h>
 
 namespace plegma {
-  enum VRED {V_2=2,V_3=3,V_4=4};
+  enum VRED {V_2=2,V_3=3,V_4=4,V_5=5,V_6=6};
   enum TRED {T_1=1,T_2=2};  
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
@@ -139,6 +139,33 @@ namespace plegma {
      *
      **/
     void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
+    /**
+     *
+     *  @brief performs V5 type reduction produces two spin and one color indices tensor from two fermion vectors
+     *         It is used for forming diagrams for 2 hadron 2pt correlation function with one-end-trick
+     *         Formula
+     *         V5^{\kappa_1,\kappa_2}_{m}=\eps_{mab}{\phi}^{a*}_{\kappa_1}{\xi}^{b*}_{\kappa_2}
+     *  @params PLEGMA_Vector<Float> &Phi1
+     *  @params PLEGMA_Vector<Float> &Phi2
+     *  @params bool conj_v=false perform /or not to perform a conjugation on the fermion vectors
+     *                      in most cases we do set this to true
+     *
+     **/
+    void V5( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, bool conj_v=false );
+    /**
+     *
+     *  @brief performs V6 type reduction produces four spin and one color indices tensor from two fermion vectors
+     *         and one fermion propagator
+     *         Formula
+     *         V6^{alpha;beta;gamma,delta}_{m}=\eps_{abc}{\phi}^{a}_{alpha}{\xi}^{b}_{\beta}S^{c,m}_{\gamma,\delta}
+     * @params PLEGMA_Vector<Float> &Phi1
+     * @params PLEGMA_Vector<Float> &Phi2
+     * @params PLEGMA_Propagator<Float> &S1
+     * @params bool conj_v=false perform /or not to perform a conjugation on the fermion vectors
+     *  in most cases we do set this to false
+     *
+     **/
+    void V6( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, PLEGMA_Propagator<Float> &S, bool conj_v=false );
     /**
      *  @brief performs T1 type reduction to compute baryon 2pt functions
      *  T1_{alpha,beta}=\epsilon_{a,b,c}\epsilon_{l,m,n}S1^{c,l}_{alpha,alpha0}\Gamma_{i}_{alpha0,alpha1}S2^{b,m}_{beta0,alpha1}\Gamma_{f}_{beta0,beta1}S3^{a,n}_{beta1,beta} 
