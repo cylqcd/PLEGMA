@@ -89,6 +89,10 @@ void setGaugeParam(QudaGaugeParam &gauge_param) {
   pad_size = std::max(pad_size, t_face_size);
   gauge_param.ga_pad = pad_size;    
 #endif
+  if(verbosity>2){
+    PLEGMA_printf("setGaugeParam\n");
+    printQudaGaugeParam(&gauge_param);
+  }
 }
 
 #ifdef QUDA_INCLUDES_COMMIT_775a033
@@ -96,14 +100,14 @@ void setEigParam(QudaEigParam &mg_eig_param, int level)
 {
   mg_eig_param.eig_type = mg_eig_type[level];
   mg_eig_param.spectrum = mg_eig_spectrum[level];
-  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS || mg_eig_type[level] == QUDA_EIG_IR_LANCZOS)
+  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS)
       && !(mg_eig_spectrum[level] == QUDA_SPECTRUM_LR_EIG || mg_eig_spectrum[level] == QUDA_SPECTRUM_SR_EIG)) {
     PLEGMA_error("Only real spectrum type (LR or SR) can be passed to the a Lanczos type solver");
   }
 
-  mg_eig_param.nEv = mg_eig_nEv[level];
-  mg_eig_param.nKr = mg_eig_nKr[level];
-  mg_eig_param.nConv = mg_eig_nConv[level];
+  mg_eig_param.n_ev = mg_eig_nEv[level];
+  mg_eig_param.n_kr = mg_eig_nKr[level];
+  mg_eig_param.n_conv = mg_eig_nConv[level];
   mg_eig_param.require_convergence = mg_eig_require_convergence[level];
 
   mg_eig_param.tol = mg_eig_tol[level];
@@ -304,6 +308,11 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
   inv_param.verbosity = QUDA_SUMMARIZE;
   inv_param.verbosity_precondition = QUDA_SUMMARIZE;
+  if(verbosity>2){
+    PLEGMA_printf("setMultigridParam\n");
+    printQudaInvertParam(&inv_param);
+    printQudaMultigridParam(&mg_param);
+  }
 }
 
 void setInvertParam(QudaInvertParam &inv_param) {
@@ -415,6 +424,10 @@ void setInvertParam(QudaInvertParam &inv_param) {
   inv_param.omega = 1.0;
 
   inv_param.verbosity = verbosity_level;
+  if(verbosity>2){
+    PLEGMA_printf("setInvertParam\n");
+    printQudaInvertParam(&inv_param);
+  }
 }
 
 
