@@ -56,7 +56,8 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
     if(isFound) readSourceList();
   }
   if (isInList(list, "momlist-filename")){
-    opt.set("momlist-filename", "Filename of list of momenta", verbosity, pathListMomenta);
+    isFound = opt.set("momlist-filename", "Filename of list of momenta", verbosity, pathListMomenta);
+    if(isFound) readMomentaList();
   }
   // List of configurations or vectors-----------------------------------------------------------------------------
   if(isInList(list,"load-gauge-list-filename")){

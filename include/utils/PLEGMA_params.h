@@ -33,6 +33,7 @@ define(std::vector<std::string> listVecs);
 define(std::string pathListSourcePositions);
 define(std::string pathListMomenta);
 define(std::vector<site> sourcePositions, {});
+define(std::vector<momentum> momenta, {});
 define(int maxQsq, 64);
 define(FILE_FORMAT corr_file_format, HDF5_FORMAT);
 define(CORR_SPACE corr_space, MOMENTUM_SPACE);
