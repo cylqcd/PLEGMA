@@ -78,11 +78,11 @@ int main(int argc, char **argv) {
 		    isource, source[0], source[1], source[2], source[3]);
       updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
-      PLEGMA_Gauge3D<double> smearedGauge3D;
-      smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
-
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
 				   double run_mu, WHICHFLAVOR fl, int nSmear, bool finalize) {
+				 PLEGMA_Gauge3D<double> smearedGauge3D;
+				 smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
+
 				 // ensuring mu value
 				 if(mu != run_mu) {
 				   updateOptions(fl);
@@ -148,18 +148,11 @@ int main(int argc, char **argv) {
 	  int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
 	  int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
-	  // 3D propagators at t_sink
-	  PLEGMA_Propagator3D<float> propUP3D;
-	  PLEGMA_Propagator3D<float> propDN3D;
-	  PLEGMA_Gauge3D<double> smearedGauge3D_sink;
-	  propUP3D.absorb(propUP, global_fixSinkTime);
-	  propDN3D.absorb(propDN, global_fixSinkTime);
-	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
 	  for(size_t iproj = 0; iproj < Projs.size(); iproj++){
-	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
+	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
 	      std::string filename = threep_filename + "_" + Projs[iproj] + "_dt" + std::to_string(tsinkMtsource) + "_" + fl + ".h5";
 	      if(access( filename.c_str(), F_OK ) != -1) {
 		PLEGMA_printf("File %s already exists. Skipping...", filename.c_str());
@@ -168,8 +161,6 @@ int main(int argc, char **argv) {
 	      if(not computed_light) {
 		TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
 		TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
-		propUP3D.absorb(propUP, global_fixSinkTime);
-		propDN3D.absorb(propDN, global_fixSinkTime);
 		computed_light = true;
 	      }
 	      PLEGMA_Propagator<float> seqProp;
@@ -179,7 +170,16 @@ int main(int argc, char **argv) {
 		mu = run_mu;
 		solver.UpdateSolver();
 	      }
-				     
+	      
+	      {
+		// 3D propagators at t_sink
+		PLEGMA_Propagator3D<float> prop13D;
+		PLEGMA_Propagator3D<float> prop23D;
+		prop13D.absorb(prop1, global_fixSinkTime);
+		prop23D.absorb(prop2, global_fixSinkTime);
+		PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+		smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
+
 	      for(int nu = 0 ; nu < 4 ; nu++)
 		for(int c2 = 0 ; c2 < 3 ; c2++){
 		  PLEGMA_Vector<double> vectorInOut;
@@ -187,9 +187,9 @@ int main(int argc, char **argv) {
 		    PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
 		    PLEGMA_Vector3D<float> vectorAuxF;
 		    if(&prop1 != &prop2)
-		      vectorAuxF.seqSourceNucleon(prop1, prop2, get_projector(Projs[iproj]), nucleon, nu, c2);
+		      vectorAuxF.seqSourceNucleon(prop13D, prop23D, get_projector(Projs[iproj]), nucleon, nu, c2);
 		    else
-		      vectorAuxF.seqSourceNucleon(prop1, get_projector(Projs[iproj]), nucleon, nu, c2);
+		      vectorAuxF.seqSourceNucleon(prop13D, get_projector(Projs[iproj]), nucleon, nu, c2);
 					 
 		    // put a momentum in the sink later
 		    vectorAuxF.conjugate();
@@ -206,6 +206,7 @@ int main(int argc, char **argv) {
 		  vectorAuxF.copy(vectorInOut);
 		  seqProp.absorb(vectorAuxF, nu, c2);
 		}
+	      }
 	      seqProp.apply_gamma(G5);
 	      seqProp.conjugate();
 				     
@@ -227,11 +228,11 @@ int main(int argc, char **argv) {
 	      THREAD(corr.writeFile( filename, corr_file_format));
 	    };
 	    if(nucleon == PROTON) {
-	      TIME(computeThreep(-mu_ud, propUP3D, propDN3D, +1, propUP_SL, "up"));
-	      TIME(computeThreep( mu_ud, propUP3D, propUP3D, -1, propDN_SL, "dn"));
+	      TIME(computeThreep(-mu_ud, propUP, propDN, +1, propUP_SL, "up"));
+	      TIME(computeThreep( mu_ud, propUP, propUP, -1, propDN_SL, "dn"));
 	    } else {
-	      TIME(computeThreep( mu_ud, propDN3D, propUP3D, -1, propDN_SL, "dn"));
-	      TIME(computeThreep(-mu_ud, propDN3D, propDN3D, +1, propUP_SL, "up"));
+	      TIME(computeThreep( mu_ud, propDN, propUP, -1, propDN_SL, "dn"));
+	      TIME(computeThreep(-mu_ud, propDN, propDN, +1, propUP_SL, "up"));
 	    }
 	  }
 	}
@@ -273,7 +274,36 @@ int main(int argc, char **argv) {
 	TIME(corr.contractBaryons(propUP, propDN));
 	THREAD(corr.writeFile(twop_filename, corr_file_format));
       }
-      
+
+      //D diagram
+      if(false){
+	std::vector<GAMMAS_SCATT> glist_source_delta={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
+	std::vector<GAMMAS_SCATT> glist_sink_delta={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
+	std::vector<GAMMAS_SCATT> glist_source_delta_unpaired={ID};
+	std::vector<GAMMAS_SCATT> glist_sink_delta_unpaired={ID};
+	site source0=site({0,0,0,source[3]});
+	PLEGMA_ScattCorrelator<float> reductionsT1(source0, 3);
+	PLEGMA_ScattCorrelator<float> reductionsT2(source0, 3);
+	momList list_mtot(1,{reductionsT1.getMomList(),},{0,});
+	PLEGMA_ScattCorrelator<float> corrD(source, list_mtot);
+
+	//initialize diagram
+	corrD.initialize_diagram( glist_source_delta_unpaired, glist_sink_delta_unpaired, glist_source_delta, glist_sink_delta,"D");
+	TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
+	TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
+
+	//write D
+	asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", source[0], source[1], source[2], source[3]);
+	auto outfilename = given_twop_filename + "D" + src_string + ".h5";
+	free(src_string);
+	
+	TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
+	TIME( corrD.apply_phase() );
+	TIME( corrD.apply_sign("D") );
+	TIME( corrD.applyBoundaryConditions( true ) );
+	TIME( corrD.writeHDF5(outfilename) );
+      }
+
       // Storing only the smaller and then computing on the fly the other
       int nSmaller = std::min(mu_s.size(),mu_c.size());
       char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
