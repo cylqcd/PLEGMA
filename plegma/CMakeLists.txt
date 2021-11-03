@@ -37,6 +37,9 @@ endif(PLEGMA_MKL)
 cuda_add_executable(Plaquette Plaquette.cpp)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
+cuda_add_executable(pion pion.cpp)
+target_link_libraries(pion ${PLEGMA_LIBS})
+
 cuda_add_executable(Topo Topo.cpp)
 target_link_libraries(Topo ${PLEGMA_LIBS})
 
@@ -48,6 +51,9 @@ target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
+
+cuda_add_executable(meson_2pt_3pt meson_2pt_3pt.cpp)
+target_link_libraries(meson_2pt_3pt ${PLEGMA_LIBS})
 
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
