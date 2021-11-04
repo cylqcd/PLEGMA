@@ -19,6 +19,8 @@ int main(int argc, char **argv)
   std::string outfile_V3;
   std::string outfile_V2;
   std::string outfile_V4;
+  std::string outfile_V5;
+  std::string outfile_V6;
   std::string outfile_T1;
   std::string outfile_T2;
   std::string path_V="";
@@ -27,8 +29,10 @@ int main(int argc, char **argv)
   HGC_options->set("outVector", "Path for saving the vector field used", verbosity, outfile_V);
   HGC_options->set("outProp", "Path for saving the propagator used", verbosity, outfile_S);
   HGC_options->set("outV3", "Path for saving the result of V3_reduction", verbosity, outfile_V3);
-  HGC_options->set("outV2", "Path for saving the result of V3_reduction", verbosity, outfile_V2);
-  HGC_options->set("outV4", "Path for saving the result of V3_reduction", verbosity, outfile_V4);
+  HGC_options->set("outV2", "Path for saving the result of V2_reduction", verbosity, outfile_V2);
+  HGC_options->set("outV4", "Path for saving the result of V4_reduction", verbosity, outfile_V4);
+  HGC_options->set("outV5", "Path for saving the result of V5_reduction", verbosity, outfile_V5);
+  HGC_options->set("outV6", "Path for saving the result of V6_reduction", verbosity, outfile_V6);
   HGC_options->set("outT1", "Path for saving the result of T1_reduction", verbosity, outfile_T1);
   HGC_options->set("outt2", "Path for saving the result of T2_reduction", verbosity, outfile_T2);
   HGC_options->set("loadVector", "Path for loading V", verbosity, path_V);
@@ -80,7 +84,7 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
       
-	vectorAuxD.pointSource( source, isc/3, isc%3, DEVICE);
+	vectorAuxD.pointSource( source, isc/3, isc%3 );
       
 	//vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
 	//solver.solve(vectorInOut, vectorInOut);
@@ -120,6 +124,7 @@ int main(int argc, char **argv)
     
     //create vector field
     PLEGMA_Vector<float> vectorStoc(BOTH);
+    PLEGMA_Vector<float> vectorStoc2(BOTH);
     if(path_V==""){
       PLEGMA_printf("Build vector from scratch\n");     
       int nroots=4;
@@ -128,10 +133,21 @@ int main(int argc, char **argv)
       vectorStoc.stochastic_Z(nroots);
       solver.solve(vectorStoc, vectorStoc);
 
+      vectorStoc2.randInit(4567);
+      vectorStoc2.stochastic_Z(nroots);
+      solver.solve(vectorStoc2, vectorStoc2);
+
+
+
       if(outfile_V!=""){
-	PLEGMA_printf("Print Vector\n");     
+	PLEGMA_printf("Print Vector1\n");     
 	vectorStoc.unload();
-	vectorStoc.writeLIME(outfile_V);
+	vectorStoc.writeLIME(outfile_V+"1");
+
+        PLEGMA_printf("Print Vector2\n");
+        vectorStoc2.unload();
+        vectorStoc2.writeLIME(outfile_V+"2");
+
       }
     }
     else{
@@ -221,6 +237,13 @@ int main(int argc, char **argv)
       reductions.writeHDF5(outfile_V3+"_Qmax_gl1_c1");
       reductions.V4( vectorStoc, glist1, propUP, propUP);
       reductions.writeHDF5(outfile_V4+"_Qmax_gl1_c1");
+    }
+    {
+      PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
+      reductions.V5( vectorStoc, vectorStoc2);
+      reductions.writeHDF5(outfile_V5+"_1mom_c1");
+      reductions.V6( vectorStoc, vectorStoc2, propUP);
+      reductions.writeHDF5(outfile_V6+"_1mom_c1");
     }
     
   }
