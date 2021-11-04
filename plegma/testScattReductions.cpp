@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 	PLEGMA_Vector<double> vectorInOut, vectorAuxD;
 	PLEGMA_Vector<float> vectorAuxF;
       
-	vectorAuxD.pointSource( source, isc/3, isc%3 );
+	vectorAuxD.pointSource( sourcePositions[0], isc/3, isc%3 );
       
 	//vectorInOut.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss);
 	//solver.solve(vectorInOut, vectorInOut);
@@ -200,28 +200,28 @@ int main(int argc, char **argv)
     //reductionV2.writeHDF5(outfile_V2);
     
     {
-      PLEGMA_ScattCorrelator<float> reductionV2(MOMENTUM_SPACE, mom);
+      PLEGMA_ScattCorrelator<float> reductionV2(sourcePositions[0], mom);
       reductionV2.V2( vectorStoc, glist1, propUP, propUP);
       reductionV2.writeHDF5(outfile_V2+"_1mom_gl1_c0");
       reductionV2.V2( vectorStoc, glist2, propUP, propUP);
       reductionV2.writeHDF5(outfile_V2+"_1mom_gl2_c0");
     }
     {
-      PLEGMA_ScattCorrelator<float> reductionV3(MOMENTUM_SPACE, mom);
+      PLEGMA_ScattCorrelator<float> reductionV3(sourcePositions[0], mom);
       reductionV3.V3( vectorStoc, glist1, propUP);
       reductionV3.writeHDF5(outfile_V3+"_1mom_gl1_c0");
       reductionV3.V3( vectorStoc, glist2, propUP);
       reductionV3.writeHDF5(outfile_V3+"_1mom_gl2_c0");   
     }
     {
-      PLEGMA_ScattCorrelator<float> reductionV4(MOMENTUM_SPACE, mom);
+      PLEGMA_ScattCorrelator<float> reductionV4(sourcePositions[0], mom);
       reductionV4.V4( vectorStoc, glist1, propUP ,propUP);
       reductionV4.writeHDF5(outfile_V4+"_1mom_gl1_c0");
       reductionV4.V4( vectorStoc, glist2, propUP,propUP);
       reductionV4.writeHDF5(outfile_V4+"_1mom_gl2_c0");   
     }
     {
-      PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
+      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], mom);
       reductions.V2( vectorStoc, glist1, propUP, propUP);
       reductions.writeHDF5(outfile_V2+"_1mom_gl1_c1");
       reductions.V3( vectorStoc, glist1, propUP);
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
       reductions.writeHDF5(outfile_V4+"_1mom_gl1_c1");
     }
     {
-      PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, Qmax);
+      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], Qmax);
       reductions.V2( vectorStoc, glist1, propUP, propUP);
       reductions.writeHDF5(outfile_V2+"_Qmax_gl1_c1");
       reductions.V3( vectorStoc, glist1, propUP);
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
       reductions.writeHDF5(outfile_V4+"_Qmax_gl1_c1");
     }
     {
-      PLEGMA_ScattCorrelator<float> reductions(MOMENTUM_SPACE, mom);
+      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], mom);
       reductions.V5( vectorStoc, vectorStoc2);
       reductions.writeHDF5(outfile_V5+"_1mom_c1");
       reductions.V6( vectorStoc, vectorStoc2, propUP);
