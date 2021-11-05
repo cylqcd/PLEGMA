@@ -82,6 +82,11 @@ if(GIT_FOUND)
       add_compile_definitions(QUDA_INCLUDES_COMMIT_1dec1db)
     endif()
   endif()
+else
+  add_compile_definitions(QUDA_INCLUDES_COMMIT_b08233a)
+  add_compile_definitions(QUDA_INCLUDES_COMMIT_775a033)	
+  add_compile_definitions(QUDA_INCLUDES_COMMIT_55782743)
+  add_compile_definitions(QUDA_INCLUDES_COMMIT_55782743)
 endif(GIT_FOUND)
 
 include(ExternalProject)
