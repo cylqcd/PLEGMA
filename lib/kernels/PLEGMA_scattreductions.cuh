@@ -51,7 +51,7 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
-    PLEGMA_printf("Error in allocating d_partial_block\n");
+    PLEGMA_printf("Error in allocating d_partial_block %d\n",alloc_size);
     cudaFree(d_partial_block);
     return;
   }
@@ -59,10 +59,18 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
   //allocate list of Gammas that can be passed to the device (std::vector not recognized)
   KernelArr<GAMMAS_SCATT> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
-  checkCudaError();
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
-  checkCudaError();
+
+  if (gammas.size()==0){
+      cudaMalloc((void**)&listGammas.array, sizeof(GAMMAS_SCATT));
+      checkCudaError();
+
+  }
+  else{
+      cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
+      checkCudaError();
+      cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
+      checkCudaError();
+  }
   
   //loop over the bunches of timeslices passed to device
   for(int it=0; it < t_size; it+=time_step) {
@@ -76,7 +84,7 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
     //Syncronize (maybe useles) and look for errors (without stopping)
     cudaDeviceSynchronize();
     error=cudaPeekAtLastError();
-    if(error != cudaSuccess) { PLEGMA_printf("Error after V_kernels_wrapper, it=%d\n",it); break;}
+    if(error != cudaSuccess) { PLEGMA_printf("Error after V_kernels_wrapper, it=%d tsize=%d error=%d string%s\n",it,t_size,error, cudaGetErrorString(error)); break;}
 
     //copy partial summed 3dfourier back to host d_partial -> h_partial (device->host)
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
@@ -185,7 +193,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
                          PLEGMA_Vector<FloatV> &Phi1,PLEGMA_Vector<FloatV> &Phi2, 
                          PLEGMA_Propagator<FloatP> &S){
 
-  int site_size = N_SPINS*N_SPINS*N_COLS;
+  int site_size = N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_COLS;
 
   if(Vout.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
@@ -240,6 +248,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   ProfileStruct ps(HGC_localVolume3D, shared_size);
   int myLocalT = Vout.localT();
   int maxLocalT = myLocalT;
+  std::vector<GAMMAS_SCATT> Gammas {};
   MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
   ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
@@ -248,11 +257,10 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 
   auto vectorPhi1 = toTexture<vectorTex>(Phi1);
   auto vectorPhi2 = toTexture<vectorTex>(Phi2);
-
-  PLEGMA_Propagator<FloatP> S;
+  PLEGMA_Propagator<FloatP> S(NONE);
   auto propS = toTexture<propTex>(S);
 
-  std::vector<GAMMAS_SCATT> Gammas {};
+
 //  plegma::genericProp<plegma::texture<FloatOut>,FloatOut> vec {};
  
 //  propTex<FloatP> vec {};

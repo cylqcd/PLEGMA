@@ -31,10 +31,10 @@ __global__ void V5_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
     if(CONJ_V){
 
        #pragma unroll
-       for (int alpha=0; alpha<4; ++alpha){
+       for (int alpha=0; alpha<N_SPINS; ++alpha){
 
          #pragma unroll 
-         for (int beta=0; beta<4; ++beta){
+         for (int beta=0; beta<N_SPINS; ++beta){
 	 
 
            #pragma unroll
@@ -51,10 +51,10 @@ __global__ void V5_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
     }
     else {
        #pragma unroll
-       for(int alpha=0; alpha<4; ++alpha){
+       for(int alpha=0; alpha<N_SPINS; ++alpha){
         
          #pragma unroll
-         for(int beta=0; beta<4; ++beta){
+         for(int beta=0; beta<N_SPINS; ++beta){
           
            #pragma unroll
            for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
@@ -73,12 +73,13 @@ __global__ void V5_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z};
-
-  const unsigned int OUT_DOF= 1;
-  const unsigned int IN_DOF= N_SPINS*N_SPINS*N_COLS;
+  
+  
+  const unsigned int OUT_DOF= N_SPINS;
+  const unsigned int IN_DOF= N_SPINS*N_COLS;
 
   #pragma unroll
   for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
-    fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid); 
+    fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
 }
 

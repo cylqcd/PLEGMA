@@ -5,12 +5,14 @@ using namespace plegma;
 using namespace quda;
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsrc","src-filename", "momlist-filename", "readStochSamples","time-dilution","nstochSamples","confnumber","contractionstoch","contractionstd","contractionoet"};
 
 int main(int argc, char **argv)
 {
+
   initializeOptions(argc, argv, true, listOpt);
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
+
   double mu_ud = mu;
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
@@ -160,7 +162,7 @@ int main(int argc, char **argv)
     std::vector<int> mom={0,0,1};
     int Qmax=1;
     std::vector<GAMMAS_SCATT> glist2={G_1,G_2,G_3,G_4};
-    std::vector<GAMMAS_SCATT> glist1={G_4,G_5};
+    std::vector<GAMMAS_SCATT> glist1={G_5};
     // std::vector<GAMMAS_SCATT> glist={G_1,G_2,G_3,G_4};
     // // std::vector<GAMMAS_SCATT> glist={G_4};
     // // std::vector<GAMMAS_SCATT> glist_in={G_4};
@@ -198,27 +200,27 @@ int main(int argc, char **argv)
     //PLEGMA_ScattCorrelator<float> reductionV2(MOMENTUM_SPACE, mom);
     //reductionV2.V2( vectorStoc, glist, propUP, propUP);
     //reductionV2.writeHDF5(outfile_V2);
-    
+#if 0    
     {
       PLEGMA_ScattCorrelator<float> reductionV2(sourcePositions[0], mom);
       reductionV2.V2( vectorStoc, glist1, propUP, propUP);
       reductionV2.writeHDF5(outfile_V2+"_1mom_gl1_c0");
-      reductionV2.V2( vectorStoc, glist2, propUP, propUP);
-      reductionV2.writeHDF5(outfile_V2+"_1mom_gl2_c0");
+     // reductionV2.V2( vectorStoc, glist2, propUP, propUP);
+     // reductionV2.writeHDF5(outfile_V2+"_1mom_gl2_c0");
     }
     {
       PLEGMA_ScattCorrelator<float> reductionV3(sourcePositions[0], mom);
       reductionV3.V3( vectorStoc, glist1, propUP);
       reductionV3.writeHDF5(outfile_V3+"_1mom_gl1_c0");
-      reductionV3.V3( vectorStoc, glist2, propUP);
-      reductionV3.writeHDF5(outfile_V3+"_1mom_gl2_c0");   
+     // reductionV3.V3( vectorStoc, glist2, propUP);
+     // reductionV3.writeHDF5(outfile_V3+"_1mom_gl2_c0");   
     }
     {
       PLEGMA_ScattCorrelator<float> reductionV4(sourcePositions[0], mom);
       reductionV4.V4( vectorStoc, glist1, propUP ,propUP);
       reductionV4.writeHDF5(outfile_V4+"_1mom_gl1_c0");
-      reductionV4.V4( vectorStoc, glist2, propUP,propUP);
-      reductionV4.writeHDF5(outfile_V4+"_1mom_gl2_c0");   
+     // reductionV4.V4( vectorStoc, glist2, propUP,propUP);
+     // reductionV4.writeHDF5(outfile_V4+"_1mom_gl2_c0");   
     }
     {
       PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], mom);
@@ -229,6 +231,7 @@ int main(int argc, char **argv)
       reductions.V4( vectorStoc, glist1, propUP, propUP);
       reductions.writeHDF5(outfile_V4+"_1mom_gl1_c1");
     }
+#endif
     {
       PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], Qmax);
       reductions.V2( vectorStoc, glist1, propUP, propUP);
@@ -238,6 +241,7 @@ int main(int argc, char **argv)
       reductions.V4( vectorStoc, glist1, propUP, propUP);
       reductions.writeHDF5(outfile_V4+"_Qmax_gl1_c1");
     }
+
     {
       PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], mom);
       reductions.V5( vectorStoc, vectorStoc2);
@@ -245,7 +249,7 @@ int main(int argc, char **argv)
       reductions.V6( vectorStoc, vectorStoc2, propUP);
       reductions.writeHDF5(outfile_V6+"_1mom_c1");
     }
-    
+   
   }
   finalize();
   

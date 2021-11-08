@@ -20,18 +20,20 @@ void V_kernels( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
     V3_kernel<FloatOut,FloatV,FloatP,NG,CONJ_V><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi1, listGammas, S1, block2, it, time_step, maxT, source, moms);
   else if(V==V_4)
     V4_kernel<FloatOut,FloatV,FloatP,NG,CONJ_V><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi1, listGammas, S1, S2, block2, it, time_step, maxT, source, moms);
+  else
     PLEGMA_error("Unrecognized V reduction type\n");
 }
 
 template<bool CONJ_V,unsigned int NG, typename FloatOut, typename FloatV, typename FloatP>
 void V_kernels_nogamma( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
                 int it, int time_step, int maxT, int4 source, tex_mom_list moms,
-                KernelArr<GAMMAS_SCATT> &listGammas,
-                vectorTex<FloatV> &Phi1,vectorTex<FloatV> &Phi2, propTex<FloatP>& S1, propTex<FloatP>& S2){
-  if(V==V_5)
+                vectorTex<FloatV> &Phi1,vectorTex<FloatV> &Phi2, propTex<FloatP>& S1){
+  if(V==V_5){
     V5_kernel<FloatOut,FloatV,FloatP,NG,CONJ_V><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi1, Phi2,  block2, it, time_step, maxT, source, moms);
-  else if(V==V_6)
+  }
+  else if(V==V_6){
     V6_kernel<FloatOut,FloatV,FloatP,NG,CONJ_V><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi1, Phi2,  S1, block2, it, time_step, maxT, source, moms);
+  }
   else
     PLEGMA_error("Unrecognized V reduction type\n");
 }
@@ -43,9 +45,8 @@ void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 			KernelArr<GAMMAS_SCATT> &listGammas,
 			vectorTex<FloatV> &Phi1,vectorTex<FloatV> &Phi2, propTex<FloatP>& S1, propTex<FloatP>& S2){
 
-  
   switch(listGammas.size){
-  case(0): V_kernels_nogamma<CONJ_V,(unsigned int)0, FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
+  case(0): V_kernels_nogamma<CONJ_V,(unsigned int)0, FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, Phi1, Phi2,S1 ); break;
   case(1): V_kernels<CONJ_V,(unsigned int)1,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
   //case(4): V_kernels<(unsigned int)4,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(5): V_kernels<(unsigned int)5,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
