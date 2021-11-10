@@ -49,6 +49,12 @@ int main(int argc, char **argv)
     //float alphaGauss=0.1;
     int source[4]={4,3,12,1};
 
+    //Reading the momentum lists
+    PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
+    momList sourcemomentumList(3,pathListMomenta,{1,2});
+    PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
+
+
     //Create Propagator
     PLEGMA_Propagator<float> propUP(BOTH);
     if (path_P==""){
@@ -243,7 +249,7 @@ int main(int argc, char **argv)
     }
 
     {
-      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], mom);
+      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList);
       reductions.V5( vectorStoc, vectorStoc2);
       reductions.writeHDF5(outfile_V5+"_1mom_c1");
       reductions.V6( vectorStoc, vectorStoc2, propUP);
