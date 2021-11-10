@@ -249,7 +249,7 @@ int main(int argc, char **argv)
     }
 
     {
-      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList);
+      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList.uniq_p(1));
       reductions.V5( vectorStoc, vectorStoc2);
       reductions.writeHDF5(outfile_V5+"_1mom_c1");
       reductions.V6( vectorStoc, vectorStoc2, propUP);
