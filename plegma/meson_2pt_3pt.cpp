@@ -38,14 +38,6 @@ int main(int argc, char **argv) {
   //=========================================================================================================//
   initializePLEGMA();
 
-  //Reading the momentum lists
-  PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
-  momList sourcemomentumList(3,pathListMomenta,{});
-  PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
-
-  if(sourcemomentumList.empty())
-    PLEGMA_error("momentumList empty");
-
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
     PLEGMA_Gauge<float> contractGauge(BOTH);
