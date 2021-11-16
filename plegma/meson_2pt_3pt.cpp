@@ -122,12 +122,12 @@ int main(int argc, char **argv) {
       threep_filename = given_threep_filename + src_string;
       free(src_string);
       
-      PLEGMA_Propagator<float> propUP;
-      PLEGMA_Propagator<float> propST;
+      PLEGMA_Propagator<float> propUP(BOTH, FIRST_VERTEX);
+      PLEGMA_Propagator<float> propST(BOTH, FIRST_VERTEX);
       
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
-	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
-	PLEGMA_Propagator<float> propST_SL(tSinks.size()>0 ? BOTH:NONE);
+	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_VERTEX);
+	PLEGMA_Propagator<float> propST_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_VERTEX);
 
 	// If twop_filename exists we hold the computation of the light props
 	if(access( twop_filename.c_str(), F_OK ) == -1) {
@@ -135,6 +135,23 @@ int main(int argc, char **argv) {
 	  TIME(computePropagator(propST, propST_SL, mu_s, LIGHT, nsmearGauss_s, false));
 	}
 	
+      {
+	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+	TIME(corr.contractMesonsNew(propUP, propUP));
+	char *dset;
+	asprintf(&dset, "pion", mu_ud);
+	corr.setDatasets((std::vector<std::string>) {dset});
+	free(dset);
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
+
+	TIME(corr.contractMesonsNew(propUP, propST));
+	asprintf(&dset, "kaon", mu_ud, mu_s);
+	corr.setDatasets((std::vector<std::string>) {dset});
+	free(dset);
+	THREAD(corr.writeFile(twop_filename, corr_file_format));
+      }
+    }
+      
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 	for(size_t its = 0; its < tSinks.size(); its++){
 	  int tsinkMtsource = tSinks[its];
@@ -254,27 +271,6 @@ int main(int argc, char **argv) {
 	continue;
       }
       
-      propUP.rotateToPhysicalBase_device(+1);
-      propST.rotateToPhysicalBase_device(+1);
-      propUP.applyBoundaries_device(source[3]);
-      propST.applyBoundaries_device(source[3]);
-      
-      {
-	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-	TIME(corr.contractMesonsNew(propUP, propUP));
-	char *dset;
-	asprintf(&dset, "pion", mu_ud);
-	corr.setDatasets((std::vector<std::string>) {dset});
-	free(dset);
-	THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-	TIME(corr.contractMesonsNew(propUP, propST));
-	asprintf(&dset, "kaon", mu_ud, mu_s);
-	corr.setDatasets((std::vector<std::string>) {dset});
-	free(dset);
-	THREAD(corr.writeFile(twop_filename, corr_file_format));
-      }
-    }
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }
 
