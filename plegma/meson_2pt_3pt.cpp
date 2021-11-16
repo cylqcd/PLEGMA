@@ -122,8 +122,8 @@ int main(int argc, char **argv) {
       threep_filename = given_threep_filename + src_string;
       free(src_string);
       
-      PLEGMA_Propagator<float> propUP(BOTH, FIRST_VERTEX);
-      PLEGMA_Propagator<float> propST(BOTH, FIRST_VERTEX);
+      PLEGMA_Propagator<float> propUP;
+      PLEGMA_Propagator<float> propST;
       
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_VERTEX);
@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
 		return;
 	      }
 	      
-	      PLEGMA_Propagator<float> seqProp;
+	      PLEGMA_Propagator<float> seqProp(BOTH, FIRST_VERTEX);
 	      // ensuring mu positive
 	      if(mu != run_mu) {
 		updateOptions(LIGHT);
