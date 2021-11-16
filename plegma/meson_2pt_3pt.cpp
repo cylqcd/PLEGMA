@@ -135,22 +135,21 @@ int main(int argc, char **argv) {
 	  TIME(computePropagator(propST, propST_SL, mu_s, LIGHT, nsmearGauss_s, false));
 	}
 	
-      {
-	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-	TIME(corr.contractMesonsNew(propUP, propUP));
-	char *dset;
-	asprintf(&dset, "pion", mu_ud);
-	corr.setDatasets((std::vector<std::string>) {dset});
-	free(dset);
-	THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-	TIME(corr.contractMesonsNew(propUP, propST));
-	asprintf(&dset, "kaon", mu_ud, mu_s);
-	corr.setDatasets((std::vector<std::string>) {dset});
-	free(dset);
-	THREAD(corr.writeFile(twop_filename, corr_file_format));
-      }
-    }
+	{
+	  PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+	  TIME(corr.contractMesonsNew(propUP, propUP));
+	  char *dset;
+	  asprintf(&dset, "pion", mu_ud);
+	  corr.setDatasets((std::vector<std::string>) {dset});
+	  free(dset);
+	  THREAD(corr.writeFile(twop_filename, corr_file_format));
+	  
+	  TIME(corr.contractMesonsNew(propUP, propST));
+	  asprintf(&dset, "kaon", mu_ud, mu_s);
+	  corr.setDatasets((std::vector<std::string>) {dset});
+	  free(dset);
+	  THREAD(corr.writeFile(twop_filename, corr_file_format));
+	}
       
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 	for(size_t its = 0; its < tSinks.size(); its++){
@@ -271,6 +270,7 @@ int main(int argc, char **argv) {
 	continue;
       }
       
+    }
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }
 
