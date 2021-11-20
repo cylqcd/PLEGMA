@@ -4,7 +4,7 @@
 #include <utils/PLEGMA_scatt_utils.h>
 
 namespace plegma {
-  enum VRED {V_2=2,V_3=3,V_4=4,V_5=5,V_6=6};
+  enum VRED {V_2=2,V_3=3,V_4=4,V_5=5,V_6=6,V_6_RED=7};
   enum TRED {T_1=1,T_2=2};  
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
@@ -101,7 +101,7 @@ namespace plegma {
      *          in most cases we do set this to false
      *
      **/
-    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
+    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2,bool conj_v=false );
     /**
      *
      *  @brief performs V3 type reduction produces one spin and one color indices tensor from a fermion vector and a fermion propagator
@@ -118,7 +118,7 @@ namespace plegma {
      *                      in most cases we do set this to true
      *
      **/
-    void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S, bool conj_v=true );
+    void V3( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S,bool conj_v=true );
     /**
      *
      *  @brief performs V4 type reduction produces three spin and one color indices tensor from a fermion vector and two fermion
@@ -151,7 +151,7 @@ namespace plegma {
      *                      in most cases we do set this to true
      *
      **/
-    void V5( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, bool conj_v=false );
+    void V5( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, bool conj_v=true );
     /**
      *
      *  @brief performs V6 type reduction produces four spin and one color indices tensor from two fermion vectors
@@ -166,6 +166,8 @@ namespace plegma {
      *
      **/
     void V6( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, PLEGMA_Propagator<Float> &S, bool conj_v=false );
+    void V6_RED( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, int C1=0, int C2=1, bool conj_v=false);
+
     /**
      *  @brief performs T1 type reduction to compute baryon 2pt functions
      *  T1_{alpha,beta}=\epsilon_{a,b,c}\epsilon_{l,m,n}S1^{c,l}_{alpha,alpha0}\Gamma_{i}_{alpha0,alpha1}S2^{b,m}_{beta0,alpha1}\Gamma_{f}_{beta0,beta1}S3^{a,n}_{beta1,beta} 

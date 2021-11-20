@@ -15,7 +15,7 @@ __global__ void V6_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
   int vid = sid3D + t*DGC_localVolume3D;
 
   register Float2<FloatOut> accum[N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_COLS];
-  for(int i = 0 ; i <N_SPINS*N_SPINS*N_SPINS*N_COLS  ; i++){
+  for(int i = 0 ; i < N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_COLS  ; i++){
     accum[i] = 0.;
   }
   
@@ -29,7 +29,7 @@ __global__ void V6_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
 
 
     //loops
-    if(CONJ_V){
+    if(!CONJ_V){
        #pragma unroll
        for (int alpha=0; alpha < N_SPINS ; alpha++){
 
@@ -50,10 +50,11 @@ __global__ void V6_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
                    unsigned short a=plegma::eps[eps1_nz][0];
                    unsigned short b=plegma::eps[eps1_nz][1];
                    unsigned short c=plegma::eps[eps1_nz][2];
-	      
-                   accum[(((alpha*N_SPINS+beta)*N_SPINS+gamma)*N_SPINS + delta)*N_COLS+m] =
-                   accum[(((alpha*N_SPINS+beta)*N_SPINS+gamma)*N_SPINS + delta)*N_COLS+m] 
-		    + conj(phi1[alpha][a])*conj(phi2[beta][b])*s[gamma][delta][c][m];
+                   int eps1_sgn=plegma::sgn_eps[eps1_nz];
+                   Float2<FloatOut> factor=eps1_sgn;
+	           accum[(((alpha*N_SPINS+beta)*N_SPINS+gamma)*N_SPINS + delta)*N_COLS+m] =
+                   accum[(((alpha*N_SPINS+beta)*N_SPINS+gamma)*N_SPINS + delta)*N_COLS+m]
+                    + (phi1[alpha][a])*(phi2[beta][b])*s[gamma][delta][c][m]*factor;
 	        }
 	      }
 	    }
@@ -77,17 +78,18 @@ __global__ void V6_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
              #pragma unroll
              for (int m=0; m< N_COLS; ++m){
             
-               #pragma unroll
+       /*        #pragma unroll
                for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
                  unsigned short a=plegma::eps[eps1_nz][0];
                  unsigned short b=plegma::eps[eps1_nz][1];
                  unsigned short c=plegma::eps[eps1_nz][2];
-
+		 int eps1_sgn=plegma::sgn_eps[eps1_nz];
+                 Float2<FloatOut> factor=eps1_sgn;*/
                  accum[(((alpha*N_SPINS+beta)*N_SPINS+gamma)*N_SPINS + delta)*N_COLS+m] =
-                 accum[(((alpha*N_SPINS+beta)*N_SPINS+gamma)*N_SPINS + delta)*N_COLS+m]
-                    + (phi1[alpha][a])*(phi2[beta][b])*s[gamma][delta][c][m];
+                 accum[(((alpha*N_SPINS+beta)*N_SPINS+gamma)*N_SPINS + delta)*N_COLS+m]+phi1[0][0];
+//                    + (phi1[alpha][a])*(phi2[beta][b])*s[gamma][delta][c][m]*factor;
+//	       }
 
-               }
 
              }
 

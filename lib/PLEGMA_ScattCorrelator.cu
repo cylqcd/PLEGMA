@@ -129,9 +129,9 @@ void PLEGMA_ScattCorrelator<Float>::V3( PLEGMA_Vector<Float> &Phi, std::vector<G
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
   if(conj_v)
-    V_reductions<true,Float,Float,Float>(V_3, *this, Phi, Gammas, S);
+    V_reductions<true,0,1,Float,Float,Float>(V_3, *this, Phi, Gammas, S);
   else
-    V_reductions<false,Float,Float,Float>(V_3, *this, Phi, Gammas, S);
+    V_reductions<false,0,1,Float,Float,Float>(V_3, *this, Phi, Gammas, S);
 }
 
 
@@ -151,9 +151,9 @@ void PLEGMA_ScattCorrelator<Float>::V5( PLEGMA_Vector<Float> &Phi1,  PLEGMA_Vect
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
   if(conj_v)
-    V_reductions<true,Float,Float,Float>(V_5, *this, Phi1, Phi2);
+    V_reductions<true,0,1,Float,Float,Float>(V_5, *this, Phi1, Phi2);
   else
-    V_reductions<false,Float,Float,Float>(V_5, *this, Phi1, Phi2);
+    V_reductions<false,0,1,Float,Float,Float>(V_5, *this, Phi1, Phi2);
 }
 
 template<typename Float>
@@ -172,9 +172,47 @@ void PLEGMA_ScattCorrelator<Float>::V6( PLEGMA_Vector<Float> &Phi1,  PLEGMA_Vect
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
   if(conj_v)
-    V_reductions<true,Float,Float,Float>(V_6, *this, Phi1, Phi2, S);
+    V_reductions<true,0,1,Float,Float,Float>(V_6, *this, Phi1, Phi2, S);
   else
-    V_reductions<false,Float,Float,Float>(V_6, *this, Phi1, Phi2, S);
+    V_reductions<false,0,1,Float,Float,Float>(V_6, *this, Phi1, Phi2, S);
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V6_RED( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, int C1, int C2, bool conj_v) {
+
+  int n_gammas= Gammas.size();
+  this->GList.clear();
+
+  if(n_gammas<=0||n_gammas>16)
+    PLEGMA_error("provide at list 1 Gamma matrix and no more than 16(temporary)\n");
+  this->GList.push_back(Gammas);
+
+  this->datasets={"dataset_v6_red"};
+  this->groups={"group_v6_red"};
+  this->shape={n_gammas,N_SPINS,N_SPINS,N_COLS};
+  this->labels="tmgssc";
+  this->initialize();
+  this->setOffsets();
+
+  for(int i=0; i<3; ++i)
+    assert(this->source[i]==0);
+
+  if(conj_v ){
+    if ((C1==0) && (C2==1)){
+       V_reductions<true,0,1,Float,Float,Float>( V_6_RED, *this, Phi1, Phi2, Gammas, S1);
+    }
+    else if ((C1==1) && (C2==2)){
+       V_reductions<true,1,2,Float,Float,Float>( V_6_RED, *this, Phi1, Phi2, Gammas, S1);
+    }
+  }
+  else{
+   if ((C1==0) && (C2==1)){
+       V_reductions<false,0,1,Float,Float,Float>( V_6_RED, *this, Phi1, Phi2, Gammas, S1);
+    }
+    else if ((C1==1) && (C2==2)){
+       V_reductions<false,1,2,Float,Float,Float>( V_6_RED, *this, Phi1, Phi2, Gammas, S1);
+    }
+  }
 }
 
 template<typename Float>
@@ -198,9 +236,9 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
     assert(this->source[i]==0);
 
   if(conj_v)
-    V_reductions<true,Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
+    V_reductions<true,0,1,Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
   else
-    V_reductions<false,Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
+    V_reductions<false,0,1,Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
 }
 
 template<typename Float>
@@ -224,9 +262,9 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
     assert(this->source[i]==0);
 
   if(conj_v)
-    V_reductions<true,Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
+    V_reductions<true,0,1,Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
   else
-    V_reductions<false,Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
+    V_reductions<false,0,1,Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
 }
 
 

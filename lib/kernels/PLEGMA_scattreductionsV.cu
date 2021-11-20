@@ -6,10 +6,11 @@
 #include <PLEGMA_scattreductionsV4.cuh>
 #include <PLEGMA_scattreductionsV5.cuh>
 #include <PLEGMA_scattreductionsV6.cuh>
+#include <PLEGMA_scattreductionsV6_red.cuh>
 
 using namespace plegma;
 
-template<bool CONJ_V,unsigned int NG, typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_V,unsigned int C1, unsigned int C2, unsigned int NG,typename FloatOut, typename FloatV, typename FloatP>
 void V_kernels( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 		int it, int time_step, int maxT, int4 source, tex_mom_list moms,
 		KernelArr<GAMMAS_SCATT> &listGammas,
@@ -20,7 +21,9 @@ void V_kernels( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
     V3_kernel<FloatOut,FloatV,FloatP,NG,CONJ_V><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi1, listGammas, S1, block2, it, time_step, maxT, source, moms);
   else if(V==V_4)
     V4_kernel<FloatOut,FloatV,FloatP,NG,CONJ_V><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi1, listGammas, S1, S2, block2, it, time_step, maxT, source, moms);
-  else
+  else if(V==V_6_RED)
+    V6_RED_kernel<FloatOut,FloatV,FloatP,NG,CONJ_V,C1,C2><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(Phi1, Phi2, listGammas, S1, block2, it, time_step, maxT, source, moms);
+  else 
     PLEGMA_error("Unrecognized V reduction type\n");
 }
 
@@ -39,15 +42,16 @@ void V_kernels_nogamma( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 }
 
 
-template<bool CONJ_V, typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_V, unsigned int C1, unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
 void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
 			KernelArr<GAMMAS_SCATT> &listGammas,
 			vectorTex<FloatV> &Phi1,vectorTex<FloatV> &Phi2, propTex<FloatP>& S1, propTex<FloatP>& S2){
 
   switch(listGammas.size){
-  case(0): V_kernels_nogamma<CONJ_V,(unsigned int)0, FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, Phi1, Phi2,S1 ); break;
-  case(1): V_kernels<CONJ_V,(unsigned int)1,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
+  case(0): V_kernels_nogamma<CONJ_V,(unsigned int)0,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, Phi1, Phi2,S1 ); break;
+  case(1): V_kernels<CONJ_V,C1,C2,(unsigned int)1,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
+  case(2): V_kernels<CONJ_V,C1,C2,(unsigned int)2,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
   //case(4): V_kernels<(unsigned int)4,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(5): V_kernels<(unsigned int)5,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(6): V_kernels<(unsigned int)6,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
@@ -67,24 +71,44 @@ void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 
 
 template
-void V_kernels_wrapper<true,float, float, float>( ProfileStruct &, VRED, Float2<float> *,
+void V_kernels_wrapper<true,0,1,float, float, float>( ProfileStruct &, VRED, Float2<float> *,
 					     int, int, int, int4, tex_mom_list,
 					     KernelArr<GAMMAS_SCATT> &,
 					     vectorTex<float>&,vectorTex<float>&, propTex<float>&, propTex<float>&);
-
 template
-void V_kernels_wrapper<true,double, double, double>( ProfileStruct &, VRED, Float2<double> *,
+void V_kernels_wrapper<true,1,2,float, float, float>( ProfileStruct &, VRED, Float2<float> *,
+                                             int, int, int, int4, tex_mom_list,
+                                             KernelArr<GAMMAS_SCATT> &,
+                                             vectorTex<float>&,vectorTex<float>&, propTex<float>&, propTex<float>&);
+template
+void V_kernels_wrapper<true,0,1,double, double, double>( ProfileStruct &, VRED, Float2<double> *,
 						int, int, int, int4, tex_mom_list,
 						KernelArr<GAMMAS_SCATT> &,
 						vectorTex<double>&,vectorTex<double>&,propTex<double>&, propTex<double>&);
 template
-void V_kernels_wrapper<false,float, float, float>( ProfileStruct &, VRED, Float2<float> *,
+void V_kernels_wrapper<true,1,2,double, double, double>( ProfileStruct &, VRED, Float2<double> *,
+                                                int, int, int, int4, tex_mom_list,
+                                                KernelArr<GAMMAS_SCATT> &,
+                                                vectorTex<double>&,vectorTex<double>&,propTex<double>&, propTex<double>&);
+
+template
+void V_kernels_wrapper<false,0,1,float, float, float>( ProfileStruct &, VRED, Float2<float> *,
 					     int, int, int, int4, tex_mom_list,
 					     KernelArr<GAMMAS_SCATT> &,
 					     vectorTex<float>&, vectorTex<float>&,propTex<float>&, propTex<float>&);
-
 template
-void V_kernels_wrapper<false,double, double, double>( ProfileStruct &, VRED, Float2<double> *,
+void V_kernels_wrapper<false,1,2,float, float, float>( ProfileStruct &, VRED, Float2<float> *,
+                                             int, int, int, int4, tex_mom_list,
+                                             KernelArr<GAMMAS_SCATT> &,
+                                             vectorTex<float>&, vectorTex<float>&,propTex<float>&, propTex<float>&);
+template
+void V_kernels_wrapper<false,0,1,double, double, double>( ProfileStruct &, VRED, Float2<double> *,
 						int, int, int, int4, tex_mom_list,
 						KernelArr<GAMMAS_SCATT> &,
 						vectorTex<double>&, vectorTex<double>&,propTex<double>&, propTex<double>&);
+template
+void V_kernels_wrapper<false,1,2,double, double, double>( ProfileStruct &, VRED, Float2<double> *,
+                                                int, int, int, int4, tex_mom_list,
+                                                KernelArr<GAMMAS_SCATT> &,
+                                                vectorTex<double>&, vectorTex<double>&,propTex<double>&, propTex<double>&);
+
