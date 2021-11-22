@@ -169,7 +169,7 @@
     std::vector<int> mom={0,0,1};
     int Qmax=1;
     std::vector<GAMMAS_SCATT> glist2={G_1,G_2};
-    std::vector<GAMMAS_SCATT> glist1={G_5};
+    std::vector<GAMMAS_SCATT> glist1={CG_5};
     // std::vector<GAMMAS_SCATT> glist={G_1,G_2,G_3,G_4};
     // // std::vector<GAMMAS_SCATT> glist={G_4};
     // // std::vector<GAMMAS_SCATT> glist_in={G_4};
@@ -293,6 +293,23 @@
       PLEGMA_printf("Norm of vector after V6 reduction\n",norm);
       reductions.writeHDF5(outfile_V6+"conj_false");
     }
+    {
+      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList.uniq_p(1));
+      reductions.V6_RED( vectorStoc,vectorStoc2,glist1,propUP,true);
+      double norm=vectorStoc.norm();
+      PLEGMA_printf("Norm of vector after V6 reduction\n",norm);
+      reductions.writeHDF5(outfile_V6+"red_conj_true");
+    }
+
+    {
+      PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList.uniq_p(1));
+      reductions.V6_RED( vectorStoc,vectorStoc2,glist1,propUP,false);
+      double norm=vectorStoc.norm();
+      PLEGMA_printf("Norm of vector after V6 reduction\n",norm);
+      reductions.writeHDF5(outfile_V6+"red_conj_false");
+    }
+
+
 
 
    

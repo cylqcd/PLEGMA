@@ -195,7 +195,7 @@ __global__ void V6_RED_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> v
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z};
 
-  const unsigned int OUT_DOF= N_SPINS*N_SPINS*N_SPINS;
+  const unsigned int OUT_DOF= N_SPINS*N_GAMMAS_SCATT;
   const unsigned int IN_DOF= N_SPINS*N_COLS;
 
   #pragma unroll
