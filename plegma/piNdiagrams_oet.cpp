@@ -640,7 +640,6 @@ int main(int argc, char **argv)
       } //End of loop on coherent sources
 
 
-      mom_index=0;
       for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
         auto &momentum_f2 =  mpf2[i_mpf2];
@@ -654,10 +653,8 @@ int main(int argc, char **argv)
         std::string pf2y=std::to_string(momentum_f2[1]);
         std::string pf2z=std::to_string(momentum_f2[2]);
 
-	if ((momentum_f2[0] != 0) || (momentum_f2[1] != 0) || (momentum_f2[2] != 0)){
-	  stochastic_propagator_oet_fini
-
-
+	  
+	stochastic_propagator_oet_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2], HOST);
 
 
         PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], filtered_sourcemomentumList);
@@ -673,23 +670,22 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(2));
 
 
-        PLEGMA_Vector<float> stochastic_oet_fini_propagator;
 
-        for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+	reductionV2.V2(stochastic_propagator_fini, propUP, propUP);
+        
+	for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
-          PLEGMA_Vector<float> stochastic_oet_zero_propagator;
+          stochastic_propagator_oet_zero.copy(*stochastic_propagator_oet_zero[timeidx],HOST);
+	  reductionV3.V3(stochastic_propagator_oet_zero, propDN);
+	                
+	  reductionV3.absorbTimeslice(reductionV3, sourcePositions[isource], false);
+          reductionV2_local.absorbTimeslice(reductionV2, timeidx, false);
 
-        stochastic_propagator.copy(*stochastic_propags[i],HOST);
-        stochastic_source.copy(*stochastic_sources[i],HOST);
+          TIME(corrB1.B_diagramms_oet(reductionsV3, reductionsV2_local, i_gamma_i2, 1, true),"ISOSPIN32");
 
-        stochastic_propagator.load();
-        stochastic_source.load();
-
-
+          TIME(corrB2.B_diagramms_oet(reductionsV3, reductionsV2_local, i_gamma_i2, 2, true),"ISOSPIN32");
 
 	}
-
-
 
       }
 
