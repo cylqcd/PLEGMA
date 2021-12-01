@@ -37,11 +37,11 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
       for(int i_g = 0 ; i_g < N_GAMMAS_SCATT; i_g++){
 	int gId=listGammas.array[i_g];
       
-        #pragma unroll //for loop over nonzero entries
-	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
-	  int alpha0=gammasIdx[gId][nz_e][0];
-	  int alpha1=gammasIdx[gId][nz_e][1];
-	  Float2<FloatOut> factor=g[gId][nz_e];
+//        #pragma unroll //for loop over nonzero entries
+//	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+//	  int alpha0=gammasIdx[gId][nz_e][0];
+//	  int alpha1=gammasIdx[gId][nz_e][1];
+//	  Float2<FloatOut> factor=g[gId][nz_e];
 	
           #pragma unroll
 	  for(int beta = 0 ; beta < N_SPINS ; beta++){
@@ -51,11 +51,11 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
 	      for(int b = 0 ; b < N_COLS ; b++){
 		accum[(i_g*N_SPINS + beta)*N_COLS+b] =
 		  accum[(i_g*N_SPINS + beta)*N_COLS+b]
-		  + conj(phi[alpha0][a])*factor*s[alpha1][beta][a][b];
+		  + conj(phi[0][0]);//*factor*s[alpha1][beta][a][b];
 	      }
 	    }
 	  }
-	}
+//	}
       }
       //
     }
@@ -64,30 +64,32 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
       //loops
       #pragma unroll
       for(int i_g = 0 ; i_g < N_GAMMAS_SCATT; i_g++){
-	int gId=listGammas.array[i_g];
+//	int gId=listGammas.array[i_g];
       
-        #pragma unroll //for loop over nonzero entries
-	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
-	  int alpha0=gammasIdx[gId][nz_e][0];
-	  int alpha1=gammasIdx[gId][nz_e][1];
-	  Float2<FloatOut> factor=g[gId][nz_e];
+//        #pragma unroll //for loop over nonzero entries
+//	for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+//	  int alpha0=gammasIdx[gId][nz_e][0];
+//	  int alpha1=gammasIdx[gId][nz_e][1];
+//	  Float2<FloatOut> factor=g[gId][nz_e];
 	
           #pragma unroll
 	  for(int beta = 0 ; beta < N_SPINS ; beta++){
-            #pragma unroll
-	    for(int a = 0 ; a < N_COLS ; a++){
+//          #pragma unroll
+//   for(int a = 0 ; a < N_COLS ; a++){
               #pragma unroll
 	      for(int b = 0 ; b < N_COLS ; b++){
 		accum[(i_g*N_SPINS + beta)*N_COLS+b] =
 		  accum[(i_g*N_SPINS + beta)*N_COLS+b]
-		  + phi[alpha0][a]*factor*s[alpha1][beta][a][b];
+		  + phi[0][0];//*factor*s[alpha1][beta][a][b];
 	      }
 	    }
-	  }
-	}
+// }
+//	}
       }
       //
     }
+    printf("V3 gridDim %d blockIdx.x %d blockDim.x %d threadIdx.x %d blockIdx.x %d sid3D %d grid3D %d t %d vid %d it %d time step %d\n", gridDim.x,blockIdx.x, blockDim.x, threadIdx.x, blockIdx.x, sid3D, grid3D, t, vid, it, time_step);
+
   }
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
@@ -95,6 +97,8 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
 
   const unsigned int OUT_DOF= N_GAMMAS_SCATT;
   const unsigned int IN_DOF= N_SPINS*N_COLS;
+//  accum[0].print()
+
 
   #pragma unroll
   for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
