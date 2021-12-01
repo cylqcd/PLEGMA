@@ -249,7 +249,7 @@
       reductions.writeHDF5(outfile_V4+"_Qmax_gl1_c1");
     }*/
 
-    {
+/*    {
       PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList.uniq_p(1));
       reductions.V5( vectorStoc, vectorStoc2,true);
       double norm=vectorStoc.norm();
@@ -262,7 +262,7 @@
       double norm=vectorStoc.norm();
       PLEGMA_printf("Norm of vector after V5 reduction %d\n",norm);
         reductions.writeHDF5(outfile_V5+"conj_false");
-    }
+    }*/
     {
 
       PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList.uniq_p(1));
@@ -279,7 +279,7 @@
       PLEGMA_printf("Norm of vector after V3 reduction %e\n",norm);
       reductions.writeHDF5(outfile_V3+"_2mom_c1");
     }
-    {
+/*    {
       PLEGMA_ScattCorrelator<float> reductions(sourcePositions[0], sourcemomentumList.uniq_p(1));
       reductions.V6( vectorStoc,vectorStoc2,propUP,true);
       double norm=vectorStoc.norm();
@@ -309,7 +309,7 @@
       reductions.writeHDF5(outfile_V6+"red_conj_false");
     }
 
-
+*/
 
 
    
