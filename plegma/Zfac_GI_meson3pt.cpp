@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
 	  //propST3D.absorb(propST, global_fixSinkTime);
 	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
-	  std::string meson_index[4] = {'5', '1', '2', '3'};
+	  char meson_index[4] = {'5', '1', '2', '3'};
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
 	  for(size_t imom = 0; imom < sourceMom.size()/3; imom++){
 	    std::vector<int> sinkMom = {sourceMom[imom*3],sourceMom[imom*3+1],sourceMom[imom*3+2]};

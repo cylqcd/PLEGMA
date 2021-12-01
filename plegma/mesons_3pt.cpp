@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int startSource = 0;
+  int endSource = numSourcePositions;
   std::string srcInputFile = "./input.src";
   std::vector<int> sourceMom = {0,0,0};
     auto add_options = [&](Options& options) {
@@ -31,6 +32,7 @@ int main(int argc, char **argv) {
     options.set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
     options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
     options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
+    options.set("end-src", "The index of the source position where to stop the calculation", verbosity, endSource);
     options.set("source-mom", "The list of momenta components at the source. Every three makes a momentum", verbosity, sourceMom);
 		     };
   add_options(*HGC_options);
@@ -77,7 +79,7 @@ int main(int argc, char **argv) {
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
     
-    for(int isource = startSource; isource < numSourcePositions; isource++){
+    for(int isource = startSource; isource < endSource; isource++){
       site& source = sourcePositions[isource];
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, source[0], source[1], source[2], source[3]);

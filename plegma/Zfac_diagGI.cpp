@@ -1,4 +1,3 @@
-
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 #include <cmath>
@@ -170,13 +169,13 @@ int main(int argc, char **argv)
     Vstc.randInit(rng_seed);
 
     double G_FF[N_DIMS][N_DIMS][T];
-    for(int i=0; i<N_DIMS*N_DIMS; i++ ) for(int t=0; t<T; t++ ) G_FF[i%N_DIMS][i/N_DIMS][t] = 0.;
 
     // Compute (mu,nu); See my note for computing <T_ii T_ii >
     for(int isc=0; isc < numSourcePositions; isc++){
       Vstc.stochastic_Z(4);
       for(int t=0; t<T; t++){ // source time slice
-	
+	for(int i=0; i<N_DIMS*N_DIMS; i++ ) for(int ts=0; ts<T; ts++ ) G_FF[i%N_DIMS][i/N_DIMS][ts] = 0.;
+    
 	// inversion with xi w/&w/t gamma_5
 	mu = in_mu;
         solver.UpdateSolver();
@@ -201,7 +200,7 @@ int main(int argc, char **argv)
 	  //---- inversion with mu&nu dependent rhs
 	  // for Diag (1) & (3)
 	  
-	  Unu.Udag();
+	  Unu.Udag(); // U_nu daggerred
 	  VtIn.absorbTimeslice(Vstc,t);
 	  Vtmp.mulGV(VtIn,Unu);//use sep. field!!! 
 	  Vtmp.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
@@ -247,7 +246,7 @@ int main(int argc, char **argv)
 	  //---- inversion with mu&nu dependent rhs
 	  // for Diag (2) & (4)
 
-	  Unu.Udag();
+	  Unu.Udag(); // U_nu not daggered
 	  VtIn.absorbTimeslice(Vstc,t);
 	  Vtmp.shift(VtIn,N_DIMS+nu);
 	  VtIn.mulGV(Vtmp,Unu);
@@ -296,7 +295,7 @@ int main(int argc, char **argv)
 	  
 	  //---- inversion with mu&nu dependent rhs
 	  // for Diag (5) & (7)
-	  Unu.Udag();
+	  Unu.Udag(); // U_nu daggered
 	  VtIn.absorbTimeslice(Vstc,t);
 	  Vtmp.mulGV(VtIn,Unu);
 	  VtIn.shift(Vtmp,nu);
@@ -341,6 +340,7 @@ int main(int argc, char **argv)
 
 	  //---- inversion with mu&nu dependent rhs
 	  // for Diag (6) & (8)
+	  Unu.Udag(); // U_nu not daggerred
 	  VtIn.absorbTimeslice(Vstc,t);
 	  Vtmp.shift(VtIn,N_DIMS+nu);
 	  VtIn.mulGV(Vtmp,Unu);
@@ -388,7 +388,7 @@ int main(int argc, char **argv)
 	  for(int ts=0; ts < dims[3]; ts++) 
 	    for(int mu_d=0; mu_d<N_DIMS; mu_d++)
 	      for(int nu=0; nu<N_DIMS; nu++)
-		fpt << isc<< " " << t << " " << ts << " " << mu_d << " " << nu << " " << std::scientific << G_FF[mu_d][nu][ts]/2.0 << std::endl;
+		fpt << isc<< " " << t << " " << ts << " " << mu_d << " " << nu << " " << std::scientific << G_FF[mu_d][nu][ts]/8.0 << std::endl;
 	}
       }
     }
