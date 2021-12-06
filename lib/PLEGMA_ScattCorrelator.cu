@@ -2018,26 +2018,58 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
 
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
 
-  if (forcetozero == true){
-
+  if (forcetozero == true && !this->labels.empty()){
     int tot_size = 2*this->getTotalSize();
-  memset( this->H_elem(), 0, tot_size*sizeof(Float) );
-
+    memset( this->H_elem(), 0, tot_size*sizeof(Float) );
   }
 
+
   if (is_myIt){
-    std::size_t n_t = this->labels.find("t");
-    assert(n_t!=std::string::npos);
-
-    int TIME = this->localT();
-    int in_dofs = std::accumulate(ranges.begin()+n_t+1, ranges.end(), 2, std::multiplies<int>());
-    int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
-
-    for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
-      for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
-        *(this->H_elem() + o_dofs*TIME*in_dofs + my_it*in_dofs  + i_dofs) = *(srcCorr.H_elem() + o_dofs*TIME*in_dofs + my_it*in_dofs  + i_dofs);
-       
+    int TIME;
+    if (this->labels.empty()){
+      this->labels=srcCorr.labels;
+     
+      for (auto &elem : srcCorr.GList){
+	this->GList.push_back(elem);
       }
+      this->datasets=srcCorr.datasets;
+      this->groups=srcCorr.groups;
+      this->shape=srcCorr.shape;
+      this->initialize();
+      this->setOffsets();
+      TIME=0;
+
+    }
+    else {
+      TIME=this->localT();
+    }
+
+    std::size_t n_t_src = srcCorr.labels.find("t");
+    
+    int TIME_src= srcCorr.localT();
+
+    int in_dofs_src = std::accumulate(srcCorr.ranges.begin()+n_t_src+1, srcCorr.ranges.end(), 2, std::multiplies<int>());
+    int out_dofs_src = srcCorr.ranges[0]*srcCorr.offsets[0]/TIME_src/in_dofs_src;
+ 
+    for( int o_dofs=0; o_dofs<out_dofs_src; ++o_dofs){
+      for( int i_dofs=0; i_dofs<in_dofs_src; ++i_dofs){
+	if (TIME!=0 && TIME!=1){
+	  *(this->H_elem() + o_dofs*TIME*in_dofs_src + my_it*in_dofs_src  + i_dofs) = *(srcCorr.H_elem() + o_dofs*TIME*in_dofs_src + my_it*in_dofs_src  + i_dofs);  
+	}
+	else {
+	  *(this->H_elem() + o_dofs*in_dofs_src + i_dofs) = *(srcCorr.H_elem() + o_dofs*TIME_src*in_dofs_src + my_it*in_dofs_src  + i_dofs);
+
+	}
+      }
+    }
+
+    if (TIME==0 || TIME==1){
+      int coords[4];
+      for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
+      coords[3]= global_it / HGC_localL[3];
+      int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+      int mpiErr = MPI_Bcast(this->H_elem(), in_dofs_src*out_dofs_src , MPI_Type<Float>(), rankHas, HGC_fullComm);
+      if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     }
   }
   comm_barrier();
