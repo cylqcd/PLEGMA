@@ -451,58 +451,118 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
   //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
   auto imap = this->pList().index_map();
 
-
-  #pragma omp parallel for
-  for(int i_m=0; i_m<imap.size(); i_m++){
-    Float V3aux[N_SPINS*N_COLS*2];
-    Float temp[2*N_SPINS*N_SPINS];
-    int i_mom_f1 = imap[i_m][1];
-    int i_mom_f2 = imap[i_m][2];
-    for(int t=0; t < TIME; ++t){
-      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
-        for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-	  for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
-            for (int alfa=0; alfa < N_SPINS; ++alfa ){
-	      for (int beta=0; beta < N_SPINS; ++beta ){
-		int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
-		switch(index_abs){
-		case 0: absorb_fromV24<0,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
-		case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
-		case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
-                }
-		//if true multiply by sigma_T(G_f1)
-		if(transpgamma_f1){
-		  for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
-		    V3aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
-		}
-		V_M_V<Float>( srcV3.Corr(t,i_mom_f2,g3), V3aux,
+  if (srcV3.localT()!=1 && srcV2.localT()!=1){
+    #pragma omp parallel for
+    for(int i_m=0; i_m<imap.size(); i_m++){
+      Float V3aux[N_SPINS*N_COLS*2];
+      Float temp[2*N_SPINS*N_SPINS];
+      int i_mom_f1 = imap[i_m][1];
+      int i_mom_f2 = imap[i_m][2];
+      for(int t=0; t < TIME; ++t){
+        for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+          for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+	    for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+              for (int alfa=0; alfa < N_SPINS; ++alfa ){
+	        for (int beta=0; beta < N_SPINS; ++beta ){
+		  int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
+		  switch(index_abs){
+		    case 0: absorb_fromV24<0,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
+		    case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
+		    case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr(t,i_mom_f1,g2), alfa, beta ); break;
+                  }
+		  //if true multiply by sigma_T(G_f1)
+		  if(transpgamma_f1){
+                    for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
+		      V3aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+		  }
+		  V_M_V<Float>( srcV3.Corr(t,i_mom_f2,g3), V3aux,
 		              this->GList[2][g1], transpgamma_i1, temp + spins);
-              }//beta
-            }//alfa
-            if(factor!=NULL){
+                }//beta
+              }//alfa
+              if(factor!=NULL){
 	        Float aux;
 		for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
 		  aux = temp[2*ss+0]*factor[0] - temp[2*ss+1]*factor[1];
 		  temp[2*ss+1] = temp[2*ss+0]*factor[1] + temp[2*ss+1]*factor[0];
 		  temp[2*ss+0] = aux;
 		}
-            }
+              }
 
-            for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
-              for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
-                GAMMAS_SCATT egammai = this->GList[0][g_exti];
-                GAMMAS_SCATT egammaf = this->GList[1][g_extf];
+              for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
+                for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
+                  GAMMAS_SCATT egammai = this->GList[0][g_exti];
+                  GAMMAS_SCATT egammaf = this->GList[1][g_extf];
 		
-		//multiplication with external gammas NB written here! mod in M_pe_GNG
-		M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g0,g2,g3),
+		  //multiplication with external gammas NB written here! mod in M_pe_GNG
+		  M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g0,g2,g3),
 				egammaf, egammai, temp );
-	      }//Gextf
-	    }//Gexti
-	  }//Gf2	
-	}//Gf1
-      }//Gi1
-    }//mom
-  }//time
+	        }//Gextf
+	      }//Gexti
+	    }//Gf2	
+	  }//Gf1
+        }//Gi1
+      }//mom
+    }//time
+  }//stochastic 
+  else{
+
+    int my_it = srcV2.source[3] - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+
+    
+    if (is_myIt){
+
+      #pragma omp parallel for
+      for(int i_m=0; i_m<imap.size(); i_m++){
+        Float V3aux[N_SPINS*N_COLS*2];
+        Float temp[2*N_SPINS*N_SPINS];
+        int i_mom_f1 = imap[i_m][1];
+        int i_mom_f2 = imap[i_m][2];
+        for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+          for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+            for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+              for (int alfa=0; alfa < N_SPINS; ++alfa ){
+                for (int beta=0; beta < N_SPINS; ++beta ){
+                  int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
+                  switch(index_abs){
+                    case 0: absorb_fromV24<0,Float>( V3aux, srcV2.Corr(0,i_mom_f1,g2), alfa, beta ); break;
+                    case 1: absorb_fromV24<1,Float>( V3aux, srcV2.Corr(0,i_mom_f1,g2), alfa, beta ); break;
+                    case 2: absorb_fromV24<2,Float>( V3aux, srcV2.Corr(0,i_mom_f1,g2), alfa, beta ); break;
+                  }
+                    //if true multiply by sigma_T(G_f1)
+                    if(transpgamma_f1){
+                    for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
+                        V3aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+                    }
+                    V_M_V<Float>( srcV3.Corr(0,i_mom_f2,g3), V3aux,
+                              this->GList[2][g1], transpgamma_i1, temp + spins);
+                  }//beta
+                }//alfa
+                if(factor!=NULL){
+                  Float aux;
+                  for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
+                    aux = temp[2*ss+0]*factor[0] - temp[2*ss+1]*factor[1];
+                    temp[2*ss+1] = temp[2*ss+0]*factor[1] + temp[2*ss+1]*factor[0];
+                    temp[2*ss+0] = aux;
+                  }
+                }
+
+                for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
+                  for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
+                    GAMMAS_SCATT egammai = this->GList[0][g_exti];
+                    GAMMAS_SCATT egammaf = this->GList[1][g_extf];
+
+                    //multiplication with external gammas NB written here! mod in M_pe_GNG
+                    M_pe_GNG<Float>( this->Corr(my_it,i_m,g_exti,g_extf,g1,g0,g2,g3),
+                                egammaf, egammai, temp );
+                  }//Gextf
+                }//Gexti
+              }//Gf2
+            }//Gf1
+          }//Gi1
+        }//mom
+      }//myit
+  }//stpchastic oet
 }
 
 
