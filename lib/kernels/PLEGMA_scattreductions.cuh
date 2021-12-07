@@ -29,18 +29,13 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
   int t_size = Vout.localT(); if(t_size==0) return;
 //PLEGMA_printf("t_size = %d\n",t_size);
   int maxT = Vout.endT() - Vout.startT(); 
-//PLEGMA_printf("maxT=%d\n", maxT);
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);//size of bunch of timeslices passed to the device
   size_t size = Vout.getTotalSize()/t_size*time_step;//N_moms*site_size*time_step
-//PLEGMA_printf("size = %d\n",size);
   size_t N_moms = Vout.getVolSize()/t_size;//N_moms
-//PLEGMA_printf("Nmoms %d\n", N_moms);
   int4 source = Vout.getSource(); 
   auto moms = Vout.getTexMomList();
   int site_size = Vout.getSiteSize();
-//PLEGMA_printf("site sie %d\n",site_size);
   int nblockspert = ps.tp.grid.x/time_step;
-//PLEGMA_printf("blockspert %d\n",nblockspert);
 
 
   //value of some quantities
@@ -292,17 +287,13 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", Vout.getSiteSize(), site_size);
 
   int shared_size = N_SPINS*N_COLS*sizeof(Float2<FloatOut>); //+
-//PLEGMA_printf("site_size= %d\n", site_size);
 
   Float2<FloatOut> *result = NULL;
   hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
-//PLEGMA_printf("Vout.getTotalSize() = %d\n",Vout.getTotalSize());
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
   ProfileStruct ps(HGC_localVolume3D, shared_size);
-//PLEGMA_printf("HGC_localVolume3D=%d\n",HGC_localVolume3D);
   int myLocalT = Vout.localT();
-//PLEGMA_printf("My localT %d\n",myLocalT);
   int maxLocalT = myLocalT;
   std::vector<GAMMAS_SCATT> Gammas {};
   MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
@@ -326,7 +317,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   //reduction between spaceComm for the sum of Fourier transformation between nodes
   MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
 
- hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
+  hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 
 }
 
@@ -344,7 +335,8 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
 
   int t_size = Tout.localT(); if(t_size==0) return;
   int maxT = Tout.endT() - Tout.startT(); 
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x); //size of bunch of timeslices passed to the device
+
   size_t size = Tout.getTotalSize()/t_size*time_step;//N_moms*site_size*time_step
   size_t N_moms = Tout.getVolSize()/t_size;//N_moms
   int4 source = Tout.getSource(); 

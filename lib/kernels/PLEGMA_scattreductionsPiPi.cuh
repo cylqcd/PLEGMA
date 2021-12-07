@@ -69,7 +69,8 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
 
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;//size of bunch of timeslices passed to the device
+
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);//size of bunch of timeslices passed to the device
   size_t size = corr.getTotalSize()/t_size*time_step;//N_moms*site_size*time_step
   size_t N_moms = corr.getVolSize()/t_size;//N_moms
   int4 source = corr.getSource();

@@ -77,7 +77,8 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);
+
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
   size_t size = corr.getTotalSize()/t_size*time_step;

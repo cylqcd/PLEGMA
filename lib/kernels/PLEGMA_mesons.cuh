@@ -26,7 +26,6 @@ __global__ void contract_mesons_device( propTex<FloatA> texProp1,
   for(int i = 0 ; i < 2*N_MESONS ; i++){
     accum[i] = 0.;
   }
-
   if (sid3D < DGC_localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -72,7 +71,8 @@ void contract_mesons_host( ProfileStruct &ps,
 
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);
+
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   size_t size = corr.getTotalSize()/t_size*time_step;
   size_t volume = corr.getVolSize()/t_size;
@@ -125,6 +125,8 @@ void contract_mesons_host( ProfileStruct &ps,
 	}
     }
   }
+
+  printf("PLEGMA_mesons res %e %e %e t_size = %d, maxT = %d, source.w = %d, HGC_localVolume3D %d time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", result[0].norm2(),result[1].norm2(),result[2].norm(),t_size, maxT, source.w, HGC_localVolume3D, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
   cudaFree(d_partial_block);
 }
