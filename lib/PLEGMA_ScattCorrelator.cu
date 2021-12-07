@@ -517,7 +517,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
         Float V3aux[N_SPINS*N_COLS*2];
         Float temp[2*N_SPINS*N_SPINS];
         int i_mom_f1 = imap[i_m][1];
-        int i_mom_f2 = imap[i_m][2];
+        int i_mom_i2 = imap[i_m][0];
         for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
           for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
             for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
@@ -534,7 +534,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
                     for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
                         V3aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
                     }
-                    V_M_V<Float>( srcV3.Corr(0,i_mom_f2,g3), V3aux,
+                    V_M_V<Float>( srcV3.Corr(0,i_mom_i2,g3), V3aux,
                               this->GList[2][g1], transpgamma_i1, temp + spins);
                   }//beta
                 }//alfa
@@ -673,7 +673,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
     #pragma omp parallel for
     for(int i_m=0; i_m<imap.size(); i_m++){
       int i_mom_f1 = imap[i_m][1];
-      int i_mom_f2 = imap[i_m][2];
+      int i_mom_i2 = imap[i_m][2];
       Float V3aux[N_SPINS*N_SPINS*N_COLS*2];
       Float temp_colorvector[N_COLS*2];
       Float temp[N_SPINS*N_SPINS*2];
@@ -703,11 +703,11 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
                 //colorvector x V3
                 for (int coloridx=0; coloridx<3; ++coloridx){
                   temp[spins+0] +=
-		    +temp_colorvector[2*coloridx+0]*srcV3.Corr(0,i_mom_f2,g3,beta,coloridx)[0]
-                    -temp_colorvector[2*coloridx+1]*srcV3.Corr(0,i_mom_f2,g3,beta,coloridx)[1];
+		    +temp_colorvector[2*coloridx+0]*srcV3.Corr(0,i_mom_i2,g3,beta,coloridx)[0]
+                    -temp_colorvector[2*coloridx+1]*srcV3.Corr(0,i_mom_i2,g3,beta,coloridx)[1];
                   temp[spins+1] +=
-                    +temp_colorvector[2*coloridx+1]*srcV3.Corr(0,i_mom_f2,g3,beta,coloridx)[0]
-                    +temp_colorvector[2*coloridx+0]*srcV3.Corr(0,i_mom_f2,g3,beta,coloridx)[1];
+                    +temp_colorvector[2*coloridx+1]*srcV3.Corr(0,i_mom_i2,g3,beta,coloridx)[0]
+                    +temp_colorvector[2*coloridx+0]*srcV3.Corr(0,i_mom_i2,g3,beta,coloridx)[1];
                 }//coloridx
               }//beta
             }//alfa

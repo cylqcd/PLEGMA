@@ -678,12 +678,10 @@ int main(int argc, char **argv)
         site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
 	PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(2));
+        PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));
 
-	
-	PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(1), 1);
-        PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source, filtered_sourcemomentumList.uniq_p(2), 1);
-	 
+        PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source, filtered_sourcemomentumList.uniq_p(1), 1);
+	PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(0), 1);	 
 
 	PLEGMA_printf("spropagator fini norm %e\n",spropagator_fini.norm());
 
@@ -693,7 +691,7 @@ int main(int argc, char **argv)
         
 	for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
-          spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);
+          spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
 	  spropagator_zero.load();
 
 	  reductionsV3.V3(spropagator_zero, glist_sink_nucleon, propDN, false);
