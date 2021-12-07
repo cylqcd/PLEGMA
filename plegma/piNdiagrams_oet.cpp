@@ -20,7 +20,7 @@ std::vector<double> runtime;
 //#define THREAD(fnc) TIME(fnc)
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename", "readStochSamples","time-dilution","nstochSamples","confnumber","contractionstoch","contractionstd","contractionoet"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename","time-dilution","confnumber"};
 // Note here sinkMom is used as the momentum insertion in the sequential souce, probably has to be renamed to seqMom
 
 void produceOutput( PLEGMA_ScattCorrelator<float> source,
@@ -98,6 +98,8 @@ int main(int argc, char **argv)
   HGC_options->set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
   HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
   HGC_options->set("seed2", "Seed for intiialization of stochastic sources", verbosity, rand_seed2);
+
+  PLEGMA_printf("Automatic seed mmm\n");
 
   //=========================================================================================================//
   initializePLEGMA();
@@ -194,8 +196,6 @@ int main(int argc, char **argv)
       stochastic_oet_prop_d_fini_mom.push_back(new PLEGMA_Vector<float>(HOST));
     }
 
-    PLEGMA_Vector<double> vectorStoc_source_oet;
-    vectorStoc_source_oet.randInit(rand_seed1);
 
     PLEGMA_printf("Start producing stochastic oet propagators\n");
     //Note that we replace the f1<-f2 DN propagator with a stochastic one
@@ -205,17 +205,20 @@ int main(int argc, char **argv)
 
 
     std::vector<std::vector<int>> mpf2 = sourcemomentumList.uniq_p(2);
+
+    std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(2);
+
    
-    if (read_stochastic_oet==0){
+    if (read_stochastic_oet==false){
       
       PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
       PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
       PLEGMA_Vector<double> vectorInOut; //temporary vector using in solve
 
-      PLEGMA_Vector<double> vectorSource_oet; 
-
-
       //Step(1) Creating the time-diluted stochastic source
+
+      PLEGMA_Vector<double> vectorSource_oet;
+      vectorSource_oet.randInit(rand_seed1);
       vectorSource_oet.stochastic_Z(nroots);
 
       for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
@@ -232,7 +235,6 @@ int main(int argc, char **argv)
 
         //In vectorAuxD2 we store the results for the inversion for sink to sink
         vectorAuxD2.scale(0.0);
-
 
 	//Step(2) Smearing all the time slice
         TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
@@ -340,6 +342,11 @@ int main(int argc, char **argv)
 *
 *********************************************************************************************/
 
+    PLEGMA_Vector<double> vectorSource_oet;
+    vectorSource_oet.randInit(rand_seed2);
+
+
+
 
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -381,7 +388,7 @@ int main(int argc, char **argv)
                     isource, sourcePositions[isource][0], sourcePositions[isource][1],
                     sourcePositions[isource][2], sourcePositions[isource][3]);
       for(int icoherentsource; icoherentsource < n_coherent_source; ++icoherentsource){
-	PLEGMA_printf("\n ### Calculations for coherent-source-numbedr %d - timeslice %03d begin now ###\n\n",
+	PLEGMA_printf("\n ### Calculations for coherent-source-number %d - timeslice %03d begin now ###\n\n",
                     icoherentsource, sourcePositions[isource][3]+icoherentsource*HGC_totalL[DIM_T]/n_coherent_source);
       }
  
@@ -662,6 +669,7 @@ int main(int argc, char **argv)
         PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], filtered_sourcemomentumList);
         PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], filtered_sourcemomentumList);
 
+
 	
         //initialize diagrams
         corrB1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B1");
@@ -675,8 +683,13 @@ int main(int argc, char **argv)
 	
 	PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(1), 1);
         PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source, filtered_sourcemomentumList.uniq_p(2), 1);
+	 
 
-	reductionsV2.V2(spropagator_fini,glist_sink_nucleon, propDN, propUP, false);
+	PLEGMA_printf("spropagator fini norm %e\n",spropagator_fini.norm());
+
+        reductionsV2.V2(spropagator_fini,glist_sink_nucleon, propDN, propUP, false);
+        reductionsV2.writeHDF5("V2red"+std::to_string(i_mpf2));
+
         
 	for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
@@ -684,19 +697,132 @@ int main(int argc, char **argv)
 	  spropagator_zero.load();
 
 	  reductionsV3.V3(spropagator_zero, glist_sink_nucleon, propDN, false);
+	  reductionsV3.writeHDF5("V3red"+std::to_string(timeidx));
 
-	                
+
 	  reductionsV3_1timeslice.absorbTimeslice(reductionsV3, sourcePositions[isource][DIM_T], false);
+	  
           reductionsV2_1timeslice.absorbTimeslice(reductionsV2, timeidx, false);
 
 
- //         TIME(corrB1.B_diagramms_oet(reductionsV3_local, reductionsV2_local, i_gamma_i2, 1, true),"ISOSPIN32");
+          TIME(corrB1.B_diagramms(reductionsV3_1timeslice, reductionsV2_1timeslice, 0, 1, true),"ISOSPIN32");
 
-//          TIME(corrB2.B_diagramms_oet(reductionsV3_local, reductionsV2_local, i_gamma_i2, 2, true),"ISOSPIN32");
+          TIME(corrB2.B_diagramms(reductionsV3_1timeslice, reductionsV2_1timeslice, 0, 2, true),"ISOSPIN32");
 
 	}
 
       }
+
+
+      { //Z diagrams
+
+      //We draw a different random vector for every source position
+      vectorSource_oet.stochastic_Z(nroots);
+
+      //Doing for +mu for the UP propagator spin dilution oet
+      if(mu<0) {
+         mu*=-1.;
+         solver.UpdateSolver();
+      }
+
+      PLEGMA_Vector<double> vectortmp1;
+      PLEGMA_Vector<double> vectortmp2;
+      PLEGMA_Vector<double> vectorSave_diluted;
+      PLEGMA_Vector<double> stochastic_oet_prop_u_zero_mom;
+      PLEGMA_Vector<double> stochastic_oet_prop_u_fini_mom;
+
+
+
+      // Smearing the source
+
+      for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
+        vectortmp1.absorbTimeslice(vectorStoc_source_oet, coherent_source_table[i_coherent_source]);
+        PLEGMA_Vector3D<double> vector1, vector2;
+        vector1.absorb(vectortmp1, coherent_source_table[i_coherent_source]);
+
+        PLEGMA_Gauge3D<double> smearedGauge3D;
+        smearedGauge3D.absorb(smearedGauge, coherent_source_table[i_coherent_source]);
+
+        TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
+        vectortmp1.absorb(vector2,coherent_source_table[i_coherent_source]);
+        vectortmp2.absorbTimeslice(vectortmp1,coherent_source_table[i_coherent_source],false);
+      }
+
+
+      //Save the smeared,transformed and diluted source for non-zero momentum oet.
+      vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
+      vectorStoc_source_oet.copy(vectortmp1);
+
+
+      TIME(solver.solve(vectortmp2, vectortmp2), "ISOSPIN32");
+
+      vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
+
+      TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss), "ISOSPIN32");
+
+      stochastic_oet_prop_u_zero_mom.copy(vectortmp2);
+
+      PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(2));
+      PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));
+      PLEGMA_ScattCorrelator<float> reductionsV4(source, filtered_sourcemomentumList.uniq_p(1));
+
+      TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP));
+      TIME(reductionsV2.V2( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP));
+
+      for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
+
+        vectortmp1.copy(vectorSource_oet);
+
+        //Multiplying by the appropriate momentum phase
+        std::vector<int> tmp_4Dmom= momentum_i2 ;
+        tmp_4Dmom.push_back(0);
+        vectortmp1.mulMomentumPhases(tmp_4Dmom,-1);
+
+	if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+	  
+          //Doing the inversion
+          TIME(solver.solve(vectortmp1, vectortmp1),"ISOSPIN32");
+
+          //Rotate back immediately to the physical basis
+          vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
+
+          //performing smearing
+          TIME(vectortmp1.gaussianSmearing(vectortmp2, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
+
+              
+	  stochastic_oet_prop_u_fini_mom.copy(vectortmp1);
+          
+        }
+
+	if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+
+           TIME(reductionsV3.V3( stochastic_oet_prop_u_fini_mom, gamma_5_t_sinkmeson, propUP));
+
+         }
+         else{
+
+           TIME(reductionsV3.V3( stochastic_oet_prop_u_zero_mom, gamma_5_t_sinkmeson, propUP));
+
+         }
+
+
+
+         TIME(corrZ1.Z_diagramms_without_dilution( reductionsV3, reductionsV4, 1 ),"ISOSPIN32");
+         TIME(corrZ2.Z_diagramms_withput_dilution( reductionsV3, reductionsV4, 2 ),"ISOSPIN32");
+
+         TIME(corrZ3.Z_diagramms_without_dilution( reductionsV3, reductionsV2, 3 ),"ISOSPIN32");
+         TIME(corrZ4.Z_diagramms_without_dilution( reductionsV3, reductionsV2, 4 ),"ISOSPIN32");
+
+
+         TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+         TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+         TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+         TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+
+
+      }
+
+      }//Z diagrams
 
 
     }

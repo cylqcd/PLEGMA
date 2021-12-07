@@ -1326,6 +1326,33 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
 }
 
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::Z_diagramms_without_dilution(PLEGMA_ScattCorrelator<Float> &srcV3, 
+                                                PLEGMA_ScattCorrelator<Float> &srcV2,
+                                                int diagramm_index, bool accum ){
+  //if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
+  //  PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
+
+  this->clear_output(!accum, 5, 0);
+
+  Float factor[2]={-1.,0.};//-1 from eqs. (28),(31),(34),(37), ....
+  switch (diagramm_index){
+  case 1:
+    this->V3V2reduction( srcV3, srcV2, 1, false, 0, true, factor,false); //checked FP
+    break;
+  case 2:
+    this->V3V2reduction_matrix( srcV3, srcV2, 0, false, 0, true, factor, false);//checked FP
+    break;
+  case 3:
+    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, 0, true, factor, false);//checked FP
+    break;
+  case 4:
+    this->V3V2reduction( srcV3, srcV2, 0, false, 0, true, factor, false);//checked FP
+    break;
+  default:
+    PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+  }//switch (Diagram index)
+}
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3),
