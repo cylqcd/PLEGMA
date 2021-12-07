@@ -728,7 +728,8 @@
 	}
 
 
-	{ //Z diagrams
+
+	{ //W,Z diagrams
 
 	//We draw a different random vector for every source position
 	vectorSource_oet.stochastic_Z(nroots);
@@ -781,6 +782,7 @@
 	PLEGMA_ScattCorrelator<float> reductionsV2(source, sourcemomentumList.uniq_p(1));
 	PLEGMA_ScattCorrelator<float> reductionsV4(source, sourcemomentumList.uniq_p(1));
 
+
 	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
         TIME(reductionsV2.V2( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
 
@@ -797,12 +799,28 @@
           PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], filtered_sourcemomentumList);
           PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], filtered_sourcemomentumList);
 
+	  //initialize diagrams
+          corrW1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W1");
+          corrW2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W2");
+          corrW3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W3");
+          corrW4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W4");
+
+
+          corrZ1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "Z1");
+          corrZ2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "Z2");
+          corrZ3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "Z3");
+          corrZ4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "Z4");
+          corrM.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MNPPP");
+
+
           vectortmp1.copy(vectorSource_oet);
 
           //Multiplying by the appropriate momentum phase
           std::vector<int> tmp_4Dmom= momentum_i2 ;
           tmp_4Dmom.push_back(0);
           vectortmp1.mulMomentumPhases(tmp_4Dmom,-1);
+
+
 
 	  if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
 	  
@@ -819,6 +837,41 @@
 	    stochastic_oet_prop_u_fini_mom.copy(vectortmp1);
           
           }
+
+          for  (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
+
+	    for (int timeidx=0; timeidx<HGC_totalL[DIMT]; ++timeidx){
+
+              for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
+
+                for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2) {
+
+                  spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);
+                  spropagator_zero.load();
+
+                  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,1,2,false);
+
+                  TIME(corrW1.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 1, true),"ISOSPIN12");
+
+		  TIME(corrW2.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 2, true),"ISOSPIN12");
+
+		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,0,1,false);
+		  TIME(corrW3.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 3, true),"ISOSPIN12");
+
+                  TIME(corrW4.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 4, true),"ISOSPIN12");
+
+
+
+
+		  
+		}
+
+	      }
+
+	    }
+
+	  }
+
 
           for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
 
