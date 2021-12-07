@@ -1206,6 +1206,10 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &s
 
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::W_diagramms_oet(PLEGMA_ScattCorrelator<Float> &srcV6, PLEGMA_Vector<Float> &Phi0, PLEGMA_Vector<Float> &Phi1, int ig_i2, int ig_f2, int diagramm_index, bool accum){
+    this->clear_output(!accum, 5, ig_i2);
+}
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum){

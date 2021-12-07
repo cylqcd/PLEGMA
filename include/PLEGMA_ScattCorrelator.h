@@ -166,8 +166,17 @@ namespace plegma {
      *
      **/
     void V6( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, PLEGMA_Propagator<Float> &S, bool conj_v=false );
+    /** 
+     *
+     *  @brief performs V6 type reduction produces two spin and one color indices tensor from two fermion vectors
+     *         and one fermion propagator
+     *         Formula
+     *         C1=0,C2=1
+     *         V6^{gamma,delta}_{m}=\eps_{abc}{\phi}^{a}_{alpha}\Gamma_{\alpha,\beta}{\xi}^{b}_{\beta}S^{c,m}_{\gamma,\delta}
+     *         C1=1,C2=2
+     *         V6^{alpha,delta}_{m}=\eps_{abc}{\phi}^{a}_{alpha}{\xi}^{b}_{\beta}\Gamma_{\beta,\gamma}S^{c,m}_{\gamma,\delta}
+     **/
     void V6_RED( PLEGMA_Vector<Float> &Phi1, PLEGMA_Vector<Float> &Phi2, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, int C1=0, int C2=1, bool conj_v=false);
-
     /**
      *  @brief performs T1 type reduction to compute baryon 2pt functions
      *  T1_{alpha,beta}=\epsilon_{a,b,c}\epsilon_{l,m,n}S1^{c,l}_{alpha,alpha0}\Gamma_{i}_{alpha0,alpha1}S2^{b,m}_{beta0,alpha1}\Gamma_{f}_{beta0,beta1}S3^{a,n}_{beta1,beta} 
@@ -215,6 +224,7 @@ namespace plegma {
     //diagrams
     void B_diagramms( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false );
     void W_diagramms( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false );
+    void W_diagramms_oet(PLEGMA_ScattCorrelator<Float> &srcV6, PLEGMA_Vector<Float> &Phi0, PLEGMA_Vector<Float> &Phi1, int ig_i2, int ig_f2, int diagramm_index, bool accum=false );
     void Z_diagramms( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
     void Z_diagramms_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2,  int diagramm_index, bool accum=false );
 
