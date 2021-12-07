@@ -651,6 +651,9 @@
 
 	} //End of loop on coherent sources
 
+        std::vector<GAMMAS_SCATT> gamma_5_t_sourcemeson=apply_gamma5_scatt_gamma(glist_source_meson,LEFT);
+
+
 	for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
 	  auto &momentum_f2 =  mpf2[i_mpf2];
@@ -688,27 +691,37 @@
 
 	  PLEGMA_printf("spropagator fini norm %e\n",spropagator_fini.norm());
 
+
 	  reductionsV2.V2(spropagator_fini,glist_sink_nucleon, propDN, propUP, false);
 	  reductionsV2.writeHDF5("V2red"+std::to_string(i_mpf2));
 
 	  
 	  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
-	    spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
-	    spropagator_zero.load();
-
-	    reductionsV3.V3(spropagator_zero, glist_sink_nucleon, propDN, false);
-	    reductionsV3.writeHDF5("V3red"+std::to_string(timeidx));
+	    //Loop over the different gamma structure for the source meson
+            for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
 
 
-	    reductionsV3_1timeslice.absorbTimeslice(reductionsV3, sourcePositions[isource][DIM_T], false);
+	      GAMMAS_SCATT gamma_f2 = glist_sink_meson[i_gamma_f2];
+              GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gamma_f2, RIGHT );
+
+	      spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
+	      spropagator_zero.load();
+
+              spropagator_zero.apply_gamma_scatt(gammaf2_t_gamma5,RIGHT);
+
+	      reductionsV3.V3(spropagator_zero, gamma_5_t_sourcemeson, propDN, false);
+	      reductionsV3.writeHDF5("V3red"+std::to_string(timeidx));
+
+	      reductionsV3_1timeslice.absorbTimeslice(reductionsV3, sourcePositions[isource][DIM_T], false);
 	    
-	    reductionsV2_1timeslice.absorbTimeslice(reductionsV2, timeidx, false);
+	      reductionsV2_1timeslice.absorbTimeslice(reductionsV2, timeidx, false);
 
+	      TIME(corrB1.B_diagramms(reductionsV3_1timeslice, reductionsV2_1timeslice, i_gamma_f2, 1, true),"ISOSPIN32");
 
-	    TIME(corrB1.B_diagramms(reductionsV3_1timeslice, reductionsV2_1timeslice, 0, 1, true),"ISOSPIN32");
+	      TIME(corrB2.B_diagramms(reductionsV3_1timeslice, reductionsV2_1timeslice, i_gamma_f2, 2, true),"ISOSPIN32");
 
-	    TIME(corrB2.B_diagramms(reductionsV3_1timeslice, reductionsV2_1timeslice, 0, 2, true),"ISOSPIN32");
+	    }
 
 	  }
 
@@ -719,8 +732,6 @@
 
 	//We draw a different random vector for every source position
 	vectorSource_oet.stochastic_Z(nroots);
-
-        std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
 
 
 	//Doing for +mu for the UP propagator spin dilution oet
@@ -773,6 +784,8 @@
 	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
         TIME(reductionsV2.V2( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
 
+
+
         for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
 
           auto &momentum_i2 =  mpi2[i_mpi2];
@@ -807,30 +820,50 @@
           
           }
 
-	  if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+          for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
 
-           TIME(reductionsV3.V3( stochastic_oet_prop_u_fini_mom, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
 
-          }
-          else{
+            GAMMAS_SCATT gamma_i2 = glist_sink_meson[i_gamma_i2];
+            GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gamma_i2, RIGHT );
 
-           TIME(reductionsV3.V3( stochastic_oet_prop_u_zero_mom, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
-
-          }
+	    zero_tmp.copy(stochastic_oet_prop_u_zero_mom);
 
 
 
-         TIME(corrZ1.Z_diagramms_without_dilution( reductionsV3, reductionsV4, 1 ),"ISOSPIN32");
-         TIME(corrZ2.Z_diagramms_without_dilution( reductionsV3, reductionsV4, 2 ),"ISOSPIN32");
+	    if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
 
-         TIME(corrZ3.Z_diagramms_without_dilution( reductionsV3, reductionsV2, 3 ),"ISOSPIN32");
-         TIME(corrZ4.Z_diagramms_without_dilution( reductionsV3, reductionsV2, 4 ),"ISOSPIN32");
+	      PLEGMA_Vector fini_tmp(BOTH);
+              fini_tmp.copy(stochastic_oet_prop_u_fini_mom);
+              fini_tmp.apply_gamma_scatt(gammai2_t_gamma5,RIGHT);
+
+              TIME(reductionsV3.V3( fini_tmp, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
+
+            }
+            else{
+
+              PLEGMA_Vector zero_tmp(BOTH);
+              zero_tmp.copy(stochastic_oet_prop_u_zero_mom);
+              zero_tmp.apply_gamma_scatt(gammai2_t_gamma5,RIGHT);
+
+              TIME(reductionsV3.V3( zero_tmp, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
+
+            }
 
 
-         TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-         TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-         TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-         TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+
+            TIME(corrZ1.Z_diagramms_without_dilution( reductionsV3, reductionsV4, i_gamma_i2, 1 ),"ISOSPIN32");
+            TIME(corrZ2.Z_diagramms_without_dilution( reductionsV3, reductionsV4, i_gamma_i2, 2 ),"ISOSPIN32");
+
+            TIME(corrZ3.Z_diagramms_without_dilution( reductionsV3, reductionsV2, i_gamma_i2, 3 ),"ISOSPIN32");
+            TIME(corrZ4.Z_diagramms_without_dilution( reductionsV3, reductionsV2, i_gamma_i2, 4 ),"ISOSPIN32");
+
+
+            TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+            TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+            TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+            TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+
+	  }
 
 
       }
