@@ -708,7 +708,7 @@
 	      spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
 	      spropagator_zero.load();
 
-              spropagator_zero.apply_gamma_scatt(gammaf2_t_gamma5,RIGHT);
+              spropagator_zero.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
 
 	      reductionsV3.V3(spropagator_zero, gamma_5_t_sourcemeson, propDN, false);
 	      reductionsV3.writeHDF5("V3red"+std::to_string(timeidx));
@@ -741,15 +741,15 @@
 	   solver.UpdateSolver();
 	}
 
-	PLEGMA_Vector<double> vectortmp1;
-	PLEGMA_Vector<double> vectortmp2;
-	PLEGMA_Vector<double> vectorSave_diluted;
 	PLEGMA_Vector<float> stochastic_oet_prop_u_zero_mom;
 	PLEGMA_Vector<float> stochastic_oet_prop_u_fini_mom;
 
 
-
-	// Smearing the source
+	// Smearing the source and invert
+	{
+	
+	PLEGMA_Vector<double> vectortmp1;
+	PLEGMA_Vector<double> vectortmp2;
 
 	for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
 	  vectortmp1.absorbTimeslice(vectorSource_oet, coherent_source_table[i_coherent_source]);
@@ -775,12 +775,16 @@
 	vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
 
 	TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss), "ISOSPIN32");
-
+	
 	stochastic_oet_prop_u_zero_mom.copy(vectortmp2);
+
+	}
 
 	PLEGMA_ScattCorrelator<float> reductionsV3(source, sourcemomentumList.uniq_p(2));
 	PLEGMA_ScattCorrelator<float> reductionsV2(source, sourcemomentumList.uniq_p(1));
 	PLEGMA_ScattCorrelator<float> reductionsV4(source, sourcemomentumList.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV6(source, sourcemomentumList.uniq_p(1));
+
 
 
 	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
@@ -799,6 +803,13 @@
           PLEGMA_ScattCorrelator<float> corrZ3(sourcePositions[isource], filtered_sourcemomentumList);
           PLEGMA_ScattCorrelator<float> corrZ4(sourcePositions[isource], filtered_sourcemomentumList);
 
+          PLEGMA_ScattCorrelator<float> corrW1(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW2(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW3(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW4(sourcePositions[isource], filtered_sourcemomentumList);
+
+	  PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], filtered_sourcemomentumList);
+          
 	  //initialize diagrams
           corrW1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W1");
           corrW2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W2");
@@ -813,16 +824,22 @@
           corrM.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MNPPP");
 
 
-          vectortmp1.copy(vectorSource_oet);
-
-          //Multiplying by the appropriate momentum phase
-          std::vector<int> tmp_4Dmom= momentum_i2 ;
-          tmp_4Dmom.push_back(0);
-          vectortmp1.mulMomentumPhases(tmp_4Dmom,-1);
-
-
 
 	  if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+
+
+	    PLEGMA_Vector<double> vectortmp1;
+	    PLEGMA_Vector<double> vectortmp2;
+	    vectortmp1.copy(vectorSource_oet);
+
+          
+	    //Multiplying by the appropriate momentum phase
+          
+	    std::vector<int> tmp_4Dmom= momentum_i2 ;
+	    tmp_4Dmom.push_back(0);
+	    vectortmp1.mulMomentumPhases(tmp_4Dmom,-1);
+
+
 	  
             //Doing the inversion
             TIME(solver.solve(vectortmp1, vectortmp1),"ISOSPIN32");
@@ -838,9 +855,16 @@
           
           }
 
+	  PLEGMA_Vector<float> spropagator_zero;
+	  PLEGMA_Vector<float> spropagator_fini;
+
+          PLEGMA_Vector<float> vectortmp_zero;
+          PLEGMA_Vector<float> vectortmp_fini;
+
+
           for  (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
-	    for (int timeidx=0; timeidx<HGC_totalL[DIMT]; ++timeidx){
+	    for (int timeidx=0; timeidx<HGC_totalL[DIM_T]; ++timeidx){
 
               for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
 
@@ -849,16 +873,21 @@
                   spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);
                   spropagator_zero.load();
 
+                  spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
+		  spropagator_fini.load();
+
+
                   reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,1,2,false);
 
-                  TIME(corrW1.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 1, true),"ISOSPIN12");
+                  TIME(corrW1.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 1, true),"ISOSPIN12");
 
-		  TIME(corrW2.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 2, true),"ISOSPIN12");
+		  TIME(corrW2.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 2, true),"ISOSPIN12");
 
-		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,0,1,false);
-		  TIME(corrW3.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 3, true),"ISOSPIN12");
 
-                  TIME(corrW4.W_diagramms_oet( reductionsV6 , vectortmp1, vectortmp2, i_gamma_i2, i_gamma_f2, 4, true),"ISOSPIN12");
+		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_fini, glist_sink_nucleon,propUP,0,1,false);
+		  TIME(corrW3.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 3, true),"ISOSPIN12");
+
+                  TIME(corrW4.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 4, true),"ISOSPIN12");
 
 
 
@@ -879,26 +908,24 @@
             GAMMAS_SCATT gamma_i2 = glist_sink_meson[i_gamma_i2];
             GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gamma_i2, RIGHT );
 
-	    zero_tmp.copy(stochastic_oet_prop_u_zero_mom);
+            std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
+
 
 
 
 	    if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+              vectortmp_fini.copy(stochastic_oet_prop_u_fini_mom);
+              vectortmp_fini.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
-	      PLEGMA_Vector fini_tmp(BOTH);
-              fini_tmp.copy(stochastic_oet_prop_u_fini_mom);
-              fini_tmp.apply_gamma_scatt(gammai2_t_gamma5,RIGHT);
-
-              TIME(reductionsV3.V3( fini_tmp, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
+              TIME(reductionsV3.V3( vectortmp_fini, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
 
             }
             else{
 
-              PLEGMA_Vector zero_tmp(BOTH);
-              zero_tmp.copy(stochastic_oet_prop_u_zero_mom);
-              zero_tmp.apply_gamma_scatt(gammai2_t_gamma5,RIGHT);
+              vectortmp_zero.copy(stochastic_oet_prop_u_zero_mom);
+              vectortmp_zero.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
-              TIME(reductionsV3.V3( zero_tmp, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
+              TIME(reductionsV3.V3( vectortmp_zero, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
 
             }
 
