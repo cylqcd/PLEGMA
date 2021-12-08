@@ -1207,8 +1207,134 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &s
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms_oet(PLEGMA_ScattCorrelator<Float> &srcV6, PLEGMA_Vector<Float> &Phi0, PLEGMA_Vector<Float> &Phi1, int ig_i2, int ig_f2, int diagramm_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::V5V6reductions(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::shared_ptr<Float> &Phi1, int diagramm_index, int input_mom_i2, int input_mom_f2, accum){
     this->clear_output(!accum, 5, ig_i2);
+    
+    int Nmoms_f1 = srcV6.Nmoms();
+
+    std::string exp_shape="tmggggggss";
+    if( this->labels!=exp_shape )
+      PLEGMA_error("V3V2reduction Expected shape ptmggggggss not the one detected\n");
+
+    if( srcV2.getGList()[0] != this->GList[4] ) PLEGMA_error("G_f1 doesn't match\n");
+  
+    //if( srcV3.getGList()[0] != this->GList[5] ) PLEGMA_error("G_f2 doesn't match\n");
+
+    int n_gammas_exti = this->GList[0].size();
+    int n_gammas_extf = this->GList[1].size();
+    int n_gammas_i1 = this->GList[2].size();
+    int n_gammas_i2 = this->GList[3].size();
+    int n_gammas_f1 = this->GList[4].size();
+    int n_gammas_f2 = this->GList[5].size();
+    int TIME = this->localT();
+    int TIME_src= srcV6.source[DIM_T];
+
+
+    auto imap = this->pList().index_map();
+
+    int my_it = srcV6.source[3] - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+
+
+    if (is_myIt){
+      
+    for (int i_gamma_i2=0; i_gamma_i2 < this->GList[3].size() ; ++i_gamma_i2 ){
+      for (int i_gamma_f2=0; i_gamma_f2 < this->GList[5].size() ; ++i_gamma_f2 ){
+
+      #pragma omp parallel for
+      for(int i_m=0; i_m<imap.size(); i_m++){
+        Float temp[2*N_SPINS*N_SPINS];
+        int i_mom_f1 = imap[i_m][1];
+        int i_mom_i2 = imap[i_m][0];
+	int i_mom_f2 = imap[i_m][2];
+	if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_momi2)){
+	  for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+	    for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//pi
+              GAMMAS_SCATT gammai2 = this->GList[3][g2];
+              GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gammai2, RIGHT );
+
+	      for (int g3=0 ; g3 < n_gammas_f1 ; ++g3 ){//pf1
+	        for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//pf2
+                  GAMMAS_SCATT gammaf2 = this->GList[5][g4];
+                  GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gammaf2, RIGHT );
+
+	          Float V5Aux[2*N_SPINS*N_SPINS*N_COLS];
+		  Float V5Aux2[2*N_SPINS*N_SPINS*N_COLS];
+		  for (int alfa=0; alfa < N_SPINS; ++alfa ){                
+		    for (int beta=0; beta < N_SPINS; ++beta ){
+		      for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
+			unsigned short a=plegma::eps[eps1_nz][0];
+			unsigned short b=plegma::eps[eps1_nz][1];
+			unsigned short c=plegma::eps[eps1_nz][2];
+			int eps1_sgn=plegma::sgn_eps[eps1_nz];
+			Float tmp[2];
+			tmp[0]=Phi0.get()[2*(alpha*N_COLS+a)]*Phi1.get()[2*(alpha*N_COLS+b)]-Phi0.get()[2*(alpha*N_COLS+a)+1]*Phi1.get()[2*(alpha*N_COLS+b)+1];
+                        tmp[1]=-Phi0.get()[2*(alpha*N_COLS+a)+1]*Phi1.get()[2*(alpha*N_COLS+b)]-Phi0.get()[2*(alpha*N_COLS+a)]*Phi1.get()[2*(alpha*N_COLS+b)+1];
+			V5Aux[2*((alpha*N_SPINS+beta)*N_COLS+m)] = V5Aux[2*((alpha*N_SPINS+beta)*N_COLS+m)] + tmp[0];
+                        V5Aux[2*((alpha*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alpha*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
+		      }
+		    }
+		  }
+		  Mc_pe_GNcG<Float>( V5Aux2, gamma_i2_t_gamma5, V5Aux, gamma_f2_t_gamma5);
+
+		  for (int alfa=0;alfa<N_SPINS;++alfa){
+		    for (int beta=0; beta<N_SPINS;++beta){
+		      switch(index_abs_V6){
+			case 0: absorb_fromV56<0,Float>( V6aux, srcV6.Corr(0,i_mom_f1,g3), alfa ); break;
+			case 1: absorb_fromV56<1,Float>( V6aux, srcV6.Corr(0,i_mom_f1,g3), alfa ); break;
+		      }
+		      switch(index_abs_V5){
+			case 0: absorb_fromV56<0,Float>( V5aux3, V5Aux2, alfa ); break;
+                        case 1: absorb_fromV56<1,Float>( V5aux3, V5Aux2, alfa ); break;
+		      }
+		   
+		  
+                      //if true multiply by sigma_T(G_f1)
+                      if(transpgamma_f1){
+                        for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc){
+                          V6aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+                        }
+		      }
+                      V_M_V<Float>( V5Aux3, V6aux,
+			  this->GList[2][g1], transpgamma_i1, temp + spins);
+		    }//beta
+		  }//alfa
+		  if(factor!=NULL){
+		    Float aux;
+		    for(int ss=0; ss<N_SPINS*N_SPINS; ++ss){
+		      aux = temp[2*ss+0]*factor[0] - temp[2*ss+1]*factor[1];
+		      temp[2*ss+1] = temp[2*ss+0]*factor[1] + temp[2*ss+1]*factor[0];
+		      temp[2*ss+0] = aux;
+		    }
+		  }
+		  for (int g_exti=0; g_exti < n_gammas_exti ; ++ g_exti){
+		    for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
+		      GAMMAS_SCATT egammai = this->GList[0][g_exti];
+		      GAMMAS_SCATT egammaf = this->GList[1][g_extf];
+		      
+		      //multiplication with external gammas NB written here! mod in M_pe_GNG
+		      M_pe_GNG<Float>( this->Corr(my_it,i_m,g_exti,g_extf,g1,g0,g2,g3),
+                                egammaf, egammai, temp );
+		    }//Gextf
+                  }//Gexti
+                }//Gf2
+              }//Gf1
+            }//Gi2
+          }//Gi1
+        }//mom
+      }//myit
+  }//stpchastic oet
+
+
+
+
+
+
+
+
+      }
+    }
+
 }
 
 template<typename Float>
