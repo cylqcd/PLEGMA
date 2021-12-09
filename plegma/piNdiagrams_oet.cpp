@@ -353,6 +353,12 @@
 
         site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
+        site actualSource=site({sourcePositions[isource][DIM_X],
+	                        sourcePositions[isource][DIM_Y],
+	                        sourcePositions[isource][DIM_Z],
+		                sourcePositions[isource][DIM_T]});
+
+
 
 	//Creating look up tables for the coherent time-slice sources
 	int *coherent_source_table=NULL;
@@ -362,7 +368,8 @@
 	coherent_source_table=(int *)malloc(sizeof(int)*n_coherent_source);
 	for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
 	  coherent_source_table[i_coherent_source]=(sourcePositions[isource][DIM_T]+i_coherent_source*HGC_totalL[DIM_T]/n_coherent_source)%HGC_totalL[DIM_T];
-	}
+	        site source=site({0,0,0,sourcePositions[isource][DIM_T]});
+}
 	coherent_source_table_timeslice=(int *)malloc(sizeof(int)*HGC_totalL[DIM_T]);
 	for (int i_coherent_source=0; i_coherent_source < n_coherent_source; ++i_coherent_source){
 	  for (int i=0; i<=HGC_totalL[DIM_T]/(2*n_coherent_source); ++i){
@@ -785,6 +792,9 @@
 	PLEGMA_ScattCorrelator<float> reductionsV4(source, sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV6(source, sourcemomentumList.uniq_p(1));
 
+	PLEGMA_ScattCorrelator<float> reductionsV6_1timeslice(source, sourcemomentumList.uniq_p(1), 1);
+
+
 
 
 	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
@@ -876,21 +886,33 @@
                   spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
 		  spropagator_fini.load();
 
-
                   reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,1,2,false);
 
-                  TIME(corrW1.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 1, true),"ISOSPIN12");
-
-		  TIME(corrW2.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 2, true),"ISOSPIN12");
-
-
-		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_fini, glist_sink_nucleon,propUP,0,1,false);
-		  TIME(corrW3.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 3, true),"ISOSPIN12");
-
-                  TIME(corrW4.W_diagramms_oet( reductionsV6 ,stochastic_oet_prop_u_zero_mom, spropagator_fini, i_gamma_i2, i_gamma_f2, 4, true),"ISOSPIN12");
+		  reductionsV6_1timeslice.absorbTimeslice(reductionsV6, timeidx, false);
 
 
 
+		  stochastic_oet_prop_u_zero_mom.unload();
+
+		  std::shared_ptr<Float> Phi0 = stochastic_oet_prop_u_zero_mom.getSourcePosition(actualSource,HOST);
+
+                  stochastic_oet_prop_u_zero_mom.load();
+
+		  spropagator_fini.unload();
+
+		  std::shared_ptr<Float> Phi1 = spropagator_fini.getSourcePosition(actualSource,HOST);
+
+		  spropagator_fini.load();
+
+
+		  TIME(corrW1.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 1, true),"ISOSPIN32");
+
+		  TIME(corrW2.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 2, true),"ISOSPIN32");
+
+		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,0,1,false);
+		  TIME(corrW3.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 3, true),"ISOSPIN32");
+
+		  TIME(corrW4.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 4, true),"ISOSPIN32");
 
 		  
 		}

@@ -358,6 +358,41 @@ __inline__ void M_pe_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_
     }
   }
 }
+template<typename Float>
+__inline__ void Mc_pe_GNcG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source, bool forcezero=false ){
+  const int NC2=N_SPINS*N_SPINS*N_COLS*2;
+  const int C2=N_COLS*2;
+  if(forcezero)
+    for (int i=0; i < NC2; ++i)
+      dest[i]=0.;
+  for (int n_gamma_f=0; n_gamma_f<4; ++n_gamma_f) {
+    const int alfa =   gammaInd_scatt[Gamma_f][n_gamma_f][0];
+    const int alfa0=   gammaInd_scatt[Gamma_f][n_gamma_f][1];
+    Float gf[2];
+    gf[1]=gamma_scatt[Gamma_f][n_gamma_f][1];
+    gf[0]=gamma_scatt[Gamma_f][n_gamma_f][0];
+    for (int n_gamma_i=0; n_gamma_i<4; ++n_gamma_i){
+      const int beta=    gammaInd_scatt[Gamma_i][n_gamma_i][1];
+      const int beta0=   gammaInd_scatt[Gamma_i][n_gamma_i][0];
+      Float gi[2];
+      gi[1]=gamma_scatt[Gamma_i][n_gamma_i][1];
+      gi[0]=gamma_scatt[Gamma_i][n_gamma_i][0];
+      for (int c=0;c<N_COLS;++c){
+        dest[(alfa*N_SPINS+beta)*C2+2*c+0]+=
+                +gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[0]
+                -gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[0]
+                -gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[1]
+                -gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[1];
+        dest[(alfa*N_SPINS+beta)*C2+2*c+1]+=
+                -gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[1]
+                +gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[0]
+                +gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[0]
+                +gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[1];
+      }
+    }
+  }
+}
+
 
 template<typename Float> void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size );
 template<typename Float> void x_pe_sy( Float *dest, Float floatnumber, Float *temporary, int size );
