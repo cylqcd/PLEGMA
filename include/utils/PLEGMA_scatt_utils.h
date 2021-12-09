@@ -359,7 +359,7 @@ __inline__ void M_pe_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_
   }
 }
 template<typename Float>
-__inline__ void Mc_pe_GNcG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source, bool forcezero=false ){
+__inline__ void Mc_pe_GNcGt( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source, bool forcezero=false ){
   const int NC2=N_SPINS*N_SPINS*N_COLS*2;
   const int C2=N_COLS*2;
   if(forcezero)
@@ -372,8 +372,8 @@ __inline__ void Mc_pe_GNcG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMA
     gf[1]=gamma_scatt[Gamma_f][n_gamma_f][1];
     gf[0]=gamma_scatt[Gamma_f][n_gamma_f][0];
     for (int n_gamma_i=0; n_gamma_i<4; ++n_gamma_i){
-      const int beta=    gammaInd_scatt[Gamma_i][n_gamma_i][1];
-      const int beta0=   gammaInd_scatt[Gamma_i][n_gamma_i][0];
+      const int beta=    gammaInd_scatt[Gamma_i][n_gamma_i][0];
+      const int beta0=   gammaInd_scatt[Gamma_i][n_gamma_i][1];
       Float gi[2];
       gi[1]=gamma_scatt[Gamma_i][n_gamma_i][1];
       gi[0]=gamma_scatt[Gamma_i][n_gamma_i][0];
