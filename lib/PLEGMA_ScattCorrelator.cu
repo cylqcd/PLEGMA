@@ -819,7 +819,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		      }
 		    }
 		  }
-		  Mc_pe_GNcG<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
+		  Mc_pe_GNcGt<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
 
 		  for (int alfa=0;alfa<N_SPINS;++alfa){
 		    for (int beta=0; beta<N_SPINS;++beta){
@@ -955,7 +955,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		    }
 		  }
 
-		  Mc_pe_GNcG<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
+		  Mc_pe_GNcGt<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
 		  V_TR_MM<Float>( V5Aux2, this->GList[2][g1], false, V5Aux3);
 
                   for (int alfa=0;alfa<N_SPINS;++alfa){

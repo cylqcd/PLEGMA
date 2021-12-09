@@ -886,17 +886,12 @@
                   spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
 		  spropagator_fini.load();
 
-                  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,1,2,false);
 
-		  reductionsV6_1timeslice.absorbTimeslice(reductionsV6, timeidx, false);
+		  stochastic_oet_prop_u_fini_mom.unload();
 
+		  std::shared_ptr<float> Phi0 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
 
-
-		  stochastic_oet_prop_u_zero_mom.unload();
-
-		  std::shared_ptr<float> Phi0 = stochastic_oet_prop_u_zero_mom.getPointSource(actualSource,HOST);
-
-                  stochastic_oet_prop_u_zero_mom.load();
+                  stochastic_oet_prop_u_fini_mom.load();
 
 		  spropagator_fini.unload();
 
@@ -904,15 +899,19 @@
 
 		  spropagator_fini.load();
 
+                  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,1,2,false);
+		  reductionsV6_1timeslice.absorbTimeslice(reductionsV6, timeidx, false);
 
-		  TIME(corrW1.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
+		  TIME(corrW1.W_diagramms_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
 
-		  TIME(corrW2.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
+		  TIME(corrW2.W_diagramms_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
 
 		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,0,1,false);
-		  TIME(corrW3.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
+		  reductionsV6_1timeslice.absorbTimeslice(reductionsV6, timeidx, false);
 
-		  TIME(corrW4.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
+		  TIME(corrW3.W_diagramms_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
+
+		  TIME(corrW4.W_diagramms_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
 
 		  
 		}
