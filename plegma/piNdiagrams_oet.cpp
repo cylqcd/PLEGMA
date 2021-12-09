@@ -894,25 +894,25 @@
 
 		  stochastic_oet_prop_u_zero_mom.unload();
 
-		  std::shared_ptr<Float> Phi0 = stochastic_oet_prop_u_zero_mom.getSourcePosition(actualSource,HOST);
+		  std::shared_ptr<float> Phi0 = stochastic_oet_prop_u_zero_mom.getPointSource(actualSource,HOST);
 
                   stochastic_oet_prop_u_zero_mom.load();
 
 		  spropagator_fini.unload();
 
-		  std::shared_ptr<Float> Phi1 = spropagator_fini.getSourcePosition(actualSource,HOST);
+		  std::shared_ptr<float> Phi1 = spropagator_fini.getPointSource(actualSource,HOST);
 
 		  spropagator_fini.load();
 
 
-		  TIME(corrW1.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 1, true),"ISOSPIN32");
+		  TIME(corrW1.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
 
-		  TIME(corrW2.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 2, true),"ISOSPIN32");
+		  TIME(corrW2.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
 
 		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,0,1,false);
-		  TIME(corrW3.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 3, true),"ISOSPIN32");
+		  TIME(corrW3.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
 
-		  TIME(corrW4.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2, int i_mpf2, 4, true),"ISOSPIN32");
+		  TIME(corrW4.W_diagramms_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
 
 		  
 		}

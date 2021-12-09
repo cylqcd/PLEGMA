@@ -531,7 +531,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
                   }
                     //if true multiply by sigma_T(G_f1)
                     if(transpgamma_f1){
-                    for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
+                      for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc)
                         V3aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
                     }
                     V_M_V<Float>( srcV3.Corr(0,i_mom_i2,g3), V3aux,
@@ -936,6 +936,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 	          Float V5Aux[2*N_SPINS*N_SPINS*N_COLS];
 		  Float V5Aux2[2*N_SPINS*N_SPINS*N_COLS];
 		  Float V5Aux3[2*N_COLS];
+		  Float V6Aux[2*N_SPINS*N_SPINS*N_COLS];
 
 		  for (int alfa=0; alfa < N_SPINS; ++alfa ){                
 		    for (int beta=0; beta < N_SPINS; ++beta ){
@@ -953,19 +954,38 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		      }
 		    }
 		  }
+
 		  Mc_pe_GNcG<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
 		  V_TR_MM<Float>( V5Aux2, this->GList[2][g1], false, V5Aux3);
+
+                  for (int alfa=0;alfa<N_SPINS;++alfa){
+                    for (int beta=0;beta<N_SPINS;++beta){
+		      for (int coloridx=0;coloridx<N_COLS;++coloridx){
+		           V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]=srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[0];
+                           V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1]=srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[1];
+		      }
+		    }
+		  }
+
+		   //if true multiply by sigma_T(G_f1)
+
+
+                  if(transpgamma_f1){
+                    for(int sc=0; sc<N_SPINS*N_SPINS*N_COLS*2; ++sc)
+                      V6Aux[sc] *= gammaTranspSign_scatt[this->GList[4][g3]];
+                  }
+
 
 		  for (int alfa=0;alfa<N_SPINS;++alfa){
 		    for (int beta=0; beta<N_SPINS;++beta){
 		      for (int coloridx=0; coloridx<N_COLS; ++coloridx){ 
 			int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
 		        temp[spins+0]+=
-			  +V5Aux3[2*coloridx+0]*srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[0]
-			  -V5Aux3[2*coloridx+1]*srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[1];
+			  +V5Aux3[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
+			  -V5Aux3[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
 			temp[spins+1]+=
-                          +V5Aux3[2*coloridx+0]*srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[1]
-                          +V5Aux3[2*coloridx+1]*srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[0];
+                          +V5Aux3[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
+                          +V5Aux3[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
 
 		      }//n_col
 		    }//beta
@@ -1475,7 +1495,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms_oet(PLEGMA_ScattCorrelator<Float
 
   switch( diagram_index ){
     case 1:
-//      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2,  false, false, factor);
+      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2,  false, false, true, factor);
       break;
     case 2: 
       this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 0, 1, false, false, false, factor);
@@ -1484,7 +1504,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms_oet(PLEGMA_ScattCorrelator<Float
       this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 0, 0, false, false, false, factor);
       break;
     case 4:
-  //    this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, false, factor);
+      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, false, false, factor);
       break;
     default:
       PLEGMA_error("This value of W diagram oet index does not exists, please check your inputs in piNdiagramms_oet.cpp");
