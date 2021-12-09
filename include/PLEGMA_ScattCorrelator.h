@@ -203,7 +203,22 @@ namespace plegma {
     //manipulation
     void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false );
 
+    void V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, 
+	                      std::shared_ptr<Float> &Phi0, 
+			      std::shared_ptr<Float> &Phi1, 
+			      int input_mom_i2, int input_mom_f2, 
+			      int index_abs_V6, int index_abs_V5, 
+			      bool transp=false, bool transpgamma_i1=false, bool transgamma_f1=false, 
+			      Float *factor=NULL);
+
     void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false ); 
+
+    void V5V6reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV6, 
+	                             std::shared_ptr<Float> &Phi0, 
+				     std::shared_ptr<Float> &Phi1, 
+				     int input_mom_i2, int input_mom_f2, 
+				     bool transp=false, bool transpgamma_i1=false, bool transpgamma_f1=false, Float *factor=NULL );
+
 
     //manipulation for coherent source implementation
 
@@ -224,7 +239,8 @@ namespace plegma {
     //diagrams
     void B_diagramms( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false );
     void W_diagramms( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false );
-    void W_diagramms_oet(PLEGMA_ScattCorrelator<Float> &srcV6, PLEGMA_Vector<Float> &Phi0, PLEGMA_Vector<Float> &Phi1, int ig_i2, int ig_f2, int diagramm_index, bool accum=false );
+    void W_diagramms_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::shared_ptr<Float> &Phi1, int input_mom_i2, int input_mom_f2, int diagram_index, bool accum=false);
+
     void Z_diagramms( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
     void Z_diagramms_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2,  int diagramm_index, bool accum=false );
 
@@ -307,5 +323,18 @@ namespace plegma {
     }
   }
 
-  
+  template <int s_free, typename Float>
+  void absorb_fromV56( Float dest[N_SPINS*N_COLS*2], Float* src, int alfa ){
+    if( s_free == 0){
+      for(int s=0; s < N_SPINS; ++s)
+        for(int c=0; c < N_COLS; ++c)
+          for(int ri=0; ri<2; ++ri)
+            dest[(s*N_COLS+c)*2+ri]  = src[((s*N_SPINS+alfa)*N_COLS+c)*2+ri];
+    } else {
+      for(int s=0; s < N_SPINS; ++s)
+        for(int c=0; c < N_COLS; ++c)
+          for(int ri=0; ri<2; ++ri)
+            dest[(s*N_COLS+c)*2+ri]  = src[((alfa*N_SPINS+s)*N_COLS+c)*2+ri];
+    }
+  }
 }
