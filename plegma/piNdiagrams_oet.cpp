@@ -215,6 +215,14 @@
 	PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
 	PLEGMA_Vector<double> vectorInOut; //temporary vector using in solve
 
+	
+	// ensuring mu negative
+          if(mu<0) {
+            mu*=-1.;
+            solver.UpdateSolver();
+          }
+
+
 	//Step(1) Creating the time-diluted stochastic source
 
 	PLEGMA_Vector<double> vectorSource_oet;
@@ -728,11 +736,11 @@
 
 	      TIME(corrB2.B_diagramms(reductionsV3_1timeslice, reductionsV2_1timeslice, i_gamma_f2, 2, true),"ISOSPIN32");
 
-	    }
+	    } // gamma f2
 
-	  }
+	  }//timeidx
 
-	}
+	}//i_mpf2
 
 
 
@@ -794,6 +802,12 @@
 
 	PLEGMA_ScattCorrelator<float> reductionsV6_1timeslice(source, sourcemomentumList.uniq_p(1), 1);
 
+	PLEGMA_ScattCorrelator<float> reductionsV2T(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV4T(source,  sourcemomentumList.uniq_p(3));
+
+        TIME(reductionsV4T.V4( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
+        TIME(reductionsV2T.V2( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
+
 
 
 
@@ -819,6 +833,25 @@
           PLEGMA_ScattCorrelator<float> corrW4(sourcePositions[isource], filtered_sourcemomentumList);
 
 	  PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], filtered_sourcemomentumList);
+	  
+	  //T diagrams
+          std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(3);
+          std::vector<std::vector<int>> mpi2_filt;
+          mpi2_filt.assign(mptot_filt.size(),momentum_i2);
+          momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+
+
+
+          PLEGMA_ScattCorrelator<float> corrT1(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT2(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT3(sourcePositions[isource], list_mpi2ptot);
+
+          corrT1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "T1");
+          corrT2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "T2");
+          corrT3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "T3");
+
+
+
           
 	  //initialize diagrams
           corrW1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W1");
@@ -862,8 +895,21 @@
 
               
 	    stochastic_oet_prop_u_fini_mom.copy(vectortmp1);
-          
-          }
+
+	    stochastic_oet_prop_u_fini_mom.unload();
+
+            std::shared_ptr<float> Phi1 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
+            stochastic_oet_prop_u_fini_mom.load();
+
+	    TIME(corrT1.T_diagrams_oet(reductionsV4T, Phi1, i_mpi2, 1, true),"ISOSPIN32");
+
+	    TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 2, true),"ISOSPIN32");
+
+            TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 3, true),"ISOSPIN32");
+
+
+	  }
+
 
 	  PLEGMA_Vector<float> spropagator_zero;
 	  PLEGMA_Vector<float> spropagator_fini;
@@ -922,6 +968,11 @@
 
 	  }
 
+          TIME(produceOutput(corrW1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+
 
           for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
 
@@ -969,7 +1020,7 @@
 
       }
 
-      }//Z diagrams
+      }//Z,W diagrams
 
 
     }
