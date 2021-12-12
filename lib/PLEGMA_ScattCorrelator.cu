@@ -2226,9 +2226,9 @@ void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0, int i_mpi2, int diagramindex, bool accum=false){
+void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0, int i_mpi2, int diagramindex, bool accum){
 
-  if( this->pList().pi(1) != VT.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
+  if( this->pList().pi(1) != reductionsVT.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
 
     //n gammas
   int n_gammas_f = this->GList[4].size();
@@ -2237,10 +2237,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
   int n_extgammas_f = this->GList[1].size();
   int n_extgammas_i = this->GList[0].size();
   int TIME = this->localT();
-
-
 		
-  V_MVM<Float>( Phi0.get(), GAMMAS_SCATT gamma5, gamma5_t_gammai2, stochAux );
+  //put output to zero
+  this->clear_output(!accum);
 
   for(int t=0; t<TIME; ++t){
     #pragma omp parallel for
@@ -2251,16 +2250,16 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       GAMMAS_SCATT gamma5 = G_5;
       for (int gi2=0 ; gi2< n_gammas_i2; ++gi2){
         GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][gi2], LEFT);
-        V_MVM<Float>( Phi0.get(), GAMMAS_SCATT gamma5, gamma5_t_gammai2, stochAux );
+        V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, stochAux );
         for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
           for( int gf=0; gf<n_gammas_f; ++gf ){
 	    for ( int alpha=0;alpha<N_SPINS;++alpha){
-	      for ( int beta=0: beta< N_SPINS; ++beta){
-	        int spins =(alfa*N_SPINS+beta)*2;
+	      for ( int beta=0; beta< N_SPINS; ++beta){
+	        int spins =(alpha*N_SPINS+beta)*2;
 	        switch(diagramindex){
-                  case 1: absorb_fromV24<1,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alfa, beta ); break;
+                  case 1: absorb_fromV24<1,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha, beta ); break;
                   case 2: absorb_fromV24<2,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), beta, alpha); break;
-                  case 3: absorb_fromV24<0,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alfa, beta ); break;
+                  case 3: absorb_fromV24<0,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha, beta ); break;
 	        }
                 V_M_V<Float>( stochAux, V3aux,
                               this->GList[2][gi1], false, temp + spins);

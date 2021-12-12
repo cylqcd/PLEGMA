@@ -323,22 +323,22 @@ __inline__ void V_MVM( Float * V1, GAMMAS_SCATT gamma1, GAMMAS_SCATT gamma2, Flo
      for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
        int beta0= gammaInd_scatt[gamma2][nz_e][0];
        int beta1= gammaInd_scatt[gamma2][nz_e][1];
-       tmp[2*(beta1*N_COLS+color)+0]+=+V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma2][nz_e][0]
-                                      -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma2][nz_e][1];	    
-       tmp[2*(beta1*N_COLS+color)+1]+=+V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma2][nz_e][0]
-                                      +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma2][nz_e][1];
+       tmp[2*(beta1*N_COLS+color)+0]+=+V1[2*(beta0*N_COLS+color)+0]*gamma_scatt[gamma2][nz_e][0]
+                                      -V1[2*(beta0*N_COLS+color)+1]*gamma_scatt[gamma2][nz_e][1];	    
+       tmp[2*(beta1*N_COLS+color)+1]+=+V1[2*(beta0*N_COLS+color)+1]*gamma_scatt[gamma2][nz_e][0]
+                                      +V1[2*(beta0*N_COLS+color)+0]*gamma_scatt[gamma2][nz_e][1];
      }
    }
    #pragma unroll
    for (int color=0;color<N_COLS;  ++color){
      #pragma unroll
      for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
-       int beta0= gammaInd_scatt[gamma][nz_e][0];
-       int beta1= gammaInd_scatt[gamma][nz_e][1];
-       Dest[2*(beta0*N_COLS+color)+0]+=+tmp[2*(beta1*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][0]
-                                       -tmp[2*(beta1*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][1];
-       Dest[2*(beta0*N_COLS+color)+1]+=+tmp[2*(beta1*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][0]
-                                       +tmp[2*(beta1*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][1];
+       int beta0= gammaInd_scatt[gamma1][nz_e][0];
+       int beta1= gammaInd_scatt[gamma1][nz_e][1];
+       Dest[2*(beta0*N_COLS+color)+0]+=+tmp[2*(beta1*N_COLS+color)+0]*gamma_scatt[gamma1][nz_e][0]
+                                       -tmp[2*(beta1*N_COLS+color)+1]*gamma_scatt[gamma1][nz_e][1];
+       Dest[2*(beta0*N_COLS+color)+1]+=+tmp[2*(beta1*N_COLS+color)+1]*gamma_scatt[gamma1][nz_e][0]
+                                       +tmp[2*(beta1*N_COLS+color)+0]*gamma_scatt[gamma1][nz_e][1];
      }
    }
 }
