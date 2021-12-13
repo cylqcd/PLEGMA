@@ -51,7 +51,7 @@ void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
   switch(listGammas.size){
   case(0): V_kernels_nogamma<CONJ_V,(unsigned int)0,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, Phi1, Phi2,S1 ); break;
   case(1): V_kernels<CONJ_V,C1,C2,(unsigned int)1,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
-  case(2): V_kernels<CONJ_V,C1,C2,(unsigned int)2,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
+  case(3): V_kernels<CONJ_V,C1,C2,(unsigned int)3,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2,S1, S2 ); break;
   //case(4): V_kernels<(unsigned int)4,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(5): V_kernels<(unsigned int)5,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(6): V_kernels<(unsigned int)6,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
