@@ -1110,6 +1110,9 @@
 
 	  }
 
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
+
+
           TIME(produceOutput(corrW1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
@@ -1149,6 +1152,8 @@
 
 
 	  }
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
           TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
