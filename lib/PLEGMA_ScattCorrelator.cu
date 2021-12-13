@@ -520,7 +520,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
         int i_mom_i2 = imap[i_m][0];
         for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
           for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-            for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+            for (int g3=0 ; g3 < n_gammas_i2 ; ++g3 ){//pf2
               for (int alfa=0; alfa < N_SPINS; ++alfa ){
                 for (int beta=0; beta < N_SPINS; ++beta ){
                   int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
@@ -553,7 +553,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
                     GAMMAS_SCATT egammaf = this->GList[1][g_extf];
 
                     //multiplication with external gammas NB written here! mod in M_pe_GNG
-                    M_pe_GNG<Float>( this->Corr(my_it,i_m,g_exti,g_extf,g1,g0,g2,g3),
+                    M_pe_GNG<Float>( this->Corr(my_it,i_m,g_exti,g_extf,g1,g3,g2,g0),
                                 egammaf, egammai, temp );
                   }//Gextf
                 }//Gexti
@@ -673,14 +673,14 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
     #pragma omp parallel for
     for(int i_m=0; i_m<imap.size(); i_m++){
       int i_mom_f1 = imap[i_m][1];
-      int i_mom_i2 = imap[i_m][2];
+      int i_mom_i2 = imap[i_m][0];
       Float V3aux[N_SPINS*N_SPINS*N_COLS*2];
       Float temp_colorvector[N_COLS*2];
       Float temp[N_SPINS*N_SPINS*2];
 
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
         for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-          for (int g3=0 ; g3 < n_gammas_f2 ; ++g3 ){//pf2
+          for (int g3=0 ; g3 < n_gammas_i2 ; ++g3 ){//pi2
             for (int alfa=0; alfa < N_SPINS; ++alfa ){
               for (int beta=0; beta < N_SPINS; ++beta ){
                 int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
@@ -1273,7 +1273,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 //4pt --> "B1","B2","W1","W2","W3","W4","Z1","Z2","Z3","Z4","M","TpiNsink" "D" 6Gammas
 //note that here D stands for disconnected
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string isospin, std::string name_of_diagram){
+void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::string isospin, std::string name_of_diagram, bool oet){
   
   char letter = name_of_diagram.at(0);
   assert( (letter=='M') || (letter=='B') || (letter=='W') || (letter=='Z') || (letter=='D') );
@@ -1329,8 +1329,14 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   
   //Groups
   char *temporary;
-  asprintf(&temporary,"%s/pi2=",isospin.c_str());
-  this->groups = {this->pList().to_string({0},{temporary})[0],};
+  if (oet ==true){
+    asprintf(&temporary,"%s/pf2=",isospin.c_str());
+    this->groups = {this->pList().to_string({2},{temporary})[0],};
+  }
+  else{
+    asprintf(&temporary,"%s/pi2=",isospin.c_str());
+    this->groups = {this->pList().to_string({0},{temporary})[0],};
+  }
   free(temporary);
 
   //Dataset

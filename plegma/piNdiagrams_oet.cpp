@@ -666,6 +666,13 @@
 
 	} //End of loop on coherent sources
 
+        //P diagram
+        std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
+        momList list_mpi2(1,{mpi2,},{0,});
+        PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], list_mpi2);
+        corrP.initialize_diagram(glist_source_meson, glist_sink_meson, "P");
+
+
         std::vector<GAMMAS_SCATT> gamma_5_t_sourcemeson=apply_gamma5_scatt_gamma(glist_source_meson,LEFT);
 
 
@@ -693,16 +700,16 @@
 
 	  
 	  //initialize diagrams
-	  corrB1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B1");
-	  corrB2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B2");
+	  corrB1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B1", true);
+	  corrB2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B2", true);
 
 	  site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
-	  PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));
-	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));
+	  PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
 
-	  PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source, filtered_sourcemomentumList.uniq_p(1), 1);
-	  PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(0), 1);	 
+	  PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source, filtered_sourcemomentumList.uniq_p(1), 1);//restricted to 1 timeslice
+	  PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(0), 1);//restricted to 1 timeslice
 
 	  PLEGMA_printf("spropagator fini norm %e\n",spropagator_fini.norm());
 
@@ -739,6 +746,14 @@
 	    } // gamma f2
 
 	  }//timeidx
+	         
+	  //## B
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
+   
+          TIME(produceOutput(corrB1, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB2, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+
 
 	}//i_mpf2
 
@@ -796,26 +811,37 @@
 	}
 
 	PLEGMA_ScattCorrelator<float> reductionsV3(source, sourcemomentumList.uniq_p(2));
+	//for the Z diagram we need V3 reduction for momentum pf2
 	PLEGMA_ScattCorrelator<float> reductionsV2(source, sourcemomentumList.uniq_p(1));
+	//for the Z diagram we need V2 reduction for momentum pf1
 	PLEGMA_ScattCorrelator<float> reductionsV4(source, sourcemomentumList.uniq_p(1));
+	//for the Z diagram we need V4 reduction for momentum pf1
         PLEGMA_ScattCorrelator<float> reductionsV6(source, sourcemomentumList.uniq_p(1));
 
+	//for the W diagram we need V6 reduction for momentum pf1
 	PLEGMA_ScattCorrelator<float> reductionsV6_1timeslice(source, sourcemomentumList.uniq_p(1), 1);
 
 	PLEGMA_ScattCorrelator<float> reductionsV2T(source,  sourcemomentumList.uniq_p(3));
-        PLEGMA_ScattCorrelator<float> reductionsV4T(source,  sourcemomentumList.uniq_p(3));
+	//for the T diagram we need V2 reduction for momentum p total
+	
+	PLEGMA_ScattCorrelator<float> reductionsV4T(source,  sourcemomentumList.uniq_p(3));
+	//for the T diagram we need V4 reduction for momentum p total
 
         TIME(reductionsV4T.V4( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
+
+
+	//for the T diagram we need V2 reduction for momentum p total
         TIME(reductionsV2T.V2( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
 
 
 
-
+	//Factors for the Z diagram
 	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
         TIME(reductionsV2.V2( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
 
 
 
+	//Loop over the source meson momentum
         for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
 
           auto &momentum_i2 =  mpi2[i_mpi2];
@@ -870,18 +896,15 @@
 
 	  if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
 
-
 	    PLEGMA_Vector<double> vectortmp1;
 	    PLEGMA_Vector<double> vectortmp2;
 	    vectortmp1.copy(vectorSource_oet);
-
           
 	    //Multiplying by the appropriate momentum phase
           
 	    std::vector<int> tmp_4Dmom= momentum_i2 ;
 	    tmp_4Dmom.push_back(0);
 	    vectortmp1.mulMomentumPhases(tmp_4Dmom,-1);
-
 
 	  
             //Doing the inversion
@@ -932,16 +955,16 @@
        
 	  if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
 	    
-	    TIME(corrP.P_diagrams_oet( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom, i_mpi2),"ISOSPIN32");
+	    TIME(corrP.P_diagrams( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom, i_mpi2, true),"ISOSPIN32");
 	 
-	    TIME(corrM.M_diagrams_oet( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom ),"ISOSPIN32");
+	    TIME(corrM.M_diagrams( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom ),"ISOSPIN32");
 	  
 	  }
 	  else{
 
-	    TIME(corrP.P_diagrams_oet( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+	    TIME(corrP.P_diagrams( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2, true),"ISOSPIN32");
 
-	    TIME(corrM.M_diagrams_oet( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom ),"ISOSPIN32");
+	    TIME(corrM.M_diagrams( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom ),"ISOSPIN32");
 	  
 	  }
         
@@ -1045,15 +1068,14 @@
             TIME(corrZ4.Z_diagrams_without_dilution( reductionsV3, reductionsV2, i_gamma_i2, 4 ),"ISOSPIN32");
 
 
-            TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-            TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-            TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-            TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-
 	  }
 
+          TIME(produceOutput(corrZ1, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 
-      }
+      } //loop over p_i2
 
       }//Z,W diagrams
 
