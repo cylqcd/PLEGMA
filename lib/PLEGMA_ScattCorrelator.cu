@@ -791,22 +791,25 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
         int i_mom_i2 = imap[i_m][0];
 	int i_mom_f2 = imap[i_m][2];
 	if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
-	  for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
-	    for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//pi
+          for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
 
-              GAMMAS_SCATT gammai2 = this->GList[3][g2];
-              GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gammai2, RIGHT );
+            Float phi0Aux[N_SPINS*N_COLS*2];
+            GAMMAS_SCATT gamma5 = G_5;
+            GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][g2], LEFT);
+            V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, phi0Aux );
 
-	      for (int g3=0 ; g3 < n_gammas_f1 ; ++g3 ){//pf1
-	        for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//pf2
+            for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//gf2
 
-                  GAMMAS_SCATT gammaf2 = this->GList[5][g4];
-                  GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gammaf2, RIGHT );
+              Float phi1Aux[N_SPINS*N_COLS*2];
+              GAMMAS_SCATT gamma5_t_gammaf2 = apply_g5( this->GList[5][g4], LEFT);
+              V_MVM<Float>( Phi1.get(), gamma5, gamma5_t_gammaf2, phi1Aux );
+
+              for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//gi1
+                for (int g3=0 ; g3 < n_gammas_f1 ; ++g3 ){//gf1
 
 	          Float V5Aux[NS2C];
-		  Float V5Aux2[NS2C];
 		  Float V6Aux[NS1C];
-		  Float V5Aux3[NS1C];
+		  Float V5Aux2[NS1C];
 		  for (int ii=0;ii<NS2C;++ii)
 		    V5Aux[ii]=0;
 
@@ -819,15 +822,13 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 			unsigned short b=eps_host[eps1_nz][2];
 			int eps1_sgn=sgn_eps_host[eps1_nz];
 			Float tmp[2];
-			tmp[0]= (Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
-			tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
+			tmp[0]= (phi0Aux[2*(alfa*N_COLS+a)]*phi1Aux[2*(beta*N_COLS+b)]-phi0Aux[2*(alfa*N_COLS+a)+1]*phi1Aux[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
+			tmp[1]= (-phi0Aux[2*(alfa*N_COLS+a)+1]*phi1Aux[2*(beta*N_COLS+b)]-phi0Aux[2*(alfa*N_COLS+a)]*phi1Aux[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)]   = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)] + tmp[0];
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
 		      }
 		    }
 		  }
-
-		  Mc_pe_GNcGt<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
 
 		  for (int alfa=0;alfa<N_SPINS;++alfa){
 		    for (int beta=0; beta<N_SPINS;++beta){
@@ -839,8 +840,8 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 			case 1: absorb_fromV56<1,Float>( V6Aux, srcV6.Corr(0,i_mom_f1,g3), alfa ); break;
 		      }
 		      switch(index_abs_V5){
-			case 0: absorb_fromV56<0,Float>( V5Aux3, V5Aux2, alfa ); break;
-			case 1: absorb_fromV56<1,Float>( V5Aux3, V5Aux2, alfa ); break;
+			case 0: absorb_fromV56<0,Float>( V5Aux2, V5Aux, beta ); break;
+			case 1: absorb_fromV56<1,Float>( V5Aux2, V5Aux, beta ); break;
 		      }
 
 
@@ -850,7 +851,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 			  V6Aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
 			}
 		      }
-		      V_M_V<Float>( V5Aux3, V6Aux,
+		      V_M_V<Float>( V5Aux2, V6Aux,
 			  this->GList[2][g1], transpgamma_i1, temp + spins);
 		    }//beta
 		  }//alfa
@@ -872,13 +873,13 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 			  egammaf, egammai, temp );
 		    }//Gextf
 		  }//Gexti
-		}//Gf2
-	      }//Gf1
-	    }//Gi2
-	  }//Gi1
-	}//mom
-      }//myit
-    }
+		}//Gf1
+	      }//Gi1
+	    }//Gf2
+	  }//Gi2
+	}//if mom
+      }//mom
+    }//myit
 }
 
 
@@ -887,11 +888,11 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 
 
     static const int eps_host[6][3]= {{0,1,2},
-                                          {2,0,1},
-                                          {1,2,0},
-                                          {2,1,0},
-                                          {0,2,1},
-                                          {1,0,2}};
+                                      {2,0,1},
+                                      {1,2,0},
+                                      {2,1,0},
+                                      {0,2,1},
+                                      {1,0,2}};
     
     static const int sgn_eps_host[6]= { +1,+1,+1,-1,-1,-1 };
   
@@ -929,21 +930,26 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
         int i_mom_i2 = imap[i_m][0];
 	int i_mom_f2 = imap[i_m][2];
 	if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
-	  for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
-	    for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//pi
+	  for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
 
-              GAMMAS_SCATT gammai2 = this->GList[3][g2];
-              GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gammai2, RIGHT );
+            Float phi0Aux[N_SPINS*N_COLS*2];
+            GAMMAS_SCATT gamma5 = G_5;
+            GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][g2], LEFT);
+            V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, phi0Aux );
 
-	      for (int g3=0 ; g3 < n_gammas_f1 ; ++g3 ){//pf1
-	        for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//pf2
+            for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//gf2
 
-                  GAMMAS_SCATT gammaf2 = this->GList[5][g4];
-                  GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gammaf2, RIGHT );
+	      Float phi1Aux[N_SPINS*N_COLS*2];
+              GAMMAS_SCATT gamma5_t_gammaf2 = apply_g5( this->GList[5][g4], LEFT);
+	      V_MVM<Float>( Phi1.get(), gamma5, gamma5_t_gammaf2, phi1Aux );
+
+ 
+              for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//gi1i
+	        for (int g3=0 ; g3 < n_gammas_f1 ; ++g3 ){//gf1
+
 
 	          Float V5Aux[2*N_SPINS*N_SPINS*N_COLS];
-		  Float V5Aux2[2*N_SPINS*N_SPINS*N_COLS];
-		  Float V5Aux3[2*N_COLS];
+		  Float V5Aux2[2*N_COLS];
 		  Float V6Aux[2*N_SPINS*N_SPINS*N_COLS];
 
 		  for (int alfa=0; alfa < N_SPINS; ++alfa ){                
@@ -955,16 +961,15 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 			unsigned short b=eps_host[eps1_nz][2];
 			int eps1_sgn=sgn_eps_host[eps1_nz];
 			Float tmp[2];
-			tmp[0]= (Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
-                        tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
+			tmp[0]= ( phi0Aux[2*(alfa*N_COLS+a)]*phi1Aux[2*(beta*N_COLS+b)]-phi0Aux[2*(alfa*N_COLS+a)+1]*phi1Aux[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
+                        tmp[1]= (-phi0Aux[2*(alfa*N_COLS+a)+1]*phi1Aux[2*(beta*N_COLS+b)]-phi0Aux[2*(alfa*N_COLS+a)]*phi1Aux[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)]   = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)] + tmp[0];
                         V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
 		      }
 		    }
 		  }
 
-		  Mc_pe_GNcGt<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
-		  V_TR_MM<Float>( V5Aux2, this->GList[2][g1], false, V5Aux3);
+		  V_TR_MM<Float>( V5Aux, this->GList[2][g1], false, V5Aux2);
 
                   for (int alfa=0;alfa<N_SPINS;++alfa){
                     for (int beta=0;beta<N_SPINS;++beta){
@@ -989,11 +994,11 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		      for (int coloridx=0; coloridx<N_COLS; ++coloridx){ 
 			int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
 		        temp[spins+0]+=
-			  +V5Aux3[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
-			  -V5Aux3[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
+			  +V5Aux2[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
+			  -V5Aux2[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
 			temp[spins+1]+=
-                          +V5Aux3[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
-                          +V5Aux3[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
+                          +V5Aux2[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
+                          +V5Aux2[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
 
 		      }//n_col
 		    }//beta
@@ -1017,13 +1022,13 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
                                 egammaf, egammai, temp );
 		    }//Gextf
                   }//Gexti
-                }//Gf2
-              }//Gf1
-            }//Gi2
-          }//Gi1
-        }//mom
-      }//myit
-    }
+                }//Gf1
+              }//Gi1
+            }//Gf2
+          }//Gi12
+        }//if mom
+      }//mom
+    }//myit
 }
 
 
