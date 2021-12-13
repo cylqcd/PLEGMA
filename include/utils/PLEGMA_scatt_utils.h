@@ -29,7 +29,7 @@ namespace plegma {
       file.close();
 
       read_momList( mom_list );
-    } //constructor used for reading the momenta used in piNdiagramms.cpp:
+    } //constructor used for reading the momenta used in piNdiagrams.cpp:
       //for example: momList sourcemomentumList(3,pathListMomenta,{1,2});
       //here 3 stands for pi2,pf1,pf2; 
       //     pathListMomenta is the name of the file that contains the three momenta-s

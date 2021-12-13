@@ -1360,7 +1360,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 //#  Diagrams  #
 //##############
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, Float *loopcontribution, const int ig_i2, const int diagram_index, bool accum) {
+void PLEGMA_ScattCorrelator<Float>::D1ii_diagrams(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, Float *loopcontribution, const int ig_i2, const int diagram_index, bool accum) {
 
   if(ig_i2 >= this->GList[3].size()) PLEGMA_error("ig_i2 = %d but Gi2 list size is %d\n", ig_i2, this->GList[3].size() );
 
@@ -1405,12 +1405,12 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagramms(PLEGMA_ScattCorrelator<Float>
       this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     default:
-      PLEGMA_error("This value of D1ii diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+      PLEGMA_error("This value of D1ii diagram index does not exists, please check your inputs in piNdiagrams.cpp");
   }
 
 }
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum) {
+void PLEGMA_ScattCorrelator<Float>::B_diagrams(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum) {
 
   if(ig_i2 >= this->GList[3].size()) PLEGMA_error("ig_i2 = %d but Gi2 list size is %d\n", ig_i2, this->GList[3].size() );
 
@@ -1480,7 +1480,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &s
       this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     default:
-      PLEGMA_error("This value of B diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+      PLEGMA_error("This value of B diagram index does not exists, please check your inputs in piNdiagrams.cpp");
   }
   //Note that the last true or false indicates the of transp(G_f1).
 
@@ -1488,7 +1488,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagramms(PLEGMA_ScattCorrelator<Float> &s
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::shared_ptr<Float> &Phi1, int input_mom_i2, int input_mom_f2, int diagram_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::shared_ptr<Float> &Phi1, int input_mom_i2, int input_mom_f2, int diagram_index, bool accum){
 
   this->clear_output(!accum);
   Float factor[2]={-1,0};
@@ -1507,13 +1507,13 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms_oet(PLEGMA_ScattCorrelator<Float
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, false, false, factor);
       break;
     default:
-      PLEGMA_error("This value of W diagram oet index does not exists, please check your inputs in piNdiagramms_oet.cpp");
+      PLEGMA_error("This value of W diagram oet index does not exists, please check your inputs in piNdiagrams_oet.cpp");
   }
 }
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::W_diagrams(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum){
 
   //if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
   //  PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
@@ -1625,14 +1625,14 @@ void PLEGMA_ScattCorrelator<Float>::W_diagramms(PLEGMA_ScattCorrelator<Float> &s
       this->V3V2reduction_matrix( srcV3, srcV2, 1, false, ig_i2, false, factor, false);//checked FP
       break;
     default:
-      PLEGMA_error("This value of W diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+      PLEGMA_error("This value of W diagram index does not exists, please check your inputs in piNdiagrams.cpp");
   }//switch (diagram_index)
 
 }
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::Z_diagramms_without_dilution(PLEGMA_ScattCorrelator<Float> &srcV3, 
+void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorrelator<Float> &srcV3, 
                                                 PLEGMA_ScattCorrelator<Float> &srcV2, int i_g_i2,
                                                 int diagramm_index, bool accum ){
   //if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
@@ -1655,12 +1655,12 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms_without_dilution(PLEGMA_ScattCor
     this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, true, factor, false);//checked FP
     break;
   default:
-    PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+    PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagrams.cpp");
   }//switch (Diagram index)
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3),
+void PLEGMA_ScattCorrelator<Float>::Z_diagrams(std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3),
                                                 std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),
 						int diagramm_index, bool accum ){
 
@@ -1741,7 +1741,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
           this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, false);//checked FP
           break;
         default:
-          PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+          PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagrams.cpp");
       }//switch (Diagram index)
 
     }//n -> nonzero elems of Gi2
@@ -1752,7 +1752,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagramms(std::array<PLEGMA_ScattCorrelato
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 //GList only 2 gammas G_i2, G_f2
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::P_diagrams( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum){
 
   assert(i_pi2<this->pList().size());
 
@@ -1820,7 +1820,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::P_diagrams_oet( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, int i_pi2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, int i_pi2, bool accum){
 
   assert(i_pi2<this->pList().size());
 
@@ -1894,7 +1894,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams_oet( PLEGMA_Vector<Float> &Phi_0,
 //it is assumed therefore that we call it with the propagator as the first argument and with the
 //stochastic source as the second one.
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2, bool dn, bool accum){
+void PLEGMA_ScattCorrelator<Float>::Loop_diagrams( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2, bool dn, bool accum){
 
   assert(i_pi2<this->pList().size());
   
@@ -1956,10 +1956,82 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0
   }	
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum){
+
+  //extract moms
+  assert(this->pList().check_eq(0));
+  //extract moms
+  assert(this->pList().check_eq(0));
+
+  std::vector<int> mom_pi2 = this->pList().pi(0)[0];
+  std::vector<std::vector<int>> moms_pf2 = this->pList().uniq_p(2);
+  //extract vector p_f1
+  std::vector<std::vector<int>> moms_pf1_red = this->pList().uniq_p(1); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pf1 = CorrNucleon.pList().pi(0); //list of pf1 in Nucleons PLEGMA_SC
+  std::vector<int> i_pf1s = CorrNucleon.pList().u_posix( 0, moms_pf1_red ); //list of positions of moms_pf1_red momenta in moms_pf1 array
+  auto map = this->pList().index_map();
+
+
+  //++++++++ PION-PION +++++++++
+
+  //aux PLEGMA_SC for PhixGxPhi multiplications
+  momList auxmlist(1, {moms_pf2,}, {0,});
+  PLEGMA_ScattCorrelator pipi_aux(this->getSource(), auxmlist, this->getTotalT());
+
+  pipi_aux.initialize_diagram( this->GList[3], this->GList[5], "P"); //false m is pi2, true is pf2
+
+  pipi_aux.P_diagrams( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2 //-1 from eq. (13) is inside P_diagram
+
+
+  //++++++++++ NN x PIPI ++++++++++++
+
+  //put output to zero
+  this->clear_output(!accum);
+
+  int n_extgammas_i = CorrNucleon.GList[0].size();
+  int n_extgammas_f = CorrNucleon.GList[1].size();
+  int n_gammas_i1 = CorrNucleon.GList[2].size();
+  int n_gammas_i2 = pipi_aux.GList[0].size();
+  int n_gammas_f1 = CorrNucleon.GList[3].size();
+  int n_gammas_f2 = pipi_aux.GList[1].size();
+  int TIME = this->localT();
+
+  //for each momentum in moms_red
+  #pragma omp parallel for
+  for( int i_mom=0; i_mom < this->pList().size(); ++i_mom){
+    int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN)
+    int i_pf2 = map[i_mom][2]; //position of pf2 in pionpion
+    for( int t=0; t<TIME; ++t){
+      for( int gei=0; gei<n_extgammas_i; ++gei ){
+        for( int gef=0; gef<n_extgammas_f; ++gef ){
+          for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
+            for( int gi2=0; gi2<n_gammas_i2; ++gi2 ){
+              for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
+                for( int gf2=0; gf2<n_gammas_f2; ++gf2){
+                  //Float *pion_pointer=pipi_aux.Corr(t,i_pf2,gi2,gf2);
+                  //Float pion_contribution[2];
+                  //pion_contribution[0]=-1.* pion_pointer[0];
+                  //pion_contribution[1]=-1.* pion_pointer[1];
+                  //x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
+                  //       CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
+                  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2),
+                           pipi_aux.Corr(t,i_pf2,gi2,gf2),
+                           CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
+                           N_SPINS*N_SPINS);
+                }//G_f2
+              }//G_f1
+            }//G_i2
+          }//G_i1
+        }//G_ext_f
+      }//G_ext_i
+    }//time
+  }//mom
+}
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, bool accum){
+void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, bool accum){
 
   //extract moms
   assert(this->pList().check_eq(0));
@@ -1981,7 +2053,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 
   pipi_aux.initialize_diagram( this->GList[3], this->GList[5], "P"); //false m is pi2, true is pf2
 
-  pipi_aux.P_diagramms( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2 //-1 from eq. (13) is inside P_diagram
+  pipi_aux.P_diagrams( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2 //-1 from eq. (13) is inside P_diagram
 
   
   //++++++++++ NN x PIPI ++++++++++++
@@ -2034,7 +2106,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagramms( PLEGMA_ScattCorrelator<Float> &
 //V3 should have momentum list p_f2
 //V2 should have momentum list p_f1 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagram_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::T_diagrams_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int diagram_index, bool accum){
 
 
   //checks between srcV2 srcV3
@@ -2118,7 +2190,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
       this->V3V2reduction( srcV3, srcV2, 0, false, 0, false, factor, true);
       break;
     default:
-      PLEGMA_error("This value of T-piNsink diagram index does not exists, please check your inputs in piNdiagramms.cpp");
+      PLEGMA_error("This value of T-piNsink diagram index does not exists, please check your inputs in piNdiagrams.cpp");
   }
 }
 //T diagramm pion nucleon at the sink
@@ -2126,7 +2198,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
 //V2 should have momentum list p_f1
 /*
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::T_diagrams_piNsink( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, bool accum){
 
 
   //checks between srcV2 srcV3
@@ -2157,11 +2229,11 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms_piNsink( PLEGMA_ScattCorrelator<
 
 }
 */
-//LT diagramms, Loop at the sink multiplied by T diagramm at the
+//LT diagrams, Loop at the sink multiplied by T diagramm at the
 //T is build up from a T1 and a T2 reduction
 //source
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, PLEGMA_ScattCorrelator<Float> &Loop, bool accum){
+void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, PLEGMA_ScattCorrelator<Float> &Loop, bool accum){
 
   //checks between T1 T2
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
@@ -2236,7 +2308,7 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagramms( PLEGMA_ScattCorrelator<Float> 
 
 //Nucleon correlator. This function should be called outside the p_i2 loop, with Ts computed using the entire list of unique p_f1s. N.B: we multiply the output by exp(i * x_sourcepos * p_f1);
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::N_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
 
   //checks between T1 T2
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
@@ -2347,7 +2419,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
 //This is true for delta++ and I=3/2, I_3=3/2 pion-nucleon scattering
 //Please take care of your signs!
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, int ig_i2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::T_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T3, PLEGMA_ScattCorrelator<Float> &T5, int ig_i2, bool accum){
 
 
   //checks between T1 T3 T5
@@ -2402,7 +2474,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagramms( PLEGMA_ScattCorrelator<Float> &
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::D_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
   //checks between T1 T2
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
