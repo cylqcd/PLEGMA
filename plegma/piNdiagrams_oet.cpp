@@ -434,7 +434,7 @@
 	  PLEGMA_Propagator<float> propDN_coherent;
 
 	  asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], coherent_source_table[icoherentsource]);
-	  std::string sourcepositiontext= (std::string)"_" + ssource; 
+	  std::string sourcepositiontext_inside= (std::string)"_" + ssource; 
 	  free(ssource);
 
 	  PLEGMA_Gauge3D<double> smearedGauge3D;
@@ -561,7 +561,7 @@
 	    TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propUP_coherent),"ISOSPIN32");
 
 	    //write D
-	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_D";
+	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_D";
 	  
 	    TIME( corrD.D_diagrams( reductionsT1, reductionsT2 ),"ISOSPIN32");
 	    TIME( corrD.apply_phase(),"ISOSPIN32" );
@@ -571,28 +571,28 @@
 
 #ifdef PLEGMA_SCATTERING_SPIN12
 	    //For I=1/2 I_3=+1/2
-	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_DNUPUP_T2";
+	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_DELTA_DNUPUP_T2";
 	    TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN_coherent, propUP_coherent, propUP_coherent), "ISOSPIN12");
 	    TIME( corrD.convertTreductiontoDiagram( reductionsT2, -1 ), "ISOSPIN12"); //The argument -1 indicates the corrD does not contain any mesonic 
 	    //gamma structure
 	    TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
-	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_DNUPUP_T1";
+	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_DELTA_DNUPUP_T1";
 	    TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN_coherent, propUP_coherent, propUP_coherent), "ISOSPIN12");
 	    TIME( corrD.convertTreductiontoDiagram( reductionsT1, -1 ), "ISOSPIN12");
 	    TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
-	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPUPDN_T1";
+	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_DELTA_UPUPDN_T1";
 	    TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propDN_coherent), "ISOSPIN12");
 	    TIME( corrD.convertTreductiontoDiagram( reductionsT1,-1 ), "ISOSPIN12");
 	    TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
-	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPDNUP_T1";
+	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_DELTA_UPDNUP_T1";
 	    TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP_coherent, propDN_coherent, propUP_coherent), "ISOSPIN12");
 	    TIME( corrD.convertTreductiontoDiagram( reductionsT1,-1 ), "ISOSPIN12");
 	    TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
 
-	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_DELTA_UPDNUP_T2";
+	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_DELTA_UPDNUP_T2";
 	    TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP_coherent, propUP_coherent, propDN_coherent), "ISOSPIN12");
 	    TIME( corrD.convertTreductiontoDiagram( reductionsT2,-1 ), "ISOSPIN12");
 	    TIME( produceOutput(corrD, outfilename, "D" ) ,"ISOSPIN12" );
@@ -610,7 +610,7 @@
 #endif
 
 	  //initialize diagram
-	  outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N";
+	  outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_N";
 
 	  corrNP_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP");
 #ifdef PLEGMA_SCATTERING_SPIN12
@@ -665,6 +665,11 @@
 	  }//end of if(do_contraction_std)
 
 	} //End of loop on coherent sources
+
+
+	asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+        std::string sourcepositiontext= (std::string)"_" + ssource;
+        free(ssource);
 
         //P diagram
         std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
@@ -827,10 +832,8 @@
 	PLEGMA_ScattCorrelator<float> reductionsV4T(source,  sourcemomentumList.uniq_p(3));
 	//for the T diagram we need V4 reduction for momentum p total
 
+	//Factors for the T diagram (zero momentum i2)
         TIME(reductionsV4T.V4( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
-
-
-	//for the T diagram we need V2 reduction for momentum p total
         TIME(reductionsV2T.V2( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
 
 
@@ -838,7 +841,6 @@
 	//Factors for the Z diagram
 	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
         TIME(reductionsV2.V2( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
-
 
 
 	//Loop over the source meson momentum
@@ -867,16 +869,13 @@
           momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
 
 
-
           PLEGMA_ScattCorrelator<float> corrT1(sourcePositions[isource], list_mpi2ptot);
           PLEGMA_ScattCorrelator<float> corrT2(sourcePositions[isource], list_mpi2ptot);
           PLEGMA_ScattCorrelator<float> corrT3(sourcePositions[isource], list_mpi2ptot);
 
-          corrT1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T1seq");
-          corrT2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T2seq");
-          corrT3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T3seq");
-
-
+          corrT1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T1oet");
+          corrT2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T2oet");
+          corrT3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T3oet");
 
           
 	  //initialize diagrams
@@ -949,6 +948,26 @@
 	  TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 2, true),"ISOSPIN32");
 
           TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 3, true),"ISOSPIN32");
+
+
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+	  
+	  TIME(corrT1.apply_phase(),"ISOSPIN32");
+	  TIME(corrT1.apply_sign("T"),"ISOSPIN32");
+	  TIME(corrT1.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN32");
+	  TIME(corrT1.writeHDF5(outfilename),"ISOSPIN32");
+
+
+	  TIME(corrT2.apply_phase(),"ISOSPIN32");
+          TIME(corrT2.apply_sign("T"),"ISOSPIN32");
+          TIME(corrT2.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN32");
+          TIME(corrT2.writeHDF5(outfilename),"ISOSPIN32");
+
+
+	  TIME(corrT3.apply_phase(),"ISOSPIN32");
+          TIME(corrT3.apply_sign("T"),"ISOSPIN32");
+          TIME(corrT3.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN32");
+          TIME(corrT3.writeHDF5(outfilename),"ISOSPIN32");
 
 
 	  //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
@@ -1039,10 +1058,6 @@
             GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gamma_i2, RIGHT );
 
             std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
-
-
-
-
 	    if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
               vectortmp_fini.copy(stochastic_oet_prop_u_fini_mom);
               vectortmp_fini.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
