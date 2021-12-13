@@ -745,11 +745,11 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 
 
     static const int eps_host[6][3]= {{0,1,2},
-                                          {2,0,1},
-                                          {1,2,0},
-                                          {2,1,0},
-                                          {0,2,1},
-                                          {1,0,2}};
+                                      {2,0,1},
+                                      {1,2,0},
+                                      {2,1,0},
+				      {0,2,1},
+                                      {1,0,2}};
     
     static const int sgn_eps_host[6]= { +1,+1,+1,-1,-1,-1 };
   
@@ -819,8 +819,8 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 			unsigned short b=eps_host[eps1_nz][2];
 			int eps1_sgn=sgn_eps_host[eps1_nz];
 			Float tmp[2];
-			tmp[0]= (Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(alfa*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(alfa*N_COLS+b)+1])*(Float)eps1_sgn;
-			tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(alfa*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(alfa*N_COLS+b)+1])*(Float)eps1_sgn;
+			tmp[0]= (Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
+			tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)]   = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)] + tmp[0];
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
 		      }
@@ -955,8 +955,8 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 			unsigned short b=eps_host[eps1_nz][2];
 			int eps1_sgn=sgn_eps_host[eps1_nz];
 			Float tmp[2];
-			tmp[0]= (Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(alfa*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(alfa*N_COLS+b)+1])*(Float)eps1_sgn;
-                        tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(alfa*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(alfa*N_COLS+b)+1])*(Float)eps1_sgn;
+			tmp[0]= (Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
+                        tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(beta*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)]   = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)] + tmp[0];
                         V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
 		      }
