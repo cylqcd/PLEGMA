@@ -1819,6 +1819,67 @@ void PLEGMA_ScattCorrelator<Float>::P_diagramms( std::vector<PLEGMA_Vector<Float
 
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::P_diagrams_oet( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, int i_pi2, bool accum){
+
+  assert(i_pi2<this->pList().size());
+
+  std::vector<std::vector<int>> momlist(this->pList().pi(0));
+  if(i_pi2!=-1)
+    momlist = std::vector<std::vector<int>>(1,this->pList().pi(0)[i_pi2]);
+
+  if(i_pi2==-1)
+    this->clear_output(!accum);
+  else
+    this->clear_output(!accum,1,i_pi2);
+
+  //++++++++ MESON-MESON +++++++++
+
+  //mom_pi2 can be 1 mom or a list of moms
+
+  //aux PLEGMA_SC for PhixGxPhi multiplications
+  site source=site({0,0,0,this->getSource()[3]});
+  PLEGMA_ScattCorrelator<Float> pipi_aux(source, momlist, this->getTotalT());
+
+  int N_moms = pipi_aux.Nmoms();
+  assert( N_moms==1 || i_pi2==-1 );
+  int n_gammas_i2 = this->GList[0].size();
+  int n_gammas_f2 = this->GList[1].size();
+  int TIME = this->localT();
+
+  PLEGMA_Vector<Float> vectortmp(BOTH);
+
+
+
+  //loop over G_f2
+  for(int gi2=0; gi2<n_gammas_i2; ++gi2){
+    //GAMMAS_SCATT G_i2=this->GList[0][gi2];
+    GAMMAS_SCATT G_i2= apply_g5( this->GList[0][gi2], RIGHT );
+    vectortmp.copy(Phi_1);
+    vectortmp.apply_gamma_scatt(G_i2,RIGHT);
+
+    std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
+    pipi_aux.PhiPhi( Phi_0, tmpGf2, Phi_1); //T x N_moms x n_gammas_f2
+    Float g[2];
+    g[0]=1;
+    g[1]=0;
+
+    if(i_pi2==-1){
+      for( int im=0; im<N_moms; ++im)
+        for( int t=0; t<TIME; ++t)
+          for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+              x_pe_cy( this->Corr(t,im,gi2,gf2), g, pipi_aux.Corr(t,im,gf2), 1);
+    }
+    else{
+      for( int t=0; t<TIME; ++t)
+        for( int gf2=0; gf2<n_gammas_f2; ++gf2)
+          x_pe_cy( this->Corr(t,i_pi2,gi2,gf2), g, pipi_aux.Corr(t,0,gf2), 1);
+    }
+  }//loop over G_i2 matrix
+
+}
+
+
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! 
 //Phi_0[r] is the stochastic vector at zero momentum

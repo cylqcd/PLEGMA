@@ -896,20 +896,55 @@
               
 	    stochastic_oet_prop_u_fini_mom.copy(vectortmp1);
 
+	  }
+
+	  std::shared_ptr<float> Phi1;
+
+          if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+
 	    stochastic_oet_prop_u_fini_mom.unload();
 
-            std::shared_ptr<float> Phi1 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
+            Phi1 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
+
             stochastic_oet_prop_u_fini_mom.load();
 
-	    TIME(corrT1.T_diagrams_oet(reductionsV4T, Phi1, i_mpi2, 1, true),"ISOSPIN32");
+	  }
+	  else {
 
-	    TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 2, true),"ISOSPIN32");
+            stochastic_oet_prop_u_zero_mom.unload();
 
-            TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 3, true),"ISOSPIN32");
+            Phi1 = stochastic_oet_prop_u_zero_mom.getPointSource(actualSource,HOST);
 
+            stochastic_oet_prop_u_zero_mom.load();
 
 	  }
 
+
+
+	  TIME(corrT1.T_diagrams_oet(reductionsV4T, Phi1, i_mpi2, 1, true),"ISOSPIN32");
+
+	  TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 2, true),"ISOSPIN32");
+
+          TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 3, true),"ISOSPIN32");
+
+
+	  //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
+       
+	  if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+	    
+	    TIME(corrP.P_diagrams_oet( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom, i_mpi2),"ISOSPIN32");
+	 
+	    TIME(corrM.M_diagrams_oet( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_fini_mom ),"ISOSPIN32");
+	  
+	  }
+	  else{
+
+	    TIME(corrP.P_diagrams_oet( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+
+	    TIME(corrM.M_diagrams_oet( corrNP, stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom ),"ISOSPIN32");
+	  
+	  }
+        
 
 	  PLEGMA_Vector<float> spropagator_zero;
 	  PLEGMA_Vector<float> spropagator_fini;

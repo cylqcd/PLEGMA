@@ -258,6 +258,9 @@ namespace plegma {
 
     void Loop_diagramms( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2,bool dn=false, bool accum=false);
     void P_diagramms( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum=false );
+
+    void P_diagrams_oet( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, int i_pi2, bool accum);
+
     void N_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
     void D_diagramms( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
     void convertTreductiontoDiagram( PLEGMA_ScattCorrelator<Float> &T2, int ig_i2, bool accum=false, bool transp_i1=false, bool transp_f1=false );
