@@ -509,6 +509,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
     int my_it = srcV2.source[3] - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
 
+    printf("My it %d\n", my_it);
     
     if (is_myIt){
 
@@ -771,6 +772,10 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
     int TIME = this->localT();
     int TIME_src= srcV6.source[DIM_T];
 
+    const int NS2C=2*N_SPINS*N_SPINS*N_COLS;
+    const int NS1C=2*N_SPINS*N_SPINS*N_COLS;
+
+
 
     auto imap = this->pList().index_map();
 
@@ -798,10 +803,12 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
                   GAMMAS_SCATT gammaf2 = this->GList[5][g4];
                   GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gammaf2, RIGHT );
 
-	          Float V5Aux[2*N_SPINS*N_SPINS*N_COLS];
-		  Float V5Aux2[2*N_SPINS*N_SPINS*N_COLS];
-		  Float V6Aux[2*N_SPINS*N_COLS];
-		  Float V5Aux3[2*N_SPINS*N_COLS];
+	          Float V5Aux[NS2C];
+		  Float V5Aux2[NS2C];
+		  Float V6Aux[NS1C];
+		  Float V5Aux3[NS1C];
+		  for (int ii=0;ii<NS2C;++ii)
+		    V5Aux[ii]=0;
 
 		  for (int alfa=0; alfa < N_SPINS; ++alfa ){                
 		    for (int beta=0; beta < N_SPINS; ++beta ){
@@ -813,12 +820,13 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 			int eps1_sgn=sgn_eps_host[eps1_nz];
 			Float tmp[2];
 			tmp[0]= (Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(alfa*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(alfa*N_COLS+b)+1])*(Float)eps1_sgn;
-                        tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(alfa*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(alfa*N_COLS+b)+1])*(Float)eps1_sgn;
+			tmp[1]= (-Phi0.get()[2*(alfa*N_COLS+a)+1]*Phi1.get()[2*(alfa*N_COLS+b)]-Phi0.get()[2*(alfa*N_COLS+a)]*Phi1.get()[2*(alfa*N_COLS+b)+1])*(Float)eps1_sgn;
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)]   = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)] + tmp[0];
-                        V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
+			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
 		      }
 		    }
 		  }
+
 		  Mc_pe_GNcGt<Float>( V5Aux2, gamma_i2_t_gamma5, gamma_f2_t_gamma5, V5Aux);
 
 		  for (int alfa=0;alfa<N_SPINS;++alfa){
@@ -832,17 +840,17 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		      }
 		      switch(index_abs_V5){
 			case 0: absorb_fromV56<0,Float>( V5Aux3, V5Aux2, alfa ); break;
-                        case 1: absorb_fromV56<1,Float>( V5Aux3, V5Aux2, alfa ); break;
+			case 1: absorb_fromV56<1,Float>( V5Aux3, V5Aux2, alfa ); break;
 		      }
-		   
-		  
-                      //if true multiply by sigma_T(G_f1)
-                      if(transpgamma_f1){
-                        for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc){
-                          V6Aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
-                        }
+
+
+		      //if true multiply by sigma_T(G_f1)
+		      if(transpgamma_f1){
+			for(int sc=0; sc<N_SPINS*N_COLS*2; ++sc){
+			  V6Aux[sc] *= gammaTranspSign_scatt[this->GList[4][g2]];
+			}
 		      }
-                      V_M_V<Float>( V5Aux3, V6Aux,
+		      V_M_V<Float>( V5Aux3, V6Aux,
 			  this->GList[2][g1], transpgamma_i1, temp + spins);
 		    }//beta
 		  }//alfa
@@ -858,17 +866,17 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		    for (int g_extf=0; g_extf < n_gammas_extf ; ++ g_extf){
 		      GAMMAS_SCATT egammai = this->GList[0][g_exti];
 		      GAMMAS_SCATT egammaf = this->GList[1][g_extf];
-		      
+
 		      //multiplication with external gammas NB written here! mod in M_pe_GNG
 		      M_pe_GNG<Float>( this->Corr(my_it,i_m,g_exti,g_extf,g1,g2,g3,g4),
-                                egammaf, egammai, temp );
+			  egammaf, egammai, temp );
 		    }//Gextf
-                  }//Gexti
-                }//Gf2
-              }//Gf1
-            }//Gi2
-          }//Gi1
-        }//mom
+		  }//Gexti
+		}//Gf2
+	      }//Gf1
+	    }//Gi2
+	  }//Gi1
+	}//mom
       }//myit
     }
 }

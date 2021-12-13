@@ -482,7 +482,7 @@
 	  for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
 	    propUP.absorbTimeslice(propUP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
 	  }
-	  /*if(outfile_upS!="")
+	  if(outfile_upS!="")
 	  {
 	    PLEGMA_printf("Save propagator for the up quark\n");
 	    PLEGMA_Vector<float> vectorAuxPrint(BOTH);
@@ -492,10 +492,10 @@
 
 	      vectorAuxPrint.absorb(propUP,isc/3,isc%3);
 	      vectorAuxPrint.unload();
-	      vectorAuxPrint.writeLIME(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+	      vectorAuxPrint.writeLIME(outfile_upS+confnumber+sourcepositiontext_inside+"_s"+spin+"_c"+col);
 	      //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
 	    }
-	  }*/
+	  }
 	  // ensuring mu negative
 	  if(mu>0) {
 	    mu*=-1.;
@@ -533,7 +533,23 @@
 	  }
 	  for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
 	    propDN.absorbTimeslice(propDN_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
-	  } 
+	  }
+	  
+	  if(outfile_dnS!="")
+          {
+            PLEGMA_printf("Save propagator for the dn quark\n");
+            PLEGMA_Vector<float> vectorAuxPrint(BOTH);
+            for(int isc = 0 ; isc < 12 ; isc++){
+              std::string spin=std::to_string(isc/3);
+              std::string col=std::to_string(isc%3);
+
+              vectorAuxPrint.absorb(propDN,isc/3,isc%3);
+              vectorAuxPrint.unload();
+              vectorAuxPrint.writeLIME(outfile_dnS+confnumber+sourcepositiontext_inside+"_s"+spin+"_c"+col);
+              //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
+            }
+          }
+
 
 
 	  std::vector<int> mom={0,0,0};
@@ -713,7 +729,6 @@
 	  PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
 	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
 
-	  PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source, filtered_sourcemomentumList.uniq_p(1), 1);//restricted to 1 timeslice
 	  PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(0), 1);//restricted to 1 timeslice
 
 	  PLEGMA_printf("spropagator fini norm %e\n",spropagator_fini.norm());
@@ -724,6 +739,10 @@
 
 	  
 	  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+
+            site source_one=site({0,0,0,timeidx});
+
+	    PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source_one, filtered_sourcemomentumList.uniq_p(1), 1);//restricted to 1 timeslice
 
 	    //Loop over the different gamma structure for the source meson
             for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
@@ -741,8 +760,11 @@
 	      reductionsV3.writeHDF5("V3red"+std::to_string(timeidx));
 
 	      reductionsV3_1timeslice.absorbTimeslice(reductionsV3, sourcePositions[isource][DIM_T], false);
+              reductionsV3_1timeslice.writeHDF5("V3redtimeslice"+std::to_string(timeidx));
+
 	    
 	      reductionsV2_1timeslice.absorbTimeslice(reductionsV2, timeidx, false);
+	      reductionsV2_1timeslice.writeHDF5("V2redtimeslice"+std::to_string(timeidx));
 
 	      TIME(corrB1.B_diagrams(reductionsV3_1timeslice, reductionsV2_1timeslice, i_gamma_f2, 1, true),"ISOSPIN32");
 
