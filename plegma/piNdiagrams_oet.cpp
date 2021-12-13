@@ -1160,9 +1160,21 @@
           TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 
-      } //loop over p_i2
+    
+	  //## M
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
+          TIME(produceOutput(corrM, outfilename,"4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 
-      }//Z,W diagrams
+      }//loop over unique set of momenta for p_i2
+
+      //write P
+      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+      TIME(corrP.apply_sign("P"),"ISOSPIN32");
+      TIME(corrP.writeHDF5( outfilename ),"ISOSPIN32");
+      
+
+
+      }//Z,W,P,M diagrams
 
 
     }
