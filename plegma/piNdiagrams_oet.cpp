@@ -756,7 +756,7 @@
 
               spropagator_zero.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
 
-	      reductionsV3.V3(spropagator_zero, gamma_5_t_sourcemeson, propDN, false);
+	      reductionsV3.V3(spropagator_zero, gamma_5_t_sourcemeson, propDN, true);
 	      reductionsV3.writeHDF5("V3redforBdiagram"+std::to_string(timeidx));
 
 	      reductionsV3_1timeslice.absorbTimeslice(reductionsV3, sourcePositions[isource][DIM_T], false);
@@ -1130,7 +1130,7 @@
               vectortmp_fini.copy(stochastic_oet_prop_u_fini_mom);
               vectortmp_fini.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
-              TIME(reductionsV3.V3( vectortmp_fini, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
+              TIME(reductionsV3.V3( vectortmp_fini, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
 
             }
             else{
@@ -1138,7 +1138,7 @@
               vectortmp_zero.copy(stochastic_oet_prop_u_zero_mom);
               vectortmp_zero.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
-              TIME(reductionsV3.V3( vectortmp_zero, gamma_5_t_sinkmeson, propUP),"ISOSPIN32");
+              TIME(reductionsV3.V3( vectortmp_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
 
             }
 
