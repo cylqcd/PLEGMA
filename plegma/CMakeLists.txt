@@ -110,3 +110,6 @@ target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
 
 cuda_add_executable(invert EXCLUDE_FROM_ALL invert.cpp)
 target_link_libraries(invert ${PLEGMA_LIBS})
+
+cuda_add_executable(polarN EXCLUDE_FROM_ALL polarN.cpp)
+target_link_libraries(polarN ${PLEGMA_LIBS})

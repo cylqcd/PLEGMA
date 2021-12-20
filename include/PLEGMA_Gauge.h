@@ -6,6 +6,7 @@
 
 namespace plegma {
   template<typename Float> class PLEGMA_Su3field;
+  template<typename Float> class PLEGMA_U1Gauge;
   ////////////////////////
   // CLASS: PLEGMA_Gauge //
   ////////////////////////
@@ -42,6 +43,7 @@ namespace plegma {
     void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
     void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-12,int maxIter=10000, int seedOverRelax=123456);
     void gluonField(PLEGMA_Gauge<Float> &uIn);
+    void U3xU1(PLEGMA_Gauge<Float> &u3, PLEGMA_U1Gauge<Float> &u1);
   };
 
   /////////////////////////////////////

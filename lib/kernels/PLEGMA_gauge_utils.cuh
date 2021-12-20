@@ -1,5 +1,33 @@
 #include <PLEGMA_kernel_utils.cuh>
+#include <PLEGMA_kernel_tuner.cuh>
 using namespace plegma;
+
+template< typename Float>
+__global__ void U3xU1_kernel(gauge2<Float> u3Out,gauge2<Float> u3In, u1gauge2<Float> u1){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= u3Out.volume()) return;
+  Float2<Float> A,B;
+#pragma unroll
+  for(int dir = 0; dir < N_DIMS; dir++)
+#pragma unroll
+    for(int c=0; c<N_COLS*N_COLS; c++){
+      A=u3In.get(dir,c/N_COLS, c%N_COLS, sid);
+      B=u1.get(dir,sid);
+      u3Out.set(dir,c/N_COLS, c%N_COLS, sid,A*B);
+    }
+}
+
+template<typename Float>
+static void U3xU1_k( PLEGMA_Gauge<Float> &u3Out, PLEGMA_Gauge<Float> &u3In,
+		     PLEGMA_U1Gauge<Float> &u1){
+  assert(u3Out.checkVolume(u3In));
+  assert(u3Out.checkVolume(u1));
+  ProfileStruct ps(u3Out.Total_length());
+  tuneAndRun(ps, "U3xU1_kernel", U3xU1_kernel<Float>, toField2<gauge2>(u3Out), toField2<gauge2>(u3In),
+      toField2<u1gauge2>(u1));
+  checkCudaError();
+}
+
 
 template< typename Float, typename FloatGauge>
 __global__ void scale_dir_wise_kernel(gauge2<FloatGauge> gauge, Float2<Float> scale[N_DIMS]){

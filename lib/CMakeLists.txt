@@ -22,8 +22,8 @@ set (PLEGMA_OBJS
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
   PLEGMA_Fmunu.cu
+  PLEGMA_U1Gauge.cu	
 )
-
 if(PLEGMA_UDSC_BARYONS)
   LIST(APPEND PLEGMA_OBJS
     kernels/PLEGMA_baryons_udsc.cu
