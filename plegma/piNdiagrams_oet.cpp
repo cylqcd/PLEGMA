@@ -729,10 +729,6 @@
 	  PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
 	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
 
-	  PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(0), 1);//restricted to 1 timeslice
-
-	  PLEGMA_printf("spropagator fini norm %e\n",spropagator_V2.norm());
-
 
 	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propDN, propUP, false);
 	  reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2));
@@ -749,7 +745,7 @@
 	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
   
               PLEGMA_Vector<float> spropagator;
-              PLEGMA_Vector3D<float> vector1;
+`             PLEGMA_Vector3D<float> vector1;
  	      spropagator.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
 	      spropagator.load();
           
@@ -809,6 +805,9 @@
 
 	//We draw a different random vector for every source position
 	vectorSource_oet.stochastic_Z(nroots);
+
+        PLEGMA_Vector<float> spropagator_V6;
+
 
 
 	//Doing for +mu for the UP propagator spin dilution oet
@@ -1063,65 +1062,58 @@
           PLEGMA_Vector<float> vectortmp_fini;
 
 
+	  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+
+            PLEGMA_Vector<float> spropagator;
+            PLEGMA_Vector3D<float> vector1;
+            spropagator.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);
+            spropagator.load();
+
+            vector1.absorb(spropagator,  timeidx);
+            spropagator_V6.absorb(vector1,  timeidx, false);
+
+          }
+
           for  (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
-	    for (int timeidx=0; timeidx<HGC_totalL[DIM_T]; ++timeidx){
 
-	      site source_one=site({0,0,0,timeidx});
+            spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
+            spropagator_fini.load();
 
-	      //for the W diagram we need V6 reduction for momentum pf1
-	      PLEGMA_ScattCorrelator<float> reductionsV6_1timeslice(source_one, sourcemomentumList.uniq_p(1), 1);
-
-              for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
-
-                for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2) {
-
-                  spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);
-                  spropagator_zero.load();
-
-                  spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
-		  spropagator_fini.load();
+            stochastic_oet_prop_u_fini_mom.unload();
+            std::shared_ptr<float> Phi0 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
+            stochastic_oet_prop_u_fini_mom.load();
 
 
-		  stochastic_oet_prop_u_fini_mom.unload();
+	    spropagator_fini.unload();
+            std::shared_ptr<float> Phi1 = spropagator_fini.getPointSource(actualSource,HOST);
+            spropagator_fini.load();
 
-		  std::shared_ptr<float> Phi0 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
+            for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
 
-                  stochastic_oet_prop_u_fini_mom.load();
-
-		  spropagator_fini.unload();
-
-		  std::shared_ptr<float> Phi1 = spropagator_fini.getPointSource(actualSource,HOST);
-
-		  spropagator_fini.load();
-
-                  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,1,2,false);
-
-                  reductionsV6.writeHDF5("V6redforWdiagram12");
+              for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2) {
 
 
-		  reductionsV6_1timeslice.absorbTimeslice(reductionsV6, timeidx, false);
-	          reductionsV6_1timeslice.writeHDF5("V6redforWdiagram12_"+std::to_string(timeidx));
+                reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,1,2,false);
+
+                reductionsV6.writeHDF5("V6redforWdiagram12");
 
 
-		  TIME(corrW1.W_diagrams_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
+		TIME(corrW1.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
 
-		  TIME(corrW2.W_diagrams_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
+		TIME(corrW2.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
 
-		  reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_zero, glist_sink_nucleon,propUP,0,1,false);
+		reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,0,1,false);
 
-		  reductionsV6.writeHDF5("V6redforWdiagram34");
+		reductionsV6.writeHDF5("V6redforWdiagram34");
 
-		  reductionsV6_1timeslice.absorbTimeslice(reductionsV6, timeidx, false);
-                  reductionsV6_1timeslice.writeHDF5("V6redforWdiagram34_"+std::to_string(timeidx));
+                  
+		TIME(corrW3.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
 
-
-		  TIME(corrW3.W_diagrams_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
-
-		  TIME(corrW4.W_diagrams_oet(reductionsV6_1timeslice, Phi0, Phi1, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
+		TIME(corrW4.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
 
 		  
-		}
+		
 
 	      }
 
