@@ -703,16 +703,16 @@
 	  //List of momenta corresponding to a fix value of p_i2
 	  momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_f2, 2);
 
-	  PLEGMA_Vector<float> spropagator_zero;
-	  PLEGMA_Vector<float> spropagator_fini;
+	  PLEGMA_Vector<float> spropagator_V3;
+	  PLEGMA_Vector<float> spropagator_V2;
 
 	  std::string pf2x=std::to_string(momentum_f2[0]);
 	  std::string pf2y=std::to_string(momentum_f2[1]);
 	  std::string pf2z=std::to_string(momentum_f2[2]);
 
 	    
-	  spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2], HOST);
-	  spropagator_fini.load();
+	  spropagator_V2.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2], HOST);
+	  spropagator_V2.load();
 
 
 	  PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], filtered_sourcemomentumList);
@@ -731,48 +731,67 @@
 
 	  PLEGMA_ScattCorrelator<float> reductionsV3_1timeslice(source, filtered_sourcemomentumList.uniq_p(0), 1);//restricted to 1 timeslice
 
-	  PLEGMA_printf("spropagator fini norm %e\n",spropagator_fini.norm());
+	  PLEGMA_printf("spropagator fini norm %e\n",spropagator_V2.norm());
 
 
-	  reductionsV2.V2(spropagator_fini,glist_sink_nucleon, propDN, propUP, false);
+	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propDN, propUP, false);
 	  reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2));
 
+          //Loop over the different gamma structure for the source meson
+          for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
+
+
+	    GAMMAS_SCATT gamma_f2 = glist_sink_meson[i_gamma_f2];
+            GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gamma_f2, RIGHT );
+
+            PLEGMA_Propagator<float> propDN_source_to_source;
 	  
-	  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+  
+              PLEGMA_Vector<float> spropagator;
+              PLEGMA_Vector3D<float> vector1;
+ 	      spropagator.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
+	      spropagator.load();
+          
+	      vector1.absorb(spropagator,  sourcePositions[isource][3]);
+              spropagator_V3.absorb(vector1,  timeidx, false);
 
-            site source_one=site({0,0,0,timeidx});
+	    }
 
-	    PLEGMA_ScattCorrelator<float> reductionsV2_1timeslice(source_one, filtered_sourcemomentumList.uniq_p(1), 1);//restricted to 1 timeslice
+	    for (int isc=0; isc<12; ++isc){
 
-	    //Loop over the different gamma structure for the source meson
-            for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
+              PLEGMA_Vector<float> spropagator;
+              PLEGMA_Vector<float> stmp;
+              PLEGMA_Vector3D<float> vector1;
+
+              spropagator.absorb(propDN, isc/3, isc%3);
+	      vector1.absorb(spropagator, sourcePositions[isource][3]);
+
+	      for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+                stmp.absorb(vector1, timeidx, false); 
+	      }
+
+	        
+	      propDN_source_to_source.absorb(stmp, isc/3, isc%3);
+
+	    }
+
+            spropagator_V3.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
 
 
-	      GAMMAS_SCATT gamma_f2 = glist_sink_meson[i_gamma_f2];
-              GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gamma_f2, RIGHT );
+	    reductionsV3.V3(spropagator_V3, gamma_5_t_sourcemeson, propDN_source_to_source, true);
 
-	      spropagator_zero.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
-	      spropagator_zero.load();
+	    reductionsV3.writeHDF5("V3redforBdiagram");
 
-              spropagator_zero.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
+	    TIME(corrB1.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 1, true),"ISOSPIN32");
 
-	      reductionsV3.V3(spropagator_zero, gamma_5_t_sourcemeson, propDN, true);
-	      reductionsV3.writeHDF5("V3redforBdiagram"+std::to_string(timeidx));
-
-	      reductionsV3_1timeslice.absorbTimeslice(reductionsV3, sourcePositions[isource][DIM_T], false);
-              reductionsV3_1timeslice.writeHDF5("V3redforBdiagramtimeslice"+std::to_string(timeidx));
 
 	    
-	      reductionsV2_1timeslice.absorbTimeslice(reductionsV2, timeidx, false);
-	      reductionsV2_1timeslice.writeHDF5("V2redforBdiagramtimeslice"+std::to_string(timeidx));
+	    TIME(corrB2.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 2, true),"ISOSPIN32");
 
-	      TIME(corrB1.B_diagrams(reductionsV3_1timeslice, reductionsV2_1timeslice, i_gamma_f2, 1, true),"ISOSPIN32");
+	     
 
-	      TIME(corrB2.B_diagrams(reductionsV3_1timeslice, reductionsV2_1timeslice, i_gamma_f2, 2, true),"ISOSPIN32");
-
-	    } // gamma f2
-
-	  }//timeidx
+	  }//gamma_f2
 	         
 	  //## B
 
