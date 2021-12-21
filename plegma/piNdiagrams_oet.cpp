@@ -730,7 +730,7 @@
 	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
 
 
-	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propDN, propUP, false);
+	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, false);
 	  reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2));
 
           //Loop over the different gamma structure for the source meson
@@ -745,7 +745,7 @@
 	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
   
               PLEGMA_Vector<float> spropagator;
-`             PLEGMA_Vector3D<float> vector1;
+              PLEGMA_Vector3D<float> vector1;
  	      spropagator.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
 	      spropagator.load();
           
