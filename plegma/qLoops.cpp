@@ -263,6 +263,7 @@ int main(int argc, char **argv)
   else
     PLEGMA_error("Cannot happen to reach this error");
 
+
 #if defined(HAVE_EIGENSOLVER)
   if(lowModesRecon){
     dumpLoops(qloops_std, ft, loopsPrefix + "/exact_part_std", confID, corr_file_format);
