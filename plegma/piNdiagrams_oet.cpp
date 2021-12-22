@@ -987,13 +987,13 @@
 
 	  }
 
-	  std::shared_ptr<float> Phi1;
+	  std::shared_ptr<float> Phi0;
 
           if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
 
 	    stochastic_oet_prop_u_fini_mom.unload();
 
-            Phi1 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
+            Phi0 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
 
             stochastic_oet_prop_u_fini_mom.load();
 
@@ -1002,7 +1002,7 @@
 
             stochastic_oet_prop_u_zero_mom.unload();
 
-            Phi1 = stochastic_oet_prop_u_zero_mom.getPointSource(actualSource,HOST);
+            Phi0 = stochastic_oet_prop_u_zero_mom.getPointSource(actualSource,HOST);
 
             stochastic_oet_prop_u_zero_mom.load();
 
@@ -1010,11 +1010,11 @@
 
 
 
-	  TIME(corrT1.T_diagrams_oet(reductionsV4T, Phi1, i_mpi2, 1, true),"ISOSPIN32");
+	  TIME(corrT1.T_diagrams_oet(reductionsV4T, Phi0, i_mpi2, 1, true),"ISOSPIN32");
 
-	  TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 2, true),"ISOSPIN32");
+	  TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi0, i_mpi2, 2, true),"ISOSPIN32");
 
-          TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi1, i_mpi2, 3, true),"ISOSPIN32");
+          TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi0, i_mpi2, 3, true),"ISOSPIN32");
 
 
 	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
@@ -1077,17 +1077,18 @@
           for  (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
 
-            spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
-            spropagator_fini.load();
+         /*   spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
 
-            stochastic_oet_prop_u_fini_mom.unload();
-            std::shared_ptr<float> Phi0 = stochastic_oet_prop_u_fini_mom.getPointSource(actualSource,HOST);
-            stochastic_oet_prop_u_fini_mom.load();
-
-
-	    spropagator_fini.unload();
             std::shared_ptr<float> Phi1 = spropagator_fini.getPointSource(actualSource,HOST);
-            spropagator_fini.load();
+	    for (int i=0;i<24;++i){
+              printf("Phi0 %e\n",Phi0.get()[i]);
+            }
+
+
+	    for (int i=0;i<24;++i){
+	      printf("Phi1 %e\n",Phi1.get()[i]);
+	    }
+            spropagator_fini.load();*/
 
             for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
 
@@ -1099,18 +1100,18 @@
                 reductionsV6.writeHDF5("V6redforWdiagram12");
 
 
-		TIME(corrW1.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
+		TIME(corrW1.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
 
-		TIME(corrW2.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
+		TIME(corrW2.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
 
 		reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,0,1,false);
 
 		reductionsV6.writeHDF5("V6redforWdiagram34");
 
                   
-		TIME(corrW3.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
+		TIME(corrW3.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
 
-		TIME(corrW4.W_diagrams_oet(reductionsV6, Phi0, Phi1, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
+		TIME(corrW4.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
 
 		  
 		
@@ -1142,6 +1143,8 @@
               vectortmp_fini.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
               TIME(reductionsV3.V3( vectortmp_fini, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
+              reductionsV3.writeHDF5("V3redforZdiagram");
+
 
             }
             else{
@@ -1150,6 +1153,8 @@
               vectortmp_zero.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
               TIME(reductionsV3.V3( vectortmp_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
+              reductionsV3.writeHDF5("V3redforZdiagram");
+
 
             }
 

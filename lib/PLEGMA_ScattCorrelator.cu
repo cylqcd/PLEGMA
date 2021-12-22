@@ -741,7 +741,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::shared_ptr<Float> &Phi1, int input_mom_i2, int input_mom_f2, int index_abs_V6, int index_abs_V5, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
+void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_i2, int input_mom_f2, int index_abs_V6, int index_abs_V5, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
 
 
     static const int eps_host[6][3]= {{0,1,2},
@@ -770,33 +770,44 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
     int n_gammas_f1 = this->GList[4].size();
     int n_gammas_f2 = this->GList[5].size();
     int TIME = this->localT();
-    int TIME_src= srcV6.source[DIM_T];
+    int TIME_src= srcV6.localT();
 
     const int NS2C=2*N_SPINS*N_SPINS*N_COLS;
     const int NS1C=2*N_SPINS*N_SPINS*N_COLS;
 
+    if (TIME != TIME_src){
+      PLEGMA_error("W diagram and V6 reduction expected to have the same time extent\n");
+    }
 
+    site actualSource=this->source;
 
     auto imap = this->pList().index_map();
 
-    int my_it = srcV6.source[3] - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
 
+    #pragma omp parallel for
+    for(int i_m=0; i_m<imap.size(); i_m++){
+      Float temp[2*N_SPINS*N_SPINS];
+      int i_mom_f1 = imap[i_m][1];
+      int i_mom_i2 = imap[i_m][0];
+      int i_mom_f2 = imap[i_m][2];
+      if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
+        for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
+          Float phi0Aux[N_SPINS*N_COLS*2];
+          GAMMAS_SCATT gamma5 = G_5;
+          GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][g2], LEFT);
+          V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, phi0Aux );
 
-    if (is_myIt){  
-      #pragma omp parallel for
-      for(int i_m=0; i_m<imap.size(); i_m++){
-        Float temp[2*N_SPINS*N_SPINS];
-        int i_mom_f1 = imap[i_m][1];
-        int i_mom_i2 = imap[i_m][0];
-	int i_mom_f2 = imap[i_m][2];
-	if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
-          for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
+          for(int t=0; t < TIME; ++t){
 
-            Float phi0Aux[N_SPINS*N_COLS*2];
-            GAMMAS_SCATT gamma5 = G_5;
-            GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][g2], LEFT);
-            V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, phi0Aux );
+	    int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
+
+	    PLEGMA_Vector<Float> tmp;
+	    tmp.copy(*Phi_1[global_time_index],HOST);
+
+            std::shared_ptr<Float> Phi1 = tmp.getPointSource(actualSource,HOST);
+            for (int i=0;i<24;++i){
+              printf("Phi0 %e\n",Phi0.get()[i]);
+            }
 
             for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//gf2
 
@@ -829,6 +840,15 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		      }
 		    }
 		  }
+                  for (int alfa=0; alfa < N_SPINS; ++alfa ){
+                    for (int beta=0; beta < N_SPINS; ++beta ){
+                      for (int color=0; color< N_COLS; ++color ){
+			printf("V5INREDUCTION %d %d %d %e %e\n",alfa,beta,color,V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)],V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)+1]);
+		      }
+		    }
+		  }
+
+		  
 
 		  for (int alfa=0;alfa<N_SPINS;++alfa){
 		    for (int beta=0; beta<N_SPINS;++beta){
@@ -836,8 +856,8 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		      int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
 
 		      switch(index_abs_V6){
-			case 0: absorb_fromV56<0,Float>( V6Aux, srcV6.Corr(0,i_mom_f1,g3), alfa ); break;
-			case 1: absorb_fromV56<1,Float>( V6Aux, srcV6.Corr(0,i_mom_f1,g3), alfa ); break;
+			case 0: absorb_fromV56<0,Float>( V6Aux, srcV6.Corr(t,i_mom_f1,g3), alfa ); break;
+			case 1: absorb_fromV56<1,Float>( V6Aux, srcV6.Corr(t,i_mom_f1,g3), alfa ); break;
 		      }
 		      switch(index_abs_V5){
 			case 0: absorb_fromV56<0,Float>( V5Aux2, V5Aux, beta ); break;
@@ -869,7 +889,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		      GAMMAS_SCATT egammaf = this->GList[1][g_extf];
 
 		      //multiplication with external gammas NB written here! mod in M_pe_GNG
-		      M_pe_GNG<Float>( this->Corr(my_it,i_m,g_exti,g_extf,g1,g2,g3,g4),
+		      M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g2,g3,g4),
 			  egammaf, egammai, temp );
 		    }//Gextf
 		  }//Gexti
@@ -877,14 +897,14 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 	      }//Gi1
 	    }//Gf2
 	  }//Gi2
-	}//if mom
-      }//mom
-    }//myit
+	}//t
+      }//if mom
+    }//mom
 }
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::shared_ptr<Float> &Phi1, int input_mom_i2, int input_mom_f2, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
+void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_i2, int input_mom_f2, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
 
 
     static const int eps_host[6][3]= {{0,1,2},
@@ -913,35 +933,54 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
     int n_gammas_f1 = this->GList[4].size();
     int n_gammas_f2 = this->GList[5].size();
     int TIME = this->localT();
-    int TIME_src= srcV6.source[DIM_T];
+    int TIME_src= srcV6.localT();
 
-
+    if (TIME != TIME_src){
+      PLEGMA_error("W diagram and V6 reduction expected to have the same time extent\n");
+    }
+    
+    site actualSource=this->source;
+    
     auto imap = this->pList().index_map();
 
-    int my_it = srcV6.source[3] - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    #pragma omp parallel for
+    for(int i_m=0; i_m<imap.size(); i_m++){
+      Float temp[2*N_SPINS*N_SPINS];
+      int i_mom_f1 = imap[i_m][1];
+      int i_mom_i2 = imap[i_m][0];
+      int i_mom_f2 = imap[i_m][2];
+      if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
+	printf("INPUT MOM correct\n");
+	for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
+
+          Float phi0Aux[N_SPINS*N_COLS*2];
+          GAMMAS_SCATT gamma5 = G_5;
+          GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][g2], LEFT);
+          V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, phi0Aux );
+	  for (int i=0;i<24;++i){
+	    printf("Hunting BUG phi0 %e\n",phi0Aux[i]);
+	  }
 
 
-    if (is_myIt){  
-      #pragma omp parallel for
-      for(int i_m=0; i_m<imap.size(); i_m++){
-        Float temp[2*N_SPINS*N_SPINS];
-        int i_mom_f1 = imap[i_m][1];
-        int i_mom_i2 = imap[i_m][0];
-	int i_mom_f2 = imap[i_m][2];
-	if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
-	  for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
+	  for (int t=0; t<TIME; ++t){
 
-            Float phi0Aux[N_SPINS*N_COLS*2];
-            GAMMAS_SCATT gamma5 = G_5;
-            GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][g2], LEFT);
-            V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, phi0Aux );
+            int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
+
+	    PLEGMA_Vector<Float> tmp;
+            tmp.copy(*Phi_1[global_time_index],HOST);
+
+            std::shared_ptr<Float> Phi1 = tmp.getPointSource(actualSource,HOST);
+
 
             for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//gf2
 
 	      Float phi1Aux[N_SPINS*N_COLS*2];
               GAMMAS_SCATT gamma5_t_gammaf2 = apply_g5( this->GList[5][g4], LEFT);
 	      V_MVM<Float>( Phi1.get(), gamma5, gamma5_t_gammaf2, phi1Aux );
+	      for (int i=0;i<24;++i){
+                printf("Hunting BUG phi1 %e\n",phi1Aux[i]);
+              }
+
 
  
               for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//gi1i
@@ -949,7 +988,14 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 
 
 	          Float V5Aux[2*N_SPINS*N_SPINS*N_COLS];
+		  for (int i=0;i<2*N_SPINS*N_SPINS*N_COLS;++i){
+		    V5Aux[i]=0.;
+		  }
 		  Float V5Aux2[2*N_COLS];
+                  for (int i=0;i<2*N_COLS;++i){
+                    V5Aux2[i]=0.;
+                  }
+
 		  Float V6Aux[2*N_SPINS*N_SPINS*N_COLS];
 
 		  for (int alfa=0; alfa < N_SPINS; ++alfa ){                
@@ -968,17 +1014,33 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		      }
 		    }
 		  }
+		  for (int alfa=0; alfa < N_SPINS; ++alfa ){
+                    for (int beta=0; beta < N_SPINS; ++beta ){
+                      for (int color=0; color< N_COLS; ++color ){
+                        printf("V5INMATRIX %d %d %d %e %e\n",alfa,beta,color,V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)],V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)+1]);
+                      }
+                    }
+                  }
 
 		  V_TR_MM<Float>( V5Aux, this->GList[2][g1], false, V5Aux2);
+		  for (int i=0;i<6;++i){
+                    printf("Hunting BUG V5Aux2 %e\n",V5Aux2[i]);
+                  }
+
 
                   for (int alfa=0;alfa<N_SPINS;++alfa){
                     for (int beta=0;beta<N_SPINS;++beta){
 		      for (int coloridx=0;coloridx<N_COLS;++coloridx){
-		           V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]=srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[0];
-                           V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1]=srcV6.Corr(0,i_mom_f1,g3,alfa,beta,coloridx)[1];
+		           V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]=srcV6.Corr(t,i_mom_f1,g3,alfa,beta,coloridx)[0];
+                           V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1]=srcV6.Corr(t,i_mom_f1,g3,alfa,beta,coloridx)[1];
 		      }
 		    }
 		  }
+		  for (int i=0;i<96;++i){
+                    printf("Hunting BUG V6Aux %e\n",V6Aux[i]);
+                  }
+
+
 
 		   //if true multiply by sigma_T(G_f1)
 
@@ -991,18 +1053,26 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 
 		  for (int alfa=0;alfa<N_SPINS;++alfa){
 		    for (int beta=0; beta<N_SPINS;++beta){
+	              int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
+		      temp[spins]=0.;
+		      temp[spins+1]=0.;
 		      for (int coloridx=0; coloridx<N_COLS; ++coloridx){ 
-			int spins = (transp) ? (beta*N_SPINS+alfa)*2 : (alfa*N_SPINS+beta)*2;
 		        temp[spins+0]+=
 			  +V5Aux2[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
 			  -V5Aux2[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
 			temp[spins+1]+=
-                          +V5Aux2[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0]
-                          +V5Aux2[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1];
+                          +V5Aux2[2*coloridx+0]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+1]
+                          +V5Aux2[2*coloridx+1]*V6Aux[(alfa*N_SPINS+beta)*2*N_COLS+2*coloridx+0];
 
 		      }//n_col
 		    }//beta
 		  }//alfa
+
+		  for (int i=0;i<32;++i){
+                    printf("Hunting BUG temp %e\n",temp[i]);
+                  }
+
+
 
 		  if(factor!=NULL){
 		    Float aux;
@@ -1018,7 +1088,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		      GAMMAS_SCATT egammaf = this->GList[1][g_extf];
 		      
 		      //multiplication with external gammas NB written here! mod in M_pe_GNG
-		      M_pe_GNG<Float>( this->Corr(my_it,i_m,g_exti,g_extf,g1,g2,g3,g4),
+		      M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g2,g3,g4),
                                 egammaf, egammai, temp );
 		    }//Gextf
                   }//Gexti
@@ -1026,9 +1096,9 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
               }//Gi1
             }//Gf2
           }//Gi12
-        }//if mom
-      }//mom
-    }//myit
+        }//t
+      }//if mom
+    }//mom
 }
 
 
@@ -1507,7 +1577,7 @@ void PLEGMA_ScattCorrelator<Float>::B_diagrams(PLEGMA_ScattCorrelator<Float> &sr
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::shared_ptr<Float> &Phi1, int input_mom_i2, int input_mom_f2, int diagram_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi1, int input_mom_i2, int input_mom_f2, int diagram_index, bool accum){
 
   this->clear_output(!accum);
   Float factor[2]={-1,0};
