@@ -2453,8 +2453,9 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
   if( this->pList().pi(1) != reductionsVT.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
 
     //n gammas
-  int n_gammas_f = this->GList[4].size();
-  int n_gammas_i2= this->GList[3].size();
+  int n_gammas_f = this->GList[5].size();
+  printf("Ngammas f %d size %d \n", n_gammas_f, this->GList.size());
+  int n_gammas_i2= this->GList[4].size();
   int n_gammas_i1 = this->GList[2].size();
   int n_extgammas_f = this->GList[1].size();
   int n_extgammas_i = this->GList[0].size();
@@ -2471,7 +2472,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       Float stochAux[N_SPINS*N_COLS*2];
       GAMMAS_SCATT gamma5 = G_5;
       for (int gi2=0 ; gi2< n_gammas_i2; ++gi2){
-        GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][gi2], LEFT);
+        GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[4][gi2], LEFT);
         V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, stochAux );
         for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
           for( int gf=0; gf<n_gammas_f; ++gf ){
@@ -2491,7 +2492,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
               for( int gef=0; gef<n_extgammas_f; ++gef ){
                 GAMMAS_SCATT eGamma_i = this->GList[0][gei];
                 GAMMAS_SCATT eGamma_f = this->GList[1][gef];
-                M_pe_GNG<Float>( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf), eGamma_f, eGamma_i, temp);
+                M_pe_GNG<Float>( this->Corr(t,i_mom,gei,gef,gi1,0,gi2,gf), eGamma_f, eGamma_i, temp);
 
               }//G_ext_f
             }//G_ext_i

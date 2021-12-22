@@ -1138,7 +1138,9 @@
             GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gamma_i2, RIGHT );
 
             std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
+
 	    if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+
               vectortmp_fini.copy(stochastic_oet_prop_u_fini_mom);
               vectortmp_fini.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
@@ -1154,7 +1156,6 @@
 
               TIME(reductionsV3.V3( vectortmp_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
               reductionsV3.writeHDF5("V3redforZdiagram");
-
 
             }
 
