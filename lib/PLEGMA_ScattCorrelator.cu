@@ -773,7 +773,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
     int TIME_src= srcV6.localT();
 
     const int NS2C=2*N_SPINS*N_SPINS*N_COLS;
-    const int NS1C=2*N_SPINS*N_SPINS*N_COLS;
+    const int NS1C=2*N_SPINS*N_COLS;
 
     if (TIME != TIME_src){
       PLEGMA_error("W diagram and V6 reduction expected to have the same time extent\n");
@@ -823,6 +823,11 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		  Float V5Aux2[NS1C];
 		  for (int ii=0;ii<NS2C;++ii)
 		    V5Aux[ii]=0;
+                  for (int ii=0;ii<NS2C;++ii){
+                    V5Aux2[ii]=0;
+		    V6Aux[ii]=0;
+		  }
+
 
 		  for (int alfa=0; alfa < N_SPINS; ++alfa ){                
 		    for (int beta=0; beta < N_SPINS; ++beta ){
@@ -1587,10 +1592,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2,  false, false, true, factor);
       break;
     case 2: 
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 0, 1, false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 0, false, false, false, factor);
       break;
     case 3:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 0, 0, false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 1, false, false, false, factor);
       break;
     case 4:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, false, false, factor);
@@ -2474,6 +2479,14 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       for (int gi2=0 ; gi2< n_gammas_i2; ++gi2){
         GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[4][gi2], LEFT);
         V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, stochAux );
+	for (int i=0; i<N_SPINS*N_COLS;++i){
+	  stochAux[2*i+1]=-1*stochAux[2*i+1];
+	}
+	for (int alpha=0; alpha<N_SPINS;++alpha){
+	  for (int color=0; color<N_COLS;++color){
+	    printf("STOCHPARTINT %d %d %e %e\n",alpha,color, stochAux[2*(alpha*N_COLS+color)],stochAux[2*(alpha*N_COLS+color)+1]);
+	  }
+	}
         for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
           for( int gf=0; gf<n_gammas_f; ++gf ){
 	    for ( int alpha=0;alpha<N_SPINS;++alpha){
