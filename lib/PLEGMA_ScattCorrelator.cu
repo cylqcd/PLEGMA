@@ -823,7 +823,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 		  Float V5Aux2[NS1C];
 		  for (int ii=0;ii<NS2C;++ii)
 		    V5Aux[ii]=0;
-                  for (int ii=0;ii<NS2C;++ii){
+                  for (int ii=0;ii<NS1C;++ii){
                     V5Aux2[ii]=0;
 		    V6Aux[ii]=0;
 		  }
@@ -1027,10 +1027,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
                     }
                   }
 
-		  V_TR_MM<Float>( V5Aux, this->GList[2][g1], false, V5Aux2);
-		  for (int i=0;i<6;++i){
-                    printf("Hunting BUG V5Aux2 %e\n",V5Aux2[i]);
-                  }
+		  V_TR_MM<Float>( V5Aux, this->GList[2][g1],transpgamma_i1, V5Aux2);
 
 
                   for (int alfa=0;alfa<N_SPINS;++alfa){
@@ -1041,11 +1038,6 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		      }
 		    }
 		  }
-		  for (int i=0;i<96;++i){
-                    printf("Hunting BUG V6Aux %e\n",V6Aux[i]);
-                  }
-
-
 
 		   //if true multiply by sigma_T(G_f1)
 
@@ -1072,11 +1064,6 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		      }//n_col
 		    }//beta
 		  }//alfa
-
-		  for (int i=0;i<32;++i){
-                    printf("Hunting BUG temp %e\n",temp[i]);
-                  }
-
 
 
 		  if(factor!=NULL){
@@ -1589,16 +1576,16 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
 
   switch( diagram_index ){
     case 1:
-      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2,  false, false, true, factor);
+      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2,  false, true, true, factor);
       break;
     case 2: 
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 0, false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 0, false, false, true, factor);
       break;
     case 3:
       this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 1, false, false, false, factor);
       break;
     case 4:
-      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, false, false, factor);
+      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, true, false, factor);
       break;
     default:
       PLEGMA_error("This value of W diagram oet index does not exists, please check your inputs in piNdiagrams_oet.cpp");
