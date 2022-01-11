@@ -1010,11 +1010,11 @@
 
 
 
-	  TIME(corrT1.T_diagrams_oet(reductionsV4T, Phi0, i_mpi2, 1, true),"ISOSPIN32");
+	  TIME(corrT1.T_diagrams_oet(reductionsV4T, Phi0, 1, true),"ISOSPIN32");
 
-	  TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi0, i_mpi2, 2, true),"ISOSPIN32");
+	  TIME(corrT2.T_diagrams_oet(reductionsV2T, Phi0, 2, true),"ISOSPIN32");
 
-          TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi0, i_mpi2, 3, true),"ISOSPIN32");
+          TIME(corrT3.T_diagrams_oet(reductionsV2T, Phi0, 3, true),"ISOSPIN32");
 
 
 	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";

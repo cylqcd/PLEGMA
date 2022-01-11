@@ -1187,14 +1187,11 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   assert( this->pList().check_eq(0) );
 
   //Groups
-  if (found==std::string::npos)
-    this->groups = {isospin,};
-  else{
-    char *temporary;
-    asprintf(&temporary,"%s/pi2=",isospin.c_str());
-    this->groups ={this->pList().to_string({0},{temporary})[0], };
-    free(temporary);
-  }
+  char *temporary;
+  asprintf(&temporary,"%s/pi2=",isospin.c_str());
+  this->groups ={this->pList().to_string({0},{temporary})[0], };
+  free(temporary);
+  
   //Dataset
   this->datasets = {name_of_diagram,};
 
@@ -2310,7 +2307,7 @@ void PLEGMA_ScattCorrelator<Float>::N_diagrams( PLEGMA_ScattCorrelator<Float> &T
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0, int i_mpi2, int diagramindex, bool accum){
+void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0,  int diagramindex, bool accum){
 
   if( this->pList().pi(1) != reductionsVT.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
 
@@ -2329,6 +2326,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
   for(int t=0; t<TIME; ++t){
     #pragma omp parallel for
     for(int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
+
       Float temp[N_SPINS*N_SPINS*2];
       Float V3aux[N_SPINS*N_COLS*2];
       Float stochAux[N_SPINS*N_COLS*2];
@@ -2338,11 +2336,6 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
         V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, stochAux );
 	for (int i=0; i<N_SPINS*N_COLS;++i){
 	  stochAux[2*i+1]=-1*stochAux[2*i+1];
-	}
-	for (int alpha=0; alpha<N_SPINS;++alpha){
-	  for (int color=0; color<N_COLS;++color){
-	    printf("STOCHPARTINT %d %d %e %e\n",alpha,color, stochAux[2*(alpha*N_COLS+color)],stochAux[2*(alpha*N_COLS+color)+1]);
-	  }
 	}
         for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
           for( int gf=0; gf<n_gammas_f; ++gf ){
