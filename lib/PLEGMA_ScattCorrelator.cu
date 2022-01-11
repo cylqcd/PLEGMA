@@ -459,7 +459,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
     int i_mom_i2_f2;
     if (oet) {
       i_mom_i2_f2= imap[i_m][0];
-    }else
+    }else{
       i_mom_i2_f2= imap[i_m][2];
     }
     for(int t=0; t < TIME; ++t){

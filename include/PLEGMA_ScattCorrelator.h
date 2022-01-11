@@ -212,7 +212,7 @@ namespace plegma {
 			      bool transp=false, bool transpgamma_i1=false, bool transgamma_f1=false, 
 			      Float *factor=NULL);
 
-    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false ); 
+    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false ); 
 
     void V5V6reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV6, 
 	                             std::shared_ptr<Float> &Phi0, 
