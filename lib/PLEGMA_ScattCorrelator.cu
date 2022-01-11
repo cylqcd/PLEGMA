@@ -1582,7 +1582,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 0, false, false, true, factor);
       break;
     case 3:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 1, false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 0, false, false, false, factor);
       break;
     case 4:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, true, false, factor);
