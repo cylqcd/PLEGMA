@@ -700,9 +700,6 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 	    tmp.copy(*Phi_1[global_time_index],HOST);
 
             std::shared_ptr<Float> Phi1 = tmp.getPointSource(actualSource,HOST);
-            for (int i=0;i<24;++i){
-              printf("Phi0 %e\n",Phi0.get()[i]);
-            }
 
             for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//gf2
 
@@ -737,13 +734,6 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 			tmp[1]= (-phi0Aux[2*(alfa*N_COLS+a)+1]*phi1Aux[2*(beta*N_COLS+b)]-phi0Aux[2*(alfa*N_COLS+a)]*phi1Aux[2*(beta*N_COLS+b)+1])*(Float)eps1_sgn;
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)]   = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)] + tmp[0];
 			V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] = V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+m)+1] + tmp[1];
-		      }
-		    }
-		  }
-                  for (int alfa=0; alfa < N_SPINS; ++alfa ){
-                    for (int beta=0; beta < N_SPINS; ++beta ){
-                      for (int color=0; color< N_COLS; ++color ){
-			printf("V5INREDUCTION %d %d %d %e %e\n",alfa,beta,color,V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)],V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)+1]);
 		      }
 		    }
 		  }
@@ -850,16 +840,12 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
       int i_mom_i2 = imap[i_m][0];
       int i_mom_f2 = imap[i_m][2];
       if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
-	printf("INPUT MOM correct\n");
 	for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
 
           Float phi0Aux[N_SPINS*N_COLS*2];
           GAMMAS_SCATT gamma5 = G_5;
           GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[3][g2], LEFT);
           V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, phi0Aux );
-	  for (int i=0;i<24;++i){
-	    printf("Hunting BUG phi0 %e\n",phi0Aux[i]);
-	  }
 
 
 	  for (int t=0; t<TIME; ++t){
@@ -877,10 +863,6 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 	      Float phi1Aux[N_SPINS*N_COLS*2];
               GAMMAS_SCATT gamma5_t_gammaf2 = apply_g5( this->GList[5][g4], LEFT);
 	      V_MVM<Float>( Phi1.get(), gamma5, gamma5_t_gammaf2, phi1Aux );
-	      for (int i=0;i<24;++i){
-                printf("Hunting BUG phi1 %e\n",phi1Aux[i]);
-              }
-
 
  
               for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//gi1i
@@ -914,13 +896,6 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		      }
 		    }
 		  }
-		  for (int alfa=0; alfa < N_SPINS; ++alfa ){
-                    for (int beta=0; beta < N_SPINS; ++beta ){
-                      for (int color=0; color< N_COLS; ++color ){
-                        printf("V5INMATRIX %d %d %d %e %e\n",alfa,beta,color,V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)],V5Aux[2*((alfa*N_SPINS+beta)*N_COLS+color)+1]);
-                      }
-                    }
-                  }
 
 		  V_TR_MM<Float>( V5Aux, this->GList[2][g1],transpgamma_i1, V5Aux2);
 
@@ -934,7 +909,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 		    }
 		  }
 
-		   //if true multiply by sigma_T(G_f1)
+                  //if true multiply by sigma_T(G_f1)
 
 
                   if(transpgamma_f1){
