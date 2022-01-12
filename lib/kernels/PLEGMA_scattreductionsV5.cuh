@@ -3,7 +3,7 @@
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT, bool CONJ_V>
+template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT, bool CONJ_P>
 __global__ void V5_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vectorPhi2,
 			   Float2<FloatOut> *block2,
 			   int it, int time_step, int maxT, int4 source, tex_mom_list moms){
@@ -27,50 +27,25 @@ __global__ void V5_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
     
 
     //loops
-    if(CONJ_V){
+    #pragma unroll
+    for (int alpha=0; alpha<N_SPINS; ++alpha){
 
-       #pragma unroll
-       for (int alpha=0; alpha<N_SPINS; ++alpha){
+      #pragma unroll 
+      for (int beta=0; beta<N_SPINS; ++beta){
 
-         #pragma unroll 
-         for (int beta=0; beta<N_SPINS; ++beta){
-
-           #pragma unroll
-           for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
-             unsigned short m=plegma::eps[eps1_nz][0];
-             unsigned short a=plegma::eps[eps1_nz][1];
-             unsigned short b=plegma::eps[eps1_nz][2];
-             int eps1_sgn=plegma::sgn_eps[eps1_nz];
-             Float2<FloatOut> factor=eps1_sgn;	      
-             accum[(alpha*N_SPINS+beta)*N_COLS+m] = accum[(alpha*N_SPINS+beta)*N_COLS+m] 
+        #pragma unroll
+        for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
+          unsigned short m=plegma::eps[eps1_nz][0];
+          unsigned short a=plegma::eps[eps1_nz][1];
+          unsigned short b=plegma::eps[eps1_nz][2];
+          int eps1_sgn=plegma::sgn_eps[eps1_nz];
+          Float2<FloatOut> factor=eps1_sgn;	      
+          accum[(alpha*N_SPINS+beta)*N_COLS+m] = accum[(alpha*N_SPINS+beta)*N_COLS+m] 
 		    + conj(phi1[alpha][a])*conj(phi2[beta][b])*factor;
-	   }
-         }
+	   
+        }
       }
-    }
-    else {
-       #pragma unroll
-       for(int alpha=0; alpha<N_SPINS; ++alpha){
-        
-         #pragma unroll
-         for(int beta=0; beta<N_SPINS; ++beta){
-         
-           for( unsigned short m=0; m<N_COLS; m++ ){
-         /*  #pragma unroll
-           for( unsigned short eps1_nz=0; eps1_nz<6; eps1_nz++ ){
-             unsigned short m=plegma::eps[eps1_nz][0];
-             unsigned short a=plegma::eps[eps1_nz][1];
-             unsigned short b=plegma::eps[eps1_nz][2];
-             int eps1_sgn=plegma::sgn_eps[eps1_nz];
-             Float2<FloatOut> factor=eps1_sgn;*/
-	     accum[(alpha*N_SPINS+beta)*N_COLS+m] = accum[(alpha*N_SPINS+beta)*N_COLS+m]+phi1[0][0];
-//                    + (phi1[alpha][a])*(phi2[beta][b])*factor;
-
-           }       
-         }
-       }
-    }
-    printf("V5 gridDim %d blockIdx.x %d blockDim.x %d threadIdx.x %d blockIdx.x %d sid3D %d grid3D %d t %d vid %d it %d time step %d\n", gridDim.x,blockIdx.x, blockDim.x, threadIdx.x, blockIdx.x, sid3D, grid3D, t, vid, it, time_step); 
+    } 
   }
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
@@ -79,8 +54,14 @@ __global__ void V5_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
   const unsigned int OUT_DOF= N_SPINS;
   const unsigned int IN_DOF= N_SPINS*N_COLS;
 
-  #pragma unroll
-  for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
-    fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
+  if (CONJ_P){
+    #pragma unroll
+    for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+      fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
+  } else {
+    #pragma unroll
+    for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+      fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, +1, time_step, tid);
+  }
 }
 

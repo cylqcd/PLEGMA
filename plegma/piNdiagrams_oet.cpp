@@ -296,7 +296,7 @@
 	    PLEGMA_Vector<float> vectorAuxF;
 	    vectorAuxF.copy(vectorAuxD2);
 	    vectorAuxF.unload();
-	    vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_stoch_mom"+std::to_string(i_mpf2)+"_"+confnumber);
+	    vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber);
 	  }
 
 	  //Step(13) Save the propagator to the host memory
@@ -324,7 +324,7 @@
 	    }
 	  }
 	  
-	  std::string inputfilename=outfile_V+"globalTfulltimedilution_propagator_oet_stoch_mom_"+std::to_string(i_mpf2)+"_"+confnumber;
+	  std::string inputfilename=outfile_V+"globalTfulltimedilution_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
 
 	  PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
 	    
@@ -730,8 +730,8 @@
 	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
 
 
-	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, false);
-	  reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2));
+	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
+// reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2));
 
           //Loop over the different gamma structure for the source meson
           for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
@@ -775,9 +775,9 @@
             spropagator_V3.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
 
 
-	    reductionsV3.V3(spropagator_V3, gamma_5_t_sourcemeson, propDN_source_to_source, true);
+	    reductionsV3.V3(spropagator_V3, gamma_5_t_sourcemeson, propDN_source_to_source, false);
 
-	    reductionsV3.writeHDF5("V3redforBdiagram");
+//   reductionsV3.writeHDF5("V3redforBdiagram");
 
 	    TIME(corrB1.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 1, true),"ISOSPIN32");
 
@@ -878,25 +878,25 @@
 	//for the T diagram we need V4 reduction for momentum p total
 
 	//Factors for the T diagram (zero momentum i2)
-        TIME(reductionsV4T.V4( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
+        TIME(reductionsV4T.V4( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
 
-	reductionsV4T.writeHDF5("V4redforTdiagram");
+//	reductionsV4T.writeHDF5("V4redforTdiagram");
 
-        TIME(reductionsV2T.V2( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP),"ISOSPIN32");
+        TIME(reductionsV2T.V2( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
 
-	reductionsV2T.writeHDF5("V2redforTdiagram");
+//	reductionsV2T.writeHDF5("V2redforTdiagram");
 
 
 
 
 	//Factors for the Z diagram
-	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
+	TIME(reductionsV4.V4( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN32");
  
-	reductionsV4.writeHDF5("V4redforZdiagram");
+//	reductionsV4.writeHDF5("V4redforZdiagram");
 
-        TIME(reductionsV2.V2( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP),"ISOSPIN32");
+        TIME(reductionsV2.V2( stochastic_oet_prop_u_zero_mom, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN32");
 
-        reductionsV2.writeHDF5("V2redforZdiagram");
+//        reductionsV2.writeHDF5("V2redforZdiagram");
 
 
 
@@ -979,7 +979,7 @@
               PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(stochastic_oet_prop_u_fini_mom);
               vectorAuxF.unload();
-              vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_mpi2_momstoch_mom_"+std::to_string(i_mpi2)+"_"+confnumber);
+              vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_mpi2_momstoch_mom_pi2x"+std::to_string(momentum_i2[0])+"_pi2y"+std::to_string(momentum_i2[1])+"_pi2z"+std::to_string(momentum_i2[2])+"_"+confnumber);
             }
 
 
@@ -1062,7 +1062,7 @@
           PLEGMA_Vector<float> vectortmp_fini;
 
 
-	  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+        /*for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
             PLEGMA_Vector<float> spropagator;
             PLEGMA_Vector3D<float> vector1;
@@ -1072,23 +1072,13 @@
             vector1.absorb(spropagator,  timeidx);
             spropagator_V6.absorb(vector1,  timeidx, false);
 
-          }
+          }*/
 
           for  (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
 
-         /*   spropagator_fini.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
-
-            std::shared_ptr<float> Phi1 = spropagator_fini.getPointSource(actualSource,HOST);
-	    for (int i=0;i<24;++i){
-              printf("Phi0 %e\n",Phi0.get()[i]);
-            }
-
-
-	    for (int i=0;i<24;++i){
-	      printf("Phi1 %e\n",Phi1.get()[i]);
-	    }
-            spropagator_fini.load();*/
+            spropagator_V6.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
+	    spropagator_V6.load();
 
             for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
 
@@ -1097,16 +1087,16 @@
 
                 reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,1,2,false);
 
-                reductionsV6.writeHDF5("V6redforWdiagram12");
+//                reductionsV6.writeHDF5("V6redforWdiagram12");
 
 
 		TIME(corrW1.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
 
 		TIME(corrW2.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
 
-		reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,0,1,false);
+		reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,0,1,true);
 
-		reductionsV6.writeHDF5("V6redforWdiagram34");
+//		reductionsV6.writeHDF5("V6redforWdiagram34");
 
                   
 		TIME(corrW3.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
@@ -1145,7 +1135,7 @@
               vectortmp_fini.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
               TIME(reductionsV3.V3( vectortmp_fini, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
-              reductionsV3.writeHDF5("V3redforZdiagram");
+//              reductionsV3.writeHDF5("V3redforZdiagram");
 
 
             }
@@ -1155,7 +1145,7 @@
               vectortmp_zero.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
               TIME(reductionsV3.V3( vectortmp_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
-              reductionsV3.writeHDF5("V3redforZdiagram");
+//              reductionsV3.writeHDF5("V3redforZdiagram");
 
             }
 

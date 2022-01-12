@@ -4,7 +4,7 @@ using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-template<bool CONJ_V,unsigned int C1,unsigned int C2, typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_P,unsigned int C1,unsigned int C2, typename FloatOut, typename FloatV, typename FloatP>
 void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 			int it, int time_step, int maxT, int4 source, tex_mom_list moms,
 			KernelArr<GAMMAS_SCATT> &listGammas,
@@ -21,7 +21,7 @@ void T_kernels_wrapper( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
 // +++++++++++| V reductions |++++++++++++
 // +++++++++++++++++++++++++++++++++++++++
 
-template<bool CONJ_V,unsigned int C1, unsigned int C2, typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_P,unsigned int C1, unsigned int C2, typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 			       Float2<FloatOut>* result, std::vector<GAMMAS_SCATT> &gammas,
 			       vectorTex<FloatV> &Phi1, vectorTex<FloatV> &Phi2, propTex<FloatP>& S1, propTex<FloatP>& S2){
@@ -83,7 +83,7 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
 //    PLEGMA_printf("ps.tp.grid.x %d\n",ps.tp.grid.x);
     
     //call the kernel wrapper
-    V_kernels_wrapper<CONJ_V,C1,C2,FloatOut, FloatV, FloatP>(ps, V, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas, Phi1,Phi2,S1, S2 );
+    V_kernels_wrapper<CONJ_P,C1,C2,FloatOut, FloatV, FloatP>(ps, V, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms, listGammas, Phi1,Phi2,S1, S2 );
     ps.tp.grid.x = grid.x;
 
     //Syncronize (maybe useles) and look for errors (without stopping)
@@ -117,7 +117,7 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
   
 }
 
-template<bool CONJ_V,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_P,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 			 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
 			 PLEGMA_Propagator<FloatP> &S){
@@ -146,7 +146,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
       
   auto vectorPhi = toTexture<vectorTex>(Phi);
   auto propS = toTexture<propTex>(S);
-  tuneAndRun( ps, kerName, V_reductions_host<CONJ_V,C1,C2,FloatOut, FloatV, FloatP>,
+  tuneAndRun( ps, kerName, V_reductions_host<CONJ_P,C1,C2,FloatOut, FloatV, FloatP>,
 	      ps, V, Vout, result, Gammas, *vectorPhi,*vectorPhi,*propS, *propS);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
@@ -155,7 +155,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 }
 
-template<bool CONJ_V,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_P,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 			 PLEGMA_Vector<FloatV> &Phi, std::vector<GAMMAS_SCATT> &Gammas,
 			 PLEGMA_Propagator<FloatP> &S1,  PLEGMA_Propagator<FloatP> &S2){
@@ -185,7 +185,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   auto vectorPhi = toTexture<vectorTex>(Phi);
   auto propS1 = toTexture<propTex>(S1);
   auto propS2 = toTexture<propTex>(S2);
-  tuneAndRun( ps, kerName, V_reductions_host<CONJ_V,C1,C2,FloatOut,FloatV,FloatP>,
+  tuneAndRun( ps, kerName, V_reductions_host<CONJ_P,C1,C2,FloatOut,FloatV,FloatP>,
 	      ps, V, Vout, result, Gammas, *vectorPhi,*vectorPhi, *propS1, *propS2);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
@@ -195,7 +195,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
  
 }
 
-template<bool CONJ_V,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_P,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
                          PLEGMA_Vector<FloatV> &Phi1, PLEGMA_Vector<FloatV> &Phi2, std::vector<GAMMAS_SCATT> &Gammas,
                          PLEGMA_Propagator<FloatP> &S1 ){
@@ -225,7 +225,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   auto vectorPhi1 = toTexture<vectorTex>(Phi1);
   auto vectorPhi2 = toTexture<vectorTex>(Phi2);
   auto propS1 = toTexture<propTex>(S1);
-  tuneAndRun( ps, kerName, V_reductions_host<CONJ_V,C1,C2,FloatOut,FloatV,FloatP>,
+  tuneAndRun( ps, kerName, V_reductions_host<CONJ_P,C1,C2,FloatOut,FloatV,FloatP>,
               ps, V, Vout, result, Gammas, *vectorPhi1,*vectorPhi2, *propS1, *propS1);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
@@ -236,7 +236,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 }
 
 
-template<bool CONJ_V,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_P,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
                          PLEGMA_Vector<FloatV> &Phi1,PLEGMA_Vector<FloatV> &Phi2, 
                          PLEGMA_Propagator<FloatP> &S){
@@ -267,7 +267,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   auto propS = toTexture<propTex>(S);
 
   std::vector<GAMMAS_SCATT> Gammas {};
-  tuneAndRun( ps, kerName, V_reductions_host<CONJ_V,C1,C2,FloatOut,FloatV,FloatP>,
+  tuneAndRun( ps, kerName, V_reductions_host<CONJ_P,C1,C2,FloatOut,FloatV,FloatP>,
               ps, V, Vout, result, Gammas, *vectorPhi1,*vectorPhi2, *propS, *propS);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
@@ -277,7 +277,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
  
 }
 
-template<bool CONJ_V,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
+template<bool CONJ_P,unsigned int C1,unsigned int C2,typename FloatOut, typename FloatV, typename FloatP>
 static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
                          PLEGMA_Vector<FloatV> &Phi1,PLEGMA_Vector<FloatV> &Phi2){
 
@@ -311,7 +311,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 //  plegma::genericProp<plegma::texture<FloatOut>,FloatOut> vec {};
  
 //  propTex<FloatP> vec {};
-  tuneAndRun( ps, kerName, V_reductions_host<CONJ_V,C1,C2,FloatOut,FloatV,FloatP>,
+  tuneAndRun( ps, kerName, V_reductions_host<CONJ_P,C1,C2,FloatOut,FloatV,FloatP>,
               ps, V, Vout, result, Gammas, *vectorPhi1,*vectorPhi2,*propS,*propS);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
