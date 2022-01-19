@@ -1,4 +1,4 @@
-#include <PLEGMA_ScattCorrelator.h>
+#hinclude <PLEGMA_ScattCorrelator.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_scattreductions.cuh>
@@ -457,7 +457,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
     Float temp[2*N_SPINS*N_SPINS];
     int i_mom_f1 = imap[i_m][1];
     int i_mom_i2_f2;
-    if (oet) {
+    if (oet==true) {
       i_mom_i2_f2= imap[i_m][0];
     }else{
       i_mom_i2_f2= imap[i_m][2];
@@ -466,7 +466,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
         for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
 	  int n_gammas_i2_f2;
-	  if (oet){
+	  if (oet==true){
 	    n_gammas_i2_f2=n_gammas_i2;
 	  } else {
 	    n_gammas_i2_f2=n_gammas_f2;
@@ -504,12 +504,13 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
                 GAMMAS_SCATT egammaf = this->GList[1][g_extf];
 		
 	        //multiplication with external gammas NB written here! mod in M_pe_GNG
-		if (oet){
+		if (oet==true){
                   M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g3,g2,g0),
                                  egammaf, egammai, temp );
 		} else{
 		  M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g0,g2,g3),
 		                 egammaf, egammai, temp );
+
 		}
 	      }//Gextf
 	    }//Gexti
@@ -552,7 +553,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
     int i_mom_i2_f2;
-    if (oet){
+    if (oet==true){
      i_mom_i2_f2= imap[i_m][0];
     }else {
      i_mom_i2_f2= imap[i_m][2];
@@ -565,7 +566,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
         for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
 	  int n_gammas_i2_f2;
-	  if (oet){
+	  if (oet==true){
 	    n_gammas_i2_f2=n_gammas_i2;
 	  } else{
 	    n_gammas_i2_f2=n_gammas_f2;
@@ -617,7 +618,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 
 
 		//multiplication with external gammas NB: written here!!
-		if (oet){
+		if (oet==true){
                   M_pe_GNG<Float>( this->Corr(t,i_m,g_exti,g_extf,g1,g3,g2,g0),
                                 egammaf, egammai, temp );
 		}else{
@@ -636,7 +637,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction_matrix( PLEGMA_ScattCorrelator
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_i2, int input_mom_f2, int index_abs_V6, int index_abs_V5, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
+void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_f2, int index_abs_V6, int index_abs_V5, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
 
 
     static const int eps_host[6][3]= {{0,1,2},
@@ -683,9 +684,8 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
     for(int i_m=0; i_m<imap.size(); i_m++){
       Float temp[2*N_SPINS*N_SPINS];
       int i_mom_f1 = imap[i_m][1];
-      int i_mom_i2 = imap[i_m][0];
       int i_mom_f2 = imap[i_m][2];
-      if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
+      if ((i_mom_f2==input_mom_f2)){
         for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
           Float phi0Aux[N_SPINS*N_COLS*2];
           GAMMAS_SCATT gamma5 = G_5;
@@ -794,7 +794,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_i2, int input_mom_f2, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
+void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_f2, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float *factor) {
 
 
     static const int eps_host[6][3]= {{0,1,2},
@@ -837,9 +837,8 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
     for(int i_m=0; i_m<imap.size(); i_m++){
       Float temp[2*N_SPINS*N_SPINS];
       int i_mom_f1 = imap[i_m][1];
-      int i_mom_i2 = imap[i_m][0];
       int i_mom_f2 = imap[i_m][2];
-      if ((i_mom_f2==input_mom_f2) && (i_mom_i2==input_mom_i2)){
+      if ((i_mom_f2==input_mom_f2) ){
 	for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
 
           Float phi0Aux[N_SPINS*N_COLS*2];
@@ -1436,23 +1435,23 @@ void PLEGMA_ScattCorrelator<Float>::B_diagrams(PLEGMA_ScattCorrelator<Float> &sr
 
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi1, int input_mom_i2, int input_mom_f2, int diagram_index, bool accum){
+void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi1, int input_mom_f2, int diagram_index, bool accum){
 
   this->clear_output(!accum);
   Float factor[2]={-1,0};
 
   switch( diagram_index ){
     case 1:
-      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2,  false, true, true, factor);
+      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, true, true, factor);
       break;
     case 2: 
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 0, false, false, true, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, false, true, factor);
       break;
     case 3:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, 1, 0, false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, false, false, factor);
       break;
     case 4:
-      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_i2, input_mom_f2, false, true, false, factor);
+      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2, false, true, false, factor);
       break;
     default:
       PLEGMA_error("This value of W diagram oet index does not exists, please check your inputs in piNdiagrams_oet.cpp");

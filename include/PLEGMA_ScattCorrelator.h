@@ -207,7 +207,7 @@ namespace plegma {
     void V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, 
 	                      std::shared_ptr<Float> &Phi0, 
 			      std::vector<PLEGMA_Vector<Float>*> &Phi_1,
-			      int input_mom_i2, int input_mom_f2, 
+			      int input_mom_f2, 
 			      int index_abs_V6, int index_abs_V5, 
 			      bool transp=false, bool transpgamma_i1=false, bool transgamma_f1=false, 
 			      Float *factor=NULL);
@@ -217,7 +217,7 @@ namespace plegma {
     void V5V6reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV6, 
 	                             std::shared_ptr<Float> &Phi0, 
 				     std::vector<PLEGMA_Vector<Float>*> &Phi_1,
-				     int input_mom_i2, int input_mom_f2, 
+				     int input_mom_f2, 
 				     bool transp=false, bool transpgamma_i1=false, bool transpgamma_f1=false, Float *factor=NULL );
 
 
@@ -240,7 +240,7 @@ namespace plegma {
     //diagrams
     void B_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false, bool oet=false );
     void W_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false );
-    void W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_i2, int input_mom_f2, int diagram_index, bool accum=false);
+    void W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_f2, int diagram_index, bool accum=false);
 
     void Z_diagrams( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
     void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2,  int diagramm_index, bool accum=false );
