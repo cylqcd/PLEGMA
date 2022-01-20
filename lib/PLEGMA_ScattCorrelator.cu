@@ -1,4 +1,4 @@
-#hinclude <PLEGMA_ScattCorrelator.h>
+#include <PLEGMA_ScattCorrelator.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_scattreductions.cuh>
