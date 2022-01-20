@@ -11,13 +11,13 @@
     runtime_inside.pop_back()
 
   std::vector<double> runtime;
-#define TIME(fnc,isospin)  runtime.push_back(MPI_Wtime()); fnc;                 \
+#define TIME(fnc,isospin)  runtime.push_back(MPI_Wtime()); fnc;\
     PLEGMA_printf("TIME "#isospin" for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
     runtime.pop_back()
 
-  //std::vector<std::thread> threads;
-  //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
-  //#define THREAD(fnc) TIME(fnc)
+  std::vector<std::thread> threads;
+  //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME_INSIDE(fnc); }))
+  #define THREAD(fnc) TIME_INSIDE(fnc)
 
   extern int device;
   static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsmear-APE","alpha-APE", "nsmear-gauss","alpha-gauss","nsrc","src-filename", "momlist-filename","time-dilution","confnumber"};
@@ -36,6 +36,7 @@
     TIME_INSIDE(source.writeHDF5( outputFilename ));
 
   }
+
 
   void produceOutput( PLEGMA_ScattCorrelator<float> source,
 		      std::string outputFilename,
@@ -273,7 +274,7 @@
 	      {
 	       PLEGMA_Vector<float> vectorAuxF;
 	       vectorAuxF.copy(vectorInOut);
-	       vectorAuxF.unload();
+//	       vectorAuxF.unload();
 	       vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
 	      }
 
@@ -482,7 +483,7 @@
 	  for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
 	    propUP.absorbTimeslice(propUP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
 	  }
-	  if(outfile_upS!="")
+	  /*if(outfile_upS!="")
 	  {
 	    PLEGMA_printf("Save propagator for the up quark\n");
 	    PLEGMA_Vector<float> vectorAuxPrint(BOTH);
@@ -495,7 +496,7 @@
 	      vectorAuxPrint.writeLIME(outfile_upS+confnumber+sourcepositiontext_inside+"_s"+spin+"_c"+col);
 	      //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
 	    }
-	  }
+	  }*/
 	  // ensuring mu negative
 	  if(mu>0) {
 	    mu*=-1.;
@@ -535,7 +536,7 @@
 	    propDN.absorbTimeslice(propDN_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
 	  }
 	  
-	  if(outfile_dnS!="")
+	  /*if(outfile_dnS!="")
           {
             PLEGMA_printf("Save propagator for the dn quark\n");
             PLEGMA_Vector<float> vectorAuxPrint(BOTH);
@@ -548,7 +549,7 @@
               vectorAuxPrint.writeLIME(outfile_dnS+confnumber+sourcepositiontext_inside+"_s"+spin+"_c"+col);
               //vectorAuxPrint.writeHDF5(outfile_upS+confnumber+sourcepositiontext+"_s"+spin+"_c"+col);
             }
-          }
+          }*/
 
 
 
@@ -731,7 +732,7 @@
 
 
 	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
-// reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2));
+          //THREAD(reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2)));
 
           //Loop over the different gamma structure for the source meson
           for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
@@ -777,13 +778,13 @@
 
 	    reductionsV3.V3(spropagator_V3, gamma_5_t_sourcemeson, propDN_source_to_source, false);
 
-//   reductionsV3.writeHDF5("V3redforBdiagram");
+            //THREAD(reductionsV3.writeHDF5("V3redforBdiagram"));
 
-	    TIME(corrB1.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 1, true),"ISOSPIN32");
+	    TIME(corrB1.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 1, true, true),"ISOSPIN32");
 
 
 	    
-	    TIME(corrB2.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 2, true),"ISOSPIN32");
+	    TIME(corrB2.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 2, true, true),"ISOSPIN32");
 
 	     
 
@@ -792,7 +793,11 @@
 	  //## B
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-   
+  
+//	  THREAD(corrB1.writeHDF5(outfilename));
+
+//          while(not threads.empty()) {threads.back().join(); threads.pop_back();}
+
           TIME(produceOutput(corrB1, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrB2, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 
@@ -853,12 +858,12 @@
 	
 	stochastic_oet_prop_u_zero_mom.copy(vectortmp2);
 
-        {
+/*        {
           PLEGMA_Vector<float> vectorAuxF;
           vectorAuxF.copy(stochastic_oet_prop_u_zero_mom);
           vectorAuxF.unload();
-          vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_mpi2_zero_momstoch_mom_"+confnumber);
-        }
+          vectorAuxF.writeHDF5(outfile_V+"globalTfulltimedilution_propagator_oet_mpi2_zero_momstoch_mom_"+confnumber);
+        }*/
 
 
 	}
@@ -880,11 +885,11 @@
 	//Factors for the T diagram (zero momentum i2)
         TIME(reductionsV4T.V4( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
 
-//	reductionsV4T.writeHDF5("V4redforTdiagram");
+	//THREAD(reductionsV4T.writeHDF5("V4redforTdiagram"));
 
         TIME(reductionsV2T.V2( stochastic_oet_prop_u_zero_mom, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
 
-//	reductionsV2T.writeHDF5("V2redforTdiagram");
+	//THREAD(reductionsV2T.writeHDF5("V2redforTdiagram"));
 
 
 
@@ -975,12 +980,12 @@
               
 	    stochastic_oet_prop_u_fini_mom.copy(vectortmp1);
 
-	    {
+	   /* {
               PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(stochastic_oet_prop_u_fini_mom);
               vectorAuxF.unload();
               vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_mpi2_momstoch_mom_pi2x"+std::to_string(momentum_i2[0])+"_pi2y"+std::to_string(momentum_i2[1])+"_pi2z"+std::to_string(momentum_i2[2])+"_"+confnumber);
-            }
+            }*/
 
 
 
@@ -1074,7 +1079,10 @@
 
           }*/
 
-          for  (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
+          std::vector<std::vector<int>> mpf2_forfixmpi2 = filtered_sourcemomentumList.uniq_p(2);
+
+
+          for  (int i_mpf2=0; i_mpf2<mpf2_forfixmpi2.size(); ++i_mpf2){
 
 
             spropagator_V6.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2],HOST);
@@ -1085,18 +1093,21 @@
               for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2) {
 
 
-                reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,1,2,false);
+                reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,1,2,true);
 
-//                reductionsV6.writeHDF5("V6redforWdiagram12");
+                //reductionsV6.writeHDF5("V6redforWdiagram12_mpi2_"+std::to_string(i_mpi2)+"mpf2_"+std::to_string(i_mpf2));
+//
 
 
 		TIME(corrW1.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
+
 
 		TIME(corrW2.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
 
 		reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,0,1,true);
 
-//		reductionsV6.writeHDF5("V6redforWdiagram34");
+		//reductionsV6.writeHDF5("V6redforWdiagram34_mpi2_"+std::to_string(i_mpi2)+"mpf2_"+std::to_string(i_mpf2));
+
 
                   
 		TIME(corrW3.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
@@ -1135,7 +1146,7 @@
               vectortmp_fini.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
               TIME(reductionsV3.V3( vectortmp_fini, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
-//              reductionsV3.writeHDF5("V3redforZdiagram");
+              //THREAD(reductionsV3.writeHDF5("V3redforZdiagram"));
 
 
             }
@@ -1145,7 +1156,7 @@
               vectortmp_zero.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
 
               TIME(reductionsV3.V3( vectortmp_zero, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
-//              reductionsV3.writeHDF5("V3redforZdiagram");
+              //THREAD(reductionsV3.writeHDF5("V3redforZdiagram"));
 
             }
 
@@ -1177,7 +1188,7 @@
       //write P
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
       TIME(corrP.apply_sign("P"),"ISOSPIN32");
-      TIME(corrP.writeHDF5( outfilename ),"ISOSPIN32");
+      TIME_INSIDE(corrP.writeHDF5( outfilename ));
       
 
 
@@ -1206,6 +1217,8 @@
         }
 
      }
+
+//     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
 
 
   } 
