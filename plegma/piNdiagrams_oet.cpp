@@ -671,13 +671,12 @@
 	      corrN0.absorbTimeslice(corrN0_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
 	    }
 
-#endif
 
 	    TIME( corrN0_coherent.apply_phase(),"ISOSPIN12" );
 	    TIME( corrN0_coherent.apply_sign("N"),"ISOSPIN12" );
 	    TIME( corrN0_coherent.applyBoundaryConditions( true ),"ISOSPIN12" );
 	    TIME( corrN0_coherent.writeHDF5(outfilename) ,"ISOSPIN12");
-
+#endif
 	  }//end of T reduction 
 	  }//end of if(do_contraction_std)
 
@@ -1099,10 +1098,9 @@
 //
 
 
-		TIME(corrW1.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 1, true),"ISOSPIN32");
+		TIME(corrW1.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 1, true),"ISOSPIN32");
 
-
-		TIME(corrW2.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 2, true),"ISOSPIN32");
+		TIME(corrW2.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 2, true),"ISOSPIN32");
 
 		reductionsV6.V6_RED(stochastic_oet_prop_u_zero_mom, spropagator_V6, glist_sink_nucleon,propUP,0,1,true);
 
@@ -1110,9 +1108,9 @@
 
 
                   
-		TIME(corrW3.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 3, true),"ISOSPIN32");
+		TIME(corrW3.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 3, true),"ISOSPIN32");
 
-		TIME(corrW4.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpi2,  i_mpf2, 4, true),"ISOSPIN32");
+		TIME(corrW4.W_diagrams_oet(reductionsV6, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 4, true),"ISOSPIN32");
 
 		  
 		
