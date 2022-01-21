@@ -17,6 +17,7 @@
 //#define TIMING_REPORT
 
 
+
 /* 
  * From https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
  * Note that any atomic operation can be implemented based on atomicCAS() (Compare And Swap). 
@@ -600,7 +601,7 @@ namespace plegma {
 						   int sid3D, int sp[3], tex_mom_list &texMomList,
 						   int padding = 0, int sign = -1, int nTime=1, int tId=0){
     int cacheIndex = threadIdx.x;
-    int leftToReduce = gridDim.x/nTime;
+    int leftToReduce = (int)(gridDim.x/(double)nTime);
     int nMoms = texMomList.Nmoms;
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
@@ -618,6 +619,9 @@ namespace plegma {
       expon.y = sign*sin(phase);
       for(int ip = 0 ; ip < n_comp ; ip++){
       	shared_cache[ip*blockDim.x + cacheIndex] = in[ip] * expon; 
+   //     if (nTime==5 || nTime==2 || nTime==1){
+   //       printf("InsideBL ip %d blockDim.x %d cacheIndex %d %e %e\n", ip, blockDim.x, cacheIndex, shared_cache[ip*blockDim.x + cacheIndex].givex(),shared_cache[ip*blockDim.x + cacheIndex].givey());
+   //  	}
       }
       reduce(shared_cache,n_comp);
       
@@ -625,6 +629,9 @@ namespace plegma {
 	for(int ip = 0 ; ip < n_comp ; ip++){
 	  out[((tId*nMoms + imom)*(n_comp+padding) + ip)*leftToReduce + (blockIdx.x%leftToReduce)] =
 	    shared_cache[ip*blockDim.x];
+//	  if (nTime==5 || nTime==2 || nTime==1){
+//	    printf("InsideFT %d gridDim/Timestep %e Blockdim %e tId %d nMoms %d imom %d n_comp %d paddding %d ip %d %e %e\n",leftToReduce, gridDim.x/(double)nTime, (double)blockDim.x, tId, nMoms, imom, n_comp, padding, ip, shared_cache[ip*blockDim.x].givex(),shared_cache[ip*blockDim.x].givey());
+//	  }
 	}
       }
     }    
@@ -643,6 +650,10 @@ namespace plegma {
       }
     else
       return sin(w)/w;
+  }
+  __inline__ int get_time_step(int grid, int block){
+      int nblocks= (HGC_localVolume3D+block-1)/block;
+      return  grid/nblocks;
   }
 
   template<typename Float>

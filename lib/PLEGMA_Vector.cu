@@ -242,6 +242,7 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
 
 
 
+
 template<typename Float>
 void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG where){
   if(where == EVERY) where = this->allocation;
@@ -280,6 +281,58 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
     PLEGMA_error("Not supported %d\n",where);
   }
 }
+template<typename Float>
+std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourceposition, ALLOCATION_FLAG where){
+  if (where == HOST){
+    std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*N_SPINS*N_COLS*2), free);
+
+    for(int i = 0; i < N_DIMS; i++)
+      if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
+
+  
+    int my_src[N_DIMS];
+  
+    size_t id=0;
+    for(int i = N_DIMS-1; i >= 0; i--) {
+
+      my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
+       
+      id = id * HGC_localL[i] + my_src[i];
+    
+    }
+  
+    // This make it work also for vector3D
+    id = id % this->Total_length();
+
+    int coords[4];
+    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
+    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+
+    if (comm_rank()==rankHas){
+      for (int spin=0; spin<N_SPINS; ++spin){
+        for (int color=0; color<N_COLS; ++color){
+    
+	  ptr.get()[2*(spin*N_COLS+color)+0]=this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] ;
+          ptr.get()[2*(spin*N_COLS+color)+1]=this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2+1] ;
+        }
+      }
+    }
+
+    MPI_Barrier(HGC_fullComm);
+
+    int mpiErr = MPI_Bcast(ptr.get(), 2*N_SPINS*N_COLS, MPI_Type<Float>(), rankHas, HGC_fullComm);
+
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+
+    return ptr;
+
+  }
+  else{
+    PLEGMA_error("Not supported %d\n",where);
+  }
+
+}
+
 
 
 template<typename Float>

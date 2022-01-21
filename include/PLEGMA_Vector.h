@@ -81,6 +81,8 @@ namespace plegma {
     void diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
     
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
+    std::shared_ptr<Float> getPointSource( const site& sourceposition, ALLOCATION_FLAG alloc_flag=HOST);
+
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
     void rotateToPhysicalBasis(PLEGMA_Vector<Float> &vecIn, int sgn);

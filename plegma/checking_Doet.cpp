@@ -434,7 +434,7 @@ int main(int argc, char **argv)
       PLEGMA_ScattCorrelator<float> corrP(sourcePositions[isource], list_mpi2);
       corrP.initialize_diagram(glist_source_meson, glist_sink_meson, "P");
 
-
+#ifdef PLEGMA_SCATTERING_SPIN12
 
       //We draw a different random vector for every source position
       vectorStoc_source_oet.stochastic_Z(nroots);
@@ -608,10 +608,10 @@ int main(int argc, char **argv)
 
 
 
-         TIME(corrP0UP.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
-         TIME(corrP0DN.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
-         TIME(corrPPUP.P_diagramms( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
-         TIME(corrPPDN.P_diagramms( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
+         TIME(corrP0UP.P_diagrams( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+         TIME(corrP0DN.P_diagrams( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
+         TIME(corrPPUP.P_diagrams( stochastic_oet_prop_u_zero_mom, stochastic_oet_prop_u_zero_mom, i_mpi2),"ISOSPIN32");
+         TIME(corrPPDN.P_diagrams( stochastic_oet_prop_d_zero_mom, stochastic_oet_prop_d_zero_mom, i_mpi2),"ISOSPIN32");
 
 
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
@@ -636,6 +636,7 @@ int main(int argc, char **argv)
       for (int i=0; i<n_coherent_source;++i)
         free(coherent_look_up_table[i]);
       free(coherent_look_up_table);
+#endif
 
     } //end of loop over source position
 

@@ -165,7 +165,7 @@ namespace plegma {
        @param int global_it, The global time slice where data which will be inserted, the rest of the time-slices will become zero in the 4D field
        @return void
      **/    
-    void absorb(const PLEGMA_Field3D<Float> &field, int global_it);
+    void absorb(const PLEGMA_Field3D<Float> &field, int global_it, bool forcetozero=true);
     /**
        @brief Multiplies a field with theta twists in temporal direction, namely e^{i \theta \pi t/T}
        @param double theta: the parameter \theta as used above

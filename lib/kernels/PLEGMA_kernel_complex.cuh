@@ -184,6 +184,12 @@ namespace plegma {
     inline __host__ __device__ Float norm() const {
       return sqrt(norm2());
     }
+    inline __host__ __device__ Float givex() const {
+      return this->x;
+    }
+    inline __host__ __device__ Float givey() const {
+      return this->y;
+    }
 
     // Power
     template<typename FloatIn>

@@ -836,10 +836,12 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 
 // field4D <- field3D
 template<typename Float>
-void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it){
+void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it, bool forcetozero){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   assert(field.Field_length() == this->Field_length());
-  this->zero_where(allocation);
+  if (forcetozero == true){
+    this->zero_where(allocation);
+  }
   
   int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
