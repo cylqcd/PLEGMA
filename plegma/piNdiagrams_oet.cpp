@@ -586,7 +586,7 @@
 	    TIME( corrD.applyBoundaryConditions( true ),"ISOSPIN32" );
 	    TIME( corrD.writeHDF5(outfilename),"ISOSPIN32" );
 
-#ifdef PLEGMA_SCATTERING_SPIN12
+#if 0 // PLEGMA_SCATTERING_SPIN12
 	    //For I=1/2 I_3=+1/2
 	    outfilename=outdiagramPrefix+confnumber+ sourcepositiontext_inside+"_DELTA_DNUPUP_T2";
 	    TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN_coherent, propUP_coherent, propUP_coherent), "ISOSPIN12");
@@ -631,7 +631,7 @@
 
 	  corrNP_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP");
 #ifdef PLEGMA_SCATTERING_SPIN12
-	  corrN0_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0");
+//	  corrN0_coherent.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0");
 #endif
 
 	
@@ -642,12 +642,12 @@
 	    //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
 	    TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_coherent, propDN_coherent, propUP_coherent), "ISOSPIN32");
 
-	    PLEGMA_printf("Nucleon T2 reduction\n");
+	    //PLEGMA_printf("Nucleon T2 reduction\n");
 	    TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_coherent, propDN_coherent, propUP_coherent), "ISOSPIN32");
-	    PLEGMA_printf("Nucleon T2 reduction ready\n");
+	    //PLEGMA_printf("Nucleon T2 reduction ready\n");
 
 	    TIME(corrNP_coherent.N_diagrams( reductionsT1N, reductionsT2N ),"ISOSPIN32");
-	    PLEGMA_printf("Nucleon diagram ready\n");
+	    //PLEGMA_printf("Nucleon diagram ready\n");
 
 	    for (int timeslice=0; timeslice<HGC_totalL[DIM_T]/n_coherent_source; ++timeslice){
 	      corrNP.absorbTimeslice(corrNP_coherent, coherent_look_up_table[icoherentsource][timeslice], false);
@@ -659,7 +659,7 @@
 	    TIME( corrNP_coherent.writeHDF5(outfilename),"ISOSPIN32" );
 
 
-#ifdef PLEGMA_SCATTERING_SPIN12 
+#if 0 // PLEGMA_SCATTERING_SPIN12 
 	    //Secondly compute N_0 (neutron)(we need for M diagram (N0p+))
 	    TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_coherent, propUP_coherent, propDN_coherent), "ISOSPIN12");
 	  
@@ -718,19 +718,32 @@
 	  PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], filtered_sourcemomentumList);
 	  PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], filtered_sourcemomentumList);
 
-
+          PLEGMA_ScattCorrelator<float> corrB13(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB14(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB15(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB16(sourcePositions[isource], filtered_sourcemomentumList);
 	  
 	  //initialize diagrams
 	  corrB1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B1", true);
 	  corrB2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B2", true);
 
+	  corrB13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B13", true);
+          corrB14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B14", true);
+          corrB15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B15", true);
+          corrB16.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B16", true);
+
+
 	  site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
 	  PLEGMA_ScattCorrelator<float> reductionsV2(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+	  PLEGMA_ScattCorrelator<float> reductionsV4(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
 	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
 
 
 	  reductionsV2.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
+
+          reductionsV4.V4(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+
           //THREAD(reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2)));
 
           //Loop over the different gamma structure for the source meson
@@ -780,10 +793,14 @@
             //THREAD(reductionsV3.writeHDF5("V3redforBdiagram"));
 
 	    TIME(corrB1.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 1, true, true),"ISOSPIN32");
-
-
 	    
 	    TIME(corrB2.B_diagrams(reductionsV3, reductionsV2, i_gamma_f2, 2, true, true),"ISOSPIN32");
+
+            TIME(corrB13.B_diagrams(reductionsV3, reductionsV4, i_gamma_f2, 13, true, true),"ISOSPIN32");
+
+            TIME(corrB14.B_diagrams(reductionsV3, reductionsV4, i_gamma_f2, 14, true, true),"ISOSPIN32");
+
+
 
 	     
 
