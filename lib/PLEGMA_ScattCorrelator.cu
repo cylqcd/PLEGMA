@@ -1442,15 +1442,19 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
 
   switch( diagram_index ){
     case 1:
+    case 25:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, true, true, factor);
       break;
     case 2: 
+    case 26:
       this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, false, true, factor);
       break;
     case 3:
+    case 28:
       this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, false, false, factor);
       break;
     case 4:
+    case 27:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2, false, true, false, factor);
       break;
     default:
@@ -1600,6 +1604,30 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorr
     break;
   case 4:
     this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 15:
+    this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, false, factor, true);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, true); //checked FP
+    break;
+  case 16:
+    this->V3V2reduction( srcV3, srcV2, 2, true, i_g_i2, false, factor, true);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  false, g, true); //checked FP
+    break;
+  case 17:
+    this->V3V2reduction( srcV3, srcV2, 2, true, i_g_i2, true, factor, false);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, true, g, false);//checked FP
+    break;
+  case 18:
+    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, i_g_i2, false, factor, false);//checked FP
+  //this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g, false);//checked FP
+    break;
+  case 19:
+    this->V3V2reduction( srcV3, srcV2, 2, false, i_g_i2, true, factor, false);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, false, g2, true, g, false); //checked FP
+    break;
+  case 20:
+    this->V3V2reduction_matrix( srcV3, srcV2, 0, false, i_g_i2, false, factor, false);//checked FP
+  //this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, false);//checked FP
     break;
   default:
     PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagrams.cpp");
