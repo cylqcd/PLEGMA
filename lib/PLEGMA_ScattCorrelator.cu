@@ -1443,6 +1443,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
   switch( diagram_index ){
     case 1:
     case 25:
+    case 35:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, true, true, factor);
       break;
     case 2: 
@@ -1457,6 +1458,21 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
     case 27:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2, false, true, false, factor);
       break;
+    case 29:
+    case 31:
+    case 34:
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 1, false, true, true, factor);
+      break;
+    case 30:
+    case 32:
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, true, true, factor);
+      break;
+    case 33:
+      this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, false, true, factor);
+      break;
+    case 36:
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, false, true, factor);
+      break;    
     default:
       PLEGMA_error("This value of W diagram oet index does not exists, please check your inputs in piNdiagrams_oet.cpp");
   }
