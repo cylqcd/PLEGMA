@@ -1327,6 +1327,14 @@
           TIME(produceOutput(corrW26, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW27, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW28, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW29, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW30, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW31, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW32, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW33, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW34, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW35, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW36, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 
 
 
