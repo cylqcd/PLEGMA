@@ -188,13 +188,27 @@
       std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_d_zero_mom;
       std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_d_fini_mom;
 
+#ifdef PLEGMA_SCATTERING_SPIN12
+      std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_u_zero_mom;
+      std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_u_fini_mom;
+#endif
+
+
       for(int i=0; i< HGC_totalL[DIM_T]; ++i) {
 	stochastic_oet_prop_d_zero_mom.push_back(new PLEGMA_Vector<float>(HOST));
+#ifdef PLEGMA_SCATTERING_SPIN12
+        stochastic_oet_prop_u_zero_mom.push_back(new PLEGMA_Vector<float>(HOST));
+#endif
+
       }
       //length of pf2
       int length_fini_mom=(sourcemomentumList.uniq_p(2)).size();
       for(int i=0; i< length_fini_mom; ++i) {
 	stochastic_oet_prop_d_fini_mom.push_back(new PLEGMA_Vector<float>(HOST));
+#ifdef PLEGMA_SCATTERING_SPIN12
+        stochastic_oet_prop_u_fini_mom.push_back(new PLEGMA_Vector<float>(HOST));
+#endif
+
       }
 
 
@@ -202,92 +216,86 @@
       //Note that we replace the f1<-f2 DN propagator with a stochastic one
       //phi^f2(xf1)
       //In the same time we replace 
-      //U(xf2,xi2) with gamma5 U(xi2,xf2) gamma5 = gamma5 phi*^(f2)(i2) gamma5
+      //U(xf2,xi2) with gamma5 D(xi2,xf2)^DAGGER gamma5 = gamma5 phi*^(f2)(xi2) gamma5
 
 
       std::vector<std::vector<int>> mpf2 = sourcemomentumList.uniq_p(2);
-
-      std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(2);
 
      
       if (read_stochastic_oet==false){
 	
 	PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
 	PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
+	PLEGMA_Vector<double> vectorAuxD3(BOTH);
 	PLEGMA_Vector<double> vectorInOut; //temporary vector using in solve
 
 	
 	// ensuring mu negative
-          if(mu<0) {
-            mu*=-1.;
-            solver.UpdateSolver();
-          }
-
-
-	//Step(1) Creating the time-diluted stochastic source
+        if(mu>0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
 
 	PLEGMA_Vector<double> vectorSource_oet;
 	vectorSource_oet.randInit(rand_seed1);
 	vectorSource_oet.stochastic_Z(nroots);
 
+        TIME(vectorInOut.gaussianSmearing(vectorSource_oet, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
 	for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
 	  auto &momentum_f2 = mpf2[i_mpf2];
-
-	  vectorAuxD1.copy(vectorSource_oet);
 
 	  std::vector<int> tmp_4Dmom= momentum_f2 ;
 	  tmp_4Dmom.push_back(0);
 	  
 	  //Step(1) multiply with the momentum phase
+	  vectorAuxD1.copy(vectorInOut);
 	  vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
 
 	  //In vectorAuxD2 we store the results for the inversion for sink to sink
 	  vectorAuxD2.scale(0.0);
-
-	  //Step(2) Smearing all the time slice
-	  TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
-   
-	  //Step(3) We rotate the source to the physical basis
-	  TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,+1),"ISOSPIN32");
+ 
+	  //Step(2) We rotate the source to the physical basis
+	  TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
    
 	  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
-	    //Step(4) pick out a particular timeslice from the source
-	    vectorInOut.absorbTimeslice(vectorAuxD1, timeidx);
+	    //Step(3) pick out a particular timeslice from the source
+	    vectorAuxD1.absorbTimeslice(vectorAuxD3, timeidx);
 
-	    //Step(5) Solve
-	    TIME(solver.solve(vectorInOut, vectorInOut),"ISOSPIN32");
+	    //Step(4) Solve
+	    TIME(solver.solve(vectorAuxD1, vectorAuxD1),"ISOSPIN32");
 
-	    //Step(6) absorbing the particular timeslice to a 4d vector
-	    vectorAuxD2.absorbTimeslice(vectorInOut, timeidx, false);
+	    //Step(5) absorbing the particular timeslice to a 4d vector
+	    vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx, false);
 
 	    if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
 
-	      //Step(7) We rotate back the propagator to the physical basis
-	      TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,+1),"ISOSPIN32");
+	      //Step(6) We rotate back the propagator to the physical basis
+	      TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
 
-	      //Step(8) Smearing all the time slice in the propagator
-	      TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+	      //Step(7) Smearing all the time slice in the propagator
+	      TIME(vectorAuxD1.gaussianSmearing(vectorAuxD3, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
 
-	      //Step(9) Save the propagator to the disk
+	      //Step(8) Save the propagator to the disk
 	      {
 	       PLEGMA_Vector<float> vectorAuxF;
-	       vectorAuxF.copy(vectorInOut);
+	       vectorAuxF.copy(vectorAuxD1);
 //	       vectorAuxF.unload();
-	       vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
+	       vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
 	      }
 
 	      //Step(9) Save the propagator to the host memory
-	      vectorInOut.unload();
-	      stochastic_oet_prop_d_zero_mom[timeidx]->copy(vectorInOut,HOST);
-	      vectorInOut.load();
+	      vectorAuxD1.unload();
+	      stochastic_oet_prop_d_zero_mom[timeidx]->copy(vectorAuxD1,HOST);
+	      vectorAuxD1.load();
 	    }
 	  
 	  } //timeidx
 
 	  //Step(10) We rotate back the propagator to the physical basis
-	  TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1),"ISOSPIN32");
+	  TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,-1),"ISOSPIN32");
 
 	  //Step(11) Smearing all the time slice in the propagator
 	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
@@ -297,7 +305,7 @@
 	    PLEGMA_Vector<float> vectorAuxF;
 	    vectorAuxF.copy(vectorAuxD2);
 	    vectorAuxF.unload();
-	    vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber);
+	    vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber);
 	  }
 
 	  //Step(13) Save the propagator to the host memory
@@ -305,6 +313,87 @@
 	  stochastic_oet_prop_d_fini_mom[i_mpf2]->copy(vectorAuxD2,HOST);
 	  vectorAuxD2.load();
 	}
+
+#ifdef PLEGMA_SCATTERING_SPIN12
+
+	if(mu<0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
+
+        for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
+
+          auto &momentum_f2 = mpf2[i_mpf2];
+
+          vectorAuxD1.copy(vectorInOut);
+
+          std::vector<int> tmp_4Dmom= momentum_f2 ;
+          tmp_4Dmom.push_back(0);
+
+          //Step(1) multiply with the momentum phase
+          vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
+
+          //In vectorAuxD2 we store the results for the inversion for sink to sink
+          vectorAuxD2.scale(0.0);
+
+          //Step(2) We rotate the source to the physical basis
+          TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,+1),"ISOSPIN12");
+
+          for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+
+            //Step(4) pick out a particular timeslice from the source
+            vectorAuxD1.absorbTimeslice(vectorAuxD3, timeidx);
+
+            //Step(5) Solve
+            TIME(solver.solve(vectorAuxD1, vectorAuxD1),"ISOSPIN12");
+
+            //Step(6) absorbing the particular timeslice to a 4d vector
+            vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx, false);
+
+            if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
+
+              //Step(7) We rotate back the propagator to the physical basis
+              TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,+1),"ISOSPIN32");
+
+              //Step(8) Smearing all the time slice in the propagator
+              TIME(vectorAuxD1.gaussianSmearing(vectorAuxD3, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
+              //Step(9) Save the propagator to the disk
+              {
+               PLEGMA_Vector<float> vectorAuxF;
+               vectorAuxF.copy(vectorAuxD1);
+//             vectorAuxF.unload();
+               vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_u_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
+              }
+
+              //Step(9) Save the propagator to the host memory
+              vectorAuxD1.unload();
+              stochastic_oet_prop_u_zero_mom[timeidx]->copy(vectorAuxD1,HOST);
+              vectorAuxD1.load();
+            }
+
+          } //timeidx
+
+          //Step(10) We rotate back the propagator to the physical basis
+          TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1),"ISOSPIN32");
+
+          //Step(11) Smearing all the time slice in the propagator
+          TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
+          //Step(12) Save the propagator to the disk
+          {
+            PLEGMA_Vector<float> vectorAuxF;
+            vectorAuxF.copy(vectorAuxD2);
+            vectorAuxF.unload();
+            vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_u_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber);
+          }
+
+          //Step(13) Save the propagator to the host memory
+          vectorAuxD2.unload();
+          stochastic_oet_prop_u_fini_mom[i_mpf2]->copy(vectorAuxD2,HOST);
+          vectorAuxD2.load();
+        }
+#endif
 	
       }
       else{
@@ -315,7 +404,7 @@
 
 	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
-	      std::string inputfilename=outfile_V+"globalTfulltimedilution_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber;
+	      std::string inputfilename=outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber;
 	      PLEGMA_printf("Read stochastic oet source (zero momentum source to sink) from: %s\n",inputfilename.c_str());
 	  
 	      vectorRead.readFile(inputfilename,LIME_FORMAT);
@@ -323,15 +412,38 @@
 	      stochastic_oet_prop_d_zero_mom[timeidx]->copy(vectorRead,HOST);
 	
 	    }
+#ifdef PLEGMA_SCATTERING_SPIN12
+	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+
+              std::string inputfilename=outfile_V+"globalTfulltimedilution_u_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber;
+              PLEGMA_printf("Read stochastic oet source (zero momentum source to sink) from: %s\n",inputfilename.c_str());
+
+              vectorRead.readFile(inputfilename,LIME_FORMAT);
+
+              stochastic_oet_prop_u_zero_mom[timeidx]->copy(vectorRead,HOST);
+
+            }
+#endif
 	  }
 	  
-	  std::string inputfilename=outfile_V+"globalTfulltimedilution_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
+	  std::string inputfilename=outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
 
 	  PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
 	    
 	  vectorRead.readFile(inputfilename,LIME_FORMAT);
 	    
 	  stochastic_oet_prop_d_fini_mom[i_mpf2]->copy(vectorRead,HOST);
+
+#ifdef PLEGMA_SCATTERING_SPIN12
+	  inputfilename=outfile_V+"globalTfulltimedilution_u_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
+
+          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
+
+          vectorRead.readFile(inputfilename,LIME_FORMAT);
+
+          stochastic_oet_prop_u_fini_mom[i_mpf2]->copy(vectorRead,HOST);
+#endif
+
 	}
       }
       
@@ -353,9 +465,6 @@
 
       PLEGMA_Vector<double> vectorSource_oet;
       vectorSource_oet.randInit(rand_seed2);
-
-
-
 
       //loop over the soure positions
       for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -414,8 +523,6 @@
 	//Create Propagator
 	PLEGMA_Propagator<float> propUP(BOTH); //To be saved for all the coherent sources.
 	PLEGMA_Propagator<float> propDN(BOTH);
-
-	PLEGMA_Propagator<float> propTS(BOTH);
 
 	std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
 	momList list_mpf1(1,{mpf1,},{0,});
@@ -695,6 +802,16 @@
 
 
         std::vector<GAMMAS_SCATT> gamma_5_t_sourcemeson=apply_gamma5_scatt_gamma(glist_source_meson,LEFT);
+	/********************************************************/
+	/*
+	 *
+	 *
+	 *
+	 * Computing B diagrams for a fixed sink pion momentum
+	 *
+	 *
+	 *
+	 * ******************************************************/
 
 
 	for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
@@ -703,20 +820,32 @@
 	  //List of momenta corresponding to a fix value of p_i2
 	  momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_f2, 2);
 
-	  PLEGMA_Vector<float> spropagator_V3;
+	  PLEGMA_Vector<float> spropagator_V3_u;
+          PLEGMA_Vector<float> spropagator_V3_d;
+
 	  PLEGMA_Vector<float> spropagator_V2;
 
 	  std::string pf2x=std::to_string(momentum_f2[0]);
 	  std::string pf2y=std::to_string(momentum_f2[1]);
 	  std::string pf2z=std::to_string(momentum_f2[2]);
-
 	    
-	  spropagator_V2.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2], HOST);
-	  spropagator_V2.load();
-
-
 	  PLEGMA_ScattCorrelator<float> corrB1(sourcePositions[isource], filtered_sourcemomentumList);
 	  PLEGMA_ScattCorrelator<float> corrB2(sourcePositions[isource], filtered_sourcemomentumList);
+
+#ifdef PLEGMA_SCATTERING_SPIN12
+
+          PLEGMA_ScattCorrelator<float> corrB3(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB4(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB5(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB6(sourcePositions[isource], filtered_sourcemomentumList);
+
+          PLEGMA_ScattCorrelator<float> corrB7(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB8(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB9(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB10(sourcePositions[isource], filtered_sourcemomentumList);
+
+          PLEGMA_ScattCorrelator<float> corrB11(sourcePositions[isource], filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB12(sourcePositions[isource], filtered_sourcemomentumList);
 
           PLEGMA_ScattCorrelator<float> corrB13(sourcePositions[isource], filtered_sourcemomentumList);
           PLEGMA_ScattCorrelator<float> corrB14(sourcePositions[isource], filtered_sourcemomentumList);
@@ -727,29 +856,71 @@
           PLEGMA_ScattCorrelator<float> corrB18(sourcePositions[isource], filtered_sourcemomentumList);
           PLEGMA_ScattCorrelator<float> corrB19(sourcePositions[isource], filtered_sourcemomentumList);
           PLEGMA_ScattCorrelator<float> corrB20(sourcePositions[isource], filtered_sourcemomentumList);
+#endif
 	  
 	  //initialize diagrams
 	  corrB1.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B1", true);
 	  corrB2.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B2", true);
 
+#ifdef PLEGMA_SCATTERING_SPIN12
+
+          corrB3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B3", true);
+          corrB4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B4", true);
+          corrB5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B5", true);
+          corrB6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B6", true);
+          corrB7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B7", true);
+          corrB8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B8", true);
+	  corrB9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B9", true);
+          corrB10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B10", true);
+          corrB11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B11", true);
+          corrB12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B12", true);
 	  corrB13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B13", true);
           corrB14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B14", true);
           corrB15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B15", true);
           corrB16.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B16", true);
+          corrB17.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B17", true);
+          corrB18.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B18", true);
+          corrB19.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B19", true);
+          corrB20.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "B20", true);
+
+#endif
+
+	  site source=site({0,0,0,sourcePositions[isource][DIM_T]});	  
+
+	  PLEGMA_ScattCorrelator<float> reductionsV2_phid_UU(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+	  PLEGMA_ScattCorrelator<float> reductionsV3_phid_D(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
+
+#ifdef PLEGMA_SCATTERING_SPIN12
+
+          PLEGMA_ScattCorrelator<float> reductionsV2_phiu_DU(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+          PLEGMA_ScattCorrelator<float> reductionsV4_phiu_UD(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+          PLEGMA_ScattCorrelator<float> reductionsV4_phid_UU(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+          PLEGMA_ScattCorrelator<float> reductionsV2_phid_UD(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+	  PLEGMA_ScattCorrelator<float> reductionsV4_phid_UD(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
+          PLEGMA_ScattCorrelator<float> reductionsV3_phiu_D(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
+          PLEGMA_ScattCorrelator<float> reductionsV3_phid_U(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
 
 
-	  site source=site({0,0,0,sourcePositions[isource][DIM_T]});
-
-	  PLEGMA_ScattCorrelator<float> reductionsV2_B_01(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
-          PLEGMA_ScattCorrelator<float> reductionsV2_B_15(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
-	  PLEGMA_ScattCorrelator<float> reductionsV4(source, filtered_sourcemomentumList.uniq_p(1));//V2 reduction for momentum pf1
-	  PLEGMA_ScattCorrelator<float> reductionsV3(source, filtered_sourcemomentumList.uniq_p(0));//V3 reduction for momentum pi2
+#endif
 
 
-	  reductionsV2_B_01.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
-          reductionsV2_B_15.V2(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+	  spropagator_V2.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2], HOST);
+	  spropagator_V2.load();
 
-          reductionsV4.V4(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+	  reductionsV2_phid_UU.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
+
+	  reductionsV4_phid_UU.V4(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
+
+          reductionsV4_phid_UD.V4(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+
+          reductionsV2_phid_UD.V2(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+
+          spropagator_V2.copy(*stochastic_oet_prop_u_fini_mom[i_mpf2], HOST);
+          spropagator_V2.load();
+
+          reductionsV2_phiu_DU.V2(spropagator_V2,glist_sink_nucleon, propDN, propUP, true);
+
+          reductionsV4_phiu_UD.V4(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
 
           //THREAD(reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2)));
 
@@ -769,11 +940,22 @@
 	      spropagator.load();
           
 	      vector1.absorb(spropagator,  sourcePositions[isource][3]);
-              spropagator_V3.absorb(vector1,  timeidx, false);
+              spropagator_V3_d.absorb(vector1,  timeidx, false);
+
+#ifdef PLEGMA_SCATTERING_SPIN12
+              spropagator.copy(*stochastic_oet_prop_u_zero_mom[timeidx],HOST);
+              spropagator.load();
+
+              vector1.absorb(spropagator,  sourcePositions[isource][3]);
+              spropagator_V3_u.absorb(vector1,  timeidx, false);
+#endif
 
 	    }
 
-            spropagator_V3.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
+            spropagator_V3_d.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
+#ifdef PLEGMA_SCATTERING_SPIN12
+            spropagator_V3_u.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
+#endif
 
 	    {
 
@@ -797,25 +979,15 @@
 
 	    }
 
-	    reductionsV3.V3(spropagator_V3, gamma_5_t_sourcemeson, propDN_source_to_source, false);
+	    reductionsV3_phid_D.V3(spropagator_V3_d, gamma_5_t_sourcemeson, propDN_source_to_source, false);
+#ifdef PLEGMA_SCATTERING_SPIN12
+            reductionsV3_phiu_D.V3(spropagator_V3_u, gamma_5_t_sourcemeson, propDN_source_to_source, false);
+#endif
+
 
 	    }
-
-            //THREAD(reductionsV3.writeHDF5("V3redforBdiagram"));
-
-	    TIME(corrB1.B_diagrams(reductionsV3, reductionsV2_B_01, i_gamma_f2, 1, true, true),"ISOSPIN32");
-	    
-	    TIME(corrB2.B_diagrams(reductionsV3, reductionsV2_B_01, i_gamma_f2, 2, true, true),"ISOSPIN32");
-
-            TIME(corrB13.B_diagrams(reductionsV3, reductionsV4, i_gamma_f2, 13, true, true),"ISOSPIN32");
-
-            TIME(corrB14.B_diagrams(reductionsV3, reductionsV4, i_gamma_f2, 14, true, true),"ISOSPIN32");
-
-            TIME(corrB15.B_diagrams(reductionsV3, reductionsV2_B_15, i_gamma_f2, 15, true, true),"ISOSPIN32");
-
-            TIME(corrB16.B_diagrams(reductionsV3, reductionsV2_B_15, i_gamma_f2, 16, true, true),"ISOSPIN32");
-
-	    {
+#ifdef PLEGMA_SCATTERING_SPIN12
+            {
 
             PLEGMA_Propagator<float> propUP_source_to_source;
 
@@ -837,32 +1009,57 @@
 
             }
 
-            spropagator_V3.apply_gamma_scatt(gamma_f2_t_gamma5,RIGHT);
-
-
-            reductionsV3.V3(spropagator_V3, gamma_5_t_sourcemeson, propUP_source_to_source, false);
+            reductionsV3_phid_U.V3(spropagator_V3, gamma_5_t_sourcemeson, propUP_source_to_source, false);
 
             }
+#endif
 
 
-	    TIME(corrB17.B_diagrams(reductionsV3, reductionsV4, i_gamma_f2, 17, true, true),"ISOSPIN32");
+            //THREAD(reductionsV3.writeHDF5("V3redforBdiagram"));
 
-            TIME(corrB18.B_diagrams(reductionsV3, reductionsV4, i_gamma_f2, 18, true, true),"ISOSPIN32");
+	    TIME(corrB1.B_diagrams(reductionsV3_phid_D, reductionsV2_phid_UU, i_gamma_f2, 1, true, true),"ISOSPIN32");
+	    
+	    TIME(corrB2.B_diagrams(reductionsV3_phid_D, reductionsV2_phid_UU, i_gamma_f2, 2, true, true),"ISOSPIN32");
+#ifdef PLEGMA_SCATTERING_SPIN12
 
-            TIME(corrB19.B_diagrams(reductionsV3, reductionsV2_B_15, i_gamma_f2, 19, true, true),"ISOSPIN32");
+            TIME(corrB3.B_diagrams(reductionsV3_phid_U, reductionsV2_phiu_DU, i_gamma_f2, 3, true, true),"ISOSPIN32");
 
-            TIME(corrB20.B_diagrams(reductionsV3, reductionsV2_B_15, i_gamma_f2, 20, true, true),"ISOSPIN32");
+            TIME(corrB4.B_diagrams(reductionsV3_phid_U, reductionsV4_phiu_UD, i_gamma_f2, 4, true, true),"ISOSPIN32");
 
+            TIME(corrB5.B_diagrams(reductionsV3_phid_U, reductionsV2_phiu_DU, i_gamma_f2, 5, true, true),"ISOSPIN32");
 
+            TIME(corrB6.B_diagrams(reductionsV3_phid_U, reductionsV4_phiu_UD, i_gamma_f2, 6, true, true),"ISOSPIN32");
 
+            TIME(corrB7.B_diagrams(reductionsV3_phiu_D, reductionsV4_phid_UU, i_gamma_f2, 7, true, true),"ISOSPIN32");
 
+            TIME(corrB8.B_diagrams(reductionsV3_phiu_D, reductionsV2_phid_UU, i_gamma_f2, 8, true, true),"ISOSPIN32");
 
+            TIME(corrB9.B_diagrams(reductionsV3_phid_D, reductionsV2_phiu_DU, i_gamma_f2, 9, true, true),"ISOSPIN32");
 
+	    TIME(corrB10.B_diagrams(reductionsV3_phid_D, reductionsV4_phiu_UD, i_gamma_f2, 10, true, true),"ISOSPIN32");
 
+            TIME(corrB11.B_diagrams(reductionsV3_phid_D, reductionsV2_phiu_DU, i_gamma_f2, 11, true, true),"ISOSPIN32");
 
-	     
+            TIME(corrB12.B_diagrams(reductionsV3_phid_D, reductionsV4_phiu_UD, i_gamma_f2, 12, true, true),"ISOSPIN32");
 
+            TIME(corrB13.B_diagrams(reductionsV3_phid_D, reductionsV4_phid_UD, i_gamma_f2, 13, true, true),"ISOSPIN32");
+
+            TIME(corrB14.B_diagrams(reductionsV3_phid_D, reductionsV4_phid_UD, i_gamma_f2, 14, true, true),"ISOSPIN32");
+
+            TIME(corrB15.B_diagrams(reductionsV3_phid_D, reductionsV2_phid_UD, i_gamma_f2, 15, true, true),"ISOSPIN32");
+
+            TIME(corrB16.B_diagrams(reductionsV3_phid_D, reductionsV2_phid_UD, i_gamma_f2, 16, true, true),"ISOSPIN32");
+#endif
+	    TIME(corrB17.B_diagrams(reductionsV3_phid_U, reductionsV4_phid_UD, i_gamma_f2, 17, true, true),"ISOSPIN32");
+
+            TIME(corrB18.B_diagrams(reductionsV3_phid_U, reductionsV4_phid_UD, i_gamma_f2, 18, true, true),"ISOSPIN32");
+
+            TIME(corrB19.B_diagrams(reductionsV3_phid_U, reductionsV2_phid_UD, i_gamma_f2, 19, true, true),"ISOSPIN32");
+
+            TIME(corrB20.B_diagrams(reductionsV3_phid_U, reductionsV2_phid_UD, i_gamma_f2, 20, true, true),"ISOSPIN32");
+#endif
 	  }//gamma_f2
+	
 	         
 	  //## B
 
@@ -874,6 +1071,17 @@
 
           TIME(produceOutput(corrB1, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrB2, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+#ifdef PLEGMA_SCATTERING_SPIN12
+	  TIME(produceOutput(corrB3, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB4, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB5, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB6, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB7, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB8, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB9, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB10, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB11, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrB12, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
 	  TIME(produceOutput(corrB13, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32=");
 	  TIME(produceOutput(corrB14, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32=");
           TIME(produceOutput(corrB15, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32=");
@@ -882,9 +1090,7 @@
           TIME(produceOutput(corrB18, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32=");
           TIME(produceOutput(corrB19, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32=");
           TIME(produceOutput(corrB20, outfilename, "4pt", 1, n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32=");
-
-
-
+#endif
 
 	}//i_mpf2
 
