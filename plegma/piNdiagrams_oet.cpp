@@ -1108,7 +1108,6 @@
 	PLEGMA_ScattCorrelator<float> reductionsV3_phidi2_U(source, sourcemomentumList.uniq_p(2));
         PLEGMA_ScattCorrelator<float> reductionsV3_phiui2_D(source, sourcemomentumList.uniq_p(2));
 
-
 	
 	//for the Z diagram we need V3 reduction for momentum pf2
         PLEGMA_ScattCorrelator<float> reductionsV2_phidi2_UU(source, sourcemomentumList.uniq_p(1));
@@ -1121,7 +1120,8 @@
         PLEGMA_ScattCorrelator<float> reductionsV4_phidi2_DU(source, sourcemomentumList.uniq_p(1));
 
 	//for the Z diagram we need V4 reduction for momentum pf1
-        PLEGMA_ScattCorrelator<float> reductionsV6_W_01(source, sourcemomentumList.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV6_W_phiui2_phidf2U(source, sourcemomentumList.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV6_W_phiui2phidf2_U(source, sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV6_W_25(source, sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV6_W_33(source, sourcemomentumList.uniq_p(1));
 
@@ -1237,10 +1237,21 @@
           corrW3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W3");
           corrW4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W4");
 
-          corrW25.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W25");
-	  corrW26.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W26");
-          corrW27.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W27");
-          corrW28.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "W28");
+          corrW25.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W25");
+	  corrW26.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W26");
+          corrW27.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W27");
+          corrW28.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W28");
+
+          corrW29.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W29");
+          corrW30.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W30");
+          corrW31.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W31");
+          corrW32.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W32");
+          corrW33.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W33");
+          corrW34.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W34");
+          corrW35.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W35");
+          corrW36.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W36");
+
+
 
 
 
@@ -1354,7 +1365,7 @@
 	   *
 	   * ******************************************************************/
 
-	  spropagator_V6.copy(*stochastic_oet_prop_d_fini_mom[i_mpi2],HOST);
+	  spropagator_V6.copy(*stochastic_oet_prop_u_fini_mom[i_mpi2],HOST);
 
 	  spropagator_V6.unload();
 
@@ -1429,7 +1440,9 @@
 		szerotmp.copy(*stochastic_oet_prop_u_zero_mom[sourcePositions[isource][DIM_T]],HOST);
 		szerotmp.load();
 
-                reductionsV6_W_01.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propUP,1,2,true);
+                reductionsV6_W_phiui2_phidf2U.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propUP,1,2,true);
+
+		reductionsV6_W_phiui2phidf2_U.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propUP,0,1,true);
 
 	        reductionsV6_W_25.V6_RED(spropagator_V6, szerotmp, glist_sink_nucleon,propDN,1,2,true);
 
@@ -1440,9 +1453,13 @@
 
                 //reductionsV6.writeHDF5("V6redforWdiagram12_mpi2_"+std::to_string(i_mpi2)+"mpf2_"+std::to_string(i_mpf2));
 //
-		TIME(corrW1.W_diagrams_oet(reductionsV6_W_01, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 1, true),"ISOSPIN32");
+		TIME(corrW1.W_diagrams_oet(reductionsV6_W_phiui2_phidf2U, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 1, true),"ISOSPIN32");
 
-		TIME(corrW2.W_diagrams_oet(reductionsV6_W_01, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 2, true),"ISOSPIN32");
+		TIME(corrW2.W_diagrams_oet(reductionsV6_W_phiui2_phidf2U, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 2, true),"ISOSPIN32");
+
+		TIME(corrW3.W_diagrams_oet(reductionsV6_W_phiui2phidf2_U, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 3, true),"ISOSPIN32");
+
+		TIME(corrW4.W_diagrams_oet(reductionsV6_W_phiui2phidf2_U, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 4, true),"ISOSPIN32");
 
 
 		TIME(corrW25.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom,  i_mpf2, 25, true),"ISOSPIN32");
@@ -1463,7 +1480,6 @@
 
                 
 
-		reductionsV6_W_01.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propUP,0,1,true);
 
                 reductionsV6_W_25.V6_RED(spropagator_V6, szerotmp, glist_sink_nucleon,propDN,0,1,true);
 
@@ -1474,11 +1490,8 @@
 
 		//reductionsV6.writeHDF5("V6redforWdiagram34_mpi2_"+std::to_string(i_mpi2)+"mpf2_"+std::to_string(i_mpf2));
                   
-		TIME(corrW3.W_diagrams_oet(reductionsV6_W_01, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 3, true),"ISOSPIN32");
 
-		TIME(corrW4.W_diagrams_oet(reductionsV6_W_01, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 4, true),"ISOSPIN32");
-
-		TIME(corrW27.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 27, true),"ISOSPIN32");
+/*		TIME(corrW27.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 27, true),"ISOSPIN32");
 
 		TIME(corrW28.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 28, true),"ISOSPIN32");
 
@@ -1489,7 +1502,7 @@
 	        TIME(corrW35.W_diagrams_oet(reductionsV6_W_33, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 35, true),"ISOSPIN32");
 
 		TIME(corrW36.W_diagrams_oet(reductionsV6_W_33, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 36, true),"ISOSPIN32");
-
+*/
 
 
 
@@ -1509,7 +1522,7 @@
           TIME(produceOutput(corrW2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-	  TIME(produceOutput(corrW25, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+/*	  TIME(produceOutput(corrW25, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW26, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW27, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW28, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
@@ -1521,7 +1534,7 @@
           TIME(produceOutput(corrW34, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW35, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW36, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-
+*/
 
 
           for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
