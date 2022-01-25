@@ -1621,6 +1621,36 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorr
   case 4:
     this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, true, factor, false);//checked FP
     break;
+  case 5:
+    this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 6:
+    this->V3V2reduction( srcV3, srcV2, 1, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 7:
+    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 8:
+    this->V3V2reduction_matrix( srcV3, srcV2, 0, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 9:
+    this->V3V2reduction( srcV3, srcV2, 2, true, i_g_i2, false, factor, true); //checked FP
+    break;
+  case 10:
+    this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, false, factor, true); //checked FP
+    break;
+  case 11:
+    this->V3V2reduction( srcV3, srcV2, 2, true, i_g_i2,  true, factor, false); //checked FP
+    break;
+  case 12:
+    this->V3V2reduction( srcV3, srcV2, 2, false,i_g_i2, true, factor, false); //checked FP
+    break;
+  case 13:
+    this->V3V2reduction_matrix( srcV3, srcV2, 1, false, i_g_i2, false, factor, false); //checked FP
+    break;
+  case 14:
+    this->V3V2reduction_matrix( srcV3, srcV2, 0, false, i_g_i2, false, factor, false); //checked FP
+    break;
   case 15:
     this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, false, factor, true);//checked FP
   //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, true); //checked FP
