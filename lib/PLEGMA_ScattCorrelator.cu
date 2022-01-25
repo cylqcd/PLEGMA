@@ -696,7 +696,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 
 	    int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
 
-	    PLEGMA_Vector<Float> tmp;
+	    PLEGMA_Vector<Float> tmp(HOST);
 	    tmp.copy(*Phi_1[global_time_index],HOST);
 
             std::shared_ptr<Float> Phi1 = tmp.getPointSource(actualSource,HOST);
@@ -851,7 +851,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 
             int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
 
-	    PLEGMA_Vector<Float> tmp;
+	    PLEGMA_Vector<Float> tmp(HOST);
             tmp.copy(*Phi_1[global_time_index],HOST);
 
             std::shared_ptr<Float> Phi1 = tmp.getPointSource(actualSource,HOST);
