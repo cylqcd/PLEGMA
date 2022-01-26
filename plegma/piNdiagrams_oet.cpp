@@ -1659,24 +1659,40 @@
           TIME(produceOutput(corrW2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrW4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW5, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW6, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW7, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW8, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+          TIME(produceOutput(corrW5, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW6, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW7, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW8, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
 
-/*	  TIME(produceOutput(corrW25, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW26, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW27, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW28, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW29, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW30, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW31, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW32, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW33, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW34, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW35, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrW36, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-*/
+          TIME(produceOutput(corrW9, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW10, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW11, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW12, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW13, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW14, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW15, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW16, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW17, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW18, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW19, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW20, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW21, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW22, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW23, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW24, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+	  TIME(produceOutput(corrW25, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW26, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW27, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW28, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW29, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW30, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW31, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW32, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW33, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW34, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW35, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrW36, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+
 
 
           for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2) {
@@ -1727,22 +1743,22 @@
             TIME(corrZ2.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV4_phiui2_DU, i_gamma_i2, 2 ),"ISOSPIN32");
             TIME(corrZ3.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phiui2_DU, i_gamma_i2, 3 ),"ISOSPIN32");
             TIME(corrZ4.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phiui2_DU, i_gamma_i2, 4 ),"ISOSPIN32");
-            TIME(corrZ5.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV2_phiui2_DU, i_gamma_i2, 5 ),"ISOSPIN32");
-            TIME(corrZ6.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV4_phiui2_DU, i_gamma_i2, 6 ),"ISOSPIN32");
-            TIME(corrZ7.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV2_phiui2_DU, i_gamma_i2, 7 ),"ISOSPIN32");
-            TIME(corrZ8.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV4_phiui2_DU, i_gamma_i2, 8 ),"ISOSPIN32");
-            TIME(corrZ9.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phidi2_UU, i_gamma_i2, 9 ),"ISOSPIN32");
-            TIME(corrZ10.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phidi2_UU, i_gamma_i2, 10 ),"ISOSPIN32");
-            TIME(corrZ11.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phiui2_DU, i_gamma_i2, 11 ),"ISOSPIN32");
-            TIME(corrZ12.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV4_phiui2_DU, i_gamma_i2, 12 ),"ISOSPIN32");
-            TIME(corrZ13.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phiui2_DU, i_gamma_i2, 13 ),"ISOSPIN32");
-            TIME(corrZ14.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV4_phiui2_DU, i_gamma_i2, 14 ),"ISOSPIN32");
-	    TIME(corrZ15.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phiui2_DD, i_gamma_i2, 15 ),"ISOSPIN32");
-            TIME(corrZ16.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phiui2_DD, i_gamma_i2, 16 ),"ISOSPIN32");
-            TIME(corrZ17.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phidi2_UD, i_gamma_i2, 17 ),"ISOSPIN32");
-            TIME(corrZ18.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phidi2_UD, i_gamma_i2, 18 ),"ISOSPIN32");
-            TIME(corrZ19.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV4_phidi2_DU, i_gamma_i2, 19 ),"ISOSPIN32");
-            TIME(corrZ20.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV4_phidi2_DU, i_gamma_i2, 20 ),"ISOSPIN32");
+            TIME(corrZ5.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV2_phiui2_DU, i_gamma_i2, 5 ),"ISOSPIN12");
+            TIME(corrZ6.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV4_phiui2_DU, i_gamma_i2, 6 ),"ISOSPIN12");
+            TIME(corrZ7.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV2_phiui2_DU, i_gamma_i2, 7 ),"ISOSPIN12");
+            TIME(corrZ8.Z_diagrams_without_dilution( reductionsV3_phidi2_U, reductionsV4_phiui2_DU, i_gamma_i2, 8 ),"ISOSPIN12");
+            TIME(corrZ9.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phidi2_UU, i_gamma_i2, 9 ),"ISOSPIN12");
+            TIME(corrZ10.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phidi2_UU, i_gamma_i2, 10 ),"ISOSPIN12");
+            TIME(corrZ11.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phiui2_DU, i_gamma_i2, 11 ),"ISOSPIN12");
+            TIME(corrZ12.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV4_phiui2_DU, i_gamma_i2, 12 ),"ISOSPIN12");
+            TIME(corrZ13.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV2_phiui2_DU, i_gamma_i2, 13 ),"ISOSPIN12");
+            TIME(corrZ14.Z_diagrams_without_dilution( reductionsV3_phiui2_D, reductionsV4_phiui2_DU, i_gamma_i2, 14 ),"ISOSPIN12");
+	    TIME(corrZ15.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phiui2_DD, i_gamma_i2, 15 ),"ISOSPIN12");
+            TIME(corrZ16.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phiui2_DD, i_gamma_i2, 16 ),"ISOSPIN12");
+            TIME(corrZ17.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phidi2_UD, i_gamma_i2, 17 ),"ISOSPIN12");
+            TIME(corrZ18.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV2_phidi2_UD, i_gamma_i2, 18 ),"ISOSPIN12");
+            TIME(corrZ19.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV4_phidi2_DU, i_gamma_i2, 19 ),"ISOSPIN12");
+            TIME(corrZ20.Z_diagrams_without_dilution( reductionsV3_phiui2_U, reductionsV4_phidi2_DU, i_gamma_i2, 20 ),"ISOSPIN12");
 
 
 
@@ -1754,22 +1770,22 @@
           TIME(produceOutput(corrZ2, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrZ3, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
           TIME(produceOutput(corrZ4, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-	  TIME(produceOutput(corrZ5, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ6, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ7, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ8, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ9, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ10, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ11, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ12, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ13, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ14, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ15, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ16, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ17, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ18, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ19, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
-          TIME(produceOutput(corrZ20, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN32");
+	  TIME(produceOutput(corrZ5, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ6, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ7, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ8, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ9, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ10, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ11, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ12, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ13, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ14, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ15, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ16, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ17, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ18, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ19, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
+          TIME(produceOutput(corrZ20, outfilename, "4pt",n_coherent_source, coherent_source_table_timeslice),"ISOSPIN12");
   
 	  //## M
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M";
