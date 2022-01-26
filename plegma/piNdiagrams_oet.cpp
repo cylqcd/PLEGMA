@@ -1565,7 +1565,7 @@
 
 		TIME(corrW22.W_diagrams_oet(reductionsV6_W_phiui2_phidf2U, Phi0, stochastic_oet_prop_u_zero_mom, i_mpf2, 22, true),"ISOSPIN12");
 
-		TIME(corrW23.W_diagrams_oet(reductionsV6_W_phiui2phiuf2_U, Phi0, stochastic_oet_prop_u_zero_mom, i_mpf2, 23, true),"ISOSPIN12");
+		TIME(corrW23.W_diagrams_oet(reductionsV6_W_phiui2phidf2_U, Phi0, stochastic_oet_prop_u_zero_mom, i_mpf2, 23, true),"ISOSPIN12");
 
 		TIME(corrW24.W_diagrams_oet(reductionsV6_W_phiui2_phidf2U, Phi0, stochastic_oet_prop_u_zero_mom, i_mpf2, 24, true),"ISOSPIN12");
 
