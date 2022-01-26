@@ -1124,7 +1124,11 @@
         PLEGMA_ScattCorrelator<float> reductionsV6_W_phiuf2_phiui2D(source, sourcemomentumList.uniq_p(1));
 	PLEGMA_ScattCorrelator<float> reductionsV6_W_phiui2_phiuf2D(source, sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> reductionsV6_W_phiui2phidf2_U(source, sourcemomentumList.uniq_p(1));
+  	PLEGMA_ScattCorrelator<float> reductionsV6_W_phiuf2phidi2_U(source, sourcemomentumList.uniq_p(1));
+        PLEGMA_ScattCorrelator<float> reductionsV6_W_phiui2phiuf2_U(source, sourcemomentumList.uniq_p(1));
+	PLEGMA_ScattCorrelator<float> reductionsV6_W_phidf2phiui2_D(source, sourcemomentumList.uniq_p(1));
 	PLEGMA_ScattCorrelator<float> reductionsV6_W_phiuf2_phidi2U(source, sourcemomentumList.uniq_p(1));
+
 
 
         PLEGMA_ScattCorrelator<float> reductionsV6_W_phidf2_phiui2D(source, sourcemomentumList.uniq_p(1));
@@ -1470,6 +1474,8 @@
 
 		reductionsV6_W_phiui2phidf2_U.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propUP,0,1,true);
 
+		reductionsV6_W_phidf2phiui2_D.V6_RED(spropagator_V6,szerotmp,glist_sink_nucleon,propUP,0,1,true);
+
 		szerotmp.copy(*stochastic_oet_prop_d_zero_mom[sourcePositions[isource][DIM_T]],HOST);
                 szerotmp.load();
 		reductionsV6_W_phidf2_phidi2U.V6_RED(spropagator_V6, szerotmp, glist_sink_nucleon,propUP,1,2,true);
@@ -1592,59 +1598,6 @@
 		TIME(corrW31.W_diagrams_oet(reductionsV6_W_phidf2phiui2_D, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 31, true),"ISOSPIN12");
 		
 		TIME(corrW32.W_diagrams_oet(reductionsV6_W_phidf2phiui2_D, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 32, true),"ISOSPIN12");
-
-
-
-
-
-
-
-
-
-
-
-                TIME(corrW29.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom,  i_mpf2, 29, true),"ISOSPIN32");
-
-		TIME(corrW30.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom,  i_mpf2, 30, true),"ISOSPIN32");
-		
-		TIME(corrW33.W_diagrams_oet(reductionsV6_W_33, Phi0, stochastic_oet_prop_d_zero_mom,  i_mpf2, 33, true),"ISOSPIN32");
-
-                TIME(corrW34.W_diagrams_oet(reductionsV6_W_33, Phi0, stochastic_oet_prop_d_zero_mom,  i_mpf2, 34, true),"ISOSPIN32");
-
- 
-
-
-
-                
-
-
-                reductionsV6_W_25.V6_RED(spropagator_V6, szerotmp, glist_sink_nucleon,propDN,0,1,true);
-
-                szerotmp.copy(*stochastic_oet_prop_d_zero_mom[sourcePositions[isource][DIM_T]],HOST);
-                szerotmp.load();
-
-                reductionsV6_W_33.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propDN,1,2,true);
-
-		//reductionsV6.writeHDF5("V6redforWdiagram34_mpi2_"+std::to_string(i_mpi2)+"mpf2_"+std::to_string(i_mpf2));
-                  
-
-/*		TIME(corrW27.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 27, true),"ISOSPIN32");
-
-		TIME(corrW28.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 28, true),"ISOSPIN32");
-
-                TIME(corrW31.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 31, true),"ISOSPIN32");
-
-                TIME(corrW32.W_diagrams_oet(reductionsV6_W_25, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 32, true),"ISOSPIN32");
-
-	        TIME(corrW35.W_diagrams_oet(reductionsV6_W_33, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 35, true),"ISOSPIN32");
-
-		TIME(corrW36.W_diagrams_oet(reductionsV6_W_33, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 36, true),"ISOSPIN32");
-*/
-
-
-
-		  
-		
 
 	      }
 
