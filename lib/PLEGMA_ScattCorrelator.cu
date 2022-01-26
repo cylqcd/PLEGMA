@@ -1459,7 +1459,7 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       break;
     case 7:
     case 8:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 0, false, true, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 1, false, true, false, factor);
       break;
     case 9:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2, false, true, false, factor);
@@ -1480,10 +1480,10 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2, false, false, true, factor);
       break;
     case 15:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 0, false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 1, false, false, false, factor);
       break;
     case 16:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 0, false, false, true, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 1, false, false, true, factor);
       break;
     case 17:
     case 18:
@@ -1491,55 +1491,55 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams_oet(PLEGMA_ScattCorrelator<Float>
       break;
     case 19:
     case 20:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 0, false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 1, false, false, false, factor);
       break;
     case 21:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 1, false, true, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, true, false, factor);
       break;
     case 22:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 1, false, true, true, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 0, false, true, true, factor);
       break;
     case 23:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 0, false, true, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 1, false, true, false, factor);
       break;
     case 24:
-      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 0, 0, false, true, true, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1,  input_mom_f2, 1, 1, false, true, true, factor);
       break;
     case 25:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, false, true, factor);
       break;
     case 26:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 0,  false, false, true, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 1,  false, false, true, factor);
       break;
     case 27:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, false, false, factor);
       break;
     case 28:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 0,  false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 1,  false, false, false, factor);
       break;
     case 29:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 1,  false, true, true, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 0,  false, true, true, factor);
       break;
     case 30:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 0,  false, true, true, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 1,  false, true, true, factor);
       break;
     case 31:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 1,  false, true, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 0,  false, true, false, factor);
       break;
     case 32:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 0,  false, true, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 1,  false, true, false, factor);
       break;
     case 33:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, true, false, factor);
       break;
     case 34:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 1,  false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 0,  false, false, false, factor);
       break;
     case 35:
       this->V5V6reduction_matrix(srcV6, Phi0, Phi1, input_mom_f2,  false, true, false, factor);
       break;
     case 36:
-      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 0, 1,  false, false, false, factor);
+      this->V5V6reduction(srcV6, Phi0, Phi1, input_mom_f2, 1, 0,  false, false, false, factor);
       break;
     default:
       PLEGMA_error("This value of W diagram oet index does not exists, please check your inputs in piNdiagrams_oet.cpp");
