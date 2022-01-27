@@ -1494,7 +1494,7 @@
 
           TIME(corrT3.T_diagrams_oet(reductionsV2_phiui2_UU, Phi0, 3, true),"ISOSPIN32");
 
-          TIME(corrT7.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 7, true),"ISOSPIN32");
+//          TIME(corrT7.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 7, true),"ISOSPIN32");
 
           TIME(corrT9.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 9, true),"ISOSPIN32");
 
