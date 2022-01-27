@@ -1136,34 +1136,57 @@
         PLEGMA_ScattCorrelator<float> reductionsV6_W_phidi2_phidf2U(source, sourcemomentumList.uniq_p(1));
 
 
-
 	PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_UU(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_UD(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_DUT(source, sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV2_phidi2_UUT(source, sourcemomentumList.uniq_p(3));
+
+
 	//for the T diagram we need V2 reduction for momentum p total
 	
 	PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_UU(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV4_phidi2_UU(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_DUT(source, sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_UD(source,  sourcemomentumList.uniq_p(3));
+
 	//for the T diagram we need V4 reduction for momentum p total
 
 	//Factors for the T diagram (zero momentum i2)
+
+        spropagator_V6.copy(*stochastic_oet_prop_d_zero_mom[sourcePositions[isource][DIM_T]],HOST);
+        spropagator_V6.load();
+
+	TIME(reductionsV4_phidi2_UU.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
+
         spropagator_V6.copy(*stochastic_oet_prop_u_zero_mom[sourcePositions[isource][DIM_T]],HOST);
         spropagator_V6.load();
 
-        TIME(reductionsV4_phiui2_UU.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
+        TIME(reductionsV4_phiui2_UU.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV4_phiui2_UD.V4( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
+	TIME(reductionsV4_phiui2_DUT.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
+
+
 	//THREAD(reductionsV4_phiui2_UU.writeHDF5("V4redforTdiagram"));
 
-        TIME(reductionsV2_phiui2_UU.V2( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
+        TIME(reductionsV2_phiui2_UU.V2( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phiui2_UD.V2( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
+        TIME(reductionsV2_phiui2_DUT.V2( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
+
+
 	//THREAD(reductionsV2_phiui2_UU.writeHDF5("V2redforTdiagram"));
 
 	//Factors for the Z diagram
-	TIME(reductionsV4_phiui2_DU.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN32");
-        TIME(reductionsV2_phiui2_DU.V2( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN32");
-        TIME(reductionsV2_phiui2_DD.V2( spropagator_V6, glist_sink_nucleon, propDN, propDN, true),"ISOSPIN32");	
+	TIME(reductionsV4_phiui2_DU.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phiui2_DU.V2( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phiui2_DD.V2( spropagator_V6, glist_sink_nucleon, propDN, propDN, true),"ISOSPIN12");	
 
         spropagator_V6.copy(*stochastic_oet_prop_d_zero_mom[sourcePositions[isource][DIM_T]],HOST);
         spropagator_V6.load();
  
-        TIME(reductionsV2_phidi2_UD.V2( spropagator_V6, glist_sink_nucleon, propUP, propDN, true),"ISOSPIN32");
-        TIME(reductionsV2_phidi2_UU.V2( spropagator_V6, glist_sink_nucleon, propUP, propUP, true),"ISOSPIN32");
-        TIME(reductionsV4_phidi2_DU.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN32");
+        TIME(reductionsV2_phidi2_UD.V2( spropagator_V6, glist_sink_nucleon, propUP, propDN, true),"ISOSPIN12");
+        TIME(reductionsV2_phidi2_UU.V2( spropagator_V6, glist_sink_nucleon, propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phidi2_UUT.V2( spropagator_V6, glist_sink_nucleon,propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV4_phidi2_DU.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
 
 //	reductionsV4.writeHDF5("V4redforZdiagram");
 
@@ -1259,9 +1282,51 @@
           PLEGMA_ScattCorrelator<float> corrT2(sourcePositions[isource], list_mpi2ptot);
           PLEGMA_ScattCorrelator<float> corrT3(sourcePositions[isource], list_mpi2ptot);
 
+          PLEGMA_ScattCorrelator<float> corrT7(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT9(sourcePositions[isource], list_mpi2ptot);
+
+          PLEGMA_ScattCorrelator<float> corrT11(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT12(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT13(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT14(sourcePositions[isource], list_mpi2ptot);
+
+          PLEGMA_ScattCorrelator<float> corrT15(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT17(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT19(sourcePositions[isource], list_mpi2ptot);
+
+          PLEGMA_ScattCorrelator<float> corrT21(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT22(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT23(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT24(sourcePositions[isource], list_mpi2ptot);
+
+          PLEGMA_ScattCorrelator<float> corrT25(sourcePositions[isource], list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrT26(sourcePositions[isource], list_mpi2ptot);
+
+
           corrT1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T1oet");
           corrT2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T2oet");
           corrT3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "32", "T3oet");
+
+          corrT7.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T7oet");
+          corrT9.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T9oet");
+
+
+          corrT11.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T11oet");
+          corrT12.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T12oet");
+          corrT13.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T13oet");
+          corrT14.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T14oet");
+
+          corrT15.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T15oet");
+          corrT17.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T17oet");
+          corrT19.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T19oet");
+
+          corrT21.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T21oet");
+          corrT22.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T22oet");
+          corrT23.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T23oet");
+          corrT24.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T24oet");
+
+          corrT25.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T25oet");
+          corrT26.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_delta_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_delta, "12", "T26oet");
 
           
 	  //initialize diagrams
@@ -1428,6 +1493,50 @@
 	  TIME(corrT2.T_diagrams_oet(reductionsV2_phiui2_UU, Phi0, 2, true),"ISOSPIN32");
 
           TIME(corrT3.T_diagrams_oet(reductionsV2_phiui2_UU, Phi0, 3, true),"ISOSPIN32");
+
+          TIME(corrT7.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 7, true),"ISOSPIN32");
+
+          TIME(corrT9.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 9, true),"ISOSPIN32");
+
+          TIME(corrT11.T_diagrams_oet(reductionsV4_phiui2_UD, Phi0, 11, true),"ISOSPIN32");
+
+          TIME(corrT12.T_diagrams_oet(reductionsV4_phiui2_UD, Phi0, 12, true),"ISOSPIN32");
+
+          TIME(corrT13.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 13, true),"ISOSPIN32");
+
+	  TIME(corrT14.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 14, true),"ISOSPIN32");
+
+	  TIME(corrT19.T_diagrams_oet(reductionsV4_phidi2_UU, Phi0, 19, true),"ISOSPIN32");
+
+          TIME(corrT25.T_diagrams_oet(reductionsV2_phidi2_UUT, Phi0, 25, true),"ISOSPIN32");
+
+          TIME(corrT26.T_diagrams_oet(reductionsV2_phidi2_UUT, Phi0, 26, true),"ISOSPIN32");
+
+
+          spropagator_V6.copy(*stochastic_oet_prop_d_fini_mom[i_mpi2],HOST);
+
+          spropagator_V6.unload();
+
+          Phi0 = spropagator_V6.getPointSource(actualSource,HOST);
+
+          spropagator_V6.load();
+
+
+          TIME(corrT15.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 15, true),"ISOSPIN32");
+
+          TIME(corrT17.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 17, true),"ISOSPIN32");
+
+	  TIME(corrT21.T_diagrams_oet(reductionsV4_phiui2_DU, Phi0, 21, true),"ISOSPIN32");
+
+	  TIME(corrT22.T_diagrams_oet(reductionsV4_phiui2_DU, Phi0, 22, true),"ISOSPIN32");
+
+          TIME(corrT23.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 23, true),"ISOSPIN32");
+
+          TIME(corrT24.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 24, true),"ISOSPIN32");
+
+
+
+
 
 
 	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";

@@ -57,7 +57,7 @@ void PLEGMA_ScattCorrelator<Float>::setOffsets( ){
     case('s'): ranges.push_back( N_SPINS ); break;
     case('c'): ranges.push_back( N_COLS ); break;
     default: PLEGMA_error( "Label %c not recognized\n", l );
-    }	
+   }	
   }
 
   offsets.clear();
@@ -2446,10 +2446,77 @@ void PLEGMA_ScattCorrelator<Float>::N_diagrams( PLEGMA_ScattCorrelator<Float> &T
 
 }
 
-
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0,  int diagramindex, bool accum){
 
+  //put output to zero
+  this->clear_output(!accum);
+    this->clear_output(!accum);
+  Float factor[2]={-1,0};
+
+  switch( diagramindex ){
+    case 1:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 1,  false, false, factor);
+      break;
+    case 2:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 2,  true, false, factor);
+      break;
+    case 3:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 0,  false, false, factor);
+      break;
+    case 7:
+      this->V24pointSourceReduction_matrix(reductionsVT, Phi0, 1,  false, true, factor);
+      break;
+    case 9:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 0,  false, true, factor);
+      break;
+    case 11:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 1,  false, true, factor);
+      break;
+    case 12:
+      this->V24pointSourceReduction_matrix(reductionsVT, Phi0, 0,  false, true, factor);
+      break;
+    case 13:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 2,  true, true, factor);
+      break;
+    case 14:
+      this->V24pointSourceReduction_matrix(reductionsVT, Phi0, 1,  false, false, factor);
+      break;
+    case 15:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 2,  true, true, factor);
+      break;
+    case 17:
+      this->V24pointSourceReduction_matrix(reductionsVT, Phi0, 1,  false, false, factor);
+      break;
+    case 19:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 1, false, false, factor);
+      break;
+    case 21:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 1, false, true, factor);
+      break;
+    case 22:
+      this->V24pointSourceReduction_matrix(reductionsVT, Phi0, 0, false, true, factor);
+      break;
+    case 23:
+      this->V24pointSourceReduction_matrix(reductionsVT, Phi0, 0, false, true, factor);
+      break;
+    case 24:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 0, false, true, factor);
+      break;
+    case 25:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 2, true, false, factor);
+      break;
+    case 26:
+      this->V24pointSourceReduction(reductionsVT, Phi0, 0, false, false, factor);
+      break;
+    default:
+      PLEGMA_error("This value of T-piN oet diagram index does not exists, please check your inputs in piNdiagrams_oet.cpp");
+  }
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V24pointSourceReduction_matrix( PLEGMA_ScattCorrelator<Float> &reductionsVT,  std::shared_ptr<Float> &Phi0, int index_abs, bool transp, bool transpgamma_i1, Float* factor) {
+    
   if( this->pList().pi(1) != reductionsVT.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
 
     //n gammas
@@ -2460,9 +2527,78 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
   int n_extgammas_f = this->GList[1].size();
   int n_extgammas_i = this->GList[0].size();
   int TIME = this->localT();
-		
-  //put output to zero
-  this->clear_output(!accum);
+
+  for(int t=0; t<TIME; ++t){
+    #pragma omp parallel for
+    for(int i_mom=0; i_mom<this->Nmoms(); ++i_mom){
+      Float temp_colorvector[N_COLS*2];
+      Float temp[N_SPINS*N_SPINS*2];
+      Float V3aux[N_SPINS*N_COLS*2];
+      Float stochAux[N_SPINS*N_COLS*2];
+      GAMMAS_SCATT gamma5 = G_5;
+      for (int gi2=0 ; gi2< n_gammas_i2; ++gi2){
+        GAMMAS_SCATT gamma5_t_gammai2 = apply_g5( this->GList[4][gi2], LEFT);
+        V_MVM<Float>( Phi0.get(), gamma5, gamma5_t_gammai2, stochAux );
+        for (int i=0; i<N_SPINS*N_COLS;++i){
+          stochAux[2*i+1]=-1*stochAux[2*i+1];
+        }
+        for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
+          for( int gf=0; gf<n_gammas_f; ++gf ){
+            for ( int alpha=0;alpha<N_SPINS;++alpha){
+              for ( int beta=0; beta< N_SPINS; ++beta){
+                int spins = transp ? (beta*N_SPINS+alpha)*2 : (alpha*N_SPINS+beta)*2;
+                switch(index_abs){
+                  case 0: absorbspinmatrix_fromV24<0,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha ); break;
+                  case 1: absorbspinmatrix_fromV24<1,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha ); break;
+                  case 2: absorbspinmatrix_fromV24<2,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha ); break;
+                }
+
+                //color vector from Tr[G_i1 V2]
+                V_TR_MM<Float>( V3aux, this->GList[2][gi1], transpgamma_i1, temp_colorvector);
+
+		temp[spins]=0.;
+                temp[spins+1]=0.;
+
+                //colorvector x V3
+                for (int coloridx=0; coloridx<3; ++coloridx){
+                  temp[spins+0] +=
+                    +temp_colorvector[2*coloridx+0]*stochAux[2*beta*N_COLS+2*coloridx]
+                    -temp_colorvector[2*coloridx+1]*stochAux[2*beta*N_COLS+2*coloridx+1];
+                  temp[spins+1] +=
+                    +temp_colorvector[2*coloridx+1]*stochAux[2*beta*N_COLS+2*coloridx]
+                    +temp_colorvector[2*coloridx+0]*stochAux[2*beta*N_COLS+2*coloridx+1];
+                }//coloridx
+
+              }
+            }
+            for( int gei=0; gei<n_extgammas_i; ++gei ){
+              for( int gef=0; gef<n_extgammas_f; ++gef ){
+                GAMMAS_SCATT eGamma_i = this->GList[0][gei];
+                GAMMAS_SCATT eGamma_f = this->GList[1][gef];
+                M_pe_GNG<Float>( this->Corr(t,i_mom,gei,gef,gi1,0,gi2,gf), eGamma_f, eGamma_i, temp);
+
+              }//G_ext_f
+            }//G_ext_i
+          }//G_f
+        }//G_i
+      }//G_i2
+    }//mom
+  }//time
+}
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::V24pointSourceReduction( PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0, int index_abs, bool transp, bool transpgamma_i1, Float* factor) {
+
+  if( this->pList().pi(1) != reductionsVT.getMomList() ) PLEGMA_error("T1 has not the the same mom list of T\n");
+
+    //n gammas
+  int n_gammas_f = this->GList[5].size();
+  printf("Ngammas f %d size %d \n", n_gammas_f, this->GList.size());
+  int n_gammas_i2= this->GList[4].size();
+  int n_gammas_i1 = this->GList[2].size();
+  int n_extgammas_f = this->GList[1].size();
+  int n_extgammas_i = this->GList[0].size();
+  int TIME = this->localT();	
 
   for(int t=0; t<TIME; ++t){
     #pragma omp parallel for
@@ -2482,14 +2618,14 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
           for( int gf=0; gf<n_gammas_f; ++gf ){
 	    for ( int alpha=0;alpha<N_SPINS;++alpha){
 	      for ( int beta=0; beta< N_SPINS; ++beta){
-	        int spins =(alpha*N_SPINS+beta)*2;
-	        switch(diagramindex){
+	        int spins = transp ? (beta*N_SPINS+alpha)*2 : (alpha*N_SPINS+beta)*2;
+	        switch(index_abs){
                   case 1: absorb_fromV24<1,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha, beta ); break;
-                  case 2: absorb_fromV24<2,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), beta, alpha); break;
-                  case 3: absorb_fromV24<0,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha, beta ); break;
+                  case 2: absorb_fromV24<2,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha, beta); break;
+                  case 0: absorb_fromV24<0,Float>( V3aux, reductionsVT.Corr(t,i_mom,gf), alpha, beta ); break;
 	        }
                 V_M_V<Float>( stochAux, V3aux,
-                              this->GList[2][gi1], false, temp + spins);
+                              this->GList[2][gi1], transpgamma_i1, temp + spins);
 	      }
 	    }
             for( int gei=0; gei<n_extgammas_i; ++gei ){
