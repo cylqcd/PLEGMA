@@ -2452,7 +2452,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_oet(PLEGMA_ScattCorrelator<Float>
   //put output to zero
   this->clear_output(!accum);
     this->clear_output(!accum);
-  Float factor[2]={-1,0};
+  Float factor[2]={1,0};
 
   switch( diagramindex ){
     case 1:

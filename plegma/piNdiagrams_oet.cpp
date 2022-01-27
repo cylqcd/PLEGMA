@@ -1163,14 +1163,14 @@
 
         TIME(reductionsV4_phiui2_UU.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
         TIME(reductionsV4_phiui2_UD.V4( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
-	TIME(reductionsV4_phiui2_DUT.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
+	TIME(reductionsV4_phiui2_DUT.V4( spropagator_V6, glist_sink_delta, propDN, propUP, true),"ISOSPIN12");
 
 
 	//THREAD(reductionsV4_phiui2_UU.writeHDF5("V4redforTdiagram"));
 
         TIME(reductionsV2_phiui2_UU.V2( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
         TIME(reductionsV2_phiui2_UD.V2( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
-        TIME(reductionsV2_phiui2_DUT.V2( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phiui2_DUT.V2( spropagator_V6, glist_sink_delta, propDN, propUP, true),"ISOSPIN12");
 
 
 	//THREAD(reductionsV2_phiui2_UU.writeHDF5("V2redforTdiagram"));
@@ -1185,7 +1185,7 @@
  
         TIME(reductionsV2_phidi2_UD.V2( spropagator_V6, glist_sink_nucleon, propUP, propDN, true),"ISOSPIN12");
         TIME(reductionsV2_phidi2_UU.V2( spropagator_V6, glist_sink_nucleon, propUP, propUP, true),"ISOSPIN12");
-        TIME(reductionsV2_phidi2_UUT.V2( spropagator_V6, glist_sink_nucleon,propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phidi2_UUT.V2( spropagator_V6, glist_sink_delta,propUP, propUP, true),"ISOSPIN12");
         TIME(reductionsV4_phidi2_DU.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
 
 //	reductionsV4.writeHDF5("V4redforZdiagram");
@@ -1557,6 +1557,86 @@
           TIME(corrT3.apply_sign("T"),"ISOSPIN32");
           TIME(corrT3.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN32");
           TIME(corrT3.writeHDF5(outfilename),"ISOSPIN32");
+
+          TIME(corrT7.apply_phase(),"ISOSPIN12");
+          TIME(corrT7.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT7.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT7.writeHDF5(outfilename),"ISOSPIN12");
+	  
+	  TIME(corrT9.apply_phase(),"ISOSPIN12");
+          TIME(corrT9.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT9.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT9.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT11.apply_phase(),"ISOSPIN12");
+          TIME(corrT11.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT11.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT11.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT12.apply_phase(),"ISOSPIN12");
+          TIME(corrT12.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT12.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT12.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT13.apply_phase(),"ISOSPIN12");
+          TIME(corrT13.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT13.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT13.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT14.apply_phase(),"ISOSPIN12");
+          TIME(corrT14.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT14.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT14.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT15.apply_phase(),"ISOSPIN12");
+          TIME(corrT15.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT15.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT15.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT17.apply_phase(),"ISOSPIN12");
+          TIME(corrT17.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT17.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT17.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT19.apply_phase(),"ISOSPIN12");
+          TIME(corrT19.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT19.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT19.writeHDF5(outfilename),"ISOSPIN12");
+
+	  TIME(corrT21.apply_phase(),"ISOSPIN12");
+          TIME(corrT21.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT21.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT21.writeHDF5(outfilename),"ISOSPIN12");
+
+	  TIME(corrT21.apply_phase(),"ISOSPIN12");
+          TIME(corrT21.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT21.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT21.writeHDF5(outfilename),"ISOSPIN12");
+
+	  TIME(corrT22.apply_phase(),"ISOSPIN12");
+          TIME(corrT22.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT22.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT22.writeHDF5(outfilename),"ISOSPIN12");
+
+	  TIME(corrT23.apply_phase(),"ISOSPIN12");
+          TIME(corrT23.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT23.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT23.writeHDF5(outfilename),"ISOSPIN12");
+
+	  TIME(corrT24.apply_phase(),"ISOSPIN12");
+          TIME(corrT24.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT24.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT24.writeHDF5(outfilename),"ISOSPIN12");
+
+	  TIME(corrT25.apply_phase(),"ISOSPIN12");
+          TIME(corrT25.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT25.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT25.writeHDF5(outfilename),"ISOSPIN12");
+
+          TIME(corrT26.apply_phase(),"ISOSPIN12");
+          TIME(corrT26.apply_sign("T"),"ISOSPIN12");
+          TIME(corrT26.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
+          TIME(corrT26.writeHDF5(outfilename),"ISOSPIN12");
 
 
 	  //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
