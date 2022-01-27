@@ -231,6 +231,7 @@
 	PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
 	PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
 	PLEGMA_Vector<double> vectorAuxD3(BOTH);
+	PLEGMA_Vector<double> vectorAuxD4(BOTH);
 	PLEGMA_Vector<double> vectorInOut; //temporary vector using in solve
 
 	
@@ -275,12 +276,13 @@
 	    vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx, false);
 
 	    if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
+	
 
 	      //Step(6) We rotate back the propagator to the physical basis
-	      TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
+	      TIME(vectorAuxD4.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
 
 	      //Step(7) Smearing all the time slice in the propagator
-	      TIME(vectorAuxD1.gaussianSmearing(vectorAuxD3, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+	      TIME(vectorAuxD1.gaussianSmearing(vectorAuxD4, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
 
 	      //Step(8) Save the propagator to the disk
 	      {
@@ -357,10 +359,10 @@
             if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
 
               //Step(7) We rotate back the propagator to the physical basis
-              TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,+1),"ISOSPIN32");
+              TIME(vectorAuxD4.rotateToPhysicalBasis(vectorAuxD1,+1),"ISOSPIN32");
 
               //Step(8) Smearing all the time slice in the propagator
-              TIME(vectorAuxD1.gaussianSmearing(vectorAuxD3, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+              TIME(vectorAuxD1.gaussianSmearing(vectorAuxD4, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
 
               //Step(9) Save the propagator to the disk
               {
