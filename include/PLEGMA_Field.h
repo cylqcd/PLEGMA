@@ -219,7 +219,7 @@ namespace plegma {
        @param int global_it, The global time slice from where data will be extracted from the the 4D field
        @return void
      **/    
-    void absorb(const PLEGMA_Field<Float> &field, int global_it);
+    void absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast=false);
   };
 }
 #endif

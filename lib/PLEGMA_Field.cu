@@ -1040,7 +1040,7 @@ template void PLEGMA_Field<double>::mulMomentumPhases<double>(std::vector<double
 
 // field3D <- field4D
 template<typename Float>
-void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it){
+void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   assert(field.Field_length() == this->Field_length());
   int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
@@ -1054,7 +1054,16 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
     if(this->activeTimeSlice) {
       pointer_src = (field.D_elem() + i*V4 + my_it*V3);
       cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
-    } else {
+    }
+    if (broadcast == true){
+      int time_rank=global_it/HGC_localL[3];
+      Float *temp=(Float *)malloc(sizeof(Float)*V3);
+      cudaMemcpy(temp, pointer_dst, V3* sizeof(Float), cudaMemcpyDeviceToHost);
+      MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+      cudaMemcpy(pointer_dst, temp, V3* sizeof(Float), cudaMemcpyHostToDevice);
+      free(temp);
+    }
+    if (broadcast == false && !(this->activeTimeSlice)){
       cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
     }
   }
