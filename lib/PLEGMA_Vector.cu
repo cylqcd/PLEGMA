@@ -396,6 +396,8 @@ namespace plegma{
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2, bool broadcast){
     if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    printf("I am in absorb\n");
+    fflush(stdout);
     int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     this->activeTimeSlice = is_myIt;
@@ -410,14 +412,23 @@ namespace plegma{
 	  pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	  cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
 	}
-      }
-
-    if (broadcast == true){
-      int time_rank=global_it/HGC_localL[3];
-      MPI_Bcast(pointer_dst, N_SPINS*N_COLS*V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
-    }
-    if (broadcast == false && is_myIt ==false){
-      cudaMemset(pointer_dst, 0, N_SPINS*N_COLS*V3*2 * sizeof(Float));
+	
+	if (broadcast == true){
+         int time_rank=global_it/HGC_localL[3];
+         printf("Time rank %d\n",time_rank);
+         fflush(stdout);
+         Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
+         cudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), cudaMemcpyDeviceToHost);
+         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+         printf("Temp 0 %e\n",temp[0]);
+         fflush(stdout);
+         cudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), cudaMemcpyHostToDevice);
+         free(temp);
+       }
+       if (broadcast == false && is_myIt ==false){
+         cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+       }
+      
     }
     checkCudaError();
     

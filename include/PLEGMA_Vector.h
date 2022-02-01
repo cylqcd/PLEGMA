@@ -131,7 +131,7 @@ namespace plegma {
                               otherwise threads not containing global_it will be set to zero
        @return void
      **/
-    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2, bool  broadcast);
+    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2, bool  broadcast=false);
 
     void gaussianSmearing(PLEGMA_Vector3D<Float> &vecIn, PLEGMA_Gauge3D<Float> &gauge, int nsmearGauss, Float alphaGauss) {
       this->activeTimeSlice = vecIn.activeTimeSlice;
