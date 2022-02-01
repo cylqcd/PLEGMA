@@ -913,22 +913,22 @@
 	  spropagator_V2.copy(*stochastic_oet_prop_d_fini_mom[i_mpf2], HOST);
 	  spropagator_V2.load();
 
-	  reductionsV2_phid_UU.V2(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
+	  reductionsV2_phid_UU.V2(spropagator_V2, glist_sink_nucleon, propUP, propUP, true);
 
-	  reductionsV4_phid_UU.V4(spropagator_V2,glist_sink_nucleon, propUP, propUP, true);
+	  reductionsV4_phid_UU.V4(spropagator_V2, glist_sink_nucleon, propUP, propUP, true);
 
-          reductionsV4_phid_UD.V4(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+          reductionsV4_phid_UD.V4(spropagator_V2, glist_sink_nucleon, propUP, propDN, true);
 
-          reductionsV2_phid_UD.V2(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+          reductionsV2_phid_UD.V2(spropagator_V2, glist_sink_nucleon, propUP, propDN, true);
 
           spropagator_V2.copy(*stochastic_oet_prop_u_fini_mom[i_mpf2], HOST);
           spropagator_V2.load();
 
-          reductionsV2_phiu_DU.V2(spropagator_V2,glist_sink_nucleon, propDN, propUP, true);
+          reductionsV2_phiu_DU.V2(spropagator_V2, glist_sink_nucleon, propDN, propUP, true);
 
-          reductionsV4_phiu_UD.V4(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
+          reductionsV4_phiu_UD.V4(spropagator_V2, glist_sink_nucleon, propUP, propDN, true);
 
-          THREAD(reductionsV2_phiu_DU.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2)));
+//          THREAD(reductionsV2_phiu_DU.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2)));
 
           //Loop over the different gamma structure for the source meson
           for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
@@ -937,6 +937,11 @@
 	    GAMMAS_SCATT gamma_f2 = glist_sink_meson[i_gamma_f2];
             GAMMAS_SCATT gamma_f2_t_gamma5= apply_g5( gamma_f2, RIGHT );
 
+	    spropagator_V3_d.zero_where(DEVICE);
+	    spropagator_V3_d.zero_where(HOST);
+
+	    spropagator_V3_u.zero_where(DEVICE);
+	    spropagator_V3_u.zero_where(HOST);
 	  
 	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
   
@@ -945,14 +950,14 @@
  	      spropagator.copy(*stochastic_oet_prop_d_zero_mom[timeidx],HOST);	
 	      spropagator.load();
           
-	      vector1.absorb(spropagator,  sourcePositions[isource][3]);
+	      vector1.absorb(spropagator,  sourcePositions[isource][3], true);
               spropagator_V3_d.absorb(vector1,  timeidx, false);
 
 #ifdef PLEGMA_SCATTERING_SPIN12
               spropagator.copy(*stochastic_oet_prop_u_zero_mom[timeidx],HOST);
               spropagator.load();
 
-              vector1.absorb(spropagator,  sourcePositions[isource][3]);
+              vector1.absorb(spropagator,  sourcePositions[isource][3], true);
               spropagator_V3_u.absorb(vector1,  timeidx, false);
 #endif
 
@@ -972,6 +977,9 @@
               PLEGMA_Vector<float> stmp;
               PLEGMA_Vector3D<float> vector1;
 
+              stmp.zero_where(DEVICE);
+              stmp.zero_where(HOST);
+
 	      vector1.absorb(propDN, sourcePositions[isource][3],isc/3, isc%3,true);
 
 	      for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
@@ -982,6 +990,10 @@
 	      propDN_source_to_source.absorb(stmp, isc/3, isc%3);
 
 	    }
+
+            THREAD(propDN_source_to_source.writeHDF5("propDNsourcetosource"));
+            THREAD(spropagator_V3_d.writeHDF5("spropagator_V3_d"));
+            THREAD(spropagator_V3_u.writeHDF5("spropagator_V3_u"));
 
 	    reductionsV3_phid_D.V3(spropagator_V3_d, gamma_5_t_sourcemeson, propDN_source_to_source, false);
 #ifdef PLEGMA_SCATTERING_SPIN12
@@ -1000,33 +1012,23 @@
               PLEGMA_Vector<float> stmp;
               PLEGMA_Vector3D<float> vector1;
 
-              vector1.absorb(propUP, sourcePositions[isource][3],isc/3, isc%3);
-              THREAD(vector1.writeHDF5("vector1"+std::to_string(isc/3)+"_c"+std::to_string(isc%3)));
+	      stmp.zero_where(DEVICE);
+	      stmp.zero_where(HOST);
 
-
+              vector1.absorb(propUP, sourcePositions[isource][3],isc/3, isc%3, true);
               for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
                 stmp.absorb(vector1, timeidx, false);
-                THREAD(stmp.writeHDF5("stmp_t"+std::to_string(timeidx)+"_s"+std::to_string(isc/3)+"_c"+std::to_string(isc%3)));
 
               }
-             
-              THREAD(stmp.writeHDF5("stmp_s"+std::to_string(isc/3)+"_c"+std::to_string(isc%3)));
-
-
+           
               propUP_source_to_source.absorb(stmp, isc/3, isc%3);
 
             }
 
-            THREAD(spropagator_V3_d.writeHDF5("spropagator_v3_d"));
-
-
             reductionsV3_phid_U.V3(spropagator_V3_d, gamma_5_t_sourcemeson, propUP_source_to_source, false);
 
             }
-#endif
-
-
-            THREAD(reductionsV3_phid_D.writeHDF5("V3redforBdiagram"));
+#endif 
 
 	    TIME(corrB1.B_diagrams(reductionsV3_phid_D, reductionsV2_phid_UU, i_gamma_f2, 1, true, true),"ISOSPIN32");
 	    
@@ -1143,44 +1145,39 @@
         PLEGMA_ScattCorrelator<float> reductionsV6_W_phidi2_phidf2U(source, sourcemomentumList.uniq_p(1));
 
 
-	PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_UU(source,  sourcemomentumList.uniq_p(3));
-        PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_UD(source,  sourcemomentumList.uniq_p(3));
+	PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_UUT(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_UDT(source,  sourcemomentumList.uniq_p(3));
         PLEGMA_ScattCorrelator<float> reductionsV2_phiui2_DUT(source, sourcemomentumList.uniq_p(3));
         PLEGMA_ScattCorrelator<float> reductionsV2_phidi2_UUT(source, sourcemomentumList.uniq_p(3));
 
 
 	//for the T diagram we need V2 reduction for momentum p total
 	
-	PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_UU(source,  sourcemomentumList.uniq_p(3));
-        PLEGMA_ScattCorrelator<float> reductionsV4_phidi2_UU(source,  sourcemomentumList.uniq_p(3));
+	PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_UUT(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV4_phidi2_UUT(source,  sourcemomentumList.uniq_p(3));
         PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_DUT(source, sourcemomentumList.uniq_p(3));
-        PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_UD(source,  sourcemomentumList.uniq_p(3));
+        PLEGMA_ScattCorrelator<float> reductionsV4_phiui2_UDT(source,  sourcemomentumList.uniq_p(3));
 
 	//for the T diagram we need V4 reduction for momentum p total
 
 	//Factors for the T diagram (zero momentum i2)
 
-        spropagator_V6.copy(*stochastic_oet_prop_d_zero_mom[sourcePositions[isource][DIM_T]],HOST);
-        spropagator_V6.load();
-
-	TIME(reductionsV4_phidi2_UU.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
-
         spropagator_V6.copy(*stochastic_oet_prop_u_zero_mom[sourcePositions[isource][DIM_T]],HOST);
         spropagator_V6.load();
 
-        TIME(reductionsV4_phiui2_UU.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
-        TIME(reductionsV4_phiui2_UD.V4( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
+        TIME(reductionsV4_phiui2_UUT.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV4_phiui2_UDT.V4( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
 	TIME(reductionsV4_phiui2_DUT.V4( spropagator_V6, glist_sink_delta, propDN, propUP, true),"ISOSPIN12");
 
 
 	//THREAD(reductionsV4_phiui2_UU.writeHDF5("V4redforTdiagram"));
 
-        TIME(reductionsV2_phiui2_UU.V2( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
-        TIME(reductionsV2_phiui2_UD.V2( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
+        TIME(reductionsV2_phiui2_UUT.V2( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phiui2_UDT.V2( spropagator_V6, glist_sink_delta, propUP, propDN, true),"ISOSPIN12");
         TIME(reductionsV2_phiui2_DUT.V2( spropagator_V6, glist_sink_delta, propDN, propUP, true),"ISOSPIN12");
 
 
-	//THREAD(reductionsV2_phiui2_UU.writeHDF5("V2redforTdiagram"));
+	//THREAD(reductionsV2_phiui2_UUT.writeHDF5("V2redforTdiagram"));
 
 	//Factors for the Z diagram
 	TIME(reductionsV4_phiui2_DU.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
@@ -1192,13 +1189,13 @@
  
         TIME(reductionsV2_phidi2_UD.V2( spropagator_V6, glist_sink_nucleon, propUP, propDN, true),"ISOSPIN12");
         TIME(reductionsV2_phidi2_UU.V2( spropagator_V6, glist_sink_nucleon, propUP, propUP, true),"ISOSPIN12");
-        TIME(reductionsV2_phidi2_UUT.V2( spropagator_V6, glist_sink_delta,propUP, propUP, true),"ISOSPIN12");
         TIME(reductionsV4_phidi2_DU.V4( spropagator_V6, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phidi2_UUT.V2( spropagator_V6, glist_sink_delta,propUP, propUP, true),"ISOSPIN12");
+	TIME(reductionsV4_phidi2_UUT.V4( spropagator_V6, glist_sink_delta, propUP, propUP, true),"ISOSPIN32");
 
 //	reductionsV4.writeHDF5("V4redforZdiagram");
 
-
-//        reductionsV2.writeHDF5("V2redforZdiagram");
+//      reductionsV2.writeHDF5("V2redforZdiagram");
 
 	//Loop over the source meson momentum
         for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
@@ -1495,25 +1492,25 @@
 
 
 
-	  TIME(corrT1.T_diagrams_oet(reductionsV4_phiui2_UU, Phi0, 1, true),"ISOSPIN32");
+	  TIME(corrT1.T_diagrams_oet(reductionsV4_phiui2_UUT, Phi0, 1, true),"ISOSPIN32");
 
-	  TIME(corrT2.T_diagrams_oet(reductionsV2_phiui2_UU, Phi0, 2, true),"ISOSPIN32");
+	  TIME(corrT2.T_diagrams_oet(reductionsV2_phiui2_UUT, Phi0, 2, true),"ISOSPIN32");
 
-          TIME(corrT3.T_diagrams_oet(reductionsV2_phiui2_UU, Phi0, 3, true),"ISOSPIN32");
+          TIME(corrT3.T_diagrams_oet(reductionsV2_phiui2_UUT, Phi0, 3, true),"ISOSPIN32");
 
-//          TIME(corrT7.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 7, true),"ISOSPIN32");
+          TIME(corrT7.T_diagrams_oet(reductionsV2_phiui2_UDT, Phi0, 7, true),"ISOSPIN32");
 
-          TIME(corrT9.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 9, true),"ISOSPIN32");
+          TIME(corrT9.T_diagrams_oet(reductionsV2_phiui2_UDT, Phi0, 9, true),"ISOSPIN32");
 
-          TIME(corrT11.T_diagrams_oet(reductionsV4_phiui2_UD, Phi0, 11, true),"ISOSPIN32");
+          TIME(corrT11.T_diagrams_oet(reductionsV4_phiui2_UDT, Phi0, 11, true),"ISOSPIN32");
 
-          TIME(corrT12.T_diagrams_oet(reductionsV4_phiui2_UD, Phi0, 12, true),"ISOSPIN32");
+          TIME(corrT12.T_diagrams_oet(reductionsV4_phiui2_UDT, Phi0, 12, true),"ISOSPIN32");
 
           TIME(corrT13.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 13, true),"ISOSPIN32");
 
 	  TIME(corrT14.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 14, true),"ISOSPIN32");
 
-	  TIME(corrT19.T_diagrams_oet(reductionsV4_phidi2_UU, Phi0, 19, true),"ISOSPIN32");
+	  TIME(corrT19.T_diagrams_oet(reductionsV4_phidi2_UUT, Phi0, 19, true),"ISOSPIN32");
 
           TIME(corrT25.T_diagrams_oet(reductionsV2_phidi2_UUT, Phi0, 25, true),"ISOSPIN32");
 
@@ -1529,21 +1526,17 @@
           spropagator_V6.load();
 
 
-          TIME(corrT15.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 15, true),"ISOSPIN32");
+          TIME(corrT15.T_diagrams_oet(reductionsV2_phiui2_UDT, Phi0, 15, true),"ISOSPIN32");
 
-          TIME(corrT17.T_diagrams_oet(reductionsV2_phiui2_UD, Phi0, 17, true),"ISOSPIN32");
+          TIME(corrT17.T_diagrams_oet(reductionsV2_phiui2_UDT, Phi0, 17, true),"ISOSPIN32");
 
-	  TIME(corrT21.T_diagrams_oet(reductionsV4_phiui2_DU, Phi0, 21, true),"ISOSPIN32");
+	  TIME(corrT21.T_diagrams_oet(reductionsV4_phiui2_DUT, Phi0, 21, true),"ISOSPIN32");
 
-	  TIME(corrT22.T_diagrams_oet(reductionsV4_phiui2_DU, Phi0, 22, true),"ISOSPIN32");
+	  TIME(corrT22.T_diagrams_oet(reductionsV4_phiui2_DUT, Phi0, 22, true),"ISOSPIN32");
 
           TIME(corrT23.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 23, true),"ISOSPIN32");
 
           TIME(corrT24.T_diagrams_oet(reductionsV2_phiui2_DUT, Phi0, 24, true),"ISOSPIN32");
-
-
-
-
 
 
 	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
