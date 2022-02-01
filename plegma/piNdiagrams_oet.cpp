@@ -1608,11 +1608,6 @@
           TIME(corrT21.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
           TIME(corrT21.writeHDF5(outfilename),"ISOSPIN12");
 
-	  TIME(corrT21.apply_phase(),"ISOSPIN12");
-          TIME(corrT21.apply_sign("T"),"ISOSPIN12");
-          TIME(corrT21.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
-          TIME(corrT21.writeHDF5(outfilename),"ISOSPIN12");
-
 	  TIME(corrT22.apply_phase(),"ISOSPIN12");
           TIME(corrT22.apply_sign("T"),"ISOSPIN12");
           TIME(corrT22.applyBoundaryConditions( true,  n_coherent_source, coherent_source_table_timeslice ),"ISOSPIN12");
