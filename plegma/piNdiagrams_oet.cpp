@@ -928,7 +928,7 @@
 
           reductionsV4_phiu_UD.V4(spropagator_V2,glist_sink_nucleon, propUP, propDN, true);
 
-          //THREAD(reductionsV2.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2)));
+          THREAD(reductionsV2_phiu_DU.writeHDF5("V2redforBdiagram"+std::to_string(i_mpf2)));
 
           //Loop over the different gamma structure for the source meson
           for (int i_gamma_f2=0; i_gamma_f2<glist_sink_meson.size(); ++i_gamma_f2) {
@@ -969,12 +969,10 @@
 
 	    for (int isc=0; isc<12; ++isc){
 
-              PLEGMA_Vector<float> spropagator;
               PLEGMA_Vector<float> stmp;
               PLEGMA_Vector3D<float> vector1;
 
-              spropagator.absorb(propDN, isc/3, isc%3);
-	      vector1.absorb(spropagator, sourcePositions[isource][3]);
+	      vector1.absorb(propDN, sourcePositions[isource][3],isc/3, isc%3,true);
 
 	      for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
                 stmp.absorb(vector1, timeidx, false); 
@@ -999,21 +997,28 @@
 
             for (int isc=0; isc<12; ++isc){
 
-              PLEGMA_Vector<float> spropagator;
               PLEGMA_Vector<float> stmp;
               PLEGMA_Vector3D<float> vector1;
 
-              spropagator.absorb(propUP, isc/3, isc%3);
-              vector1.absorb(spropagator, sourcePositions[isource][3]);
+              vector1.absorb(propUP, sourcePositions[isource][3],isc/3, isc%3);
+              THREAD(vector1.writeHDF5("vector1"+std::to_string(isc/3)+"_c"+std::to_string(isc%3)));
+
 
               for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
                 stmp.absorb(vector1, timeidx, false);
+                THREAD(stmp.writeHDF5("stmp_t"+std::to_string(timeidx)+"_s"+std::to_string(isc/3)+"_c"+std::to_string(isc%3)));
+
               }
+             
+              THREAD(stmp.writeHDF5("stmp_s"+std::to_string(isc/3)+"_c"+std::to_string(isc%3)));
 
 
               propUP_source_to_source.absorb(stmp, isc/3, isc%3);
 
             }
+
+            THREAD(spropagator_V3_d.writeHDF5("spropagator_v3_d"));
+
 
             reductionsV3_phid_U.V3(spropagator_V3_d, gamma_5_t_sourcemeson, propUP_source_to_source, false);
 
@@ -1021,7 +1026,7 @@
 #endif
 
 
-            //THREAD(reductionsV3.writeHDF5("V3redforBdiagram"));
+            THREAD(reductionsV3_phid_D.writeHDF5("V3redforBdiagram"));
 
 	    TIME(corrB1.B_diagrams(reductionsV3_phid_D, reductionsV2_phid_UU, i_gamma_f2, 1, true, true),"ISOSPIN32");
 	    
