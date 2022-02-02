@@ -322,6 +322,8 @@ std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourcep
 
     int mpiErr = MPI_Bcast(ptr.get(), 2*N_SPINS*N_COLS, MPI_Type<Float>(), rankHas, HGC_fullComm);
 
+    MPI_Barrier(HGC_fullComm);
+
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
 
     return ptr;
