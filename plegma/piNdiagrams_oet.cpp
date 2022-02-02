@@ -451,8 +451,7 @@
 #endif
 
 	}
-      }
-      
+      } 
       
       
   /********************************************************************************************
@@ -819,7 +818,6 @@
 	 *
 	 * ******************************************************/
 
-
 	for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
 	  auto &momentum_f2 =  mpf2[i_mpf2];
@@ -1106,7 +1104,6 @@
 #endif
 
 	}//i_mpf2
-
 
 
 	{ //W,Z diagrams
@@ -1652,7 +1649,7 @@
 	    TIME(corrM.M_diagrams( corrNP, spropagator_V6, spropagator_V6 ),"ISOSPIN32");
 	  
 	  }
-        
+       
 
           std::vector<std::vector<int>> mpf2_forfixmpi2 = filtered_sourcemomentumList.uniq_p(2);
 
@@ -1704,14 +1701,9 @@
                 reductionsV6_W_phiuf2phidi2_U.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propUP,0,1,true);
 		reductionsV6_W_phiuf2_phidi2U.V6_RED(szerotmp, spropagator_V6, glist_sink_nucleon,propUP,1,2,true);
 
-
-
-
-
 		szerotmp.copy(*stochastic_oet_prop_d_zero_mom[sourcePositions[isource][DIM_T]],HOST);
                 szerotmp.load();
 		  
-
                 //reductionsV6.writeHDF5("V6redforWdiagram12_mpi2_"+std::to_string(i_mpi2)+"mpf2_"+std::to_string(i_mpf2));
                 spropagator_V6.copy(*stochastic_oet_prop_u_fini_mom[i_mpi2],HOST);
 
@@ -1720,6 +1712,8 @@
                 Phi0 = spropagator_V6.getPointSource(actualSource,HOST);
 
                 spropagator_V6.load();
+
+//	        reductionsV6_W_phiui2_phidf2U.writeHDF5("V6redforWdiagram12_mpi2_"+std::to_string(i_mpi2)+"mpf2_"+std::to_string(i_mpf2));
 
 		TIME(corrW1.W_diagrams_oet(reductionsV6_W_phiui2_phidf2U, Phi0, stochastic_oet_prop_d_zero_mom, i_mpf2, 1, true),"ISOSPIN32");
 
@@ -1965,22 +1959,17 @@
 
 
     for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-      
+      stochastic_oet_prop_u_zero_mom.pop_back();
       stochastic_oet_prop_d_zero_mom.pop_back();
-
     }
     
     for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
+      
+      auto &momentum_f2 = mpf2[i_mpf2];
+      stochastic_oet_prop_u_fini_mom.pop_back();
+      stochastic_oet_prop_d_fini_mom.pop_back();   
 
-        auto &momentum_f2 = mpf2[i_mpf2];
-
-        if ((momentum_f2[0] != 0) || (momentum_f2[1] != 0) || (momentum_f2[2] != 0)){
-
-	  stochastic_oet_prop_d_fini_mom.pop_back();
-
-        }
-
-     }
+    }
 
 //     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
 

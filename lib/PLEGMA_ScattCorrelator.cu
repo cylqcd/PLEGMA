@@ -679,14 +679,14 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 
     auto imap = this->pList().index_map();
 
+    std::vector<std::shared_ptr<Float>> Phi1; 
+    for (int t=0; t<HGC_totalL[DIM_T]; ++t){
+      Phi1.push_back(Phi_1[t]->getPointSource(actualSource,HOST));
+    }
+
 
     for(int t=0; t < TIME; ++t){
       int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
-
-//      PLEGMA_Vector<Float> tmp(HOST);
-//      tmp.copy(*Phi_1[global_time_index],HOST);
-
-      std::shared_ptr<Float> Phi1 = Phi_1[global_time_index]->getPointSource(actualSource,HOST);
 
       for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
         Float phi0Aux[N_SPINS*N_COLS*2];
@@ -698,18 +698,13 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 
           Float phi1Aux[N_SPINS*N_COLS*2];
           GAMMAS_SCATT gamma5_t_gammaf2 = apply_g5( this->GList[5][g4], LEFT);
-          V_MVM<Float>( Phi1.get(), gamma5, gamma5_t_gammaf2, phi1Aux );
+          V_MVM<Float>( Phi1[global_time_index].get(), gamma5, gamma5_t_gammaf2, phi1Aux );
 
           for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//gi1
             for (int g3=0 ; g3 < n_gammas_f1 ; ++g3 ){//gf1
               Float V5Aux[NS2C];
-	      Float V5Aux2[NS1C];
 	      for (int ii=0;ii<NS2C;++ii)
 	        V5Aux[ii]=0;
-              for (int ii=0;ii<NS1C;++ii){
-                V5Aux2[ii]=0;
-	      }
-
 
 	      for (int alfa=0; alfa < N_SPINS; ++alfa ){                
 	        for (int beta=0; beta < N_SPINS; ++beta ){
@@ -730,10 +725,12 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
 
               #pragma omp parallel for
               for(int i_m=0; i_m<imap.size(); i_m++){
+	        Float V5Aux2[NS1C];
                 Float V6Aux[NS1C];
                 Float temp[2*N_SPINS*N_SPINS];
 	        for (int ii=0;ii<NS1C;++ii){
                   V6Aux[ii]=0;
+                  V5Aux2[ii]=0;
                 }
                 int i_mom_f1 = imap[i_m][1];
                 int i_mom_f2 = imap[i_m][2];
@@ -831,12 +828,14 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
     
     auto imap = this->pList().index_map();
 
+    std::vector<std::shared_ptr<Float>> Phi1;
+    for (int t=0; t<HGC_totalL[DIM_T]; ++t){
+      Phi1.push_back(Phi_1[t]->getPointSource(actualSource,HOST));
+    }
+
+
     for (int t=0; t<TIME; ++t){
       int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
-//      PLEGMA_Vector<Float> tmp(HOST);
-//      tmp.copy(*Phi_1[global_time_index],HOST);
-
-      std::shared_ptr<Float> Phi1 = Phi_1[global_time_index]->getPointSource(actualSource,HOST);
 
       for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
         Float phi0Aux[N_SPINS*N_COLS*2];
@@ -846,7 +845,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
         for (int g4=0 ; g4 < n_gammas_f2 ; ++g4 ){//gf2
           Float phi1Aux[N_SPINS*N_COLS*2];
           GAMMAS_SCATT gamma5_t_gammaf2 = apply_g5( this->GList[5][g4], LEFT);
-	  V_MVM<Float>( Phi1.get(), gamma5, gamma5_t_gammaf2, phi1Aux );
+	  V_MVM<Float>( Phi1[global_time_index].get(), gamma5, gamma5_t_gammaf2, phi1Aux );
 
           for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//gi1i
 	    for (int g3=0 ; g3 < n_gammas_f1 ; ++g3 ){//gf1
