@@ -36,3 +36,10 @@ template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
 void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Su3field<FloatG>& gauge, std::vector<GAMMAS>& gammas);
 
 
+template<typename Float>
+void threep_qgq(PLEGMA_Correlator<Float> &corr,
+		PLEGMA_Propagator<Float>& prop1, PLEGMA_Propagator<Float>& prop2,
+		int signProps, PLEGMA_Su3field<Float>& su3_l,
+		PLEGMA_Fmunu<Float> &Fmunu, std::pair<int,int> munu,
+		PLEGMA_Su3field<Float>& su3_r,
+		std::vector<GAMMAS>& gammas);
