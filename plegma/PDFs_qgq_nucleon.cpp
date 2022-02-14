@@ -110,7 +110,6 @@ int main(int argc, char **argv)
   PLEGMA_Su3field<float> bWL; // beginning of WL
   PLEGMA_Su3field<float> eWL; // end of WL (between is the fmunu)
   PLEGMA_Gauge<float> gaugeWL;
-  //  gaugeWL.copy(gauge);
   
   PLEGMA_Su3field<float> tmp;
   PLEGMA_Fmunu<float> *fmunu = new PLEGMA_Fmunu<float>(BOTH);
@@ -123,7 +122,6 @@ int main(int argc, char **argv)
     gaugeWL.copy(gauge);
     fmunu->compute_leaves(gaugeWL);
     gauge.load();
-    //gaugeWL.copy(gauge);
   }
   else fmunu->setUnit((std::vector<int>) {0,4,8,9,13,17,18,22,26,27,31,35,36,40,44,45,49,53});  
 
@@ -504,11 +502,6 @@ int main(int argc, char **argv)
   delete fmunu;
   delete fmunuIn;	
 
-  // delete[] nucleonThrpWLP_CP1;
-  // delete[] nucleonThrpWLP_CP2;
-
-  // delete[] nucleonThrpWLM_CP1;
-  // delete[] nucleonThrpWLM_CP2;
 
   delete solver;
   
