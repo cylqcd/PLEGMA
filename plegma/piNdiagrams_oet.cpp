@@ -218,7 +218,7 @@
       std::vector<std::vector<int>> mpf2 = sourcemomentumList.uniq_p(2);
 
      
-      if (read_stochastic_oet==false){
+      if (read_stochastic_oet==true){
 	
 	PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
 	PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
@@ -243,82 +243,224 @@
 
 	  auto &momentum_f2 = mpf2[i_mpf2];
 
-	  std::vector<int> tmp_4Dmom= momentum_f2 ;
-	  tmp_4Dmom.push_back(0);
-	  
-	  //Step(1) multiply with the momentum phase
-	  vectorAuxD1.copy(vectorInOut);
-	  vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
+	  if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
 
-	  //In vectorAuxD2 we store the results for the inversion for sink to sink
-	  vectorAuxD2.scale(0.0);
+	     std::vector<int> tmp_4Dmom= momentum_f2 ;
+	     tmp_4Dmom.push_back(0);
+	  
+	     //Step(1) multiply with the momentum phase
+	     vectorAuxD1.copy(vectorInOut);
+	     vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
+
+	     //In vectorAuxD2 we store the results for the inversion for sink to sink
+	     vectorAuxD2.scale(0.0);
  
-	  //Step(2) We rotate the source to the physical basis
-	  TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
+	     //Step(2) We rotate the source to the physical basis
+	     TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
    
-	  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+	     for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
-	    //Step(3) pick out a particular timeslice from the source
-	    vectorAuxD1.absorbTimeslice(vectorAuxD3, timeidx);
+	       //Step(3) pick out a particular timeslice from the source
+	       vectorAuxD1.absorbTimeslice(vectorAuxD3, timeidx);
 
-	    //Step(4) Solve
-	    TIME(solver.solve(vectorAuxD1, vectorAuxD1),"ISOSPIN32");
+	       //Step(4) Solve
+	       TIME(solver.solve(vectorAuxD1, vectorAuxD1),"ISOSPIN32");
 
-	    //Step(5) absorbing the particular timeslice to a 4d vector
-	    vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx, false);
+	       //Step(5) absorbing the particular timeslice to a 4d vector
+	       vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx, false);
 
-	    if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
 	
+	       //Step(6) We rotate back the propagator to the physical basis
+	       TIME(vectorAuxD4.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
 
-	      //Step(6) We rotate back the propagator to the physical basis
-	      TIME(vectorAuxD4.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
+	       //Step(7) Smearing all the time slice in the propagator
+	       TIME(vectorAuxD1.gaussianSmearing(vectorAuxD4, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
 
-	      //Step(7) Smearing all the time slice in the propagator
-	      TIME(vectorAuxD1.gaussianSmearing(vectorAuxD4, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
-
-	      //Step(8) Save the propagator to the disk
-	      {
-	       PLEGMA_Vector<float> vectorAuxF;
-	       vectorAuxF.copy(vectorAuxD1);
-//	       vectorAuxF.unload();
-	       vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
-	      }
-
-	      //Step(9) Save the propagator to the host memory
-	      vectorAuxD1.unload();
-	      stochastic_oet_prop_d_zero_mom[timeidx]->copy(vectorAuxD1,HOST);
-	      vectorAuxD1.load();
-	    }
+	       //Step(8) Save the propagator to the host memory
+	       vectorAuxD1.unload();
+	       stochastic_oet_prop_d_zero_mom[timeidx]->copy(vectorAuxD1,HOST);
+	       vectorAuxD1.load();
+	     } //timeidx
 	  
-	  } //timeidx
+	  } //if zero momentum
 
-	  //Step(10) We rotate back the propagator to the physical basis
-	  TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,-1),"ISOSPIN32");
+	  PLEGMA_Vector<float> vectorRead(BOTH);
 
-	  //Step(11) Smearing all the time slice in the propagator
-	  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+          std::string inputfilename=outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
 
-	  //Step(12) Save the propagator to the disk
-	  {
-	    PLEGMA_Vector<float> vectorAuxF;
-	    vectorAuxF.copy(vectorAuxD2);
-	    vectorAuxF.unload();
-	    vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber);
-	  }
+          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
 
-	  //Step(13) Save the propagator to the host memory
-	  vectorAuxD2.unload();
-	  stochastic_oet_prop_d_fini_mom[i_mpf2]->copy(vectorAuxD2,HOST);
-	  vectorAuxD2.load();
+          vectorRead.readFile(inputfilename,LIME_FORMAT);
+
+          stochastic_oet_prop_d_fini_mom[i_mpf2]->copy(vectorRead,HOST);
+
 	}
 
-
-	if(mu<0) {
+        if(mu<0) {//ensure mu positive
           mu*=-1.;
           solver.UpdateSolver();
         }
 
         for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
+
+          auto &momentum_f2 = mpf2[i_mpf2];
+
+          if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
+
+            vectorAuxD1.copy(vectorInOut);
+
+            std::vector<int> tmp_4Dmom= momentum_f2 ;
+            tmp_4Dmom.push_back(0);
+
+            //Step(1) multiply with the momentum phase
+            vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
+
+            //In vectorAuxD2 we store the results for the inversion for sink to sink
+            vectorAuxD2.scale(0.0);
+
+            //Step(2) We rotate the source to the physical basis
+            TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,+1),"ISOSPIN12");
+
+            for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+
+              //Step(4) pick out a particular timeslice from the source
+              vectorAuxD1.absorbTimeslice(vectorAuxD3, timeidx);
+
+              //Step(5) Solve
+              TIME(solver.solve(vectorAuxD1, vectorAuxD1),"ISOSPIN12");
+
+              //Step(6) absorbing the particular timeslice to a 4d vector
+              vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx, false);
+
+              //Step(7) We rotate back the propagator to the physical basis
+              TIME(vectorAuxD4.rotateToPhysicalBasis(vectorAuxD1,+1),"ISOSPIN32");
+
+              //Step(8) Smearing all the time slice in the propagator
+              TIME(vectorAuxD1.gaussianSmearing(vectorAuxD4, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
+              //Step(9) Save the propagator to the host memory
+              vectorAuxD1.unload();
+              stochastic_oet_prop_u_zero_mom[timeidx]->copy(vectorAuxD1,HOST);
+              vectorAuxD1.load();
+            } //timeidx
+
+          } //if zero momentum
+
+          PLEGMA_Vector<float> vectorRead(BOTH);
+
+          std::string inputfilename=outfile_V+"globalTfulltimedilution_u_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
+
+          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
+
+          vectorRead.readFile(inputfilename,LIME_FORMAT);
+
+          stochastic_oet_prop_u_fini_mom[i_mpf2]->copy(vectorRead,HOST);
+
+
+        }
+	
+      }
+      else{
+
+	PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
+        PLEGMA_Vector<double> vectorAuxD2(BOTH);//For storing the propagotor for the time-slices
+        PLEGMA_Vector<double> vectorAuxD3(BOTH);
+        PLEGMA_Vector<double> vectorAuxD4(BOTH);
+        PLEGMA_Vector<double> vectorInOut; //temporary vector using in solve
+
+
+        // ensuring mu negative
+        if(mu>0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
+
+        PLEGMA_Vector<double> vectorSource_oet;
+        vectorSource_oet.randInit(rand_seed1);
+        vectorSource_oet.stochastic_Z(nroots);
+
+        TIME(vectorInOut.gaussianSmearing(vectorSource_oet, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
+        for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
+
+          auto &momentum_f2 = mpf2[i_mpf2];
+
+          std::vector<int> tmp_4Dmom= momentum_f2 ;
+          tmp_4Dmom.push_back(0);
+
+          //Step(1) multiply with the momentum phase
+          vectorAuxD1.copy(vectorInOut);
+          vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
+
+          //In vectorAuxD2 we store the results for the inversion for sink to sink
+          vectorAuxD2.scale(0.0);
+
+          //Step(2) We rotate the source to the physical basis
+          TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
+
+          for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+
+            //Step(3) pick out a particular timeslice from the source
+            vectorAuxD1.absorbTimeslice(vectorAuxD3, timeidx);
+
+            //Step(4) Solve
+            TIME(solver.solve(vectorAuxD1, vectorAuxD1),"ISOSPIN32");
+
+            //Step(5) absorbing the particular timeslice to a 4d vector
+            vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx, false);
+
+            if ((momentum_f2[0] == 0) && (momentum_f2[1] == 0) && (momentum_f2[2] == 0)){
+
+
+              //Step(6) We rotate back the propagator to the physical basis
+              TIME(vectorAuxD4.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
+
+              //Step(7) Smearing all the time slice in the propagator
+              TIME(vectorAuxD1.gaussianSmearing(vectorAuxD4, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
+              //Step(8) Save the propagator to the disk
+              {
+               PLEGMA_Vector<float> vectorAuxF;
+               vectorAuxF.copy(vectorAuxD1);
+//             vectorAuxF.unload();
+               vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
+              }
+
+              //Step(9) Save the propagator to the host memory
+              vectorAuxD1.unload();
+              stochastic_oet_prop_d_zero_mom[timeidx]->copy(vectorAuxD1,HOST);
+              vectorAuxD1.load();
+            } //if zero momentum
+
+          } //timeidx
+
+          //Step(10) We rotate back the propagator to the physical basis
+          TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,-1),"ISOSPIN32");
+
+          //Step(11) Smearing all the time slice in the propagator
+          TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
+          //Step(12) Save the propagator to the disk
+          {
+            PLEGMA_Vector<float> vectorAuxF;
+            vectorAuxF.copy(vectorAuxD2);
+            vectorAuxF.unload();
+            vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber);
+          }
+
+          //Step(13) Save the propagator to the host memory
+          vectorAuxD2.unload();
+          stochastic_oet_prop_d_fini_mom[i_mpf2]->copy(vectorAuxD2,HOST);
+          vectorAuxD2.load();
+        } //momentum
+
+
+        if(mu<0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
+
+	for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
           auto &momentum_f2 = mpf2[i_mpf2];
 
@@ -367,9 +509,9 @@
               vectorAuxD1.unload();
               stochastic_oet_prop_u_zero_mom[timeidx]->copy(vectorAuxD1,HOST);
               vectorAuxD1.load();
-            }
+            } //if zero momentum
 
-          } //timeidx
+          } //time index
 
           //Step(10) We rotate back the propagator to the physical basis
           TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1),"ISOSPIN32");
@@ -390,55 +532,9 @@
           stochastic_oet_prop_u_fini_mom[i_mpf2]->copy(vectorAuxD2,HOST);
           vectorAuxD2.load();
         }
-	
-      }
-      else{
-	PLEGMA_Vector<float> vectorRead(BOTH);
-	for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
-	  auto &momentum_f2 = mpf2[i_mpf2];
-	  if ((momentum_f2[0] == 0) || (momentum_f2[1] == 0) || (momentum_f2[2] == 0)){
 
-	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
-	      std::string inputfilename=outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber;
-	      PLEGMA_printf("Read stochastic oet source (zero momentum source to sink) from: %s\n",inputfilename.c_str());
-	  
-	      vectorRead.readFile(inputfilename,LIME_FORMAT);
-	  
-	      stochastic_oet_prop_d_zero_mom[timeidx]->copy(vectorRead,HOST);
-	
-	    }
-	    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-
-              std::string inputfilename=outfile_V+"globalTfulltimedilution_u_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber;
-              PLEGMA_printf("Read stochastic oet source (zero momentum source to sink) from: %s\n",inputfilename.c_str());
-
-              vectorRead.readFile(inputfilename,LIME_FORMAT);
-
-              stochastic_oet_prop_u_zero_mom[timeidx]->copy(vectorRead,HOST);
-
-            }
-	  }
-	  
-	  std::string inputfilename=outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
-
-	  PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
-	    
-	  vectorRead.readFile(inputfilename,LIME_FORMAT);
-	    
-	  stochastic_oet_prop_d_fini_mom[i_mpf2]->copy(vectorRead,HOST);
-
-	  inputfilename=outfile_V+"globalTfulltimedilution_u_propagator_oet_stoch_mom_pf2x_"+std::to_string(momentum_f2[0])+"_pf2y"+std::to_string(momentum_f2[1])+"_pf2z"+std::to_string(momentum_f2[2])+"_"+confnumber;
-
-          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
-
-          vectorRead.readFile(inputfilename,LIME_FORMAT);
-
-          stochastic_oet_prop_u_fini_mom[i_mpf2]->copy(vectorRead,HOST);
-
-	}
-      } 
-      
+      } //else 
       
   /********************************************************************************************
   *
@@ -1349,7 +1445,7 @@
             //performing smearing
             TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
             stochastic_oet_prop_d_fini_mom_source_to_sink.copy(vectortmp1);
-
+/*
             {
               PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(stochastic_oet_prop_u_fini_mom_source_to_sink);
@@ -1363,7 +1459,7 @@
               vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_mpi2_momstoch_mom_pi2x"+std::to_string(momentum_i2[0])+"_pi2y"+std::to_string(momentum_i2[1])+"_pi2z"+std::to_string(momentum_i2[2])+"_"+confnumber);
             }
  
-
+*/
           }
 
 
