@@ -417,15 +417,15 @@ namespace plegma{
 	
 	if (broadcast == true){
          int time_rank=global_it/HGC_localL[3];
-         printf("Time rank %d\n",time_rank);
-         fflush(stdout);
-         Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
-         cudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), cudaMemcpyDeviceToHost);
-         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
-         printf("Temp 0 %e\n",temp[0]);
-         fflush(stdout);
-         cudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), cudaMemcpyHostToDevice);
-         free(temp);
+//         printf("Time rank %d\n",time_rank);
+//         fflush(stdout);
+//       Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
+//         cudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), cudaMemcpyDeviceToHost);
+         MPI_Bcast(pointer_dst, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+//         printf("Temp 0 %e\n",temp[0]);
+//         fflush(stdout);
+//         cudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), cudaMemcpyHostToDevice);
+//         free(temp);
        }
        if (broadcast == false && is_myIt ==false){
          cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
