@@ -146,6 +146,22 @@ inline WHICHPROJECTOR get_projector(std::string s){
   else if (s == "P4G5G1_M") proj = P4G5G1_M;
   else if (s == "P4G5G2_M") proj = P4G5G2_M;
   else if (s == "P4G5G3_M") proj = P4G5G3_M;
+  else if (s == "P_00") proj = P_00;
+  else if (s == "P_01") proj = P_02;
+  else if (s == "P_02") proj = P_02;
+  else if (s == "P_03") proj = P_03;
+  else if (s == "P_10") proj = P_10;
+  else if (s == "P_11") proj = P_11;
+  else if (s == "P_12") proj = P_12;
+  else if (s == "P_13") proj = P_13;
+  else if (s == "P_20") proj = P_20;
+  else if (s == "P_21") proj = P_21;
+  else if (s == "P_22") proj = P_22;
+  else if (s == "P_23") proj = P_23;
+  else if (s == "P_30") proj = P_30;
+  else if (s == "P_31") proj = P_31;
+  else if (s == "P_32") proj = P_32;
+  else if (s == "P_33") proj = P_33;
   else PLEGMA_error("Projector %s is not implemented", s.c_str());
   return proj;
 }
@@ -160,6 +176,22 @@ inline std::string get_projector_str(WHICHPROJECTOR proj){
   else if(proj==P4G5G1_M) res = "P4G5G1_M";
   else if(proj==P4G5G2_M) res = "P4G5G2_M";
   else if(proj==P4G5G3_M) res = "P4G5G3_M";
+  else if(proj==P_00) res + "P_00";
+  else if(proj==P_01) res + "P_01";
+  else if(proj==P_02) res + "P_02";
+  else if(proj==P_03) res + "P_03";
+  else if(proj==P_10) res + "P_10";
+  else if(proj==P_11) res + "P_11";
+  else if(proj==P_12) res + "P_12";
+  else if(proj==P_13) res + "P_13";
+  else if(proj==P_20) res + "P_20";
+  else if(proj==P_21) res + "P_21";
+  else if(proj==P_22) res + "P_22";
+  else if(proj==P_23) res + "P_23";
+  else if(proj==P_30) res + "P_30";
+  else if(proj==P_31) res + "P_31";
+  else if(proj==P_32) res + "P_32";
+  else if(proj==P_33) res + "P_33";
   else PLEGMA_error("Projector not identified");
   return res;
 }
