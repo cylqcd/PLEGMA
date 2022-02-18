@@ -202,6 +202,8 @@ int main(int argc, char **argv) {
 		  vectorInOut.scale(1/norm);
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS
 		  {
+
+	          PLEGMA_Vector<double> vectorAuxD;
 	          int sgn=(nucleon == PROTON) ? +1: -1;
                   TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,sgn));
                   TIME(vectorInOut.copy(vectorAuxD));
@@ -210,6 +212,8 @@ int main(int argc, char **argv) {
 		  TIME(solver.solve(vectorInOut, vectorInOut));
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS
 		  {
+
+	          PLEGMA_Vector<double> vectorAuxD;
 		  int sgn=(nucleon == PROTON) ? +1: -1;
                   TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,sgn));
                   TIME(vectorInOut.copy(vectorAuxD));
