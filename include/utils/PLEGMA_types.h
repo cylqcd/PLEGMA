@@ -147,7 +147,7 @@ inline WHICHPROJECTOR get_projector(std::string s){
   else if (s == "P4G5G2_M") proj = P4G5G2_M;
   else if (s == "P4G5G3_M") proj = P4G5G3_M;
   else if (s == "P_00") proj = P_00;
-  else if (s == "P_01") proj = P_02;
+  else if (s == "P_01") proj = P_01;
   else if (s == "P_02") proj = P_02;
   else if (s == "P_03") proj = P_03;
   else if (s == "P_10") proj = P_10;

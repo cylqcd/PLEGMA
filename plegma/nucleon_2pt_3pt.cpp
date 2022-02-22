@@ -12,7 +12,7 @@ std::vector<std::thread> threads;
 
 using namespace plegma;
 using namespace quda;
-static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
+static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss","momlist-filename",
 					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space", "tSinks","Projs", "threep-filename"};
   
 int main(int argc, char **argv) {
@@ -71,6 +71,15 @@ int main(int argc, char **argv) {
 
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
+
+    //Reading the momentum lists
+    PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
+    momList sourcemomentumList(3,pathListMomenta,{1,2});
+    PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
+
+    if(sourcemomentumList.empty())
+     PLEGMA_error("momentumList empty");
+
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
       site& source = sourcePositions[isource];
@@ -82,7 +91,7 @@ int main(int argc, char **argv) {
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
-				   double run_mu, WHICHFLAVOR fl, int nSmear, bool finalize) {
+				   double run_mu, WHICHFLAVOR fl, int nSmear,  bool finalize) {
 				 // ensuring mu value
 				 if(mu != run_mu) {
 				   updateOptions(fl);
@@ -100,7 +109,25 @@ int main(int argc, char **argv) {
 				   // Inverting
 				   PLEGMA_printf("Going to invert %s for component %d\n",
 						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
+//				   if (iproj>7)
+		   {
+                                    PLEGMA_Vector<double> vectorAuxD;
+                                    TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                                    TIME(vectorInOut.copy(vectorAuxD));
+                                  }
+
 				   TIME(solver.solve(vectorInOut, vectorInOut));
+//				   if (iproj>7)
+//				   
+				  
+	                           {
+
+                                    PLEGMA_Vector<double> vectorAuxD;
+                                    TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                                    TIME(vectorInOut.copy(vectorAuxD));
+                                   }
+				  
+
 				   if(prop_SL.getAllocation() != NONE) {
 				     PLEGMA_Vector<float> vectorAuxF;
 				     vectorAuxF.copy(vectorInOut);
@@ -179,71 +206,89 @@ int main(int argc, char **argv) {
 		mu = run_mu;
 		solver.UpdateSolver();
 	      }
+
+              std::vector<std::vector<int>> pf1_filt = sourcemomentumList.uniq_p(1);
+
+
+	      for(int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1){
+
+                auto &momentum_f1 =  pf1_filt[i_mpi2];
 				     
-	      for(int nu = 0 ; nu < 4 ; nu++)
-		for(int c2 = 0 ; c2 < 3 ; c2++){
-		  PLEGMA_Vector<double> vectorInOut;
-		  {
-		    PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
-		    PLEGMA_Vector3D<float> vectorAuxF;
-		    if(&prop1 != &prop2)
-		      vectorAuxF.seqSourceNucleon(prop1, prop2, get_projector(Projs[iproj]), nucleon, nu, c2);
-		    else
-		      vectorAuxF.seqSourceNucleon(prop1, get_projector(Projs[iproj]), nucleon, nu, c2);
+	        for(int nu = 0 ; nu < 4 ; nu++){
+		  for(int c2 = 0 ; c2 < 3 ; c2++){
+		    PLEGMA_Vector<double> vectorInOut;
+		    {
+		      PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
+		      PLEGMA_Vector3D<float> vectorAuxF;
+		      printf("Iproj %d\n",get_projector(Projs[iproj]));
+		      if(&prop1 != &prop2)
+		        vectorAuxF.seqSourceNucleon(prop1, prop2, get_projector(Projs[iproj]), nucleon, nu, c2);
+		      else
+		        vectorAuxF.seqSourceNucleon(prop1, get_projector(Projs[iproj]), nucleon, nu, c2);
 					 
-		    // put a momentum in the sink later
-		    vectorAuxF.conjugate();
-		    vectorAuxF.apply_gamma(G5);
-		    vectorAuxD1.copy(vectorAuxF);
-		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
-		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
-		  }
-		  double norm = vectorInOut.norm();
-		  vectorInOut.scale(1/norm);
-#ifdef PLEGMA_SCATTERING_CONTRACTIONS
-		  {
+		      // put a momentum in the sink later
+                      vectorAuxF.mulMomentumPhases(momentum_f1,1);
+		      vectorAuxF.conjugate();
+		      vectorAuxF.apply_gamma(G5);
+		      vectorAuxD1.copy(vectorAuxF);
+		      TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
+		      vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+		    }
+		    double norm = vectorInOut.norm();
+		    vectorInOut.scale(1/norm);
+		    if (get_projector(Projs[iproj])>7)
+		    {
+	            PLEGMA_Vector<double> vectorAuxD;
+	            int sgn=run_mu/fabs(run_mu);
+                    TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,sgn));
+                    TIME(vectorInOut.copy(vectorAuxD));
+		    }
+		    
+		    TIME(solver.solve(vectorInOut, vectorInOut));
+		   if (get_projector(Projs[iproj])>7){
 
-	          PLEGMA_Vector<double> vectorAuxD;
-	          int sgn=(nucleon == PROTON) ? +1: -1;
-                  TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,sgn));
-                  TIME(vectorInOut.copy(vectorAuxD));
-		  }
-#endif
-		  TIME(solver.solve(vectorInOut, vectorInOut));
-#ifdef PLEGMA_SCATTERING_CONTRACTIONS
-		  {
+                    PLEGMA_Vector<double> vectorAuxD;
+	            int sgn=run_mu/(fabs(run_mu));
+                    TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,sgn));
+                    TIME(vectorInOut.copy(vectorAuxD));
+		    }
+		    
 
-	          PLEGMA_Vector<double> vectorAuxD;
-		  int sgn=(nucleon == PROTON) ? +1: -1;
-                  TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,sgn));
-                  TIME(vectorInOut.copy(vectorAuxD));
+		    vectorInOut.scale(norm);
+		    PLEGMA_Vector<float> vectorAuxF;
+		    vectorAuxF.copy(vectorInOut);
+		    seqProp.absorb(vectorAuxF, nu, c2);
 		  }
-#endif
 
-		  vectorInOut.scale(norm);
-		  PLEGMA_Vector<float> vectorAuxF;
-		  vectorAuxF.copy(vectorInOut);
-		  seqProp.absorb(vectorAuxF, nu, c2);
 		}
-	      seqProp.apply_gamma(G5);
-	      seqProp.conjugate();
+
+                seqProp.apply_gamma(G5);
+	          
+		seqProp.conjugate();
 				     
-	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
+	        PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
 	  
-	      // LOCAL contractions
-	      TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-	      THREAD(corr.writeFile(filename, corr_file_format));
+    		  // LOCAL contractions
+		if (get_projector(Projs[iproj])<8){
+                TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
+		}
+		else{
+                TIME(corr.contractNucleonThrp_local(seqProp, propF, 0, gammas));
+                }
+	        if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
+	        THREAD(corr.writeFile(filename, corr_file_format));
+
+	      }
 				     
 	      // ONED contractions
-	      TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      THREAD(corr.writeFile( filename, corr_file_format));
+	//      TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
+	//      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	//      THREAD(corr.writeFile( filename, corr_file_format));
 				     
 	      // noe contractions
-	      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      THREAD(corr.writeFile( filename, corr_file_format));
+	//      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
+	//     if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	//      THREAD(corr.writeFile( filename, corr_file_format));
 	    };
 	    if(nucleon == PROTON) {
 	      TIME(computeThreep(-mu_ud, propUP3D, propDN3D, +1, propUP_SL, "up"));
@@ -262,8 +307,8 @@ int main(int argc, char **argv) {
 	continue;
       }
       
-      propUP.rotateToPhysicalBase_device(+1);
-      propDN.rotateToPhysicalBase_device(-1);
+ //     propUP.rotateToPhysicalBase_device(+1);
+//      propDN.rotateToPhysicalBase_device(-1);
       propUP.applyBoundaries_device(source[3]);
       propDN.applyBoundaries_device(source[3]);
       

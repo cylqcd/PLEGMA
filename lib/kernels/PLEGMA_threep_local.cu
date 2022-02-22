@@ -40,7 +40,16 @@ __global__ void threep_local_device(Float2<FloatC>* block2,
     for(int iop = 0; iop < listGammas.size; iop++){
       int opId=listGammas.array[iop];
       if(notZfac){
-	accum[iop]=((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));}
+	if (signProps >0){
+	  accum[iop]=trace_gamma_S<true>(opId,TMP,R);
+	}
+	else if (signProps<0){
+	  accum[iop]=trace_gamma_S<true>(opId,TMM,R);
+	}
+	else{
+          accum[iop]=trace_gamma_S<true>(opId,NOROT,R);
+	}
+      }//(signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : ((signProps < 0) ? trace_gamma_S<true>(opId,TMM,R) : trace_gamma_S<true>(opId,NOROT,R)));}
       else{
 	accum[iop]=trace_gamma_S<true>(opId,NOROT,R);
       }
