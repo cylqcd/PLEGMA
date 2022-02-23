@@ -225,12 +225,21 @@ namespace plegma {
 
     void absorbTimeslice(PLEGMA_ScattCorrelator<Float> &srcCorr, int global_it, bool forcetozero=false); 
 
+    //manipulation to construct N like diagram from NjN
+    void absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero=false);
+
+
     //initialize_diagrams
     void initialize_diagram( std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram );//L
 
     void initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram );//P
+    void initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::vector<GAMMAS_SCATT> &G_c, std::string name_of_diagram );//P
+
     void initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f,
 			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_f1, std::string name_of_diagram );//N,D
+    void initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f,
+                             std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_c, std::string name_of_diagram );//NjN
+
     void initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f,
 			     std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f, std::string isospin, std::string name_of_diagram );//T
     void initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f,

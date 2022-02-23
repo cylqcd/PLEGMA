@@ -1057,6 +1057,65 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   this->clear_output(true);
 }
+//3pt ->  PJP
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2,std::vector<GAMMAS_SCATT> &G_c,std::string name_of_diagram){
+
+  assert(( name_of_diagram=="PJP") );
+
+  //Gamma list
+  this->GList.clear();
+  //this->GList.push_back( apply_gamma5_scatt_gamma(G_i2,RIGHT) );
+  //this->GList.push_back( apply_gamma5_scatt_gamma(G_f2,LEFT) );
+  this->GList.push_back( G_i2 );
+  this->GList.push_back( G_f2 );
+  this->GList.push_back( G_c );
+
+
+  //Description
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {G_i2, G_f2, G_c};
+  std::string tmp="";
+  for (int i=0; i<tmpvector.size(); ++i){
+    tmp+="{";
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
+      }
+    }
+    if (i==(tmpvector.size()-1)){
+      tmp+="}";
+    }
+    else{
+      tmp+="},";
+    }
+  }
+  tmp+="/S1/S2/";
+
+  this->description = tmp;
+
+  //Groups
+  this->groups = {""};
+
+  //Dataset
+  this->datasets = {name_of_diagram,};
+
+  //Shape
+  this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[1].size()) };
+
+  //initialize
+  this->initialize();
+
+  //Offsets
+  this->labels="tmggg";
+  this->setOffsets();
+
+  this->clear_output(true);
+}
+
 
 //2pt --> "N","D", 4Gammas
 template<typename Float>
@@ -1120,6 +1179,74 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   this->clear_output(true);
 }
+
+//3pt --> "NJN","D", 5Gammas
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_c, std::string name_of_diagram){
+
+  //assert( name_of_diagram=="N" || name_of_diagram=="D");
+  //Gamma list
+  this->GList.clear();
+  this->GList.push_back( eG_i );
+  this->GList.push_back( eG_f );
+  this->GList.push_back( G_i1 );
+  this->GList.push_back( G_f1 );
+  this->GList.push_back( G_c );
+
+
+  //Description
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_f1, G_c};
+  std::string tmp="";
+  for (int i=0; i<tmpvector.size(); ++i){
+    tmp+="{";
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
+      }
+    }
+    if (i==(tmpvector.size()-1)){
+      tmp+="}";
+    }
+    else{
+      tmp+="},";
+    }
+  }
+  tmp+="/S1/S2/";
+
+  this->description = tmp;
+
+  //momList
+
+  //Groups
+  this->groups={"",};
+
+  //Dataset
+  this->datasets={name_of_diagram,};
+
+  //Shape
+  this->shape={(int)(this->GList[0].size())*
+               (int)(this->GList[1].size())*
+               (int)(this->GList[2].size())*
+               (int)(this->GList[3].size())*
+               (int)(this->GList[4].size()),
+               N_SPINS*N_SPINS};
+
+  //initialize
+  this->initialize();
+
+  //Offsets
+  this->labels="tmgggggss";
+  this->setOffsets();
+
+
+  this->clear_output(true);
+}
+
+
 
 //3pt --> "T", 5Gammas, "T1" 5Gammas +1 fake (cause V3V2reductions works only for 4pt)
 template<typename Float>
@@ -2869,6 +2996,58 @@ void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
   x_e_sx<Float>( this->H_elem() , 1./n_stoch, in_dofs/2);
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero){
+
+
+  std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi2","pf1","pc"});
+  std::cout<<"Plist srcCorr"<<std::endl;
+  for (auto &line : temp){ 
+    std::cout<<line<<std::endl;
+  }
+  fflush(stdout);
+
+  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(1); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
+  std::vector<int> i_pinsertions = srcCorr.pList().u_posix( 0, moms_pinsertion_red); //list of positions of moms_pf1_red momenta in moms_pf1 array
+
+//  int n_gammas_exti = this->GList[0].size();
+//  int n_gammas_extf = this->GList[1].size();
+  int n_gammas_i1 = this->GList[2].size();
+  int n_gammas_f1 = this->GList[3].size();
+  int n_gammas_c = this->GList[4].size();
+  int TIME = this->localT();
+
+  int Nmoms_c = srcCorr.Nmoms();
+
+  //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
+  auto imap = this->pList().index_map();
+
+  #pragma omp parallel for
+  for(int i_m=0; i_m<imap.size(); i_m++){ 
+    PLEGMA_printf("i_m %d \n", i_m);
+    fflush(stdout);
+    int i_mom_f1 = imap[i_m][1];
+    if (i_mom_f1!=pf1){
+      continue;
+    }
+    int i_pc = i_pinsertions[imap[i_m][2]]; //position of pf1 in moms_pf1 (tempNN)
+
+    for(int t=0; t < TIME; ++t){
+      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+        for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+          for (int g3=0; g3 < n_gammas_c; ++g3 ){
+            this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[0]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0];
+            this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[1]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
+	    printf("t %d alpha %d beta %d g3 %d %e %e\n", t, alpha, beta, g3, this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[0],
+			    this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[1]);
+	    fflush(stdout);
+          }
+	}
+      }
+    }
+  }
+}
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float> &srcCorr, int global_it, bool forcetozero){
