@@ -20,17 +20,23 @@ int main(int argc, char **argv) {
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
   std::vector<double> mu_s;
   std::vector<double> mu_c;
+  int rand_seed1;
   double mu_ud = mu;
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
   for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
   int startSource = 0;
+  int nroots=4;
   std::string prOrNt = "neutron";
   std::string srcInputFile = "./input.src";
 
   std::vector<GAMMAS_SCATT> glist_source_nucleon={CG_5};
   std::vector<GAMMAS_SCATT> glist_sink_nucleon={CG_5};
+
+  std::vector<GAMMAS_SCATT> glist_sink_meson={G_5};
+  std::vector<GAMMAS_SCATT> glist_source_meson={G_5};
+
   std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired={ID};
   std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID};
   std::vector<GAMMAS_SCATT> gammas_insertion = {ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};//,S12,S13,S23,S41,S42,S43};
@@ -45,6 +51,8 @@ int main(int argc, char **argv) {
     options.set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
     options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
     options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
+    options.set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
+
 		     };
   add_options(*HGC_options);
   if(prOrNt != "proton" && prOrNt != "neutron") PLEGMA_error("This exec is only for nucleon, %s is not allowed",prOrNt.c_str());
@@ -99,8 +107,15 @@ int main(int argc, char **argv) {
     if(sourcemomentumList.empty())
      PLEGMA_error("momentumList empty");
 
+    PLEGMA_Vector<double> vectorSource_oet;
+    vectorSource_oet.randInit(rand_seed1);
+
+
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
+
+      vectorSource_oet.stochastic_Z(nroots);
+
       site& source = sourcePositions[isource];
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, source[0], source[1], source[2], source[3]);
@@ -110,13 +125,38 @@ int main(int argc, char **argv) {
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
       auto computeOetPropagator = [&](PLEGMA_Vector<float>& vec_SS, PLEGMA_Vector<float>& vec_SL,
-                                   double run_mu, WHICHFLAVOR fl, int nSmear,  bool finalize) {
+                                   double run_mu, WHICHFLAVOR fl, int nSmear,  std::vector<int> sinkMom, bool finalize) {
 	      // ensuring mu value
                                  if(mu != run_mu) {
                                    updateOptions(fl);
                                    mu = run_mu;
                                    solver.UpdateSolver();
                                  }
+
+	              		 PLEGMA_Vector<double> vectorInOut;
+
+                                 {  // absorbing the source and put momentum to the sink
+                                   PLEGMA_Vector3D<double> vector1;
+                                   vector1.absorb(vectorSource_oet,sourcePositions[isource][DIM_T]);
+				   vector1.mulMomentumPhases(sinkMom,+1);
+                                   vectorInOut.absorb(vector1,sourcePositions[isource][DIM_T]);
+                                 }
+
+                                 TIME(solver.solve(vectorInOut, vectorInOut));
+
+				 if(vec_SL.getAllocation() != NONE) {
+				   PLEGMA_Vector<float> vectorAuxF;
+				   vectorAuxF.copy(vectorInOut);
+				   vec_SL.copy(vectorAuxF);
+				 }
+
+				 { // Smearing the solution
+				   PLEGMA_Vector<double> vectorAuxD;
+				   PLEGMA_Vector<float> vectorAuxF;
+				   TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nSmear, alphaGauss));
+				   vectorAuxF.copy(vectorAuxD);
+				   vec_SS.copy(vectorAuxF);
+				 }
 
       };
 
@@ -380,12 +420,83 @@ int main(int argc, char **argv) {
 	        TIME(computeThreep( mu_ud, propDN3D, propUP3D, -1, propDN_SL, "dn"));
 	        TIME(computeThreep(-mu_ud, propDN3D, propDN3D, +1, propUP_SL, "up"));
 	      }
-	    }
-	  }
+	    } //loop over beta
+	  }//loop over alpha
 
-	  THREAD(corrUp.writeHDF5("uptemporary"));
-          THREAD(corrDn.writeHDF5("dntemporary"));
-	}
+ 
+	  THREAD(corrUp.writeHDF5("njnup"));
+          THREAD(corrDn.writeHDF5("njndn"));
+
+
+
+          PLEGMA_Vector<float> oet_mom_zero_up_SS;
+          PLEGMA_Vector<float> oet_mom_zero_up_SL;
+
+          PLEGMA_Vector<float> oet_mom_zero_dn_SS;
+          PLEGMA_Vector<float> oet_mom_zero_dn_SL;
+
+          PLEGMA_Vector<float> oet_mom_fini_up_SS;
+          PLEGMA_Vector<float> oet_mom_fini_up_SL;
+
+	  PLEGMA_Vector<float> oet_mom_fini_dn_SS;
+          PLEGMA_Vector<float> oet_mom_fini_dn_SL;
+
+	  std::vector<int> zero_mom({0,0,0});
+
+          TIME(computeOetPropagator(oet_mom_zero_up_SS, oet_mom_zero_up_SL,  mu_ud, LIGHT, nsmearGauss, zero_mom, false));
+          TIME(computeOetPropagator(oet_mom_zero_dn_SS, oet_mom_zero_dn_SL, -mu_ud, LIGHT, nsmearGauss, zero_mom, false));
+
+
+          std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
+
+          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
+            auto &momentum_i2 =  pi2_filt[i_pi2];
+            momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+            PLEGMA_ScattCorrelator<float> corrM1(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+            PLEGMA_ScattCorrelator<float> corrM2(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+            PLEGMA_ScattCorrelator<float> corrM3(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+            PLEGMA_ScattCorrelator<float> corrM4(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+
+
+            if (nucleon==PROTON){
+	       corrM1.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MPUU_UP");
+               corrM2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MPUU_DN");
+               corrM3.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MPDD_UP");
+               corrM4.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MPDD_DN");
+	    } else {
+               corrM1.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MNUD_UP");
+               corrM2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MNUD_DN");
+
+	    }
+  
+
+            TIME(computeOetPropagator(oet_mom_fini_up_SS, oet_mom_fini_up_SL, mu_ud, LIGHT, nsmearGauss, momentum_i2, false));
+	    TIME(computeOetPropagator(oet_mom_fini_dn_SS, oet_mom_fini_dn_SL, mu_ud, LIGHT, nsmearGauss, momentum_i2, false));
+
+	    if (nucleon==PROTON){
+
+             TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_mom_fini_up_SS ));
+             TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_mom_fini_up_SS ));
+             TIME(corrM3.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_mom_fini_dn_SS ));
+             TIME(corrM4.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_mom_fini_dn_SS ));
+
+	    }
+
+	    else{
+             TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_mom_fini_up_SS ));
+             TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_mom_fini_up_SS ));
+	    }
+
+/*            THREAD(corrM1.writeHDF5("corrM1"));
+            THREAD(corrM2.writeHDF5("corrM2"));
+            THREAD(corrM3.writeHDF5("corrM3"));
+            THREAD(corrM4.writeHDF5("corrM4"));*/
+	}//momentum pi2
+
+
+
+      }//tsink
+
 #endif
 
         }

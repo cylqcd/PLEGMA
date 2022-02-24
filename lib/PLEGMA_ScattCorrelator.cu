@@ -1410,6 +1410,81 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->clear_output(true);
 }
 
+//2pt with insertion --> "B1","B2","W1","W2","W3","W4","Z1","Z2","Z3","Z4","M","TpiNsink" "D" 7Gammas
+//note that here D stands for disconnected
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &eG_i, std::vector<GAMMAS_SCATT> &eG_f, std::vector<GAMMAS_SCATT> &G_i1, std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f1, std::vector<GAMMAS_SCATT> &G_f2, std::vector<GAMMAS_SCATT> &G_c, std::string isospin, std::string name_of_diagram){
+
+
+  //Gamma list
+  this->GList.clear();
+  this->GList.push_back( eG_i );
+  this->GList.push_back( eG_f );
+  this->GList.push_back( G_i1 );
+  //std::vector<GAMMAS_SCATT> tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_i2,RIGHT) : G_i2;
+  this->GList.push_back( G_i2 );
+  this->GList.push_back( G_f1 );
+  //tmpG = (letter == 'Z') ? apply_gamma5_scatt_gamma(G_f2,LEFT) : G_f2;
+  this->GList.push_back( G_f2 );
+  this->GList.push_back( G_c );
+
+
+  //Description
+  std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {eG_i, eG_f, G_i1, G_i2, G_f1, G_f2, G_c};
+  std::string tmp="";
+  for (int i=0; i<tmpvector.size(); ++i){
+    tmp+="{";
+    std::vector<GAMMAS_SCATT> elements=tmpvector[i];
+    for( int j=0; j<elements.size();++j ){
+      if (j==(elements.size()-1)){
+        tmp+= GAMMAS_SCATT_STR[elements[j]];
+      }
+      else{
+        tmp+= GAMMAS_SCATT_STR[elements[j]]+",";
+      }
+    }
+    if (i==(tmpvector.size()-1)){
+      tmp+="}";
+    }
+    else{
+      tmp+="},";
+    }
+  }
+  tmp+="/S1/S2/";
+
+  this->description = tmp;
+
+  //Groups
+  char *temporary;
+  asprintf(&temporary,"%s/pi2=",isospin.c_str());
+  this->groups = {this->pList().to_string({0},{temporary})[0],};
+  
+  free(temporary);
+
+  //Dataset
+  this->datasets = {name_of_diagram};
+
+  //Shape
+  this->shape={(int)(this->GList[0].size())*
+               (int)(this->GList[1].size())*
+               (int)(this->GList[2].size())*
+               (int)(this->GList[3].size())*
+               (int)(this->GList[4].size())*
+               (int)(this->GList[5].size())*
+	       (int)(this->GList[6].size()),
+               N_SPINS*N_SPINS};
+
+  //initialize
+  this->initialize();
+
+  //Offsets
+  this->labels="tmgggggggss";
+  this->setOffsets();
+
+  this->clear_output(true);
+}
+
+
 
 //##############
 //#  Diagrams  #
@@ -2168,7 +2243,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   std::vector<std::vector<int>> moms_pf1 = CorrNucleon.pList().pi(0); //list of pf1 in Nucleons PLEGMA_SC
   std::vector<int> i_pf1s = CorrNucleon.pList().u_posix( 0, moms_pf1_red ); //list of positions of moms_pf1_red momenta in moms_pf1 array
   auto map = this->pList().index_map();
-
+  auto map_minus = this->pList().index_map_minus();
 
   //++++++++ PION-PION +++++++++
 
@@ -2191,6 +2266,10 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   int n_gammas_i1 = CorrNucleon.GList[2].size();
   int n_gammas_i2 = pipi_aux.GList[0].size();
   int n_gammas_f1 = CorrNucleon.GList[3].size();
+  int n_gammas_c ;
+  if (CorrNucleon.GList.size() >4){ 
+    n_gammas_c = CorrNucleon.GList[4].size();
+  }
   int n_gammas_f2 = pipi_aux.GList[1].size();
   int TIME = this->localT();
 
@@ -2199,6 +2278,9 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   for( int i_mom=0; i_mom < this->pList().size(); ++i_mom){
     int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN)
     int i_pf2 = map[i_mom][2]; //position of pf2 in pionpion
+    if (CorrNucleon.GList.size() >4){//ensure always zero momentum at the sink
+      i_pf2=map_minus[i_mom][2];
+    }
     for( int t=0; t<TIME; ++t){
       for( int gei=0; gei<n_extgammas_i; ++gei ){
         for( int gef=0; gef<n_extgammas_f; ++gef ){
@@ -2212,10 +2294,22 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
                   //pion_contribution[1]=-1.* pion_pointer[1];
                   //x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
                   //       CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
-                  x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2),
-                           pipi_aux.Corr(t,i_pf2,gi2,gf2),
-                           CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
-                           N_SPINS*N_SPINS);
+	          if (CorrNucleon.GList.size() >4){
+	            for (int gc=0; gc< n_gammas_c; ++gc){
+                      x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2,gc),
+                               pipi_aux.Corr(t,i_pf2,gi2,gf2),
+                               CorrNucleon.Corr(t,i_mom,gei,gef,gi1,gf1,gc),
+                               N_SPINS*N_SPINS);
+		    } //gc
+
+		  }
+		  else{
+                    x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2),
+                             pipi_aux.Corr(t,i_pf2,gi2,gf2),
+                             CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
+                             N_SPINS*N_SPINS);
+		  }
+		  
                 }//G_f2
               }//G_f1
             }//G_i2
@@ -3001,11 +3095,6 @@ void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelat
 
 
   std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi2","pf1","pc"});
-  std::cout<<"Plist srcCorr"<<std::endl;
-  for (auto &line : temp){ 
-    std::cout<<line<<std::endl;
-  }
-  fflush(stdout);
 
   std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(1); //list of pf1 momenta needed here
   std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
@@ -3039,9 +3128,6 @@ void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelat
           for (int g3=0; g3 < n_gammas_c; ++g3 ){
             this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[0]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0];
             this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[1]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
-	    printf("t %d alpha %d beta %d g3 %d %e %e\n", t, alpha, beta, g3, this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[0],
-			    this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[1]);
-	    fflush(stdout);
           }
 	}
       }
