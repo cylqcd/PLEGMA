@@ -64,20 +64,6 @@ contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 }
 
 
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
-		  PLEGMA_Propagator<Float> &prop2 ){
-
-  shape = {10};
-  datasets =  {"twop_meson_new"};
-  groups =  {"mesons"};
-  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
-  
-  initialize();
-  contract_mesons_new(prop1,prop2,*this);
-}
-
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
