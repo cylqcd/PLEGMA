@@ -362,27 +362,7 @@ int main(int argc, char **argv) {
 	    	  momList list_mpc(1,{mpc,},{0,});
 				     
 	          PLEGMA_ScattCorrelator<float> corr( source, list_mpc, tsinkMtsource+1);
-/*                  {
-                  std::vector<std::string> temp=corr.pList().to_string({0},{"pc"});
-                  std::cout<<"Plist srcCorr Corr"<<std::endl;
-                  for (auto &line : temp){
-                    std::cout<<line<<std::endl;
-                  }
-                  fflush(stdout);
-                  }*/
 
-
-                  {
-                  std::vector<std::string> temp=corrUp.pList().to_string({0,1,2},{"pi2","pf1","pc"});
-                  std::cout<<"Plist srcCorr Corr"<<std::endl;
-                  for (auto &line : temp){
-                    std::cout<<line<<std::endl;
-                  }
-                  fflush(stdout);
-                  }
-
-
-	  
     		  // LOCAL contractions
 		  if (get_projector(alpha,beta)<8){
                     TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
@@ -452,6 +432,60 @@ int main(int argc, char **argv) {
           for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
             auto &momentum_i2 =  pi2_filt[i_pi2];
             momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+
+	    std::vector<std::vector<int>> pf1_filt= filtered_sourcemomentumList.uniq_p(1);
+	    for (int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1 ){
+              auto &momentum_f1 =  pf1_filt[i_pf1];
+
+              auto computeThreep_meson = [&](double run_mu, PLEGMA_Vector3D<float>& prop, PLEGMA_Vector<float> &propF, int nSmear, WHICHFLAVOR fl, std::string name) {
+		 char * mom_string;
+		 asprintf(&mom_string, "_mx%+dmy%+dsz%+d", momentum_f1[0], momentum_f1[1], momentum_f1[2]);
+                 std::string filename = threep_filename + mom_string + "_dt" + std::to_string(tsinkMtsource)+name;
+                 free(mom_string);
+
+                 int signProps = -run_mu/abs(run_mu);
+                 PLEGMA_Vector<float> seqProp(BOTH);
+                 // ensuring mu positive
+                 if(mu != run_mu) {
+                   updateOptions(fl);
+                   mu = run_mu;
+                   solver.UpdateSolver();
+                 }
+
+                 PLEGMA_Vector<double> vectorInOut;
+                 {
+                    PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
+                    PLEGMA_Vector3D<float> vectorAuxF;
+                    vectorAuxF.absorb(prop, nu, c2);
+                    vectorAuxF.apply_gamma(G5);
+                    vectorAuxF.mulMomentumPhases(momentum_f1,+1); // put momentum at the sink
+                    vectorAuxD1.copy(vectorAuxF);
+                    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
+                    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+                  }
+                  double norm = vectorInOut.norm();
+                  vectorInOut.scale(1/norm);
+                  TIME(solver.solve(vectorInOut, vectorInOut));
+                  vectorInOut.scale(norm);
+                  PLEGMA_Vector<float> vectorAuxF;
+                  vectorAuxF.copy(vectorInOut);
+                  seqProp.absorb(vectorAuxF);
+                }
+                seqProp.apply_gamma(G5);
+                seqProp.conjugate();
+
+                PLEGMA_ScattCorrelator<float> corr(corr_space, source, , tsinkMtsource+1);
+
+                // LOCAL contractions
+                TIME(corr.contractPionThrp_local(seqProp, propF, signProps, gammas));
+                if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+                THREAD(corr.writeFile(filename, corr_file_format));
+
+              };
+              TIME(computeThreep(-mu_ud, propUP3D, propUP_SL, nsmearGauss, LIGHT, "_up_pion"));
+              TIME(computeThreep(-mu_ud, propST3D, propUP_SL, nsmearGauss, LIGHT, "_up_kaon"));
+	    }//pf1
+
             PLEGMA_ScattCorrelator<float> corrM1(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM2(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM3(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
