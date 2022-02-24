@@ -196,7 +196,7 @@ namespace plegma {
 
     void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 			   PLEGMA_Propagator<Float> &prop2);
-
+    
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2);
     
@@ -232,8 +232,8 @@ namespace plegma {
     void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 					PLEGMA_Propagator<Float> &fwdProp,
 					PLEGMA_Su3field<Float> &su3,
-					int signProps, std::vector<GAMMAS> gammas);
-
+					int signProps, std::vector<GAMMAS> gammas,
+					int z, std::string quark);
 
     virtual void writeASCII(std::string filename) const;
     virtual void writeHDF5(std::string filename) const;

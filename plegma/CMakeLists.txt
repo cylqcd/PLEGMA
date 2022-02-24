@@ -43,11 +43,17 @@ target_link_libraries(Topo ${PLEGMA_LIBS})
 cuda_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
+cuda_add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
+target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
+
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
+
+cuda_add_executable(mesons_3pt mesons_3pt.cpp)
+target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
 
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
