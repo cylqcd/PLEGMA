@@ -228,6 +228,14 @@ namespace plegma {
     //manipulation to construct N like diagram from NjN
     void absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero=false);
 
+    //manipulation to construct P like diagram from pi j pi
+    void absorbGammai2Gammaf2momentumf2(PLEGMA_ScattCorrelator<Float> &srcCorr, int  i_gamma_i2, int i_gamma_f2, int i_pf1, bool forcetozero=false );
+
+
+    void contractMesonThrp_local(PLEGMA_Vector<Float> &bwdProp,
+                                 PLEGMA_Vector<Float> &fwdProp,
+                                 std::vector<GAMMAS_SCATT> gammas);
+
 
     //initialize_diagrams
     void initialize_diagram( std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram );//L
@@ -260,6 +268,8 @@ namespace plegma {
     void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, bool accum=false );
 
     void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum=false );
+
+    void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_ScattCorrelator<Float> &CorrPion,  bool accum=false );
 
     void LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1reduction, PLEGMA_ScattCorrelator<Float> &T2reduction, PLEGMA_ScattCorrelator<Float> &Loop, bool accum=false );
 

@@ -1,6 +1,12 @@
 #pragma once
 #include <PLEGMA_Propagator.h>
 
+//template<typename FloatC,typename FloatA, typename FloatB>
+//void threep_local_stochastic(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Vector<FloatA>& vec1, PLEGMA_Vector<FloatB>& vec2, int signProps, std::vector<GAMMAS>& gammas);
+
+template<typename FloatC,typename FloatA, typename FloatB>
+void threep_local_stochastic(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Vector<FloatA>& prop1, PLEGMA_Vector<FloatB>& prop2, int signProps, std::vector<GAMMAS>& gammas);
+
 
 template<typename FloatC,typename FloatA, typename FloatB>
 void threep_local(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, std::vector<GAMMAS>& gammas, bool isZfac);

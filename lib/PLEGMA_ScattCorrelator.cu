@@ -1104,7 +1104,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->datasets = {name_of_diagram,};
 
   //Shape
-  this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[1].size()) };
+  this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[2].size()) };
 
   //initialize
   this->initialize();
@@ -2229,6 +2229,67 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagrams( PLEGMA_Vector<Float>* &Phi_0,
 }
 
 template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_ScattCorrelator<Float> &CorrPion, bool accum){
+
+  //extract moms
+  assert(this->pList().check_eq(0));
+
+  //extract vector p_f1
+  std::vector<std::vector<int>> moms_pf1_red = this->pList().uniq_p(1); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pf1 = CorrNucleon.pList().pi(0); //list of pf1 in Nucleons PLEGMA_SC
+  std::vector<int> i_pf1s = CorrNucleon.pList().u_posix( 0, moms_pf1_red ); //list of positions of moms_pf1_red momenta in moms_pf1 array
+  auto map = this->pList().index_map();
+  //++++++++++ NN x PIPI ++++++++++++
+
+  //put output to zero
+  this->clear_output(!accum);
+
+  int n_extgammas_i = CorrNucleon.GList[0].size();
+  int n_extgammas_f = CorrNucleon.GList[1].size();
+  int n_gammas_i1 = CorrNucleon.GList[2].size();
+  int n_gammas_i2 = CorrPion.GList[0].size();
+  int n_gammas_f1 = CorrNucleon.GList[3].size();
+  int n_gammas_c  = CorrPion.GList[2].size();
+
+  int n_gammas_f2 = CorrPion.GList[1].size();
+  int TIME = this->localT();
+
+  //for each momentum in moms_red
+  #pragma omp parallel for
+  for( int i_mom=0; i_mom < this->pList().size(); ++i_mom){
+    int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN) 
+    for( int t=0; t<TIME; ++t){
+      for( int gei=0; gei<n_extgammas_i; ++gei ){
+        for( int gef=0; gef<n_extgammas_f; ++gef ){
+          for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
+            for( int gi2=0; gi2<n_gammas_i2; ++gi2 ){
+              for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
+                for( int gf2=0; gf2<n_gammas_f2; ++gf2){
+                  //Float *pion_pointer=pipi_aux.Corr(t,i_pf2,gi2,gf2);
+                  //Float pion_contribution[2];
+                  //pion_contribution[0]=-1.* pion_pointer[0];
+                  //pion_contribution[1]=-1.* pion_pointer[1];
+                  //x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
+                  //       CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
+                  for (int gc=0; gc< n_gammas_c; ++gc){
+                    x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2,gc),
+                             CorrPion.Corr(t,i_mom,gi2,gf2,gc),
+                             CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
+                             N_SPINS*N_SPINS);
+                  } //gc
+                }//G_f2
+              }//G_f1
+            }//G_i2
+          }//G_i1
+        }//G_ext_f
+      }//G_ext_i
+    }//time
+  }//mom
+}
+
+
+
+template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum){
 
   //extract moms
@@ -2845,6 +2906,23 @@ void PLEGMA_ScattCorrelator<Float>::V24pointSourceReduction( PLEGMA_ScattCorrela
   }//time
 }
 
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::contractMesonThrp_local(PLEGMA_Vector<Float> &bwdProp,
+                       PLEGMA_Vector<Float> &fwdProp,
+                       std::vector<GAMMAS_SCATT> gammas){
+  this->shape = {(int) gammas.size()};
+  this->datasets = {"threep"};
+  this->groups =  {"Local"};
+  this->description = getGammasString_scatt(gammas);
+  this->initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+  PhixGxPhi_k<Float,Float>(*this,bwdProp, gammas, fwdProp);
+
+}
+
+
 
 //here pi2 and Gamma_i2 are looped outside in the building of the sequential propagator. NB for moms I expect that pi2 is the same! The T reduction contains ptot.
 //Here we assume that the nucleon interpolator is anti-symmetric and the delta interpolator is symmetric
@@ -3035,12 +3113,14 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
 //coherent sources applied
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic, int n_coherent_source, int *attract_look_up_table ) {
+
   if(!antiperiodic) return;
 
   std::size_t n_t = this->labels.find("t");
   assert(n_t!=std::string::npos);
 
   int TIME = this->localT();
+  if (TIME==0) return;
   int in_dofs = std::accumulate(ranges.begin()+n_t+1, ranges.end(), 2, std::multiplies<int>());
   int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
   int maxT = this->endT() - this->startT();
@@ -3091,12 +3171,83 @@ void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
 }
 
 template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattCorrelator<Float> &srcCorr, int  i_gamma_i2, int i_gamma_f2, int i_pf1, bool forcetozero ){
+
+
+  PLEGMA_printf("Something new\n");
+  std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi2","pf1","pc"});
+  PLEGMA_printf("Something new2\n");
+  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
+
+  PLEGMA_printf("Something new3\n");
+  std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
+
+  PLEGMA_printf("Something new4\n");
+  fflush(stdout);
+  std::vector<int> i_pinsertions = srcCorr.pList().u_posix( 0, moms_pinsertion_red); //list of positions of moms_pf1_red momenta in moms_pf1 array
+
+  PLEGMA_printf("Something new5 %d\n",this->GList.size());
+
+  int n_gammas_i2 = this->GList[0].size();
+  PLEGMA_printf("Something new52 %d \n", n_gammas_i2);
+  fflush(stdout);
+
+  int n_gammas_f2 = this->GList[1].size();
+  PLEGMA_printf("Something new53 %d \n",n_gammas_f2);
+  fflush(stdout);
+
+  int n_gammas_c  = this->GList[2].size();
+  PLEGMA_printf("Something new54 %d \n",n_gammas_c);
+  fflush(stdout);
+
+  int TIME = this->localT();
+
+
+  PLEGMA_printf("Something new6\n");
+
+  int Nmoms_c = srcCorr.Nmoms();
+
+  //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
+  auto imap = this->pList().index_map();
+
+  PLEGMA_printf("Something new7\n");
+  fflush(stdout);
+
+  #pragma omp parallel for
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    PLEGMA_printf("i_m %d \n", i_m);
+    fflush(stdout);
+    int i_mom_f1 = imap[i_m][1];
+    if (i_mom_f1!=i_pf1){
+      continue;
+    }
+    int i_pc = i_pinsertions[imap[i_m][2]]; //position of pf1 in moms_pf1 (tempNN)
+
+    for(int t=0; t < TIME; ++t){
+      for (int g1=0 ; g1 < n_gammas_i2 ; ++g1 ){//pi
+	if (i_gamma_i2 != g1)
+         continue;
+        for (int g2=0 ; g2 < n_gammas_f2 ; ++g2 ){//pf1
+	  if (i_gamma_f2 != g2)
+           continue;
+          for (int g3=0; g3 < n_gammas_c; ++g3 ){
+            printf("NN %e \n",srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0]);
+            this->Corr(t,i_m,g1,g2,g3)[0]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0];
+            this->Corr(t,i_m,g1,g2,g3)[1]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
+          }
+        }
+      }
+    }
+  }
+
+}
+template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero){
 
 
   std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi2","pf1","pc"});
 
-  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(1); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
   std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
   std::vector<int> i_pinsertions = srcCorr.pList().u_posix( 0, moms_pinsertion_red); //list of positions of moms_pf1_red momenta in moms_pf1 array
 
@@ -3300,6 +3451,11 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram ){
     //x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     this->apply_sign_adj(0);     // adjoint G_i2 (Pion-source)
   }
+  else if( name_of_diagram == "NJNP"){
+    //Float overall_sign[2] = {1. ,0.}; // i at sink, -i at source
+    //x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    this->apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
+  }
   else if( name_of_diagram == "T"){
     Float overall_sign[2] = {0.,1.}; //-i from pion at source, -1 coming from epsilon in adj interp of N
     x_e_cx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
@@ -3316,6 +3472,14 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign(std::string name_of_diagram ){
   else if( name_of_diagram == "4pt"){
     // ??????? is N called after or before phase multiplication of M !!!!!!! In the following like we call signs for N after the M_diagram call.
     Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N 
+    x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
+    apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
+    apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)
+    apply_sign_adj(3);     // adjoint G_i2 (Pion-source)
+  }
+  else if( name_of_diagram == "NPJP"){
+    // ??????? is N called after or before phase multiplication of M !!!!!!! In the following like we call signs for N after the M_diagram call.
+    Float overall_sign = -1.; // -1 coming from epsilon in adj interp of N
     x_e_sx<Float>( this->H_elem(), overall_sign, this->getTotalSize());
     apply_sign_adj(0);     // adjoint G_ei (Nucleon-extsource)
     apply_sign_adj(2);     // adjoint G_i1 (Nucleon-source)

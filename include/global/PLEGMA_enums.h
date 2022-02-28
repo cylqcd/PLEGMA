@@ -102,6 +102,13 @@ static inline std::string getGammasString(std::vector<GAMMAS> gammas) {
   return s;
 }
 
+static inline std::string getGammasString_scatt(std::vector<GAMMAS_SCATT> gammas) {
+  std::string s = "";
+  std::for_each(gammas.begin(), gammas.end(), [&] (GAMMAS_SCATT n) {s += GAMMAS_SCATT_STR[(int) n]+",";});
+  return s;
+}
+
+
 enum ACCUM_TYPE{ACC_ZERO, ZERO_PLUS=ACC_ZERO, ZERO_MINUS, ACC_PLUS, ACC_MINUS};
 enum LEFTRIGHT {LEFT, RIGHT};
 enum TOPO_CHARGE_DEF {PLAQUETTE,CLOVER,IMP_CLOVER};

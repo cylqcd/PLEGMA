@@ -81,6 +81,36 @@ namespace plegma {
       }
       return accum;
   }
+
+  template<bool isTransMatrix,typename Float>
+  __inline__ __device__ Float2<Float> trace_spin_color_V_gamma_V(int opId, TMROT trot, Float2<Float> vec1[N_SPINS][N_COLS], Float2<Float> vec2[N_SPINS][N_COLS]){
+      const Float2<float> (*g)[4];
+      const short int (*gIn)[4][2];
+      if(trot == TMP){
+        g = (Float2<float> (*)[4]) gammaTmP;
+        gIn = gammaIndTmP;
+      }else if (trot == TMM){
+        g = (Float2<float> (*)[4]) gammaTmM;
+        gIn = gammaIndTmM;
+      }
+      else{
+        g = (Float2<float> (*)[4]) gamma;
+        gIn = gammaInd;
+      }
+      Float2<Float> accum = 0.;
+#pragma unroll
+      for(int nz = 0 ; nz < N_SPINS ; nz++){
+        int mu = gIn[opId][nz][0];
+        int nu = gIn[opId][nz][1];
+        Float2<Float> val = g[opId][nz];
+        #pragma unroll 
+        for (int color=0; color<N_COLS; ++color){
+          accum += isTransMatrix ? val*vec1[mu][color]*vec2[nu][color] : val*vec1[nu][color]*vec2[mu][color];
+	}
+      }
+      return accum;
+  }
+
   
   template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaV(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS], short int r){
