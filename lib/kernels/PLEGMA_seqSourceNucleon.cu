@@ -56,14 +56,14 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
       short c2p = eps[cc2][1];
       short c3p = eps[cc2][2];
       if(c3p == c_c2)
-//        #pragma unroll
+        #pragma unroll
 	for(short idx = 0 ; idx < 16 ; idx++){
 	  short mu = NtoN_indices[idx][0];
 	  short nu = NtoN_indices[idx][1];
 	  short ku = NtoN_indices[idx][2];
 	  short lu = NtoN_indices[idx][3];
           if (proj<8){
-//          #pragma unroll
+          #pragma unroll
           for(short nz = 0; nz < 8; nz++){
 	    int b = prInd[proj][nz][0];
 	    int a = prInd[proj][nz][1];
@@ -75,7 +75,7 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
 	      }
 	    }
 	    else
-//#pragma unroll
+#pragma unroll
 	      for(short gu = 0 ; gu < 4 ; gu++){
                 if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][ku][c2][c2p];
                 if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
@@ -95,7 +95,7 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
             }
           }
           else
-//#pragma unroll
+#pragma unroll
             for(short gu = 0 ; gu < 4 ; gu++){
               if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][ku][c2][c2p];
               if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
