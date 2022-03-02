@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
       auto computeOetPropagator = [&](PLEGMA_Vector<float>& vec_SS, PLEGMA_Vector<float>& vec_SL,
-                                   double run_mu, WHICHFLAVOR fl, int nSmear,  std::vector<int> sinkMom, bool finalize) {
+                                   double run_mu, WHICHFLAVOR fl, int nSmear,  std::vector<int> sourceMom, bool finalize) {
 	      // ensuring mu value
                                  if(mu != run_mu) {
                                    updateOptions(fl);
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
                                  {  // absorbing the source and put momentum to the sink
                                    PLEGMA_Vector3D<double> vector1;
                                    vector1.absorb(vectorSource_oet,sourcePositions[isource][DIM_T]);
-				   vector1.mulMomentumPhases(sinkMom,+1);
+				   vector1.mulMomentumPhases(sourceMom,+1);
                                    vectorInOut.absorb(vector1,sourcePositions[isource][DIM_T]);
                                  }
 
@@ -533,7 +533,8 @@ int main(int argc, char **argv) {
 		       double tmp=vectorAuxF.norm();
                        vectorAuxF.apply_gamma(G5);
 
-                       vectorAuxF.mulMomentumPhases(momentum_f1,+1); // put momentum at the sink
+                       vectorAuxF.mulMomentumPhases(momentum_f1,-1); // put momentum at the sink
+                       vectorAuxF.conjugate();
                        vectorAuxD1.copy(vectorAuxF);
                        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
                        vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
@@ -639,19 +640,23 @@ int main(int argc, char **argv) {
            
 	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizerodn";
 	     TIME(corrM1.apply_sign("NJNP")); 
+             TIME(corrM1.apply_phase());
 	     TIME(corrM1.writeHDF5(outfilename));
 
 	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizerodn";
              TIME(corrM2.apply_sign("NJNP"));
+             TIME(corrM2.apply_phase());
              TIME(corrM2.writeHDF5(outfilename));
 
              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
              TIME(corrM3.apply_sign("NJNP"));
+             TIME(corrM3.apply_phase());
              TIME(corrM3.writeHDF5(outfilename));
 
 	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizeroup";
 
              TIME(corrM4.apply_sign("NJNP"));
+             TIME(corrM4.apply_phase());
              TIME(corrM4.writeHDF5(outfilename));
 
 	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"proton_pizeroupup";
@@ -673,10 +678,12 @@ int main(int argc, char **argv) {
 
              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup_piplus";
              TIME(corrM7.apply_sign("NJNP"));
+             TIME(corrM7.apply_phase());
              TIME(corrM7.writeHDF5(outfilename));
 
 	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutrondn_piplus";
              TIME(corrM8.apply_sign("NJNP"));
+             TIME(corrM8.apply_phase());
              TIME(corrM8.writeHDF5(outfilename));
 
 	     TIME(corrM9.M_diagrams(  corrN0, corrpiplus_up ));
