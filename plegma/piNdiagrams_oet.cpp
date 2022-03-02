@@ -135,6 +135,9 @@
 	smearedGauge.calculatePlaq();
       }
 
+      MPI_Barrier(MPI_COMM_WORLD);
+      exit(1);
+
       updateOptions(LIGHT);
       TIME(QUDA_solver solver(mu),"ISOSPIN32");
 
