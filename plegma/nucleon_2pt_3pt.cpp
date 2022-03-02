@@ -330,15 +330,10 @@ int main(int argc, char **argv) {
 
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};//,S12,S13,S23,S41,S42,S43};
-	  for (int alpha=0;alpha<1; ++alpha){
-            for (int beta=0; beta<1; ++beta){
+	  for (int alpha=0;alpha<N_SPINS; ++alpha){
+            for (int beta=0; beta<N_SPINS; ++beta){
 
 	      auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
-	        std::string filename = threep_filename + "_P" +std::to_string(alpha)+std::to_string(beta) + "_dt" + std::to_string(tsinkMtsource) + "_" + fl + ".h5";
-	        if(access( filename.c_str(), F_OK ) != -1) {
-		  PLEGMA_printf("File %s already exists. Skipping...", filename.c_str());
-		  return;
-	        }
 	        if(not computed_light) {
 		  TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
 		  TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
@@ -362,8 +357,12 @@ int main(int argc, char **argv) {
 
                   auto &momentum_f1 =  pf1_filt[i_pf1];
 
-		  printf("Momentum f1 %d %d %d\n", momentum_f1[0], momentum_f1[1], momentum_f1[2]);
-		  fflush(stdout);
+
+	          std::string filename = threep_filename + "_P" +std::to_string(alpha)+std::to_string(beta) + "_dt" + std::to_string(tsinkMtsource) + "_" + fl + "pf_x"+std::to_string(momentum_f1[0])+"_y"+std::to_string(momentum_f1[1])+"_z"+std::to_string(momentum_f1[2])+".h5";
+	          if(access( filename.c_str(), F_OK ) != -1) {
+		    PLEGMA_printf("File %s already exists. Skipping...", filename.c_str());
+		    return;
+	          }
 
                   momList filtered_sinkList = sourcemomentumList.extract(momentum_f1, 1);
 
@@ -464,8 +463,8 @@ int main(int argc, char **argv) {
 	  }//loop over alpha
 
  
-//	  THREAD(corrUp.writeHDF5("njnup"));
-//        THREAD(corrDn.writeHDF5("njndn"));
+	  THREAD(corrUp.writeHDF5("njnup"));
+          THREAD(corrDn.writeHDF5("njndn"));
 
 
 
@@ -510,8 +509,6 @@ int main(int argc, char **argv) {
             corrpiplus_up.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
             corrpiplus_dn.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
 
-	    PLEGMA_printf("Three point meson begin\n");
-	    fflush(stdout);
 
 	    for (int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1 ){
               auto &momentum_f1 =  pf1_filt[i_pf1];
@@ -534,25 +531,16 @@ int main(int argc, char **argv) {
                        PLEGMA_Vector3D<float> vectorAuxF;
                        vectorAuxF.copy(prop);
 		       double tmp=vectorAuxF.norm();
-		       PLEGMA_printf("Norm of vector %e\n", tmp);
                        vectorAuxF.apply_gamma(G5);
 
-		       PLEGMA_printf("Gamma multiplications are already done\n");
-		       PLEGMA_printf("%d %d %d\n", momentum_f1[0], momentum_f1[1], momentum_f1[2]);
-		       fflush(stdout);
                        vectorAuxF.mulMomentumPhases(momentum_f1,+1); // put momentum at the sink
-                       PLEGMA_printf("Momentum multiplications are already done\n");
                        vectorAuxD1.copy(vectorAuxF);
-                       PLEGMA_printf("Momentum multiplications are already done\n");
-                       fflush(stdout);
                        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
                        vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
                      }
 
 		     vectorInOut.apply_gamma_scatt(glist_source_meson[i_gamma_i2],RIGHT);
                      vectorInOut.apply_gamma_scatt(glist_sink_meson[i_gamma_f2],LEFT);
-                     PLEGMA_printf("Source done\n");
-                     fflush(stdout);
 
                      double norm = vectorInOut.norm();
                      vectorInOut.scale(1/norm);
@@ -569,8 +557,6 @@ int main(int argc, char **argv) {
 
                      PLEGMA_ScattCorrelator<float> corr(source, list_mpc, tsinkMtsource+1);
 		     TIME(corr.contractMesonThrp_local(seqProp, propF, gammas_insertion));
-                     PLEGMA_printf("Contraction also done\n");
-                     fflush(stdout);
 
 
                      // LOCAL contractions
