@@ -135,8 +135,6 @@
 	smearedGauge.calculatePlaq();
       }
 
-      MPI_Barrier(MPI_COMM_WORLD);
-      exit(1);
 
       updateOptions(LIGHT);
       TIME(QUDA_solver solver(mu),"ISOSPIN32");
@@ -241,6 +239,8 @@
 	vectorSource_oet.stochastic_Z(nroots);
 
         TIME(vectorInOut.gaussianSmearing(vectorSource_oet, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+	double tmp=vectorInOut.norm();
+	PLEGMA_printf("Normtest11 %e\n",tmp);
 
 	for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
@@ -555,6 +555,9 @@
 
       PLEGMA_Vector<double> vectorSource_oet;
       vectorSource_oet.randInit(rand_seed2);
+      vectorSource_oet.stochastic_Z(nroots);
+      double tmp=vectorSource_oet.norm();
+      PLEGMA_printf("Normtest12 %e\n", tmp);
 
       //loop over the soure positions
       for(int isource = 0 ; isource < numSourcePositions; isource++){
@@ -775,12 +778,13 @@
 	    //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
 	    TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP), "ISOSPIN32");
 
-	    //PLEGMA_printf("Nucleon T2 reduction\n");
+	    PLEGMA_printf("Nucleon T2 reduction\n");
 	    TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP), "ISOSPIN32");
-	    //PLEGMA_printf("Nucleon T2 reduction ready\n");
+	    PLEGMA_printf("Nucleon T2 reduction ready\n");
 
 	    TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ),"ISOSPIN32");
-	    //PLEGMA_printf("Nucleon diagram ready\n");
+	    PLEGMA_printf("Nucleon diagram ready\n");
+	    corrNP.writeHDF5("protonshould.h5");
 
 // PLEGMA_SCATTERING_SPIN12 
 	    //Secondly compute N_0 (neutron)(we need for M diagram (N0p+))
@@ -789,6 +793,7 @@
 	    TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN), "ISOSPIN12");
 
 	    TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ),"ISOSPIN12");
+	    corrN0.writeHDF5("neutronshould.h5");
 
 	  }//end of T reduction 
         }//end of if(do_contraction_std)
@@ -1182,6 +1187,8 @@
 	//Loop over the source meson momentum
         for (int i_mpi2=0; i_mpi2<mpi2.size(); ++i_mpi2){
 
+          PLEGMA_printf("MOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
+
           auto &momentum_i2 =  mpi2[i_mpi2];
           //List of momenta corresponding to a fix value of p_i2
           momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
@@ -1400,27 +1407,50 @@
               mu*=-1.;
               solver.UpdateSolver();
             }
-
+            double tmp;
 
             vectortmp2.copy(vectorSource_oet);
+	    tmp=vectortmp2.norm();
+	    PLEGMA_printf("Normtest1 %e\n",tmp);
             vectortmp1.absorbTimeslice(vectortmp2, sourcePositions[isource][DIM_T]);
+            tmp=vectortmp1.norm();
+            PLEGMA_printf("Normtest2 %e\n",tmp);
+
 
             vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
+            tmp=vectortmp2.norm();
+            PLEGMA_printf("Normtest3 %e\n",tmp);
+
 
             //Multiplying by the appropriate momentum phase
 
             std::vector<int> tmp_4Dmom= momentum_i2 ;
             tmp_4Dmom.push_back(0);
             vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
+            tmp=vectortmp2.norm();
+            PLEGMA_printf("Normtest4 %e\n",tmp);
+
 
             //Doing the inversion
             TIME(solver.solve(vectortmp2, vectortmp2),"ISOSPIN32");
 
+            tmp=vectortmp2.norm();
+            PLEGMA_printf("Normtest5 %e\n",tmp);
+
+
             //Rotate back immediately to the physical basis
             vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
 
+            tmp=vectortmp1.norm();
+            PLEGMA_printf("Normtest6 %e\n",tmp);
+
+
             //performing smearing
+	    
             TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
+            tmp=vectortmp2.norm();
+            PLEGMA_printf("Normtest7 %e\n",tmp);
+
             stochastic_oet_prop_u_fini_mom_source_to_sink.copy(vectortmp2);
 
             // ensuring mu negative
@@ -1626,19 +1656,30 @@
           TIME(corrT26.applyBoundaryConditions( true,  1, NULL ),"ISOSPIN12");
           TIME(corrT26.writeHDF5(outfilename),"ISOSPIN12");
 
+          PLEGMA_printf("MOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
 
 	  //M diagram N.B. I still need Phi_0, Phi_1 here! So even if we decide to enclose Phi's plegma_vectors in a smaller scope, we need to move this diagram too.
 	  spropagator_V6.copy(*stochastic_oet_prop_u_zero_mom[sourcePositions[isource][DIM_T]],HOST);
           spropagator_V6.load();
+
+	  PLEGMA_printf("MOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
 
 	  if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
 	    
 	    TIME(corrPPUP.P_diagrams( spropagator_V6, stochastic_oet_prop_u_fini_mom_source_to_sink, i_mpi2, true),"ISOSPIN32");
 
             TIME(corrP0DN.P_diagrams( spropagator_V6, stochastic_oet_prop_d_fini_mom_source_to_sink, i_mpi2, true),"ISOSPIN32");
+
+	    double norm;
+	    norm=spropagator_V6.norm();
+	    PLEGMA_printf("V6 prop %e\n",norm);
+            norm=stochastic_oet_prop_u_fini_mom_source_to_sink.norm();
+            PLEGMA_printf("V6 prop %e\n",norm);
+
 	 
 	    TIME(corrM.M_diagrams( corrNP, spropagator_V6, stochastic_oet_prop_u_fini_mom_source_to_sink ),"ISOSPIN32");
-
+	    corrNP.writeHDF5("temporarynucleon.h5");
+	    corrM.writeHDF5("Temporary.h5");
             TIME(corrD1if12.M_diagrams( corrNP, spropagator_V6, stochastic_oet_prop_d_fini_mom_source_to_sink),"ISOSPIN12");
 
 	    TIME(corrD1if56.M_diagrams( corrN0, spropagator_V6, stochastic_oet_prop_u_fini_mom_source_to_sink),"ISOSPIN12");
@@ -1888,11 +1929,19 @@
             GAMMAS_SCATT gamma_i2_t_gamma5= apply_g5( gamma_i2, RIGHT );
 
             std::vector<GAMMAS_SCATT> gamma_5_t_sinkmeson=apply_gamma5_scatt_gamma(glist_sink_meson,LEFT);
+	    
+	    PLEGMA_printf("MOmentum test ssss\n");
+	    PLEGMA_printf("asas %d %d %d\n",momentum_i2[0] , momentum_i2[1], momentum_i2[2]  );
 
 	    if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
 
               spropagator_V6.copy(stochastic_oet_prop_u_fini_mom_source_to_sink);
+	      double tmp=stochastic_oet_prop_u_fini_mom_source_to_sink.norm();
+	      PLEGMA_printf("Test %e\n",tmp);
               spropagator_V6.apply_gamma_scatt(gamma_i2_t_gamma5,RIGHT);
+	      tmp=spropagator_V6.norm();
+              PLEGMA_printf("Test2 %e\n",tmp);
+
 
               TIME(reductionsV3_phiui2_U.V3( spropagator_V6, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
               TIME(reductionsV3_phiui2_D.V3( spropagator_V6, gamma_5_t_sinkmeson, propDN, true),"ISOSPIN32");
@@ -1902,7 +1951,7 @@
               TIME(reductionsV3_phidi2_U.V3( spropagator_V6, gamma_5_t_sinkmeson, propUP, true),"ISOSPIN32");
 
 
-              //THREAD(reductionsV3.writeHDF5("V3redforZdiagram"));
+//              THREAD(reductionsV3_phidi2_U.writeHDF5("V3redforZdiagramU"));
 
 
             }
