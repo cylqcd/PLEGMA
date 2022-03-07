@@ -1061,7 +1061,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2,std::vector<GAMMAS_SCATT> &G_c,std::string name_of_diagram){
 
-  assert(( name_of_diagram=="PJP") );
+  assert(( name_of_diagram=="PJP") || (name_of_diagram=="PJP_STANDALONE"));
 
   //Gamma list
   this->GList.clear();
@@ -1098,7 +1098,13 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->description = tmp;
 
   //Groups
-  this->groups = {""};
+  if (name_of_diagram=="PJP"){
+    this->groups = {""};
+  }
+  else{
+    char *temporary;
+    this->groups ={this->pList().to_string({0},"pi=", };
+  }
 
   //Dataset
   this->datasets = {name_of_diagram,};
@@ -2133,7 +2139,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLE
     std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
     pipi_aux.PhiPhi( Phi_0, tmpGf2, Phi_1); //T x N_moms x n_gammas_f2
     Float g[2];
-    g[0]=1;
+    g[0]=-1;//eq 13
     g[1]=0;
 
     if(i_pi2==-1){
@@ -2316,6 +2322,8 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
 
   pipi_aux.P_diagrams( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2 //-1 from eq. (13) is inside P_diagram
 
+  pipi_aux.writeHDF5("temporarypion.h5");
+
 
   //++++++++++ NN x PIPI ++++++++++++
 
@@ -2365,6 +2373,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
 
 		  }
 		  else{
+	            PLEGMA_printf("test %e %e\n",Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2)[0],Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2)[1]);
                     x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2),
                              pipi_aux.Corr(t,i_pf2,gi2,gf2),
                              CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
@@ -3170,11 +3179,11 @@ void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
   x_e_sx<Float>( this->H_elem() , 1./n_stoch, in_dofs/2);
 }
 
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattCorrelator<Float> &srcCorr, int  i_gamma_i2, int i_gamma_f2, int i_pf1, bool forcetozero ){
 
 
-  std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi2","pf1","pc"});
   std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
 
   std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
@@ -3191,7 +3200,6 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
   int Nmoms_c = srcCorr.Nmoms();
 
-  //PLEGMA_ScattCorrelator<Float> V3aux(srcV2.getSource(), srcV2.getMomList(), srcV2.getTotalT());
   auto imap = this->pList().index_map();
 
 
@@ -3205,10 +3213,10 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
     for(int t=0; t < TIME; ++t){
       for (int g1=0 ; g1 < n_gammas_i2 ; ++g1 ){//pi
-	if (i_gamma_i2 != g1)
+        if (i_gamma_i2 != g1)
          continue;
         for (int g2=0 ; g2 < n_gammas_f2 ; ++g2 ){//pf1
-	  if (i_gamma_f2 != g2)
+          if (i_gamma_f2 != g2)
            continue;
           for (int g3=0; g3 < n_gammas_c; ++g3 ){
             this->Corr(t,i_m,g1,g2,g3)[0]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0];
@@ -3220,11 +3228,9 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
   }
 
 }
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero){
-
-
-  std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi2","pf1","pc"});
 
   std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
   std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
@@ -3402,11 +3408,12 @@ void PLEGMA_ScattCorrelator<Float>::apply_sign_adj(int gi){
   
   for( int i_g=0; i_g < N_gammas; ++i_g ){
     Float sign[2] = { (Float)sign_arr[this->GList[gi][i_g]], 0. };
-    PLEGMA_printf("(%s->%f),", GAMMAS_SCATT_STR[this->GList[gi][i_g]].c_str(), sign);
+    PLEGMA_printf("(%s->%f %f),", GAMMAS_SCATT_STR[this->GList[gi][i_g]].c_str(), sign[0], sign[1] );
     for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
       x_e_cx<Float>( this->H_elem() + (o_dofs*N_gammas+i_g)*in_dofs, sign, in_dofs/2);
     }
   }
+  PLEGMA_printf("Apply_sign_adj end\n");
 }
 
 template<typename Float>

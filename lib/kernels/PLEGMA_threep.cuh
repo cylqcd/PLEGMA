@@ -17,6 +17,9 @@ void threep_noe(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop
 
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Vector<FloatA>& vec1, PLEGMA_Vector<FloatB>& vec2, int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas);
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
 void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
 
 
