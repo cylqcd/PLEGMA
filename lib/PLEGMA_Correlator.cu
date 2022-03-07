@@ -1,4 +1,5 @@
 #include <PLEGMA_Gauge.h>
+#include <PLEGMA_Vector.h>
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
@@ -154,6 +155,28 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
   threep_local(*this,bwdProp,fwdProp,signProps,gammas,isZfac);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_oneD(PLEGMA_Vector<Float> &bwdProp,
+                         PLEGMA_Vector<Float> &fwdProp,
+                         PLEGMA_Gauge<Float> &gauge,
+                         int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS,(int) gammas.size()};
+  else  shape = {N_DIMS, (int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"OneD"};
+  description = "x,y,z,t / "+getGammasString(gammas);
+  initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+  gauge.communicateSideGhost();
+  bwdProp.communicateGhost();
+  fwdProp.communicateGhost();
+
+  threep_oneD(*this,bwdProp,fwdProp,signProps,gauge,gammas);
 }
 
 

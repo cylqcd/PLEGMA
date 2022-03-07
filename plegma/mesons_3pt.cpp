@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
       PLEGMA_Vector<float> oet_light_up_zero_SS;
       PLEGMA_Vector<float> oet_light_dn_zero_SS;
       PLEGMA_Vector<float> oet_strange_dn_zero_SS;
-
+      PLEGMA_Vector<float> oet_strange_up_zero_SS;
 
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	//PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
@@ -228,8 +228,7 @@ int main(int argc, char **argv) {
         PLEGMA_Vector<float> oet_light_up_zero_SL(NONE);
         PLEGMA_Vector<float> oet_light_dn_zero_SL(NONE);
         PLEGMA_Vector<float> oet_strange_dn_zero_SL(NONE);
-
-
+        PLEGMA_Vector<float> oet_strange_up_zero_SL(NONE);
 
 	if (stoch_std ==true){
 
@@ -388,7 +387,7 @@ int main(int argc, char **argv) {
 	        THREAD(corr.writeFile( filename, corr_file_format));
 	      };
 
-	      auto computeThreep_oet = [&](double run_mu, PLEGMA_Vector3D<float>& prop, PLEGMA_Vector<float> &propF, int nSmear, WHICHFLAVOR fl, std::string flstring, std::string name) {
+	      auto computeThreep_oet = [&](double run_mu, PLEGMA_Vector3D<float>& prop, PLEGMA_Vector<float> &propF, int nSmear, WHICHFLAVOR fl, std::string name) {
                  PLEGMA_Vector<float> seqProp(BOTH);
                  // ensuring mu positive
 
@@ -444,7 +443,7 @@ int main(int argc, char **argv) {
 
 		     // ONED contractions
 		     seqProp.conjugate();
-                     TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas_insertion));
+                     //TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas_insertion));
                      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
                      corr_oneD.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
 
@@ -465,8 +464,6 @@ int main(int argc, char **argv) {
               THREAD(corr_local.writeFile( filename, corr_file_format));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_oneD";
               THREAD(corr_oneD.writeFile( filename, corr_file_format));
-              corr_local.clear();
-	      corr_oneD.clear();
 
 
               PLEGMA_Vector3D<float> zero_momentum_strange;
@@ -477,8 +474,6 @@ int main(int argc, char **argv) {
               THREAD(corr_local.writeFile( filename, corr_file_format));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_oneD";
               THREAD(corr_oneD.writeFile( filename, corr_file_format));
-              corr_local.clear();
-              corr_oneD.clear();
 
 
 
@@ -492,20 +487,17 @@ int main(int argc, char **argv) {
 
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_oneD";
               THREAD(corr_oneD.writeFile( filename, corr_file_format));
-              corr_local.clear();
-              corr_oneD.clear();
-
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon";
-
 
 	    }
 	    else{
 	      TIME(computeThreep(-mu_ud, propUP3D, propUP_SL, nsmearGauss, LIGHT, "_up_pion"));
 	      TIME(computeThreep(-mu_ud, propST3D, propUP_SL, nsmearGauss, LIGHT, "_up_kaon"));
 	      TIME(computeThreep(-mu_s, propUP3D, propST_SL, nsmearGauss_s, STRANGE, "_st_kaon"));
-	    }
-	  }
-	}
+	    } //std or oet
+	  } //i pf momentum
+	}//i pi momentum
+      } //t sinks
+
       }
       propUP_wrong_smear.rotateToPhysicalBase_device(mu_ud/abs(mu_ud));
       propST_wrong_smear.rotateToPhysicalBase_device(mu_s/abs(mu_s));

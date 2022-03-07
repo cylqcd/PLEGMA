@@ -114,13 +114,11 @@ int main(int argc, char **argv) {
     fflush(stdout);
     }
 
-
     if(sourcemomentumList.empty())
      PLEGMA_error("momentumList empty");
 
     PLEGMA_Vector<double> vectorSource_oet;
     vectorSource_oet.randInit(rand_seed1);
-
 
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
@@ -129,6 +127,17 @@ int main(int argc, char **argv) {
       std::string sourcepositiontext= (std::string)"_" + ssource;
       free(ssource);
 
+      std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
+      momList list_mpi2(1,{mpi2,},{0,});
+      PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2);
+      PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2);
+      PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2);
+      PLEGMA_ScattCorrelator<float> corrPPDN(sourcePositions[isource], list_mpi2);
+
+      corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P0UP");
+      corrP0DN.initialize_diagram(glist_source_meson, glist_sink_meson, "P0DN");
+      corrPPUP.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+      corrPPDN.initialize_diagram(glist_source_meson, glist_sink_meson, "PPDN");
 
       vectorSource_oet.stochastic_Z(nroots);
 
@@ -157,8 +166,21 @@ int main(int argc, char **argv) {
 				   vector1.mulMomentumPhases(sourceMom,+1);
                                    vectorInOut.absorb(vector1,sourcePositions[isource][DIM_T]);
                                  }
+				 {
+                                    PLEGMA_Vector<double> vectorAuxD;
+                                    TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                                    TIME(vectorInOut.copy(vectorAuxD));
+                                 }
+
 
                                  TIME(solver.solve(vectorInOut, vectorInOut));
+
+				 {
+                                    PLEGMA_Vector<double> vectorAuxD;
+                                    TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                                    TIME(vectorInOut.copy(vectorAuxD));
+                                 }
+
 
 				 if(vec_SL.getAllocation() != NONE) {
 				   PLEGMA_Vector<float> vectorAuxF;
@@ -196,11 +218,11 @@ int main(int argc, char **argv) {
 				   PLEGMA_printf("Going to invert %s for component %d\n",
 						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
 //				   if (iproj>7)
-		   {
+		                   {
                                     PLEGMA_Vector<double> vectorAuxD;
                                     TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
                                     TIME(vectorInOut.copy(vectorAuxD));
-                                  }
+                                   }
 
 				   TIME(solver.solve(vectorInOut, vectorInOut));
 //				   if (iproj>7)
@@ -626,6 +648,15 @@ int main(int argc, char **argv) {
 
 
 	    }
+
+
+	    TIME(corrPPUP.P_diagrams( oet_mom_zero_up_SS, oet_mom_fini_up_SS, i_pi2, true));
+
+            TIME(corrP0DN.P_diagrams( oet_mom_zero_up_SS, oet_mom_zero_dn_SS, i_pi2, true));
+
+            TIME(corrPPDN.P_diagrams( oet_mom_zero_dn_SS, oet_mom_fini_dn_SS, i_pi2, true));
+
+            TIME(corrP0UP.P_diagrams( oet_mom_zero_dn_SS, oet_mom_zero_up_SS, i_pi2, true));
   
 
 	    if (nucleon==PROTON){
@@ -704,6 +735,17 @@ int main(int argc, char **argv) {
 	    }
 
 	}//momentum pi2
+
+   	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+        TIME(corrPPUP.apply_sign("P"));
+        TIME(corrPPUP.writeHDF5( outfilename ));
+        TIME(corrPPDN.apply_sign("P"));
+        TIME(corrPPDN.writeHDF5( outfilename ));
+        TIME(corrP0UP.apply_sign("P"));
+        TIME(corrP0UP.writeHDF5( outfilename ));
+        TIME(corrP0DN.apply_sign("P"));
+        TIME(corrP0DN.writeHDF5( outfilename ));
+
 
       }//tsink
 

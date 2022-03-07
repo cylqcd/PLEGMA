@@ -540,32 +540,37 @@ namespace plegma {
   }
 
   template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
-  __inline__ __device__ void partial_trace_mul_Vec_G_Vec(Float2<FloatA> A[N_SPINS],
+  __inline__ __device__ void partial_trace_mul_Vec_G_Vec(Float2<FloatA> A[N_SPINS][N_SPINS],
                                                            Float2<FloatB> B[N_SPINS][N_COLS],
                                                            Float2<FloatC> C[N_SPINS][N_COLS],
                                                            Float2<FloatD> D[N_COLS][N_COLS]){
     if(isGdag) Gdag(D);
 #pragma unroll
     for(int mu = 0 ; mu < N_SPINS; mu++){
-      if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
-         A[mu].x=0.; A[mu].y=0.;
-      }
-#pragma unroll
-      for(int a = 0; a < N_COLS; a++)
-#pragma unroll
-        for(int b = 0; b < N_COLS; b++){
-          if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
-            if(isLeftTrans)  A[mu] +=  B[mu][a] * D[b][a] * C[mu][b];
-            else A[mu] += B[mu][a] * D[a][b] * C[mu][b];
-          }
-          else{
-            if(isLeftTrans) A[mu] -=  B[mu][a] * D[b][a] * C[mu][b];
-            else A[mu] -= B[mu][a] * D[b][a] * C[mu][b];
-          }
+#pragma unroll 
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+        if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
+           A[mu][nu].x=0.; A[mu][nu].y=0.;
         }
+#pragma unroll
+        for(int a = 0; a < N_COLS; a++)
+#pragma unroll
+          for(int b = 0; b < N_COLS; b++){
+            if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
+             if(isLeftTrans)  A[mu][nu] +=  B[mu][a] * D[b][a] * C[nu][b];
+             else A[mu][nu] += B[mu][a] * D[a][b] * C[nu][b];
+            }
+            else{
+             if(isLeftTrans) A[mu][nu] -=  B[mu][a] * D[b][a] * C[nu][b];
+             else A[mu][nu] -= B[mu][a] * D[b][a] * C[nu][b];
+            }
+          }
 
+      }
     }
+
     if(isGdag) Gdag(D);
+    
   }
 
   

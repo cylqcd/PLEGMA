@@ -32,7 +32,7 @@ __global__ void threep_oneD_stochastic_device(Float2<FloatC>* block2,
   if (sid3D < DGC_localVolume3D){
     Float2<FloatA> vec1[N_SPINS][N_COLS];
     Float2<FloatB> vec2[N_SPINS][N_COLS];
-    Float2<FloatC> R[N_SPINS];
+    Float2<FloatC> R[N_SPINS][N_SPINS];
     Float2<FloatG> su3[N_COLS][N_COLS];
     #pragma unroll
     for(int dir = 0; dir < N_DIMS; dir++) {
@@ -59,6 +59,16 @@ __global__ void threep_oneD_stochastic_device(Float2<FloatC>* block2,
 
       for(int iop = 0; iop < listGammas.size; iop++){
 	int opId=listGammas.array[iop];
+	if (signProps >0){
+          accum[iop]=trace_gamma_S<true>(opId,TMP,R);
+        }
+        else if (signProps<0){
+          accum[iop]=trace_gamma_S<true>(opId,TMM,R);
+        }
+        else{
+          accum[iop]=trace_gamma_S<true>(opId,NOROT,R);
+        }
+
 	//if(notZfac){
 	//  accum[dir*listGammas.size + iop] =0;// 0.25*((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
 	//}
@@ -159,7 +169,7 @@ static void threep_oneD_stochastic_host(ProfileStruct &ps, Float2<FloatC> *resul
 
 template<typename FloatC,typename FloatA,typename FloatB,typename FloatG>
 void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Vector<FloatA>& vec1, PLEGMA_Vector<FloatB>& vec2,
-		 int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas){
+		 int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas ){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(gammas.size() <= 0)
     PLEGMA_error("Error the container of gamma matrices cannot be zero");

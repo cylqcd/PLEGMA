@@ -1103,7 +1103,8 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   }
   else{
     char *temporary;
-    this->groups ={this->pList().to_string({0},"pi=", };
+    asprintf(&temporary,"/pi=");
+    this->groups = {this->pList().to_string({0},{temporary})[0],};
   }
 
   //Dataset
