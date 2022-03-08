@@ -60,21 +60,14 @@ __global__ void threep_oneD_stochastic_device(Float2<FloatC>* block2,
       for(int iop = 0; iop < listGammas.size; iop++){
 	int opId=listGammas.array[iop];
 	if (signProps >0){
-          accum[iop]=trace_gamma_S<true>(opId,TMP,R);
+          accum[dir*listGammas.size + iop]=trace_gamma_S<true>(opId,TMP,R);
         }
         else if (signProps<0){
-          accum[iop]=trace_gamma_S<true>(opId,TMM,R);
+          accum[dir*listGammas.size + iop]=trace_gamma_S<true>(opId,TMM,R);
         }
         else{
-          accum[iop]=trace_gamma_S<true>(opId,NOROT,R);
+          accum[dir*listGammas.size + iop]=trace_gamma_S<true>(opId,NOROT,R);
         }
-
-	//if(notZfac){
-	//  accum[dir*listGammas.size + iop] =0;// 0.25*((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
-	//}
-	//else{
-	  accum[dir*listGammas.size + iop] = 0;//trace_gamma_S<true>(opId,NOROT,R);
-	//}
       }
     }
   }

@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
     //pc momentum at the insertion
     //pf meson momentum at the sink
     PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
-    momList sourcemomentumList(2,pathListMomenta,{1,2,});
+    momList sourcemomentumList(2,pathListMomenta,{0,1,});
 
     PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
 
@@ -268,6 +268,7 @@ int main(int argc, char **argv) {
 	
 	for(size_t its = 0; its < tSinks.size(); its++){
 	  int tsinkMtsource = tSinks[its];
+	  printf("Tsinks size %d\n",tSinks[its]);
 	  if(tsinkMtsource >= HGC_totalL[3])
 	    PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
 	  int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
@@ -284,32 +285,55 @@ int main(int argc, char **argv) {
 	  }
 	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
-	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
+	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};
 
+          PLEGMA_printf("Here is ok\n");
+	  fflush(stdout);
 	  std::vector<std::vector<int>> pi1_filt = sourcemomentumList.uniq_p(0);
-
+	  
+          PLEGMA_printf("Here is also pk\n");
+	  fflush(stdout);
 	  for (int i_pi1=0; i_pi1<pi1_filt.size();++i_pi1){
 
             auto &momentum_i1 =  pi1_filt[i_pi1];
-
+            printf("asasasssssssssssssss\n");
+	    fflush(stdout);
 	    momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i1, 0);
+
 	  
 
-            PLEGMA_ScattCorrelator<float> corr_local(source,  filtered_sourcemomentumList, tsinkMtsource+1 );
+	    printf("dssssssssssasasasssssssssssssss\n");
+            fflush(stdout);
+/*	    std::vector<std::string> temp=filtered_sourcemomentumList.to_string({0,1},{"pi2","pf1"});
+            std::cout<<"Plist srcCorr"<<std::endl;
+            for (auto &line : temp){
+              std::cout<<line<<std::endl;
+            }
+            fflush(stdout);
+
+  */        PLEGMA_ScattCorrelator<float> corr_local(source,  filtered_sourcemomentumList, tsinkMtsource+1 );
             PLEGMA_ScattCorrelator<float> corr_oneD( source,  filtered_sourcemomentumList, tsinkMtsource+1 );
 
+	    printf("already the definition fails\n");
+	    fflush(stdout);
 
-            corr_local.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STANDALONE");
+            corr_local.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STL");
 
-            corr_oneD.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STANDALONE");
+            corr_oneD.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STD");
+	    PLEGMA_printf("init done\n");
+	    fflush(stdout);
 
 	    if (stoch_std==true){
     	      TIME(computePropagator_oet(oet_light_up_fini_SS, oet_light_up_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
 	      TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
 	    }
 
+	    PLEGMA_printf("sasass\n");
+	    fflush(stdout);
 
 	    std::vector<std::vector<int>> pf1_filt = filtered_sourcemomentumList.uniq_p(1);
+	    PLEGMA_printf("saaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
+	    fflush(stdout);
 
 
             for(int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1){
@@ -407,6 +431,8 @@ int main(int argc, char **argv) {
                        PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
                        PLEGMA_Vector3D<float> vectorAuxF;
                        vectorAuxF.copy(prop);
+		       double normin=prop.norm();
+		       PLEGMA_printf("propnorm %e\n",normin);
                        double tmp=vectorAuxF.norm();
                        vectorAuxF.apply_gamma(G5);
 
@@ -417,10 +443,17 @@ int main(int argc, char **argv) {
                        vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
                      }
 
+		     double tmpd=vectorInOut.norm();
+                     printf("NORMMMMM %e\n",tmpd);
+                     fflush(stdout);
+
+
                      vectorInOut.apply_gamma_scatt(glist_source_meson[i_gamma_i2],RIGHT);
                      vectorInOut.apply_gamma_scatt(glist_sink_meson[i_gamma_f2],LEFT);
 
                      double norm = vectorInOut.norm();
+		     printf("NORMMMMM %e\n",norm);
+		     fflush(stdout);
                      vectorInOut.scale(1/norm);
                      TIME(solver.solve(vectorInOut, vectorInOut));
                      vectorInOut.scale(norm);
@@ -432,20 +465,24 @@ int main(int argc, char **argv) {
                      //seqProp.conjugate();
                      std::vector<std::vector<int>> mpc = filtered_sourcemomentumList.uniq_p(2);
                      momList list_mpc(1,{mpc,},{0,});
+		     printf("MOmentum %d %d %d\n", mpc[0][0],mpc[0][1],mpc[0][2]);
+		     fflush(stdout);
  
 
 		     //local contractions
-                     PLEGMA_ScattCorrelator<float> corr(source, list_mpc, tsinkMtsource+1);
-                     TIME(corr.contractMesonThrp_local(seqProp, propF, gammas_insertion));
+                     PLEGMA_ScattCorrelator<float> corr1(source, list_mpc, tsinkMtsource+1);
+                     TIME(corr1.contractMesonThrp_local(seqProp, propF, gammas_insertion));
+                     if(signPer < 0) for(size_t iv = 0 ; iv < corr1.getTotalSize()*2; iv++) corr1.H_elem()[iv] *= signPer;
 
-                     corr_local.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
+                     corr_local.absorbGammai2Gammaf2momentumf2(corr1, i_gamma_i2, i_gamma_f2, i_pf1 );
 
 
 		     // ONED contractions
 		     seqProp.conjugate();
-                     //TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas_insertion));
-                     if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-                     corr_oneD.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
+                     PLEGMA_ScattCorrelator<float> corr2(source, list_mpc, tsinkMtsource+1);
+                     TIME(corr2.contractNucleonThrp_oneD(seqProp, propF, contractGauge,0, gammas));
+                     if(signPer < 0) for(size_t iv = 0 ; iv < corr2.getTotalSize()*2; iv++) corr2.H_elem()[iv] *= signPer;
+                     corr_oneD.absorbGammai2Gammaf2momentumf2(corr2, i_gamma_i2, i_gamma_f2, i_pf1 );
 
 
                    }

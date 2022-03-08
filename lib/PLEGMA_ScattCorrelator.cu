@@ -1061,7 +1061,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2,std::vector<GAMMAS_SCATT> &G_c,std::string name_of_diagram){
 
-  assert(( name_of_diagram=="PJP") || (name_of_diagram=="PJP_STANDALONE"));
+  assert(( name_of_diagram=="PJP") || (name_of_diagram=="PJP_STL") || (name_of_diagram=="PJP_STD"));
 
   //Gamma list
   this->GList.clear();
@@ -1093,6 +1093,9 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
       tmp+="},";
     }
   }
+  if (name_of_diagram=="PJP_STD"){
+    tmp+="/x,y,z,t / ";
+  }
   tmp+="/S1/S2/";
 
   this->description = tmp;
@@ -1102,22 +1105,32 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
     this->groups = {""};
   }
   else{
-    char *temporary;
-    asprintf(&temporary,"/pi=");
-    this->groups = {this->pList().to_string({0},{temporary})[0],};
+   char *temporary;
+   asprintf(&temporary,"/pi=");
+   this->groups ={this->pList().to_string({0},{"pi="})[0], };
+   free(temporary);
   }
 
   //Dataset
   this->datasets = {name_of_diagram,};
 
   //Shape
-  this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[2].size()) };
+  if (name_of_diagram == "PJP_STD"){
+    this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[2].size()),(int)N_DIMS };
+  } else{
+    this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[2].size()) };
+  }
 
   //initialize
   this->initialize();
 
   //Offsets
-  this->labels="tmggg";
+  if (name_of_diagram == "PJP_STD"){
+    this->labels="tmgggs";
+  }
+  else{
+    this->labels="tmggg";
+  }
   this->setOffsets();
 
   this->clear_output(true);
@@ -3203,7 +3216,8 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
   auto imap = this->pList().index_map();
 
-
+  std::size_t n_s = this->labels.find("s");
+  if (n_s==std::string::npos){
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
@@ -3226,6 +3240,36 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
         }
       }
     }
+  }
+  }
+  else{
+   printf("Execadasasas\n");
+   fflush(stdout);
+#pragma omp parallel for
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    int i_mom_f1 = imap[i_m][1];
+    if (i_mom_f1!=i_pf1){
+      continue;
+    }
+    int i_pc = i_pinsertions[imap[i_m][2]]; //position of pf1 in moms_pf1 (tempNN)
+    for(int t=0; t < TIME; ++t){
+      for (int g1=0 ; g1 < n_gammas_i2 ; ++g1 ){//pi
+        if (i_gamma_i2 != g1)
+         continue;
+        for (int g2=0 ; g2 < n_gammas_f2 ; ++g2 ){//pf1
+          if (i_gamma_f2 != g2)
+           continue;
+	  for (int dir=0; dir<N_DIMS; ++dir){
+            for (int g3=0; g3 < n_gammas_c; ++g3 ){
+              this->Corr(t,i_m,g1,g2,g3,dir)[0]=srcCorr.H_elem()[2*t*Nmoms_c*N_DIMS*n_gammas_c+2*i_pc*n_gammas_c*N_DIMS+2*dir*n_gammas_c+2*g3+0];
+              this->Corr(t,i_m,g1,g2,g3,dir)[1]=srcCorr.H_elem()[2*t*Nmoms_c*N_DIMS*n_gammas_c+2*i_pc*n_gammas_c*N_DIMS+2*dir*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
+	    }
+          }
+        }
+      }
+    }
+  }
+
   }
 
 }
