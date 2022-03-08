@@ -213,7 +213,6 @@ int main(int argc, char **argv) {
 
       PLEGMA_Vector<float> oet_light_up_zero_SS;
       PLEGMA_Vector<float> oet_light_dn_zero_SS;
-      PLEGMA_Vector<float> oet_strange_dn_zero_SS;
       PLEGMA_Vector<float> oet_strange_up_zero_SS;
 
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
@@ -227,7 +226,6 @@ int main(int argc, char **argv) {
 
         PLEGMA_Vector<float> oet_light_up_zero_SL(NONE);
         PLEGMA_Vector<float> oet_light_dn_zero_SL(NONE);
-        PLEGMA_Vector<float> oet_strange_dn_zero_SL(NONE);
         PLEGMA_Vector<float> oet_strange_up_zero_SL(NONE);
 
 	if (stoch_std ==true){
@@ -238,7 +236,8 @@ int main(int argc, char **argv) {
 
           TIME(computePropagator_oet(oet_light_dn_zero_SS, oet_light_dn_zero_SL, -mu_ud, LIGHT, nsmearGauss, nsmearGauss,  zero_mom));
 
-          TIME(computePropagator_oet(oet_strange_dn_zero_SS, oet_strange_dn_zero_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+          //TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+
         }
         else {
 	  TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, nsmearGauss));
@@ -325,7 +324,7 @@ int main(int argc, char **argv) {
 
 	    if (stoch_std==true){
     	      TIME(computePropagator_oet(oet_light_up_fini_SS, oet_light_up_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
-	      TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+	    //  TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
 	    }
 
 	    PLEGMA_printf("sasass\n");
@@ -343,7 +342,7 @@ int main(int argc, char **argv) {
 
 	      auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop, PLEGMA_Propagator<float> &propF, int nSmear, WHICHFLAVOR fl, std::string name) {
          	char * mom_string;
-	        asprintf(&mom_string, "_mx%+dmy%+dsz%+d", momentum_f1[0], momentum_f1[1], momentum_f1[2]);
+	        asprintf(&mom_string, "_mx%+dmy%+dmz%+d", momentum_f1[0], momentum_f1[1], momentum_f1[2]);
 	        std::string filename = threep_filename + mom_string + "_dt" + std::to_string(tsinkMtsource)+name;
 	        free(mom_string);
 	      
@@ -394,21 +393,21 @@ int main(int argc, char **argv) {
 	        // LOCAL contractions
 	        TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
 	        if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-	        THREAD(corr.writeFile(filename, corr_file_format));			     
+	        TIME(corr.writeFile(filename, corr_file_format));			     
 	        // ONED contractions
 	        TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
 	        if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	        THREAD(corr.writeFile( filename, corr_file_format));
+	        TIME(corr.writeFile( filename, corr_file_format));
 				     
 	        // noe contractions
 	        TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
 	        if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	        THREAD(corr.writeFile( filename, corr_file_format));
+	        TIME(corr.writeFile( filename, corr_file_format));
 	      
 	        // TWOD contractions
 	        TIME(corr.contractNucleonThrp_twoD(seqProp, propF, contractGauge, signProps, gammas));
 	        if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	        THREAD(corr.writeFile( filename, corr_file_format));
+	        TIME(corr.writeFile( filename, corr_file_format));
 	      };
 
 	      auto computeThreep_oet = [&](double run_mu, PLEGMA_Vector3D<float>& prop, PLEGMA_Vector<float> &propF, int nSmear, WHICHFLAVOR fl, std::string name) {
@@ -431,9 +430,6 @@ int main(int argc, char **argv) {
                        PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
                        PLEGMA_Vector3D<float> vectorAuxF;
                        vectorAuxF.copy(prop);
-		       double normin=prop.norm();
-		       PLEGMA_printf("propnorm %e\n",normin);
-                       double tmp=vectorAuxF.norm();
                        vectorAuxF.apply_gamma(G5);
 
                        vectorAuxF.mulMomentumPhases(momentum_f1,+1); // put momentum at the sink
@@ -444,16 +440,12 @@ int main(int argc, char **argv) {
                      }
 
 		     double tmpd=vectorInOut.norm();
-                     printf("NORMMMMM %e\n",tmpd);
-                     fflush(stdout);
 
 
                      vectorInOut.apply_gamma_scatt(glist_source_meson[i_gamma_i2],RIGHT);
                      vectorInOut.apply_gamma_scatt(glist_sink_meson[i_gamma_f2],LEFT);
 
                      double norm = vectorInOut.norm();
-		     printf("NORMMMMM %e\n",norm);
-		     fflush(stdout);
                      vectorInOut.scale(1/norm);
                      TIME(solver.solve(vectorInOut, vectorInOut));
                      vectorInOut.scale(norm);
@@ -465,16 +457,16 @@ int main(int argc, char **argv) {
                      //seqProp.conjugate();
                      std::vector<std::vector<int>> mpc = filtered_sourcemomentumList.uniq_p(2);
                      momList list_mpc(1,{mpc,},{0,});
-		     printf("MOmentum %d %d %d\n", mpc[0][0],mpc[0][1],mpc[0][2]);
-		     fflush(stdout);
  
 
 		     //local contractions
                      PLEGMA_ScattCorrelator<float> corr1(source, list_mpc, tsinkMtsource+1);
                      TIME(corr1.contractMesonThrp_local(seqProp, propF, gammas_insertion));
                      if(signPer < 0) for(size_t iv = 0 ; iv < corr1.getTotalSize()*2; iv++) corr1.H_elem()[iv] *= signPer;
-
+		     PLEGMA_printf("LOCAL size %d\n",corr1.getTotalSize());
                      corr_local.absorbGammai2Gammaf2momentumf2(corr1, i_gamma_i2, i_gamma_f2, i_pf1 );
+
+                     corr1.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
 
 		     // ONED contractions
@@ -482,7 +474,11 @@ int main(int argc, char **argv) {
                      PLEGMA_ScattCorrelator<float> corr2(source, list_mpc, tsinkMtsource+1);
                      TIME(corr2.contractNucleonThrp_oneD(seqProp, propF, contractGauge,0, gammas));
                      if(signPer < 0) for(size_t iv = 0 ; iv < corr2.getTotalSize()*2; iv++) corr2.H_elem()[iv] *= signPer;
-                     corr_oneD.absorbGammai2Gammaf2momentumf2(corr2, i_gamma_i2, i_gamma_f2, i_pf1 );
+                     PLEGMA_printf("ONED size %d\n",corr2.getTotalSize());
+
+
+                     corr2.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+		     corr_oneD.absorbGammai2Gammaf2momentumf2(corr2, i_gamma_i2, i_gamma_f2, i_pf1 );
 
 
                    }
@@ -498,19 +494,19 @@ int main(int argc, char **argv) {
               TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_pion"));
 
               std::string filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_local";
-              THREAD(corr_local.writeFile( filename, corr_file_format));
+              TIME(corr_local.writeFile( filename, corr_file_format));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_oneD";
-              THREAD(corr_oneD.writeFile( filename, corr_file_format));
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
 
-
+/*
               PLEGMA_Vector3D<float> zero_momentum_strange;
               zero_momentum_strange.absorb(oet_strange_up_zero_SS,global_fixSinkTime);
 
               TIME(computeThreep_oet(-mu_ud, zero_momentum_strange, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_kaon"));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_local";
-              THREAD(corr_local.writeFile( filename, corr_file_format));
+              TIME(corr_local.writeFile( filename, corr_file_format));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_oneD";
-              THREAD(corr_oneD.writeFile( filename, corr_file_format));
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
 
 
 
@@ -520,10 +516,10 @@ int main(int argc, char **argv) {
               TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_st_kaon"));
 
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_local";
-	      THREAD(corr_local.writeFile( filename, corr_file_format));
+	      TIME(corr_local.writeFile( filename, corr_file_format));
 
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_oneD";
-              THREAD(corr_oneD.writeFile( filename, corr_file_format));
+              TIME(corr_oneD.writeFile( filename, corr_file_format));*/
 
 	    }
 	    else{
@@ -536,6 +532,7 @@ int main(int argc, char **argv) {
       } //t sinks
 
       }
+/*
       propUP_wrong_smear.rotateToPhysicalBase_device(mu_ud/abs(mu_ud));
       propST_wrong_smear.rotateToPhysicalBase_device(mu_s/abs(mu_s));
       propUP.rotateToPhysicalBase_device(mu_ud/abs(mu_ud));
@@ -566,7 +563,7 @@ int main(int argc, char **argv) {
       	TIME(corr.contractMesonsNew(propUP_wrong_smear, propST_wrong_smear));
 	corr.setDatasets((std::vector<std::string>) {"twop_meson_u's'"});
 	THREAD(corr.writeFile(twop_filename, corr_file_format));
-      }
+      }*/
     }
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }

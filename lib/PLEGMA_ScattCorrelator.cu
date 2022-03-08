@@ -3197,6 +3197,24 @@ void PLEGMA_ScattCorrelator<Float>::normalize_nstoch(int n_stoch){
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattCorrelator<Float> &srcCorr, int  i_gamma_i2, int i_gamma_f2, int i_pf1, bool forcetozero ){
 
+  int TIME = this->localT();
+  if (TIME==0) return;
+
+  std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi","pf","pc"});
+  std::cout<<"Plist ThisCorr"<<std::endl;
+  for (auto &line : temp){
+    std::cout<<line<<std::endl;
+  }
+  fflush(stdout);
+
+  std::vector<std::string> temp1=srcCorr.pList().to_string({0},{"pc"});
+  std::cout<<"Plist srcCorr"<<std::endl;
+  for (auto &line : temp1){
+    std::cout<<line<<std::endl;
+  }
+  fflush(stdout);
+
+
 
   std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
 
@@ -3207,25 +3225,23 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
   int n_gammas_i2 = this->GList[0].size();
   int n_gammas_f2 = this->GList[1].size();
-
   int n_gammas_c  = this->GList[2].size();
 
-  int TIME = this->localT();
-
   int Nmoms_c = srcCorr.Nmoms();
+
 
   auto imap = this->pList().index_map();
 
   std::size_t n_s = this->labels.find("s");
   if (n_s==std::string::npos){
-  #pragma omp parallel for
+  printf("imap size %d\n",imap.size());
+  fflush(stdout);
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
     if (i_mom_f1!=i_pf1){
       continue;
     }
     int i_pc = i_pinsertions[imap[i_m][2]]; //position of pf1 in moms_pf1 (tempNN)
-
     for(int t=0; t < TIME; ++t){
       for (int g1=0 ; g1 < n_gammas_i2 ; ++g1 ){//pi
         if (i_gamma_i2 != g1)
@@ -3234,8 +3250,11 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
           if (i_gamma_f2 != g2)
            continue;
           for (int g3=0; g3 < n_gammas_c; ++g3 ){
+            //printf("REAL %e\n",srcCorr.H_elem()[0]);
+	    //printf("IMAG %e\n",srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+1]);
             this->Corr(t,i_m,g1,g2,g3)[0]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0];
             this->Corr(t,i_m,g1,g2,g3)[1]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
+
           }
         }
       }
@@ -3243,9 +3262,6 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
   }
   }
   else{
-   printf("Execadasasas\n");
-   fflush(stdout);
-#pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
     if (i_mom_f1!=i_pf1){
@@ -3261,6 +3277,9 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
            continue;
 	  for (int dir=0; dir<N_DIMS; ++dir){
             for (int g3=0; g3 < n_gammas_c; ++g3 ){
+
+              //printf("REAL %e\n",srcCorr.H_elem()[2*t*Nmoms_c*N_DIMS*n_gammas_c+2*i_pc*n_gammas_c*N_DIMS+2*dir*n_gammas_c+2*g3+0]);
+	      //printf("IMAG %e\n",srcCorr.H_elem()[2*t*Nmoms_c*N_DIMS*n_gammas_c+2*i_pc*n_gammas_c*N_DIMS+2*dir*n_gammas_c+2*g3+1]);
               this->Corr(t,i_m,g1,g2,g3,dir)[0]=srcCorr.H_elem()[2*t*Nmoms_c*N_DIMS*n_gammas_c+2*i_pc*n_gammas_c*N_DIMS+2*dir*n_gammas_c+2*g3+0];
               this->Corr(t,i_m,g1,g2,g3,dir)[1]=srcCorr.H_elem()[2*t*Nmoms_c*N_DIMS*n_gammas_c+2*i_pc*n_gammas_c*N_DIMS+2*dir*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
 	    }
