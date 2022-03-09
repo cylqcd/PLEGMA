@@ -104,6 +104,17 @@ int main(int argc, char **argv) {
     PLEGMA_printf("###Momentum list read from : %s", pathListMomenta.c_str());
     momList sourcemomentumList(3,pathListMomenta,{2,});
     PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
+    //We have three types of momenta in the list here
+    //The first three entries are the pi2 pion source momentum
+    //The second three entries are the pf1 nucleon sink momentum
+    //The third three entries are the pc momentum at the insertion
+    //In addition the following momentum conversations are imposed
+    //pf1 + pf2 = 0, momentum at the sink is zero , the the pion momentum
+    //at sink follows from the nucleon momentum
+    //pi1 + pi2 = pc so the momentum phase factor is calculated as pc-pi2
+    //We define the list of momenta such that the total momentum should be the [2] \
+    //column, the pc, and of coarse it is understand that this refers to the source only.
+    //At the sink we have always zero momentum
 
     {
     std::vector<std::string> temp=sourcemomentumList.to_string({0,1,2},{"pi2","pf1","pc"});
@@ -263,9 +274,37 @@ int main(int argc, char **argv) {
       
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propDN;
+
+      
+      PLEGMA_Vector<float> oet_mom_zero_up_SS;
+      PLEGMA_Vector<float> oet_mom_zero_dn_SS;
+
+      std::vector<PLEGMA_Vector<float>*> oet_mom_fini_up_SS;
+      std::vector<PLEGMA_Vector<float>*> oet_mom_fini_dn_SS;
+
+      int length_fini_mom=mpi2.size();
+      for(int i=0; i< length_fini_mom; ++i) {
+        oet_mom_fini_up_SS.push_back(new PLEGMA_Vector<float>(HOST));
+        oet_mom_fini_dn_SS.push_back(new PLEGMA_Vector<float>(HOST));
+      }
+
+
+
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
-	PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
+        PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
+
+        PLEGMA_Vector<float> oet_mom_zero_up_SL(tSinks.size()>0 ? BOTH:NONE);
+        PLEGMA_Vector<float> oet_mom_zero_dn_SL(tSinks.size()>0 ? BOTH:NONE);
+
+        std::vector<PLEGMA_Vector<float>*> oet_mom_fini_up_SL;
+	std::vector<PLEGMA_Vector<float>*> oet_mom_fini_dn_SL;
+
+	for(int i=0; i< length_fini_mom; ++i) {
+          oet_mom_fini_up_SL.push_back(new PLEGMA_Vector<float>(HOST));
+          oet_mom_fini_dn_SL.push_back(new PLEGMA_Vector<float>(HOST));
+        }
+
 
 	bool computed_light = false;
 	// If twop_filename exists we hold the computation of the light props
@@ -274,13 +313,90 @@ int main(int argc, char **argv) {
 	  TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
 	  computed_light = true;
 	}
-	
+
+        bool computed_light_oet = true;
+	std::vector<int> zero_mom({0,0,0});
+        TIME(computeOetPropagator(oet_mom_zero_up_SS, oet_mom_zero_up_SL,  mu_ud, LIGHT, nsmearGauss, zero_mom, false));
+        TIME(computeOetPropagator(oet_mom_zero_dn_SS, oet_mom_zero_dn_SL, -mu_ud, LIGHT, nsmearGauss, zero_mom, false));
+
+        std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
+
+        
+	{
+          PLEGMA_Vector<float> vectorAuxF_SS;
+	  PLEGMA_Vector<float> vectorAuxF_SL;
+          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
+            auto &momentum_i2 =  pi2_filt[i_pi2];
+
+            TIME(computeOetPropagator(vectorAuxF_SS, vectorAuxF_SL, mu_ud, LIGHT, nsmearGauss, momentum_i2, false));
+
+	    TIME(corrPPUP.P_diagrams( oet_mom_zero_up_SS, vectorAuxF_SS, i_pi2, true));
+	    TIME(corrP0UP.P_diagrams( oet_mom_zero_dn_SS, vectorAuxF_SS, i_pi2, true));
+
+            vectorAuxF_SS.unload();
+            oet_mom_fini_up_SS[i_pi2]->copy(vectorAuxF_SS,HOST);
+            vectorAuxF_SS.load();
+
+            vectorAuxF_SL.unload();
+            oet_mom_fini_up_SL[i_mpf2]->copy(vectorAuxF_SL,HOST);
+            vectorAuxF_SL.load();
+
+
+	    TIME(computeOetPropagator(vectorAuxF_SS, vectorAuxF_SL, -mu_ud, LIGHT, nsmearGauss, momentum_i2, false));
+	    TIME(corrP0DN.P_diagrams( oet_mom_zero_up_SS, vectorAuxF_SS, i_pi2, true));
+            TIME(corrPPDN.P_diagrams( oet_mom_zero_dn_SS, vectorAuxF_SS, i_pi2, true));
+
+            vectorAuxF_SS.unload();
+            oet_mom_fini_dn_SS[i_pi2]->copy(vectorAuxF_SS,HOST);
+            vectorAuxF_SS.load();
+
+            vectorAuxF_SL.unload();
+            oet_mom_fini_dn_SL[i_mpf2]->copy(vectorAuxF_SL,HOST);
+            vectorAuxF_SL.load();
+	  }
+	}
+
+	std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
+        momList list_mpf1(1,{mpf1,},{0,});
+        PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1);
+        TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
+
+	PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1);
+        TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
+
+	            
+	//Computing T reductions+recombination
+        {
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source, sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source, sourcemomentumList.uniq_p(1));
+          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+          //PLEGMA_printf("Nucleon T2 reduction\n");
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+          //PLEGMA_printf("Nucleon T2 reduction ready\n");
+          TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ));
+          //PLEGMA_printf("Nucleon diagram ready\n");
+
+	}
+
+	//Computing T reductions+recombination
+        {
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source, sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source, sourcemomentumList.uniq_p(1));
+          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+          //PLEGMA_printf("Nucleon T2 reduction\n");
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+          //PLEGMA_printf("Nucleon T2 reduction ready\n");
+          TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
+          //PLEGMA_printf("Nucleon diagram ready\n");
+
+	}
+
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 
         std::vector<int> filter={0,0,0};
         momList filtered_sourcemomentumList_pi20 = sourcemomentumList.extract(filter, 0);
-
-
 
 	for(size_t its = 0; its < tSinks.size(); its++){
 	  int tsinkMtsource = tSinks[its];
@@ -289,51 +405,8 @@ int main(int argc, char **argv) {
 	  int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
 	  int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
-	  std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
-          momList list_mpf1(1,{mpf1,},{0,});
-          PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1,tsinkMtsource+1);
-          TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
 
-	  PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1,tsinkMtsource+1);
-          TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N"));
-
-	            
-	  //Computing T reductions+recombination
-          {
-            PLEGMA_ScattCorrelator<float> reductionsT1N(source, sourcemomentumList.uniq_p(1));
-            PLEGMA_ScattCorrelator<float> reductionsT2N(source, sourcemomentumList.uniq_p(1));
-            //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-            TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-
-            //PLEGMA_printf("Nucleon T2 reduction\n");
-            TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-            //PLEGMA_printf("Nucleon T2 reduction ready\n");
-
-            TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ));
-            //PLEGMA_printf("Nucleon diagram ready\n");
-
-          }
-
-	  //Computing T reductions+recombination
-          {
-            PLEGMA_ScattCorrelator<float> reductionsT1N(source, sourcemomentumList.uniq_p(1));
-            PLEGMA_ScattCorrelator<float> reductionsT2N(source, sourcemomentumList.uniq_p(1));
-            //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-            TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
-
-            //PLEGMA_printf("Nucleon T2 reduction\n");
-            TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
-            //PLEGMA_printf("Nucleon T2 reduction ready\n");
-
-            TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
-            //PLEGMA_printf("Nucleon diagram ready\n");
-
-          }
-
-
-
-
-
+	  //Correlators for storing up and down insertion between the nucleon
 
   	  PLEGMA_ScattCorrelator<float> corrUp(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );
           PLEGMA_ScattCorrelator<float> corrDn(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );
@@ -373,8 +446,6 @@ int main(int argc, char **argv) {
 
                 std::vector<std::vector<int>> pf1_filt = sourcemomentumList.uniq_p(1);
 
-
-
 	        for(int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1){
 
                   auto &momentum_f1 =  pf1_filt[i_pf1];
@@ -400,7 +471,7 @@ int main(int argc, char **argv) {
 		        else
 		          vectorAuxF.seqSourceNucleon(prop1, get_projector(alpha,beta), nucleon, nu, c2);
 					 
-		        // put a momentum in the sink later
+		        // put a momentum in the sink
                         vectorAuxF.mulMomentumPhases(momentum_f1,-1);
 		        vectorAuxF.conjugate();
 		        vectorAuxF.apply_gamma(G5);
@@ -438,7 +509,6 @@ int main(int argc, char **argv) {
 	          
 		  seqProp.conjugate();
 
-
 		  std::vector<std::vector<int>> mpc = filtered_sinkList.uniq_p(2);
 	    	  momList list_mpc(1,{mpc,},{0,});
 				     
@@ -452,7 +522,7 @@ int main(int argc, char **argv) {
                     TIME(corr.contractNucleonThrp_local(seqProp, propF, 0, gammas));
                   }
 	          if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-	          THREAD(corr.writeFile(filename, corr_file_format));
+//                THREAD(corr.writeFile(filename, corr_file_format));
 
 		  if (fl=="up"){
                     corrUp.absorbSourceSinkSpinMom(corr, alpha, beta, i_pf1 );
@@ -486,35 +556,12 @@ int main(int argc, char **argv) {
 
  
 	  THREAD(corrUp.writeHDF5("njnup"));
-          THREAD(corrDn.writeHDF5("njndn"));
+          THREAD(corrDn.writeHDF5("njndn"));	  
 
-
-
-          PLEGMA_Vector<float> oet_mom_zero_up_SS;
-          PLEGMA_Vector<float> oet_mom_zero_up_SL;
-
-          PLEGMA_Vector<float> oet_mom_zero_dn_SS;
-          PLEGMA_Vector<float> oet_mom_zero_dn_SL;
-
-          PLEGMA_Vector<float> oet_mom_fini_up_SS;
-          PLEGMA_Vector<float> oet_mom_fini_up_SL;
-
-	  PLEGMA_Vector<float> oet_mom_fini_dn_SS;
-          PLEGMA_Vector<float> oet_mom_fini_dn_SL;
-
-	  std::vector<int> zero_mom({0,0,0});
-
-          TIME(computeOetPropagator(oet_mom_zero_up_SS, oet_mom_zero_up_SL,  mu_ud, LIGHT, nsmearGauss, zero_mom, false));
-          TIME(computeOetPropagator(oet_mom_zero_dn_SS, oet_mom_zero_dn_SL, -mu_ud, LIGHT, nsmearGauss, zero_mom, false));
-
-	  
           std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
 
           for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
             auto &momentum_i2 =  pi2_filt[i_pi2];
-
-            TIME(computeOetPropagator(oet_mom_fini_up_SS, oet_mom_fini_up_SL, mu_ud, LIGHT, nsmearGauss, momentum_i2, false));
-	    TIME(computeOetPropagator(oet_mom_fini_dn_SS, oet_mom_fini_dn_SL, -mu_ud, LIGHT, nsmearGauss, momentum_i2, false));
 
             momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 
@@ -574,6 +621,9 @@ int main(int argc, char **argv) {
                      seqProp.copy(vectorAuxF);
                 
                      seqProp.apply_gamma(G5);
+		     //Note that the conjugation will
+		     //be done automatically in the contraction
+		     //routine basically the ones used in the pion 2pt
                      //seqProp.conjugate();
                      std::vector<std::vector<int>> mpc = filtered_sourcemomentumList.uniq_p(2);
                      momList list_mpc(1,{mpc,},{0,});
@@ -601,8 +651,8 @@ int main(int argc, char **argv) {
 		     }
                      //THREAD(corr.writeFile(filename, corr_file_format));
 		     //
-		   }
-		 }
+		   }//beta
+		 }//alpha
 
               };
 
@@ -648,26 +698,31 @@ int main(int argc, char **argv) {
 
 
 	    }
-
-
-	    TIME(corrPPUP.P_diagrams( oet_mom_zero_up_SS, oet_mom_fini_up_SS, i_pi2, true));
-
-            TIME(corrP0DN.P_diagrams( oet_mom_zero_up_SS, oet_mom_zero_dn_SS, i_pi2, true));
-
-            TIME(corrPPDN.P_diagrams( oet_mom_zero_dn_SS, oet_mom_fini_dn_SS, i_pi2, true));
-
-            TIME(corrP0UP.P_diagrams( oet_mom_zero_dn_SS, oet_mom_zero_up_SS, i_pi2, true));
   
 
-	    if (nucleon==PROTON){
+            if (nucleon==PROTON){
 
-             TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_mom_fini_up_SS ));
-             TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_mom_fini_up_SS ));
-             TIME(corrM3.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_mom_fini_dn_SS ));
-             TIME(corrM4.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_mom_fini_dn_SS ));
+             PLEGMA_Vector<float> oet_fini_up;
+             oet_fini_up.unload();
+	     oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST)
+             oet_fini_up.load();
 
-	     TIME(corrM5.M_diagrams( corrNP, corrpizero_up ));
-             TIME(corrM6.M_diagrams( corrNP, corrpizero_dn ));
+
+	     PLEGMA_Vector<float> oet_fini_dn;
+             oet_fini_dn.unload();
+             oet_fini_dn.copy(*oet_mom_fini_dn_SS[i_pi2], HOST)
+             oet_fini_dn.load();
+
+             TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_fini_up));
+             TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_fini_up));
+             TIME(corrM3.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_dn));
+             TIME(corrM4.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_dn));
+
+             float *sinkTimeSliceProton;
+             sinkTimeSliceProton=corrNP.get_time_slice(global_fixSinkTime);
+	     TIME(corrM5.M_diagrams( corrNP, corrpizero_up, sinkTimeSliceProton ));
+             TIME(corrM6.M_diagrams( corrNP, corrpizero_dn, sinkTimeSliceProton ));
+	     free(sinkTimeSliceProton);
            
 	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizerodn";
 	     TIME(corrM1.apply_sign("NJNP")); 
@@ -704,8 +759,14 @@ int main(int argc, char **argv) {
 
 	    }
 	    else{
-             TIME(corrM7.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_mom_fini_up_SS ));
-             TIME(corrM8.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_mom_fini_up_SS ));
+
+             PLEGMA_Vector<float> oet_fini_up;
+             oet_fini_up.unload();
+             oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST)
+             oet_fini_up.load();
+
+             TIME(corrM7.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_up ));
+             TIME(corrM8.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_up ));
 
              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup_piplus";
              TIME(corrM7.apply_sign("NJNP"));
@@ -717,8 +778,11 @@ int main(int argc, char **argv) {
              TIME(corrM8.apply_phase());
              TIME(corrM8.writeHDF5(outfilename));
 
-	     TIME(corrM9.M_diagrams(  corrN0, corrpiplus_up ));
-             TIME(corrM10.M_diagrams( corrN0, corrpiplus_dn ));
+             float *sinkTimeSliceNeutron;
+             sinkTimeSliceNeutron=corrN0.get_time_slice(global_fixSinkTime);
+	     TIME(corrM9.M_diagrams(  corrN0, corrpiplus_up, sinkTimeSliceNeutron ));
+             TIME(corrM10.M_diagrams( corrN0, corrpiplus_dn, sinkTimeSliceNeutron ));
+	     free(sinkTimeSliceNeutron);
 
              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup_piplus";
              TIME(corrM9.apply_phase());
@@ -736,18 +800,20 @@ int main(int argc, char **argv) {
 
 	}//momentum pi2
 
-   	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
-        TIME(corrPPUP.apply_sign("P"));
-        TIME(corrPPUP.writeHDF5( outfilename ));
-        TIME(corrPPDN.apply_sign("P"));
-        TIME(corrPPDN.writeHDF5( outfilename ));
-        TIME(corrP0UP.apply_sign("P"));
-        TIME(corrP0UP.writeHDF5( outfilename ));
-        TIME(corrP0DN.apply_sign("P"));
-        TIME(corrP0DN.writeHDF5( outfilename ));
-
 
       }//tsink
+
+
+      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+      TIME(corrPPUP.apply_sign("P"));
+      TIME(corrPPUP.writeHDF5( outfilename ));
+      TIME(corrPPDN.apply_sign("P"));
+      TIME(corrPPDN.writeHDF5( outfilename ));
+      TIME(corrP0UP.apply_sign("P"));
+      TIME(corrP0UP.writeHDF5( outfilename ));
+      TIME(corrP0DN.apply_sign("P"));
+      TIME(corrP0DN.writeHDF5( outfilename ));
+
 
 #endif
 

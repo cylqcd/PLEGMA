@@ -383,6 +383,36 @@ Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
 //  PLEGMA_printf("DEBUG ptr global %e %e\n",ptr[0],ptr[1]);
   return ptr;
 }
+
+template<typename Float>
+Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
+  const int  size_of_glist =this->GList.size();
+  int size_timeslice= this->Nmoms();
+  for (int i=0; i< size_of_glist; ++i){
+    size_timeslice *= this->GList[i].size();
+  }
+  std::size_t n_t = this->labels.find("s");
+  if (n_t!=std::string::npos){
+    size_timeslice *= 32;
+  }
+  else{
+    size_timeslice *= 2;
+  }
+  Float *ptr=((Float *)malloc(sizeof(Float)*size_timeslice));
+  const int t_source_local= global_time_index%HGC_localL[DIM_T];
+  memcpy(ptr, this->Corr(t_source_local), sizeof(Float)*size_timeslice);
+  int coords[4];
+  for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
+  coords[N_DIMS-1]=global_time_index / HGC_localL[N_DIMS-1];
+  int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+
+  int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
+  if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+  MPI_Barrier(HGC_fullComm);
+//  PLEGMA_printf("DEBUG ptr global %e %e\n",ptr[0],ptr[1]);
+  return ptr;
+}
+
 //This routine sum over the time direction a particular PLEGMA_ScattCorrelator object
 template<typename Float>
 std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::average_all_time_slices(){
@@ -2249,7 +2279,7 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagrams( PLEGMA_Vector<Float>* &Phi_0,
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_ScattCorrelator<Float> &CorrPion, bool accum){
+void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_ScattCorrelator<Float> &CorrPion, Float *CorrNucleonTimeSlice, bool accum){
 
   //extract moms
   assert(this->pList().check_eq(0));
@@ -2273,6 +2303,9 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
 
   int n_gammas_f2 = CorrPion.GList[1].size();
   int TIME = this->localT();
+  int GEIGEFGIF=n_extgammas_i*n_extgammas_f*n_gammas_i1*n_gammas_f1;
+  int GEFGIGF=n_extgammas_f*n_gammas_i1*n_gammas_f1;
+  int GIGF=n_gammas_i1*n_gammas_f1;
 
   //for each momentum in moms_red
   #pragma omp parallel for
@@ -2292,9 +2325,10 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
                   //x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2), pion_contribution,
                   //       CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1), N_SPINS*N_SPINS);
                   for (int gc=0; gc< n_gammas_c; ++gc){
+	            int index=i_pf1*GEIGEFGIF+gei*GEFGIGF+gef*GIGF+gi1*n_gammas_f1+gf1;
                     x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2,gc),
                              CorrPion.Corr(t,i_mom,gi2,gf2,gc),
-                             CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
+                             &CorrNucleonTimeSlice[index],
                              N_SPINS*N_SPINS);
                   } //gc
                 }//G_f2
@@ -2336,8 +2370,6 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
 
   pipi_aux.P_diagrams( Phi_0, Phi_1, -1, false); // pf2, t, 1, gi2, gf2 //-1 from eq. (13) is inside P_diagram
 
-  pipi_aux.writeHDF5("temporarypion.h5");
-
 
   //++++++++++ NN x PIPI ++++++++++++
 
@@ -2355,6 +2387,13 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   }
   int n_gammas_f2 = pipi_aux.GList[1].size();
   int TIME = this->localT();
+  Float *sinktimeslice;
+  int globalSinkTimeSlice;
+  if (CorrNucleon.GList.size() >4){
+    globalSinkTimeSlice=(this->source[3]+this->localT())%HGC_totalL[3];
+    sinktimeslice=pipi_aux.get_time_slice(globalSinkTimeSlice);
+  }
+
 
   //for each momentum in moms_red
   #pragma omp parallel for
@@ -2380,14 +2419,13 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
 	          if (CorrNucleon.GList.size() >4){
 	            for (int gc=0; gc< n_gammas_c; ++gc){
                       x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2,gc),
-                               pipi_aux.Corr(t,i_pf2,gi2,gf2),
+                               &sinktimeslice[i_pf2*n_gammas_i2*n_gammas_f2*2+gi2*n_gammas_f2*2+gf2*2],
                                CorrNucleon.Corr(t,i_mom,gei,gef,gi1,gf1,gc),
                                N_SPINS*N_SPINS);
 		    } //gc
 
 		  }
 		  else{
-	            PLEGMA_printf("test %e %e\n",Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2)[0],Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2)[1]);
                     x_pe_cy( this->Corr(t,i_mom,gei,gef,gi1,gi2,gf1,gf2),
                              pipi_aux.Corr(t,i_pf2,gi2,gf2),
                              CorrNucleon.Corr(t,i_pf1,gei,gef,gi1,gf1),
@@ -2402,6 +2440,9 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
       }//G_ext_i
     }//time
   }//mom
+  if  (CorrNucleon.GList.size() >4){
+    free(sinktimeslice);
+  }
 }
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
@@ -3386,24 +3427,17 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
  
     for( int o_dofs=0; o_dofs<out_dofs_src; ++o_dofs){
       for( int i_dofs=0; i_dofs<in_dofs_src; ++i_dofs){
-	if (TIME!=0 && TIME!=1){
-	  *(this->H_elem() + o_dofs*TIME*in_dofs_src + my_it*in_dofs_src  + i_dofs) = *(srcCorr.H_elem() + o_dofs*TIME*in_dofs_src + my_it*in_dofs_src  + i_dofs);  
-	}
-	else {
-	  *(this->H_elem() + o_dofs*in_dofs_src + i_dofs) = *(srcCorr.H_elem() + o_dofs*TIME_src*in_dofs_src + my_it*in_dofs_src  + i_dofs);
-
-	}
+        *(this->H_elem() + o_dofs*TIME*in_dofs_src + my_it*in_dofs_src  + i_dofs) = *(srcCorr.H_elem() + o_dofs*TIME*in_dofs_src + my_it*in_dofs_src  + i_dofs);  	
       }
     }
 
-    if (TIME==0 || TIME==1){
-      int coords[4];
-      for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
-      coords[3]= global_it / HGC_localL[3];
-      int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
-      int mpiErr = MPI_Bcast(this->H_elem(), in_dofs_src*out_dofs_src , MPI_Type<Float>(), rankHas, HGC_fullComm);
-      if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
-    }
+    int coords[4];
+    for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
+    coords[3]= global_it / HGC_localL[3];
+    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+    int mpiErr = MPI_Bcast(this->H_elem(), in_dofs_src*out_dofs_src , MPI_Type<Float>(), rankHas, HGC_fullComm);
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+    
   }
   comm_barrier();
 

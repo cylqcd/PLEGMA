@@ -269,7 +269,7 @@ namespace plegma {
 
     void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum=false );
 
-    void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_ScattCorrelator<Float> &CorrPion,  bool accum=false );
+    void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_ScattCorrelator<Float> &CorrPion, Float *data, bool accum=false );
 
     void LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1reduction, PLEGMA_ScattCorrelator<Float> &T2reduction, PLEGMA_ScattCorrelator<Float> &Loop, bool accum=false );
 
@@ -298,6 +298,8 @@ namespace plegma {
     //
     std::shared_ptr<Float> average_all_time_slices( );
     Float *get_source_time_slice( );
+    Float *get_time_slice( int global_time_index );
+
     void multiply_by_time_slice(std::shared_ptr<Float>&);
     void applyBoundaryConditions( bool antiperiodic, int n_coherent_source=1, int *attract_look_up_table=NULL );
     void apply_phase( );
