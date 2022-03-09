@@ -166,17 +166,28 @@ namespace plegma {
 
 
     std::vector<int> u_posix( int p_i ){
-      assert(p_i<NLIST);
-      auto &moms = ps[p_i];
-    
-      return this->u_posix( p_i, moms );
+      //assert(p_i<NLIST);
+      assert(p_i<=NLIST);
+      if (p_i== NLIST){
+        std::vector<std::vector<int>> moms = this->p_tot();
+	return this->u_posix( p_i, moms );
+      }
+      else {
+	auto &moms = ps[p_i];
+	return this->u_posix( p_i, moms );
+      }
     }
 
     std::vector<int> u_posix_minus( int p_i ){
-      assert(p_i<NLIST);
-      auto &moms = ps[p_i];
-
-      return this->u_posix_minus( p_i, moms );
+      assert(p_i<=NLIST);
+      if (p_i==NLIST){
+	std::vector<std::vector<int>> moms = this->p_tot();
+        return this->u_posix_minus( p_i, moms );
+      }
+      else{
+        auto &moms = ps[p_i];
+        return this->u_posix_minus( p_i, moms );
+      }
     }
 
 
@@ -184,12 +195,12 @@ namespace plegma {
       std::vector<std::vector<int>> res;
 
       std::vector<std::vector<int>> auxs;
-      for(int j=0; j<NLIST; j++)
+      for(int j=0; j<=NLIST; j++)
 	auxs.push_back( u_posix(j) );
 
       for(int i=0; i<this->size(); i++){
 	std::vector<int> tmp;
-	for(int j=0; j<NLIST; j++)
+	for(int j=0; j<=NLIST; j++)
 	  tmp.push_back(auxs[j][i]);
 	res.push_back(tmp);
       }
@@ -201,12 +212,12 @@ namespace plegma {
       std::vector<std::vector<int>> res;
 
       std::vector<std::vector<int>> auxs;
-      for(int j=0; j<NLIST; j++)
+      for(int j=0; j<=NLIST; j++)
         auxs.push_back( u_posix_minus(j) );
 
       for(int i=0; i<this->size(); i++){
         std::vector<int> tmp;
-        for(int j=0; j<NLIST; j++)
+        for(int j=0; j<=NLIST; j++)
           tmp.push_back(auxs[j][i]);
         res.push_back(tmp);
       }

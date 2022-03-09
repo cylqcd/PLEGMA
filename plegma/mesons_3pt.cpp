@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 
           TIME(computePropagator_oet(oet_light_dn_zero_SS, oet_light_dn_zero_SL, -mu_ud, LIGHT, nsmearGauss, nsmearGauss,  zero_mom));
 
-          //TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+          TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
 
         }
         else {
@@ -286,53 +286,28 @@ int main(int argc, char **argv) {
 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};
 
-          PLEGMA_printf("Here is ok\n");
-	  fflush(stdout);
 	  std::vector<std::vector<int>> pi1_filt = sourcemomentumList.uniq_p(0);
 	  
-          PLEGMA_printf("Here is also pk\n");
-	  fflush(stdout);
 	  for (int i_pi1=0; i_pi1<pi1_filt.size();++i_pi1){
 
             auto &momentum_i1 =  pi1_filt[i_pi1];
-            printf("asasasssssssssssssss\n");
-	    fflush(stdout);
 	    momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i1, 0);
 
-	  
-
-	    printf("dssssssssssasasasssssssssssssss\n");
-            fflush(stdout);
-/*	    std::vector<std::string> temp=filtered_sourcemomentumList.to_string({0,1},{"pi2","pf1"});
-            std::cout<<"Plist srcCorr"<<std::endl;
-            for (auto &line : temp){
-              std::cout<<line<<std::endl;
-            }
-            fflush(stdout);
-
-  */        PLEGMA_ScattCorrelator<float> corr_local(source,  filtered_sourcemomentumList, tsinkMtsource+1 );
+            PLEGMA_ScattCorrelator<float> corr_local(source,  filtered_sourcemomentumList, tsinkMtsource+1 );
             PLEGMA_ScattCorrelator<float> corr_oneD( source,  filtered_sourcemomentumList, tsinkMtsource+1 );
 
-	    printf("already the definition fails\n");
-	    fflush(stdout);
 
             corr_local.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STL");
 
-            corr_oneD.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STD");
-	    PLEGMA_printf("init done\n");
-	    fflush(stdout);
+            corr_oneD.initialize_diagram( glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STD");
 
 	    if (stoch_std==true){
     	      TIME(computePropagator_oet(oet_light_up_fini_SS, oet_light_up_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
-	    //  TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+	      TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
 	    }
 
-	    PLEGMA_printf("sasass\n");
-	    fflush(stdout);
 
 	    std::vector<std::vector<int>> pf1_filt = filtered_sourcemomentumList.uniq_p(1);
-	    PLEGMA_printf("saaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-	    fflush(stdout);
 
 
             for(int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1){
@@ -466,7 +441,7 @@ int main(int argc, char **argv) {
 		     PLEGMA_printf("LOCAL size %d\n",corr1.getTotalSize());
                      corr_local.absorbGammai2Gammaf2momentumf2(corr1, i_gamma_i2, i_gamma_f2, i_pf1 );
 
-                     corr1.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+//                     corr1.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
 
 		     // ONED contractions
@@ -477,7 +452,7 @@ int main(int argc, char **argv) {
                      PLEGMA_printf("ONED size %d\n",corr2.getTotalSize());
 
 
-                     corr2.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+ //                    corr2.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 		     corr_oneD.absorbGammai2Gammaf2momentumf2(corr2, i_gamma_i2, i_gamma_f2, i_pf1 );
 
 
@@ -498,7 +473,7 @@ int main(int argc, char **argv) {
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
 
-/*
+
               PLEGMA_Vector3D<float> zero_momentum_strange;
               zero_momentum_strange.absorb(oet_strange_up_zero_SS,global_fixSinkTime);
 
@@ -519,7 +494,7 @@ int main(int argc, char **argv) {
 	      TIME(corr_local.writeFile( filename, corr_file_format));
 
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_oneD";
-              TIME(corr_oneD.writeFile( filename, corr_file_format));*/
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
 
 	    }
 	    else{
