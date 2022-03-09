@@ -338,7 +338,7 @@ int main(int argc, char **argv) {
             vectorAuxF_SS.load();
 
             vectorAuxF_SL.unload();
-            oet_mom_fini_up_SL[i_mpf2]->copy(vectorAuxF_SL,HOST);
+            oet_mom_fini_up_SL[i_pi2]->copy(vectorAuxF_SL,HOST);
             vectorAuxF_SL.load();
 
 
@@ -351,7 +351,7 @@ int main(int argc, char **argv) {
             vectorAuxF_SS.load();
 
             vectorAuxF_SL.unload();
-            oet_mom_fini_dn_SL[i_mpf2]->copy(vectorAuxF_SL,HOST);
+            oet_mom_fini_dn_SL[i_pi2]->copy(vectorAuxF_SL,HOST);
             vectorAuxF_SL.load();
 	  }
 	}
@@ -658,13 +658,22 @@ int main(int argc, char **argv) {
 
 	      PLEGMA_Vector3D<float> zero_down;
 	      zero_down.absorb(oet_mom_zero_dn_SS, global_fixSinkTime);
-              TIME(computeThreep_meson(-mu_ud, zero_down, oet_mom_fini_up_SL, nsmearGauss, LIGHT, "up", "piplus"));
-              TIME(computeThreep_meson( mu_ud, zero_down, oet_mom_fini_dn_SL, nsmearGauss, LIGHT, "dn", "piplus"));
+	      PLEGMA_Vector<float> oet_fini_up_SL;
+	      oet_fini_up_SL.unload();
+	      oet_fini_up_SL.copy(*oet_mom_fini_up_SL[i_pi2],HOST);
+	      oet_fini_up_SL.load();
+	      PLEGMA_Vector<float> oet_fini_dn_SL;
+              oet_fini_dn_SL.unload();
+              oet_fini_dn_SL.copy(*oet_mom_fini_dn_SL[i_pi2],HOST);
+              oet_fini_dn_SL.load();
 
-              TIME(computeThreep_meson( mu_ud, zero_down, oet_mom_fini_dn_SL, nsmearGauss, LIGHT, "up", "pizero"));
+              TIME(computeThreep_meson(-mu_ud, zero_down, oet_fini_up_SL, nsmearGauss, LIGHT, "up", "piplus"));
+              TIME(computeThreep_meson( mu_ud, zero_down, oet_fini_dn_SL, nsmearGauss, LIGHT, "dn", "piplus"));
+
+              TIME(computeThreep_meson( mu_ud, zero_down, oet_fini_dn_SL, nsmearGauss, LIGHT, "up", "pizero"));
 	      PLEGMA_Vector3D<float> zero_up;
               zero_up.absorb(oet_mom_zero_up_SS, global_fixSinkTime);
-              TIME(computeThreep_meson(-mu_ud, zero_up, oet_mom_fini_up_SL, nsmearGauss, LIGHT, "dn", "pizero"));
+              TIME(computeThreep_meson(-mu_ud, zero_up, oet_fini_up_SL, nsmearGauss, LIGHT, "dn", "pizero"));
 	      
 
 	    }//pf1
@@ -704,13 +713,13 @@ int main(int argc, char **argv) {
 
              PLEGMA_Vector<float> oet_fini_up;
              oet_fini_up.unload();
-	     oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST)
+	     oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST);
              oet_fini_up.load();
 
 
 	     PLEGMA_Vector<float> oet_fini_dn;
              oet_fini_dn.unload();
-             oet_fini_dn.copy(*oet_mom_fini_dn_SS[i_pi2], HOST)
+             oet_fini_dn.copy(*oet_mom_fini_dn_SS[i_pi2], HOST);
              oet_fini_dn.load();
 
              TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_fini_up));
@@ -762,7 +771,7 @@ int main(int argc, char **argv) {
 
              PLEGMA_Vector<float> oet_fini_up;
              oet_fini_up.unload();
-             oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST)
+             oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST);
              oet_fini_up.load();
 
              TIME(corrM7.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_up ));
