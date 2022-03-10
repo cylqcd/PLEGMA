@@ -355,7 +355,6 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
 //       (2)generalize it to the case, where the ScattCorrelator object is not
 //          as long as the time-extent of the Lattice
 //       (3)genarlize it to a other time-slices
-//
 template<typename Float>
 Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   const int  size_of_glist =this->GList.size();
@@ -372,7 +371,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   }
   Float *ptr=((Float *)malloc(sizeof(Float)*size_timeslice));
   const int t_source_local= this->source[DIM_T]%HGC_localL[DIM_T];
-  memcpy(ptr, this->Corr(t_source_local), sizeof(Float)*size_timeslice); 
+  memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice); 
   int coords[4];
   for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
   int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
@@ -400,7 +399,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
   }
   Float *ptr=((Float *)malloc(sizeof(Float)*size_timeslice));
   const int t_source_local= global_time_index%HGC_localL[DIM_T];
-  memcpy(ptr, this->Corr(t_source_local), sizeof(Float)*size_timeslice);
+  memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice);
   int coords[4];
   for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
   coords[N_DIMS-1]=global_time_index / HGC_localL[N_DIMS-1];
@@ -409,7 +408,6 @@ Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
   MPI_Barrier(HGC_fullComm);
-//  PLEGMA_printf("DEBUG ptr global %e %e\n",ptr[0],ptr[1]);
   return ptr;
 }
 
@@ -2362,6 +2360,12 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
 
   //++++++++ PION-PION +++++++++
 
+  double normcheck;
+  normcheck=Phi_0.norm();
+  PLEGMA_printf("Phi0 norm %e\n", normcheck);
+  normcheck=Phi_1.norm();
+  PLEGMA_printf("Phi1 norm %e\n", normcheck);
+
   //aux PLEGMA_SC for PhixGxPhi multiplications
   momList auxmlist(1, {moms_pf2,}, {0,});
   PLEGMA_ScattCorrelator pipi_aux(this->getSource(), auxmlist, this->getTotalT());
@@ -2390,8 +2394,9 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   Float *sinktimeslice;
   int globalSinkTimeSlice;
   if (CorrNucleon.GList.size() >4){
-    globalSinkTimeSlice=(this->source[3]+this->localT())%HGC_totalL[3];
+    globalSinkTimeSlice=(this->source[3]+this->localT()-1)%HGC_totalL[3];
     sinktimeslice=pipi_aux.get_time_slice(globalSinkTimeSlice);
+    PLEGMA_printf("zero component %e\n",sinktimeslice[0]);
   }
 
 

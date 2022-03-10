@@ -733,22 +733,22 @@ int main(int argc, char **argv) {
              TIME(corrM6.M_diagrams( corrNP, corrpizero_dn, sinkTimeSliceProton ));
 	     free(sinkTimeSliceProton);
            
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizerodn";
+	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
 	     TIME(corrM1.apply_sign("NJNP")); 
              TIME(corrM1.apply_phase());
 	     TIME(corrM1.writeHDF5(outfilename));
 
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizerodn";
+	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizeroup";
              TIME(corrM2.apply_sign("NJNP"));
              TIME(corrM2.apply_phase());
              TIME(corrM2.writeHDF5(outfilename));
 
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
+             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizerodn";
              TIME(corrM3.apply_sign("NJNP"));
              TIME(corrM3.apply_phase());
              TIME(corrM3.writeHDF5(outfilename));
 
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizeroup";
+	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizerodn";
 
              TIME(corrM4.apply_sign("NJNP"));
              TIME(corrM4.apply_phase());
@@ -765,6 +765,12 @@ int main(int argc, char **argv) {
              TIME(corrM6.apply_sign("NPJP"));
              TIME(corrM6.applyBoundaryConditions(true));
              TIME(corrM6.writeHDF5(outfilename));
+
+	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"pizeroup";
+             TIME(corrpizero_up.writeHDF5(outfilename));
+
+             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"pizerodn";
+             TIME(corrpizero_up.writeHDF5(outfilename));
 
 	    }
 	    else{
@@ -804,6 +810,13 @@ int main(int argc, char **argv) {
              TIME(corrM10.apply_sign("NPJP"));
              (corrM10.applyBoundaryConditions(true,1,NULL));
              TIME(corrM10.writeHDF5(outfilename));
+
+	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"piplusup";
+             TIME(corrpiplus_up.writeHDF5(outfilename));
+
+             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"piplusdn";
+             TIME(corrpiplus_dn.writeHDF5(outfilename));
+
 
 	    }
 
