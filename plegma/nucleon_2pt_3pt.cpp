@@ -153,6 +153,9 @@ int main(int argc, char **argv) {
       vectorSource_oet.stochastic_Z(nroots);
 
       site& source = sourcePositions[isource];
+
+      site source_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
+
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, source[0], source[1], source[2], source[3]);
       updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
@@ -367,8 +370,8 @@ int main(int argc, char **argv) {
 	            
 	//Computing T reductions+recombination
         {
-          PLEGMA_ScattCorrelator<float> reductionsT1N(source, sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsT2N(source, sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList.uniq_p(1));
           //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
           TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
           //PLEGMA_printf("Nucleon T2 reduction\n");
@@ -381,8 +384,8 @@ int main(int argc, char **argv) {
 
 	//Computing T reductions+recombination
         {
-          PLEGMA_ScattCorrelator<float> reductionsT1N(source, sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsT2N(source, sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList.uniq_p(1));
           //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
           TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
           //PLEGMA_printf("Nucleon T2 reduction\n");
@@ -557,127 +560,157 @@ int main(int argc, char **argv) {
  
 	  THREAD(corrUp.writeHDF5("njnup"));
           THREAD(corrDn.writeHDF5("njndn"));	  
+          auto computeOetInvThroughSink = [&](PLEGMA_Vector<float>& vec_SC, double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::vector<int> momentum_f1, int i_gamma_i2, int i_gamma_f2 ) {
+               // ensuring mu positive
+               if(mu != run_mu) {
+                  updateOptions(fl);
+                  mu = run_mu;
+                  solver.UpdateSolver();
+               }
 
-          std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
+               PLEGMA_Vector<double> vectorInOut;
+               {
+                  PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
+                  PLEGMA_Vector3D<float> vectorAuxF;
+                  vectorAuxF.copy(prop);
+		  double tmp=vectorAuxF.norm();
+                  vectorAuxF.apply_gamma(G5);
 
-          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
-            auto &momentum_i2 =  pi2_filt[i_pi2];
+                  vectorAuxF.mulMomentumPhases(momentum_f1,-1); // put momentum at the sink
+                  vectorAuxF.conjugate();
+                  vectorAuxD1.copy(vectorAuxF);
+                  TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
+                  vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+               }
 
-            momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+	       vectorInOut.apply_gamma_scatt(glist_source_meson[i_gamma_i2],RIGHT);
+               vectorInOut.apply_gamma_scatt(glist_sink_meson[i_gamma_f2],LEFT);
 
-	    std::vector<std::vector<int>> pf1_filt= filtered_sourcemomentumList.uniq_p(1);
+               double norm = vectorInOut.norm();
+               vectorInOut.scale(1/norm);
+               TIME(solver.solve(vectorInOut, vectorInOut));
+               vectorInOut.scale(norm);
+               PLEGMA_Vector<float> vectorAuxF;
+               vectorAuxF.copy(vectorInOut);
+               vec_SC.copy(vectorAuxF);
+                
+               vec_SC.apply_gamma(G5);
+	  };
 
-            PLEGMA_ScattCorrelator<float> corrpizero_up(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );
-            PLEGMA_ScattCorrelator<float> corrpizero_dn(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );
-            PLEGMA_ScattCorrelator<float> corrpiplus_up(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );
-            PLEGMA_ScattCorrelator<float> corrpiplus_dn(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );
-	    
-            corrpizero_up.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
-            corrpizero_dn.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
+          auto computeThreep_contract = [&](PLEGMA_ScattCorrelator<float> corrScatt, PLEGMA_Vector<float>& seqProp, PLEGMA_Vector<float> &propF, int i_gamma_i2, int i_gamma_f2, int i_pf1){
 
-            corrpiplus_up.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
-            corrpiplus_dn.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
+	       //Note that the conjugation will
+	       //be done automatically in the contraction
+	       //routine basically the ones used in the pion 2pt
+               //seqProp.conjugate();
+               std::vector<std::vector<int>> mpc = sourcemomentumList.uniq_p(2);
+               momList list_mpc(1,{mpc,},{0,});
 
+	       PLEGMA_ScattCorrelator<float> corr(source, list_mpc, tsinkMtsource+1);
+	       TIME(corr.contractMesonThrp_local(seqProp, propF, gammas_insertion));
 
-	    for (int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1 ){
-              auto &momentum_f1 =  pf1_filt[i_pf1];
+               corrScatt.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
 
-              auto computeThreep_meson = [&](double run_mu, PLEGMA_Vector3D<float>& prop, PLEGMA_Vector<float> &propF, int nSmear, WHICHFLAVOR fl, std::string flstring, std::string name) {
-                 PLEGMA_Vector<float> seqProp(BOTH);
-                 // ensuring mu positive
-                 if(mu != run_mu) {
-                   updateOptions(fl);
-                   mu = run_mu;
-                   solver.UpdateSolver();
+          };
+
+          auto computeThreep_meson = [&](PLEGMA_ScattCorrelator<float> nucleon2pt, double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::string flstring, std::string name) {
+	       std::vector<PLEGMA_Vector<float>*>  inversionThroughSink;
+ 
+	       std::vector<std::vector<int>> pf1_filt= sourcemomentumList.uniq_p(1);
+               int length_fini_mom=pf1_filt.size();
+               int momgammaif=length_fini_mom*glist_source_meson.size()*glist_sink_meson.size();
+
+               for(int i=0; i< momgammaif; ++i) {
+	         inversionThroughSink.push_back(new PLEGMA_Vector<float>(HOST));
+               }
+	       {
+                 PLEGMA_Vector<float> vectorAuxF_SL;
+                 for (int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1 ){
+                   auto &momentum_f1 =  pf1_filt[i_pf1];
+                   for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2){
+	             for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2){
+	     	       TIME(computeOetInvThroughSink(vectorAuxF_SL, run_mu, prop, nSmear, LIGHT, momentum_f1, i_gamma_i2, i_gamma_f2 ));
+                       int index=i_pf1*glist_source_meson.size()*glist_sink_meson.size();
+                       inversionThroughSink[index]->copy( vectorAuxF_SL, HOST);
+                       vectorAuxF_SL.load();
+                     }
+	           }
+	         }
+
+	       }
+	  
+               std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
+               for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
+                 auto &momentum_i2 =  pi2_filt[i_pi2];
+                 momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+
+                 PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+		 std::string label;
+		 if ((flstring == "up") && (name == "pizero")){
+		   label="UUJUU_UP";
+		 }
+		 else if ((flstring == "dn") && (name == "pizero")){
+                   label="DDJDD_DN";
+		 }
+		 else if ((flstring == "up") && (name == "piplus")){
+                   label="DUJUD_UP";
+		 }
+		 else if ((flstring == "dn") && (name == "piplus")){
+                   label="DUJUD_DN";
                  }
 
-		 for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2){
-	           for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2){
+     	         corrM.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", nucleon2pt.getDatasets()[0]+label);
 
-                     PLEGMA_Vector<double> vectorInOut;
-                     {
-                       PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
-                       PLEGMA_Vector3D<float> vectorAuxF;
-                       vectorAuxF.copy(prop);
-		       double tmp=vectorAuxF.norm();
-                       vectorAuxF.apply_gamma(G5);
+                 PLEGMA_ScattCorrelator<float> corrpjp(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );	    
+                 corrpjp.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
 
-                       vectorAuxF.mulMomentumPhases(momentum_f1,-1); // put momentum at the sink
-                       vectorAuxF.conjugate();
-                       vectorAuxD1.copy(vectorAuxF);
-                       TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
-                       vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
-                     }
+	         PLEGMA_Vector<float> oet_fini_SL;
+                 oet_fini_SL.unload();
+	         if ((flstring == "up") ){
+		   oet_fini_SL.copy(*oet_mom_fini_up_SL[i_pi2],HOST);
+		 } 
+                 else {
+                   oet_fini_SL.copy(*oet_mom_fini_dn_SL[i_pi2],HOST);
+		 }
+	         oet_fini_SL.load();
 
-		     vectorInOut.apply_gamma_scatt(glist_source_meson[i_gamma_i2],RIGHT);
-                     vectorInOut.apply_gamma_scatt(glist_sink_meson[i_gamma_f2],LEFT);
-
-                     double norm = vectorInOut.norm();
-                     vectorInOut.scale(1/norm);
-                     TIME(solver.solve(vectorInOut, vectorInOut));
-                     vectorInOut.scale(norm);
-                     PLEGMA_Vector<float> vectorAuxF;
-                     vectorAuxF.copy(vectorInOut);
-                     seqProp.copy(vectorAuxF);
-                
-                     seqProp.apply_gamma(G5);
-		     //Note that the conjugation will
-		     //be done automatically in the contraction
-		     //routine basically the ones used in the pion 2pt
-                     //seqProp.conjugate();
-                     std::vector<std::vector<int>> mpc = filtered_sourcemomentumList.uniq_p(2);
-                     momList list_mpc(1,{mpc,},{0,});
-
-                     PLEGMA_ScattCorrelator<float> corr(source, list_mpc, tsinkMtsource+1);
-		     TIME(corr.contractMesonThrp_local(seqProp, propF, gammas_insertion));
-
-
-                     // LOCAL contractions
-		     if ((name=="pizero")){
-	              if((flstring=="up")){
-                       corrpizero_up.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
-		       }
-		      else {
-                       corrpizero_dn.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
-		       }
+                 for (int i_pf1=0; i_pf1<pf1_filt.size(); ++i_pf1 ){
+                   auto &momentum_f1 =  pf1_filt[i_pf1];
+                   for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2){
+                     for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2){
+	               PLEGMA_Vector<float> sequential;
+		       sequential.unload();
+		       int index=i_pf1*glist_source_meson.size()*glist_sink_meson.size();
+                       sequential.copy(*inversionThroughSink[index],HOST);
+                       TIME(computeThreep_contract(corrpjp, sequential, oet_fini_SL, i_gamma_i2, i_gamma_f2, i_pf1 ));
 		     }
-		     else if ((name=="piplus")){
-	              if ((flstring=="up")){
-                       corrpiplus_up.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
-		      }
-		      else {
-                       corrpiplus_dn.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
-		      }
-		     }
-                     //THREAD(corr.writeFile(filename, corr_file_format));
-		     //
-		   }//beta
-		 }//alpha
+		   }
+		 }
+	       
+                 float *sinkTimeSliceProton;
+                 sinkTimeSliceProton=nucleon2pt.get_time_slice(global_fixSinkTime);
+	         TIME(corrM.M_diagrams( nucleon2pt, corrpjp, sinkTimeSliceProton ));
+	         free(sinkTimeSliceProton);
 
-              };
+	         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"nucleonpionJpion";
+	         TIME(corrM.apply_phase());
+                 TIME(corrM.apply_sign("NPJP"));
+                 TIME(corrM.applyBoundaryConditions(true));
+                 TIME(corrM.writeHDF5(outfilename));
 
-	      PLEGMA_Vector3D<float> zero_down;
-	      zero_down.absorb(oet_mom_zero_dn_SS, global_fixSinkTime);
-	      PLEGMA_Vector<float> oet_fini_up_SL;
-	      oet_fini_up_SL.unload();
-	      oet_fini_up_SL.copy(*oet_mom_fini_up_SL[i_pi2],HOST);
-	      oet_fini_up_SL.load();
-	      PLEGMA_Vector<float> oet_fini_dn_SL;
-              oet_fini_dn_SL.unload();
-              oet_fini_dn_SL.copy(*oet_mom_fini_dn_SL[i_pi2],HOST);
-              oet_fini_dn_SL.load();
 
-              TIME(computeThreep_meson(-mu_ud, zero_down, oet_fini_up_SL, nsmearGauss, LIGHT, "up", "piplus"));
-              TIME(computeThreep_meson( mu_ud, zero_down, oet_fini_dn_SL, nsmearGauss, LIGHT, "dn", "piplus"));
+	         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"pionJpion";
+                 TIME(corrpjp.writeHDF5(outfilename));
+	       }
 
-              TIME(computeThreep_meson( mu_ud, zero_down, oet_fini_dn_SL, nsmearGauss, LIGHT, "up", "pizero"));
-	      PLEGMA_Vector3D<float> zero_up;
-              zero_up.absorb(oet_mom_zero_up_SS, global_fixSinkTime);
-              TIME(computeThreep_meson(-mu_ud, zero_up, oet_fini_up_SL, nsmearGauss, LIGHT, "dn", "pizero"));
-	      
+	  };
 
-	    }//pf1
 
+          std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
+          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
+            auto &momentum_i2 =  pi2_filt[i_pi2];
+            momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
+	  
             PLEGMA_ScattCorrelator<float> corrM1(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM2(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM3(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
@@ -692,136 +725,87 @@ int main(int argc, char **argv) {
 
 
             if (nucleon==PROTON){
-	       corrM1.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUU_UP");
-               corrM2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUU_DN");
-               corrM3.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDD_UP");
-               corrM4.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDD_DN");
-	       corrM5.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNNDJD_DN");
-               corrM6.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNNUJU_UP");
+	      corrM1.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUU_UP");
+              corrM2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUU_DN");
+              corrM3.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDD_UP");
+              corrM4.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDD_DN");
 
 	    } else {
-               corrM7.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUD_UP");
-               corrM8.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUD_DN");
-	       corrM9.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNNUJD_UP");
-               corrM10.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNNUJD_DN");
-
+              corrM7.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUD_UP");
+              corrM8.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUD_DN");
 
 	    }
-  
-
+ 
             if (nucleon==PROTON){
+              PLEGMA_Vector<float> oet_fini_up;
+              oet_fini_up.unload();
+	      oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST);
+              oet_fini_up.load();
 
-             PLEGMA_Vector<float> oet_fini_up;
-             oet_fini_up.unload();
-	     oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST);
-             oet_fini_up.load();
+	      PLEGMA_Vector<float> oet_fini_dn;
+              oet_fini_dn.unload();
+              oet_fini_dn.copy(*oet_mom_fini_dn_SS[i_pi2], HOST);
+              oet_fini_dn.load();
 
+              TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_fini_up));
+              TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_fini_up));
+              TIME(corrM3.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_dn));
+              TIME(corrM4.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_dn));
 
-	     PLEGMA_Vector<float> oet_fini_dn;
-             oet_fini_dn.unload();
-             oet_fini_dn.copy(*oet_mom_fini_dn_SS[i_pi2], HOST);
-             oet_fini_dn.load();
+            
+	      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
+	      TIME(corrM1.apply_sign("NJNP")); 
+              TIME(corrM1.apply_phase());
+	      TIME(corrM1.writeHDF5(outfilename));
 
-             TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_fini_up));
-             TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_fini_up));
-             TIME(corrM3.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_dn));
-             TIME(corrM4.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_dn));
+	      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizeroup";
+              TIME(corrM2.apply_sign("NJNP"));
+              TIME(corrM2.apply_phase());
+              TIME(corrM2.writeHDF5(outfilename));
 
-             float *sinkTimeSliceProton;
-             sinkTimeSliceProton=corrNP.get_time_slice(global_fixSinkTime);
-	     TIME(corrM5.M_diagrams( corrNP, corrpizero_up, sinkTimeSliceProton ));
-             TIME(corrM6.M_diagrams( corrNP, corrpizero_dn, sinkTimeSliceProton ));
-	     free(sinkTimeSliceProton);
-           
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
-	     TIME(corrM1.apply_sign("NJNP")); 
-             TIME(corrM1.apply_phase());
-	     TIME(corrM1.writeHDF5(outfilename));
+              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizerodn";
+              TIME(corrM3.apply_sign("NJNP"));
+              TIME(corrM3.apply_phase());
+              TIME(corrM3.writeHDF5(outfilename));
 
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizeroup";
-             TIME(corrM2.apply_sign("NJNP"));
-             TIME(corrM2.apply_phase());
-             TIME(corrM2.writeHDF5(outfilename));
+	      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizerodn";
 
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizerodn";
-             TIME(corrM3.apply_sign("NJNP"));
-             TIME(corrM3.apply_phase());
-             TIME(corrM3.writeHDF5(outfilename));
+	      TIME(corrM4.apply_sign("NJNP"));
+              TIME(corrM4.apply_phase());
+              TIME(corrM4.writeHDF5(outfilename));
 
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_pizerodn";
-
-             TIME(corrM4.apply_sign("NJNP"));
-             TIME(corrM4.apply_phase());
-             TIME(corrM4.writeHDF5(outfilename));
-
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"proton_pizeroupup";
-	     TIME(corrM5.apply_phase());
-             TIME(corrM5.apply_sign("NPJP"));
-             TIME(corrM5.applyBoundaryConditions(true));
-             TIME(corrM5.writeHDF5(outfilename));
-
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"proton_pizerodndn";
-             TIME(corrM6.apply_phase());
-             TIME(corrM6.apply_sign("NPJP"));
-             TIME(corrM6.applyBoundaryConditions(true));
-             TIME(corrM6.writeHDF5(outfilename));
-
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"pizeroup";
-             TIME(corrpizero_up.writeHDF5(outfilename));
-
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"pizerodn";
-             TIME(corrpizero_up.writeHDF5(outfilename));
+              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"proton_pizerodndn";
+              TIME(corrM6.apply_phase());
+              TIME(corrM6.apply_sign("NPJP"));
+              TIME(corrM6.applyBoundaryConditions(true));
+              TIME(corrM6.writeHDF5(outfilename));
 
 	    }
 	    else{
 
-             PLEGMA_Vector<float> oet_fini_up;
-             oet_fini_up.unload();
-             oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST);
-             oet_fini_up.load();
+              PLEGMA_Vector<float> oet_fini_up;
+              oet_fini_up.unload();
+              oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST);
+              oet_fini_up.load();
 
-             TIME(corrM7.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_up ));
-             TIME(corrM8.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_up ));
+              TIME(corrM7.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_up ));
+              TIME(corrM8.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_up ));
 
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup_piplus";
-             TIME(corrM7.apply_sign("NJNP"));
-             TIME(corrM7.apply_phase());
-             TIME(corrM7.writeHDF5(outfilename));
+              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup_piplus";
+              TIME(corrM7.apply_sign("NJNP"));
+              TIME(corrM7.apply_phase());
+              TIME(corrM7.writeHDF5(outfilename));
 
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutrondn_piplus";
-             TIME(corrM8.apply_sign("NJNP"));
-             TIME(corrM8.apply_phase());
-             TIME(corrM8.writeHDF5(outfilename));
+	      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutrondn_piplus";
+              TIME(corrM8.apply_sign("NJNP"));
+              TIME(corrM8.apply_phase());
+              TIME(corrM8.writeHDF5(outfilename));
 
-             float *sinkTimeSliceNeutron;
-             sinkTimeSliceNeutron=corrN0.get_time_slice(global_fixSinkTime);
-	     TIME(corrM9.M_diagrams(  corrN0, corrpiplus_up, sinkTimeSliceNeutron ));
-             TIME(corrM10.M_diagrams( corrN0, corrpiplus_dn, sinkTimeSliceNeutron ));
-	     free(sinkTimeSliceNeutron);
-
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup_piplus";
-             TIME(corrM9.apply_phase());
-             TIME(corrM9.apply_sign("NPJP"));
-             (corrM9.applyBoundaryConditions(true,1,NULL));
-             TIME(corrM9.writeHDF5(outfilename));
-
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutrondn_piplus";
-             TIME(corrM10.apply_phase());
-             TIME(corrM10.apply_sign("NPJP"));
-             (corrM10.applyBoundaryConditions(true,1,NULL));
-             TIME(corrM10.writeHDF5(outfilename));
-
-	     outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"piplusup";
-             TIME(corrpiplus_up.writeHDF5(outfilename));
-
-             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"piplusdn";
-             TIME(corrpiplus_dn.writeHDF5(outfilename));
-
-
+             
 	    }
 
 	}//momentum pi2
-
+#endif
 
       }//tsink
 
@@ -837,7 +821,7 @@ int main(int argc, char **argv) {
       TIME(corrP0DN.writeHDF5( outfilename ));
 
 
-#endif
+
 
         }
       // If twop_filename exists we skip the rest
@@ -1026,4 +1010,3 @@ int main(int argc, char **argv) {
   finalize();
   return 0;
 }
-
