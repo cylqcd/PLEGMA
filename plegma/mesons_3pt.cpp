@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   int startSource = 0;
   int nroots=4;
   int rand_seed1=1234;
-
+  int confnumber_int;
   int stoch_std=true;
 
   std::vector<GAMMAS_SCATT> glist_sink_meson={G_5};
@@ -35,6 +35,9 @@ int main(int argc, char **argv) {
 
 
   std::string srcInputFile = "./input.src";
+  std::string outfilename;
+  std::string outdiagramPrefix="";
+
   std::vector<int> sourceMom = {0,0,0};
     auto add_options = [&](Options& options) {
     options.set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
@@ -43,6 +46,10 @@ int main(int argc, char **argv) {
     options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
     options.set("source-mom", "The list of momenta components at the source. Every three makes a momentum", verbosity, sourceMom);
     options.set("stoch_std", "stoch_std = true calculates the meson 3pt function using the oet, otherwise we use the standard point to all method", verbosity, stoch_std);
+    options.set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
+    options.set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
+
+
 
 		     };
   add_options(*HGC_options);
@@ -98,12 +105,34 @@ int main(int argc, char **argv) {
 
     PLEGMA_printf("N momenta in sourcemomentumList: %d",sourcemomentumList.size());
 
-    
+  //Get the confnumber for latfile
+    char *ssource;
+    asprintf(&ssource,"%04d", confnumber_int);
+    std::string confnumber= ssource;
+    free(ssource);
+
     for(int isource = startSource; isource < numSourcePositions; isource++){
       site& source = sourcePositions[isource];
+
+      asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);
+      std::string sourcepositiontext= (std::string)"_" + ssource;
+      free(ssource);
+
+
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, source[0], source[1], source[2], source[3]);
       updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
+
+      std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
+      momList list_mpi2(1,{mpi2,},{0,});
+      PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2);
+      PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2);
+      PLEGMA_ScattCorrelator<float> corrKAON(sourcePositions[isource], list_mpi2);
+
+      corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P0UP");
+      corrPPUP.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+      corrKAON.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+
 
       vectorSource_oet.stochastic_Z(nroots);
 
@@ -213,7 +242,7 @@ int main(int argc, char **argv) {
 
       PLEGMA_Vector<float> oet_light_up_zero_SS;
       PLEGMA_Vector<float> oet_light_dn_zero_SS;
-      PLEGMA_Vector<float> oet_strange_up_zero_SS;
+      PLEGMA_Vector<float> oet_strange_dn_zero_SS;
 
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	//PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
@@ -226,7 +255,7 @@ int main(int argc, char **argv) {
 
         PLEGMA_Vector<float> oet_light_up_zero_SL(NONE);
         PLEGMA_Vector<float> oet_light_dn_zero_SL(NONE);
-        PLEGMA_Vector<float> oet_strange_up_zero_SL(NONE);
+        PLEGMA_Vector<float> oet_strange_dn_zero_SL(NONE);
 
 	if (stoch_std ==true){
 
@@ -234,9 +263,17 @@ int main(int argc, char **argv) {
 
           TIME(computePropagator_oet(oet_light_up_zero_SS, oet_light_up_zero_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, zero_mom));
 
-          TIME(computePropagator_oet(oet_light_dn_zero_SS, oet_light_dn_zero_SL, -mu_ud, LIGHT, nsmearGauss, nsmearGauss,  zero_mom));
+          oet_light_up_zero_SS.writeHDF5("oet_light_UP_SS_zero");
 
-          TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+
+          TIME(computePropagator_oet(oet_light_dn_zero_SS, oet_light_dn_zero_SL, -mu_ud, LIGHT, nsmearGauss, nsmearGauss,  zero_mom));
+	  oet_light_dn_zero_SS.writeHDF5("oet_light_DN_SS_zero");
+
+
+          TIME(computePropagator_oet(oet_strange_dn_zero_SS, oet_strange_dn_zero_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+
+	  oet_strange_dn_zero_SS.writeHDF5("oet_strange_DN_SS_zero");
+
 
         }
         else {
@@ -290,6 +327,7 @@ int main(int argc, char **argv) {
 	  
 	  for (int i_pi1=0; i_pi1<pi1_filt.size();++i_pi1){
 
+
             auto &momentum_i1 =  pi1_filt[i_pi1];
 	    momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i1, 0);
 
@@ -303,8 +341,22 @@ int main(int argc, char **argv) {
 
 	    if (stoch_std==true){
     	      TIME(computePropagator_oet(oet_light_up_fini_SS, oet_light_up_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
+              oet_light_up_fini_SS.writeHDF5("oet_light_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+              oet_light_up_fini_SL.writeHDF5("oet_light_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+
+
 	      TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+
+              oet_strange_up_fini_SS.writeHDF5("oet_strange_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+              oet_strange_up_fini_SL.writeHDF5("oet_strange_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+
 	    }
+
+
+            TIME(corrPPUP.P_diagrams( oet_light_up_zero_SS, oet_light_up_fini_SS, i_pi1, true));
+            TIME(corrP0UP.P_diagrams( oet_light_dn_zero_SS, oet_light_up_fini_SS, i_pi1, true));
+	    TIME(corrKAON.P_diagrams( oet_light_up_zero_SS, oet_strange_up_fini_SS, i_pi1, true)); 
+
 
 
 	    std::vector<std::vector<int>> pf1_filt = filtered_sourcemomentumList.uniq_p(1);
@@ -407,28 +459,46 @@ int main(int argc, char **argv) {
                        vectorAuxF.copy(prop);
                        vectorAuxF.apply_gamma(G5);
 
-                       vectorAuxF.mulMomentumPhases(momentum_f1,+1); // put momentum at the sink
-                       vectorAuxF.conjugate();
+                       vectorAuxF.mulMomentumPhases(momentum_f1,-1); // put momentum at the sink
                        vectorAuxD1.copy(vectorAuxF);
                        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
                        vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
                      }
 
-		     double tmpd=vectorInOut.norm();
+
+	    	     GAMMAS_SCATT G_i2= apply_g5( glist_source_meson[i_gamma_i2], LEFT );
+                     GAMMAS_SCATT G_f2= apply_g5( glist_source_meson[i_gamma_f2], RIGHT );
 
 
-                     vectorInOut.apply_gamma_scatt(glist_source_meson[i_gamma_i2],RIGHT);
-                     vectorInOut.apply_gamma_scatt(glist_sink_meson[i_gamma_f2],LEFT);
+                     vectorInOut.apply_gamma_scatt(G_i2,RIGHT);
+                     vectorInOut.apply_gamma_scatt(G_f2,LEFT);
+
+		     vectorInOut.apply_gamma(G5);
 
                      double norm = vectorInOut.norm();
                      vectorInOut.scale(1/norm);
+		     {
+                     PLEGMA_Vector<double> vectorAuxD;
+                     TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                     vectorInOut.copy(vectorAuxD);
+                     }
+
                      TIME(solver.solve(vectorInOut, vectorInOut));
+
+                     {
+                     PLEGMA_Vector<double> vectorAuxD;
+                     TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                     vectorInOut.copy(vectorAuxD);
+                     }
                      vectorInOut.scale(norm);
                      PLEGMA_Vector<float> vectorAuxF;
                      vectorAuxF.copy(vectorInOut);
                      seqProp.copy(vectorAuxF);
-
                      seqProp.apply_gamma(G5);
+
+                     seqProp.writeHDF5("oet_seq_"+name+std::to_string(momentum_f1[0])+std::to_string(momentum_f1[1])+std::to_string(momentum_f1[2]));
+
+
                      //seqProp.conjugate();
                      std::vector<std::vector<int>> mpc = filtered_sourcemomentumList.uniq_p(2);
                      momList list_mpc(1,{mpc,},{0,});
@@ -464,7 +534,7 @@ int main(int argc, char **argv) {
 	    if (stoch_std == true){
 
               PLEGMA_Vector3D<float> zero_momentum_light;
-	      zero_momentum_light.absorb(oet_light_dn_zero_SS, global_fixSinkTime);
+	      zero_momentum_light.absorb(oet_light_up_zero_SS, global_fixSinkTime);
 
               TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_pion"));
 
@@ -475,7 +545,7 @@ int main(int argc, char **argv) {
 
 
               PLEGMA_Vector3D<float> zero_momentum_strange;
-              zero_momentum_strange.absorb(oet_strange_up_zero_SS,global_fixSinkTime);
+              zero_momentum_strange.absorb(oet_strange_dn_zero_SS,global_fixSinkTime);
 
               TIME(computeThreep_oet(-mu_ud, zero_momentum_strange, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_kaon"));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_local";
@@ -486,15 +556,15 @@ int main(int argc, char **argv) {
 
 
 
-	      zero_momentum_light.absorb(oet_light_up_zero_SS,global_fixSinkTime);
+/*            zero_momentum_light.absorb(oet_light_up_zero_SS,global_fixSinkTime);
 
-              TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_st_kaon"));
+              TIME(computeThreep_oet(mu_s, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_st_kaon"));
 
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_local";
 	      TIME(corr_local.writeFile( filename, corr_file_format));
 
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_oneD";
-              TIME(corr_oneD.writeFile( filename, corr_file_format));
+              TIME(corr_oneD.writeFile( filename, corr_file_format));*/
 
 	    }
 	    else{
@@ -505,6 +575,18 @@ int main(int argc, char **argv) {
 	  } //i pf momentum
 	}//i pi momentum
       } //t sinks
+
+      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
+      TIME(corrPPUP.apply_sign("P"));
+      TIME(corrPPUP.writeHDF5( outfilename ));
+      TIME(corrP0UP.apply_sign("P"));
+      TIME(corrP0UP.writeHDF5( outfilename ));
+
+      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_K";
+      TIME(corrKAON.apply_sign("P"));
+      TIME(corrKAON.writeHDF5( outfilename ));
+
+
 
       }
 /*
