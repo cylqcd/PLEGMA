@@ -245,6 +245,7 @@ int main(int argc, char **argv) {
       PLEGMA_Vector<float> oet_light_up_zero_SS;
       PLEGMA_Vector<float> oet_light_dn_zero_SS;
       PLEGMA_Vector<float> oet_strange_up_zero_SS;
+      PLEGMA_Vector<float> oet_strange_dn_zero_SS;
 
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	//PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
@@ -261,6 +262,7 @@ int main(int argc, char **argv) {
         PLEGMA_Vector<float> oet_light_up_zero_SL(NONE);
         PLEGMA_Vector<float> oet_light_dn_zero_SL(NONE);
         PLEGMA_Vector<float> oet_strange_up_zero_SL(NONE);
+	PLEGMA_Vector<float> oet_strange_dn_zero_SL(NONE);
 
 	if (stoch_std ==true){
 
@@ -278,6 +280,12 @@ int main(int argc, char **argv) {
           TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
 
 	  oet_strange_up_zero_SS.writeHDF5("oet_strange_UP_SS_zero");
+
+
+          TIME(computePropagator_oet(oet_strange_dn_zero_SS, oet_strange_dn_zero_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+
+          oet_strange_dn_zero_SS.writeHDF5("oet_strange_DN_SS_zero");
+
 
 
         }
@@ -560,6 +568,14 @@ int main(int argc, char **argv) {
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
 
+	      zero_momentum_light.absorb(oet_light_dn_zero_SS, global_fixSinkTime);
+
+              TIME(computeThreep_oet(mu_ud, zero_momentum_light, oet_light_dn_fini_SL, nsmearGauss, LIGHT, "_up_pion_inverted"));
+
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_inverted_local";
+              TIME(corr_local.writeFile( filename, corr_file_format));
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_inverted_oneD";
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
 
               PLEGMA_Vector3D<float> zero_momentum_strange;
               zero_momentum_strange.absorb(oet_strange_up_zero_SS,global_fixSinkTime);
@@ -570,6 +586,13 @@ int main(int argc, char **argv) {
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
 
+	      zero_momentum_strange.absorb(oet_strange_dn_zero_SS,global_fixSinkTime);
+
+              TIME(computeThreep_oet(mu_ud, zero_momentum_strange, oet_light_dn_fini_SL, nsmearGauss, LIGHT, "_up_kaon_inverted"));
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_inverted_local";
+              TIME(corr_local.writeFile( filename, corr_file_format));
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_inverted_oneD";
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
 
 
               zero_momentum_light.absorb(oet_light_dn_zero_SS,global_fixSinkTime);
@@ -582,6 +605,17 @@ int main(int argc, char **argv) {
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
 
+	      zero_momentum_light.absorb(oet_light_up_zero_SS,global_fixSinkTime);
+
+              TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_dn_pion_inverted"));
+
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_inverted_local";
+              TIME(corr_local.writeFile( filename, corr_file_format));
+
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_inverted_oneD";
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
+
+	      zero_momentum_light.absorb(oet_light_dn_zero_SS,global_fixSinkTime);
 
               TIME(computeThreep_oet(mu_s, zero_momentum_light, oet_strange_dn_fini_SL, nsmearGauss, STRANGE, "_st_kaon"));
 
@@ -591,6 +625,15 @@ int main(int argc, char **argv) {
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
 
+              zero_momentum_light.absorb(oet_light_up_zero_SS,global_fixSinkTime);
+
+              TIME(computeThreep_oet(-mu_s, zero_momentum_light, oet_strange_up_fini_SL, nsmearGauss, STRANGE, "_st_kaon_inverted"));
+
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_inverted_local";
+              TIME(corr_local.writeFile( filename, corr_file_format));
+
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_inverted_oneD";
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
 
 	    }
 	    else{
