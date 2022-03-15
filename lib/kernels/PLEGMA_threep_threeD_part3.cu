@@ -4,14 +4,24 @@
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_threep.cuh>
+#include <PLEGMA_Vector.h>
 
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-template<typename FloatC, typename FloatA, typename FloatB, typename FloatG>
+template<bool b, typename FloatA> using local_PorV = typename std::conditional< b==true,  Float2<FloatA>[N_SPINS][N_SPINS][N_COLS][N_COLS],  Float2<FloatA>[N_SPINS][N_COLS]>::type;
+
+template<bool b, typename FloatA> using PorV = typename std::conditional< b==true,  PLEGMA_Propagator<FloatA>&,  PLEGMA_Vector<FloatA>&>::type;
+
+template<bool b, typename FloatA> using PorVtex = typename std::conditional< b==true,  propTex<FloatA>,  vectorTex<FloatA>>::type;
+
+
+template<bool b,typename FloatC, typename FloatA, typename FloatB, typename FloatG>
 __global__ void threep_threeD_part3_device(Float2<FloatC>* block2,
-				     propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
+                                     typename std::conditional<b==true, propTex<FloatA>,  vectorTex<FloatA>>::type texture1,
+                                     typename std::conditional<b==true, propTex<FloatB>,  vectorTex<FloatB>>::type texture2,
+
 				     gaugeTex<FloatG> gaugeTex, KernelArr<GAMMAS> listGammas,
 				     int it, int time_step, int maxT, int4 source,
 				     int signProps, bool runFT, tex_mom_list moms,
@@ -31,80 +41,91 @@ __global__ void threep_threeD_part3_device(Float2<FloatC>* block2,
     accum[i]=0;
 
   if (sid3D < DGC_localVolume3D){
-    Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
-    Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
+    local_PorV<b,FloatA> prop1;
+    local_PorV<b,FloatB> prop2;
+
     Float2<FloatC> R[N_SPINS][N_SPINS];
     Float2<FloatG> su3_1[N_COLS][N_COLS];
     Float2<FloatG> su3_2[N_COLS][N_COLS];
     Float2<FloatG> su3_3[N_COLS][N_COLS];
 	  
     // - term x+dir1, x^, x, x+dir2, x+dir2+dir3
-    prop1Tex.get<Plus>(prop1,vid,dir1); gaugeTex.get(su3_1,dir1,vid); gaugeTex.get(su3_2,dir2,vid); gaugeTex.get<Plus>(su3_3,dir3,vid,dir2); prop2Tex.get<PlusPlus>(prop2,vid,dir2,dir3);
+    texture1.get<Plus>(prop1,vid,dir1); gaugeTex.get(su3_1,dir1,vid); gaugeTex.get(su3_2,dir2,vid); gaugeTex.get<Plus>(su3_3,dir3,vid,dir2); texture2.get<PlusPlus>(prop2,vid,dir2,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ZERO_MINUS,true,false,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1, x^, x, x+dir2-dir3^, x+dir2-dir3
-    /*prop1Tex.get<Plus>(prop1,vid,dir1);*/ /*gaugeTex.get(su3_1,dir1,vid);*/ /*gaugeTex.get(su3_2,dir2,vid);*/ gaugeTex.get<PlusMinus>(su3_3,dir3,vid,dir2,dir3); prop2Tex.get<PlusMinus>(prop2,vid,dir2,dir3);
+    /*texture1.get<Plus>(prop1,vid,dir1);*/ /*gaugeTex.get(su3_1,dir1,vid);*/ /*gaugeTex.get(su3_2,dir2,vid);*/ gaugeTex.get<PlusMinus>(su3_3,dir3,vid,dir2,dir3); texture2.get<PlusMinus>(prop2,vid,dir2,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,false,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1+dir3, x+dir3^, x+dir3, x+dir2^, x+dir2
-    prop1Tex.get<PlusPlus>(prop1,vid,dir1,dir3); gaugeTex.get<Plus>(su3_1,dir1,vid,dir3); gaugeTex.get<Plus>(su3_2,dir2,vid,dir3); gaugeTex.get<Plus>(su3_3,dir3,vid,dir2); prop2Tex.get<Plus>(prop2,vid,dir2);
+    texture1.get<PlusPlus>(prop1,vid,dir1,dir3); gaugeTex.get<Plus>(su3_1,dir1,vid,dir3); gaugeTex.get<Plus>(su3_2,dir2,vid,dir3); gaugeTex.get<Plus>(su3_3,dir3,vid,dir2); texture2.get<Plus>(prop2,vid,dir2);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,false,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // - term x+dir1-dir3, x-dir3^, x-dir3, x+dir2-dir3, x+dir2
-    prop1Tex.get<PlusMinus>(prop1,vid,dir1,dir3); gaugeTex.get<Minus>(su3_1,dir1,vid,dir3); gaugeTex.get<Minus>(su3_2,dir2,vid,dir3); gaugeTex.get<PlusMinus>(su3_3,dir3,vid,dir2,dir3); /*prop2Tex.get<Plus>(prop2,vid,dir2);*/
+    texture1.get<PlusMinus>(prop1,vid,dir1,dir3); gaugeTex.get<Minus>(su3_1,dir1,vid,dir3); gaugeTex.get<Minus>(su3_2,dir2,vid,dir3); gaugeTex.get<PlusMinus>(su3_3,dir3,vid,dir2,dir3); /*texture2.get<Plus>(prop2,vid,dir2);*/
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,false,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1, x^, x-dir2^, x-dir2, x-dir2+dir3
-    prop1Tex.get<Plus>(prop1,vid,dir1); gaugeTex.get(su3_1,dir1,vid); gaugeTex.get<Minus>(su3_2,dir2,vid,dir2); gaugeTex.get<Minus>(su3_3,dir3,vid,dir2); prop2Tex.get<MinusPlus>(prop2,vid,dir2,dir3);
+    texture1.get<Plus>(prop1,vid,dir1); gaugeTex.get(su3_1,dir1,vid); gaugeTex.get<Minus>(su3_2,dir2,vid,dir2); gaugeTex.get<Minus>(su3_3,dir3,vid,dir2); texture2.get<MinusPlus>(prop2,vid,dir2,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,true,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // - term x+dir1, x^, x-dir2^, x-dir2-dir3^, x-dir2-dir3
-    /*prop1Tex.get<Plus>(prop1,vid,dir1);*/ /*gaugeTex.get(su3_1,dir1,vid);*/ /*gaugeTex.get<Minus>(su3_2,dir2,vid,dir2);*/ gaugeTex.get<MinusMinus>(su3_3,dir3,vid,dir2,dir3); prop2Tex.get<MinusMinus>(prop2,vid,dir2,dir3);
+    /*texture1.get<Plus>(prop1,vid,dir1);*/ /*gaugeTex.get(su3_1,dir1,vid);*/ /*gaugeTex.get<Minus>(su3_2,dir2,vid,dir2);*/ gaugeTex.get<MinusMinus>(su3_3,dir3,vid,dir2,dir3); texture2.get<MinusMinus>(prop2,vid,dir2,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,true,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // - term x+dir1+dir3, x+dir3^, x-dir2+dir3^, x-dir2^, x-dir2
-    prop1Tex.get<PlusPlus>(prop1,vid,dir1,dir3); gaugeTex.get<Plus>(su3_1,dir1,vid,dir3); gaugeTex.get<MinusPlus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get<Minus>(su3_3,dir3,vid,dir2); prop2Tex.get<Minus>(prop2,vid,dir2);
+    texture1.get<PlusPlus>(prop1,vid,dir1,dir3); gaugeTex.get<Plus>(su3_1,dir1,vid,dir3); gaugeTex.get<MinusPlus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get<Minus>(su3_3,dir3,vid,dir2); texture2.get<Minus>(prop2,vid,dir2);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,true,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1-dir3, x-dir3^, x-dir2-dir3^, x-dir2-dir3, x-dir2
-    prop1Tex.get<PlusMinus>(prop1,vid,dir1,dir3); gaugeTex.get<Minus>(su3_1,dir1,vid,dir3); gaugeTex.get<MinusMinus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get<MinusMinus>(su3_3,dir3,vid,dir2,dir3); /*prop2Tex.get<Minus>(prop2,vid,dir2);*/
+    texture1.get<PlusMinus>(prop1,vid,dir1,dir3); gaugeTex.get<Minus>(su3_1,dir1,vid,dir3); gaugeTex.get<MinusMinus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get<MinusMinus>(su3_3,dir3,vid,dir2,dir3); /*texture2.get<Minus>(prop2,vid,dir2);*/
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,true,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1+dir2, x+dir2^, x^, x, x+dir3
-    prop1Tex.get<PlusPlus>(prop1,vid,dir1,dir2); gaugeTex.get<Plus>(su3_1,dir1,vid,dir2); gaugeTex.get(su3_2,dir2,vid); gaugeTex.get(su3_3,dir3,vid); prop2Tex.get<Plus>(prop2,vid,dir3);
+    texture1.get<PlusPlus>(prop1,vid,dir1,dir2); gaugeTex.get<Plus>(su3_1,dir1,vid,dir2); gaugeTex.get(su3_2,dir2,vid); gaugeTex.get(su3_3,dir3,vid); texture2.get<Plus>(prop2,vid,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,true,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // - term x+dir1+dir2, x+dir2^, x^, x-dir3^, x-dir3
-    /*prop1Tex.get<PlusPlus>(prop1,vid,dir1,dir2);*/ /*gaugeTex.get<Plus>(su3_1,dir1,vid,dir2);*/ /*gaugeTex.get(su3_2,dir2,vid);*/ gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); prop2Tex.get<Minus>(prop2,vid,dir3);
+    /*texture1.get<PlusPlus>(prop1,vid,dir1,dir2);*/ /*gaugeTex.get<Plus>(su3_1,dir1,vid,dir2);*/ /*gaugeTex.get(su3_2,dir2,vid);*/ gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); texture2.get<Minus>(prop2,vid,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,true,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // - term x+dir1+dir2+dir3, x+dir2+dir3^, x+dir3^, x^, x
-    prop1Tex.get<PlusPlusPlus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<PlusPlus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<Plus>(su3_2,dir2,vid,dir3); gaugeTex.get(su3_3,dir3,vid); prop2Tex.get(prop2,vid);
+    texture1.get<PlusPlusPlus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<PlusPlus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<Plus>(su3_2,dir2,vid,dir3); gaugeTex.get(su3_3,dir3,vid); texture2.get(prop2,vid);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,true,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1+dir2-dir3, x+dir2-dir3^, x-dir3^, x-dir3, x
-    prop1Tex.get<PlusPlusMinus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<PlusMinus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<Minus>(su3_2,dir2,vid,dir3); gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); /*prop2Tex.get(prop2,vid);*/
+    texture1.get<PlusPlusMinus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<PlusMinus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<Minus>(su3_2,dir2,vid,dir3); gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); /*texture2.get(prop2,vid);*/
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,true,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // - term x+dir1-dir2, x-dir2^, x-dir2, x, x+dir3
-    prop1Tex.get<PlusMinus>(prop1,vid,dir1,dir2); gaugeTex.get<Minus>(su3_1,dir1,vid,dir2); gaugeTex.get<Minus>(su3_2,dir2,vid,dir2); gaugeTex.get(su3_3,dir3,vid); prop2Tex.get<Plus>(prop2,vid,dir3);
+    texture1.get<PlusMinus>(prop1,vid,dir1,dir2); gaugeTex.get<Minus>(su3_1,dir1,vid,dir2); gaugeTex.get<Minus>(su3_2,dir2,vid,dir2); gaugeTex.get(su3_3,dir3,vid); texture2.get<Plus>(prop2,vid,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,false,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1-dir2, x-dir2^, x-dir2, x-dir3^, x-dir3
-    /*prop1Tex.get<PlusMinus>(prop1,vid,dir1,dir2);*/ /*gaugeTex.get<Minus>(su3_1,dir1,vid,dir2);*/ /*gaugeTex.get<Minus>(su3_2,dir2,vid,dir2);*/ gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); prop2Tex.get<Minus>(prop2,vid,dir3);
+    /*texture1.get<PlusMinus>(prop1,vid,dir1,dir2);*/ /*gaugeTex.get<Minus>(su3_1,dir1,vid,dir2);*/ /*gaugeTex.get<Minus>(su3_2,dir2,vid,dir2);*/ gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); texture2.get<Minus>(prop2,vid,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,false,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // + term x+dir1-dir2+dir3, x-dir2+dir3^, x-dir2+dir3, x^, x
-    prop1Tex.get<PlusMinusPlus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<MinusPlus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<MinusPlus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get(su3_3,dir3,vid); prop2Tex.get(prop2,vid);
+    texture1.get<PlusMinusPlus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<MinusPlus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<MinusPlus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get(su3_3,dir3,vid); texture2.get(prop2,vid);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_PLUS,true,false,true>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 
     // - term x+dir1-dir2-dir3, x-dir2-dir3^, x-dir2-dir3, x-dir3, x
-    prop1Tex.get<PlusMinusMinus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<MinusMinus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<MinusMinus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); /*prop2Tex.get(prop2,vid);*/
+    texture1.get<PlusMinusMinus>(prop1,vid,dir1,dir2,dir3); gaugeTex.get<MinusMinus>(su3_1,dir1,vid,dir2,dir3); gaugeTex.get<MinusMinus>(su3_2,dir2,vid,dir2,dir3); gaugeTex.get<Minus>(su3_3,dir3,vid,dir3); /*texture2.get(prop2,vid);*/
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,false,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
 	
     for(int iop = 0; iop < listGammas.size; iop++){
       int opId=listGammas.array[iop];
-      if(notZfac) accum[iop] = 0.015625*((signProps > 0) ? trace_gamma_S<true>(opId,TMP,R) : trace_gamma_S<true>(opId,TMM,R));
+      if(notZfac) {
+        if (signProps >0){
+          accum[iop]= 0.015625*trace_gamma_S<true>(opId,TMP,R);
+        }
+        else if (signProps<0){
+          accum[iop]= 0.015625*trace_gamma_S<true>(opId,TMM,R);
+        }
+        else{
+          accum[iop]=0.015625*trace_gamma_S<true>(opId,NOROT,R);
+        }
+      }
       else accum[iop] = trace_gamma_S<true>(opId,NOROT,R);
     }
   }    
@@ -122,9 +143,10 @@ __global__ void threep_threeD_part3_device(Float2<FloatC>* block2,
   }
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+template<bool b,typename FloatC,typename FloatA, typename FloatB, typename FloatG>
 static void threep_threeD_part3_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Correlator<FloatC> &corr,
-			       PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatA>& prop2,
+			       PorV<b, FloatA> &prop1,
+                               PorV<b, FloatB> &prop2,
 			       int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac){
   
   int t_size = corr.localT(); if(t_size==0) return;
@@ -156,8 +178,8 @@ static void threep_threeD_part3_host(ProfileStruct &ps, Float2<FloatC> *result, 
   cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
-  auto propTex1 = toTexture<propTex>(prop1);
-  auto propTex2 = toTexture<propTex>(prop2);
+  auto propTex1 = toTexture<PorVtex<b,FloatA>>(prop1);
+  auto propTex2 = toTexture<PorVtex<b,FloatB>>(prop2);
   auto gaugetex = toTexture<gaugeTex>(gauge);
 
   cudaError_t error=cudaPeekAtLastError();
@@ -189,7 +211,7 @@ static void threep_threeD_part3_host(ProfileStruct &ps, Float2<FloatC> *result, 
       int t_step = std::min(t_size-it, time_step);
       dim3 grid = ps.tp.grid;
       grid.x = (grid.x/time_step)*t_step;
-      threep_threeD_part3_device<FloatC,FloatA, FloatB, FloatG>
+      threep_threeD_part3_device<b,FloatC,FloatA, FloatB, FloatG>
 	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	(d_partial_block, *propTex1, *propTex2, *gaugetex, listGammas, it, t_step, maxT,
 	 source, signProps, runFT, *moms, dir1,dir2,dir3,mu,nu,c1,c2);
@@ -221,8 +243,10 @@ static void threep_threeD_part3_host(ProfileStruct &ps, Float2<FloatC> *result, 
   cudaFree(listGammas.array);
 }
 
-template<typename FloatC,typename FloatA,typename FloatB,typename FloatG>
-void threep_threeD_part3(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
+template<bool b,typename FloatC,typename FloatA,typename FloatB,typename FloatG>
+void threep_threeD_part3(PLEGMA_Correlator<FloatC> &corr,
+         	 typename std::conditional<b==true, PLEGMA_Propagator<FloatA>&, PLEGMA_Vector<FloatA>&>::type prop1,
+                 typename std::conditional<b==true, PLEGMA_Propagator<FloatB>&, PLEGMA_Vector<FloatB>&>::type prop2,
 		 int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(gammas.size() <= 0)
@@ -249,7 +273,7 @@ void threep_threeD_part3(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<Floa
   
   Float2<FloatC> *result = (Float2<FloatC> *) corr.H_elem();
 
-  run( ps, "threep_threeD", threep_threeD_part3_host<FloatC,FloatA,FloatB,FloatG>,
+  run( ps, "threep_threeD", threep_threeD_part3_host<b,FloatC,FloatA,FloatB,FloatG>,
        ps, result, corr, prop1, prop2, signProps, gauge, gammas,isZfac);
 
 #else
@@ -257,6 +281,10 @@ void threep_threeD_part3(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<Floa
 #endif
 }
 
-template void threep_threeD_part3<float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Gauge<float>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
-template void threep_threeD_part3<double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, PLEGMA_Gauge<double>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+template void threep_threeD_part3<true,float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Gauge<float>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+template void threep_threeD_part3<true,double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, PLEGMA_Gauge<double>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+
+template void threep_threeD_part3<false,float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Vector<float>& prop1, PLEGMA_Vector<float>& prop2, int signProps, PLEGMA_Gauge<float>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+template void threep_threeD_part3<false,double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Vector<double>& prop1, PLEGMA_Vector<double>& prop2, int signProps, PLEGMA_Gauge<double>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
+
 
