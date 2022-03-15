@@ -154,7 +154,7 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_local(*this,bwdProp,fwdProp,signProps,gammas,isZfac);
+  threep_local<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gammas,isZfac);
 }
 
 template<typename Float>
@@ -199,7 +199,7 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost();
   fwdProp.communicateGhost();
   
-  threep_oneD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_oneD<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 
@@ -222,7 +222,7 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   
-  threep_twoD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_twoD<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 template<typename Float>
@@ -244,10 +244,10 @@ contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   
-  threep_threeD_part1(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
-  threep_threeD_part2(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
-  threep_threeD_part3(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
-  threep_threeD_part4(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part1<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part2<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part3<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part4<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 

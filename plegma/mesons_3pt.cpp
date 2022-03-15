@@ -238,11 +238,13 @@ int main(int argc, char **argv) {
       PLEGMA_Propagator<float> propST;
 
       PLEGMA_Vector<float> oet_light_up_fini_SS;
+      PLEGMA_Vector<float> oet_light_dn_fini_SS;
       PLEGMA_Vector<float> oet_strange_up_fini_SS;
+      PLEGMA_Vector<float> oet_strange_dn_fini_SS;
 
       PLEGMA_Vector<float> oet_light_up_zero_SS;
       PLEGMA_Vector<float> oet_light_dn_zero_SS;
-      PLEGMA_Vector<float> oet_strange_dn_zero_SS;
+      PLEGMA_Vector<float> oet_strange_up_zero_SS;
 
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	//PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
@@ -251,11 +253,14 @@ int main(int argc, char **argv) {
 	PLEGMA_Propagator<float> propST_SL(BOTH, FIRST_CORNER);
 
    	PLEGMA_Vector<float> oet_light_up_fini_SL;
+	PLEGMA_Vector<float> oet_light_dn_fini_SL;
         PLEGMA_Vector<float> oet_strange_up_fini_SL;
+        PLEGMA_Vector<float> oet_strange_dn_fini_SL;
+
 
         PLEGMA_Vector<float> oet_light_up_zero_SL(NONE);
         PLEGMA_Vector<float> oet_light_dn_zero_SL(NONE);
-        PLEGMA_Vector<float> oet_strange_dn_zero_SL(NONE);
+        PLEGMA_Vector<float> oet_strange_up_zero_SL(NONE);
 
 	if (stoch_std ==true){
 
@@ -270,9 +275,9 @@ int main(int argc, char **argv) {
 	  oet_light_dn_zero_SS.writeHDF5("oet_light_DN_SS_zero");
 
 
-          TIME(computePropagator_oet(oet_strange_dn_zero_SS, oet_strange_dn_zero_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+          TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
 
-	  oet_strange_dn_zero_SS.writeHDF5("oet_strange_DN_SS_zero");
+	  oet_strange_up_zero_SS.writeHDF5("oet_strange_UP_SS_zero");
 
 
         }
@@ -344,11 +349,22 @@ int main(int argc, char **argv) {
               oet_light_up_fini_SS.writeHDF5("oet_light_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
               oet_light_up_fini_SL.writeHDF5("oet_light_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
+              TIME(computePropagator_oet(oet_light_dn_fini_SS, oet_light_dn_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
+              oet_light_dn_fini_SS.writeHDF5("oet_light_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+              oet_light_dn_fini_SL.writeHDF5("oet_light_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+
+
 
 	      TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
 
               oet_strange_up_fini_SS.writeHDF5("oet_strange_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
               oet_strange_up_fini_SL.writeHDF5("oet_strange_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+
+
+ 	      TIME(computePropagator_oet(oet_strange_dn_fini_SS, oet_strange_dn_fini_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+              oet_strange_dn_fini_SS.writeHDF5("oet_strange_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+              oet_strange_dn_fini_SL.writeHDF5("oet_strange_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+
 
 	    }
 
@@ -467,7 +483,7 @@ int main(int argc, char **argv) {
 
 
 	    	     GAMMAS_SCATT G_i2= apply_g5( glist_source_meson[i_gamma_i2], LEFT );
-                     GAMMAS_SCATT G_f2= apply_g5( glist_source_meson[i_gamma_f2], RIGHT );
+                     GAMMAS_SCATT G_f2= apply_g5( glist_sink_meson[i_gamma_f2], RIGHT );
 
 
                      vectorInOut.apply_gamma_scatt(G_i2,RIGHT);
@@ -538,14 +554,15 @@ int main(int argc, char **argv) {
 
               TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_pion"));
 
-              std::string filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_local";
+              std::string filename;
+	      filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_local";
               TIME(corr_local.writeFile( filename, corr_file_format));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
 
 
               PLEGMA_Vector3D<float> zero_momentum_strange;
-              zero_momentum_strange.absorb(oet_strange_dn_zero_SS,global_fixSinkTime);
+              zero_momentum_strange.absorb(oet_strange_up_zero_SS,global_fixSinkTime);
 
               TIME(computeThreep_oet(-mu_ud, zero_momentum_strange, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_kaon"));
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_local";
@@ -555,16 +572,25 @@ int main(int argc, char **argv) {
 
 
 
+              zero_momentum_light.absorb(oet_light_dn_zero_SS,global_fixSinkTime);
 
-/*            zero_momentum_light.absorb(oet_light_up_zero_SS,global_fixSinkTime);
+              TIME(computeThreep_oet(mu_ud, zero_momentum_light, oet_light_dn_fini_SL, nsmearGauss, LIGHT, "_dn_pion"));
 
-              TIME(computeThreep_oet(mu_s, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_st_kaon"));
-
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_local";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_local";
 	      TIME(corr_local.writeFile( filename, corr_file_format));
 
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_oneD";
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
+
+
+              TIME(computeThreep_oet(mu_s, zero_momentum_light, oet_strange_dn_fini_SL, nsmearGauss, STRANGE, "_st_kaon"));
+
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_local";
+              TIME(corr_local.writeFile( filename, corr_file_format));
+
               filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_oneD";
-              TIME(corr_oneD.writeFile( filename, corr_file_format));*/
+              TIME(corr_oneD.writeFile( filename, corr_file_format));
+
 
 	    }
 	    else{

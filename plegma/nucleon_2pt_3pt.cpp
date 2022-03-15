@@ -583,12 +583,30 @@ int main(int argc, char **argv) {
                   vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
                }
 
-	       vectorInOut.apply_gamma_scatt(glist_source_meson[i_gamma_i2],RIGHT);
-               vectorInOut.apply_gamma_scatt(glist_sink_meson[i_gamma_f2],LEFT);
+               GAMMAS_SCATT G_i2= apply_g5( glist_source_meson[i_gamma_i2], LEFT );
+               GAMMAS_SCATT G_f2= apply_g5( glist_sink_meson[i_gamma_f2], RIGHT );
+
+               vectorInOut.apply_gamma_scatt(G_i2,RIGHT);
+               vectorInOut.apply_gamma_scatt(G_f2,LEFT);
+
+               vectorInOut.apply_gamma(G5);
 
                double norm = vectorInOut.norm();
                vectorInOut.scale(1/norm);
+               {
+                  PLEGMA_Vector<double> vectorAuxD;
+                  TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                   vectorInOut.copy(vectorAuxD);
+               }
+
                TIME(solver.solve(vectorInOut, vectorInOut));
+
+               {
+                  PLEGMA_Vector<double> vectorAuxD;
+                  TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
+                  vectorInOut.copy(vectorAuxD);
+               }
+
                vectorInOut.scale(norm);
                PLEGMA_Vector<float> vectorAuxF;
                vectorAuxF.copy(vectorInOut);
@@ -715,9 +733,9 @@ int main(int argc, char **argv) {
             PLEGMA_ScattCorrelator<float> corrM2(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM3(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM4(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
-
             PLEGMA_ScattCorrelator<float> corrM5(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM6(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+
             PLEGMA_ScattCorrelator<float> corrM7(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
             PLEGMA_ScattCorrelator<float> corrM8(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
 	    PLEGMA_ScattCorrelator<float> corrM9(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
@@ -729,6 +747,9 @@ int main(int argc, char **argv) {
               corrM2.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUU_DN");
               corrM3.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDD_UP");
               corrM4.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDD_DN");
+	      corrM5.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDU_UP");
+              corrM6.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNDU_DN");
+
 
 	    } else {
               corrM7.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "MNJNUD_UP");
@@ -751,6 +772,9 @@ int main(int argc, char **argv) {
               TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_fini_up));
               TIME(corrM3.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_dn));
               TIME(corrM4.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_dn));
+              TIME(corrM5.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_up));
+              TIME(corrM6.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_up));
+
 
             
 	      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
@@ -774,11 +798,17 @@ int main(int argc, char **argv) {
               TIME(corrM4.apply_phase());
               TIME(corrM4.writeHDF5(outfilename));
 
-              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"proton_pizerodndn";
+              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_piplusdn";
+              TIME(corrM5.apply_sign("NJNP"));
+              TIME(corrM5.apply_phase());
+              TIME(corrM5.writeHDF5(outfilename));
+
+              outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn_piplusdn";
+	      TIME(corrM6.apply_sign("NJNP"));
               TIME(corrM6.apply_phase());
-              TIME(corrM6.apply_sign("NPJP"));
-              TIME(corrM6.applyBoundaryConditions(true));
               TIME(corrM6.writeHDF5(outfilename));
+
+
 
 	    }
 	    else{
