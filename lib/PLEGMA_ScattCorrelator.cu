@@ -1896,6 +1896,45 @@ void PLEGMA_ScattCorrelator<Float>::W_diagrams(PLEGMA_ScattCorrelator<Float> &sr
 
 }
 
+//void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transpgamma_i1, Float* factor, bool transpgamma_f1, bool oet) {
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution_check(PLEGMA_ScattCorrelator<Float> &srcV3,
+                                                PLEGMA_ScattCorrelator<Float> &srcV2, int i_g_i2,
+                                                std::string proporder, int diagram_number, bool transp_i1, bool transp_f1, bool accum ){
+  this->clear_output(!accum, 5, i_g_i2);
+  Float factor[2]={-1.,0.};//-1 from eqs. (28),(31),(34),(37), ....
+  if (proporder== "PSS"){
+    switch (diagram_number){
+     case 1:
+       this->V3V2reduction( srcV3, srcV2, 1, false, i_g_i2, transp_i1, factor,transp_f1); 
+       break;
+     case 2:
+       this->V3V2reduction_matrix( srcV3, srcV2, 0, false, i_g_i2, transp_i1, factor,transp_f1);
+       break;
+    }
+  }
+  else if (proporder =="SPS"){
+    switch (diagram_number){
+    case 1:
+       this->V3V2reduction( srcV3, srcV2, 2, true, i_g_i2, transp_i1, factor,transp_f1);
+       break;
+     case 2:
+       this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, transp_i1, factor,transp_f1);
+       break;
+    }
+  }
+  else if (proporder =="SSP"){
+    switch (diagram_number){
+    case 1:
+       this->V3V2reduction_matrix( srcV3, srcV2, 1, false, i_g_i2, transp_i1, factor,transp_f1);
+       break;
+    case 2:
+       this->V3V2reduction( srcV3, srcV2, 0, false, i_g_i2, transp_i1, factor,transp_f1);
+       break;
+    }
+  }
+}
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorrelator<Float> &srcV3, 

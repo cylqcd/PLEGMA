@@ -264,6 +264,9 @@ namespace plegma {
 
     void Z_diagrams( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
     void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2,  int diagramm_index, bool accum=false );
+    void Z_diagrams_without_dilution_check(PLEGMA_ScattCorrelator<Float> &srcV3,
+                                                PLEGMA_ScattCorrelator<Float> &srcV2, int i_g_i2,
+                                                std::string proporder, int diagram_number, bool transp_i1, bool transp_f1, bool accum );
 
     void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, bool accum=false );
 
