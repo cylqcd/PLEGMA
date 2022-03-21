@@ -56,6 +56,8 @@ void PLEGMA_ScattCorrelator<Float>::setOffsets( ){
     case('g'): assert(g_count<GList.size()); ranges.push_back( GList[g_count].size() ); g_count++; break;
     case('s'): ranges.push_back( N_SPINS ); break;
     case('c'): ranges.push_back( N_COLS ); break;
+    case('d'): ranges.push_back( N_DIMS ); break;
+    case('l'): ranges.push_back( N_DIMS*(N_DIMS-1)) ; break;
     default: PLEGMA_error( "Label %c not recognized\n", l );
    }	
   }
@@ -1089,7 +1091,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2,std::vector<GAMMAS_SCATT> &G_c,std::string name_of_diagram){
 
-  assert(( name_of_diagram=="PJP") || (name_of_diagram=="PJP_STL") || (name_of_diagram=="PJP_STD"));
+  assert(( name_of_diagram=="PJP") || (name_of_diagram=="PJP_STL") || (name_of_diagram=="PJP_STD") || (name_of_diagram=="PJP_TWOD")  );
 
   //Gamma list
   this->GList.clear();
@@ -1124,6 +1126,9 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   if (name_of_diagram=="PJP_STD"){
     tmp+="/x,y,z,t / ";
   }
+  else if (name_of_diagram=="PJP_TWOD"){
+    tmp+="xy,xz,xt,yx,yz,yt,zx,zy,zt,tx,ty,tz / ";
+  }
   tmp+="/S1/S2/";
 
   this->description = tmp;
@@ -1145,7 +1150,10 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Shape
   if (name_of_diagram == "PJP_STD"){
     this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[2].size()),(int)N_DIMS };
-  } else{
+  } else if (name_of_diagram == "PJP_TWOD"){
+    this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[2].size()),(int)(N_DIMS*(N_DIMS-1)) };
+  }
+  else{
     this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size())*(int)(this->GList[2].size()) };
   }
 
@@ -1154,7 +1162,10 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 
   //Offsets
   if (name_of_diagram == "PJP_STD"){
-    this->labels="tmgggs";
+    this->labels="tmgggd";
+  }
+  else if (name_of_diagram == "PJP_TWOD"){
+    this->labels="tmgggl";
   }
   else{
     this->labels="tmggg";
@@ -3285,21 +3296,6 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
   int TIME = this->localT();
   if (TIME==0) return;
 
-  std::vector<std::string> temp=this->pList().to_string({0,1,2},{"pi","pf","pc"});
-  std::cout<<"Plist ThisCorr"<<std::endl;
-  for (auto &line : temp){
-    std::cout<<line<<std::endl;
-  }
-  fflush(stdout);
-
-  std::vector<std::string> temp1=srcCorr.pList().to_string({0},{"pc"});
-  std::cout<<"Plist srcCorr"<<std::endl;
-  for (auto &line : temp1){
-    std::cout<<line<<std::endl;
-  }
-  fflush(stdout);
-
-
 
   std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
 
@@ -3317,10 +3313,10 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
   auto imap = this->pList().index_map();
 
-  std::size_t n_s = this->labels.find("s");
-  if (n_s==std::string::npos){
-  printf("imap size %d\n",imap.size());
-  fflush(stdout);
+  std::size_t n_s1 = this->labels.find("d");
+  std::size_t n_s2 = this->labels.find("l");
+
+  if ((n_s1==std::string::npos) && (n_s2==std::string::npos)) {
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
     if (i_mom_f1!=i_pf1){
@@ -3347,6 +3343,13 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
   }
   }
   else{
+  int derivLoopLength;
+  if (n_s1==std::string::npos){
+    derivLoopLength=N_DIMS*(N_DIMS-1);
+  }
+  else {
+    derivLoopLength=N_DIMS;
+  }
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];
     if (i_mom_f1!=i_pf1){
@@ -3360,7 +3363,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
         for (int g2=0 ; g2 < n_gammas_f2 ; ++g2 ){//pf1
           if (i_gamma_f2 != g2)
            continue;
-	  for (int dir=0; dir<N_DIMS; ++dir){
+	  for (int dir=0; dir<derivLoopLength; ++dir){
             for (int g3=0; g3 < n_gammas_c; ++g3 ){
 
               //printf("REAL %e\n",srcCorr.H_elem()[2*t*Nmoms_c*N_DIMS*n_gammas_c+2*i_pc*n_gammas_c*N_DIMS+2*dir*n_gammas_c+2*g3+0]);
