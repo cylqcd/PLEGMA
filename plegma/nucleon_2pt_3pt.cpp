@@ -176,9 +176,16 @@ int main(int argc, char **argv) {
 
                                  {  // absorbing the source and put momentum to the sink
                                    PLEGMA_Vector3D<double> vector1;
+				                                      
+				   PLEGMA_Vector3D<double> vector2;
+
+
                                    vector1.absorb(vectorSource_oet,sourcePositions[isource][DIM_T]);
-				   vector1.mulMomentumPhases(sourceMom,+1);
-                                   vectorInOut.absorb(vector1,sourcePositions[isource][DIM_T]);
+
+				   TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
+
+				   vector2.mulMomentumPhases(sourceMom,+1);
+                                   vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
                                  }
 				 {
                                     PLEGMA_Vector<double> vectorAuxD;
@@ -558,8 +565,8 @@ int main(int argc, char **argv) {
 	  }//loop over alpha
 
  
-	  THREAD(corrUp.writeHDF5("njnup"));
-          THREAD(corrDn.writeHDF5("njndn"));	  
+	  //THREAD(corrUp.writeHDF5("njnup"));
+          //THREAD(corrDn.writeHDF5("njndn"));	  
           auto computeOetInvThroughSink = [&](PLEGMA_Vector<float>& vec_SC, double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::vector<int> momentum_f1, int i_gamma_i2, int i_gamma_f2 ) {
                // ensuring mu positive
                if(mu != run_mu) {
@@ -574,10 +581,7 @@ int main(int argc, char **argv) {
                   PLEGMA_Vector3D<float> vectorAuxF;
                   vectorAuxF.copy(prop);
 		  double tmp=vectorAuxF.norm();
-                  vectorAuxF.apply_gamma(G5);
-
                   vectorAuxF.mulMomentumPhases(momentum_f1,-1); // put momentum at the sink
-                  vectorAuxF.conjugate();
                   vectorAuxD1.copy(vectorAuxF);
                   TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
                   vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
@@ -626,12 +630,13 @@ int main(int argc, char **argv) {
 
 	       PLEGMA_ScattCorrelator<float> corr(source, list_mpc, tsinkMtsource+1);
 	       TIME(corr.contractMesonThrp_local(seqProp, propF, gammas_insertion));
+	       corr.writeHDF5("test.h5");
 
                corrScatt.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
 
           };
 
-          auto computeThreep_meson = [&](PLEGMA_ScattCorrelator<float> nucleon2pt, double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::string flstring, std::string name) {
+          auto computeThreep_meson = [&](double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::string flstring, std::string name) {
 	       std::vector<PLEGMA_Vector<float>*>  inversionThroughSink;
  
 	       std::vector<std::vector<int>> pf1_filt= sourcemomentumList.uniq_p(1);
@@ -648,6 +653,7 @@ int main(int argc, char **argv) {
                    for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2){
 	             for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2){
 	     	       TIME(computeOetInvThroughSink(vectorAuxF_SL, run_mu, prop, nSmear, LIGHT, momentum_f1, i_gamma_i2, i_gamma_f2 ));
+		       vectorAuxF_SL.unload();
                        int index=i_pf1*glist_source_meson.size()*glist_sink_meson.size();
                        inversionThroughSink[index]->copy( vectorAuxF_SL, HOST);
                        vectorAuxF_SL.load();
@@ -662,7 +668,9 @@ int main(int argc, char **argv) {
                  auto &momentum_i2 =  pi2_filt[i_pi2];
                  momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 
-                 PLEGMA_ScattCorrelator<float> corrM(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+                 PLEGMA_ScattCorrelator<float> corrMP(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+                 PLEGMA_ScattCorrelator<float> corrMN(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
+
 		 std::string label;
 		 if ((flstring == "up") && (name == "pizero")){
 		   label="UUJUU_UP";
@@ -677,7 +685,10 @@ int main(int argc, char **argv) {
                    label="DUJUD_DN";
                  }
 
-     	         corrM.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", nucleon2pt.getDatasets()[0]+label);
+     	         corrMP.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "Mproton"+label);
+ 
+ 		 corrMN.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "Mneutron"+label);
+
 
                  PLEGMA_ScattCorrelator<float> corrpjp(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );	    
                  corrpjp.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
@@ -700,22 +711,36 @@ int main(int argc, char **argv) {
 		       sequential.unload();
 		       int index=i_pf1*glist_source_meson.size()*glist_sink_meson.size();
                        sequential.copy(*inversionThroughSink[index],HOST);
+		       sequential.load();
+		       double norm2=sequential.norm();
+		       PLEGMA_printf("Normamsa1 %e\n", norm2);
+		       norm2=oet_fini_SL.norm();
+                       PLEGMA_printf("Normamsa2 %e\n", norm2);
                        TIME(computeThreep_contract(corrpjp, sequential, oet_fini_SL, i_gamma_i2, i_gamma_f2, i_pf1 ));
 		     }
 		   }
 		 }
 	       
                  float *sinkTimeSliceProton;
-                 sinkTimeSliceProton=nucleon2pt.get_time_slice(global_fixSinkTime);
-	         TIME(corrM.M_diagrams( nucleon2pt, corrpjp, sinkTimeSliceProton ));
+                 sinkTimeSliceProton=corrNP.get_time_slice(global_fixSinkTime);
+	         TIME(corrMP.M_diagrams( corrNP, corrpjp, sinkTimeSliceProton ));
 	         free(sinkTimeSliceProton);
 
 	         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"nucleonpionJpion";
-	         TIME(corrM.apply_phase());
-                 TIME(corrM.apply_sign("NPJP"));
-                 TIME(corrM.applyBoundaryConditions(true));
-                 TIME(corrM.writeHDF5(outfilename));
+	         TIME(corrMP.apply_phase());
+                 TIME(corrMP.apply_sign("NPJP"));
+                 TIME(corrMP.applyBoundaryConditions(true));
+                 TIME(corrMP.writeHDF5(outfilename));
 
+                 sinkTimeSliceProton=corrN0.get_time_slice(global_fixSinkTime);
+                 TIME(corrMN.M_diagrams( corrN0, corrpjp, sinkTimeSliceProton ));
+                 free(sinkTimeSliceProton);
+
+                 outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"nucleonpionJpion";
+                 TIME(corrMN.apply_phase());
+                 TIME(corrMN.apply_sign("NPJP"));
+                 TIME(corrMN.applyBoundaryConditions(true));
+                 TIME(corrMN.writeHDF5(outfilename));
 
 	         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"pionJpion";
                  TIME(corrpjp.writeHDF5(outfilename));
@@ -835,6 +860,24 @@ int main(int argc, char **argv) {
 	    }
 
 	}//momentum pi2
+
+        {
+	PLEGMA_Vector3D<float> zero_momentum_light;
+        zero_momentum_light.absorb(oet_mom_zero_up_SS, global_fixSinkTime);
+	computeThreep_meson(-mu_ud, zero_momentum_light, nsmearGauss, LIGHT,"up", "piplus");
+
+	zero_momentum_light.absorb(oet_mom_zero_dn_SS, global_fixSinkTime);
+        computeThreep_meson(+mu_ud, zero_momentum_light, nsmearGauss, LIGHT,"dn", "piplus");
+
+        zero_momentum_light.absorb(oet_mom_zero_dn_SS, global_fixSinkTime);
+        computeThreep_meson(-mu_ud, zero_momentum_light, nsmearGauss, LIGHT,"up", "pizero");
+
+        zero_momentum_light.absorb(oet_mom_zero_up_SS, global_fixSinkTime);
+        computeThreep_meson(+mu_ud, zero_momentum_light, nsmearGauss, LIGHT,"dn", "pizero");
+	}
+
+
+
 #endif
 
       }//tsink
