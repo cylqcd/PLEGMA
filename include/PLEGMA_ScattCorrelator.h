@@ -231,10 +231,10 @@ namespace plegma {
     //manipulation to construct P like diagram from pi j pi
     void absorbGammai2Gammaf2momentumf2(PLEGMA_ScattCorrelator<Float> &srcCorr, int  i_gamma_i2, int i_gamma_f2, int i_pf1, bool forcetozero=false );
 
-
     void contractMesonThrp_local(PLEGMA_Vector<Float> &bwdProp,
                                  PLEGMA_Vector<Float> &fwdProp,
                                  std::vector<GAMMAS_SCATT> gammas);
+
 
 
     //initialize_diagrams
