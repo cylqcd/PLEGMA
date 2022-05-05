@@ -282,8 +282,8 @@ namespace plegma {
 
     void T_diagrams_oet(PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0, int diagramindex, bool accum=false);
 
-    void V24pointSourceReduction( PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0, int index_abs, bool transp, bool transpgamma_i1, Float* factor);
-    void V24pointSourceReduction_matrix( PLEGMA_ScattCorrelator<Float> &reductionsVT,  std::shared_ptr<Float> &Phi0, int index_abs, bool transp, bool transpgamma_i1, Float* factor);
+    void V24pointSourceReduction( PLEGMA_ScattCorrelator<Float> &reductionsVT, std::shared_ptr<Float> &Phi0, int index_abs, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float* factor);
+    void V24pointSourceReduction_matrix( PLEGMA_ScattCorrelator<Float> &reductionsVT,  std::shared_ptr<Float> &Phi0, int index_abs, bool transp, bool transpgamma_i1, bool transpgamma_f1, Float* factor);
 
     void T_diagrams_piNsink(PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3,int diagram_index, bool accum=false);
 

@@ -647,12 +647,12 @@ namespace plegma {
 #pragma unroll
           for(int b = 0; b < N_COLS; b++){
             if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
-             if(isLeftTrans)  A[mu][nu] +=  B[mu][a] * D[b][a] * C[nu][b];
+             if(isLeftTrans)  A[mu][nu] +=  B[mu][a] * D[a][b] * C[nu][b];
              else A[mu][nu] += B[mu][a] * D[a][b] * C[nu][b];
             }
             else{
-             if(isLeftTrans) A[mu][nu] -=  B[mu][a] * D[b][a] * C[nu][b];
-             else A[mu][nu] -= B[mu][a] * D[b][a] * C[nu][b];
+             if(isLeftTrans) A[mu][nu] -=  B[mu][a] * D[a][b] * C[nu][b];
+             else A[mu][nu] -= B[mu][a] * D[a][b] * C[nu][b];
             }
           }
 
