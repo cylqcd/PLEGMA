@@ -17,6 +17,10 @@ int main(int argc, char **argv)
   HGC_options->set("output-path","Path to the directory to dump G_FF",verbosity,pathOut);
   bool doG_FF = true;
   HGC_options->set("doG_FF", "If we want to compute 2pt correlator for the fermionic traceless off-diagonal EMT, default true", verbosity,doG_FF);
+  int startT = 0;
+  int endT   = 0;
+  HGC_options->set("startT", "The start time for iteration over source timeslices", verbosity, startT);
+  HGC_options->set("endT", "The end time for iteration over source timeslices", verbosity, endT);
   bool doG_GG = true;
   HGC_options->set("doG_GG", "If we want to compute 2pt correlator for the gluonic traceless off-diagonal EMT, default true", verbosity,doG_GG);
   int nsmearStoutStart = 0;
@@ -40,21 +44,21 @@ int main(int argc, char **argv)
      * Definition \mathcal{O}_i = unknown * \Tr[\sum_\mu F_{i,\mu} * F_{3,\mu}]
      * FST indices cannot be same
      * unknown is a factor which will be figured out later
-     */
+     ************************************************************************************************************************/
 
     if ( (nsmearStout-nsmearStoutStart)%nsmearStep != 0 )
       PLEGMA_error("nsmear-stout-Gprop must be divisible by nsmear-step-Gprop\n");
 
-    // setup output
-    /*   If add3D == true, we compute gluon loops with 3D smearing as well as 4D
+    /***  Smearing Options  **********************************************************
+     *   If add3D == true, we compute gluon loops with 3D smearing as well as 4D
      *   If isS4D == true, 4D smearing is performed but only for the spatial indicies
-     */
+     *********************************************************************************/
     int n_s_dim = (add3D)?2:1;
     std::string sd = (isS4D)?"S4D":"4D";
     std::string outName3 = pathOut + "T_G_3DStoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
     std::string outName4 = pathOut + "T_G_"+sd+"StoutSmearing" + std::to_string(nsmearStout) +"by"+std::to_string(nsmearStep)+"with"+std::to_string(alphaStout);
 
-    // initialize the files: I append data later
+    // create empty files: I append data later
     FILE *fp = NULL;
     if(comm_rank() == 0){
       if (add3D) {
@@ -75,7 +79,6 @@ int main(int argc, char **argv)
 
     PLEGMA_Gauge<double> gauge, gauge1, gauge2;
     PLEGMA_Field<double> trace1(BOTH,SCALAR), trace2(BOTH,SCALAR); // could this be DEVICE?
-    PLEGMA_Field3D<double> tr3D(BOTH,SCALAR);
     PLEGMA_FT<double> ft3D(0,3,false,dims[3]); // this performs 3D FT on each time slice
     PLEGMA_Fmunu<double> fmunu;
     PLEGMA_Su3field<double> one3x3; 
@@ -89,8 +92,9 @@ int main(int argc, char **argv)
       PLEGMA_printf("Unsmeared Plaquette is: ");
       gauge.calculatePlaq();
 
-      for ( int i_s = 0; i_s < n_s_dim; i_s++ ){
+      for ( int i_s = 0; i_s < n_s_dim; i_s++ ){ // loop over smearing options
 	int s_dim = (add3D && i_s == 0)?3:4;// smearing dimension: assume n_s_dim = 1 or 2
+	// Smear the gauge and compute FST
 	for(int n=nsmearStoutStart; n<=nsmearStout;n+=nsmearStep){
 	  if((n-nsmearStoutStart)%(2*nsmearStep) == 0){
 	    if((n-nsmearStoutStart)==0) {
@@ -102,9 +106,10 @@ int main(int argc, char **argv)
 	  else{
 	    gauge1.stoutSmearing(gauge2,nsmearStep,alphaStout,s_dim,isS4D);
 	  }
-	  
 	  fmunu.compute_leaves(((n-nsmearStoutStart)%(2*nsmearStep)==0)?gauge2:gauge1);
-	  for(int p =0 ; p<pairs.size(); p++){ // for each pair (i,j), compute T_ij
+	  
+	  // for each pair (i,j), compute T_ij
+	  for(int p =0 ; p<pairs.size(); p++){ 
 	    int i = pairs[p].first, j = pairs[p].second;
 	    double sign;
 	    trace2.zero_device();
@@ -135,6 +140,7 @@ int main(int argc, char **argv)
   }
 
   if ( doG_FF ) {
+    if ( startT >= endT ) endT = HGC_totalL[3];
     // TODO: may not work when time dim of lattice is divided over processes
     PLEGMA_Gauge<double> gauge;
     if ( Nconf == "unit" ) {
@@ -149,349 +155,359 @@ int main(int argc, char **argv)
     initGaugeQuda(gauge, true);
     plaqQuda();
 
-    int T = HGC_totalL[3];
-    double in_mu = mu, norm;
-    QUDA_solver solver(mu);
+    //TODO
+    // 1) reduce application of Udag op.
+    // 2) split the loop into two for Diag (1,2,3,4) and Diag (5,6,7,8) to reduce #UpdateSolver() and storage from VtOut[3] to VtOut[2]
+    // 3) in sacrifice to readability, we can remove VtIn to use only Vtmp1 and Vtmp2
+    
+    int T = HGC_totalL[3]; 
+    int T0 = endT - startT; 
+    // Prepare two solvers for D_u & D_d as updating the solver for MG takes some time
+    QUDA_solver u_solver(mu);
+    QUDA_solver d_solver(-mu);
     // TODO: we can use 3D vectors once dot prodct for 3D vectors is correctly implemented
     PLEGMA_Vector<double> psi, phi;//alloc flags. etc...?
-    PLEGMA_Vector<double> VtIn, VtOut[5], Vtmp, Vtmp1, Vtmp2, Vstc;
-    PLEGMA_Su3field<double> Umu(DEVICE), Umu_d(DEVICE), Unu_d(DEVICE);
+    PLEGMA_Vector<double> VtIn, VtOut[2], Vtmp1, Vtmp2, Vstc;
+    PLEGMA_Su3field<double> Umu(DEVICE), Unu(DEVICE);
     Vstc.randInit(rng_seed);
 
-    //std::complex<double> G_FF[dims[3]];
-    //for(int t=0; t < dims[3]; t++) G_FF[t]=0;
-    double G_FF[T][T][numSourcePositions];
-    for(int isc=0; isc < numSourcePositions; isc++) for(int t=0; t < T*T; t++) G_FF[t/T][t%T][isc]=0;
-    
-    std::string outName = pathOut + "G_FF" + Nconf + "_" + std::to_string(numSourcePositions);
+    double G_FF[T0][T][numSourcePositions];
+    for(int isc=0; isc < numSourcePositions; isc++) for(int t=0; t < T0*T; t++) G_FF[t/T][t%T][isc]=0;
+
+    std::string ext = "";
+    if ( T0 != T ) ext = "from" + std::to_string(startT) + "to" + std::to_string(endT);
+    std::string outName = pathOut + "G_FF" + Nconf + "_" + std::to_string(numSourcePositions) + ext;
     for(int isc=0; isc < numSourcePositions; isc++){
       Vstc.stochastic_Z(4);
-      for(int t=0; t < T; t++){ // source time slice
-	//Vstc.stochastic_Z(4);
-	
-	// inversion with xi w/&w/t gamma_5
-	mu = in_mu;
-        solver.UpdateSolver();
-	//VtIn.zero_where(BOTH);//this is unncessary if we use 4D vectors
+      for(int t=startT; t < endT; t++){ // source time slice
+	// TODO
+	//  To enable dvision over time slice, we need to
+	//   absorbTimeslice(Vstc,t); if t is in the range of time slices managed by the given rank
+	//   set it to zero otherwise
+
+	//mu = -in_mu;
+	//solver.UpdateSolver();
 	VtIn.absorbTimeslice(Vstc,t);
-	solver.solve(VtOut[0],VtIn);	
-	
-	mu = -in_mu;
-	solver.UpdateSolver();
+	//VtIn.zero_where(BOTH);//this is unncessary if we use 4D vectors
 	VtIn.apply_gamma5();
-	solver.solve(VtOut[1],VtIn);
+	d_solver.solve(VtOut[0],VtIn);
 	
+
 	for(int mu_d=0; mu_d<3; mu_d++ ){
-	  // inversion with shifted xi w/&w/t gamma_5
-	  mu = in_mu;;
-          solver.UpdateSolver();
-	  //VtIn.zero_where(BOTH);
-	  VtIn.absorbTimeslice(Vstc,t);
-	  Vtmp.shift(VtIn,mu_d);
-	  solver.solve(VtOut[2],Vtmp);
-	  
-	  mu = -in_mu;;
-	  solver.UpdateSolver();
-	  Vtmp.apply_gamma5();
-	  solver.solve(VtOut[3],Vtmp);
 	  
 	  Umu.absorbDir_device(gauge,mu_d);
-	  //Umu.absorbDir_host(gauge,mu_d);
-	  Umu_d.copy(Umu,DEVICE);//BOTH);
-	  Umu_d.Udag();
+	  Umu.Udag(); // to reduce #Udag() ops
 	  for(int nu=0; nu<3; nu++){
-	    if ( mu_d != nu ){//PLEGMA_printf("test %d %d\n",mu_d,nu);
-	      // We only need U_\nu^\dagger
-	      Unu_d.absorbDir_device(gauge,nu);
-	      //Unu_d.absorbDir_host(gauge,nu);
-	      Unu_d.Udag();
-
+	    if ( mu_d != nu ){
 	      
 	      //-- Notation: take <psi,phi>
 	      /******  (<-, <-) Group  ******/
 
 	      //---- inversion with mu&nu dependent rhs
-	      // for Diag (1) & (3)
-	      mu = -in_mu;
-	      solver.UpdateSolver();
-	  
-	      //Vtmp.zero_where(BOTH);
-	      Vtmp.absorbTimeslice(Vstc,t);
-	      VtIn.mulGV(Vtmp,Umu);//use sep. field!!!
+	      // for Diag (1) & (3) // need Umu^dagger
+	      
+	      //mu = in_mu;
+	      //solver.UpdateSolver();
+
+	      Unu.shift(Umu, nu); // Here, Unu = Umu(x - nu)
+	      //Unu.Udag(); //if Umu not daggered
+	      Vtmp1.absorbTimeslice(Vstc,t);
+	      VtIn.mulGV(Vtmp1,Unu);//use sep. field!!!
 	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      VtIn.apply_gamma5();
-	      solver.solve(VtOut[4],VtIn);
+	      u_solver.solve(VtOut[1],VtIn);
+
+	      // After this point, only Unu^dagger are used for Diag. (1,2,3,4) so that Unu is daggrered
+	      Unu.absorbDir_device(gauge,nu);
+	      Unu.Udag();
 
 	      // Diag (1)
 
 	      // (mu,nu;nu,mu)
 	      // compute psi
-	      Vtmp1.shift(VtOut[4],N_DIMS+nu);
-	      // compute phi
-	      Vtmp2.mulGV(VtOut[2],Unu_d);
+	      Vtmp1.shift(VtOut[0],N_DIMS+nu);
+	      // compute phi //need Unu^dagger
+	      Vtmp2.mulGV(VtOut[1],Unu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
 	      Vtmp2.apply_gamma5();
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
 		phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-		G_FF[t][ts][isc] -= (psi.dot(phi)).real();//does not partition time; could brak donw.
+		G_FF[t-startT][ts][isc] -= (psi.dot(phi)).real();//does not partition time; could brak donw.
 	      }
 	      
-	      // (mu,nu;nu,mu)
+	      // (nu,mu;nu,mu)
 	      // compute psi
-	      Vtmp1.shift(VtOut[4],N_DIMS+mu_d);
-	      // compute phi
-	      //Umu.Udag();
-	      Vtmp2.mulGV(VtOut[2],Umu_d);
+	      Vtmp1.shift(VtOut[0],N_DIMS+mu_d);
+	      // compute phi //need Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered 
+	      Vtmp2.mulGV(VtOut[1],Umu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      Vtmp2.apply_gamma5();
-	      //Umu.Udag();
+	      //Umu.Udag(); //necessary if Umu not daggered 
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
 		phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-		G_FF[t][ts][isc] -= (psi.dot(phi)).real();
+		G_FF[t-startT][ts][isc] -= (psi.dot(phi)).real();
 	      }
 		
 	      // Diag (3)
 	      
 	      // (mu,nu;nu,mu)
-	      // compute psi
-	      Vtmp.mulGV(VtOut[4],Unu_d);
-	      Vtmp.apply_gamma5();
-	      Vtmp.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
-	      Vtmp1.shift(Vtmp,nu);
+	      // compute psi // need Unu^dagger
+	      Vtmp2.mulGV(VtOut[0],Unu);
+	      Vtmp2.apply_gamma5();
+	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
+	      Vtmp1.shift(Vtmp2,nu);
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
-		phi.absorbTimeslice(VtOut[2],(t+ts)%T);
-		G_FF[t][ts][isc] += (psi.dot(phi)).real();
+		phi.absorbTimeslice(VtOut[1],(t+ts)%T);
+		G_FF[t-startT][ts][isc] += (psi.dot(phi)).real();
 	      }
 
-	      // (mu,nu;mu,nu)
-	      // compute psi
-	      //Umu.Udag();
-	      Vtmp.mulGV(VtOut[4],Umu_d);
-	      Vtmp.apply_gamma5();
-	      Vtmp.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
-	      Vtmp1.shift(Vtmp,mu_d);
-	      //Umu.Udag();
+	      // (nu,mu;nu,mu)
+	      // compute psi // need Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered 
+	      Vtmp2.mulGV(VtOut[0],Umu);
+	      Vtmp2.apply_gamma5();
+	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
+	      Vtmp1.shift(Vtmp2,mu_d);
+	      //Umu.Udag(); //necessary if Umu not daggered 
 	      for(int ts=0; ts < T; ts++){//time separation 
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
-		phi.absorbTimeslice(VtOut[2],(t+ts)%T);
-                G_FF[t][ts][isc] += (psi.dot(phi)).real();
+		phi.absorbTimeslice(VtOut[1],(t+ts)%T);
+                G_FF[t-startT][ts][isc] += (psi.dot(phi)).real();
               }
 
 	      //---- inversion with mu&nu dependent rhs
-	      // for Diag (2) & (4)
-	      mu = in_mu;
-	      solver.UpdateSolver();
-	  
-	      //VtIn.zero_where(BOTH);
+	      // for Diag (2) & (4) // need Umu
+
+	      Umu.Udag(); // since Umu is daggered
 	      VtIn.absorbTimeslice(Vstc,t);
-	      Vtmp.shift(VtIn,N_DIMS+mu_d);
-	      VtIn.mulGV(Vtmp,Umu);
+	      Vtmp1.shift(VtIn,N_DIMS+mu_d);
+	      VtIn.mulGV(Vtmp1,Umu);
 	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
-	      solver.solve(VtOut[4],VtIn);
+	      u_solver.solve(VtOut[1],VtIn);
+	      Umu.Udag(); // since Umu is daggered
 	      
 	      // Diag (2)
 
 	      // (mu,nu;nu,mu) 
 	      // compute psi
-	      Vtmp1.shift(VtOut[1],N_DIMS+nu);
-	      // compute phi
-	      Vtmp2.mulGV(VtOut[4],Unu_d);
+	      Vtmp1.shift(VtOut[0],N_DIMS+nu);
+	      // compute phi // need U_nu^dagger
+	      Vtmp2.mulGV(VtOut[1],Unu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
 	      Vtmp2.apply_gamma5();
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
 		phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-                G_FF[t][ts][isc] += (psi.dot(phi)).real();
+                G_FF[t-startT][ts][isc] += (psi.dot(phi)).real();
               }
 	      
-	      // (mu,nu;mu,nu) 
+	      // (nu,mu;nu,mu) 
 	      // compute psi
-	      Vtmp1.shift(VtOut[1],N_DIMS+mu_d);
-	      // compute phi
-	      //Umu.Udag();
-	      Vtmp2.mulGV(VtOut[4],Umu_d);
+	      Vtmp1.shift(VtOut[0],N_DIMS+mu_d);
+	      // compute phi // need Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered 
+	      Vtmp2.mulGV(VtOut[1],Umu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      Vtmp2.apply_gamma5();
-	      //Umu.Udag();
+	      //Umu.Udag(); //necessary if Umu not daggered 
 	      for(int ts=0; ts < T; ts++){//time separation 
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
 		phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-                G_FF[t][ts][isc] += (psi.dot(phi)).real();
+                G_FF[t-startT][ts][isc] += (psi.dot(phi)).real();
               }
 		
 	      // Diag (4)
 
 	      // (mu,nu;nu,mu)   
-	      // compute psi
-	      Vtmp.mulGV(VtOut[1],Unu_d);
-	      Vtmp.apply_gamma5();
-              Vtmp.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
-	      Vtmp1.shift(Vtmp,nu);
+	      // compute psi // need Unu^dagger
+	      Vtmp2.mulGV(VtOut[0],Unu);
+	      Vtmp2.apply_gamma5();
+              Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
+	      Vtmp1.shift(Vtmp2,nu);
 	      for(int ts=0; ts < T; ts++){//time separation  
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
-		phi.absorbTimeslice(VtOut[4],(t+ts)%T);
-		G_FF[t][ts][isc] -= (psi.dot(phi)).real();
+		phi.absorbTimeslice(VtOut[1],(t+ts)%T);
+		G_FF[t-startT][ts][isc] -= (psi.dot(phi)).real();
 	      }
 
 	      // (mu,nu;mu,nu)
-	      /////// already taken into account in Diag (1)
-	      // compute psi 
-	      Vtmp.mulGV(VtOut[1],Umu_d);
-              Vtmp.apply_gamma5();
-              Vtmp.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
-              Vtmp1.shift(Vtmp,mu_d);
+	      // compute psi // need Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered
+	      Vtmp2.mulGV(VtOut[0],Umu);
+              Vtmp2.apply_gamma5();
+              Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
+              Vtmp1.shift(Vtmp2,mu_d);
+	      //Umu.Udag(); //necessary if Umu not daggered
               for(int ts=0; ts < T; ts++){//time separation
                 psi.absorbTimeslice(Vtmp1,(t+ts)%T);
-                phi.absorbTimeslice(VtOut[4],(t+ts)%T);
-                G_FF[t][ts][isc] -= (psi.dot(phi)).real();
+                phi.absorbTimeslice(VtOut[1],(t+ts)%T);
+                G_FF[t-startT][ts][isc] -= (psi.dot(phi)).real();
               }
+	    }
+	  }
+	}
 
+	//mu = in_mu;
+        //solver.UpdateSolver();
+
+	VtIn.absorbTimeslice(Vstc,t);
+	u_solver.solve(VtOut[0],VtIn);	  
+	
+        for(int mu_d=0; mu_d<3; mu_d++ ){
+
+          Umu.absorbDir_device(gauge,mu_d);
+	  Umu.Udag(); // to reduce #Udag() ops 
+          for(int nu=0; nu<3; nu++){
+            if ( mu_d != nu ){
 	      
 	      /******  (<-, ->) Group  ******/
 	      
 	      //---- inversion with mu&nu dependent rhs
 	      // for Diag (5) & (7)
-	      mu = in_mu;
-	      solver.UpdateSolver();
-	  
-	      //Vtmp.zero_where(BOTH);
-	      Vtmp.absorbTimeslice(Vstc,t);
-	      VtIn.mulGV(Vtmp,Umu);
-	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
-	      solver.solve(VtOut[4],VtIn);
+	      //mu = -in_mu;
+	      //solver.UpdateSolver();
 
+	      Unu.shift(Umu, nu); // Here, Unu = Umu(x - nu) 
+              //Unu.Udag(); // since Umu is daggered
+	      Vtmp1.absorbTimeslice(Vstc,t);
+	      VtIn.mulGV(Vtmp1,Unu);
+	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
+	      VtIn.apply_gamma5();
+	      d_solver.solve(VtOut[1],VtIn);
+
+	      Unu.absorbDir_device(gauge,nu);
+              Unu.Udag();
 
 	      // Diag (5)
 	      
 	      // (mu,nu;nu,mu)
 	      // compute psi
-	      Vtmp1.shift(VtOut[3],N_DIMS+nu);
-	      // compute phi 
-	      Vtmp2.mulGV(VtOut[4],Unu_d);
+	      Vtmp1.shift(VtOut[1],N_DIMS+nu);
+	      // compute phi // need Unu^dagger
+	      Vtmp2.mulGV(VtOut[0],Unu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
 	      Vtmp2.apply_gamma5();
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
 		phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-                G_FF[t][ts][isc] -= -(psi.dot(phi)).real();
+                G_FF[t-startT][ts][isc] -= -(psi.dot(phi)).real();
               }
 
-	      // (mu,nu;mu,nu)
+	      // (nu,mu;nu,mu)
 	      // compute psi
-	      Vtmp1.shift(VtOut[3],N_DIMS+mu_d);
-	      // compute phi
-	      //Umu.Udag();
-	      Vtmp2.mulGV(VtOut[4],Umu_d);
+	      Vtmp1.shift(VtOut[1],N_DIMS+mu_d);
+	      // compute phi //need Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered
+	      Vtmp2.mulGV(VtOut[0],Umu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      Vtmp2.apply_gamma5();
-	      //Umu.Udag();
+	      //Umu.Udag(); //necessary if Umu not daggered
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
                 phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-		G_FF[t][ts][isc] -= -(psi.dot(phi)).real();
+		G_FF[t-startT][ts][isc] -= -(psi.dot(phi)).real();
               }
 	      
 	      // Diag (7)
 	      
 	      // (mu,nu;nu,mu)  
-	      // compute psi
-	      Vtmp.mulGV(VtOut[3],Unu_d);
-	      Vtmp.apply_gamma5();
-	      Vtmp.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
-	      Vtmp1.shift(Vtmp,nu);
+	      // compute psi // need Unu^dagger
+	      Vtmp2.mulGV(VtOut[1],Unu);
+	      Vtmp2.apply_gamma5();
+	      Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
+	      Vtmp1.shift(Vtmp2,nu);
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
-		phi.absorbTimeslice(VtOut[4],(t+ts)%T);
-		G_FF[t][ts][isc] += -(psi.dot(phi)).real();
+		phi.absorbTimeslice(VtOut[0],(t+ts)%T);
+		G_FF[t-startT][ts][isc] += -(psi.dot(phi)).real();
               }
 
-	      // (mu,nu;mu,nu)
-	      // compute psi
-	      //Umu.Udag();
-	      Vtmp.mulGV(VtOut[3],Umu_d);
-	      Vtmp.apply_gamma5();
-	      Vtmp.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
-	      Vtmp1.shift(Vtmp,mu_d);
-	      //Umu.Udag();
-	      // compute phi
+	      // (nu,mu;nu,mu)
+	      // compute psi // need Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered
+	      Vtmp2.mulGV(VtOut[1],Umu);
+	      Vtmp2.apply_gamma5();
+	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
+	      Vtmp1.shift(Vtmp2,mu_d);
+	      //Umu.Udag(); //necessary if Umu not daggered
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
-                phi.absorbTimeslice(VtOut[4],(t+ts)%T);
-                G_FF[t][ts][isc] += -(psi.dot(phi)).real();
+                phi.absorbTimeslice(VtOut[0],(t+ts)%T);
+                G_FF[t-startT][ts][isc] += -(psi.dot(phi)).real();
               }
 	      
 	      //---- inversion with mu&nu dependent rhs
-	      // for Diag (6) & (8)
-	      mu = -in_mu;
-	      solver.UpdateSolver();
-	      
-	      //VtIn.zero_where(BOTH);
+	      // for Diag (6) & (8) // need Umu   
+
+	      Umu.Udag(); // since Umu is daggered
 	      VtIn.absorbTimeslice(Vstc,t);
-	      Vtmp.shift(VtIn,N_DIMS+mu_d);
-	      VtIn.mulGV(Vtmp,Umu);
+	      Vtmp1.shift(VtIn,N_DIMS+mu_d);
+	      VtIn.mulGV(Vtmp1,Umu);
 	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      VtIn.apply_gamma5();
-	      solver.solve(VtOut[4],VtIn);
+	      d_solver.solve(VtOut[1],VtIn);
+	      Umu.Udag();
 	      
 	      // Diag (6)
 	      
 	      // (mu,nu;nu,mu) 
 	      // compute psi
-	      Vtmp1.shift(VtOut[4],N_DIMS+nu);
-	      // compute phi
-	      Vtmp2.mulGV(VtOut[0],Unu_d);
+	      Vtmp1.shift(VtOut[1],N_DIMS+nu);
+	      // compute phi //need Unu^dagger
+	      Vtmp2.mulGV(VtOut[0],Unu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
 	      Vtmp2.apply_gamma5();
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
 		phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-		G_FF[t][ts][isc] += -(psi.dot(phi)).real();
+		G_FF[t-startT][ts][isc] += -(psi.dot(phi)).real();
 	      }
 
-	      // (mu,nu;mu,nu)    
+	      // (nu,mu;nu,mu)    
 	      // compute psi
-	      Vtmp1.shift(VtOut[4],N_DIMS+mu_d);
-	      // compute phi
-	      //Umu.Udag();
-	      Vtmp2.mulGV(VtOut[0],Umu_d);
+	      Vtmp1.shift(VtOut[1],N_DIMS+mu_d);
+	      // compute phi // meed Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered
+	      Vtmp2.mulGV(VtOut[0],Umu);
 	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      Vtmp2.apply_gamma5();
-	      //Umu.Udag();
+	      //Umu.Udag(); //necessary if Umu not daggered
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
 		phi.absorbTimeslice(Vtmp2,(t+ts)%T);
-                G_FF[t][ts][isc] += -(psi.dot(phi)).real();
+                G_FF[t-startT][ts][isc] += -(psi.dot(phi)).real();
 	      }
 	      
 	      // Diag (8)
 
 	      // (mu,nu;nu,mu) 
-	      // compute psi
-	      Vtmp.mulGV(VtOut[4],Unu_d);
-	      Vtmp.apply_gamma5();
-	      Vtmp.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
-	      Vtmp1.shift(Vtmp,nu);
-	      // compute phi
+	      // compute psi // need Unu^dagger
+	      Vtmp2.mulGV(VtOut[1],Unu);
+	      Vtmp2.apply_gamma5();
+	      Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
+	      Vtmp1.shift(Vtmp2,nu);
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
                 phi.absorbTimeslice(VtOut[0],(t+ts)%T);
-                G_FF[t][ts][isc] -= -(psi.dot(phi)).real();
+                G_FF[t-startT][ts][isc] -= -(psi.dot(phi)).real();
               }
 
-	      // (mu,nu;mu,nu)
-              // already taken into account in Diag (5)
-	      Vtmp.mulGV(VtOut[4],Umu_d);
-              Vtmp.apply_gamma5();
-              Vtmp.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
-              Vtmp1.shift(Vtmp,mu_d);
-              // compute phi
+	      // (nu,mu;nu,mu)
+	      // compute psi // need Umu^dagger
+	      //Umu.Udag(); //necessary if Umu not daggered
+	      Vtmp2.mulGV(VtOut[1],Umu);
+              Vtmp2.apply_gamma5();
+              Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
+              Vtmp1.shift(Vtmp2,mu_d);
+	      //Umu.Udag(); //necessary if Umu not daggered
               for(int ts=0; ts < T; ts++){//time separation
                 psi.absorbTimeslice(Vtmp1,(t+ts)%T);
                 phi.absorbTimeslice(VtOut[0],(t+ts)%T);
-                G_FF[t][ts][isc] -= -(psi.dot(phi)).real();
+                G_FF[t-startT][ts][isc] -= -(psi.dot(phi)).real();
               }
 	    }
 	  }
@@ -510,8 +526,8 @@ int main(int argc, char **argv)
       std::ofstream fpt(outName);
       fpt.precision(8);
       for(int isc=0; isc < numSourcePositions; isc++)
-	for(int t=0; t < dims[3]; t++)
-	  for(int ts=0; ts < dims[3]; ts++) {
+	for(int t=startT; t < endT; t++)
+	  for(int ts=0; ts < T; ts++) {
 	    fpt << isc<< " " << t << " " << ts << " " << std::scientific << G_FF[t][ts][isc]/16.0 <<  std::endl;
 	  }
     }

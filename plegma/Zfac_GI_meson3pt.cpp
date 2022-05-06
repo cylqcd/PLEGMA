@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
-      // prop_SS: smearing both at source(nSmear0, alphaGauss)  and sink(nSmear1, alphaGauss)
-      // prop_SL: smearing only at the source(nSmear0, alphaGauss)
+      //: prop_SS: smearing both at source(nSmear0, alphaGauss)  and sink(nSmear1, alphaGauss)
+      //: prop_SL: smearing only at the source(nSmear0, alphaGauss)
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
 				   double run_mu, WHICHFLAVOR fl, int nSmear0, int nSmear1) {
 				 // ensuring mu value
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
       twop_filename = given_twop_filename + src_string;
       threep_filename = given_threep_filename + src_string;
       free(src_string);
-      
+
       //PLEGMA_Propagator<float> propUP_wrong_smear;
       PLEGMA_Propagator<float> propUP;
       //PLEGMA_Propagator<float> propST_wrong_smear;
@@ -183,6 +183,7 @@ int main(int argc, char **argv) {
 	  //propST3D.absorb(propST, global_fixSinkTime);
 	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
+	  char meson_index[4] = {'5', '1', '2', '3'};
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
 	  for(size_t imom = 0; imom < sourceMom.size()/3; imom++){
 	    std::vector<int> sinkMom = {sourceMom[imom*3],sourceMom[imom*3+1],sourceMom[imom*3+2]};
@@ -203,7 +204,7 @@ int main(int argc, char **argv) {
 		solver.UpdateSolver();
 	      }
 	      // Note: interpolating op's are rotated to physical basis so that there are extra G5 multiplying G_mu_rho and G_nu_rho
-	      for(int mu_rho = 1; mu_rho<N_DIMS; mu_rho++){
+	      for(int mu_rho = 0; mu_rho<N_DIMS; mu_rho++){
 		PLEGMA_Propagator<float> seqProp(BOTH, FIRST_CORNER);
 		for(int nu = 0 ; nu < 4 ; nu++)
 		  for(int c2 = 0 ; c2 < 3 ; c2++){
@@ -233,8 +234,8 @@ int main(int argc, char **argv) {
 		    seqProp.absorb(vectorAuxF, nu, c2);
 		  }
 		seqProp.apply_gamma(G5);
-		for(int nu_rho = 1; nu_rho<N_DIMS; nu_rho++){
-		  std::string filename = filename0 + std::to_string(mu_rho) + std::to_string(nu_rho);
+		for(int nu_rho = 0; nu_rho<N_DIMS; nu_rho++){
+		  std::string filename = filename0 + meson_index[mu_rho] + meson_index[nu_rho];
 		  PLEGMA_Propagator<float> seqPropGamma(BOTH, FIRST_CORNER);
 		  seqPropGamma.copy(seqProp,BOTH);
 		  seqPropGamma.apply_gamma(gammas[nu_rho],RIGHT);

@@ -117,10 +117,17 @@ int main(int argc, char **argv) {
       propUP.rotateToPhysicalBase_device(mu/abs(mu));
       
       PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
+      /*
       TIME(corr.contractMesonsNew(propUP, propUP));
       corr.setDatasets((std::vector<std::string>) {"twop_meson_uu"});
+      double* c_p = corr.H_elem();
+      for ( int i=0; i<dims[3]*10; i++ ){
+	PLEGMA_printf("corr = %g %g\n",*c_p, *(c_p+1));
+	c_p+=2;
+      }
       // or
-      //TIME(corr.contractMesons(propUP, propUP));
+      */
+      TIME(corr.contractMesons(propUP, propUP));
       
       THREAD(propUP.writeFile(twop_filename, corr_file_format));
       THREAD(corr.writeFile(twop_filename, corr_file_format));
