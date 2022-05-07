@@ -208,9 +208,10 @@
 
       PLEGMA_Vector<double> vectorSource_oet;
       vectorSource_oet.randInit(rand_seed2);
-      vectorSource_oet.stochastic_Z(nroots);
       //loop over the soure positions
       for(int isource = 0 ; isource < numSourcePositions; isource++){
+
+        vectorSource_oet.stochastic_Z(nroots);
 
         site source=site({0,0,0,sourcePositions[isource][DIM_T]});
 
@@ -243,7 +244,7 @@
 	free(ssource);
 
         PLEGMA_Gauge3D<double> smearedGauge3D;
-        smearedGauge3D.absorb(smearedGauge, sourcePositions[isource][DIM_T]);
+        smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
 	// ensuring mu positive
 	if(mu<0) {
@@ -423,26 +424,15 @@
 
         {  // Smearing the source
 
-           vectortmp1.absorbTimeslice(vectorSource_oet, sourcePositions[isource][DIM_T]);
            PLEGMA_Vector3D<double> vector1, vector2;
-           vector1.absorb(vectortmp1, sourcePositions[isource][DIM_T]);
+           vector1.absorb(vectorSource_oet, sourcePositions[isource][DIM_T]);
 
-           PLEGMA_Gauge3D<double> smearedGauge3D;
-           smearedGauge3D.absorb(smearedGauge, sourcePositions[isource][DIM_T]);
 
            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
+
            vectortmp1.absorb(vector2,sourcePositions[isource][DIM_T]);
-           vectortmp2.absorbTimeslice(vectortmp1,sourcePositions[isource][DIM_T]);
 
         }
-
-        //Save the smeared,transformed and diluted source for non-zero momentum oet.
-        vectorSource_oet.copy(vectortmp2);
-
-
-        vectortmp2.copy(vectorSource_oet);
-        vectortmp1.absorbTimeslice(vectortmp2, sourcePositions[isource][DIM_T]);
-
 
         vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
         //Multiplying by the appropriate momentum phase
@@ -456,6 +446,7 @@
         vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
 
 
+
         //performing smearing
 	    
         TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
@@ -467,19 +458,30 @@
            solver.UpdateSolver();
         }
 
-        vectortmp2.copy(vectorSource_oet);
-        vectortmp1.absorbTimeslice(vectortmp2, sourcePositions[isource][DIM_T]);
+	{  // Smearing the source
 
-        vectortmp2.rotateToPhysicalBasis(vectortmp1,-1);
+           PLEGMA_Vector3D<double> vector1, vector2;
+           vector1.absorb(vectorSource_oet, sourcePositions[isource][DIM_T]);
 
-        //Doing the inversion
-        TIME(solver.solve(vectortmp2, vectortmp2),"ISOSPIN32");
 
-        //Rotate back immediately to the physical basis
+           TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
+
+           vectortmp2.absorb(vector2,sourcePositions[isource][DIM_T]);
+
+        }
+
+
+
         vectortmp1.rotateToPhysicalBasis(vectortmp2,-1);
 
+        //Doing the inversion
+        TIME(solver.solve(vectortmp1, vectortmp1),"ISOSPIN32");
+
+        //Rotate back immediately to the physical basis
+        vectortmp2.rotateToPhysicalBasis(vectortmp1,-1);
+
         //performing smearing
-        TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
+        TIME(vectortmp1.gaussianSmearing(vectortmp2, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
         stochastic_oet_prop_d_zero_mom_source_to_sink.copy(vectortmp1);
 
 	}
@@ -543,7 +545,7 @@
         TIME(reductionsV2_phidi2_UD.V2( stochastic_oet_prop_d_zero_mom_source_to_sink, glist_sink_nucleon, propUP, propDN, true),"ISOSPIN12");
         TIME(reductionsV2_phidi2_UU.V2( stochastic_oet_prop_d_zero_mom_source_to_sink, glist_sink_nucleon, propUP, propUP, true),"ISOSPIN12");
         TIME(reductionsV4_phidi2_DU.V4( stochastic_oet_prop_d_zero_mom_source_to_sink, glist_sink_nucleon, propDN, propUP, true),"ISOSPIN12");
-        TIME(reductionsV2_phidi2_UUT_nucleon.V2( stochastic_oet_prop_d_zero_mom_source_to_sink, glist_sink_delta,propUP, propUP, true),"ISOSPIN12");
+        TIME(reductionsV2_phidi2_UUT_nucleon.V2( stochastic_oet_prop_d_zero_mom_source_to_sink, glist_sink_nucleon,propUP, propUP, true),"ISOSPIN12");
 
 //	reductionsV4.writeHDF5("V4redforZdiagram");
 
@@ -720,20 +722,23 @@
               mu*=-1.;
               solver.UpdateSolver();
             }
-            double tmp;
+            double norm;
 
-            vectortmp2.copy(vectorSource_oet);
-            vectortmp1.absorbTimeslice(vectortmp2, sourcePositions[isource][DIM_T]);
-
-
-            vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
-
+            vectortmp1.absorbTimeslice(vectorSource_oet, sourcePositions[isource][DIM_T]);
 
             //Multiplying by the appropriate momentum phase
+	    //
+	    {  // absorbing the source and put momentum to the sink
+              PLEGMA_Vector3D<double> vector1,vector2;
+              vector1.absorb(vectortmp1,sourcePositions[isource][DIM_T]);
+              vector1.mulMomentumPhases(momentum_i2,-1);
 
-            std::vector<int> tmp_4Dmom= momentum_i2 ;
-            tmp_4Dmom.push_back(0);
-            vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
+	      vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss);
+
+              vectortmp1.absorb(vector2,sourcePositions[isource][DIM_T]);
+            }
+
+            vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
 
 
             //Doing the inversion
@@ -743,11 +748,14 @@
             //Rotate back immediately to the physical basis
             vectortmp1.rotateToPhysicalBasis(vectortmp2,+1);
 
+
             //performing smearing
 	    
             TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
 
+
             stochastic_oet_prop_u_fini_mom_source_to_sink.copy(vectortmp2);
+
 
             // ensuring mu negative
             if(mu>0) {
@@ -755,25 +763,39 @@
               solver.UpdateSolver();
             }
 
+
 	    vectortmp2.copy(vectorSource_oet);
             vectortmp1.absorbTimeslice(vectortmp2, sourcePositions[isource][DIM_T]);
 
-            vectortmp2.rotateToPhysicalBasis(vectortmp1,-1);
+	   
 
             //Multiplying by the appropriate momentum phase
+	    {  // absorbing the source and put momentum to the sink
+              PLEGMA_Vector3D<double> vector1,vector2;
+              vector1.absorb(vectortmp1,sourcePositions[isource][DIM_T]);
+              vector1.mulMomentumPhases(momentum_i2,-1);
 
-            vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
+              vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss);
 
+              vectortmp1.absorb(vector2,sourcePositions[isource][DIM_T]);
+            }
+
+
+            vectortmp2.rotateToPhysicalBasis(vectortmp1,-1);
 
             //Doing the inversion
             TIME(solver.solve(vectortmp2, vectortmp2),"ISOSPIN32");
+
 
             //Rotate back immediately to the physical basis
             vectortmp1.rotateToPhysicalBasis(vectortmp2,-1);
 
             //performing smearing
             TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
-            stochastic_oet_prop_d_fini_mom_source_to_sink.copy(vectortmp1);
+
+
+            stochastic_oet_prop_d_fini_mom_source_to_sink.copy(vectortmp2);
+
 /*
             {
               PLEGMA_Vector<float> vectorAuxF;
@@ -812,6 +834,7 @@
           spropagator_V6.unload();
 
           Phi0 = spropagator_V6.getPointSource(actualSource,HOST);
+	  //PLEGMA_printf("Phi0 %e\n", Phi0.get()[0]);
 
           spropagator_V6.load();
 
@@ -950,8 +973,8 @@
 	  }
 	  else{
 
-	    TIME(corrPPUP.P_diagrams( stochastic_oet_prop_u_zero_mom_source_to_sink, stochastic_oet_prop_u_zero_mom_source_to_sink, i_mpi2, true),"ISOSPIN32");
-            TIME(corrP0DN.P_diagrams( stochastic_oet_prop_u_zero_mom_source_to_sink, stochastic_oet_prop_d_zero_mom_source_to_sink, i_mpi2, true),"ISOSPIN32");
+	    TIME(corrPPUP.P_diagrams( stochastic_oet_prop_u_zero_mom_source_to_sink, stochastic_oet_prop_u_zero_mom_source_to_sink, i_mpi2, false),"ISOSPIN32");
+            TIME(corrP0DN.P_diagrams( stochastic_oet_prop_u_zero_mom_source_to_sink, stochastic_oet_prop_d_zero_mom_source_to_sink, i_mpi2, false),"ISOSPIN32");
 	    TIME(corrM.M_diagrams( corrNP, stochastic_oet_prop_u_zero_mom_source_to_sink,stochastic_oet_prop_u_zero_mom_source_to_sink ),"ISOSPIN32");
             TIME(corrD1if12.M_diagrams( corrNP, stochastic_oet_prop_u_zero_mom_source_to_sink,stochastic_oet_prop_d_zero_mom_source_to_sink),"ISOSPIN12");
 
@@ -971,8 +994,8 @@
           }
           else{
 
-            TIME(corrPPDN.P_diagrams( stochastic_oet_prop_d_zero_mom_source_to_sink, stochastic_oet_prop_d_zero_mom_source_to_sink, i_mpi2, true),"ISOSPIN32");
-            TIME(corrP0UP.P_diagrams( stochastic_oet_prop_d_zero_mom_source_to_sink, stochastic_oet_prop_u_zero_mom_source_to_sink, i_mpi2, true),"ISOSPIN32");
+            TIME(corrPPDN.P_diagrams( stochastic_oet_prop_d_zero_mom_source_to_sink, stochastic_oet_prop_d_zero_mom_source_to_sink, i_mpi2, false),"ISOSPIN32");
+            TIME(corrP0UP.P_diagrams( stochastic_oet_prop_d_zero_mom_source_to_sink, stochastic_oet_prop_u_zero_mom_source_to_sink, i_mpi2, false),"ISOSPIN32");
             TIME(corrD1if34.M_diagrams( corrNP, stochastic_oet_prop_d_zero_mom_source_to_sink, stochastic_oet_prop_u_zero_mom_source_to_sink ),"ISOSPIN12");
 
 
