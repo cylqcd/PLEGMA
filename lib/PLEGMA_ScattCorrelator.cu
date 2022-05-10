@@ -3334,10 +3334,10 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
   std::size_t n_s1 = this->labels.find("d");
   std::size_t n_s2 = this->labels.find("l");
-  int LIM=TIME*Nmoms_c*n_gammas_c;
-  for (int i=0;i<LIM;++i){ 
-    printf("Source %d %e %e\n",i, srcCorr.H_elem()[2*i+0],srcCorr.H_elem()[2*i+1]);
-  }
+//  int LIM=TIME*Nmoms_c*n_gammas_c;
+//  for (int i=0;i<LIM;++i){ 
+//    printf("Source %d %e %e\n",i, srcCorr.H_elem()[2*i+0],srcCorr.H_elem()[2*i+1]);
+//  }
   if ((n_s1==std::string::npos) && (n_s2==std::string::npos)) {
   for(int i_m=0; i_m<imap.size(); i_m++){
     int i_mom_f1 = imap[i_m][1];

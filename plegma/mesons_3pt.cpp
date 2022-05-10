@@ -154,22 +154,23 @@ int main(int argc, char **argv) {
 
                                  PLEGMA_Vector<double> vectorInOut;
 
+
                                  {  // absorbing the source and put momentum to the sink
                                    PLEGMA_Vector3D<double> vector1,vector2;
                                    vector1.absorb(vectorSource_oet,sourcePositions[isource][DIM_T]);
                                    vector1.mulMomentumPhases(sourceMom,-1);
-                                   TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear0, alphaGauss));
 
-                                   vectorInOut.absorb(vector1,sourcePositions[isource][DIM_T]);
+				   TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear0, alphaGauss));
+
+
+                                   vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
                                  }
-				 double tmp=vectorInOut.norm();
-				 PLEGMA_printf("Norm of the source %e\n",tmp);
+
                                  {
                                     PLEGMA_Vector<double> vectorAuxD;
                                     TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
                                     TIME(vectorInOut.copy(vectorAuxD));
                                  }
-
 
                                  TIME(solver.solve(vectorInOut, vectorInOut));
 
@@ -178,7 +179,6 @@ int main(int argc, char **argv) {
                                     TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
                                     TIME(vectorInOut.copy(vectorAuxD));
                                  }
-
 
                                  if(vec_SL.getAllocation() != NONE) {
                                    PLEGMA_Vector<float> vectorAuxF;
@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
 
       };
 
-
+#if 0
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
 				   double run_mu, WHICHFLAVOR fl, int nSmear0, int nSmear1) {
 				 // ensuring mu value
@@ -231,18 +231,18 @@ int main(int argc, char **argv) {
 				   }
 				 }
 			       };
-
+#endif
       char * src_string;
       asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", source[0], source[1], source[2], source[3]);
       twop_filename = given_twop_filename + src_string;
       threep_filename = given_threep_filename + src_string;
       free(src_string);
-      
+#if 0      
       PLEGMA_Propagator<float> propUP_wrong_smear;
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propST_wrong_smear;
       PLEGMA_Propagator<float> propST;
-
+#endif
       PLEGMA_Vector<float> oet_light_up_fini_SS;
       PLEGMA_Vector<float> oet_light_dn_fini_SS;
       PLEGMA_Vector<float> oet_strange_up_fini_SS;
@@ -256,8 +256,8 @@ int main(int argc, char **argv) {
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	//PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
 	//PLEGMA_Propagator<float> propST_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
-	PLEGMA_Propagator<float> propUP_SL;//(BOTH, FIRST_CORNER);
-	PLEGMA_Propagator<float> propST_SL;//(BOTH, FIRST_CORNER);
+//	PLEGMA_Propagator<float> propUP_SL;//(BOTH, FIRST_CORNER);
+//	PLEGMA_Propagator<float> propST_SL;//(BOTH, FIRST_CORNER);
 
    	PLEGMA_Vector<float> oet_light_up_fini_SL(BOTH, FIRST_CORNER);
 	PLEGMA_Vector<float> oet_light_dn_fini_SL(BOTH, FIRST_CORNER);
@@ -276,24 +276,26 @@ int main(int argc, char **argv) {
 
           TIME(computePropagator_oet(oet_light_up_zero_SS, oet_light_up_zero_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, zero_mom));
 
-          oet_light_up_zero_SS.writeHDF5("oet_light_UP_SS_zero");
+//        oet_light_up_zero_SS.writeHDF5("oet_light_UP_SS_zero");
 
 
           TIME(computePropagator_oet(oet_light_dn_zero_SS, oet_light_dn_zero_SL, -mu_ud, LIGHT, nsmearGauss, nsmearGauss,  zero_mom));
-	  oet_light_dn_zero_SS.writeHDF5("oet_light_DN_SS_zero");
+
+// oet_light_dn_zero_SS.writeHDF5("oet_light_DN_SS_zero");
 
 
           TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
 
-	  oet_strange_up_zero_SS.writeHDF5("oet_strange_UP_SS_zero");
+	  //oet_strange_up_zero_SS.writeHDF5("oet_strange_UP_SS_zero");
 
 
           TIME(computePropagator_oet(oet_strange_dn_zero_SS, oet_strange_dn_zero_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
 
-          oet_strange_dn_zero_SS.writeHDF5("oet_strange_DN_SS_zero");
+          //oet_strange_dn_zero_SS.writeHDF5("oet_strange_DN_SS_zero");
 
         } 
-        else {
+#if 0    
+    	else {
 	  TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, nsmearGauss));
 	  TIME(computePropagator(propST, propST_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s));
 	
@@ -318,6 +320,8 @@ int main(int argc, char **argv) {
 	    propST_wrong_smear.absorb(vectorAuxF, isc/3, isc%3);
 	  }
 	}
+#endif
+
 	
 	for(size_t its = 0; its < tSinks.size(); its++){
 	  int tsinkMtsource = tSinks[its];
@@ -328,14 +332,17 @@ int main(int argc, char **argv) {
 	  int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
 	  // 3D propagators at t_sink
+
+	  PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+#if 0
 	  PLEGMA_Propagator3D<float> propUP3D;
 	  PLEGMA_Propagator3D<float> propST3D;
-	  PLEGMA_Gauge3D<double> smearedGauge3D_sink;
 
 	  if (stoch_std ==false){
             propUP3D.absorb(propUP, global_fixSinkTime);
 	    propST3D.absorb(propST, global_fixSinkTime);
 	  }
+#endif
 	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};
@@ -405,6 +412,7 @@ int main(int argc, char **argv) {
 
               auto &momentum_f1 =  pf1_filt[i_pf1];
 
+#if 0
 	      auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop, PLEGMA_Propagator<float> &propF, int nSmear, WHICHFLAVOR fl, std::string name) {
          	char * mom_string;
 	        asprintf(&mom_string, "_mx%+dmy%+dmz%+d", momentum_f1[0], momentum_f1[1], momentum_f1[2]);
@@ -474,7 +482,7 @@ int main(int argc, char **argv) {
 	        if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	        TIME(corr.writeFile( filename, corr_file_format));
 	      };
-
+#endif
 	      auto computeThreep_oet = [&](double run_mu, PLEGMA_Vector3D<float>& prop, PLEGMA_Vector<float> &propF, int nSmear, WHICHFLAVOR fl, std::string name) {
                  PLEGMA_Vector<float> seqProp(BOTH, FIRST_CORNER);
                  // ensuring mu positive
@@ -692,11 +700,13 @@ int main(int argc, char **argv) {
 
 
 	    }
+#if 0	    
 	    else{
 	      TIME(computeThreep(-mu_ud, propUP3D, propUP_SL, nsmearGauss, LIGHT, "_up_pion"));
 	      TIME(computeThreep(-mu_ud, propST3D, propUP_SL, nsmearGauss, LIGHT, "_up_kaon"));
 	      TIME(computeThreep(-mu_s, propUP3D, propST_SL, nsmearGauss_s, STRANGE, "_st_kaon"));
 	    } //std or oet
+#endif	   
 	  } //i pf momentum
 	}//i pi momentum
       } //t sinks
