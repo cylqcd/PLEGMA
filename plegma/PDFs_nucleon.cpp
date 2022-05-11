@@ -174,13 +174,13 @@ int main(int argc, char **argv)
 	      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
 	      // check if we need to normalize the seqsource for mix precision solver
 	      if(nucleon == PROTON){
-		if(mu<0) {
+		if(mu>0) {
 		  mu*=-1.;
 		  solver->UpdateSolver();
 		}
 	      }
 	      else{
-		if(mu>0) {
+		if(mu<0) {
 		  mu*=-1.;
 		  solver->UpdateSolver();
 		}
