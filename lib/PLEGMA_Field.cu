@@ -1034,8 +1034,10 @@ template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCAT
 template void PLEGMA_Field<double>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<double>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<float>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
-template void PLEGMA_Field<double>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
 template void PLEGMA_Field<float>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
+template void PLEGMA_Field<float>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
+template void PLEGMA_Field<double>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
+template void PLEGMA_Field<double>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
 template void PLEGMA_Field<double>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
 
 // field3D <- field4D

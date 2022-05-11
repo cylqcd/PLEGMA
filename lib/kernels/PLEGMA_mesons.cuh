@@ -114,14 +114,14 @@ void contract_mesons_host( ProfileStruct &ps,
       int accumX = ps.tp.grid.x/time_step;
       for(size_t v = 0 ; v < volume*std::min(t_size-it, time_step); v++)
 	for(int f = 0 ; f < site_size; f++) {
-	  result[(f*t_size + it)*volume+v] = 0;
+	  result[(((f/N_MESONS)*t_size+it)*volume+v)*N_MESONS+f % N_MESONS] = 0;
 	  for(int j = 0 ; j < accumX; j++)
-	    result[(f*t_size + it)*volume+v] += h_partial_block[(v*site_size+f)*accumX+j];
+	    result[(((f/N_MESONS)*t_size+it)*volume+v)*N_MESONS+f % N_MESONS] += h_partial_block[(v*site_size+f)*accumX+j];
 	}
     } else {
       for(size_t v = 0 ; v < volume; v++)
 	for(int f = 0 ; f < site_size; f++) {
-	  result[(f*t_size + it)*volume+v] = h_partial_block[v*site_size+f];
+	  result[(((f/N_MESONS)*t_size+it)*volume+v)*N_MESONS+f % N_MESONS] = h_partial_block[v*site_size+f];
 	}
     }
   }

@@ -147,29 +147,84 @@ namespace plegma {
       return res;
     }
 
-    std::vector<int> u_posix( int p_i ){
-      assert(p_i<NLIST);
-      auto &moms = ps[p_i];
-    
-      return this->u_posix( p_i, moms );
+    std::vector<int> u_posix_minus( int p_i, std::vector<std::vector<int>> &moms){
+      int aux;
+      std::vector<int> res;
+      std::vector<std::vector<int>> uniq_pi = uniq_p(p_i);
+
+      for( auto& mom: moms ){
+	std::vector<int> tmp=mom;
+        tmp[0]*=-1;
+	tmp[1]*=-1;
+	tmp[2]*=-1;
+        auto momf = std::find(uniq_pi.begin(), uniq_pi.end(), tmp);
+        aux = (momf==uniq_pi.end()) ? -1 : momf-uniq_pi.begin();
+        res.push_back(aux);
+      }
+      return res;
     }
+
+
+    std::vector<int> u_posix( int p_i ){
+      //assert(p_i<NLIST);
+      assert(p_i<=NLIST);
+      if (p_i== NLIST){
+        std::vector<std::vector<int>> moms = this->p_tot();
+	return this->u_posix( p_i, moms );
+      }
+      else {
+	auto &moms = ps[p_i];
+	return this->u_posix( p_i, moms );
+      }
+    }
+
+    std::vector<int> u_posix_minus( int p_i ){
+      assert(p_i<=NLIST);
+      if (p_i==NLIST){
+	std::vector<std::vector<int>> moms = this->p_tot();
+        return this->u_posix_minus( p_i, moms );
+      }
+      else{
+        auto &moms = ps[p_i];
+        return this->u_posix_minus( p_i, moms );
+      }
+    }
+
 
     std::vector<std::vector<int>> index_map(){
       std::vector<std::vector<int>> res;
 
       std::vector<std::vector<int>> auxs;
-      for(int j=0; j<NLIST; j++)
+      for(int j=0; j<=NLIST; j++)
 	auxs.push_back( u_posix(j) );
 
       for(int i=0; i<this->size(); i++){
 	std::vector<int> tmp;
-	for(int j=0; j<NLIST; j++)
+	for(int j=0; j<=NLIST; j++)
 	  tmp.push_back(auxs[j][i]);
 	res.push_back(tmp);
       }
     
       return res;
     }
+
+    std::vector<std::vector<int>> index_map_minus(){
+      std::vector<std::vector<int>> res;
+
+      std::vector<std::vector<int>> auxs;
+      for(int j=0; j<=NLIST; j++)
+        auxs.push_back( u_posix_minus(j) );
+
+      for(int i=0; i<this->size(); i++){
+        std::vector<int> tmp;
+        for(int j=0; j<=NLIST; j++)
+          tmp.push_back(auxs[j][i]);
+        res.push_back(tmp);
+      }
+
+      return res;
+    }
+
     
     std::vector<std::vector<int>> tolist( std::initializer_list<int> p_i ){
       std::vector<std::vector<int>> out;

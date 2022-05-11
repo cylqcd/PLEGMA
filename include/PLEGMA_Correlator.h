@@ -196,7 +196,7 @@ namespace plegma {
 
     void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 			   PLEGMA_Propagator<Float> &prop2);
-
+    
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2);
     
@@ -209,31 +209,58 @@ namespace plegma {
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
 				   int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+    void contractNucleonThrp_local(PLEGMA_Vector<Float> &bwdProp,
+                                   PLEGMA_Vector<Float> &fwdProp,
+                                   int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+
+    void contractNucleonThrp_oneD(PLEGMA_Vector<Float> &bwdProp,
+                                  PLEGMA_Vector<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
     
     void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 				  PLEGMA_Propagator<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
 				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
-    
+
     void contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
-				  PLEGMA_Propagator<Float> &fwdProp,
-				  PLEGMA_Gauge<Float> &gauge,
-				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+                                  PLEGMA_Propagator<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+    void contractNucleonThrp_twoD(PLEGMA_Vector<Float> &bwdProp,
+                                  PLEGMA_Vector<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false); 
     
-    void contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
-				  PLEGMA_Propagator<Float> &fwdProp,
+    void contractNucleonThrp_threeD(PLEGMA_Vector<Float> &bwdProp,
+				  PLEGMA_Vector<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
 				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+    void contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
+                                  PLEGMA_Propagator<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
     
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,
 				 PLEGMA_Gauge<Float> &gauge, int signProps);
 
+    void contractNucleonThrp_noe(PLEGMA_Vector<Float> &bwdProp,
+                                 PLEGMA_Vector<Float> &fwdProp,
+                                 PLEGMA_Gauge<Float> &gauge, int signProps);
+
+
     void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 					PLEGMA_Propagator<Float> &fwdProp,
 					PLEGMA_Su3field<Float> &su3,
-					int signProps, std::vector<GAMMAS> gammas);
-
+					int signProps, std::vector<GAMMAS> gammas,
+					int z, std::string quark);
 
     virtual void writeASCII(std::string filename) const;
     virtual void writeHDF5(std::string filename) const;
