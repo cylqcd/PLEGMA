@@ -323,85 +323,81 @@ int main(int argc, char **argv) {
 #endif
 
 	
-	for(size_t its = 0; its < tSinks.size(); its++){
-	  int tsinkMtsource = tSinks[its];
-	  printf("Tsinks size %d\n",tSinks[its]);
-	  if(tsinkMtsource >= HGC_totalL[3])
-	    PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
-	  int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
-	  int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
-	  // 3D propagators at t_sink
-
-	  PLEGMA_Gauge3D<double> smearedGauge3D_sink;
-#if 0
-	  PLEGMA_Propagator3D<float> propUP3D;
-	  PLEGMA_Propagator3D<float> propST3D;
-
-	  if (stoch_std ==false){
-            propUP3D.absorb(propUP, global_fixSinkTime);
-	    propST3D.absorb(propST, global_fixSinkTime);
-	  }
-#endif
-	  smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
-
-	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};
-
-	  std::vector<std::vector<int>> pi1_filt = sourcemomentumList.uniq_p(0);
+	std::vector<std::vector<int>> pi1_filt = sourcemomentumList.uniq_p(0);
 	  
-	  for (int i_pi1=0; i_pi1<pi1_filt.size();++i_pi1){
+	for (int i_pi1=0; i_pi1<pi1_filt.size();++i_pi1){
 
 
-            auto &momentum_i1 =  pi1_filt[i_pi1];
-	    //printf("Momentum I1 %d %d %d\n",momentum_i1[0],momentum_i1[1], momentum_i1[2]);
-	    momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i1, 0);
+          auto &momentum_i1 =  pi1_filt[i_pi1];
+	  //printf("Momentum I1 %d %d %d\n",momentum_i1[0],momentum_i1[1], momentum_i1[2]);
+	  momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i1, 0);
 
-            PLEGMA_ScattCorrelator<float> corr_local(source,  filtered_sourcemomentumList );
-            //PLEGMA_ScattCorrelator<float> corr_local2(source,  filtered_sourcemomentumList );
+          PLEGMA_ScattCorrelator<float> corr_local(source,  filtered_sourcemomentumList );
+          //PLEGMA_ScattCorrelator<float> corr_local2(source,  filtered_sourcemomentumList );
 
-            PLEGMA_ScattCorrelator<float> corr_oneD( source,  filtered_sourcemomentumList );
-            PLEGMA_ScattCorrelator<float> corr_twoD( source,  filtered_sourcemomentumList );
-
-
-            corr_local.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STL");
-            //corr_local2.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STL");
+          PLEGMA_ScattCorrelator<float> corr_oneD( source,  filtered_sourcemomentumList );
+          PLEGMA_ScattCorrelator<float> corr_twoD( source,  filtered_sourcemomentumList );
 
 
-            corr_oneD.initialize_diagram( glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STD");
-
-            //corr_twoD.initialize_diagram( glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_TWOD");
-
-
-	    if (stoch_std==true){
-    	      TIME(computePropagator_oet(oet_light_up_fini_SS, oet_light_up_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
-              //oet_light_up_fini_SS.writeHDF5("oet_light_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
-              //oet_light_up_fini_SL.writeHDF5("oet_light_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
-
-              TIME(computePropagator_oet(oet_light_dn_fini_SS, oet_light_dn_fini_SL,  -mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
-              //oet_light_dn_fini_SS.writeHDF5("oet_light_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
-              //oet_light_dn_fini_SL.writeHDF5("oet_light_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+          corr_local.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STL");
+          //corr_local2.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STL");
 
 
+          corr_oneD.initialize_diagram( glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STD");
+          //corr_twoD.initialize_diagram( glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_TWOD");
 
-	      TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+          if (stoch_std==true){
+    	    TIME(computePropagator_oet(oet_light_up_fini_SS, oet_light_up_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
+            //oet_light_up_fini_SS.writeHDF5("oet_light_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+            //oet_light_up_fini_SL.writeHDF5("oet_light_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
-              //oet_strange_up_fini_SS.writeHDF5("oet_strange_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
-              //oet_strange_up_fini_SL.writeHDF5("oet_strange_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+            TIME(computePropagator_oet(oet_light_dn_fini_SS, oet_light_dn_fini_SL,  -mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
+            //oet_light_dn_fini_SS.writeHDF5("oet_light_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+            //oet_light_dn_fini_SL.writeHDF5("oet_light_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+
+	    TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+
+            //oet_strange_up_fini_SS.writeHDF5("oet_strange_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+            //oet_strange_up_fini_SL.writeHDF5("oet_strange_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
 
- 	      TIME(computePropagator_oet(oet_strange_dn_fini_SS, oet_strange_dn_fini_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+            TIME(computePropagator_oet(oet_strange_dn_fini_SS, oet_strange_dn_fini_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
               //oet_strange_dn_fini_SS.writeHDF5("oet_strange_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
               //oet_strange_dn_fini_SL.writeHDF5("oet_strange_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
+	  }
 
+
+          TIME(corrPPUP.P_diagrams( oet_light_up_zero_SS, oet_light_up_fini_SS, i_pi1, false));
+          TIME(corrPPDN.P_diagrams( oet_light_dn_zero_SS, oet_light_dn_fini_SS, i_pi1, false));
+          TIME(corrP0UP.P_diagrams( oet_light_dn_zero_SS, oet_light_up_fini_SS, i_pi1, false));
+          TIME(corrP0DN.P_diagrams( oet_light_up_zero_SS, oet_light_dn_fini_SS, i_pi1, false));
+	  TIME(corrKAON.P_diagrams( oet_light_up_zero_SS, oet_strange_up_fini_SS, i_pi1, false)); 
+
+
+	  for(size_t its = 0; its < tSinks.size(); its++){
+	    int tsinkMtsource = tSinks[its];
+	    if(tsinkMtsource >= HGC_totalL[3])
+	      PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+	    int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
+	    int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
+
+	    // 3D propagators at t_sink
+
+	    PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+#if 0
+	    PLEGMA_Propagator3D<float> propUP3D;
+	    PLEGMA_Propagator3D<float> propST3D;
+
+	    if (stoch_std ==false){
+              propUP3D.absorb(propUP, global_fixSinkTime);
+	      propST3D.absorb(propST, global_fixSinkTime);
 	    }
+#endif
+	    smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
 
-
-            TIME(corrPPUP.P_diagrams( oet_light_up_zero_SS, oet_light_up_fini_SS, i_pi1, false));
-            TIME(corrPPDN.P_diagrams( oet_light_dn_zero_SS, oet_light_dn_fini_SS, i_pi1, false));
-            TIME(corrP0UP.P_diagrams( oet_light_dn_zero_SS, oet_light_up_fini_SS, i_pi1, false));
-            TIME(corrP0DN.P_diagrams( oet_light_up_zero_SS, oet_light_dn_fini_SS, i_pi1, false));
-	    TIME(corrKAON.P_diagrams( oet_light_up_zero_SS, oet_strange_up_fini_SS, i_pi1, false)); 
+	    std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};
 
 
 
@@ -589,8 +585,8 @@ int main(int argc, char **argv) {
 
 
 
-                   }
-                 }
+                   }//igamma1
+                 }//igamma2
 
               };
 
@@ -699,7 +695,7 @@ int main(int argc, char **argv) {
               //TIME(corr_twoD.writeFile( filename, corr_file_format));
 
 
-	    }
+	    } //stochastic standard
 #if 0	    
 	    else{
 	      TIME(computeThreep(-mu_ud, propUP3D, propUP_SL, nsmearGauss, LIGHT, "_up_pion"));
@@ -708,8 +704,8 @@ int main(int argc, char **argv) {
 	    } //std or oet
 #endif	   
 	  } //i pf momentum
-	}//i pi momentum
-      } //t sinks
+	}// tsinks 
+      } // i_pi momentum
 
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
       TIME(corrPPUP.apply_sign("P"));
