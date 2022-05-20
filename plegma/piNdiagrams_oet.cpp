@@ -1446,12 +1446,27 @@
 	   * pf2
 	   *
 	   * ******************************************************************/
+/*
+          if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+             spropagator_V6.copy(stochastic_oet_prop_u_fini_mom_source_to_sink);
+          }
+          else {
+             spropagator_V6.unload();
+             spropagator_V6.copy(*stochastic_oet_prop_u_zero_mom[sourcePositions[isource][DIM_T]],HOST);
+             spropagator_V6.load();
+
+ //            spropagator_V6.copy(stochastic_oet_prop_u_zero_mom_source_to_sink);
+          }
+*/
 
 	  spropagator_V6.copy(*stochastic_oet_prop_u_fini_mom[i_mpi2],HOST);
+	  spropagator_V6.load();
 
 	  spropagator_V6.unload();
 
           Phi0 = spropagator_V6.getPointSource(actualSource,HOST);
+	  PLEGMA_printf("Phi0 %e\n",Phi0.get()[0]);
+
 
           spropagator_V6.load();
 
@@ -1474,9 +1489,22 @@
           TIME(corrT25.T_diagrams_oet(reductionsV2_phidi2_UUT_nucleon, Phi0, 25, true),"ISOSPIN32");
 
           TIME(corrT26.T_diagrams_oet(reductionsV2_phidi2_UUT_nucleon, Phi0, 26, true),"ISOSPIN32");
+/*
+          if ((momentum_i2[0] != 0) || (momentum_i2[1] != 0) || (momentum_i2[2] != 0)){
+             spropagator_V6.copy(stochastic_oet_prop_d_fini_mom_source_to_sink);
+          }
+          else {
+             spropagator_V6.unload();
+             spropagator_V6.copy(*stochastic_oet_prop_d_zero_mom[sourcePositions[isource][DIM_T]],HOST);
+             spropagator_V6.load();
 
+ //            spropagator_V6.copy(stochastic_oet_prop_u_zero_mom_source_to_sink);
+          }
+
+*/
 
           spropagator_V6.copy(*stochastic_oet_prop_d_fini_mom[i_mpi2],HOST);
+	  spropagator_V6.load();
 
           spropagator_V6.unload();
 
