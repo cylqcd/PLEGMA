@@ -88,8 +88,9 @@ int main(int argc, char **argv) {
       applyBoundaryConditions(contractGauge,true);
     }
 
-    updateOptions(LIGHT);
+                                  
     TIME(QUDA_solver solver(mu));
+
 
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
@@ -130,6 +131,9 @@ int main(int argc, char **argv) {
       PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2);
       PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2);
       PLEGMA_ScattCorrelator<float> corrKAON(sourcePositions[isource], list_mpi2);
+//      PLEGMA_ScattCorrelator<float> corrKAONUP(sourcePositions[isource], list_mpi2);
+//      PLEGMA_ScattCorrelator<float> corrKAONDN(sourcePositions[isource], list_mpi2);
+
 
       corrP0UP.initialize_diagram(glist_source_meson, glist_sink_meson, "P0UP");
       corrPPUP.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
@@ -137,20 +141,43 @@ int main(int argc, char **argv) {
       corrPPDN.initialize_diagram(glist_source_meson, glist_sink_meson, "PPDN");
       corrKAON.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
 
+//      corrKAONUP.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+//      corrKAONDN.initialize_diagram(glist_source_meson, glist_sink_meson, "PPDN");
+
+
 
       vectorSource_oet.stochastic_Z(nroots);
+      vectorSource_oet.writeLIME("source_for_marcus"+sourcepositiontext);
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
       auto computePropagator_oet = [&](PLEGMA_Vector<float>& vec_SS, PLEGMA_Vector<float>& vec_SL,
                                    double run_mu, WHICHFLAVOR fl, int nSmear0, int nSmear1,  std::vector<int> sourceMom) {
-                                 // ensuring mu value
                                  if(mu != run_mu) {
                                    updateOptions(fl);
                                    mu = run_mu;
                                    solver.UpdateSolver();
+
                                  }
+				 #if 0
+				 //Doing the solver setup from scratch
+                                 mu=run_mu;
+                                 // Reading from Lime file and loading to device
+                                 {   
+	                         PLEGMA_Gauge<double> gauge;
+                                 gauge.readFile(latfile, LIME_FORMAT);
+                                 gauge.load();
+                                 gauge.calculatePlaq();
+
+                                 // Loading to QUDA and computing plaquette also there
+                                 initGaugeQuda(gauge, true);
+                                 }
+
+                                 updateOptions(LIGHT);
+
+                                 TIME(QUDA_solver solver(mu));
+                                 #endif
 
                                  PLEGMA_Vector<double> vectorInOut;
 
@@ -162,17 +189,39 @@ int main(int argc, char **argv) {
 
 				   TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear0, alphaGauss));
 
-
                                    vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
+
                                  }
+
 
                                  {
                                     PLEGMA_Vector<double> vectorAuxD;
                                     TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
                                     TIME(vectorInOut.copy(vectorAuxD));
                                  }
+				 
+				 //vectorInOut.writeHDF5("source"+std::to_string(run_mu)+"_p"+std::to_string(sourceMom[0])+std::to_string(sourceMom[1])+std::to_string(sourceMom[2]));
+
+				 PLEGMA_Vector<double> res2;
+				 double norm;
+                                 res2.copy(vectorInOut);
+                                 norm=res2.norm();
 
                                  TIME(solver.solve(vectorInOut, vectorInOut));
+
+				 PLEGMA_Vector<double> res;
+                                 QUDA_dirac *D = nullptr;
+				 D = new QUDA_dirac(QUDA_TWISTED_CLOVER_DSLASH);
+
+				 D->apply<M>(res, vectorInOut, QUDA_MASS_NORMALIZATION);
+				 res.add(res2, -1);
+				 res.scale(1./norm);
+				 norm=res.norm();
+				 PLEGMA_printf("residual norm %e \n",norm);
+
+
+
+                                 //vectorInOut.writeHDF5("propagator"+std::to_string(run_mu)+"_p"+std::to_string(sourceMom[0])+std::to_string(sourceMom[1])+std::to_string(sourceMom[2]));
 
                                  {
                                     PLEGMA_Vector<double> vectorAuxD;
@@ -215,7 +264,7 @@ int main(int argc, char **argv) {
 				   }
 				   // Inverting
 				   PLEGMA_printf("Going to invert %s for component %d\n",
-						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
+						 fl==LIGHT ? "LIGHT" : (fl == LIGHT ? "LIGHT" : "CHARM"), isc);
 				   TIME(solver.solve(vectorInOut, vectorInOut));
 				   if(prop_SL.getAllocation() != NONE) {
 				     PLEGMA_Vector<float> vectorAuxF;
@@ -276,28 +325,32 @@ int main(int argc, char **argv) {
 
           TIME(computePropagator_oet(oet_light_up_zero_SS, oet_light_up_zero_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, zero_mom));
 
-//        oet_light_up_zero_SS.writeHDF5("oet_light_UP_SS_zero");
+          //oet_light_up_zero_SS.writeHDF5("oet_light_UP_SS_zero");
 
 
           TIME(computePropagator_oet(oet_light_dn_zero_SS, oet_light_dn_zero_SL, -mu_ud, LIGHT, nsmearGauss, nsmearGauss,  zero_mom));
 
-// oet_light_dn_zero_SS.writeHDF5("oet_light_DN_SS_zero");
+          //oet_light_dn_zero_SS.writeHDF5("oet_light_DN_SS_zero");
 
 
-          TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+          TIME(computePropagator_oet(oet_strange_up_zero_SS, oet_strange_up_zero_SL, mu_s,STRANGE, nsmearGauss, nsmearGauss, zero_mom));
 
 	  //oet_strange_up_zero_SS.writeHDF5("oet_strange_UP_SS_zero");
 
 
-          TIME(computePropagator_oet(oet_strange_dn_zero_SS, oet_strange_dn_zero_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, zero_mom));
+          TIME(computePropagator_oet(oet_strange_dn_zero_SS, oet_strange_dn_zero_SL, -mu_s,STRANGE, nsmearGauss, nsmearGauss, zero_mom));
 
           //oet_strange_dn_zero_SS.writeHDF5("oet_strange_DN_SS_zero");
+
+
+
+
 
         } 
 #if 0    
     	else {
 	  TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, nsmearGauss));
-	  TIME(computePropagator(propST, propST_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s));
+	  TIME(computePropagator(propST, propST_SL, mu_s, LIGHT, nsmearGauss_s, nsmearGauss_s));
 	
 	  // Correcting the smearing
 	  for(int isc = 0 ; isc < 12 ; isc++){
@@ -322,7 +375,6 @@ int main(int argc, char **argv) {
 	}
 #endif
 
-	
 
 	std::vector<std::vector<int>> pi1_filt = sourcemomentumList.uniq_p(0);
 	  
@@ -348,6 +400,7 @@ int main(int argc, char **argv) {
           //corr_twoD.initialize_diagram( glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_TWOD");
 
           if (stoch_std==true){
+
     	    TIME(computePropagator_oet(oet_light_up_fini_SS, oet_light_up_fini_SL,  mu_ud, LIGHT, nsmearGauss, nsmearGauss, momentum_i1));
             //oet_light_up_fini_SS.writeHDF5("oet_light_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
             //oet_light_up_fini_SL.writeHDF5("oet_light_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
@@ -356,15 +409,17 @@ int main(int argc, char **argv) {
             //oet_light_dn_fini_SS.writeHDF5("oet_light_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
             //oet_light_dn_fini_SL.writeHDF5("oet_light_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
-	    TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
+
+	    TIME(computePropagator_oet(oet_strange_up_fini_SS, oet_strange_up_fini_SL, mu_s, STRANGE, nsmearGauss, nsmearGauss, momentum_i1));
 
             //oet_strange_up_fini_SS.writeHDF5("oet_strange_UP_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
             //oet_strange_up_fini_SL.writeHDF5("oet_strange_UP_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
 
-            TIME(computePropagator_oet(oet_strange_dn_fini_SS, oet_strange_dn_fini_SL, -mu_s, STRANGE, nsmearGauss_s, nsmearGauss_s, momentum_i1));
-              //oet_strange_dn_fini_SS.writeHDF5("oet_strange_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
-              //oet_strange_dn_fini_SL.writeHDF5("oet_strange_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+            TIME(computePropagator_oet(oet_strange_dn_fini_SS, oet_strange_dn_fini_SL, -mu_s, STRANGE, nsmearGauss, nsmearGauss, momentum_i1));
+            //oet_strange_dn_fini_SS.writeHDF5("oet_strange_DN_SS_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+            //oet_strange_dn_fini_SL.writeHDF5("oet_strange_DN_SL_mom_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
+
 
 	  }
 
@@ -374,6 +429,10 @@ int main(int argc, char **argv) {
           TIME(corrP0UP.P_diagrams( oet_light_dn_zero_SS, oet_light_up_fini_SS, i_pi1, false));
           TIME(corrP0DN.P_diagrams( oet_light_up_zero_SS, oet_light_dn_fini_SS, i_pi1, false));
 	  TIME(corrKAON.P_diagrams( oet_light_up_zero_SS, oet_strange_up_fini_SS, i_pi1, false)); 
+
+//          TIME(corrKAONUP.P_diagrams( oet_strange_up_zero_SS, oet_strange_up_fini_SS, i_pi1, false));
+//          TIME(corrKAONDN.P_diagrams( oet_strange_up_zero_SS, oet_strange_up_fini_SS, i_pi1, false));
+
 
 
 	  for(size_t its = 0; its < tSinks.size(); its++){
@@ -481,15 +540,30 @@ int main(int argc, char **argv) {
 #endif
 	      auto computeThreep_oet = [&](double run_mu, PLEGMA_Vector3D<float>& prop, PLEGMA_Vector<float> &propF, int nSmear, WHICHFLAVOR fl, std::string name) {
                  PLEGMA_Vector<float> seqProp(BOTH, FIRST_CORNER);
-                 // ensuring mu positive
 
  		 int signProps = -run_mu/abs(run_mu);
-
+                 
                  if(mu != run_mu) {
                    updateOptions(fl);
                    mu = run_mu;
                    solver.UpdateSolver();
                  }
+                 #if 0
+		 //Creating the solver object from scratch
+		 mu=run_mu;
+                 //Reading from Lime file and loading to device
+                 {
+                   PLEGMA_Gauge<double> gauge;
+                   gauge.readFile(latfile, LIME_FORMAT);
+                   gauge.load();
+                   gauge.calculatePlaq();
+                   // Loading to QUDA and computing plaquette also there
+                   initGaugeQuda(gauge, true);
+                 }
+
+                 updateOptions(LIGHT);
+                 TIME(QUDA_solver solver(mu));
+                 #endif			 
 
                  for (int i_gamma_i2=0; i_gamma_i2 < glist_source_meson.size(); ++i_gamma_i2){
                    for (int i_gamma_f2=0; i_gamma_f2 < glist_sink_meson.size(); ++i_gamma_f2){
@@ -524,7 +598,13 @@ int main(int argc, char **argv) {
                      vectorInOut.copy(vectorAuxD);
                      }
 
-                     TIME(solver.solve(vectorInOut, vectorInOut));
+		     //vectorInOut.writeHDF5("oet_seq_source"+name+"m"+std::to_string(run_mu)+"p"+std::to_string(momentum_f1[0])+std::to_string(momentum_f1[1])+std::to_string(momentum_f1[2]));
+
+
+		     TIME(solver.solve(vectorInOut, vectorInOut));
+
+		     //vectorInOut.writeHDF5("oet_seq_propagator"+name+"m"+std::to_string(run_mu)+"p"+std::to_string(momentum_f1[0])+std::to_string(momentum_f1[1])+std::to_string(momentum_f1[2]));
+
 
                      {
                      PLEGMA_Vector<double> vectorAuxD;
@@ -551,18 +631,12 @@ int main(int argc, char **argv) {
 
 		     seqProp.conjugate();
 
-
-                     //seqProp.conjugate();
- 
-
 		     //local contractions
                      PLEGMA_ScattCorrelator<float> corr1(source, list_mpc);//, tsinkMtsource+1);
                      TIME(corr1.contractNucleonThrp_local(seqProp, propF, 0, gammas, false));
                      if(signPer < 0) for(size_t iv = 0 ; iv < corr1.getTotalSize()*2; iv++) corr1.H_elem()[iv] *= signPer;
 		     //PLEGMA_printf("LOCAL size %d\n",corr1.getTotalSize());
                      corr_local.absorbGammai2Gammaf2momentumf2(corr1, i_gamma_i2, i_gamma_f2, i_pf1 );
-
-//                     corr1.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 
 
 		     // ONED contractions
@@ -571,8 +645,6 @@ int main(int argc, char **argv) {
                      if(signPer < 0) for(size_t iv = 0 ; iv < corr2.getTotalSize()*2; iv++) corr2.H_elem()[iv] *= signPer;
                      //PLEGMA_printf("ONED size %d\n",corr2.getTotalSize());
 
-
- //                    corr2.writeHDF5(threep_filename+name+std::to_string(i_gamma_i2)+"_"+std::to_string(i_gamma_f2)+"_"+std::to_string(momentum_i1[0])+std::to_string(momentum_i1[1])+std::to_string(momentum_i1[2]));
 		     corr_oneD.absorbGammai2Gammaf2momentumf2(corr2, i_gamma_i2, i_gamma_f2, i_pf1 );
 		              
 	      	     // TWOD contractions
@@ -598,51 +670,38 @@ int main(int argc, char **argv) {
               TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_pion"));
 
               std::string filename;
-	      filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_local";
+	      filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_up_light_up_light_dn_local";
               TIME(corr_local.writeFile( filename, corr_file_format));
 	      //TIME(corr_local2.apply_sign("P"));
-              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion2_local";
+              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_up_light_up_light_dn_local2";
               //TIME(corr_local2.writeFile( filename, corr_file_format));
 
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_oneD";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_up_light_up_light_dn_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
-              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_twoD";
+              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_up_light_up_light_dn_twoD";
               //TIME(corr_twoD.writeFile( filename, corr_file_format));
-
-
-	      /*
-	      zero_momentum_light.absorb(oet_light_dn_zero_SS, global_fixSinkTime);
-
-              TIME(computeThreep_oet(mu_ud, zero_momentum_light, oet_light_dn_fini_SL, nsmearGauss, LIGHT, "_up_pion_inverted"));
-
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_inverted_local";
-              TIME(corr_local.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_inverted_oneD";
-              TIME(corr_oneD.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_pion_inverted_twoD";
-              TIME(corr_twoD.writeFile( filename, corr_file_format));*/
 
 
               PLEGMA_Vector3D<float> zero_momentum_strange;
               zero_momentum_strange.absorb(oet_strange_up_zero_SS,global_fixSinkTime);
 
               TIME(computeThreep_oet(-mu_ud, zero_momentum_strange, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_up_kaon"));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_local";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_up_light_up_strange_minus_local";
               TIME(corr_local.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_oneD";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_up_light_up_strange_minus_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
-              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_twoD";
+              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_up_light_up_strange_minus_twoD";
               //TIME(corr_twoD.writeFile( filename, corr_file_format));
 
 
 	      zero_momentum_strange.absorb(oet_strange_dn_zero_SS,global_fixSinkTime);
 
               TIME(computeThreep_oet(mu_ud, zero_momentum_strange, oet_light_dn_fini_SL, nsmearGauss, LIGHT, "_up_kaon_inverted"));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_inverted_local";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_dn_light_dn_strange_plus_local";
               TIME(corr_local.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_inverted_oneD";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_dn_light_dn_strange_plus_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
-              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_up_kaon_inverted_twoD";
+              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_dn_light_dn_strange_plus_twoD";
               //TIME(corr_twoD.writeFile( filename, corr_file_format));
 
 
@@ -651,47 +710,35 @@ int main(int argc, char **argv) {
 
               TIME(computeThreep_oet(mu_ud, zero_momentum_light, oet_light_dn_fini_SL, nsmearGauss, LIGHT, "_dn_pion"));
 
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_local";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_dn_light_dn_light_up_local";
 	      TIME(corr_local.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_oneD";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_dn_light_dn_light_up_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
-              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_twoD";
+              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_light_dn_light_dn_light_up_twoD";
               //TIME(corr_twoD.writeFile( filename, corr_file_format));
-
-              /*
-	      zero_momentum_light.absorb(oet_light_up_zero_SS,global_fixSinkTime);
-
-              TIME(computeThreep_oet(-mu_ud, zero_momentum_light, oet_light_up_fini_SL, nsmearGauss, LIGHT, "_dn_pion_inverted"));
-
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_inverted_local";
-              TIME(corr_local.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_inverted_oneD";
-              TIME(corr_oneD.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_dn_pion_inverted_twoD";
-              TIME(corr_twoD.writeFile( filename, corr_file_format));*/
 
 
 	      zero_momentum_light.absorb(oet_light_dn_zero_SS,global_fixSinkTime);
 
-              TIME(computeThreep_oet(mu_s, zero_momentum_light, oet_strange_dn_fini_SL, nsmearGauss, STRANGE, "_st_kaon"));
+              TIME(computeThreep_oet(mu_s, zero_momentum_light, oet_strange_dn_fini_SL, nsmearGauss, LIGHT, "_st_kaon"));
 
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_local";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_strange_minus_strange_minus_light_up_local";
               TIME(corr_local.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_oneD";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_strange_minus_strange_minus_light_up_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
-              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_twoD";
+              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_strange_minus_strange_minus_light_up_twoD";
               //TIME(corr_twoD.writeFile( filename, corr_file_format));
 
 
               zero_momentum_light.absorb(oet_light_up_zero_SS,global_fixSinkTime);
 
-              TIME(computeThreep_oet(-mu_s, zero_momentum_light, oet_strange_up_fini_SL, nsmearGauss, STRANGE, "_st_kaon_inverted"));
+              TIME(computeThreep_oet(-mu_s, zero_momentum_light, oet_strange_up_fini_SL, nsmearGauss, LIGHT, "_st_kaon_inverted"));
 
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_inverted_local";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_strange_plus_strange_plus_light_dn_local";
               TIME(corr_local.writeFile( filename, corr_file_format));
-              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_inverted_oneD";
+              filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_strange_plus_strange_plus_light_dn_oneD";
               TIME(corr_oneD.writeFile( filename, corr_file_format));
-              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_st_kaon_inverted_twoD";
+              //filename = threep_filename + "_dt" + std::to_string(tsinkMtsource)+"_strange_plus_strange_plus_light_dn_twoD";
               //TIME(corr_twoD.writeFile( filename, corr_file_format));
 
 
@@ -700,7 +747,7 @@ int main(int argc, char **argv) {
 	    else{
 	      TIME(computeThreep(-mu_ud, propUP3D, propUP_SL, nsmearGauss, LIGHT, "_up_pion"));
 	      TIME(computeThreep(-mu_ud, propST3D, propUP_SL, nsmearGauss, LIGHT, "_up_kaon"));
-	      TIME(computeThreep(-mu_s, propUP3D, propST_SL, nsmearGauss_s, STRANGE, "_st_kaon"));
+	      TIME(computeThreep(-mu_s, propUP3D, propST_SL, nsmearGauss_s, LIGHT, "_st_kaon"));
 	    } //std or oet
 #endif	   
 	  } //i pf momentum
@@ -720,6 +767,15 @@ int main(int argc, char **argv) {
       outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_K";
       TIME(corrKAON.apply_sign("P"));
       TIME(corrKAON.writeHDF5( outfilename ));
+
+/*      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_S";
+      TIME(corrKAONUP.apply_sign("P"));
+      TIME(corrKAONUP.writeHDF5( outfilename ));
+
+      TIME(corrKAONDN.apply_sign("P"));
+      TIME(corrKAONDN.writeHDF5( outfilename ));
+*/
+
 
 
 

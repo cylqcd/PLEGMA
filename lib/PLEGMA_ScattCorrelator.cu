@@ -2909,7 +2909,6 @@ void PLEGMA_ScattCorrelator<Float>::V24pointSourceReduction_matrix( PLEGMA_Scatt
 
     //n gammas
   int n_gammas_f = this->GList[5].size();
-  printf("Ngammas f %d size %d \n", n_gammas_f, this->GList.size());
   int n_gammas_i2= this->GList[4].size();
   int n_gammas_i1 = this->GList[2].size();
   int n_extgammas_f = this->GList[1].size();
@@ -2986,7 +2985,6 @@ void PLEGMA_ScattCorrelator<Float>::V24pointSourceReduction( PLEGMA_ScattCorrela
 
     //n gammas
   int n_gammas_f = this->GList[5].size();
-  printf("Ngammas f %d size %d \n", n_gammas_f, this->GList.size());
   int n_gammas_i2= this->GList[4].size();
   int n_gammas_i1 = this->GList[2].size();
   int n_extgammas_f = this->GList[1].size();
