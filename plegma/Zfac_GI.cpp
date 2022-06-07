@@ -1,4 +1,3 @@
-
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 #include <cmath>
@@ -157,7 +156,6 @@ int main(int argc, char **argv)
 
     //TODO
     // 1) reduce application of Udag op.
-    // 2) split the loop into two for Diag (1,2,3,4) and Diag (5,6,7,8) to reduce #UpdateSolver() and storage from VtOut[3] to VtOut[2]
     // 3) in sacrifice to readability, we can remove VtIn to use only Vtmp1 and Vtmp2
     
     int T = HGC_totalL[3]; 
@@ -170,9 +168,25 @@ int main(int argc, char **argv)
     PLEGMA_Vector<double> VtIn, VtOut[2], Vtmp1, Vtmp2, Vstc;
     PLEGMA_Su3field<double> Umu(DEVICE), Unu(DEVICE);
     Vstc.randInit(rng_seed);
-
+    //PLEGMA_printf("%d %d %d\n",T,T0,startT);
     double G_FF[T0][T][numSourcePositions];
     for(int isc=0; isc < numSourcePositions; isc++) for(int t=0; t < T0*T; t++) G_FF[t/T][t%T][isc]=0;
+
+    /* DEBUG */
+    /*
+    PLEGMA_Field<double> s(BOTH,SCALAR),ss(BOTH,SCALAR);
+    s.stochastic_Z(4);
+    ss.shift(s, 0);
+    PLEGMA_printf()*/
+    /*
+    FILE *fp = NULL;
+    if(comm_rank() == 0){
+      fp = fopen(pathOut + "test","w");
+      //if(fp == NULL) PLEGMA_error("Cannot open file:%s for writting\n",outName4.c_str());
+      fclose(fp);
+    }
+    */
+    /* END */
 
     std::string ext = "";
     if ( T0 != T ) ext = "from" + std::to_string(startT) + "to" + std::to_string(endT);
@@ -185,13 +199,13 @@ int main(int argc, char **argv)
 	//   absorbTimeslice(Vstc,t); if t is in the range of time slices managed by the given rank
 	//   set it to zero otherwise
 
-	//mu = -in_mu;
-	//solver.UpdateSolver();
+	
+	/*******   Diag. (1 ~ 4)  ********/
+	//----- (mu,nu)-independent inversion 
 	VtIn.absorbTimeslice(Vstc,t);
 	//VtIn.zero_where(BOTH);//this is unncessary if we use 4D vectors
 	VtIn.apply_gamma5();
 	d_solver.solve(VtOut[0],VtIn);
-	
 
 	for(int mu_d=0; mu_d<3; mu_d++ ){
 	  
@@ -206,15 +220,10 @@ int main(int argc, char **argv)
 	      //---- inversion with mu&nu dependent rhs
 	      // for Diag (1) & (3) // need Umu^dagger
 	      
-	      //mu = in_mu;
-	      //solver.UpdateSolver();
-
-	      Unu.shift(Umu, nu); // Here, Unu = Umu(x - nu)
-	      //Unu.Udag(); //if Umu not daggered
-	      Vtmp1.absorbTimeslice(Vstc,t);
-	      VtIn.mulGV(Vtmp1,Unu);//use sep. field!!!
+	      VtIn.absorbTimeslice(Vstc,t);
+	      Vtmp1.mulGV(VtIn,Umu);//use sep. field!!!
+	      VtIn.shift(Vtmp1,mu_d);
 	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
-	      VtIn.apply_gamma5();
 	      u_solver.solve(VtOut[1],VtIn);
 
 	      // After this point, only Unu^dagger are used for Diag. (1,2,3,4) so that Unu is daggrered
@@ -257,7 +266,7 @@ int main(int argc, char **argv)
 	      // compute psi // need Unu^dagger
 	      Vtmp2.mulGV(VtOut[0],Unu);
 	      Vtmp2.apply_gamma5();
-	      Vtmp2.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
+	      Vtmp2.apply_gamma(static_cast<GAMMAS>(mu_d+1),LEFT);
 	      Vtmp1.shift(Vtmp2,nu);
 	      for(int ts=0; ts < T; ts++){//time separation
 		psi.absorbTimeslice(Vtmp1,(t+ts)%T);
@@ -285,10 +294,10 @@ int main(int argc, char **argv)
 	      Umu.Udag(); // since Umu is daggered
 	      VtIn.absorbTimeslice(Vstc,t);
 	      Vtmp1.shift(VtIn,N_DIMS+mu_d);
-	      VtIn.mulGV(Vtmp1,Umu);
+	      VtIn.mulGV(Vtmp1,Umu);	      
 	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      u_solver.solve(VtOut[1],VtIn);
-	      Umu.Udag(); // since Umu is daggered
+	      Umu.Udag(); // since Umu is to be daggered
 	      
 	      // Diag (2)
 
@@ -349,11 +358,9 @@ int main(int argc, char **argv)
               }
 	    }
 	  }
-	}
+	} // END: for(int mu_d=0; mu_d<3; mu_d++ )
 
-	//mu = in_mu;
-        //solver.UpdateSolver();
-
+	/*******   Diag. (5 ~ 8)  ********/
 	VtIn.absorbTimeslice(Vstc,t);
 	u_solver.solve(VtOut[0],VtIn);	  
 	
@@ -363,24 +370,21 @@ int main(int argc, char **argv)
 	  Umu.Udag(); // to reduce #Udag() ops 
           for(int nu=0; nu<3; nu++){
             if ( mu_d != nu ){
-	      
+
+	      Unu.absorbDir_device(gauge,nu);
+              Unu.Udag();
+
 	      /******  (<-, ->) Group  ******/
 	      
 	      //---- inversion with mu&nu dependent rhs
 	      // for Diag (5) & (7)
-	      //mu = -in_mu;
-	      //solver.UpdateSolver();
 
-	      Unu.shift(Umu, nu); // Here, Unu = Umu(x - nu) 
-              //Unu.Udag(); // since Umu is daggered
-	      Vtmp1.absorbTimeslice(Vstc,t);
-	      VtIn.mulGV(Vtmp1,Unu);
+	      VtIn.absorbTimeslice(Vstc,t);
+	      Vtmp1.mulGV(VtIn,Umu);
+	      VtIn.shift(Vtmp1,mu_d);
 	      VtIn.apply_gamma(static_cast<GAMMAS>(nu+1),LEFT);
 	      VtIn.apply_gamma5();
 	      d_solver.solve(VtOut[1],VtIn);
-
-	      Unu.absorbDir_device(gauge,nu);
-              Unu.Udag();
 
 	      // Diag (5)
 	      
