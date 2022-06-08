@@ -109,7 +109,6 @@ void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType 
     QudaInvertParam inv_param = newQudaInvertParam();
     setInvertParam(inv_param);
     checkInvertParam(&inv_param);
-
     loadCloverQuda(NULL, NULL, &inv_param);
   }
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gauge.Bytes_total()/N_DIMS);
@@ -179,6 +178,7 @@ QUDA_solver::QUDA_solver(double mu) {
   D = NULL;
   DSloppy = NULL;
   DPre = NULL;
+  
 
   // create the dirac operator
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
@@ -199,6 +199,7 @@ QUDA_solver::QUDA_solver(double mu) {
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
   b = new cudaColorSpinorField(cudaParam);
   x = new cudaColorSpinorField(cudaParam);
+
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();
@@ -317,6 +318,9 @@ void QUDA_solver::UpdateSolver()
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
 
+  loadCloverQuda(NULL, NULL, &inv_param);
+
+
   if(use_mg){
     inv_param.preconditioner = mg_preconditioner;
     multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
@@ -325,6 +329,8 @@ void QUDA_solver::UpdateSolver()
       destroyMultigridQuda(mg_preconditioner);
       mg_preconditioner = newMultigridQuda(&mg_param);
     } else {
+      //destroyMultigridQuda(mg_preconditioner);
+      //mg_preconditioner = newMultigridQuda(&mg_param);
       updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
       updateMultigridQuda(mg_preconditioner, &mg_param);
     }
