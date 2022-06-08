@@ -380,7 +380,6 @@
         vectorSource_oet.randInit(rand_seed1);
         vectorSource_oet.stochastic_Z(nroots);
 
-        TIME(vectorInOut.gaussianSmearing(vectorSource_oet, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
 
         for (int i_mpf2=0; i_mpf2<mpf2.size(); ++i_mpf2){
 
@@ -390,14 +389,16 @@
           tmp_4Dmom.push_back(0);
 
           //Step(1) multiply with the momentum phase
-          vectorAuxD1.copy(vectorInOut);
+          vectorAuxD1.copy(vectorSource_oet);
           vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
+
+          TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
 
           //In vectorAuxD2 we store the results for the inversion for sink to sink
           vectorAuxD2.scale(0.0);
 
           //Step(2) We rotate the source to the physical basis
-          TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,-1),"ISOSPIN32");
+          TIME(vectorAuxD3.rotateToPhysicalBasis(vectorInOut,-1),"ISOSPIN32");
 
           for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
@@ -465,7 +466,7 @@
 
           auto &momentum_f2 = mpf2[i_mpf2];
 
-          vectorAuxD1.copy(vectorInOut);
+          vectorAuxD1.copy(vectorSource_oet);
 
           std::vector<int> tmp_4Dmom= momentum_f2 ;
           tmp_4Dmom.push_back(0);
@@ -473,11 +474,14 @@
           //Step(1) multiply with the momentum phase
           vectorAuxD1.mulMomentumPhases(tmp_4Dmom,-1);
 
+          TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ),"ISOSPIN32");
+
+
           //In vectorAuxD2 we store the results for the inversion for sink to sink
           vectorAuxD2.scale(0.0);
 
           //Step(2) We rotate the source to the physical basis
-          TIME(vectorAuxD3.rotateToPhysicalBasis(vectorAuxD1,+1),"ISOSPIN12");
+          TIME(vectorAuxD3.rotateToPhysicalBasis(vectorInOut,+1),"ISOSPIN12");
 
           for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
 
