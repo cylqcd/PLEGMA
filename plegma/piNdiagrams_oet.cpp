@@ -1356,30 +1356,21 @@
               solver.UpdateSolver();
             }
 
-	    {  // Smearing the source
+	    //Multiplying by the appropriate momentum phase
+            
+            {  // absorbing the source and put momentum to the sink
+              PLEGMA_Vector3D<double> vector1,vector2;
+              vector1.absorb(vectorSource_oet,sourcePositions[isource][DIM_T]);
+              vector1.mulMomentumPhases(momentum_i2,-1);
 
-            vectortmp1.absorbTimeslice(vectorSource_oet, sourcePositions[isource][DIM_T]);
-            PLEGMA_Vector3D<double> vector1, vector2;
-            vector1.absorb(vectortmp1, sourcePositions[isource][DIM_T]);
+              vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss);
 
-            PLEGMA_Gauge3D<double> smearedGauge3D;
-            smearedGauge3D.absorb(smearedGauge, sourcePositions[isource][DIM_T]);
-
-            TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss),"ISOSPIN32");
-            vectortmp2.absorb(vector2,sourcePositions[isource][DIM_T]);
-            vectortmp1.absorbTimeslice(vectortmp2,sourcePositions[isource][DIM_T]);
-
+              vectortmp1.absorb(vector2,sourcePositions[isource][DIM_T]);
             }
 
+
+
             vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
-
-
-            //Multiplying by the appropriate momentum phase
-
-            std::vector<int> tmp_4Dmom= momentum_i2 ;
-            tmp_4Dmom.push_back(0);
-            vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
-
 
             //Doing the inversion
             TIME(solver.solve(vectortmp2, vectortmp2),"ISOSPIN32");
@@ -1401,15 +1392,19 @@
               solver.UpdateSolver();
             }
 
-	    vectortmp2.copy(vectorSource_oet);
-            vectortmp1.absorbTimeslice(vectortmp2, sourcePositions[isource][DIM_T]);
+	    //Multiplying by the appropriate momentum phase
+
+            {  // absorbing the source and put momentum to the sink
+              PLEGMA_Vector3D<double> vector1,vector2;
+              vector1.absorb(vectorSource_oet,sourcePositions[isource][DIM_T]);
+              vector1.mulMomentumPhases(momentum_i2,-1);
+
+              vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss);
+
+              vectortmp1.absorb(vector2,sourcePositions[isource][DIM_T]);
+            }
 
             vectortmp2.rotateToPhysicalBasis(vectortmp1,-1);
-
-            //Multiplying by the appropriate momentum phase
-
-            vectortmp2.mulMomentumPhases(tmp_4Dmom,-1);
-
 
             //Doing the inversion
             TIME(solver.solve(vectortmp2, vectortmp2),"ISOSPIN32");
@@ -1419,7 +1414,7 @@
 
             //performing smearing
             TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss),"ISOSPIN32");
-            stochastic_oet_prop_d_fini_mom_source_to_sink.copy(vectortmp1);
+            stochastic_oet_prop_d_fini_mom_source_to_sink.copy(vectortmp2);
 /*
             {
               PLEGMA_Vector<float> vectorAuxF;
