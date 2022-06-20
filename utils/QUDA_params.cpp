@@ -101,9 +101,9 @@ void setEigParam(QudaEigParam &mg_eig_param, int level)
     PLEGMA_error("Only real spectrum type (LR or SR) can be passed to the a Lanczos type solver");
   }
 
-  mg_eig_param.n_ev = mg_eig_nEv[level];
-  mg_eig_param.n_kr = mg_eig_nKr[level];
-  mg_eig_param.n_conv = mg_eig_nConv[level];
+  mg_eig_param.nEv = mg_eig_nEv[level];
+  mg_eig_param.nKr = mg_eig_nKr[level];
+  mg_eig_param.nConv = mg_eig_nConv[level];
   mg_eig_param.require_convergence = mg_eig_require_convergence[level];
 
   mg_eig_param.tol = mg_eig_tol[level];
