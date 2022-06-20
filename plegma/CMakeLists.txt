@@ -117,6 +117,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
   cuda_add_executable(checking_Doet checking_Doet.cpp)
   target_link_libraries(checking_Doet ${PLEGMA_LIBS})
+  cuda_add_executable(omegamass EXCLUDE_FROM_ALL omegamass.cpp)
+  target_link_libraries(omegamass ${PLEGMA_LIBS})
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 
