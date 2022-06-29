@@ -7,11 +7,14 @@
 #include <limits>
 #include <string.h>
 #include <PLEGMA_io.h>
+#include <communicator_quda.h>
+#include <comm_quda.h>
 
 //#define TIMING_REPORT
 using namespace plegma;
-extern Topology *default_topo;
+//extern Topology *default_topo;
 std::vector<std::string> HDF5::open_files;
+Communicator &get_current_communicator();
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
   HGC_hold_exit = false;
@@ -25,7 +28,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
 
-    HGC_default_topo = default_topo;
+    HGC_default_topo = get_current_communicator().default_topo;
     HGC_verbosity = verbosity;
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];
@@ -184,7 +187,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
     int spaceId = (HGC_procPosition[0] * HGC_nProc[1] + HGC_procPosition[1]) * HGC_nProc[2] + HGC_procPosition[2];
     for(int i=0 ; i < HGC_nProc[3] ; i++)
-      ranksTime[i] = spaceId*HGC_nProc[3]+i;
+      ranksTime[i] = spaceId+i;
     
     MPI_Group_incl(HGC_fullGroup,HGC_nProc[3], ranksTime, &HGC_timeGroup);
     MPI_Group_rank(HGC_timeGroup, &HGC_timeRank);

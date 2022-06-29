@@ -191,7 +191,7 @@ QUDA_solver::QUDA_solver(double mu) {
   // Create Solvers
   solverParam = new SolverParam(inv_param);
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-			  *MPre, *profiler);
+			  *MPre, *MPre, *profiler);
 
   ColorSpinorParam cpuParam(NULL, inv_param, HGC_localL, pc_solution,
 			    inv_param.input_location);
@@ -350,7 +350,7 @@ void QUDA_solver::UpdateSolver()
   solverParam = new SolverParam(inv_param);
   
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-  			 *MPre, *profiler);
+  			 *MPre, *MPre, *profiler);
 
   profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+to_string(mu)).c_str();
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);

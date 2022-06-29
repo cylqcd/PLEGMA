@@ -10,6 +10,7 @@
 #include <PLEGMA_gammas.h>
 #include <kernels/PLEGMA_gammas_scatt.cuh>
 #endif
+#include <communicator_quda.h>
 
 using namespace plegma;
 using namespace quda;
