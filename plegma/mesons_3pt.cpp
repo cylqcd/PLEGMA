@@ -88,7 +88,8 @@ int main(int argc, char **argv) {
       applyBoundaryConditions(contractGauge,true);
     }
 
-                                  
+              
+    updateOptions(LIGHT);    
     TIME(QUDA_solver solver(mu));
 
 
@@ -148,6 +149,14 @@ int main(int argc, char **argv) {
 
       vectorSource_oet.stochastic_Z(nroots);
       vectorSource_oet.writeLIME("source_for_marcus"+sourcepositiontext);
+      {
+	PLEGMA_Vector<double> abs;
+	abs.absorbTimeslice(vectorSource_oet,sourcePositions[isource][DIM_T]);
+        abs.writeLIME("source_for_marcus_onetimeslice"+sourcepositiontext);
+        abs.writeHDF5("source_for_marcus_onetimeslice"+sourcepositiontext);
+
+
+      }
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
@@ -218,6 +227,7 @@ int main(int argc, char **argv) {
 				 res.scale(1./norm);
 				 norm=res.norm();
 				 PLEGMA_printf("residual norm %e \n",norm);
+				 delete D;
 
 
 
