@@ -425,7 +425,7 @@
                PLEGMA_Vector<float> vectorAuxF;
                vectorAuxF.copy(vectorAuxD1);
 //             vectorAuxF.unload();
-               vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
+//               vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_d_propagator_oet_stoch_time_"+std::to_string(timeidx)+"_"+confnumber);
               }
 
               //Step(9) Save the propagator to the host memory
