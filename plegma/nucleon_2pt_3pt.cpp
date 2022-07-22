@@ -944,10 +944,15 @@ int main(int argc, char **argv) {
 	}//momentum pi2
 #endif
 
+        //Note that we compute NJN for the set 
+	//of input momenta pf1 and perform the 
+	//fourier transform for the set of momenta
+	//pc, however pi is not neccessarily pf1-pc, so
+	//we do not apply here the momentum phase at
+	//the source, this hast to be done in postproduction
+        //TIME(corrUp.apply_phase());
 
-        TIME(corrUp.apply_phase());
-
-        TIME(corrDn.apply_phase());
+        //TIME(corrDn.apply_phase());
 
 	if (nucleon==PROTON){
            outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup";
