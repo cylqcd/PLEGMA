@@ -517,7 +517,7 @@ int main(int argc, char **argv) {
 
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};//,S12,S13,S23,S41,S42,S43};
-          #if 0
+          #if 1
 	  for (int alpha=0;alpha<N_SPINS; ++alpha){
             for (int beta=0; beta<N_SPINS; ++beta){
 
@@ -648,8 +648,6 @@ int main(int argc, char **argv) {
 	  }//loop over alpha
 
           #endif 
-	  //TIME(corrUp.writeHDF5("njnup"));
-          //TIME(corrDn.writeHDF5("njndn"));	  
           auto computeOetInvThroughSink = [&](PLEGMA_Vector<float>& vec_SC, double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::vector<int> momentum_f1, int i_gamma_i2, int i_gamma_f2 ) {
                // ensuring mu positive
                if(mu != run_mu) {
@@ -833,7 +831,7 @@ int main(int argc, char **argv) {
 
 	  };
 
-#if 0
+#if 1
           for(int i_pi2=0; i_pi2<mpi2.size(); ++i_pi2){
             auto &momentum_i2 =  mpi2[i_pi2];
             momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
@@ -876,11 +874,6 @@ int main(int argc, char **argv) {
               oet_fini_dn.unload();
               oet_fini_dn.copy(*oet_mom_fini_dn_SS[i_pi2], HOST);
               oet_fini_dn.load();
-	      //corrUp.writeHDF5("tempro");
-	      //double normtemp=oet_mom_zero_dn_SS.norm();
-	      //PLEGMA_printf("%e normtemp \n",normtemp);
-	      //normtemp=oet_fini_up.norm();
-              //PLEGMA_printf("%e normtemp \n",normtemp);
 
               TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_fini_up));
               TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_fini_up));
@@ -892,7 +885,6 @@ int main(int argc, char **argv) {
 
             
 	      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
-	      corrM1.writeHDF5("M1withoutphase");
 	      TIME(corrM1.apply_sign("NJNP")); 
               TIME(corrM1.apply_phase());
 	      TIME(corrM1.writeHDF5(outfilename));
@@ -951,6 +943,28 @@ int main(int argc, char **argv) {
 
 	}//momentum pi2
 #endif
+
+
+        TIME(corrUp.apply_phase());
+
+        TIME(corrDn.apply_phase());
+
+	if (nucleon==PROTON){
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup";
+	}
+	else{
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup";
+	}
+        TIME(corrUp.writeHDF5(outfilename));
+
+        if (nucleon==PROTON){
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn";
+        }
+        else{
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutrondn";
+        }
+        TIME(corrDn.writeHDF5(outfilename));	  
+
         {
 	PLEGMA_Vector3D<float> zero_momentum_light;
         zero_momentum_light.absorb(oet_mom_zero_up_SS, global_fixSinkTime);
