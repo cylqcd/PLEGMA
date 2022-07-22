@@ -37,6 +37,15 @@ void T_kernels_wrapper( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
 //    case(9): T_kernels<(unsigned int)1,(unsigned int)9,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
     default: PLEGMA_error("not initialized for nGammas_f=%d\n",listGammas_f.size);
     }; break;
+  case(2):
+    switch(listGammas_f.size){
+    case(2): T_kernels<(unsigned int)2,(unsigned int)2,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+
+    case(3): T_kernels<(unsigned int)2,(unsigned int)3,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+//    case(4): T_kernels<(unsigned int)1,(unsigned int)4,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+//    case(9): T_kernels<(unsigned int)1,(unsigned int)9,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    default: PLEGMA_error("not initialized for nGammas_f=%d\n",listGammas_f.size);
+    }; break;
   case(3):
     switch(listGammas_f.size){
     case(3): T_kernels<(unsigned int)3,(unsigned int)3,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
@@ -51,7 +60,10 @@ void T_kernels_wrapper( ProfileStruct &ps, TRED T, Float2<FloatOut> *block2,
 //    case(9): T_kernels<(unsigned int)9,(unsigned int)9,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
     default: PLEGMA_error("not initialized for nGammas_f=%d\n",listGammas_f.size);
     }; break;
-  default: PLEGMA_error("not initialized for nGammas_i=%d\n",listGammas_i.size);
+  case(6):
+    switch(listGammas_f.size){
+    case(6): T_kernels<(unsigned int)6,(unsigned int)6,FloatOut,FloatP>( ps, T, block2, it, time_step, maxT, source, moms, listGammas_i, listGammas_f, S1, S2, S3); break;
+    default: PLEGMA_error("not initialized for nGammas_i=%d\n",listGammas_i.size);}
   }
 }
 

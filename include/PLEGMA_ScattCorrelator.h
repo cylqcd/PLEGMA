@@ -296,7 +296,6 @@ namespace plegma {
     void D_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum=false );
     void convertTreductiontoDiagram( PLEGMA_ScattCorrelator<Float> &T2, int ig_i2, bool accum=false, bool transp_i1=false, bool transp_f1=false );
 
-
     //others
     //
     std::shared_ptr<Float> average_all_time_slices( );

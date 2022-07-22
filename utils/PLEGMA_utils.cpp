@@ -68,10 +68,13 @@ void updateOptions(WHICHFLAVOR fl){
   return updateOptions(filename, aux);
 }
 
-void initializePLEGMA() {
+void initializePLEGMA(int device_num) {
   if(!isInitOpt){fprintf(stderr,"initializeOptions should be called before initializePLEGMA");exit(EXIT_FAILURE);}
   HGC_options->close();
-  initQuda(device_number);
+  if (device_num==-2)
+    initQuda(device_number);
+  else
+    initQuda(device_num);
   qudaInitialized=true;
   // initialize PLEGMA params
   PLEGMA_init(dims, procs, verbosity);
