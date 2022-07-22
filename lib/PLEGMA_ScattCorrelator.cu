@@ -3052,7 +3052,7 @@ void PLEGMA_ScattCorrelator<Float>::contractMesonThrp_local(PLEGMA_Vector<Float>
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
-  PhixGxPhi_k<Float,Float>(*this,bwdProp, gammas, fwdProp);
+  PhixGxPhi_k<Float,Float>(*this,fwdProp, gammas, bwdProp);
 
 }
 
@@ -3311,9 +3311,10 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
   int TIME = this->localT();
   if (TIME==0) return;
 
+  int Nlist= this->pList().N_list();
 
 //  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
-  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(1); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(Nlist-1); //list of pf1 momenta needed here
 
 
   std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
@@ -3330,6 +3331,8 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
   auto imap = this->pList().index_map();
 
+
+
   std::size_t n_s1 = this->labels.find("d");
   std::size_t n_s2 = this->labels.find("l");
 //  int LIM=TIME*Nmoms_c*n_gammas_c;
@@ -3342,7 +3345,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
     if (i_mom_f1!=i_pf1){
       continue;
     }
-    int i_pc = i_pinsertions[imap[i_m][1]]; //position of pf1 in moms_pf1 (tempNN)
+    int i_pc = i_pinsertions[imap[i_m][Nlist-1]]; //position of pf1 in moms_pf1 (tempNN)
     for(int t=0; t < TIME; ++t){
       for (int g1=0 ; g1 < n_gammas_i2 ; ++g1 ){//pi
         if (i_gamma_i2 != g1)
