@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
 
 
       vectorSource_oet.stochastic_Z(nroots);
-      vectorSource_oet.writeLIME("source_for_marcus"+sourcepositiontext);
+ /*   vectorSource_oet.writeLIME("source_for_marcus"+sourcepositiontext);
       {
 	PLEGMA_Vector<double> abs;
 	abs.absorbTimeslice(vectorSource_oet,sourcePositions[isource][DIM_T]);
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
         abs.writeHDF5("source_for_marcus_onetimeslice"+sourcepositiontext);
 
 
-      }
+      }*/
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
                                  norm=res2.norm();
 
                                  TIME(solver.solve(vectorInOut, vectorInOut));
-
+                                 /*
 				 PLEGMA_Vector<double> res;
                                  QUDA_dirac *D = nullptr;
 				 D = new QUDA_dirac(QUDA_TWISTED_CLOVER_DSLASH);
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
 				 norm=res.norm();
 				 PLEGMA_printf("residual norm %e \n",norm);
 				 delete D;
-
+                                 */
 
 
                                  //vectorInOut.writeHDF5("propagator"+std::to_string(run_mu)+"_p"+std::to_string(sourceMom[0])+std::to_string(sourceMom[1])+std::to_string(sourceMom[2]));
@@ -632,9 +632,10 @@ int main(int argc, char **argv) {
                      std::vector<std::vector<int>> mpc = filtered_sourcemomentumList.uniq_p(1);
                      momList list_mpc(1,{mpc,},{0,});
 
+		     /*
 		     PLEGMA_ScattCorrelator<float> corr4(source, list_mpc, tsinkMtsource+1);
                      TIME(corr4.contractMesonThrp_local(seqProp, propF,  gammas_insertion));
-                     if(signPer < 0) for(size_t iv = 0 ; iv < corr4.getTotalSize()*2; iv++) corr4.H_elem()[iv] *= signPer;
+                     if(signPer < 0) for(size_t iv = 0 ; iv < corr4.getTotalSize()*2; iv++) corr4.H_elem()[iv] *= signPer;*/
                      //PLEGMA_printf("LOCAL size %d\n",corr1.getTotalSize());
                      //corr_local2.absorbGammai2Gammaf2momentumf2(corr4, i_gamma_i2, i_gamma_f2, i_pf1 );
 
