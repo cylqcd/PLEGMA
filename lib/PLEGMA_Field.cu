@@ -702,7 +702,6 @@ void PLEGMA_Field<Float>::stochastic_Z(int n){
 template<typename Float>
 void PLEGMA_Field<Float>::random(DIST sampling){
   this->zero_device();
-  if(randstate_ptr == NULL) PLEGMA_error("Random number generator state not initialized");
   int rng_size = this->total_length;
   if(randstate_ptr==NULL)
     randInit(time(NULL));
@@ -756,7 +755,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
   if(field_length != fieldIn.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
   if(total_length != fieldIn.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
-w  Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
+  Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
   cuBLAS::axpy(total_length*field_length, a, fieldIn.D_elem(), d_elem);
 }
 
