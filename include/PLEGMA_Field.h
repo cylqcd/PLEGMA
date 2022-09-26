@@ -23,9 +23,9 @@ namespace plegma {
   protected:
     
     int field_length; /*!< Member variable to hold the degrees of freedom of a field eg. (spin,color,...) */
-    int total_length; /*!< Member variable to hold the size of a field only lattice points excluding the d.o.f per lattice point */
-    int ghost_length; /*!< Member variable to hold the size of ghosts that involve in the communication (only side ghosts) */
-    int ghost_corner_length; /*!< Member variable to hold the size of ghosts that involve in the communication (ghosts which are on the corners) */
+    size_t total_length; /*!< Member variable to hold the size of a field only lattice points excluding the d.o.f per lattice point */
+    size_t ghost_length; /*!< Member variable to hold the size of ghosts that involve in the communication (only side ghosts) */
+    size_t ghost_corner_length; /*!< Member variable to hold the size of ghosts that involve in the communication (ghosts which are on the corners) */
     size_t ghost_vertex_length;
     
     Float *h_elem; /*!< Member variable pointer to the elements of the field on CPU */
@@ -94,13 +94,14 @@ namespace plegma {
     /**
        @brief virtual destructor responsible for freeing memory. Virtual because it could be called from an instance of a derived class through a pointer to base class
      */
-    virtual ~PLEGMA_Field();
+    ~PLEGMA_Field();
     // Deleting copy contructor at the moment. This would cause seg fault due to the fields allocated
     PLEGMA_Field(const PLEGMA_Field<Float>&) = delete;
     /**
        @brief sets to zero all element of the field on CPU
      */
     void zero_host();
+    void zero_host_backup();
     /**
        @brief sets to zero all element of the field on GPU
      */
@@ -249,7 +250,7 @@ namespace plegma {
     /**
      * @brief shift the field by one step in direction,orientation. (0,1,2,3) Push the field in (+x,+y,+z,+t) while (4,5,6,7) push the field in (-x,-y,-z,-t)
      */
-    void shift(PLEGMA_Field &Fin, int dirOr);
+    void shift(PLEGMA_Field &Fin, short dirOr);
     void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2);
     void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2, short dirOr3);
     /**
@@ -357,15 +358,15 @@ namespace plegma {
     /**
      * @brief Read from lime a field
      */
-    virtual void readLIME(std::string filename);
+    virtual void readLIME(std::string filename, bool loadToDev=true);
     /**
      * @brief Write to lime a field
      */
-    virtual void writeLIME(std::string filename);
+    virtual void writeLIME(std::string filename, bool unloadFromDev=true) const;
     /**
      * @brief Write to hdf5 a field
      */
-    virtual void writeHDF5(std::string filename);
+    virtual void writeHDF5(std::string filename, bool unloadFromDev=true) const;
     void readFile(std::string filename, FILE_FORMAT format, bool loadToDev=true) {
       IO<void,bool>::readFile(filename, format, loadToDev);
     }
