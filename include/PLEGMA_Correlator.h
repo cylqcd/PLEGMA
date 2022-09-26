@@ -10,7 +10,7 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
-
+  template<typename Float>  class PLEGMA_Fmunu;
   //////////////////////////////
   // CLASS: PLEGMA_Correlator //
   ////////////////////////////// 
@@ -231,6 +231,13 @@ namespace plegma {
 					PLEGMA_Su3field<Float> &su3,
 					int signProps, std::vector<GAMMAS> gammas);
 
+
+    void contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
+				 PLEGMA_Propagator<Float> &fwdProp,
+				 PLEGMA_Su3field<Float> &su3_1,
+				 PLEGMA_Fmunu<Float> &Fmunu, std::pair<int,int> munu,
+				 PLEGMA_Su3field<Float> &su3_2,
+				 int signProps, std::vector<GAMMAS> gammas, int z2, int z1);
 
     virtual void writeASCII(std::string filename) const;
     virtual void writeHDF5(std::string filename) const;
