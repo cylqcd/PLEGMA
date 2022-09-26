@@ -123,13 +123,10 @@ int main(int argc, char **argv)
 	    }
 	    ft3D.apply(trace2,FT_GEMV);
 	    
-	    //std::string tmp = "_"+std::to_string(iconf)+"_"+std::to_string(n)+"_"+std::to_string(p);
 	    if(s_dim == 3)
 	      ft3D.writeASCII(outName3, 0, true);
 	    else if(s_dim == 4)
 	      ft3D.writeASCII(outName4, 0, true);
-	      //ft3D.store3DFTs(T[i_s][n/nsmearStep][p], 0 );
-	    //PLEGMA_printf("%d %d %d\n",iconf,n,p);}
 	  }
 	}
       }
@@ -144,7 +141,7 @@ int main(int argc, char **argv)
     PLEGMA_Gauge<double> gauge;
     if ( Nconf == "unit" ) {
       gauge.setUnit((std::vector<int>) {0,4,8, 9,13,17, 18,22,26, 27,31,35});
-      gauge.unload();//I think this is not necessary
+      gauge.unload();
     }
     else {
       gauge.readFile(latfile, LIME_FORMAT);
@@ -164,11 +161,11 @@ int main(int argc, char **argv)
     QUDA_solver u_solver(mu);
     QUDA_solver d_solver(-mu);
     // TODO: we can use 3D vectors once dot prodct for 3D vectors is correctly implemented
-    PLEGMA_Vector<double> psi, phi;//alloc flags. etc...?
+    PLEGMA_Vector<double> psi, phi;
     PLEGMA_Vector<double> VtIn, VtOut[2], Vtmp1, Vtmp2, Vstc;
     PLEGMA_Su3field<double> Umu(DEVICE), Unu(DEVICE);
     Vstc.randInit(rng_seed);
-    //PLEGMA_printf("%d %d %d\n",T,T0,startT);
+
     double G_FF[T0][T][numSourcePositions];
     for(int isc=0; isc < numSourcePositions; isc++) for(int t=0; t < T0*T; t++) G_FF[t/T][t%T][isc]=0;
 

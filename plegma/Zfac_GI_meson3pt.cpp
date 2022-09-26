@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
       PLEGMA_Gauge<double> gauge;
       if ( latfile == "unit" ) {
         gauge.setUnit((std::vector<int>) {0,4,8, 9,13,17, 18,22,26, 27,31,35});
-	gauge.unload();//I think this is not necessary
+	gauge.unload();
       }
       else {
         gauge.readFile(latfile, LIME_FORMAT);
