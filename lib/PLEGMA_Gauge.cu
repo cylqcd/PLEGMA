@@ -169,6 +169,16 @@ void PLEGMA_Gauge<Float>::scaleDirWise(std::complex<Float> scale[N_DIMS]){
 }
 
 template<typename Float>
+void PLEGMA_Gauge<Float>::momPhase(Float phase[N_DIMS],int mom[N_DIMS]){
+  std::complex<Float> scale[N_DIMS];
+  for(int d=0; d<N_DIMS; d++) {
+    Float theta = 2.0*PI*((Float)mom[d])*phase[d]/((Float) HGC_totalL[d]);
+    scale[d] = {cos(theta), sin(theta)};
+  }
+  scaleDirWise(scale);
+}
+
+template<typename Float>
 void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4){
   if(nSmear < 1){
     cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
