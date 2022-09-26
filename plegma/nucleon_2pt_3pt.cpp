@@ -183,6 +183,15 @@ int main(int argc, char **argv) {
 
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
       momList list_mpi2(1,{mpi2,},{0,});
+
+      std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
+      momList list_mpf1(1,{mpf1,},{0,});
+      PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1);
+      TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
+
+      PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1);
+      TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
+
       PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2);
       PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2);
       PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2);
@@ -374,16 +383,6 @@ int main(int argc, char **argv) {
 
 
 
-        std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
-
-	std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
-        momList list_mpf1(1,{mpf1,},{0,});
-        PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1);
-        TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
-
-	PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1);
-        TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
-
 	//Computing T reductions+recombination
         {
           PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList.uniq_p(1));
@@ -416,9 +415,9 @@ int main(int argc, char **argv) {
 	{
           PLEGMA_Vector<float> vectorAuxF_SS;
 	  PLEGMA_Vector<float> vectorAuxF_SL;
-          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
+          for(int i_pi2=0; i_pi2<mpi2.size(); ++i_pi2){
 
-            auto &momentum_i2 =  pi2_filt[i_pi2];
+            auto &momentum_i2 =  mpi2[i_pi2];
 
             momList filtered_sourcemomentumList_twopoint = sourcemomentumList_twopoint.extract(momentum_i2, 0);
 
@@ -743,9 +742,8 @@ int main(int argc, char **argv) {
 
 	       }
 	  
-               std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
-               for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
-                 auto &momentum_i2 =  pi2_filt[i_pi2];
+               for(int i_pi2=0; i_pi2<mpi2.size(); ++i_pi2){
+                 auto &momentum_i2 =  mpi2[i_pi2];
                  momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 
                  PLEGMA_ScattCorrelator<float> corrMP(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
@@ -827,9 +825,8 @@ int main(int argc, char **argv) {
 	  };
 
 
-          std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
-          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
-            auto &momentum_i2 =  pi2_filt[i_pi2];
+          for(int i_pi2=0; i_pi2<mpi2.size(); ++i_pi2){
+            auto &momentum_i2 =  mpi2[i_pi2];
             momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 	  
             PLEGMA_ScattCorrelator<float> corrM1(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
@@ -992,7 +989,6 @@ int main(int argc, char **argv) {
 
 
 
-        }
       // If twop_filename exists we skip the rest
       if(access( twop_filename.c_str(), F_OK ) != -1) {
 	PLEGMA_printf("File %s already exists. Skipping...", twop_filename.c_str());
