@@ -1,3 +1,4 @@
+#pragma once
 //======== Templated types and functions =========//
 
 // MPI_Type(): return the MPI type to use in MPI reductions
@@ -141,6 +142,33 @@ inline std::string type_print(void* ptr, char type, int bytes) {
     }
     return "0x"+s;
   }
+}
+
+inline std::string toString(){return "";}
+
+template<typename T, typename... Pars>
+inline std::string toString(T & p1, Pars & ... pars){
+  std::stringstream cs;
+  cs << " " << p1;
+  return cs.str() + toString(pars...);
+}
+
+template<typename T>
+inline std::string toString(std::vector<T> &vec){
+  std::stringstream cs;
+  for(T i : vec) cs << " " << i;
+  return cs.str();
+}
+
+template<typename T1, typename T2>
+inline std::string toString(std::map<T1,T2> &tpl){
+  std::stringstream cs;
+  typename std::map<T1,T2>::iterator it_b = tpl.begin();
+  while(it_b != tpl.end()){
+    cs << " (" <<it_b->first << ", " << it_b->second << ")";
+    it_b++;
+    }
+  return cs.str();
 }
 
 // type_name(): return the demangled typename of a type

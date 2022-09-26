@@ -1,4 +1,7 @@
 #include <hdf5.h>
+#include <vector>
+#include <numeric>      // std::iota
+#include <algorithm>    // std::sort, std::stable_sort
 
 //TODO: This function should be overloaded for different data type
 template<typename T> inline hid_t datatype();
@@ -22,6 +25,8 @@ protected:
   std::vector<std::string> path_str;
   std::string prev_path;
 
+  static std::vector<std::string> open_files;
+  
   inline std::string join_path(std::vector<std::string> vp, bool fromTop = true) {
     std::string ret = fromTop ? "" : "." ;
     for (auto s : vp) ret += "/" + s;
@@ -35,7 +40,7 @@ public:
    * @param name the filename. The extension '.h5' will be added if not provided. It can also contain a list of groups to open, e.g. name="./sample.h5/group1/group2" would create the file sample.h5 an dthen go to group1 and group2.
    * @param comm the communicator to use during the file writing.
    **/
-  //  HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD);
+  //  HDF5(std::string name, MPI_Comm comm=HGC_fullComm);
 
   /*
    * @brief Does sanity checks and close the file.
@@ -49,7 +54,14 @@ public:
   inline std::string pwd() {
     return join_path(path_str);
   }
-  
+
+  /*
+   * @brief Returns if HDF5 has open writing
+   */
+  static bool isWriting() {
+    return not open_files.empty();
+  }
+
   /*
    * @brief Creates or opens the groups to reach the path.
    * @param path a string containing the path. Similar rules to filesystem are used: 
@@ -140,6 +152,18 @@ protected:
     return res;
   }
 
+
+  inline std::vector<size_t> sort_indexes(const std::vector<hsize_t> &v) {
+
+    std::vector<size_t> idx(v.size());
+    std::iota(idx.begin(), idx.end(), 0);
+
+    std::stable_sort(idx.begin(), idx.end(),
+		     [&v](size_t i1, size_t i2) {return v[i1] > v[i2];});
+
+    return idx;
+  }
+
   // replace the first finding in a string
   inline bool replace(std::string& str, const std::string& from, const std::string& to) {
     size_t start_pos = str.find(from);
@@ -206,7 +230,7 @@ protected:
 	auto it = vp.begin();
 	auto pit = path_str.begin();
 	// checking until the paths match
-	while(*it == *pit && it != vp.end() && pit != path_str.end()) {
+	while(it != vp.end() && pit != path_str.end() && *it == *pit  ) {
 	  it = vp.erase(it);
 	  pit++;
 	}
@@ -265,6 +289,7 @@ protected:
     H5Tset_size(type_id, attr_value.length());
     hid_t attr_id = H5Acreate2(obj_id, attr_name.c_str(), type_id, 
 			       attrdat_id, H5P_DEFAULT, H5P_DEFAULT);
+    
     H5Awrite(attr_id, type_id, attr_value.c_str());
     H5Aclose(attr_id);
     H5Tclose(type_id);
@@ -285,6 +310,7 @@ protected:
 
   template<typename T>
   inline void _write_dataset_parallel(hid_t dataset_id, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start, bool serial=false) {
+    //hsize_t size=1; for(auto l: shape) size*=l; if(size==0) return;
     hid_t filespace = H5Dget_space(dataset_id);
     hid_t subspace   = H5Screate_simple(lshape.size(), lshape.data(), NULL);
     H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start.data(), NULL, lshape.data(), NULL);
@@ -330,16 +356,23 @@ protected:
   
   template<typename T>
   inline void _write_dataset_parallel(std::string name, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start) {
+    //PLEGMA_printf("DEBUG: ###_write_dataset_parallel:\n");
+    //MPI_Barrier(comm);
     
     hid_t dataset_id = require_dataset<T>(name, shape);
-
+    //PLEGMA_printf("DEBUG: require dataset ok \n");
+    //MPI_Barrier(comm);
+    
     // Counting how many writings we need to do
     size_t my_n_writings = 1, n_writings = 1;
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
+    
+    //PLEGMA_printf("DEBUG: shape.size =%d, start.size =%d, lshape.size=%d\n", shape.size(), start.size(),lshape.size());
+    //MPI_Barrier(comm);
     for(size_t i=0; i<shape.size(); i++) {
-      int exceeding = start[i] + lshape[i] - shape[i];
-      if(exceeding > 0) { // then i it's exceeding
+      if(start[i] + lshape[i] > shape[i]) { // then i it's exceeding
+	int exceeding = std::min(lshape[i], start[i] + lshape[i] - shape[i]);
 	if(HGC_verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);
@@ -348,24 +381,50 @@ protected:
 	exceeding_shape.push_back(0);
       }
     }
+ 
     if(!exceeding_id.empty())
       my_n_writings = 1<<exceeding_id.size();
     MPI_Allreduce( &my_n_writings, &n_writings, 1, MPI_Type(n_writings), MPI_MAX, comm);
     if(HGC_verbosity > 2) PLEGMA_printf("%s: %d writing(s) are needed for writing the dataset\n", name.c_str(), n_writings);
 
     if(n_writings>1) {
+      std::vector<size_t> my_writings = {0};
+
+      // Sorting the writings by size
+      if(my_n_writings>1) {
+	std::vector<hsize_t> tmp_lshape = lshape;
+	std::vector<hsize_t> sizes;
+	for(size_t i=0; i<my_n_writings; i++) {
+	  for(size_t j=0; j<lshape.size(); j++)
+	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
+
+	  // checking which direction we shift in this iteration
+	  int j=0;
+	  while((i>>j) > 0) {
+	    if((i>>j) & 1) {
+	      int id = exceeding_id[j];
+	      tmp_lshape[id] = exceeding_shape[id];
+	    }
+	    j++;
+	  }
+	  sizes.push_back(product(tmp_lshape));
+	}
+	my_writings = sort_indexes(sizes);
+      }
+      
       // looping over the writings 
-      for(size_t i=0; i<n_writings; i++) {
+      for(size_t i0=0; i0<n_writings; i0++) {
 	// standard behaviour
 	T* tmp = buf;
 	std::vector<hsize_t> tmp_lshape = lshape;
 	std::vector<hsize_t> tmp_start = start;
 	// creating the shifted case
-	if(!exceeding_id.empty() && i < my_n_writings) {
+	if(!exceeding_id.empty() && i0 < my_n_writings) {
+	  size_t i = my_writings[i0];
 	  std::vector<hsize_t> shift = zeros_like(start);
 	  for(size_t j=0; j<lshape.size(); j++)
 	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
-
+	  
 	  // checking which direction we shift in this iteration
 	  int j=0;
 	  while((i>>j) > 0) {
@@ -381,15 +440,32 @@ protected:
 	    j++;
 	  }
 
-	  // copying the part of the buffer to write
-	  hostMalloc(tmp, product(tmp_lshape)*sizeof(T));
-	  for(hsize_t i = 0; i<product(tmp_lshape); i++) {
-	    hsize_t j = to_id( add( from_id(i, tmp_lshape), shift), lshape);
-	    tmp[i] = buf[j];
+	  // Finding the first index that is not contiguous in memory
+	  size_t non_cont_id = tmp_lshape.size()-1;
+	  while(non_cont_id>0) {
+	    if(tmp_lshape[non_cont_id] == lshape[non_cont_id])
+	      non_cont_id --;
+	    else
+	      break;
 	  }
-	} else if(i >= my_n_writings) {
+
+	  hsize_t contiguous = product(std::vector<hsize_t>(tmp_lshape.begin()+non_cont_id+1, tmp_lshape.end()));
+
+	  hsize_t write_size = product(tmp_lshape);
+	  std::vector<hsize_t> cut_tmp_lshape = std::vector<hsize_t>(tmp_lshape.begin(), tmp_lshape.begin()+non_cont_id+1);
+	  std::vector<hsize_t> cut_lshape = std::vector<hsize_t>(lshape.begin(), lshape.begin()+non_cont_id+1);
+	  shift = std::vector<hsize_t>(shift.begin(), shift.begin()+non_cont_id+1);
+	  assert(product(cut_tmp_lshape)*contiguous == write_size);
+	  
+	  // copying the part of the buffer to write
+	  hostMalloc(tmp, write_size*sizeof(T));
+	  for(hsize_t i = 0; i<product(cut_tmp_lshape); i++) {
+	    hsize_t j = to_id( add( from_id(i, cut_tmp_lshape), shift), cut_lshape);
+	    std::memcpy(tmp+i*contiguous, buf+j*contiguous, contiguous*sizeof(T));
+	  }
+	} else if(i0 >= my_n_writings) {
 	  // do a dummy write to keep the communications active
-	  tmp_lshape = ones_like(lshape);
+	  tmp_lshape = zeros_like(lshape);
 	}
 	_write_dataset_parallel(dataset_id, tmp, shape, tmp_lshape, tmp_start);
 	if(tmp != buf) hostFree(tmp, product(tmp_lshape)*sizeof(T));
@@ -401,6 +477,18 @@ protected:
     H5Dclose(dataset_id);
   }
 
+  bool isFileOpen( std::string filename){
+    // NOTE: in order to open multiple files one needs to check if HDF5 is thread-safe
+#ifdef HDF5_THREAD_SAFE
+    if( std::find(open_files.begin(), open_files.end(), filename) != open_files.end() )
+      return true;
+#else
+    if( not open_files.empty() )
+      return true;
+#endif
+      return false;
+  }
+  
 public:
   /*
    * Creates or opens a path.
@@ -429,10 +517,7 @@ public:
    *    i.e. name="./sample.h5/group1/group2" would create the file sample.h5 and
    *    then go to group1 and group2
    */
-  HDF5(std::string name, MPI_Comm comm=MPI_COMM_WORLD) : comm(comm) {
-    hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-    H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
-
+  HDF5(std::string name, MPI_Comm comm=HGC_fullComm) : comm(comm) {
     // Creating filename and path from name
     std::string path = "/";
     // checking if .h5 is given and at the end of file
@@ -449,7 +534,15 @@ public:
     } else {
       filename = name;
     }
-  
+
+    // check if filename is open by another instance
+    if(HGC_verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filename.c_str());
+    while( isFileOpen(filename) )
+      std::this_thread::sleep_for(1ms);
+    
+    hid_t fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio(fapl_id, comm, MPI_INFO_NULL);
+
     // checking if file exists or creating it
     if(access( filename.c_str(), F_OK ) != -1) {
       file_id = H5Fopen(filename.c_str(),  H5F_ACC_RDWR, fapl_id);
@@ -459,7 +552,11 @@ public:
       if(HGC_verbosity > 2) PLEGMA_printf("Created file %s\n", filename.c_str());
     }
     H5Pclose(fapl_id);
-
+    
+    // adding opened file to vector
+    if(HGC_verbosity > 2) PLEGMA_printf("Adding %s to open files\n", filename.c_str());
+    open_files.push_back(filename);
+    
     if(path != "/") {
       cd(path);
     }
@@ -478,6 +575,12 @@ public:
     }
     H5Fclose(file_id);
     if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
+    
+    // remove opened file from vector
+    if(HGC_verbosity > 2) PLEGMA_printf("Removing %s from open files\n", filename.c_str());
+    std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filename);
+    assert(posix != open_files.end());
+    open_files.erase(posix);
   }
 
   /*
@@ -494,10 +597,14 @@ public:
 			     path+"/"+object.substr(0,check));
     if(HGC_verbosity > 2) PLEGMA_printf("Going to write attribute %s in path %s \n", attr_name.c_str(),
 					path.c_str());
+
     cd(path);
+
     _write_attribute(object, attr_name, attr_value);
+
     if(HGC_verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
     cd("-");
+ 
   }
 
   /*
@@ -510,6 +617,7 @@ public:
   template<typename T>
   void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
 			    std::vector<hsize_t> start={}, std::string path=".") {
+    
     // checking for / in name
     size_t check = name.rfind("/");
     if(check != std::string::npos)
@@ -517,6 +625,8 @@ public:
 			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
     if(HGC_verbosity > 2) PLEGMA_printf("Going to write dataset %s in path %s \n", name.c_str(),
 					path.c_str());
+    if(HGC_verbosity > 3) printf("RANK(%d) Dataset shape=(%s), lshape=(%s), start=(%s)\n", getRank(),
+				 toString(shape).c_str(), toString(lshape).c_str(), toString(start).c_str());
     cd(path);
 
     // Sanity check
@@ -527,17 +637,18 @@ public:
     if( !start.empty() && start.size() != shape.size())
       PLEGMA_error("start has wrong size\n");
 
+    
     if(exists(name)) {
       PLEGMA_warning("An object with name %s already exists in %s. Skipping...", name.c_str(),
 		     pwd().c_str());
     } else {    
       int comm_size;
       MPI_Comm_size(comm, &comm_size);
-      if(lshape.empty() || comm_size == 1)
-	_write_dataset_single(name,buf,shape,start);
-      else
+      if(lshape.empty() || comm_size == 1){
+	_write_dataset_single(name,buf,shape,start);}
+      else{
 	_write_dataset_parallel(name,buf,shape,lshape,start);
-
+      }
       if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
 					  (lshape.empty() || comm_size == 1) ? "single" : "parallel");
     }

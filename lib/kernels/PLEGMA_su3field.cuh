@@ -3,11 +3,10 @@
 using namespace plegma;
 
 template<typename FloatA>
-static __global__ void Udag_kernel(FloatA *A){
+static __global__ void Udag_kernel(su3_2<FloatA> RA){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= RA.volume()) return;
   Float2<FloatA> lA[N_COLS][N_COLS];
-  su3_2<FloatA> RA(A);
   RA.get(lA,sid);
   Gdag(lA);
   RA.set(lA,sid);
@@ -15,35 +14,27 @@ static __global__ void Udag_kernel(FloatA *A){
 
 
 template<typename FloatA,typename FloatB>
-static __global__ void Udag_kernel(FloatA *A, FloatB *B){
+static __global__ void Udag_kernel(su3_2<FloatA> RA, su3_2<FloatB> RB){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= RA.volume()) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
-
-  su3_2<FloatA> RA(A);
-  su3_2<FloatB> RB(B);
-
   RB.get(lB,sid);
   Gdag(lA,lB);
   RA.set(lA,sid);
 }
 
 template<typename FloatA,typename FloatB, typename FloatC>
-static __global__ void U_plus_eq_aU_kernel(FloatA *A, FloatB *B, FloatC c){
+static __global__ void U_plus_eq_aU_kernel(su3_2<FloatA> RA, su3_2<FloatB> RB, FloatC c){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= RA.volume()) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatB> lB[N_COLS][N_COLS];
   Float2<FloatA> lR[N_COLS][N_COLS];
-
-  su3_2<FloatA> RA(A);
-  su3_2<FloatB> RB(B);
-
   RA.get(lA,sid);
   RB.get(lB,sid);
   
@@ -53,19 +44,14 @@ static __global__ void U_plus_eq_aU_kernel(FloatA *A, FloatB *B, FloatC c){
 }
 
 template<typename FloatA,typename FloatB, typename FloatC>
-static __global__ void UxU_kernel(FloatA *A, FloatB *B, FloatC *C){
+static __global__ void UxU_kernel(su3_2<FloatA> RA, su3_2<FloatB> RB, su3_2<FloatC> RC){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= RA.volume()) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
   Float2<FloatA> lC[N_COLS][N_COLS];
-
-  su3_2<FloatA> RA(A);
-  su3_2<FloatB> RB(B);
-  su3_2<FloatC> RC(C);
-
   RB.get(lB,sid);
   RC.get(lC,sid);
   mul_G_G(lA,lB,lC);
@@ -74,19 +60,14 @@ static __global__ void UxU_kernel(FloatA *A, FloatB *B, FloatC *C){
 
 
 template<typename FloatA,typename FloatB, typename FloatC>
-static __global__ void UxUdag_kernel(FloatA *A, FloatB *B, FloatC *C){
+static __global__ void UxUdag_kernel(su3_2<FloatA> RA, su3_2<FloatB> RB, su3_2<FloatC> RC){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= RA.volume()) return;
 
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatA> lB[N_COLS][N_COLS];
   Float2<FloatA> lC[N_COLS][N_COLS];
-
-  su3_2<FloatA> RA(A);
-  su3_2<FloatB> RB(B);
-  su3_2<FloatC> RC(C);
-
   RB.get(lB,sid);
   RC.get(lC,sid);
   mul_G_Gdag(lA,lB,lC);
@@ -94,16 +75,15 @@ static __global__ void UxUdag_kernel(FloatA *A, FloatB *B, FloatC *C){
 }
 
 template<typename Float,typename FloatU>
-static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
+static __global__ void sum_real_trace_kernel(su3_2<FloatU> RU, Float *partial_plaq){
 
   extern __shared__ int ext_shared_cache[];
   Float *shared_cache = (Float*)ext_shared_cache;
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
-  if(sid < DGC_localVolume){
+  if(sid < RU.volume()){
   Float2<FloatU> lU[N_COLS][N_COLS];
-  su3_2<FloatU> RU(U);
   RU.get(lU,sid);
   shared_cache[cacheIndex] = real_trace<Float>(lU);
   }
@@ -119,13 +99,11 @@ static __global__ void sum_real_trace_kernel(FloatU *U, Float *partial_plaq){
 }
 
 template<typename FloatA,typename FloatB>
-static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
+static __global__ void traceHerExpMap_kernel(su3_2<FloatA> RA, su3_2<FloatB> RB){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= RA.volume()) return;
   Float2<FloatA> lA[N_COLS][N_COLS];
   Float2<FloatB> lB[N_COLS][N_COLS];
-  su3_2<FloatA> RA(A);
-  su3_2<FloatB> RB(B);
   RB.get(lB,sid);
   Gdag(lA,lB);
   G_plus_aG(lA,lB,-1.);
@@ -143,43 +121,48 @@ static __global__ void traceHerExpMap_kernel(FloatA *A, FloatB *B){
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void U_plus_eq_aU_k( PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, FloatC c){
-  ProfileStruct ps(HGC_localVolume);
-  run(ps, "U_plus_eq_aU_kernel", U_plus_eq_aU_kernel<FloatA,FloatB,FloatC>, A.D_elem(), B.D_elem(), c);
+  assert(A.checkVolume(B));
+  ProfileStruct ps(A.Total_length());
+  run(ps, "U_plus_eq_aU_kernel", U_plus_eq_aU_kernel<FloatA,FloatB,FloatC>, toField2<su3_2>(A), toField2<su3_2>(B), c);
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB>
 static void traceHerExpMap_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
-  ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps, "traceHerExpMap_kernel", traceHerExpMap_kernel<FloatA,FloatB>, A.D_elem(), B.D_elem());
+  assert(A.checkVolume(B));
+  ProfileStruct ps(A.Total_length());
+  tuneAndRun(ps, "traceHerExpMap_kernel", traceHerExpMap_kernel<FloatA,FloatB>, toField2<su3_2>(A), toField2<su3_2>(B));
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB>
 static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
-  ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps, "Udag_kernel", Udag_kernel<FloatA,FloatB>,A.D_elem(), B.D_elem());
+  assert(A.checkVolume(B));
+  ProfileStruct ps(A.Total_length());
+  tuneAndRun(ps, "Udag_kernel", Udag_kernel<FloatA,FloatB>,toField2<su3_2>(A), toField2<su3_2>(B));
   checkCudaError();
 }
 
 template<typename Float>
 static void Udag_k(PLEGMA_Su3field<Float> &A){
-  ProfileStruct ps(HGC_localVolume);
-  run(ps, "Udag_kernel", Udag_kernel<Float>,A.D_elem());
+  ProfileStruct ps(A.Total_length());
+  run(ps, "Udag_kernel", Udag_kernel<Float>,toField2<su3_2>(A));
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
-  ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps, "UxU_kernel", UxU_kernel<FloatA,FloatB,FloatC>,A.D_elem(), B.D_elem(),C.D_elem());
+  assert(A.checkVolume(B,C));
+  ProfileStruct ps(A.Total_length());
+  tuneAndRun(ps, "UxU_kernel", UxU_kernel<FloatA,FloatB,FloatC>,toField2<su3_2>(A), toField2<su3_2>(B),toField2<su3_2>(C));
   checkCudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA_Su3field<FloatC> &C){
-  ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps, "UxUdag_kernel", UxUdag_kernel<FloatA,FloatB,FloatC>, A.D_elem(), B.D_elem(),C.D_elem());
+  assert(A.checkVolume(B,C));
+  ProfileStruct ps(A.Total_length());
+  tuneAndRun(ps, "UxUdag_kernel", UxUdag_kernel<FloatA,FloatB,FloatC>, toField2<su3_2>(A), toField2<su3_2>(B),toField2<su3_2>(C));
   checkCudaError();
 }
 
@@ -193,7 +176,7 @@ static void sum_real_trace_host(ProfileStruct& ps, PLEGMA_Su3field<FloatS> &su3M
   hostMalloc(h_partial_sum, gridDimX * sizeof(Float) );
   cudaMalloc((void**)&d_partial_sum, gridDimX * sizeof(Float));
 
-  sum_real_trace_kernel<Float,FloatS><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(su3M.D_elem(), d_partial_sum);
+  sum_real_trace_kernel<Float,FloatS><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(toField2<su3_2>(su3M), d_partial_sum);
 
   cudaMemcpy(h_partial_sum, d_partial_sum , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_sum);
@@ -208,10 +191,10 @@ template<typename Float, typename FloatS>
 static Float sumRtraceU_k(PLEGMA_Su3field<FloatS> &su3M){
   Float sum = 0.;
 
-  ProfileStruct ps(HGC_localVolume,sizeof(FloatS));
+  ProfileStruct ps(su3M.Total_length(),sizeof(FloatS));
   tuneAndRun(ps, "sum_real_trace_host", sum_real_trace_host<Float,FloatS>, ps, su3M, sum);
 
   Float globalSum = 0.;
-  MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , MPI_COMM_WORLD);  
+  MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , HGC_fullComm);  
   return globalSum;
 }

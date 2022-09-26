@@ -46,8 +46,8 @@ target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
-cuda_add_executable(nucleon_3pt nucleon_3pt.cpp)
-target_link_libraries(nucleon_3pt ${PLEGMA_LIBS})
+cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
+target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
@@ -88,5 +88,25 @@ target_link_libraries(benchmark ${PLEGMA_LIBS})
 cuda_add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
 target_link_libraries(quark_rms ${PLEGMA_LIBS})
 
-cuda_add_executable(Zfac_Vgg Zfac_Vgg.cpp)
+cuda_add_executable(Zfac_Vgg EXCLUDE_FROM_ALL Zfac_Vgg.cpp)
 target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})
+
+cuda_add_executable(testShifts EXCLUDE_FROM_ALL testShifts.cpp)
+target_link_libraries(testShifts ${PLEGMA_LIBS})
+
+cuda_add_executable(Zfac Zfac.cpp)
+target_link_libraries(Zfac ${PLEGMA_LIBS})
+
+if (PLEGMA_SCATTERING_CONTRACTIONS)
+  cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
+  target_link_libraries(testScattReductions ${PLEGMA_LIBS})
+  cuda_add_executable(piNdiagrams piNdiagrams.cpp)
+  target_link_libraries(piNdiagrams ${PLEGMA_LIBS})
+endif(PLEGMA_SCATTERING_CONTRACTIONS)
+
+
+cuda_add_executable(gaugeFixing EXCLUDE_FROM_ALL gaugeFixing.cpp)
+target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
+
+cuda_add_executable(invert EXCLUDE_FROM_ALL invert.cpp)
+target_link_libraries(invert ${PLEGMA_LIBS})

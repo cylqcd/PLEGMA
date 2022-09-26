@@ -13,7 +13,7 @@ inline QudaVerbosity get_verbosity_type(std::string s) {
   else if(s=="debug")
     return QUDA_DEBUG_VERBOSE;
   else {
-    PLEGMA_warning("invalid verbosity type %s\n", s.c_str());
+    PLEGMA_error("invalid verbosity type %s\n", s.c_str());
     return QUDA_INVALID_VERBOSITY;
   }
 }
@@ -29,7 +29,7 @@ inline std::string get_verbosity_str(QudaVerbosity type) {
   case QUDA_DEBUG_VERBOSE:
     return "debug";
   default:
-    PLEGMA_warning("invalid verbosity type %d\n", type);
+    PLEGMA_error("invalid verbosity type %d\n", type);
     return "invalid";
   }
 }
@@ -46,7 +46,7 @@ inline QudaReconstructType get_recon(std::string s) {
   else if(s=="18")
     return  QUDA_RECONSTRUCT_NO;
   else {
-    PLEGMA_warning( "Error: invalid reconstruct type %s\n", s.c_str());
+    PLEGMA_error( "Error: invalid reconstruct type %s\n", s.c_str());
     return QUDA_RECONSTRUCT_INVALID;
   }
 }
@@ -64,7 +64,7 @@ inline std::string get_recon_str(QudaReconstructType recon) {
   case QUDA_RECONSTRUCT_NO:
     return "18";
   default:
-    PLEGMA_warning( "Error: invalid reconstruct type %d\n", recon);
+    PLEGMA_error( "Error: invalid reconstruct type %d\n", recon);
     return"invalid";	
   }
 }
@@ -81,7 +81,7 @@ inline QudaPrecision get_prec(std::string s) {
   else if(s=="quarter")
     return QUDA_QUARTER_PRECISION;
   else {
-    PLEGMA_warning( "invalid precision type %s\n",s.c_str());
+    PLEGMA_error( "invalid precision type %s\n",s.c_str());
     return QUDA_INVALID_PRECISION;
   }
 }
@@ -97,7 +97,7 @@ inline std::string get_prec_str(QudaPrecision prec) {
   case QUDA_QUARTER_PRECISION:
     return"quarter";
   default:
-    PLEGMA_warning( "invalid precision type %d\n", prec);
+    PLEGMA_error( "invalid precision type %d\n", prec);
     return "invalid";
   }
 }
@@ -111,7 +111,7 @@ inline std::string get_gauge_order_str(QudaGaugeFieldOrder order) {
   case QUDA_CPS_WILSON_GAUGE_ORDER:
     return "cps_wilson";
   default:
-    PLEGMA_warning( "invalid gauge order type %d\n", order);
+    PLEGMA_error( "invalid gauge order type %d\n", order);
     return "invalid";
   }	
 }
@@ -138,7 +138,7 @@ inline QudaDslashType get_dslash_type(std::string s) {
   else if(s=="laplace")
     return  QUDA_LAPLACE_DSLASH;
   else {
-    PLEGMA_warning( "invalid dslash type %s\n", s.c_str());	
+    PLEGMA_error( "invalid dslash type %s\n", s.c_str());	
     return QUDA_INVALID_DSLASH;
   }
 }
@@ -166,7 +166,7 @@ inline std::string get_dslash_str(QudaDslashType type) {
   case QUDA_LAPLACE_DSLASH:
     return "laplace";
   default:
-    PLEGMA_warning( "invalid dslash type %d\n", type); 
+    PLEGMA_error( "invalid dslash type %d\n", type); 
     return "invalid";
   }
 }
@@ -179,7 +179,7 @@ inline QudaMassNormalization get_mass_normalization_type(std::string s) {
   else if(s=="asym-mass")
     return QUDA_ASYMMETRIC_MASS_NORMALIZATION;
   else {
-    PLEGMA_warning( "invalid mass normalization %s\n", s.c_str());
+    PLEGMA_error( "invalid mass normalization %s\n", s.c_str());
     return QUDA_INVALID_NORMALIZATION;
   }
 }
@@ -193,7 +193,7 @@ inline std::string get_mass_normalization_str(QudaMassNormalization type) {
   case QUDA_ASYMMETRIC_MASS_NORMALIZATION:
     return "asym-mass";
   default:
-    PLEGMA_warning( "invalid mass normalization\n");
+    PLEGMA_error( "invalid mass normalization\n");
     return "invalid";
   }
 }
@@ -208,7 +208,7 @@ inline QudaMatPCType get_matpc_type(std::string s) {
   else if(s=="odd-odd-asym")
     return QUDA_MATPC_ODD_ODD_ASYMMETRIC;
   else {
-    PLEGMA_warning( "invalid matpc type %s\n", s.c_str());
+    PLEGMA_error( "invalid matpc type %s\n", s.c_str());
     return QUDA_MATPC_INVALID;
   }
 }
@@ -224,7 +224,7 @@ inline std::string get_matpc_str(QudaMatPCType type) {
   case QUDA_MATPC_ODD_ODD_ASYMMETRIC:
     return "odd-odd-asym";
   default:
-    PLEGMA_warning( "invalid matpc type %d\n", type);
+    PLEGMA_error( "invalid matpc type %d\n", type);
     return "invalid";
   }
 }
@@ -243,7 +243,7 @@ inline QudaSolveType get_solve_type(std::string s) {
   else if(s=="normerr-pc")
     return QUDA_NORMERR_PC_SOLVE;
   else {
-    PLEGMA_warning( "invalid matpc type %s\n", s.c_str());
+    PLEGMA_error( "invalid matpc type %s\n", s.c_str());
     return QUDA_INVALID_SOLVE;
   }
 }
@@ -263,7 +263,7 @@ inline std::string get_solve_str(QudaSolveType type) {
   case QUDA_NORMERR_PC_SOLVE:
     return "normerr-pc";
   default:
-    PLEGMA_warning( "invalid solve type %d\n", type);
+    PLEGMA_error( "invalid solve type %d\n", type);
     return "invalid";
   }
 }
@@ -276,7 +276,7 @@ inline QudaSchwarzType get_schwarz_type(std::string s) {
   else if(s=="mul")
     return QUDA_MULTIPLICATIVE_SCHWARZ;
   else {
-    PLEGMA_warning( "invalid Schwarz type %s\n", s.c_str());
+    PLEGMA_error( "invalid Schwarz type %s\n", s.c_str());
     return QUDA_INVALID_SCHWARZ;
   }
 }
@@ -291,7 +291,7 @@ inline QudaTwistFlavorType get_flavor_type(std::string s) {
   else if(s=="no")
     return  QUDA_TWIST_NO;
   else {
-    PLEGMA_warning( "invalid flavor type %s\n", s.c_str());	
+    PLEGMA_error( "invalid flavor type %s\n", s.c_str());	
     return QUDA_TWIST_INVALID;
   }
 }
@@ -307,7 +307,7 @@ inline std::string get_flavor_str(QudaTwistFlavorType type) {
   case QUDA_TWIST_NO:
     return "no";
   default:
-    PLEGMA_warning( "invalid flavor type %d\n", type);	
+    PLEGMA_error( "invalid flavor type %d\n", type);	
     return "invalid";
   }
 }
@@ -362,7 +362,7 @@ inline QudaInverterType get_solver_type(std::string s) {
   else if(s=="none")
     return QUDA_INVALID_INVERTER;
   else {
-    PLEGMA_warning( "invalid solver type %s\n", s.c_str());
+    PLEGMA_error( "invalid solver type %s\n", s.c_str());
     return QUDA_INVALID_INVERTER;
   }
 }
@@ -427,6 +427,7 @@ inline QudaBoolean get_boolean(std::string s){
   if(s.compare("true")==0) return QUDA_BOOLEAN_YES;
   else if (s.compare("false")==0) return QUDA_BOOLEAN_NO;
   else PLEGMA_error("Boolean not recognized");
+  return QUDA_BOOLEAN_YES;
 }
 
 
@@ -450,14 +451,16 @@ inline QudaEigSpectrumType get_eigensolution_type(std::string s) {
 }
 
 inline  QudaEigType get_eigensolver(std::string s){
-  if(s=="trlan")
+  if(s=="trlan" || s=="trlm")
     return QUDA_EIG_TR_LANCZOS;
-  else if(s=="irlan")
+  else if(s=="irlan" || s=="irlm")
     return QUDA_EIG_IR_LANCZOS;
-  else if(s=="irarn")
+  else if(s=="irarn" || s=="iram")
     return QUDA_EIG_IR_ARNOLDI;
-  else
+  else {
     PLEGMA_error("Invalid eigensolver for multigrid exact deflation\n");
+    return QUDA_EIG_INVALID;
+  }
 }
 
 

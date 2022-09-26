@@ -7,10 +7,10 @@
 #define _PLEGMA_FIELD_H
 
 namespace plegma {
+  template<typename Float>  class PLEGMA_Field3D;
   template<typename Float>  class PLEGMA_Fmunu;
   template<typename Float>  class PLEGMA_Su3field;
   template<typename Float>  class PLEGMA_Gauge;
-
 
   ////////////////////////
   // CLASS: PLEGMA_Field //
@@ -19,19 +19,14 @@ namespace plegma {
      @brief The parent class of all PLEGMA fields
    **/
   template<typename Float>
-  class PLEGMA_Field : public IO<void> {
+  class PLEGMA_Field : virtual public IO<void,bool> {
   protected:
     
     int field_length; /*!< Member variable to hold the degrees of freedom of a field eg. (spin,color,...) */
     int total_length; /*!< Member variable to hold the size of a field only lattice points excluding the d.o.f per lattice point */
     int ghost_length; /*!< Member variable to hold the size of ghosts that involve in the communication (only side ghosts) */
     int ghost_corner_length; /*!< Member variable to hold the size of ghosts that involve in the communication (ghosts which are on the corners) */
-    int total_plus_ghost_length; /*!< Member variable to hold the size of "total_length + ghost_length + ghost_corner_length" */
-
-    size_t bytes_total_length; /*!< Member variable to hold in bytes the "total_length*field_length" */
-    size_t bytes_ghost_length; /*!< Member variable to hold in bytes the "ghost_length*field_length" */
-    size_t bytes_ghost_corner_length; /*!< Member variable to hold in bytes the "ghost_corner_length*field_length" */
-    size_t bytes_total_plus_ghost_length; /*!< Member variable to hold in bytes the "total_plus_ghost_length*field_length" */
+    size_t ghost_vertex_length;
     
     Float *h_elem; /*!< Member variable pointer to the elements of the field on CPU */
     Float *d_elem; /*!< Member variable pointer to the elements of the field on GPU */
@@ -39,6 +34,8 @@ namespace plegma {
     Float *h_ext_ghost_s; /*!< Member variable pointer to the side ghost elements of the field on CPU (send version)*/
     Float *h_ext_ghost_corner_r; /*!< Member variable pointer to the corner ghost elements of the field on CPU (receive version)*/
     Float *h_ext_ghost_corner_s; /*!< Member variable pointer to the corner ghost elements of the field on CPU (send version)*/
+    Float *h_ext_ghost_vertex_r;
+    Float *h_ext_ghost_vertex_s;
     PLEGMA_RNG *randstate_ptr; /*!< Member variable a PLEGMA_RNG allowing a field to create random numbers */
     
     GHOST_FLAG ghost_flag; /*!< Choose what kind of ghosts the field has, options (NO_GHOSTS,FIRST_SIDE,FIRST_CORNER)*/
@@ -47,6 +44,7 @@ namespace plegma {
     bool isAllocHost; /*!< Flag to determine if allocation is done on the CPU */
     bool isAllocDevice; /*!< Flag to determine if allocation is done on the GPU */
     bool checkErr; /*!< Controls if we want to check for errors in the PLEGMA_Fields, default is true */
+    std::vector<MsgHandle*> messages;
 
     CLASS_ENUM field_type; /*!< Enum for the names of fields */
     std::string field_name; /*!< Hold in string the name of the field */
@@ -83,21 +81,22 @@ namespace plegma {
        @param ghost_flag: Controls what kind of ghosts can be exchanged
        @param isPinnedHost: see "isPinnedHost"
      */
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
     /**
        @brief Overloaded constructor to create a general field by calling "initialize(...)"
        @param alloc_flag: see "allocation"
        @param site_size: Provide d.o.fs of the field
        @param ghost_flag: Controls what kind of ghosts can be exchanged
        @param isPinnedHost: see "isPinnedHost"
-       @param D3: If true creates a 3D field instead of a 4D field
        @param checkErr: see "checkErr"
      */
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool D3 = false, bool checkErr = true);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localV = HGC_localVolume, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
     /**
        @brief virtual destructor responsible for freeing memory. Virtual because it could be called from an instance of a derived class through a pointer to base class
      */
     virtual ~PLEGMA_Field();
+    // Deleting copy contructor at the moment. This would cause seg fault due to the fields allocated
+    PLEGMA_Field(const PLEGMA_Field<Float>&) = delete;
     /**
        @brief sets to zero all element of the field on CPU
      */
@@ -113,11 +112,11 @@ namespace plegma {
     /**
        @brief Creates a texture object which binds on field elements on GPU
      */
-    cudaTextureObject_t createTexObject();
+    cudaTextureObject_t createTexObject() const;
     /**
        @brief Destroys the texture object which binds on field elements on GPU
      */
-    void destroyTexObject(cudaTextureObject_t tex);
+    void destroyTexObject(cudaTextureObject_t tex) const;
     /**
      * @return a pointer to access Host elements of the field
      */
@@ -138,34 +137,47 @@ namespace plegma {
      * @return the kind of allocation we have for the field
      */
     ALLOCATION_FLAG getAllocation() const { return allocation; }
-    /**
-     * @return the bytes the length of the field including d.o.f
-     */
-    size_t Bytes_total() const { return bytes_total_length; }
-    /**
-     * @return the bytes the length of the ghost including d.o.f
-     */
-    size_t Bytes_ghost() const { return bytes_ghost_length; }
-    /**
-     * @return the bytes the length of the field including ghost including d.o.f
-     */
-    size_t Bytes_total_plus_ghost() const { return bytes_total_plus_ghost_length; }
+
     /**
      * @return degrees of freedom per lattice point
      */
-    int Field_length() const { return field_length;} 
+    int Field_length() const { return field_length;} // degrees of freedom per lattice point
     /**
      * @return the length of the field in lattice points (local)
      */
-    int Total_length() const { return total_length;}
+    size_t Total_length() const { return total_length;} // the length of the field (local)
     /**
      * @return the length of the ghost part of the field in lattice points (local)
      */
-    int Ghost_length() const { return ghost_length;} 
+    size_t Ghost_length() const { return ghost_length;} // the length of the ghost
+    size_t GhostCorner_length() const { return ghost_corner_length;} // the length of the ghost for corners
+    size_t GhostVertex_length() const { return ghost_vertex_length;} // the length of the ghost for vertex
     /**
      * @return the length of the field + ghost in lattice points (local)
      */
-    int TotalGhost_length() const { return total_plus_ghost_length;} 
+    size_t TotalPlusGhost_length() const { return Total_length()+Ghost_length()+GhostCorner_length()+GhostVertex_length();} // total + ghost
+
+    /**
+     * @return the bytes the length of the field including d.o.f
+     */
+    size_t Bytes_total() const { return this->Total_length()*this->Field_length()*2*sizeof(Float); }
+    /**
+     * @return the bytes the length of the ghost including d.o.f
+     */
+    size_t Bytes_ghost() const { return this->Ghost_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_ghostVertex() const { return this->GhostVertex_length()*this->Field_length()*2*sizeof(Float); }
+    /**
+     * @return the bytes the length of the field including ghost including d.o.f
+     */
+    size_t Bytes_total_plus_ghost() const { return this->TotalPlusGhost_length()*this->Field_length()*2*sizeof(Float); }
+
+    template<class... Args>
+    bool checkVolume(const Args&... fields) {
+      std::vector<bool> checks = {this->Total_length() == fields.Total_length() ...};
+      return std::all_of(checks.begin(), checks.end(), [](bool i){return i;});
+    }
+    
     /**
      * @return a string with the name of the field
      */
@@ -193,23 +205,19 @@ namespace plegma {
      * @brief Communicates only the side ghosts in chosen direction,orientation
      * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
      */
-    void communicateSideGhost(int dirOr=-1);
+    void communicateSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     /**
      * @brief Communicates side+corner ghosts in chosen direction,orientation
      * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
      */
-    void communicateCornerGhost(int dirOr=-1);
+    void communicateCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateVertexGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     /**
      * @brief Communicates side or side+corner ghosts in chosen direction,orientation give the ghost type
      * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
      * @param which_ghost: choose what kind of ghost to exchange
      */
-    void communicateGhost(int dirOr, GHOST_FLAG which_ghost);
-    /**
-     * @brief Communicates side or side+corner ghosts in chosen direction,orientation using ghost type from member variable
-     * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
-     */
-    void communicateGhost(int dirOr=-1);
+    void communicateGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, GHOST_FLAG which_ghost=ALL_GHOSTS, ACTION action=DO_ALL);
 
     std::vector<int> getSiteShape() const {return site_shape;}
     void setSiteShape(std::vector<int> new_shape) {
@@ -219,7 +227,7 @@ namespace plegma {
       assert(current_size==new_size);
       site_shape = new_shape;
     }
-    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start);
+    std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start) const;
     /**
      * @brief On the host pack the data from d.o.fs running faster to d.o.fs running slower. Common practice before copy data to GPU
      * @param Array with input data to pack
@@ -237,11 +245,13 @@ namespace plegma {
     /**
      * @brief Download from the GPU the data. Just memcpy without changing data layout
      */
-    void unload();
+    void unload() const;
     /**
      * @brief shift the field by one step in direction,orientation. (0,1,2,3) Push the field in (+x,+y,+z,+t) while (4,5,6,7) push the field in (-x,-y,-z,-t)
      */
     void shift(PLEGMA_Field &Fin, int dirOr);
+    void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2);
+    void shift(PLEGMA_Field &Fin, short dirOr1, short dirOr2, short dirOr3);
     /**
      * @brief Initialize the random number generator of the field. Includes memory allocation
      * @param The seed will be used for the random number generator
@@ -266,6 +276,7 @@ namespace plegma {
      * @param indDiag: a std vector with the chosen d.o.f indices
      */
     void setUnit(std::vector<int> indDiag);
+    void conjugate();
     /**
      * @brief copies the elements from one field to another on the desired location. If the two fields do not have matched field_length an error is thrown. If the precision is not match a casting is used.
      * @param where: the location where we copy from-to
@@ -276,7 +287,8 @@ namespace plegma {
      * @brief multiply the elements of the field with position dependent momentum phases. 
      * @param sign: the sign on the exponential
      */
-    void mulMomentumPhases(std::vector<int> mom, int sign=-1);
+    template<typename T>
+    void mulMomentumPhases(std::vector<T> mom, int sign=-1);
     /**
      * @brief Adds two fields where the input field is scaled by complex number and the results is stored on "this" (F += a*Fin)
      * @param alpha: complex number scales input field
@@ -294,6 +306,11 @@ namespace plegma {
      */
     Float norm();
     /**
+     * @brief Scales the field by a real number
+     * @param the scaling value
+     */
+    void scale(Float val);
+    /**
      * @brief Scales the field by a complex number
      * @param the scaling value
      */
@@ -306,6 +323,7 @@ namespace plegma {
      * @param indDof: choose the d.o.fs where the application of the Hadamard vectors will take place
      */
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
+    void absorbTimeslice(PLEGMA_Field<Float> &srcfield, int global_it, bool forcetozero=true);
     /**
      * @brief Contracts two gluon field strength tensors (FST) connected SU3 matrices and then take a trace
      * @param Fl: FST on the left
@@ -323,6 +341,20 @@ namespace plegma {
      */
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
     /**
+       @brief Absorbs all  elements from a 3D field and puts it at a specific global time of the 4D field
+       @param PLEGMA_Field3D<Float> prop, The 3D field
+       @param int global_it, The global time slice where data which will be inserted, the rest of the time-slices will become zero in the 4D field
+       @return void
+     **/    
+    void absorb(const PLEGMA_Field3D<Float> &field, int global_it);
+    /**
+       @brief Multiplies a field with theta twists in temporal direction, namely e^{i \theta \pi t/T}
+       @param double theta: the parameter \theta as used above
+       @param bool dagger: If true flips the sign in the exponential
+     **/
+    void mulThetaPhase(Float theta, bool dagger=false);
+
+    /**
      * @brief Read from lime a field
      */
     virtual void readLIME(std::string filename);
@@ -334,6 +366,21 @@ namespace plegma {
      * @brief Write to hdf5 a field
      */
     virtual void writeHDF5(std::string filename);
+    void readFile(std::string filename, FILE_FORMAT format, bool loadToDev=true) {
+      IO<void,bool>::readFile(filename, format, loadToDev);
+    }
+    void readFile(std::string filename, bool loadToDev=true) {
+      IO<void,bool>::readFile(filename, loadToDev);
+    }
+    void writeFile(std::string filename, FILE_FORMAT format, bool unloadFromDev=true) const {
+      IO<void,bool>::writeFile(filename, format, unloadFromDev);
+    }
+    void writeFile(std::string filename, bool unloadFromDev=true) const{
+      IO<void,bool>::writeFile(filename, unloadFromDev);
+    }
+
+    virtual bool includesActiveTimeSlice() const{return true;}
+    virtual bool is4D() const{assert(Total_length()==HGC_localVolume); return true;}
   };
 
 
@@ -342,18 +389,32 @@ namespace plegma {
      @brief A child class of Field specialized for 3D fields
    **/
   template<typename Float>
-  class PLEGMA_Field3D : public PLEGMA_Field<Float> {
-  protected:
-    bool activeTimeSlice; /*!< Becomes true if the global time slice is active on the current process */
+  class PLEGMA_Field3D : virtual public PLEGMA_Field<Float> {
   public:
-    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
-      PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost) {
-    }
-    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false) :
-      PLEGMA_Field<Float>(alloc_flag, site_size, ghost_flag, isPinnedHost) {
-    }
+    bool activeTimeSlice; /*!< Becomes true if the global time slice is active on the current process */
+    
+    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true) :
+      PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost, checkErr), activeTimeSlice(false) { }
+    PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true) :
+      PLEGMA_Field<Float>(alloc_flag, site_size, HGC_localVolume3D, ghost_flag, isPinnedHost, checkErr), activeTimeSlice(false) { }
+    PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC_localVolume3D), activeTimeSlice(false) { }
 
-    bool includesActiveTimeSlice(){return activeTimeSlice;}
+    virtual bool includesActiveTimeSlice() const{return activeTimeSlice;}
+    virtual bool is4D() const{assert(this->Total_length()==HGC_localVolume3D); return false;}
+
+    template<typename FloatIn>
+    void copy(PLEGMA_Field3D<FloatIn> &f, ALLOCATION_FLAG where=DEVICE) {
+      this->activeTimeSlice = f.activeTimeSlice;
+      return ((PLEGMA_Field<Float>*) this)->copy(f,where);
+    }
+    
+    /**
+       @brief Absorbs a time-slice from a 4D field to a 3D field
+       @param PLEGMA_Field<Float> field, The 4D field
+       @param int global_it, The global time slice from where data will be extracted from the the 4D field
+       @return void
+     **/    
+    void absorb(const PLEGMA_Field<Float> &field, int global_it);
   };
 }
 #endif

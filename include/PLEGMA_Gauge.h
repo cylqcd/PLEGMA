@@ -13,7 +13,7 @@ namespace plegma {
      @brief A child class of PLEGMA_Field with specialization for Gauge field
    **/  
   template<typename Float>
-    class PLEGMA_Gauge : public PLEGMA_Field<Float> {
+  class PLEGMA_Gauge : virtual public PLEGMA_Field<Float> {
   public:
     /**
        @brief Constructor of the PLEGMA_Gauge. Calls the constructor of its parent
@@ -104,6 +104,7 @@ namespace plegma {
        @param[in] scale: array with four values for each direction
      **/
     void scaleDirWise(std::complex<Float> scale[N_DIMS]);
+    void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
     /**
        @brief Landau gauge fixing using stochastic overelaxation
        @param[in] uIn: Input gauge field
@@ -116,7 +117,20 @@ namespace plegma {
     /**
        @bried Computes the gluon field given a gauge field with definition A_mu = \frac{1/2i} [ (U_\mu - U_\mu^\dag) - \frac{1}{3} Tr[U_\mu - U_\mu^\dag]]. Note that g_0 is not included
      **/
+    void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-12,int maxIter=10000, int seedOverRelax=123456);
     void gluonField(PLEGMA_Gauge<Float> &uIn);
+  };
+
+  /////////////////////////////////////
+  // CLASS: PLEGMA_Gauge3D ///////////
+  ////////////////////////////////////
+  
+  template<typename Float>
+  class PLEGMA_Gauge3D : public PLEGMA_Field3D<Float>, public PLEGMA_Gauge<Float> {
+  public:
+    PLEGMA_Gauge3D(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE):
+      PLEGMA_Field<Float>(alloc_flag, GAUGE3D, ghost_flag) { }
+    ~PLEGMA_Gauge3D(){ }
   };
 }
 

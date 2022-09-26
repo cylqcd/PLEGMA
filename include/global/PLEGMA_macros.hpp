@@ -13,10 +13,6 @@
 #define	LEXIC_ZX(iz,ix,L) ( (iz)*L[0] + (ix) )
 #define	LEXIC_YX(iy,ix,L) ( (iy)*L[0] + (ix) )
 
-#define MIN(a,b) ((a)<(b) ? (a):(b))
-#define MAX(a,b) ((a)>(b) ? (a):(b))
-
-
 #define BOOST_PP_VARIADICS 1
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
@@ -81,3 +77,29 @@
 #define EQUAL(...) BOOST_PP_IF(IS_EMPTY(__VA_ARGS__),		\
 			       NOTHING,				\
 			       __EQUAL) (__VA_ARGS__)
+
+
+// Use the following for accessing off-diagonal terms of matrices with only off-diagonal stored
+#define _OFF2(i,j) ((i*(i-1))/2 + j)
+#define OFF2(i,j) (i>j ? _OFF2(i,j) : _OFF2(j,i))
+
+#define _OFF2SIGN(i,j,mu,nu) ((((i*(i-1))/2 + j)*2 + mu)*2 + nu)
+#define OFF2SIGN(i,j,mu,nu) (i>j ? _OFF2SIGN(i,j,mu,nu) : _OFF2SIGN(j,i,nu,mu))
+
+
+#define _OFF3(i,j,k) ((i*(i-1)*(i-2))/6 + (j*(j-1))/2 + k)
+#define OFF3(i,j,k) (i>j && j>k ? _OFF3(i,j,k) : \
+		    (i>k && k>j ? _OFF3(i,k,j) : \
+		    (j>i && i>k ? _OFF3(j,i,k) : \
+		    (j>k && k>i ? _OFF3(j,k,i) : \
+		    (k>i && i>j ? _OFF3(k,i,j) : \
+		                  _OFF3(k,j,i))))))
+
+#define _OFF3SIGN(i,j,k,mu,nu,ku) (((((i*(i-1)*(i-2))/6 + (j*(j-1))/2 + k)*2 + mu)*2 + nu)*2 + ku)
+#define OFF3SIGN(i,j,k,mu,nu,ku) (i>j && j>k ? _OFF3SIGN(i,j,k,mu,nu,ku) :	\
+				 (i>k && k>j ? _OFF3SIGN(i,k,j,mu,ku,nu) :	\
+				 (j>i && i>k ? _OFF3SIGN(j,i,k,nu,mu,ku) :	\
+				 (j>k && k>i ? _OFF3SIGN(j,k,i,nu,ku,mu) :	\
+				 (k>i && i>j ? _OFF3SIGN(k,i,j,ku,mu,nu) :	\
+				               _OFF3SIGN(k,j,i,ku,nu,mu))))))
+

@@ -68,22 +68,21 @@ __device__ void clover_leaves(Float2<Float> F[N_COLS][N_COLS], gauge2<Float> &u,
 }
 
 template<typename Float>
-static __global__ void clover_leaves_kernel(Float *fmunu, Float *gauge){
+static __global__ void clover_leaves_kernel(pFloat2<Float> fmunu, gauge2<Float> gauge){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  Float2<Float> *fmunu2 = (Float2<Float> *) fmunu;
-  gauge2<Float> u(gauge);
   Float2<Float> F[N_COLS][N_COLS];
-  if (sid >= DGC_localVolume) return;
+  if (sid >= fmunu.volume()) return;
   int count=0;
-  
+
+  fmunu.setSid(sid);
   for(int mu = 0 ; mu < N_DIMS; mu++){
     for(int nu = mu+1 ; nu < N_DIMS; nu++){
-      clover_leaves(F,u,mu,nu,sid);
+      clover_leaves(F,gauge,mu,nu,sid);
 #pragma unroll
       for(int c1 = 0 ; c1 < N_COLS; c1++){
 #pragma unroll
 	for(int c2 = 0 ; c2 < N_COLS; c2++){
-	  fmunu2[(count*N_COLS*N_COLS + c1*N_COLS + c2) * DGC_localVolume + sid ] = F[c1][c2];
+	  fmunu.set((count*N_COLS*N_COLS + c1*N_COLS + c2), F[c1][c2]);
 	}
       }
       count++;
@@ -94,7 +93,8 @@ static __global__ void clover_leaves_kernel(Float *fmunu, Float *gauge){
 
 template<typename Float>
 static void clover_leaves_k(PLEGMA_Fmunu<Float> &fmunu, PLEGMA_Gauge<Float> &gauge){
-  ProfileStruct ps(HGC_localVolume);
-  tuneAndRun(ps,"clover_leaves_kernel", clover_leaves_kernel<Float>, fmunu.D_elem(), gauge.D_elem());
+  assert(fmunu.checkVolume(gauge));
+  ProfileStruct ps(gauge.Total_length());
+  tuneAndRun(ps,"clover_leaves_kernel", clover_leaves_kernel<Float>, toField2<pFloat2>(fmunu), toField2<gauge2>(gauge));
   checkCudaError();
 }

@@ -33,7 +33,7 @@ define(double csw, 0.1);
 define(double anisotropy, 1.0);
 define(QudaTwistFlavorType twist_flavor, QUDA_TWIST_SINGLET);
 define(bool compute_clover, false);
-define(QudaMassNormalization normalization, QUDA_KAPPA_NORMALIZATION); // mass normalization of Dirac operators
+define(QudaMassNormalization normalization, QUDA_MASS_NORMALIZATION); // mass normalization of Dirac operators
 define(QudaDagType dagger, QUDA_DAG_NO);
 define(bool isEven, true);
 
@@ -48,10 +48,10 @@ define(bool verify_results, false);
 define(bool kernel_pack_t, false);
 define(int pipeline, 0); // length of pipeline for fused operations in GCR or BiCGstab-l
 define(int solution_accumulator_pipeline, 0);
-define(QudaInverterType inv_type, QUDA_MG_INVERTER);
-define(QudaInverterType precon_type, QUDA_INVALID_INVERTER);
+define(QudaInverterType inv_type, QUDA_GCR_INVERTER);
 
 // MG options
+define(bool  use_mg, true); //Use the multigrid preconditioner 
 define(int gcrNkrylov, 10); // number of inner iterations for GCR, or l for BiCGstab-l
 define(int nvec[QUDA_MAX_MG_LEVEL], {});
 define(int mg_levels, 2);
@@ -66,6 +66,7 @@ define(QudaVerbosity mg_verbosity[QUDA_MAX_MG_LEVEL], {});
 define(QudaInverterType setup_inv[QUDA_MAX_MG_LEVEL],{});
 define(int num_setup_iter[QUDA_MAX_MG_LEVEL], {});
 define(double setup_tol, 5e-6);
+define(int setup_maxiter, 500);
 define(QudaSetupType setup_type, QUDA_NULL_VECTOR_SETUP);
 define(bool pre_orthonormalize, false);
 define(bool post_orthonormalize, true);
