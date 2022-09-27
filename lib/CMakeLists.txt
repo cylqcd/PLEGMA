@@ -12,7 +12,6 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_threep_local.cu
   kernels/PLEGMA_threep_noe.cu
   kernels/PLEGMA_threep_oneD.cu
-  kernels/PLEGMA_threep_oneD_stochastic.cu
   kernels/PLEGMA_threep_twoD.cu
   kernels/PLEGMA_threep_threeD_part1.cu
   kernels/PLEGMA_threep_threeD_part2.cu
