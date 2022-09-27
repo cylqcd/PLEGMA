@@ -333,8 +333,6 @@ void QUDA_solver::UpdateSolver()
       destroyMultigridQuda(mg_preconditioner);
       mg_preconditioner = newMultigridQuda(&mg_param);
     } else {
-      //destroyMultigridQuda(mg_preconditioner);
-      //mg_preconditioner = newMultigridQuda(&mg_param);
       updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
       updateMultigridQuda(mg_preconditioner, &mg_param);
     }
