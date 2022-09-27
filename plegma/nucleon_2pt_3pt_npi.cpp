@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
   std::vector<double> mu_s;
   std::vector<double> mu_c;
-  int rand_seed1;
+  int rand_seed1=1234;
   int confnumber_int;
   double mu_ud = mu;
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
@@ -85,6 +85,9 @@ int main(int argc, char **argv) {
   std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID};
   std::vector<GAMMAS_SCATT> gammas_insertion = {ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};//,S12,S13,S23,S41,S42,S43};
 
+  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};
+
+
 
 
   auto add_options = [&](Options& options) {
@@ -96,7 +99,6 @@ int main(int argc, char **argv) {
     options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
     options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
     options.set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
-    options.set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
     options.set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
 		     };
   add_options(*HGC_options);
@@ -227,7 +229,7 @@ int main(int argc, char **argv) {
 
 				   TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
 
-				   vector2.mulMomentumPhases(sourceMom,+1);
+				   vector2.mulMomentumPhases(sourceMom,-1);
                                    vectorInOut.absorb(vector2,sourcePositions[isource][DIM_T]);
                                  }
 				 {
@@ -293,7 +295,6 @@ int main(int argc, char **argv) {
 //				   
 				  
 	                           {
-
                                     PLEGMA_Vector<double> vectorAuxD;
                                     TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
                                     TIME(vectorInOut.copy(vectorAuxD));
@@ -374,7 +375,7 @@ int main(int argc, char **argv) {
 
 
 
-        std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
+        std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
 
 	std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
         momList list_mpf1(1,{mpf1,},{0,});
@@ -416,9 +417,9 @@ int main(int argc, char **argv) {
 	{
           PLEGMA_Vector<float> vectorAuxF_SS;
 	  PLEGMA_Vector<float> vectorAuxF_SL;
-          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
+          for(int i_pi2=0; i_pi2<mpi2.size(); ++i_pi2){
 
-            auto &momentum_i2 =  pi2_filt[i_pi2];
+            auto &momentum_i2 =  mpi2[i_pi2];
 
             momList filtered_sourcemomentumList_twopoint = sourcemomentumList_twopoint.extract(momentum_i2, 0);
 
@@ -516,6 +517,7 @@ int main(int argc, char **argv) {
 
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};//,S12,S13,S23,S41,S42,S43};
+          #if 1
 	  for (int alpha=0;alpha<N_SPINS; ++alpha){
             for (int beta=0; beta<N_SPINS; ++beta){
 
@@ -645,9 +647,7 @@ int main(int argc, char **argv) {
 	    } //loop over beta
 	  }//loop over alpha
 
- 
-	  //TIME(corrUp.writeHDF5("njnup"));
-          //TIME(corrDn.writeHDF5("njndn"));	  
+          #endif 
           auto computeOetInvThroughSink = [&](PLEGMA_Vector<float>& vec_SC, double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::vector<int> momentum_f1, int i_gamma_i2, int i_gamma_f2 ) {
                // ensuring mu positive
                if(mu != run_mu) {
@@ -661,7 +661,6 @@ int main(int argc, char **argv) {
                   PLEGMA_Vector3D<double> vectorAuxD1, vectorAuxD2;
                   PLEGMA_Vector3D<float> vectorAuxF;
                   vectorAuxF.copy(prop);
-		  double tmp=vectorAuxF.norm();
                   vectorAuxF.mulMomentumPhases(momentum_f1,-1); // put momentum at the sink
                   vectorAuxD1.copy(vectorAuxF);
                   TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
@@ -681,7 +680,7 @@ int main(int argc, char **argv) {
                {
                   PLEGMA_Vector<double> vectorAuxD;
                   TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,run_mu/abs(run_mu)));
-                   vectorInOut.copy(vectorAuxD);
+                  vectorInOut.copy(vectorAuxD);
                }
 
                TIME(solver.solve(vectorInOut, vectorInOut));
@@ -709,8 +708,10 @@ int main(int argc, char **argv) {
                std::vector<std::vector<int>> mpc = sourcemomentumList.uniq_p(2);
                momList list_mpc(1,{mpc,},{0,});
 
+	       seqProp.conjugate();
+
 	       PLEGMA_ScattCorrelator<float> corr(source, list_mpc, tsinkMtsource+1);
-	       TIME(corr.contractMesonThrp_local(seqProp, propF, gammas_insertion));
+	       TIME(corr.contractNucleonThrp_local(seqProp, propF, 0, gammas, false));
 
                corrScatt.absorbGammai2Gammaf2momentumf2(corr, i_gamma_i2, i_gamma_f2, i_pf1 );
 
@@ -743,9 +744,8 @@ int main(int argc, char **argv) {
 
 	       }
 	  
-               std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
-               for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
-                 auto &momentum_i2 =  pi2_filt[i_pi2];
+               for(int i_pi2=0; i_pi2<mpi2.size(); ++i_pi2){
+                 auto &momentum_i2 =  mpi2[i_pi2];
                  momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 
                  PLEGMA_ScattCorrelator<float> corrMP(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
@@ -770,8 +770,8 @@ int main(int argc, char **argv) {
  		 corrMN.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, gammas_insertion, "32", "Mneutron"+label);
 
 
-                 PLEGMA_ScattCorrelator<float> corrpjp(source,  filtered_sourcemomentumList_pi20, tsinkMtsource+1 );	    
-                 corrpjp.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP");
+                 PLEGMA_ScattCorrelator<float> corrpjp(source,  filtered_sourcemomentumList, tsinkMtsource+1 );	    
+                 corrpjp.initialize_diagram(glist_source_meson, glist_sink_meson, gammas_insertion, "PJP_STL");
 
 	         PLEGMA_Vector<float> oet_fini_SL;
                  oet_fini_SL.unload();
@@ -820,16 +820,20 @@ int main(int argc, char **argv) {
                  TIME(corrMN.applyBoundaryConditions(true));
                  TIME(corrMN.writeHDF5(outfilename));
 
+//                 asprintf(&ssource,"pi2x%02dpi2y%02dpi2z%02d", momentum_i2[0], momentum_i2[1], momentum_i2[2]);
+//                 std::string momtext= (std::string)"_" + ssource;
+//                 free(ssource);
+
+
 	         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"pionJpion"+label;
                  TIME(corrpjp.writeHDF5(outfilename));
 	       }
 
 	  };
 
-
-          std::vector<std::vector<int>> pi2_filt = sourcemomentumList.uniq_p(0);
-          for(int i_pi2=0; i_pi2<pi2_filt.size(); ++i_pi2){
-            auto &momentum_i2 =  pi2_filt[i_pi2];
+#if 1
+          for(int i_pi2=0; i_pi2<mpi2.size(); ++i_pi2){
+            auto &momentum_i2 =  mpi2[i_pi2];
             momList filtered_sourcemomentumList = sourcemomentumList.extract(momentum_i2, 0);
 	  
             PLEGMA_ScattCorrelator<float> corrM1(sourcePositions[isource], filtered_sourcemomentumList, tsinkMtsource+1);
@@ -870,11 +874,6 @@ int main(int argc, char **argv) {
               oet_fini_dn.unload();
               oet_fini_dn.copy(*oet_mom_fini_dn_SS[i_pi2], HOST);
               oet_fini_dn.load();
-	      //corrUp.writeHDF5("tempro");
-	      //double normtemp=oet_mom_zero_dn_SS.norm();
-	      //PLEGMA_printf("%e normtemp \n",normtemp);
-	      //normtemp=oet_fini_up.norm();
-              //PLEGMA_printf("%e normtemp \n",normtemp);
 
               TIME(corrM1.M_diagrams( corrUp, oet_mom_zero_dn_SS, oet_fini_up));
               TIME(corrM2.M_diagrams( corrDn, oet_mom_zero_dn_SS, oet_fini_up));
@@ -886,7 +885,6 @@ int main(int argc, char **argv) {
 
             
 	      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup_pizeroup";
-	      corrM1.writeHDF5("M1withoutphase");
 	      TIME(corrM1.apply_sign("NJNP")); 
               TIME(corrM1.apply_phase());
 	      TIME(corrM1.writeHDF5(outfilename));
@@ -944,6 +942,33 @@ int main(int argc, char **argv) {
 	    }
 
 	}//momentum pi2
+#endif
+
+        //Note that we compute NJN for the set 
+	//of input momenta pf1 and perform the 
+	//fourier transform for the set of momenta
+	//pc, however pi is not neccessarily pf1-pc, so
+	//we do not apply here the momentum phase at
+	//the source, this hast to be done in postproduction
+        //TIME(corrUp.apply_phase());
+
+        //TIME(corrDn.apply_phase());
+
+	if (nucleon==PROTON){
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup";
+	}
+	else{
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup";
+	}
+        TIME(corrUp.writeHDF5(outfilename));
+
+        if (nucleon==PROTON){
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn";
+        }
+        else{
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutrondn";
+        }
+        TIME(corrDn.writeHDF5(outfilename));	  
 
         {
 	PLEGMA_Vector3D<float> zero_momentum_light;
