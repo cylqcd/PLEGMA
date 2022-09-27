@@ -140,8 +140,8 @@ namespace plegma {
     template<typename FloatIn>
     void copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG where=DEVICE);
 
-    template<typename T>
-    void mulMomentumPhases(std::vector<T> mom, int sign=-1);
+    template<typename FloatMom>
+    void mulMomentumPhases(std::vector<FloatMom> mom, int sign=-1);
 
     // F += a*Fin
     void add(PLEGMA_Field &Fin, std::complex<Float> alpha = 1.);
@@ -219,7 +219,12 @@ namespace plegma {
        @param int global_it, The global time slice from where data will be extracted from the the 4D field
        @return void
      **/    
+<<<<<<< HEAD
     void absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast=false);
+=======
+    void absorb(const PLEGMA_Field<Float> &field, int global_it);
+    std::complex<Float> dot(PLEGMA_Field3D<Float> &fieldIn);
+>>>>>>> newloc/feature/gluonPDF
   };
 }
 #endif

@@ -19,7 +19,7 @@ using namespace plegma;
 // class PLEGMA_Field //
 //--------------------------//
 
-// This is is a class which allocates memory on either the
+// This is is a class which allocates memory on either
 // the device, or host, or both for the structures:
 // Field: one complex number per spacetime point.
 // Gauge: one SU(3) link variable per spacetime point X spacetime dimension.
@@ -29,6 +29,7 @@ using namespace plegma;
 // (usually a whole spacetime volume.)
 // Propagtor3D: as above, but with sinks only at one timeslice.
 
+//: computes the size of fields and alloc mem on both sides
 template<typename Float>
 void PLEGMA_Field<Float>::
 initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
@@ -721,8 +722,8 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
 }
 
 template<typename Float>
-template<typename T>
-void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<T> mom, int sign){
+template<typename FloatMom>
+void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign){
   if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
@@ -1072,6 +1073,13 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   checkCudaError();
 }
 
+template<typename Float>
+std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
+  // TODO: need to think about appropriate communicator
+  if (HGC_localVolume != HGC_totalVolume)
+    PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
+  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
+}
 
 template class PLEGMA_Field3D<float>;
 template class PLEGMA_Field3D<double>;

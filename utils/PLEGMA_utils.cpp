@@ -1,6 +1,10 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 
+/************
+ *  It provides utility functions (e.g. initialization, updating, finalization, and some others)
+ ***********/
+
 using namespace quda;
 #define ALLOCATE
 #include "utils/PLEGMA_params.h"

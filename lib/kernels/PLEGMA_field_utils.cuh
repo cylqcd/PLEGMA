@@ -195,12 +195,13 @@ __inline__ __device__ Float2<float> rootsunity<4>(int order){
 }
 
 template<typename Float, int n>
-__global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field, Float *inout){
+__global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field, Float *inout, bool is4D){
 
   Float2<Float> *inout2 = (Float2<Float> *) inout;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if( n < 2) return;
 
+  int V = is4D?DGC_localVolume:DGC_localVolume3D;
   for( int i = 0; i < length_field; ++i){
 
     Float tmp = PLEGMA_Random<Float, Uniform>(state[sid]);
@@ -209,7 +210,7 @@ __global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field,
 
       if( tmp  < ((Float)order+1.0)/(Float)n ){
 
-        inout2[sid + i*(DGC_localVolume)] = rootsunity<n>(order);
+        inout2[sid + i*(V)] = rootsunity<n>(order);
         break;
       }
     }
@@ -221,7 +222,7 @@ void set_stochastic( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int fiel
 
   dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
   dim3 gridDim( (rng_size  + blockDim.x -1)/blockDim.x , 1 , 1);
-  genStochasticUniform_kernel<Float, n><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem());
+  genStochasticUniform_kernel<Float, n><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem(), inOut.is4D());
 }
 template<typename Float>
 __global__ void genRandomUniform_kernel(cuRNGState *state, int length_field, Float *inout){

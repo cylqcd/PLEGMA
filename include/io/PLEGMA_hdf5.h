@@ -129,7 +129,7 @@ protected:
   }
   inline std::vector<hsize_t> from_id(hsize_t id, std::vector<hsize_t> shape){
     std::vector<hsize_t> ids;
-    for (auto s = shape.rbegin(); s != shape.rend(); ++s ) { 
+    for (auto s = shape.rbegin(); s != shape.rend(); s++ ) { 
       ids.push_back(id % *s);
       id /= *s;
     }
@@ -336,10 +336,10 @@ protected:
     // In this function only one processor writes
     if(getRank() == 0) {
       bool needs_shift = false;
+
       T* tmp = buf;
       if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
 
-      
       // Shifting the data accordingly to start
       if(needs_shift) {
 	hostMalloc(tmp, product(shape)*sizeof(T));
@@ -351,7 +351,6 @@ protected:
 	    non_cont_id --;
 	  else
 	    break;
-	}
 
         hsize_t contiguous = product(std::vector<hsize_t>(shape.begin()+non_cont_id+1, shape.end()));
         std::vector<hsize_t> cut_start = std::vector<hsize_t>(start.begin(), start.begin()+non_cont_id+1);
@@ -363,16 +362,16 @@ protected:
           hsize_t j = to_id( add( from_id(i, cut_shape), shift), cut_shape);
 //          printf("DEBUG i=%d j=%d contiguous=%d sizeof(T)=%d\n",i,j,contiguous,sizeof(T));
           std::memcpy(tmp+i*contiguous, buf+j*contiguous, contiguous*sizeof(T));
+          //TODO: check whether i and j here should be swapped
         }
   //      PLEGMA_printf("DEBUG Copy already performed\n");
       }
-
 
       _write_dataset_parallel(dataset_id, tmp, shape, shape, zeros_like(shape), true);
 
       if(needs_shift) {
 	hostFree(tmp, product(shape)*sizeof(T));
-      }
+      }      
     } else {
       _write_dataset_parallel(dataset_id, buf, shape, ones_like(shape), start.empty() ? zeros_like(shape) : start, true);
     }

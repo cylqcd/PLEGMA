@@ -18,7 +18,7 @@ namespace plegma {
     
     void absorbDir_device(PLEGMA_Su3field<Float> &su,int dir);
     void absorbDir_host(PLEGMA_Su3field<Float> &su,int dir);
-    void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4);
+    void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4, bool S4D=false);
 
     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
 

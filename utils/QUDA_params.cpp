@@ -10,6 +10,16 @@
 // In a typical application, quda.h is the only QUDA header required.
 #include <quda.h>
 
+/*********************************************
+ * QUDA related paramters are defined globally in QUDA_params.h
+ * They are set to input values using qudaOptions in PLEGMA_Options.cpp
+ * These global variables are used in the following functions to set param values in
+ *   QudaGaugeParam
+ *   QudaEigParam
+ *   QudaMultigridParam
+ *   QudaInvertParam
+ *********************************************/
+
 namespace quda {
   extern void setTransferGPU(bool);
 }
