@@ -2,7 +2,7 @@
 #include <PLEGMA_mesons.cuh>
 using namespace plegma;
 
-const int N_PAIRS=34;
+const int N_PAIRS=52; // 2 + 16*2 + 9*2
   
 template<typename FloatA, typename FloatB, typename FloatC>
 __global__ void contract_mesons_all_device( propTex<FloatA> texProp1,
@@ -31,9 +31,9 @@ __global__ void contract_mesons_all_device( propTex<FloatA> texProp1,
     texProp2.get(prop2,vid);
     short int beta, zeta, delta, alpha;
     Float2<FloatC> value1, value2;
+    // For 1 and g5
 #pragma unroll
     for(int ip = 0 ; ip < 2 ; ip++){
-      // For 1 and g5
 #pragma unroll
       for(int is = 0 ; is < N_SPINS*N_SPINS ; is++){
 	beta  = mesons_indices[ip][is][0];
@@ -49,11 +49,17 @@ __global__ void contract_mesons_all_device( propTex<FloatA> texProp1,
 	  }
 	}
       }
-      // For all pairs of (g_mu,g_nu) & (g5g_mu,g5g_nu)
+    }
+    // For all pairs of (g_mu,g_nu), (g5g_mu,g5g_nu), (g_ij, g_kl), (g_it, gjt)
+    int ip_max[4] =  {4, 4, 3, 3};
+    int shift = 0; // tracks how many combos computed
+    int ip_shift = 1;
 #pragma unroll
-      for(int ip1 = 0 ; ip1 < 4 ; ip1++){
+    for(int ip = 0 ; ip < 4 ; ip++){
 #pragma unroll
-	for(int ip2 = 0 ; ip2 < 4 ; ip2++){
+      for(int ip1 = 0 ; ip1 < ip_max[ip] ; ip1++){
+#pragma unroll
+	for(int ip2 = 0 ; ip2 < ip_max[ip] ; ip2++){
 #pragma unroll
 	  for(int is1 = 0 ; is1 < N_SPINS ; is1++){
 #pragma unroll
@@ -62,23 +68,25 @@ __global__ void contract_mesons_all_device( propTex<FloatA> texProp1,
 	      // \Gamma1_{delta,alpha}: sink gamma
 	      // \Gamma2_{beta,zeta}: src gamma
 	      // alpha, gamma can be chosen to run independently from 0 to 3
-	      beta  = gammaInd[1+ip2+5*ip][is2][0];
-	      zeta  = gammaInd[1+ip2+5*ip][is2][1];
-	      delta = gammaInd[1+ip1+5*ip][is1][0];
-	      alpha = gammaInd[1+ip1+5*ip][is1][1];
-	      value1 = Float2<FloatC>(plegma::gamma[1+ip1+5*ip][is1][0],plegma::gamma[1+ip1+5*ip][is1][1]);
-	      value2 = Float2<FloatC>(plegma::gamma[1+ip2+5*ip][is2][0],plegma::gamma[1+ip2+5*ip][is2][1]);//plegma::gamma[1+ip2+6*ip][is2];
+	      beta  = gammaInd[ip2+ip_shift][is2][0];
+	      zeta  = gammaInd[ip2+ip_shift][is2][1];
+	      delta = gammaInd[ip1+ip_shift][is1][0];
+	      alpha = gammaInd[ip1+ip_shift][is1][1];
+	      value1 = Float2<FloatC>(plegma::gamma[ip1+ip_shift][is1][0],plegma::gamma[ip1+ip_shift][is1][1]);
+	      value2 = Float2<FloatC>(plegma::gamma[ip2+ip_shift][is2][0],plegma::gamma[ip2+ip_shift][is2][1]);//plegma::gamma[1+ip2+6*ip][is2];
 #pragma unroll
 	      for(int a = 0 ; a < N_COLS ; a++){
 #pragma unroll
 		for(int b = 0 ; b < N_COLS ; b++){ //minus from value2 cancels overall minus sign of Tr
-		  accum[2+ip1*4+ip2+16*ip] = accum[2+ip1*4+ip2+16*ip] + value1 * prop1[alpha][beta][a][b] * value2 * conj(prop2[delta][zeta][a][b]); 
+		  accum[2+ip1*4+ip2+shift] = accum[2+ip1*4+ip2+shift] + value1 * prop1[alpha][beta][a][b] * value2 * conj(prop2[delta][zeta][a][b]); 
 		}
 	      }
 	    }
 	  }
 	}
       }
+      shift += ip_max[ip]*ip_max[ip];
+      ip_shift += 5-ip; // ip_shift should be {1, 1+5, 6+4, 10+3}, c.f., PLEGMA_gammas.cuh
     }
   }
   if(runFT) {

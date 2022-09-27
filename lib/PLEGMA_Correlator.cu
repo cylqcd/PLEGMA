@@ -69,7 +69,7 @@ void PLEGMA_Correlator<Float>::
 contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
 		  PLEGMA_Propagator<Float> &prop2 ){
 
-  shape = {34};
+  shape = {52};
   datasets =  {"twop_meson"};
   groups =  {"mesons"};
   description = "pseudoscalar, scalar";
@@ -81,7 +81,14 @@ contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
       }
     }
   }
-  
+  std::string tensors[6] = {"-I/2 [g1,g2]","-I/2 [g1,g3]","-I/2 [g2,g3]","-I/2 [g4,g1]","-I/2 [g4,g2]","-I/2 [g4,g3]"};
+  for ( int p=0; p<2; p++ ) {
+    for ( int i=0; i<3; i++ ) {
+      for ( int j=0; j<3; j++ ) {
+	description += ", ("+tensors[i+p*3]+","+tensors[j+p*3]+")";
+      }
+    }
+  }
   initialize();
   contract_mesons_all(prop1,prop2,*this);
 }
