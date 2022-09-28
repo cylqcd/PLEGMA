@@ -351,7 +351,7 @@ protected:
 	    non_cont_id --;
 	  else
 	    break;
-
+        }
         hsize_t contiguous = product(std::vector<hsize_t>(shape.begin()+non_cont_id+1, shape.end()));
         std::vector<hsize_t> cut_start = std::vector<hsize_t>(start.begin(), start.begin()+non_cont_id+1);
         std::vector<hsize_t> cut_shape = std::vector<hsize_t>(shape.begin(), shape.begin()+non_cont_id+1);
