@@ -185,6 +185,9 @@ int main(int argc, char **argv) {
 
       std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
       momList list_mpi2(1,{mpi2,},{0,});
+
+      std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
+      momList list_mpf1(1,{mpf1,},{0,});
       PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2);
       PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2);
       PLEGMA_ScattCorrelator<float> corrPPUP(sourcePositions[isource], list_mpi2);
@@ -343,6 +346,14 @@ int main(int argc, char **argv) {
       }
 
 
+      PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1);
+      TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
+
+      PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1);
+      TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
+
+
+
 
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
 	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
@@ -374,16 +385,6 @@ int main(int argc, char **argv) {
         TIME(computeOetPropagator(oet_mom_zero_dn_SS, oet_mom_zero_dn_SL, -mu_ud, LIGHT, nsmearGauss, zero_mom, false));
 
 
-
-        std::vector<std::vector<int>> mpi2 = sourcemomentumList.uniq_p(0);
-
-	std::vector<std::vector<int>> mpf1 = sourcemomentumList.uniq_p(1);
-        momList list_mpf1(1,{mpf1,},{0,});
-        PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1);
-        TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
-
-	PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1);
-        TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
 
 	//Computing T reductions+recombination
         {
@@ -1017,7 +1018,7 @@ int main(int argc, char **argv) {
 
 
 
-        }
+        
       // If twop_filename exists we skip the rest
       if(access( twop_filename.c_str(), F_OK ) != -1) {
 	PLEGMA_printf("File %s already exists. Skipping...", twop_filename.c_str());
