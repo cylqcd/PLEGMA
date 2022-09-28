@@ -354,7 +354,7 @@ int main(int argc, char **argv)
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
 
-      site& source_full = source_full;
+      site& source_full = sourcePositions[isource];
 
       site source_zero=site({0,0,0,source_full[DIM_T]});
 
@@ -1112,8 +1112,8 @@ int main(int argc, char **argv)
             solver.UpdateSolver();
           }
  
-          std::vector<std::vector<int>> mpi2_filt;
-          std::vector<std::vector<int>> mptot_filt = sourcemomentumList.uniq_p(3);
+          std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(3);
+          std::vector<std::vector<int>> mpi2_filt  ;
           mpi2_filt.assign(mptot_filt.size(),momentum_i2);
           momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
 
@@ -1136,25 +1136,25 @@ int main(int argc, char **argv)
           PLEGMA_ScattCorrelator<float> reductionsV3_12(source_zero, filtered_sourcemomentumList.uniq_p(2));
           PLEGMA_ScattCorrelator<float> reductionsV2_12(source_zero, filtered_sourcemomentumList.uniq_p(1));
 
-          PLEGMA_ScattCorrelator<float> corrB3(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrB4(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrB5(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrB6(source_full, filtered_sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> corrB3(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB4(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB5(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrB6(source_full, filtered_sourcemomentumList);
 /*
         PLEGMA_ScattCorrelator<float> corrB17(source_full, filtered_sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> corrB18(source_full, filtered_sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> corrB19(source_full, filtered_sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> corrB20(source_full, filtered_sourcemomentumList.uniq_p(1));
 */
-          PLEGMA_ScattCorrelator<float> corrW5(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrW6(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrW7(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrW8(source_full, filtered_sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> corrW5(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW6(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW7(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW8(source_full, filtered_sourcemomentumList);
 
-          PLEGMA_ScattCorrelator<float> corrW13(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrW14(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrW15(source_full, filtered_sourcemomentumList.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> corrW16(source_full, filtered_sourcemomentumList.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> corrW13(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW14(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW15(source_full, filtered_sourcemomentumList);
+          PLEGMA_ScattCorrelator<float> corrW16(source_full, filtered_sourcemomentumList);
 
 /*      PLEGMA_ScattCorrelator<float> corrW29(source_full, filtered_sourcemomentumList.uniq_p(1));
         PLEGMA_ScattCorrelator<float> corrW30(source_full, filtered_sourcemomentumList.uniq_p(1));
@@ -1318,8 +1318,8 @@ int main(int argc, char **argv)
 
 
             //D1ff type diagrams
-            PLEGMA_ScattCorrelator<float> reductionsT1(source_zero,  list_mpi2ptot.uniq_p(1));
-            PLEGMA_ScattCorrelator<float> reductionsT2(source_zero,  list_mpi2ptot.uniq_p(1));
+            PLEGMA_ScattCorrelator<float> reductionsT1(source_zero,  mptot_filt);
+            PLEGMA_ScattCorrelator<float> reductionsT2(source_zero,  mptot_filt);
 
 /*          TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP),"ISOSPIN12");
           TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propTS, propDN, propUP),"ISOSPIN12");
@@ -1521,8 +1521,8 @@ int main(int argc, char **argv)
         }
 */
 
-            PLEGMA_ScattCorrelator<float> reductionsT1(source_zero,  list_mpi2ptot.uniq_p(1));
-            PLEGMA_ScattCorrelator<float> reductionsT2(source_zero,  list_mpi2ptot.uniq_p(1));
+            PLEGMA_ScattCorrelator<float> reductionsT1(source_zero,  mptot_filt);
+            PLEGMA_ScattCorrelator<float> reductionsT2(source_zero,  mptot_filt);
 
 /*          TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propUP),"ISOSPIN12");
           TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propTS, propUP),"ISOSPIN12");

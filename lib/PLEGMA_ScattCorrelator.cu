@@ -3178,7 +3178,7 @@ void PLEGMA_ScattCorrelator<Float>::convertTreductiontoDiagram( PLEGMA_ScattCorr
   //checks between T2
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T1like shape\n");
 
-  if( T2.getMomList()!=this->pList().pi(0) )
+  if( T2.getMomList()!=this->pList().pi(1) )
     PLEGMA_error("T2 must have a mom list\n");
 
   //extract array mom
