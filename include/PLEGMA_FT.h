@@ -8,7 +8,7 @@ namespace plegma {
   ////////////////
   enum FT_TYPE{FT_NAIVE,FT_GEMV,FT_FFT};
   template<typename Float>
-  class PLEGMA_FT : public IO<void,int>  {
+  class PLEGMA_FT : public IO<void,int,bool>  {
     using Vint = std::vector<int>;
     using VVint = std::vector<Vint>;
     using VFloat = std::vector<Float>;
@@ -113,8 +113,8 @@ namespace plegma {
     void mulConstMomentumPhases(Vint src, int sign);
     void scale(Float a);
 
-    void writeFile(std::string filename, FILE_FORMAT format, int timeshift = 0) {
-      return IO<void,int>::writeFile(filename,format,timeshift);
+    void writeFile(std::string filename, FILE_FORMAT format, int timeshift = 0, bool append = false) {
+      return IO<void,int,bool>::writeFile(filename,format,timeshift,append);
     }
 
     std::string Field_name() const {return field_name;}
@@ -128,7 +128,8 @@ namespace plegma {
     }
     std::string fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::vector<hsize_t> &start, int timeshift = 0) const;
 
-    virtual void writeASCII(std::string filename, int timeshift = 0) const;
-    virtual void writeHDF5(std::string filename, int timeshift = 0) const;
+    virtual void store3DFTs(std::complex<Float> *Ts, int timeshift = 0, bool append = false) const;
+    virtual void writeASCII(std::string filename, int timeshift = 0, bool append = false) const;
+    virtual void writeHDF5(std::string filename, int timeshift = 0, bool append = false) const;
 };
 }

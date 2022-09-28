@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
   std::vector<GAMMAS_SCATT> gammas_insertion = {ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};//,S12,S13,S23,S41,S42,S43};
 
 
+  int endSource = numSourcePositions;
   std::string srcInputFile = "./input.src";
   std::string outfilename;
   std::string outdiagramPrefix="";
@@ -44,6 +45,7 @@ int main(int argc, char **argv) {
     options.set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
     options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
     options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
+    options.set("end-src", "The index of the source position where to stop the calculation", verbosity, endSource);
     options.set("source-mom", "The list of momenta components at the source. Every three makes a momentum", verbosity, sourceMom);
     options.set("stoch_std", "stoch_std = true calculates the meson 3pt function using the oet, otherwise we use the standard point to all method", verbosity, stoch_std);
     options.set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
@@ -69,8 +71,14 @@ int main(int argc, char **argv) {
     {
       // Reading from Lime file and loading to device
       PLEGMA_Gauge<double> gauge;
-      gauge.readFile(latfile, LIME_FORMAT);
-      gauge.load();
+      if ( latfile == "unit" ) {
+	gauge.setUnit((std::vector<int>) {0,4,8, 9,13,17, 18,22,26, 27,31,35});
+	gauge.unload();//I think this is not necessary
+      }
+      else {
+	gauge.readFile(latfile, LIME_FORMAT);
+	gauge.load();
+      }
       gauge.calculatePlaq();
       
       // Loading to QUDA and computing plaquette also there
@@ -96,7 +104,6 @@ int main(int argc, char **argv) {
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
 
-
     //Reading the momentum lists
     //we have here three momenta 
     //pi1 meson momentum at the source
@@ -113,7 +120,8 @@ int main(int argc, char **argv) {
     std::string confnumber= ssource;
     free(ssource);
 
-    for(int isource = startSource; isource < numSourcePositions; isource++){
+    
+    for(int isource = startSource; isource < endSource; isource++){
       site& source = sourcePositions[isource];
 
       asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]);

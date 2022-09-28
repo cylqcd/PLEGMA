@@ -52,6 +52,9 @@ target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
+cuda_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
+target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
+
 cuda_add_executable(mesons_3pt mesons_3pt.cpp)
 target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
 
@@ -125,5 +128,20 @@ endif(PLEGMA_SCATTERING_CONTRACTIONS)
 cuda_add_executable(gaugeFixing EXCLUDE_FROM_ALL gaugeFixing.cpp)
 target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
 
-cuda_add_executable(invert EXCLUDE_FROM_ALL invert.cpp)
+cuda_add_executable(invert invert.cpp)
 target_link_libraries(invert ${PLEGMA_LIBS})
+
+cuda_add_executable(Zfac_GI Zfac_GI.cpp)
+target_link_libraries(Zfac_GI ${PLEGMA_LIBS})
+
+cuda_add_executable(Zfac_GI_meson3pt Zfac_GI_meson3pt.cpp)
+target_link_libraries(Zfac_GI_meson3pt ${PLEGMA_LIBS})
+
+cuda_add_executable(mesons_2pt  mesons_2pt.cpp)
+target_link_libraries(mesons_2pt ${PLEGMA_LIBS})
+
+cuda_add_executable(mesons_simple mesons_simple.cpp)
+target_link_libraries(mesons_simple ${PLEGMA_LIBS})
+
+cuda_add_executable(Zfac_diagGI Zfac_diagGI.cpp)
+target_link_libraries(Zfac_diagGI ${PLEGMA_LIBS})

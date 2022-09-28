@@ -6,6 +6,10 @@
 using namespace std;
 using namespace quda;
 
+/*
+ * It contins wrapper functions of QUDA features we need (e.g. solvers & Dirac op)
+ */
+
 // HACK definition missing in quda headers, but available in the library
 // define (static) checkGaugeParam() and checkInvertParam()
 #define CHECK_PARAM
@@ -329,8 +333,6 @@ void QUDA_solver::UpdateSolver()
       destroyMultigridQuda(mg_preconditioner);
       mg_preconditioner = newMultigridQuda(&mg_param);
     } else {
-      //destroyMultigridQuda(mg_preconditioner);
-      //mg_preconditioner = newMultigridQuda(&mg_param);
       updateMultigridParam(mg->mg, mg->mgParam, &mg_param);
       updateMultigridQuda(mg_preconditioner, &mg_param);
     }

@@ -256,13 +256,13 @@ int main(int argc, char **argv){
     	for(int itype = 0 ; itype < 5 ; itype++){
     	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,Wl,*fmunu_ptr,Wr,itype);
     	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i;
-    	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
+    	  if(FTs[index]->IsAccum()) PLEGMA_error("We need to switch off accumulation here");
     	  FTs[index]->apply(traceO1);
     	}
     	fmunuExchange = fmunu_In; fmunu_In = fmunu_ptr; fmunu_ptr = fmunuExchange;
     	Wl.wilsonLineUpdate(su3l,tmp,4+wilsDir);
 	Wr.wilsonLineUpdate(su3r,tmp,4+wilsDir,true);
-    	fmunu_ptr->shift(*fmunu_In,4+wilsDir);
+    	fmunu_ptr->shift(*fmunu_In,4+wilsDir); //:fmunu_In pts to fmunu_r; fmunu_ptr pts to initial fmunu_I, i.e., tmp pt; so this shifts fmunu_r
       }
 
       su3l.absorbDir_device(*smearedGaugeWL,wilsDir);
@@ -274,7 +274,7 @@ int main(int argc, char **argv){
     	for(int itype = 0 ; itype < 5 ; itype++){
     	  computeWithType(traceO1,traceO2,wilsDir,fmunu_l,Wl,*fmunu_ptr,Wr,itype);
     	  int index = itype*3*2*Lo2 + wilsDir*2*Lo2+i+Lo2;
-    	  if(FTs[index]->IsAccum()) PLEGMA_error("We need accumulation off here");
+    	  if(FTs[index]->IsAccum()) PLEGMA_error("We need to switch off accumulation here");
     	  FTs[index]->apply(traceO1);
     	}
     	fmunuExchange = fmunu_In; fmunu_In = fmunu_ptr; fmunu_ptr = fmunuExchange;

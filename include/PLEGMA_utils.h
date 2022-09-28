@@ -38,7 +38,7 @@ extern const std::vector<std::string> listAvailOptPLEGMA;
 void initializeOptions(int argc, char **argv, bool withQuda=true, std::vector<std::string> listOptPLEGMA = listAvailOptPLEGMA);
 void updateOptions(std::string filename, std::vector<std::string>& listOpt, std::function<void(Options&)> add_options = nullptr);
 void updateOptions(WHICHFLAVOR fl);
-void initializePLEGMA(int devicenumber=-2);
+void initializePLEGMA();
 void finalize();
 template<typename FloatOut, typename FloatIn> void unpackGaugeToEvenOdd(FloatOut *buf[4], PLEGMA_Gauge<FloatIn> &gauge);
 template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gauge<FloatOut> &gauge, FloatIn *buf[4]);

@@ -13,6 +13,8 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
   template<typename Float>  class PLEGMA_Su3field;
+
+  
   /////////////////////////
   // Class: PLEGMA_Vector //
   /////////////////////////
