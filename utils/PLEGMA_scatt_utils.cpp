@@ -1,5 +1,5 @@
 #include <PLEGMA.h>
-
+//vectorOut <- vectorOut + c * vectorIn 
 template<typename Float>
 void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size ){
   for (int i=0; i<size; ++i){
@@ -11,6 +11,32 @@ template void x_pe_cy<float>(  float *dest,  float  *floatcomplex, float  *tempo
 
 template void x_pe_cy<double>( double *dest, double *floatcomplex, double *temporary, int size) ;
 
+//vectorOut <- vectorOut + s * vectorIn 
+template<typename Float>
+void x_pe_sy( Float *dest, Float floatnumber, Float *temporary, int size ){
+  for (int i=0; i<size; ++i){
+    dest[2*i+0]+= floatnumber*temporary[2*i+0];
+    dest[2*i+1]+= floatnumber*temporary[2*i+1];
+  }
+}
+template void x_pe_sy<float>(  float *dest,  float  floatnumber, float  *temporary, int size) ;
+
+template void x_pe_sy<double>( double *dest, double floatnumber, double *temporary, int size) ;
+
+
+//vectorOut <- vectorOut + vectorIn 
+template<typename Float>
+void x_pe_y( Float *dest, Float *temporary, int size ){
+  for (int i=0; i<size; ++i){
+    dest[2*i+0]+= temporary[2*i+0];
+    dest[2*i+1]+= temporary[2*i+1];
+  }
+}
+template void x_pe_y<float>(  float *dest,  float  *temporary, int size) ;
+
+template void x_pe_y<double>( double *dest, double *temporary, int size) ;
+
+//vectorOut <- c * vectorOut
 template<typename Float>
 void x_e_cx( Float *dest, const Float floatcomplex[2],  int size ){
   for (int i=0; i<size; ++i){
@@ -23,12 +49,14 @@ void x_e_cx( Float *dest, const Float floatcomplex[2],  int size ){
 template void x_e_cx<float>(  float *dest,  const float  floatcomplex[2], int size) ;
 
 template void x_e_cx<double>( double *dest, const double floatcomplex[2], int size) ;
-
+//vectorOut <- s * vectorOut
 template<typename Float>
 void x_e_sx( Float *dest, const Float floatreal,  int size ){
   for (int i=0; i<size; ++i){
-    Float tmpre=floatreal*dest[i];
-    dest[i]= tmpre;
+    Float tmpim=floatreal*dest[2*i+1];
+    Float tmpre=floatreal*dest[2*i+0];
+    dest[2*i+1]= tmpim;
+    dest[2*i+0]= tmpre;
   }
 }
 template void x_e_sx<float>(  float *dest,  const float  floatreal, int size) ;

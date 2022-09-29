@@ -13,6 +13,8 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
   template<typename Float>  class PLEGMA_Su3field;
+
+  
   /////////////////////////
   // Class: PLEGMA_Vector //
   /////////////////////////
@@ -81,6 +83,8 @@ namespace plegma {
     void diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
     
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
+    std::shared_ptr<Float> getPointSource( const site& sourceposition, ALLOCATION_FLAG alloc_flag=HOST);
+
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
     void rotateToPhysicalBasis(PLEGMA_Vector<Float> &vecIn, int sgn);
@@ -125,9 +129,11 @@ namespace plegma {
        @param int global_it, The global time slice which we want to extract
        @param int nu, The spin index we want to extract
        @param int c2, The color index we want to extract
+       @param bool broadcast, in case we want to have the 3d vector on all time-slices it will be broadcasted
+                              otherwise threads not containing global_it will be set to zero
        @return void
      **/
-    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2);
+    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2, bool  broadcast=false);
 
     void gaussianSmearing(PLEGMA_Vector3D<Float> &vecIn, PLEGMA_Gauge3D<Float> &gauge, int nsmearGauss, Float alphaGauss) {
       this->activeTimeSlice = vecIn.activeTimeSlice;

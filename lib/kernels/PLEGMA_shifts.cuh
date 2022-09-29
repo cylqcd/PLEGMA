@@ -6,7 +6,7 @@ static __global__ void shifts1_kernel(pFloat2<Float> in, pFloat2<Float> out, int
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if(sid >= in.volume()) return;
   in.setSid(sid);
-  if(dirOr<4) in.shift<Minus>(dirOr%4);
+  if(dirOr<4) in.shift<Minus>(dirOr%4); //:bring the elem from behind the current pos
   else in.shift<Plus>(dirOr%4);
   out.setSid(sid);
   for(int i = 0 ; i < in.site_size; i++){

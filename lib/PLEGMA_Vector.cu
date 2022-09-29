@@ -10,6 +10,7 @@
 #include <PLEGMA_gammas.h>
 #include <kernels/PLEGMA_gammas_scatt.cuh>
 #endif
+#include <communicator_quda.h>
 
 using namespace plegma;
 using namespace quda;
@@ -242,6 +243,7 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
 
 
 
+
 template<typename Float>
 void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG where){
   if(where == EVERY) where = this->allocation;
@@ -280,6 +282,60 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
     PLEGMA_error("Not supported %d\n",where);
   }
 }
+template<typename Float>
+std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourceposition, ALLOCATION_FLAG where){
+  if (where == HOST){
+    std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*N_SPINS*N_COLS*2), free);
+
+    for(int i = 0; i < N_DIMS; i++)
+      if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
+
+  
+    int my_src[N_DIMS];
+  
+    size_t id=0;
+    for(int i = N_DIMS-1; i >= 0; i--) {
+
+      my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
+       
+      id = id * HGC_localL[i] + my_src[i];
+    
+    }
+  
+    // This make it work also for vector3D
+    id = id % this->Total_length();
+
+    int coords[4];
+    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
+    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+
+    if (comm_rank()==rankHas){
+      for (int spin=0; spin<N_SPINS; ++spin){
+        for (int color=0; color<N_COLS; ++color){
+    
+	  ptr.get()[2*(spin*N_COLS+color)+0]=this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] ;
+          ptr.get()[2*(spin*N_COLS+color)+1]=this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2+1] ;
+        }
+      }
+    }
+
+    MPI_Barrier(HGC_fullComm);
+
+    int mpiErr = MPI_Bcast(ptr.get(), 2*N_SPINS*N_COLS, MPI_Type<Float>(), rankHas, HGC_fullComm);
+
+    MPI_Barrier(HGC_fullComm);
+
+    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
+
+    return ptr;
+
+  }
+  else{
+    PLEGMA_error("Not supported %d\n",where);
+  }
+
+}
+
 
 
 template<typename Float>
@@ -341,8 +397,10 @@ namespace plegma{
 
   // vec3D <- Prop4D
   template<typename Float>
-  void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
+  void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2, bool broadcast){
     if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    printf("I am in absorb\n");
+    fflush(stdout);
     int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     this->activeTimeSlice = is_myIt;
@@ -357,10 +415,26 @@ namespace plegma{
 	  pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	  cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
 	}
-	else
-	  cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
-      }
+	
+	if (broadcast == true){
+         int time_rank=global_it/HGC_localL[3];
+//         printf("Time rank %d\n",time_rank);
+//         fflush(stdout);
+         Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
+         cudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), cudaMemcpyDeviceToHost);
+         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+//         printf("Temp 0 %e\n",temp[0]);
+//         fflush(stdout);
+         cudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), cudaMemcpyHostToDevice);
+         free(temp);
+       }
+       if (broadcast == false && is_myIt ==false){
+         cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+       }
+      
+    }
     checkCudaError();
+    
   }
 
   template<typename Float>

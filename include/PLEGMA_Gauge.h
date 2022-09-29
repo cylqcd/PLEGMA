@@ -41,7 +41,7 @@ namespace plegma {
        @param[in] rho: stout smearing parameter
        @param[in] D3D4: Either to 3 or 4 directions do the smearing
     **/
-    void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4);
+    void stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4, bool S4D=false);
     /**
        @brief APE smearing for the SU3 links
        @param[in] uin: Input gauge field to be smeared
@@ -113,11 +113,10 @@ namespace plegma {
        @param[in] maxIter: Maximum number of iteration 
        @param[in] seedOverRelax: Seed for the random number generator needed for the overelaxation
      **/    
-    void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-8,int maxIter=10000, int seedOverRelax=123456);
+    void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-12,int maxIter=10000, int seedOverRelax=123456);
     /**
        @bried Computes the gluon field given a gauge field with definition A_mu = \frac{1/2i} [ (U_\mu - U_\mu^\dag) - \frac{1}{3} Tr[U_\mu - U_\mu^\dag]]. Note that g_0 is not included
      **/
-    void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-12,int maxIter=10000, int seedOverRelax=123456);
     void gluonField(PLEGMA_Gauge<Float> &uIn);
   };
 

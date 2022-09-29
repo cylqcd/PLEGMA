@@ -1,6 +1,10 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 
+/************
+ *  It provides utility functions (e.g. initialization, updating, finalization, and some others)
+ ***********/
+
 using namespace quda;
 #define ALLOCATE
 #include "utils/PLEGMA_params.h"
@@ -71,7 +75,7 @@ void updateOptions(WHICHFLAVOR fl){
 void initializePLEGMA() {
   if(!isInitOpt){fprintf(stderr,"initializeOptions should be called before initializePLEGMA");exit(EXIT_FAILURE);}
   HGC_options->close();
-  initQuda(device);
+  initQuda(device_number);
   qudaInitialized=true;
   // initialize PLEGMA params
   PLEGMA_init(dims, procs, verbosity);

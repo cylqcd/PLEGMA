@@ -19,7 +19,7 @@ using namespace plegma;
 // class PLEGMA_Field //
 //--------------------------//
 
-// This is is a class which allocates memory on either the
+// This is is a class which allocates memory on either
 // the device, or host, or both for the structures:
 // Field: one complex number per spacetime point.
 // Gauge: one SU(3) link variable per spacetime point X spacetime dimension.
@@ -29,6 +29,7 @@ using namespace plegma;
 // (usually a whole spacetime volume.)
 // Propagtor3D: as above, but with sinks only at one timeslice.
 
+//: computes the size of fields and alloc mem on both sides
 template<typename Float>
 void PLEGMA_Field<Float>::
 initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
@@ -723,8 +724,8 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
 }
 
 template<typename Float>
-template<typename T>
-void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<T> mom, int sign){
+template<typename FloatMom>
+void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign){
   if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
@@ -843,10 +844,12 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 
 // field4D <- field3D
 template<typename Float>
-void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it){
+void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it, bool forcetozero){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   assert(field.Field_length() == this->Field_length());
-  this->zero_where(allocation);
+  if (forcetozero == true){
+    this->zero_where(allocation);
+  }
   
   int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
@@ -1039,13 +1042,15 @@ template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCAT
 template void PLEGMA_Field<double>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<double>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<float>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
-template void PLEGMA_Field<double>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
 template void PLEGMA_Field<float>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
+template void PLEGMA_Field<float>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
+template void PLEGMA_Field<double>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
+template void PLEGMA_Field<double>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
 template void PLEGMA_Field<double>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
 
 // field3D <- field4D
 template<typename Float>
-void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it){
+void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast){
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   assert(field.Field_length() == this->Field_length());
   int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
@@ -1059,13 +1064,29 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
     if(this->activeTimeSlice) {
       pointer_src = (field.D_elem() + i*V4 + my_it*V3);
       cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
-    } else {
+    }
+    if (broadcast == true){
+      int time_rank=global_it/HGC_localL[3];
+      Float *temp=(Float *)malloc(sizeof(Float)*V3);
+      cudaMemcpy(temp, pointer_dst, V3* sizeof(Float), cudaMemcpyDeviceToHost);
+      MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+      cudaMemcpy(pointer_dst, temp, V3* sizeof(Float), cudaMemcpyHostToDevice);
+      free(temp);
+    }
+    if (broadcast == false && !(this->activeTimeSlice)){
       cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
     }
   }
   checkCudaError();
 }
 
+template<typename Float>
+std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
+  // TODO: need to think about appropriate communicator
+  if (HGC_localVolume != HGC_totalVolume)
+    PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
+  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
+}
 
 template class PLEGMA_Field3D<float>;
 template class PLEGMA_Field3D<double>;

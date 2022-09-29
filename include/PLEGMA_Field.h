@@ -288,8 +288,8 @@ namespace plegma {
      * @brief multiply the elements of the field with position dependent momentum phases. 
      * @param sign: the sign on the exponential
      */
-    template<typename T>
-    void mulMomentumPhases(std::vector<T> mom, int sign=-1);
+    template<typename FloatMom>
+    void mulMomentumPhases(std::vector<FloatMom> mom, int sign=-1);
     /**
      * @brief Adds two fields where the input field is scaled by complex number and the results is stored on "this" (F += a*Fin)
      * @param alpha: complex number scales input field
@@ -347,7 +347,7 @@ namespace plegma {
        @param int global_it, The global time slice where data which will be inserted, the rest of the time-slices will become zero in the 4D field
        @return void
      **/    
-    void absorb(const PLEGMA_Field3D<Float> &field, int global_it);
+    void absorb(const PLEGMA_Field3D<Float> &field, int global_it, bool forcetozero=true);
     /**
        @brief Multiplies a field with theta twists in temporal direction, namely e^{i \theta \pi t/T}
        @param double theta: the parameter \theta as used above
@@ -415,7 +415,8 @@ namespace plegma {
        @param int global_it, The global time slice from where data will be extracted from the the 4D field
        @return void
      **/    
-    void absorb(const PLEGMA_Field<Float> &field, int global_it);
+    void absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast=false);
+    std::complex<Float> dot(PLEGMA_Field3D<Float> &fieldIn);
   };
 }
 #endif

@@ -87,6 +87,45 @@ inline std::string get_particle_str(WHICHPARTICLE par) {
   }
 }
 
+inline void assert_gamma_scatt_gamma (std::vector<GAMMAS> list1, std::vector<GAMMAS_SCATT> list2){
+
+  if (list2.size()!= list1.size()){
+    PLEGMA_error("Size of list gammas_scatt and gammas is not equal\n");
+  }
+  for (int i=0; i<list1.size();++i){
+    if ((list1[i]==ONE) && (list2[i]!=ID)){
+      PLEGMA_error("icompatible entries in the two lists ID\n");
+    }
+    if ((list1[i]==G1) && (list2[i]!=G_1)){
+      PLEGMA_error("icompatible entries in the two lists G1\n");
+    }
+    if ((list1[i]==G2) && (list2[i]!=G_2)){
+      PLEGMA_error("icompatible entries in the two lists G2\n");
+    }
+    if ((list1[i]==G3) && (list2[i]!=G_3)){
+      PLEGMA_error("icompatible entries in the two lists G3\n");
+    }
+    if ((list1[i]==G4) && (list2[i]!=G_4)){
+      PLEGMA_error("icompatible entries in the two lists G4\n");
+    }
+    if ((list1[i]==G5) && (list2[i]!=G_5)){
+      PLEGMA_error("icompatible entries in the two lists G5\n");
+    }
+    if ((list1[i]==G5G1) && (list2[i]!=G_5_G_1)){
+      PLEGMA_error("icompatible entries in the two lists G5G1\n");
+    }
+    if ((list1[i]==G5G2) && (list2[i]!=G_5_G_2)){
+      PLEGMA_error("icompatible entries in the two lists G5G2\n");
+    }
+    if ((list1[i]==G5G3) && (list2[i]!=G_5_G_3)){
+      PLEGMA_error("icompatible entries in the two lists G5G3\n");
+    }
+    if ((list1[i]==G5G4) && (list2[i]!=G_5_G_4)){
+      PLEGMA_error("icompatible entries in the two lists G5G4\n");
+    }
+  }  
+}
+
 inline std::vector<GAMMAS> get_gammas(std::vector<std::string> s){
   std::vector<GAMMAS> g;
   for(size_t i=0;i<s.size();i++)
@@ -136,6 +175,31 @@ inline std::vector<std::string> get_gammas_str(std::vector<GAMMAS> g, std::vecto
   return *s;
 }
 
+inline WHICHPROJECTOR get_projector( int alpha, int beta){
+
+  WHICHPROJECTOR proj;
+  if ((alpha==0) && (beta==0)) proj = P_00;
+  else if ((alpha==0) && (beta==1)) proj = P_01;
+  else if ((alpha==0) && (beta==2)) proj = P_02;
+  else if ((alpha==0) && (beta==3)) proj = P_03;
+  else if ((alpha==1) && (beta==0)) proj = P_10;
+  else if ((alpha==1) && (beta==1)) proj = P_11;
+  else if ((alpha==1) && (beta==2)) proj = P_12;
+  else if ((alpha==1) && (beta==3)) proj = P_13;
+  else if ((alpha==2) && (beta==0)) proj = P_20;
+  else if ((alpha==2) && (beta==1)) proj = P_21;
+  else if ((alpha==2) && (beta==2)) proj = P_22;
+  else if ((alpha==2) && (beta==3)) proj = P_23;
+  else if ((alpha==3) && (beta==0)) proj = P_30;
+  else if ((alpha==3) && (beta==1)) proj = P_31;
+  else if ((alpha==3) && (beta==2)) proj = P_32;
+  else if ((alpha==3) && (beta==3)) proj = P_33;
+  else PLEGMA_error("Projector %d %d is not implemented", alpha, beta);
+  return proj;
+}
+
+
+
 inline WHICHPROJECTOR get_projector(std::string s){
   WHICHPROJECTOR proj;
   if(s == "P4_P") proj = P4_P;
@@ -146,6 +210,22 @@ inline WHICHPROJECTOR get_projector(std::string s){
   else if (s == "P4G5G1_M") proj = P4G5G1_M;
   else if (s == "P4G5G2_M") proj = P4G5G2_M;
   else if (s == "P4G5G3_M") proj = P4G5G3_M;
+  else if (s == "P_00") proj = P_00;
+  else if (s == "P_01") proj = P_01;
+  else if (s == "P_02") proj = P_02;
+  else if (s == "P_03") proj = P_03;
+  else if (s == "P_10") proj = P_10;
+  else if (s == "P_11") proj = P_11;
+  else if (s == "P_12") proj = P_12;
+  else if (s == "P_13") proj = P_13;
+  else if (s == "P_20") proj = P_20;
+  else if (s == "P_21") proj = P_21;
+  else if (s == "P_22") proj = P_22;
+  else if (s == "P_23") proj = P_23;
+  else if (s == "P_30") proj = P_30;
+  else if (s == "P_31") proj = P_31;
+  else if (s == "P_32") proj = P_32;
+  else if (s == "P_33") proj = P_33;
   else PLEGMA_error("Projector %s is not implemented", s.c_str());
   return proj;
 }
@@ -160,6 +240,22 @@ inline std::string get_projector_str(WHICHPROJECTOR proj){
   else if(proj==P4G5G1_M) res = "P4G5G1_M";
   else if(proj==P4G5G2_M) res = "P4G5G2_M";
   else if(proj==P4G5G3_M) res = "P4G5G3_M";
+  else if(proj==P_00) res + "P_00";
+  else if(proj==P_01) res + "P_01";
+  else if(proj==P_02) res + "P_02";
+  else if(proj==P_03) res + "P_03";
+  else if(proj==P_10) res + "P_10";
+  else if(proj==P_11) res + "P_11";
+  else if(proj==P_12) res + "P_12";
+  else if(proj==P_13) res + "P_13";
+  else if(proj==P_20) res + "P_20";
+  else if(proj==P_21) res + "P_21";
+  else if(proj==P_22) res + "P_22";
+  else if(proj==P_23) res + "P_23";
+  else if(proj==P_30) res + "P_30";
+  else if(proj==P_31) res + "P_31";
+  else if(proj==P_32) res + "P_32";
+  else if(proj==P_33) res + "P_33";
   else PLEGMA_error("Projector not identified");
   return res;
 }

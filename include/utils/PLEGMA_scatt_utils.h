@@ -2,10 +2,14 @@
 namespace plegma {
   class momList {
   private:
-    const int NLIST;
+    const int NLIST;//number of list of independent three momenta, for example in two particle 
+                    //scattering for the pi-N -->> pi-N correlation function NLIST should be 3:
+                    //pi2,pf1,pf2
+                    //for the nucleon and pion two-point function NLIST should be 1:pf1
   protected:
-    std::vector<std::vector<std::vector<int>>> ps;
-    std::vector<int> i_tot;  
+    std::vector<std::vector<std::vector<int>>> ps;//the momentum list
+    std::vector<int> i_tot;  //indices of momenta in list of momentum, that defines
+                             //the total momentum
   public:
     momList( int nlist=0, std::initializer_list<int> li_tot={} ) : NLIST(nlist), i_tot(li_tot), ps( std::vector<std::vector<std::vector<int>>>(NLIST) ) {;}
 
@@ -25,11 +29,21 @@ namespace plegma {
       file.close();
 
       read_momList( mom_list );
-    }
+    } //constructor used for reading the momenta used in piNdiagrams.cpp:
+      //for example: momList sourcemomentumList(3,pathListMomenta,{1,2});
+      //here 3 stands for pi2,pf1,pf2; 
+      //     pathListMomenta is the name of the file that contains the three momenta-s
+      //{1,2} stands for columns pf1,pf2: momentum for the nucleon and the pion at the 
+      //final state, sum of these defines the total momentum
 
     momList( int nlist, std::initializer_list< std::vector<std::vector<int>> > list_ps, std::initializer_list<int> li_tot ) : NLIST(nlist), i_tot(li_tot), ps(list_ps){
       assert( list_ps.size() == NLIST );
-    }
+    } //initialization used for N diagrams: momList list_mpf1(1,{mpf1,},{0,});
+      //1, we have only one list of momenta that is mpf1 and it defines the total momentum as well 
+      //contains a list of three momentum
+      //initialization used for T diagrams: momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});      //for T diagram we have for independent momenta: pion at the source and nucleon at 
+      //the sink:that is the total momentum
+
 
     void read_momList( std::vector<int> &mom_list ){
       assert( mom_list.size()%(3*NLIST)==0 );
@@ -133,29 +147,84 @@ namespace plegma {
       return res;
     }
 
-    std::vector<int> u_posix( int p_i ){
-      assert(p_i<NLIST);
-      auto &moms = ps[p_i];
-    
-      return this->u_posix( p_i, moms );
+    std::vector<int> u_posix_minus( int p_i, std::vector<std::vector<int>> &moms){
+      int aux;
+      std::vector<int> res;
+      std::vector<std::vector<int>> uniq_pi = uniq_p(p_i);
+
+      for( auto& mom: moms ){
+	std::vector<int> tmp=mom;
+        tmp[0]*=-1;
+	tmp[1]*=-1;
+	tmp[2]*=-1;
+        auto momf = std::find(uniq_pi.begin(), uniq_pi.end(), tmp);
+        aux = (momf==uniq_pi.end()) ? -1 : momf-uniq_pi.begin();
+        res.push_back(aux);
+      }
+      return res;
     }
+
+
+    std::vector<int> u_posix( int p_i ){
+      //assert(p_i<NLIST);
+      assert(p_i<=NLIST);
+      if (p_i== NLIST){
+        std::vector<std::vector<int>> moms = this->p_tot();
+	return this->u_posix( p_i, moms );
+      }
+      else {
+	auto &moms = ps[p_i];
+	return this->u_posix( p_i, moms );
+      }
+    }
+
+    std::vector<int> u_posix_minus( int p_i ){
+      assert(p_i<=NLIST);
+      if (p_i==NLIST){
+	std::vector<std::vector<int>> moms = this->p_tot();
+        return this->u_posix_minus( p_i, moms );
+      }
+      else{
+        auto &moms = ps[p_i];
+        return this->u_posix_minus( p_i, moms );
+      }
+    }
+
 
     std::vector<std::vector<int>> index_map(){
       std::vector<std::vector<int>> res;
 
       std::vector<std::vector<int>> auxs;
-      for(int j=0; j<NLIST; j++)
+      for(int j=0; j<=NLIST; j++)
 	auxs.push_back( u_posix(j) );
 
       for(int i=0; i<this->size(); i++){
 	std::vector<int> tmp;
-	for(int j=0; j<NLIST; j++)
+	for(int j=0; j<=NLIST; j++)
 	  tmp.push_back(auxs[j][i]);
 	res.push_back(tmp);
       }
     
       return res;
     }
+
+    std::vector<std::vector<int>> index_map_minus(){
+      std::vector<std::vector<int>> res;
+
+      std::vector<std::vector<int>> auxs;
+      for(int j=0; j<=NLIST; j++)
+        auxs.push_back( u_posix_minus(j) );
+
+      for(int i=0; i<this->size(); i++){
+        std::vector<int> tmp;
+        for(int j=0; j<=NLIST; j++)
+          tmp.push_back(auxs[j][i]);
+        res.push_back(tmp);
+      }
+
+      return res;
+    }
+
     
     std::vector<std::vector<int>> tolist( std::initializer_list<int> p_i ){
       std::vector<std::vector<int>> out;
@@ -282,6 +351,55 @@ __inline__ void V_M_V( Float * V1, Float * V2, GAMMAS_SCATT gamma, bool transp, 
 }
 
 /**
+ *
+ *  @brief matrix (spin x spin )  vector( spin x color)  matrix(spin x spin)  
+ *          multiplication for piN scattering project resulting in complex vector of size N_COLS*N_SPINS
+ *          
+ *  @params Float * V1 pointer to a float array of size 2*N_COLS*N_SPINS
+ *  @params GAMMAS_SCATT gamma enumerator specifies the gamma matrix
+ *  @params GAMMAS_SCATT gamma enumerator specifies the gamma matrix
+ *  @params Float * Dest pointer to 2 Float number (complex)
+ **/
+
+template<typename Float>
+__inline__ void V_MVM( Float * V1, GAMMAS_SCATT gamma1, GAMMAS_SCATT gamma2, Float *Dest ){
+   *(Dest+0)=0.;
+   *(Dest+1)=0.;
+   int NC2=N_SPINS*N_COLS*2;
+   Float tmp[N_SPINS*N_COLS*2];
+   #pragma unroll
+   for (int i=0; i< NC2; ++i){
+     *(Dest+i)=0;
+     *(tmp+i) =0;
+   }
+   #pragma unroll
+   for (int color=0;color<N_COLS;  ++color){
+     #pragma unroll
+     for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+       int beta0= gammaInd_scatt[gamma2][nz_e][0];
+       int beta1= gammaInd_scatt[gamma2][nz_e][1];
+       tmp[2*(beta1*N_COLS+color)+0]+=+V1[2*(beta0*N_COLS+color)+0]*gamma_scatt[gamma2][nz_e][0]
+                                      -V1[2*(beta0*N_COLS+color)+1]*gamma_scatt[gamma2][nz_e][1];	    
+       tmp[2*(beta1*N_COLS+color)+1]+=+V1[2*(beta0*N_COLS+color)+1]*gamma_scatt[gamma2][nz_e][0]
+                                      +V1[2*(beta0*N_COLS+color)+0]*gamma_scatt[gamma2][nz_e][1];
+     }
+   }
+   #pragma unroll
+   for (int color=0;color<N_COLS;  ++color){
+     #pragma unroll
+     for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
+       int beta0= gammaInd_scatt[gamma1][nz_e][0];
+       int beta1= gammaInd_scatt[gamma1][nz_e][1];
+       Dest[2*(beta0*N_COLS+color)+0]+=+tmp[2*(beta1*N_COLS+color)+0]*gamma_scatt[gamma1][nz_e][0]
+                                       -tmp[2*(beta1*N_COLS+color)+1]*gamma_scatt[gamma1][nz_e][1];
+       Dest[2*(beta0*N_COLS+color)+1]+=+tmp[2*(beta1*N_COLS+color)+1]*gamma_scatt[gamma1][nz_e][0]
+                                       +tmp[2*(beta1*N_COLS+color)+0]*gamma_scatt[gamma1][nz_e][1];
+     }
+   }
+}
+
+
+/**
  *  @brief tensor*matrix multiplication  
  *         for piN scattering project returns a color vector
  *  @params Float * V1 pointer to a Float array of size 2*N_COLS*N_SPINS*N_SPINS
@@ -344,8 +462,46 @@ __inline__ void M_pe_GNG( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_
     }
   }
 }
+template<typename Float>
+__inline__ void Mc_pe_GNcGt( Float *dest, const GAMMAS_SCATT Gamma_f, const GAMMAS_SCATT Gamma_i, const Float *source, bool forcezero=false ){
+  const int NC2=N_SPINS*N_SPINS*N_COLS*2;
+  const int C2=N_COLS*2;
+  if(forcezero)
+    for (int i=0; i < NC2; ++i)
+      dest[i]=0.;
+  for (int n_gamma_f=0; n_gamma_f<4; ++n_gamma_f) {
+    const int alfa =   gammaInd_scatt[Gamma_f][n_gamma_f][0];
+    const int alfa0=   gammaInd_scatt[Gamma_f][n_gamma_f][1];
+    Float gf[2];
+    gf[1]=gamma_scatt[Gamma_f][n_gamma_f][1];
+    gf[0]=gamma_scatt[Gamma_f][n_gamma_f][0];
+    for (int n_gamma_i=0; n_gamma_i<4; ++n_gamma_i){
+      const int beta=    gammaInd_scatt[Gamma_i][n_gamma_i][0];
+      const int beta0=   gammaInd_scatt[Gamma_i][n_gamma_i][1];
+      Float gi[2];
+      gi[1]=gamma_scatt[Gamma_i][n_gamma_i][1];
+      gi[0]=gamma_scatt[Gamma_i][n_gamma_i][0];
+      for (int c=0;c<N_COLS;++c){
+        dest[(alfa*N_SPINS+beta)*C2+2*c+0]+=
+                +gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[0]
+                -gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[0]
+                -gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[1]
+                -gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[1];
+        dest[(alfa*N_SPINS+beta)*C2+2*c+1]+=
+                -gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[1]
+                +gi[1]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[0]
+                +gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+1]*gf[0]
+                +gi[0]*source[(alfa0*N_SPINS+beta0)*C2+2*c+0]*gf[1];
+      }
+    }
+  }
+}
+
 
 template<typename Float> void x_pe_cy( Float *dest, Float *floatcomplex, Float *temporary, int size );
+template<typename Float> void x_pe_sy( Float *dest, Float floatnumber, Float *temporary, int size );
+template<typename Float> void x_pe_y( Float *dest, Float *temporary, int size );
+
 template<typename Float> void x_e_cx( Float *dest, const Float floatcomplex[2], int size );
 template<typename Float> void x_e_sx( Float *dest, const Float floatreal, int size );
 

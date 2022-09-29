@@ -3,7 +3,7 @@
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
+template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT,bool CONJ_P>
 __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> listGammas,
 			   propTex<FloatP> propS, Float2<FloatOut> *block2,
 			   int it, int time_step, int maxT, int4 source, tex_mom_list moms){
@@ -31,6 +31,7 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
     g = (Float2<float> (*)[4]) plegma::gamma_scatt;
     gammasIdx = gammaInd_scatt;
 
+    //loops
     #pragma unroll
     for(int i_g = 0 ; i_g < N_GAMMAS_SCATT; i_g++){
       int gId=listGammas.array[i_g];
@@ -48,15 +49,15 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
             #pragma unroll
 	    for(int b = 0 ; b < N_COLS ; b++){
 	      accum[(i_g*N_SPINS + beta)*N_COLS+b] =
-		accum[(i_g*N_SPINS + beta)*N_COLS+b]
-		+ conj(phi[alpha0][a])*factor*s[alpha1][beta][a][b];
-	    }
+              accum[(i_g*N_SPINS + beta)*N_COLS+b]
+		  + conj(phi[alpha0][a])*factor*s[alpha1][beta][a][b];
+	    }	    
 	  }
 	}
       }
+      //
     }
   }
-      
   extern __shared__ int ext_shared_cache[];
   Float2<FloatOut> *shared_cache = (Float2<FloatOut> *) ext_shared_cache;
   int source_pos[3] = {source.x, source.y, source.z};
@@ -64,8 +65,14 @@ __global__ void V3_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
   const unsigned int OUT_DOF= N_GAMMAS_SCATT;
   const unsigned int IN_DOF= N_SPINS*N_COLS;
 
-  #pragma unroll
-  for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
-    fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid); 
+  if (CONJ_P){
+    #pragma unroll
+    for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+      fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid); 
+  } else {
+    #pragma unroll
+    for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+      fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, +1, time_step, tid);
+  }
 }
 
