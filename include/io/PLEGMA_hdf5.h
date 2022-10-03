@@ -1,4 +1,7 @@
 #include <hdf5.h>
+#include <vector>
+#include <numeric>      // std::iota
+#include <algorithm>    // std::sort, std::stable_sort
 
 //TODO: This function should be overloaded for different data type
 template<typename T> inline hid_t datatype();
@@ -120,13 +123,13 @@ protected:
     return product;
   }
   inline hsize_t to_id(std::vector<hsize_t> ids, std::vector<hsize_t> shape){
-    hsize_t id = ids[0];
-    for(size_t i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i];
+    hsize_t id = ids[0]%shape[0];
+    for(size_t i = 1; i < ids.size(); i++) id = id*shape[i] + ids[i]%shape[i];
     return id;
   }
   inline std::vector<hsize_t> from_id(hsize_t id, std::vector<hsize_t> shape){
     std::vector<hsize_t> ids;
-    for (auto s = shape.rbegin(); s != shape.rend(); ++s ) { 
+    for (auto s = shape.rbegin(); s != shape.rend(); s++ ) { 
       ids.push_back(id % *s);
       id /= *s;
     }
@@ -138,6 +141,11 @@ protected:
     for(size_t i=0; i < shape1.size(); i++) res.push_back(shape1[i] + shape2[i]);
     return res;
   }
+  inline std::vector<hsize_t> sub(std::vector<hsize_t> shape1, std::vector<hsize_t> shape2){
+    std::vector<hsize_t> res;
+    for(size_t i=0; i < shape1.size(); i++) res.push_back(shape1[i] - shape2[i]);
+    return res;
+  }
   inline std::vector<hsize_t> zeros_like(std::vector<hsize_t> shape){
     std::vector<hsize_t> res;
     for(size_t i=0; i < shape.size(); i++) res.push_back(0);
@@ -147,6 +155,18 @@ protected:
     std::vector<hsize_t> res;
     for(size_t i=0; i < shape.size(); i++) res.push_back(1);
     return res;
+  }
+
+
+  inline std::vector<size_t> sort_indexes(const std::vector<hsize_t> &v) {
+
+    std::vector<size_t> idx(v.size());
+    std::iota(idx.begin(), idx.end(), 0);
+
+    std::stable_sort(idx.begin(), idx.end(),
+		     [&v](size_t i1, size_t i2) {return v[i1] > v[i2];});
+
+    return idx;
   }
 
   // replace the first finding in a string
@@ -274,6 +294,7 @@ protected:
     H5Tset_size(type_id, attr_value.length());
     hid_t attr_id = H5Acreate2(obj_id, attr_name.c_str(), type_id, 
 			       attrdat_id, H5P_DEFAULT, H5P_DEFAULT);
+    
     H5Awrite(attr_id, type_id, attr_value.c_str());
     H5Aclose(attr_id);
     H5Tclose(type_id);
@@ -315,23 +336,42 @@ protected:
     // In this function only one processor writes
     if(getRank() == 0) {
       bool needs_shift = false;
+
       T* tmp = buf;
       if(!start.empty()) for (auto i: start) if(i != 0) needs_shift = true;
-      
+
       // Shifting the data accordingly to start
       if(needs_shift) {
 	hostMalloc(tmp, product(shape)*sizeof(T));
-	for(hsize_t i = 0; i<product(shape); i++) {
-	  hsize_t j = to_id( add( from_id(i, shape), start), shape);
-	  tmp[i] = buf[j];
-	}
+
+	// Finding the first index that is not contiguous in memory 
+	size_t non_cont_id = shape.size()-1;
+	while(non_cont_id>0) {
+	  if(start[non_cont_id] == 0)
+	    non_cont_id --;
+	  else
+	    break;
+        }
+        hsize_t contiguous = product(std::vector<hsize_t>(shape.begin()+non_cont_id+1, shape.end()));
+        std::vector<hsize_t> cut_start = std::vector<hsize_t>(start.begin(), start.begin()+non_cont_id+1);
+        std::vector<hsize_t> cut_shape = std::vector<hsize_t>(shape.begin(), shape.begin()+non_cont_id+1);
+	std::vector<hsize_t> shift = sub(cut_shape,cut_start);
+        assert(product(cut_shape)*contiguous == product(shape));
+
+        for(hsize_t i = 0; i<product(cut_shape); i++) {
+          hsize_t j = to_id( add( from_id(i, cut_shape), shift), cut_shape);
+//          printf("DEBUG i=%d j=%d contiguous=%d sizeof(T)=%d\n",i,j,contiguous,sizeof(T));
+          std::memcpy(tmp+i*contiguous, buf+j*contiguous, contiguous*sizeof(T));
+          //TODO: check whether i and j here should be swapped
+        }
+  //      PLEGMA_printf("DEBUG Copy already performed\n");
       }
 
       _write_dataset_parallel(dataset_id, tmp, shape, shape, zeros_like(shape), true);
 
       if(needs_shift) {
 	hostFree(tmp, product(shape)*sizeof(T));
-      }
+      }      
     } else {
       _write_dataset_parallel(dataset_id, buf, shape, ones_like(shape), start.empty() ? zeros_like(shape) : start, true);
     }
@@ -340,13 +380,20 @@ protected:
   
   template<typename T>
   inline void _write_dataset_parallel(std::string name, T *buf, std::vector<hsize_t> shape, std::vector<hsize_t> lshape, std::vector<hsize_t> start) {
+    //PLEGMA_printf("DEBUG: ###_write_dataset_parallel:\n");
+    //MPI_Barrier(comm);
     
     hid_t dataset_id = require_dataset<T>(name, shape);
-
+    //PLEGMA_printf("DEBUG: require dataset ok \n");
+    //MPI_Barrier(comm);
+    
     // Counting how many writings we need to do
     size_t my_n_writings = 1, n_writings = 1;
     std::vector<int> exceeding_id;
     std::vector<hsize_t> exceeding_shape;
+    
+    //PLEGMA_printf("DEBUG: shape.size =%d, start.size =%d, lshape.size=%d\n", shape.size(), start.size(),lshape.size());
+    //MPI_Barrier(comm);
     for(size_t i=0; i<shape.size(); i++) {
       if(start[i] + lshape[i] > shape[i]) { // then i it's exceeding
 	int exceeding = std::min(lshape[i], start[i] + lshape[i] - shape[i]);
@@ -358,24 +405,50 @@ protected:
 	exceeding_shape.push_back(0);
       }
     }
+ 
     if(!exceeding_id.empty())
       my_n_writings = 1<<exceeding_id.size();
     MPI_Allreduce( &my_n_writings, &n_writings, 1, MPI_Type(n_writings), MPI_MAX, comm);
     if(HGC_verbosity > 2) PLEGMA_printf("%s: %d writing(s) are needed for writing the dataset\n", name.c_str(), n_writings);
 
     if(n_writings>1) {
+      std::vector<size_t> my_writings = {0};
+
+      // Sorting the writings by size
+      if(my_n_writings>1) {
+	std::vector<hsize_t> tmp_lshape = lshape;
+	std::vector<hsize_t> sizes;
+	for(size_t i=0; i<my_n_writings; i++) {
+	  for(size_t j=0; j<lshape.size(); j++)
+	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
+
+	  // checking which direction we shift in this iteration
+	  int j=0;
+	  while((i>>j) > 0) {
+	    if((i>>j) & 1) {
+	      int id = exceeding_id[j];
+	      tmp_lshape[id] = exceeding_shape[id];
+	    }
+	    j++;
+	  }
+	  sizes.push_back(product(tmp_lshape));
+	}
+	my_writings = sort_indexes(sizes);
+      }
+      
       // looping over the writings 
-      for(size_t i=0; i<n_writings; i++) {
+      for(size_t i0=0; i0<n_writings; i0++) {
 	// standard behaviour
 	T* tmp = buf;
 	std::vector<hsize_t> tmp_lshape = lshape;
 	std::vector<hsize_t> tmp_start = start;
 	// creating the shifted case
-	if(!exceeding_id.empty() && i < my_n_writings) {
+	if(!exceeding_id.empty() && i0 < my_n_writings) {
+	  size_t i = my_writings[i0];
 	  std::vector<hsize_t> shift = zeros_like(start);
 	  for(size_t j=0; j<lshape.size(); j++)
 	    tmp_lshape[j] = lshape[j] - exceeding_shape[j];
-
+	  
 	  // checking which direction we shift in this iteration
 	  int j=0;
 	  while((i>>j) > 0) {
@@ -391,13 +464,30 @@ protected:
 	    j++;
 	  }
 
-	  // copying the part of the buffer to write
-	  hostMalloc(tmp, product(tmp_lshape)*sizeof(T));
-	  for(hsize_t i = 0; i<product(tmp_lshape); i++) {
-	    hsize_t j = to_id( add( from_id(i, tmp_lshape), shift), lshape);
-	    tmp[i] = buf[j];
+	  // Finding the first index that is not contiguous in memory
+	  size_t non_cont_id = tmp_lshape.size()-1;
+	  while(non_cont_id>0) {
+	    if(tmp_lshape[non_cont_id] == lshape[non_cont_id])
+	      non_cont_id --;
+	    else
+	      break;
 	  }
-	} else if(i >= my_n_writings) {
+
+	  hsize_t contiguous = product(std::vector<hsize_t>(tmp_lshape.begin()+non_cont_id+1, tmp_lshape.end()));
+
+	  hsize_t write_size = product(tmp_lshape);
+	  std::vector<hsize_t> cut_tmp_lshape = std::vector<hsize_t>(tmp_lshape.begin(), tmp_lshape.begin()+non_cont_id+1);
+	  std::vector<hsize_t> cut_lshape = std::vector<hsize_t>(lshape.begin(), lshape.begin()+non_cont_id+1);
+	  shift = std::vector<hsize_t>(shift.begin(), shift.begin()+non_cont_id+1);
+	  assert(product(cut_tmp_lshape)*contiguous == write_size);
+	  
+	  // copying the part of the buffer to write
+	  hostMalloc(tmp, write_size*sizeof(T));
+	  for(hsize_t i = 0; i<product(cut_tmp_lshape); i++) {
+	    hsize_t j = to_id( add( from_id(i, cut_tmp_lshape), shift), cut_lshape);
+	    std::memcpy(tmp+i*contiguous, buf+j*contiguous, contiguous*sizeof(T));
+	  }
+	} else if(i0 >= my_n_writings) {
 	  // do a dummy write to keep the communications active
 	  tmp_lshape = zeros_like(lshape);
 	}
@@ -531,10 +621,14 @@ public:
 			     path+"/"+object.substr(0,check));
     if(HGC_verbosity > 2) PLEGMA_printf("Going to write attribute %s in path %s \n", attr_name.c_str(),
 					path.c_str());
+
     cd(path);
+
     _write_attribute(object, attr_name, attr_value);
+
     if(HGC_verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
     cd("-");
+ 
   }
 
   /*
@@ -547,6 +641,7 @@ public:
   template<typename T>
   void write_dataset(std::string name, T *buf, std::vector<hsize_t> shape,  std::vector<hsize_t> lshape={},
 			    std::vector<hsize_t> start={}, std::string path=".") {
+    
     // checking for / in name
     size_t check = name.rfind("/");
     if(check != std::string::npos)
@@ -566,17 +661,18 @@ public:
     if( !start.empty() && start.size() != shape.size())
       PLEGMA_error("start has wrong size\n");
 
+    
     if(exists(name)) {
       PLEGMA_warning("An object with name %s already exists in %s. Skipping...", name.c_str(),
 		     pwd().c_str());
     } else {    
       int comm_size;
       MPI_Comm_size(comm, &comm_size);
-      if(lshape.empty() || comm_size == 1)
-	_write_dataset_single(name,buf,shape,start);
-      else
+      if(lshape.empty() || comm_size == 1){
+	_write_dataset_single(name,buf,shape,start);}
+      else{
 	_write_dataset_parallel(name,buf,shape,lshape,start);
-
+      }
       if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
 					  (lshape.empty() || comm_size == 1) ? "single" : "parallel");
     }

@@ -13,6 +13,8 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
   template<typename Float>  class PLEGMA_Su3field;
+
+  
   /////////////////////////
   // Class: PLEGMA_Vector //
   /////////////////////////
@@ -71,14 +73,26 @@ namespace plegma {
     void dilutecolor(PLEGMA_Vector<Float> &vecIn, int color);
     
     void dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin, int color);
+
+    /**
+       @brief Moves a spincomponent to another one, used for creating sources in spin dilution
+       @param PLEGMA_Vector<Float> vecIn input vector (assumed to be non-zero only at one spin component
+       @param int spin1 target spin index
+       @param int spin2 original spin index
+     **/
+    void diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int spin1, int spin2);
     
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY);
+    std::shared_ptr<Float> getPointSource( const site& sourceposition, ALLOCATION_FLAG alloc_flag=HOST);
+
     void apply_gamma5();
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
+    void rotateToPhysicalBasis(PLEGMA_Vector<Float> &vecIn, int sgn);
+    void apply_gamma_scatt( GAMMAS_SCATT gMat, LEFTRIGHT LR = LEFT);
     /**
        @brief Performs the similarity transformation of gamma matrices from tmLQCD to QUDA-UKQCD and vice versa
      **/
-    void rotate_uk_ch();
+    void rotate_uk_ch_g5g4();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
   };
@@ -115,9 +129,11 @@ namespace plegma {
        @param int global_it, The global time slice which we want to extract
        @param int nu, The spin index we want to extract
        @param int c2, The color index we want to extract
+       @param bool broadcast, in case we want to have the 3d vector on all time-slices it will be broadcasted
+                              otherwise threads not containing global_it will be set to zero
        @return void
      **/
-    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2);
+    void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2, bool  broadcast=false);
 
     void gaussianSmearing(PLEGMA_Vector3D<Float> &vecIn, PLEGMA_Gauge3D<Float> &gauge, int nsmearGauss, Float alphaGauss) {
       this->activeTimeSlice = vecIn.activeTimeSlice;

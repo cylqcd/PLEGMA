@@ -10,6 +10,16 @@
 // In a typical application, quda.h is the only QUDA header required.
 #include <quda.h>
 
+/*********************************************
+ * QUDA related paramters are defined globally in QUDA_params.h
+ * They are set to input values using qudaOptions in PLEGMA_Options.cpp
+ * These global variables are used in the following functions to set param values in
+ *   QudaGaugeParam
+ *   QudaEigParam
+ *   QudaMultigridParam
+ *   QudaInvertParam
+ *********************************************/
+
 namespace quda {
   extern void setTransferGPU(bool);
 }
@@ -96,7 +106,7 @@ void setEigParam(QudaEigParam &mg_eig_param, int level)
 {
   mg_eig_param.eig_type = mg_eig_type[level];
   mg_eig_param.spectrum = mg_eig_spectrum[level];
-  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS || mg_eig_type[level] == QUDA_EIG_IR_LANCZOS)
+  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS)
       && !(mg_eig_spectrum[level] == QUDA_SPECTRUM_LR_EIG || mg_eig_spectrum[level] == QUDA_SPECTRUM_SR_EIG)) {
     PLEGMA_error("Only real spectrum type (LR or SR) can be passed to the a Lanczos type solver");
   }

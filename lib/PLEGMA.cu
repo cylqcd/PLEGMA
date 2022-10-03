@@ -7,11 +7,14 @@
 #include <limits>
 #include <string.h>
 #include <PLEGMA_io.h>
+#include <communicator_quda.h>
+#include <comm_quda.h>
 
 //#define TIMING_REPORT
 using namespace plegma;
-extern Topology *default_topo;
+//extern Topology *default_topo;
 std::vector<std::string> HDF5::open_files;
+Communicator &get_current_communicator();
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
   HGC_hold_exit = false;
@@ -25,7 +28,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
 
-    HGC_default_topo = default_topo;
+    HGC_default_topo = get_current_communicator().default_topo;
     HGC_verbosity = verbosity;
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];
@@ -64,16 +67,31 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
       }
     }
 
-    for(int i=0; i<N_DIMS; i++){
-      for(int j=0; j<N_DIMS; j++){
-	if(i!=j && HGC_dimBreak[i] && HGC_dimBreak[j]){
-	  HGC_surface2D[i][j] = 1;
+    for(int i=1; i<N_DIMS; i++){
+      for(int j=0; j<i; j++){
+	if(HGC_dimBreak[i] && HGC_dimBreak[j]){
+	  HGC_surface2D[OFF2(i,j)] = 1;
 	  for(int k=0; k<N_DIMS; k++)
-	    HGC_surface2D[i][j] *= (k!=i && k!=j) ? HGC_localL[k] : 1;
+	    HGC_surface2D[OFF2(i,j)] *= (k!=i && k!=j) ? HGC_localL[k] : 1;
 	}
-	else HGC_surface2D[i][j] = 0;
+	else {
+	  HGC_surface2D[OFF2(i,j)] = 0;
+	}
       }
     }
+    
+    for(int i=2; i<N_DIMS; i++)
+      for(int j=1; j<i; j++)
+	for(int k=0; k<j; k++) {
+	  if(HGC_dimBreak[i] && HGC_dimBreak[j] && HGC_dimBreak[k]){
+	    HGC_surface1D[OFF3(i,j,k)] = 1;
+	    for(int l=0; l<N_DIMS; l++)
+	      HGC_surface1D[OFF3(i,j,k)] *= (l!=i && l!=j && l!=k) ? HGC_localL[l] : 1;
+	  }
+	  else {
+	    HGC_surface1D[OFF3(i,j,k)] = 0;
+	  }
+	}
     
     for(int i = 0 ; i < N_DIMS ; i++)
       for(int dir = 0; dir < DIR_BOTH; dir++)
@@ -81,13 +99,23 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     HGC_sideGhostVolume=0;
     HGC_sideGhostVolume3D=0;    
 
-    for(int i=0; i<N_DIMS; i++)
-      for(int j=0; j<N_DIMS; j++)
+    for(int i=1; i<N_DIMS; i++)
+      for(int j=0; j<i; j++)
 	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
 	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
-	    HGC_cornerGhost[i][j][dir1][dir2] = 0;
+	    HGC_cornerGhost[OFF2SIGN(i,j,dir1,dir2)] = 0;
     HGC_cornerGhostVolume=0; 
     HGC_cornerGhostVolume3D=0;
+   
+    for(int i=2; i<N_DIMS; i++)
+      for(int j=1; j<i; j++)
+	for(int k=0; k<j; k++)
+	  for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
+	    for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
+	      for(int dir3 = 0; dir3 < DIR_BOTH; dir3++)
+		HGC_vertexGhost[OFF3SIGN(i,j,k,dir1,dir2,dir3)] = 0;
+    HGC_vertexGhostVolume=0; 
+    HGC_vertexGhostVolume3D=0;
    
 #ifdef MULTI_GPU
     size_t lastIndex = 0;
@@ -106,14 +134,28 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
       for(int j=0; j<i; j++)
 	for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
 	  for(int dir2 = 0; dir2 < DIR_BOTH; dir2++) {
-	    HGC_cornerGhost[i][j][dir1][dir2] = lastIndex;
-	    HGC_cornerGhost[j][i][dir2][dir1] = lastIndex;
-	    if( (i != j ) && HGC_dimBreak[i] && HGC_dimBreak[j] ) {
-	      lastIndex += HGC_surface2D[i][j];
+	    HGC_cornerGhost[OFF2SIGN(i,j,dir1,dir2)] = lastIndex;
+	    if( HGC_dimBreak[i] && HGC_dimBreak[j] ) {
+	      lastIndex += HGC_surface2D[OFF2(i,j)];
 	    }
 	  }
     HGC_cornerGhostVolume = lastIndex;
-    HGC_cornerGhostVolume3D = HGC_cornerGhost[DIM_T][0][0][0]/HGC_localL[DIM_T];
+    HGC_cornerGhostVolume3D = HGC_cornerGhost[OFF2SIGN(DIM_T,0,0,0)]/HGC_localL[DIM_T];
+
+    lastIndex = 0;
+    for(int i=2; i<N_DIMS; i++)
+      for(int j=1; j<i; j++)
+	for(int k=0; k<j; k++)
+	  for(int dir1 = 0; dir1 < DIR_BOTH; dir1++)
+	    for(int dir2 = 0; dir2 < DIR_BOTH; dir2++)
+	      for(int dir3 = 0; dir3 < DIR_BOTH; dir3++) {
+		HGC_vertexGhost[OFF3SIGN(i,j,k,dir1,dir2,dir3)] = lastIndex;
+		if( HGC_dimBreak[i] && HGC_dimBreak[j] && HGC_dimBreak[k] ) {
+		  lastIndex += HGC_surface1D[OFF3(i,j,k)];
+		}
+	      }
+    HGC_vertexGhostVolume = lastIndex;
+    HGC_vertexGhostVolume3D = HGC_vertexGhost[OFF3SIGN(DIM_T,0,0,0,0,0)]/HGC_localL[DIM_T];
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)
@@ -145,12 +187,16 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
     int spaceId = (HGC_procPosition[0] * HGC_nProc[1] + HGC_procPosition[1]) * HGC_nProc[2] + HGC_procPosition[2];
     for(int i=0 ; i < HGC_nProc[3] ; i++)
-      ranksTime[i] = spaceId+i;
+      ranksTime[i] = spaceId*HGC_nProc[3]+i;
     
     MPI_Group_incl(HGC_fullGroup,HGC_nProc[3], ranksTime, &HGC_timeGroup);
     MPI_Group_rank(HGC_timeGroup, &HGC_timeRank);
     MPI_Group_size(HGC_timeGroup, &HGC_timeSize);
     MPI_Comm_create(HGC_fullComm, HGC_timeGroup, &HGC_timeComm);
+
+    int tmp;
+    MPI_Comm_rank(HGC_timeComm,&tmp);
+    assert(tmp==HGC_timeRank);
 
     cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
     if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCreate failed with error %d", error);
@@ -172,6 +218,7 @@ void plegma::PLEGMA_status(){
     PLEGMA_printf("Number of colors is %d\n",N_COLS);
     PLEGMA_printf("Number of spins is %d\n",N_SPINS);
     PLEGMA_printf("Number of dimensions is %d\n",N_DIMS);
+
     HGC_global_vars.print();
   }
 }

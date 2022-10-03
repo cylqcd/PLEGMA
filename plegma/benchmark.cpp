@@ -125,16 +125,18 @@ int main(int argc, char **argv) {
   }
 
   if(run({"threep"})) {
-    PLEGMA_Gauge<float> gauge;
-    PLEGMA_Propagator<float> prop_a,  prop_b;
+    PLEGMA_Gauge<float> gauge(BOTH, FIRST_VERTEX);
+    PLEGMA_Propagator<float> prop_a(BOTH, FIRST_VERTEX),  prop_b(BOTH, FIRST_VERTEX);
     site source;
     source.fill(0);
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
     std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
     
     // Benchmark three point functions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas);
+
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas,false);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, false);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_twoD,"Contraction third derivative",prop_a, prop_b, gauge, +1, gammas, false);
     PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1);
   }
   
@@ -152,13 +154,13 @@ int main(int argc, char **argv) {
     PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing (scale 1 dir)",momSmScale);
 
     // Benchmark contraction  3pt
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas);
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, 0, (std::string)"");
 
     // Benchmark Wilson line update 
     PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2, false);
 
     // Benchmark shift routine 
-    PLEGMA_benchmark(&prop_b,&PLEGMA_Field<float>::shift,"Shift routine", prop_a, 2);
+    PLEGMA_benchmark(&prop_b,static_cast<void (PLEGMA_Field<float>::*)(PLEGMA_Field<float> &, short  )>(&PLEGMA_Field<float>::shift),"Shift routine", prop_a, 2);
 
     // Benchmark stout smearing
     PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::stoutSmearing,"Stout smearing (1 step)",gauge, 1,0.4,3);
@@ -173,7 +175,7 @@ int main(int argc, char **argv) {
     // Benchmark standard one-end trick
     // Since the function is overloaded we need to select one version of it
     PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, double , bool  )>
-		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
+    		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
 
     
     // Benchmark standard one-end trick

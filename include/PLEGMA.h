@@ -7,6 +7,7 @@
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_ScattCorrelator.h>
 #include <PLEGMA_QLoops.h>
 #include <PLEGMA_FT.h>
 #include <PLEGMA_Fmunu.h>

@@ -5,10 +5,12 @@
 #include <utils/PLEGMA_readList.h>
 #include <utils/PLEGMA_auxiliary.h>
 #include <utils/PLEGMA_eigSolver.h>
+#include <utils/PLEGMA_scatt_utils.h>
 #include <utils/QUDA_params.h>
 #include <utils/QUDA_types.h>
 #include <utils/QUDA_interface.h>
 #include <functional>
+
 
 using namespace plegma;
 
@@ -43,7 +45,6 @@ template<typename FloatOut, typename FloatIn> void packGaugeToNormal(PLEGMA_Gaug
 template<typename Float> void applyAntiperiodicBoundary(Float **buf);
 template<typename Float> void applyBoundaryConditions(PLEGMA_Gauge<Float> &gauge, bool antiperiodic);
 std::vector<int> createR2(std::vector<int> &vec);
-
 //=================== PLEGMA_Options.cpp ==========================//
 void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_params = false);
 void qudaOptions(Options &opt);

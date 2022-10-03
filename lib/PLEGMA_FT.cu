@@ -31,6 +31,18 @@ PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum, int dimT):
 }
 
 template<typename Float>
+template<typename T>
+PLEGMA_FT<Float>::PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4, bool accum, int dimT ):
+  dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
+  if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
+  for(auto &mom : moms){
+    if(mom.size()%dims != 0) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT %d %d",mom.size(),dims);
+    VFloat momF(mom.begin(),mom.end());
+    momList.push_back(momF);
+  }
+}
+
+template<typename Float>
 void PLEGMA_FT<Float>::zero(){
   if(h_elem) memset(h_elem.get(), 0, Nmoms()*dimT*dof*2*sizeof(Float));
 }
@@ -109,7 +121,7 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
-  if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation anly");
+  if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation only");
   if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
   if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
@@ -175,9 +187,35 @@ void PLEGMA_FT<Float>::scale(Float a){
   cBLAS::scal(sizeN/2, a, h_elem.get());
 }
 
+template<typename Float>
+void PLEGMA_FT<Float>::store3DFTs(std::complex<Float> *Ts, int timeshift, bool append) const{
+  if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
+  if(!h_elem) PLEGMA_error("Memory not allocated cannot write data");
+  if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in storing (TODO)\n");
+
+  std::shared_ptr<Float> helem_global = h_elem;
+  if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
+    helem_global.reset(new Float[HGC_nProc[DIM_T]*sizeN]);
+    if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
+    int error = MPI_Gather(h_elem.get(), sizeN, MPI_Type<Float>(), helem_global.get(), sizeN, MPI_Type<Float>(),0,HGC_timeComm);
+    if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
+  }
+
+  if(comm_rank() == 0){
+    int T = (dimT != 1)?HGC_totalL[DIM_T]:1;
+    for(int idf = 0 ; idf < dof; idf++)
+      for(int it = 0 ; it < T; it++){
+        int its = (it + timeshift)%HGC_totalL[DIM_T];
+        for(int imom = 0; imom < Nmoms(); imom++) 
+	  Ts[its*dof*Nmoms()+idf*Nmoms()+imom] = std::complex<Float>(helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0],
+								     helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1]);
+      }
+  }
+  comm_barrier();
+}
 
 template<typename Float>
-void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift) const{
+void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift, bool append) const{
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!h_elem) PLEGMA_error("Memory not allocated cannot write data");
   if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
@@ -191,7 +229,9 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift) const{
   }
   
   if(comm_rank() == 0){
-    FILE *ptr = fopen(filename.c_str(), "w");
+    // If append==true, the file needs to be initialized before calling this method instad of initializing it using append==false
+    //  Othereise, the order will be messed, and some iterms will be missing.
+    FILE *ptr = append?fopen(filename.c_str(), "a"):fopen(filename.c_str(), "w");
     if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
     int T = (dimT != 1)?HGC_totalL[DIM_T]:1;
     for(int idf = 0 ; idf < dof; idf++)
@@ -285,7 +325,7 @@ static std::string str(T begin, T end) {
 
 template<typename Float>
 void PLEGMA_FT<Float>::
-writeHDF5(std::string filename, int timeshift) const{
+writeHDF5(std::string filename, int timeshift, bool append) const{
   if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);
@@ -340,9 +380,12 @@ writeHDF5(std::string filename, int timeshift) const{
 
 template class PLEGMA_FT<float>;
 template class PLEGMA_FT<double>;
+
 template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
+template PLEGMA_FT<float>::PLEGMA_FT<int>( std::vector<std::vector<int>> &,int,bool,int);
+template PLEGMA_FT<double>::PLEGMA_FT<int>( std::vector<std::vector<int>> &,int,bool,int);

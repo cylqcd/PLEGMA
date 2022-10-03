@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
+#include <numeric>
 #include <array>
 #include <algorithm>
 #include <quda.h>
@@ -24,6 +25,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <assert.h>
 #include <fstream>
 #include <map>

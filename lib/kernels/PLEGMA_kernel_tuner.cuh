@@ -270,6 +270,7 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,0);
 #endif
+  checkCudaError();
 }
 
 template<class ...types, class ...typesK>
