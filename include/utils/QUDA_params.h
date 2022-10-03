@@ -8,9 +8,9 @@
 #endif
 
 #ifdef MULTI_GPU
-define(int device, -1);
+define(int device_number, -1);
 #else
-define(int device, 0);
+define(int device_number, 0);
 #endif
 
 define(bool qudaInitialized, false);
@@ -33,7 +33,7 @@ define(double csw, 0.1);
 define(double anisotropy, 1.0);
 define(QudaTwistFlavorType twist_flavor, QUDA_TWIST_SINGLET);
 define(bool compute_clover, false);
-define(QudaMassNormalization normalization, QUDA_KAPPA_NORMALIZATION); // mass normalization of Dirac operators
+define(QudaMassNormalization normalization, QUDA_MASS_NORMALIZATION); // mass normalization of Dirac operators
 define(QudaDagType dagger, QUDA_DAG_NO);
 define(bool isEven, true);
 
@@ -66,6 +66,7 @@ define(QudaVerbosity mg_verbosity[QUDA_MAX_MG_LEVEL], {});
 define(QudaInverterType setup_inv[QUDA_MAX_MG_LEVEL],{});
 define(int num_setup_iter[QUDA_MAX_MG_LEVEL], {});
 define(double setup_tol, 5e-6);
+define(int setup_maxiter, 500);
 define(QudaSetupType setup_type, QUDA_NULL_VECTOR_SETUP);
 define(bool pre_orthonormalize, false);
 define(bool post_orthonormalize, true);

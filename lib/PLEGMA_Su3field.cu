@@ -16,14 +16,14 @@ PLEGMA_Su3field<Float>::PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag, GHOST_FLAG g
 template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
   cudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
-  	     this->bytes_total_length, cudaMemcpyDeviceToDevice);
+  	     this->Bytes_total(), cudaMemcpyDeviceToDevice);
   checkCudaError();
 }
 
 template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_host(PLEGMA_Gauge<Float> &u,int dir){
   memcpy(this->h_elem, u.H_elem()+dir*(this->field_length)*(this->total_length)*2,
-	 this->bytes_total_length);
+	 this->Bytes_total());
 }
 
 template<typename Float>
@@ -69,6 +69,9 @@ Float PLEGMA_Su3field<Float>::sumRtraceU(){
 template<typename Float>
 static void pathX(int *dir, int *sign, int length,PLEGMA_Su3field<Float> **u_s,
 		 PLEGMA_Su3field<Float>& s1, PLEGMA_Su3field<Float>& s2){
+  //: Like an old RPG game, we traverse the path by shifting the field,
+  //: instead of us moving to the next point.
+  //: Then, take a product with U_\mu at the next pt.
   // do first step
   if(sign[0] > 0) s1.shift( *(u_s[dir[0]]), dir[0] );
   else s1.Udag( *(u_s[dir[0]]) );

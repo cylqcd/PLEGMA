@@ -10,6 +10,16 @@
 // In a typical application, quda.h is the only QUDA header required.
 #include <quda.h>
 
+/*********************************************
+ * QUDA related paramters are defined globally in QUDA_params.h
+ * They are set to input values using qudaOptions in PLEGMA_Options.cpp
+ * These global variables are used in the following functions to set param values in
+ *   QudaGaugeParam
+ *   QudaEigParam
+ *   QudaMultigridParam
+ *   QudaInvertParam
+ *********************************************/
+
 namespace quda {
   extern void setTransferGPU(bool);
 }
@@ -84,9 +94,9 @@ void setGaugeParam(QudaGaugeParam &gauge_param) {
   int y_face_size = gauge_param.X[0]*gauge_param.X[2]*gauge_param.X[3]/2;
   int z_face_size = gauge_param.X[0]*gauge_param.X[1]*gauge_param.X[3]/2;
   int t_face_size = gauge_param.X[0]*gauge_param.X[1]*gauge_param.X[2]/2;
-  int pad_size =MAX(x_face_size, y_face_size);
-  pad_size = MAX(pad_size, z_face_size);
-  pad_size = MAX(pad_size, t_face_size);
+  int pad_size =std::max(x_face_size, y_face_size);
+  pad_size = std::max(pad_size, z_face_size);
+  pad_size = std::max(pad_size, t_face_size);
   gauge_param.ga_pad = pad_size;    
 #endif
 }
@@ -96,14 +106,14 @@ void setEigParam(QudaEigParam &mg_eig_param, int level)
 {
   mg_eig_param.eig_type = mg_eig_type[level];
   mg_eig_param.spectrum = mg_eig_spectrum[level];
-  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS || mg_eig_type[level] == QUDA_EIG_IR_LANCZOS)
+  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS)
       && !(mg_eig_spectrum[level] == QUDA_SPECTRUM_LR_EIG || mg_eig_spectrum[level] == QUDA_SPECTRUM_SR_EIG)) {
     PLEGMA_error("Only real spectrum type (LR or SR) can be passed to the a Lanczos type solver");
   }
 
-  mg_eig_param.nEv = mg_eig_nEv[level];
-  mg_eig_param.nKr = mg_eig_nKr[level];
-  mg_eig_param.nConv = mg_eig_nConv[level];
+  mg_eig_param.n_ev = mg_eig_nEv[level];
+  mg_eig_param.n_kr = mg_eig_nKr[level];
+  mg_eig_param.n_conv = mg_eig_nConv[level];
   mg_eig_param.require_convergence = mg_eig_require_convergence[level];
 
   mg_eig_param.tol = mg_eig_tol[level];
@@ -205,6 +215,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.setup_inv_type[i] = setup_inv[i];
     mg_param.num_setup_iter[i] = num_setup_iter[i];
     mg_param.setup_tol[i] = setup_tol;
+    mg_param.setup_maxiter[i] = setup_maxiter;
     mg_param.spin_block_size[i] = 1;
     mg_param.n_vec[i] = nvec[i] == 0 ? 24 : nvec[i]; // default to 24 vectors if not set
     mg_param.precision_null[i] = prec_null; // precision to store the null-space basis

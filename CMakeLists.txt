@@ -5,9 +5,9 @@ set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 include(CheckIncludeFileCXX)
-
+include(CheckSymbolExists)
 
 if(${CMAKE_VERSION} VERSION_GREATER "3.12.0") 
   cmake_policy(SET CMP0074 NEW)
@@ -112,8 +112,8 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG 
 string(REPLACE ":" ";" LIBRARY_DIRS $ENV{LD_LIBRARY_PATH})
 
 set(DEFAULT_GPU_ARCH sm_60)
-set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60)")
-set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60)
+set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60, sm_70)")
+set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60 sm_70)
 
 # max threads
 set(PLEGMA_MAX_THREADS 256 CACHE INT "maximum number of threads per block in tuner")
@@ -125,6 +125,15 @@ set(PLEGMA_NO_TUNING FALSE CACHE BOOL "force not to perform kernel tuning in PLE
 mark_as_advanced(PLEGMA_NO_TUNING)
 if(PLEGMA_NO_TUNING)
   add_definitions(-DPLEGMA_NO_TUNING)
+else()
+  
+endif()
+
+# Use CUDA textures
+set(PLEGMA_TEXTURE TRUE CACHE BOOL "Wheater to use or not CUDA textures")
+mark_as_advanced(PLEGMA_TEXTURE)
+if(PLEGMA_TEXTURE)
+  add_definitions(-DPLEGMA_TEXTURE)
 else()
   
 endif()
@@ -141,6 +150,18 @@ if(PLEGMA_LIGHT_BARYONS)
   add_definitions(-DPLEGMA_LIGHT_BARYONS)
 endif()
 
+set(PLEGMA_SCATTERING_CONTRACTIONS FALSE CACHE BOOL "compile contractions for pi-N scattering")
+if (PLEGMA_SCATTERING_CONTRACTIONS)
+  add_definitions(-DPLEGMA_SCATTERING_CONTRACTIONS)
+endif()
+set(PLEGMA_SCATTERING_SPIN12 FALSE CACHE BOOL "compile contractions for pi-N scattering I=1/2")
+if (PLEGMA_SCATTERING_SPIN12)
+  add_definitions(-DPLEGMA_SCATTERING_SPIN12)
+endif()
+set(PLEGMA_SCATTERING_SPIN32 FALSE CACHE BOOL "compile contractions for pi-N scattering I=3/2")
+if (PLEGMA_SCATTERING_SPIN32)
+  add_definitions(-DPLEGMA_SCATTERING_SPIN32)
+endif()
 set(PLEGMA_UDSC_BARYONS TRUE CACHE BOOL "compile contractions for all u,d,s and c baryons")
 if(PLEGMA_UDSC_BARYONS)
   add_definitions(-DPLEGMA_UDSC_BARYONS)
@@ -152,14 +173,22 @@ if(PLEGMA_PINNED_GHOST_BUFFERS)
   add_definitions(-DHAVE_PINNED_GHOST)
 endif()
 
-set(PLEGMA_EIGENSOLVER FALSE CACHE BOOL "build eigensolver")
+set(PLEGMA_EIGENSOLVER FALSE CACHE BOOL "Build eigensolvers interface. Options (ARPACK, PRIMME, QUDAEIG)")
 if(PLEGMA_EIGENSOLVER)
   add_definitions(-DHAVE_EIGENSOLVER)
   #ARPACK || PRIMME
   set(PLEGMA_ARPACK OFF CACHE BOOL "build arpack interface")
   set(PLEGMA_PRIMME OFF CACHE BOOL "build PRIMME interface")
+  set(PLEGMA_QUDAEIG OFF CACHE BOOL "build interface for QUDA eigensolver")
+
   if(PLEGMA_ARPACK AND PLEGMA_PRIMME)
-    message(SEND_ERROR "Please specify either ARPACK or PRIMME library, not both")
+    message(SEND_ERROR "Please specify either ARPACK or PRIMME eigensolver, not both")
+  endif()
+  if(PLEGMA_ARPACK AND PLEGMA_QUDAEIG)
+    message(SEND_ERROR "Please specify either ARPACK or QUDAEIG eigensolver, not both")
+  endif()
+  if(PLEGMA_QUDAEIG AND PLEGMA_PRIMME)
+    message(SEND_ERROR "Please specify either ARPACK or PRIMME eigensolver, not both")
   endif()
 
   if(PLEGMA_ARPACK)
@@ -171,6 +200,10 @@ if(PLEGMA_EIGENSOLVER)
     add_definitions(-DHAVE_PRIMME)
     set(PLEGMA_PRIMMEHOME "" CACHE PATH "path to PRIMME")
   endif(PLEGMA_PRIMME)
+
+  if(PLEGMA_QUDAEIG)
+     add_definitions(-DQUDAEIG)
+  endif(PLEGMA_QUDAEIG)
 endif(PLEGMA_EIGENSOLVER)
 
 set(PLEGMA_2FLAVMG ON CACHE BOOL "compile 2-flavour MG routines. This requires modification of QUDA to add extra preconditioner pointers")
@@ -182,7 +215,8 @@ endif()
 #set(PLEGMA_GSLHOME "" CACHE PATH "path to GSL")
 set(PLEGMA_LIMEHOME "" CACHE PATH "path to LIME")
 set(PLEGMA_HDF5HOME "" CACHE PATH "path to HDF5")
-
+set(PLEGMA_HDF5_THREAD_SAFE OFF CACHE BOOL "Is HDF5 compiled in a thread-safe mode?")
+    
 # Switch between MKL and OpenBlas BLAS
 set(PLEGMA_MKL OFF CACHE BOOL "build PLEGMA with MKL")
 set(PLEGMA_OPENBLAS OFF CACHE BOOL "build PLEGMA with OPENBLAS")
@@ -230,7 +264,7 @@ find_package(PythonInterp)
 if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
   find_package(CUDAWrapper)
   set(USING_CUDA_LANG_SUPPORT True)
-  set(CMAKE_CUDA_STANDARD 11)
+  set(CMAKE_CUDA_STANDARD 14)
   set(CMAKE_CUDA_STANDARD_REQUIRED True)
 else()
   set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
@@ -308,8 +342,15 @@ if(HDF5_FOUND)
   FIND_LIBRARY(PLEGMA_Z_LIB z ${LIBRARY_DIRS})	
 #link_libraries(${HDF5_C_LIBRARY_hdf5})
   message(STATUS "HDF5 version ${HDF5_VERSION} found, include dir: ${HDF5_INCLUDE_DIRS}, libraries ${HDF5_C_LIBRARY_hdf5}")
+ if(NOT HDF5_IS_PARALLEL)
+   message(FATAL_ERROR "HDF5 must be parallel")
+ endif()
 else()
   message(FATAL_ERROR "HDF5 could not be located, did you try specifying -DPLEGMA_HDF5HOME?")
+endif()
+
+if(PLEGMA_HDF5_THREAD_SAFE)
+  add_definitions(-DHDF5_THREAD_SAFE)
 endif()
 
 add_definitions(-DHAVE_LIME)
@@ -443,6 +484,21 @@ set(CMAKE_CXX_FLAGS_DEVICEDEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas 
 set(CMAKE_CXX_FLAGS_DEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
     "Flags used by the C++ compiler during full (host+device) debug builds.")
 
+OPTION(USE_OpenMP "Use OpenMP" ON)
+IF(USE_OpenMP)
+    FIND_PACKAGE(OpenMP)
+    IF( OPENMP_FOUND )
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+   	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler ${OpenMP_CXX_FLAGS}")
+    ENDIF()
+ENDIF()
+
+
+
+
+
 #define C FLAGS
 set(CMAKE_C_FLAGS_DEVEL "-Wall -O3"  CACHE STRING
     "Flags used by the C compiler during regular development builds.")
@@ -464,7 +520,7 @@ set(PLEGMA_ALIGNMENT 64 CACHE STRING "Alignment size for allocations done with m
 mark_as_advanced(PLEGMA_ALIGNMENT)
 add_definitions(-DPLEGMA_ALIGNMENT=${PLEGMA_ALIGNMENT})
 
-check_symbol_exists(memalign malloc.h HAVE_MEMALIGN)
+#check_symbol_exists(memalign malloc.h HAVE_MEMALIGN)
 if(HAVE_MEMALIGN)
   add_definitions(-DPLEGMA_HAVE_MEMALIGN)
 else()

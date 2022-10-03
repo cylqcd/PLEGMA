@@ -87,7 +87,6 @@ int main(int argc, char **argv)
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
   gauge.readFile(latfile, LIME_FORMAT);
-  gauge.load();
   gauge.calculatePlaq();
 
   // Loading to QUDA and computing plaquette also there
@@ -235,7 +234,7 @@ int main(int argc, char **argv)
 	  else if(!spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(source,*hprop,ih,indDof);}
 	  if(spinColorDil || k_probing>0) solverDN->solve(phi,*sourceDil); else solverDN->solve(phi,source);
 	  // for convention reasons for quark loops we put the normalization factors of the fields later in the analysis
-	  phi.scaleVector(1./(2.*inv_params.kappa));
+	  phi.scale(1./(2.*inv_params.kappa));
 	  double t1=MPI_Wtime();
 #if defined(HAVE_EIGENSOLVER)
 	  if(lowModesRecon)
