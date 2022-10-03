@@ -117,6 +117,8 @@ int main(int argc, char **argv)
     //loop over the soure positions
     for(int isource = 0 ; isource < numSourcePositions; isource++){
 
+      vectorStoc_source_oet.stochastic_Z(nroots);
+
       int sequential_time_source=sourcePositions[isource][DIM_T];
 
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
@@ -138,12 +140,12 @@ int main(int argc, char **argv)
          PLEGMA_Vector<double> vectortmp2;          
  
          vectortmp1.absorbTimeslice(vectorStoc_source_oet, sequential_time_source);
+
+	 //Dilution     
+         vectortmp2.dilutespin(vectortmp1,0);
  
          //Transforming to physical base
-         vectortmp2.rotateToPhysicalBasis(vectortmp1,+1);
- 
-	 //Dilution     
-         vectortmp1.dilutespin(vectortmp2,0);
+         vectortmp1.rotateToPhysicalBasis(vectortmp2,+1); 
 
          //Save the smeared,transformed and diluted source for non-zero momentum oet.
          vectorStoc_source_oet.copy(vectortmp1);
