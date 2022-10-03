@@ -466,7 +466,7 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<doubl
 
 
  // vecOut = (1 - U * U^\dag) vecIn where out and in are the same
-void EigSolver::projectVector(PLEGMA_Vector<double> &vec){
+ void EigSolver::projectVector(PLEGMA_Vector<double> &vec, int nvecs){
   if(p.NeV <= 0){
     if(verbose) PLEGMA_printf("Skipping deflation of source vector since NeV=%d\n",p.NeV);
     return;
@@ -475,10 +475,13 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vec){
   vec.unload();
   double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
   double *tmpArr = nullptr;
-  try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
-  memset(tmpArr,0,p.NeV*2*sizeof(double));
-  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
-  cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
+  int local_NeV;
+  if(nvecs==0) local_NeV=p.NeV;
+  else local_NeV=nvecs;
+  try { tmpArr = new double[local_NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
+  memset(tmpArr,0,local_NeV*2*sizeof(double));
+  cBLAS::gemv(DAGGER, size_per_Vec, local_NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
+  cBLAS::gemv(NOTRANS, size_per_Vec, local_NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
   vec.load();
   delete[] tmpArr;
 }
@@ -521,7 +524,8 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
    PLEGMA_Vector<double> tmp(HOST);
    for(int i = 0 ; i < p.NeV; i++){
-     double *eigVec = h_eigVecs + ((long int) std::get<3>(evalsOrdered[i])) * size_per_Vec*2;
+     long int iorder = std::get<3>(this->getEigVals()[i]);
+     double *eigVec = h_eigVecs + iorder * size_per_Vec*2;
      memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
      tmp.writeLIME(filenamePrefix + "_eV" + std::to_string(i),false);
      if(verbose) PLEGMA_printf("Eigenvector %d is written\n", i);
