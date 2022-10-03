@@ -14,7 +14,6 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   if(sid >= vec.volume()) return;
-  
   const Float2<float> (*pr)[8];
   const short int (*prInd)[8][2];
   if(particle == PROTON){
@@ -29,6 +28,12 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
     printf("Error: You can use only PROTON or NEUTRON\n");
     asm("trap;"); 
   }
+
+  const Float2<float> (*prscatt);
+  const short int (*prIndscatt)[2];
+  prscatt = (Float2<float> (*))projScatt;
+  prIndscatt = projIndScatt;
+
 
   Float2<FloatA> P[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<FloatB> P2[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -57,14 +62,15 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
 	  short nu = NtoN_indices[idx][1];
 	  short ku = NtoN_indices[idx][2];
 	  short lu = NtoN_indices[idx][3];
+          if (proj<8){
           #pragma unroll
-	  for(short nz = 0; nz < 8; nz++){
+          for(short nz = 0; nz < 8; nz++){
 	    int b = prInd[proj][nz][0];
 	    int a = prInd[proj][nz][1];
 	    Float2<FloatC> factor = (-1)*sgn_eps[cc1]*sgn_eps[cc2]*NtoN_values[idx]*pr[proj][nz];
 	    if(!isTwoPropDiff){
 	      if(lu == c_nu){
-		spinor[nu][c3] += factor * P[mu][b][c1][c1p] * P[a][ku][c2][c2p];
+	        spinor[nu][c3] += factor * P[mu][b][c1][c1p] * P[a][ku][c2][c2p];
 		spinor[nu][c3] += factor * P[mu][ku][c1][c1p] * P[a][b][c2][c2p];
 	      }
 	    }
@@ -76,12 +82,32 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
                 if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
                 if( a == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][b][c2][c2p];
 	      }
-	  }   
-	}}}
+	  }
+	  }
+	  else{
+          int b = prIndscatt[proj][0];
+          int a = prIndscatt[proj][1];
+          Float2<FloatC> factor = (-1)*sgn_eps[cc1]*sgn_eps[cc2]*NtoN_values[idx]*prscatt[proj];
+          if(!isTwoPropDiff){
+            if(lu == c_nu){
+              spinor[nu][c3] += factor * P[mu][b][c1][c1p] * P[a][ku][c2][c2p];
+              spinor[nu][c3] += factor * P[mu][ku][c1][c1p] * P[a][b][c2][c2p];
+            }
+          }
+          else
+#pragma unroll
+            for(short gu = 0 ; gu < 4 ; gu++){
+              if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][ku][c2][c2p];
+              if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
+              if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
+              if( a == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][b][c2][c2p];
+            }
+	  } 
+
+      }}}
   vec.set(spinor, sid);
 #endif
 }
-
 
 template<typename FloatC, typename FloatA, typename FloatB, bool isTwoPropDiff, int c_nu>
 __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& prop1, propTex<FloatB>& prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_c2){

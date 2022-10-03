@@ -862,6 +862,12 @@ namespace plegma {
   static inline std::shared_ptr<T<Float>> toTexture(const Tfield<Float>& field) {
     return std::shared_ptr<T<Float>>(new T<Float>(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T<Float>* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
   }
+
+  template<class T, template<typename> class Tfield, typename Float>
+  static inline std::shared_ptr<T> toTexture(const Tfield<Float>& field) {
+    return std::shared_ptr<T>(new T(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
+  }
+
     
 
 }

@@ -8,9 +8,9 @@
 #endif
 
 #ifdef MULTI_GPU
-define(int device, -1);
+define(int device_number, -1);
 #else
-define(int device, 0);
+define(int device_number, 0);
 #endif
 
 define(bool qudaInitialized, false);

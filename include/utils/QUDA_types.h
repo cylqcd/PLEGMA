@@ -453,8 +453,6 @@ inline QudaEigSpectrumType get_eigensolution_type(std::string s) {
 inline  QudaEigType get_eigensolver(std::string s){
   if(s=="trlan" || s=="trlm")
     return QUDA_EIG_TR_LANCZOS;
-  else if(s=="irlan" || s=="irlm")
-    return QUDA_EIG_IR_LANCZOS;
   else if(s=="irarn" || s=="iram")
     return QUDA_EIG_IR_ARNOLDI;
   else {
