@@ -3,7 +3,7 @@
 
 using namespace plegma;
 
-template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT>
+template<typename FloatOut, typename FloatV, typename FloatP, unsigned int N_GAMMAS_SCATT,bool CONJ_P>
 __global__ void V4_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> listGammas,
 			   propTex<FloatP> propS1, propTex<FloatP> propS2, Float2<FloatOut> *block2,
 			   int it, int time_step, int maxT, int4 source, tex_mom_list moms){
@@ -36,12 +36,13 @@ __global__ void V4_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
     g = (Float2<float> (*)[4]) plegma::gamma_scatt;
     gammasIdx = gammaInd_scatt;
 
+    //loops
     #pragma unroll 
     for( unsigned short alfa1=0; alfa1<N_SPINS; alfa1++){
       #pragma unroll 
       for( unsigned short alfa2=0; alfa2<N_SPINS; alfa2++ ){
         #pragma unroll 
-      	for(unsigned short n_g=0; n_g<N_GAMMAS_SCATT; n_g++ ){
+        for(unsigned short n_g=0; n_g<N_GAMMAS_SCATT; n_g++ ){
 	  int gId=listGammas.array[n_g];
           #pragma unroll 
 	  for(int nz_e = 0 ; nz_e < 4 ; nz_e++){
@@ -62,15 +63,16 @@ __global__ void V4_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
 		  unsigned short m=plegma::eps[eps2_nz][1];
 		  unsigned short n=plegma::eps[eps2_nz][2];
 		  int eps2_sgn=plegma::sgn_eps[eps2_nz];
-                  Float2<FloatOut> factor=eps1_sgn*eps2_sgn*factor_gamma;
+		  Float2<FloatOut> factor=eps1_sgn*eps2_sgn*factor_gamma;
 		  accum[ n_g*N_S3C + alfa0*N_S2C + alfa1*N_S1C + alfa2*N_COLS + l] =
-		    accum[ n_g*N_S3C + alfa0*N_S2C + alfa1*N_S1C + alfa2*N_COLS + l] + factor*phi[alfa0][a]*s1[beta1][alfa1][b][m]*s2[beta0][alfa2][c][n];
+		    accum[ n_g*N_S3C + alfa0*N_S2C + alfa1*N_S1C + alfa2*N_COLS + l] + factor*(phi[alfa0][a])*s1[beta1][alfa1][b][m]*s2[beta0][alfa2][c][n];
+		
 		}
 	      }
 	    }
 	  }
 	}
-      }
+      }//end loops
     }
   }
 
@@ -81,8 +83,14 @@ __global__ void V4_kernel( vectorTex<FloatV> vectorPhi, KernelArr<GAMMAS_SCATT> 
   const unsigned int OUT_DOF= N_GAMMAS_SCATT*N_SPINS*N_SPINS;
   const unsigned int IN_DOF= N_SPINS*N_COLS;
 
-  #pragma unroll
-  for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
-    fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
+  if (CONJ_P){
+    #pragma unroll
+    for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+      fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, -1, time_step, tid);
+  } else {
+    #pragma unroll
+    for(int i_gs = 0 ; i_gs < OUT_DOF; i_gs++)
+      fourier_transform_3D(block2+i_gs*IN_DOF*grid3D, accum+i_gs*IN_DOF, shared_cache, IN_DOF, sid3D, source_pos, moms, (OUT_DOF-1)*IN_DOF, +1, time_step, tid);
+  }
 
 }

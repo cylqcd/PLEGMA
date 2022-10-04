@@ -6,6 +6,10 @@
 using namespace std;
 using namespace quda;
 
+/*
+ * It contins wrapper functions of QUDA features we need (e.g. solvers & Dirac op)
+ */
+
 // HACK definition missing in quda headers, but available in the library
 // define (static) checkGaugeParam() and checkInvertParam()
 #define CHECK_PARAM
@@ -109,7 +113,6 @@ void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType 
     QudaInvertParam inv_param = newQudaInvertParam();
     setInvertParam(inv_param);
     checkInvertParam(&inv_param);
-
     loadCloverQuda(NULL, NULL, &inv_param);
   }
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gauge.Bytes_total()/N_DIMS);
@@ -179,6 +182,7 @@ QUDA_solver::QUDA_solver(double mu) {
   D = NULL;
   DSloppy = NULL;
   DPre = NULL;
+  
 
   // create the dirac operator
   createDirac(D, DSloppy, DPre, inv_param, pc_solve);
@@ -191,7 +195,7 @@ QUDA_solver::QUDA_solver(double mu) {
   // Create Solvers
   solverParam = new SolverParam(inv_param);
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-			  *MPre, *profiler);
+			  *MPre, *MPre, *profiler);
 
   ColorSpinorParam cpuParam(NULL, inv_param, HGC_localL, pc_solution,
 			    inv_param.input_location);
@@ -199,6 +203,7 @@ QUDA_solver::QUDA_solver(double mu) {
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
   b = new cudaColorSpinorField(cudaParam);
   x = new cudaColorSpinorField(cudaParam);
+
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();
@@ -243,10 +248,16 @@ template<typename Tag,typename Tag::type M>
 struct Rob {
   friend typename Tag::type get(Tag){ return M;}
 };
-  
+
+struct Profiler_name{
+  typedef std::string TimeProfile::*type;
+  friend type get(Profiler_name);
+};
+
 template struct Rob<MG_Transfer,&MG::transfer>;
 template struct Rob<MG_CoarseParam,&MG::param_coarse>;
 template struct Rob<MG_Coarse,&MG::coarse>;
+template struct Rob<Profiler_name,&TimeProfile::fname>;
 
 inline bool changeBlock(int* blockOut, int* blockIn) {
   bool changed = false;
@@ -340,8 +351,9 @@ void QUDA_solver::UpdateSolver()
   solverParam = new SolverParam(inv_param);
   
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-  			 *MPre, *profiler);
+  			 *MPre, *MPre, *profiler);
 
+  profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+to_string(mu)).c_str();
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();

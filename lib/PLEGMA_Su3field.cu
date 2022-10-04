@@ -69,6 +69,9 @@ Float PLEGMA_Su3field<Float>::sumRtraceU(){
 template<typename Float>
 static void pathX(int *dir, int *sign, int length,PLEGMA_Su3field<Float> **u_s,
 		 PLEGMA_Su3field<Float>& s1, PLEGMA_Su3field<Float>& s2){
+  //: Like an old RPG game, we traverse the path by shifting the field,
+  //: instead of us moving to the next point.
+  //: Then, take a product with U_\mu at the next pt.
   // do first step
   if(sign[0] > 0) s1.shift( *(u_s[dir[0]]), dir[0] );
   else s1.Udag( *(u_s[dir[0]]) );

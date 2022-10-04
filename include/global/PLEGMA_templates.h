@@ -149,6 +149,7 @@ inline std::string toString(){return "";}
 template<typename T, typename... Pars>
 inline std::string toString(T & p1, Pars & ... pars){
   std::stringstream cs;
+  cs << std::setprecision(8);
   cs << " " << p1;
   return cs.str() + toString(pars...);
 }
@@ -156,6 +157,7 @@ inline std::string toString(T & p1, Pars & ... pars){
 template<typename T>
 inline std::string toString(std::vector<T> &vec){
   std::stringstream cs;
+  cs << std::setprecision(8);
   for(T i : vec) cs << " " << i;
   return cs.str();
 }
@@ -163,6 +165,7 @@ inline std::string toString(std::vector<T> &vec){
 template<typename T1, typename T2>
 inline std::string toString(std::map<T1,T2> &tpl){
   std::stringstream cs;
+  cs << std::setprecision(8);
   typename std::map<T1,T2>::iterator it_b = tpl.begin();
   while(it_b != tpl.end()){
     cs << " (" <<it_b->first << ", " << it_b->second << ")";

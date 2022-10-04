@@ -18,16 +18,9 @@ static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-A
 int main(int argc, char **argv)
 {
   initializeOptions(argc, argv, true, listOpt);
-  
-  int nsmearStout = 30;
-  double alphaStout = 0.129;
-  HGC_options->set("nsmear-stout", "Number of stout smearing step for the configuration",verbosity,nsmearStout);
-  HGC_options->set("alpha-stout", "Coefficient for the stout smearing for the configuration",verbosity,alphaStout);
-  
   initializePLEGMA();
 
   twop_filename += std::string("_") + ((nsmearGauss>0) ? "SS" : "LL") +
-    "_sN" + std::to_string(nsmearStout) + "a" + convNumToStr(alphaStout) +
     "_gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) +
     "_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
 
@@ -40,19 +33,14 @@ int main(int argc, char **argv)
       gauge.load();
       gauge.calculatePlaq();
 
-      // apply stout smearing
-      PLEGMA_Gauge<double> gaugeStout;
-      gaugeStout.stoutSmearing(gauge, nsmearStout, alphaStout, 4);
-      PLEGMA_printf("Smeared Plaquette with stout 4D:");
-      gaugeStout.calculatePlaq();
-
+      
       // Loading to QUDA and computing plaquette also there
-      initGaugeQuda(gaugeStout, true);
+      initGaugeQuda(gauge, true);
       plaqQuda();
       
       // Smearing
-      TIME(smearedGauge.APEsmearing(gaugeStout, nsmearAPE, alphaAPE, 3));
-      PLEGMA_printf("Smeared Plaquette with APE 3D:\n");
+      TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
+      PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
     }
     updateOptions(LIGHT);

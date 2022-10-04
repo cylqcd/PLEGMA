@@ -10,6 +10,16 @@
 // In a typical application, quda.h is the only QUDA header required.
 #include <quda.h>
 
+/*********************************************
+ * QUDA related paramters are defined globally in QUDA_params.h
+ * They are set to input values using qudaOptions in PLEGMA_Options.cpp
+ * These global variables are used in the following functions to set param values in
+ *   QudaGaugeParam
+ *   QudaEigParam
+ *   QudaMultigridParam
+ *   QudaInvertParam
+ *********************************************/
+
 namespace quda {
   extern void setTransferGPU(bool);
 }
@@ -96,14 +106,14 @@ void setEigParam(QudaEigParam &mg_eig_param, int level)
 {
   mg_eig_param.eig_type = mg_eig_type[level];
   mg_eig_param.spectrum = mg_eig_spectrum[level];
-  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS || mg_eig_type[level] == QUDA_EIG_IR_LANCZOS)
+  if ((mg_eig_type[level] == QUDA_EIG_TR_LANCZOS)
       && !(mg_eig_spectrum[level] == QUDA_SPECTRUM_LR_EIG || mg_eig_spectrum[level] == QUDA_SPECTRUM_SR_EIG)) {
     PLEGMA_error("Only real spectrum type (LR or SR) can be passed to the a Lanczos type solver");
   }
 
-  mg_eig_param.nEv = mg_eig_nEv[level];
-  mg_eig_param.nKr = mg_eig_nKr[level];
-  mg_eig_param.nConv = mg_eig_nConv[level];
+  mg_eig_param.n_ev = mg_eig_nEv[level];
+  mg_eig_param.n_kr = mg_eig_nKr[level];
+  mg_eig_param.n_conv = mg_eig_nConv[level];
   mg_eig_param.require_convergence = mg_eig_require_convergence[level];
 
   mg_eig_param.tol = mg_eig_tol[level];
