@@ -4,6 +4,7 @@
 #include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
+#include <PLEGMA_TMDWF.cuh>
 #include <PLEGMA_mesonsNew.cuh>
 #include <PLEGMA_mesonsAll.cuh>
 #include <PLEGMA_baryons.cuh>
@@ -85,6 +86,25 @@ contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
   
   initialize();
   contract_mesons_all(prop1,prop2,*this);
+}
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
+		    PLEGMA_Propagator<Float> &prop2,
+		    PLEGMA_Su3field<float> &staple, int l){
+
+  shape = {1};
+  char d1[50],d2[50];
+  sprintf(d1,"twop_meson_1_l_%d",l);
+  sprintf(d2,"twop_meson_2_l_%d",l);
+  datasets =  {d1, d2};
+  groups =  {"mesons"};
+  description = "g4 ";
+  
+  initialize();
+  contract_TMDWF_mesons(prop1,prop2,*this, staple);
 }
 
 
