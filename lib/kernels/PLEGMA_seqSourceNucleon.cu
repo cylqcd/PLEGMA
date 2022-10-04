@@ -29,11 +29,12 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
     asm("trap;"); 
   }
 
+#ifdef PLEGMA_SCATTERING_CONTRACTIONS
   const Float2<float> (*prscatt);
   const short int (*prIndscatt)[2];
   prscatt = (Float2<float> (*))projScatt;
   prIndscatt = projIndScatt;
-
+#endif
 
   Float2<FloatA> P[N_SPINS][N_SPINS][N_COLS][N_COLS];
   Float2<FloatB> P2[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -85,6 +86,7 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
 	  }
 	  }
 	  else{
+#ifdef PLEGMA_SCATTERING_CONTRACTIONS
           int b = prIndscatt[proj][0];
           int a = prIndscatt[proj][1];
           Float2<FloatC> factor = (-1)*sgn_eps[cc1]*sgn_eps[cc2]*NtoN_values[idx]*prscatt[proj];
@@ -102,6 +104,7 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
               if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
               if( a == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][b][c2][c2p];
             }
+#endif
 	  } 
 
       }}}
