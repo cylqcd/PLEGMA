@@ -43,11 +43,41 @@ target_link_libraries(Topo ${PLEGMA_LIBS})
 cuda_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
+cuda_add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
+target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
+
+cuda_add_executable(Tetraquark Tetraquark.cpp)
+target_link_libraries(Tetraquark ${PLEGMA_LIBS})
+
+cuda_add_executable(TetraquarkBCUD TetraquarkBCUD.cpp)
+target_link_libraries(TetraquarkBCUD ${PLEGMA_LIBS})
+
+cuda_add_executable(TestFrame EXCLUDE_FROM_ALL TestFrame.cpp)
+target_link_libraries(TestFrame ${PLEGMA_LIBS})
+
+cuda_add_executable(StochasticTetraquark StochasticTetraquark.cpp)
+target_link_libraries(StochasticTetraquark ${PLEGMA_LIBS})
+
+cuda_add_executable(StochasticTetraquarkBCUD StochasticTetraquarkBCUD.cpp)
+target_link_libraries(StochasticTetraquarkBCUD ${PLEGMA_LIBS})
+
+cuda_add_executable(ComputeLightStochProp ComputeLightStochProp.cpp)
+target_link_libraries(ComputeLightStochProp ${PLEGMA_LIBS})
+
+cuda_add_executable(ComputeLightPointProp ComputeLightPointProp.cpp)
+target_link_libraries(ComputeLightPointProp ${PLEGMA_LIBS})
+
+cuda_add_executable(Calc_2pt_charmonium Calc_2pt_charmonium.cpp)
+target_link_libraries(Calc_2pt_charmonium ${PLEGMA_LIBS})
+
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
+
+cuda_add_executable(mesons_3pt mesons_3pt.cpp)
+target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
 
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})

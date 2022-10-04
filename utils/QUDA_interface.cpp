@@ -311,6 +311,8 @@ void QUDA_solver::UpdateSolver()
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
 
+  loadCloverQuda(NULL, NULL, &inv_param);
+
   if(use_mg){
     inv_param.preconditioner = mg_preconditioner;
     multigrid_solver* mg = (multigrid_solver*) mg_preconditioner;
