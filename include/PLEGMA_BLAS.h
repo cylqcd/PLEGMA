@@ -187,11 +187,11 @@ namespace cuBLAS{
   template<typename Float>
   inline Float norm(int NN, const Float *x, MPI_Comm comm) {
     if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
-    Float result, loc_res = cuBLAS::norm(NN, x);
+    Float result, loc_res = std::pow(cuBLAS::norm(NN, x),2);
     int mpiErr = MPI_Allreduce(&loc_res, &result, 1, MPI_Type<Float>(), MPI_SUM,
 			       comm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-    return result;
+    return sqrt(result);
   }
 
 

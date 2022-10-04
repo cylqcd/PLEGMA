@@ -11,7 +11,7 @@
 #include <PLEGMA_QLoops.h>
 #include <PLEGMA_FT.h>
 #include <PLEGMA_Fmunu.h>
-
+#include <PLEGMA_U1Gauge.h>
 namespace plegma {
   
   void PLEGMA_init(int localL[4], int nProcs[4], int verbosity);

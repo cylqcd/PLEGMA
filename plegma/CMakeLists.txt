@@ -49,6 +49,9 @@ target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
+cuda_add_executable(PDFs_qgq_nucleon PDFs_qgq_nucleon.cpp)
+target_link_libraries(PDFs_qgq_nucleon ${PLEGMA_LIBS})
+
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
@@ -134,6 +137,8 @@ target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
 cuda_add_executable(invert invert.cpp)
 target_link_libraries(invert ${PLEGMA_LIBS})
 
+cuda_add_executable(polarN EXCLUDE_FROM_ALL polarN.cpp)
+target_link_libraries(polarN ${PLEGMA_LIBS})
 
 cuda_add_executable(Zfac_GI Zfac_GI.cpp)
 target_link_libraries(Zfac_GI ${PLEGMA_LIBS})
