@@ -194,6 +194,11 @@ namespace plegma {
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
 
+    void contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
+			     PLEGMA_Propagator<Float> &prop2,
+			     PLEGMA_Su3field<float> &staple,
+			     int l);
+    
     void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 			   PLEGMA_Propagator<Float> &prop2);
     void contractMesonsAll(PLEGMA_Propagator<Float> &prop1,

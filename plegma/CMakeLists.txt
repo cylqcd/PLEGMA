@@ -121,6 +121,9 @@ target_link_libraries(MG_tuner ${PLEGMA_LIBS})
 cuda_add_executable(benchmark benchmark.cpp)
 target_link_libraries(benchmark ${PLEGMA_LIBS})
 
+cuda_add_executable(TMDWFs_mesons  TMDWFs_mesons.cpp)
+target_link_libraries(TMDWFs_mesons ${PLEGMA_LIBS})
+
 cuda_add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
 target_link_libraries(quark_rms ${PLEGMA_LIBS})
 
@@ -154,6 +157,7 @@ target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
 
 cuda_add_executable(invert invert.cpp)
 target_link_libraries(invert ${PLEGMA_LIBS})
+
 
 cuda_add_executable(Zfac_GI Zfac_GI.cpp)
 target_link_libraries(Zfac_GI ${PLEGMA_LIBS})
