@@ -176,7 +176,7 @@ protected:
       // in case ProfileStruct is the first argument we call it as a function
       (*kernel)(std::get<S>(args)...);
     } else {
-      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,get_stream(&stream)>>>(std::get<S>(args)...);
+      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,target::cuda::get_stream(stream)>>>(std::get<S>(args)...);
     }      
    // cudaDeviceSynchronize();
   }
