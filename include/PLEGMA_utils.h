@@ -33,6 +33,7 @@ void setInvertParam(QudaInvertParam &inv_param);
 void setEigMultigridParam(QudaMultigridParam &mg_param, QudaEigParam *mg_eig_param);
 #endif
 //============== PLEGMA_utils.cpp =======================================//
+void checkQudaError();
 void createMom(int *Nmom, int momElem[][3], int Q_qs);
 extern const std::vector<std::string> listAvailOptPLEGMA;
 void initializeOptions(int argc, char **argv, bool withQuda=true, std::vector<std::string> listOptPLEGMA = listAvailOptPLEGMA);

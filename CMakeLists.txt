@@ -5,7 +5,7 @@ set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 include(CheckIncludeFileCXX)
 include(CheckSymbolExists)
 
@@ -264,7 +264,7 @@ find_package(PythonInterp)
 if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
   find_package(CUDAWrapper)
   set(USING_CUDA_LANG_SUPPORT True)
-  set(CMAKE_CUDA_STANDARD 14)
+  set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED True)
 else()
   set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
@@ -415,7 +415,7 @@ add_definitions(-D__COMPUTE_CAPABILITY__=${COMP_CAP})
 
 # NVCC FLAGS independet off build type
 if(NOT USING_CUDA_LANG_SUPPORT)
-  set(CUDA_NVCC_FLAGS "-std c++11 -arch=${GPU_ARCH} -ftz=true -prec-div=false -prec-sqrt=false")
+  set(CUDA_NVCC_FLAGS "-std c++17 -arch=${GPU_ARCH} -ftz=true -prec-div=false -prec-sqrt=false")
 else()
   set(CUDA_NVCC_FLAGS "-ftz=true -prec-div=false -prec-sqrt=false")
   set(CMAKE_CUDA_FLAGS "-arch=${GPU_ARCH}" CACHE STRING "Flags used by the CUDA compiler" FORCE)
@@ -471,17 +471,17 @@ set(CMAKE_CUDA_FLAGS_DEBUG "${CUDA_NVCC_FLAGS} -g -DHOST_DEBUG -G" CACHE STRING
     FORCE )
 
 #define CXX FLAGS
-set(CMAKE_CXX_FLAGS_DEVEL  "${OpenMP_CXX_FLAGS} -O3 -Wall ${CLANG_FORCE_COLOR}" CACHE STRING
+set(CMAKE_CXX_FLAGS_DEVEL "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -Wall ${CLANG_FORCE_COLOR}" CACHE STRING
 "Flags used by the C++ compiler during regular development builds.")
-set(CMAKE_CXX_FLAGS_STRICT  "${OpenMP_CXX_FLAGS} -O3 -Wall -Werror ${CLANG_NOERROR}" CACHE STRING
+set(CMAKE_CXX_FLAGS_STRICT  "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -Wall -Werror ${CLANG_NOERROR}" CACHE STRING
 "Flags used by the C++ compiler during strict jenkins builds.")
-set(CMAKE_CXX_FLAGS_RELEASE "${OpenMP_CXX_FLAGS} -O3 -w" CACHE STRING
+set(CMAKE_CXX_FLAGS_RELEASE "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -w" CACHE STRING
     "Flags used by the C++ compiler during release builds.")
-set(CMAKE_CXX_FLAGS_HOSTDEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
+set(CMAKE_CXX_FLAGS_HOSTDEBUG "${OpenMP_CXX_FLAGS} -std=c++17 -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
     "Flags used by the C++ compiler during host-debug builds.")
-set(CMAKE_CXX_FLAGS_DEVICEDEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas ${CLANG_FORCE_COLOR}" CACHE STRING
+set(CMAKE_CXX_FLAGS_DEVICEDEBUG "${OpenMP_CXX_FLAGS} -std=c++17 -Wall -Wno-unknown-pragmas ${CLANG_FORCE_COLOR}" CACHE STRING
     "Flags used by the C++ compiler during device-debug builds.")
-set(CMAKE_CXX_FLAGS_DEBUG "${OpenMP_CXX_FLAGS} -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
+set(CMAKE_CXX_FLAGS_DEBUG "${OpenMP_CXX_FLAGS} -std=c++17 -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
     "Flags used by the C++ compiler during full (host+device) debug builds.")
 
 OPTION(USE_OpenMP "Use OpenMP" ON)

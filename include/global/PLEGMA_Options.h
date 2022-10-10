@@ -1,5 +1,6 @@
 #pragma once
 #include "PLEGMA_templates.h"
+#include <comm_quda.h>
 struct argument{std::string name, value;};
 
 class Arguments{

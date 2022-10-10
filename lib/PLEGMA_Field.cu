@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <time.h>
 #include <PLEGMA_BLAS.h>
+#include <PLEGMA_utils.h>
 #include <PLEGMA_FT.cuh>
 #include <utils/PLEGMA_auxiliary.h>
 #include <io/PLEGMA_lime.h>
@@ -741,7 +742,7 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   Float2<Float> *x;
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
-  if(checkErr) checkCudaError();
+  if(checkErr) checkQudaError();
   std::vector<Float> momF(mom.begin(), mom.end());
   createMomField(x, momF, D3D4, sign);
   for(int dof = 0; dof < field_length; dof++)
@@ -798,7 +799,7 @@ static void cudaCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatI
   else
     cudaMemcpy(fieldOut.D_elem(), fieldIn.D_elem(), fieldIn.Bytes_total(), 
 	       cudaMemcpyDeviceToDevice);
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatOut, typename FloatIn>
@@ -1082,7 +1083,7 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
       cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
     }
   }
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
