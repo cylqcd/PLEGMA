@@ -149,11 +149,11 @@ set(PLEGMA_LIGHT_BARYONS FALSE CACHE BOOL "compile contractions for all light ba
 if(PLEGMA_LIGHT_BARYONS)
   add_definitions(-DPLEGMA_LIGHT_BARYONS)
 endif()
-set(PLEGMA_SCATTERING_CONTRACTIONS FALSE CACHE BOOL "compile contractions for pi-N scattering I=3/2")
+set(PLEGMA_SCATTERING_CONTRACTIONS TRUE CACHE BOOL "compile contractions for pi-N scattering I=3/2")
 if (PLEGMA_SCATTERING_CONTRACTIONS)
   add_definitions(-DPLEGMA_SCATTERING_CONTRACTIONS)
 endif()
-set(PLEGMA_UDSC_BARYONS FALSE CACHE BOOL "compile contractions for all u,d,s and c baryons")
+set(PLEGMA_UDSC_BARYONS TRUE CACHE BOOL "compile contractions for all u,d,s and c baryons")
 if(PLEGMA_UDSC_BARYONS)
   add_definitions(-DPLEGMA_UDSC_BARYONS)
 endif()
@@ -546,4 +546,3 @@ add_subdirectory(tests)
 ### add PLEGMA directory
 add_subdirectory(utils)
 add_subdirectory(plegma)
-

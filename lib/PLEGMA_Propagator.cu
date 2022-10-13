@@ -191,6 +191,18 @@ void  PLEGMA_Propagator<Float>::apply_gamma5(){
   apply_gamma5_propagator(*this);
 }
 
+template<typename Float>
+void PLEGMA_Propagator<Float>::PropmulVVdag(PLEGMA_Vector<Float> &vec1,PLEGMA_Vector<Float> &vec2){
+  this->zero_device();
+  assert(this->checkVolume(vec1));
+  assert(this->checkVolume(vec2));
+  auto vectex1 = toTexture<vectorTex>(vec1);
+  auto vectex2 = toTexture<vectorTex>(vec2);
+  prop_mul_V_Vdag(toField2<prop2>(*this), *vectex1, *vectex2);
+  checkCudaError();
+}
+	      
+
 //----------------------------------//
 // class PLEGMA_ Propagator3D //
 //----------------------------------//

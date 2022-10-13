@@ -86,7 +86,6 @@ void apply_boundaries(Float *inOut, int t0){
   checkCudaError();
 }
 
-
 template<typename Float>
 static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
 
@@ -132,3 +131,43 @@ void rotateToPhysicalBase(Float* inOut, int sign){
   rotateToPhysicalBase_kernel<Float><<<gridDim,blockDim>>>((Float*) inOut,sign);
   checkCudaError();
 }
+
+template<typename Float>
+static __global__ void prop_mul_V_Vdag_kernel(prop2<Float> prop, vectorTex<Float> vectex1, vectorTex<Float> vectex2) {
+
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= prop.volume()) return;
+
+  Float2<Float> vc1[N_SPINS][N_COLS];
+  Float2<Float> vc2[N_SPINS][N_COLS];
+  Float2<Float> prp[N_SPINS][N_SPINS][N_COLS][N_COLS];
+
+  vectex1.get(vc1,sid);
+  vectex2.get(vc2,sid);
+
+#pragma unroll
+  for(int mu = 0 ; mu < N_SPINS ; mu++){
+#pragma unroll
+    for(int nu = 0 ; nu < N_SPINS ; nu++){
+#pragma unroll
+      for(int a = 0 ; a < N_COLS ; a++){
+#pragma unroll
+        for(int b = 0 ; b < N_COLS ; b++){
+          prp[mu][nu][a][b] = vc1[mu][a] * conj(vc2[nu][b]);
+	}
+      }
+    }
+  }
+
+  prop.set(prp,sid);
+
+}
+
+
+template<typename Float>
+static void prop_mul_V_Vdag(prop2<Float> prop, vectorTex<Float>& vectex1, vectorTex<Float>& vectex2){
+  ProfileStruct ps(prop.volume());
+  run(ps, "prop_mul_V_Vdag_kernel", prop_mul_V_Vdag_kernel<Float>, prop, vectex1, vectex2);
+  checkCudaError();
+}
+      

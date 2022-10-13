@@ -193,9 +193,17 @@ namespace plegma {
     }
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
+                           PLEGMA_Propagator<Float> &prop2);
     
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2);
+
+    void contractBaryonsWall(PLEGMA_Propagator<Float> &prop1,
+			     PLEGMA_Propagator<Float> &prop2,
+			     PLEGMA_Propagator<Float> &prop3,
+			     PLEGMA_Propagator<Float> &prop4);
     
     void contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 			     PLEGMA_Propagator<Float> &propDN, 
@@ -231,6 +239,25 @@ namespace plegma {
 					PLEGMA_Su3field<Float> &su3,
 					int signProps, std::vector<GAMMAS> gammas);
 
+    void contractNucleonThrp_staple(PLEGMA_Propagator<Float> &bwdProp,
+				    PLEGMA_Propagator<Float> &fwdProp,
+				    PLEGMA_Su3field<Float> &su3,
+				    int signProps, std::vector<GAMMAS> gammas, bool isZfac, int b, int l, int z);
+
+    void contractMesonsFourp_ultralocal_oneendtrick(PLEGMA_Propagator<Float> &prop1,
+						    PLEGMA_Propagator<Float> &prop2,int b);
+
+    void contractMesonsFourp_ultralocal(PLEGMA_Propagator<Float> &prop1,
+					PLEGMA_Propagator<Float> &prop2,
+					PLEGMA_Propagator<Float> &prop3,
+					PLEGMA_Propagator<Float> &prop4,int b);
+
+    void contractTMDWFMesonsTrick_Zfac(PLEGMA_Propagator<Float> &prop1,
+				       PLEGMA_Su3field<float> &staple, int b, int l);
+
+    void contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
+				  PLEGMA_Propagator<Float> &prop2,
+                                  PLEGMA_Su3field<float> &staple, int b, int l);
 
     virtual void writeASCII(std::string filename) const;
     virtual void writeHDF5(std::string filename) const;

@@ -159,6 +159,8 @@ namespace plegma {
 
     void trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu);
 
+    void SU3Trace(PLEGMA_Su3field<Float> &su3field);
+    
     /**
        @brief Absorbs all  elements from a 3D field and puts it at a specific global time of the 4D field
        @param PLEGMA_Field3D<Float> prop, The 3D field

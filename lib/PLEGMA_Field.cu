@@ -1024,6 +1024,11 @@ void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int>
   trPmunu_k(*this,gauge,munu);
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::SU3Trace(PLEGMA_Su3field<Float> &su3field){
+  SU3Trace_k(*this,su3field);
+}
+
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
 // Forcing initialization of the following cases
