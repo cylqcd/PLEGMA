@@ -240,7 +240,7 @@ int main(int argc, char **argv)
       long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
-      checkCudaError();
+      checkQudaError();
       if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1./eigVal,true); //standard one-end trick
       else qloops_std.oneEnd_trick(phi,phi,-1./eigVal,true); //standard one-end trick
 

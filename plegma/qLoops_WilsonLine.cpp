@@ -182,7 +182,7 @@ int main(int argc, char **argv)
       long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
       cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
-      checkCudaError();      
+      checkQudaError();      
       phi_r.copy(phi);
       qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1./eigVal,gaugeStout,ft_std);
       D->apply<M>(phi_r,phi);

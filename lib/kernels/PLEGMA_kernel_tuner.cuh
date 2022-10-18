@@ -264,8 +264,8 @@ void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream){
 #endif
 }
 
-template<class ...types>
-void PLEGMA_kernel_tuner<types...>::apply(){ apply(0); }
+//template<class ...types>
+//void PLEGMA_kernel_tuner<types...>::apply(){ apply(0); }
   
 template<class ...types>
 void PLEGMA_kernel_tuner<types...>::run(){
@@ -276,7 +276,7 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,0);
 #endif
-  checkCudaError();
+  checkQudaError();
 }
 
 template<class ...types, class ...typesK>

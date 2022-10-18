@@ -195,11 +195,11 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
     calcTopChClovDef_kernel<FloatG,Float><<<gridDim,blockDim>>>( gaugeTex, d_partial_Q );
     break;
     }
-  checkCudaError();
+  checkQudaError();
 
   cudaMemcpy(h_partial_Q, d_partial_Q , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_Q);
-  checkCudaError();
+  checkQudaError();
 
   for(int i = 0 ; i < gridDim.x ; i++){
     Q += h_partial_Q[i];
@@ -259,7 +259,7 @@ static Float calcPlaqClovDef(gaugeTex<FloatG> gaugeTex){
 
   cudaMemcpy(h_partial_Plaq, d_partial_Plaq , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_Plaq);
-  checkCudaError();
+  checkQudaError();
 
   for(int i = 0 ; i < gridDim.x ; i++)
     Plaq += h_partial_Plaq[i];

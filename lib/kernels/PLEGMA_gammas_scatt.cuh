@@ -39,7 +39,7 @@ namespace plegma{
         apply_gamma_scatt_vector_kernel<RIGHT><<<gridDim,blockDim>>>(inOut, r);
         break;
     }
-    checkCudaError();
+    checkQudaError();
   }
 
 }

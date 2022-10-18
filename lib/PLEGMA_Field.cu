@@ -204,14 +204,14 @@ template<typename Float>
 void PLEGMA_Field<Float>::load(){
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
   cudaMemcpy(d_elem, h_elem, Bytes_total(), cudaMemcpyHostToDevice );
-  if(checkErr) checkCudaError();
+  if(checkErr) checkQudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload() const{
   if(allocation != BOTH) PLEGMA_error("Unload from Device to Host needs BOTH allocation");
   cudaMemcpy(h_elem, d_elem, Bytes_total(), cudaMemcpyDeviceToHost);
-  if(checkErr) checkCudaError();
+  if(checkErr) checkQudaError();
 }
 
 
@@ -225,8 +225,9 @@ void PLEGMA_Field<Float>::create_host(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_device(){
-  cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
-  if(checkErr) checkCudaError();
+  d_elem=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, Bytes_total_plus_ghost());
+//  cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
+  if(checkErr) checkQudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
   HGC_deviceMemory += Bytes_total_plus_ghost()/(1024.*1024.);          
@@ -260,7 +261,7 @@ void PLEGMA_Field<Float>::create_device(){
     hostMalloc(h_ext_ghost_vertex_s, Bytes_ghostVertex());
 #endif
   }
-  if(checkErr) checkCudaError();
+  if(checkErr) checkQudaError();
   isAllocDevice = true;
 }
 
@@ -274,7 +275,7 @@ void PLEGMA_Field<Float>::destroy_host(){
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_device(){
   cudaFree(d_elem);
-  if(checkErr) checkCudaError();
+  if(checkErr) checkQudaError();
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
   HGC_deviceMemory -= Bytes_total_plus_ghost()/(1024.*1024.);
@@ -307,7 +308,7 @@ void PLEGMA_Field<Float>::destroy_device(){
     hostFree(h_ext_ghost_vertex_s,Bytes_ghostVertex()); h_ext_ghost_vertex_s=NULL;
 #endif
   }
-  if(checkErr) checkCudaError();
+  if(checkErr) checkQudaError();
   isAllocDevice=false;
 }
 
@@ -430,7 +431,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
 	    
 	    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-	    if(checkErr) checkCudaError();
+	    if(checkErr) checkQudaError();
 	      
 	    disp = (s==DIR_PLUS) ? +1 : -1;
 	    messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
@@ -451,7 +452,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       Float *host = h_ext_ghost_r;
       Float *device = d_elem+total_length*field_length*2;
       cudaMemcpy(device, host, Bytes_ghost(),cudaMemcpyHostToDevice);
-      if(checkErr) checkCudaError();
+      if(checkErr) checkQudaError();
     } else {
       for(short i=0; i<N_DIMS; i++)
 	if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
@@ -461,7 +462,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	      Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length)*field_length*2;
 	      cudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
 			 cudaMemcpyHostToDevice);
-	      if(checkErr) checkCudaError();
+	      if(checkErr) checkQudaError();
 	    }
     }
   }
@@ -502,7 +503,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 		  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
 
 		  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-		  if(checkErr) checkCudaError();
+		  if(checkErr) checkQudaError();
 	    
 		  // communicating
 		  disp[i] = (s1==DIR_PLUS) ? +1 : -1;
@@ -527,7 +528,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
       Float *hostCorner = h_ext_ghost_corner_r;
       Float *device = d_elem+(total_length+ghost_length)*field_length*2;
       cudaMemcpy(device,hostCorner,Bytes_ghostCorner(),cudaMemcpyHostToDevice);
-      if(checkErr) checkCudaError();
+      if(checkErr) checkQudaError();
     } else {
       for(short i=0; i<N_DIMS; i++)
 	for(short j=i+1; j<N_DIMS; j++)
@@ -539,7 +540,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 		    Float *device = d_elem+(HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
 		    cudaMemcpy(device, hostCorner, HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
 			       cudaMemcpyHostToDevice);
-		    if(checkErr) checkCudaError();
+		    if(checkErr) checkQudaError();
 		  }
     }
   }
@@ -580,7 +581,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		    size_t nbytes = HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float);
 
 		    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-		    if(checkErr) checkCudaError();
+		    if(checkErr) checkQudaError();
 	    
 		    // communicating
 		    disp[i] = (s1==DIR_PLUS) ? +1 : -1;
@@ -607,7 +608,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
       Float *hostVertex = h_ext_ghost_vertex_r;
       Float *device = d_elem+(total_length+ghost_length)*field_length*2;
       cudaMemcpy(device,hostVertex,Bytes_ghostVertex(),cudaMemcpyHostToDevice);
-      if(checkErr) checkCudaError();
+      if(checkErr) checkQudaError();
     } else {
       for(short i=0; i<N_DIMS; i++)
 	for(short j=i+1; j<N_DIMS; j++)
@@ -621,7 +622,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		      Float *device = d_elem+(HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
 		      cudaMemcpy(device, hostVertex, HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float),
 				 cudaMemcpyHostToDevice);
-		      if(checkErr) checkCudaError();
+		      if(checkErr) checkQudaError();
 		  }
     }
   }
@@ -670,14 +671,14 @@ template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr1, short dirOr2, short dirOr3){
   // we have to make sure that we have the ghost
   assert(dirOr1!=dirOr2 && dirOr2!=dirOr3 && dirOr1!=dirOr3);
-  Fin.communicateGhost(-1, DIR_BOTH, FIRST_VERTEX);
+  /Fin.communicateGhost(-1, DIR_BOTH, FIRST_VERTEX);
   shiftField(Fin,*this,dirOr1,dirOr2,dirOr3);
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
   randstate_ptr = new PLEGMA_RNG(seed, total_length);
-  if(checkErr) checkCudaError();  
+  if(checkErr) checkQudaError();  
 }
 
 template<typename Float>
@@ -703,7 +704,7 @@ void PLEGMA_Field<Float>::stochastic_Z(int n){
     default:
       PLEGMA_error("This value of n has not been compiled. Come here to add it");
   }
-  if(checkErr) checkCudaError();
+  if(checkErr) checkQudaError();
 }
 
 template<typename Float>
@@ -740,7 +741,8 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
   Float2<Float> *x;
-  cudaMalloc((void**)&x, V*2*sizeof(Float));
+  x=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__,  V*2*sizeof(Float));
+//  cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
   if(checkErr) checkQudaError();
   std::vector<Float> momF(mom.begin(), mom.end());
@@ -870,7 +872,7 @@ void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_
     pointer_dst = (this->D_elem() + i*V4 + my_it*V3);
     cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
   }
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -1023,7 +1025,7 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
     }
   }
   comm_barrier();
-  checkCudaError();
+  checkQudaError();
 }
 
 

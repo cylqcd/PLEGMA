@@ -17,7 +17,7 @@ template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
   cudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
   	     this->Bytes_total(), cudaMemcpyDeviceToDevice);
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -133,7 +133,7 @@ void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA
     }
   tmp1.shift(*this,4+dir);
   cudaMemcpy(this->D_elem(), tmp1.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -147,7 +147,7 @@ void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLE
    */
   if( !((dirOr >= 0) && (dirOr <= 7)) ) PLEGMA_error("Error you provided a direction which is not supported");
   cudaMemcpy(tmp.D_elem(), inOut.D_elem(), tmp.Bytes_total(), cudaMemcpyDeviceToDevice);
-  checkCudaError();
+  checkQudaError();
   if(dirOr > 3){
     //          x->->->->
     if(reverse) this->Udag();

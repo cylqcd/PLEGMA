@@ -112,7 +112,7 @@ __inline__ void GFlow_substep( gauge2<FloatG> W, gauge2<FloatG> Z, FloatE e_work
   cudaDeviceSynchronize();
 
   WUpdate<FloatG><<<gridDim,blockDim>>>( W, Z );
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -142,7 +142,7 @@ __inline__ void unitarize_dev( gauge2<FloatG> gauge )
   dim3 gridDim( (gauge.volume() + blockDim.x -1)/blockDim.x, 1, 1);
   
   unitarize_dev_kernel<<<gridDim,blockDim>>>( gauge );
-  checkCudaError();
+  checkQudaError();
 }
 
 //#####################################################################################
@@ -198,7 +198,7 @@ static FloatG calcPlaqStaplesDef(gauge2<FloatG> gaugep){
 
   cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDim.x * sizeof(FloatG) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_plaq);
-  checkCudaError();
+  checkQudaError();
   
   for(int i = 0 ; i < gridDim.x ; i++)
     plaquette += h_partial_plaq[i];

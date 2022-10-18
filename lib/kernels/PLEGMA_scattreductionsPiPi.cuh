@@ -102,9 +102,9 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
   KernelArr<GAMMAS_SCATT> listGammas;
   listGammas.size = gammas.size();
   cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
-  checkCudaError();
+  checkQudaError();
   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
-  checkCudaError();
+  checkQudaError();
   if(HGC_verbosity > 2)
     PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
 

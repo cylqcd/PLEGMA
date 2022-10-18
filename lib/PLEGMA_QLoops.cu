@@ -89,7 +89,7 @@ void PLEGMA_QLoops<Float>::contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<F
   auto vtex_l = toTexture<vectorTex>(x_l);
   auto vtex_r = toTexture<vectorTex>(x_r);
   contractG5_bilinear(toField2<generic2>(*this), *vtex_l, *vtex_r, accum_sign);
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>

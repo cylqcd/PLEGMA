@@ -25,7 +25,7 @@ template<typename FloatOut,typename FloatIn>
 static void cudaCast(pFloat2<FloatOut> out, pFloat2<FloatIn> in){
   ProfileStruct ps(out.volume()); // here we can actually use any size
   tuneAndRun(ps, "cast_kernel_size_"+std::to_string(out.site_size), cast_kernel<FloatOut,FloatIn>, out, in);
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -142,7 +142,7 @@ void conjugate_k(PLEGMA_Field<Float>& inOut){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (field.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   conjugate_kernel<<<gridDim,blockDim>>>(field);
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -325,7 +325,7 @@ static void traceMulFmunuSu3FmunuSu3_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<Floa
 
   ProfileStruct ps(RA.volume());
   tuneAndRun(ps, "traceMulFmunuSu3FmunuSu3_kernel", traceMulFmunuSu3FmunuSu3_kernel<Float,FloatA,FloatB,FloatC,FloatD>, F.D_elem(), RA, toField2<su3_2>(B), RC, toField2<su3_2>(D));
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatA, typename FloatB>
@@ -353,5 +353,5 @@ static void trPmunu_k(PLEGMA_Field<FloatA> &f,PLEGMA_Gauge<FloatB> &gauge, std::
   ProfileStruct ps(gauge.Total_length());
   if(std::get<0>(munu) == std::get<1>(munu)) PLEGMA_error("For Pmunu cannot have mu == nu");
   tuneAndRun(ps,"trPmunu_kernel",trPmunu_kernel<FloatA,FloatB>,f.D_elem(),toField2<gauge2>(gauge),std::get<0>(munu),std::get<1>(munu));
-  checkCudaError();
+  checkQudaError();
 }

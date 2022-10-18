@@ -25,7 +25,7 @@ static void U3xU1_k( PLEGMA_Gauge<Float> &u3Out, PLEGMA_Gauge<Float> &u3In,
   ProfileStruct ps(u3Out.Total_length());
   tuneAndRun(ps, "U3xU1_kernel", U3xU1_kernel<Float>, toField2<gauge2>(u3Out), toField2<gauge2>(u3In),
       toField2<u1gauge2>(u1));
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -55,5 +55,5 @@ static void scale_dir_wise(gauge2<FloatGauge> gauge, Float* scale){
   cudaMemcpy( d_scale, scale, N_DIMS*sizeof(Float2<Float>),cudaMemcpyHostToDevice);
   scale_dir_wise_kernel<Float,FloatGauge><<<gridDim,blockDim>>>(gauge, d_scale);
   cudaFree(d_scale);
-  checkCudaError();
+  checkQudaError();
 }

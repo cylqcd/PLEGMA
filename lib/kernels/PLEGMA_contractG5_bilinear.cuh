@@ -34,5 +34,5 @@ template<typename Float>
 static void contractG5_bilinear( generic2<Float> qLoops, vectorTex<Float>& v_l, vectorTex<Float>& v_r, Float accum_sign){
   ProfileStruct ps(qLoops.volume());
   run(ps, "contractG5_bilinear_kernel", contractG5_bilinear_kernel<Float>, qLoops, v_l, v_r, accum_sign);
-  checkCudaError();
+  checkQudaError();
 }

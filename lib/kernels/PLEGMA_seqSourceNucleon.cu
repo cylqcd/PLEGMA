@@ -141,7 +141,7 @@ template<typename FloatC, typename FloatA, typename FloatB>
 static void contractNucleonSeqSource(vector2<FloatC> &vec, propTex<FloatA>& prop1, propTex<FloatB>& prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, bool isTwoPropDiff, int c_nu, int c_c2){
   ProfileStruct ps(vec.volume());
   tuneAndRun(ps,"contractNucleonSeqSource", contractNucleonSeqSource_kernel<FloatC,FloatA,FloatB>, vec, prop1, prop2, proj, particle, isTwoPropDiff, c_nu, c_c2);
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatC, typename FloatA>

@@ -71,7 +71,7 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
     cudaMemcpy(this->D_elem(),vecIn.D_elem(),
 	       this->Bytes_total(),cudaMemcpyDeviceToDevice);
   
-  checkCudaError();
+  checkQudaError();
 
   if(vecIn.IsAllocHost()) {
     vecIn.load(); // restoring vecIn
@@ -141,7 +141,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
       }
     }
   comm_barrier();
-  checkCudaError();
+  checkQudaError();
 }
 
 // vec4D <- prop4D (it)
@@ -164,7 +164,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
       }
     }
   comm_barrier();
-  checkCudaError();
+  checkQudaError();
 }
 
 // vec4D <- prop4D
@@ -179,7 +179,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
       pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2);
       cudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -194,7 +194,7 @@ void PLEGMA_Vector<Float>::dilutespin(PLEGMA_Vector<Float> &vecIn, int spin){
         cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
       } 
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -209,7 +209,7 @@ void PLEGMA_Vector<Float>::dilutecolor(PLEGMA_Vector<Float> &vecIn, int color){
         cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
       } 
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -225,7 +225,7 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
         cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
       } 
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -238,7 +238,7 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
     cudaMemcpy((this->d_elem + ((c1 + spin1*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       
   }
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -392,7 +392,7 @@ namespace plegma{
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
 	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
-    checkCudaError();
+    checkQudaError();
   }
 
   // vec3D <- Prop4D
@@ -433,7 +433,7 @@ namespace plegma{
        }
       
     }
-    checkCudaError();
+    checkQudaError();
     
   }
 

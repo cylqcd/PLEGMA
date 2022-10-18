@@ -25,7 +25,7 @@ static void apply_gamma_prop(LEFTRIGHT LR, PLEGMA_Propagator<Float>& InOut, GAMM
     apply_gamma_prop_kernel<RIGHT><<<gridDim,blockDim>>>(prop, r);
     break;
   }
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -83,7 +83,7 @@ void apply_boundaries(Float *inOut, int t0){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   apply_boundaries_kernel<<<gridDim,blockDim>>>(inOut,t0);
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -130,5 +130,5 @@ void rotateToPhysicalBase(Float* inOut, int sign){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   rotateToPhysicalBase_kernel<Float><<<gridDim,blockDim>>>((Float*) inOut,sign);
-  checkCudaError();
+  checkQudaError();
 }
