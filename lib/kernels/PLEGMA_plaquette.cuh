@@ -1,15 +1,50 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
+#include <type_traits>
 using namespace plegma;
 
 template<typename Float, typename FloatG>
-static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gaugeTex, Float *partial_plaq) {
+static __global__ void calculatePlaquette_device(u1gaugeTex<FloatG> gTex, Float *partial_plaq) {
+  extern __shared__ int ext_shared_cache[];
+  Float *shared_cache = (Float*)ext_shared_cache;
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  int cacheIndex = threadIdx.x;
+  if (sid < gTex.volume()) {
+    Float2<FloatG> G1,G2,G3,G4;
+    Float sum = 0.;
+    // Loop over xy, xz, xt, yz, yt, zt
+    //    int x[N_DIMS]=GET_ID(sid);
+    #pragma unroll
+    for(int dir1=0; dir1<N_DIMS-1; dir1++) {
+      #pragma unroll
+      for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
+	gTex.get(G1,dir1,sid); gTex.get<Plus>(G2,dir2,sid,dir1);
+	gTex.get<Plus>(G3,dir1,sid,dir2); gTex.get(G4,dir2,sid);
+	Float2<Float> val = G1*G2*conj(G3)*conj(G4);
+	//	if(dir1 == 2 && dir2 == 3)
+	  //	  printf("%d %d %d %d %f %f\n",x[0],x[1],x[2],x[3],val.x,val.y);
+	sum+=val.x*val.x-val.y*val.y;
+      }
+    }
+    shared_cache[cacheIndex] = sum;
+  } else {
+    shared_cache[cacheIndex] = 0.;
+  }
+  reduce(shared_cache, 1);
+
+  // now on the first element of the shared memory we have the reduction of block threads
+  if(cacheIndex == 0 && partial_plaq!=NULL)
+    partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory
+}
+
+template<typename Float, typename FloatG>
+static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gTex, Float *partial_plaq) {
   extern __shared__ int ext_shared_cache[];
   Float *shared_cache = (Float*)ext_shared_cache;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
-  if (sid < gaugeTex.volume()) {
+  if (sid < gTex.volume()) {
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];    
     Float trace = 0.;
@@ -20,13 +55,13 @@ static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gaugeTex, Floa
       #pragma unroll
       for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-	gaugeTex.get(G1,dir1,sid);
-	gaugeTex.get<Plus>(G2,dir2,sid,dir1);
+	gTex.get(G1,dir1,sid);
+	gTex.get<Plus>(G2,dir2,sid,dir1);
       
 	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
-	gaugeTex.get<Plus>(G1,dir1,sid,dir2);
-	gaugeTex.get(G2,dir2,sid);
+	gTex.get<Plus>(G1,dir1,sid,dir2);
+	gTex.get(G2,dir2,sid);
       
 	mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
@@ -44,13 +79,13 @@ static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gaugeTex, Floa
     partial_plaq[blockIdx.x] = shared_cache[0];   // write result back to global memory
 }
 
-template<typename Float, typename FloatG>
-static void calculatePlaquette_host(ProfileStruct& ps, gaugeTex<FloatG> gaugeTex, Float& plaquette){
+template<typename Float, typename FloatG, typename TG>
+static void calculatePlaquette_host(ProfileStruct& ps, TG gTex, Float& plaquette){
 
   Float *d_partial_plaq = NULL;
   int gridDimX = ps.tp.grid.x;
   cudaMalloc((void**)&d_partial_plaq, gridDimX * sizeof(Float));
-  calculatePlaquette_device<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gaugeTex, d_partial_plaq);
+  calculatePlaquette_device<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gTex, d_partial_plaq);
 
   Float *h_partial_plaq = NULL;
   hostMalloc(h_partial_plaq, gridDimX * sizeof(Float) );
@@ -65,15 +100,26 @@ static void calculatePlaquette_host(ProfileStruct& ps, gaugeTex<FloatG> gaugeTex
   hostFree(h_partial_plaq, gridDimX * sizeof(Float) );
 }
 
-template<typename Float, typename FloatG>
-static Float calculatePlaquette(gaugeTex<FloatG> gaugeTex){
+template<typename Float, typename FloatG, typename TG>
+static Float calculatePlaquette(TG gTex){
 
-  assert(gaugeTex.is4D); // TODO: For 3D we should not compute the plaquette in T
-  ProfileStruct ps(gaugeTex.volume(),sizeof(Float));
+  assert(gTex.is4D); // TODO: For 3D we should not compute the plaquette in T
+  ProfileStruct ps(gTex.volume(),sizeof(Float));
   Float plaquette;
-  tuneAndRun(ps, "calculatePlaquette", calculatePlaquette_host<Float,FloatG>, ps, gaugeTex, plaquette);
+  std::string nameK;
+  int normC;
+  if(std::is_same<TG, gaugeTex<FloatG>>::value){
+    nameK="calculatePlaquette";
+    normC=N_COLS;
+  }
+  else if(std::is_same<TG, u1gaugeTex<FloatG>>::value){
+    nameK="calculateU1Plaquette";
+    normC=1;
+  }
+  else assert(false);
+  tuneAndRun(ps, nameK, calculatePlaquette_host<Float,FloatG,TG>, ps, gTex, plaquette);
 
   Float globalPlaquette = 0.;
   MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , HGC_fullComm);  
-  return globalPlaquette/(HGC_totalVolume*N_COLS*6);
+  return globalPlaquette/(HGC_totalVolume*normC*6);
 }

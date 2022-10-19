@@ -10,7 +10,7 @@ namespace plegma {
   template<typename Float>  class PLEGMA_Vector;
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
-
+  template<typename Float>  class PLEGMA_Fmunu;
   //////////////////////////////
   // CLASS: PLEGMA_Correlator //
   ////////////////////////////// 
@@ -194,9 +194,16 @@ namespace plegma {
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
 
-    void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
-                           PLEGMA_Propagator<Float> &prop2);
+    void contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
+			     PLEGMA_Propagator<Float> &prop2,
+			     PLEGMA_Su3field<float> &staple,
+			     int l);
     
+    void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
+			   PLEGMA_Propagator<Float> &prop2);
+    void contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
+			   PLEGMA_Propagator<Float> &prop2);
+
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2);
 
@@ -214,36 +221,70 @@ namespace plegma {
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
 				   int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+    void contractNucleonThrp_local(PLEGMA_Vector<Float> &bwdProp,
+                                   PLEGMA_Vector<Float> &fwdProp,
+                                   int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+
+    void contractNucleonThrp_oneD(PLEGMA_Vector<Float> &bwdProp,
+                                  PLEGMA_Vector<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
     
     void contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
 				  PLEGMA_Propagator<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
 				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
-    
+
     void contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
-				  PLEGMA_Propagator<Float> &fwdProp,
-				  PLEGMA_Gauge<Float> &gauge,
-				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+                                  PLEGMA_Propagator<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+    void contractNucleonThrp_twoD(PLEGMA_Vector<Float> &bwdProp,
+                                  PLEGMA_Vector<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false); 
     
-    void contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
-				  PLEGMA_Propagator<Float> &fwdProp,
+    void contractNucleonThrp_threeD(PLEGMA_Vector<Float> &bwdProp,
+				  PLEGMA_Vector<Float> &fwdProp,
 				  PLEGMA_Gauge<Float> &gauge,
 				  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
+    void contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
+                                  PLEGMA_Propagator<Float> &fwdProp,
+                                  PLEGMA_Gauge<Float> &gauge,
+                                  int signProps, std::vector<GAMMAS> gammas, bool isZfac = false);
+
     
     void contractNucleonThrp_noe(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,
 				 PLEGMA_Gauge<Float> &gauge, int signProps);
 
+    void contractNucleonThrp_noe(PLEGMA_Vector<Float> &bwdProp,
+                                 PLEGMA_Vector<Float> &fwdProp,
+                                 PLEGMA_Gauge<Float> &gauge, int signProps);
+
+
     void contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 					PLEGMA_Propagator<Float> &fwdProp,
 					PLEGMA_Su3field<Float> &su3,
-					int signProps, std::vector<GAMMAS> gammas);
+					int signProps, std::vector<GAMMAS> gammas,
+					int z, std::string quark);
 
     void contractNucleonThrp_staple(PLEGMA_Propagator<Float> &bwdProp,
 				    PLEGMA_Propagator<Float> &fwdProp,
 				    PLEGMA_Su3field<Float> &su3,
 				    int signProps, std::vector<GAMMAS> gammas, bool isZfac, int b, int l, int z);
 
+    void contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
+				 PLEGMA_Propagator<Float> &fwdProp,
+				 PLEGMA_Su3field<Float> &su3_1,
+				 PLEGMA_Fmunu<Float> &Fmunu, std::pair<int,int> munu,
+				 PLEGMA_Su3field<Float> &su3_2,
+				 int signProps, std::vector<GAMMAS> gammas, int z2, int z1);
     void contractMesonsFourp_ultralocal_oneendtrick(PLEGMA_Propagator<Float> &prop1,
 						    PLEGMA_Propagator<Float> &prop2,int b);
 

@@ -1,10 +1,13 @@
 #include <PLEGMA_Gauge.h>
+#include <PLEGMA_Vector.h>
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_QWF.cuh>
 #include <PLEGMA_mesons.cuh>
+#include <PLEGMA_TMDWF.cuh>
 #include <PLEGMA_mesonsNew.cuh>
+#include <PLEGMA_mesonsAll.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <PLEGMA_threep.cuh>
 #include <functional>
@@ -59,10 +62,52 @@ contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
   datasets =  {"twop_meson"};
   groups =  {"mesons"};
   description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
-  
+
   initialize();
   contract_mesons_new(prop1,prop2,*this);
 }
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2 ){
+
+  shape = {34};
+  datasets =  {"twop_meson"};
+  groups =  {"mesons"};
+  description = "pseudoscalar, scalar";
+  for ( int p=0; p<2; p++ ) {
+    std::string va = p?"":"g5";
+    for ( int i=1; i<5; i++ ) {
+      for ( int j=1; j<5; j++ ) {
+	description += ", (" + va + "g" + std::to_string(i) + "," + va + "g" + std::to_string(j) +  ")";
+      }
+    }
+  }
+  
+  initialize();
+  contract_mesons_all(prop1,prop2,*this);
+}
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
+		    PLEGMA_Propagator<Float> &prop2,
+		    PLEGMA_Su3field<float> &staple, int l){
+
+  shape = {1};
+  char d1[50],d2[50];
+  sprintf(d1,"twop_meson_1_l_%d",l);
+  sprintf(d2,"twop_meson_2_l_%d",l);
+  datasets =  {d1, d2};
+  groups =  {"mesons"};
+  description = "g4 ";
+  
+  initialize();
+  contract_TMDWF_mesons(prop1,prop2,*this, staple);
+}
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -175,7 +220,45 @@ contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_local(*this,bwdProp,fwdProp,signProps,gammas,isZfac);
+  threep_local<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gammas,isZfac);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_local(PLEGMA_Vector<Float> &bwdProp,
+                          PLEGMA_Vector<Float> &fwdProp,
+                          int signProps, std::vector<GAMMAS> gammas, bool isZfac ){
+  if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,(int) gammas.size()};
+  else shape = {(int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"Local"};
+  description = getGammasString(gammas);
+  initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+  threep_local<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gammas,isZfac);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_oneD(PLEGMA_Vector<Float> &bwdProp,
+                         PLEGMA_Vector<Float> &fwdProp,
+                         PLEGMA_Gauge<Float> &gauge,
+                         int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS,(int) gammas.size()};
+  else  shape = {N_DIMS, (int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"OneD"};
+  description = "x,y,z,t / "+getGammasString(gammas);
+  initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+  gauge.communicateSideGhost();
+  bwdProp.communicateGhost();
+  fwdProp.communicateGhost();
+
+  threep_oneD<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 
@@ -198,14 +281,14 @@ contractNucleonThrp_oneD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost();
   fwdProp.communicateGhost();
   
-  threep_oneD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_oneD<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
-			 PLEGMA_Propagator<Float> &fwdProp,
+                         PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas, bool isZfac){
   if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1), (int) gammas.size()};
@@ -221,7 +304,29 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   
-  threep_twoD(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_twoD<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_twoD(PLEGMA_Vector<Float> &bwdProp,
+                         PLEGMA_Vector<Float> &fwdProp,
+                         PLEGMA_Gauge<Float> &gauge,
+                         int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1), (int) gammas.size()};
+  else shape = {N_DIMS*(N_DIMS-1), (int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"TwoD"};
+  description = "xy,xz,xt,yx,yz,yt,zx,zy,zt,tx,ty,tz / "+getGammasString(gammas);
+  initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+  gauge.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
+  bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
+  fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
+
+  threep_twoD<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
 template<typename Float>
@@ -243,11 +348,37 @@ contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
   
-  threep_threeD_part1(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
-  threep_threeD_part2(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
-  threep_threeD_part3(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
-  threep_threeD_part4(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part1<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part2<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part3<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part4<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_threeD(PLEGMA_Vector<Float> &bwdProp,
+                           PLEGMA_Vector<Float> &fwdProp,
+                           PLEGMA_Gauge<Float> &gauge,
+                           int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
+  else shape = {N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"ThreeD"};
+  description = "xyz,xyt,xzy,xzt,xty,xtz,yxz,yxt,yzx,yzt,ytx,ytz,zxy,zxt,zyx,zyt,ztx,zty,txy,txz,tyx,tyz,tzx,tzy / "+getGammasString(gammas);
+  initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+  gauge.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
+  bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
+  fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
+
+  threep_threeD_part1<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part2<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part3<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+  threep_threeD_part4<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+}
+
 
 
 template<typename Float>
@@ -273,10 +404,12 @@ void PLEGMA_Correlator<Float>::
 contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 			       PLEGMA_Propagator<Float> &fwdProp,
 			       PLEGMA_Su3field<Float> &su3,
-			       int signProps, std::vector<GAMMAS> gammas){
+			       int signProps, std::vector<GAMMAS> gammas,
+			       int z, std::string quark ){
   shape = {(int) gammas.size()};
-  datasets = {"threep"};
-  groups =  {"wilsonLine"};
+  datasets = {"z_"+std::to_string(z)};
+  groups =  {quark.c_str()};
+
   description = getGammasString(gammas);
   initialize();
   
@@ -371,6 +504,25 @@ contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
+contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
+			PLEGMA_Propagator<Float> &fwdProp,
+			PLEGMA_Su3field<Float> &su3_1,
+			PLEGMA_Fmunu<Float> &Fmunu, std::pair<int,int> munu,
+			PLEGMA_Su3field<Float> &su3_2,
+			int signProps, std::vector<GAMMAS> gammas, int z2, int z1 ){
+  shape = {(int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"z2_"+std::to_string(z2)+"__z1_"+std::to_string(z1)};
+  description = getGammasString(gammas);
+  initialize();
+  
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+  threep_qgq(*this,bwdProp,fwdProp,signProps,su3_1,Fmunu,munu,su3_2,gammas);
+}
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
 writeASCII(std::string filename_out) const {
   MPI_Comm comm;
   size_t g_vol_size = getVolSize();
@@ -410,9 +562,10 @@ writeASCII(std::string filename_out) const {
 	for(int id=0; id < nDatasets(); id++)
 	  for(int ig=0; ig < nGroups(); ig++)
 	    for(int is=0; is < site_sizeR; is++)
-	      for(int ri =0 ; ri < 2 ; ri++)
+	      for(int ri =0 ; ri < 2 ; ri++){
 		corrReorder[((((it*Nmoms+imom)*nDatasets()+id)*nGroups()+ig)*site_sizeR+is)*2+ri]=
 		  H_elem()[((((ig*nDatasets()+id)*HGC_localL[3]+it)*Nmoms+imom)*site_sizeR+is)*2+ri];
+	      }
 
     //=============================================================================
     // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for HGC_fullComm (POSITION SPACE)

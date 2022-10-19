@@ -65,7 +65,7 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
   size_t size = corr.getTotalSize()/t_size*time_step;
@@ -174,3 +174,6 @@ static void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr,
 
 template void threep_wilsonLine<float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Su3field<float>& su3, std::vector<GAMMAS>& gammas);
 template void threep_wilsonLine<double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, PLEGMA_Su3field<double>& su3, std::vector<GAMMAS>& gammas);
+
+
+

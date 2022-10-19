@@ -14,6 +14,10 @@ int main(int argc, char **argv)
   HGC_options->set("boundary-condition", "If we want periodic or antiperiodic in the temporal direction", verbosity, boundaryCond);
   std::string filesPrefix="./";
   HGC_options->set("output-path", "Path to the directory to dump results", verbosity, filesPrefix);
+  bool isTwoD = false;
+  bool isThreeD = false;
+  HGC_options->set("enable-2D", "Enable the calculation of vertex functions with two derivatives", verbosity, isTwoD);
+  HGC_options->set("enable-3D", "Enable the calculation of vertex functions with three derivatives", verbosity, isThreeD);
   //==========================//
   initializePLEGMA();
 
@@ -83,14 +87,18 @@ int main(int argc, char **argv)
     corr.contractNucleonThrp_local(lprop,rprop,0,gammas,true);
     corr.writeFile(filesPrefix+"zfac_Vloc_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
 
-    /***corr.contractNucleonThrp_oneD(lprop,rprop,gauge,0,gammas,true);
+    corr.contractNucleonThrp_oneD(lprop,rprop,gauge,0,gammas,true);
     corr.writeFile(filesPrefix+"zfac_VoneD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
 
-    corr.contractNucleonThrp_twoD(lprop,rprop,gauge,0,gammas,true);
-    corr.writeFile(filesPrefix+"zfac_VtwoD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
+    if(isTwoD){
+      corr.contractNucleonThrp_twoD(lprop,rprop,gauge,0,gammas,true);
+      corr.writeFile(filesPrefix+"VtwoD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
+    }
     
-    corr.contractNucleonThrp_threeD(lprop,rprop,gauge,0,gammas,true);
-    corr.writeFile(filesPrefix+"zfac_VthreeD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);***/
+    if(isThreeD){
+      corr.contractNucleonThrp_threeD(lprop,rprop,gauge,0,gammas,true);
+      corr.writeFile(filesPrefix+"VthreeD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
+    }
   }
 
     

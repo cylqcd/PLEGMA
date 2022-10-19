@@ -614,6 +614,58 @@ namespace plegma {
   template<typename Float>
   using gauge2 = genericGauge<pFloat2<Float>, Float>;
 
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+  template<typename T, typename Float>
+  struct genericU1Gauge : generic<T,Float> {
+    using generic<T,Float>::generic;
+    inline __device__ void set(const short& mu, const Float2<Float>& v) {
+      T::set(mu, v);
+    }
+    inline __device__ void set(const short& mu, const size_t& sid, const Float2<Float>& v) {
+      sidStride::setSid(sid);
+      set(mu, v);
+    }
+    inline __device__ void set(Float2<Float> &G, const short& mu, const size_t& sid) {
+      sidStride::setSid(sid);
+      set(mu,G);
+    }
+    inline __device__ Float2<Float> get(const short& mu) const {
+      return T::get(mu);
+    }
+    inline __device__ Float2<Float> get(const short& mu, const size_t& sid) {
+      sidStride::setSid(sid);
+      return get(mu);
+    }
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(const short& mu, const size_t& sid, const dir_t&... dirs) {
+      sidStride::setSid(sid);
+      sidStride::shift<src>(dirs ...);
+      return get(mu);
+    }
+    inline __device__ void get(Float2<Float> &G, const short& mu) const {
+      G=get(mu);
+    }
+    inline __device__ void get(Float2<Float> &G, const short& mu, const size_t& sid) {
+      sidStride::setSid(sid);
+      get(G, mu);
+    }
+    template<get_from src, typename ...dir_t>
+    inline __device__ void get(Float2<Float> &G, const short& mu, const size_t& sid, const dir_t&... dirs) {
+      sidStride::setSid(sid);
+      sidStride::shift<src>(dirs ...);
+      get(G, mu);
+    }
+  };
+
+  template<typename Float>
+  using u1gaugeTex = genericU1Gauge<texture<Float>, Float>;
+
+  template<typename Float>
+  using u1gauge2 = genericU1Gauge<pFloat2<Float>, Float>;
+
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+
+  
   template<typename T, typename Float>
   struct genericSu3 : generic<T,Float> {
     using generic<T,Float>::generic;
@@ -810,6 +862,12 @@ namespace plegma {
   static inline std::shared_ptr<T<Float>> toTexture(const Tfield<Float>& field) {
     return std::shared_ptr<T<Float>>(new T<Float>(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T<Float>* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
   }
+
+  template<class T, template<typename> class Tfield, typename Float>
+  static inline std::shared_ptr<T> toTexture(const Tfield<Float>& field) {
+    return std::shared_ptr<T>(new T(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
+  }
+
     
 
 }

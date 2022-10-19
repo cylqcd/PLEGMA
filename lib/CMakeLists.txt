@@ -19,12 +19,13 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_threep_threeD_part4.cu
   kernels/PLEGMA_threep_wilsonLine.cu
   kernels/PLEGMA_threep_staple.cu
+  kernels/PLEGMA_threep_qgq.cu	
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
   PLEGMA_Fmunu.cu
+  PLEGMA_U1Gauge.cu	
 )
-
 if(PLEGMA_UDSC_BARYONS)
   LIST(APPEND PLEGMA_OBJS
     kernels/PLEGMA_baryons_udsc.cu
