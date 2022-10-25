@@ -33,6 +33,16 @@ endif()
 FIND_LIBRARY(QUDA_LIB quda ${QUDA_HOME}/lib)
 include_directories(SYSTEM ${QUDA_HOME}/include)
 
+set(QUDA_PRECISION
+  "14"
+  CACHE STRING "which precisions to instantiate in QUDA (4-bit number - double, single, half, quarter)")
+set(QUDA_RECONSTRUCT
+  "7"
+  CACHE STRING "which reconstructs to instantiate in QUDA (3-bit number - 18, 13/12, 9/8)")
+add_definitions(-DQUDA_PRECISION=${QUDA_PRECISION})
+add_definitions(-DQUDA_RECONSTRUCT=${QUDA_RECONSTRUCT})
+
+
 set(QUDA_SRC "" CACHE PATH "path to QUDA src directory")
 if("${QUDA_SRC}" STREQUAL "")
   message( FATAL_ERROR "QUDA_SRC must be defined" )
