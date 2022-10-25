@@ -225,8 +225,8 @@ void PLEGMA_Field<Float>::create_host(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_device(){
-  d_elem=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, Bytes_total_plus_ghost());
-//  cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
+//  d_elem=(Float *)device_malloc(Bytes_total_plus_ghost());
+  cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
   if(checkErr) checkQudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
@@ -671,7 +671,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr1, short dirOr2, short dirOr3){
   // we have to make sure that we have the ghost
   assert(dirOr1!=dirOr2 && dirOr2!=dirOr3 && dirOr1!=dirOr3);
-  /Fin.communicateGhost(-1, DIR_BOTH, FIRST_VERTEX);
+  Fin.communicateGhost(-1, DIR_BOTH, FIRST_VERTEX);
   shiftField(Fin,*this,dirOr1,dirOr2,dirOr3);
 }
 
@@ -741,8 +741,8 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
   Float2<Float> *x;
-  x=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__,  V*2*sizeof(Float));
-//  cudaMalloc((void**)&x, V*2*sizeof(Float));
+  //x=((Float2<Float>) *)device_malloc(V*2*sizeof(Float));
+  cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
   if(checkErr) checkQudaError();
   std::vector<Float> momF(mom.begin(), mom.end());
