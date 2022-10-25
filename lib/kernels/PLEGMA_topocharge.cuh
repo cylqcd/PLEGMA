@@ -10,7 +10,7 @@ using namespace plegma;
 //device function that computes the clover term! save a clover extracted from gaugetex (dir1,dir2,sid) into a C matrix
 //COMMENTS: check with clover-definded plaquette OK!
 template<typename FloatG>
-__device__ void clover( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> &gaugeTex, int dir1, int dir2, int sid ) {
+__device__ void clover_term( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> &gaugeTex, int dir1, int dir2, int sid ) {
 
   Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
     G3[N_COLS][N_COLS], G4[N_COLS][N_COLS], P[N_COLS][N_COLS];
@@ -91,8 +91,8 @@ static __global__ void calcTopChClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float 
     FloatG tr_aux = 0. ;
     #pragma unroll
     for(int i=0; i<3; i++) {
-      clover( clov1, gaugeTex, dir0[i], dir1[i], sid );
-      clover( clov2, gaugeTex, dir2[i], dir3[i], sid );
+      clover_term( clov1, gaugeTex, dir0[i], dir1[i], sid );
+      clover_term( clov2, gaugeTex, dir2[i], dir3[i], sid );
 
       tr_aux = trace_mul_ImG_ImG<FloatG,FloatG>( clov1, clov2 );
       
@@ -226,7 +226,7 @@ static __global__ void calcPlaqClovDef_kernel(gaugeTex<FloatG> gaugeTex, Float *
     for(int dir1=0; dir1<N_DIMS-1; dir1++) {
       #pragma unroll
       for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
-	clover( clov_tmp, gaugeTex, dir1, dir2, sid);
+	clover_term( clov_tmp, gaugeTex, dir1, dir2, sid);
 	trace += real_trace<Float,FloatG>( clov_tmp );
       }
     }
