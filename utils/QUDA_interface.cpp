@@ -197,12 +197,14 @@ QUDA_solver::QUDA_solver(double mu) {
   solver = Solver::create(*solverParam, *M, *MSloppy, 
 			  *MPre, *MPre, *profiler);
 
-  ColorSpinorParam cpuParam(NULL, inv_param, HGC_localL, pc_solution,
+  quda::lat_dim_t X = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
+
+  ColorSpinorParam cpuParam(NULL, inv_param, X, pc_solution,
 			    inv_param.input_location);
-  ColorSpinorParam cudaParam(cpuParam, inv_param);
+  ColorSpinorParam cudaParam(cpuParam, inv_param,inv_param.input_location);
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
-  b = new cudaColorSpinorField(cudaParam);
-  x = new cudaColorSpinorField(cudaParam);
+  b = new ColorSpinorField(cudaParam);
+  x = new ColorSpinorField(cudaParam);
 
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
@@ -360,7 +362,7 @@ void QUDA_solver::UpdateSolver()
   profiler->TPRESET();
 }
 
-cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
+ColorSpinorField *QUDA_solver::solve(ColorSpinorField * rhs){
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
   ColorSpinorField *in = NULL;
   ColorSpinorField *out = NULL;
@@ -375,7 +377,7 @@ cudaColorSpinorField *QUDA_solver::solve(cudaColorSpinorField * rhs){
 
 
 template<typename Float>
-cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
+ColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
   bool flag_eo=false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
@@ -401,8 +403,8 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
 template void QUDA_solver::solve(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
 
-template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
-template cudaColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
+template ColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
+template ColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
 
 template<typename Float>
 void QUDA_solver::runOneIter(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &vectorIn){
@@ -432,13 +434,14 @@ QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
   if (dParam.gauge == nullptr) PLEGMA_error("Gauge field not allocated");
   if (dParam. clover == nullptr && ((inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH) || (inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH))) PLEGMA_error("Clover field not allocated");
   D = Dirac::create(dParam);
+  quda::lat_dim_t X = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
 
-  ColorSpinorParam cpuParam(nullptr, inv_param, HGC_localL, false,
+  ColorSpinorParam cpuParam(nullptr, inv_param, X, false,
 			    inv_param.input_location);
-  ColorSpinorParam cudaParam(cpuParam, inv_param);
+  ColorSpinorParam cudaParam(cpuParam, inv_param,inv_param.input_location);
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
-  in = new cudaColorSpinorField(cudaParam);
-  out = new cudaColorSpinorField(cudaParam);
+  in = new ColorSpinorField(cudaParam);
+  out = new ColorSpinorField(cudaParam);
   if(in->SiteSubset() != QUDA_FULL_SITE_SUBSET || out->SiteSubset() != QUDA_FULL_SITE_SUBSET)
     PLEGMA_error("cudaColorSpinorField should be a full vector for this class");
 }
