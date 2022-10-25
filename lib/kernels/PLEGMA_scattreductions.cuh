@@ -50,8 +50,8 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
   Float2<FloatOut> *h_partial_block = NULL;
   Float2<FloatOut> *d_partial_block = NULL;
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-//  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  d_partial_block=device_malloc(alloc_size*sizeof(Float2<FloatOut>));
+  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatOut>));
+//  d_partial_block=device_malloc(alloc_size*sizeof(Float2<FloatOut>));
   // Checking for allocation error. In case we return and let the tuner handle the error.
   auto error= qudaGetLastError();
   if(error != QUDA_SUCCESS) {
@@ -66,17 +66,15 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
   listGammas.size = gammas.size();
 
   if (gammas.size()==0){
-    listGammas.array=device_malloc(sizeof(GAMMAS_SCATT));
+//    listGammas.array=device_malloc(sizeof(GAMMAS_SCATT));
+//    checkQudaError(); 
+    cudaMalloc((void**)&listGammas.array, sizeof(GAMMAS_SCATT));
     checkQudaError();
-  }
-
-//      cudaMalloc((void**)&listGammas.array, sizeof(GAMMAS_SCATT));
-//      checkCudaError();
 
   }
   else{
-      listGammas.array=device_malloc(gammas.size()*sizeof(GAMMAS_SCATT));
-//      cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
+//      listGammas.array=device_malloc(gammas.size()*sizeof(GAMMAS_SCATT));
+      cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
       auto error= qudaGetLastError();
       if(error != QUDA_SUCCESS) {
         errorQuda("Failed to clear error state %s\n", qudaGetLastErrorString().c_str());
@@ -85,7 +83,7 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
         return;
       }
       qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), qudaMemcpyHostToDevice);
-      auto error= qudaGetLastError();
+      error= qudaGetLastError();
       if(error != QUDA_SUCCESS) {
         errorQuda("Failed to copy from host to device %s\n", qudaGetLastErrorString().c_str());
         PLEGMA_printf("Error in allocating  %d\n",gammas.size()*sizeof(GAMMAS_SCATT));
@@ -107,15 +105,15 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
     ps.tp.grid.x = grid.x;
 
     //Syncronize (maybe useles) and look for errors (without stopping)
-    cudaDeviceSynchronize();
-    error=cudaPeekAtLastError();
-    if(error != cudaSuccess) { PLEGMA_printf("Error after V_kernels_wrapper, it=%d tsize=%d error=%d string%s\n",it,t_size,error, cudaGetErrorString(error)); break;}
+    //cudaDeviceSynchronize();
+    //error=cudaPeekAtLastError();
+    //if(error != cudaSuccess) { PLEGMA_printf("Error after V_kernels_wrapper, it=%d tsize=%d error=%d string%s\n",it,t_size,error, cudaGetErrorString(error)); break;}
 
     //copy partial summed 3dfourier back to host d_partial -> h_partial (device->host)
     cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
     
-    error=cudaPeekAtLastError(); 
-    if(error != cudaSuccess) { PLEGMA_printf("Error after copying back partial_block, it=%d\n",it); break;}
+    //error=cudaPeekAtLastError(); 
+    //if(error != cudaSuccess) { PLEGMA_printf("Error after copying back partial_block, it=%d\n",it); break;}
 
     //perform intermediate sum between results of different blocks with same timeslice
     for(size_t tslicexmom = 0 ; tslicexmom< N_moms*std::min(t_size-it, time_step); tslicexmom++){
@@ -374,9 +372,9 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
   Float2<FloatOut> *h_partial_block = NULL;
   Float2<FloatOut> *d_partial_block = NULL;
 
-  d_partial_block=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__,alloc_size*sizeof(Float2<FloatOut>));
+//  d_partial_block=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__,alloc_size*sizeof(Float2<FloatOut>));
 
-//  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatOut>));
+  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatOut>));
   
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();
@@ -391,13 +389,13 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
   listGammas_i.size = gammas_i.size();
   listGammas_f.size = gammas_f.size();
   
-  listGammas_i.array=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, gammas_i.size()*sizeof(GAMMAS_SCATT));
+//  listGammas_i.array=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, gammas_i.size()*sizeof(GAMMAS_SCATT));
 
-  listGammas_f.array=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, gammas_f.size()*sizeof(GAMMAS_SCATT));
+//  listGammas_f.array=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, gammas_f.size()*sizeof(GAMMAS_SCATT));
 
 
-//  cudaMalloc((void**)&listGammas_i.array, gammas_i.size()*sizeof(GAMMAS_SCATT));
-//  cudaMalloc((void**)&listGammas_f.array, gammas_f.size()*sizeof(GAMMAS_SCATT));
+  cudaMalloc((void**)&listGammas_i.array, gammas_i.size()*sizeof(GAMMAS_SCATT));
+  cudaMalloc((void**)&listGammas_f.array, gammas_f.size()*sizeof(GAMMAS_SCATT));
   checkQudaError();
   cudaMemcpy(listGammas_i.array, gammas_i.data(), gammas_i.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
   cudaMemcpy(listGammas_f.array, gammas_f.data(), gammas_f.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
