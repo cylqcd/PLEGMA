@@ -274,7 +274,7 @@ void PLEGMA_kernel_tuner<types...>::run(){
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
   if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
-  launchKernel(ps.tp,target::cuda::get_stream(0));
+  launchKernel(ps.tp,device::get_stream(0));
 #endif
   checkQudaError();
 }
