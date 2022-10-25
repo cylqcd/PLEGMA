@@ -13,6 +13,7 @@
 
 #include <cublas_v2.h>
 #include <mpi.h>
+#include <PLEGMA_utils.h>
 #pragma once
 enum OPER_MATR_BLAS {NOTRANS, TRANS, DAGGER};
 namespace cBLAS{
