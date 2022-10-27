@@ -264,8 +264,8 @@ void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream){
 #endif
 }
 
-//template<class ...types>
-//void PLEGMA_kernel_tuner<types...>::apply(){ apply(0); }
+template<class ...types>
+void PLEGMA_kernel_tuner<types...>::apply(){ apply(device::get_stream(0)); }
   
 template<class ...types>
 void PLEGMA_kernel_tuner<types...>::run(){
