@@ -16,7 +16,9 @@ using namespace quda;
 //extern Topology *default_topo;
 std::vector<std::string> HDF5::open_files;
 Communicator &get_current_communicator();
-Communicator default_t;
+//Communicator default_t;
+//extern Topology *default_topo;
+
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
   HGC_hold_exit = false;
@@ -30,7 +32,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
 
-    HGC_default_topo = default_t.comm_default_topology();//get_current_communicator().default_topo;//default_topo;// get_current_communicator().default_topo;
+//    HGC_default_topo = get_current_communicator().comm_default_topology();//default_tcomm_default_topology();//get_current_communicator().default_topo;//default_topo;// get_current_communicator().default_topo;
     HGC_verbosity = verbosity;
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];
@@ -161,7 +163,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)
-      HGC_procPosition[i] = comm_coords(HGC_default_topo)[i];
+      HGC_procPosition[i] = comm_coord(i);
 
     // copying globals to device
     HGC_global_vars.copyToDevice();
