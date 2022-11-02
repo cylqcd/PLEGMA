@@ -11,6 +11,8 @@
 #include <PLEGMA_FT.cuh>
 #include <utils/PLEGMA_auxiliary.h>
 #include <io/PLEGMA_lime.h>
+#include <comm_quda.h>
+#include <communicator_quda.h>
 using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT
@@ -1007,94 +1009,94 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
 
   //check dimensions
   
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
-  Float *pointer_src = NULL;
-  Float *pointer_dst = NULL;
+	  int my_it = global_it - comm_coord(3) * HGC_localL[3];
+	  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+	  int V3 = HGC_localVolume/HGC_localL[3];
+	  int V4 = HGC_localVolume;
+	  Float *pointer_src = NULL;
+	  Float *pointer_dst = NULL;
 
 
-  for(int i = 0 ; i < this->field_length; i++){
-    if( forcetozero )
-      cudaMemset( this->d_elem + i*V4*2, 0, V4*2*sizeof(Float));
-    if(is_myIt){
-      pointer_dst = (this->d_elem + i*V4*2 + my_it*V3*2);
-      pointer_src = (srcfield.D_elem() + i*V4*2 + my_it*V3*2);
-      cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
-    }
-  }
-  comm_barrier();
-  checkQudaError();
-}
+	  for(int i = 0 ; i < this->field_length; i++){
+	    if( forcetozero )
+	      cudaMemset( this->d_elem + i*V4*2, 0, V4*2*sizeof(Float));
+	    if(is_myIt){
+	      pointer_dst = (this->d_elem + i*V4*2 + my_it*V3*2);
+	      pointer_src = (srcfield.D_elem() + i*V4*2 + my_it*V3*2);
+	      cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+	    }
+	  }
+	  comm_barrier();
+	  checkQudaError();
+	}
 
 
-template<typename Float>
-void PLEGMA_Field<Float>::TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
-					PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r,
-					PLEGMA_Su3field<Float> &Wr){
-  traceMulFmunuSu3FmunuSu3_k(*this,Fl,munu_l,Wl,Fr,munu_r,Wr);
-}
+	template<typename Float>
+	void PLEGMA_Field<Float>::TrFmunuSu3FmunuSu3(PLEGMA_Fmunu<Float> &Fl, std::pair<int,int> munu_l, PLEGMA_Su3field<Float> &Wl,
+						PLEGMA_Fmunu<Float> &Fr, std::pair<int,int> munu_r,
+						PLEGMA_Su3field<Float> &Wr){
+	  traceMulFmunuSu3FmunuSu3_k(*this,Fl,munu_l,Wl,Fr,munu_r,Wr);
+	}
 
-template<typename Float>
-void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu){
-  gauge.communicateSideGhost();
-  trPmunu_k(*this,gauge,munu);
-}
+	template<typename Float>
+	void PLEGMA_Field<Float>::trPmunu(PLEGMA_Gauge<Float> &gauge, std::pair<int,int> munu){
+	  gauge.communicateSideGhost();
+	  trPmunu_k(*this,gauge,munu);
+	}
 
-template class PLEGMA_Field<float>;
-template class PLEGMA_Field<double>;
-// Forcing initialization of the following cases
-template void PLEGMA_Field<float>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
-template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
-template void PLEGMA_Field<double>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
-template void PLEGMA_Field<double>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
-template void PLEGMA_Field<float>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
-template void PLEGMA_Field<float>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
-template void PLEGMA_Field<float>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
-template void PLEGMA_Field<double>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
-template void PLEGMA_Field<double>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
-template void PLEGMA_Field<double>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
+	template class PLEGMA_Field<float>;
+	template class PLEGMA_Field<double>;
+	// Forcing initialization of the following cases
+	template void PLEGMA_Field<float>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
+	template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
+	template void PLEGMA_Field<double>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
+	template void PLEGMA_Field<double>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
+	template void PLEGMA_Field<float>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
+	template void PLEGMA_Field<float>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
+	template void PLEGMA_Field<float>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
+	template void PLEGMA_Field<double>::mulMomentumPhases<int>(std::vector<int> mom, int sign);
+	template void PLEGMA_Field<double>::mulMomentumPhases<float>(std::vector<float> mom, int sign);
+	template void PLEGMA_Field<double>::mulMomentumPhases<double>(std::vector<double> mom, int sign);
 
-// field3D <- field4D
-template<typename Float>
-void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  assert(field.Field_length() == this->Field_length());
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  size_t V3 = HGC_localVolume3D*2;
-  size_t V4 = HGC_localVolume*2;
-  Float *pointer_src = NULL;
-  Float *pointer_dst = NULL;
-  for(int i = 0; i < this->Field_length(); i++) {
-    pointer_dst = (this->D_elem() + i*V3);
-    if(this->activeTimeSlice) {
-      pointer_src = (field.D_elem() + i*V4 + my_it*V3);
-      cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
-    }
-    if (broadcast == true){
-      int time_rank=global_it/HGC_localL[3];
-      Float *temp=(Float *)malloc(sizeof(Float)*V3);
-      cudaMemcpy(temp, pointer_dst, V3* sizeof(Float), cudaMemcpyDeviceToHost);
-      MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
-      cudaMemcpy(pointer_dst, temp, V3* sizeof(Float), cudaMemcpyHostToDevice);
-      free(temp);
-    }
-    if (broadcast == false && !(this->activeTimeSlice)){
-      cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
-    }
-  }
-  checkQudaError();
-}
+	// field3D <- field4D
+	template<typename Float>
+	void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast){
+	  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+	  assert(field.Field_length() == this->Field_length());
+	  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
+	  this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[3] );
+	  size_t V3 = HGC_localVolume3D*2;
+	  size_t V4 = HGC_localVolume*2;
+	  Float *pointer_src = NULL;
+	  Float *pointer_dst = NULL;
+	  for(int i = 0; i < this->Field_length(); i++) {
+	    pointer_dst = (this->D_elem() + i*V3);
+	    if(this->activeTimeSlice) {
+	      pointer_src = (field.D_elem() + i*V4 + my_it*V3);
+	      cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
+	    }
+	    if (broadcast == true){
+	      int time_rank=global_it/HGC_localL[3];
+	      Float *temp=(Float *)malloc(sizeof(Float)*V3);
+	      cudaMemcpy(temp, pointer_dst, V3* sizeof(Float), cudaMemcpyDeviceToHost);
+	      MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+	      cudaMemcpy(pointer_dst, temp, V3* sizeof(Float), cudaMemcpyHostToDevice);
+	      free(temp);
+	    }
+	    if (broadcast == false && !(this->activeTimeSlice)){
+	      cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
+	    }
+	  }
+	  checkQudaError();
+	}
 
-template<typename Float>
-std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
-  // TODO: need to think about appropriate communicator
-  if (HGC_localVolume != HGC_totalVolume)
-    PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
-  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
-}
+	template<typename Float>
+	std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
+	  // TODO: need to think about appropriate communicator
+	  if (HGC_localVolume != HGC_totalVolume)
+	    PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
+	  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
+	}
 
-template class PLEGMA_Field3D<float>;
+	template class PLEGMA_Field3D<float>;
 template class PLEGMA_Field3D<double>;
