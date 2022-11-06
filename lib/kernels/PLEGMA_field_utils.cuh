@@ -371,5 +371,5 @@ static void SU3Trace_k(PLEGMA_Field<FloatA> &f,PLEGMA_Su3field<FloatB> &su3field
   assert(f.checkVolume(su3field));
   ProfileStruct ps(su3field.Total_length());
   tuneAndRun(ps,"SU3Trace_kernel",SU3Trace_kernel<FloatA,FloatB>,f.D_elem(),toField2<su3_2>(su3field));
-  checkCudaError();
+  checkQudaError();
 }

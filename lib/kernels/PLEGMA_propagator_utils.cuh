@@ -168,6 +168,6 @@ template<typename Float>
 static void prop_mul_V_Vdag(prop2<Float> prop, vectorTex<Float>& vectex1, vectorTex<Float>& vectex2){
   ProfileStruct ps(prop.volume());
   run(ps, "prop_mul_V_Vdag_kernel", prop_mul_V_Vdag_kernel<Float>, prop, vectex1, vectex2);
-  checkCudaError();
+  checkQudaError();
 }
       

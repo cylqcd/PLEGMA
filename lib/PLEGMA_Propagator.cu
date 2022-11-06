@@ -199,7 +199,7 @@ void PLEGMA_Propagator<Float>::PropmulVVdag(PLEGMA_Vector<Float> &vec1,PLEGMA_Ve
   auto vectex1 = toTexture<vectorTex>(vec1);
   auto vectex2 = toTexture<vectorTex>(vec2);
   prop_mul_V_Vdag(toField2<prop2>(*this), *vectex1, *vectex2);
-  checkCudaError();
+  checkQudaError();
 }
 	      
 

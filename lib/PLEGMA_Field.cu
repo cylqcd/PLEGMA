@@ -1093,46 +1093,14 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   checkQudaError();
 }
 
-// field3D <- field4D
-template<typename Float>
-void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  assert(field.Field_length() == this->Field_length());
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  size_t V3 = HGC_localVolume3D*2;
-  size_t V4 = HGC_localVolume*2;
-  Float *pointer_src = NULL;
-  Float *pointer_dst = NULL;
-  for(int i = 0; i < this->Field_length(); i++) {
-    pointer_dst = (this->D_elem() + i*V3);
-    if(this->activeTimeSlice) {
-      pointer_src = (field.D_elem() + i*V4 + my_it*V3);
-      cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
-    }
-    if (broadcast == true){
-      int time_rank=global_it/HGC_localL[3];
-      Float *temp=(Float *)malloc(sizeof(Float)*V3);
-      cudaMemcpy(temp, pointer_dst, V3* sizeof(Float), cudaMemcpyDeviceToHost);
-      MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
-      cudaMemcpy(pointer_dst, temp, V3* sizeof(Float), cudaMemcpyHostToDevice);
-      free(temp);
-    }
-    if (broadcast == false && !(this->activeTimeSlice)){
-      cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
-    }
-  }
-  checkCudaError();
-}
->>>>>>> origin/softfunctionTMDPDFs
 
-	template<typename Float>
-	std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
-	  // TODO: need to think about appropriate communicator
-	  if (HGC_localVolume != HGC_totalVolume)
-	    PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
-	  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
-	}
+template<typename Float>
+std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
+  // TODO: need to think about appropriate communicator
+  if (HGC_localVolume != HGC_totalVolume)
+    PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
+  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
+}
 
 	template class PLEGMA_Field3D<float>;
 template class PLEGMA_Field3D<double>;
