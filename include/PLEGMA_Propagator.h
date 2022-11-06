@@ -57,6 +57,7 @@ namespace plegma {
     void applyBoundaries_device(int t0);
     void rotateToPhysicalBase_host(int sign);
     void rotateToPhysicalBase_device(int sign);
+    void PropmulVVdag(PLEGMA_Vector<Float> &vec1,PLEGMA_Vector<Float> &vec2);
   };
 
   ///////////////////////////////
