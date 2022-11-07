@@ -14,6 +14,8 @@
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
 #endif
+#include <PLEGMA_heavy_light_tetraquarks.cuh>
+#include <PLEGMA_bcud_tetraquarks.cuh>
 
 using namespace plegma;
 
@@ -53,6 +55,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
   contract_mesons(prop1,prop2,*this);
 }
 
+
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
@@ -61,7 +64,9 @@ contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
   shape = {10};
   datasets =  {"twop_meson"};
   groups =  {"mesons"};
+
   description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
+
 
   initialize();
   contract_mesons_new(prop1,prop2,*this);
@@ -88,6 +93,7 @@ contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
   initialize();
   contract_mesons_all(prop1,prop2,*this);
 }
+
 
 
 template<typename Float>
@@ -206,6 +212,306 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 #endif
 }
 
+
+template<typename Float> template<typename Float2>
+void PLEGMA_Correlator<Float>::
+contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
+            PLEGMA_Propagator<Float2> &propST,
+            PLEGMA_Propagator<Float2> &propCH,
+            PLEGMA_Propagator<Float2> &propBT,
+            bool only_st, bool only_ch){
+
+  shape = {};
+  description = "";
+  datasets = {};
+  groups = {};
+
+  bool not_lt = propLT.getAllocation() == NONE;
+  bool not_st = propST.getAllocation() == NONE;
+  bool not_ch = propCH.getAllocation() == NONE;
+  bool not_bt = propBT.getAllocation() == NONE;
+
+  std::vector<int> todo;
+  for(int i=0; i<TETRA_prop_prods.size(); i++) {
+    if(not_lt && TETRA_prop_prods[i].find('u')!=std::string::npos)
+      continue;
+    if(not_lt && TETRA_prop_prods[i].find('d')!=std::string::npos)
+      continue;
+    if(not_st && TETRA_prop_prods[i].find('s')!=std::string::npos)
+      continue;
+    if(not_ch && TETRA_prop_prods[i].find('c')!=std::string::npos)
+      continue;
+    if(not_bt && TETRA_prop_prods[i].find('b')!=std::string::npos)
+      continue;
+    if(only_st && TETRA_prop_prods[i].find('s')==std::string::npos)
+      continue;
+    if(only_ch && TETRA_prop_prods[i].find('c')==std::string::npos)
+      continue;
+    if(true) {
+      todo.push_back(i);
+      for(auto name: TETRA_prop_prods_names[i])
+	datasets.push_back(name);
+    }
+  }
+
+  if(HGC_verbosity > 2) {
+    PLEGMA_printf("contractTetraquarks is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  }
+
+  initialize();
+
+   PLEGMA_printf("contractTetraquarks is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  contract_tetraquarks(propLT, propST, propCH, propBT, *this, todo);
+}
+
+
+template<typename Float> template<typename Float2>
+void PLEGMA_Correlator<Float>::
+contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
+            PLEGMA_Propagator<Float2> &propST,
+            PLEGMA_Propagator<Float2> &propCH,
+            PLEGMA_Propagator<Float2> &propBT,
+            bool only_st, bool only_ch){
+
+  shape = {};
+  description = "";
+  datasets = {};
+  groups = {};
+
+  bool not_lt = propLT.getAllocation() == NONE;
+  bool not_st = propST.getAllocation() == NONE;
+  bool not_ch = propCH.getAllocation() == NONE;
+  bool not_bt = propBT.getAllocation() == NONE;
+
+  std::vector<int> todo;
+  for(int i=0; i<TETRA_bcud_prop_prods.size(); i++) {
+    if(not_lt && TETRA_bcud_prop_prods[i].find('u')!=std::string::npos)
+      continue;
+    if(not_lt && TETRA_bcud_prop_prods[i].find('d')!=std::string::npos)
+      continue;
+    if(not_st && TETRA_bcud_prop_prods[i].find('s')!=std::string::npos)
+      continue;
+    if(not_ch && TETRA_bcud_prop_prods[i].find('c')!=std::string::npos)
+      continue;
+    if(not_bt && TETRA_bcud_prop_prods[i].find('b')!=std::string::npos)
+      continue;
+    if(only_st && TETRA_bcud_prop_prods[i].find('s')==std::string::npos)
+      continue;
+    if(only_ch && TETRA_bcud_prop_prods[i].find('c')==std::string::npos)
+      continue;
+    if(true) {
+      todo.push_back(i);
+      for(auto name: TETRA_bcud_prop_prods_names[i])
+	datasets.push_back(name);
+    }
+  }
+
+  if(HGC_verbosity > 2) {
+    PLEGMA_printf("contractTetraquarksBCUD is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  }
+
+  initialize();
+
+   PLEGMA_printf("contractTetraquarksBCUD is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  contract_tetraquarks_bcud(propLT, propST, propCH, propBT, *this, todo);
+}
+
+
+
+
+template<typename Float> template<typename Float2>
+void PLEGMA_Correlator<Float>::
+contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
+            PLEGMA_Propagator<Float2> &propLT2,
+            PLEGMA_Propagator<Float2> &propST1,
+            PLEGMA_Propagator<Float2> &propST2,
+            PLEGMA_Propagator<Float2> &propBT1,
+            PLEGMA_Propagator<Float2> &propBT2){
+
+  shape = {};
+  description = "";
+  datasets = {};
+  groups = {};
+
+  bool not_lt = propLT1.getAllocation() == NONE;
+  bool not_st = propST1.getAllocation() == NONE;
+  bool not_bt = propBT1.getAllocation() == NONE;
+
+  std::vector<int> todo;
+  for(int i=0; i<TETRA_stoch_prop_prods.size(); i++) {
+    if(not_lt && TETRA_stoch_prop_prods[i].find('u')!=std::string::npos)
+      continue;
+    if(not_lt && TETRA_stoch_prop_prods[i].find('d')!=std::string::npos)
+      continue;
+    if(not_st && TETRA_stoch_prop_prods[i].find('s')!=std::string::npos)
+      continue;
+    if(not_bt && TETRA_stoch_prop_prods[i].find('b')!=std::string::npos)
+      continue;
+    if(true) {
+      todo.push_back(i);
+      for(auto name: TETRA_stoch_prop_prods_names[i])
+	datasets.push_back(name);
+    }
+  }
+
+  if(HGC_verbosity > 2) {
+    PLEGMA_printf("contractTetraquarksStochastic is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  }
+
+  initialize();
+
+   PLEGMA_printf("contractTetraquarksStochastic is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  contract_tetraquarks_stochastic(propLT1, propLT2,propST1, propST2, propBT1, propBT2, *this, todo);
+}
+
+
+
+
+template<typename Float> template<typename Float2>
+void PLEGMA_Correlator<Float>::
+contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
+            PLEGMA_Propagator<Float2> &propLT2,
+            PLEGMA_Propagator<Float2> &propST1,
+            PLEGMA_Propagator<Float2> &propST2,
+            PLEGMA_Propagator<Float2> &propCH1,
+            PLEGMA_Propagator<Float2> &propCH2,
+            PLEGMA_Propagator<Float2> &propBT1,
+            PLEGMA_Propagator<Float2> &propBT2){
+
+  shape = {};
+  description = "";
+  datasets = {};
+  groups = {};
+
+  bool not_lt = propLT1.getAllocation() == NONE;
+  bool not_st = propST1.getAllocation() == NONE;
+  bool not_ch = propCH1.getAllocation() == NONE;
+  bool not_bt = propBT1.getAllocation() == NONE;
+
+  std::vector<int> todo;
+  for(int i=0; i<TETRA_bcud_stoch_prop_prods.size(); i++) {
+    if(not_lt && TETRA_bcud_stoch_prop_prods[i].find('u')!=std::string::npos)
+      continue;
+    if(not_lt && TETRA_bcud_stoch_prop_prods[i].find('d')!=std::string::npos)
+      continue;
+    if(not_st && TETRA_bcud_stoch_prop_prods[i].find('s')!=std::string::npos)
+      continue;
+    if(not_ch && TETRA_bcud_stoch_prop_prods[i].find('c')!=std::string::npos)
+      continue;
+    if(not_bt && TETRA_bcud_stoch_prop_prods[i].find('b')!=std::string::npos)
+      continue;
+    if(true) {
+      todo.push_back(i);
+      for(auto name: TETRA_bcud_stoch_prop_prods_names[i])
+	datasets.push_back(name);
+    }
+  }
+
+  if(HGC_verbosity > 2) {
+    PLEGMA_printf("contractTetraquarksStochasticBCUD is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  }
+
+  initialize();
+
+   PLEGMA_printf("contractTetraquarksStochasticBCUD is going to run: ");
+    for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+    PLEGMA_printf("\n");
+  contract_tetraquarks_bcud_stochastic(propLT1, propLT2,propST1, propST2, propCH1, propCH2, propBT1, propBT2, *this, todo);
+}
+
+
+
+template<typename Float> template<typename Float2>
+void PLEGMA_Correlator<Float>::
+contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
+          PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks){
+
+   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+
+   std::string GammaString = getGammasString(gammas);
+   GammaString = GammaString.substr(0, GammaString.size()-1);
+   std::string GroupName = "tetraquark/open_contractions/"+Quarks+ "/"+ GammaString;
+   std::string SpinString = "s1_"+ std::to_string(s1);
+
+   shape = {N_SPINS, N_COLS, N_COLS};
+   datasets =  {SpinString.c_str()};
+   groups =  {GroupName.c_str()};
+   description = getGammasString(gammas);
+
+//    datasets =  {};
+//    groups =  {"tetraquark"};
+//    description = getGammasString(gammas);
+
+//    std::string GammaString = getGammasString(gammas);
+//    GammaString = GammaString.substr(0, GammaString.size()-1);
+//    std::string name = "open_contractions/" + GammaString;
+//
+//    datasets.push_back(name);
+    PLEGMA_printf("contractTetraquarkScatteringOpenIndex is going to run:");
+   for(auto name: datasets)
+      PLEGMA_printf("%s, ", name.c_str());
+   PLEGMA_printf("\n");
+
+   initialize();
+   contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+}
+
+
+
+template<typename Float> template<typename Float2>
+void PLEGMA_Correlator<Float>::
+contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1,
+          PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks){
+
+   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+
+   std::string GammaString = getGammasString(gammas);
+   GammaString = GammaString.substr(0, GammaString.size()-1);
+   std::string GroupName = "tetraquark/open_contractions/"+Quarks+"/r"  + std::to_string(randInd1) +"r"  + std::to_string(randInd2)+"/"+ GammaString;
+   std::string SpinString = "s1_"+ std::to_string(s1);
+
+   shape = {N_SPINS, N_COLS, N_COLS};
+   datasets =  {SpinString.c_str()};
+   groups =  {GroupName.c_str()};
+   description = getGammasString(gammas);
+
+//    std::string GammaString = getGammasString(gammas);
+//    GammaString = GammaString.substr(0, GammaString.size()-1);
+//    std::string name = "open_contractions/r"  + std::to_string(randInd1) +"r"  + std::to_string(randInd2)+"/"+ GammaString;
+
+//    datasets.push_back(name);
+//    for(auto name: datasets)
+//       PLEGMA_printf("%s, ", name.c_str());
+//    PLEGMA_printf("\n");
+
+   initialize();
+
+//     PLEGMA_printf("contractTetraquarkScatteringOpenIndexStochastic is going to run:");
+   contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -755,3 +1061,121 @@ writeHDF5(std::string filename) const {
 
 template class PLEGMA_Correlator<float>;
 template class PLEGMA_Correlator<double>;
+
+
+
+
+
+template
+void PLEGMA_Correlator<float>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
+		  PLEGMA_Propagator<float> &prop2 );
+
+template
+void PLEGMA_Correlator<double>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
+		  PLEGMA_Propagator<float> &prop2 );
+
+template
+void PLEGMA_Correlator<double>::contractMesonsNew<double>(PLEGMA_Propagator<double> &prop1,
+		  PLEGMA_Propagator<double> &prop2 );
+
+
+template
+void PLEGMA_Correlator<float>::contractTetraquarks<float>(PLEGMA_Propagator<float> &propLT,
+            PLEGMA_Propagator<float> &propST, PLEGMA_Propagator<float> &propCH,
+            PLEGMA_Propagator<float> &propBT, bool only_st, bool only_ch);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarks<float>(PLEGMA_Propagator<float> &propLT,
+            PLEGMA_Propagator<float> &propST, PLEGMA_Propagator<float> &propCH,
+            PLEGMA_Propagator<float> &propBT, bool only_st, bool only_ch);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarks<double>(PLEGMA_Propagator<double> &propLT,
+            PLEGMA_Propagator<double> &propST, PLEGMA_Propagator<double> &propCH,
+            PLEGMA_Propagator<double> &propBT, bool only_st, bool only_ch);
+
+
+template
+void PLEGMA_Correlator<float>::contractTetraquarksBCUD<float>(PLEGMA_Propagator<float> &propLT,
+            PLEGMA_Propagator<float> &propST, PLEGMA_Propagator<float> &propCH,
+            PLEGMA_Propagator<float> &propBT, bool only_st, bool only_ch);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarksBCUD<float>(PLEGMA_Propagator<float> &propLT,
+            PLEGMA_Propagator<float> &propST, PLEGMA_Propagator<float> &propCH,
+            PLEGMA_Propagator<float> &propBT, bool only_st, bool only_ch);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarksBCUD<double>(PLEGMA_Propagator<double> &propLT,
+            PLEGMA_Propagator<double> &propST, PLEGMA_Propagator<double> &propCH,
+            PLEGMA_Propagator<double> &propBT, bool only_st, bool only_ch);
+
+
+
+template
+void PLEGMA_Correlator<float>::contractTetraquarksStochastic<float>(PLEGMA_Propagator<float> &propLT1,
+            PLEGMA_Propagator<float> &propLT2, PLEGMA_Propagator<float> &propST1,
+            PLEGMA_Propagator<float> &propST2, PLEGMA_Propagator<float> &propBT1,
+            PLEGMA_Propagator<float> &propBT2);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarksStochastic<float>(PLEGMA_Propagator<float> &propLT1,
+            PLEGMA_Propagator<float> &propLT2, PLEGMA_Propagator<float> &propST1,
+            PLEGMA_Propagator<float> &propST2, PLEGMA_Propagator<float> &propBT1,
+            PLEGMA_Propagator<float> &propBT2);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarksStochastic<double>(PLEGMA_Propagator<double> &propLT1,
+            PLEGMA_Propagator<double> &propLT2, PLEGMA_Propagator<double> &propST1,
+            PLEGMA_Propagator<double> &propST2, PLEGMA_Propagator<double> &propBT1,
+            PLEGMA_Propagator<double> &propBT2);
+
+
+template
+void PLEGMA_Correlator<float>::contractTetraquarksStochasticBCUD<float>(PLEGMA_Propagator<float> &propLT1,
+            PLEGMA_Propagator<float> &propLT2, PLEGMA_Propagator<float> &propST1,
+            PLEGMA_Propagator<float> &propST2, PLEGMA_Propagator<float> &propCH1,
+            PLEGMA_Propagator<float> &propCH2, PLEGMA_Propagator<float> &propBT1,
+            PLEGMA_Propagator<float> &propBT2);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarksStochasticBCUD<float>(PLEGMA_Propagator<float> &propLT1,
+            PLEGMA_Propagator<float> &propLT2, PLEGMA_Propagator<float> &propST1,
+            PLEGMA_Propagator<float> &propST2, PLEGMA_Propagator<float> &propCH1,
+            PLEGMA_Propagator<float> &propCH2, PLEGMA_Propagator<float> &propBT1,
+            PLEGMA_Propagator<float> &propBT2);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarksStochasticBCUD<double>(PLEGMA_Propagator<double> &propLT1,
+            PLEGMA_Propagator<double> &propLT2, PLEGMA_Propagator<double> &propST1,
+            PLEGMA_Propagator<double> &propST2, PLEGMA_Propagator<double> &propCH1,
+            PLEGMA_Propagator<double> &propCH2, PLEGMA_Propagator<double> &propBT1,
+            PLEGMA_Propagator<double> &propBT2);
+
+
+template
+void PLEGMA_Correlator<float>::contractTetraquarkScatteringOpenIndex<float>(PLEGMA_Propagator<float> &prop1,
+            PLEGMA_Propagator<float> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks );
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarkScatteringOpenIndex<float>(PLEGMA_Propagator<float> &prop1,
+            PLEGMA_Propagator<float> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks );
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarkScatteringOpenIndex<double>(PLEGMA_Propagator<double> &prop1,
+            PLEGMA_Propagator<double> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks );
+
+
+
+template
+void PLEGMA_Correlator<float>::contractTetraquarkScatteringOpenIndexStochastic<float>(PLEGMA_Propagator<float> &prop1,
+            PLEGMA_Propagator<float> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarkScatteringOpenIndexStochastic<float>(PLEGMA_Propagator<float> &prop1,
+            PLEGMA_Propagator<float> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks);
+
+template
+void PLEGMA_Correlator<double>::contractTetraquarkScatteringOpenIndexStochastic<double>(PLEGMA_Propagator<double> &prop1,
+            PLEGMA_Propagator<double> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks);
+
