@@ -7,6 +7,7 @@
 #include <PLEGMA_FT.cuh>
 #include <complex>
 #include <cmath>
+#include <malloc_quda.h>
 using namespace plegma;
 
 
@@ -97,7 +98,8 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
   void * devPtr;
   int hostPtr[Nmoms()*N_DIMS];
   memset(hostPtr, 0, sizeof(hostPtr));
-  cudaMalloc(&devPtr, sizeof(hostPtr));
+  devPtr=device_malloc(sizeof(hostPtr));
+//  cudaMalloc(&devPtr, sizeof(hostPtr));
   Float intp;
   for(int i=0; i<Nmoms(); i++) {
     for(int j=0; j<dims; j++) {

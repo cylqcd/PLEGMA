@@ -13,6 +13,7 @@
 #include <io/PLEGMA_lime.h>
 #include <comm_quda.h>
 #include <communicator_quda.h>
+#include <malloc_quda.h>
 using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT
@@ -227,8 +228,8 @@ void PLEGMA_Field<Float>::create_host(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_device(){
-//  d_elem=(Float *)device_malloc(Bytes_total_plus_ghost());
-  cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
+  d_elem=(Float *)device_malloc(Bytes_total_plus_ghost());
+  //cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
   if(checkErr) checkQudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
@@ -743,8 +744,8 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
   Float2<Float> *x;
-  //x=((Float2<Float>) *)device_malloc(V*2*sizeof(Float));
-  cudaMalloc((void**)&x, V*2*sizeof(Float));
+  x=((Float2<Float>) *)device_malloc(V*2*sizeof(Float));
+  //cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
   if(checkErr) checkQudaError();
   std::vector<Float> momF(mom.begin(), mom.end());

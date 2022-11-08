@@ -261,8 +261,13 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   int *d_listR2 = nullptr;
   Float *d_absPsi = nullptr;
   if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");
-  cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int)); checkQudaError();
-  cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); checkQudaError();
+//  cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int));
+  d_listR2=(int *)device_malloc(listR2.size() * sizeof(int));
+  checkQudaError();
+//  cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); 
+  d_absPsi=(Float *)device_malloc(absPsi.size() * sizeof(Float));
+
+  checkQudaError();
   cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkQudaError();
   cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkQudaError();
   thrust::counting_iterator<int> first(0);

@@ -1066,17 +1066,17 @@ template class PLEGMA_Correlator<double>;
 
 
 
-template
-void PLEGMA_Correlator<float>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
-		  PLEGMA_Propagator<float> &prop2 );
+//template
+//void PLEGMA_Correlator<float>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
+//		  PLEGMA_Propagator<float> &prop2 );
 
-template
-void PLEGMA_Correlator<double>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
-		  PLEGMA_Propagator<float> &prop2 );
+//template
+//void PLEGMA_Correlator<double>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
+//		  PLEGMA_Propagator<float> &prop2 );
 
-template
-void PLEGMA_Correlator<double>::contractMesonsNew<double>(PLEGMA_Propagator<double> &prop1,
-		  PLEGMA_Propagator<double> &prop2 );
+//template
+//void PLEGMA_Correlator<double>::contractMesonsNew<double>(PLEGMA_Propagator<double> &prop1,
+//		  PLEGMA_Propagator<double> &prop2 );
 
 
 template

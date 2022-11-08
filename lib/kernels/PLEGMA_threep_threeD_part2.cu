@@ -5,7 +5,7 @@
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_threep.cuh>
 #include <PLEGMA_Vector.h>
-
+#include <malloc_quda.h>
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
@@ -49,7 +49,7 @@ __global__ void threep_threeD_part2_device(Float2<FloatC>* block2,
     Float2<FloatG> su3_1[N_COLS][N_COLS];
     Float2<FloatG> su3_2[N_COLS][N_COLS];
     Float2<FloatG> su3_3[N_COLS][N_COLS];
-	  
+#if 0	  
     // - term x, x-dir1^, x-dir1, x-dir1+dir2, x-dir1+dir2+dir3
     texture1.get(prop1,vid); gaugeTex.get<Minus>(su3_1,dir1,vid,dir1); gaugeTex.get<Minus>(su3_2,dir2,vid,dir1); gaugeTex.get<MinusPlus>(su3_3,dir3,vid,dir1,dir2); texture2.get<MinusPlusPlus>(prop2,vid,dir1,dir2,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ZERO_MINUS,true,false,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
@@ -113,7 +113,7 @@ __global__ void threep_threeD_part2_device(Float2<FloatC>* block2,
     // - term x-dir2-dir3, x-dir1-dir2-dir3^, x-dir1-dir2-dir3, x-dir1-dir3, x-dir1
     texture1.get<MinusMinus>(prop1,vid,dir2,dir3); gaugeTex.get<MinusMinusMinus>(su3_1,dir1,vid,dir1,dir2,dir3); gaugeTex.get<MinusMinusMinus>(su3_2,dir2,vid,dir1,dir2,dir3); gaugeTex.get<MinusMinus>(su3_3,dir3,vid,dir1,dir3); /*texture2.get<Minus>(prop2,vid,dir1);*/
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ACC_MINUS,true,false,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
-	
+#endif	
     for(int iop = 0; iop < listGammas.size; iop++){
       int opId=listGammas.array[iop];
       if(notZfac){
@@ -164,8 +164,10 @@ static void threep_threeD_part2_host(ProfileStruct &ps, Float2<FloatC> *result, 
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  //cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
+   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -175,7 +177,8 @@ static void threep_threeD_part2_host(ProfileStruct &ps, Float2<FloatC> *result, 
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+//  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatOut> *)device_malloc(alloc_size*sizeof(Float2<FloatOut>));
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<PorVtex<b,FloatA>>(prop1);
