@@ -178,7 +178,7 @@ static void threep_threeD_part3_host(ProfileStruct &ps, Float2<FloatC> *result, 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
 //cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
-  d_partial_block=(Float2<FloatOut> *)device_malloc(alloc_size*sizeof(Float2<FloatOut>));
+  d_partial_block=(Float2<FloatC> *)device_malloc(alloc_size*sizeof(Float2<FloatC>));
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<PorVtex<b,FloatA>>(prop1);

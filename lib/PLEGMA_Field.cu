@@ -744,7 +744,7 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
   Float2<Float> *x;
-  x=((Float2<Float>) *)device_malloc(V*2*sizeof(Float));
+  x=(Float2<Float> *)device_malloc(V*2*sizeof(Float));
   //cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset((void*) x,0,V*2*sizeof(Float));
   if(checkErr) checkQudaError();
