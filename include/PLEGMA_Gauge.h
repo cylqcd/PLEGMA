@@ -6,6 +6,7 @@
 
 namespace plegma {
   template<typename Float> class PLEGMA_Su3field;
+  template<typename Float> class PLEGMA_U1Gauge;
   ////////////////////////
   // CLASS: PLEGMA_Gauge //
   ////////////////////////
@@ -118,6 +119,7 @@ namespace plegma {
        @bried Computes the gluon field given a gauge field with definition A_mu = \frac{1/2i} [ (U_\mu - U_\mu^\dag) - \frac{1}{3} Tr[U_\mu - U_\mu^\dag]]. Note that g_0 is not included
      **/
     void gluonField(PLEGMA_Gauge<Float> &uIn);
+    void U3xU1(PLEGMA_Gauge<Float> &u3, PLEGMA_U1Gauge<Float> &u1);
   };
 
   /////////////////////////////////////

@@ -254,14 +254,14 @@ int main(int argc, char **argv)
   std::size_t foundPos = latfile.find("conf.");
   std::size_t foundPos2 = latfile.find("conf_lgfix.");
   if(foundPos == std::string::npos && foundPos2 == std::string::npos)
-	  PLEGMA_error("Cannot find (conf.) or (conf_lgfix.) in configuration path to get confID");
+    PLEGMA_error("Cannot find (conf.) or (conf_lgfix.) in configuration path to get confID");
   std::string confID;
   if(foundPos != std::string::npos)
-  	confID = latfile.substr(foundPos+5,latfile.length());
+    confID = latfile.substr(foundPos+5,latfile.length());
   else if(foundPos2 != std::string::npos)
-	confID = latfile.substr(foundPos2+5,latfile.length());
+    confID = latfile.substr(foundPos2+5,latfile.length());
   else
-	PLEGMA_error("Cannot happen to reach this error");
+    PLEGMA_error("Cannot happen to reach this error");
 
 #if defined(HAVE_EIGENSOLVER)
   if(lowModesRecon){

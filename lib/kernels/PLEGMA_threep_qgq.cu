@@ -1,20 +1,25 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Su3field.h>
+#include <PLEGMA_Fmunu.h>
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_threep.cuh>
+#include <cmath>
+#include <cfloat>
 
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
 
-template<typename FloatC, typename FloatA, typename FloatB, typename FloatS>
-__global__ void threep_wilsonLine_device(Float2<FloatC>* block2,
-					 propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
-					 su3Tex<FloatS> su3Tx, KernelArr<GAMMAS> listGammas,
-					 int it, int time_step, int maxT, int4 source,
-					 int signProps, bool runFT, tex_mom_list moms){
+
+template<typename Float>
+__global__ void threep_qgq_kernel(Float2<Float>* block2,
+				  prop2<Float> propl, prop2<Float> propr,
+				  su3_2<Float> su3_l, su3_2<Float> fmunu, su3_2<Float> su3_r,
+				  KernelArr<GAMMAS> listGammas,
+				  int it, int time_step, int maxT, int4 source,
+				  int signProps, bool runFT, tex_mom_list moms){
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
   int tid = blockIdx.x/grid3D;
@@ -23,20 +28,29 @@ __global__ void threep_wilsonLine_device(Float2<FloatC>* block2,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   
-  Float2<FloatC> accum[N_SPINS*N_SPINS]; // max value of gammas
+  Float2<Float> accum[N_SPINS*N_SPINS]; // max value of gammas
   #pragma unroll
   for(int i = 0; i < N_SPINS*N_SPINS; i++)
     accum[i]=0;
 
   if (sid3D < DGC_localVolume3D){
-    Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
-    Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
-    Float2<FloatS> su3[N_COLS][N_COLS]; 
-    Float2<FloatC> R[N_SPINS][N_SPINS];
-    prop1Tex.get(prop1,vid);
-    prop2Tex.get(prop2,vid);
-    su3Tx.get(su3,vid);
-    partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+
+    Float2<Float> pp1[N_SPINS][N_SPINS][N_COLS][N_COLS];
+    Float2<Float> pp2[N_SPINS][N_SPINS][N_COLS][N_COLS];
+    Float2<Float> u1[N_COLS][N_COLS];
+    Float2<Float> u2[N_COLS][N_COLS];
+    Float2<Float> u3[N_COLS][N_COLS];
+    Float2<Float> R[N_SPINS][N_SPINS];
+    propl.get(pp1,vid);
+    propr.get(pp2,vid);
+
+    su3_l.get(u1,vid);
+    fmunu.get(u2,vid);
+    mul_G_G(u3,u1,u2);
+    su3_r.get(u2,vid);
+    mul_G_G(u1,u3,u2);
+    
+    partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,pp1,pp2,u1);
 
     for(int iop = 0; iop < listGammas.size; iop++){
       int opId=listGammas.array[iop];
@@ -48,7 +62,7 @@ __global__ void threep_wilsonLine_device(Float2<FloatC>* block2,
 
   if(runFT){
     extern __shared__ int ext_shared_cache[];
-    Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
+    Float2<Float> *shared_cache = (Float2<Float> *) ext_shared_cache;
     fourier_transform_3D(block2, accum, shared_cache, listGammas.size, sid3D, source_pos, moms, 0, +1, time_step, tid);
   } else{
     if (sid3D < DGC_localVolume3D)
@@ -57,11 +71,15 @@ __global__ void threep_wilsonLine_device(Float2<FloatC>* block2,
   }
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
-				   PLEGMA_Correlator<FloatC> &corr,
-				   PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatA>& prop2,
-				   int signProps, PLEGMA_Su3field<FloatS>& su3, std::vector<GAMMAS>& gammas){
+
+template<typename Float>
+static void threep_qgq_host(ProfileStruct &ps, Float2<Float> *result,
+				   PLEGMA_Correlator<Float> &corr,
+				   PLEGMA_Propagator<Float>& propl, PLEGMA_Propagator<Float>& propr,
+				   int signProps, PLEGMA_Su3field<Float>& su3_l,
+				   PLEGMA_Fmunu<Float>& Fmunu, std::pair<int,int> munu,
+				   PLEGMA_Su3field<Float>& su3_r,
+				   std::vector<GAMMAS>& gammas){
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
@@ -84,14 +102,15 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   size_t alloc_size = (runFT==true)? (size * (ps.tp.grid.x/time_step) ) : size;
 
-  Float2<FloatC> *h_partial_block = NULL;
-  Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
-  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  Float2<Float> *h_partial_block = NULL;
+  Float2<Float> *d_partial_block = NULL;
+  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<Float>) );
+  hostMalloc(h_partial_block, alloc_size*sizeof(Float2<Float>));
 
-  auto propTex1 = toTexture<propTex>(prop1);
-  auto propTex2 = toTexture<propTex>(prop2);
-  auto su3tex = toTexture<su3Tex>(su3);
+
+  long int shift = ((long int) Fmunu.munuToIndx(munu)) * N_COLS * N_COLS * Fmunu.Total_length();
+  su3_2<Float> RFmunu((Float2<Float>*) Fmunu.D_elem()+shift, su3_l.Field_length(), Fmunu.is4D(), false);
+  
 
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
@@ -99,13 +118,15 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
     int t_step = std::min(t_size-it, time_step);
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*t_step;
-    threep_wilsonLine_device<FloatC,FloatA,FloatB,FloatS>
+    threep_qgq_kernel<Float>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, *propTex1, *propTex2, *su3tex, listGammas, it, t_step, maxT,
+      (d_partial_block, toField2<prop2>(propl), toField2<prop2>(propr),
+       toField2<su3_2>(su3_l), RFmunu, toField2<su3_2>(su3_r),
+       listGammas, it, t_step, maxT,
        source, signProps, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<Float>) , cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
@@ -113,9 +134,13 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
       for(size_t v = 0 ; v < volume*t_step; v++)
 	for(int i = 0 ; i < site_size; i++) {
 	  result[(it*volume+v)*site_size+i] = 0;
-	    for(int j = 0 ; j < accumX; j++)
+	  for(int j = 0 ; j < accumX; j++){
 	      result[(it*volume+v)*site_size+i] +=
 		h_partial_block[(v*site_size+i)*accumX+j];
+	      if(std::isnan(h_partial_block[(v*site_size+i)*accumX+j].x)){
+		PLEGMA_error("Got NaN");
+	      }
+	  }
 	}
     } else {
       for(size_t v = 0 ; v < volume*t_step; v++)
@@ -126,15 +151,20 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
   }
 
  exit:
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  hostFree(h_partial_block, alloc_size*sizeof(Float));
   cudaFree(d_partial_block);
   cudaFree(listGammas.array);
 }
 
-template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-static void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr,
-			      PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
-			      int signProps, PLEGMA_Su3field<FloatS>& su3, std::vector<GAMMAS>& gammas){
+
+
+template<typename Float>
+void threep_qgq(PLEGMA_Correlator<Float> &corr,
+	   PLEGMA_Propagator<Float>& prop1, PLEGMA_Propagator<Float>& prop2,
+	   int signProps, PLEGMA_Su3field<Float>& su3_l,
+	   PLEGMA_Fmunu<Float> &Fmunu, std::pair<int,int> munu,
+	   PLEGMA_Su3field<Float>& su3_r,
+	   std::vector<GAMMAS>& gammas){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(gammas.size() <= 0)
     PLEGMA_error("Error the container of gamma matrices cannot be zero");
@@ -146,34 +176,45 @@ static void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr,
   if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
-  ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
+  ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<Float>) : 0);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
   MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
   ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
   
-  Float2<FloatC> *result = NULL;
+  Float2<Float> *result = NULL;
   if(runFT)
-    hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
+    hostMalloc(result, corr.getTotalSize()*sizeof(Float2<Float>));
   else
-    result = (Float2<FloatC> *) corr.H_elem();
+    result = (Float2<Float> *) corr.H_elem();
+
   
-  tuneAndRun( ps, "threep_wilsonLine", threep_wilsonLine_host<FloatC,FloatA,FloatB,FloatS>,
-	      ps, result, corr, prop1, prop2, signProps, su3, gammas);
+  tuneAndRun( ps, "threep_qgq", threep_qgq_host<Float>,
+	      ps, result, corr, prop1, prop2, signProps, su3_l,
+	      Fmunu, munu, su3_r, gammas);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
 		  MPI_SUM, HGC_spaceComm);
-    hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
+    hostFree(result, corr.getTotalSize()*sizeof(Float2<Float>));
   }
 #else
   PLEGMA_error("You must enable PLEGMA_NUCLEON_3PF_FIX_SINK\n");
 #endif
 }
 
-template void threep_wilsonLine<float,float,float,float>(PLEGMA_Correlator<float> &corr, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Su3field<float>& su3, std::vector<GAMMAS>& gammas);
-template void threep_wilsonLine<double,double,double,double>(PLEGMA_Correlator<double> &corr, PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2, int signProps, PLEGMA_Su3field<double>& su3, std::vector<GAMMAS>& gammas);
 
+template void threep_qgq(PLEGMA_Correlator<float> &corr,
+			 PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2,
+			 int signProps, PLEGMA_Su3field<float>& su3_l,
+			 PLEGMA_Fmunu<float> &Fmunu, std::pair<int,int> munu,
+			 PLEGMA_Su3field<float>& su3_r,
+			 std::vector<GAMMAS>& gammas);
 
-
+template void threep_qgq(PLEGMA_Correlator<double> &corr,
+			 PLEGMA_Propagator<double>& prop1, PLEGMA_Propagator<double>& prop2,
+			 int signProps, PLEGMA_Su3field<double>& su3_l,
+			 PLEGMA_Fmunu<double> &Fmunu, std::pair<int,int> munu,
+			 PLEGMA_Su3field<double>& su3_r,
+			 std::vector<GAMMAS>& gammas);

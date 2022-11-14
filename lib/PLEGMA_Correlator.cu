@@ -701,6 +701,25 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
+contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
+			PLEGMA_Propagator<Float> &fwdProp,
+			PLEGMA_Su3field<Float> &su3_1,
+			PLEGMA_Fmunu<Float> &Fmunu, std::pair<int,int> munu,
+			PLEGMA_Su3field<Float> &su3_2,
+			int signProps, std::vector<GAMMAS> gammas, int z2, int z1 ){
+  shape = {(int) gammas.size()};
+  datasets = {"threep"};
+  groups =  {"z2_"+std::to_string(z2)+"__z1_"+std::to_string(z1)};
+  description = getGammasString(gammas);
+  initialize();
+  
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+  threep_qgq(*this,bwdProp,fwdProp,signProps,su3_1,Fmunu,munu,su3_2,gammas);
+}
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
 writeASCII(std::string filename_out) const {
   MPI_Comm comm;
   size_t g_vol_size = getVolSize();
@@ -740,9 +759,10 @@ writeASCII(std::string filename_out) const {
 	for(int id=0; id < nDatasets(); id++)
 	  for(int ig=0; ig < nGroups(); ig++)
 	    for(int is=0; is < site_sizeR; is++)
-	      for(int ri =0 ; ri < 2 ; ri++)
+	      for(int ri =0 ; ri < 2 ; ri++){
 		corrReorder[((((it*Nmoms+imom)*nDatasets()+id)*nGroups()+ig)*site_sizeR+is)*2+ri]=
 		  H_elem()[((((ig*nDatasets()+id)*HGC_localL[3]+it)*Nmoms+imom)*site_sizeR+is)*2+ri];
+	      }
 
     //=============================================================================
     // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for HGC_fullComm (POSITION SPACE)
