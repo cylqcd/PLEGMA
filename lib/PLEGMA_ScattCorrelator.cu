@@ -2406,6 +2406,8 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   assert(this->pList().check_eq(0));
 
   std::vector<int> mom_pi2 = this->pList().pi(0)[0];
+  //This is working only when the unique list of pc and pf1 are the same!!!!!!!!!! 
+  //They taking the same set of momenta
   std::vector<std::vector<int>> moms_pf2 = this->pList().uniq_p(2);
   //extract vector p_f1
   std::vector<std::vector<int>> moms_pf1_red = this->pList().uniq_p(1); //list of pf1 momenta needed here
@@ -2463,7 +2465,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
     int i_pf1 = i_pf1s[map[i_mom][1]]; //position of pf1 in moms_pf1 (tempNN)
     int i_pf2 = map[i_mom][2]; //position of pf2 in pionpion
     if (CorrNucleon.GList.size() >4){//ensure always zero momentum at the sink
-      i_pf2=map_minus[i_mom][2];
+      i_pf2=map_minus[i_mom][1];
     }
     for( int t=0; t<TIME; ++t){
       for( int gei=0; gei<n_extgammas_i; ++gei ){
