@@ -89,16 +89,22 @@ void contract_tetraquarks_bcud_host(ProfileStruct &ps,
   Float2<FloatC> *d_partial_block = NULL;
   size_t alloc_size = (runFT==true) ? (volume * (ps.tp.grid.x/time_step)):volume;
   hostMalloc(h_partial_block, alloc_size * sizeof(Float2<FloatC>));
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  //cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size * sizeof(Float2<FloatC>) );
   
   short *idxs, *col_contr;
   Float2<float> *vals;
   int size = 0;
   for(int j=0; j<TETRA_bcud_prop_prods_count[i].size(); j++)
     size += TETRA_bcud_prop_prods_count[i][j];
-  cudaMalloc((void**)&idxs, 8*size*sizeof(short));
-  cudaMalloc((void**)&col_contr, 8*size*sizeof(short));
-  cudaMalloc((void**)&vals, size*sizeof(Float2<float>));
+//  cudaMalloc((void**)&idxs, 8*size*sizeof(short));
+  idxs=(short*)device_malloc(8*size*sizeof(short));
+//  cudaMalloc((void**)&col_contr, 8*size*sizeof(short));
+  col_contr=(short*)device_malloc(8*size*sizeof(short));
+//  cudaMalloc((void**)&vals, size*sizeof(Float2<float>));
+  vals=(Float2<float>*)device_malloc( size*sizeof(Float2<float>));
+
+
   int shift = 0;
   for(int j=0; j<TETRA_bcud_prop_prods_count[i].size(); j++) {
     cudaMemcpy(idxs+8*shift, TETRA_bcud_prop_prods_idxs[i][j], 8*TETRA_bcud_prop_prods_count[i][j]*sizeof(short), cudaMemcpyHostToDevice);

@@ -1,4 +1,5 @@
 #include <PLEGMA_kernel_utils.cuh>
+#include <malloc_quda.h>
 #pragma once
 using namespace plegma;
 const int N_MESONS=10;

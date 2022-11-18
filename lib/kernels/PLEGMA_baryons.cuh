@@ -1,7 +1,7 @@
 #pragma once
 
 #include <PLEGMA_kernel_utils.cuh>
-
+#include <malloc_quda.h>
 enum BARYONS_TYPE{NtoN,		
 #ifdef PLEGMA_LIGHT_BARYONS		
 		  NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,		
@@ -189,7 +189,8 @@ static void contract_baryons_host( ProfileStruct &ps,
   
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(sizeof(Float2<FloatC>) );
+//  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
@@ -259,7 +260,8 @@ static void contract_baryons_wall_host( ProfileStruct &ps,
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  //cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(sizeof(Float2<FloatC>) );
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {

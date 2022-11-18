@@ -1,7 +1,7 @@
 #pragma once
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
-
+#include <malloc_quda.h>
 using namespace plegma;
 
 template<typename FloatG>
@@ -192,7 +192,8 @@ static FloatG calcPlaqStaplesDef(gauge2<FloatG> gaugep){
    
   h_partial_plaq = (FloatG*) malloc(gridDim.x * sizeof(FloatG) );
   if(h_partial_plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
-  cudaMalloc((void**)&d_partial_plaq, gridDim.x * sizeof(FloatG));
+  d_partial_plaq=(FloatG*)device_malloc( gridDim.x * sizeof(FloatG));
+  //cudaMalloc((void**)&d_partial_plaq, gridDim.x * sizeof(FloatG));
 
   calcPlaqStaplesDef_kernel<FloatG><<<gridDim,blockDim>>>( gaugep, d_partial_plaq );
 
