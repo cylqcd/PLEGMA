@@ -13,9 +13,9 @@
 #include <functional>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
-#endif
 #include <PLEGMA_heavy_light_tetraquarks.cuh>
 #include <PLEGMA_bcud_tetraquarks.cuh>
+#endif
 
 using namespace plegma;
 
@@ -220,7 +220,7 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
             PLEGMA_Propagator<Float2> &propCH,
             PLEGMA_Propagator<Float2> &propBT,
             bool only_st, bool only_ch){
-
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -268,6 +268,10 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks(propLT, propST, propCH, propBT, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -278,7 +282,7 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
             PLEGMA_Propagator<Float2> &propCH,
             PLEGMA_Propagator<Float2> &propBT,
             bool only_st, bool only_ch){
-
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -326,6 +330,10 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud(propLT, propST, propCH, propBT, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -340,6 +348,7 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
             PLEGMA_Propagator<Float2> &propBT1,
             PLEGMA_Propagator<Float2> &propBT2){
 
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -380,6 +389,10 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_stochastic(propLT1, propLT2,propST1, propST2, propBT1, propBT2, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -395,7 +408,7 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
             PLEGMA_Propagator<Float2> &propCH2,
             PLEGMA_Propagator<Float2> &propBT1,
             PLEGMA_Propagator<Float2> &propBT2){
-
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -439,6 +452,10 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud_stochastic(propLT1, propLT2,propST1, propST2, propCH1, propCH2, propBT1, propBT2, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -447,7 +464,7 @@ template<typename Float> template<typename Float2>
 void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks){
-
+#ifdef PLEGMA_UDSC_BARYONS
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
 
@@ -477,6 +494,10 @@ contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
 
    initialize();
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -485,6 +506,7 @@ template<typename Float> template<typename Float2>
 void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks){
+#ifdef PLEGMA_UDSC_BARYONS
 
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
@@ -511,6 +533,10 @@ contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1
 
 //     PLEGMA_printf("contractTetraquarkScatteringOpenIndexStochastic is going to run:");
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 template<typename Float>
