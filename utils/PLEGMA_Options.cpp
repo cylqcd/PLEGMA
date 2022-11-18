@@ -13,7 +13,7 @@
 
 
 const std::vector<std::string> listAvailOptPLEGMA = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "momlist-filename",
+						     "nsmear-stout", "alpha-stout", "nsrc", "src-filename", "maxQsq", "momlist-filename","momlisttwopt-filename","momlistthreept-filename",
 						     "twop-filename", "threep-filename",  "corr-file-format", "corr-space", "tSinks","Projs", "Eig-NeV"
 #if  defined(HAVE_ARPACK) || defined(QUDAEIG)
 						     ,"Eig-NkV", "Eig-logFile"
@@ -67,6 +67,13 @@ void plegmaOptions(Options &opt, std::vector<std::string> list, bool update_para
   if (isInList(list, "momlist-filename")){
     opt.set("momlist-filename", "Filename of list of momenta", verbosity, pathListMomenta);
   }
+  if (isInList(list, "momlisttwopt-filename")){
+    opt.set("momlisttwopt-filename", "Filename of list of momenta", verbosity, pathListMomenta_twopt);
+  }
+  if (isInList(list, "momlistthreept-filename")){
+    opt.set("momlistthreept-filename", "Filename of list of momenta", verbosity, pathListMomenta_threept);
+  }
+
   // List of configurations or vectors-----------------------------------------------------------------------------
   if(isInList(list,"load-gauge-list-filename")){
     isFound = opt.set("load-gauge-list-filename", "Filename of the list of the configuration to analyze", verbosity, pathListGaugeConfs);
