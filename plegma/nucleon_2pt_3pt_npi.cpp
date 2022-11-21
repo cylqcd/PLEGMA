@@ -422,8 +422,8 @@ int main(int argc, char **argv) {
           //PLEGMA_printf("Nucleon T2 reduction\n");
           TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
           //PLEGMA_printf("Nucleon T2 reduction ready\n");
-          TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
-          //PLEGMA_printf("Nucleon diagram ready\n");
+	  TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
+	  //PLEGMA_printf("Nucleon diagram ready\n");
 
 	}
 
@@ -459,6 +459,11 @@ int main(int argc, char **argv) {
 	    TIME(corrD1if34.M_diagrams( corrNP, vectorAuxF_SS, oet_mom_zero_dn_SS ));
 
             TIME(corrD1if56.M_diagrams( corrN0, vectorAuxF_SS, oet_mom_zero_up_SS ));
+
+	    double norm1=vectorAuxF_SS.norm();
+            double norm2=oet_mom_zero_up_SS.norm();
+	    PLEGMA_printf("norm1 %e norm2 %e\n",norm1,norm2);
+ 
 
 	    TIME(corrPPUP.P_diagrams( vectorAuxF_SS, oet_mom_zero_up_SS, i_pi2, true));
 	    TIME(corrP0UP.P_diagrams( vectorAuxF_SS, oet_mom_zero_dn_SS, i_pi2, true));
