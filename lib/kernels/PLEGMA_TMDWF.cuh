@@ -1,5 +1,6 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <malloc_quda.h>
+#include <quda_api.h>
 using namespace plegma;
 const int N_TMDWF_MESONS=1;
 // TODO: This is hard to extend. These variables should replaced by compile-time functions.
@@ -116,7 +117,7 @@ void contract_TMDWF_mesons_host( ProfileStruct &ps,
       (*propTex1, *propTex2, *stapleTex  ,d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+    qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
       
     if(runFT==true) {
@@ -135,7 +136,7 @@ void contract_TMDWF_mesons_host( ProfileStruct &ps,
     }
   }
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
+  device_free(d_partial_block);
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>

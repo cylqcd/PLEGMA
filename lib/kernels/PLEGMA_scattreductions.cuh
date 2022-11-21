@@ -431,9 +431,12 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
     }
   }
   hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas_i.array);
-  cudaFree(listGammas_f.array);
+  device_free(d_partial_block);
+  device_free(listGammas_i.array);
+  device_free(listGammas_f.array);
+  //cudaFree(d_partial_block);
+  //cudaFree(listGammas_i.array);
+  //cudaFree(listGammas_f.array);
   
 }
 

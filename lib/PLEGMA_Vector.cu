@@ -11,6 +11,7 @@
 #include <kernels/PLEGMA_gammas_scatt.cuh>
 #endif
 #include <communicator_quda.h>
+#include <quda_api.h>
 
 using namespace plegma;
 using namespace quda;
@@ -68,8 +69,8 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
     }
   }
   if( (nsmearGauss%2) == 0)
-    cudaMemcpy(this->D_elem(),vecIn.D_elem(),
-	       this->Bytes_total(),cudaMemcpyDeviceToDevice);
+    qudaMemcpy(this->D_elem(),vecIn.D_elem(),
+	       this->Bytes_total(),qudaMemcpyDeviceToDevice);
   
   checkQudaError();
 
@@ -133,11 +134,11 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      qudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
 	pointer_dst = (this->d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
-	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+	qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
     }
   comm_barrier();
@@ -156,11 +157,11 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      qudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
 	pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
        	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
-       	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+       	qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
     }
   comm_barrier();
@@ -177,7 +178,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
       pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2);
-      cudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      qudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
     }
   checkQudaError();
 }
@@ -191,7 +192,7 @@ void PLEGMA_Vector<Float>::dilutespin(PLEGMA_Vector<Float> &vecIn, int spin){
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       if(mu == spin){
         pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC_localVolume*2);
-        cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
+        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
       } 
     }
   checkQudaError();
@@ -206,7 +207,7 @@ void PLEGMA_Vector<Float>::dilutecolor(PLEGMA_Vector<Float> &vecIn, int color){
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       if(c1 == color){
         pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC_localVolume*2);
-        cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
+        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
       } 
     }
   checkQudaError();
@@ -222,7 +223,7 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       if(c1 == color && mu == spin){
         pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC_localVolume*2);
-        cudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice); 
+        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
       } 
     }
   checkQudaError();
@@ -235,7 +236,7 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
   this->zero_device();
   for(int c1 = 0 ; c1 < N_COLS ; c1++){
     pointer_src = (vecIn.D_elem() + (c1 + spin2*N_COLS)*HGC_localVolume*2);
-    cudaMemcpy((this->d_elem + ((c1 + spin1*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+    qudaMemcpy((this->d_elem + ((c1 + spin1*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       
   }
   checkQudaError();
@@ -268,15 +269,15 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
   temp[0] = 1.0;
   if( where == BOTH ){
     this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
-                cudaMemcpyHostToDevice ); 
+    qudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
+                qudaMemcpyHostToDevice ); 
   }
   else if (where == HOST){
     this->h_elem[((spin*N_COLS+color)*this->Total_length() + id)*2] = 1.0; 
   }
   else if (where == DEVICE){
-    cudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
-                cudaMemcpyHostToDevice ); 
+    qudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
+                qudaMemcpyHostToDevice ); 
   }
   else{
     PLEGMA_error("Not supported %d\n",where);
@@ -390,7 +391,7 @@ namespace plegma{
       for(int c1 = 0 ; c1 < N_COLS ; c1++){
 	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
-	cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+	qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
     checkQudaError();
   }
@@ -413,7 +414,7 @@ namespace plegma{
 	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
 	if(is_myIt){
 	  pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
-	  cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+	  qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
 	}
 	
 	if (broadcast == true){
@@ -421,15 +422,15 @@ namespace plegma{
 //         printf("Time rank %d\n",time_rank);
 //         fflush(stdout);
          Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
-         cudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), cudaMemcpyDeviceToHost);
+         qudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), qudaMemcpyDeviceToHost);
          MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
 //         printf("Temp 0 %e\n",temp[0]);
 //         fflush(stdout);
-         cudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), cudaMemcpyHostToDevice);
+         qudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), qudaMemcpyHostToDevice);
          free(temp);
        }
        if (broadcast == false && is_myIt ==false){
-         cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+         qudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
        }
       
     }
