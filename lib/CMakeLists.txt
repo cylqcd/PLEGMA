@@ -29,6 +29,15 @@ if(PLEGMA_UDSC_BARYONS)
   LIST(APPEND PLEGMA_OBJS
     kernels/PLEGMA_baryons_udsc.cu
     kernels/PLEGMA_baryons_udsc_arrays.cu
+    kernels/PLEGMA_heavy_light_tetraquarks.cu
+    kernels/PLEGMA_heavy_light_tetraquarks_stochastic.cu
+    kernels/PLEGMA_heavy_light_tetraquarks_open_contractions.cu
+    kernels/PLEGMA_heavy_light_tetraquarks_arrays.cu
+    kernels/PLEGMA_heavy_light_tetraquarks_arrays_stoch.cu
+    kernels/PLEGMA_bcud_tetraquarks.cu
+    kernels/PLEGMA_bcud_tetraquarks_stochastic.cu
+    kernels/PLEGMA_bcud_tetraquarks_arrays.cu
+    kernels/PLEGMA_bcud_tetraquarks_arrays_stoch.cu
   )
 endif()
 if(PLEGMA_SCATTERING_CONTRACTIONS)

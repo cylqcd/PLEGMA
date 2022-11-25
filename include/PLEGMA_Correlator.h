@@ -213,6 +213,55 @@ namespace plegma {
 			     PLEGMA_Propagator<Float> &propST, 
 			     PLEGMA_Propagator<Float> &propCH,
 			     bool only_st=false, bool only_ch=false);
+  
+    template<typename Float2>
+    void contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
+			     PLEGMA_Propagator<Float2> &propST, 
+			     PLEGMA_Propagator<Float2> &propCH,
+                 PLEGMA_Propagator<Float2> &propBT,
+			     bool only_st=false, bool only_ch=false);
+    
+    template<typename Float2>
+    void contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
+		    PLEGMA_Propagator<Float2> &propST, 
+		    PLEGMA_Propagator<Float2> &propCH, 
+            PLEGMA_Propagator<Float2> &propBT, 
+		    bool only_st=false, bool only_ch=false);
+
+    template<typename Float2>
+    void contractTetraquarkScatteringOpenIndex(
+                PLEGMA_Propagator<Float2> &prop1,
+                PLEGMA_Propagator<Float2> &prop2, 
+                std::vector<GAMMAS> gammas, int s1,
+                std::string Quarks);
+    
+    template<typename Float2>
+    void contractTetraquarksStochastic(
+            PLEGMA_Propagator<Float2> &propLT1,
+		    PLEGMA_Propagator<Float2> &propLT2, 
+            PLEGMA_Propagator<Float2> &propST1, 
+            PLEGMA_Propagator<Float2> &propST2,
+		    PLEGMA_Propagator<Float2> &propBT1, 
+            PLEGMA_Propagator<Float2> &propBT2);
+    
+    template<typename Float2>
+    void contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
+		    PLEGMA_Propagator<Float2> &propLT2, 
+            PLEGMA_Propagator<Float2> &propST1, 
+            PLEGMA_Propagator<Float2> &propST2,
+		    PLEGMA_Propagator<Float2> &propCH1,
+            PLEGMA_Propagator<Float2> &propCH2,
+            PLEGMA_Propagator<Float2> &propBT1, 
+            PLEGMA_Propagator<Float2> &propBT2);
+    
+    
+    template<typename Float2>
+    void contractTetraquarkScatteringOpenIndexStochastic(
+            PLEGMA_Propagator<Float2> &prop1,
+            PLEGMA_Propagator<Float2> &prop2, 
+            std::vector<GAMMAS> gammas, 
+            int randInd1, int randInd2, int s1,
+            std::string Quarks);
     
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,
