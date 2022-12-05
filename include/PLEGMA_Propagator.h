@@ -95,6 +95,15 @@ namespace plegma {
      **/    
     void absorb(PLEGMA_Vector3D<Float> &vec, int nu, int c2);
 
+    /** 
+       @brief packing the sinktime slice in all other time slices
+       @param the initial propagator to be broadcasted
+       @param PLEGMA_Propagator<Float> in initial propagator to be broadcasted
+       @param int sinktimeslice  the sinktime slice to be broadcasted
+     **/ 
+    void pack_propagator_as_sink(PLEGMA_Propagator<Float> in, int sinktimeslice);
+
+
   };
 }
 

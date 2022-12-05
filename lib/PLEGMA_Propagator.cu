@@ -98,6 +98,27 @@ template<typename Float>
 void PLEGMA_Propagator<Float>::applyBoundaries_device(int t0){
   apply_boundaries(this->d_elem, t0);
 }
+template<typename Float>
+void PLEGMA_Propagator<Float>::pack_propagator_as_sink(PLEGMA_Propagator<Float> in, int sinktimeslice){
+  for (int isc=0; isc<12; ++isc){
+
+    PLEGMA_Vector<Float> stmp;
+    PLEGMA_Vector3D<Float> vector1;
+
+    stmp.zero_where(DEVICE);
+    stmp.zero_where(HOST);
+
+    vector1.absorb(in, sinktimeslice, isc/3, isc%3,true);
+
+    for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+      stmp.absorb(vector1, timeidx, false);
+    }
+
+
+    this->absorb(stmp, isc/3, isc%3);
+  }
+}
+
 
 template<typename Float>
 void PLEGMA_Propagator<Float>::rotateToPhysicalBase_device(int sign){
