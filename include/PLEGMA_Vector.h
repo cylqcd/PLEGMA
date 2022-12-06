@@ -95,6 +95,8 @@ namespace plegma {
     void rotate_uk_ch_g5g4();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
+    void pack_fermion_from_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime);
+
   };
 
   template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer

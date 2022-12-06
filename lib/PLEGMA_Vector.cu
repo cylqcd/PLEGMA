@@ -243,6 +243,25 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
 }
 
 
+template<typename Float>
+void PLEGMA_Vector<Float>::pack_fermion_from_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime){
+  PLEGMA_Vector<Float> stmp;
+
+  stmp.zero_where(DEVICE);
+  stmp.zero_where(HOST);
+
+
+  PLEGMA_Vector<Float> temporary;
+  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+    temporary.copy(*stochastic_vector[timeidx], HOST);
+    temporary.load();
+    stmp.absorbTimeSlice(temporary, sinktime, false);
+  }
+
+  this->copy(stmp);
+
+}
+
 
 
 template<typename Float>
@@ -396,12 +415,10 @@ namespace plegma{
     checkQudaError();
   }
 
-  // vec3D <- Prop4D
+  // vec3D <- vec4D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2, bool broadcast){
     if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    printf("I am in absorb\n");
-    fflush(stdout);
     int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     this->activeTimeSlice = is_myIt;
@@ -437,6 +454,7 @@ namespace plegma{
     checkQudaError();
     
   }
+
 
   template<typename Float>
   std::vector<Float> PLEGMA_Vector3D<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
