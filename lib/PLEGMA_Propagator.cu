@@ -111,7 +111,7 @@ void PLEGMA_Propagator<Float>::pack_propagator_as_sink(PLEGMA_Propagator<Float> 
     vector1.absorb(in, sinktimeslice, isc/3, isc%3,true);
 
     for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-      stmp.absorb(vector1, timeidx, false);
+      stmp.absorbTimeslice(vector1, timeidx, false);
     }
 
 

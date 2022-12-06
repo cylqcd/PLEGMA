@@ -168,6 +168,29 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
   checkQudaError();
 }
 
+//vec4D <- vec3D (it)
+template<typename Float>
+void PLEGMA_Vector<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bool broadcast){
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  int V3 = HGC_localVolume/HGC_localL[3];
+  int V4 = HGC_localVolume;
+  Float *pointer_src = NULL;
+  Float *pointer_dst = NULL;
+  for(int mu = 0 ; mu < N_SPINS ; mu++)
+    for(int c1 = 0 ; c1 < N_COLS ; c1++){
+      //qudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      if(is_myIt){
+        pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
+        pointer_src = (vec.D_elem()  + mu*N_COLS*V3*2 + c1*V3*2);
+        qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+      }
+    }
+  comm_barrier();
+  checkQudaError();
+}
+
 // vec4D <- prop4D
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2){
@@ -244,18 +267,21 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
 
 
 template<typename Float>
-void PLEGMA_Vector<Float>::pack_fermion_from_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime){
+void PLEGMA_Vector<Float>::pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime){
   PLEGMA_Vector<Float> stmp;
 
   stmp.zero_where(DEVICE);
   stmp.zero_where(HOST);
 
 
-  PLEGMA_Vector<Float> temporary;
+  PLEGMA_Vector<Float> temporary4D;
+  PLEGMA_Vector3D<Float> temporary3D;
   for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-    temporary.copy(*stochastic_vector[timeidx], HOST);
-    temporary.load();
-    stmp.absorbTimeSlice(temporary, sinktime, false);
+    temporary4D.copy(*stochastic_vector[timeidx], HOST);
+    temporary4D.load();
+    temporary3D.absorb(temporary4D, sinktime );
+    temporary4D.absorb(temporary3D, timeidx );
+    stmp.absorbTimeslice(temporary4D, timeidx, false);
   }
 
   this->copy(stmp);
@@ -415,7 +441,7 @@ namespace plegma{
     checkQudaError();
   }
 
-  // vec3D <- vec4D
+  // vec3D <- prop4D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2, bool broadcast){
     if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
@@ -454,6 +480,35 @@ namespace plegma{
     checkQudaError();
     
   }
+
+  // vec3D <- vec4D
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Vector<Float> &prop, int global_it, bool broadcast){
+    if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    this->activeTimeSlice = is_myIt;
+    int V3 = HGC_localVolume/HGC_localL[3];
+    int V4 = HGC_localVolume;
+    Float *pointer_src = NULL;
+    Float *pointer_dst = NULL;
+    for(int mu = 0 ; mu < N_SPINS ; mu++)
+      for(int c1 = 0 ; c1 < N_COLS ; c1++)
+      {
+        pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
+        if(is_myIt){
+          pointer_src = (prop.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
+          qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+        }
+        else{
+          qudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+        }
+      }
+
+    checkQudaError();
+
+  }
+
 
 
   template<typename Float>
