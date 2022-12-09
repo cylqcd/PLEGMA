@@ -99,7 +99,7 @@ void PLEGMA_Propagator<Float>::applyBoundaries_device(int t0){
   apply_boundaries(this->d_elem, t0);
 }
 template<typename Float>
-void PLEGMA_Propagator<Float>::pack_propagator_as_sink(PLEGMA_Propagator<Float> in, int sinktimeslice){
+void PLEGMA_Propagator<Float>::pack_propagator_as_sink(PLEGMA_Propagator<Float> &in, int sinktimeslice){
   for (int isc=0; isc<12; ++isc){
 
     PLEGMA_Vector<Float> stmp;

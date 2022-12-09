@@ -60,7 +60,7 @@ namespace plegma {
        @param PLEGMA_Propagator<Float> in initial propagator to be broadcasted
        @param int sinktimeslice  the sinktime slice to be broadcasted
      **/ 
-    void pack_propagator_as_sink(PLEGMA_Propagator<Float> in, int sinktimeslice);
+    void pack_propagator_as_sink(PLEGMA_Propagator<Float> &in, int sinktimeslice);
 
 
     
