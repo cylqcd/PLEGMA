@@ -97,6 +97,9 @@ namespace plegma {
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
     void pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime);
 
+    void pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
+
+
     void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bool  broadcast=false);
 
 

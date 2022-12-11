@@ -84,10 +84,8 @@ int main(int argc, char **argv) {
   std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID};
   std::vector<GAMMAS_SCATT> glist_insertion = {ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};//,S12,S13,S23,S41,S42,S43};
 
-  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};
-
-
   int n_stochastic_samples;
+  int max_source_sink_separations;
 
 
   auto add_options = [&](Options& options) {
@@ -96,9 +94,13 @@ int main(int argc, char **argv) {
     options.set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
     options.set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
     options.set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
+    options.set("maxSourceSinkSeparations", "Maximal source sink separations", verbosity, max_source_sink_separations);
+
 		     };
   //=========================================================================================================//
   initializePLEGMA();
+
+
 
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
@@ -186,26 +188,176 @@ int main(int argc, char **argv) {
     momList list_mpc(1,{mpc,},{0,});
 
 
+    int parallel_sources=HGC_totalL[3]/max_source_sink_separations;
+    std::vector<int> lookuptable;
+    
+    for (int i=0; i<HGC_totalL[3]; ++i)
+      lookuptable.push_back(-1);
+//    for (
+//    for (int j=0; j< tSinks.size();++j){
+//      for (int k=0; k< parallel_sources;++k){
+//        lookuptable[(i*tSinks.size()*parallel_sources+j*parallel_sources+k);
+//      }
+//    }
+
     PLEGMA_Vector<float> vectorSource_stochastic;
     vectorSource_stochastic.randInit(rand_seed1);
 
     //Computing with ubaru insertion
     //Step (1) produce the stochastic sample
-    //Step (2) produce standard point to all propagators
-    //Step (3) produce sequential through the source
-    //Step (4) produce stochastic propagators pieces
-    //Step (5) doing the recombination
-    //Step (6) doing the one end trick calculation for the Z diagrams
+    //Step (2) produce the stochastic propagators
+    //Step (3) produce standard point to all propagators
+    //Step (4) produce factors with point to all
+    //Step (5) produce sequential through the source with momenta pi2
+    //Step (6) produce factors with the sequential
+    //Step (7) doing the recombination
+    //Step (8) doing the one end trick calculation for the Z diagrams
 
     std::vector<PLEGMA_Vector<float>*> stochastic_sources;
 
-    for(int i=0; i< n_stochastic_samples; ++i) {
+    std::vector<PLEGMA_Vector<float>*> stochastic_propags_UP;
+
+    std::vector<PLEGMA_Vector<float>*> stochastic_propags_DN;
+
+
+    /******************************************************
+     *
+     *Step 1: Producing the stochastic sources
+     *
+     ******************************************************/
+
+    for (int i=0; i<n_stochastic_samples;++i){
+   
       stochastic_sources.push_back(new PLEGMA_Vector<float>(HOST));
       vectorSource_stochastic.stochastic_Z(nroots);
       vectorSource_stochastic.unload();
       stochastic_sources[i]->copy(vectorSource_stochastic,HOST);
       vectorSource_stochastic.load();
+
     }
+
+    /******************************************************
+     *
+     *Step 2: Producing the stochastic propagators
+     *
+     ******************************************************/
+
+    if(mu<0) 
+    {
+      mu = -mu;
+      solver.UpdateSolver();
+    }
+
+
+    for (int isource=0; isource<numSourcePositions;++isource){
+      site& source = sourcePositions[isource];
+      for (int k=0; k<tSinks.size();++k){
+        for (int l=0; l<parallel_sources;++l){
+          if (lookuptable[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]==-1){
+            int timeSlice=(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];	     
+	    PLEGMA_Gauge3D<double> smearedGauge3D;
+            smearedGauge3D.absorb(smearedGauge, timeSlice );
+            for(int i=0; i< n_stochastic_samples; ++i) {
+	      vectorSource_stochastic.copy( *stochastic_sources[i], HOST);
+              vectorSource_stochastic.load();
+	      PLEGMA_Vector<double> vectorInOut, vectorAuxD1;
+              { // Smearing the source
+		PLEGMA_Vector3D<double> vector1, vector2;
+		vectorInOut.copy(vectorSource_stochastic);
+                vector1.absorb(vectorInOut,timeSlice);
+                TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+                vectorInOut.absorb(vector2,timeSlice);
+              }
+
+              //Step(4) We rotate the source to the physical basis
+              TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,+1));
+ 
+	      //Step(5) pick out a particular timeslice from the source
+              vectorInOut.absorbTimeslice(vectorAuxD1, timeSlice);
+              
+	      //Step(6) Solve
+              TIME(solver.solve(vectorInOut, vectorInOut));
+              
+              //Step(6) We rotate back the propagator to the physical basis
+              TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,+1));
+
+              //Step(7) Smearing all the time slice in the propagator
+              TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+
+	      vectorInOut.unload();
+	      stochastic_propags_UP.push_back(new PLEGMA_Vector<float>(HOST));
+              stochastic_propags_UP[(isource*tSinks.size()*parallel_sources+k*parallel_sources+l)*n_stochastic_samples+i]->copy(vectorInOut, HOST);
+	      vectorInOut.load();
+
+	    }
+	    lookuptable[timeSlice]=isource*tSinks.size()*parallel_sources+k*parallel_sources+l;
+	  }
+        }
+      }
+    }
+
+    if(mu>0)
+    {
+      mu = -mu;
+      solver.UpdateSolver();
+    }
+
+
+
+    for (int isource=0; isource<numSourcePositions;++isource){
+      site& source = sourcePositions[isource];
+      for (int k=0; k<tSinks.size();++k){
+        for (int l=0; l<parallel_sources;++l){
+          if (lookuptable[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]==-1){
+            int timeSlice=(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+            PLEGMA_Gauge3D<double> smearedGauge3D;
+            smearedGauge3D.absorb(smearedGauge, timeSlice );
+            for(int i=0; i< n_stochastic_samples; ++i) {
+              vectorSource_stochastic.copy( *stochastic_sources[i], HOST);
+              vectorSource_stochastic.load();
+              PLEGMA_Vector<double> vectorInOut,vectorAuxD1;
+              { // Smearing the source
+                PLEGMA_Vector3D<double> vector1, vector2;
+		vectorInOut.copy(vectorSource_stochastic);
+                vector1.absorb(vectorInOut,timeSlice);
+                TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+                vectorInOut.absorb(vector2,timeSlice);
+              }
+
+              //Step(4) We rotate the source to the physical basis
+              TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,-1));
+
+              //Step(5) pick out a particular timeslice from the source
+              vectorInOut.absorbTimeslice(vectorAuxD1, timeSlice);
+
+              //Step(6) Solve
+              TIME(solver.solve(vectorInOut, vectorInOut));
+
+              //Step(6) We rotate back the propagator to the physical basis
+              TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,-1));
+
+              //Step(7) Smearing all the time slice in the propagator
+              TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+
+              vectorInOut.unload();
+              stochastic_propags_DN.push_back(new PLEGMA_Vector<float>(HOST));
+              stochastic_propags_DN[(isource*tSinks.size()*parallel_sources+k*parallel_sources+l)*n_stochastic_samples+i]->copy(vectorInOut, HOST);
+              vectorInOut.load();
+
+            }
+            lookuptable[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]=isource*tSinks.size()*parallel_sources+k*parallel_sources+l;
+          }
+        }
+      }
+    }
+
+
+    /******************************************************
+     *
+     * Step 3: Computing the point to all propagators
+     *
+     ******************************************************/
+
 
     for(int isource = startSource; isource < numSourcePositions; isource++){
 
@@ -225,7 +377,7 @@ int main(int argc, char **argv) {
 
 
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
-				   double run_mu, WHICHFLAVOR fl, int nSmear,  bool finalize) {
+				   double run_mu, WHICHFLAVOR fl, int nSmear,  site &source_location, bool finalize) {
 				 // ensuring mu value
 				 if(mu != run_mu) {
 				   updateOptions(fl);
@@ -236,7 +388,7 @@ int main(int argc, char **argv) {
 				   PLEGMA_Vector<double> vectorInOut;
 				   { // Smearing the source
 				     PLEGMA_Vector3D<double> vector1, vector2;
-				     vector1.pointSource(source, isc/3, isc%3, DEVICE);
+				     vector1.pointSource(source_location, isc/3, isc%3, DEVICE);
 				     TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear, alphaGauss));
 				     vectorInOut.absorb(vector2,source[DIM_T]);
 				   }
@@ -277,52 +429,77 @@ int main(int argc, char **argv) {
 				 }
       };
 
-      PLEGMA_Propagator<float> propUP;
-      PLEGMA_Propagator<float> propDN;
+      PLEGMA_Propagator<float> propUP_SS_packed;
+      PLEGMA_Propagator<float> propDN_SS_packed;
 
-      PLEGMA_Propagator<float> propUP_SL;
-      PLEGMA_Propagator<float> propDN_SL;
+      PLEGMA_Propagator<float> propUP_SL_packed;
+      PLEGMA_Propagator<float> propDN_SL_packed;
+
+      
 
 
-      PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1_twopt);
-      TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
+      for (int i=0; i<HGC_totalL[3]/max_source_sink_separations;++i){
+	PLEGMA_Propagator<float> propUP_SS;
+        PLEGMA_Propagator<float> propDN_SS;
 
-      PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1_twopt);
-      TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
+	PLEGMA_Propagator<float> propUP_SL;
+        PLEGMA_Propagator<float> propDN_SL;
 
-      bool computed_light = false;
-      // If twop_filename exists we hold the computation of the light props
-      if(access( twop_filename.c_str(), F_OK ) == -1) {
-	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
-	TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
-	computed_light = true; 
-      }
+        site& source_local = sourcePositions[isource];
+	source_local[3]=(sourcePositions[isource][3]+i*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
 
-      //Computing T reductions+recombination
-      {
-        PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-        TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-        //PLEGMA_printf("Nucleon T2 reduction\n");
-        TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
-        //PLEGMA_printf("Nucleon T2 reduction ready\n");
-        TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ));
-        //PLEGMA_printf("Nucleon diagram ready\n");
+	site source_local_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
+        source_local_reduction[3]=(sourcePositions[isource][3]+i*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
 
-      }
+
+  	PLEGMA_ScattCorrelator<float> corrNP(source_local, list_mpf1_twopt);
+    	TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
+
+        PLEGMA_ScattCorrelator<float> corrN0(source_local, list_mpf1_twopt);
+        TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
+
+        bool computed_light = false;
+        // If twop_filename exists we hold the computation of the light props
+        if(access( twop_filename.c_str(), F_OK ) == -1) {
+	  TIME(computePropagator(propUP_SS, propUP_SL, mu_ud, LIGHT, nsmearGauss, source_local, false));
+	  TIME(computePropagator(propDN_SS, propDN_SL, -mu_ud, LIGHT, nsmearGauss, source_local, false));
+          computed_light = true; 
+        }
+
+        //Computing T reductions+recombination
+        {
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS, propDN_SS, propUP_SS));
+          //PLEGMA_printf("Nucleon T2 reduction\n");
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS, propDN_SS, propUP_SS));
+          //PLEGMA_printf("Nucleon T2 reduction ready\n");
+          TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ));
+          //PLEGMA_printf("Nucleon diagram ready\n");
+
+        }
 
 	//Computing T reductions+recombination
-      {
-        PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-        TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
-        //PLEGMA_printf("Nucleon T2 reduction\n");
-        TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
-        //PLEGMA_printf("Nucleon T2 reduction ready\n");
-        TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
-	//PLEGMA_printf("Nucleon diagram ready\n");
+        {
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
+          //PLEGMA_printf("Nucleon T2 reduction\n");
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
+          //PLEGMA_printf("Nucleon T2 reduction ready\n");
+          TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
+	  //PLEGMA_printf("Nucleon diagram ready\n");
+        }
+
+        propUP_SS_packed.pack_propagator_from_source_to_sink(propUP_SS, source_local[3], max_source_sink_separations, i == 0 ? true : false);
+        propDN_SS_packed.pack_propagator_from_source_to_sink(propDN_SS, source_local[3], max_source_sink_separations, i == 0 ? true : false);
+
+        propUP_SL_packed.pack_propagator_from_source_to_sink(propUP_SS, source_local[3], max_source_sink_separations, i == 0 ? true : false);
+        propDN_SL_packed.pack_propagator_from_source_to_sink(propDN_SS, source_local[3], max_source_sink_separations, i == 0 ? true : false);
+
+
       }
 
       //We implement the UD part first
@@ -331,117 +508,178 @@ int main(int argc, char **argv) {
 
       int sequential_time_source=source[DIM_T];
 
-      //We implement the following factors in this part of the calculation
-      //source piplus 
-      //B9-12
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V3_GAMMAC_TUD;
+      //We can compute V2 contractions for B and V3 contraction for W first
+      //without having to compute it for all the iterations in the loop
+      //over the sequential momentum
+      //Provided we have the same pf1,pf2 pairs for all pi2 sequential momentum
+      //For the saved V2 and V3 reductions we have to use all possible unique pf1 and pf2
 
-	//W17,19
-	std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1D_TUD;
+      //Here the prefix UU means that reduction is based phi and xi, without the gamma_5
+      //We replace U(x_f2,x_f1) with phi(x_f2) xi^dagger(x_f1)
+      //phi goes to V2 reduction and xi goes to V3 reduction
 
-        //W18,20
-	std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1D_TUD;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V2_GAMMAF1D_U;//implemented
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V4_GAMMAF1U_D;//implemented
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V3_GAMMAF2U;//implemented
 
-	//W21,23
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1TUD_U;
+      //Here the prefix DD means that reduction is based phi*g5 and xi*g5
+      //We replace D(x_f2,x_f1) with xi(x_f2)*gamma_5* phi^dagger(x_f1) *gamma_5
+      //phi goes to V3 reduction and xi goes to V2 reduction
 
-	//W22,24
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_TUD;
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2D;//implemented
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_U;//implemented
 
-	//source pizero u
-        //B3-6
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V3_GAMMAC_TUU;
+      for(int i=0; i< n_stochastic_samples; ++i) {
+	for (int k=0; k< tSinks.size(); ++k){
+          try
+          {
+            reductions_DD_V2_GAMMAF1U_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
+            reductions_UU_V2_GAMMAF1D_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
+            reductions_UU_V4_GAMMAF1U_D.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
 
-        //W5,6
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1D_TUU;
+            reductions_UU_V3_GAMMAF2U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpc));
+            reductions_DD_V3_GAMMAF2D.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpc));
 
-        //W7,8
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1D_TUU;
+          }
+          catch(std::bad_alloc&){
+            PLEGMA_printf("Memory allocation fails to store factors");
+            exit(1);
+          }
+        }
+      }
 
-        //W13,15
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1TUU_U;
+      for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
 
-        //W14,16
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_TUU;
-
-	//source pizero d
-	
-	//B7,8
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_UU_V3_GAMMAC_TDD;
-
-        //W10,12
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1TDD_U;
-
-        //W9,11
-        std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1TDD_U;
-	
-
-
-
-	for(int i=0; i< n_stochastic_samples; ++i) {
-          for (int j=0; j<mpi2_threept.size();++j){
-            try
-            {
-              reductions_UU_V3_GAMMAC_TUD.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpc));
- 
-	      reductions_UU_V3_GAMMAC_TUU.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpc));
-
-              reductions_UU_V3_GAMMAC_TDD.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpc));
+        PLEGMA_Vector<float> stochastic_source;
+        stochastic_source.copy(*stochastic_sources[i_sample],HOST);
+        stochastic_source.load();
 
 
+	for (int k=0; k< tSinks.size();++k){
+
+          stochastic_source.apply_gamma5();
+
+          //For U(xf1,xf2)
+          //B3,B5,B9,B11
+	  PLEGMA_Propagator<float> propUPpacked_to_sink;
+          PLEGMA_Propagator<float> propDNpacked_to_sink;
+          {
+            for (int j=0; j<HGC_totalL[3]/max_source_sink_separations;++j){
+              int tsinkMtsource = tSinks[k];
+              if(tsinkMtsource >= HGC_totalL[3])
+                PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+              int global_fixSinkTime = (tsinkMtsource + source[3]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+              propUPpacked_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
+              propDNpacked_to_sink.pack_propagator_as_sink(propDN_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
             }
-	    catch(std::bad_alloc&){
-                PLEGMA_printf("Memory allocation fails to store factors V3");
-                exit(1);
-            }
-            for (int k=0; k<tSinks.size(); ++k){
+          }
 
-	      try
-	      {
-                reductions_DD_V4_GAMMAF1D_TUD.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-                reductions_DD_V2_GAMMAF1D_TUD.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-
-	        reductions_DD_V2_GAMMAF1TUD_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-                reductions_DD_V2_GAMMAF1U_TUD.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-
-                reductions_DD_V4_GAMMAF1D_TUU.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-                reductions_DD_V2_GAMMAF1D_TUU.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-
-                reductions_DD_V2_GAMMAF1TUU_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-                reductions_DD_V2_GAMMAF1U_TUU.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
+          TIME(reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k]->V2( stochastic_source,     glist_sink_nucleon, propDNpacked_to_sink, propUPpacked_to_sink, false));
 
 
-                reductions_DD_V2_GAMMAF1TDD_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
-                reductions_DD_V4_GAMMAF1TDD_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_threept));
+          //B4,B6
+          //B10,B12
+          TIME(reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k]->V4( stochastic_source,     glist_sink_nucleon, propUPpacked_to_sink, propDNpacked_to_sink, false));
+
+          //W5,W6,W7,W8
+          //W9,W10,W11,W12,W17,W18,W19,W20
+	  PLEGMA_Vector<float> stochastic_propagator_packed;
+          for (int j=0; j<HGC_totalL[3]/max_source_sink_separations;++j){
+            PLEGMA_Vector<float> temporary;
+            temporary.copy(*stochastic_propags_DN[lookuptable[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+	    temporary.load();
+            stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, j == 0 ? true : false);
+          }
+
+          stochastic_propagator_packed.apply_gamma5();
+
+	  
+          TIME(reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k]->V3( stochastic_propagator_packed, glist_insertion,   propUP_SL_packed, true));
+
+          //For D(xf1,xf2)
+
+          stochastic_propagator_packed.apply_gamma5();
 
 
+	  for (int j=0; j<HGC_totalL[3]/max_source_sink_separations;++j){
+            PLEGMA_Vector<float> temporary;
+            temporary.copy(*stochastic_propags_UP[lookuptable[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+            temporary.load();
+            stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary,  (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, j == 0 ? true : false);
+          }
 
-              }
-              catch(std::bad_alloc&){
-                PLEGMA_printf("Memory allocation fails to store factors V2 V4");
-                exit(1);
-              }
-            }
-	  }
-	}
+          stochastic_propagator_packed.apply_gamma5();
 
-	//We first have a loop over all unique the source meson momentum p_i2
-        for (int i_mpi2=0; i_mpi2<mpi2_threept.size(); ++i_mpi2){
 
-          auto &momentum_i2 =  mpi2_threept[i_mpi2];
-          //List of momenta corresponding to a fix value of p_i2
-          momList filtered_sourcemomentumList = sourcemomentumList_threept.extract(momentum_i2, 0);
+          //W13,W14,W15,W16
+          //W21,W22,W23,W24
+          TIME(reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k]->V3( stochastic_propagator_packed, glist_insertion,   propDN_SL_packed, true));
 
+          //B7,B8
+          //B1,B2
+          TIME(reductions_DD_V2_GAMMAF1U_U[i_sample*tSinks.size()+k]->V2( stochastic_source, glist_sink_nucleon, propUPpacked_to_sink, propUPpacked_to_sink, false));
+
+        } //end of for source sink separations
+      } //end of for stochastic samples
+
+      //We first have a loop over all unique the source meson momentum p_i2
+      for (int i_mpi2=0; i_mpi2<mpi2_threept.size(); ++i_mpi2){
+
+        auto &momentum_i2 =  mpi2_threept[i_mpi2];
+        //List of momenta corresponding to a fix value of p_i2
+        momList filtered_sourcemomentumList = sourcemomentumList_threept.extract(momentum_i2, 0);
+
+        PLEGMA_ScattCorrelator<float> reductionsV2(source_reduction, list_mpf1_threept);
 		
-	  std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(4);
-          std::vector<std::vector<int>> mpi2_filt  ;
-          mpi2_filt.assign(mptot_filt.size(),momentum_i2);
-          momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+	std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList.uniq_p(4);
+        std::vector<std::vector<int>> mpi2_filt  ;
+        mpi2_filt.assign(mptot_filt.size(),momentum_i2);
+        momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
 
-          PLEGMA_ScattCorrelator<float> reductionsT1(source_reduction, sourcemomentumList_threept.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsT2(source_reduction, sourcemomentumList_threept.uniq_p(1));
+	PLEGMA_ScattCorrelator<float> reductionsT1(source_reduction, mpf1_threept);
+        PLEGMA_ScattCorrelator<float> reductionsT2(source_reduction, mpf1_threept);
+
+        PLEGMA_ScattCorrelator<float> reductionsV3(source_reduction, list_mpc);
+
+
+        PLEGMA_ScattCorrelator<float> corrB3(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB4(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB5(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB6(source, filtered_sourcemomentumList);
+
+	PLEGMA_ScattCorrelator<float> corrW5(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW6(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW7(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW8(source, filtered_sourcemomentumList);
+
+        PLEGMA_ScattCorrelator<float> corrW13(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW14(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW15(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW16(source, filtered_sourcemomentumList);
+
+	corrB3.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B3");
+        corrB4.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B4");
+        corrB5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B5");
+        corrB6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B6");
+
+
+        corrW5.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W5");
+        corrW6.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W6");
+        corrW7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W7");
+        corrW8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W8");
+
+
+        corrW13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W13");
+        corrW14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W14");
+        corrW15.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W15");
+        corrW16.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W16");
+
 
 		 
+	PLEGMA_Propagator<float> propTS_SS_packed;
+
+	for (int i_source_parallel=0; i_source_parallel < HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+
 	  PLEGMA_Propagator<float> propTS;
 
           //we first implemenet UD
@@ -451,24 +689,23 @@ int main(int argc, char **argv) {
             solver.UpdateSolver();
           }
 
-
 	  //pi plus at the source 
           for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
             PLEGMA_Vector<float> vectorAuxF;
             PLEGMA_Vector<double> vectorAuxD2;
             //Performing the smearing
-
-	    {
+            {
               PLEGMA_Vector3D<double> vector1, vector2;
-              vectorAuxF.absorb(propDN, isc/3, isc%3);
+              vectorAuxF.absorb(propUP_SS_packed, isc/3, isc%3);
               vectorAuxD.copy(vectorAuxF);
-              vector1.absorb( vectorAuxD, sequential_time_source);
+              vector1.absorb( vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
               vector2.mulMomentumPhases(momentum_i2,1);
-              vectorAuxD.absorb(vector2,sequential_time_source);
+              vectorAuxD.absorb(vector2, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
 	    }
-            vectorAuxD2.absorbTimeslice(vectorAuxD,sequential_time_source, false);
+            
+	    vectorAuxD2.absorbTimeslice(vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], false);
 
             //Perform multiplication with glist_sink_meson[0]
             vectorAuxD2.apply_gamma_scatt(glist_sink_meson[0]);
@@ -486,92 +723,148 @@ int main(int argc, char **argv) {
             TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
             vectorAuxF.copy(vectorAuxD);
             propTS.absorb(vectorAuxF, isc/3, isc%3);
+
           }
 
-	  PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus1(source, list_mpi2ptot);
-          PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus2(source, list_mpi2ptot);
-          PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus3(source, list_mpi2ptot);
-          PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus4(source, list_mpi2ptot);
-
-	  corrTproton_neutronpiplus1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq11");
-
-          corrTproton_neutronpiplus2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq12");
-
-          corrTproton_neutronpiplus3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq13");
-
-          corrTproton_neutronpiplus4.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq14");
-
-	  TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS, propUP, propDN));
-          TIME(corrTproton_neutronpiplus1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
-
-          TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS, propDN, propUP));
-          TIME(corrTproton_neutronpiplus2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
-
-          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP, propTS, propDN));
-          TIME(corrTproton_neutronpiplus3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
-
-          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP, propDN, propTS));
-          TIME(corrTproton_neutronpiplus4.convertTreductiontoDiagram( reductionsT1, false, false, true));
-
-	  //creating factors
-
-          for (int i=0; i<n_stochastic_samples; ++i){
-
-            vectorSource_stochastic.copy(*stochastic_sources[i],HOST);
-	    vectorSource_stochastic.load();
-
-	    //V3
-            TIME(reductions_UU_V3_GAMMAC_TUD[i_mpi2*n_stochastic_samples+i]->V3( vectorSource_stochastic, glist_insertion,   propTS, true));
+	  propTS_SS_packed.pack_propagator_from_source_to_sink(propTS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+	}
 
 
-	    for (int k=0; k<tSinks.size(); ++k){
-	      int tsinkMtsource = tSinks[k];
+
+	PLEGMA_ScattCorrelator<float> corrTproton_protonpizero1(source, list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrTproton_protonpizero2(source, list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrTproton_protonpizero3(source, list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrTproton_protonpizero4(source, list_mpi2ptot);
+
+        corrTproton_protonpizero1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq21");
+
+        corrTproton_protonpizero2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq22");
+
+        corrTproton_protonpizero3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq23");
+
+        corrTproton_protonpizero4.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq24");
+
+        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, propDN_SS_packed));
+        TIME(corrTproton_protonpizero1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
+
+        TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, propUP_SS_packed));
+        TIME(corrTproton_protonpizero2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
+
+        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
+        TIME(corrTproton_protonpizero3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
+
+        TIME(reductionsT1.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
+        TIME(corrTproton_protonpizero4.convertTreductiontoDiagram( reductionsT1, false, false, true));
+
+	//creating factors
+
+	PLEGMA_Vector<float> stochastic_propagator_packed;
+	for (int k=0; k<tSinks.size(); ++k){
+
+	  PLEGMA_Propagator<float> propTS_SS_packed_to_sink;
+          {
+            for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+              int tsinkMtsource = tSinks[k];
               if(tsinkMtsource >= HGC_totalL[3])
                 PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+              int global_fixSinkTime = (tsinkMtsource + source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+              propTS_SS_packed_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
+            }
+          }
 
-              int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3];
-	      PLEGMA_Propagator<float> propTS_as_sink;
-	      propTS_as_sink.pack_propagator_as_sink(propTS, global_fixSinkTime);
+	  PLEGMA_Propagator<float> propUPpacked_to_sink;
+          PLEGMA_Propagator<float> propDNpacked_to_sink;
+          {
+            for (int j=0; j<HGC_totalL[3]/max_source_sink_separations;++j){
+              int tsinkMtsource = tSinks[k];
+              if(tsinkMtsource >= HGC_totalL[3])
+                PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+              int global_fixSinkTime = (tsinkMtsource + source[3]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+              propUPpacked_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
+              propDNpacked_to_sink.pack_propagator_as_sink(propDN_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
+            }
+          }
 
-	      PLEGMA_Propagator<float> propSINGLE_as_sink;
-	      propSINGLE_as_sink.pack_propagator_as_sink(propDN, global_fixSinkTime);
+          for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
+            for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+	      PLEGMA_Vector<float> temporary;
+	      temporary.copy(*stochastic_propags_DN[lookuptable[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
-	      vectorSource_stochastic.apply_gamma5();
+	      stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+	    }
 
-	      //V2 
-              TIME(reductions_DD_V2_GAMMAF1D_TUD[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V2( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
+            stochastic_propagator_packed.apply_gamma5();
+	    
+	    //V3
+            TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion,   propTS_SS_packed, true));
+	    TIME(corrB3.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 3, true));
+            TIME(corrB4.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 4, true));
+	    TIME(corrB5.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 5, true));
+            TIME(corrB6.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 6, true));
 
-	      //V4
-	      TIME(reductions_DD_V4_GAMMAF1D_TUD[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V4( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
+	    stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
+	    stochastic_propagator_packed.load();
+	    stochastic_propagator_packed.apply_gamma5();
 
 
-	      propSINGLE_as_sink.pack_propagator_as_sink(propUP, global_fixSinkTime);
 
-	      //V2
-              TIME(reductions_DD_V2_GAMMAF1TUD_U[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V2( vectorSource_stochastic,   glist_sink_nucleon, propTS_as_sink, propSINGLE_as_sink, false));
-	      TIME(reductions_DD_V2_GAMMAF1U_TUD[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V2( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
+            TIME(reductionsV2.V4( stochastic_propagator_packed, glist_sink_nucleon, propDNpacked_to_sink, propTS_SS_packed_to_sink, false));//checked
 
-	    }//loop over source sink separations
+	    TIME(corrW5.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 5, true));
+
+	    TIME(corrW7.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 7, true));
+
+            TIME(reductionsV2.V2( stochastic_propagator_packed, glist_sink_nucleon, propDNpacked_to_sink, propTS_SS_packed_to_sink, false));//checked
+
+            TIME(corrW6.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 6, true));
+            TIME(corrW8.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 8, true));
+
+            TIME(reductionsV2.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, false));//checked
+
+            TIME(corrW13.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 13, true));
+            TIME(corrW15.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 15, true));
+
+            TIME(reductionsV2.V2( stochastic_propagator_packed, glist_sink_nucleon, propUPpacked_to_sink, propTS_SS_packed_to_sink, false));//checked
+            TIME(corrW14.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 14, true));
+            TIME(corrW16.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 16, true));
 
 	  }//loop over stochastic samples
 
-	  //pi zero  at the source (U part)
+        }//loop over source sink separations
+
+        // ensuring mu positive
+        if(mu<0) {
+          mu*=-1.;
+          solver.UpdateSolver();
+        }
+
+	for (int i_source_parallel=0; i_source_parallel < HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+
+          PLEGMA_Propagator<float> propTS;
+
+          //we first implemenet UU pizero UP
+          if(mu<0) {
+            mu*=-1.;
+            solver.UpdateSolver();
+          }
+
+          //pi plus at the source
           for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
             PLEGMA_Vector<float> vectorAuxF;
             PLEGMA_Vector<double> vectorAuxD2;
             //Performing the smearing
-
             {
               PLEGMA_Vector3D<double> vector1, vector2;
-              vectorAuxF.absorb(propUP, isc/3, isc%3);
+              vectorAuxF.absorb(propDN_SS_packed, isc/3, isc%3);
               vectorAuxD.copy(vectorAuxF);
-              vector1.absorb( vectorAuxD, sequential_time_source);
+              vector1.absorb( vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
               vector2.mulMomentumPhases(momentum_i2,1);
-              vectorAuxD.absorb(vector2,sequential_time_source);
+              vectorAuxD.absorb(vector2, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
             }
-            vectorAuxD2.absorbTimeslice(vectorAuxD,sequential_time_source, false);
+
+            vectorAuxD2.absorbTimeslice(vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], false);
 
             //Perform multiplication with glist_sink_meson[0]
             vectorAuxD2.apply_gamma_scatt(glist_sink_meson[0]);
@@ -580,7 +873,7 @@ int main(int argc, char **argv) {
 
             //Computing sequential propagators UD T_fii with insertion
             //glist_sink_meson[0]=gamma_5 and momentum momentum_i2
-            PLEGMA_printf("Going to invert UP for sequential propagator UP  for component %d\n", isc);
+            PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
             //performing the inversion
             TIME(solver.solve(vectorAuxD, vectorAuxD));
             //performing rotation to physical base
@@ -589,92 +882,165 @@ int main(int argc, char **argv) {
             TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
             vectorAuxF.copy(vectorAuxD);
             propTS.absorb(vectorAuxF, isc/3, isc%3);
+
           }
 
-	  PLEGMA_ScattCorrelator<float> corrTproton_protonpizero1(source, list_mpi2ptot);
-          PLEGMA_ScattCorrelator<float> corrTproton_protonpizero2(source, list_mpi2ptot);
-          PLEGMA_ScattCorrelator<float> corrTproton_protonpizero3(source, list_mpi2ptot);
-          PLEGMA_ScattCorrelator<float> corrTproton_protonpizero4(source, list_mpi2ptot);
-
-          corrTproton_protonpizero1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq21");
-
-          corrTproton_protonpizero2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq22");
-
-          corrTproton_protonpizero3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq23");
-
-          corrTproton_protonpizero4.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq24");
-
-          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS, propUP, propDN));
-          TIME(corrTproton_protonpizero1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
-
-          TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS, propDN, propUP));
-          TIME(corrTproton_protonpizero2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
-
-          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP, propDN, propTS));
-          TIME(corrTproton_protonpizero3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
-
-          TIME(reductionsT1.T2(glist_source_nucleon,glist_sink_nucleon, propUP, propDN, propTS));
-          TIME(corrTproton_protonpizero4.convertTreductiontoDiagram( reductionsT1, false, false, true));
-
-	   //creating factors
-
-          for (int i=0; i<n_stochastic_samples; ++i){
-
-            vectorSource_stochastic.copy(*stochastic_sources[i],HOST);
-            vectorSource_stochastic.load();
-
-            vectorSource_stochastic.apply_gamma5();
-
-            //V3
-            TIME(reductions_UU_V3_GAMMAC_TUU[i_mpi2*n_stochastic_samples+i]->V3( vectorSource_stochastic, glist_insertion,   propTS, true));
+          propTS_SS_packed.pack_propagator_from_source_to_sink(propTS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+        }
 
 
-            for (int k=0; k<tSinks.size(); ++k){
-	      int tsinkMtsource = tSinks[k];
+	PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus1(source, list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus2(source, list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus3(source, list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus4(source, list_mpi2ptot);
+
+	corrTproton_neutronpiplus1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq11");
+
+        corrTproton_neutronpiplus2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq12");
+
+        corrTproton_neutronpiplus3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq13");
+
+        corrTproton_neutronpiplus4.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq14");
+
+	TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, propDN_SS_packed));
+        TIME(corrTproton_neutronpiplus1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
+
+        TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, propUP_SS_packed));
+        TIME(corrTproton_neutronpiplus2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
+
+	TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propDN_SS_packed));
+        TIME(corrTproton_neutronpiplus3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
+
+        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
+        TIME(corrTproton_neutronpiplus4.convertTreductiontoDiagram( reductionsT1, false, false, true));
+
+	PLEGMA_ScattCorrelator<float> corrB9(source,  list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrB10(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrB11(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrB12(source, list_mpf1_threept);
+
+	PLEGMA_ScattCorrelator<float> corrW17(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrW18(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrW19(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrW20(source, list_mpf1_threept);
+
+        PLEGMA_ScattCorrelator<float> corrW21(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrW22(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrW23(source, list_mpf1_threept);
+        PLEGMA_ScattCorrelator<float> corrW24(source, list_mpf1_threept);
+
+	corrB9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B9");
+        corrB10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B10");
+        corrB11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B11");
+        corrB12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B12");
+
+	corrW17.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W17");
+        corrW18.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W18");
+        corrW19.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W19");
+        corrW20.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W20");
+
+        corrW21.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W21");
+        corrW22.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W22");
+        corrW23.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W23");
+        corrW24.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W24");
+
+
+	for (int k=0; k<tSinks.size();++k){
+	  PLEGMA_Propagator<float> propTS_SS_packed_to_sink;
+          {
+            for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+              int tsinkMtsource = tSinks[k];
               if(tsinkMtsource >= HGC_totalL[3])
                 PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+              int global_fixSinkTime = (tsinkMtsource + source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+              propTS_SS_packed_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
+            }
+          }
 
-              int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3];
-              PLEGMA_Propagator<float> propTS_as_sink;
-              propTS_as_sink.pack_propagator_as_sink(propTS, global_fixSinkTime);
+	  PLEGMA_Propagator<float> propUPpacked_to_sink;
+          PLEGMA_Propagator<float> propDNpacked_to_sink;
+          {
+            for (int j=0; j<HGC_totalL[3]/max_source_sink_separations;++j){
+              int tsinkMtsource = tSinks[k];
+              if(tsinkMtsource >= HGC_totalL[3])
+                PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+              int global_fixSinkTime = (tsinkMtsource + source[3]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+              propUPpacked_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
+              propDNpacked_to_sink.pack_propagator_as_sink(propDN_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
+            }
+          }
 
-              PLEGMA_Propagator<float> propSINGLE_as_sink;
-              propSINGLE_as_sink.pack_propagator_as_sink(propDN, global_fixSinkTime);
+          for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
+            PLEGMA_Vector<float> stochastic_propagator_packed;
+            for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+              PLEGMA_Vector<float> temporary;
+              temporary.copy(*stochastic_propags_DN[lookuptable[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+
+              stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+            }
+
+            stochastic_propagator_packed.apply_gamma5();
+
+	    TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion,   propTS_SS_packed, true ));
+
+            TIME( corrB9.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0,  9, true));
+            TIME(corrB10.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 10, true));
+            TIME(corrB11.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 11, true));
+            TIME(corrB12.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 12, true));
+
+            stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
+            stochastic_propagator_packed.load();
+            stochastic_propagator_packed.apply_gamma5();
 
 
-              //V2
-              TIME(reductions_DD_V2_GAMMAF1D_TUU[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V2( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
+            TIME(reductionsV2.V4( stochastic_propagator_packed, glist_sink_nucleon, propDNpacked_to_sink, propTS_SS_packed_to_sink, false));
+            TIME(corrW17.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 17, true));
+            TIME(corrW19.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 19, true));
 
-              //V4
-              TIME(reductions_DD_V4_GAMMAF1D_TUU[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V4( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
+            TIME(reductionsV2.V2( stochastic_propagator_packed, glist_sink_nucleon, propDNpacked_to_sink, propTS_SS_packed_to_sink, false));
+            TIME(corrW18.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 18, true));
+            TIME(corrW20.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 20, true));
 
+            TIME(reductionsV2.V2( stochastic_propagator_packed, glist_sink_nucleon, propUPpacked_to_sink, propTS_SS_packed_to_sink, false));
+	    TIME(corrW22.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 22, true));
+            TIME(corrW24.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 24, true));
 
-              propSINGLE_as_sink.pack_propagator_as_sink(propUP, global_fixSinkTime);
+            TIME(reductionsV2.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, false));
 
-              //V2
-              TIME(reductions_DD_V2_GAMMAF1TUU_U[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V2( vectorSource_stochastic,   glist_sink_nucleon, propTS_as_sink, propSINGLE_as_sink, false));
-              TIME(reductions_DD_V2_GAMMAF1U_TUU[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V2( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
+	    TIME(corrW21.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 21, true));
+            TIME(corrW23.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 23, true));
 
-            }//loop over source sink separations
+	  } //loop over stochastic samples
 
-          }//loop over stochastic samples
+	} //loop over source sink separations
 
-	  for(int isc = 0 ; isc < 12 ; isc++){
+        for (int i_source_parallel=0; i_source_parallel < HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+
+          PLEGMA_Propagator<float> propTS;
+
+          //we first implemenet DD pizero DN
+          if(mu>0) {
+            mu*=-1.;
+            solver.UpdateSolver();
+          }
+
+          //pi plus at the source
+          for(int isc = 0 ; isc < 12 ; isc++){
             PLEGMA_Vector<double> vectorAuxD;
             PLEGMA_Vector<float> vectorAuxF;
             PLEGMA_Vector<double> vectorAuxD2;
             //Performing the smearing
-
             {
               PLEGMA_Vector3D<double> vector1, vector2;
-              vectorAuxF.absorb(propDN, isc/3, isc%3);
+              vectorAuxF.absorb(propDN_SS_packed, isc/3, isc%3);
               vectorAuxD.copy(vectorAuxF);
-              vector1.absorb( vectorAuxD, sequential_time_source);
+              vector1.absorb( vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
               vector2.mulMomentumPhases(momentum_i2,1);
-              vectorAuxD.absorb(vector2,sequential_time_source);
+              vectorAuxD.absorb(vector2, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
             }
-            vectorAuxD2.absorbTimeslice(vectorAuxD,sequential_time_source, false);
+
+            vectorAuxD2.absorbTimeslice(vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], false);
 
             //Perform multiplication with glist_sink_meson[0]
             vectorAuxD2.apply_gamma_scatt(glist_sink_meson[0]);
@@ -683,7 +1049,7 @@ int main(int argc, char **argv) {
 
             //Computing sequential propagators UD T_fii with insertion
             //glist_sink_meson[0]=gamma_5 and momentum momentum_i2
-            PLEGMA_printf("Going to invert DN for sequential propagator DN  for component %d\n", isc);
+            PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
             //performing the inversion
             TIME(solver.solve(vectorAuxD, vectorAuxD));
             //performing rotation to physical base
@@ -692,149 +1058,104 @@ int main(int argc, char **argv) {
             TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
             vectorAuxF.copy(vectorAuxD);
             propTS.absorb(vectorAuxF, isc/3, isc%3);
+
           }
 
-          PLEGMA_ScattCorrelator<float> corrTproton_protonpizero5(source, list_mpi2ptot);
-          PLEGMA_ScattCorrelator<float> corrTproton_protonpizero6(source, list_mpi2ptot);
+          propTS_SS_packed.pack_propagator_from_source_to_sink(propTS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+        }
 
-          corrTproton_protonpizero5.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq25");
+        PLEGMA_ScattCorrelator<float> corrTproton_protonpizero5(source, list_mpi2ptot);
+        PLEGMA_ScattCorrelator<float> corrTproton_protonpizero6(source, list_mpi2ptot);
 
-          corrTproton_protonpizero6.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq26");
+        corrTproton_protonpizero5.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq25");
 
-          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP, propTS, propUP));
-          TIME(corrTproton_protonpizero5.convertTreductiontoDiagram( reductionsT1, false, true, false ));
+        corrTproton_protonpizero6.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq26");
 
-          TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propUP, propTS, propDN));
-          TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, false, false, true ));
+        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propUP_SS_packed));
+        TIME(corrTproton_protonpizero5.convertTreductiontoDiagram( reductionsT1, false, true, false ));
 
-	  //creating factors
+        TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propDN_SS_packed));
+        TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, false, false, true ));
 
-          for (int i=0; i<n_stochastic_samples; ++i){
+	PLEGMA_ScattCorrelator<float> corrB7(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB8(source, filtered_sourcemomentumList);
 
-            vectorSource_stochastic.copy(*stochastic_sources[i],HOST);
-            vectorSource_stochastic.load();
+        PLEGMA_ScattCorrelator<float> corrW9(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW10(source,filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW11(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW12(source, filtered_sourcemomentumList);
 
-            //V3
-            TIME(reductions_UU_V3_GAMMAC_TDD[i_mpi2*n_stochastic_samples+i]->V3( vectorSource_stochastic, glist_insertion,   propTS, true));
+	corrB7.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B7");
+        corrB8.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B8");
 
+        corrW9.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W9");
+        corrW10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W10");
+        corrW11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W11");
+        corrW12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W12");
 
-            for (int k=0; k<tSinks.size(); ++k){
+        for (int k=0; k<tSinks.size();++k){
+          PLEGMA_Propagator<float> propTS_SS_packed_to_sink;
+          {
+            for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
               int tsinkMtsource = tSinks[k];
               if(tsinkMtsource >= HGC_totalL[3])
                 PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
-
-              int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3];
-              PLEGMA_Propagator<float> propTS_as_sink;
-              propTS_as_sink.pack_propagator_as_sink(propTS, global_fixSinkTime);
-
-              PLEGMA_Propagator<float> propSINGLE_as_sink;
-              propSINGLE_as_sink.pack_propagator_as_sink(propDN, global_fixSinkTime);
-
-              vectorSource_stochastic.apply_gamma5();
-
-              //V2
-              TIME(reductions_DD_V2_GAMMAF1TDD_U[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V2( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
-
-              //V4
-              TIME(reductions_DD_V4_GAMMAF1TDD_U[(i_mpi2*n_stochastic_samples+i)*tSinks.size()+k]->V4( vectorSource_stochastic,   glist_sink_nucleon, propSINGLE_as_sink, propTS_as_sink, false));
-
-
-            }//loop over source sink separations
-
-          }//loop over stochastic samples
-
-	}//loop over source meson momentum
-
-	/*********************************************
-	 *
-	 *
-	 * Part II Stochastic inversion and contraction
-	 *         with stochastic propagators
-	 *         this will do not involve any 
-	 *         sequential propagator
-	 *
-	 *********************************************/
-
-	//UU stochastic piece
-        for (int i=0; i<n_stochastic_samples; ++i){         
-
-          std::vector<PLEGMA_Vector<float>*> stochastic_propags;
-
-          for(int i=0; i< HGC_totalL[DIM_T]; ++i) {
-            stochastic_propags.push_back(new PLEGMA_Vector<float>(HOST));
+              int global_fixSinkTime = (tsinkMtsource + source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+              propTS_SS_packed_to_sink.pack_propagator_as_sink(propTS_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
+            }
           }
 
+          PLEGMA_Propagator<float> propUPpacked_to_sink;
+          PLEGMA_Propagator<float> propDNpacked_to_sink;
+          {
+            for (int j=0; j<HGC_totalL[3]/max_source_sink_separations;++j){
+              int tsinkMtsource = tSinks[k];
+              if(tsinkMtsource >= HGC_totalL[3])
+                PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+              int global_fixSinkTime = (tsinkMtsource + source[3]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+              propUPpacked_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
+              propDNpacked_to_sink.pack_propagator_as_sink(propDN_SS_packed,  global_fixSinkTime, tsinkMtsource, j==0 ? true : false);
+            }
+          }
 
+          for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
+            PLEGMA_Vector<float> stochastic_propagator_packed;
+            for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
+              PLEGMA_Vector<float> temporary;
+              temporary.copy(*stochastic_propags_UP[lookuptable[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
-	  //Step(1) load the souce from the host memory
-	  PLEGMA_Vector<float> vectorSource_stochastic;
-          PLEGMA_Vector<double> vectorAuxD1,vectorAuxD2;
+              stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+            }
 
-	  vectorSource_stochastic.copy(*stochastic_sources[i],HOST);
-          vectorSource_stochastic.load();
-	  
-	  vectorAuxD1.copy(vectorSource_stochastic);
+            stochastic_propagator_packed.apply_gamma5();
 
-          //Step(2) Smearing all the time slice
-          TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+	    TIME(reductionsV3.V3( stochastic_propagator_packed, glist_sink_meson,   propTS_SS_packed, true));
 
-          //Step(3) We rotate the source to the physical basis
-          TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
+            TIME(corrB7.B_diagrams(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i_sample*tSinks.size()+k], 0, 7, true));
+            TIME(corrB8.B_diagrams(reductionsV3, *reductions_DD_V2_GAMMAF1U_U[i_sample*tSinks.size()+k], 0, 8, true));
 
-          PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
-          for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-            //Step(4) pick out a particular timeslice from the source
-            vectorAuxD2.absorbTimeslice(vectorAuxD1, timeidx);
+            stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
+            stochastic_propagator_packed.load();
+            stochastic_propagator_packed.apply_gamma5();
 
-            //Step(5) Solve
-            TIME(solver.solve(vectorAuxD2, vectorAuxD2));
-          
-	    //Step(6) We rotate back the propagator to the physical basis
-            TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2, +1));
-            //Step(7) Smearing all the time slice in the propagator
-            TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
- 
-	    //Step(8) Save the propagator to the host memory
-            vectorAuxD2.unload();
-            stochastic_propags[i]->copy(vectorAuxD2,HOST);
-            vectorAuxD2.load();
+	    TIME(reductionsV2.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, false));
 
+            TIME( corrW9.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0,  9, true));
+            TIME(corrW11.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 11, true));
 
-	  }
+            TIME(reductionsV2.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, false));
 
-	  //Neutron pi plus V3 reductions
-	  //V3
-	  
-          PLEGMA_Vector<float> vectorPropagator_stochastic;
+            TIME(corrW10.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 10, true));
+            TIME(corrW12.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 12, true));
 
-	  
-	  for (int k=0; k<tSinks.size(); ++k){
-             int tsinkMtsource = tSinks[k];
-             if(tsinkMtsource >= HGC_totalL[3])
-               PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
+	  } //loop over stochastic samples
 
-            int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3];
-	    vectorPropagator_stochastic.pack_fermion_to_sink(stochastic_propags, global_fixSinkTime);
-	  
-	    //TIME(reductions_UU_V3_GAMMAC_TDD[i_mpi2*n_stochastic_samples+i]->V3( vectorPropagator_stochastic, glist_insertion,   propUP, true));
+	} //loop over tSinks
 
-	  
-	}
+      }//loop over mpi2
 
+    }//loop over source sink
 
-        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
-        TIME( corrN0.apply_phase());
-        TIME( corrN0.apply_sign("N"));
-        TIME( corrN0.applyBoundaryConditions( true ));
-        TIME( corrN0.writeHDF5(outfilename));
-
-        TIME( corrNP.apply_phase() );
-        TIME( corrNP.apply_sign("N") );
-        TIME( corrNP.applyBoundaryConditions( true ) );
-        TIME( corrNP.writeHDF5(outfilename) );
-        
-      }  //keep track of
-    }//source positions
   }//loop in finalize
   finalize();
   return 0;
