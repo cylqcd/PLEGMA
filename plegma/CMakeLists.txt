@@ -103,6 +103,10 @@ target_link_libraries(Dilution ${PLEGMA_LIBS})
 cuda_add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
 target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 
+cuda_add_executable(piNdiagrams_3pt_N_Npi EXCLUDE_FROM_ALL piNdiagrams_3pt_N_Npi.cpp)
+target_link_libraries(piNdiagrams_3pt_N_Npi ${PLEGMA_LIBS})
+
+
 cuda_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})
 
@@ -164,6 +168,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(piNdiagrams ${PLEGMA_LIBS})
   cuda_add_executable(nucleon_delta_test EXCLUDE_FROM_ALL nucleon_delta_test.cpp)
   target_link_libraries(nucleon_delta_test ${PLEGMA_LIBS})
+  cuda_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
+  target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams_oet piNdiagrams_oet.cpp)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
   cuda_add_executable(checking_Doet checking_Doet.cpp)
