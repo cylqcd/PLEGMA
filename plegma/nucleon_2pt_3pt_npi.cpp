@@ -944,8 +944,8 @@ int main(int argc, char **argv) {
               oet_fini_up.copy(*oet_mom_fini_up_SS[i_pi2], HOST);
               oet_fini_up.load();
 
-              TIME(corrM7.M_diagrams( corrUp, oet_mom_zero_up_SS, oet_fini_up ));
-              TIME(corrM8.M_diagrams( corrDn, oet_mom_zero_up_SS, oet_fini_up ));
+              TIME(corrM7.M_diagrams( corrUp, oet_fini_up, oet_mom_zero_up_SS ));
+              TIME(corrM8.M_diagrams( corrDn, oet_fini_up, oet_mom_zero_up_SS ));
 
               outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup_piplus";
               TIME(corrM7.apply_sign("NJNP"));
