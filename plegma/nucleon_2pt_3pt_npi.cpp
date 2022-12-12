@@ -504,7 +504,6 @@ int main(int argc, char **argv) {
 
 	            
 
-#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 
         std::vector<int> filter={0,0,0};
         momList filtered_sourcemomentumList_pi20 = sourcemomentumList_threept.extract(filter, 0);
@@ -1003,7 +1002,6 @@ int main(int argc, char **argv) {
           computeThreep_meson(+mu_ud, zero_momentum_light, nsmearGauss, LIGHT,"dn", "pizero");
   	  }
 
-#endif
 
         }//tsink
 
