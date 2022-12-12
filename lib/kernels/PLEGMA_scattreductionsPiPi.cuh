@@ -47,7 +47,6 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
 	  #pragma unroll
 	  for(int a=0; a<N_COLS; ++a){
 	    accum[n_g] = accum[n_g] + phi0[alfa][a]*factor*conj(phi1[beta][a]);
-	    printf("%d %d %d %e %e\n", vid, n_g, a, accum[n_g].x,accum[n_g].y);
 	  }
 	//****//     
 	}

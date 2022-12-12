@@ -2239,7 +2239,6 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLE
     std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
     double norm1=Phi_0.norm();
     double norm2=Phi_1.norm();
-    PLEGMA_printf("NOrm inside P diagram %e %e\n", norm1, norm2);
     pipi_aux.PhiPhi( Phi_0, tmpGf2, Phi_1); //T x N_moms x n_gammas_f2
     Float g[2];
     g[0]=-1;//eq 13
@@ -2249,14 +2248,12 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLE
       for( int im=0; im<N_moms; ++im)
         for( int t=0; t<TIME; ++t)
           for( int gf2=0; gf2<n_gammas_f2; ++gf2){
-	      PLEGMA_printf("PP corr %d %d %d %e %e\n", im, t, gf2, pipi_aux.Corr(t,im,gf2)[0],pipi_aux.Corr(t,im,gf2)[1]);
               x_pe_cy( this->Corr(t,im,gi2,gf2), g, pipi_aux.Corr(t,im,gf2), 1);
 	  }
     }
     else{
       for( int t=0; t<TIME; ++t)
         for( int gf2=0; gf2<n_gammas_f2; ++gf2){
-          PLEGMA_printf("PP corr %d %d %e %e\n", t, gf2, pipi_aux.Corr(t,0,gf2)[0],pipi_aux.Corr(t,0,gf2)[1]);
           x_pe_cy( this->Corr(t,i_pi2,gi2,gf2), g, pipi_aux.Corr(t,0,gf2), 1);
 	}
     }
