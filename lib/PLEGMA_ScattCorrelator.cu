@@ -6,8 +6,14 @@
 #include <PLEGMA_utils.h>
 #include <omp.h>
 #include  <memory>
+#include <comm_quda.h>
 #include <communicator_quda.h>
 using namespace plegma;
+using namespace quda;
+
+Communicator &get_current_communicator();
+
+
 
 bool gammas_isSym( std::vector<GAMMAS_SCATT> &Gammas ){
   bool res = true;
@@ -377,7 +383,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice); 
   int coords[4];
   for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
-  int rankHas = quda::comm_rank_from_coords(HGC_default_topo, coords);
+  int rankHas = comm_rank_from_coords(coords);
 
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
@@ -390,12 +396,12 @@ template<typename Float>
 Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
   const int  size_of_glist =this->GList.size();
   int size_timeslice= this->Nmoms();
-  //printf("Nmoms %d \n", this->Nmoms());
-  //printf("Global time index %d\n",global_time_index);
+  printf("Nmoms %d \n", this->Nmoms());
+  printf("Global time index %d\n",global_time_index);
   for (int i=0; i< size_of_glist; ++i){
     size_timeslice *= this->GList[i].size();
   }
-  //printf("Size timeslice %d\n",size_timeslice);
+  printf("Size timeslice %d\n",size_timeslice);
   std::size_t n_t = this->labels.find("s");
   if (n_t!=std::string::npos){
     size_timeslice *= 32;
@@ -406,18 +412,18 @@ Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
   Float *ptr=((Float *)malloc(sizeof(Float)*size_timeslice));
   const int t_source_local= global_time_index%HGC_localL[DIM_T];
   memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice);
-  //printf("ptr %e\n",ptr[0]);
+  printf("ptr %e\n",ptr[0]);
   int coords[4];
   for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
   coords[N_DIMS-1]=global_time_index / HGC_localL[N_DIMS-1];
-  int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
-  //printf("rankHas %d\n",rankHas);
+  int rankHas = quda::comm_rank_from_coords(coords);
+  printf("rankHas %d\n",rankHas);
   MPI_Barrier(HGC_fullComm);
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
-  //printf("ptrafter %e\n",ptr[0]);
-  //fflush(stdout);
-  //MPI_Barrier(HGC_fullComm);
+  printf("ptrafter %e\n",ptr[0]);
+  fflush(stdout);
+  MPI_Barrier(HGC_fullComm);
   return ptr;
 }
 
@@ -3511,7 +3517,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
     int coords[4];
     for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
     coords[3]= global_it / HGC_localL[3];
-    int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+    int rankHas = quda::comm_rank_from_coords(coords);
     int mpiErr = MPI_Bcast(this->H_elem(), in_dofs_src*out_dofs_src , MPI_Type<Float>(), rankHas, HGC_fullComm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     
