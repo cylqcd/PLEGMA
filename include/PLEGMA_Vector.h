@@ -99,6 +99,9 @@ namespace plegma {
 
     void pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
 
+    void pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
+
+
 
     void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bool  broadcast=false);
 

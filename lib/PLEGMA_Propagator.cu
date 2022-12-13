@@ -135,7 +135,7 @@ void PLEGMA_Propagator<Float>::pack_propagator_from_source_to_sink(PLEGMA_Propag
 
     for (int dt=0; dt<source_sink_separation; ++dt){
       int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
-      vector1.absorb(in, sinktimeslice, isc/3, isc%3,true);
+      vector1.absorb(in, actualtimeslice, isc/3, isc%3,true);
       stmp.absorbTimeslice(vector1, actualtimeslice, false);
     }
 

@@ -289,7 +289,7 @@ void PLEGMA_Vector<Float>::pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize){
+void PLEGMA_Vector<Float>::pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize){
 
   PLEGMA_Vector<Float> stmp;
   PLEGMA_Vector3D<Float> vector1;
@@ -302,6 +302,27 @@ void PLEGMA_Vector<Float>::pack_propagator_from_source_to_sink(PLEGMA_Vector<Flo
   for (int dt=0; dt<source_sink_separation; ++dt){
     int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
     vector1.absorb(in, sinktimeslice );
+    stmp.absorbTimeslice(vector1, actualtimeslice, false);
+  }
+
+  this->copy(stmp);
+}
+
+
+template<typename Float>
+void PLEGMA_Vector<Float>::pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize){
+
+  PLEGMA_Vector<Float> stmp;
+  PLEGMA_Vector3D<Float> vector1;
+
+  if (initialize==true){
+    stmp.zero_where(DEVICE);
+    stmp.zero_where(HOST);
+  }
+
+  for (int dt=0; dt<source_sink_separation; ++dt){
+    int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
+    vector1.absorb(in, actualtimeslice );
     stmp.absorbTimeslice(vector1, actualtimeslice, false);
   }
 
