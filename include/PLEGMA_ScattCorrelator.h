@@ -263,6 +263,8 @@ namespace plegma {
     void W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_f2, int diagram_index, bool accum=false);
 
     void Z_diagrams( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
+    void Z_diagrams(std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV3), std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2), int diagramm_index, bool accum=false );
+
     void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2,  int diagramm_index, bool accum=false );
     void Z_diagrams_without_dilution_check(PLEGMA_ScattCorrelator<Float> &srcV3,
                                                 PLEGMA_ScattCorrelator<Float> &srcV2, int i_g_i2,

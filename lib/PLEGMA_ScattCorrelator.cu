@@ -2133,6 +2133,99 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagrams(std::array<PLEGMA_ScattCorrelator
 
 }
 
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::Z_diagrams(std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV3),
+                                                std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2),
+                                                int diagramm_index, bool accum ){
+
+  if( (diagramm_index <1) || (diagramm_index >20 ) )
+    PLEGMA_error("diagramm_index %d out of range (1..20)\n",diagramm_index);
+
+  this->clear_output(!accum);
+
+  for (int g2=0; g2<this->GList[3].size(); ++g2 ){
+    //GAMMAS_SCATT gammai2 = this->GList[3][g2];
+    GAMMAS_SCATT gammai2_t_gamma5 = apply_g5( this->GList[3][g2], RIGHT);
+    for (int n=0; n<4; ++n){
+      int kappa = gammaInd_scatt[gammai2_t_gamma5][n][0];
+      int lambda =gammaInd_scatt[gammai2_t_gamma5][n][1];
+      Float g[2];
+      g[1] = -gamma_scatt[gammai2_t_gamma5][n][1]; //-1 from eqs. (41),(44),(47),(50)
+      g[0] = -gamma_scatt[gammai2_t_gamma5][n][0]; //-1 from eqs. (41),(44),(47),(50)
+
+      switch (diagramm_index){
+        case 1:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 1, false, g2, true, g, false); //checked FP
+          break;
+        case 2:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 0, false, g2, true, g, false);//checked FP
+          break;
+        case 3:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 1, false, g2, true, g, false);//checked FP
+          break;
+        case 4:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 0, false, g2, true, g, false);//checked FP
+          break;
+        case 5:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 0, false, g2, true, g, false);//checked FP
+          break;
+        case 6:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 1, false, g2, true, g, false);//checked FP
+          break;
+        case 7:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 1, false, g2, true, g, false);//checked FP
+          break;
+        case 8:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 0, false, g2, true, g, false);//checked FP
+          break;
+        case 9:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 2, true, g2, false, g, true); //checked FP
+          break;
+        case 10:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 0, false, g2, false, g, true); //checked FP
+          break;
+        case 11:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 2, true, g2,  true, g, false); //checked FP
+          break;
+        case 12:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 2, false, g2, true, g, false); //checked FP
+          break;
+        case 13:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 1, false, g2, false, g, false); //checked FP
+          break;
+        case 14:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 0, false, g2, false, g, false); //checked FP
+          break;
+        case 15:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 0, false, g2, false, g, true); //checked FP
+          break;
+        case 16:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 2, true, g2,  false, g, true); //checked FP
+          break;
+        case 17:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 2, true, g2, true, g, false);//checked FP
+          break;
+        case 18:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 1, false, g2, false, g, false);//checked FP
+          break;
+        case 19:
+          this->V3V2reduction( *srcV3[lambda], *srcV2[kappa], 2, false, g2, true, g, false); //checked FP
+          break;
+        case 20:
+          this->V3V2reduction_matrix( *srcV3[lambda], *srcV2[kappa], 0, false, g2, false, g, false);//checked FP
+          break;
+        default:
+          PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagrams.cpp");
+      }//switch (Diagram index)
+
+    }//n -> nonzero elems of Gi2
+  }//loop over G_i2 matrix
+
+}
+
+
+
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! Phi_0[s] is the stocastic propagator at zero momentum and spin s, Phi_1 with momentum pi2
 //GList only 2 gammas G_i2, G_f2
 template<typename Float>
