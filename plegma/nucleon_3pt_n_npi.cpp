@@ -888,7 +888,7 @@ int main(int argc, char **argv) {
 	    vectorAuxD2.absorbTimeslice(vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], false);
 
             //Perform multiplication with glist_insertion[0]
-            vectorAuxD2.apply_gamma_scatt(glist_insertion[0]);
+            vectorAuxD2.apply_gamma_scatt(glist_source_meson[0]);
             //Perform rotation to the physical basis
             vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1);
 
@@ -1093,7 +1093,7 @@ int main(int argc, char **argv) {
             vectorAuxD2.absorbTimeslice(vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], false);
 
             //Perform multiplication with glist_insertion[0]
-            vectorAuxD2.apply_gamma_scatt(glist_insertion[0]);
+            vectorAuxD2.apply_gamma_scatt(glist_source_meson[0]);
             //Perform rotation to the physical basis
             vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,+1);
 
@@ -1284,7 +1284,7 @@ int main(int argc, char **argv) {
             vectorAuxD2.absorbTimeslice(vectorAuxD, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], false);
 
             //Perform multiplication with glist_insertion[0]
-            vectorAuxD2.apply_gamma_scatt(glist_insertion[0]);
+            vectorAuxD2.apply_gamma_scatt(glist_source_meson[0]);
             //Perform rotation to the physical basis
             vectorAuxD.rotateToPhysicalBasis(vectorAuxD2,-1);
 
