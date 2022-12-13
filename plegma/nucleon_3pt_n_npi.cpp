@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
   std::vector<double> mu_s;
   std::vector<double> mu_c;
   int rand_seed1=1234;
+  int rand_seed2=5678;
   int confnumber_int;
   double mu_ud = mu;
   double mu_ud_factor[QUDA_MAX_MG_LEVEL];
@@ -68,15 +69,13 @@ int main(int argc, char **argv) {
   int max_source_sink_separations;
 
 
-  auto add_options = [&](Options& options) {
-    options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
-    options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
-    options.set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
-    options.set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
-    options.set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
-    options.set("maxSourceSinkSeparations", "Maximal source sink separations", verbosity, max_source_sink_separations);
+  HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
+  HGC_options->set("maxSourceSinkSeparations", "Maximal source sink separations", verbosity, max_source_sink_separations);
+  HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
+  HGC_options->set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
+  HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
+  HGC_options->set("seed2", "Seed for intiialization of stochastic sources", verbosity, rand_seed2);
 
-		     };
   //=========================================================================================================//
   initializePLEGMA();
 
@@ -169,16 +168,15 @@ int main(int argc, char **argv) {
 
 
     int parallel_sources=HGC_totalL[3]/max_source_sink_separations;
-    std::vector<int> lookuptable;
+    std::vector<int> lookuptable_UP;
+    std::vector<int> lookuptable_DN;
+
     
-    for (int i=0; i<HGC_totalL[3]; ++i)
-      lookuptable.push_back(-1);
-//    for (
-//    for (int j=0; j< tSinks.size();++j){
-//      for (int k=0; k< parallel_sources;++k){
-//        lookuptable[(i*tSinks.size()*parallel_sources+j*parallel_sources+k);
-//      }
-//    }
+    for (int i=0; i<HGC_totalL[3]; ++i){
+      lookuptable_UP.push_back(-1);
+      lookuptable_DN.push_back(-1);
+    }
+
 
     PLEGMA_Vector<double> vectorSource_stochastic;
     vectorSource_stochastic.randInit(rand_seed1);
@@ -256,7 +254,7 @@ int main(int argc, char **argv) {
       site& source = sourcePositions[isource];
       for (int k=0; k<tSinks.size();++k){
         for (int l=0; l<parallel_sources;++l){
-          if (lookuptable[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]==-1){
+          if (lookuptable_UP[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]==-1){
             int timeSlice=(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];	     
 	    PLEGMA_Gauge3D<double> smearedGauge3D;
             smearedGauge3D.absorb(smearedGauge, timeSlice );
@@ -295,12 +293,11 @@ int main(int argc, char **argv) {
 	      vectorInOut.load();
 
 	    }
-	    lookuptable[timeSlice]=countindex/n_stochastic_samples;
+	    lookuptable_UP[timeSlice]=(countindex-1)/n_stochastic_samples;
 	  }
         }
       }
     }
-
     if(mu>0)
     {
       mu = -mu;
@@ -313,7 +310,7 @@ int main(int argc, char **argv) {
       site& source = sourcePositions[isource];
       for (int k=0; k<tSinks.size();++k){
         for (int l=0; l<parallel_sources;++l){
-          if (lookuptable[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]==-1){
+          if (lookuptable_DN[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]==-1){
             int timeSlice=(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
             PLEGMA_Gauge3D<double> smearedGauge3D;
             smearedGauge3D.absorb(smearedGauge, timeSlice );
@@ -354,7 +351,7 @@ int main(int argc, char **argv) {
 
             }
             //lookuptable[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]=isource*tSinks.size()*parallel_sources+k*parallel_sources+l;
-            lookuptable[timeSlice]=countindex/n_stochastic_samples;
+            lookuptable_DN[timeSlice]=(countindex-1)/n_stochastic_samples;
           }
         }
       }
@@ -375,7 +372,7 @@ int main(int argc, char **argv) {
       site source_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
 
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",isource, source[0], source[1], source[2], source[3]);
-      updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
+      //updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
@@ -456,6 +453,7 @@ int main(int argc, char **argv) {
 
         site& source_local = sourcePositions[isource];
 	source_local[3]=(sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+	int sink_local=(sourcePositions[isource][3]+(i_source_parallel+1)*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
 
 	site source_local_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
         source_local_reduction[3]=(sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
@@ -502,13 +500,25 @@ int main(int argc, char **argv) {
 	  //PLEGMA_printf("Nucleon diagram ready\n");
         }
 
-        propUP_SS_packed.pack_propagator_from_source_to_sink(propUP_SS, source_local[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
-        propDN_SS_packed.pack_propagator_from_source_to_sink(propDN_SS, source_local[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
+        TIME( corrN0.apply_phase());
+        TIME( corrN0.apply_sign("N"));
+        TIME( corrN0.applyBoundaryConditions( true ));
+        TIME( corrN0.writeHDF5(outfilename));
 
-        propUP_SL_packed.pack_propagator_from_source_to_sink(propUP_SS, source_local[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
-        propDN_SL_packed.pack_propagator_from_source_to_sink(propDN_SS, source_local[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+        TIME( corrNP.apply_phase() );
+        TIME( corrNP.apply_sign("N") );
+        TIME( corrNP.applyBoundaryConditions( true ) );
+        TIME( corrNP.writeHDF5(outfilename) );
 
 
+        propUP_SS_packed.pack_propagator_from_source_to_sink(propUP_SS, sink_local, max_source_sink_separations, i_source_parallel == 0 ? true : false);
+        propDN_SS_packed.pack_propagator_from_source_to_sink(propDN_SS, sink_local, max_source_sink_separations, i_source_parallel == 0 ? true : false);
+
+        propUP_SL_packed.pack_propagator_from_source_to_sink(propUP_SL, sink_local, max_source_sink_separations, i_source_parallel == 0 ? true : false);
+        propDN_SL_packed.pack_propagator_from_source_to_sink(propDN_SL, sink_local, max_source_sink_separations, i_source_parallel == 0 ? true : false);
+
+        printf("Packing step %d\n", i_source_parallel);
       }
 
       //We implement the UD part first
@@ -593,7 +603,11 @@ int main(int argc, char **argv) {
 	  PLEGMA_Vector<float> stochastic_propagator_packed;
           for (int j=0; j<parallel_sources;++j){
             PLEGMA_Vector<float> temporary;
-            temporary.copy(*stochastic_propags_DN[lookuptable[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+
+	    //PLEGMA_printf("Look up table %d TIMESlice %d j %d\n", lookuptable_DN[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]],
+	    //		    (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3],j);
+	    //fflush(stdout);
+            temporary.copy(*stochastic_propags_DN[lookuptable_DN[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 	    temporary.load();
             stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, j == 0 ? true : false);
           }
@@ -610,7 +624,7 @@ int main(int argc, char **argv) {
 
 	  for (int j=0; j<parallel_sources;++j){
             PLEGMA_Vector<float> temporary;
-            temporary.copy(*stochastic_propags_UP[lookuptable[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+            temporary.copy(*stochastic_propags_UP[lookuptable_UP[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
             temporary.load();
             stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary,  (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, j == 0 ? true : false);
           }
@@ -999,7 +1013,7 @@ int main(int argc, char **argv) {
           for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
             for (int i_source_parallel=0; i_source_parallel<parallel_sources;++i_source_parallel){
 	      PLEGMA_Vector<float> temporary;
-	      temporary.copy(*stochastic_propags_DN[lookuptable[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+	      temporary.copy(*stochastic_propags_DN[lookuptable_DN[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
 	      stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
 	    }
@@ -1200,7 +1214,7 @@ int main(int argc, char **argv) {
             PLEGMA_Vector<float> stochastic_propagator_packed;
             for (int i_source_parallel=0; i_source_parallel<parallel_sources;++i_source_parallel){
               PLEGMA_Vector<float> temporary;
-              temporary.copy(*stochastic_propags_DN[lookuptable[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+              temporary.copy(*stochastic_propags_DN[lookuptable_DN[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
               stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
             }
@@ -1369,7 +1383,7 @@ int main(int argc, char **argv) {
             PLEGMA_Vector<float> stochastic_propagator_packed;
             for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
               PLEGMA_Vector<float> temporary;
-              temporary.copy(*stochastic_propags_UP[lookuptable[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+              temporary.copy(*stochastic_propags_UP[lookuptable_UP[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
               stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
             }

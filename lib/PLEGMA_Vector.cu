@@ -302,7 +302,7 @@ void PLEGMA_Vector<Float>::pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int
   for (int dt=0; dt<source_sink_separation; ++dt){
     int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
     vector1.absorb(in, sinktimeslice );
-    stmp.absorbTimeslice(vector1, actualtimeslice, false);
+    stmp.absorb(vector1, actualtimeslice, false);
   }
 
   this->copy(stmp);
@@ -323,7 +323,7 @@ void PLEGMA_Vector<Float>::pack_propagator_from_source_to_sink(PLEGMA_Vector<Flo
   for (int dt=0; dt<source_sink_separation; ++dt){
     int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
     vector1.absorb(in, actualtimeslice );
-    stmp.absorbTimeslice(vector1, actualtimeslice, false);
+    stmp.absorb(vector1, actualtimeslice, false);
   }
 
   this->copy(stmp);
