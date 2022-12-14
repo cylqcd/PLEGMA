@@ -119,13 +119,10 @@ int main(int argc, char **argv)
 	    }
 	    ft3D.apply(trace2,FT_GEMV);
 	    
-	    //std::string tmp = "_"+std::to_string(iconf)+"_"+std::to_string(n)+"_"+std::to_string(p);
 	    if(s_dim == 3)
 	      ft3D.writeASCII(outName3, 0, true);
 	    else if(s_dim == 4)
 	      ft3D.writeASCII(outName4, 0, true);
-	      //ft3D.store3DFTs(T[i_s][n/nsmearStep][p], 0 );
-	    //PLEGMA_printf("%d %d %d\n",iconf,n,p);}
 	  }
 	}
       }
@@ -158,8 +155,6 @@ int main(int argc, char **argv)
     PLEGMA_Su3field<double> Umu(DEVICE), Umu_d(DEVICE), Unu_d(DEVICE);
     Vstc.randInit(rng_seed);
 
-    //std::complex<double> G_FF[dims[3]];
-    //for(int t=0; t < dims[3]; t++) G_FF[t]=0;
     double G_FF[T][T][numSourcePositions];
     for(int isc=0; isc < numSourcePositions; isc++) for(int t=0; t < T*T; t++) G_FF[t/T][t%T][isc]=0;
     
@@ -196,11 +191,10 @@ int main(int argc, char **argv)
 	  solver.solve(VtOut[3],Vtmp);
 	  
 	  Umu.absorbDir_device(gauge,mu_d);
-	  //Umu.absorbDir_host(gauge,mu_d);
-	  Umu_d.copy(Umu,DEVICE);//BOTH);
+	  Umu_d.copy(Umu,DEVICE);
 	  Umu_d.Udag();
 	  for(int nu=0; nu<3; nu++){
-	    if ( mu_d != nu ){//PLEGMA_printf("test %d %d\n",mu_d,nu);
+	    if ( mu_d != nu ){
 	      // We only need U_\nu^\dagger
 	      Unu_d.absorbDir_device(gauge,nu);
 	      //Unu_d.absorbDir_host(gauge,nu);
