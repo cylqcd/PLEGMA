@@ -197,9 +197,9 @@ int main(int argc, char **argv) {
 
     std::vector<PLEGMA_Vector<float>*> stochastic_sources;
 
-    std::vector<PLEGMA_Vector<float>*> stochastic_propags_UP;
+    std::vector<PLEGMA_Vector<float>*> stochastic_propags_UP_SL;
 
-    std::vector<PLEGMA_Vector<float>*> stochastic_propags_DN;
+    std::vector<PLEGMA_Vector<float>*> stochastic_propags_DN_SL;
 
     std::vector<PLEGMA_Vector<float>*> stochastic_oet_prop_u_zero_mom;
 
@@ -283,11 +283,11 @@ int main(int argc, char **argv) {
               TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,+1));
 
               //Step(7) Smearing all the time slice in the propagator
-              TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+              //TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
 	      vectorInOut.unload();
-	      stochastic_propags_UP.push_back(new PLEGMA_Vector<float>(HOST));
-              stochastic_propags_UP[countindex]->copy(vectorInOut, HOST);
+	      stochastic_propags_UP_SL.push_back(new PLEGMA_Vector<float>(HOST));
+              stochastic_propags_UP_SL[countindex]->copy(vectorAuxD1, HOST);
 	      countindex++;
               //(isource*tSinks.size()*parallel_sources+k*parallel_sources+l)*n_stochastic_samples+i]->copy(vectorInOut, HOST);
 	      vectorInOut.load();
@@ -339,14 +339,14 @@ int main(int argc, char **argv) {
               TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,-1));
 
               //Step(7) Smearing all the time slice in the propagator
-              TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+              //TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
-              vectorInOut.unload();
-              stochastic_propags_DN.push_back(new PLEGMA_Vector<float>(HOST));
-	      stochastic_propags_DN[countindex]->copy(vectorInOut, HOST);
+              vectorAuxD1.unload();
+              stochastic_propags_DN_SL.push_back(new PLEGMA_Vector<float>(HOST));
+	      stochastic_propags_DN_SL[countindex]->copy(vectorAuxD1, HOST);
               countindex++;
 
-              //stochastic_propags_DN[(isource*tSinks.size()*parallel_sources+k*parallel_sources+l)*n_stochastic_samples+i]->copy(vectorInOut, HOST);
+              //stochastic_propags_DN_SL[(isource*tSinks.size()*parallel_sources+k*parallel_sources+l)*n_stochastic_samples+i]->copy(vectorInOut, HOST);
               vectorInOut.load();
 
             }
@@ -607,7 +607,7 @@ int main(int argc, char **argv) {
 	    //PLEGMA_printf("Look up table %d TIMESlice %d j %d\n", lookuptable_DN[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]],
 	    //		    (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3],j);
 	    //fflush(stdout);
-            temporary.copy(*stochastic_propags_DN[lookuptable_DN[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+            temporary.copy(*stochastic_propags_DN_SL[lookuptable_DN[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 	    temporary.load();
             stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, j == 0 ? true : false);
           }
@@ -624,7 +624,7 @@ int main(int argc, char **argv) {
 
 	  for (int j=0; j<parallel_sources;++j){
             PLEGMA_Vector<float> temporary;
-            temporary.copy(*stochastic_propags_UP[lookuptable_UP[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+            temporary.copy(*stochastic_propags_UP_SL[lookuptable_UP[(source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
             temporary.load();
             stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary,  (source[3]+tSinks[k]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, j == 0 ? true : false);
           }
@@ -857,10 +857,14 @@ int main(int argc, char **argv) {
         PLEGMA_ScattCorrelator<float> reductionsV3(source_reduction, list_mpc);
 		 
 	PLEGMA_Propagator<float> propTS_SS_packed;
+        PLEGMA_Propagator<float> propTS_SL_packed;
+
 
 	for (int i_source_parallel=0; i_source_parallel < parallel_sources;++i_source_parallel){
 
-	  PLEGMA_Propagator<float> propTS;
+	  PLEGMA_Propagator<float> propTS_SS;
+          PLEGMA_Propagator<float> propTS_SL;
+
 
           //we first implemenet UD
 	  //Ensure mu is positive
@@ -894,19 +898,23 @@ int main(int argc, char **argv) {
 
             //Computing sequential propagators UD T_fii with insertion
             //glist_insertion[0]=gamma_5 and momentum momentum_i2
-            PLEGMA_printf("Going to invert UP for sequential propagator DN  for component %d\n", isc);
+            PLEGMA_printf("Going to invert UP for sequential propagator UP  for component %d\n", isc);
             //performing the inversion
             TIME(solver.solve(vectorAuxD, vectorAuxD));
             //performing rotation to physical base
             vectorAuxD2.rotateToPhysicalBasis(vectorAuxD,+1);
             //performing smearing
+	    vectorAuxF.copy(vectorAuxD2);
+            propTS_SL.absorb(vectorAuxF, isc/3, isc%3);
             TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
             vectorAuxF.copy(vectorAuxD);
-            propTS.absorb(vectorAuxF, isc/3, isc%3);
+            propTS_SS.absorb(vectorAuxF, isc/3, isc%3);
 
           }
 
-	  propTS_SS_packed.pack_propagator_from_source_to_sink(propTS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+	  propTS_SS_packed.pack_propagator_from_source_to_sink(propTS_SS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+          propTS_SL_packed.pack_propagator_from_source_to_sink(propTS_SL, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+
 	}
 
 
@@ -994,7 +1002,7 @@ int main(int argc, char **argv) {
             if(tsinkMtsource >= HGC_totalL[3])
               PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
             int global_fixSinkTime = (tsinkMtsource + source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
-            propTS_SS_packed_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
+            propTS_SS_packed_to_sink.pack_propagator_as_sink(propTS_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
           }
 
 	  PLEGMA_Propagator<float> propUPpacked_to_sink;
@@ -1013,7 +1021,7 @@ int main(int argc, char **argv) {
           for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
             for (int i_source_parallel=0; i_source_parallel<parallel_sources;++i_source_parallel){
 	      PLEGMA_Vector<float> temporary;
-	      temporary.copy(*stochastic_propags_DN[lookuptable_DN[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+	      temporary.copy(*stochastic_propags_DN_SL[lookuptable_DN[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
 	      stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
 	    }
@@ -1021,7 +1029,8 @@ int main(int argc, char **argv) {
             stochastic_propagator_packed.apply_gamma5();
 	    
 	    //V3
-            TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion,   propTS_SS_packed, true));
+            TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion, propTS_SL_packed, true));
+
 	    TIME(corrB3.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 3, true));
             TIME(corrB4.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 4, true));
 	    TIME(corrB5.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 5, true));
@@ -1055,6 +1064,24 @@ int main(int argc, char **argv) {
 
 	  }//loop over stochastic samples
 
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
+          TIME(produceOutput(corrB3, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrB4, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrB5, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrB6, outfilename, "4pt", n_stochastic_samples));
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
+          TIME(produceOutput(corrW5, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW6, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW7, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW8, outfilename, "4pt", n_stochastic_samples));
+
+          TIME(produceOutput(corrW13, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW14, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW15, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW16, outfilename, "4pt", n_stochastic_samples));
+
+
         }//loop over source sink separations
 
 
@@ -1066,7 +1093,9 @@ int main(int argc, char **argv) {
 
 	for (int i_source_parallel=0; i_source_parallel < parallel_sources;++i_source_parallel){
 
-          PLEGMA_Propagator<float> propTS;
+          PLEGMA_Propagator<float> propTS_SS;
+          PLEGMA_Propagator<float> propTS_SL;
+
 
           //we first implemenet UU pizero UP
           if(mu<0) {
@@ -1111,7 +1140,9 @@ int main(int argc, char **argv) {
 
           }
 
-          propTS_SS_packed.pack_propagator_from_source_to_sink(propTS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+          propTS_SS_packed.pack_propagator_from_source_to_sink(propTS_SS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+          propTS_SL_packed.pack_propagator_from_source_to_sink(propTS_SL, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+
         }
 
 
@@ -1195,7 +1226,7 @@ int main(int argc, char **argv) {
               if(tsinkMtsource >= HGC_totalL[3])
                 PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
               int global_fixSinkTime = (tsinkMtsource + source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
-              propTS_SS_packed_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
+              propTS_SS_packed_to_sink.pack_propagator_as_sink(propTS_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
             }
           }
 
@@ -1214,14 +1245,14 @@ int main(int argc, char **argv) {
             PLEGMA_Vector<float> stochastic_propagator_packed;
             for (int i_source_parallel=0; i_source_parallel<parallel_sources;++i_source_parallel){
               PLEGMA_Vector<float> temporary;
-              temporary.copy(*stochastic_propags_DN[lookuptable_DN[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+              temporary.copy(*stochastic_propags_DN_SL[lookuptable_DN[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
               stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
             }
 
             stochastic_propagator_packed.apply_gamma5();
 
-	    TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion,   propTS_SS_packed, true ));
+	    TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion,   propTS_SL_packed, true ));
 
             TIME( corrB9.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0,  9, true));
             TIME(corrB10.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 10, true));
@@ -1257,7 +1288,9 @@ int main(int argc, char **argv) {
 
         for (int i_source_parallel=0; i_source_parallel < parallel_sources;++i_source_parallel){
 
-          PLEGMA_Propagator<float> propTS;
+          PLEGMA_Propagator<float> propTS_SS;
+          PLEGMA_Propagator<float> propTS_SL;
+
 
           //we first implemenet DD pizero DN
           if(mu>0) {
@@ -1296,13 +1329,17 @@ int main(int argc, char **argv) {
             //performing rotation to physical base
             vectorAuxD2.rotateToPhysicalBasis(vectorAuxD,-1);
             //performing smearing
+            vectorAuxF.copy(vectorAuxD);
+            propTS_SL.absorb(vectorAuxF, isc/3, isc%3);
             TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
             vectorAuxF.copy(vectorAuxD);
-            propTS.absorb(vectorAuxF, isc/3, isc%3);
+            propTS_SS.absorb(vectorAuxF, isc/3, isc%3);
 
           }
 
-          propTS_SS_packed.pack_propagator_from_source_to_sink(propTS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+          propTS_SS_packed.pack_propagator_from_source_to_sink(propTS_SS, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+          propTS_SL_packed.pack_propagator_from_source_to_sink(propTS_SL, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+
         }
 
         PLEGMA_ScattCorrelator<float> corrTproton_protonpizero5(source, list_mpi2ptot);
@@ -1367,7 +1404,6 @@ int main(int argc, char **argv) {
           }
 
           PLEGMA_Propagator<float> propUPpacked_to_sink;
-          PLEGMA_Propagator<float> propDNpacked_to_sink;
           
           for (int i_source_parallel=0; i_source_parallel< parallel_sources;++i_source_parallel){
             int tsinkMtsource = tSinks[k];
@@ -1375,7 +1411,6 @@ int main(int argc, char **argv) {
               PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
             int global_fixSinkTime = (tsinkMtsource + source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
             propUPpacked_to_sink.pack_propagator_as_sink(propUP_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
-            propDNpacked_to_sink.pack_propagator_as_sink(propDN_SS_packed,  global_fixSinkTime, tsinkMtsource, i_source_parallel==0 ? true : false);
           }
        
 
@@ -1383,7 +1418,7 @@ int main(int argc, char **argv) {
             PLEGMA_Vector<float> stochastic_propagator_packed;
             for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
               PLEGMA_Vector<float> temporary;
-              temporary.copy(*stochastic_propags_UP[lookuptable_UP[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
+              temporary.copy(*stochastic_propags_UP_SL[lookuptable_UP[(source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]*n_stochastic_samples+i_sample],HOST);
 
               stochastic_propagator_packed.pack_propagator_from_source_to_sink(temporary, (sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
             }
@@ -1444,10 +1479,6 @@ int main(int argc, char **argv) {
 
             vectortmp1.dilutespin(vectorStoc_source_oet,0);
             vectorSource_finite_mom.copy(vectortmp1);
-            std::vector<int> tmp_4Dmom= momentum_i2 ;
-            tmp_4Dmom.push_back(0);
-            vectorSource_finite_mom.mulMomentumPhases(tmp_4Dmom,-1);
-
 
             {  // Smearing the source
 
@@ -1457,6 +1488,11 @@ int main(int argc, char **argv) {
               vectorSource_finite_mom.absorb(vector2, source_local[3]);
 
             }
+            std::vector<int> tmp_4Dmom= momentum_i2 ;
+            tmp_4Dmom.push_back(0);
+            vectorSource_finite_mom.mulMomentumPhases(tmp_4Dmom,-1);
+
+
 
             for (int spinindex=0; spinindex<4; ++spinindex){
 
@@ -1500,10 +1536,6 @@ int main(int argc, char **argv) {
 
             vectortmp1.dilutespin(vectorStoc_source_oet,0);
             vectorSource_finite_mom.copy(vectortmp1);
-            std::vector<int> tmp_4Dmom= momentum_i2 ;
-            tmp_4Dmom.push_back(0);
-            vectorSource_finite_mom.mulMomentumPhases(tmp_4Dmom,-1);
-
 
             {  // Smearing the source
 
@@ -1513,6 +1545,10 @@ int main(int argc, char **argv) {
               vectorSource_finite_mom.absorb(vector2, source_local[3]);
 
             }
+
+            std::vector<int> tmp_4Dmom= momentum_i2 ;
+            tmp_4Dmom.push_back(0);
+            vectorSource_finite_mom.mulMomentumPhases(tmp_4Dmom,-1);
 
             for (int spinindex=0; spinindex<4; ++spinindex){
 
@@ -1619,21 +1655,22 @@ int main(int argc, char **argv) {
           sprintf(ssource,"Z14_deltat_%d",tSinks[k]);
           corrZ14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_insertion, "12", ssource);
 
-	  TIME(corrZ5.Z_diagrams( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, 5 ));
-          TIME(corrZ7.Z_diagrams( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, 7 ));
+	  PLEGMA_ScattCorrelator<float>* pointer=  reductionsV2_diluted_STOCHU_DN_UP;
+	  TIME(corrZ5.Z_diagrams( reductionsV3_diluted_D_UP, &reductionsV2_diluted_STOCHU_DN_UP, 4*k, 5 ));
+          TIME(corrZ7.Z_diagrams( reductionsV3_diluted_D_UP, &reductionsV2_diluted_STOCHU_DN_UP, 4*k, 7 ));
 
-	  TIME(corrZ6.Z_diagrams( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, 6 ));
-          TIME(corrZ8.Z_diagrams( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, 8 ));
+	  TIME(corrZ6.Z_diagrams( reductionsV3_diluted_D_UP, &reductionsV4_diluted_STOCHU_DN_UP, 4*k, 6 ));
+          TIME(corrZ8.Z_diagrams( reductionsV3_diluted_D_UP, &reductionsV4_diluted_STOCHU_DN_UP, 4*k, 8 ));
 
-          TIME(corrZ9.Z_diagrams(  reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP, 9 ));
-          TIME(corrZ10.Z_diagrams( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP, 10));
+          TIME(corrZ9.Z_diagrams(  reductionsV3_diluted_U_DN, &reductionsV2_diluted_STOCHD_UP_UP,4*k, 9 ));
+          TIME(corrZ10.Z_diagrams( reductionsV3_diluted_U_DN, &reductionsV2_diluted_STOCHD_UP_UP,4*k, 10));
 
 
-	  TIME(corrZ11.Z_diagrams( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP, 11 ));
-          TIME(corrZ13.Z_diagrams( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP, 13 ));
+	  TIME(corrZ11.Z_diagrams( reductionsV3_diluted_U_DN, &reductionsV2_diluted_STOCHU_DN_UP,4*k, 11 ));
+          TIME(corrZ13.Z_diagrams( reductionsV3_diluted_U_DN, &reductionsV2_diluted_STOCHU_DN_UP,4*k, 13 ));
 
-	  TIME(corrZ12.Z_diagrams( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP, 12 ));
-          TIME(corrZ14.Z_diagrams( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP, 14 ));
+	  TIME(corrZ12.Z_diagrams( reductionsV3_diluted_U_DN, &reductionsV4_diluted_STOCHU_DN_UP,4*k, 12 ));
+          TIME(corrZ14.Z_diagrams( reductionsV3_diluted_U_DN, &reductionsV4_diluted_STOCHU_DN_UP,4*k, 14 ));
 
 	  TIME(produceOutput(corrZ5, outfilename, "4pt"));
           TIME(produceOutput(corrZ6, outfilename, "4pt"));
@@ -1687,8 +1724,8 @@ int main(int argc, char **argv) {
     }
 
     for (int i=0; i<countindex;++i){
-      stochastic_propags_UP.pop_back();
-      stochastic_propags_DN.pop_back();
+      stochastic_propags_UP_SL.pop_back();
+      stochastic_propags_DN_SL.pop_back();
     }
 
     for(int i=0; i< 4; ++i) {
