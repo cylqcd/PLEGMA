@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
       PLEGMA_Gauge<double> gauge;
       if ( latfile == "unit" ) {
         gauge.setUnit((std::vector<int>) {0,4,8, 9,13,17, 18,22,26, 27,31,35});
-	gauge.unload();//I think this is not necessary
+	gauge.unload();
       }
       else {
         gauge.readFile(latfile, LIME_FORMAT);
@@ -248,7 +248,7 @@ int main(int argc, char **argv) {
 		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 		  THREAD(corr.writeFile(filename, corr_file_format));
 		  // ONED contractions
-		  TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas));
+		  TIME(corr.contractNucleonThrp_oneD(seqPropGamma, propF, contractGauge, signProps, gammas)); 
 		  //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 		  THREAD(corr.writeFile( filename, corr_file_format));
 		  // noe contractions

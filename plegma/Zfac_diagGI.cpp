@@ -175,7 +175,7 @@ int main(int argc, char **argv)
       Vstc.stochastic_Z(4);
       for(int t=0; t<T; t++){ // source time slice
 	for(int i=0; i<N_DIMS*N_DIMS; i++ ) for(int ts=0; ts<T; ts++ ) G_FF[i%N_DIMS][i/N_DIMS][ts] = 0.;
-    
+
 	// inversion with xi w/&w/t gamma_5
 	mu = in_mu;
         solver.UpdateSolver();
