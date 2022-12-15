@@ -27,6 +27,18 @@ void produceOutput( PLEGMA_ScattCorrelator<float> source,
 
 }
 
+void produceOutput_3pt( PLEGMA_ScattCorrelator<float> source,
+                    std::string outputFilename,
+                    std::string diagram_name,
+                    int n_stochastic_samples){
+  TIME(source.apply_phase());
+  TIME(source.apply_sign(diagram_name));
+  TIME(source.applyBoundaryConditions( true ));
+  TIME(source.normalize_nstoch(n_stochastic_samples));
+  TIME(source.writeHDF5( outputFilename ));
+
+}
+
 void produceOutput( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name
@@ -233,7 +245,13 @@ int main(int argc, char **argv) {
       vectorSource_stochastic.stochastic_Z(nroots);
       vectorSource_stochastic.unload();
       stochastic_sources[i]->copy(vectorSource_stochastic,HOST);
+
+      PLEGMA_printf("Save the stochastic source for sample %d\n",i);
+      std::string nstoch=std::to_string(i);
+      vectorSource_stochastic.writeHDF5("stochastic_source"+nstoch);
+
       vectorSource_stochastic.load();
+
 
     }
 
@@ -285,12 +303,17 @@ int main(int argc, char **argv) {
               //Step(7) Smearing all the time slice in the propagator
               //TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
-	      vectorInOut.unload();
+              vectorAuxD1.unload();
+	      PLEGMA_printf("Save the stochastic source for sample %d\n",i);
+              std::string nstoch=std::to_string(i);
+              vectorAuxD1.writeHDF5("stochastic_propagators_UP"+nstoch);
+
+	      //writeHDF5(outfilename) 
 	      stochastic_propags_UP_SL.push_back(new PLEGMA_Vector<float>(HOST));
               stochastic_propags_UP_SL[countindex]->copy(vectorAuxD1, HOST);
 	      countindex++;
               //(isource*tSinks.size()*parallel_sources+k*parallel_sources+l)*n_stochastic_samples+i]->copy(vectorInOut, HOST);
-	      vectorInOut.load();
+	      vectorAuxD1.load();
 
 	    }
 	    lookuptable_UP[timeSlice]=(countindex-1)/n_stochastic_samples;
@@ -342,12 +365,16 @@ int main(int argc, char **argv) {
               //TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
               vectorAuxD1.unload();
+	      PLEGMA_printf("Save the stochastic source for sample %d\n",i);
+              std::string nstoch=std::to_string(i);
+              vectorAuxD1.writeHDF5("stochastic_propagators_DN"+nstoch);
+
               stochastic_propags_DN_SL.push_back(new PLEGMA_Vector<float>(HOST));
 	      stochastic_propags_DN_SL[countindex]->copy(vectorAuxD1, HOST);
               countindex++;
 
               //stochastic_propags_DN_SL[(isource*tSinks.size()*parallel_sources+k*parallel_sources+l)*n_stochastic_samples+i]->copy(vectorInOut, HOST);
-              vectorInOut.load();
+              vectorAuxD1.load();
 
             }
             //lookuptable[(source[3]+tSinks[k]+l*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]]=isource*tSinks.size()*parallel_sources+k*parallel_sources+l;
@@ -519,6 +546,46 @@ int main(int argc, char **argv) {
         propDN_SL_packed.pack_propagator_from_source_to_sink(propDN_SL, sink_local, max_source_sink_separations, i_source_parallel == 0 ? true : false);
 
       }
+      {
+        PLEGMA_printf("Save propagator for the up  and dn quark\n");
+        PLEGMA_Vector<float> vectorAuxPrint(BOTH);
+        for(int isc = 0 ; isc < 12 ; isc++){
+          std::string spin=std::to_string(isc/3);
+          std::string col=std::to_string(isc%3);
+
+          vectorAuxPrint.absorb(propUP_SL_packed,isc/3,isc%3);
+          vectorAuxPrint.unload();
+          vectorAuxPrint.writeHDF5("propUPSL_packed_s"+spin+"_c"+col);
+        }
+        for(int isc = 0 ; isc < 12 ; isc++){
+          std::string spin=std::to_string(isc/3);
+          std::string col=std::to_string(isc%3);
+
+          vectorAuxPrint.absorb(propUP_SS_packed,isc/3,isc%3);
+          vectorAuxPrint.unload();
+          vectorAuxPrint.writeHDF5("propUPSS_packed_s"+spin+"_c"+col);
+        }
+	for(int isc = 0 ; isc < 12 ; isc++){
+          std::string spin=std::to_string(isc/3);
+          std::string col=std::to_string(isc%3);
+
+          vectorAuxPrint.absorb(propDN_SL_packed,isc/3,isc%3);
+          vectorAuxPrint.unload();
+          vectorAuxPrint.writeHDF5("propDNSL_packed_s"+spin+"_c"+col);
+        }
+	for(int isc = 0 ; isc < 12 ; isc++){
+          std::string spin=std::to_string(isc/3);
+          std::string col=std::to_string(isc%3);
+
+          vectorAuxPrint.absorb(propDN_SS_packed,isc/3,isc%3);
+          vectorAuxPrint.unload();
+          vectorAuxPrint.writeHDF5("propDNSS_packed_s"+spin+"_c"+col);
+        }
+      }
+
+
+
+
 
       //We implement the UD part first
       //The neutron piplus at the source
@@ -1189,6 +1256,8 @@ int main(int argc, char **argv) {
         TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
         TIME(corrTproton_neutronpiplus4.convertTreductiontoDiagram( reductionsT1, false, false, true));
 
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+
 	TIME(produceOutput(corrTproton_neutronpiplus1, outfilename, "T"));
 	TIME(produceOutput(corrTproton_neutronpiplus2, outfilename, "T"));
         TIME(produceOutput(corrTproton_neutronpiplus3, outfilename, "T"));
@@ -1310,6 +1379,26 @@ int main(int argc, char **argv) {
 
 	  } //loop over stochastic samples
 
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
+          TIME(produceOutput(corrB9, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrB10, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrB11, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrB12, outfilename, "4pt", n_stochastic_samples));
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
+          TIME(produceOutput(corrW17, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW18, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW19, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW20, outfilename, "4pt", n_stochastic_samples));
+
+          TIME(produceOutput(corrW21, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW22, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW23, outfilename, "4pt", n_stochastic_samples));
+          TIME(produceOutput(corrW24, outfilename, "4pt", n_stochastic_samples));
+
+
+
+
 	} //loop over source sink separations
 
 
@@ -1381,6 +1470,8 @@ int main(int argc, char **argv) {
 
         TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propDN_SS_packed));
         TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, false, false, true ));
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
 	TIME(produceOutput(corrTproton_protonpizero5, outfilename, "T"));
         TIME(produceOutput(corrTproton_protonpizero6, outfilename, "T"));
