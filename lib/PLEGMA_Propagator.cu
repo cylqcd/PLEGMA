@@ -109,6 +109,10 @@ void PLEGMA_Propagator<Float>::pack_propagator_as_sink(PLEGMA_Propagator<Float> 
       stmp.zero_where(DEVICE);
       stmp.zero_where(HOST);
     }
+    else{
+      stmp.absorb(*this,isc/3, isc%3);
+    }
+    
 
     vector1.absorb(in, sinktimeslice, isc/3, isc%3,true);
 
@@ -131,6 +135,9 @@ void PLEGMA_Propagator<Float>::pack_propagator_from_source_to_sink(PLEGMA_Propag
     if (initialize==true){
       stmp.zero_where(DEVICE);
       stmp.zero_where(HOST);
+    }
+    else{ 
+      stmp.absorb(*this,isc/3, isc%3);
     }
 
     for (int dt=0; dt<source_sink_separation; ++dt){

@@ -298,6 +298,10 @@ void PLEGMA_Vector<Float>::pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int
     stmp.zero_where(DEVICE);
     stmp.zero_where(HOST);
   }
+  else{
+      stmp.copy(*this);
+  }
+
 
   for (int dt=0; dt<source_sink_separation; ++dt){
     int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
@@ -319,6 +323,10 @@ void PLEGMA_Vector<Float>::pack_propagator_from_source_to_sink(PLEGMA_Vector<Flo
     stmp.zero_where(DEVICE);
     stmp.zero_where(HOST);
   }
+  else{
+    stmp.copy(*this);
+  }
+
 
   for (int dt=0; dt<source_sink_separation; ++dt){
     int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
