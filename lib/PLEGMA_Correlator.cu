@@ -67,7 +67,7 @@ contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
-		  PLEGMA_Propagator<Float> &prop2 ){
+                  PLEGMA_Propagator<Float> &prop2 ){
 
   shape = {52};
   datasets =  {"twop_meson"};
@@ -77,7 +77,7 @@ contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
     std::string va = p?"":"g5";
     for ( int i=1; i<5; i++ ) {
       for ( int j=1; j<5; j++ ) {
-	description += ", (" + va + "g" + std::to_string(i) + "," + va + "g" + std::to_string(j) +  ")";
+        description += ", (" + va + "g" + std::to_string(i) + "," + va + "g" + std::to_string(j) +  ")";
       }
     }
   }
@@ -85,13 +85,15 @@ contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
   for ( int p=0; p<2; p++ ) {
     for ( int i=0; i<3; i++ ) {
       for ( int j=0; j<3; j++ ) {
-	description += ", ("+tensors[i+p*3]+","+tensors[j+p*3]+")";
+        description += ", ("+tensors[i+p*3]+","+tensors[j+p*3]+")";
       }
     }
   }
+
   initialize();
   contract_mesons_all(prop1,prop2,*this);
 }
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::

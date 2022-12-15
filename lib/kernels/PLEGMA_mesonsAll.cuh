@@ -78,15 +78,15 @@ __global__ void contract_mesons_all_device( propTex<FloatA> texProp1,
 	      for(int a = 0 ; a < N_COLS ; a++){
 #pragma unroll
 		for(int b = 0 ; b < N_COLS ; b++){ //minus from value2 cancels overall minus sign of Tr
-		  accum[2+ip1*4+ip2+shift] = accum[2+ip1*4+ip2+shift] + value1 * prop1[alpha][beta][a][b] * value2 * conj(prop2[delta][zeta][a][b]); 
+		  accum[2+ip1*ip_max[ip]+ip2+shift] = accum[2+ip1*ip_max[ip]+ip2+shift] + value1 * prop1[alpha][beta][a][b] * value2 * conj(prop2[delta][zeta][a][b]); 
 		}
 	      }
 	    }
 	  }
 	}
       }
-      shift += ip_max[ip]*ip_max[ip];
-      ip_shift += 5-ip; // ip_shift should be {1, 1+5, 6+4, 10+3}, c.f., PLEGMA_gammas.cuh
+      shift = shift + ip_max[ip]*ip_max[ip];
+      ip_shift = ip_shift + 5-ip; // ip_shift should be {1, 1+5, 6+4, 10+3}, c.f., PLEGMA_gammas.cuh
     }
   }
   if(runFT) {
