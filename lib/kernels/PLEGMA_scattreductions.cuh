@@ -133,8 +133,8 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
 
   //free allocated memory
   hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
   
 }
 
