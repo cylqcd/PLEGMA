@@ -3402,7 +3402,7 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiod
     int actualSource;
     for (int j=0; j<parallel_sources;++j){
       actualSource=(this->source[DIM_T]+j*max_source_sink_separation+HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
-      if (t_global>=((possible_source+max_source_sink_separation+HGC_totalL[DIM_T])%HGC_totalL[DIM_T])){
+      if (t_global>=((actualSource+max_source_sink_separation+HGC_totalL[DIM_T])%HGC_totalL[DIM_T])){
 	break;
       }
     }      
