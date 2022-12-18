@@ -127,26 +127,13 @@ void PLEGMA_Propagator<Float>::pack_propagator_as_sink(PLEGMA_Propagator<Float> 
 }
 template<typename Float>
 void PLEGMA_Propagator<Float>::pack_propagator_from_source_to_sink(PLEGMA_Propagator<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize){
-  for (int isc=0; isc<12; ++isc){
 
-    PLEGMA_Vector<Float> stmp;
-    PLEGMA_Vector3D<Float> vector1;
-
-    if (initialize==true){
-      stmp.zero_where(DEVICE);
-      stmp.zero_where(HOST);
-    }
-    else{ 
-      stmp.absorb(*this,isc/3, isc%3);
-    }
-
-    for (int dt=0; dt<source_sink_separation; ++dt){
-      int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
-      vector1.absorb(in, actualtimeslice, isc/3, isc%3,true);
-      stmp.absorb(vector1, actualtimeslice, false);
-    }
-
-    this->absorb(stmp, isc/3, isc%3);
+  for (int ii=0;ii<12;++ii){
+    PLEGMA_Vector<Float> temporary1,temporary2;
+    temporary1.absorb(in,ii/3,ii%3);
+    temporary2.absorb(*this,ii/3,ii%3);
+    temporary2.pack_propagator_from_source_to_sink(temporary1,sinktimeslice, source_sink_separation, initialize);
+    this->absorb(temporary2,ii/3,ii%3);
   }
 }
 
