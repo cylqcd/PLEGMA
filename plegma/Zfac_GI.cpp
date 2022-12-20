@@ -511,7 +511,7 @@ int main(int argc, char **argv)
       std::ofstream fpt(outName);
       fpt.precision(8);
       for(int isc=0; isc < numSourcePositions; isc++)
-	for(int t=startT; t < endT; t++)
+	for(int t=0; t < T0; t++)
 	  for(int ts=0; ts < T; ts++) {
 	    fpt << isc<< " " << t << " " << ts << " " << std::scientific << G_FF[t][ts][isc]/16.0 <<  std::endl;
 	  }
