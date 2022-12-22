@@ -2043,6 +2043,90 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorr
   }//switch (Diagram index)
 }
 
+
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorrelator<Float> &srcV3,
+                                                std::vector<PLEGMA_ScattCorrelator<Float>*> &(srcV2), int srcV2index,
+                                                int diagramm_index, bool accum ){
+  //if( (diagramm_index != 1) && (diagramm_index !=2 ) &&  (diagramm_index != 3) &&  (diagramm_index != 4)   )
+  //  PLEGMA_error("diagramm_index %d out of range (1,2,3 or 4)\n",diagramm_index);
+
+  this->clear_output(!accum);
+  int i_g_i2=0;
+  Float factor[2]={-1.,0.};//-1 from eqs. (28),(31),(34),(37), ....
+  switch (diagramm_index){
+  case 1:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor,false); //checked FP
+    break;
+  case 2:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 3:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 4:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 5:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 6:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 7:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 8:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false);//checked FP
+    break;
+  case 9:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2, false, factor, true); //checked FP
+    break;
+  case 10:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, true); //checked FP
+    break;
+  case 11:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2,  true, factor, false); //checked FP
+    break;
+  case 12:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, false,i_g_i2, true, factor, false); //checked FP
+    break;
+  case 13:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, false, factor, false); //checked FP
+    break;
+  case 14:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, false); //checked FP
+    break;
+  case 15:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, true);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, true); //checked FP
+    break;
+  case 16:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2, false, factor, true);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  false, g, true); //checked FP
+    break;
+  case 17:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2, true, factor, false);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, true, g, false);//checked FP
+    break;
+  case 18:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, false, factor, false);//checked FP
+  //this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g, false);//checked FP
+    break;
+  case 19:
+    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, false, i_g_i2, true, factor, false);//checked FP
+  //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, false, g2, true, g, false); //checked FP
+    break;
+  case 20:
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, false);//checked FP
+  //this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, false);//checked FP
+    break;
+  default:
+    PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagrams.cpp");
+  }//switch (Diagram index)
+}
+
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::Z_diagrams(std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV3),
                                                std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2),int srcV2index,
