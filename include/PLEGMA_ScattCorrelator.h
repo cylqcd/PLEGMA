@@ -202,7 +202,7 @@ namespace plegma {
 
     //manipulation
     //Note that in the case of oet B, W diagram g0 refers not to gamma_i2 but to gamma_f2
-    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false );
+    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false, bool threept=false );
 
     void V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, 
 	                      std::shared_ptr<Float> &Phi0, 
@@ -212,7 +212,7 @@ namespace plegma {
 			      bool transp=false, bool transpgamma_i1=false, bool transgamma_f1=false, 
 			      Float *factor=NULL);
 
-    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false ); 
+    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false, bool threept=false ); 
 
     void V5V6reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV6, 
 	                             std::shared_ptr<Float> &Phi0, 
@@ -258,15 +258,15 @@ namespace plegma {
 
     
     //diagrams
-    void B_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false, bool oet=false );
-    void W_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false );
+    void B_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false, bool oet=false, bool threept=false );
+    void W_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false, bool threept=false );
     void W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_f2, int diagram_index, bool accum=false);
 
     void Z_diagrams( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
     void Z_diagrams(std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV3), std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2),int srcV2index, int diagramm_index, bool accum=false );
 
     void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2,  int diagramm_index, bool accum=false );
-    void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2), int srcV2index,  int diagramm_index, bool accum=false );
+    void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2), int srcV2index,  int diagramm_index, bool accum=false, bool threept=false);
 
     void Z_diagrams_without_dilution_check(PLEGMA_ScattCorrelator<Float> &srcV3,
                                                 PLEGMA_ScattCorrelator<Float> &srcV2, int i_g_i2,
