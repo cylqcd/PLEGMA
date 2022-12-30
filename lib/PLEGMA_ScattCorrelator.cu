@@ -518,6 +518,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 	  } else {
 	    n_gammas_i2_f2=n_gammas_f2;
 	  }
+	  PLEGMA_printf("n_gammas_i2_f2 %d\n",n_gammas_i2_f2);
           for (int g3=0 ; g3 < n_gammas_i2_f2 ; ++g3 ){//pf2
             for (int alfa=0; alfa < N_SPINS; ++alfa ){
 	      for (int beta=0; beta < N_SPINS; ++beta ){
@@ -2045,7 +2046,7 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorr
   //this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, false);//checked FP
     break;
   default:
-    PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagrams.cpp");
+    PLEGMA_error("This value of Z diagram index does not exists, please check your inputs in piNdiagrams.cpp %d\n", diagramm_index);
   }//switch (Diagram index)
 }
 
@@ -2062,69 +2063,69 @@ void PLEGMA_ScattCorrelator<Float>::Z_diagrams_without_dilution(PLEGMA_ScattCorr
   Float factor[2]={-1.,0.};//-1 from eqs. (28),(31),(34),(37), ....
   switch (diagramm_index){
   case 1:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor,false, threept); //checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false, false, threept); //checked FP
     break;
   case 2:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, false, threept);//checked FP
     break;
   case 3:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false, false, threept);//checked FP
     break;
   case 4:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, false, threept);//checked FP
     break;
   case 5:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, false, threept);//checked FP
     break;
   case 6:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false, false, threept);//checked FP
     break;
   case 7:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, true, factor, false, false, threept);//checked FP
     break;
   case 8:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, true, factor, false, false, threept);//checked FP
     break;
   case 9:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2, false, factor, true, threept); //checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 2, true, i_g_i2, false, factor, true, false, threept); //checked FP
     break;
   case 10:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, true, threept); //checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, true, false, threept); //checked FP
     break;
   case 11:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2,  true, factor, false, threept); //checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 2, true, i_g_i2,  true, factor, false, false, threept); //checked FP
     break;
   case 12:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, false,i_g_i2, true, factor, false, threept); //checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 2, false,i_g_i2, true, factor, false, false, threept); //checked FP
     break;
   case 13:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, false, factor, false, threept); //checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, false, factor, false, false, threept); //checked FP
     break;
   case 14:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, false, threept); //checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, false, false, threept); //checked FP
     break;
   case 15:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, true, threept);//checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, true, false, threept);//checked FP
   //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, true); //checked FP
     break;
   case 16:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2, false, factor, true, threept);//checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 2, true, i_g_i2, false, factor, true, false, threept);//checked FP
   //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2,  false, g, true); //checked FP
     break;
   case 17:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, true, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 2, true, i_g_i2, true, factor, false, false, threept);//checked FP
   //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, true, g2, true, g, false);//checked FP
     break;
   case 18:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, false, factor, false, threept);//checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 1, false, i_g_i2, false, factor, false,  false, threept);//checked FP
   //this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 1, false, g2, false, g, false);//checked FP
     break;
   case 19:
-    this->V3V2reduction( srcV3, *srcV2[srcV2index], 2, false, i_g_i2, true, factor, false, threept);//checked FP
+    this->V3V2reduction(        srcV3, *srcV2[srcV2index], 2, false, i_g_i2, true, factor, false, false, threept);//checked FP
   //this->V3V2reduction( srcV3[lambda], srcV2[kappa], 2, false, g2, true, g, false); //checked FP
     break;
   case 20:
-    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, false, threept);//checked FP
+    this->V3V2reduction_matrix( srcV3, *srcV2[srcV2index], 0, false, i_g_i2, false, factor, false, false,  threept);//checked FP
   //this->V3V2reduction_matrix( srcV3[lambda], srcV2[kappa], 0, false, g2, false, g, false);//checked FP
     break;
   default:
