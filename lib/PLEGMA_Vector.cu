@@ -12,7 +12,7 @@
 #endif
 #include <communicator_quda.h>
 #include <quda_api.h>
-
+#include <device.h>
 using namespace plegma;
 using namespace quda;
 
@@ -132,13 +132,19 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+  {
+    Float2<Float>* tempquda=(Float2<Float>*)device_malloc(V4*2*sizeof(Float));
+    PLEGMA_memset(tempquda,0, V4*2*sizeof(Float));
+    PLEGMA_memcpy(tempquda, tempquda,V3*2*sizeof(Float),qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+  }
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      qudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      PLEGMA_memset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
 	pointer_dst = (this->d_elem + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
 	pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
-	qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+	PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
     }
   comm_barrier();
@@ -178,16 +184,21 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bo
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+  { 
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc( V3*2 * sizeof(Float));
+    PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+  }
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       //qudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
         pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
         pointer_src = (vec.D_elem()  + mu*N_COLS*V3*2 + c1*V3*2);
-        qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+        PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
     }
-  comm_barrier();
+  //comm_barrier();
   checkQudaError();
 }
 
@@ -201,7 +212,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
       pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2);
-      qudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+      qudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), qudaMemcpyDeviceToDevice);   
     }
   checkQudaError();
 }
@@ -542,16 +553,23 @@ namespace plegma{
     int V4 = HGC_localVolume;
     Float *pointer_src = NULL;
     Float *pointer_dst = NULL;
+    {
+     Float2<Float> *tmpdevice=(Float2<Float>*)device_malloc(V3*2 * sizeof(Float));
+     PLEGMA_memset(tmpdevice, 0, V3*2 * sizeof(Float));
+     PLEGMA_memcpy(tmpdevice, tmpdevice,V3*2 * sizeof(Float),qudaMemcpyDeviceToDevice);
+     device_free(tmpdevice);
+    }
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++)
       {
+	PLEGMA_printf("HERE IS THE PROBLEM %d %d %d %d %d\n",mu,c1,my_it,global_it,is_myIt);
         pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
         if(is_myIt){
           pointer_src = (prop.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
-          qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+          PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
         }
         else{
-          qudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+          PLEGMA_memset(pointer_dst, 0, V3*2 * sizeof(Float));
         }
       }
 

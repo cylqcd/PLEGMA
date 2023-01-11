@@ -15,6 +15,7 @@
 #include <communicator_quda.h>
 #include <malloc_quda.h>
 #include <quda_api.h>
+#include <device.h>
 using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT
@@ -865,16 +866,22 @@ void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_
   
   int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  if(not is_myIt) return;
-  
+
   size_t V4 = HGC_localVolume*2;
   size_t V3 = HGC_localVolume3D*2;
+  { 
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3 * sizeof(Float));
+    PLEGMA_memcpy(tempquda,tempquda,V3 * sizeof(Float),qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+  }
+  if(not is_myIt) return;
+  
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   for(int i = 0; i < this->Field_length(); i++) {
     pointer_src = (field.D_elem() + i*V3);
     pointer_dst = (this->D_elem() + i*V4 + my_it*V3);
-    qudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    PLEGMA_memcpy(pointer_dst, pointer_src, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
   }
   checkQudaError();
 }
@@ -1007,7 +1014,7 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
   if(!srcfield.IsAllocDevice()) PLEGMA_error("This function needs allocation of input field on the device to work\n");
   
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  if( this->field_name.compare(srcfield.Field_name()) != 0) PLEGMA_error("Fields types does not match\n");
+  if( this->field_name.compare(srcfield.Field_name()) != 0) PLEGMA_error("Fields types does not match %s %s \n",this->field_name.c_str(),srcfield.Field_name().c_str());
 
   //check dimensions
   
@@ -1018,14 +1025,21 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
+  {
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3*2 * sizeof(Float));
+    PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+  }
+
 
   for(int i = 0 ; i < this->field_length; i++){
-    if( forcetozero )
+    if( forcetozero ){
       qudaMemset( this->d_elem + i*V4*2, 0, V4*2*sizeof(Float));
+    }
     if(is_myIt){
       pointer_dst = (this->d_elem + i*V4*2 + my_it*V3*2);
       pointer_src = (srcfield.D_elem() + i*V4*2 + my_it*V3*2);
-      qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+      PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
     }
   }
   comm_barrier();
@@ -1074,22 +1088,35 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   size_t V4 = HGC_localVolume*2;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+
+  if (broadcast ==true){
+    PLEGMA_memcpy(this->H_elem(), this->D_elem(), V3 * sizeof(Float), qudaMemcpyDeviceToHost);
+    PLEGMA_memcpy(this->D_elem(), this->H_elem(), V3 * sizeof(Float), qudaMemcpyHostToDevice);
+  }
+  { 
+    Float2<Float> *tmpquda=(Float2<Float> *)device_malloc(V3 * sizeof(Float));
+    PLEGMA_memset(tmpquda, 0, V3 * sizeof(Float));
+    PLEGMA_memcpy(tmpquda, tmpquda, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    device_free(tmpquda);
+  }
+
+
   for(int i = 0; i < this->Field_length(); i++) {
     pointer_dst = (this->D_elem() + i*V3);
     if(this->activeTimeSlice) {
       pointer_src = (field.D_elem() + i*V4 + my_it*V3);
-      qudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
+      PLEGMA_memcpy(pointer_dst, pointer_src, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
     }
     if (broadcast == true){
       int time_rank=global_it/HGC_localL[3];
       Float *temp=(Float *)malloc(sizeof(Float)*V3);
-      qudaMemcpy(temp, pointer_dst, V3* sizeof(Float), qudaMemcpyDeviceToHost);
+      PLEGMA_memcpy(temp, pointer_dst, V3* sizeof(Float), qudaMemcpyDeviceToHost);
       MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
-      qudaMemcpy(pointer_dst, temp, V3* sizeof(Float), qudaMemcpyHostToDevice);
+      PLEGMA_memcpy(pointer_dst, temp, V3* sizeof(Float), qudaMemcpyHostToDevice);
       free(temp);
     }
     if (broadcast == false && !(this->activeTimeSlice)){
-      qudaMemset(pointer_dst, 0, V3 * sizeof(Float));
+      PLEGMA_memset(pointer_dst, 0, V3 * sizeof(Float));
     }
   }
   checkQudaError();
