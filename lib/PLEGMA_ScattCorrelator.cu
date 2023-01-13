@@ -3473,13 +3473,12 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic, 
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiodic, int source_sink_separation,int max_source_sink_separation ) {
+void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiodic, int n_coherent_source, int *attract_look_up_table, int source_sink_separation ) {
 
   if(!antiperiodic) return;
 
   std::size_t n_t = this->labels.find("t");
   assert(n_t!=std::string::npos);
-  int parallel_sources=HGC_totalL[DIM_T]/max_source_sink_separation;
 
   int TIME = this->localT();
   if (TIME==0) return;
@@ -3487,17 +3486,13 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiod
   int out_dofs = ranges[0]*offsets[0]/TIME/in_dofs;
   int maxT = this->endT() - this->startT();
 
+  if (n_coherent_source >1 && attract_look_up_table==NULL) PLEGMA_error("attract_look_up_table must be created before using this function\n");
+
   for( int t=0; t<TIME; ++t){
     int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
     int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
-    int actualSource;
-    for (int j=0; j<parallel_sources;++j){
-      actualSource=(this->source[DIM_T]+j*max_source_sink_separation+HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
-      if (t_global>=((actualSource+max_source_sink_separation+HGC_totalL[DIM_T])%HGC_totalL[DIM_T])){
-	break;
-      }
-    }      
-    if (actualSource+source_sink_separation>HGC_totalL[DIM_T]){
+    int source_num= n_coherent_source > 1 ? attract_look_up_table[t_global] : this->source[DIM_T];
+    if(  source_num + source_sink_separation > HGC_totalL[3] ){
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
         for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
           *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
@@ -3506,8 +3501,6 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiod
     }
   }
 }
-
-
 
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::apply_phase(){

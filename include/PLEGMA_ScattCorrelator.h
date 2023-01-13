@@ -308,7 +308,7 @@ namespace plegma {
 
     void multiply_by_time_slice(std::shared_ptr<Float>&);
     void applyBoundaryConditions( bool antiperiodic, int n_coherent_source=1, int *attract_look_up_table=NULL );
-    void applyBoundaryConditions_3pt( bool antiperiodic, int source_sink_separation,int max_source_sink_separation );
+    void applyBoundaryConditions_3pt( bool antiperiodic, int n_coherent_source, int *attract_look_up_table, int source_sink_separation ); 
 
     void apply_phase( );
 
