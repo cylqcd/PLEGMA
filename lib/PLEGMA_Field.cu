@@ -1025,10 +1025,13 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
-  {
+  static bool init_absorbTimeslice = false;
+
+  if (!init_absorbTimeslice) {
     Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3*2 * sizeof(Float));
     PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
     device_free(tempquda);
+    init_absorbTimeslice=true;
   }
 
 
@@ -1089,15 +1092,20 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
-  if (broadcast ==true){
-    PLEGMA_memcpy(this->H_elem(), this->D_elem(), V3 * sizeof(Float), qudaMemcpyDeviceToHost);
-    PLEGMA_memcpy(this->D_elem(), this->H_elem(), V3 * sizeof(Float), qudaMemcpyHostToDevice);
-  }
-  { 
+  static bool init_absorb_vec3D_vec4D = false;
+  if (!init_absorb_vec3D_vec4D) {
+  {
+
     Float2<Float> *tmpquda=(Float2<Float> *)device_malloc(V3 * sizeof(Float));
+    Float *tmphost=(Float*)malloc(sizeof(Float)*V3);
+    if (broadcast ==true){
+      PLEGMA_memcpy(tmphost, tmpquda, V3 * sizeof(Float), qudaMemcpyDeviceToHost);
+      PLEGMA_memcpy(tmpquda, tmphost, V3 * sizeof(Float), qudaMemcpyHostToDevice);
+    }
     PLEGMA_memset(tmpquda, 0, V3 * sizeof(Float));
     PLEGMA_memcpy(tmpquda, tmpquda, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
     device_free(tmpquda);
+    free(tmphost);
   }
 
 
