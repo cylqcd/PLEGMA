@@ -1093,7 +1093,7 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   Float *pointer_dst = NULL;
 
   static bool init_absorb_vec3D_vec4D = false;
-  if (!init_absorb_vec3D_vec4D) {
+  if (!init_absorb_vec3D_vec4D) 
   {
 
     Float2<Float> *tmpquda=(Float2<Float> *)device_malloc(V3 * sizeof(Float));
@@ -1106,6 +1106,7 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
     PLEGMA_memcpy(tmpquda, tmpquda, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
     device_free(tmpquda);
     free(tmphost);
+    init_absorb_vec3D_vec4D=true;
   }
 
 
