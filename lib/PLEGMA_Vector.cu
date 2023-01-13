@@ -132,11 +132,16 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
-  {
+  static bool init_absorb_vec4D_prop3D = false;
+
+  if (!init_absorb_vec4D_prop3D) {
+
     Float2<Float>* tempquda=(Float2<Float>*)device_malloc(V4*2*sizeof(Float));
     PLEGMA_memset(tempquda,0, V4*2*sizeof(Float));
     PLEGMA_memcpy(tempquda, tempquda,V3*2*sizeof(Float),qudaMemcpyDeviceToDevice);
     device_free(tempquda);
+    init_absorb_vec4D_prop3D=true;
+
   }
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
@@ -184,10 +189,17 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bo
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
-  { 
+
+  static bool init_vector4D_vector3D = false;
+
+  if (!init_vector4D_vector3D) {
+
     Float2<Float> *tempquda=(Float2<Float> *)device_malloc( V3*2 * sizeof(Float));
     PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
     device_free(tempquda);
+
+    init_vector4D_vector3D=true;
+
   }
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
@@ -313,10 +325,10 @@ void PLEGMA_Vector<Float>::pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int
       stmp.copy(*this);
   }
 
+  vector1.absorb(in, sinktimeslice, true);
 
   for (int dt=0; dt<source_sink_separation; ++dt){
     int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
-    vector1.absorb(in, sinktimeslice );
     stmp.absorb(vector1, actualtimeslice, false);
   }
 
@@ -360,6 +372,18 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
   this->zero_where(where);
   int my_src[N_DIMS];
   size_t id=0;
+  static bool init_PointSource = false;
+
+  if (!init_PointSource) {
+    Float * temphost=(Float*)malloc(sizeof(Float));
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(sizeof(Float));
+    PLEGMA_memcpy(tempquda, temphost,sizeof(Float),
+                qudaMemcpyHostToDevice );
+    free(temphost);
+    device_free(tempquda);
+    init_PointSource=true;
+  }
+
   for(int i = N_DIMS-1; i >= 0; i--) {
     my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
 
@@ -375,14 +399,14 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
   temp[0] = 1.0;
   if( where == BOTH ){
     this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
-    qudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
+    PLEGMA_memcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
                 qudaMemcpyHostToDevice ); 
   }
   else if (where == HOST){
     this->h_elem[((spin*N_COLS+color)*this->Total_length() + id)*2] = 1.0; 
   }
   else if (where == DEVICE){
-    qudaMemcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
+    PLEGMA_memcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
                 qudaMemcpyHostToDevice ); 
   }
   else{
@@ -513,12 +537,24 @@ namespace plegma{
     int V4 = HGC_localVolume;
     Float *pointer_src = NULL;
     Float *pointer_dst = NULL;
+    static bool init_vector3D_prop4D = false;
+
+    if (!init_vector3D_prop4D) {
+
+      Float2<Float>* tempquda=(Float2<Float>*)device_malloc(V3*2 * sizeof(Float));
+      PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+      PLEGMA_memset(tempquda, 0, V3*2 * sizeof(Float));
+      device_free(tempquda);
+      init_vector3D_prop4D=true;
+
+    }
+
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++){
 	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
 	if(is_myIt){
 	  pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
-	  qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+	  PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
 	}
 	
 	if (broadcast == true){
@@ -526,15 +562,15 @@ namespace plegma{
 //         printf("Time rank %d\n",time_rank);
 //         fflush(stdout);
          Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
-         qudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), qudaMemcpyDeviceToHost);
+         PLEGMA_memcpy(temp, pointer_dst, V3*2 * sizeof(Float), qudaMemcpyDeviceToHost);
          MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
 //         printf("Temp 0 %e\n",temp[0]);
 //         fflush(stdout);
-         qudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), qudaMemcpyHostToDevice);
+         PLEGMA_memcpy(pointer_dst, temp, V3*2 * sizeof(Float), qudaMemcpyHostToDevice);
          free(temp);
        }
        if (broadcast == false && is_myIt ==false){
-         qudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+         PLEGMA_memset(pointer_dst, 0, V3*2 * sizeof(Float));
        }
       
     }
@@ -553,24 +589,39 @@ namespace plegma{
     int V4 = HGC_localVolume;
     Float *pointer_src = NULL;
     Float *pointer_dst = NULL;
-    {
+    static bool init_vector3D_vector4D = false;
+
+    if (!init_vector3D_vector4D) {
      Float2<Float> *tmpdevice=(Float2<Float>*)device_malloc(V3*2 * sizeof(Float));
      PLEGMA_memset(tmpdevice, 0, V3*2 * sizeof(Float));
      PLEGMA_memcpy(tmpdevice, tmpdevice,V3*2 * sizeof(Float),qudaMemcpyDeviceToDevice);
      device_free(tmpdevice);
+     init_vector3D_vector4D=true;
     }
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++)
       {
-	PLEGMA_printf("HERE IS THE PROBLEM %d %d %d %d %d\n",mu,c1,my_it,global_it,is_myIt);
         pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
         if(is_myIt){
           pointer_src = (prop.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
           PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
         }
-        else{
-          PLEGMA_memset(pointer_dst, 0, V3*2 * sizeof(Float));
-        }
+	if (broadcast == true){
+         int time_rank=global_it/HGC_localL[3];
+//         printf("Time rank %d\n",time_rank);
+//         fflush(stdout);
+         Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
+         PLEGMA_memcpy(temp, pointer_dst, V3*2 * sizeof(Float), qudaMemcpyDeviceToHost);
+         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+//         printf("Temp 0 %e\n",temp[0]);
+//         fflush(stdout);
+         PLEGMA_memcpy(pointer_dst, temp, V3*2 * sizeof(Float), qudaMemcpyHostToDevice);
+         free(temp);
+       }
+       if (broadcast == false && is_myIt ==false){
+         PLEGMA_memset(pointer_dst, 0, V3*2 * sizeof(Float));
+       }
+
       }
 
     checkQudaError();

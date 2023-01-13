@@ -58,13 +58,22 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, 
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+  static bool init_prop4D_vec4D = false;
+
+  if (!init_prop4D_vec4D) {
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3*2 * sizeof(Float));
+    PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+    init_prop4D_vec4D=true;
+  }
+
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       qudaMemset(this->d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
 	pointer_dst = (this->d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	pointer_src = (vec.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
-	qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+	PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
     }
   comm_barrier();
@@ -81,13 +90,22 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+  static bool init_prop4D_vec3D = false;
+
+  if (!init_prop4D_vec3D) { 
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3*2 * sizeof(Float));
+    PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+    init_prop4D_vec3D=true;
+  }
+
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       qudaMemset(this->d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
 	pointer_dst = (this->d_elem + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2 + my_it*V3*2);
 	pointer_src = (vec.D_elem() + mu*N_COLS*V3*2 + c1*V3*2);
-	qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+        PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
     }
   comm_barrier();
@@ -286,15 +304,26 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+
+  static bool init_prop3D_vec4D=false;
+  if (!init_prop3D_vec4D) {
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3*2 * sizeof(Float));
+    PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    PLEGMA_memset(tempquda, 0, V3*2 * sizeof(Float));
+
+    device_free(tempquda);
+    init_prop3D_vec4D=true;
+  }
+
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointer_dst = (this->d_elem + mu*N_SPINS*N_COLS*N_COLS*V3*2 + nu*N_COLS*N_COLS*V3*2 + c1*N_COLS*V3*2 + c2*V3*2);
       if(is_myIt){
 	pointer_src = (vec.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
-	qudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+	PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       }
       else
-	qudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+	PLEGMA_memset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
   checkQudaError();
 }
