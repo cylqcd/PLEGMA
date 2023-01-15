@@ -25,6 +25,7 @@ set (PLEGMA_OBJS
   PLEGMA_BLAS.cu
   PLEGMA_Fmunu.cu
   PLEGMA_U1Gauge.cu	
+  ToolYan.cpp
 )
 if(PLEGMA_UDSC_BARYONS)
   LIST(APPEND PLEGMA_OBJS
