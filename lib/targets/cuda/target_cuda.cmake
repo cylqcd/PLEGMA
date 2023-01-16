@@ -146,3 +146,4 @@ else()
 endif()
 target_include_directories(PLEGMA PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+target_include_directories(plegma PUBLIC ${QUDA_HOME}/include/targets/cuda)

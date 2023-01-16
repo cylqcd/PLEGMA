@@ -487,11 +487,12 @@ namespace plegma {
   
   template<typename Float>
   struct texture : pFloat2<Float> {
-    cudaTextureObject_t tex;
+//    cudaTextureObject_t tex;
 
-    __host__ __device__ texture(cudaTextureObject_t tex, Float2<Float>* p, int site_size, bool is4D, bool changeValue) :
-      pFloat2<Float>(p, site_size, is4D, changeValue), tex(tex) { }
-
+    __host__ __device__ texture(//cudaTextureObject_t tex, 
+		                 Float2<Float>* p, int site_size, bool is4D, bool changeValue) :
+      pFloat2<Float>(p, site_size, is4D, changeValue) { }
+/*
     #ifdef PLEGMA_TEXTURE
     // Fetch is going to be specialized after
     inline __device__ Float2<Float> fetch(const size_t& i) const;
@@ -499,8 +500,9 @@ namespace plegma {
       return this->returnZero ? Float2<Float>(0) : texture<Float>::fetch(i*this->stride + this->sid);
     }
     #endif
+    */
   };
-
+/*
   #ifdef PLEGMA_TEXTURE
   // Here we specialize fetch
   template<> inline __device__ Float2<float> texture<float>::fetch(const size_t& i) const {
@@ -511,6 +513,7 @@ namespace plegma {
     return (Float2<double>) make_double2(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
   #endif
+*/
 
   template<typename T, typename Float>
   struct generic : T {
@@ -860,12 +863,12 @@ namespace plegma {
 
   template<template<typename> class T, template<typename> class Tfield, typename Float>
   static inline std::shared_ptr<T<Float>> toTexture(const Tfield<Float>& field) {
-    return std::shared_ptr<T<Float>>(new T<Float>(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T<Float>* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
+    return std::shared_ptr<T<Float>>(new T<Float>((Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T<Float>* ptr){delete ptr;});
   }
 
   template<class T, template<typename> class Tfield, typename Float>
   static inline std::shared_ptr<T> toTexture(const Tfield<Float>& field) {
-    return std::shared_ptr<T>(new T(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
+    return std::shared_ptr<T>(new T( (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T* ptr){delete ptr;});
   }
 
     

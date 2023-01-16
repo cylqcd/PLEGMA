@@ -107,7 +107,7 @@ global_host(int, timeRank);
 global_host(int, timeSize);
 
 // for cublas use
-global_host(cublasHandle_t, cublas_handle);
+//global_host(cublasHandle_t, cublas_handle);
 
 #undef global_both
 #undef global_host

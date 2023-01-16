@@ -680,7 +680,7 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr1, short di
 
 template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
-  randstate_ptr = new PLEGMA_RNG(seed, total_length);
+  randstate_ptr = new RNG(this, seed, total_length);
   if(checkErr) checkQudaError();  
 }
 

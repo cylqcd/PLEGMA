@@ -1,4 +1,5 @@
 #pragma once
+#include <malloc_quda.h>
 //#include <PLEGMA_utils.h>
 #include <tune_quda.h>
 
@@ -101,15 +102,15 @@ namespace plegma {
       createElemColBlock();
       createColLattice();
       //  if(check)checkColoring();
-      cudaMalloc((void**)&d_arrVc, HGC_localVolume*sizeof(int));
+      d_arrVc=(int*)device_malloc(HGC_localVolume*sizeof(int));
 //      checkQudaError();
-      cudaMemcpy(d_arrVc, h_arrVc, HGC_localVolume*sizeof(int), cudaMemcpyHostToDevice);
+      qudaMemcpy(d_arrVc, h_arrVc, HGC_localVolume*sizeof(int), qudaMemcpyHostToDevice);
 //      checkQudaError();    
     }
     ~PLEGMA_Hprobing(){
       delete[] h_arrVc;
       delete[] arrlc;
-      cudaFree(d_arrVc);
+      device_free(d_arrVc);
       //checkQudaError();
     }
     int* H_arrVc() const{return h_arrVc;}

@@ -45,20 +45,22 @@ template<typename T> inline void hostFree(T &ptr) {
 }
 
 // Pinned memory allocation
-template<typename T> inline void hostMallocPinned(T &ptr, size_t size){
-  cudaError_t err = cudaMallocHost((void**)&ptr, size);
-  if (err != cudaSuccess) {
-    errorQuda("Failed to allocate host memory of size %zu \n", size);
-  }
+template<typename T> inline void hostMallocPinned(T &ptr, size_t size){ 
+  ptr=(void**)pinned_malloc(size);
+  //cudaError_t err = cudaMallocHost((void**)&ptr, size);
+  //if (err != cudaSuccess) {
+  //  errorQuda("Failed to allocate host memory of size %zu \n", size);
+  //}
   HGC_used_memory += size;
 }
 
 template<typename T> inline void hostFreePinned(T &ptr, size_t size) {
-  cudaError_t err = cudaFreeHost(ptr);
-  if (err != cudaSuccess) {
-    errorQuda("Failed to free host memory of size %zu \n", size);
-  }
-  ptr=NULL;
+  //cudaError_t err = cudaFreeHost(ptr);
+  //if (err != cudaSuccess) {
+  //  errorQuda("Failed to free host memory of size %zu \n", size);
+  //}
+  host_free(ptr);
+  //ptr=NULL;
   HGC_used_memory -= size;
 }
 template<typename T> inline void hostFreePinned(T &ptr) {

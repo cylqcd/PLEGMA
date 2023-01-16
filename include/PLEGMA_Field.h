@@ -113,11 +113,11 @@ namespace plegma {
     /**
        @brief Creates a texture object which binds on field elements on GPU
      */
-    cudaTextureObject_t createTexObject() const;
+    //cudaTextureObject_t createTexObject() const;
     /**
        @brief Destroys the texture object which binds on field elements on GPU
      */
-    void destroyTexObject(cudaTextureObject_t tex) const;
+    //void destroyTexObject(cudaTextureObject_t tex) const;
     /**
      * @return a pointer to access Host elements of the field
      */

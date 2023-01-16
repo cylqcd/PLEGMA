@@ -89,12 +89,24 @@ set(GITVERSION "${PROJECT_VERSION}-${GITVERSION}-${GPU_ARCH}")
 # ######################################################################################################################
 # cuda specific compile options
 
+# Use CUDA textures
+set(PLEGMA_TEXTURE TRUE CACHE BOOL "Wheater to use or not CUDA textures")
+mark_as_advanced(PLEGMA_TEXTURE)
+if(PLEGMA_TEXTURE)
+  add_definitions(-DPLEGMA_TEXTURE)
+else()
+
+endif()
+
+
 #target_include_directories(plegma PRIVATE ${CMAKE_SOURCE_DIR}/include/targets/hip)
 #target_include_directories(plegma PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/targets/hip>
 #                                       $<INSTALL_INTERFACE:include/targets/hip>)
 
 
 #set_source_files_properties(block_orthogonalize.cu PROPERTIES COMPILE_OPTIONS "-mllvm;-pragma-unroll-threshold=4096")
+
+add_definitions(-DMULTI_GPU)
 
 target_compile_options(
   plegma 
@@ -114,8 +126,9 @@ target_link_libraries(plegma PUBLIC hip::hiprand roc::rocrand hip::hipcub roc::r
 target_link_libraries(plegma PUBLIC roc::hipblas roc::rocblas)
 
 target_include_directories(plegma PUBLIC ${ROCM_PATH}/hipfft/include)
+target_include_directories(plegma PUBLIC ${QUDA_HOME}/include/targets/hip)
 target_link_libraries(plegma PUBLIC hip::hipfft)
 
 #add_subdirectory(targets/hip)
 
-install(FILES ${CMAKE_SOURCE_DIR}/cmake/find_target_hip_dependencies.cmake DESTINATION lib/cmake/QUDA)
+install(FILES ${CMAKE_SOURCE_DIR}/cmake/find_target_hip_dependencies.cmake DESTINATION lib/cmake/PLEGMA)

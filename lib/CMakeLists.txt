@@ -221,28 +221,42 @@ if(QUDA_ARPACK)
   target_link_libraries(PLEGMA ${PARPACK_OR_ARPACK})
 endif()
 
+configure_file(../include/plegma_define.h.in ../include/plegma_define.h @ONLY)
+install(FILES "${CMAKE_BINARY_DIR}/include/plegma_define.h" DESTINATION include/)
+
 
 # until we define an install step copy the include directory to the build directory
 ADD_CUSTOM_COMMAND(TARGET plegma POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)
 # some hackery to prevent having old shared / static builds of quda messing with the current build
 ADD_CUSTOM_COMMAND(TARGET plegma PRE_LINK COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.a ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.so)
 
-install(TARGETS plegma EXPORT PLEGMATargets
+install(TARGETS plegma 
+	EXPORT PLEGMATargets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
+        INCLUDES 
+	DESTINATION include)
+
+install(
+  EXPORT PLEGMATargets
+  FILE PLEGMATargets.cmake
+  NAMESPACE PLEGMA::
+  DESTINATION lib/cmake/PLEGMA)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file( 
-  "${CMAKE_CURRENT_BINARY_DIR}/qudaConfigVersion.cmake" 
-  VERSION ${QUDA_VERSION}
+  "${CMAKE_CURRENT_BINARY_DIR}/plegmaConfigVersion.cmake" 
+  VERSION ${PLEGMA_VERSION}
   COMPATIBILITY AnyNewerVersion
 )
 
-export(EXPORT PLEGMATargets FILE "${CMAKE_CURRENT_BINARY_DIR}/PLEGMATargets.cmake" NAMESPACE quda::)
-set(ConfigPackageLocation lib/cmake/quda/)
-install(EXPORT PLEGMATargets NAMESPACE quda:: DESTINATION ${ConfigPackageLocation})
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(${CMAKE_SOURCE_DIR}/PLEGMAConfig.cmake.in PLEGMAConfig.cmake INSTALL_DESTINATION lib/cmake/PLEGMA)
+#export(EXPORT PLEGMATargets FILE "${CMAKE_CURRENT_BINARY_DIR}/PLEGMATargets.cmake" NAMESPACE quda::)
+#set(ConfigPackageLocation lib/cmake/quda/)
+#install(EXPORT PLEGMATargets NAMESPACE quda:: DESTINATION ${ConfigPackageLocation})
 
 
 add_custom_target(gen ${PYTHON_EXECUTABLE} ${PLEGMA_QUDA_HOME}/lib/generate/gen.py

@@ -2,7 +2,7 @@
 
 //======== External libraries =========//
 #include <mpi.h>
-#include <cuda.h>
+//#include <cuda.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <quda.h>
 #include <quda_internal.h>
-#include <cublas_v2.h>
+//#include <cublas_v2.h>
 #ifdef __GNUG__ // gnu C++ compiler
 #include <cxxabi.h>
 #include <stdlib.h>
@@ -45,6 +45,7 @@ using namespace std::chrono_literals;
 #include <global/PLEGMA_macros.hpp>
 #include <tune_quda.h>
 #include <comm_quda.h>
+#include <random_quda.h>
 using namespace quda;
 
 namespace plegma {

@@ -30,20 +30,20 @@ inline std::istream& operator >> (std::istream &i, site &x){
 // Global variable for mom list
 struct tex_mom_list {
   size_t Nmoms;
-  cudaTextureObject_t tex;
+//  qudaTextureObject_t tex;
   void* devPtr;
 
-  tex_mom_list() : Nmoms(0), tex(), devPtr(nullptr) {}
+  tex_mom_list() : Nmoms(0), devPtr(nullptr) {}
 
-  tex_mom_list(size_t Nmoms, cudaTextureObject_t tex, void* devPtr) :
-    Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
+  tex_mom_list(size_t Nmoms, void* devPtr) :
+    Nmoms(Nmoms), devPtr(devPtr) {}
   
   inline __device__ int4 get(const size_t &i) const {
-#ifdef __NVCC__
-    return tex1Dfetch<int4>(tex,i);
-#else
+//#ifdef __NVCC__
+//    return tex1Dfetch<int4>(tex,i);
+//#else
     return make_int4(0,0,0,0);
-#endif
+//#endif
   };
 };
 
@@ -63,18 +63,18 @@ struct pointer_holder {
 
   void copyToDeviceConstant() {
     if(devPointer != nullptr) {
-      cudaError_t err = cudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
-      if (err != cudaSuccess) {
+      //cudaError_t err = qudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
+      //if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
-      }
+      //}
     }
   }
   void copyFromDeviceConstant() {
     if(false and devPointer != nullptr) {
-      cudaError_t err = cudaMemcpyFromSymbol(hostPointer, *devPointer, bytes*size, 0, cudaMemcpyDeviceToHost);
-      if (err != cudaSuccess) {
+      //cudaError_t err = qudaMemcpyFromSymbol(hostPointer, *devPointer, bytes*size, 0, cudaMemcpyDeviceToHost);
+      //if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
-      }
+      //}
     }
   }
   bool checkDeviceConstant() {
