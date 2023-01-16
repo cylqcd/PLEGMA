@@ -107,7 +107,7 @@ target_compile_options(
           $<$<CONFIG:SANITIZE>:-fsanitize=address
           -fsanitize=undefined>)
 
-  set_source_files_properties( ${plegma_CU_OBJS} PROPERTIES LANGUAGE HIP)
+  set_source_files_properties( ${PLEGMA_CU_OBJS} PROPERTIES LANGUAGE HIP)
 # malloc.cpp uses both the driver and runtime api So we need to find the CUDA_CUDA_LIBRARY (driver api) or the stub
 # version for cmake 3.8 and later this has been integrated into  FindCUDALibs.cmake
 target_link_libraries(plegma PUBLIC hip::hiprand roc::rocrand hip::hipcub roc::rocprim_hip)
