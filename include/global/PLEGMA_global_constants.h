@@ -34,7 +34,7 @@
 
 #define global_host(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
-#ifdef __NVCC__
+#if defined (  __HIP__ ) || (  __NVCC__ ) 
 #define global_both(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				\
   __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);		
@@ -47,7 +47,7 @@
 
 #define global_host(dtype, name, ...)					\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
-#ifdef __NVCC__
+#if defined (  __HIP__ ) ||(  __NVCC__ ) 
 #define global_both(dtype, name, ...)					\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
   extern __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__); 

@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
-#include <PLEGMA_kernel_complex.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
-#include <PLEGMA_gammas.cuh>
+#include "PLEGMA_kernel_complex.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
+#include "PLEGMA_gammas.cuh"
 
 #ifndef PLEGMA_KERNEL_UTILS_CUH
 #define PLEGMA_KERNEL_UTILS_CUH

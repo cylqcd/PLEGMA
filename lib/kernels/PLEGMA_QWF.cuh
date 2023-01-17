@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 using namespace plegma;
 
 template<typename FloatA, typename FloatC>
@@ -12,7 +12,7 @@ __global__ void contract_TMDWF_mesons_trick_zfac_device(propTex<FloatA>texProp1,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
 
-  register Float2<FloatC> accum[16];
+  Float2<FloatC> accum[16];
 #pragma unroll
   for(int i = 0 ; i < 16 ; i++){
     accum[i] = 0.;
@@ -149,7 +149,7 @@ void contract_TMDWF_mesons_trick_zfac_host( ProfileStruct &ps,PLEGMA_Propagator<
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size*sizeof(Float2<FloatC>));
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<propTex>(prop1);
@@ -158,7 +158,7 @@ void contract_TMDWF_mesons_trick_zfac_host( ProfileStruct &ps,PLEGMA_Propagator<
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) {
     hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-    cudaFree(d_partial_block);
+    device_free(d_partial_block);
     return;
   }
 

@@ -2,7 +2,7 @@
 #include <tune_quda.h>
 #include <comm_quda.h>
 #include <PLEGMA_utils.h>
-#include <targets/cuda/quda_cuda_api.h>
+//#include <targets/cuda/quda_cuda_api.h>
 using namespace quda;
 
 #ifndef PLEGMA_KERNEL_TUNER_H
@@ -11,7 +11,7 @@ using namespace quda;
 #define THREADS_PER_BLOCK 64
 
 
-extern __device__ cudaDeviceProp devProp;
+//extern __device__ cudaDeviceProp devProp;
 
 // struct that contains all variables
 //  necessary for the tuning evaluation
@@ -176,7 +176,7 @@ protected:
       // in case ProfileStruct is the first argument we call it as a function
       (*kernel)(std::get<S>(args)...);
     } else {
-      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,target::cuda::get_stream(stream)>>>(std::get<S>(args)...);
+      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,quda::device::get_cuda_stream(stream)>>>(std::get<S>(args)...);
     }      
    // cudaDeviceSynchronize();
   }
