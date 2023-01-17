@@ -2,7 +2,13 @@
 #include <tune_quda.h>
 #include <comm_quda.h>
 #include <PLEGMA_utils.h>
-//#include <targets/cuda/quda_cuda_api.h>
+
+#ifdef __NVCC__
+#include <targets/cuda/quda_cuda_api.h>
+#elif __HIP__
+#include <targets/hip/quda_hip_api.h>
+#endif
+
 using namespace quda;
 
 #ifndef PLEGMA_KERNEL_TUNER_H
@@ -176,7 +182,11 @@ protected:
       // in case ProfileStruct is the first argument we call it as a function
       (*kernel)(std::get<S>(args)...);
     } else {
-      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,quda::device::get_cuda_stream(stream)>>>(std::get<S>(args)...);
+      #ifdef __NVCC__
+      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,quda::target::cuda::get_stream(stream)>>>(std::get<S>(args)...);
+      #elif __HIP__
+      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes, quda::target::hip::get_stream(stream)>>>(std::get<S>(args)...);
+      #endif
     }      
    // cudaDeviceSynchronize();
   }
