@@ -6,6 +6,7 @@
 #include <PLEGMA_threep.cuh>
 #include <PLEGMA_Vector.h>
 #include <malloc_quda.h>
+#include <quda_api.h>
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
@@ -168,7 +169,7 @@ static void threep_threeD_part4_host(ProfileStruct &ps, Float2<FloatC> *result, 
   listGammas.size = gammas.size();
   listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
 //  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -222,7 +223,7 @@ static void threep_threeD_part4_host(ProfileStruct &ps, Float2<FloatC> *result, 
 	 source, signProps, runFT, *moms, dir1,dir2,dir3,mu,nu,c1,c2);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
       
-      cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+      qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
       
       if(runFT==true){
@@ -244,8 +245,8 @@ static void threep_threeD_part4_host(ProfileStruct &ps, Float2<FloatC> *result, 
   
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 template<bool b,typename FloatC,typename FloatA,typename FloatB,typename FloatG>

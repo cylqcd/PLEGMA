@@ -95,6 +95,17 @@ namespace plegma {
     void rotate_uk_ch_g5g4();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
+    void pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime);
+
+    void pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
+
+    void pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
+
+
+
+    void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bool  broadcast=false);
+
+
   };
 
   template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
@@ -134,6 +145,9 @@ namespace plegma {
        @return void
      **/
     void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2, bool  broadcast=false);
+
+    void absorb(PLEGMA_Vector<Float> &vec, int global_it, bool  broadcast=false);
+
 
     void gaussianSmearing(PLEGMA_Vector3D<Float> &vecIn, PLEGMA_Gauge3D<Float> &gauge, int nsmearGauss, Float alphaGauss) {
       this->activeTimeSlice = vecIn.activeTimeSlice;

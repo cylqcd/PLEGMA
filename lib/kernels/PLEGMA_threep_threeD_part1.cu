@@ -245,8 +245,8 @@ static void threep_threeD_part1_host(ProfileStruct &ps, Float2<FloatC> *result, 
   
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 template<bool b, typename FloatC,typename FloatA,typename FloatB,typename FloatG>

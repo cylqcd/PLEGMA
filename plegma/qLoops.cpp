@@ -2,6 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <PLEGMA_Hprobing.h>
 #include <stdio.h>
+#include <quda_api.h>
 using namespace plegma;
 using namespace quda;
 
@@ -239,7 +240,7 @@ int main(int argc, char **argv)
       double eigVal = std::get<0>(eigSol->getEigVals()[i]);
       long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
-      cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
+      qudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
       checkQudaError();
       if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1./eigVal,true); //standard one-end trick
       else qloops_std.oneEnd_trick(phi,phi,-1./eigVal,true); //standard one-end trick

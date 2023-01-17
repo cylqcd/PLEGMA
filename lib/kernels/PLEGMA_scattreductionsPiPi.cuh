@@ -1,6 +1,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <../../include/PLEGMA_gammas.h>
 #include <malloc_quda.h>
+#include <quda_api.h>
 using namespace plegma;
 
 template<typename FloatOut, typename FloatPhi>
@@ -18,7 +19,7 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
   register Float2<FloatOut> accum[16];
   for(int i = 0 ; i < 16  ; i++){
     accum[i].x = 0.;
-    accum[i].x = 0.;
+    accum[i].y = 0.;
   }
   
 
@@ -44,8 +45,9 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
 	  int beta = gammasIdx[gId][nz_e][1];
 	  Float2<FloatOut> factor = g[gId][nz_e];
 	  #pragma unroll
-	  for(int a=0; a<N_COLS; ++a)
+	  for(int a=0; a<N_COLS; ++a){
 	    accum[n_g] = accum[n_g] + phi0[alfa][a]*factor*conj(phi1[beta][a]);
+	  }
 	//****//     
 	}
       }
@@ -105,7 +107,7 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
   listGammas.array=(GAMMAS_SCATT*)device_malloc(gammas.size()*sizeof(GAMMAS_SCATT));
   //cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS_SCATT));
   checkQudaError();
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), cudaMemcpyHostToDevice);
+  qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), qudaMemcpyHostToDevice);
   checkQudaError();
   if(HGC_verbosity > 2)
     PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
@@ -123,7 +125,7 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
 
     error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), cudaMemcpyDeviceToHost);
+    qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), qudaMemcpyDeviceToHost);
     
     error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
 
@@ -136,8 +138,8 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
     }
   }
   hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
   
 }
 
