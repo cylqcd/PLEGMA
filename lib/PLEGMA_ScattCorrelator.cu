@@ -225,7 +225,7 @@ void PLEGMA_ScattCorrelator<Float>::V6_RED( PLEGMA_Vector<Float> &Phi1, PLEGMA_V
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, bool conj_v) {
+void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, bool conj_P) {
 
   int n_gammas= Gammas.size();
   this->GList.clear();
@@ -244,14 +244,14 @@ void PLEGMA_ScattCorrelator<Float>::V4( PLEGMA_Vector<Float> &Phi, std::vector<G
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
 
-  if(conj_v)
+  if(conj_P)
     V_reductions<true,0,1,Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
   else
     V_reductions<false,0,1,Float,Float,Float>( V_4, *this, Phi, Gammas, S1, S2);
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, bool conj_v) {
+void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, bool conj_P) {
 
   int n_gammas= Gammas.size();
   this->GList.clear();
@@ -270,7 +270,7 @@ void PLEGMA_ScattCorrelator<Float>::V2( PLEGMA_Vector<Float> &Phi, std::vector<G
   for(int i=0; i<3; ++i)
     assert(this->source[i]==0);
 
-  if(conj_v)
+  if(conj_P)
     V_reductions<true,0,1,Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
   else
     V_reductions<false,0,1,Float,Float,Float>(V_2, *this, Phi, Gammas, S1, S2);
@@ -3492,7 +3492,9 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiod
     int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
     int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
     int source_num= n_coherent_source > 1 ? attract_look_up_table[t_global] : this->source[DIM_T];
+    PLEGMA_printf("t_global %d source num %d \n",t_global, source_num);
     if(  source_num + source_sink_separation > HGC_totalL[3] ){
+      PLEGMA_printf("we apply sign t_global %d\n",t_global);
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
         for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
           *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
@@ -3514,6 +3516,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase(){
 
   #pragma omp parallel for
   for( int i_m=0; i_m<N_moms; ++i_m){
+      PLEGMA_printf("PI1 %d %d %d\n",mom_list[i_m][0],mom_list[i_m][1],mom_list[i_m][2]);
       Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_list[i_m][0]*this->source[0]+
 	2*M_PI/(Float)HGC_totalL[1]* mom_list[i_m][1]*this->source[1]+
 	2*M_PI/(Float)HGC_totalL[2]* mom_list[i_m][2]*this->source[2];
