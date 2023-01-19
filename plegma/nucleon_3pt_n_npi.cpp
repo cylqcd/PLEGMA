@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
   int n_stochastic_samples;
   int max_source_sink_separations;
   int dotwopoint;
-  setVerbosity(QUDA_DEBUG_VERBOSE);
+  //setVerbosity(QUDA_DEBUG_VERBOSE);
 
   HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
   HGC_options->set("maxSourceSinkSeparations", "Maximal source sink separations", verbosity, max_source_sink_separations);
@@ -1404,8 +1404,6 @@ int main(int argc, char **argv) {
         
 	momList filtered_sourcemomentumList_2pt = sourcemomentumList_twopt.extract(momentum_i2, 0);
 
-
-	int Nlist=filtered_sourcemomentumList.N_list();
 
         PLEGMA_ScattCorrelator<float> reductionsV2(source_reduction, list_mpf1_threept);
         PLEGMA_ScattCorrelator<float> reductionsV2_2pt(source_reduction, list_mpf1_twopt);
