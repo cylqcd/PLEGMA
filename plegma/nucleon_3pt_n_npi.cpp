@@ -1,6 +1,6 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
-
+#include <util_quda.h>
 std::vector<double> runtime;
 #define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;			\
   PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
@@ -35,7 +35,7 @@ void produceOutput_2pt_packed( PLEGMA_ScattCorrelator<float> source,
 		    int *attract_look_up_table){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions( true, n_coherent_source, attract_look_up_table );
+  TIME(source.applyBoundaryConditions( true, n_coherent_source, attract_look_up_table ));
   TIME(source.normalize_nstoch(n_stochastic_samples));
   TIME(source.writeHDF5( outputFilename ));
 
@@ -46,11 +46,12 @@ void produceOutput_3pt( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
                     int n_stochastic_samples,
-		    int source_sink_separation,
-		    int max_source_sink_separation){
+		    int n_coherent_source,
+                    int *attract_look_up_table,
+		    int source_sink_separation){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions_3pt( true, source_sink_separation, max_source_sink_separation ));
+  TIME(source.applyBoundaryConditions_3pt( true, n_coherent_source, attract_look_up_table, source_sink_separation ));
   TIME(source.normalize_nstoch(n_stochastic_samples));
   TIME(source.writeHDF5( outputFilename ));
 
@@ -82,12 +83,13 @@ void produceOutput_2pt_packed( PLEGMA_ScattCorrelator<float> source,
 void produceOutput_3pt( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
-		    int source_sink_separation,
-                    int max_source_sink_separation
+		    int n_coherent_source,
+                    int *attract_look_up_table,
+		    int source_sink_separation
                   ){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions_3pt( true, source_sink_separation, max_source_sink_separation ));
+  TIME(source.applyBoundaryConditions_3pt( true,n_coherent_source, attract_look_up_table, source_sink_separation ));
   TIME(source.writeHDF5( outputFilename ));
 }
 
@@ -123,7 +125,8 @@ int main(int argc, char **argv) {
 
   int n_stochastic_samples;
   int max_source_sink_separations;
-
+  int dotwopoint;
+  setVerbosity(QUDA_DEBUG_VERBOSE);
 
   HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
   HGC_options->set("maxSourceSinkSeparations", "Maximal source sink separations", verbosity, max_source_sink_separations);
@@ -131,6 +134,8 @@ int main(int argc, char **argv) {
   HGC_options->set("nstochSamples", "Number of stochastic samples", verbosity, n_stochastic_samples);
   HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
   HGC_options->set("seed2", "Seed for intiialization of stochastic sources", verbosity, rand_seed2);
+  HGC_options->set("dotwopoint", "Doing also the twopoint functions", verbosity,dotwopoint);
+
 
   //=========================================================================================================//
   initializePLEGMA();
@@ -154,6 +159,7 @@ int main(int argc, char **argv) {
       TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
       PLEGMA_printf("Plaquette after smearing:\n");
       smearedGauge.calculatePlaq();
+      smearedGauge.writeHDF5("smearingGauge");
 
       // Gauge for contractions
       contractGauge.copy(gauge);
@@ -311,7 +317,9 @@ int main(int argc, char **argv) {
     for (int i=0; i<n_stochastic_samples;++i){
    
       stochastic_sources.push_back(new PLEGMA_Vector<float>(HOST));
-      stochastic_propagator_2pt_SS.push_back(new PLEGMA_Vector<float>(HOST));
+      if (dotwopoint==1){
+        stochastic_propagator_2pt_SS.push_back(new PLEGMA_Vector<float>(HOST));
+      }
       vectorSource_stochastic.stochastic_Z(nroots);
       vectorSource_stochastic.unload();
       stochastic_sources[i]->copy(vectorSource_stochastic,HOST);
@@ -331,50 +339,62 @@ int main(int argc, char **argv) {
      *
      ******************************************************/
 
-    for (int i=0; i<n_stochastic_samples;++i){
-      PLEGMA_Vector<double> vectorInOut, vectorAuxD1,vectorAuxD2;
+    if (dotwopoint==1){
+      for (int i=0; i<n_stochastic_samples;++i){
+        PLEGMA_Vector<double> vectorInOut, vectorAuxD1,vectorAuxD2;
 
-      vectorAuxD1.copy(*stochastic_sources[i], HOST);
-      vectorAuxD1.load();
+        vectorAuxD1.copy(*stochastic_sources[i], HOST);
+        vectorAuxD1.load();
 
-      //Step(3) Smearing all the time slice
-      TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+        //Step(3) Smearing all the time slice
+        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
-      //Step(4) We rotate the source to the physical basis
-      TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
+        //Step(4) We rotate the source to the physical basis
+        TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
 
-      //In vectorAuxD2 we store the results for the inversion
-      vectorAuxD2.scale(0.0);
+        //In vectorAuxD2 we store the results for the inversion
+        vectorAuxD2.scale(0.0);
 
-      PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
-      for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-        //Step(5) pick out a particular timeslice from the source
-        vectorInOut.absorbTimeslice(vectorAuxD1, timeidx);
-        //Step(6) Solve
-        TIME(solver.solve(vectorInOut, vectorInOut));
-        //Step(7) absorbing the particular timeslice to a 4d vector
-        vectorAuxD2.absorbTimeslice(vectorInOut, timeidx, false);
+        PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
+        for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+          //Step(5) pick out a particular timeslice from the source
+	  //
+	  //PLEGMA_Vector3D<double> vec3D;
+	  //vec3D.absorb(vectorAuxD1, timeidx);
+	  //vectorInOut.absorb(vec3D, timeidx);
+	  //vectorInOut.copy(vectorAuxD1);
+	  PLEGMA_printf("Start absorb\n");
+          vectorInOut.absorbTimeslice(vectorAuxD1, timeidx);
+	  PLEGMA_printf("Finish absorb\n");
+          //Step(6) Solve
+          TIME(solver.solve(vectorInOut, vectorInOut));
+	  PLEGMA_printf("Finish solve\n");
+          //Step(7) absorbing the particular timeslice to a 4d vector
+	  //vec3D.absorb(vectorInOut, timeidx);
+	  //vectorAuxD2.absorb(vec3D, timeidx, false);
+          vectorAuxD2.absorbTimeslice(vectorInOut, timeidx, false);
+        }
+
+        //Step(6) We rotate back the propagator to the physical basis
+        TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
+
+        //Step(7) Smearing all the time slice in the propagator
+        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+
+        //Step(8) Save the propagator to the disk
+        {
+          PLEGMA_Vector<float> vectorAuxF;
+          vectorAuxF.copy(vectorAuxD2);
+          vectorAuxF.unload();
+          vectorAuxF.writeLIME("globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
+        }
+
+        //Step(9) Save the propagator to the host memory
+        vectorAuxD2.unload();
+        stochastic_propagator_2pt_SS[i]->copy(vectorAuxD2,HOST);
+        vectorAuxD2.load();
+
       }
-
-      //Step(6) We rotate back the propagator to the physical basis
-      TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2,+1));
-
-      //Step(7) Smearing all the time slice in the propagator
-      TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
-
-      //Step(8) Save the propagator to the disk
-      {
-        PLEGMA_Vector<float> vectorAuxF;
-        vectorAuxF.copy(vectorAuxD2);
-        vectorAuxF.unload();
-        vectorAuxF.writeLIME("globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
-      }
-
-      //Step(9) Save the propagator to the host memory
-      vectorAuxD2.unload();
-      stochastic_propagator_2pt_SS[i]->copy(vectorAuxD2,HOST);
-      vectorAuxD2.load();
-
     }
 
 
@@ -396,6 +416,7 @@ int main(int argc, char **argv) {
             PLEGMA_printf("PACKING check TIMESLICE %d\n",timeSlice);
 	    PLEGMA_Gauge3D<double> smearedGauge3D;
             smearedGauge3D.absorb(smearedGauge, timeSlice );
+	    PLEGMA_printf("absorb Gauge is done\n");
             for(int i=0; i< n_stochastic_samples; ++i) {
 	      vectorSource_stochastic.copy( *stochastic_sources[i], HOST);
               vectorSource_stochastic.load();
@@ -403,8 +424,11 @@ int main(int argc, char **argv) {
               { // Smearing the source
 		PLEGMA_Vector3D<double> vector1, vector2;
 		vectorInOut.copy(vectorSource_stochastic);
+		PLEGMA_printf("Absorb fermion is started\n");
                 vector1.absorb(vectorInOut,timeSlice);
+                PLEGMA_printf("Absorb fermion is finished\n");
                 TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+		PLEGMA_printf("absorb fermion start 4D <- 3D\n");
                 vectorInOut.absorb(vector2,timeSlice);
               }
 
@@ -426,9 +450,9 @@ int main(int argc, char **argv) {
               //TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
 
               vectorAuxD1.unload();
-	      PLEGMA_printf("Save the stochastic source for sample %d\n",i);
-              std::string nstoch=std::to_string(i);
-              vectorAuxD1.writeHDF5("stochastic_propagators_UP"+nstoch+"_t"+std::to_string(timeSlice));
+	      //PLEGMA_printf("Save the stochastic source for sample %d\n",i);
+              //std::string nstoch=std::to_string(i);
+              //vectorAuxD1.writeHDF5("stochastic_propagators_UP"+nstoch+"_t"+std::to_string(timeSlice));
 
 	      //writeHDF5(outfilename) 
 	      stochastic_propags_UP_SL.push_back(new PLEGMA_Vector<float>(HOST));
@@ -468,6 +492,7 @@ int main(int argc, char **argv) {
 		vectorInOut.copy(vectorSource_stochastic);
                 vector1.absorb(vectorInOut,timeSlice);
                 TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+		PLEGMA_printf("Location 2\n");
                 vectorInOut.absorb(vector2,timeSlice);
               }
 
@@ -548,9 +573,12 @@ int main(int argc, char **argv) {
 				     //double tmp=vector1.norm();
 				     //PLEGMA_printf("Norm of source location %d is %e\n",source_location[3],tmp);
 				     TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear, alphaGauss));
-
+                                     PLEGMA_printf("Location 4\n");
 				     vectorInOut.absorb(vector2,source_location[DIM_T]);
 				   }
+				   //vectorInOut.unload();
+				   //vectorInOut.writeHDF5("testPointSourceSmeared");
+				   //vectorInOut.load();
 				   // Inverting
 				   PLEGMA_printf("Going to invert %s for component %d\n",
 						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
@@ -599,6 +627,9 @@ int main(int argc, char **argv) {
 	  attract_lookup_table[(sourcePositions[isource][DIM_T]+max_source_sink_separations*i_source_parallel+sink)%HGC_totalL[3]]=(sourcePositions[isource][DIM_T]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
 	}
       }
+      for (int i=0; i<HGC_totalL[3];++i){
+	PLEGMA_printf("attract_lookup_table %d %d \n",i,attract_lookup_table[i]);
+      }
       for (int i_source_parallel=0; i_source_parallel < parallel_sources;++i_source_parallel){
 
 	PLEGMA_Propagator<float> propUP_SS;
@@ -635,43 +666,46 @@ int main(int argc, char **argv) {
 	TIME(computePropagator(propUP_SS, propUP_SL, mu_ud, LIGHT, nsmearGauss, source_local, false));
 	TIME(computePropagator(propDN_SS, propDN_SL, -mu_ud, LIGHT, nsmearGauss, source_local, false));
 
-        //Computing T reductions+recombination
-        {
-          PLEGMA_ScattCorrelator<float> reductionsT1N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsT2N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
-          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS, propDN_SS, propUP_SS));
-          //PLEGMA_printf("Nucleon T2 reduction\n");
-          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS, propDN_SS, propUP_SS));
-          //PLEGMA_printf("Nucleon T2 reduction ready\n");
-          TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ));
-          //PLEGMA_printf("Nucleon diagram ready\n");
+	if (dotwopoint==1){
 
-        }
+          //Computing T reductions+recombination
+          {
+            PLEGMA_ScattCorrelator<float> reductionsT1N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+            PLEGMA_ScattCorrelator<float> reductionsT2N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+            //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+            TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS, propDN_SS, propUP_SS));
+            //PLEGMA_printf("Nucleon T2 reduction\n");
+            TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS, propDN_SS, propUP_SS));
+            //PLEGMA_printf("Nucleon T2 reduction ready\n");
+            TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ));
+            //PLEGMA_printf("Nucleon diagram ready\n");
 
-	//Computing T reductions+recombination
-        {
-          PLEGMA_ScattCorrelator<float> reductionsT1N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsT2N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
-          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
-          //PLEGMA_printf("Nucleon T2 reduction\n");
-          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
-          //PLEGMA_printf("Nucleon T2 reduction ready\n");
-          TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
-	  //PLEGMA_printf("Nucleon diagram ready\n");
-        }
+          }
 
-	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
-        TIME( corrN0.apply_phase());
-        TIME( corrN0.apply_sign("N"));
-        TIME( corrN0.applyBoundaryConditions( true ));
-        TIME( corrN0.writeHDF5(outfilename));
+	  //Computing T reductions+recombination
+          {
+            PLEGMA_ScattCorrelator<float> reductionsT1N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+            PLEGMA_ScattCorrelator<float> reductionsT2N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
+            //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+            TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
+            //PLEGMA_printf("Nucleon T2 reduction\n");
+            TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
+            //PLEGMA_printf("Nucleon T2 reduction ready\n");
+            TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
+	    //PLEGMA_printf("Nucleon diagram ready\n");
+          }
 
-        TIME( corrNP.apply_phase() );
-        TIME( corrNP.apply_sign("N") );
-        TIME( corrNP.applyBoundaryConditions( true ) );
-        TIME( corrNP.writeHDF5(outfilename) );
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
+          TIME( corrN0.apply_phase());
+          TIME( corrN0.apply_sign("N"));
+          TIME( corrN0.applyBoundaryConditions( true ));
+          TIME( corrN0.writeHDF5(outfilename));
+
+          TIME( corrNP.apply_phase() );
+          TIME( corrNP.apply_sign("N") );
+          TIME( corrNP.applyBoundaryConditions( true ) );
+          TIME( corrNP.writeHDF5(outfilename) );
+	}
 
 	{
 	  PLEGMA_printf("Save propagator for the up  and dn quark\n");
@@ -684,6 +718,15 @@ int main(int argc, char **argv) {
             vectorAuxPrint.unload();
             vectorAuxPrint.writeHDF5("propUPSS_"+spin+"_c"+col+"_t_"+std::to_string(source_local[3]));
           }
+	  for(int isc = 0 ; isc < 12 ; isc++){
+            std::string spin=std::to_string(isc/3);
+            std::string col=std::to_string(isc%3);
+
+            vectorAuxPrint.absorb(propUP_SL,isc/3,isc%3);
+            vectorAuxPrint.unload();
+            vectorAuxPrint.writeHDF5("propUPSL_"+spin+"_c"+col+"_t_"+std::to_string(source_local[3]));
+          }
+
 	}
 	
         propUP_SS_packed.pack_propagator_from_source_to_sink(propUP_SS, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
@@ -695,40 +738,47 @@ int main(int argc, char **argv) {
 
       } //parallel source position
 
+
       PLEGMA_ScattCorrelator<float> corrNP_packed(source, list_mpf1_twopt);
       TIME(corrNP_packed.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
 
-      {
-        PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-        TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propUP_SS_packed));
-        //PLEGMA_printf("Nucleon T2 reduction\n");
-        TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propUP_SS_packed));
-        //PLEGMA_printf("Nucleon T2 reduction ready\n");
-        TIME(corrNP_packed.N_diagrams( reductionsT1N, reductionsT2N ));
-        //PLEGMA_printf("Nucleon diagram ready\n");
+      if (dotwopoint==1){
+ 
+        {
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
+          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propUP_SS_packed));
+          //PLEGMA_printf("Nucleon T2 reduction\n");
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propUP_SS_packed));
+          //PLEGMA_printf("Nucleon T2 reduction ready\n");
+          TIME(corrNP_packed.N_diagrams( reductionsT1N, reductionsT2N ));
+          //PLEGMA_printf("Nucleon diagram ready\n");
+
+        }
 
       }
-
 
       PLEGMA_ScattCorrelator<float> corrN0_packed(source, list_mpf1_twopt);
       TIME(corrN0_packed.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
 
-      {
-        PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-        //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-        TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_SS_packed, propUP_SS_packed, propDN_SS_packed));
-        //PLEGMA_printf("Nucleon T2 reduction\n");
-        TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN_SS_packed, propUP_SS_packed, propDN_SS_packed));
-        //PLEGMA_printf("Nucleon T2 reduction ready\n");
-        TIME(corrN0_packed.N_diagrams( reductionsT1N, reductionsT2N ));
-        //PLEGMA_printf("Nucleon diagram ready\n");
+      if (dotwopoint==1){ 
+
+        {
+          PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
+          PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
+          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_SS_packed, propUP_SS_packed, propDN_SS_packed));
+          //PLEGMA_printf("Nucleon T2 reduction\n");
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN_SS_packed, propUP_SS_packed, propDN_SS_packed));
+          //PLEGMA_printf("Nucleon T2 reduction ready\n");
+          TIME(corrN0_packed.N_diagrams( reductionsT1N, reductionsT2N ));
+          //PLEGMA_printf("Nucleon diagram ready\n");
+        }
+
       }
 
-/*
-
+      /*
       {
         PLEGMA_printf("Save propagator for the up  and dn quark\n");
         PLEGMA_Vector<float> vectorAuxPrint(BOTH);
@@ -811,15 +861,16 @@ int main(int argc, char **argv) {
 
 
       for(int i=0; i< n_stochastic_samples; ++i) {
-        reductions_UU_V2_GAMMAF1D_U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
-        reductions_UU_V4_GAMMAF1U_D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
+	if (dotwopoint==1){
+          reductions_UU_V2_GAMMAF1D_U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
+          reductions_UU_V4_GAMMAF1U_D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
 
-	reductions_DD_V2_GAMMAF1U_U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
+	  reductions_DD_V2_GAMMAF1U_U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
 
 
-	reductions_UU_V3_GAMMAF2U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
- 	reductions_DD_V3_GAMMAF2D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
-
+	  reductions_UU_V3_GAMMAF2U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
+ 	  reductions_DD_V3_GAMMAF2D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
+        }
 
 
 	for (int k=0; k< tSinks.size(); ++k){
@@ -841,35 +892,27 @@ int main(int argc, char **argv) {
         }
       }
 
+
       for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
 
         PLEGMA_Vector<float> stochastic_source;
         stochastic_source.copy(*stochastic_sources[i_sample],HOST);
         stochastic_source.load();
+	if (i_sample==0){
+	  stochastic_source.unload();
+	  stochastic_source.writeHDF5("stochastic_vector_source.h5");
+	}
 
 
 	for (int k=0; k< tSinks.size();++k){
           int tsinkMtsource = tSinks[k];
           if(tsinkMtsource >= HGC_totalL[3])
             PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
-	
-          PLEGMA_Vector<float> stochastic_source_packed;
-	  for (int i_source_parallel=0; i_source_parallel<parallel_sources;i_source_parallel++){
-	    site sink_local;
-            sink_local[0] = sourcePositions[isource][0];
-            sink_local[1] = sourcePositions[isource][1];
-            sink_local[2] = sourcePositions[isource][2];
-            sink_local[3] = (sourcePositions[isource][DIM_T]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
 
-            stochastic_source_packed.pack_propagator_as_sink(stochastic_source, sink_local[3], tSinks[k], i_source_parallel == 0 ? true : false);
-	  }
-
-          stochastic_source_packed.apply_gamma5();
-
-          //For U(xf1,xf2)
-          //B3,B5,B9,B11
-	  PLEGMA_Propagator<float> propUPpacked_to_sink;
+          PLEGMA_Propagator<float> propUPpacked_to_sink;
           PLEGMA_Propagator<float> propDNpacked_to_sink;
+
+	  PLEGMA_printf("sasas\n");
 
           for (int i_source_parallel=0; i_source_parallel<parallel_sources;++i_source_parallel){
             site sink_local;
@@ -880,10 +923,49 @@ int main(int argc, char **argv) {
             propUPpacked_to_sink.pack_propagator_as_sink(propUP_SS_packed,  sink_local[3], tsinkMtsource, i_source_parallel==0 ? true : false);
             propDNpacked_to_sink.pack_propagator_as_sink(propDN_SS_packed,  sink_local[3], tsinkMtsource, i_source_parallel==0 ? true : false);
           }
+	
+	  PLEGMA_printf("packing propUPpacked_to_sink is OK\n");
+          PLEGMA_Vector<float> stochastic_source_packed;
+	  for (int i_source_parallel=0; i_source_parallel<parallel_sources;++i_source_parallel){
+	    site sink_local;
+            sink_local[0] = sourcePositions[isource][0];
+            sink_local[1] = sourcePositions[isource][1];
+            sink_local[2] = sourcePositions[isource][2];
+            sink_local[3] = (sourcePositions[isource][DIM_T]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+
+            stochastic_source_packed.pack_propagator_as_sink(stochastic_source, sink_local[3], tsinkMtsource, i_source_parallel == 0 ? true : false);
+	  }
+          if (i_sample==0){
+	  stochastic_source_packed.unload();
+	  stochastic_source_packed.writeHDF5("stochastic_vector");
+          stochastic_source_packed.load();
+	  }
+
+          stochastic_source_packed.apply_gamma5();
+
+          //For U(xf1,xf2)
+          //B3,B5,B9,B11
+
+	  if (i_sample==0){
+          PLEGMA_Vector<float> temp;
+	  temp.absorb(propUP_SS_packed, 0, 0);
+	  temp.unload();
+	  temp.writeHDF5("up_packed_source");
+	  temp.load();
+	  temp.absorb(propUPpacked_to_sink, 0, 0);
+	  temp.unload();
+	  temp.writeHDF5("up_packed_as_sink");
+	  temp.load();
+	  temp.absorb(propDNpacked_to_sink, 0, 0);
+	  temp.unload();
+	  temp.writeHDF5("dn_packed_as_sink");
+	  temp.load();
+          }
+
           
           TIME(reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k]->V2( stochastic_source_packed,     glist_sink_nucleon, propDNpacked_to_sink, propUPpacked_to_sink, false));
 
-	  if (k==0){
+	  if (k==0 && (dotwopoint==1)){
              PLEGMA_Vector<float> stoch_piece;
 	     stoch_piece.unload();
 	     stoch_piece.copy(*stochastic_propagator_2pt_SS[i_sample], HOST);
@@ -1030,6 +1112,7 @@ int main(int argc, char **argv) {
               PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+	      PLEGMA_printf("Location 6\n");
               vectortmp1.absorb(vector2, source_local[3]);
 
            }
@@ -1115,6 +1198,7 @@ int main(int argc, char **argv) {
             PLEGMA_Gauge3D<double> smearedGauge3D;
             smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
             TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+            PLEGMA_printf("Location 999999\n");
             vectortmp1.absorb(vector2, source_local[3]);
            }
 
@@ -1262,12 +1346,12 @@ int main(int argc, char **argv) {
         }
  
 
-
         TIME(reductionsV2_diluted_STOCHU_DN_UP[k]->V2( st_oet_u_zeropacked_to_sink, glist_sink_nucleon, propDNpacked_to_sink, propUPpacked_to_sink, false));
+        //TIME(reductionsV2_diluted_STOCHU_DN_UP[k]->writeHDF5("redV2_oet"));
         TIME(reductionsV2_diluted_STOCHD_UP_UP[k]->V2( st_oet_d_zeropacked_to_sink, glist_sink_nucleon, propUPpacked_to_sink, propUPpacked_to_sink, false));
         TIME(reductionsV4_diluted_STOCHU_DN_UP[k]->V4( st_oet_u_zeropacked_to_sink, glist_sink_nucleon, propDNpacked_to_sink, propUPpacked_to_sink, false));
 
-	if (k==0){
+	if (k==0 && (dotwopoint==1)){
 
           for (int i_source_parallel=0; i_source_parallel<parallel_sources;++i_source_parallel){
             site sink_local;
@@ -1377,8 +1461,9 @@ int main(int argc, char **argv) {
               vector1.absorb( vectorAuxD, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
               PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
+
+              vector1.mulMomentumPhases(momentum_i2,1);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-              vector2.mulMomentumPhases(momentum_i2,1);
               vectorAuxD.absorb(vector2, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
 	    }
             
@@ -1427,24 +1512,27 @@ int main(int argc, char **argv) {
 
         corrTproton_protonpizero4.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq24");
 
-        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, propDN_SS_packed));
-        TIME(corrTproton_protonpizero1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
-        TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, propUP_SS_packed));
-        TIME(corrTproton_protonpizero2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
+	if (dotwopoint==1){
 
-        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
-        TIME(corrTproton_protonpizero3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
+          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, propDN_SS_packed));
+          TIME(corrTproton_protonpizero1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
+          TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, propUP_SS_packed));
+          TIME(corrTproton_protonpizero2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
 
-        TIME(reductionsT1.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
-        TIME(corrTproton_protonpizero4.convertTreductiontoDiagram( reductionsT1, false, false, true));
+          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
+          TIME(corrTproton_protonpizero3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
 
-        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+          TIME(reductionsT1.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
+          TIME(corrTproton_protonpizero4.convertTreductiontoDiagram( reductionsT1, false, false, true));
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
 
-	TIME(produceOutput_2pt_packed(corrTproton_protonpizero1, outfilename, "T", parallel_sources, attract_lookup_table));
-	TIME(produceOutput_2pt_packed(corrTproton_protonpizero2, outfilename, "T", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrTproton_protonpizero3, outfilename, "T", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrTproton_protonpizero4, outfilename, "T", parallel_sources, attract_lookup_table));
+	  TIME(produceOutput_2pt_packed(corrTproton_protonpizero1, outfilename, "T", parallel_sources, attract_lookup_table));
+	  TIME(produceOutput_2pt_packed(corrTproton_protonpizero2, outfilename, "T", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrTproton_protonpizero3, outfilename, "T", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrTproton_protonpizero4, outfilename, "T", parallel_sources, attract_lookup_table));
+	}
 
 
 	//creating factors
@@ -1481,54 +1569,57 @@ int main(int argc, char **argv) {
         corrW15_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W15");
         corrW16_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W16");
 
-	for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
+	if (dotwopoint==1){
+
+	  for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
  
-          PLEGMA_Vector<float> stochastic_piece;
-          stochastic_piece.unload();
-	  stochastic_piece.copy(*stochastic_sources[i_sample], HOST);
-	  stochastic_piece.load();
+            PLEGMA_Vector<float> stochastic_piece;
+            stochastic_piece.unload();
+	    stochastic_piece.copy(*stochastic_sources[i_sample], HOST);
+	    stochastic_piece.load();
 
-          //V3
-          TIME(reductionsV3_2pt.V3( stochastic_piece, glist_sink_meson, propTS_SS_packed, true));
+            //V3
+            TIME(reductionsV3_2pt.V3( stochastic_piece, glist_sink_meson, propTS_SS_packed, true));
 
-          TIME(corrB3_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 3, true));
-          TIME(corrB4_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 4, true));
-          TIME(corrB5_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 5, true));
-          TIME(corrB6_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 6, true));
+            TIME(corrB3_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 3, true));
+            TIME(corrB4_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 4, true));
+            TIME(corrB5_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 5, true));
+            TIME(corrB6_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 6, true));
 
-	  stochastic_piece.apply_gamma5();
-	  TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, false));//checked
+	    stochastic_piece.apply_gamma5();
+	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, false));//checked
 
-          TIME(corrW13_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 13, true, false));
+            TIME(corrW13_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 13, true, false));
 
-          TIME(corrW15_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 15, true, false));
-
-
-          TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, false));//checked
-
-          TIME(corrW14_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 14, true, false));
-
-          TIME(corrW16_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 16, true, false));
+            TIME(corrW15_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 15, true, false));
 
 
+            TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, false));//checked
 
-	  stochastic_piece.unload();
-          stochastic_piece.copy(*stochastic_propagator_2pt_SS[i_sample], HOST);
-	  stochastic_piece.load();
-	  TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propDN_SS_packed, propTS_SS_packed, false));//checked
+            TIME(corrW14_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 14, true, false));
 
-          TIME(corrW5_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 5, true, false));
-
-          TIME(corrW7_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 7, true, false));
-
-	  TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propDN_SS_packed, propTS_SS_packed, false));//checked
-
-          TIME(corrW6_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 6, true, false));
-
-          TIME(corrW8_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 8, true, false));
+            TIME(corrW16_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 16, true, false));
 
 
-	}
+
+	    stochastic_piece.unload();
+            stochastic_piece.copy(*stochastic_propagator_2pt_SS[i_sample], HOST);
+	    stochastic_piece.load();
+	    TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propDN_SS_packed, propTS_SS_packed, false));//checked
+
+            TIME(corrW5_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 5, true, false));
+
+            TIME(corrW7_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 7, true, false));
+
+	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propDN_SS_packed, propTS_SS_packed, false));//checked
+
+            TIME(corrW6_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 6, true, false));
+
+            TIME(corrW8_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 8, true, false));
+
+	  } //loop over sample
+
+	}//loop over doing twopoint
  
 	for (int k=0; k<tSinks.size(); ++k){
           int tsinkMtsource = tSinks[k];
@@ -1615,7 +1706,10 @@ int main(int argc, char **argv) {
 	    
 	    //V3
             TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion, propTS_SL_packed, true));
-
+            if (i_sample==0){
+              reductionsV3.writeHDF5("reductionsV3");
+	      reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k]->writeHDF5("reductionsV2");
+	    }
 	    TIME(corrB3.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 3, true, false, true));
             TIME(corrB4.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 4, true, false, true));
 	    TIME(corrB5.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 5, true, false, true));
@@ -1655,23 +1749,23 @@ int main(int argc, char **argv) {
 	  }//loop over stochastic samples
 
 	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-          TIME(produceOutput_3pt(corrB3, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrB4, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrB5, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrB6, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrB3, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrB4, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrB5, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrB6, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
-          TIME(produceOutput_3pt(corrW5, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
-          TIME(produceOutput_3pt(corrW6, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
-          TIME(produceOutput_3pt(corrW7, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
-          TIME(produceOutput_3pt(corrW8, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
+          TIME(produceOutput_3pt(corrW5, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
+          TIME(produceOutput_3pt(corrW6, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
+          TIME(produceOutput_3pt(corrW7, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
+          TIME(produceOutput_3pt(corrW8, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
 
-          TIME(produceOutput_3pt(corrW13, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
-          TIME(produceOutput_3pt(corrW14, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
-          TIME(produceOutput_3pt(corrW15, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
-          TIME(produceOutput_3pt(corrW16, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations));
+          TIME(produceOutput_3pt(corrW13, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
+          TIME(produceOutput_3pt(corrW14, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
+          TIME(produceOutput_3pt(corrW15, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
+          TIME(produceOutput_3pt(corrW16, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]));
 
-	  if (k==0){
+	  if (k==0 && (dotwopoint==1)){
 	    outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B_2pt";
             TIME(produceOutput_2pt_packed(corrB3_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
             TIME(produceOutput_2pt_packed(corrB4_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
@@ -1726,8 +1820,9 @@ int main(int argc, char **argv) {
               vector1.absorb( vectorAuxD, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
 	      PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
+
+              vector1.mulMomentumPhases(momentum_i2,1);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-              vector2.mulMomentumPhases(momentum_i2,1);
               vectorAuxD.absorb(vector2, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
             }
 
@@ -1763,38 +1858,39 @@ int main(int argc, char **argv) {
         }
 
 
+        if (dotwopoint==1){
+	  PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus1(source, list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus2(source, list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus3(source, list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus4(source, list_mpi2ptot);
 
-	PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus1(source, list_mpi2ptot);
-        PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus2(source, list_mpi2ptot);
-        PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus3(source, list_mpi2ptot);
-        PLEGMA_ScattCorrelator<float> corrTproton_neutronpiplus4(source, list_mpi2ptot);
+	  corrTproton_neutronpiplus1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq11");
 
-	corrTproton_neutronpiplus1.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq11");
+          corrTproton_neutronpiplus2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq12");
 
-        corrTproton_neutronpiplus2.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq12");
+          corrTproton_neutronpiplus3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq13");
 
-        corrTproton_neutronpiplus3.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq13");
+          corrTproton_neutronpiplus4.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq14");
 
-        corrTproton_neutronpiplus4.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq14");
+	  TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, propDN_SS_packed));
+          TIME(corrTproton_neutronpiplus1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
 
-	TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, propDN_SS_packed));
-        TIME(corrTproton_neutronpiplus1.convertTreductiontoDiagram( reductionsT1, false, true, false ));
+          TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, propUP_SS_packed));
+          TIME(corrTproton_neutronpiplus2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
 
-        TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, propUP_SS_packed));
-        TIME(corrTproton_neutronpiplus2.convertTreductiontoDiagram( reductionsT2, false, false, true ));
+	  TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propDN_SS_packed));
+          TIME(corrTproton_neutronpiplus3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
 
-	TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propDN_SS_packed));
-        TIME(corrTproton_neutronpiplus3.convertTreductiontoDiagram( reductionsT1, false, false, false ));
+          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
+          TIME(corrTproton_neutronpiplus4.convertTreductiontoDiagram( reductionsT1, false, false, true  ));
 
-        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
-        TIME(corrTproton_neutronpiplus4.convertTreductiontoDiagram( reductionsT1, false, false, true  ));
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
-        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
-
-	TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus1, outfilename, "T", parallel_sources, attract_lookup_table));
-	TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus2, outfilename, "T", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus3, outfilename, "T", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus4, outfilename, "T", parallel_sources, attract_lookup_table));
+	  TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus1, outfilename, "T", parallel_sources, attract_lookup_table));
+	  TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus2, outfilename, "T", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus3, outfilename, "T", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus4, outfilename, "T", parallel_sources, attract_lookup_table));
+	}
 
         PLEGMA_ScattCorrelator<float> corrB9_2pt(source, filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrB10_2pt(source, filtered_sourcemomentumList_2pt);
@@ -1904,7 +2000,7 @@ int main(int argc, char **argv) {
           for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
             PLEGMA_Vector<float> stochastic_propagator_packed;
 
-            if (k==0){
+            if (k==0 && (dotwopoint==1)){
 	      stochastic_propagator_packed.unload();
               stochastic_propagator_packed.copy(*stochastic_sources[i_sample], HOST);
 	      stochastic_propagator_packed.load();
@@ -2009,23 +2105,23 @@ int main(int argc, char **argv) {
 	  } //loop over stochastic samples
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-          TIME(produceOutput_3pt(corrB9, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations  ));
-          TIME(produceOutput_3pt(corrB10, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrB11, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrB12, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrB9, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k]  ));
+          TIME(produceOutput_3pt(corrB10, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrB11, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrB12, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
-          TIME(produceOutput_3pt(corrW17, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrW18, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrW19, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrW20, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrW17, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrW18, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrW19, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrW20, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
 
-          TIME(produceOutput_3pt(corrW21, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrW22, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrW23, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrW24, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrW21, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrW22, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrW23, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrW24, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
 
-	  if (k==0){
+	  if (k==0 && (dotwopoint==1)){
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B_2pt";
 
 	    TIME(produceOutput_2pt_packed(corrB9_2pt,  outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
@@ -2076,8 +2172,9 @@ int main(int argc, char **argv) {
               vector1.absorb( vectorAuxD, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
               PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
+
+              vector1.mulMomentumPhases(momentum_i2,1);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-              vector2.mulMomentumPhases(momentum_i2,1);
               vectorAuxD.absorb(vector2, (source[3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3]);
             }
 
@@ -2109,23 +2206,26 @@ int main(int argc, char **argv) {
 
         }
 
-        PLEGMA_ScattCorrelator<float> corrTproton_protonpizero5(source, list_mpi2ptot);
-        PLEGMA_ScattCorrelator<float> corrTproton_protonpizero6(source, list_mpi2ptot);
+	if (dotwopoint==1){
 
-        corrTproton_protonpizero5.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq25");
+          PLEGMA_ScattCorrelator<float> corrTproton_protonpizero5(source, list_mpi2ptot);
+          PLEGMA_ScattCorrelator<float> corrTproton_protonpizero6(source, list_mpi2ptot);
 
-        corrTproton_protonpizero6.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq26");
+          corrTproton_protonpizero5.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq25");
 
-        TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propUP_SS_packed));
-        TIME(corrTproton_protonpizero5.convertTreductiontoDiagram( reductionsT1, false, true, false ));
+          corrTproton_protonpizero6.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq26");
 
-        TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propDN_SS_packed));
-        TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, false, false, true ));
+          TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propUP_SS_packed));
+          TIME(corrTproton_protonpizero5.convertTreductiontoDiagram( reductionsT1, false, true, false ));
 
-        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+          TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propDN_SS_packed));
+          TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, false, false, true ));
 
-	TIME(produceOutput_2pt_packed(corrTproton_protonpizero5, outfilename, "T", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrTproton_protonpizero6, outfilename, "T", parallel_sources, attract_lookup_table));
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+
+	  TIME(produceOutput_2pt_packed(corrTproton_protonpizero5, outfilename, "T", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrTproton_protonpizero6, outfilename, "T", parallel_sources, attract_lookup_table));
+	}
 
 	PLEGMA_ScattCorrelator<float> corrB7_2pt(source, filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrB8_2pt(source, filtered_sourcemomentumList_2pt);
@@ -2198,7 +2298,7 @@ int main(int argc, char **argv) {
           for (int i_sample=0; i_sample<n_stochastic_samples; ++i_sample){
             PLEGMA_Vector<float> stochastic_propagator_packed;
 
-	    if (k==0){
+	    if (k==0 && (dotwopoint==1)){
 	      stochastic_propagator_packed.unload();
 	      stochastic_propagator_packed.copy(*stochastic_propagator_2pt_SS[i_sample],HOST);
 	      stochastic_propagator_packed.load();
@@ -2260,16 +2360,16 @@ int main(int argc, char **argv) {
 	  } //loop over stochastic samples
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B";
-          TIME(produceOutput_3pt(corrB7, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrB8, outfilename, "4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrB7, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrB8, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W";
-          TIME(produceOutput_3pt(corrW9 , outfilename,"4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));//because of V4
-          TIME(produceOutput_3pt(corrW10, outfilename,"4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));//because of V4
-          TIME(produceOutput_3pt(corrW11, outfilename,"4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrW12, outfilename,"4pt", n_stochastic_samples, tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrW9 , outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));//because of V4
+          TIME(produceOutput_3pt(corrW10, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));//because of V4
+          TIME(produceOutput_3pt(corrW11, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrW12, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table, tSinks[k] ));
 
-	  if (k==0){
+	  if (k==0 && (dotwopoint==1)){
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_B_2pt";
             TIME(produceOutput_2pt_packed(corrB7_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
             TIME(produceOutput_2pt_packed(corrB8_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
@@ -2324,8 +2424,9 @@ int main(int argc, char **argv) {
 	      PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+              //PLEGMA_printf("Location 15\n");
               vectortmp1.absorb(vector2, source_local[3],true);
-	      PLEGMA_printf("Source local %d\n",source_local[3]);
+	      //PLEGMA_printf("Source local %d\n",source_local[3]);
 	      //vectortmp1.unload();
               //vectortmp1.writeHDF5("source_for_up_fini_mom_oet_t"+std::to_string(source_local[3]));
               //vectortmp1.load();
@@ -2407,6 +2508,7 @@ int main(int argc, char **argv) {
               PLEGMA_Gauge3D<double> smearedGauge3D;
               smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
               TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+	      PLEGMA_printf("Location 10\n");
               vectortmp1.absorb(vector2, source_local[3]);
 
             }
@@ -2467,11 +2569,16 @@ int main(int argc, char **argv) {
           st_oet_d_fini.apply_gamma5();
 
           TIME(reductionsV3_diluted_D_UP.V3( st_oet_d_fini, glist_insertion, propUP_SL_packed, true));
+	  //reductionsV3_diluted_D_UP.writeHDF5("reductionV3_oet");
 
-	  st_oet_d_fini.copy(stochastic_oet_prop_d_fini_mom_SS);
-          st_oet_d_fini.apply_gamma5();
+	  if (dotwopoint==1){
 
-	  TIME(reductionsV3_diluted_D_UP_2pt.V3( st_oet_d_fini, glist_sink_meson, propUP_SS_packed, true));
+	    st_oet_d_fini.copy(stochastic_oet_prop_d_fini_mom_SS);
+            st_oet_d_fini.apply_gamma5();
+
+	    TIME(reductionsV3_diluted_D_UP_2pt.V3( st_oet_d_fini, glist_sink_meson, propUP_SS_packed, true));
+
+	  }
 
 
         }
@@ -2487,7 +2594,7 @@ int main(int argc, char **argv) {
           TIME(reductionsV3_diluted_U_DN.V3( st_oet_u_fini, glist_insertion, propDN_SL_packed, true));
 	}
 
-	{
+	if (dotwopoint==1){
           PLEGMA_Vector<float> st_oet_u_fini;
           st_oet_u_fini.copy(stochastic_oet_prop_u_fini_mom_SS);
           //st_oet_u_fini.load();
@@ -2532,63 +2639,65 @@ int main(int argc, char **argv) {
         corrD1if12.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP02");
         corrD1if56.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MN0PP");
 
+        if (dotwopoint==1){
+	  TIME(corrZ5_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 5, false ));
+          TIME(corrZ7_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 7, false ));
 
-	TIME(corrZ5_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 5, false ));
-        TIME(corrZ7_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 7, false ));
+          TIME(corrZ6_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 6, false ));
+          TIME(corrZ8_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 8, false ));
 
-        TIME(corrZ6_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 6, false ));
-        TIME(corrZ8_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 8, false ));
+          TIME( corrZ9_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 9, false ));
+          TIME(corrZ10_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 10,false ));
 
-        TIME( corrZ9_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 9, false ));
-        TIME(corrZ10_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 10,false ));
+	  TIME(corrZ11_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 11, false ));
+          TIME(corrZ13_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 13, false ));
 
-	TIME(corrZ11_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 11, false ));
-        TIME(corrZ13_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 13, false ));
+          TIME(corrZ12_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 12, false ));
+          TIME(corrZ14_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 14, false ));
 
-        TIME(corrZ12_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 12, false ));
-        TIME(corrZ14_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 14, false ));
+	  TIME(corrPPUP.P_diagrams( stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS, i_mpi2));
+          TIME(corrPPDN.P_diagrams( stochastic_oet_prop_d_zero_mom_SS, stochastic_oet_prop_d_fini_mom_SS, i_mpi2));
+          TIME(corrP0UP.P_diagrams( stochastic_oet_prop_d_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS, i_mpi2));
+          TIME(corrP0DN.P_diagrams( stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_d_fini_mom_SS, i_mpi2));
 
-	TIME(corrPPUP.P_diagrams( stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS, i_mpi2));
-        TIME(corrPPDN.P_diagrams( stochastic_oet_prop_d_zero_mom_SS, stochastic_oet_prop_d_fini_mom_SS, i_mpi2));
-        TIME(corrP0UP.P_diagrams( stochastic_oet_prop_d_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS, i_mpi2));
-        TIME(corrP0DN.P_diagrams( stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_d_fini_mom_SS, i_mpi2));
+	  TIME(corrM.M_diagrams( corrNP_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS ));
+          TIME(corrD1if56.M_diagrams( corrN0_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS));
+          TIME(corrD1if34.M_diagrams( corrNP_packed, stochastic_oet_prop_d_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS));
+          TIME(corrD1if12.M_diagrams( corrNP_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_d_fini_mom_SS));
 
-	TIME(corrM.M_diagrams( corrNP_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS ));
-        TIME(corrD1if56.M_diagrams( corrN0_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS));
-        TIME(corrD1if34.M_diagrams( corrNP_packed, stochastic_oet_prop_d_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS));
-        TIME(corrD1if12.M_diagrams( corrNP_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_d_fini_mom_SS));
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z_2pt";
 
-	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z_2pt";
+          TIME(produceOutput_2pt_packed(corrZ5_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ6_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ7_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ8_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
 
-        TIME(produceOutput_2pt_packed(corrZ5_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrZ6_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrZ7_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrZ8_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ9_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ10_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
 
-        TIME(produceOutput_2pt_packed(corrZ9_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrZ10_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ11_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ12_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ13_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrZ14_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
 
-        TIME(produceOutput_2pt_packed(corrZ11_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrZ12_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrZ13_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-        TIME(produceOutput_2pt_packed(corrZ14_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M_2pt";
+          TIME(produceOutput_2pt_packed(corrM, outfilename,"4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrD1if12, outfilename,"4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrD1if34, outfilename,"4pt", parallel_sources, attract_lookup_table));
+          TIME(produceOutput_2pt_packed(corrD1if56, outfilename,"4pt", parallel_sources, attract_lookup_table));
 
-	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M_2pt";
-        TIME(produceOutput_2pt_packed(corrM, outfilename,"4pt"));
-        TIME(produceOutput_2pt_packed(corrD1if12, outfilename,"4pt"));
-        TIME(produceOutput_2pt_packed(corrD1if34, outfilename,"4pt"));
-        TIME(produceOutput_2pt_packed(corrD1if56, outfilename,"4pt"));
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N_2pt";
+          TIME( corrN0_packed.apply_phase());
+          TIME( corrN0_packed.apply_sign("N"));
+          TIME( corrN0_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
+          TIME( corrN0_packed.writeHDF5(outfilename));
 
-	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N_2pt";
-        TIME( corrN0_packed.apply_phase());
-        TIME( corrN0_packed.apply_sign("N"));
-        TIME( corrN0_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
-        TIME( corrN0_packed.writeHDF5(outfilename));
+          TIME( corrNP_packed.apply_phase() );
+          TIME( corrNP_packed.apply_sign("N") );
+          TIME( corrNP_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
+          TIME( corrNP_packed.writeHDF5(outfilename) );
 
-        TIME( corrNP_packed.apply_phase() );
-        TIME( corrNP_packed.apply_sign("N") );
-        TIME( corrNP_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
-        TIME( corrNP_packed.writeHDF5(outfilename) );
+        }
 
 
 
@@ -2636,6 +2745,9 @@ int main(int argc, char **argv) {
 	  free(ssource);
 
 	  TIME(corrZ5.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 5, false, true ));
+	  reductionsV3_diluted_D_UP.writeHDF5("corrZ5_V3");
+	  reductionsV2_diluted_STOCHU_DN_UP[k]->writeHDF5("corrZ5_V2");
+	  corrZ5.writeHDF5("corrZ5");
           TIME(corrZ7.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 7, false, true ));
 
 	  TIME(corrZ6.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, k, 6, false, true ));
@@ -2655,33 +2767,37 @@ int main(int argc, char **argv) {
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
-	  TIME(produceOutput_3pt(corrZ5, outfilename, "4pt", tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrZ6, outfilename, "4pt", tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrZ7, outfilename, "4pt", tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrZ8, outfilename, "4pt", tSinks[k], max_source_sink_separations ));
+	  TIME(produceOutput_3pt(corrZ5, outfilename, "4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrZ6, outfilename, "4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrZ7, outfilename, "4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrZ8, outfilename, "4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
 
-          TIME(produceOutput_3pt(corrZ9, outfilename, "4pt", tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrZ10, outfilename,"4pt", tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrZ9, outfilename, "4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrZ10, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
 
-          TIME(produceOutput_3pt(corrZ11, outfilename,"4pt", tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrZ12, outfilename,"4pt", tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrZ13, outfilename,"4pt", tSinks[k], max_source_sink_separations ));
-          TIME(produceOutput_3pt(corrZ14, outfilename,"4pt", tSinks[k], max_source_sink_separations ));
+          TIME(produceOutput_3pt(corrZ11, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrZ12, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrZ13, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
+          TIME(produceOutput_3pt(corrZ14, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
 
 
 	}//end for loop source sink separations
 
       }//loop over mpi2
 
-      outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_2pt";
-      TIME(corrP0UP.apply_sign("P"));
-      TIME(corrP0UP.writeHDF5( outfilename ));
-      TIME(corrP0DN.apply_sign("P"));
-      TIME(corrP0DN.writeHDF5( outfilename ));
-      TIME(corrPPUP.apply_sign("P"));
-      TIME(corrPPUP.writeHDF5( outfilename ));
-      TIME(corrPPDN.apply_sign("P"));
-      TIME(corrPPDN.writeHDF5( outfilename ));
+      if (dotwopoint==1){
+
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_2pt";
+        TIME(corrP0UP.apply_sign("P"));
+        TIME(corrP0UP.writeHDF5( outfilename ));
+        TIME(corrP0DN.apply_sign("P"));
+        TIME(corrP0DN.writeHDF5( outfilename ));
+        TIME(corrPPUP.apply_sign("P"));
+        TIME(corrPPUP.writeHDF5( outfilename ));
+        TIME(corrPPDN.apply_sign("P"));
+        TIME(corrPPDN.writeHDF5( outfilename ));
+
+      }
 
 
       //for (int spinindex=0;spinindex<4;++spinindex){
@@ -2697,13 +2813,15 @@ int main(int argc, char **argv) {
 
 
       for(int i_samples=0; i_samples< n_stochastic_samples; ++i_samples) {
-        reductions_UU_V2_GAMMAF1D_U_2pt.pop_back();
-        reductions_UU_V4_GAMMAF1U_D_2pt.pop_back();
+	if (dotwopoint==1){
+          reductions_UU_V2_GAMMAF1D_U_2pt.pop_back();
+          reductions_UU_V4_GAMMAF1U_D_2pt.pop_back();
 
-        reductions_UU_V3_GAMMAF2U_2pt.pop_back();
-        reductions_DD_V3_GAMMAF2D_2pt.pop_back();
+          reductions_UU_V3_GAMMAF2U_2pt.pop_back();
+          reductions_DD_V3_GAMMAF2D_2pt.pop_back();
 
-        reductions_DD_V2_GAMMAF1U_U_2pt.pop_back();
+          reductions_DD_V2_GAMMAF1U_U_2pt.pop_back();
+	}
 
 
 	for (int k=0; k<tSinks.size();++k){
@@ -2721,9 +2839,13 @@ int main(int argc, char **argv) {
 
     }//loop over source position
 
+    free(attract_lookup_table);
+
     for(int i=0; i< n_stochastic_samples; ++i) {
       stochastic_sources.pop_back();
-      stochastic_propagator_2pt_SS.pop_back();
+      if (dotwopoint==1){
+        stochastic_propagator_2pt_SS.pop_back();
+      }
     }
 
     for (int i=0; i<countindex;++i){
