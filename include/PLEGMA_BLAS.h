@@ -5,13 +5,19 @@
 #if defined(HAVE_MKL)
 #include <mkl.h>
 #elif defined(HAVE_OPENBLAS)
-#include <cblas.h>
+#include <openblas/cblas.h>
 //#include <common.h> // do not know when is needed or not
 #else
 #error Neither mkl nor openBLAS have been defined
 #endif
 
+#if defined (__HIP__)
+#include <hipblas.h>
+#elif defined (__NVCC__)
 #include <cublas_v2.h>
+#else
+#error Neither HIP nor NVCC have been defined
+#endif
 #include <mpi.h>
 #include <PLEGMA_utils.h>
 #include <quda_api.h>
@@ -97,160 +103,12 @@ namespace cBLAS{
 }
 //=================================================================//
 
+#if defined (__HIP__)
+#include "target/hip/PLEGMA_hipBLAS.h"
+#elif defined (__NVCC__)
+#include "target/hip/PLEGMA_cuBLAS.h"
+#endif
 
-namespace cuBLAS{
-  
-  template<typename Float>
-  inline void axpy(int NN, Float val[2], Float *x, Float *y){}
-  template<>
-  inline void axpy<float>(int NN, float val[2], float *x, float *y){
-    cuComplex cu_val = make_cuComplex(val[0],val[1]);
-    cublasStatus_t error =  cublasCaxpy(HGC_cublas_handle,NN, &cu_val, (cuComplex*) x, 1, (cuComplex*) y, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCaxpy failed with error %d", error);
-  }
-  template<>
-  inline void axpy<double>(int NN, double val[2], double *x, double *y){
-    cuDoubleComplex cu_val = make_cuDoubleComplex(val[0],val[1]);
-    cublasStatus_t error =  cublasZaxpy(HGC_cublas_handle, NN, &cu_val,(cuDoubleComplex*) x, 1, (cuDoubleComplex*) y, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasZaxpy failed with error %d", error);
-  }
-  
-  //------------------------------------------------------------------
-  template<typename Float>
-  inline void scal(int NN, const Float val, Float *x);
-  template<>
-  inline void scal<float>(int NN, const float val, float *x){
-    cublasStatus_t error = cublasCsscal(HGC_cublas_handle, NN, &val, (cuComplex*) x, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCsscal failed with error %d", error);
-  }
-  template<>
-  inline void scal<double>(int NN, const double val, double *x){
-    cublasStatus_t error = cublasZdscal(HGC_cublas_handle, NN, &val, (cuDoubleComplex*) x, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasZdscal failed with error %d", error);
-  }
-  //------------------------------------------------------------------
-  template<typename Float>
-  inline void cscal(int NN, const Float val[2], Float *x);
-  template<>
-  inline void cscal<float>(int NN, const float val[2], float *x){
-    cuComplex cu_val = make_cuComplex(val[0],val[1]);
-    cublasStatus_t error = cublasCscal(HGC_cublas_handle, NN, &cu_val, (cuComplex*) x, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCscal failed with error %d", error);
-  }
-  template<>
-  inline void cscal<double>(int NN, const double val[2], double *x){
-    cuDoubleComplex cu_val = make_cuDoubleComplex(val[0],val[1]);
-    cublasStatus_t error = cublasZscal(HGC_cublas_handle, NN, &cu_val, (cuDoubleComplex*) x, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasZscal failed with error %d", error);
-  }
-  //-----------------------------------------------------------------
-  template<typename Float>
-  inline std::complex<Float> dot(int NN, const Float *x, const Float *y);
-  template<>
-  inline std::complex<float> dot<float>(int NN, const float *x, const float *y){
-    cuComplex cu_res;
-    cublasStatus_t error = cublasCdotc(HGC_cublas_handle, NN,(cuComplex*)x, 1, (cuComplex*)y,1,&cu_res);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCdotc failed with error %d", error);
-    return std::complex<float>(cu_res.x,cu_res.y);
-  }
-  template<>
-  inline std::complex<double> dot<double>(int NN, const double *x, const double *y){
-    cuDoubleComplex cu_res;
-    cublasStatus_t error = cublasZdotc(HGC_cublas_handle, NN,(cuDoubleComplex*)x, 1, (cuDoubleComplex*)y,1,&cu_res);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasZdotc failed with error %d", error);
-    return std::complex<double>(cu_res.x,cu_res.y);
-  }  
-  template<typename Float>
-  inline std::complex<Float> dot(int NN, const Float *x, const Float *y, MPI_Comm comm) {
-    if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
-    std::complex<Float> result, res = cuBLAS::dot(NN, x, y);
-    int mpiErr = MPI_Allreduce((Float*) &res, (Float*) &result, 2,
-  			       MPI_Type<Float>(), MPI_SUM, comm);
-    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-    return result;
-  }  
-  //-----------------------------------------------------------------
-  template<typename Float>
-  inline Float norm(int NN, const Float *x);
-  template<>
-  inline float norm<float>(int NN, const float *x){
-    float res;
-    cublasStatus_t error = cublasScnrm2(HGC_cublas_handle, NN, (cuComplex*)x, 1, &res);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCdotc failed with error %d", error);
-    return res;
-  }
-  template<>
-  inline double norm<double>(int NN, const double *x){
-    double res;
-    cublasStatus_t error = cublasDznrm2(HGC_cublas_handle, NN, (cuDoubleComplex*)x, 1, &res);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCdotc failed with error %d", error);
-    return res;
-  }
-  template<typename Float>
-  inline Float norm(int NN, const Float *x, MPI_Comm comm) {
-    if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
-    Float result, loc_res = std::pow(cuBLAS::norm(NN, x),2);
-    int mpiErr = MPI_Allreduce(&loc_res, &result, 1, MPI_Type<Float>(), MPI_SUM,
-			       comm);
-    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-    return sqrt(result);
-  }
-
-
-  //---------------------------------------------------------
-  template<typename Float>
-  inline void gemv_(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y){}
-
-  template<>
-  inline void gemv_<float>(OPER_MATR_BLAS trans, int m, int n, float alpha[2], float* A, float* x, float beta[2], float* y){
-    cublasOperation_t Oper;
-    cuComplex cu_alpha = make_cuComplex(alpha[0],alpha[1]);
-    cuComplex cu_beta = make_cuComplex(beta[0],beta[1]);
-    switch(trans){case(NOTRANS): Oper=CUBLAS_OP_N; break; case(TRANS): Oper=CUBLAS_OP_T; break; case(DAGGER): Oper=CUBLAS_OP_C; break;}
-    cublasStatus_t error = cublasCgemv(HGC_cublas_handle, Oper, m, n, &cu_alpha, (cuComplex*) A, m, (cuComplex*) x, 1, &cu_beta, (cuComplex*) y, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCgemv failed with error %d", error);
-  }
-
-  template<>
-  inline void gemv_<double>(OPER_MATR_BLAS trans, int m, int n, double alpha[2], double* A, double* x, double beta[2], double* y){
-    cublasOperation_t Oper;
-    cuDoubleComplex cu_alpha = make_cuDoubleComplex(alpha[0],alpha[1]);
-    cuDoubleComplex cu_beta = make_cuDoubleComplex(beta[0],beta[1]);
-    switch(trans){case(NOTRANS): Oper=CUBLAS_OP_N; break; case(TRANS): Oper=CUBLAS_OP_T; break; case(DAGGER): Oper=CUBLAS_OP_C; break;}
-    cublasStatus_t error = cublasZgemv(HGC_cublas_handle, Oper, m, n, &cu_alpha, (cuDoubleComplex*) A, m,(cuDoubleComplex*) x, 1, &cu_beta,(cuDoubleComplex*) y, 1);
-    if(error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasZgemv failed with error %d", error);
-  }
-
-  // In case of m is partitioned and trans=NOTRANS OR m is not partitioned one can use whatever trans
-  // Cannot work if n is partitioned
-  template<typename Float>
-  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y){
-    gemv_(trans, m, n, alpha, A, x, beta, y);
-  }
-  // In case that m is partitioned and we take trans of dagger then reduction is needed
-  // Cannot work if n is partitioned
-  template<typename Float>
-  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, Float *yHost, MPI_Comm comm){
-    if(trans == NOTRANS) PLEGMA_error("Use gemv without MPI comm");
-    if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
-    cuBLAS::gemv_(trans, m, n, alpha, A, x, beta, y);
-    qudaMemcpy(yHost,y,n*2*sizeof(Float),qudaMemcpyDeviceToHost);
-    checkQudaError();
-    int mpiErr = MPI_Allreduce(MPI_IN_PLACE,yHost,n*2,MPI_Type(yHost),MPI_SUM,comm);
-    if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-  }
-
-  // In case that m is partitioned and we take trans of dagger then reduction is needed
-  // Cannot work if n is partitioned
-  template<typename Float>
-  inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, MPI_Comm comm){
-    Float yHost[n*2];
-    cuBLAS::gemv(trans,m, n, alpha, A, x, beta, y, yHost,comm);
-    qudaMemcpy(y,yHost,sizeof(yHost),qudaMemcpyHostToDevice);
-    checkQudaError();
-  }
-}
-//=================================================================//
 
 namespace plegma{
   template<typename Float>
