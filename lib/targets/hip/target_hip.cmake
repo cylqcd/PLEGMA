@@ -113,7 +113,8 @@ target_compile_options(
   PRIVATE -Wall
           -Wextra
           -Wno-unknown-pragmas
-				  -Wno-unused-result
+          -Wno-unused-result
+	  -fgpu-rdc  -Wno-deprecated-register -dc
           $<$<CONFIG:STRICT>:-Werror
           -Wno-error=pass-failed>
           $<$<CONFIG:SANITIZE>:-fsanitize=address

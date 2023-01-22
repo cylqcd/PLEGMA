@@ -15,7 +15,9 @@
  *   - on host:                "dtype" HGC_"name" "[s1][s2][..]"
  *   - on device: __constant__ "dtype" DGC_"name" "[s1][s2][..]"
  */
-
+#ifdef __HIP__
+#include<hipblas.h>
+#endif
 #ifdef ADD_TO_GLOBAL
 
 #define global_host(dtype, name, ...)					\
@@ -107,7 +109,12 @@ global_host(int, timeRank);
 global_host(int, timeSize);
 
 // for cublas use
-//global_host(cublasHandle_t, cublas_handle);
+#if defined (__NVCC__)
+global_host(cublasHandle_t, cublas_handle);
+#endif
+#if defined (__HIP__)
+global_host(hipblasHandle_t, hipblas_handle);
+#endif
 
 #undef global_both
 #undef global_host

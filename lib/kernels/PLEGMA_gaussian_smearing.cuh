@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 using namespace plegma;
 template<typename FloatOut, typename FloatIn, typename FloatGauge, bool noGhost=false>
 __global__ void gaussian_smearing_kernel(vectorTex<FloatOut>out,

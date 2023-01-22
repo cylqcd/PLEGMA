@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
 using namespace plegma;
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
 __global__ void covD_kernel(vector2<FloatOut> out,

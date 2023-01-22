@@ -1,8 +1,8 @@
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_Random.h>
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_gammas.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_gammas.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
 #include <PLEGMA_Thrust.h>
 using namespace plegma;
 using namespace quda;
@@ -268,8 +268,9 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   d_absPsi=(Float *)device_malloc(absPsi.size() * sizeof(Float));
 
   checkQudaError();
-  cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkQudaError();
-  cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkQudaError();
+  qudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), qudaMemcpyHostToDevice); checkQudaError();
+  qudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); 
+  //checkQudaError();
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + HGC_localVolume3D;
   typedef thrust::device_ptr<Float2<Float> > DpF2;
@@ -279,9 +280,9 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
   zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+HGC_localVolume3D));
   thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
-  cudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), cudaMemcpyDeviceToHost); checkQudaError();
-  cudaFree(d_listR2);
-  cudaFree(d_absPsi);
+  qudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), qudaMemcpyDeviceToHost); checkQudaError();
+  device_free(d_listR2);
+  device_free(d_absPsi);
 }
 
 template<typename FloatVo, typename FloatS, typename FloatVi>

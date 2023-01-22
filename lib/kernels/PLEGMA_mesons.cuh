@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <malloc_quda.h>
 #pragma once
 using namespace plegma;
@@ -23,7 +23,7 @@ __global__ void contract_mesons_device( propTex<FloatA> texProp1,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   
-  register Float2<FloatC> accum[2*N_MESONS];
+  Float2<FloatC> accum[2*N_MESONS];
   for(int i = 0 ; i < 2*N_MESONS ; i++){
     accum[i] = 0.;
   }
@@ -81,7 +81,7 @@ __global__ void contract_mesons_fourp_ultralocal_device( propTex<FloatA> texProp
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
 
-  register Float2<FloatE> accum[16];
+  Float2<FloatE> accum[16];
   for(int i = 0 ; i < 16 ; i++){
     accum[i] = 0.;
   }
@@ -160,7 +160,7 @@ __global__ void contract_mesons_fourp_ultralocal_oneendtrick_device( propTex<Flo
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
 
-  register Float2<FloatE> accum[16];
+  Float2<FloatE> accum[16];
   for(int i = 0 ; i < 16 ; i++){
     accum[i] = 0.;
   }

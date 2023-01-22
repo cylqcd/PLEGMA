@@ -83,7 +83,7 @@ namespace plegma {
     size_t stride;
     
     inline __host__ __device__ size_t volume() const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__ ) || ( __HIP__ )
       return is4D ? DGC_localVolume : DGC_localVolume3D;
       #else
       return is4D ? HGC_localVolume : HGC_localVolume3D;
@@ -91,7 +91,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t sideGhostVolume() const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_sideGhostVolume : DGC_sideGhostVolume3D;
       #else
       return is4D ? HGC_sideGhostVolume : HGC_sideGhostVolume3D;      
@@ -99,7 +99,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t sideGhostL(const short& dir) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_surface3D[dir] : (DGC_surface3D[dir]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_surface3D[dir] : (HGC_surface3D[dir]/HGC_localL[DIM_T]);
@@ -107,7 +107,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t sideGhostShift(const short& dir, const ORIENTATION& sign) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_sideGhost[dir][sign] : (DGC_sideGhost[dir][sign]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_sideGhost[dir][sign] : (HGC_sideGhost[dir][sign]/HGC_localL[DIM_T]);
@@ -115,7 +115,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t cornerGhostVolume() const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_cornerGhostVolume : DGC_cornerGhostVolume3D;
       #else
       return is4D ? HGC_cornerGhostVolume : HGC_cornerGhostVolume3D;      
@@ -123,7 +123,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t cornerGhostL(const short& dir1, const short& dir2) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_surface2D[OFF2(dir1,dir2)] : (DGC_surface2D[OFF2(dir1,dir2)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_surface2D[OFF2(dir1,dir2)] : (HGC_surface2D[OFF2(dir1,dir2)]/HGC_localL[DIM_T]);
@@ -131,7 +131,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t vertexGhostL(const short& dir1, const short& dir2, const short& dir3) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_surface1D[OFF3(dir1,dir2,dir3)] : (DGC_surface1D[OFF3(dir1,dir2,dir3)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_surface1D[OFF3(dir1,dir2,dir3)] : (HGC_surface1D[OFF3(dir1,dir2,dir3)]/HGC_localL[DIM_T]);
@@ -140,7 +140,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t cornerGhostShift(const short& dir1, const short& dir2,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/HGC_localL[DIM_T]);
@@ -149,7 +149,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t vertexGhostShift(const short& dir1, const short& dir2, const short& dir3,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/HGC_localL[DIM_T]);

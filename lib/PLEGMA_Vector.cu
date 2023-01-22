@@ -2,15 +2,16 @@
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Propagator.h>
-#include <PLEGMA_vector_utils.cuh> 
-#include <PLEGMA_gaussian_smearing.cuh> 
-#include <PLEGMA_seqSourceNucleon.cuh> 
-#include <PLEGMA_covD.cuh>
+#include <kernels/PLEGMA_vector_utils.cuh> 
+#include <kernels/PLEGMA_gaussian_smearing.cuh> 
+#include <kernels/PLEGMA_seqSourceNucleon.cuh> 
+#include <kernels/PLEGMA_covD.cuh>
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS
 #include <PLEGMA_gammas.h>
 #include <kernels/PLEGMA_gammas_scatt.cuh>
 #endif
 #include <communicator_quda.h>
+#include <comm_quda.h>
 #include <quda_api.h>
 #include <device.h>
 using namespace plegma;
@@ -438,7 +439,7 @@ std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourcep
 
     int coords[4];
     for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
-    int rankHas = comm_rank_from_coords(coords);
+    int rankHas = quda::comm_rank_from_coords(coords);
 
     if (comm_rank()==rankHas){
       for (int spin=0; spin<N_SPINS; ++spin){
@@ -486,8 +487,8 @@ void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Fl
 }
 
 
-template class PLEGMA_Vector<float>;
-template class PLEGMA_Vector<double>;
+template class plegma::PLEGMA_Vector<float>;
+template class plegma::PLEGMA_Vector<double>;
 
 namespace plegma{
   
@@ -645,7 +646,7 @@ namespace plegma{
     
     int coords[4];
     for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
-    int rankHas = comm_rank_from_coords(coords);
+    int rankHas = quda::comm_rank_from_coords(coords);
     int mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     return absPsi;
@@ -671,6 +672,6 @@ namespace plegma{
   }
   
   
-  template class PLEGMA_Vector3D<float>;
-  template class PLEGMA_Vector3D<double>;
+  template class plegma::PLEGMA_Vector3D<float>;
+  template class plegma::PLEGMA_Vector3D<double>;
 }
