@@ -1,9 +1,9 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Gauge.h>
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_gammas.cuh>
-#include <PLEGMA_threep.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_gammas.cuh"
+#include "PLEGMA_threep.cuh"
 
 template<typename FloatC, typename FloatA, typename FloatB, typename FloatG>
 __global__ void threep_noe_device(Float2<FloatC>* block2,
@@ -33,22 +33,22 @@ __global__ void threep_noe_device(Float2<FloatC>* block2,
     #pragma unroll
     for(int dir = 0; dir < N_DIMS; dir++) {
       // term x, x, x+dir
-      prop1Tex.get(prop1,vid); gaugeTex.get(su3,dir,vid); prop2Tex.get<Plus>(prop2,vid,dir);
+      prop1Tex.get(prop1,vid); gaugeTex.get(su3,dir,vid); prop2Tex.template get<Plus>(prop2,vid,dir);
       partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
       noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) - trace_gamma_S<true>(ONE,NOROT,R);
 
       //term x, x-dir, x-dir
-      gaugeTex.get<Minus>(su3,dir,vid,dir); prop2Tex.get<Minus>(prop2,vid,dir);
+      gaugeTex.template get<Minus>(su3,dir,vid,dir); prop2Tex.template get<Minus>(prop2,vid,dir);
       partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3);
       noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) + trace_gamma_S<true>(ONE,NOROT,R);
 
       //term x+dir, x, x
-      prop1Tex.get<Plus>(prop1,vid,dir); gaugeTex.get(su3,dir,vid); prop2Tex.get(prop2,vid);
+      prop1Tex.template get<Plus>(prop1,vid,dir); gaugeTex.get(su3,dir,vid); prop2Tex.get(prop2,vid);
       partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3);
       noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) + trace_gamma_S<true>(ONE,NOROT,R);
 
       //term x-dir, x-dir, x
-      prop1Tex.get<Minus>(prop1,vid,dir); gaugeTex.get<Minus>(su3,dir,vid,dir);
+      prop1Tex.template get<Minus>(prop1,vid,dir); gaugeTex.template get<Minus>(su3,dir,vid,dir);
       partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
       noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) - trace_gamma_S<true>(ONE,NOROT,R);
     }    
@@ -94,15 +94,15 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)devie_malloc(alloc_size * sizeof(Float2<FloatC>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<propTex>(prop1);
   auto propTex2 = toTexture<propTex>(prop2);
   auto gaugetex = toTexture<gaugeTex>(gauge);
 
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
+  //cudaError_t error=cudaPeekAtLastError();
+  //if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     int t_step = std::min(t_size-it, time_step);
     dim3 grid = ps.tp.grid;
@@ -110,10 +110,10 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
     threep_noe_device<FloatC,FloatA, FloatB, FloatG>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (d_partial_block, *propTex1, *propTex2, *gaugetex, it, t_step, maxT, source, signProps, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+    qudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
@@ -134,7 +134,7 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
 
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
+  device_free(d_partial_block);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>

@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_complex.cuh>
+#include "PLEGMA_kernel_complex.cuh"
 
 #ifndef PLEGMA_PROJECTORS_CUH
 #define PLEGMA_PROJECTORS_CUH

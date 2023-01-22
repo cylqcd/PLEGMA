@@ -439,7 +439,7 @@ std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourcep
 
     int coords[4];
     for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
-    int rankHas = quda::comm_rank_from_coords(coords);
+    int rankHas = 0;//comm_rank_from_coords(coords);
 
     if (comm_rank()==rankHas){
       for (int spin=0; spin<N_SPINS; ++spin){
@@ -646,7 +646,7 @@ namespace plegma{
     
     int coords[4];
     for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
-    int rankHas = quda::comm_rank_from_coords(coords);
+    int rankHas = 0;// comm_rank_from_coords(coords);
     int mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     return absPsi;

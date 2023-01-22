@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 using namespace plegma;
 
 template<typename Float>
@@ -6,8 +6,8 @@ static __global__ void shifts1_kernel(pFloat2<Float> in, pFloat2<Float> out, int
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if(sid >= in.volume()) return;
   in.setSid(sid);
-  if(dirOr<4) in.shift<Minus>(dirOr%4); //:bring the elem from behind the current pos
-  else in.shift<Plus>(dirOr%4);
+  if(dirOr<4) in.template shift<Minus>(dirOr%4); //:bring the elem from behind the current pos
+  else in.template shift<Plus>(dirOr%4);
   out.setSid(sid);
   for(int i = 0 ; i < in.site_size; i++){
     out.set(i, in.get(i));
@@ -29,10 +29,10 @@ static __global__ void shifts2_kernel(pFloat2<Float> in, pFloat2<Float> out, int
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if(sid >= in.volume()) return;
   in.setSid(sid);
-  if(dirOr1<4 && dirOr2<4) in.shift<MinusMinus>(dirOr1%4,dirOr2%4);
-  else if(dirOr1<4) in.shift<MinusPlus>(dirOr1%4,dirOr2%4);
-  else if(dirOr2<4) in.shift<PlusMinus>(dirOr1%4,dirOr2%4);
-  else in.shift<PlusPlus>(dirOr1%4,dirOr2%4);
+  if(dirOr1<4 && dirOr2<4) in.template shift<MinusMinus>(dirOr1%4,dirOr2%4);
+  else if(dirOr1<4) in.template shift<MinusPlus>(dirOr1%4,dirOr2%4);
+  else if(dirOr2<4) in.template shift<PlusMinus>(dirOr1%4,dirOr2%4);
+  else in.template shift<PlusPlus>(dirOr1%4,dirOr2%4);
   out.setSid(sid);
   for(int i = 0 ; i < in.site_size; i++){
     out.set(i, in.get(i));
@@ -54,14 +54,14 @@ static __global__ void shifts3_kernel(pFloat2<Float> in, pFloat2<Float> out, int
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if(sid >= in.volume()) return;
   in.setSid(sid);
-  if(dirOr1<4 && dirOr2<4 && dirOr3<4) in.shift<MinusMinusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
-  else if(dirOr1<4 && dirOr2<4) in.shift<MinusMinusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
-  else if(dirOr2<4 && dirOr3<4) in.shift<PlusMinusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
-  else if(dirOr1<4 && dirOr3<4) in.shift<MinusPlusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
-  else if(dirOr1<4) in.shift<MinusPlusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
-  else if(dirOr2<4) in.shift<PlusMinusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
-  else if(dirOr3<4) in.shift<PlusPlusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
-  else in.shift<PlusPlusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  if(dirOr1<4 && dirOr2<4 && dirOr3<4) in.template shift<MinusMinusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  else if(dirOr1<4 && dirOr2<4) in.template shift<MinusMinusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  else if(dirOr2<4 && dirOr3<4) in.template shift<PlusMinusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  else if(dirOr1<4 && dirOr3<4) in.template shift<MinusPlusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  else if(dirOr1<4) in.template shift<MinusPlusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  else if(dirOr2<4) in.template shift<PlusMinusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  else if(dirOr3<4) in.template shift<PlusPlusMinus>(dirOr1%4,dirOr2%4,dirOr3%4);
+  else in.template shift<PlusPlusPlus>(dirOr1%4,dirOr2%4,dirOr3%4);
   out.setSid(sid);
   for(int i = 0 ; i < in.site_size; i++){
     out.set(i, in.get(i));

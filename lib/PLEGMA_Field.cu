@@ -1,19 +1,20 @@
 #include <PLEGMA_Field.h> 
 #include <PLEGMA_Thrust.h>
-#include <PLEGMA_field_utils.cuh>
-#include <PLEGMA_shifts.cuh>
+#include <kernels/PLEGMA_field_utils.cuh>
+#include <kernels/PLEGMA_shifts.cuh>
 #include <PLEGMA_Random.h>
 #include <vector>
 #include <algorithm>
 #include <time.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_utils.h>
-#include <PLEGMA_FT.cuh>
+#include <kernels/PLEGMA_FT.cuh>
 #include <utils/PLEGMA_auxiliary.h>
 #include <io/PLEGMA_lime.h>
 #include <comm_quda.h>
 #include <communicator_quda.h>
 #include <malloc_quda.h>
+#include <random_quda.h>
 #include <quda_api.h>
 #include <device.h>
 using namespace plegma;
@@ -347,7 +348,7 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
     PLEGMA_error("Not supported %d\n",alloc_flag);
   }
 }
-
+#ifdef __NVCC__
 template<typename Float>
 cudaTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
 #ifdef PLEGMA_TEXTURE
@@ -395,7 +396,7 @@ void PLEGMA_Field<Float>::destroyTexObject(cudaTextureObject_t tex) const{
   cudaDestroyTextureObject(tex);
 #endif
 }
-
+#endif
 template<typename Float>
 void PLEGMA_Field<Float>::printInfo(){
   PLEGMA_printf("This object has precision %d\n",Precision());
@@ -682,7 +683,7 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr1, short di
 
 template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
-  randstate_ptr = new RNG(this, seed, total_length);
+  randstate_ptr = new RNG(this, seed, 0, total_length);
   if(checkErr) checkQudaError();  
 }
 
@@ -1066,8 +1067,8 @@ template<typename Float>
 void PLEGMA_Field<Float>::SU3Trace(PLEGMA_Su3field<Float> &su3field){
   SU3Trace_k(*this,su3field);
 }
-template class PLEGMA_Field<float>;
-template class PLEGMA_Field<double>;
+template class plegma::PLEGMA_Field<float>;
+template class plegma::PLEGMA_Field<double>;
 // Forcing initialization of the following cases
 template void PLEGMA_Field<float>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
@@ -1140,5 +1141,5 @@ std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
   return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
 }
 
-	template class PLEGMA_Field3D<float>;
-template class PLEGMA_Field3D<double>;
+template class plegma::PLEGMA_Field3D<float>;
+template class plegma::PLEGMA_Field3D<double>;

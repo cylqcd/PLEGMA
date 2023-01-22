@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
 using namespace plegma;
 
 template< typename Float>
@@ -51,9 +51,9 @@ static void scale_dir_wise(gauge2<FloatGauge> gauge, Float* scale){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (gauge.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   Float2<Float> *d_scale;
-  cudaMalloc((void**) &d_scale, N_DIMS*sizeof(Float2<Float>));
-  cudaMemcpy( d_scale, scale, N_DIMS*sizeof(Float2<Float>),cudaMemcpyHostToDevice);
+  d_scale=(Float2<Float>*)device_malloc(N_DIMS*sizeof(Float2<Float>));
+  qudaMemcpy( d_scale, scale, N_DIMS*sizeof(Float2<Float>),qudaMemcpyHostToDevice);
   scale_dir_wise_kernel<Float,FloatGauge><<<gridDim,blockDim>>>(gauge, d_scale);
-  cudaFree(d_scale);
+  device_free(d_scale);
   checkQudaError();
 }
