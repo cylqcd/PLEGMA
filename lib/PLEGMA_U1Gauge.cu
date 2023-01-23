@@ -1,6 +1,6 @@
 #include <PLEGMA_U1Gauge.h>
-#include <PLEGMA_plaquette.cuh>
-#include <PLEGMA_u1gauge_utils.cuh>
+#include <kernels/PLEGMA_plaquette.cuh>
+#include <kernels/PLEGMA_u1gauge_utils.cuh>
 
 using namespace plegma;
 

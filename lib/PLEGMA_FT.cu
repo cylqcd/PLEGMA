@@ -4,7 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
-#include <PLEGMA_FT.cuh>
+#include <kernels/PLEGMA_FT.cuh>
 #include <complex>
 #include <cmath>
 #include <malloc_quda.h>
@@ -82,17 +82,31 @@ void PLEGMA_FT<Float>::checkAllocation(int newDof){
 
 template<typename Float>
 std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
+#ifdef __NVCC__
   cudaChannelFormatDesc desc;
   memset(&desc, 0, sizeof(cudaChannelFormatDesc));
   desc.f = cudaChannelFormatKindSigned;
+#elif defined (__HIP__)
+  hipChannelFormatDesc desc;
+  memset(&desc, 0, sizeof(hipChannelFormatDesc));
+  desc.f = hipChannelFormatKindSigned;
+#endif
   desc.x = 8*4;
   desc.y = 8*4;
   desc.z = 8*4;
   desc.w = 8*4;
-  
+ 
+#ifdef __NVCC__ 
   cudaResourceDesc resDesc;
+#elif defined (__HIP__)
+  hipResourceDesc resDesc;
+#endif
   memset(&resDesc, 0, sizeof(resDesc));
+#ifdef __NVCC__
   resDesc.resType = cudaResourceTypeLinear;
+#elif defined (__HIP__)
+  resDesc.resType = hipResourceTypeLinear;
+#endif
   resDesc.res.linear.desc = desc;
 
   void * devPtr;
@@ -107,10 +121,11 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
       hostPtr[i*N_DIMS+j]=(int) std::lround(momList[i][j]);
     }
   }
-  cudaMemcpy(devPtr, hostPtr, sizeof(hostPtr), cudaMemcpyHostToDevice );
+  qudaMemcpy(devPtr, hostPtr, sizeof(hostPtr), qudaMemcpyHostToDevice );
   resDesc.res.linear.devPtr = devPtr;
   resDesc.res.linear.sizeInBytes = sizeof(hostPtr);
 
+#if defined __NVCC__
   cudaTextureDesc texDesc;
   memset(&texDesc, 0, sizeof(texDesc));
   texDesc.readMode = cudaReadModeElementType;
@@ -119,6 +134,16 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
   cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
   
   return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); device_free(moms->devPtr);});
+#elif defined (__HIP__)
+  hipTextureDesc texDesc;
+  memset(&texDesc, 0, sizeof(texDesc));
+  texDesc.readMode = hipReadModeElementType;
+
+  hipTextureObject_t tex;
+  hipCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+
+  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { hipDestroyTextureObject(moms->tex); device_free(moms->devPtr);});
+#endif
 }
 
 template<typename Float>
@@ -380,8 +405,8 @@ writeHDF5(std::string filename, int timeshift, bool append) const{
   writer.write_dataset("mvec", mvec, momShape);
 }
 
-template class PLEGMA_FT<float>;
-template class PLEGMA_FT<double>;
+template class plegma::PLEGMA_FT<float>;
+template class plegma::PLEGMA_FT<double>;
 
 template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);

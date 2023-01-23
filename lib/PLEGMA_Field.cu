@@ -397,6 +397,57 @@ void PLEGMA_Field<Float>::destroyTexObject(cudaTextureObject_t tex) const{
 #endif
 }
 #endif
+
+#ifdef __HIP__
+template<typename Float>
+hipTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
+#ifdef PLEGMA_TEXTURE
+  hipTextureObject_t tex;
+  hipChannelFormatDesc desc;
+  memset(&desc, 0, sizeof(hipChannelFormatDesc));
+  int precision = PLEGMA_Field<Float>::Precision();
+  if(precision == 4) desc.f = hipChannelFormatKindFloat;
+  else desc.f = hipChannelFormatKindSigned;
+
+  if(precision == 4){
+    desc.x = 8*precision;
+    desc.y = 8*precision;
+    desc.z = 0;
+    desc.w = 0;
+  }
+  else if(precision == 8){
+    desc.x = 8*precision/2;
+    desc.y = 8*precision/2;
+    desc.z = 8*precision/2;
+    desc.w = 8*precision/2;
+  }
+
+  hipResourceDesc resDesc;
+  memset(&resDesc, 0, sizeof(resDesc));
+  resDesc.resType = hipResourceTypeLinear;
+  resDesc.res.linear.devPtr = d_elem;
+  resDesc.res.linear.desc = desc;
+  resDesc.res.linear.sizeInBytes = Bytes_total_plus_ghost();
+
+  hipTextureDesc texDesc;
+  memset(&texDesc, 0, sizeof(texDesc));
+  texDesc.readMode = hipReadModeElementType;
+
+  hipCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+  return tex;
+#else
+  return 0;
+#endif
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::destroyTexObject(hipTextureObject_t tex) const{
+#ifdef PLEGMA_TEXTURE
+  hipDestroyTextureObject(tex);
+#endif
+}
+#endif
+
 template<typename Float>
 void PLEGMA_Field<Float>::printInfo(){
   PLEGMA_printf("This object has precision %d\n",Precision());
@@ -683,7 +734,7 @@ void PLEGMA_Field<Float>::shift(PLEGMA_Field<Float> &Fin, short dirOr1, short di
 
 template<typename Float>
 void PLEGMA_Field<Float>::randInit(int seed){
-  randstate_ptr = new RNG(this, seed, 0, total_length);
+  randstate_ptr = new PLEGMA_RNG(seed, total_length);
   if(checkErr) checkQudaError();  
 }
 

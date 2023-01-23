@@ -46,7 +46,7 @@ template<typename T> inline void hostFree(T &ptr) {
 
 // Pinned memory allocation
 template<typename T> inline void hostMallocPinned(T &ptr, size_t size){ 
-  ptr=(T* )pinned_malloc(size);
+  //ptr=(T*)pinned_malloc(size);
   //cudaError_t err = cudaMallocHost((void**)&ptr, size);
   //if (err != cudaSuccess) {
   //  errorQuda("Failed to allocate host memory of size %zu \n", size);

@@ -1,10 +1,10 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_Fmunu.h>
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_gammas.cuh>
-#include <PLEGMA_threep.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_gammas.cuh"
+#include "PLEGMA_threep.cuh"
 #include <cmath>
 #include <cfloat>
 #include <malloc_quda.h>
@@ -95,7 +95,7 @@ static void threep_qgq_host(ProfileStruct &ps, Float2<Float> *result,
   listGammas.size = gammas.size();
   //cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
   listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -114,8 +114,8 @@ static void threep_qgq_host(ProfileStruct &ps, Float2<Float> *result,
   su3_2<Float> RFmunu((Float2<Float>*) Fmunu.D_elem()+shift, su3_l.Field_length(), Fmunu.is4D(), false);
   
 
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
+  //cudaError_t error=cudaPeekAtLastError();
+  //if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     int t_step = std::min(t_size-it, time_step);
     dim3 grid = ps.tp.grid;
@@ -126,10 +126,10 @@ static void threep_qgq_host(ProfileStruct &ps, Float2<Float> *result,
        toField2<su3_2>(su3_l), RFmunu, toField2<su3_2>(su3_r),
        listGammas, it, t_step, maxT,
        source, signProps, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<Float>) , cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+    qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<Float>) , qudaMemcpyDeviceToHost);
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
@@ -154,8 +154,8 @@ static void threep_qgq_host(ProfileStruct &ps, Float2<Float> *result,
 
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(Float));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 

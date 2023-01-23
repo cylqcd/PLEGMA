@@ -1,6 +1,6 @@
 #include <PLEGMA_Fmunu.h>
 #include <PLEGMA_Gauge.h>
-#include <PLEGMA_fmunu_utils.cuh>
+#include <kernels/PLEGMA_fmunu_utils.cuh>
 using namespace plegma;
 //---------------------------//
 // class PLEGMA_Fmunu //

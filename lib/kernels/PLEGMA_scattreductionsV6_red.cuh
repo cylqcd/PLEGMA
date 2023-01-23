@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <../../include/PLEGMA_gammas.h>
 
 using namespace plegma;
@@ -17,7 +17,7 @@ __global__ void V6_RED_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> v
 
   const unsigned short N_S1C=N_SPINS*N_COLS;
   const unsigned short N_S2C=N_SPINS*N_S1C;
-  register Float2<FloatOut> accum[N_GAMMAS_SCATT*N_S2C];
+  Float2<FloatOut> accum[N_GAMMAS_SCATT*N_S2C];
   for(int i = 0 ; i < N_GAMMAS_SCATT*N_S2C  ; i++){
     accum[i] = 0.;
   }

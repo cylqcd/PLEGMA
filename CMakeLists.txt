@@ -158,6 +158,8 @@ else()
   
 endif()
 
+add_definitions(-DMULTI_GPU)
+
 # compile contractions for nucleon fix sink 3pf
 set(PLEGMA_NUCLEON_3PF_FIX_SINK FALSE CACHE BOOL "compile contractions for nucleon 3pf fix sink method")
 if(PLEGMA_NUCLEON_3PF_FIX_SINK)

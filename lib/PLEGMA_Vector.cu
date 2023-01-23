@@ -417,7 +417,7 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
 template<typename Float>
 std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourceposition, ALLOCATION_FLAG where){
   if (where == HOST){
-    std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*N_SPINS*N_COLS*2), free);
+    std::shared_ptr<Float> ptr(new Float[N_SPINS*N_COLS*2]);
 
     for(int i = 0; i < N_DIMS; i++)
       if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);

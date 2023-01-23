@@ -1,8 +1,8 @@
 #include <PLEGMA_ScattCorrelator.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
-#include <PLEGMA_scattreductions.cuh>
-#include <PLEGMA_scattreductionsPiPi.cuh>
+#include <kernels/PLEGMA_scattreductions.cuh>
+#include <kernels/PLEGMA_scattreductionsPiPi.cuh>
 #include <PLEGMA_utils.h>
 #include <omp.h>
 #include  <memory>

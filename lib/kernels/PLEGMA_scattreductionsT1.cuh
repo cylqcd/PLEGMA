@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <../../include/PLEGMA_gammas.h>
 
 using namespace plegma;
@@ -16,7 +16,7 @@ __global__ void T1_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
   int vid = sid3D + t*DGC_localVolume3D;
   //int site_size = N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS;
 
-  register Float2<FloatOut> accum[N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS];
+  Float2<FloatOut> accum[N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS];
   for(int i = 0 ; i <N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS ; i++){
     accum[i] = 0.;
   }

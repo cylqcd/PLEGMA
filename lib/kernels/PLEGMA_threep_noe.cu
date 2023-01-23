@@ -1,5 +1,6 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Gauge.h>
+#include <malloc_quda.h>
 #include "PLEGMA_kernel_utils.cuh"
 #include "PLEGMA_kernel_getSet.cuh"
 #include "PLEGMA_gammas.cuh"
@@ -94,7 +95,7 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  d_partial_block=(Float2<FloatC>*)devie_malloc(alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size * sizeof(Float2<FloatC>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<propTex>(prop1);

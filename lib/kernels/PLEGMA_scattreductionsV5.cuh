@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <../../include/PLEGMA_gammas.h>
 
 using namespace plegma;
@@ -13,7 +13,7 @@ __global__ void V5_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> vecto
   int tid = blockIdx.x/grid3D;
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
-  register Float2<FloatOut> accum[N_SPINS*N_SPINS*N_COLS];
+  Float2<FloatOut> accum[N_SPINS*N_SPINS*N_COLS];
   for(int i = 0 ; i <N_SPINS*N_SPINS*N_COLS  ; i++){
     accum[i] = 0.;
   }

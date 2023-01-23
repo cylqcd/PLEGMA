@@ -1,5 +1,6 @@
 #include <PLEGMA_Random.h>
 #include <kernels/PLEGMA_Random.cuh>
+#include <random_helper.h>
 using namespace plegma;
 
 //--------------------------//
@@ -53,7 +54,7 @@ PLEGMA_RNG::PLEGMA_RNG(int seedin, int rng_sizes) {
 void PLEGMA_RNG::Init() {
   //printf("Number of rng_size[2]: %d\n", rng_size);
   AllocateRNG();
-  random_init(seed, unsigned long long sequence,offset,state)
+  //random_init(seed, (unsigned long long)sequence, offset, state);
   launch_random_init(state, seed, rank_offset, rng_size);
 }
 

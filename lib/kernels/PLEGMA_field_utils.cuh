@@ -266,7 +266,7 @@ void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_de
 template<typename Float>
 struct HadCol{
   int ih;
-  __device__ HadCol(int ih):ih(ih){}
+  __device__ __host__ HadCol(int ih):ih(ih){}
   __device__ int  HadamardElements(int i, int j){
     int sum=0;
     for(int k = 0 ; k < 32 ; k++){

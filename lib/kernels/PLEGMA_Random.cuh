@@ -10,7 +10,7 @@ using namespace plegma;
      @param length_field length of the CURAND RNG state array
      @param offset offset of the RNG sequence
   */
-__global__ void random_init_kernel(cuRNGState *state, int seed, int offset){
+__global__ void random_init_kernel(RNGState *state, int seed, int offset){
     
     int sid = blockIdx.x*blockDim.x + threadIdx.x;
     //printf("Field length %d", length_field);
@@ -18,8 +18,8 @@ __global__ void random_init_kernel(cuRNGState *state, int seed, int offset){
     //Determine the global id of the field.
     int seq_number  = LEXIC_1DL_1DG(sid);
     //printf("Number of threads %d and seq number %d\n", sid, seq_number);
-  
-    curand_init(seed, seq_number, offset, &state[sid]);
+
+    random_init(seed, seq_number, offset, state[sid]);
 }
 
   /**
