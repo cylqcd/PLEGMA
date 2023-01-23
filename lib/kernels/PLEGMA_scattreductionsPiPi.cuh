@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <../../include/PLEGMA_gammas.h>
 #include <malloc_quda.h>
 #include <quda_api.h>
@@ -16,7 +16,7 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   
-  register Float2<FloatOut> accum[16];
+  Float2<FloatOut> accum[16];
   for(int i = 0 ; i < 16  ; i++){
     accum[i].x = 0.;
     accum[i].y = 0.;
@@ -94,12 +94,12 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
   d_partial_block=(Float2<FloatOut>*)device_malloc(alloc_size*sizeof(Float2<FloatOut>));
   
   // Checking for allocation error. In case we return and let the tuner handle the error.
-  cudaError_t error=cudaPeekAtLastError();
+  /*cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
     PLEGMA_printf("ERROR0\n");
     cudaFree(d_partial_block);
     return;
-  }
+  }*/
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
 
   KernelArr<GAMMAS_SCATT> listGammas;
@@ -121,13 +121,13 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
 
     PhixGxPhi_kernel<FloatOut, FloatPhi><<<grid,ps.tp.block,ps.tp.shared_bytes>>>(*phiTex0, listGammas, *phiTex1, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, *moms);
 
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR1\n"); break;}
 
     qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatOut>), qudaMemcpyDeviceToHost);
     
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) { PLEGMA_printf("ERROR2\n"); break;}
 
     for(size_t tslicexmom = 0 ; tslicexmom< N_moms*std::min(t_size-it, time_step); tslicexmom++){
       for(int f = 0 ; f < site_size; f++) {

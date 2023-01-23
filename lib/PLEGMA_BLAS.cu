@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include <kernels/PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_Thrust.h>
 
 namespace plegma{

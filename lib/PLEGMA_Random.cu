@@ -1,6 +1,6 @@
 #include <PLEGMA_Random.h>
 #include <kernels/PLEGMA_Random.cuh>
-#include <random_helper.h>
+//#include <random_helper.h>
 using namespace plegma;
 
 //--------------------------//

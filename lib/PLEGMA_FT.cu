@@ -15,7 +15,7 @@ using namespace plegma;
 template<typename Float>
 PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum, int dimT):
   Q2_max(Q2_max), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
-  if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
+  if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions %d\n",dims);
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
   if(dimT<0 || dimT>HGC_localL[DIM_T]) PLEGMA_error("The time dimension cannot be negative or larger than local size\n");
   createMom();
@@ -26,7 +26,7 @@ template<typename T>
 PLEGMA_FT<Float>::PLEGMA_FT(std::vector<T> mom, int D3D4, bool accum, int dimT):
   dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
-  if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT");
+  if(mom.size() != dims) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT %zu %d\n",mom.size(), dims);
   VFloat momF(mom.begin(),mom.end());
   momList.push_back(momF);
 }
@@ -37,7 +37,7 @@ PLEGMA_FT<Float>::PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4, bool a
   dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions\n");
   for(auto &mom : moms){
-    if(mom.size()%dims != 0) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT %d %d",mom.size(),dims);
+    if(mom.size()%dims != 0) PLEGMA_error("The size of the momentum vector does not match the dimensionality of FT %zu %d",mom.size(),dims);
     VFloat momF(mom.begin(),mom.end());
     momList.push_back(momF);
   }
@@ -407,7 +407,7 @@ writeHDF5(std::string filename, int timeshift, bool append) const{
 
 template class plegma::PLEGMA_FT<float>;
 template class plegma::PLEGMA_FT<double>;
-
+/*
 template PLEGMA_FT<float>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<int>(std::vector<int>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
@@ -415,4 +415,4 @@ template PLEGMA_FT<double>::PLEGMA_FT<float>(std::vector<float>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
 template PLEGMA_FT<double>::PLEGMA_FT<double>(std::vector<double>,int,bool,int);
 template PLEGMA_FT<float>::PLEGMA_FT<int>( std::vector<std::vector<int>> &,int,bool,int);
-template PLEGMA_FT<double>::PLEGMA_FT<int>( std::vector<std::vector<int>> &,int,bool,int);
+template PLEGMA_FT<double>::PLEGMA_FT<int>( std::vector<std::vector<int>> &,int,bool,int);*/
