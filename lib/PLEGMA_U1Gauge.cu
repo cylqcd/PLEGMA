@@ -52,5 +52,5 @@ void PLEGMA_U1Gauge<Float>::modifyBoundaries(int mu, int nu, Float exparg){
   this->load();
 }
 
-template class PLEGMA_U1Gauge<float>;
-template class PLEGMA_U1Gauge<double>;
+template class plegma::PLEGMA_U1Gauge<float>;
+template class plegma::PLEGMA_U1Gauge<double>;

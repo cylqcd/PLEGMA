@@ -30,20 +30,30 @@ inline std::istream& operator >> (std::istream &i, site &x){
 // Global variable for mom list
 struct tex_mom_list {
   size_t Nmoms;
-//  qudaTextureObject_t tex;
+#ifdef __NVCC__
+  cudaTextureObject_t tex;
+#elif __HIP__
+  hipTextureObject_t tex;
+#endif
   void* devPtr;
 
-  tex_mom_list() : Nmoms(0), devPtr(nullptr) {}
+  tex_mom_list() : Nmoms(0), tex(), devPtr(nullptr) {}
 
-  tex_mom_list(size_t Nmoms, void* devPtr) :
-    Nmoms(Nmoms), devPtr(devPtr) {}
+#ifdef __NVCC__
+  tex_mom_list(size_t Nmoms, cudaTextureObject_t tex, void* devPtr) :
+    Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
+#elif defined (__HIP__)
+  tex_mom_list(size_t Nmoms, hipTextureObject_t tex, void* devPtr) :
+    Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
+#endif
+
   
   inline __device__ int4 get(const size_t &i) const {
-//#ifdef __NVCC__
-//    return tex1Dfetch<int4>(tex,i);
-//#else
+#ifdef __NVCC__
+    return tex1Dfetch<int4>(tex,i);
+#else
     return make_int4(0,0,0,0);
-//#endif
+#endif
   };
 };
 

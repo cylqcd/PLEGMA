@@ -20,5 +20,5 @@ void PLEGMA_Fmunu<Float>::compute_leaves(PLEGMA_Gauge<Float> &gauge){
   this->cscale(coeff);
 }
 
-template class PLEGMA_Fmunu<float>;
-template class PLEGMA_Fmunu<double>;
+template class plegma::PLEGMA_Fmunu<float>;
+template class plegma::PLEGMA_Fmunu<double>;
