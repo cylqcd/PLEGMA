@@ -382,7 +382,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice); 
   int coords[4];
   for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
-  int rankHas = 0;//comm_rank_from_coords(coords);
+  int rankHas = comm_rank_from_coords(coords);
 
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
@@ -415,7 +415,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
   int coords[4];
   for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
   coords[N_DIMS-1]=global_time_index / HGC_localL[N_DIMS-1];
-  int rankHas = 0; //comm_rank_from_coords(coords);
+  int rankHas = comm_rank_from_coords(coords);
   printf("rankHas %d\n",rankHas);
   MPI_Barrier(HGC_fullComm);
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
@@ -3729,7 +3729,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
     int coords[4];
     for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
     coords[3]= global_it / HGC_localL[3];
-    int rankHas = 0;// comm_rank_from_coords(coords);
+    int rankHas = comm_rank_from_coords(coords);
     int mpiErr = MPI_Bcast(this->H_elem(), in_dofs_src*out_dofs_src , MPI_Type<Float>(), rankHas, HGC_fullComm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     
