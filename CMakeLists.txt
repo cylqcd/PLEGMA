@@ -13,6 +13,26 @@ if(${CMAKE_VERSION} VERSION_GREATER "3.12.0")
   cmake_policy(SET CMP0074 NEW)
 endif()
 
+set(VALID_BUILD_TYPES
+    DEVEL
+    RELEASE
+    STRICT
+    DEBUG
+    HOSTDEBUG
+    SANITIZE)
+set(CMAKE_BUILD_TYPE
+  "${DEFBUILD}"
+  CACHE STRING "Choose the type of build, options are: ${VALID_BUILD_TYPES}")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${VALID_BUILD_TYPES})
+
+string(TOUPPER ${CMAKE_BUILD_TYPE} CHECK_BUILD_TYPE)
+list(FIND VALID_BUILD_TYPES ${CHECK_BUILD_TYPE} BUILD_TYPE_VALID)
+
+if(BUILD_TYPE_VALID LESS 0)
+  message(SEND_ERROR "Please specify a valid CMAKE_BUILD_TYPE type! Valid build types are:" "${VALID_BUILD_TYPES}")
+endif()
+
+
 
 # QUDA may be built to run using CUDA, HIP or SYCL, which we call the
 # Target type. By default, the target is CUDA.
@@ -138,8 +158,6 @@ else()
   ExternalProject_Get_Property(BoostPP DOWNLOAD_DIR)
   include_directories(${DOWNLOAD_DIR}/BoostPP/include)
 endif()
-
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG HOSTDEBUG DEVICEDEBUG)
 
 # using dirs in LD_LIBRARY_PATh for searching for libraries
 string(REPLACE ":" ";" LIBRARY_DIRS $ENV{LD_LIBRARY_PATH})
