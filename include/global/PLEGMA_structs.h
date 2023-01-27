@@ -30,10 +30,11 @@ inline std::istream& operator >> (std::istream &i, site &x){
 // Global variable for mom list
 struct tex_mom_list {
   size_t Nmoms;
-#ifdef __NVCC__
-  cudaTextureObject_t tex;
-#elif __HIP__
+
+#if __HIP__
   hipTextureObject_t tex;
+#else
+  cudaTextureObject_t tex;
 #endif
   void* devPtr;
 

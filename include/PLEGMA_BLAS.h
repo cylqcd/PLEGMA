@@ -13,10 +13,10 @@
 
 #if defined (__HIP__)
 #include <hipblas.h>
-#elif defined (__NVCC__)
-#include <cublas_v2.h>
 #else
-#error Neither HIP nor NVCC have been defined
+#include <cublas_v2.h>
+//#else
+//#error Neither HIP nor NVCC have been defined
 #endif
 #include <mpi.h>
 #include <PLEGMA_utils.h>
@@ -105,8 +105,8 @@ namespace cBLAS{
 
 #if defined (__HIP__)
 #include "target/hip/PLEGMA_hipBLAS.h"
-#elif defined (__NVCC__)
-#include "target/hip/PLEGMA_cuBLAS.h"
+#else
+#include "target/cuda/PLEGMA_cuBLAS.h"
 #endif
 
 

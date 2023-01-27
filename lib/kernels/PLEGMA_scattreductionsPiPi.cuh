@@ -1,5 +1,5 @@
 #include "PLEGMA_kernel_utils.cuh"
-#include <../../include/PLEGMA_gammas.h>
+#include "../../include/PLEGMA_gammas.h"
 #include <malloc_quda.h>
 #include <quda_api.h>
 using namespace plegma;

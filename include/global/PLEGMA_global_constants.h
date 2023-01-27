@@ -17,6 +17,8 @@
  */
 #ifdef __HIP__
 #include<hipblas.h>
+#else
+#include<cublas_v2.h>
 #endif
 #ifdef ADD_TO_GLOBAL
 
@@ -109,11 +111,10 @@ global_host(int, timeRank);
 global_host(int, timeSize);
 
 // for cublas use
-#if defined (__NVCC__)
-global_host(cublasHandle_t, cublas_handle);
-#endif
 #if defined (__HIP__)
 global_host(hipblasHandle_t, hipblas_handle);
+#else
+global_host(cublasHandle_t, cublas_handle);
 #endif
 
 #undef global_both

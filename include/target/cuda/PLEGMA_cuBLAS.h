@@ -1,11 +1,11 @@
 #if defined(HAVE_MKL) && defined(HAVE_OPENBLAS)
 #error Cannot define both mkl and openBLAS
 #endif
-
+#include<cuda_fp16.h>
 #if defined(HAVE_MKL)
 #include <mkl.h>
 #elif defined(HAVE_OPENBLAS)
-#include <cblas.h>
+#include <openblas/cblas.h>
 //#include <common.h> // do not know when is needed or not
 #else
 #error Neither mkl nor openBLAS have been defined

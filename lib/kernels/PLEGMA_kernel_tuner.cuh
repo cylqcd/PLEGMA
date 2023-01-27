@@ -55,14 +55,14 @@ struct ProfileStruct{
 };
 
 template<int ...>
-struct seq { };
+struct sequ { };
 
 template<int N, int ...S>
 struct gens : gens<N-1, N-1, S...> { };
 
 template<int ...S>
 struct gens<0, S...> {
-  typedef seq<S...> type;
+  typedef sequ<S...> type;
 };
 
 // class to perform the kernel tuning
@@ -177,7 +177,7 @@ protected:
 
   // launching utilities  
   template<int ...S>
-  void callKernel(TuneParam tp, const qudaStream_t stream, seq<S...>) {
+  void callKernel(TuneParam tp, const qudaStream_t stream, sequ<S...>) {
     if( typeid(ProfileStruct &)==typeid(std::get<0>(args))) {
       // in case ProfileStruct is the first argument we call it as a function
       (*kernel)(std::get<S>(args)...);

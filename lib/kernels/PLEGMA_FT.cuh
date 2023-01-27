@@ -1,3 +1,4 @@
+#pragma once
 #include <PLEGMA_Field.h>
 #include <PLEGMA_FT.h>
 #include "PLEGMA_kernel_utils.cuh"
