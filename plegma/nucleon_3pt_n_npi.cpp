@@ -2574,20 +2574,8 @@ int main(int argc, char **argv) {
 //          TIME(produceOutput_2pt_packed(corrD1if34, outfilename,"4pt", parallel_sources, attract_lookup_table));
           TIME(produceOutput_2pt_packed(corrD1if56, outfilename,"4pt", parallel_sources, attract_lookup_table));
 
-	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N_2pt";
-          TIME( corrN0_packed.apply_phase());
-          TIME( corrN0_packed.apply_sign("N"));
-          TIME( corrN0_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
-          TIME( corrN0_packed.writeHDF5(outfilename));
-
-          TIME( corrNP_packed.apply_phase() );
-          TIME( corrNP_packed.apply_sign("N") );
-          TIME( corrNP_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
-          TIME( corrNP_packed.writeHDF5(outfilename) );
 
         }
-
-
 
 
 	for (int k=0; k<tSinks.size();++k){
@@ -2669,6 +2657,20 @@ int main(int argc, char **argv) {
       }//loop over mpi2
 
       if (dotwopoint==1){
+
+	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N_2pt";
+        TIME( corrN0_packed.apply_phase());
+        TIME( corrN0_packed.apply_sign("N"));
+        TIME( corrN0_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
+        TIME( corrN0_packed.writeHDF5(outfilename));
+
+        TIME( corrNP_packed.apply_phase() );
+        TIME( corrNP_packed.apply_sign("N") );
+        TIME( corrNP_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
+        TIME( corrNP_packed.writeHDF5(outfilename) );
+
+
+
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_2pt";
         TIME(corrP0UP.apply_sign("P"));
