@@ -2568,7 +2568,7 @@ int main(int argc, char **argv) {
           TIME(produceOutput_2pt_packed(corrZ13_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
           TIME(produceOutput_2pt_packed(corrZ14_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));*/
 
-	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M_2pt";
+	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M_correct_2pt";
           TIME(produceOutput_2pt_packed(corrM, outfilename,"4pt", parallel_sources, attract_lookup_table));
 //          TIME(produceOutput_2pt_packed(corrD1if12, outfilename,"4pt", parallel_sources, attract_lookup_table));
 //          TIME(produceOutput_2pt_packed(corrD1if34, outfilename,"4pt", parallel_sources, attract_lookup_table));
