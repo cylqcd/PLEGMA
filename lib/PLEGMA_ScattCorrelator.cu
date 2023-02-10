@@ -518,7 +518,7 @@ void PLEGMA_ScattCorrelator<Float>::V3V2reduction( PLEGMA_ScattCorrelator<Float>
 	  } else {
 	    n_gammas_i2_f2=n_gammas_f2;
 	  }
-	  PLEGMA_printf("n_gammas_i2_f2 %d\n",n_gammas_i2_f2);
+	  //PLEGMA_printf("n_gammas_i2_f2 %d\n",n_gammas_i2_f2);
           for (int g3=0 ; g3 < n_gammas_i2_f2 ; ++g3 ){//pf2
             for (int alfa=0; alfa < N_SPINS; ++alfa ){
 	      for (int beta=0; beta < N_SPINS; ++beta ){
@@ -2611,13 +2611,13 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   auto map_minus = this->pList().index_map_minus();
 
   //++++++++ PION-PION +++++++++
-
+/*
   double normcheck;
   normcheck=Phi_0.norm();
   PLEGMA_printf("Phi0 norm %e\n", normcheck);
   normcheck=Phi_1.norm();
   PLEGMA_printf("Phi1 norm %e\n", normcheck);
-
+*/
   //aux PLEGMA_SC for PhixGxPhi multiplications
   momList auxmlist(1, {moms_pf2,}, {0,});
   PLEGMA_ScattCorrelator pipi_aux(this->getSource(), auxmlist);
@@ -3492,9 +3492,9 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiod
     int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
     int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
     int source_num= n_coherent_source > 1 ? attract_look_up_table[t_global] : this->source[DIM_T];
-    PLEGMA_printf("t_global %d source num %d \n",t_global, source_num);
+    //PLEGMA_printf("t_global %d source num %d \n",t_global, source_num);
     if(  source_num + source_sink_separation > HGC_totalL[3] ){
-      PLEGMA_printf("we apply sign t_global %d\n",t_global);
+      //PLEGMA_printf("we apply sign t_global %d\n",t_global);
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
         for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
           *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
@@ -3516,7 +3516,7 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase(){
 
   #pragma omp parallel for
   for( int i_m=0; i_m<N_moms; ++i_m){
-      PLEGMA_printf("PI1 %d %d %d\n",mom_list[i_m][0],mom_list[i_m][1],mom_list[i_m][2]);
+      //PLEGMA_printf("PI1 %d %d %d\n",mom_list[i_m][0],mom_list[i_m][1],mom_list[i_m][2]);
       Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_list[i_m][0]*this->source[0]+
 	2*M_PI/(Float)HGC_totalL[1]* mom_list[i_m][1]*this->source[1]+
 	2*M_PI/(Float)HGC_totalL[2]* mom_list[i_m][2]*this->source[2];

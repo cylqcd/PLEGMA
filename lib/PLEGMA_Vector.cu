@@ -1,5 +1,6 @@
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Su3field.h>
+#include <cuda_fp16.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_vector_utils.cuh> 
@@ -28,7 +29,7 @@ template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
 					    int nsmearGauss, Float alphaGauss){
-  
+	
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
