@@ -53,10 +53,30 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, int nu, int c2);
+
+    /** 
+       @brief packing the sinktime slice in all other time slices
+       @param the initial propagator to be broadcasted
+       @param PLEGMA_Propagator<Float> in initial propagator to be broadcasted
+       @param int sinktimeslice  the sinktime slice to be broadcasted
+     **/ 
+    void pack_propagator_as_sink(PLEGMA_Propagator<Float> &in, int sinktimeslice, int max_source_sink_separations, bool initial);
+
+    /**
+       @brief packing the sinktime slice in all other time slices
+       @param the initial propagator to be broadcasted
+       @param PLEGMA_Propagator<Float> in initial propagator to be broadcasted
+       @param int sinktimeslice  the sinktime slice to be broadcasted
+     **/
+    void pack_propagator_from_source_to_sink(PLEGMA_Propagator<Float> &in, int sinktimeslice, int source_sink_separations, bool initial);
+
+
+
     
     void applyBoundaries_device(int t0);
     void rotateToPhysicalBase_host(int sign);
     void rotateToPhysicalBase_device(int sign);
+    void PropmulVVdag(PLEGMA_Vector<Float> &vec1,PLEGMA_Vector<Float> &vec2);
   };
 
   ///////////////////////////////

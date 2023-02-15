@@ -1,5 +1,6 @@
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Su3field.h>
+#include <cuda_fp16.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_vector_utils.cuh> 
@@ -10,9 +11,11 @@
 #include <PLEGMA_gammas.h>
 #include <kernels/PLEGMA_gammas_scatt.cuh>
 #endif
-
+//#include <communicator_quda.h>
+//#include <quda_api.h>
+//#include <device.h>
 using namespace plegma;
-using namespace quda;
+//using namespace quda;
 
 //---------------------------//
 // class PLEGMA_Vector //
@@ -26,7 +29,7 @@ template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
 					    int nsmearGauss, Float alphaGauss){
-  
+	
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
   } else {
@@ -130,6 +133,17 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
   int V4 = HGC_localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+  static bool init_absorb_vec4D_prop3D = true;
+
+  if (!init_absorb_vec4D_prop3D) {
+    Float2<Float>* tempquda;
+    cudaMalloc((void**)&tempquda,V4*2*sizeof(Float));
+    cudaMemset(tempquda,0, V4*2*sizeof(Float));
+    cudaMemcpy(tempquda, tempquda,V3*2*sizeof(Float),cudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+    init_absorb_vec4D_prop3D=true;
+
+  }
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
@@ -166,6 +180,40 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
   checkCudaError();
 }
 
+//vec4D <- vec3D (it)
+template<typename Float>
+void PLEGMA_Vector<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bool broadcast){
+  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  int V3 = HGC_localVolume/HGC_localL[3];
+  int V4 = HGC_localVolume;
+  Float *pointer_src = NULL;
+  Float *pointer_dst = NULL;
+
+  static bool init_vector4D_vector3D = true;
+
+  if (!init_vector4D_vector3D) {
+    Float2<Float> *tempquda;
+    cudaMalloc((void**)&tempquda,V3*2*sizeof(Float));
+    cudaMemcpy(tempquda, tempquda, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+    init_vector4D_vector3D=true;
+
+  }
+  for(int mu = 0 ; mu < N_SPINS ; mu++)
+    for(int c1 = 0 ; c1 < N_COLS ; c1++){
+      //cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+      if(is_myIt){
+        pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
+        pointer_src = (vec.D_elem()  + mu*N_COLS*V3*2 + c1*V3*2);
+        cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      }
+    }
+  //comm_barrier();
+  checkCudaError();
+}
+
 // vec4D <- prop4D
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2){
@@ -176,7 +224,7 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
       pointer_src = (prop.D_elem() + mu*N_SPINS*N_COLS*N_COLS*V4*2 + nu*N_COLS*N_COLS*V4*2 + c1*N_COLS*V4*2 + c2*V4*2);
-      cudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      cudaMemcpy(pointer_dst, pointer_src, V4*2 * sizeof(Float), cudaMemcpyDeviceToDevice);   
     }
   checkCudaError();
 }
@@ -241,6 +289,78 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
 }
 
 
+template<typename Float>
+void PLEGMA_Vector<Float>::pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime){
+  PLEGMA_Vector<Float> stmp;
+
+  stmp.zero_where(DEVICE);
+  stmp.zero_where(HOST);
+
+
+  PLEGMA_Vector<Float> temporary4D;
+  PLEGMA_Vector3D<Float> temporary3D;
+  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+    temporary4D.copy(*stochastic_vector[timeidx], HOST);
+    temporary4D.load();
+    temporary3D.absorb(temporary4D, sinktime );
+    temporary4D.absorb(temporary3D, timeidx );
+    stmp.absorbTimeslice(temporary4D, timeidx, false);
+  }
+
+  this->copy(stmp);
+
+}
+
+template<typename Float>
+void PLEGMA_Vector<Float>::pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize){
+
+  PLEGMA_Vector<Float> stmp;
+  PLEGMA_Vector3D<Float> vector1;
+
+  if (initialize==true){
+    stmp.zero_where(DEVICE);
+    stmp.zero_where(HOST);
+  }
+  else{
+      stmp.copy(*this);
+  }
+
+  vector1.absorb(in, sinktimeslice, true);
+
+  for (int dt=0; dt<source_sink_separation; ++dt){
+    int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
+    stmp.absorb(vector1, actualtimeslice, false);
+  }
+
+  this->copy(stmp);
+}
+
+
+template<typename Float>
+void PLEGMA_Vector<Float>::pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize){
+
+  PLEGMA_Vector<Float> stmp;
+  PLEGMA_Vector3D<Float> vector1;
+
+  if (initialize==true){
+    stmp.zero_where(DEVICE);
+    stmp.zero_where(HOST);
+  }
+  else{
+    stmp.copy(*this);
+  }
+
+
+  for (int dt=0; dt<source_sink_separation; ++dt){
+    int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
+    vector1.absorb(in, actualtimeslice );
+    stmp.absorb(vector1, actualtimeslice, false);
+  }
+
+  this->copy(stmp);
+}
+
+
 
 
 template<typename Float>
@@ -252,6 +372,19 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
   this->zero_where(where);
   int my_src[N_DIMS];
   size_t id=0;
+  static bool init_PointSource = true;
+
+  if (!init_PointSource) {
+    Float * temphost=(Float*)malloc(sizeof(Float));
+    Float2<Float>* tempquda;
+    cudaMalloc((void**)&tempquda,sizeof(Float));
+    cudaMemcpy(tempquda, temphost,sizeof(Float),
+                cudaMemcpyHostToDevice );
+    free(temphost);
+    device_free(tempquda);
+    init_PointSource=true;
+  }
+
   for(int i = N_DIMS-1; i >= 0; i--) {
     my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
 
@@ -307,6 +440,7 @@ std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourcep
     int coords[4];
     for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
     int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+    //int rankHas = comm_rank_from_coords(coords);
 
     if (comm_rank()==rankHas){
       for (int spin=0; spin<N_SPINS; ++spin){
@@ -394,12 +528,10 @@ namespace plegma{
     checkCudaError();
   }
 
-  // vec3D <- Prop4D
+  // vec3D <- prop4D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2, bool broadcast){
     if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    printf("I am in absorb\n");
-    fflush(stdout);
     int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
     bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
     this->activeTimeSlice = is_myIt;
@@ -407,6 +539,18 @@ namespace plegma{
     int V4 = HGC_localVolume;
     Float *pointer_src = NULL;
     Float *pointer_dst = NULL;
+    static bool init_vector3D_prop4D = true;
+
+    if (!init_vector3D_prop4D) {
+      Float2<Float>* tempquda;
+      cudaMalloc((void**)&tempquda,V3*2*sizeof(Float)); 
+      cudaMemcpy(tempquda, tempquda, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      cudaMemset(tempquda, 0, V3*2 * sizeof(Float));
+      device_free(tempquda);
+      init_vector3D_prop4D=true;
+
+    }
+
     for(int mu = 0 ; mu < N_SPINS ; mu++)
       for(int c1 = 0 ; c1 < N_COLS ; c1++){
 	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
@@ -435,6 +579,59 @@ namespace plegma{
     checkCudaError();
     
   }
+
+  // vec3D <- vec4D
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Vector<Float> &prop, int global_it, bool broadcast){
+    if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    this->activeTimeSlice = is_myIt;
+    int V3 = HGC_localVolume/HGC_localL[3];
+    int V4 = HGC_localVolume;
+    Float *pointer_src = NULL;
+    Float *pointer_dst = NULL;
+    static bool init_vector3D_vector4D = true;
+
+    if (!init_vector3D_vector4D) {
+/*     Float2<Float>* tempquda;
+     cudaMalloc((void**)&tempquda,V3*2*sizeof(Float)); 
+     cudaMemset(tmpdevice, 0, V3*2 * sizeof(Float));
+     cudaMemcpy(tmpdevice, tmpdevice,V3*2 * sizeof(Float),cudaMemcpyDeviceToDevice);
+     device_free(tmpdevice);
+     init_vector3D_vector4D=true;*/
+    }
+    for(int mu = 0 ; mu < N_SPINS ; mu++)
+      for(int c1 = 0 ; c1 < N_COLS ; c1++)
+      {
+        pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
+        if(is_myIt){
+          pointer_src = (prop.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
+          cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+        }
+	if (broadcast == true){
+         int time_rank=global_it/HGC_localL[3];
+//         printf("Time rank %d\n",time_rank);
+//         fflush(stdout);
+         Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
+         cudaMemcpy(temp, pointer_dst, V3*2 * sizeof(Float), cudaMemcpyDeviceToHost);
+         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+//         printf("Temp 0 %e\n",temp[0]);
+//         fflush(stdout);
+         cudaMemcpy(pointer_dst, temp, V3*2 * sizeof(Float), cudaMemcpyHostToDevice);
+         free(temp);
+       }
+       if (broadcast == false && is_myIt ==false){
+         cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+       }
+
+      }
+
+    checkCudaError();
+
+  }
+
+
 
   template<typename Float>
   std::vector<Float> PLEGMA_Vector3D<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{

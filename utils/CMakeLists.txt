@@ -6,3 +6,4 @@ file(GLOB PLEGMA_UTILS
 cuda_add_library(PLEGMAutils STATIC ${PLEGMA_UTILS})
 target_include_directories(PLEGMAutils SYSTEM PRIVATE ${QUDA_SRC}/lib )
 add_dependencies(PLEGMAutils BoostPP)
+
