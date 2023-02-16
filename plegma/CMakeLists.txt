@@ -106,6 +106,8 @@ target_link_libraries(testShifts ${PLEGMA_LIBS})
 cuda_add_executable(Zfac Zfac.cpp)
 target_link_libraries(Zfac ${PLEGMA_LIBS})
 
+
+
 if (PLEGMA_SCATTERING_CONTRACTIONS)
   cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
@@ -113,6 +115,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(piNdiagrams ${PLEGMA_LIBS})
   cuda_add_executable(nucleon_delta_test EXCLUDE_FROM_ALL nucleon_delta_test.cpp)
   target_link_libraries(nucleon_delta_test ${PLEGMA_LIBS})
+  cuda_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
+  target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams_oet piNdiagrams_oet.cpp)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
   cuda_add_executable(checking_Doet checking_Doet.cpp)
@@ -122,8 +126,3 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 
-cuda_add_executable(gaugeFixing EXCLUDE_FROM_ALL gaugeFixing.cpp)
-target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
-
-cuda_add_executable(invert EXCLUDE_FROM_ALL invert.cpp)
-target_link_libraries(invert ${PLEGMA_LIBS})
