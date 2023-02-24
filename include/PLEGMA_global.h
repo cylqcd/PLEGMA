@@ -1,8 +1,7 @@
 #pragma once
-
 //======== External libraries =========//
 #include <mpi.h>
-//#include <cuda.h>
+////#include <cuda.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
@@ -15,6 +14,9 @@
 #include <algorithm>
 #include <quda.h>
 #include <quda_internal.h>
+#ifndef __HIP__
+#include <cuda_fp16.h>
+#endif
 //#include <cublas_v2.h>
 #ifdef __GNUG__ // gnu C++ compiler
 #include <cxxabi.h>

@@ -1,3 +1,4 @@
+#pragma once
 #if defined (__NVCC__)
 #include <cublas_v2.h>
 #endif

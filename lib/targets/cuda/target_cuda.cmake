@@ -2,7 +2,7 @@
 # malloc.cpp uses both the driver and runtime api
 # So we need to find the CUDA_cuda_LIBRARY (driver api) or the stub version
 find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
-target_link_libraries(PLEGMA ${CUDA_cuda_LIBRARY})
+target_link_libraries(plegma PUBLIC ${CUDA_cuda_LIBRARY})
 # CUDA specific part of CMakeLists
 include(CheckLanguage)
 check_language(CUDA)
@@ -139,11 +139,11 @@ mark_as_advanced(CMAKE_CUDA_FLAGS_HOSTDEBUG)
 mark_as_advanced(CMAKE_CUDA_FLAGS_DEVICEDEBUG)
 
 # make one library
-if(PLEGMA_BUILD_SHAREDLIB)
-    cuda_add_library(PLEGMA SHARED ${PLEGMA_LIB})
-else()
-  cuda_add_library(PLEGMA STATIC ${PLEGMA_LIB})
-endif()
-target_include_directories(PLEGMA PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+#if(PLEGMA_BUILD_SHAREDLIB)
+#   cuda_add_library(plegma SHARED ${PLEGMA_LIB})
+#else()
+#  cuda_add_library(plegma STATIC ${PLEGMA_LIB})
+#endif()
+target_include_directories(plegma PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_include_directories(plegma PUBLIC ${QUDA_HOME}/include/targets/cuda)
