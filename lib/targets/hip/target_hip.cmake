@@ -114,7 +114,9 @@ target_compile_options(
           -Wextra
           -Wno-unknown-pragmas
           -Wno-unused-result
-	  -fgpu-rdc  -Wno-deprecated-register -dc
+	  -Wno-deprecated-register -dc
+	  -fgpu-rdc #--amdgpu-target=gfx90a 
+	  -fopenmp
           $<$<CONFIG:STRICT>:-Werror
           -Wno-error=pass-failed>
           $<$<CONFIG:SANITIZE>:-fsanitize=address
