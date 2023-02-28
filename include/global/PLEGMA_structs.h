@@ -1,4 +1,12 @@
 //======== Some custom data struct =========//
+#define HIP_CHECK(error)                                                                           \
+  {                                                                                                \
+    hipError_t localError = error;                                                                 \
+    if ((localError != hipSuccess) && (localError != hipErrorPeerAccessAlreadyEnabled)) {          \
+      PLEGMA_printf("Error: %s, Code %d\n", hipGetErrorString(localError), localError);            \
+      PLEGMA_printf("FILE: %s, LINE %d\n", __FILE__, __LINE__ );			           \
+    }												   \
+  }
 template<typename Float> struct texture;
 
 struct site : std::array<int,N_DIMS> {
@@ -30,13 +38,24 @@ inline std::istream& operator >> (std::istream &i, site &x){
 // Global variable for mom list
 struct tex_mom_list {
   size_t Nmoms;
+
+#if __HIP__
+  hipTextureObject_t tex;
+#else
   cudaTextureObject_t tex;
+#endif
   void* devPtr;
 
   tex_mom_list() : Nmoms(0), tex(), devPtr(nullptr) {}
 
+#ifdef __NVCC__
   tex_mom_list(size_t Nmoms, cudaTextureObject_t tex, void* devPtr) :
     Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
+#elif defined (__HIP__)
+  tex_mom_list(size_t Nmoms, hipTextureObject_t tex, void* devPtr) :
+    Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
+#endif
+
   
   inline __device__ int4 get(const size_t &i) const {
 #ifdef __NVCC__
@@ -63,18 +82,26 @@ struct pointer_holder {
 
   void copyToDeviceConstant() {
     if(devPointer != nullptr) {
-      cudaError_t err = cudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
-      if (err != cudaSuccess) {
+#ifdef __NVCC__ 
+    cudaError_t err = cudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
+    if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
-      }
+    }
+#else
+    HIP_CHECK(hipMemcpy(*devPointer, hostPointer, bytes*size, hipMemcpyHostToDevice));
+#endif
     }
   }
   void copyFromDeviceConstant() {
     if(false and devPointer != nullptr) {
+#ifdef __NVCC__
       cudaError_t err = cudaMemcpyFromSymbol(hostPointer, *devPointer, bytes*size, 0, cudaMemcpyDeviceToHost);
       if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
       }
+#else
+     qudaMemcpy(hostPointer, *devPointer,  bytes*size,qudaMemcpyDeviceToHost);
+#endif
     }
   }
   bool checkDeviceConstant() {

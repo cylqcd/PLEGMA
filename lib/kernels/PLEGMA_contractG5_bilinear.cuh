@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 using namespace plegma;
 
 template<typename Float>

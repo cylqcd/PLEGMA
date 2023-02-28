@@ -1,7 +1,14 @@
+#pragma once
+#if defined (__NVCC__)
 #include <cublas_v2.h>
+#endif
+#if defined (__HIP__)
+#include <hipblas.h>
+#endif
+
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_Thrust.h>
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <PLEGMA_Random.h>
 #include <PLEGMA_Fmunu.h>
 #include <PLEGMA_Vector.h>
@@ -195,7 +202,7 @@ __inline__ __device__ Float2<float> rootsunity<4>(int order){
 }
 
 template<typename Float, int n>
-__global__ void genStochasticUniform_kernel(cuRNGState *state, int length_field, Float *inout, bool is4D){
+__global__ void genStochasticUniform_kernel(RNGState *state, int length_field, Float *inout, bool is4D){
 
   Float2<Float> *inout2 = (Float2<Float> *) inout;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -225,7 +232,7 @@ void set_stochastic( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int fiel
   genStochasticUniform_kernel<Float, n><<<gridDim,blockDim>>>(rng_state.State(), field_deg_free, inOut.D_elem(), inOut.is4D());
 }
 template<typename Float>
-__global__ void genRandomUniform_kernel(cuRNGState *state, int length_field, Float *inout){
+__global__ void genRandomUniform_kernel(RNGState *state, int length_field, Float *inout){
   Float2<Float> *inout2 = (Float2<Float> *) inout;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
 
@@ -235,7 +242,7 @@ __global__ void genRandomUniform_kernel(cuRNGState *state, int length_field, Flo
 } 
 
 template<typename Float>
-__global__ void genRandomNormal_kernel(cuRNGState *state, int length_field, Float *inout){
+__global__ void genRandomNormal_kernel(RNGState *state, int length_field, Float *inout){
   Float2<Float> *inout2 = (Float2<Float> *) inout;
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
 
@@ -260,7 +267,7 @@ void set_random( PLEGMA_RNG &rng_state, PLEGMA_Field<Float> &inOut, int field_de
 template<typename Float>
 struct HadCol{
   int ih;
-  __device__ HadCol(int ih):ih(ih){}
+  __device__ __host__ HadCol(int ih):ih(ih){}
   __device__ int  HadamardElements(int i, int j){
     int sum=0;
     for(int k = 0 ; k < 32 ; k++){
@@ -341,8 +348,8 @@ static void __global__ trPmunu_kernel(FloatA *out, gauge2<FloatA> u, int mu, int
     x|-->--|
    **/
   // U_\mu(x) * U_\nu(x+\mu) * U^dag_\mu(x+nu) * U^\dag_\nu(x)
-  u.get(U1,mu,sid); u.get<Plus>(U2,nu,sid,mu); mul_G_G(U3,U1,U2);
-  u.get<Plus>(U2,mu,sid,nu); mul_G_Gdag(U1,U3,U2);
+  u.get(U1,mu,sid); u.template get<Plus>(U2,nu,sid,mu); mul_G_G(U3,U1,U2);
+  u.template get<Plus>(U2,mu,sid,nu); mul_G_Gdag(U1,U3,U2);
   u.get(U2,nu,sid); mul_G_Gdag(U3,U1,U2);
   out2[sid]= U3[0][0] + U3[1][1] + U3[2][2];
 }

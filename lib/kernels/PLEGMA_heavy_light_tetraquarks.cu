@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_heavy_light_tetraquarks.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_heavy_light_tetraquarks.cuh"
 #include <malloc_quda.h>
 #include <quda_api.h>
 
@@ -114,8 +114,8 @@ void contract_tetraquarks_host(ProfileStruct &ps,
     shift += TETRA_prop_prods_count[i][j];
   }
 
-    cudaError_t error=cudaPeekAtLastError();
-    if(error != cudaSuccess) { goto exit; }
+    //cudaError_t error=cudaPeekAtLastError();
+    //if(error != cudaSuccess) { goto exit; }
 
   
   for(int it=0; it < t_size; it+=time_step) {
@@ -152,11 +152,11 @@ void contract_tetraquarks_host(ProfileStruct &ps,
   }
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
-  cudaFree(d_partial_block); d_partial_block=NULL;
+  device_free(d_partial_block); d_partial_block=NULL;
   
-  cudaFree(idxs);
-  cudaFree(col_contr);
-  cudaFree(vals);
+  device_free(idxs);
+  device_free(col_contr);
+  device_free(vals);
   
  // if (ps.tp.aux.x == 2) {
 //     cudaFree(texPropProd);

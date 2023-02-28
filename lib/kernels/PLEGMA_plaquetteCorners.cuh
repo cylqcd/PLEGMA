@@ -8,8 +8,8 @@
  * Here the plaquette is computed 4 times by each site considering all the directions.
 */
 
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
 using namespace plegma;
 
 
@@ -33,11 +33,11 @@ static __global__ void calculatePlaquetteCorners_device(gaugeTex<FloatG> gaugeTe
       for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
 	gaugeTex.get(G1,dir1,sid);
-	gaugeTex.get<Plus>(G2,dir2,sid,dir1);
+	gaugeTex.template get<Plus>(G2,dir2,sid,dir1);
       
 	mul_G_G(G3,G1,G2);
       
-	gaugeTex.get<Plus>(G1,dir1,sid,dir2);
+	gaugeTex.template get<Plus>(G1,dir1,sid,dir2);
 	gaugeTex.get(G2,dir2,sid);
       
 	mul_Gdag_Gdag(G4,G1,G2);
@@ -45,39 +45,39 @@ static __global__ void calculatePlaquetteCorners_device(gaugeTex<FloatG> gaugeTe
 	trace += real_trace_mul_G_G<Float>(G3,G4);
 	
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-	gaugeTex.get<Minus>(G1,dir1,sid,dir1);
+	gaugeTex.template get<Minus>(G1,dir1,sid,dir1);
 	gaugeTex.get(G2,dir2,sid);
       
 	mul_G_G(G3,G1,G2);
       
-	gaugeTex.get<MinusPlus>(G1,dir1,sid,dir1,dir2);
-	gaugeTex.get<Minus>(G2,dir2,sid,dir1);
+	gaugeTex.template get<MinusPlus>(G1,dir1,sid,dir1,dir2);
+	gaugeTex.template get<Minus>(G2,dir2,sid,dir1);
       
 	mul_Gdag_Gdag(G4,G1,G2);
       
 	trace += real_trace_mul_G_G<Float>(G3,G4);
 
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-	gaugeTex.get<MinusMinus>(G1,dir1,sid,dir1,dir2);
-	gaugeTex.get<Minus>(G2,dir2,sid,dir2);
+	gaugeTex.template get<MinusMinus>(G1,dir1,sid,dir1,dir2);
+	gaugeTex.template get<Minus>(G2,dir2,sid,dir2);
       
 	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
-	gaugeTex.get<Minus>(G1,dir1,sid,dir1);
-	gaugeTex.get<MinusMinus>(G2,dir2,sid,dir1,dir2);
+	gaugeTex.template get<Minus>(G1,dir1,sid,dir1);
+	gaugeTex.template get<MinusMinus>(G2,dir2,sid,dir1,dir2);
       
 	mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
 	trace += real_trace_mul_G_G<Float>(G3,G4); // flops = N_COLS*N_COLS*(2+1)
 
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-	gaugeTex.get<Minus>(G1,dir1,sid,dir2);
-	gaugeTex.get<PlusMinus>(G2,dir2,sid,dir1,dir2);
+	gaugeTex.template get<Minus>(G1,dir1,sid,dir2);
+	gaugeTex.template get<PlusMinus>(G2,dir2,sid,dir1,dir2);
       
 	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
 	gaugeTex.get(G1,dir1,sid);
-	gaugeTex.get<Minus>(G2,dir2,sid,dir2);
+	gaugeTex.template get<Minus>(G2,dir2,sid,dir2);
       
 	mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
@@ -100,15 +100,15 @@ static void calculatePlaquetteCorners_host(ProfileStruct& ps, gaugeTex<FloatG> g
 
   Float *d_partial_plaq = NULL;
   int gridDimX = ps.tp.grid.x;
-  cudaMalloc((void**)&d_partial_plaq, gridDimX * sizeof(Float));
+  d_partial_plaq=(Float*)device_malloc( gridDimX * sizeof(Float));
   calculatePlaquetteCorners_device<Float,FloatG><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gaugeTex, d_partial_plaq);
 
 
   Float *h_partial_plaq = NULL;
   hostMalloc(h_partial_plaq, gridDimX * sizeof(Float) );
   if(h_partial_plaq == NULL) PLEGMA_error("Error allocate memory for host partial plaq");
-  cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_plaq);
+  qudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , qudaMemcpyDeviceToHost);
+  device_free(d_partial_plaq);
   checkQudaError();
 
   plaquette = 0.;

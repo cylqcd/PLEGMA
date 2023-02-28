@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
 #include <type_traits>
 using namespace plegma;
 
@@ -18,8 +18,8 @@ static __global__ void calculatePlaquette_device(u1gaugeTex<FloatG> gTex, Float 
     for(int dir1=0; dir1<N_DIMS-1; dir1++) {
       #pragma unroll
       for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
-	gTex.get(G1,dir1,sid); gTex.get<Plus>(G2,dir2,sid,dir1);
-	gTex.get<Plus>(G3,dir1,sid,dir2); gTex.get(G4,dir2,sid);
+	gTex.get(G1,dir1,sid); gTex.template get<Plus>(G2,dir2,sid,dir1);
+	gTex.template get<Plus>(G3,dir1,sid,dir2); gTex.get(G4,dir2,sid);
 	Float2<Float> val = G1*G2*conj(G3)*conj(G4);
 	//	if(dir1 == 2 && dir2 == 3)
 	  //	  printf("%d %d %d %d %f %f\n",x[0],x[1],x[2],x[3],val.x,val.y);
@@ -56,11 +56,11 @@ static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gTex, Float *p
       for(int dir2=dir1+1; dir2<N_DIMS; dir2++) {
 	// term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
 	gTex.get(G1,dir1,sid);
-	gTex.get<Plus>(G2,dir2,sid,dir1);
+	gTex.template get<Plus>(G2,dir2,sid,dir1);
       
 	mul_G_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
-	gTex.get<Plus>(G1,dir1,sid,dir2);
+	gTex.template get<Plus>(G1,dir1,sid,dir2);
 	gTex.get(G2,dir2,sid);
       
 	mul_Gdag_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
@@ -84,14 +84,14 @@ static void calculatePlaquette_host(ProfileStruct& ps, TG gTex, Float& plaquette
 
   Float *d_partial_plaq = NULL;
   int gridDimX = ps.tp.grid.x;
-  cudaMalloc((void**)&d_partial_plaq, gridDimX * sizeof(Float));
+  d_partial_plaq=(Float*)device_malloc( gridDimX * sizeof(Float));
   calculatePlaquette_device<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gTex, d_partial_plaq);
 
   Float *h_partial_plaq = NULL;
   hostMalloc(h_partial_plaq, gridDimX * sizeof(Float) );
   if(h_partial_plaq == NULL) PLEGMA_error("Error allocate memory for host partial plaq");
-  cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_plaq);
+  qudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , qudaMemcpyDeviceToHost);
+  device_free(d_partial_plaq);
   checkQudaError();
 
   plaquette = 0.;

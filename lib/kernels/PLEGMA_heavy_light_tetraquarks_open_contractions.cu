@@ -1,8 +1,8 @@
 #include <PLEGMA_Correlator.h>
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_gammas.cuh>
-#include <PLEGMA_heavy_light_tetraquarks.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_gammas.cuh"
+#include "PLEGMA_heavy_light_tetraquarks.cuh"
 #include <quda_api.h>
 #include <malloc_quda.h>
 using namespace plegma;
@@ -122,8 +122,8 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
   auto propTex1 = toTexture<propTex>(prop1);
   auto propTex2 = toTexture<propTex>(prop2);
   
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
+  //cudaError_t error=cudaPeekAtLastError();
+  //if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     int t_step = std::min(t_size-it, time_step);
     dim3 grid = ps.tp.grid;
@@ -131,10 +131,10 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
     tetraquark_open_index_device<FloatC,FloatA, FloatB>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, runFT, *moms, s1);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     qudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;

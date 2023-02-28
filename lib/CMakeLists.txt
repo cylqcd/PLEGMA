@@ -1,3 +1,20 @@
+# cmake-format: off
+
+# this allows simplified running of clang-tidy
+if(${CMAKE_BUILD_TYPE} STREQUAL "DEVEL")
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
+
+#build up git version add -debug to GITVERSION if we build with debug options enabled
+string(REGEX MATCH [Dd][Ee][Bb][Uu][Gg] DEBUG_BUILD ${CMAKE_BUILD_TYPE})
+if(DEBUG_BUILD)
+  if(GITVERSION)
+    set(GITVERSION ${GITVERSION}-debug)
+  else()
+    set(GITVERSION debug)
+  endif()
+endif()
+
 set (PLEGMA_OBJS 
   PLEGMA_Correlator.cu
   PLEGMA.cu
@@ -63,56 +80,99 @@ endif()
 FOREACH(item ${PLEGMA_OBJS})
   STRING(REGEX MATCH ".+\\.cu$" item_match ${item})
   IF(item_match)
-    LIST(APPEND QUDA_CU_OBJS ${item})
+	  LIST(APPEND PLEGMA_CU_OBJS ${item})
   ENDIF(item_match)
 ENDFOREACH(item ${PLEGMA_OBJS})
 
-LIST(REMOVE_ITEM PLEGMA_OBJS ${QUDA_CU_OBJS})
+LIST(REMOVE_ITEM PLEGMA_OBJS ${PLEGMA_CU_OBJS})
+
+# PLEGMA_CU_OBJS should contain all cuda files now PLEGMA_OBJS all c, cpp, fortran sources
+# if we have a git version make version.cpp depend on git head so that it is rebuild if the git sha changed
+
+if(PLEGMA_OBJS)
+  add_library(plegma_cpp OBJECT ${PLEGMA_OBJS})
+
+  target_compile_definitions(plegma_cpp PUBLIC -DQUDA_HASH="${HASH}")
+  set_target_properties(plegma_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
+endif()
+if(${CMAKE_BUILD_TYPE} STREQUAL "DEVEL")
+  if(GITVERSION)
+    find_path(
+      PLEGMA_GITDIR NAME HEAD
+      PATHS ${CMAKE_SOURCE_DIR}/.git/logs
+      NO_DEFAULT_PATH)
+    include(AddFileDependencies)
+    if(PLEGMA_GITDIR)
+      add_file_dependencies(version.cpp ${PLEGMA_GITDIR}/HEAD)
+    endif()
+  endif()
+  mark_as_advanced(PLEGMA_GITDIR)
+endif()
 
 # QUDA_CU_OBJS shoudl contain all cuda files now
 # PLEGMA_OBJS all c, cpp, fortran sources
 
-# include_directories
-include_directories(${QUDA_HOME}/lib/)
-#PLEGMA: 
-include_directories(code_pieces)
-include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)
-include_directories(SYSTEM ${PLEGMA_HDF5HOME}/include)
-
-include_directories(SYSTEM ${PLEGMA_HDF5HOME}/src)
-include_directories(SYSTEM ${PLEGMA_LIMEHOME}/include)
-if(PLEGMA_ARPACK)
-  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/PARPACK/SRC/MPI)
-  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/PARPACK/UTIL/MPI)
-  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/SRC)
-  include_directories(SYSTEM ${PLEGMA_ARPACKHOME}/UTIL)
-endif(PLEGMA_ARPACK)
-#PLEGMA: 
-
-set(PLEGMA_LIB ${QUDA_CU_OBJS})
-
-# generate a cmake object library for all cpp files first
-if(PLEGMA_OBJS)
-  add_library(PLEGMA_cpp OBJECT ${PLEGMA_OBJS})
-
-  # add some definitions that cause issues with cmake 3.7 and nvcc only to cpp files 
-  target_compile_definitions(PLEGMA_cpp PUBLIC -DQUDA_HASH="${HASH}")
-  if(PLEGMA_BUILD_SHAREDLIB)
-    set_target_properties(PLEGMA_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+if(PLEGMA_BUILD_SHAREDLIB)
+  if (PLEGMA_OBJS)
+    set_target_properties(plegma_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
   endif()
+  add_library(plegma SHARED)
+else()
+  add_library(plegma STATIC)
+endif()
+add_library(PLEGMA::plegma ALIAS plegma)
 
-  LIST(APPEND PLEGMA_LIB $<TARGET_OBJECTS:PLEGMA_cpp>)
-
+# add target specific files
+if(${PLEGMA_TARGET_TYPE} STREQUAL "CUDA")
+  include(targets/cuda/target_cuda.cmake)
+endif()
+if(${PLEGMA_TARGET_TYPE} STREQUAL "HIP")
+  include(targets/hip/target_hip.cmake)
+endif()
+if(${PLEGMA_TARGET_TYPE} STREQUAL "SYCL")
+  include(targets/sycl/target_sycl.cmake)
 endif()
 
 # make one library
-if(PLEGMA_BUILD_SHAREDLIB)
-    cuda_add_library(PLEGMA SHARED ${PLEGMA_LIB})
-else()
-  cuda_add_library(PLEGMA STATIC ${PLEGMA_LIB})
-endif()
-target_include_directories(PLEGMA PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+target_sources(plegma PRIVATE ${PLEGMA_CU_OBJS})
+#<TARGET_OBJECTS:plegma_cpp> 
+#	                      ${PLEGMA_CU_OBJS})
+
+include(CheckLinkerFlag)
+check_linker_flag(CXX "-Wl,--compress-debug-sections=zlib" PLEGMA_LINKER_COMPRESS)
+target_link_options(plegma PRIVATE $<$<CONFIG:DEVEL>:$<${PLEGMA_LINKER_COMPRESS}:-Wl,--compress-debug-sections=zlib>>)
+
+
+# set up QUDA compile options, put them before target specific options
+target_compile_options(
+  plegma BEFORE PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:
+               $<IF:$<CONFIG:RELEASE>,-w,-Wall -Wextra>
+               $<$<CONFIG:STRICT>:-Werror>
+  >)
+
+target_compile_definitions(
+  plegma PRIVATE $<$<CONFIG:DEVEL>:DEVEL> $<$<CONFIG:HOSTDEBUG>:HOST_DEBUG> $<$<CONFIG:DEBUG>:HOST_DEBUG>
+               $<$<CONFIG:DEBUG>:DEVICE_DEBUG> $<$<CONFIG:SANITIZE>:HOST_DEBUG>)
+target_include_directories(plegma PRIVATE .)
+target_include_directories(plegma PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+
+# include_directories
+target_include_directories(plegma SYSTEM PRIVATE ${QUDA_HOME}/lib/)
+#PLEGMA: 
+target_include_directories(plegma SYSTEM PRIVATE ${PLEGMA_GSLHOME}/include)
+target_include_directories(plegma SYSTEM PRIVATE ${PLEGMA_HDF5HOME}/include)
+
+target_include_directories(plegma SYSTEM PRIVATE ${PLEGMA_HDF5HOME}/src)
+target_include_directories(plegma SYSTEM PRIVATE ${PLEGMA_LIMEHOME}/include)
+if(PLEGMA_ARPACK)
+	target_include_directories(SYSTEM PRIVATE ${PLEGMA_ARPACKHOME}/PARPACK/SRC/MPI)
+	target_include_directories(SYSTEM PRIVATE ${PLEGMA_ARPACKHOME}/PARPACK/UTIL/MPI)
+	target_include_directories(SYSTEM PRIVATE ${PLEGMA_ARPACKHOME}/SRC)
+	target_include_directories(SYSTEM PRIVATE ${PLEGMA_ARPACKHOME}/UTIL)
+endif(PLEGMA_ARPACK)
+
 
 
 LIST(APPEND PLEGMA ${PLEGMA_GSL_LIB})
@@ -140,10 +200,10 @@ endif(PLEGMA_MKL)
 
 # add dependencies for linking
 # if CUDA_cuda_LIBRARY (driver api) is not found look for stubs
-FIND_LIBRARY(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
+#FIND_LIBRARY(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
 
-target_link_libraries(PLEGMA ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${QUDA_LIBS} ${CUDA_cuda_LIBRARY})
-add_dependencies(PLEGMA BoostPP)
+target_link_libraries(plegma PUBLIC ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${QUDA_LIBS}) # ${CUDA_cuda_LIBRARY})
+add_dependencies(plegma BoostPP)
 
 if(QUDA_QMP)
   target_link_libraries(PLEGMA ${QMP_LIB} ${MPI_CXX_LIBRARIES})
@@ -161,32 +221,42 @@ if(QUDA_ARPACK)
   target_link_libraries(PLEGMA ${PARPACK_OR_ARPACK})
 endif()
 
-# malloc.cpp uses both the driver and runtime api
-# So we need to find the CUDA_cuda_LIBRARY (driver api) or the stub version
-find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
-target_link_libraries(PLEGMA ${CUDA_cuda_LIBRARY})
+configure_file(../include/plegma_define.h.in ../include/plegma_define.h @ONLY)
+install(FILES "${CMAKE_BINARY_DIR}/include/plegma_define.h" DESTINATION include/)
+
 
 # until we define an install step copy the include directory to the build directory
-ADD_CUSTOM_COMMAND(TARGET PLEGMA POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)
+ADD_CUSTOM_COMMAND(TARGET plegma POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)
 # some hackery to prevent having old shared / static builds of quda messing with the current build
-ADD_CUSTOM_COMMAND(TARGET PLEGMA PRE_LINK COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.a ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.so)
+ADD_CUSTOM_COMMAND(TARGET plegma PRE_LINK COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.a ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.so)
 
-install(TARGETS PLEGMA EXPORT PLEGMATargets
+install(TARGETS plegma 
+	EXPORT PLEGMATargets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
+        INCLUDES 
+	DESTINATION include)
+
+install(
+  EXPORT PLEGMATargets
+  FILE PLEGMATargets.cmake
+  NAMESPACE PLEGMA::
+  DESTINATION lib/cmake/PLEGMA)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include)
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file( 
-  "${CMAKE_CURRENT_BINARY_DIR}/qudaConfigVersion.cmake" 
-  VERSION ${QUDA_VERSION}
+  "${CMAKE_CURRENT_BINARY_DIR}/plegmaConfigVersion.cmake" 
+  VERSION ${PLEGMA_VERSION}
   COMPATIBILITY AnyNewerVersion
 )
 
-export(EXPORT PLEGMATargets FILE "${CMAKE_CURRENT_BINARY_DIR}/PLEGMATargets.cmake" NAMESPACE quda::)
-set(ConfigPackageLocation lib/cmake/quda/)
-install(EXPORT PLEGMATargets NAMESPACE quda:: DESTINATION ${ConfigPackageLocation})
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(${CMAKE_SOURCE_DIR}/PLEGMAConfig.cmake.in PLEGMAConfig.cmake INSTALL_DESTINATION lib/cmake/PLEGMA)
+#export(EXPORT PLEGMATargets FILE "${CMAKE_CURRENT_BINARY_DIR}/PLEGMATargets.cmake" NAMESPACE quda::)
+#set(ConfigPackageLocation lib/cmake/quda/)
+#install(EXPORT PLEGMATargets NAMESPACE quda:: DESTINATION ${ConfigPackageLocation})
 
 
 add_custom_target(gen ${PYTHON_EXECUTABLE} ${PLEGMA_QUDA_HOME}/lib/generate/gen.py
@@ -196,3 +266,4 @@ add_custom_target(gen ${PYTHON_EXECUTABLE} ${PLEGMA_QUDA_HOME}/lib/generate/gen.
 add_custom_target(mpi_nvtx ${PYTHON_EXECUTABLE} ${PLEGMA_QUDA_HOME}/lib/generate/wrap.py -g -o ${PLEGMA_QUDA_HOME}/lib/nvtx_pmpi.c ${PLEGMA_QUDA_HOME}/lib/generate/nvtx.w
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMENT "Generating mpi_nvtx wrapper" )
+

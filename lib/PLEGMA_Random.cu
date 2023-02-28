@@ -1,5 +1,6 @@
 #include <PLEGMA_Random.h>
-#include <PLEGMA_Random.cuh>
+#include <kernels/PLEGMA_Random.cuh>
+//#include <random_helper.h>
 using namespace plegma;
 
 //--------------------------//
@@ -53,6 +54,7 @@ PLEGMA_RNG::PLEGMA_RNG(int seedin, int rng_sizes) {
 void PLEGMA_RNG::Init() {
   //printf("Number of rng_size[2]: %d\n", rng_size);
   AllocateRNG();
+  //random_init(seed, (unsigned long long)sequence, offset, state);
   launch_random_init(state, seed, rank_offset, rng_size);
 }
 
@@ -63,9 +65,9 @@ void PLEGMA_RNG::AllocateRNG() {
 
   //printf("Number of rng_size[1.5]: %d\n", rng_size);
   if (rng_size>0 && state == NULL) {
-    cudaMalloc((void**)&state, rng_size * sizeof(cuRNGState));
-    cudaMemset( state , 0 , rng_size * sizeof(cuRNGState) );
-    PLEGMA_printf("Allocated array of random numbers with rng_size: %.2f MB\n",((float)rng_size * (float)sizeof(cuRNGState))/(1024*1024));
+    state=(RNGState*)device_malloc(rng_size * sizeof(RNGState));
+    qudaMemset( state , 0 , rng_size * sizeof(RNGState) );
+    PLEGMA_printf("Allocated array of random numbers with rng_size: %.2f MB\n",((float)rng_size * (float)sizeof(RNGState))/(1024*1024));
   } else {
     PLEGMA_error("Array of random numbers not allocated, array size: %d !\nExiting...\n",rng_size);
   }
@@ -73,8 +75,8 @@ void PLEGMA_RNG::AllocateRNG() {
 
 /*! @brief Destructor !*/
 PLEGMA_RNG::~PLEGMA_RNG(){
-  cudaFree(state);
-  PLEGMA_printf("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(cuRNGState))/(1024*1024));
+  device_free(state);
+  PLEGMA_printf("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(RNGState))/(1024*1024));
   rng_size = 0;
   state = NULL;
   checkQudaError();
@@ -83,15 +85,15 @@ PLEGMA_RNG::~PLEGMA_RNG(){
 /*! @brief Generating random numbers from random distribution */
 /*! @brief Restore CURAND array states initialization */
 void PLEGMA_RNG::restore() {
-  cudaMemcpy(state, backup_state, rng_size * sizeof(cuRNGState), cudaMemcpyHostToDevice);
+  qudaMemcpy(state, backup_state, rng_size * sizeof(RNGState), qudaMemcpyHostToDevice);
   checkQudaError();
-  hostFree(backup_state, rng_size * sizeof(cuRNGState));
+  hostFree(backup_state, rng_size * sizeof(RNGState));
 }
 
 /*! @brief Backup CURAND array states initialization */
 void PLEGMA_RNG::backup() {
-  hostMalloc(backup_state, rng_size * sizeof(cuRNGState));
-  cudaMemcpy(backup_state, state, rng_size * sizeof(cuRNGState), cudaMemcpyDeviceToHost);
+  hostMalloc(backup_state, rng_size * sizeof(RNGState));
+  qudaMemcpy(backup_state, state, rng_size * sizeof(RNGState), qudaMemcpyDeviceToHost);
   checkQudaError();
 }
 

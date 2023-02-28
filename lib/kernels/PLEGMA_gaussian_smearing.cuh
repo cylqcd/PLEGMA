@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 using namespace plegma;
 template<typename FloatOut, typename FloatIn, typename FloatGauge, bool noGhost=false>
 __global__ void gaussian_smearing_kernel(vectorTex<FloatOut>out,
@@ -21,14 +21,14 @@ __global__ void gaussian_smearing_kernel(vectorTex<FloatOut>out,
   // we don't smear the time -> N_DIMS-1
   #pragma unroll
   for(int dir = 0; dir < N_DIMS-1; dir++) {
-    vecInTex.get<noGhost ? PlusNoGhost : Plus>(S, sid, dir);
+    vecInTex.template get<noGhost ? PlusNoGhost : Plus>(S, sid, dir);
     if(isNotZeroV(S)) {
       gaugeTex.get(G, dir, sid);
       mul_G_V<FloatOut,FloatGauge,FloatIn,ACC_PLUS>(tmp,G,S);
     }
-    vecInTex.get<noGhost ? MinusNoGhost : Minus>(S, sid, dir);
+    vecInTex.template get<noGhost ? MinusNoGhost : Minus>(S, sid, dir);
     if(isNotZeroV(S)) {
-      gaugeTex.get<Minus>(G, dir, sid, dir);
+      gaugeTex.template get<Minus>(G, dir, sid, dir);
       mul_Gdag_V<FloatOut,FloatGauge,FloatIn,ACC_PLUS>(tmp,G,S);
     }
   }
@@ -77,15 +77,15 @@ __global__ void gaussian_smearing_only_ghost_kernel(vectorTex<FloatOut>out,
       tmp[mu][c] = 0.;
 
   if(sign==DIR_PLUS) {
-    vecInTex.get<PlusOnlyGhost>(S, sid, dir);
+    vecInTex.template get<PlusOnlyGhost>(S, sid, dir);
     if(isNotZeroV(S)) {
       gaugeTex.get(G, dir, sid);
       mul_G_V<FloatOut,FloatGauge,FloatIn,ACC_PLUS>(tmp,G,S);
     }
   } else {
-    vecInTex.get<MinusOnlyGhost>(S, sid, dir);
+    vecInTex.template get<MinusOnlyGhost>(S, sid, dir);
     if(isNotZeroV(S)) {
-      gaugeTex.get<Minus>(G, dir, sid, dir);
+      gaugeTex.template get<Minus>(G, dir, sid, dir);
       mul_Gdag_V<FloatOut,FloatGauge,FloatIn,ACC_PLUS>(tmp,G,S);
     }
   }

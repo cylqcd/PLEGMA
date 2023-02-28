@@ -13,6 +13,49 @@ if(${CMAKE_VERSION} VERSION_GREATER "3.12.0")
   cmake_policy(SET CMP0074 NEW)
 endif()
 
+set(VALID_BUILD_TYPES
+    DEVEL
+    RELEASE
+    STRICT
+    DEBUG
+    HOSTDEBUG
+    SANITIZE)
+set(CMAKE_BUILD_TYPE
+  "${DEFBUILD}"
+  CACHE STRING "Choose the type of build, options are: ${VALID_BUILD_TYPES}")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${VALID_BUILD_TYPES})
+
+string(TOUPPER ${CMAKE_BUILD_TYPE} CHECK_BUILD_TYPE)
+list(FIND VALID_BUILD_TYPES ${CHECK_BUILD_TYPE} BUILD_TYPE_VALID)
+
+if(BUILD_TYPE_VALID LESS 0)
+  message(SEND_ERROR "Please specify a valid CMAKE_BUILD_TYPE type! Valid build types are:" "${VALID_BUILD_TYPES}")
+endif()
+
+
+
+# QUDA may be built to run using CUDA, HIP or SYCL, which we call the
+# Target type. By default, the target is CUDA.
+if(DEFINED ENV{PLEGMA_TARGET})
+  set(DEFTARGET $ENV{PLEGMA_TARGET})
+else()
+  set(DEFTARGET "CUDA")
+endif()
+
+set(VALID_TARGET_TYPES CUDA HIP SYCL)
+set(PLEGMA_TARGET_TYPE
+  "${DEFTARGET}"
+  CACHE STRING "Choose the type of target, options are: ${VALID_TARGET_TYPES}")
+set_property(CACHE PLEGMA_TARGET_TYPE PROPERTY STRINGS CUDA HIP SYCL)
+
+string(TOUPPER ${PLEGMA_TARGET_TYPE} CHECK_TARGET_TYPE)
+list(FIND VALID_TARGET_TYPES ${CHECK_TARGET_TYPE} TARGET_TYPE_VALID)
+
+if(TARGET_TYPE_VALID LESS 0)
+  message(SEND_ERROR "Please specify a valid QUDA_TARGET_TYPE type! Valid target types are:" "${VALID_TARGET_TYPES}")
+endif()
+
+
 # disable in source builds
 # this is only a temporary fix, but for now we need it as cmake will
 # otherwise overwrite the existing makefiles
@@ -116,14 +159,8 @@ else()
   include_directories(${DOWNLOAD_DIR}/BoostPP/include)
 endif()
 
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG HOSTDEBUG DEVICEDEBUG)
-
 # using dirs in LD_LIBRARY_PATh for searching for libraries
 string(REPLACE ":" ";" LIBRARY_DIRS $ENV{LD_LIBRARY_PATH})
-
-set(DEFAULT_GPU_ARCH sm_60)
-set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60, sm_70)")
-set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60 sm_70)
 
 # max threads
 set(PLEGMA_MAX_THREADS 256 CACHE INT "maximum number of threads per block in tuner")
@@ -139,14 +176,7 @@ else()
   
 endif()
 
-# Use CUDA textures
-set(PLEGMA_TEXTURE TRUE CACHE BOOL "Wheater to use or not CUDA textures")
-mark_as_advanced(PLEGMA_TEXTURE)
-if(PLEGMA_TEXTURE)
-  add_definitions(-DPLEGMA_TEXTURE)
-else()
-  
-endif()
+add_definitions(-DMULTI_GPU)
 
 # compile contractions for nucleon fix sink 3pf
 set(PLEGMA_NUCLEON_3PF_FIX_SINK FALSE CACHE BOOL "compile contractions for nucleon 3pf fix sink method")
@@ -270,26 +300,6 @@ mark_as_advanced(PLEGMA_RUN_TESTS)
 # we need to check for some packages
 find_package(PythonInterp)
 
-if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
-  find_package(CUDAWrapper)
-  set(USING_CUDA_LANG_SUPPORT True)
-  set(CMAKE_CUDA_STANDARD 17)
-  set(CMAKE_CUDA_STANDARD_REQUIRED True)
-else()
-  set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
-  mark_as_advanced(CUDA_HOST_COMPILER)
-  find_package(CUDA REQUIRED)
-  set(USING_CUDA_LANG_SUPPORT False)
-endif()
-
-# solve compiler issues with CUDA and tuples
-if( (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.5) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)  AND (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER 9.0) AND (CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 9.2))
-  message(FATAL_ERROR "This library will have compilation problems with CUDA 9.1 and gcc 6")
-endif()
-if( (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6) AND (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER 9.1) AND (CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 9.3) )
-  message(FATAL_ERROR "This library will have compilation problems with CUDA 9.2 and gcc < 6")
-endif()
-
 # We need threads
 find_package(Threads REQUIRED)
 
@@ -351,9 +361,9 @@ if(HDF5_FOUND)
   FIND_LIBRARY(PLEGMA_Z_LIB z ${LIBRARY_DIRS})	
 #link_libraries(${HDF5_C_LIBRARY_hdf5})
   message(STATUS "HDF5 version ${HDF5_VERSION} found, include dir: ${HDF5_INCLUDE_DIRS}, libraries ${HDF5_C_LIBRARY_hdf5}")
- if(NOT HDF5_IS_PARALLEL)
-   message(FATAL_ERROR "HDF5 must be parallel")
- endif()
+  #if(NOT HDF5_IS_PARALLEL)
+  # message(FATAL_ERROR "HDF5 must be parallel")
+  #endif()
 else()
   message(FATAL_ERROR "HDF5 could not be located, did you try specifying -DPLEGMA_HDF5HOME?")
 endif()
@@ -366,15 +376,6 @@ add_definitions(-DHAVE_LIME)
 FIND_LIBRARY(PLEGMA_LIME_LIB lime ${PLEGMA_LIMEHOME}/lib)
 include_directories(SYSTEM ${PLEGMA_LIMEHOME}/include)
 
-LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} ${CUDA_curand_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_nvrtc_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_nvToolsExt_LIBRARY})
-
-find_package(LibDL)
-LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
-
-add_definitions(-DMULTI_GPU)
 
 set(MPI_HOME_MANUAL "" CACHE PATH "Path to MPI for manual setting")
 mark_as_advanced(MPI_HOME_MANUAL)
@@ -409,26 +410,10 @@ add_definitions(-DMPI_COMMS)
 
 # COMPILER OPTIONS and BUILD types
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
 include_directories(include)
 include_directories(utils)
 include_directories(lib)
-include_directories(lib/kernels)
 
-
-# GPU ARCH
-STRING(REGEX REPLACE sm_ "" COMP_CAP ${GPU_ARCH})
-SET(COMP_CAP "${COMP_CAP}0")
-add_definitions(-D__COMPUTE_CAPABILITY__=${COMP_CAP})
-
-
-# NVCC FLAGS independet off build type
-if(NOT USING_CUDA_LANG_SUPPORT)
-  set(CUDA_NVCC_FLAGS "-std c++17 -arch=${GPU_ARCH} -ftz=true -prec-div=false -prec-sqrt=false")
-else()
-  set(CUDA_NVCC_FLAGS "-ftz=true -prec-div=false -prec-sqrt=false")
-  set(CMAKE_CUDA_FLAGS "-arch=${GPU_ARCH}" CACHE STRING "Flags used by the CUDA compiler" FORCE)
-endif()
 
 # some clang warnings shouds be warning even when turning warnings into errors
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -439,45 +424,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
-## define CUDA flags when CMake < 3.8
-set(CUDA_NVCC_FLAGS_DEVEL ${CUDA_NVCC_FLAGS} -Wno-deprecated-gpu-targets -Xcompiler -Wno-unknown-pragmas,-Wno-unused-function,-Wno-unused-local-typedef,-Wno-unused-private-field -O3 -lineinfo CACHE STRING
-    "Flags used by the CUDA compiler during regular development builds."
-    FORCE )
-set(CUDA_NVCC_FLAGS_STRICT ${CUDA_NVCC_FLAGS_DEVEL} CACHE STRING
-    "Flags used by the CUDA compiler during strict jenkins builds."
-    FORCE )
-set(CUDA_NVCC_FLAGS_RELEASE ${CUDA_NVCC_FLAGS} -O3 -w CACHE STRING
-    "Flags used by the C++ compiler during release builds."
-    FORCE )
-set(CUDA_NVCC_FLAGS_HOSTDEBUG ${CUDA_NVCC_FLAGS} -g -lineinfo -DHOST_DEBUG CACHE STRING
-    "Flags used by the C++ compiler during host-debug builds."
-    FORCE )
-set(CUDA_NVCC_FLAGS_DEVICEDEBUG ${CUDA_NVCC_FLAGS} -G CACHE STRING
-    "Flags used by the C++ compiler during device-debug builds."
-    FORCE )
-set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS} -g -DHOST_DEBUG -G CACHE STRING
-    "Flags used by the C++ compiler during full (host+device) debug builds."
-    FORCE )
-
-## define CUDA flags when CMake >= 3.8
-set(CMAKE_CUDA_FLAGS_DEVEL "${CUDA_NVCC_FLAGS} -Wno-deprecated-gpu-targets -Xcompiler -Wno-unknown-pragmas,-Wno-unused-function,-Wno-unused-local-typedef,-Wno-unused-private-field -O3 -lineinfo" CACHE STRING
-    "Flags used by the CUDA compiler during regular development builds."
-    FORCE )
-set(CMAKE_CUDA_FLAGS_STRICT "${CMAKE_CUDA_FLAGS_DEVEL}" CACHE STRING
-    "Flags used by the CUDA compiler during strict jenkins builds."
-    FORCE )
-set(CMAKE_CUDA_FLAGS_RELEASE "${CUDA_NVCC_FLAGS} -O3 -w" CACHE STRING
-    "Flags used by the CUDA compiler during release builds."
-    FORCE )
-set(CMAKE_CUDA_FLAGS_HOSTDEBUG "${CUDA_NVCC_FLAGS} -g -lineinfo -DHOST_DEBUG" CACHE STRING
-    "Flags used by the C++ compiler during host-debug builds."
-    FORCE )
-set(CMAKE_CUDA_FLAGS_DEVICEDEBUG "${CUDA_NVCC_FLAGS} -G" CACHE STRING
-    "Flags used by the C++ compiler during device-debug builds."
-    FORCE )
-set(CMAKE_CUDA_FLAGS_DEBUG "${CUDA_NVCC_FLAGS} -g -DHOST_DEBUG -G" CACHE STRING
-    "Flags used by the C++ compiler during full (host+device) debug builds."
-    FORCE )
 
 #define CXX FLAGS
 set(CMAKE_CXX_FLAGS_DEVEL "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -Wall ${CLANG_FORCE_COLOR}" CACHE STRING
@@ -541,15 +487,6 @@ mark_as_advanced(CMAKE_CXX_FLAGS_DEVEL)
 mark_as_advanced(CMAKE_CXX_FLAGS_STRICT)
 mark_as_advanced(CMAKE_CXX_FLAGS_HOSTDEBUG)
 mark_as_advanced(CMAKE_CXX_FLAGS_DEVICEDEBUG)
-
-mark_as_advanced(CUDA_NVCC_FLAGS_DEVEL)
-mark_as_advanced(CUDA_NVCC_FLAGS_STRICT)
-mark_as_advanced(CUDA_NVCC_FLAGS_HOSTDEBUG)
-mark_as_advanced(CUDA_NVCC_FLAGS_DEVICEDEBUG)
-mark_as_advanced(CMAKE_CUDA_FLAGS_DEVEL)
-mark_as_advanced(CMAKE_CUDA_FLAGS_STRICT)
-mark_as_advanced(CMAKE_CUDA_FLAGS_HOSTDEBUG)
-mark_as_advanced(CMAKE_CUDA_FLAGS_DEVICEDEBUG)
 
 mark_as_advanced(CMAKE_C_FLAGS_DEVEL)
 mark_as_advanced(CMAKE_C_FLAGS_STRICT)

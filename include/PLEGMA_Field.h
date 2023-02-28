@@ -113,11 +113,20 @@ namespace plegma {
     /**
        @brief Creates a texture object which binds on field elements on GPU
      */
+#ifdef __NVCC__
     cudaTextureObject_t createTexObject() const;
+#elif defined (__HIP__)
+    hipTextureObject_t createTexObject() const;
+#endif
     /**
        @brief Destroys the texture object which binds on field elements on GPU
      */
+#ifdef __NVCC__
     void destroyTexObject(cudaTextureObject_t tex) const;
+#elif defined (__HIP__)
+    void destroyTexObject(hipTextureObject_t tex) const;
+#endif
+
     /**
      * @return a pointer to access Host elements of the field
      */

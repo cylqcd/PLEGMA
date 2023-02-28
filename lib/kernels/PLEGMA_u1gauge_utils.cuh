@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
 using namespace plegma;
 using namespace quda;
 

@@ -1,8 +1,8 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <PLEGMA_ScattCorrelator.h>
-#include <PLEGMA_scattreductions.cuh>
-#include <PLEGMA_scattreductionsT1.cuh>
-#include <PLEGMA_scattreductionsT2.cuh>
+#include "PLEGMA_scattreductions.cuh"
+#include "PLEGMA_scattreductionsT1.cuh"
+#include "PLEGMA_scattreductionsT2.cuh"
 
 using namespace plegma;
 

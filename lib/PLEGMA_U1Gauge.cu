@@ -1,6 +1,6 @@
 #include <PLEGMA_U1Gauge.h>
-#include <PLEGMA_plaquette.cuh>
-#include <PLEGMA_u1gauge_utils.cuh>
+#include <kernels/PLEGMA_plaquette.cuh>
+#include <kernels/PLEGMA_u1gauge_utils.cuh>
 
 using namespace plegma;
 
@@ -52,5 +52,5 @@ void PLEGMA_U1Gauge<Float>::modifyBoundaries(int mu, int nu, Float exparg){
   this->load();
 }
 
-template class PLEGMA_U1Gauge<float>;
-template class PLEGMA_U1Gauge<double>;
+template class plegma::PLEGMA_U1Gauge<float>;
+template class plegma::PLEGMA_U1Gauge<double>;

@@ -3,13 +3,13 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
-#include <PLEGMA_QWF.cuh>
-#include <PLEGMA_mesons.cuh>
-#include <PLEGMA_TMDWF.cuh>
-#include <PLEGMA_mesonsNew.cuh>
-#include <PLEGMA_mesonsAll.cuh>
-#include <PLEGMA_baryons.cuh>
-#include <PLEGMA_threep.cuh>
+#include <kernels/PLEGMA_QWF.cuh>
+#include <kernels/PLEGMA_mesons.cuh>
+#include <kernels/PLEGMA_TMDWF.cuh>
+#include <kernels/PLEGMA_mesonsNew.cuh>
+#include <kernels/PLEGMA_mesonsAll.cuh>
+#include <kernels/PLEGMA_baryons.cuh>
+#include <kernels/PLEGMA_threep.cuh>
 #include <functional>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
@@ -1085,8 +1085,8 @@ writeHDF5(std::string filename) const {
 }
 
 
-template class PLEGMA_Correlator<float>;
-template class PLEGMA_Correlator<double>;
+template class plegma::PLEGMA_Correlator<float>;
+template class plegma::PLEGMA_Correlator<double>;
 
 
 

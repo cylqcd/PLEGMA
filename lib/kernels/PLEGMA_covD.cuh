@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
 using namespace plegma;
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
 __global__ void covD_kernel(vector2<FloatOut> out,
@@ -16,13 +16,13 @@ __global__ void covD_kernel(vector2<FloatOut> out,
   
   if(dirOr < 4){
     gTex.get(G,dir,sid);
-    vTex.get<Plus>(Sin,sid,dir);
+    vTex.template get<Plus>(Sin,sid,dir);
     mul_G_V(Sout,G,Sin);
     out.set(Sout,sid);
   }
   else{
-    gTex.get<Minus>(G,dir,sid,dir);
-    vTex.get<Minus>(Sin,sid,dir);
+    gTex.template get<Minus>(G,dir,sid,dir);
+    vTex.template get<Minus>(Sin,sid,dir);
     mul_Gdag_V(Sout,G,Sin);
     out.set(Sout,sid);
   }

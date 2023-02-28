@@ -1,4 +1,4 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <malloc_quda.h>
 #pragma once
 using namespace plegma;
@@ -23,7 +23,7 @@ __global__ void contract_mesons_device( propTex<FloatA> texProp1,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   
-  register Float2<FloatC> accum[2*N_MESONS];
+  Float2<FloatC> accum[2*N_MESONS];
   for(int i = 0 ; i < 2*N_MESONS ; i++){
     accum[i] = 0.;
   }
@@ -81,7 +81,7 @@ __global__ void contract_mesons_fourp_ultralocal_device( propTex<FloatA> texProp
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
 
-  register Float2<FloatE> accum[16];
+  Float2<FloatE> accum[16];
   for(int i = 0 ; i < 16 ; i++){
     accum[i] = 0.;
   }
@@ -160,7 +160,7 @@ __global__ void contract_mesons_fourp_ultralocal_oneendtrick_device( propTex<Flo
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
 
-  register Float2<FloatE> accum[16];
+  Float2<FloatE> accum[16];
   for(int i = 0 ; i < 16 ; i++){
     accum[i] = 0.;
   }
@@ -237,13 +237,13 @@ void contract_mesons_host( ProfileStruct &ps,
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size*sizeof(Float2<FloatC>));
   // Checking for allocation error. In case we return and let the tuner handle the error.
-  cudaError_t error=cudaPeekAtLastError();
+  /*cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
     cudaFree(d_partial_block);
     return;
-  }
+  }*/
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<propTex>(prop1);
@@ -254,10 +254,10 @@ void contract_mesons_host( ProfileStruct &ps,
     contract_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
       
     if(runFT==true) {
       int accumX = ps.tp.grid.x/time_step;
@@ -275,9 +275,9 @@ void contract_mesons_host( ProfileStruct &ps,
     }
   }
 
-  printf("PLEGMA_mesons res %e %e %e t_size = %d, maxT = %d, source.w = %d, HGC_localVolume3D %d time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", result[0].norm2(),result[1].norm2(),result[2].norm(),t_size, maxT, source.w, HGC_localVolume3D, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+  //printf("PLEGMA_mesons res %e %e %e t_size = %d, maxT = %d, source.w = %d, HGC_localVolume3D %d time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", result[0].norm2(),result[1].norm2(),result[2].norm(),t_size, maxT, source.w, HGC_localVolume3D, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
+  device_free(d_partial_block);
 }
 
 template<typename FloatA, typename FloatB, typename FloatC, typename FloatD, typename FloatE>
@@ -303,13 +303,13 @@ void contract_mesons_fourp_ultralocal_host( ProfileStruct &ps,
 
   Float2<FloatE> *h_partial_block = NULL;
   Float2<FloatE> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatE>));
+  d_partial_block=(Float2<FloatE>*)device_malloc(alloc_size*sizeof(Float2<FloatE>));
   // Checking for allocation error. In case we return and let the tuner handle the error.
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess) {
-    cudaFree(d_partial_block);
-    return;
-  }
+//  cudaError_t error=cudaPeekAtLastError();
+//  if(error != cudaSuccess) {
+//    cudaFree(d_partial_block);
+//    return;
+//  }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatE>));
 
   auto propTex1 = toTexture<propTex>(prop1);
@@ -323,10 +323,10 @@ void contract_mesons_fourp_ultralocal_host( ProfileStruct &ps,
     contract_mesons_fourp_ultralocal_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (*propTex1, *propTex2, *propTex3, *propTex4, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+  //  error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatE>), cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatE>), qudaMemcpyDeviceToHost);
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     if(runFT==true) {
       int accumX = ps.tp.grid.x/time_step;
@@ -344,7 +344,7 @@ void contract_mesons_fourp_ultralocal_host( ProfileStruct &ps,
     }
   }
   hostFree(h_partial_block, alloc_size*sizeof(FloatE));
-  cudaFree(d_partial_block);
+  device_free(d_partial_block);
 }													      
 
 template<typename FloatA, typename FloatB, typename FloatE>
@@ -370,13 +370,13 @@ void contract_mesons_fourp_ultralocal_oneendtrick_host( ProfileStruct &ps,
 
   Float2<FloatE> *h_partial_block = NULL;
   Float2<FloatE> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatE>));
+  d_partial_block=(Float2<FloatE>*)device_malloc(alloc_size*sizeof(Float2<FloatE>));
   // Checking for allocation error. In case we return and let the tuner handle the error.
-  cudaError_t error=cudaPeekAtLastError();
+  /*cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
     cudaFree(d_partial_block);
     return;
-  }
+  }*/
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatE>));
 
   auto propTex1 = toTexture<propTex>(prop1);
@@ -388,10 +388,10 @@ void contract_mesons_fourp_ultralocal_oneendtrick_host( ProfileStruct &ps,
     contract_mesons_fourp_ultralocal_oneendtrick_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatE>), cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatE>), qudaMemcpyDeviceToHost);
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     if(runFT==true) {
       int accumX = ps.tp.grid.x/time_step;
@@ -410,7 +410,7 @@ void contract_mesons_fourp_ultralocal_oneendtrick_host( ProfileStruct &ps,
     }
     
   hostFree(h_partial_block, alloc_size*sizeof(FloatE));
-  cudaFree(d_partial_block);
+  device_free(d_partial_block);
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>

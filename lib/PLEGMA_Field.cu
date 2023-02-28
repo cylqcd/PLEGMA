@@ -1,19 +1,20 @@
 #include <PLEGMA_Field.h> 
 #include <PLEGMA_Thrust.h>
-#include <PLEGMA_field_utils.cuh>
-#include <PLEGMA_shifts.cuh>
+#include <kernels/PLEGMA_field_utils.cuh>
+#include <kernels/PLEGMA_shifts.cuh>
 #include <PLEGMA_Random.h>
 #include <vector>
 #include <algorithm>
 #include <time.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_utils.h>
-#include <PLEGMA_FT.cuh>
+#include <kernels/PLEGMA_FT.cuh>
 #include <utils/PLEGMA_auxiliary.h>
 #include <io/PLEGMA_lime.h>
 #include <comm_quda.h>
 #include <communicator_quda.h>
 #include <malloc_quda.h>
+#include <random_quda.h>
 #include <quda_api.h>
 #include <device.h>
 using namespace plegma;
@@ -347,7 +348,7 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
     PLEGMA_error("Not supported %d\n",alloc_flag);
   }
 }
-
+#ifdef __NVCC__
 template<typename Float>
 cudaTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
 #ifdef PLEGMA_TEXTURE
@@ -395,6 +396,57 @@ void PLEGMA_Field<Float>::destroyTexObject(cudaTextureObject_t tex) const{
   cudaDestroyTextureObject(tex);
 #endif
 }
+#endif
+
+#ifdef __HIP__
+template<typename Float>
+hipTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
+#ifdef PLEGMA_TEXTURE
+  hipTextureObject_t tex;
+  hipChannelFormatDesc desc;
+  memset(&desc, 0, sizeof(hipChannelFormatDesc));
+  int precision = PLEGMA_Field<Float>::Precision();
+  if(precision == 4) desc.f = hipChannelFormatKindFloat;
+  else desc.f = hipChannelFormatKindSigned;
+
+  if(precision == 4){
+    desc.x = 8*precision;
+    desc.y = 8*precision;
+    desc.z = 0;
+    desc.w = 0;
+  }
+  else if(precision == 8){
+    desc.x = 8*precision/2;
+    desc.y = 8*precision/2;
+    desc.z = 8*precision/2;
+    desc.w = 8*precision/2;
+  }
+
+  hipResourceDesc resDesc;
+  memset(&resDesc, 0, sizeof(resDesc));
+  resDesc.resType = hipResourceTypeLinear;
+  resDesc.res.linear.devPtr = d_elem;
+  resDesc.res.linear.desc = desc;
+  resDesc.res.linear.sizeInBytes = Bytes_total_plus_ghost();
+
+  hipTextureDesc texDesc;
+  memset(&texDesc, 0, sizeof(texDesc));
+  texDesc.readMode = hipReadModeElementType;
+
+  hipCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+  return tex;
+#else
+  return 0;
+#endif
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::destroyTexObject(hipTextureObject_t tex) const{
+#ifdef PLEGMA_TEXTURE
+  hipDestroyTextureObject(tex);
+#endif
+}
+#endif
 
 template<typename Float>
 void PLEGMA_Field<Float>::printInfo(){
@@ -1066,8 +1118,8 @@ template<typename Float>
 void PLEGMA_Field<Float>::SU3Trace(PLEGMA_Su3field<Float> &su3field){
   SU3Trace_k(*this,su3field);
 }
-template class PLEGMA_Field<float>;
-template class PLEGMA_Field<double>;
+template class plegma::PLEGMA_Field<float>;
+template class plegma::PLEGMA_Field<double>;
 // Forcing initialization of the following cases
 template void PLEGMA_Field<float>::copy<float>(PLEGMA_Field<float> &f, ALLOCATION_FLAG where);
 template void PLEGMA_Field<float>::copy<double>(PLEGMA_Field<double> &f, ALLOCATION_FLAG where);
@@ -1140,5 +1192,5 @@ std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
   return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
 }
 
-	template class PLEGMA_Field3D<float>;
-template class PLEGMA_Field3D<double>;
+template class plegma::PLEGMA_Field3D<float>;
+template class plegma::PLEGMA_Field3D<double>;

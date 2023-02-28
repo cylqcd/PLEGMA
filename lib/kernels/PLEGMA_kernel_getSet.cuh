@@ -83,7 +83,7 @@ namespace plegma {
     size_t stride;
     
     inline __host__ __device__ size_t volume() const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__ ) || ( __HIP__ )
       return is4D ? DGC_localVolume : DGC_localVolume3D;
       #else
       return is4D ? HGC_localVolume : HGC_localVolume3D;
@@ -91,7 +91,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t sideGhostVolume() const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_sideGhostVolume : DGC_sideGhostVolume3D;
       #else
       return is4D ? HGC_sideGhostVolume : HGC_sideGhostVolume3D;      
@@ -99,7 +99,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t sideGhostL(const short& dir) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_surface3D[dir] : (DGC_surface3D[dir]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_surface3D[dir] : (HGC_surface3D[dir]/HGC_localL[DIM_T]);
@@ -107,7 +107,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t sideGhostShift(const short& dir, const ORIENTATION& sign) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_sideGhost[dir][sign] : (DGC_sideGhost[dir][sign]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_sideGhost[dir][sign] : (HGC_sideGhost[dir][sign]/HGC_localL[DIM_T]);
@@ -115,7 +115,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t cornerGhostVolume() const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_cornerGhostVolume : DGC_cornerGhostVolume3D;
       #else
       return is4D ? HGC_cornerGhostVolume : HGC_cornerGhostVolume3D;      
@@ -123,7 +123,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t cornerGhostL(const short& dir1, const short& dir2) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_surface2D[OFF2(dir1,dir2)] : (DGC_surface2D[OFF2(dir1,dir2)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_surface2D[OFF2(dir1,dir2)] : (HGC_surface2D[OFF2(dir1,dir2)]/HGC_localL[DIM_T]);
@@ -131,7 +131,7 @@ namespace plegma {
     }
 
     inline __host__ __device__ size_t vertexGhostL(const short& dir1, const short& dir2, const short& dir3) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_surface1D[OFF3(dir1,dir2,dir3)] : (DGC_surface1D[OFF3(dir1,dir2,dir3)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_surface1D[OFF3(dir1,dir2,dir3)] : (HGC_surface1D[OFF3(dir1,dir2,dir3)]/HGC_localL[DIM_T]);
@@ -140,7 +140,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t cornerGhostShift(const short& dir1, const short& dir2,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/HGC_localL[DIM_T]);
@@ -149,7 +149,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t vertexGhostShift(const short& dir1, const short& dir2, const short& dir3,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) const {
-      #ifdef __CUDA_ARCH__
+      #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/DGC_localL[DIM_T]);
       #else
       return is4D ? HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/HGC_localL[DIM_T]);
@@ -487,11 +487,12 @@ namespace plegma {
   
   template<typename Float>
   struct texture : pFloat2<Float> {
-    cudaTextureObject_t tex;
+//    cudaTextureObject_t tex;
 
-    __host__ __device__ texture(cudaTextureObject_t tex, Float2<Float>* p, int site_size, bool is4D, bool changeValue) :
-      pFloat2<Float>(p, site_size, is4D, changeValue), tex(tex) { }
-
+    __host__ __device__ texture(//cudaTextureObject_t tex, 
+		                 Float2<Float>* p, int site_size, bool is4D, bool changeValue) :
+      pFloat2<Float>(p, site_size, is4D, changeValue) { }
+/*
     #ifdef PLEGMA_TEXTURE
     // Fetch is going to be specialized after
     inline __device__ Float2<Float> fetch(const size_t& i) const;
@@ -499,8 +500,9 @@ namespace plegma {
       return this->returnZero ? Float2<Float>(0) : texture<Float>::fetch(i*this->stride + this->sid);
     }
     #endif
+    */
   };
-
+/*
   #ifdef PLEGMA_TEXTURE
   // Here we specialize fetch
   template<> inline __device__ Float2<float> texture<float>::fetch(const size_t& i) const {
@@ -511,6 +513,7 @@ namespace plegma {
     return (Float2<double>) make_double2(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
   #endif
+*/
 
   template<typename T, typename Float>
   struct generic : T {
@@ -860,12 +863,12 @@ namespace plegma {
 
   template<template<typename> class T, template<typename> class Tfield, typename Float>
   static inline std::shared_ptr<T<Float>> toTexture(const Tfield<Float>& field) {
-    return std::shared_ptr<T<Float>>(new T<Float>(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T<Float>* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
+    return std::shared_ptr<T<Float>>(new T<Float>((Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T<Float>* ptr){delete ptr;});
   }
 
   template<class T, template<typename> class Tfield, typename Float>
   static inline std::shared_ptr<T> toTexture(const Tfield<Float>& field) {
-    return std::shared_ptr<T>(new T(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
+    return std::shared_ptr<T>(new T( (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T* ptr){delete ptr;});
   }
 
     

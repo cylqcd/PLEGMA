@@ -1,0 +1,14 @@
+@PACKAGE_INIT@
+  
+include(CMakeFindDependencyMacro)
+
+set(PLEGMA_TARGET_CUDA @PLEGMA_TARGET_CUDA@)
+set(PLEGMA_TARGET_HIP  @PLEGMA_TARGET_HIP@)
+
+if( PLEGMA_TARGET_CUDA )
+  include(${CMAKE_CURRENT_LIST_DIR}/find_target_cuda_dependencies.cmake)
+elseif(PLEGMA_TARGET_HIP )
+  include(${CMAKE_CURRENT_LIST_DIR}/find_target_hip_dependencies.cmake )
+endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/PLEGMATargets.cmake)
