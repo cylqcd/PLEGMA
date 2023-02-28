@@ -3,8 +3,16 @@
 #include <numeric>
 #include <iostream>
 #include <string>
+#if defined (__NVCC__)
 #include <cuda_profiler_api.h>
+#else
+//#include <hip_profiler_api.h>
+#endif
+#ifdef __NVCC__
 #include "nvToolsExt.h"
+#else
+#include "roctx.h"
+#endif
 
 using namespace plegma;
 using namespace quda;
@@ -12,7 +20,7 @@ using namespace quda;
 int n_benchmark = 100;
 double t_max = 10;
 template<typename out,class T,class T1,class ...types1, class ...types>
-void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, types&&... kArgs){
+void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, types... kArgs){
 
   std::vector<double> timing;
 
@@ -22,11 +30,27 @@ void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, t
   double t0 = MPI_Wtime();
   for(int i=0; i<n_benchmark; i++) {
     double t1 = MPI_Wtime();
+#ifdef __NVCC__
     cudaProfilerStart();
+#else
+    hipProfilerStart();
+#endif
+#ifdef __NVCC__
     nvtxRangePushA((name+" - call "+std::to_string(i)).c_str());
+#else
+    roctxRangePushA((name+" - call "+std::to_string(i)).c_str());
+#endif
     (obj->*function)(kArgs...);
+#ifdef __NVCC__
     nvtxRangePop();
+#else
+    roctxRangePop();
+#endif
+#ifdef __NVCC__
     cudaProfilerStop();
+#else
+    hipProfilerStop();
+#endif
     timing.push_back(MPI_Wtime()-t1);
     // Setting an hard break after t_max sec
     if(i > 1 && MPI_Wtime()-t0 > t_max) break;
@@ -82,15 +106,19 @@ int main(int argc, char **argv) {
     PLEGMA_Vector<double> vector_a, vector_b;
     PLEGMA_Gauge3D<double> gauge3D;
     PLEGMA_Vector3D<double> vector3D_a, vector3D_b;
-
-    // Benchmark of the APEsmearing function 
-    PLEGMA_benchmark(&gauge_b,&PLEGMA_Gauge<double>::APEsmearing, "APEsmearing (1 iter)", gauge_a, 1, 0.5, 3);
+//<typename out,class T,class T1,class ...types1, class ...types>
+//void PLEGMA_benchmark(T *obj, out (T1::*function)(types1...),std::string name, types&&... kArgs){
+    // Benchmark of the APEsmearing function
+    //     void APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4);
+ 
+    PLEGMA_benchmark(&gauge_b,static_cast<void (PLEGMA_Gauge<double>::*)(PLEGMA_Gauge<double> &, int, double , int  )>
+		    (&PLEGMA_Gauge<double>::APEsmearing), "APEsmearing (1 iter)", &gauge_a, 1, 0.5, 3);
 
     // Benchmark gaussian smearing 
-    PLEGMA_benchmark(&vector3D_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing 3D on one timeslice (1 iter)",vector3D_b, gauge3D, 1, 0.2);
+    //PLEGMA_benchmark(&vector3D_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing 3D on one timeslice (1 iter)",vector3D_b, gauge3D, 1, 0.2);
 
     // Benchmark gaussian smearing 
-    PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing on all timeslice (1 iter)",vector_b, gauge_a, 1, 0.2);
+    //PLEGMA_benchmark(&vector_a,&PLEGMA_Vector<double>::gaussianSmearing,"Gaussian Smearing on all timeslice (1 iter)",vector_b, gauge_a, 1, 0.2);
   }
 
   if(run({"twop"})) {
@@ -100,14 +128,14 @@ int main(int argc, char **argv) {
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
     
     // Benchmark Meson contration 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_a, prop_b);
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractMesons,"Contraction mesons",prop_a, prop_b);
 
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b);
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b);
 
     PLEGMA_Propagator<float> prop_c, prop_d;
     // Benchmark Baryons contractions 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsUDSC,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, false, false);
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryonsUDSC,"Contraction Baryons Proj",prop_a, prop_b, prop_c, prop_d, false, false);
   }
 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
@@ -119,8 +147,8 @@ int main(int argc, char **argv) {
     void (PLEGMA_Vector3D<float>::*seqSourceNucleon)(PLEGMA_Propagator3D<float> &, PLEGMA_Propagator3D<float> &, WHICHPROJECTOR, WHICHPARTICLE, int, int) = &PLEGMA_Vector3D<float>::seqSourceNucleon;
     // Benchmark Sequential source 
     for(int i=0; i<(int) N_PROJS; i++) {
-      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source proton P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, PROTON, 0, 0);
-      PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source neutron P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, NEUTRON, 0, 0);
+      //PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source proton P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, PROTON, 0, 0);
+      //PLEGMA_benchmark(&vector, seqSourceNucleon, "Sequential source neutron P=" + std::to_string(i), prop_a, prop_b, (WHICHPROJECTOR) i, NEUTRON, 0, 0);
     }
   }
 
@@ -134,10 +162,10 @@ int main(int argc, char **argv) {
     
     // Benchmark three point functions 
 
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas,false);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, false);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_twoD,"Contraction third derivative",prop_a, prop_b, gauge, +1, gammas, false);
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1);
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_local,"Contraction local",prop_a, prop_b, +1, gammas,false);
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_oneD,"Contraction one derivative",prop_a, prop_b, gauge, +1, gammas, false);
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_twoD,"Contraction third derivative",prop_a, prop_b, gauge, +1, gammas, false);
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_noe,"Contraction Noether",prop_a, prop_b, gauge, +1);
   }
   
   if(run({"PDFs"})) {
@@ -151,19 +179,19 @@ int main(int argc, char **argv) {
     momSmScale[0] = {0.7071, 0.7071};
     
     // Benchmark of the momentum smearing 
-    PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing (scale 1 dir)",momSmScale);
+    //PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::scaleDirWise,"Momentum smearing (scale 1 dir)",momSmScale);
 
     // Benchmark contraction  3pt
-    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, 0, (std::string)"");
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractNucleonThrp_wilsonLine,"Contraction 3pt",prop_a, prop_b, su3, +1, gammas, 0, (std::string)"");
 
     // Benchmark Wilson line update 
-    PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2, false);
+    //PLEGMA_benchmark(&su3,&PLEGMA_Su3field<float>::wilsonLineUpdate,"Update of the Wilson line",su3_a, su3_b,4+2, false);
 
     // Benchmark shift routine 
-    PLEGMA_benchmark(&prop_b,static_cast<void (PLEGMA_Field<float>::*)(PLEGMA_Field<float> &, short  )>(&PLEGMA_Field<float>::shift),"Shift routine", prop_a, 2);
+    //PLEGMA_benchmark(&prop_b,static_cast<void (PLEGMA_Field<float>::*)(PLEGMA_Field<float> &, short  )>(&PLEGMA_Field<float>::shift),"Shift routine", prop_a, 2);
 
     // Benchmark stout smearing
-    PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::stoutSmearing,"Stout smearing (1 step)",gauge, 1,0.4,3);
+   // PLEGMA_benchmark(&gauge,&PLEGMA_Gauge<double>::stoutSmearing,"Stout smearing (1 step)",gauge, 1,0.4,3);
   }
 #endif
 
@@ -174,12 +202,12 @@ int main(int argc, char **argv) {
 
     // Benchmark standard one-end trick
     // Since the function is overloaded we need to select one version of it
-    PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, double , bool  )>
-    		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
+//    PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, double , bool  )>
+  //  		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
 
     
     // Benchmark standard one-end trick
-    PLEGMA_benchmark(&ft,&PLEGMA_FT<double>::apply,"Loops FT",loops,FT_GEMV,-1);
+//  PLEGMA_benchmark(&ft,&PLEGMA_FT<double>::apply,"Loops FT",loops,FT_GEMV,-1);
   }
   
   finalize();
