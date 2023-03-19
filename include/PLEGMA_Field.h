@@ -90,7 +90,7 @@ namespace plegma {
        @param isPinnedHost: see "isPinnedHost"
        @param checkErr: see "checkErr"
      */
-    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localV = HGC_localVolume, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
+    PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localV = HGC.localVolume, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true);
     /**
        @brief virtual destructor responsible for freeing memory. Virtual because it could be called from an instance of a derived class through a pointer to base class
      */
@@ -393,7 +393,7 @@ namespace plegma {
     }
 
     virtual bool includesActiveTimeSlice() const{return true;}
-    virtual bool is4D() const{assert(Total_length()==HGC_localVolume); return true;}
+    virtual bool is4D() const{assert(Total_length()==HGC.localVolume); return true;}
   };
 
 
@@ -409,11 +409,11 @@ namespace plegma {
     PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true) :
       PLEGMA_Field<Float>(alloc_flag, classT, ghost_flag, isPinnedHost, checkErr), activeTimeSlice(false) { }
     PLEGMA_Field3D(ALLOCATION_FLAG alloc_flag, int site_size, GHOST_FLAG ghost_flag=NO_GHOSTS, bool isPinnedHost = false, bool checkErr = true) :
-      PLEGMA_Field<Float>(alloc_flag, site_size, HGC_localVolume3D, ghost_flag, isPinnedHost, checkErr), activeTimeSlice(false) { }
-    PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC_localVolume3D), activeTimeSlice(false) { }
+      PLEGMA_Field<Float>(alloc_flag, site_size, HGC.localVolume3D, ghost_flag, isPinnedHost, checkErr), activeTimeSlice(false) { }
+    PLEGMA_Field3D() : PLEGMA_Field<Float>(NONE, 0, HGC.localVolume3D), activeTimeSlice(false) { }
 
     virtual bool includesActiveTimeSlice() const{return activeTimeSlice;}
-    virtual bool is4D() const{assert(this->Total_length()==HGC_localVolume3D); return false;}
+    virtual bool is4D() const{assert(this->Total_length()==HGC.localVolume3D); return false;}
 
     template<typename FloatIn>
     void copy(PLEGMA_Field3D<FloatIn> &f, ALLOCATION_FLAG where=DEVICE) {

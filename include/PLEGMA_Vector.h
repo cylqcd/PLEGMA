@@ -155,8 +155,8 @@ namespace plegma {
     }
 
     void pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG alloc_flag=EVERY){
-      int my_it = sourceposition[DIM_T] - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
-      this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
+      int my_it = sourceposition[DIM_T] - HGC.procPosition[DIM_T] * HGC.localL[DIM_T];
+      this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC.localL[DIM_T] );
       return ((PLEGMA_Vector<Float>*) this)->pointSource(sourceposition,spin,color,alloc_flag);
     }
     

@@ -35,13 +35,13 @@ namespace plegma {
   public:
     // these constructors does NOT ALLOCATE the memory PLEGMA_ScattCorrelator here, because
     // the dimension is not provided. It will be allocated when used.
-    PLEGMA_ScattCorrelator(site source, int Q2_max, int totalT=HGC_totalL[DIM_T]);
+    PLEGMA_ScattCorrelator(site source, int Q2_max, int totalT=HGC.totalL[DIM_T]);
 
-    PLEGMA_ScattCorrelator(site source, std::vector<int> fixMomVec, int totalT=HGC_totalL[DIM_T]);
+    PLEGMA_ScattCorrelator(site source, std::vector<int> fixMomVec, int totalT=HGC.totalL[DIM_T]);
 
-    PLEGMA_ScattCorrelator(site source, std::vector<std::vector<int>> fixMomsVec, int totalT=HGC_totalL[DIM_T]);
+    PLEGMA_ScattCorrelator(site source, std::vector<std::vector<int>> fixMomsVec, int totalT=HGC.totalL[DIM_T]);
 
-    PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT=HGC_totalL[DIM_T]);
+    PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT=HGC.totalL[DIM_T]);
 
     ~PLEGMA_ScattCorrelator(){;}
 

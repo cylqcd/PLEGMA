@@ -1,34 +1,34 @@
 #ifndef PLEGMA_KERNEL_TEXTURE_CUH
 #define PLEGMA_KERNEL_TEXTURE_CUH
 
-#define GET_ID(sid) {(sid) % DGC_localL[0],				\
-		     ((sid)/DGC_localL[0]) % DGC_localL[1],			\
-		     ((sid)/DGC_localL[0]/DGC_localL[1]) % DGC_localL[2],	\
-		     ((sid)/DGC_localL[0]/DGC_localL[1]/DGC_localL[2]) % DGC_localL[3] }
+#define GET_ID(sid) {(sid) % DGC->localL[0],				\
+			     ((sid)/DGC->localL[0]) % DGC->localL[1],			\
+		     ((sid)/DGC->localL[0]/DGC->localL[1]) % DGC->localL[2],	\
+		     ((sid)/DGC->localL[0]/DGC->localL[1]/DGC->localL[2]) % DGC->localL[3] }
 
-#define GET_ID_ZYX(sid) {(sid) % DGC_localL[0],				\
-			 ((sid)/DGC_localL[0]) % DGC_localL[1],		\
-			 ((sid)/DGC_localL[0]/DGC_localL[1]) % DGC_localL[2] }
+#define GET_ID_ZYX(sid) {(sid) % DGC->localL[0],				\
+			 ((sid)/DGC->localL[0]) % DGC->localL[1],		\
+			 ((sid)/DGC->localL[0]/DGC->localL[1]) % DGC->localL[2] }
 
-#define LEXIC_ID(id) LEXIC(id[3],id[2],id[1],id[0],DGC_localL)
-#define LEXIC_3D(i,id)(i==0 ? LEXIC_TZY(id[3],id[2],id[1],DGC_localL) : \
-                      (i==1 ? LEXIC_TZX(id[3],id[2],id[0],DGC_localL) : \
-		      (i==2 ? LEXIC_TYX(id[3],id[1],id[0],DGC_localL) : \
-		              LEXIC_ZYX(id[2],id[1],id[0],DGC_localL))))
-#define LEXIC_NOX(j,id)( j==1 ? LEXIC_TZ(id[3],id[2],DGC_localL) :	\
-		       ( j==2 ? LEXIC_TY(id[3],id[1],DGC_localL) :	\
-			   LEXIC_ZY(id[2],id[1],DGC_localL) ) )
-#define	LEXIC_NOY(j,id)( j==0 ? LEXIC_TZ(id[3],id[2],DGC_localL) :	\
-		       ( j==2 ? LEXIC_TX(id[3],id[0],DGC_localL) :	\
-			   LEXIC_ZX(id[2],id[0],DGC_localL) ) )
-#define LEXIC_NOZ(j,id)( j==0 ? LEXIC_TY(id[3],id[1],DGC_localL) :	\
-		       ( j==1 ? LEXIC_TX(id[3],id[0],DGC_localL) :	\
-			   LEXIC_YX(id[1],id[0],DGC_localL) ) )
-#define LEXIC_NOT(j,id)( j==0 ? LEXIC_ZY(id[2],id[1],DGC_localL) :      \
-		       ( j==1 ? LEXIC_ZX(id[2],id[0],DGC_localL) : 	\
-			   LEXIC_YX(id[1],id[0],DGC_localL)  ) )
+#define LEXIC_ID(id) LEXIC(id[3],id[2],id[1],id[0],DGC->localL)
+#define LEXIC_3D(i,id)(i==0 ? LEXIC_TZY(id[3],id[2],id[1],DGC->localL) : \
+                      (i==1 ? LEXIC_TZX(id[3],id[2],id[0],DGC->localL) : \
+		      (i==2 ? LEXIC_TYX(id[3],id[1],id[0],DGC->localL) : \
+		              LEXIC_ZYX(id[2],id[1],id[0],DGC->localL))))
+#define LEXIC_NOX(j,id)( j==1 ? LEXIC_TZ(id[3],id[2],DGC->localL) :	\
+		       ( j==2 ? LEXIC_TY(id[3],id[1],DGC->localL) :	\
+			   LEXIC_ZY(id[2],id[1],DGC->localL) ) )
+#define	LEXIC_NOY(j,id)( j==0 ? LEXIC_TZ(id[3],id[2],DGC->localL) :	\
+		       ( j==2 ? LEXIC_TX(id[3],id[0],DGC->localL) :	\
+			   LEXIC_ZX(id[2],id[0],DGC->localL) ) )
+#define LEXIC_NOZ(j,id)( j==0 ? LEXIC_TY(id[3],id[1],DGC->localL) :	\
+		       ( j==1 ? LEXIC_TX(id[3],id[0],DGC->localL) :	\
+			   LEXIC_YX(id[1],id[0],DGC->localL) ) )
+#define LEXIC_NOT(j,id)( j==0 ? LEXIC_ZY(id[2],id[1],DGC->localL) :      \
+		       ( j==1 ? LEXIC_ZX(id[2],id[0],DGC->localL) : 	\
+			   LEXIC_YX(id[1],id[0],DGC->localL)  ) )
 
-#define LEXIC_ID_3D4D(id,is4D) (is4D ? LEXIC_ID(id) : LEXIC_ZYX(id[2],id[1],id[0],DGC_localL))
+#define LEXIC_ID_3D4D(id,is4D) (is4D ? LEXIC_ID(id) : LEXIC_ZYX(id[2],id[1],id[0],DGC->localL))
 
 // assuming i!=j
 #define LEXIC_2D(i,j,id)( i==0 ? LEXIC_NOX(j,id) :			\
@@ -39,30 +39,30 @@
 			  ( i!=1 && j!=1 && k!=1 ? id[1] :		\
 			  ( i!=2 && j!=2 && k!=2 ? id[2] : id[3] )))
 
-#define ID_PLUS(i,id) ((id[i]+1)%DGC_localL[i])
-#define ID_MINUS(i,id) ((id[i]+DGC_localL[i]-1)%DGC_localL[i])
+#define ID_PLUS(i,id) ((id[i]+1)%DGC->localL[i])
+#define ID_MINUS(i,id) ((id[i]+DGC->localL[i]-1)%DGC->localL[i])
 
-#define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],ID_PLUS(i,id),DGC_localL) : \
-                        (i==1 ? LEXIC(id[3],id[2],ID_PLUS(i,id),id[0],DGC_localL) : \
-                        (i==2 ? LEXIC(id[3],ID_PLUS(i,id),id[1],id[0],DGC_localL) : \
-			        LEXIC(ID_PLUS(i,id),id[2],id[1],id[0],DGC_localL))))
-#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],ID_MINUS(i,id),DGC_localL) : \
-                         (i==1 ? LEXIC(id[3],id[2],ID_MINUS(i,id),id[0],DGC_localL) : \
-                         (i==2 ? LEXIC(id[3],ID_MINUS(i,id),id[1],id[0],DGC_localL) : \
-			         LEXIC(ID_MINUS(i,id),id[2],id[1],id[0],DGC_localL))))
+#define LEXIC_PLUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],ID_PLUS(i,id),DGC->localL) : \
+                        (i==1 ? LEXIC(id[3],id[2],ID_PLUS(i,id),id[0],DGC->localL) : \
+                        (i==2 ? LEXIC(id[3],ID_PLUS(i,id),id[1],id[0],DGC->localL) : \
+			        LEXIC(ID_PLUS(i,id),id[2],id[1],id[0],DGC->localL))))
+#define LEXIC_MINUS(i,id)(i==0 ? LEXIC(id[3],id[2],id[1],ID_MINUS(i,id),DGC->localL) : \
+                         (i==1 ? LEXIC(id[3],id[2],ID_MINUS(i,id),id[0],DGC->localL) : \
+                         (i==2 ? LEXIC(id[3],ID_MINUS(i,id),id[1],id[0],DGC->localL) : \
+			         LEXIC(ID_MINUS(i,id),id[2],id[1],id[0],DGC->localL))))
 
-#define LEXIC_3D_PLUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],ID_PLUS(i,id),DGC_localL) : \
-			   (i==1 ? LEXIC_ZYX(id[2],ID_PLUS(i,id),id[0],DGC_localL) : \
-			           LEXIC_ZYX(ID_PLUS(i,id),id[1],id[0],DGC_localL)))
-#define LEXIC_3D_MINUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],ID_MINUS(i,id),DGC_localL) : \
-			    (i==1 ? LEXIC_ZYX(id[2],ID_MINUS(i,id),id[0],DGC_localL) : \
-			            LEXIC_ZYX(ID_MINUS(i,id),id[1],id[0],DGC_localL)))
+#define LEXIC_3D_PLUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],ID_PLUS(i,id),DGC->localL) : \
+			   (i==1 ? LEXIC_ZYX(id[2],ID_PLUS(i,id),id[0],DGC->localL) : \
+			           LEXIC_ZYX(ID_PLUS(i,id),id[1],id[0],DGC->localL)))
+#define LEXIC_3D_MINUS(i,id)(i==0 ? LEXIC_ZYX(id[2],id[1],ID_MINUS(i,id),DGC->localL) : \
+			    (i==1 ? LEXIC_ZYX(id[2],ID_MINUS(i,id),id[0],DGC->localL) : \
+			            LEXIC_ZYX(ID_MINUS(i,id),id[1],id[0],DGC->localL)))
 
 #define LEXIC_3D4D_PLUS(i,id,is4D) (is4D ? LEXIC_PLUS(i,id) : LEXIC_3D_PLUS(i,id))
 #define LEXIC_3D4D_MINUS(i,id,is4D) (is4D ? LEXIC_MINUS(i,id) : LEXIC_3D_MINUS(i,id))
 
 #define IS_MINUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == 0)
-#define IS_PLUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == (DGC_localL[i]-1))
+#define IS_PLUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == (DGC->localL[i]-1))
 
 
 namespace plegma {
@@ -92,7 +92,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t sideGhostVolume() const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_sideGhostVolume : DGC_sideGhostVolume3D;
+      return is4D ? DGC->sideGhostVolume : DGC->sideGhostVolume3D;
       #else
       return is4D ? HGC_sideGhostVolume : HGC_sideGhostVolume3D;      
       #endif
@@ -100,7 +100,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t sideGhostL(const short& dir) const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_surface3D[dir] : (DGC_surface3D[dir]/DGC_localL[DIM_T]);
+      return is4D ? DGC_surface3D[dir] : (DGC_surface3D[dir]/DGC->localL[DIM_T]);
       #else
       return is4D ? HGC_surface3D[dir] : (HGC_surface3D[dir]/HGC_localL[DIM_T]);
       #endif
@@ -108,7 +108,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t sideGhostShift(const short& dir, const ORIENTATION& sign) const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_sideGhost[dir][sign] : (DGC_sideGhost[dir][sign]/DGC_localL[DIM_T]);
+      return is4D ? DGC->sideGhost[dir][sign] : (DGC->sideGhost[dir][sign]/DGC->localL[DIM_T]);
       #else
       return is4D ? HGC_sideGhost[dir][sign] : (HGC_sideGhost[dir][sign]/HGC_localL[DIM_T]);
       #endif
@@ -116,7 +116,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t cornerGhostVolume() const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_cornerGhostVolume : DGC_cornerGhostVolume3D;
+      return is4D ? DGC->cornerGhostVolume : DGC->cornerGhostVolume3D;
       #else
       return is4D ? HGC_cornerGhostVolume : HGC_cornerGhostVolume3D;      
       #endif
@@ -124,7 +124,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t cornerGhostL(const short& dir1, const short& dir2) const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_surface2D[OFF2(dir1,dir2)] : (DGC_surface2D[OFF2(dir1,dir2)]/DGC_localL[DIM_T]);
+      return is4D ? DGC->surface2D[OFF2(dir1,dir2)] : (DGC->surface2D[OFF2(dir1,dir2)]/DGC->localL[DIM_T]);
       #else
       return is4D ? HGC_surface2D[OFF2(dir1,dir2)] : (HGC_surface2D[OFF2(dir1,dir2)]/HGC_localL[DIM_T]);
       #endif
@@ -132,7 +132,7 @@ namespace plegma {
 
     inline __host__ __device__ size_t vertexGhostL(const short& dir1, const short& dir2, const short& dir3) const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_surface1D[OFF3(dir1,dir2,dir3)] : (DGC_surface1D[OFF3(dir1,dir2,dir3)]/DGC_localL[DIM_T]);
+      return is4D ? DGC->surface1D[OFF3(dir1,dir2,dir3)] : (DGC->surface1D[OFF3(dir1,dir2,dir3)]/DGC->localL[DIM_T]);
       #else
       return is4D ? HGC_surface1D[OFF3(dir1,dir2,dir3)] : (HGC_surface1D[OFF3(dir1,dir2,dir3)]/HGC_localL[DIM_T]);
       #endif
@@ -141,7 +141,7 @@ namespace plegma {
     inline __host__ __device__ size_t cornerGhostShift(const short& dir1, const short& dir2,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2) const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (DGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/DGC_localL[DIM_T]);
+      return is4D ? DGC->cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (DGC->cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/DGC->localL[DIM_T]);
       #else
       return is4D ? HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/HGC_localL[DIM_T]);
       #endif
@@ -150,7 +150,7 @@ namespace plegma {
     inline __host__ __device__ size_t vertexGhostShift(const short& dir1, const short& dir2, const short& dir3,
 					  const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (DGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/DGC_localL[DIM_T]);
+      return is4D ? DGC->vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (DGC->vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/DGC->localL[DIM_T]);
       #else
       return is4D ? HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/HGC_localL[DIM_T]);
       #endif
@@ -248,7 +248,7 @@ namespace plegma {
   }
   template<>
   inline __device__ void sidStride::shift<PlusPlus>(const short& dirPlus1, const short& dirPlus2) {
-    if(dirPlus1 == dirPlus2 && DGC_dimBreak[dirPlus1]) {
+    if(dirPlus1 == dirPlus2 && DGC->dimBreak[dirPlus1]) {
       printf(" !!! ERROR: in PlusPlus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
@@ -270,7 +270,7 @@ namespace plegma {
   }
   template<>
   inline __device__ void sidStride::shift<MinusMinus>(const short& dirMinus1, const short& dirMinus2) {
-    if(dirMinus1 == dirMinus2 && DGC_dimBreak[dirMinus1]) {
+    if(dirMinus1 == dirMinus2 && DGC->dimBreak[dirMinus1]) {
       printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);

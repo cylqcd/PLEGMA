@@ -70,8 +70,8 @@ void finalizeComms()
 
 void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, int type, double overelaxPar,double tolerance,
 			   int maxiter, int verbosePerSteps, int reunit_interval, int stop_theta){
-  if(type == 3 && HGC_verbosity>1) PLEGMA_printf("Gauge fixing using Coulomb gauge\n");
-  if(type == 4 && HGC_verbosity>1) PLEGMA_printf("Gauge fixing using Landau gauge\n");
+  if(type == 3 && HGC.verbosity>1) PLEGMA_printf("Gauge fixing using Coulomb gauge\n");
+  if(type == 4 && HGC.verbosity>1) PLEGMA_printf("Gauge fixing using Landau gauge\n");
   if(type != 3 && type != 4) PLEGMA_error("Choose type 3 for Coulomb and type 4 for Landau\n");
     
   QudaGaugeParam gauge_param = newQudaGaugeParam();
@@ -145,7 +145,7 @@ QUDA_solver::QUDA_solver(double mu) {
     mg_param.invert_param = &mg_inv_param;
     setMultigridParam(mg_param);
     checkMultigridParam(&mg_param);
-    if(HGC_verbosity > 2) printQudaMultigridParam(&mg_param);
+    if(HGC.verbosity > 2) printQudaMultigridParam(&mg_param);
     mg_param.invert_param->mu = mu;
 
 #ifdef QUDA_INCLUDES_COMMIT_775a033
@@ -162,7 +162,7 @@ QUDA_solver::QUDA_solver(double mu) {
 
   setInvertParam(inv_param);
   checkInvertParam(&inv_param);
-  if(HGC_verbosity > 2) {
+  if(HGC.verbosity > 2) {
     printQudaInvertParam(&inv_param);
   }
   if(inv_param.gamma_basis != QUDA_UKQCD_GAMMA_BASIS) 
@@ -197,7 +197,7 @@ QUDA_solver::QUDA_solver(double mu) {
   solver = Solver::create(*solverParam, *M, *MSloppy, 
 			  *MPre, *MPre, *profiler);
 
-  quda::lat_dim_t X = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
+  quda::lat_dim_t X = {HGC.localL[0], HGC.localL[1], HGC.localL[2], HGC.localL[3]};
 
   ColorSpinorParam cpuParam(NULL, inv_param, X, pc_solution,
 			    inv_param.input_location);
@@ -433,7 +433,7 @@ QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
   if (dParam.gauge == nullptr) PLEGMA_error("Gauge field not allocated");
   if (dParam. clover == nullptr && ((inv_param.dslash_type == QUDA_CLOVER_WILSON_DSLASH) || (inv_param.dslash_type == QUDA_TWISTED_CLOVER_DSLASH))) PLEGMA_error("Clover field not allocated");
   D = Dirac::create(dParam);
-  quda::lat_dim_t X = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
+  quda::lat_dim_t X = {HGC.localL[0], HGC.localL[1], HGC.localL[2], HGC.localL[3]};
 
   ColorSpinorParam cpuParam(nullptr, inv_param, X, false,
 			    inv_param.input_location);
@@ -483,7 +483,7 @@ void QUDA_dirac::apply(Float *dout, Float *din, QudaMassNormalization normType){
   apply<type>();
   plegma::copyFromQUDA(dout,out);
   if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
-    cuBLAS::scal<Float>(N_SPINS*N_COLS*HGC_localVolume, (Float) (1./(2*inv_param.kappa)), dout);
+    cuBLAS::scal<Float>(N_SPINS*N_COLS*HGC.localVolume, (Float) (1./(2*inv_param.kappa)), dout);
 }
 
 template void QUDA_dirac::apply<M>(float *dout, float *din, QudaMassNormalization normType);

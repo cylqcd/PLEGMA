@@ -56,7 +56,6 @@ extern class Options * HGC_options;
       fprintf(getOutputFile(), "%s       last kernel called was (name=%s,volume=%s,aux=%s)\n", \
 	      getOutputPrefix(), getLastTuneKey().name,			\
 	      getLastTuneKey().volume, getLastTuneKey().aux);		\
-      HGC_global_vars.print();						\
       fflush(getOutputFile());						\
       quda::saveTuneCache(true);					\
     } else {								\

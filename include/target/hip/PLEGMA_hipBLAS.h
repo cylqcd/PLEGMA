@@ -8,13 +8,13 @@ namespace cuBLAS{
   template<>
   inline void axpy<float>(int NN, float val[2], float *x, float *y){
     hipblasComplex cu_val(val[0],val[1]);
-    hipblasStatus_t error =  hipblasCaxpy(HGC_hipblas_handle,NN, &cu_val, (hipblasComplex*) x, 1, (hipblasComplex*) y, 1);
+    hipblasStatus_t error =  hipblasCaxpy(HGC.hipblas_handle,NN, &cu_val, (hipblasComplex*) x, 1, (hipblasComplex*) y, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCaxpy failed with error %d", error);
   }
   template<>
   inline void axpy<double>(int NN, double val[2], double *x, double *y){
     hipblasDoubleComplex cu_val(val[0],val[1]);
-    hipblasStatus_t error =  hipblasZaxpy(HGC_hipblas_handle, NN, &cu_val,(hipblasDoubleComplex*) x, 1, (hipblasDoubleComplex*) y, 1);
+    hipblasStatus_t error =  hipblasZaxpy(HGC.hipblas_handle, NN, &cu_val,(hipblasDoubleComplex*) x, 1, (hipblasDoubleComplex*) y, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasZaxpy failed with error %d", error);
   }
   
@@ -23,12 +23,12 @@ namespace cuBLAS{
   inline void scal(int NN, const Float val, Float *x);
   template<>
   inline void scal<float>(int NN, const float val, float *x){
-    hipblasStatus_t error = hipblasCsscal(HGC_hipblas_handle, NN, &val, (hipblasComplex*) x, 1);
+    hipblasStatus_t error = hipblasCsscal(HGC.hipblas_handle, NN, &val, (hipblasComplex*) x, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCsscal failed with error %d", error);
   }
   template<>
   inline void scal<double>(int NN, const double val, double *x){
-    hipblasStatus_t error = hipblasZdscal(HGC_hipblas_handle, NN, &val, (hipblasDoubleComplex*) x, 1);
+    hipblasStatus_t error = hipblasZdscal(HGC.hipblas_handle, NN, &val, (hipblasDoubleComplex*) x, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasZdscal failed with error %d", error);
   }
   //------------------------------------------------------------------
@@ -37,13 +37,13 @@ namespace cuBLAS{
   template<>
   inline void cscal<float>(int NN, const float val[2], float *x){
     hipblasComplex cu_val(val[0],val[1]);
-    hipblasStatus_t error = hipblasCscal(HGC_hipblas_handle, NN, &cu_val, (hipblasComplex*) x, 1);
+    hipblasStatus_t error = hipblasCscal(HGC.hipblas_handle, NN, &cu_val, (hipblasComplex*) x, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCscal failed with error %d", error);
   }
   template<>
   inline void cscal<double>(int NN, const double val[2], double *x){
     hipblasDoubleComplex cu_val(val[0],val[1]);
-    hipblasStatus_t error = hipblasZscal(HGC_hipblas_handle, NN, &cu_val, (hipblasDoubleComplex*) x, 1);
+    hipblasStatus_t error = hipblasZscal(HGC.hipblas_handle, NN, &cu_val, (hipblasDoubleComplex*) x, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasZscal failed with error %d", error);
   }
   //-----------------------------------------------------------------
@@ -52,14 +52,14 @@ namespace cuBLAS{
   template<>
   inline std::complex<float> dot<float>(int NN, const float *x, const float *y){
     hipblasComplex cu_res;
-    hipblasStatus_t error = hipblasCdotc(HGC_hipblas_handle, NN,(hipblasComplex*)x, 1, (hipblasComplex*)y,1,&cu_res);
+    hipblasStatus_t error = hipblasCdotc(HGC.hipblas_handle, NN,(hipblasComplex*)x, 1, (hipblasComplex*)y,1,&cu_res);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCdotc failed with error %d", error);
     return std::complex<float>(cu_res.real(),cu_res.imag());
   }
   template<>
   inline std::complex<double> dot<double>(int NN, const double *x, const double *y){
     hipblasDoubleComplex cu_res;
-    hipblasStatus_t error = hipblasZdotc(HGC_hipblas_handle, NN,(hipblasDoubleComplex*)x, 1, (hipblasDoubleComplex*)y,1,&cu_res);
+    hipblasStatus_t error = hipblasZdotc(HGC.hipblas_handle, NN,(hipblasDoubleComplex*)x, 1, (hipblasDoubleComplex*)y,1,&cu_res);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasZdotc failed with error %d", error);
     return std::complex<double>(cu_res.real(),cu_res.imag());
   }  
@@ -78,14 +78,14 @@ namespace cuBLAS{
   template<>
   inline float norm<float>(int NN, const float *x){
     float res;
-    hipblasStatus_t error = hipblasScnrm2(HGC_hipblas_handle, NN, (hipblasComplex*)x, 1, &res);
+    hipblasStatus_t error = hipblasScnrm2(HGC.hipblas_handle, NN, (hipblasComplex*)x, 1, &res);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCdotc failed with error %d", error);
     return res;
   }
   template<>
   inline double norm<double>(int NN, const double *x){
     double res;
-    hipblasStatus_t error = hipblasDznrm2(HGC_hipblas_handle, NN, (hipblasDoubleComplex*)x, 1, &res);
+    hipblasStatus_t error = hipblasDznrm2(HGC.hipblas_handle, NN, (hipblasDoubleComplex*)x, 1, &res);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCdotc failed with error %d", error);
     return res;
   }
@@ -110,7 +110,7 @@ namespace cuBLAS{
     hipblasComplex cu_alpha(alpha[0],alpha[1]);
     hipblasComplex cu_beta(beta[0],beta[1]);
     switch(trans){case(NOTRANS): Oper=HIPBLAS_OP_N; break; case(TRANS): Oper=HIPBLAS_OP_T; break; case(DAGGER): Oper=HIPBLAS_OP_C; break;}
-    hipblasStatus_t error = hipblasCgemv(HGC_hipblas_handle, Oper, m, n, &cu_alpha, (hipblasComplex*) A, m, (hipblasComplex*) x, 1, &cu_beta, (hipblasComplex*) y, 1);
+    hipblasStatus_t error = hipblasCgemv(HGC.hipblas_handle, Oper, m, n, &cu_alpha, (hipblasComplex*) A, m, (hipblasComplex*) x, 1, &cu_beta, (hipblasComplex*) y, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCgemv failed with error %d", error);
   }
 
@@ -120,7 +120,7 @@ namespace cuBLAS{
     hipblasDoubleComplex cu_alpha(alpha[0],alpha[1]);
     hipblasDoubleComplex cu_beta(beta[0],beta[1]);
     switch(trans){case(NOTRANS): Oper=HIPBLAS_OP_N; break; case(TRANS): Oper=HIPBLAS_OP_T; break; case(DAGGER): Oper=HIPBLAS_OP_C; break;}
-    hipblasStatus_t error = hipblasZgemv(HGC_hipblas_handle, Oper, m, n, &cu_alpha, (hipblasDoubleComplex*) A, m,(hipblasDoubleComplex*) x, 1, &cu_beta,(hipblasDoubleComplex*) y, 1);
+    hipblasStatus_t error = hipblasZgemv(HGC.hipblas_handle, Oper, m, n, &cu_alpha, (hipblasDoubleComplex*) A, m,(hipblasDoubleComplex*) x, 1, &cu_beta,(hipblasDoubleComplex*) y, 1);
     if(error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasZgemv failed with error %d", error);
   }
 

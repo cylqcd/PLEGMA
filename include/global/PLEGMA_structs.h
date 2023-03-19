@@ -1,12 +1,19 @@
 //======== Some custom data struct =========//
+#ifdef __HIP__
+#include<hipblas.h>
+#else
+#include<cublas_v2.h>
+#endif
+
 #define HIP_CHECK(error)                                                                           \
   {                                                                                                \
     hipError_t localError = error;                                                                 \
     if ((localError != hipSuccess) && (localError != hipErrorPeerAccessAlreadyEnabled)) {          \
       PLEGMA_printf("Error: %s, Code %d\n", hipGetErrorString(localError), localError);            \
-      PLEGMA_printf("FILE: %s, LINE %d\n", __FILE__, __LINE__ );			           \
-    }												   \
+      PLEGMA_printf("FILE: %s, LINE %d\n", __FILE__, __LINE__ );                                  \
+    }                                                                                             \
   }
+
 template<typename Float> struct texture;
 
 struct site : std::array<int,N_DIMS> {
@@ -38,7 +45,6 @@ inline std::istream& operator >> (std::istream &i, site &x){
 // Global variable for mom list
 struct tex_mom_list {
   size_t Nmoms;
-
 #if __HIP__
   hipTextureObject_t tex;
 #else
@@ -47,7 +53,6 @@ struct tex_mom_list {
   void* devPtr;
 
   tex_mom_list() : Nmoms(0), tex(), devPtr(nullptr) {}
-
 #ifdef __NVCC__
   tex_mom_list(size_t Nmoms, cudaTextureObject_t tex, void* devPtr) :
     Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
@@ -56,7 +61,6 @@ struct tex_mom_list {
     Nmoms(Nmoms), tex(tex), devPtr(devPtr) {}
 #endif
 
-  
   inline __device__ int4 get(const size_t &i) const {
 #ifdef __NVCC__
     return tex1Dfetch<int4>(tex,i);
@@ -81,8 +85,8 @@ struct pointer_holder {
     var_name(name), type_name(plegma::type_name<hostT>()), type_char(plegma::type_char<hostT>()) { }
 
   void copyToDeviceConstant() {
-    if(devPointer != nullptr) {
-#ifdef __NVCC__ 
+   if(devPointer != nullptr) {
+#ifdef __NVCC__
     cudaError_t err = cudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
     if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
@@ -90,7 +94,7 @@ struct pointer_holder {
 #else
     HIP_CHECK(hipMemcpy(*devPointer, hostPointer, bytes*size, hipMemcpyHostToDevice));
 #endif
-    }
+   }
   }
   void copyFromDeviceConstant() {
     if(false and devPointer != nullptr) {
@@ -100,7 +104,7 @@ struct pointer_holder {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
       }
 #else
-     qudaMemcpy(hostPointer, *devPointer,  bytes*size,qudaMemcpyDeviceToHost);
+      qudaMemcpy(hostPointer, *devPointer,  bytes*size,qudaMemcpyDeviceToHost);
 #endif
     }
   }
@@ -134,8 +138,54 @@ struct pointer_holder {
   
 // here we collect the global variables for then running some default functions on them (print and copy to device)
 struct global_vars {
-  std::vector<pointer_holder> globals;
+  bool init_PLEGMA_flag;
+  float deviceMemory;
+  int verbosity;
+  long int used_memory;
+  Options * options;
+  bool hold_exit;
+  size_t localVolume;
+  size_t localVolume3D;
+  size_t totalVolume;
+  int localL[N_DIMS];
+  int totalL[N_DIMS];
+  int procPosition[N_DIMS];
+  size_t sideGhost[N_DIMS][DIR_BOTH];
+  size_t cornerGhost[(N_DIMS*(N_DIMS-1))/2*DIR_BOTH*DIR_BOTH];
+  size_t vertexGhost[(N_DIMS*(N_DIMS-1)*(N_DIMS-2))/6*DIR_BOTH*DIR_BOTH*DIR_BOTH];
+  size_t sideGhostVolume;
+  size_t cornerGhostVolume;
+  size_t vertexGhostVolume;
+  size_t sideGhostVolume3D;
+  size_t cornerGhostVolume3D;
+  size_t vertexGhostVolume3D;
+  size_t surface3D[N_DIMS];
+  size_t surface2D[(N_DIMS*(N_DIMS-1))/2];
+  size_t surface1D[(N_DIMS*(N_DIMS-1)*(N_DIMS-2))/6];
 
+  bool dimBreak[N_DIMS];
+  Topology *default_topo;
+  int nProc[N_DIMS];
+  MPI_Group fullGroup;
+  MPI_Group spaceGroup;
+  MPI_Group timeGroup;
+  MPI_Comm fullComm;
+  MPI_Comm spaceComm;
+  MPI_Comm timeComm;
+  int fullRank;
+  int fullSize;
+  int spaceRank;
+  int spaceSize;
+  int timeRank;
+  int timeSize;
+
+// for cublas use
+#if defined (__HIP__)
+  hipblasHandle_t hipblas_handle;
+#else
+  cublasHandle_t cublas_handle;
+#endif
+  /*
   template<typename hostT>
   void add(const std::string& name, const size_t& size, hostT *host, void ** device = nullptr) {
     globals.push_back(pointer_holder(name, size, host, device));
@@ -174,5 +224,5 @@ struct global_vars {
       }
     }
     PLEGMA_printf("\n\n");
-  }
+  }*/
 };
