@@ -11,8 +11,8 @@ __global__ void V6_RED_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> v
   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
 
 
   const unsigned short N_S1C=N_SPINS*N_COLS;
@@ -22,7 +22,7 @@ __global__ void V6_RED_kernel( vectorTex<FloatV> vectorPhi1, vectorTex<FloatP> v
     accum[i] = 0.;
   }
   
-  if (sid3D < DGC_localVolume3D){
+  if (sid3D < DGC->localVolume3D){
     Float2<FloatP> s[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatV> phi1[N_SPINS][N_COLS];
     Float2<FloatV> phi2[N_SPINS][N_COLS];

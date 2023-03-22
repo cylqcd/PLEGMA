@@ -40,7 +40,7 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Field<Float>::
 initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
-  if(HGC_init_PLEGMA_flag == false) 
+  if(HGC.init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
 
   field_length = field_l;
@@ -52,34 +52,34 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
   ghost_vertex_length = 0;
   
   if(ghost_flag>NO_GHOSTS) {
-    assert(vol_l==HGC_localVolume || vol_l==HGC_localVolume3D);
+    assert(vol_l==HGC.localVolume || vol_l==HGC.localVolume3D);
 
-    if(vol_l==HGC_localVolume) {
+    if(vol_l==HGC.localVolume) {
       for(int i = 0 ; i < N_DIMS ; i++){
-	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i];
+	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC.surface3D[i];
 	for(int j = i+1; j < N_DIMS; j++){
-	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[OFF2(i,j)];
+	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC.surface2D[OFF2(i,j)];
 	  for(int k = j+1; k < N_DIMS; k++){
-	    if(ghost_flag >= FIRST_VERTEX) ghost_vertex_length += 8*HGC_surface1D[OFF3(i,j,k)];
+	    if(ghost_flag >= FIRST_VERTEX) ghost_vertex_length += 8*HGC.surface1D[OFF3(i,j,k)];
 	  }	
 	}
       }
-      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == HGC_sideGhostVolume);
-      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == HGC_cornerGhostVolume);
-      if(ghost_flag >= FIRST_VERTEX) assert(ghost_vertex_length == HGC_vertexGhostVolume);
-    } else if(vol_l==HGC_localVolume3D) {
+      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == HGC.sideGhostVolume);
+      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == HGC.cornerGhostVolume);
+      if(ghost_flag >= FIRST_VERTEX) assert(ghost_vertex_length == HGC.vertexGhostVolume);
+    } else if(vol_l==HGC.localVolume3D) {
       for(int i = 0 ; i < N_DIMS-1 ; i++){
-	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i]/HGC_localL[DIM_T];
+	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC.surface3D[i]/HGC.localL[DIM_T];
 	for(int j = i+1; j < N_DIMS-1; j++){
-	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[OFF2(i,j)]/HGC_localL[DIM_T];
+	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC.surface2D[OFF2(i,j)]/HGC.localL[DIM_T];
 	  for(int k = j+1; k < N_DIMS-1; k++){
-	    if(ghost_flag >= FIRST_VERTEX) ghost_vertex_length += 8*HGC_surface1D[OFF3(i,j,k)]/HGC_localL[DIM_T];
+	    if(ghost_flag >= FIRST_VERTEX) ghost_vertex_length += 8*HGC.surface1D[OFF3(i,j,k)]/HGC.localL[DIM_T];
 	  }	
 	}
       }
-      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == HGC_sideGhostVolume3D);
-      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == HGC_cornerGhostVolume3D);
-      if(ghost_flag >= FIRST_VERTEX) assert(ghost_vertex_length == HGC_vertexGhostVolume3D);
+      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == HGC.sideGhostVolume3D);
+      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == HGC.cornerGhostVolume3D);
+      if(ghost_flag >= FIRST_VERTEX) assert(ghost_vertex_length == HGC.vertexGhostVolume3D);
     }
   }
   
@@ -114,62 +114,62 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
   h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), h_ext_ghost_vertex_r(NULL), h_ext_ghost_vertex_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(classT)
 {
-  if(HGC_init_PLEGMA_flag == false) 
+  if(HGC.init_PLEGMA_flag == false) 
     PLEGMA_error("You must initialize init_PLEGMA first");
   
   switch(classT){
   case SCALAR:
-    initialize(alloc_flag, 1, HGC_localVolume);
+    initialize(alloc_flag, 1, HGC.localVolume);
     field_name = "PLEGMA_SCALAR";
     setSiteShape({});
     break;
   case SU3FIELD:
-    initialize(alloc_flag, N_COLS * N_COLS, HGC_localVolume);
+    initialize(alloc_flag, N_COLS * N_COLS, HGC.localVolume);
     field_name = "PLEGMA_SU3FIELD";
     setSiteShape({N_COLS, N_COLS});
     break;
   case GAUGE:
-    initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume);
+    initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC.localVolume);
     field_name = "PLEGMA_GAUGE";
     setSiteShape({N_DIMS, N_COLS, N_COLS});
     break;    
   case U1GAUGE:
-    initialize(alloc_flag, N_DIMS, HGC_localVolume);
+    initialize(alloc_flag, N_DIMS, HGC.localVolume);
     field_name = "PLEGMA_U1GAUGE";
     setSiteShape({N_DIMS});
     break;    
   case GAUGE3D:
-    initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume3D);
+    initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC.localVolume3D);
     field_name = "PLEGMA_GAUGE3D";
     setSiteShape({N_DIMS, N_COLS, N_COLS});
     break;
   case VECTOR:
-    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC.localVolume);
     field_name = "PLEGMA_VECTOR";
     setSiteShape({N_SPINS, N_COLS});
     break;
   case VECTOR3D:
-    initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume3D);
+    initialize(alloc_flag, N_SPINS * N_COLS, HGC.localVolume3D);
     field_name = "PLEGMA_VECTOR3D";
     setSiteShape({N_SPINS, N_COLS});
     break;
   case PROPAGATOR:
-    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume);
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC.localVolume);
     field_name = "PLEGMA_PROPAGATOR";
     setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case PROPAGATOR3D:
-    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC_localVolume3D);
+    initialize(alloc_flag, N_SPINS * N_COLS * N_SPINS * N_COLS, HGC.localVolume3D);
     field_name = "PLEGMA_PROPAGATOR3D";
     setSiteShape({N_SPINS, N_SPINS, N_COLS, N_COLS});
     break;
   case QLOOPS:
-    initialize(alloc_flag, N_SPINS * N_SPINS, HGC_localVolume);
+    initialize(alloc_flag, N_SPINS * N_SPINS, HGC.localVolume);
     field_name = "PLEGMA_QLOOPS";
     setSiteShape({N_SPINS, N_SPINS});
     break;
   case FMUNU:
-    initialize(alloc_flag, ((N_SPINS * (N_SPINS-1))/2) * N_COLS * N_COLS, HGC_localVolume);
+    initialize(alloc_flag, ((N_SPINS * (N_SPINS-1))/2) * N_COLS * N_COLS, HGC.localVolume);
     field_name = "PLEGMA_FMUNU";
     setSiteShape({((N_SPINS * (N_SPINS-1))/2), N_COLS, N_COLS});
     break;
@@ -236,8 +236,8 @@ void PLEGMA_Field<Float>::create_device(){
   if(checkErr) checkQudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
-  HGC_deviceMemory += Bytes_total_plus_ghost()/(1024.*1024.);          
-  if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
+  HGC.deviceMemory += Bytes_total_plus_ghost()/(1024.*1024.);          
+  if(HGC.verbosity>1) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC.deviceMemory);
 #endif
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
@@ -284,8 +284,8 @@ void PLEGMA_Field<Float>::destroy_device(){
   if(checkErr) checkQudaError();
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
-  HGC_deviceMemory -= Bytes_total_plus_ghost()/(1024.*1024.);
-  if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
+  HGC.deviceMemory -= Bytes_total_plus_ghost()/(1024.*1024.);
+  if(HGC.verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC.deviceMemory);
 #endif
   if(ghost_flag >= FIRST_SIDE){
 #ifdef HAVE_PINNED_GHOST
@@ -460,7 +460,7 @@ void PLEGMA_Field<Float>::printInfo(){
 template<typename Float>
 void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
-  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+  assert(Total_length()==HGC.localVolume || Total_length()==HGC.localVolume3D);
   
   if(ghost_flag < FIRST_SIDE)
     PLEGMA_error("First side ghosts have not been allocated.\n");
@@ -470,22 +470,22 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     PLEGMA_error("Directions should be an orientation enum");
 
   bool isAll = (dir<0) ? true:false;
-  bool runT = Total_length()==HGC_localVolume;
-  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+  bool runT = Total_length()==HGC.localVolume;
+  size_t scaleT = runT ? 1 : HGC.localL[DIM_T];
 
   if(action==START || action==DO_ALL)
     for(short i=0; i<N_DIMS; i++)
-      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
+      if( (dir == i || isAll) && HGC.dimBreak[i] && (i < N_DIMS-1 || runT) )
 	for(short s = 0; s < DIR_BOTH; s++)
 	  if(sign == s || sign==DIR_BOTH){
 	    // collecting elements from device
 	    copy_side_to_ghost(toField2<pFloat2>(*this), i, s);
 
-	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
+	    Float *pointer_receive = h_ext_ghost_r+HGC.sideGhost[i][s]/scaleT*field_length*2;
+	    Float *pointer_send = h_ext_ghost_s+HGC.sideGhost[i][s]/scaleT*field_length*2;
+	    Float *pointer_device = d_elem+(HGC.sideGhost[i][s]/scaleT+total_length)*field_length*2;
 	    int disp;
-	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
+	    size_t nbytes = HGC.surface3D[i]/scaleT*field_length*2*sizeof(Float);
 	    
 	    qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
 	    if(checkErr) checkQudaError();
@@ -512,12 +512,12 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       if(checkErr) checkQudaError();
     } else {
       for(short i=0; i<N_DIMS; i++)
-	if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
+	if( (dir == i || isAll) && HGC.dimBreak[i] && (i < N_DIMS-1 || runT) )
 	  for(short s = 0; s < DIR_BOTH; s++)
 	    if(sign == s || sign==DIR_BOTH){
-	      Float *host = h_ext_ghost_r + HGC_sideGhost[dir][s]/scaleT*field_length*2;
-	      Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length)*field_length*2;
-	      qudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
+	      Float *host = h_ext_ghost_r + HGC.sideGhost[dir][s]/scaleT*field_length*2;
+	      Float *device = d_elem + (HGC.sideGhost[dir][s]/scaleT+total_length)*field_length*2;
+	      qudaMemcpy(device, host, HGC.surface3D[dir]/scaleT*field_length*2*sizeof(Float),
 			 qudaMemcpyHostToDevice);
 	      if(checkErr) checkQudaError();
 	    }
@@ -528,7 +528,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 template<typename Float>
 void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
-  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+  assert(Total_length()==HGC.localVolume || Total_length()==HGC.localVolume3D);
   
   if(ghost_flag < FIRST_CORNER)
     PLEGMA_error("First corner ghosts have not been allocated.\n");
@@ -538,26 +538,26 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
     PLEGMA_error("Directions should be an orientation enum");
 
   bool isAll = (dir<0) ? true:false;
-  bool runT = Total_length()==HGC_localVolume;
-  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+  bool runT = Total_length()==HGC.localVolume;
+  size_t scaleT = runT ? 1 : HGC.localL[DIM_T];
 
   std::vector<MsgHandle*> messages;
 
   if(action==START || action==DO_ALL)
     for(short i=0; i<N_DIMS; i++)
       for(short j=i+1; j<N_DIMS; j++)
-	if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
+	if( HGC.dimBreak[i] && HGC.dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
 	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
 		  // collecting elements from device
 		  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2);
 		  
-		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
-		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
-		  Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
+		  Float *pointer_receive = h_ext_ghost_corner_r + HGC.cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+		  Float *pointer_send = h_ext_ghost_corner_s + HGC.cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+		  Float *pointer_device = d_elem + (HGC.cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
 		  int disp[N_DIMS] = {0};
-		  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
+		  size_t nbytes = HGC.surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
 
 		  qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
 		  if(checkErr) checkQudaError();
@@ -589,13 +589,13 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
     } else {
       for(short i=0; i<N_DIMS; i++)
 	for(short j=i+1; j<N_DIMS; j++)
-	  if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
+	  if( HGC.dimBreak[i] && HGC.dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
 	      for(short s1 = 0; s1 < DIR_BOTH; s1++)
 		for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		  if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
-		    Float *hostCorner = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
-		    Float *device = d_elem+(HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
-		    qudaMemcpy(device, hostCorner, HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
+		    Float *hostCorner = h_ext_ghost_corner_r + HGC.cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+		    Float *device = d_elem+(HGC.cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
+		    qudaMemcpy(device, hostCorner, HGC.surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
 			       qudaMemcpyHostToDevice);
 		    if(checkErr) checkQudaError();
 		  }
@@ -606,7 +606,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 template<typename Float>
 void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
-  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+  assert(Total_length()==HGC.localVolume || Total_length()==HGC.localVolume3D);
   
   if(ghost_flag < FIRST_VERTEX)
     PLEGMA_error("First vertex ghosts have not been allocated.\n");
@@ -614,8 +614,8 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
     PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
 
   bool isAll = (dir<0) ? true:false;
-  bool runT = Total_length()==HGC_localVolume;
-  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+  bool runT = Total_length()==HGC.localVolume;
+  size_t scaleT = runT ? 1 : HGC.localL[DIM_T];
 
   std::vector<MsgHandle*> messages;
 
@@ -623,7 +623,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
     for(short i=0; i<N_DIMS; i++)
       for(short j=i+1; j<N_DIMS; j++)
 	for(short k=j+1; k<N_DIMS; k++)
-	  if( HGC_dimBreak[i] && HGC_dimBreak[j] && HGC_dimBreak[k] && (dir == i || dir == j || dir == k || isAll) && (k < N_DIMS-1 || runT))
+	  if( HGC.dimBreak[i] && HGC.dimBreak[j] && HGC.dimBreak[k] && (dir == i || dir == j || dir == k || isAll) && (k < N_DIMS-1 || runT))
 	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		for(short s3 = 0; s3 < DIR_BOTH; s3++)
@@ -631,11 +631,11 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		    // collecting elements from device
 		    copy_vertex_to_ghost(toField2<pFloat2>(*this), i, j, k, s1, s2, s3);
 		  
-		    Float *pointer_receive = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
-		    Float *pointer_send = h_ext_ghost_vertex_s + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
-		    Float *pointer_device = d_elem + (HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
+		    Float *pointer_receive = h_ext_ghost_vertex_r + HGC.vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
+		    Float *pointer_send = h_ext_ghost_vertex_s + HGC.vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
+		    Float *pointer_device = d_elem + (HGC.vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
 		    int disp[N_DIMS] = {0};
-		    size_t nbytes = HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float);
+		    size_t nbytes = HGC.surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float);
 
 		    qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
 		    if(checkErr) checkQudaError();
@@ -670,14 +670,14 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
       for(short i=0; i<N_DIMS; i++)
 	for(short j=i+1; j<N_DIMS; j++)
 	  for(short k=j+1; k<N_DIMS; k++)
-	    if( HGC_dimBreak[i] && HGC_dimBreak[j] && HGC_dimBreak[k] && (dir == i || dir == j || dir == k || isAll) && (k < N_DIMS-1 || runT))
+	    if( HGC.dimBreak[i] && HGC.dimBreak[j] && HGC.dimBreak[k] && (dir == i || dir == j || dir == k || isAll) && (k < N_DIMS-1 || runT))
 	      for(short s1 = 0; s1 < DIR_BOTH; s1++)
 		for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		  for(short s3 = 0; s3 < DIR_BOTH; s3++)
 		    if(sign == s1 || sign == s2 || sign == s3 || sign==DIR_BOTH) {
-		      Float *hostVertex = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
-		      Float *device = d_elem+(HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
-		      qudaMemcpy(device, hostVertex, HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float),
+		      Float *hostVertex = h_ext_ghost_vertex_r + HGC.vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
+		      Float *device = d_elem+(HGC.vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
+		      qudaMemcpy(device, hostVertex, HGC.surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float),
 				 qudaMemcpyHostToDevice);
 		      if(checkErr) checkQudaError();
 		  }
@@ -793,10 +793,10 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
-  if(total_length == HGC_localVolume && mom.size() != 4 ) PLEGMA_error("A 4D field needs a 4D momentum vector\n");
-  if( (total_length == HGC_localVolume3D) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
+  if(total_length == HGC.localVolume && mom.size() != 4 ) PLEGMA_error("A 4D field needs a 4D momentum vector\n");
+  if( (total_length == HGC.localVolume3D) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
   int D3D4 = mom.size();
-  int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
+  int V = D3D4 == 3 ? HGC.localVolume3D : HGC.localVolume;
   Float2<Float> *x;
   x=(Float2<Float> *)device_malloc(V*2*sizeof(Float));
   //cudaMalloc((void**)&x, V*2*sizeof(Float));
@@ -830,12 +830,12 @@ template<typename Float>
 std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
   if(field_length != fieldIn.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
   if(total_length != fieldIn.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
-  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), HGC_fullComm);
+  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), HGC.fullComm);
 }
 
 template<typename Float>
 Float PLEGMA_Field<Float>::norm(){
-  return cuBLAS::norm(total_length*field_length, d_elem, HGC_fullComm);
+  return cuBLAS::norm(total_length*field_length, d_elem, HGC.fullComm);
 }
 
 template<typename Float>
@@ -896,7 +896,7 @@ void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG wher
 
 template<typename Float>
 void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof){
-  if(total_length != HGC_localVolume || fin.Total_length() != HGC_localVolume) PLEGMA_error("Probing for now works only for 4D fields");
+  if(total_length != HGC.localVolume || fin.Total_length() != HGC.localVolume) PLEGMA_error("Probing for now works only for 4D fields");
   if(ih >= hprob.get_NHad()) PLEGMA_error("You have exceeded the size of the Hadamard matrix");
   copy(fin,DEVICE);
   for(int i = 0 ; i < Field_length(); i++){
@@ -910,17 +910,17 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
 // field4D <- field3D
 template<typename Float>
 void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it, bool forcetozero){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   assert(field.Field_length() == this->Field_length());
   if (forcetozero == true){
     this->zero_where(allocation);
   }
   
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
 
-  size_t V4 = HGC_localVolume*2;
-  size_t V3 = HGC_localVolume3D*2;
+  size_t V4 = HGC.localVolume*2;
+  size_t V3 = HGC.localVolume3D*2;
   { 
     Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3 * sizeof(Float));
     PLEGMA_memcpy(tempquda,tempquda,V3 * sizeof(Float),qudaMemcpyDeviceToDevice);
@@ -940,7 +940,7 @@ void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_
 
 template<typename Float>
 void PLEGMA_Field<Float>::writeLIME(std::string filename, bool unloadFromDev) const{
-  if(total_length != HGC_localVolume) PLEGMA_error("Writing of 3D fields is not supported");
+  if(total_length != HGC.localVolume) PLEGMA_error("Writing of 3D fields is not supported");
   FILE *fid;
   LimeWriter *limewriter = (LimeWriter*)NULL;
   if(unloadFromDev) unload();
@@ -955,7 +955,7 @@ void PLEGMA_Field<Float>::writeLIME(std::string filename, bool unloadFromDev) co
     oss << lime_version_header() << "<field>" << Field_name() << "</field>\n" << "<precision>" <<  Precision()*8 << "</precision>\n";
     oss << "<dof>" << field_length << "</dof>\n";
     std::vector<std::string> xyzt = {"x","y","z","t"};
-    for(int i = 0 ; i < N_DIMS; i++) oss << "<l" << xyzt[i] << ">" << HGC_totalL[i] << "</l" << xyzt[i] << ">\n";
+    for(int i = 0 ; i < N_DIMS; i++) oss << "<l" << xyzt[i] << ">" << HGC.totalL[i] << "</l" << xyzt[i] << ">\n";
     oss << "</ildgFormat>";
     write_lime_header(limewriter,"ildg-format",oss.str(),1,0);
   }
@@ -1003,22 +1003,22 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     }
   }
   
-  if(total_length == HGC_localVolume3D) {
+  if(total_length == HGC.localVolume3D) {
     descr += "/z/y/x";
     // Volume
     for(int i=N_DIMS-2; i>=0; i--) {
-      shape.push_back(HGC_totalL[i]);
-      lshape.push_back(HGC_localL[i]);
-      start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+      shape.push_back(HGC.totalL[i]);
+      lshape.push_back(HGC.localL[i]);
+      start.push_back(HGC.procPosition[i]*HGC.localL[i]);
     }
     if(not includesActiveTimeSlice()) lshape[0]=0;
   } else {
     descr += "/t/z/y/x";
     // Volume
     for(int i=N_DIMS-1; i>=0; i--) {
-      shape.push_back(HGC_totalL[i]);
-      lshape.push_back(HGC_localL[i]);
-      start.push_back(HGC_procPosition[i]*HGC_localL[i]);
+      shape.push_back(HGC.totalL[i]);
+      lshape.push_back(HGC.localL[i]);
+      start.push_back(HGC.procPosition[i]*HGC.localL[i]);
     }
   }
 
@@ -1034,7 +1034,7 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
 
 template<typename Float>
 void PLEGMA_Field<Float>::writeHDF5(std::string filename, bool unloadFromDev) const{
-  if(total_length != HGC_localVolume && total_length != HGC_localVolume3D)
+  if(total_length != HGC.localVolume && total_length != HGC.localVolume3D)
     PLEGMA_error("Writing of 3D fields is not supported");
   assert(isAllocHost);
   if(unloadFromDev) unload();
@@ -1054,7 +1054,7 @@ void PLEGMA_Field<Float>::writeHDF5(std::string filename, bool unloadFromDev) co
     }
   }
 
-  HDF5 writer(filename, HGC_fullComm);
+  HDF5 writer(filename, HGC.fullComm);
 
   writer.write_dataset(dataset, h_elem, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);
@@ -1065,15 +1065,15 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
   if(!this->isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   if(!srcfield.IsAllocDevice()) PLEGMA_error("This function needs allocation of input field on the device to work\n");
   
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   if( this->field_name.compare(srcfield.Field_name()) != 0) PLEGMA_error("Fields types does not match %s %s \n",this->field_name.c_str(),srcfield.Field_name().c_str());
 
   //check dimensions
   
-  int my_it = global_it - comm_coord(3) * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
+  int my_it = global_it - comm_coord(3) * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V4 = HGC.localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
@@ -1135,12 +1135,12 @@ template void PLEGMA_Field<double>::mulMomentumPhases<double>(std::vector<double
 // field3D <- field4D
 template<typename Float>
 void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_it, bool broadcast){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
   assert(field.Field_length() == this->Field_length());
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  size_t V3 = HGC_localVolume3D*2;
-  size_t V4 = HGC_localVolume*2;
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  this->activeTimeSlice = (my_it >= 0) && ( my_it < HGC.localL[3] );
+  size_t V3 = HGC.localVolume3D*2;
+  size_t V4 = HGC.localVolume*2;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
@@ -1169,10 +1169,10 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
       PLEGMA_memcpy(pointer_dst, pointer_src, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
     }
     if (broadcast == true){
-      int time_rank=global_it/HGC_localL[3];
+      int time_rank=global_it/HGC.localL[3];
       Float *temp=(Float *)malloc(sizeof(Float)*V3);
       PLEGMA_memcpy(temp, pointer_dst, V3* sizeof(Float), qudaMemcpyDeviceToHost);
-      MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+      MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC.timeComm);
       PLEGMA_memcpy(pointer_dst, temp, V3* sizeof(Float), qudaMemcpyHostToDevice);
       free(temp);
     }
@@ -1187,9 +1187,9 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
 template<typename Float>
 std::complex<Float> PLEGMA_Field3D<Float>::dot(PLEGMA_Field3D<Float> &fieldIn){
   // TODO: need to think about appropriate communicator
-  if (HGC_localVolume != HGC_totalVolume)
+  if (HGC.localVolume != HGC.totalVolume)
     PLEGMA_warning("3D Vector dot might not work with multiple MPI ranks\n");
-  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC_fullComm);
+  return cuBLAS::dot(this->total_length*this->field_length, this->d_elem, fieldIn.D_elem(), HGC.fullComm);
 }
 
 template class plegma::PLEGMA_Field3D<float>;

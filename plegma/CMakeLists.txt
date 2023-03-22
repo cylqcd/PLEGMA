@@ -1,4 +1,4 @@
-set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} /opt/cray/pe/hdf5-parallel/1.12.1.5/gnu/9.1/lib/libhdf5_parallel.so.200 ${MPI_CXX_LIBRARIES} /pfs/lustrep2/projappl/project_462000125/samantao-public/rocm/rocm-5.2.3/hip/lib/libamdhip64.so /pfs/lustrep2/projappl/project_462000125/samantao-public/rocm/rocm-5.2.3/rccl/lib/librccl.so)
+set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${MPI_CXX_LIBRARIES} )
 
 LIST(APPEND PLEGMA_LIBS ${MPI_CXX_LIBRARIES})
 

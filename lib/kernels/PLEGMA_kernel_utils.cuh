@@ -828,14 +828,14 @@ namespace plegma {
     int id[3] = GET_ID_ZYX(sid3D);
     #pragma unroll
     for(int i=0; i<3; i++) {
-      id[i] += DGC_procPosition[i] * DGC_localL[i] - sp[i];
+      id[i] += DGC->procPosition[i] * DGC->localL[i] - sp[i];
     }
     
     Float phase;
     Float2<Float> expon;
     for(int imom = 0 ; imom < nMoms ; imom++){
       int4 momv = texMomList.get(imom);
-      phase = momv.x*id[0]/((Float) DGC_totalL[0]) + momv.y*id[1]/((Float) DGC_totalL[1]) + momv.z*id[2]/((Float) DGC_totalL[2]);
+      phase = momv.x*id[0]/((Float) DGC->totalL[0]) + momv.y*id[1]/((Float) DGC->totalL[1]) + momv.z*id[2]/((Float) DGC->totalL[2]);
       phase *=  2. * PI;
       expon.x = cos(phase);
       expon.y = sign*sin(phase);
@@ -874,7 +874,7 @@ namespace plegma {
       return sin(w)/w;
   }
   __inline__ int get_time_step(int grid, int block){
-      int nblocks= (HGC_localVolume3D+block-1)/block;
+      int nblocks= (HGC.localVolume3D+block-1)/block;
       return  grid/nblocks;
   }
 
@@ -1041,15 +1041,15 @@ namespace plegma {
     
     //creating array from fastest to slowest
     for(int i = 0; i < N_DIMS; ++i){
-      TZYX_local[i] = (sid/skipvol) % DGC_localL[i];
-      skipvol *= DGC_localL[i];
+      TZYX_local[i] = (sid/skipvol) % DGC->localL[i];
+      skipvol *= DGC->localL[i];
       //TZYX_global[i] = TZYX_local[i];
     }
     for(int i = 0; i < N_DIMS; ++i)
-      TZYX_global[i] = TZYX_local[i] + DGC_procPosition[i] * DGC_localL[i];
+      TZYX_global[i] = TZYX_local[i] + DGC->procPosition[i] * DGC->localL[i];
     
     for(int i = N_DIMS-1; i>=0; i--)
-      globid = globid * DGC_totalL[i] + TZYX_global[i];
+      globid = globid * DGC->totalL[i] + TZYX_global[i];
 
     return globid;
   }

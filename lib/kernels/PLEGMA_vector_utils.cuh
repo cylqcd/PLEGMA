@@ -84,19 +84,19 @@ void apply_gamma5_vector(vector2<Float> vec){
 template<typename FloatIn, typename FloatOut, bool outEvenB, bool outOddB> 
 static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *outOdd){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume/2) return;
+  if (sid >= DGC->localVolume/2) return;
 
   // take indices on 4d lattice
-  int half_stride = DGC_localVolume/2;
+  int half_stride = DGC->localVolume/2;
   int latt_coord = 2*sid;
 
   int r1,r2,x_id,y_id,z_id,t_id;
-  r1 = latt_coord/(DGC_localL[0]);
-  r2 = r1/(DGC_localL[1]);
-  x_id = latt_coord - r1*(DGC_localL[0]);
-  y_id = r1 - r2*(DGC_localL[1]);
-  t_id = r2/(DGC_localL[2]);
-  z_id = r2 - t_id*(DGC_localL[2]);
+  r1 = latt_coord/(DGC->localL[0]);
+  r2 = r1/(DGC->localL[1]);
+  x_id = latt_coord - r1*(DGC->localL[0]);
+  y_id = r1 - r2*(DGC->localL[1]);
+  t_id = r2/(DGC->localL[2]);
+  z_id = r2 - t_id*(DGC->localL[2]);
   int evenSiteBit = ((x_id+y_id+z_id+t_id) & 1);
   int oddSiteBit  = evenSiteBit ^ 1;
   Float2<FloatOut> *outEven2 = (Float2<FloatOut> *) outEven;
@@ -109,13 +109,13 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
     for(int ic = 0 ; ic < N_COLS ; ic++){
       if(outEvenB) {
 	outEven2[(mu*N_COLS + ic)*half_stride + sid] =
-	  in2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + evenSiteBit];
+	  in2[(mu*N_COLS + ic)*DGC->localVolume + latt_coord + evenSiteBit];
       } else
 	outEven2[(mu*N_COLS + ic)*half_stride + sid] = 0.;
 
       if(outOddB) {
 	outOdd2[(mu*N_COLS + ic)*half_stride + sid] =
-	  in2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + oddSiteBit];
+	  in2[(mu*N_COLS + ic)*DGC->localVolume + latt_coord + oddSiteBit];
       } else
 	outOdd2[(mu*N_COLS + ic)*half_stride + sid] = 0.;
     }
@@ -125,7 +125,7 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
 template<typename FloatIn, typename FloatOut> 
 static void copy_to_QUDA(FloatIn* in,ColorSpinorField &qudaVec, bool isEven){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC.localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
       copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) qudaVec.V(), NULL);
@@ -151,18 +151,18 @@ template<typename FloatOut, typename FloatIn, bool inEvenB, bool inOddB>
 static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, FloatIn *inOdd){
   
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume/2) return;
+  if (sid >= DGC->localVolume/2) return;
 
-  int half_stride = DGC_localVolume/2;
+  int half_stride = DGC->localVolume/2;
   int latt_coord = 2*sid;
 
   int r1,r2,x_id,y_id,z_id,t_id;
-  r1 = latt_coord/(DGC_localL[0]);
-  r2 = r1/(DGC_localL[1]);
-  x_id = latt_coord - r1*(DGC_localL[0]);
-  y_id = r1 - r2*(DGC_localL[1]);
-  t_id = r2/(DGC_localL[2]);
-  z_id = r2 - t_id*(DGC_localL[2]);
+  r1 = latt_coord/(DGC->localL[0]);
+  r2 = r1/(DGC->localL[1]);
+  x_id = latt_coord - r1*(DGC->localL[0]);
+  y_id = r1 - r2*(DGC->localL[1]);
+  t_id = r2/(DGC->localL[2]);
+  z_id = r2 - t_id*(DGC->localL[2]);
   int evenSiteBit = ((x_id+y_id+z_id+t_id) & 1);
   int oddSiteBit  = evenSiteBit ^ 1;
   Float2<FloatIn> *inEven2 = (Float2<FloatIn> *) inEven;
@@ -174,23 +174,23 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
     #pragma unroll
     for(int ic = 0 ; ic < N_COLS ; ic++) {
       if(inEvenB) {
-	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + evenSiteBit] =
+	out2[(mu*N_COLS + ic)*DGC->localVolume + latt_coord + evenSiteBit] =
 	  inEven2[(mu*N_COLS + ic)*half_stride + sid];
       } else
-	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + evenSiteBit] = 0.;
+	out2[(mu*N_COLS + ic)*DGC->localVolume + latt_coord + evenSiteBit] = 0.;
 
       if(inOddB) {
-	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + oddSiteBit] =
+	out2[(mu*N_COLS + ic)*DGC->localVolume + latt_coord + oddSiteBit] =
 	  inOdd2[(mu*N_COLS + ic)*half_stride + sid];
       } else
-	out2[(mu*N_COLS + ic)*DGC_localVolume + latt_coord + oddSiteBit] = 0.;
+	out2[(mu*N_COLS + ic)*DGC->localVolume + latt_coord + oddSiteBit] = 0.;
     }
   }
 }
 
 template<typename FloatOut, typename FloatIn> 
 static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
-  ProfileStruct ps(HGC_localVolume);
+  ProfileStruct ps(HGC.localVolume);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
       tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
@@ -239,9 +239,9 @@ struct computeRMS{
     int x[3] = GET_ID_ZYX(id);
 #pragma unroll
     for(int i = 0 ; i < 3 ; i++){
-      x[i] += DGC_procPosition[i] * DGC_localL[i];
+      x[i] += DGC->procPosition[i] * DGC->localL[i];
       x[i] = x[i] >= s[i] ? x[i]-s[i] : s[i] - x[i];
-      if(x[i] > DGC_totalL[i]/2) x[i] = DGC_totalL[i] - x[i];
+      if(x[i] > DGC->totalL[i]/2) x[i] = DGC->totalL[i] - x[i];
     }
     int r2 = x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
     int index_r2 = getIndexElem(r2,list_comp_R2,Nr2);
@@ -249,7 +249,7 @@ struct computeRMS{
     Float2<Float> e[N_SPINS*N_COLS];
     Float2<Float> *w = &(thrust::get<1>(t));
 #pragma unroll
-    for(int i = 0 ; i < N_SPINS*N_COLS; i++) e[i] = *(w+i*DGC_localVolume3D);
+    for(int i = 0 ; i < N_SPINS*N_COLS; i++) e[i] = *(w+i*DGC->localVolume3D);
     Float val =0;
 #pragma unroll
     for(int i = 0 ; i < N_SPINS*N_COLS ; i++) val += e[i].x*e[i].x  + e[i].y*e[i].y; 
@@ -273,13 +273,13 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   qudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); 
   //checkQudaError();
   thrust::counting_iterator<int> first(0);
-  thrust::counting_iterator<int> last = first + HGC_localVolume3D;
+  thrust::counting_iterator<int> last = first + HGC.localVolume3D;
   typedef thrust::device_ptr<Float2<Float> > DpF2;
   DpF2 y( (Float2<Float>*) vec.D_elem());
   typedef thrust::tuple<thrust::counting_iterator<int>,DpF2> tplIntDev2;
   typedef thrust::zip_iterator<tplIntDev2> zipTplIntDev2;
   zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
-  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+HGC_localVolume3D));
+  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+HGC.localVolume3D));
   thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
   qudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), qudaMemcpyDeviceToHost); checkQudaError();
   device_free(d_listR2);

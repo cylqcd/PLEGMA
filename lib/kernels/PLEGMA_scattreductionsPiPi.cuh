@@ -13,8 +13,8 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
   
   Float2<FloatOut> accum[16];
   for(int i = 0 ; i < 16  ; i++){
@@ -23,7 +23,7 @@ __global__ void PhixGxPhi_kernel( vectorTex<FloatPhi> vectorPhi0, KernelArr<GAMM
   }
   
 
-  if (sid3D < DGC_localVolume3D){
+  if (sid3D < DGC->localVolume3D){
     Float2<FloatPhi> phi0[N_SPINS][N_COLS];
     Float2<FloatPhi> phi1[N_SPINS][N_COLS];
     vectorPhi0.get(phi0,vid);
@@ -80,7 +80,7 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
   int site_size = corr.getSiteSize();
   int nblockspert = ps.tp.grid.x/time_step;
   
-  if(HGC_verbosity > 2){
+  if(HGC.verbosity > 2){
     printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
     PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
@@ -109,7 +109,7 @@ static void PhixGxPhi_host( ProfileStruct &ps, PLEGMA_ScattCorrelator<FloatOut> 
   checkQudaError();
   qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS_SCATT), qudaMemcpyHostToDevice);
   checkQudaError();
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     PLEGMA_printf("site_size= %d\n", listGammas.size*N_SPINS*N_COLS);
 
   auto phiTex0 = toTexture<vectorTex>(Phi0);
@@ -159,11 +159,11 @@ static void PhixGxPhi_k(PLEGMA_ScattCorrelator<FloatOut> &corr,
   hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   std::string kerName="PhixGxPhi_gammas_";
@@ -173,7 +173,7 @@ static void PhixGxPhi_k(PLEGMA_ScattCorrelator<FloatOut> &corr,
 	      ps, corr, result, Gammas, Phi0, Phi1);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC.spaceComm);
 
   hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatOut>));
 }

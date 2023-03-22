@@ -12,8 +12,8 @@ __global__ void T1_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
   int grid3D = gridDim.x/time_step; //n_blocks x timeslice
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;//id of thread
   int tid = blockIdx.x/grid3D;
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
   //int site_size = N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS;
 
   Float2<FloatOut> accum[N_GAMMAS_SCATT_I*N_GAMMAS_SCATT_F*N_SPINS*N_SPINS];
@@ -22,7 +22,7 @@ __global__ void T1_kernel( KernelArr<GAMMAS_SCATT> listGammas_i, KernelArr<GAMMA
   }
 
 
-  if (sid3D < DGC_localVolume3D){
+  if (sid3D < DGC->localVolume3D){
     Float2<FloatP> s1[N_SPINS][N_SPINS][N_COLS][N_COLS], s2[N_SPINS][N_SPINS][N_COLS][N_COLS], s3[N_SPINS][N_SPINS][N_COLS][N_COLS];
     propS1.get(s1,vid);
     propS2.get(s2,vid);

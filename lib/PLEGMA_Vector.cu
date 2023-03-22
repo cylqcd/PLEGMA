@@ -126,11 +126,11 @@ void PLEGMA_Vector<Float>::rotate_uk_ch_g5g4(){
 // vec4D <- Prop3D
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V4 = HGC.localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   static bool init_absorb_vec4D_prop3D = false;
@@ -160,11 +160,11 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_i
 // vec4D <- prop4D (it)
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V4 = HGC.localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
@@ -183,11 +183,11 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
 //vec4D <- vec3D (it)
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bool broadcast){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V4 = HGC.localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
@@ -220,7 +220,7 @@ template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2){
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
-  int V4 = HGC_localVolume;
+  int V4 = HGC.localVolume;
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2);
@@ -238,8 +238,8 @@ void PLEGMA_Vector<Float>::dilutespin(PLEGMA_Vector<Float> &vecIn, int spin){
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       if(mu == spin){
-        pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC_localVolume*2);
-        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
+        pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC.localVolume*2);
+        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC.localVolume)*2), pointer_src, HGC.localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
       } 
     }
   checkQudaError();
@@ -253,8 +253,8 @@ void PLEGMA_Vector<Float>::dilutecolor(PLEGMA_Vector<Float> &vecIn, int color){
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       if(c1 == color){
-        pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC_localVolume*2);
-        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
+        pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC.localVolume*2);
+        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC.localVolume)*2), pointer_src, HGC.localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
       } 
     }
   checkQudaError();
@@ -269,8 +269,8 @@ void PLEGMA_Vector<Float>::dilutespincolor(PLEGMA_Vector<Float> &vecIn, int spin
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       if(c1 == color && mu == spin){
-        pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC_localVolume*2);
-        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
+        pointer_src = (vecIn.D_elem() + (c1 + mu*N_COLS)*HGC.localVolume*2);
+        qudaMemcpy((this->d_elem + ((c1 + mu*N_COLS)*HGC.localVolume)*2), pointer_src, HGC.localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice); 
       } 
     }
   checkQudaError();
@@ -282,8 +282,8 @@ void PLEGMA_Vector<Float>::diluteSpinDisplace(PLEGMA_Vector<Float> &vecIn, int s
   if( (spin1 >= N_SPINS) || (spin2>=N_SPINS) ) PLEGMA_error("The spin index you provided exceed the total spin content\n");
   this->zero_device();
   for(int c1 = 0 ; c1 < N_COLS ; c1++){
-    pointer_src = (vecIn.D_elem() + (c1 + spin2*N_COLS)*HGC_localVolume*2);
-    qudaMemcpy((this->d_elem + ((c1 + spin1*N_COLS)*HGC_localVolume)*2), pointer_src, HGC_localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    pointer_src = (vecIn.D_elem() + (c1 + spin2*N_COLS)*HGC.localVolume*2);
+    qudaMemcpy((this->d_elem + ((c1 + spin1*N_COLS)*HGC.localVolume)*2), pointer_src, HGC.localVolume*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
       
   }
   checkQudaError();
@@ -300,7 +300,7 @@ void PLEGMA_Vector<Float>::pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>
 
   PLEGMA_Vector<Float> temporary4D;
   PLEGMA_Vector3D<Float> temporary3D;
-  for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+  for (int timeidx=0; timeidx< HGC.totalL[DIM_T]; ++timeidx){
     temporary4D.copy(*stochastic_vector[timeidx], HOST);
     temporary4D.load();
     temporary3D.absorb(temporary4D, sinktime );
@@ -329,7 +329,7 @@ void PLEGMA_Vector<Float>::pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int
   vector1.absorb(in, sinktimeslice, true);
 
   for (int dt=0; dt<source_sink_separation; ++dt){
-    int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
+    int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC.totalL[DIM_T])%HGC.totalL[DIM_T];
     stmp.absorb(vector1, actualtimeslice, false);
   }
 
@@ -353,7 +353,7 @@ void PLEGMA_Vector<Float>::pack_propagator_from_source_to_sink(PLEGMA_Vector<Flo
 
 
   for (int dt=0; dt<source_sink_separation; ++dt){
-    int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
+    int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC.totalL[DIM_T])%HGC.totalL[DIM_T];
     vector1.absorb(in, actualtimeslice );
     stmp.absorb(vector1, actualtimeslice, false);
   }
@@ -368,7 +368,7 @@ template<typename Float>
 void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int color, ALLOCATION_FLAG where){
   if(where == EVERY) where = this->allocation;
   for(int i = 0; i < N_DIMS; i++)
-    if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
+    if(sourceposition[i] >= HGC.totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC.totalL[i]);
   
   this->zero_where(where);
   int my_src[N_DIMS];
@@ -386,12 +386,12 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
   }
 
   for(int i = N_DIMS-1; i >= 0; i--) {
-    my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
+    my_src[i] = (sourceposition[i] - HGC.procPosition[i] * HGC.localL[i]);
 
     // if out of the local lattice we break
-    if((my_src[i]<0) || (my_src[i]>=HGC_localL[i])) return;
+    if((my_src[i]<0) || (my_src[i]>=HGC.localL[i])) return;
 
-    id = id * HGC_localL[i] + my_src[i];
+    id = id * HGC.localL[i] + my_src[i];
   }
   // This make it work also for vector3D
   id = id % this->Total_length();
@@ -399,7 +399,7 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
   Float temp[1];
   temp[0] = 1.0;
   if( where == BOTH ){
-    this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] = 1.0; 
+    this->h_elem[((spin*N_COLS+color)*HGC.localVolume + id)*2] = 1.0; 
     PLEGMA_memcpy((this->d_elem + ((spin*N_COLS+color)*this->Total_length() + id)*2), temp,sizeof(Float),
                 qudaMemcpyHostToDevice ); 
   }
@@ -420,7 +420,7 @@ std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourcep
     std::shared_ptr<Float> ptr(new Float[N_SPINS*N_COLS*2]);
 
     for(int i = 0; i < N_DIMS; i++)
-      if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
+      if(sourceposition[i] >= HGC.totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC.totalL[i]);
 
   
     int my_src[N_DIMS];
@@ -428,9 +428,9 @@ std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourcep
     size_t id=0;
     for(int i = N_DIMS-1; i >= 0; i--) {
 
-      my_src[i] = (sourceposition[i] - HGC_procPosition[i] * HGC_localL[i]);
+      my_src[i] = (sourceposition[i] - HGC.procPosition[i] * HGC.localL[i]);
        
-      id = id * HGC_localL[i] + my_src[i];
+      id = id * HGC.localL[i] + my_src[i];
     
     }
   
@@ -438,24 +438,24 @@ std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourcep
     id = id % this->Total_length();
 
     int coords[4];
-    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
+    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC.localL[i];
     int rankHas = comm_rank_from_coords(coords);
 
     if (comm_rank()==rankHas){
       for (int spin=0; spin<N_SPINS; ++spin){
         for (int color=0; color<N_COLS; ++color){
     
-	  ptr.get()[2*(spin*N_COLS+color)+0]=this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2] ;
-          ptr.get()[2*(spin*N_COLS+color)+1]=this->h_elem[((spin*N_COLS+color)*HGC_localVolume + id)*2+1] ;
+	  ptr.get()[2*(spin*N_COLS+color)+0]=this->h_elem[((spin*N_COLS+color)*HGC.localVolume + id)*2] ;
+          ptr.get()[2*(spin*N_COLS+color)+1]=this->h_elem[((spin*N_COLS+color)*HGC.localVolume + id)*2+1] ;
         }
       }
     }
 
-    MPI_Barrier(HGC_fullComm);
+    MPI_Barrier(HGC.fullComm);
 
-    int mpiErr = MPI_Bcast(ptr.get(), 2*N_SPINS*N_COLS, MPI_Type<Float>(), rankHas, HGC_fullComm);
+    int mpiErr = MPI_Bcast(ptr.get(), 2*N_SPINS*N_COLS, MPI_Type<Float>(), rankHas, HGC.fullComm);
 
-    MPI_Barrier(HGC_fullComm);
+    MPI_Barrier(HGC.fullComm);
 
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
 
@@ -515,7 +515,7 @@ namespace plegma{
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int nu , int c2){
     this->activeTimeSlice = prop.includesActiveTimeSlice();
-    int V3 = HGC_localVolume/HGC_localL[3];
+    int V3 = HGC.localVolume/HGC.localL[3];
     Float *pointer_src = NULL;
     Float *pointer_dst = NULL;
     for(int mu = 0 ; mu < N_SPINS ; mu++)
@@ -530,12 +530,12 @@ namespace plegma{
   // vec3D <- prop4D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2, bool broadcast){
-    if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
     this->activeTimeSlice = is_myIt;
-    int V3 = HGC_localVolume/HGC_localL[3];
-    int V4 = HGC_localVolume;
+    int V3 = HGC.localVolume/HGC.localL[3];
+    int V4 = HGC.localVolume;
     Float *pointer_src = NULL;
     Float *pointer_dst = NULL;
     static bool init_vector3D_prop4D = false;
@@ -559,12 +559,12 @@ namespace plegma{
 	}
 	
 	if (broadcast == true){
-         int time_rank=global_it/HGC_localL[3];
+         int time_rank=global_it/HGC.localL[3];
 //         printf("Time rank %d\n",time_rank);
 //         fflush(stdout);
          Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
          PLEGMA_memcpy(temp, pointer_dst, V3*2 * sizeof(Float), qudaMemcpyDeviceToHost);
-         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC.timeComm);
 //         printf("Temp 0 %e\n",temp[0]);
 //         fflush(stdout);
          PLEGMA_memcpy(pointer_dst, temp, V3*2 * sizeof(Float), qudaMemcpyHostToDevice);
@@ -582,12 +582,12 @@ namespace plegma{
   // vec3D <- vec4D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Vector<Float> &prop, int global_it, bool broadcast){
-    if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-    int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
     this->activeTimeSlice = is_myIt;
-    int V3 = HGC_localVolume/HGC_localL[3];
-    int V4 = HGC_localVolume;
+    int V3 = HGC.localVolume/HGC.localL[3];
+    int V4 = HGC.localVolume;
     Float *pointer_src = NULL;
     Float *pointer_dst = NULL;
     static bool init_vector3D_vector4D = false;
@@ -608,12 +608,12 @@ namespace plegma{
           PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
         }
 	if (broadcast == true){
-         int time_rank=global_it/HGC_localL[3];
+         int time_rank=global_it/HGC.localL[3];
 //         printf("Time rank %d\n",time_rank);
 //         fflush(stdout);
          Float *temp=(Float *)malloc(sizeof(Float)*V3*2);
          PLEGMA_memcpy(temp, pointer_dst, V3*2 * sizeof(Float), qudaMemcpyDeviceToHost);
-         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC_timeComm);
+         MPI_Bcast(temp, V3*2 , MPI_Type<Float>(), time_rank, HGC.timeComm);
 //         printf("Temp 0 %e\n",temp[0]);
 //         fflush(stdout);
          PLEGMA_memcpy(pointer_dst, temp, V3*2 * sizeof(Float), qudaMemcpyHostToDevice);
@@ -635,19 +635,19 @@ namespace plegma{
   std::vector<Float> PLEGMA_Vector3D<Float>::rms(std::vector<int> listR2, const site& sourceposition) const{
     if(listR2.size() <= 0) PLEGMA_error("Provided list of r2 is empty");
     for(int i = 0; i < N_DIMS; i++)
-      if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
+      if(sourceposition[i] >= HGC.totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC.totalL[i]);
     std::vector<Float> absPsi_loc(listR2.size(),0.0);
     std::vector<Float> absPsi(listR2.size(),0.0);
     if(this->includesActiveTimeSlice()) {
       compute_rms(*this,listR2,absPsi_loc,sourceposition);
-      int mpiErr = MPI_Allreduce(absPsi_loc.data(), absPsi.data(), listR2.size(), MPI_Type<Float>(), MPI_SUM, HGC_spaceComm);
+      int mpiErr = MPI_Allreduce(absPsi_loc.data(), absPsi.data(), listR2.size(), MPI_Type<Float>(), MPI_SUM, HGC.spaceComm);
       if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
     }
     
     int coords[4];
-    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC_localL[i];
+    for(int i = 0 ; i < N_DIMS; i++) coords[i] = sourceposition[i] / HGC.localL[i];
     int rankHas = comm_rank_from_coords(coords);
-    int mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC_fullComm);
+    int mpiErr = MPI_Bcast(absPsi.data(), listR2.size(), MPI_Type<Float>(), rankHas, HGC.fullComm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     return absPsi;
   }

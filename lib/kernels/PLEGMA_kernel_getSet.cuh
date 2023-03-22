@@ -61,8 +61,8 @@
 #define LEXIC_3D4D_PLUS(i,id,is4D) (is4D ? LEXIC_PLUS(i,id) : LEXIC_3D_PLUS(i,id))
 #define LEXIC_3D4D_MINUS(i,id,is4D) (is4D ? LEXIC_MINUS(i,id) : LEXIC_3D_MINUS(i,id))
 
-#define IS_MINUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == 0)
-#define IS_PLUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == (DGC->localL[i]-1))
+#define IS_MINUS_GHOST(i,id) (DGC->dimBreak[i] == true && id[i] == 0)
+#define IS_PLUS_GHOST(i,id) (DGC->dimBreak[i] == true && id[i] == (DGC->localL[i]-1))
 
 
 namespace plegma {
@@ -84,9 +84,9 @@ namespace plegma {
     
     inline __host__ __device__ size_t volume() const {
       #if defined ( __CUDA_ARCH__ ) || ( __HIP__ )
-      return is4D ? DGC_localVolume : DGC_localVolume3D;
+      return is4D ? DGC->localVolume : DGC->localVolume3D;
       #else
-      return is4D ? HGC_localVolume : HGC_localVolume3D;
+      return is4D ? HGC.localVolume : HGC.localVolume3D;
       #endif
     }
 
@@ -94,15 +94,15 @@ namespace plegma {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC->sideGhostVolume : DGC->sideGhostVolume3D;
       #else
-      return is4D ? HGC_sideGhostVolume : HGC_sideGhostVolume3D;      
+      return is4D ? HGC.sideGhostVolume : HGC.sideGhostVolume3D;      
       #endif
     }
 
     inline __host__ __device__ size_t sideGhostL(const short& dir) const {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
-      return is4D ? DGC_surface3D[dir] : (DGC_surface3D[dir]/DGC->localL[DIM_T]);
+      return is4D ? DGC->surface3D[dir] : (DGC->surface3D[dir]/DGC->localL[DIM_T]);
       #else
-      return is4D ? HGC_surface3D[dir] : (HGC_surface3D[dir]/HGC_localL[DIM_T]);
+      return is4D ? HGC.surface3D[dir] : (HGC.surface3D[dir]/HGC.localL[DIM_T]);
       #endif
     }
 
@@ -110,7 +110,7 @@ namespace plegma {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC->sideGhost[dir][sign] : (DGC->sideGhost[dir][sign]/DGC->localL[DIM_T]);
       #else
-      return is4D ? HGC_sideGhost[dir][sign] : (HGC_sideGhost[dir][sign]/HGC_localL[DIM_T]);
+      return is4D ? HGC.sideGhost[dir][sign] : (HGC.sideGhost[dir][sign]/HGC.localL[DIM_T]);
       #endif
     }
 
@@ -118,7 +118,7 @@ namespace plegma {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC->cornerGhostVolume : DGC->cornerGhostVolume3D;
       #else
-      return is4D ? HGC_cornerGhostVolume : HGC_cornerGhostVolume3D;      
+      return is4D ? HGC.cornerGhostVolume : HGC.cornerGhostVolume3D;      
       #endif
     }
 
@@ -126,7 +126,7 @@ namespace plegma {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC->surface2D[OFF2(dir1,dir2)] : (DGC->surface2D[OFF2(dir1,dir2)]/DGC->localL[DIM_T]);
       #else
-      return is4D ? HGC_surface2D[OFF2(dir1,dir2)] : (HGC_surface2D[OFF2(dir1,dir2)]/HGC_localL[DIM_T]);
+      return is4D ? HGC.surface2D[OFF2(dir1,dir2)] : (HGC.surface2D[OFF2(dir1,dir2)]/HGC.localL[DIM_T]);
       #endif
     }
 
@@ -134,7 +134,7 @@ namespace plegma {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC->surface1D[OFF3(dir1,dir2,dir3)] : (DGC->surface1D[OFF3(dir1,dir2,dir3)]/DGC->localL[DIM_T]);
       #else
-      return is4D ? HGC_surface1D[OFF3(dir1,dir2,dir3)] : (HGC_surface1D[OFF3(dir1,dir2,dir3)]/HGC_localL[DIM_T]);
+      return is4D ? HGC.surface1D[OFF3(dir1,dir2,dir3)] : (HGC.surface1D[OFF3(dir1,dir2,dir3)]/HGC.localL[DIM_T]);
       #endif
     }
 
@@ -143,7 +143,7 @@ namespace plegma {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC->cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (DGC->cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/DGC->localL[DIM_T]);
       #else
-      return is4D ? HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (HGC_cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/HGC_localL[DIM_T]);
+      return is4D ? HGC.cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)] : (HGC.cornerGhost[OFF2SIGN(dir1,dir2,sign1,sign2)]/HGC.localL[DIM_T]);
       #endif
     }
 
@@ -152,7 +152,7 @@ namespace plegma {
       #if defined ( __CUDA_ARCH__) || ( __HIP__ )
       return is4D ? DGC->vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (DGC->vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/DGC->localL[DIM_T]);
       #else
-      return is4D ? HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (HGC_vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/HGC_localL[DIM_T]);
+      return is4D ? HGC.vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)] : (HGC.vertexGhost[OFF3SIGN(dir1,dir2,dir3,sign1,sign2,sign3)]/HGC.localL[DIM_T]);
       #endif
     }
 

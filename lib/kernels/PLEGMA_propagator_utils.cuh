@@ -65,15 +65,15 @@ template<typename Float>
 static __global__ void apply_boundaries_kernel(Float *inOut, int t0){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
-  int t = (sid/DGC_localL[0]/DGC_localL[1]/DGC_localL[2]) % DGC_localL[3];
-  t += DGC_procPosition[3] * DGC_localL[3];
+  if (sid >= DGC->localVolume) return;
+  int t = (sid/DGC->localL[0]/DGC->localL[1]/DGC->localL[2]) % DGC->localL[3];
+  t += DGC->procPosition[3] * DGC->localL[3];
 
   if( t < t0 ) {
 #pragma unroll
     for(int i = 0 ; i < N_SPINS*N_SPINS*N_COLS*N_COLS ; i++) {
-      inOut[(i*DGC_localVolume + sid)*2 + 0] *= -1.;
-      inOut[(i*DGC_localVolume + sid)*2 + 1] *= -1.;
+      inOut[(i*DGC->localVolume + sid)*2 + 0] *= -1.;
+      inOut[(i*DGC->localVolume + sid)*2 + 1] *= -1.;
     }
   }
 }
@@ -81,7 +81,7 @@ static __global__ void apply_boundaries_kernel(Float *inOut, int t0){
 template<typename Float>
 void apply_boundaries(Float *inOut, int t0){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC.localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   apply_boundaries_kernel<<<gridDim,blockDim>>>(inOut,t0);
   checkQudaError();
 }
@@ -90,7 +90,7 @@ template<typename Float>
 static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= DGC->localVolume) return;
 
   Float2<Float> P[4][4], PT[4][4], sign_imag_unit(sign*1., IMAG),
     *inOut2 = (Float2<Float> *) inOut;
@@ -105,7 +105,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
       for(int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
 	for(int nu = 0 ; nu < N_SPINS; nu++)
-	  P[mu][nu] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid];
+	  P[mu][nu] = inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC->localVolume + sid];
 
       // shuffling
       #pragma unroll
@@ -119,7 +119,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
       for(int mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
 	for(int nu = 0 ; nu < N_SPINS; nu++)
-	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC_localVolume + sid] = PT[mu][nu];
+	  inOut2[(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2)*DGC->localVolume + sid] = PT[mu][nu];
     }
 
 }
@@ -127,7 +127,7 @@ static __global__ void rotateToPhysicalBase_kernel(Float *inOut, int sign){
 template<typename Float>
 void rotateToPhysicalBase(Float* inOut, int sign){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+  dim3 gridDim( (HGC.localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
   rotateToPhysicalBase_kernel<Float><<<gridDim,blockDim>>>((Float*) inOut,sign);
   checkQudaError();
 }

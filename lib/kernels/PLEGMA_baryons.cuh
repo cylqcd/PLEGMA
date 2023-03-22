@@ -40,15 +40,15 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
   int tid = blockIdx.x/grid3D;
   // this takes into account the case where the source is in the local lattice
   // and we need to start from it when we go over maxT
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
   
   Float2<FloatC> accum[2*N_SPINS*N_SPINS];
   
   for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
     accum[i]=0;
   }
-  if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
+  if (sid3D < DGC->localVolume3D){ // I work only on the spatial volume
     switch(ip){
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
@@ -91,9 +91,9 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
     int source_pos[3] = {source.x, source.y, source.z}; 
     fourier_transform_3D(block2, accum, shared_cache, 2*N_SPINS*N_SPINS, sid3D, source_pos, mom_list, 0, -1, time_step, tid);
   } else {
-    if (sid3D < DGC_localVolume3D)
+    if (sid3D < DGC->localVolume3D)
       for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
-	block2[(tid*DGC_localVolume3D + sid3D)*2*N_SPINS*N_SPINS + i] = accum[i];
+	block2[(tid*DGC->localVolume3D + sid3D)*2*N_SPINS*N_SPINS + i] = accum[i];
       }
   }
 }
@@ -107,15 +107,15 @@ __global__ void contract_baryons_wall_device(propTex<FloatA> texProp1, propTex<F
   int tid = blockIdx.x/grid3D;
   // this takes into account the case where the source is in the local lattice
   // and we need to start from it when we go over maxT
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
 
   Float2<FloatC> accum[2*N_SPINS*N_SPINS];
 
   for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
     accum[i]=0;
   }
-  if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
+  if (sid3D < DGC->localVolume3D){ // I work only on the spatial volume
     switch(ip){
     case NtoN:
       contract_NtoN_wall_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, texProp3, texProp4, accum, vid);
@@ -158,9 +158,9 @@ __global__ void contract_baryons_wall_device(propTex<FloatA> texProp1, propTex<F
     int source_pos[3] = {source.x, source.y, source.z};
     fourier_transform_3D(block2, accum, shared_cache, 2*N_SPINS*N_SPINS, sid3D, source_pos, mom_list, 0, -1, time_step, tid);
   } else {
-    if (sid3D < DGC_localVolume3D)
+    if (sid3D < DGC->localVolume3D)
       for(int i = 0 ; i < 2*N_SPINS*N_SPINS ; i++){
-	block2[(tid*DGC_localVolume3D + sid3D)*2*N_SPINS*N_SPINS + i] = accum[i];
+	block2[(tid*DGC->localVolume3D + sid3D)*2*N_SPINS*N_SPINS + i] = accum[i];
       }
   }
 }					      
@@ -181,7 +181,7 @@ static void contract_baryons_host( ProfileStruct &ps,
   int4 source = corr.getSource();
   auto mom_list = corr.getTexMomList();
 
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     if(corr.hasSource())
       printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
@@ -252,7 +252,7 @@ static void contract_baryons_wall_host( ProfileStruct &ps,
   int4 source = corr.getSource();
   auto mom_list = corr.getTexMomList();
 
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     if(corr.hasSource())
       printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
@@ -326,11 +326,11 @@ static void contract_baryons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator
   else
     result = (Float2<FloatC> *) corr.H_elem();
 
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   for(int ip=0; ip<N_BARYONS; ip++) {
@@ -340,7 +340,7 @@ static void contract_baryons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator
     if(runFT) {
       FloatC *corr_ip = corr.H_elem() + ip*corr.getTotalSize()/N_BARYONS*2;
       MPI_Allreduce(result, corr_ip, corr.getTotalSize()/N_BARYONS*2, MPI_Type(corr_ip),
-		    MPI_SUM, HGC_spaceComm);
+		    MPI_SUM, HGC.spaceComm);
     } else {
       result += corr.getTotalSize()/N_BARYONS;
     }
@@ -365,11 +365,11 @@ static void contract_baryons_wall(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propa
   else
     result = (Float2<FloatC> *) corr.H_elem();
 
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   for(int ip=0; ip<N_BARYONS; ip++) {
@@ -379,7 +379,7 @@ static void contract_baryons_wall(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propa
     if(runFT) {
       FloatC *corr_ip = corr.H_elem() + ip*corr.getTotalSize()/N_BARYONS*2;
       MPI_Allreduce(result, corr_ip, corr.getTotalSize()/N_BARYONS*2, MPI_Type(corr_ip),
-      MPI_SUM, HGC_spaceComm);
+      MPI_SUM, HGC.spaceComm);
     } else {
       result += corr.getTotalSize()/N_BARYONS;
     }

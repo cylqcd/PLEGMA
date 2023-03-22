@@ -13,11 +13,11 @@ __global__ void contract_props_stochastic(propTex<FloatA> texProp1, propTex<Floa
   int tid = blockIdx.x/grid3D;
   // this takes into account the case where the source is in the local lattice
   // and we need to start from it when we go over maxT
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
   Float2<FloatC> accum=0;
 
-  if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
+  if (sid3D < DGC->localVolume3D){ // I work only on the spatial volume
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatA> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatA> prop3[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -85,8 +85,8 @@ __global__ void contract_props_stochastic(propTex<FloatA> texProp1, propTex<Floa
     int source_pos[3] = {source.x, source.y, source.z};
     fourier_transform_3D(block, &accum, shared_cache, 1, sid3D, source_pos, moms, 0, -1, time_step, tid);
   } else {
-    if (sid3D < DGC_localVolume3D)
-      block[tid*DGC_localVolume3D + sid3D] = accum;
+    if (sid3D < DGC->localVolume3D)
+      block[tid*DGC->localVolume3D + sid3D] = accum;
   }  
 }
 
@@ -105,7 +105,7 @@ void contract_tetraquarks_stochastic_host(ProfileStruct &ps,
   size_t volume = volume3D*time_step;
   auto moms = corr.getTexMomList();
   
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     if(corr.hasSource())
       printf("time_step = %d, ps.tp.aux.x = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n",
 	      time_step,      ps.tp.aux.x,      ps.tp.grid.x,      ps.tp.block.x,      ps.tp.shared_bytes);
@@ -232,21 +232,21 @@ void contract_tetraquarks_stochastic(PLEGMA_Propagator<FloatA>&propLT1, PLEGMA_P
 	PLEGMA_error("Unknown propagator %c", TETRA_stoch_prop_prods[i][j]);}
     }
     
-    ProfileStruct ps(HGC_localVolume3D, sizeof(Float2<FloatC>));
+    ProfileStruct ps(HGC.localVolume3D, sizeof(Float2<FloatC>));
     int myLocalT = corr.localT();
     int maxLocalT = myLocalT;
-    MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-    ps.max_volume = HGC_localVolume3D*maxLocalT;
+    MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+    ps.max_volume = HGC.localVolume3D*maxLocalT;
     ps.tune_globally = true;
     ps.aux_range.x = 1;
     
-    if(HGC_verbosity>2) PLEGMA_printf("Running for %s\n", TETRA_stoch_prop_prods[i].c_str());
+    if(HGC.verbosity>2) PLEGMA_printf("Running for %s\n", TETRA_stoch_prop_prods[i].c_str());
     tuneAndRun(ps, "contract_tetraquarks_stochastic_size"+std::to_string(TETRA_stoch_prop_prods_count[i].size()), contract_tetraquarks_stochastic_host<FloatA,FloatC>, ps, props, corr, result, i);
 
     if(runFT) {
       FloatC *corr_ip = corr.H_elem() + shift*corr.getVolSize()*2;
       MPI_Allreduce(result, corr_ip, TETRA_stoch_prop_prods_count[i].size()*corr.getVolSize()*2, MPI_Type(corr_ip),
-		    MPI_SUM, HGC_spaceComm);
+		    MPI_SUM, HGC.spaceComm);
       hostFree(result, TETRA_stoch_prop_prods_count[i].size()*corr.getVolSize()*sizeof(Float2<FloatC>));
     }
     shift+=TETRA_stoch_prop_prods_count[i].size();

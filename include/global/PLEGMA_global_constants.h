@@ -78,11 +78,20 @@ void *symbolAddress;
 
 #pragma message " HGC "
 #ifdef ALLOCATE
-struct global_vars HGC;
-struct global_vars *DGC;
+struct global_vars_host HGC;
+struct global_vars_both *DGC_ptr;
+#if defined (__NVCC__) | (__HIP__)
+__constant__ struct global_vars_both DGC_const;
+#endif
 #else
-extern struct global_vars HGC;
-extern struct global_vars *DGC;
+//static __device__ __constant__ volatile struct global_vars_both DGCS;
+
+//static __device__ volatile struct global_vars_both *DGC;
+#if defined (__NVCC__) | (__HIP__)
+static __device__ struct global_vars_both *DGC;
+#endif
+extern struct global_vars_host HGC;
+extern struct global_vars_both *DGC_ptr;
 #endif
 
 // variables visible on both host and device

@@ -5,6 +5,7 @@
 #include<cublas_v2.h>
 #endif
 
+#ifdef __HIP__
 #define HIP_CHECK(error)                                                                           \
   {                                                                                                \
     hipError_t localError = error;                                                                 \
@@ -13,6 +14,17 @@
       PLEGMA_printf("FILE: %s, LINE %d\n", __FILE__, __LINE__ );                                  \
     }                                                                                             \
   }
+#else
+#define CUDA_CHECK(error)                                                                           \
+  {                                                                                                \
+    cudaError_t localError = error;                                                                 \
+    if ((localError != cudaSuccess) && (localError != cudaErrorPeerAccessAlreadyEnabled)) {          \
+      PLEGMA_printf("Error: %s, Code %d\n", cudaGetErrorString(localError), localError);            \
+      PLEGMA_printf("FILE: %s, LINE %d\n", __FILE__, __LINE__ );                                  \
+    }                                                                                             \
+  }
+#endif
+
 
 template<typename Float> struct texture;
 
@@ -91,7 +103,7 @@ struct pointer_holder {
     if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
     }
-#else
+#elif defined (__HIP__)
     HIP_CHECK(hipMemcpy(*devPointer, hostPointer, bytes*size, hipMemcpyHostToDevice));
 #endif
    }
@@ -137,7 +149,7 @@ struct pointer_holder {
 };
   
 // here we collect the global variables for then running some default functions on them (print and copy to device)
-struct global_vars {
+struct global_vars_both{
   bool init_PLEGMA_flag;
   float deviceMemory;
   int verbosity;
@@ -162,8 +174,11 @@ struct global_vars {
   size_t surface3D[N_DIMS];
   size_t surface2D[(N_DIMS*(N_DIMS-1))/2];
   size_t surface1D[(N_DIMS*(N_DIMS-1)*(N_DIMS-2))/6];
-
   bool dimBreak[N_DIMS];
+};
+
+// here we collect the global variables for then running some default functions on them (print and copy to device)
+struct global_vars_host: global_vars_both {
   Topology *default_topo;
   int nProc[N_DIMS];
   MPI_Group fullGroup;
@@ -178,51 +193,12 @@ struct global_vars {
   int spaceSize;
   int timeRank;
   int timeSize;
+  bool hold_exit;
 
-// for cublas use
 #if defined (__HIP__)
   hipblasHandle_t hipblas_handle;
 #else
   cublasHandle_t cublas_handle;
 #endif
-  /*
-  template<typename hostT>
-  void add(const std::string& name, const size_t& size, hostT *host, void ** device = nullptr) {
-    globals.push_back(pointer_holder(name, size, host, device));
-  }
-  void copyToDevice() {
-    for(size_t i = 0; i != globals.size(); i++) {
-      globals[i].copyToDeviceConstant();
-    }
-  }
-  bool check() {
-    for(size_t i = 0; i < globals.size(); i++) {
-      if(globals[i].checkDeviceConstant() == false) return false;
-    }
-    return true;
-  }
-  void print() {
-    PLEGMA_printf("\nGlobal constants available only on host:\n");
-    for(size_t i = 0; i < globals.size(); i++) {
-      if(globals[i].devPointer != nullptr) continue;
-      std::string line = "HGC_" + globals[i].get_value();
-      PLEGMA_printf("%s",line.c_str());
-    }
-    PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
-    for(int i = 0; i < globals.size(); i++) {
-      if(globals[i].devPointer == nullptr) continue;
-      if(globals[i].checkDeviceConstant()) {
-	std::string line = "H/DGC_" + globals[i].get_value();
-	PLEGMA_printf("%s",line.c_str());
-      } else {
-	PLEGMA_printf("!!!!!! ERROR: HGC_ and DGC_ differ in the following !!!!!!!\n");
-	std::string line = "HGC_" + globals[i].get_value();
-	PLEGMA_printf("%s",line.c_str());
-	globals[i].copyFromDeviceConstant();
-	line = "DGC_" + globals[i].get_value();
-	PLEGMA_printf("%s",line.c_str());
-      }
-    }
-    PLEGMA_printf("\n\n");
-  }*/
+
 };

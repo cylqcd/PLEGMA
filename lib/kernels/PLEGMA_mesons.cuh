@@ -20,14 +20,14 @@ __global__ void contract_mesons_device( propTex<FloatA> texProp1,
   int tid = blockIdx.x/grid3D;
   // this takes into account the case where the source is in the local lattice
   // and we need to start from it when we go over maxT
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
   
   Float2<FloatC> accum[2*N_MESONS];
   for(int i = 0 ; i < 2*N_MESONS ; i++){
     accum[i] = 0.;
   }
-  if (sid3D < DGC_localVolume3D){
+  if (sid3D < DGC->localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     texProp1.get(prop1,vid);
@@ -58,9 +58,9 @@ __global__ void contract_mesons_device( propTex<FloatA> texProp1,
     int source_pos[3] = {source.x, source.y, source.z}; 
     fourier_transform_3D(block2, accum, shared_cache, 2*N_MESONS, sid3D, source_pos, moms, 0, -1, time_step, tid);
   } else {
-    if (sid3D < DGC_localVolume3D)
+    if (sid3D < DGC->localVolume3D)
       for(int ip = 0 ; ip < 2*N_MESONS ; ip++){
-	block2[(tid*DGC_localVolume3D + sid3D)*2*N_MESONS + ip] = accum[ip];
+	block2[(tid*DGC->localVolume3D + sid3D)*2*N_MESONS + ip] = accum[ip];
       }
   }
 }
@@ -78,15 +78,15 @@ __global__ void contract_mesons_fourp_ultralocal_device( propTex<FloatA> texProp
   int tid = blockIdx.x/grid3D;
   // this takes into account the case where the source is in the local lattice
   // and we need to start from it when we go over maxT
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
 
   Float2<FloatE> accum[16];
   for(int i = 0 ; i < 16 ; i++){
     accum[i] = 0.;
   }
 
-  if (sid3D < DGC_localVolume3D){
+  if (sid3D < DGC->localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatC> prop3[N_SPINS][N_SPINS][N_COLS][N_COLS];
@@ -142,9 +142,9 @@ __global__ void contract_mesons_fourp_ultralocal_device( propTex<FloatA> texProp
     int source_pos[3] = {source.x, source.y, source.z};
     fourier_transform_3D(block2, accum, shared_cache, 16, sid3D, source_pos, moms, 0, -1, time_step, tid);
   } else {
-    if (sid3D < DGC_localVolume3D)
+    if (sid3D < DGC->localVolume3D)
       for(int ip = 0 ; ip < 16 ; ip++){
-	block2[(tid*DGC_localVolume3D + sid3D)*16 + ip] = accum[ip];
+	block2[(tid*DGC->localVolume3D + sid3D)*16 + ip] = accum[ip];
       }
   }
 }
@@ -157,15 +157,15 @@ __global__ void contract_mesons_fourp_ultralocal_oneendtrick_device( propTex<Flo
   int tid = blockIdx.x/grid3D;
   // this takes into account the case where the source is in the local lattice
   // and we need to start from it when we go over maxT
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
 
   Float2<FloatE> accum[16];
   for(int i = 0 ; i < 16 ; i++){
     accum[i] = 0.;
   }
 
-  if (sid3D < DGC_localVolume3D){
+  if (sid3D < DGC->localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     texProp1.get(prop1,vid);
@@ -206,9 +206,9 @@ __global__ void contract_mesons_fourp_ultralocal_oneendtrick_device( propTex<Flo
     int source_pos[3] = {source.x, source.y, source.z};
     fourier_transform_3D(block2, accum, shared_cache, 16, sid3D, source_pos, moms, 0, -1, time_step, tid);
   } else {
-    if (sid3D < DGC_localVolume3D)
+    if (sid3D < DGC->localVolume3D)
       for(int ip = 0 ; ip < 16 ; ip++){
-        block2[(tid*DGC_localVolume3D + sid3D)*16 + ip] = accum[ip];
+        block2[(tid*DGC->localVolume3D + sid3D)*16 + ip] = accum[ip];
       }
   }
 }
@@ -229,7 +229,7 @@ void contract_mesons_host( ProfileStruct &ps,
   auto moms = corr.getTexMomList();
   int site_size = 2*N_MESONS;
 
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     if(corr.hasSource())
       printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
@@ -275,7 +275,7 @@ void contract_mesons_host( ProfileStruct &ps,
     }
   }
 
-  //printf("PLEGMA_mesons res %e %e %e t_size = %d, maxT = %d, source.w = %d, HGC_localVolume3D %d time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", result[0].norm2(),result[1].norm2(),result[2].norm(),t_size, maxT, source.w, HGC_localVolume3D, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
+  //printf("PLEGMA_mesons res %e %e %e t_size = %d, maxT = %d, source.w = %d, HGC.localVolume3D %d time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", result[0].norm2(),result[1].norm2(),result[2].norm(),t_size, maxT, source.w, HGC.localVolume3D, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
   device_free(d_partial_block);
 }
@@ -295,7 +295,7 @@ void contract_mesons_fourp_ultralocal_host( ProfileStruct &ps,
   auto moms = corr.getTexMomList();
   int site_size = 16;
 
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     if(corr.hasSource())
       printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
@@ -362,7 +362,7 @@ void contract_mesons_fourp_ultralocal_oneendtrick_host( ProfileStruct &ps,
   auto moms = corr.getTexMomList();
   int site_size = 16;
 
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     if(corr.hasSource())
       printf("t_size = %d, maxT = %d, source.w = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, source.w, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
@@ -430,18 +430,18 @@ static void contract_mesons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<
   else
     result = (Float2<FloatC> *) corr.H_elem();
 
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
   
   tuneAndRun( ps, "contract_mesons", contract_mesons_host<FloatA,FloatB,FloatC>,
 	      ps, prop1, prop2, corr, result);
 
   if(runFT) {
-    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);
+    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC.spaceComm);
     hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   }
 }
@@ -463,18 +463,18 @@ static void contract_mesons_fourp_ultralocal(PLEGMA_Propagator<FloatA> &prop1, P
   else
     result = (Float2<FloatE> *) corr.H_elem();
 
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   tuneAndRun( ps, "contract_mesons_fourp_ultralocal", contract_mesons_fourp_ultralocal_host<FloatA,FloatB,FloatC,FloatD,FloatE>,
                 ps, prop1, prop2, prop3, prop4, corr, result);
 
   if(runFT) {
-    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatE>(), MPI_SUM, HGC_spaceComm);
+    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatE>(), MPI_SUM, HGC.spaceComm);
     hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatE>));
   }
 }	    
@@ -496,18 +496,18 @@ static void contract_mesons_fourp_ultralocal_oneendtrick(PLEGMA_Propagator<Float
   else
     result = (Float2<FloatE> *) corr.H_elem();
 
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   tuneAndRun( ps, "contract_mesons_fourp_ultralocal_oneendtrick", contract_mesons_fourp_ultralocal_oneendtrick_host<FloatA,FloatB,FloatE>,
                 ps, prop1, prop2, corr, result);
 
   if(runFT) {
-    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatE>(), MPI_SUM, HGC_spaceComm);
+    MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatE>(), MPI_SUM, HGC.spaceComm);
     hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatE>));
   }
 }

@@ -1,4 +1,5 @@
 #include <PLEGMA.h>
+#include <cublas_api.h>
 #include <PLEGMA_utils.h>
 #include <invert_quda.h>
 #include <PLEGMA_BLAS.h>

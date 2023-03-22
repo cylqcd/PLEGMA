@@ -378,15 +378,15 @@ Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
     size_timeslice *= 2;
   }
   Float *ptr=((Float *)malloc(sizeof(Float)*size_timeslice));
-  const int t_source_local= this->source[DIM_T]%HGC_localL[DIM_T];
+  const int t_source_local= this->source[DIM_T]%HGC.localL[DIM_T];
   memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice); 
   int coords[4];
-  for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
+  for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC.localL[i];
   int rankHas = comm_rank_from_coords(coords);
 
-  int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
+  int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC.fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
-  MPI_Barrier(HGC_fullComm);
+  MPI_Barrier(HGC.fullComm);
 //  PLEGMA_printf("DEBUG ptr global %e %e\n",ptr[0],ptr[1]);
   return ptr;
 }
@@ -409,20 +409,20 @@ Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
     size_timeslice *= 2;
   }
   Float *ptr=((Float *)malloc(sizeof(Float)*size_timeslice));
-  const int t_source_local= global_time_index%HGC_localL[DIM_T];
+  const int t_source_local= global_time_index%HGC.localL[DIM_T];
   memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice);
   printf("ptr %e\n",ptr[0]);
   int coords[4];
   for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
-  coords[N_DIMS-1]=global_time_index / HGC_localL[N_DIMS-1];
+  coords[N_DIMS-1]=global_time_index / HGC.localL[N_DIMS-1];
   int rankHas = comm_rank_from_coords(coords);
   printf("rankHas %d\n",rankHas);
-  MPI_Barrier(HGC_fullComm);
-  int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
+  MPI_Barrier(HGC.fullComm);
+  int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC.fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
   printf("ptrafter %e\n",ptr[0]);
   fflush(stdout);
-  MPI_Barrier(HGC_fullComm);
+  MPI_Barrier(HGC.fullComm);
   return ptr;
 }
 
@@ -453,7 +453,7 @@ std::shared_ptr<Float> PLEGMA_ScattCorrelator<Float>::average_all_time_slices(){
   for (int j=0; j<size_timeslice; ++j)
     ptr.get()[j]=localsum[j];
 
-  MPI_Allreduce( localsum, ptr.get(), size_timeslice, MPI_Type(localsum[0]), MPI_SUM, HGC_timeComm);
+  MPI_Allreduce( localsum, ptr.get(), size_timeslice, MPI_Type(localsum[0]), MPI_SUM, HGC.timeComm);
   MPI_Barrier(MPI_COMM_WORLD);
   free(localsum);
   return ptr;
@@ -730,13 +730,13 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction(PLEGMA_ScattCorrelator<Float> 
     auto imap = this->pList().index_map();
 
     std::vector<std::shared_ptr<Float>> Phi1; 
-    for (int t=0; t<HGC_totalL[DIM_T]; ++t){
+    for (int t=0; t<HGC.totalL[DIM_T]; ++t){
       Phi1.push_back(Phi_1[t]->getPointSource(actualSource,HOST));
     }
 
 
     for(int t=0; t < TIME; ++t){
-      int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
+      int global_time_index = t + HGC.procPosition[3] * HGC.localL[3];
 
       for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
         Float phi0Aux[N_SPINS*N_COLS*2];
@@ -879,13 +879,13 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
     auto imap = this->pList().index_map();
 
     std::vector<std::shared_ptr<Float>> Phi1;
-    for (int t=0; t<HGC_totalL[DIM_T]; ++t){
+    for (int t=0; t<HGC.totalL[DIM_T]; ++t){
       Phi1.push_back(Phi_1[t]->getPointSource(actualSource,HOST));
     }
 
 
     for (int t=0; t<TIME; ++t){
-      int global_time_index = t + HGC_procPosition[3] * HGC_localL[3];
+      int global_time_index = t + HGC.procPosition[3] * HGC.localL[3];
 
       for (int g2=0 ; g2 < n_gammas_i2 ; ++g2 ){//gi2
         Float phi0Aux[N_SPINS*N_COLS*2];
@@ -2645,7 +2645,7 @@ void PLEGMA_ScattCorrelator<Float>::M_diagrams( PLEGMA_ScattCorrelator<Float> &C
   Float *sinktimeslice;
   int globalSinkTimeSlice;
   if (CorrNucleon.GList.size() >4){
-    globalSinkTimeSlice=(this->source[3]+this->getTotalT()-1)%HGC_totalL[3];
+    globalSinkTimeSlice=(this->source[3]+this->getTotalT()-1)%HGC.totalL[3];
     sinktimeslice=pipi_aux.get_time_slice(globalSinkTimeSlice);
     //pipi_aux.writeHDF5("testcase");
     //PLEGMA_printf("zero component %e %d %d total %d \n",sinktimeslice[0], globalSinkTimeSlice, this->localT(), this->getTotalT());
@@ -3458,8 +3458,8 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions( bool antiperiodic, 
   if (n_coherent_source >1 && attract_look_up_table==NULL) PLEGMA_error("attract_look_up_table must be created before using this function\n");
 
   for( int t=0; t<TIME; ++t){
-    int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
-    int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
+    int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC.localL[DIM_T]) + t - maxT : t;
+    int t_global = HGC.procPosition[DIM_T] * HGC.localL[DIM_T] + t_local;
     int source_num= n_coherent_source > 1 ? attract_look_up_table[t_global] : this->source[DIM_T];
     if( t_global < source_num ){
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
@@ -3488,10 +3488,10 @@ void PLEGMA_ScattCorrelator<Float>::applyBoundaryConditions_3pt( bool antiperiod
   if (n_coherent_source >1 && attract_look_up_table==NULL) PLEGMA_error("attract_look_up_table must be created before using this function\n");
 
   for( int t=0; t<TIME; ++t){
-    int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC_localL[DIM_T]) + t - maxT : t;
-    int t_global = HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + t_local;
+    int t_local = (t>=maxT) ? (this->source[DIM_T]%HGC.localL[DIM_T]) + t - maxT : t;
+    int t_global = HGC.procPosition[DIM_T] * HGC.localL[DIM_T] + t_local;
     int source_num= n_coherent_source > 1 ? attract_look_up_table[t_global] : this->source[DIM_T];
-    if(  source_num + source_sink_separation > HGC_totalL[3] ){
+    if(  source_num + source_sink_separation > HGC.totalL[3] ){
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs){
         for( int i_dofs=0; i_dofs<in_dofs; ++i_dofs){
           *(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs) = -*(this->H_elem() + o_dofs*TIME*in_dofs + t*in_dofs  + i_dofs);
@@ -3513,9 +3513,9 @@ void PLEGMA_ScattCorrelator<Float>::apply_phase(){
 
   #pragma omp parallel for
   for( int i_m=0; i_m<N_moms; ++i_m){
-      Float phase=2*M_PI/(Float)HGC_totalL[0]* mom_list[i_m][0]*this->source[0]+
-	2*M_PI/(Float)HGC_totalL[1]* mom_list[i_m][1]*this->source[1]+
-	2*M_PI/(Float)HGC_totalL[2]* mom_list[i_m][2]*this->source[2];
+      Float phase=2*M_PI/(Float)HGC.totalL[0]* mom_list[i_m][0]*this->source[0]+
+	2*M_PI/(Float)HGC.totalL[1]* mom_list[i_m][1]*this->source[1]+
+	2*M_PI/(Float)HGC.totalL[2]* mom_list[i_m][2]*this->source[2];
       Float tmpreim[2]={cos(phase),sin(phase)};
       for( int o_dofs=0; o_dofs<out_dofs; ++o_dofs)
 	x_e_cx<Float>( this->H_elem() + (o_dofs*N_moms+i_m)*in_dofs, tmpreim, in_dofs/2);
@@ -3681,11 +3681,11 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
 //      PLEGMA_error("ScattCorrelator, srcCorr wrong gamma list\n");
 
 
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
 
-  int my_it = global_it - comm_coord(3) * HGC_localL[3];
+  int my_it = global_it - comm_coord(3) * HGC.localL[3];
 
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
 
   if (forcetozero == true && !this->labels.empty()){
     int tot_size = 2*this->getTotalSize();
@@ -3728,9 +3728,9 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
 
     int coords[4];
     for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
-    coords[3]= global_it / HGC_localL[3];
+    coords[3]= global_it / HGC.localL[3];
     int rankHas = comm_rank_from_coords(coords);
-    int mpiErr = MPI_Bcast(this->H_elem(), in_dofs_src*out_dofs_src , MPI_Type<Float>(), rankHas, HGC_fullComm);
+    int mpiErr = MPI_Bcast(this->H_elem(), in_dofs_src*out_dofs_src , MPI_Type<Float>(), rankHas, HGC.fullComm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
     
   }

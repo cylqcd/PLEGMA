@@ -20,8 +20,8 @@ __global__ void tetraquark_open_index_device(Float2<FloatC>* block2,
   int tid = blockIdx.x/grid3D;
   // this takes into account the case where the source is in the local lattice
   // and we need to start from it when we go over maxT
-  int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
-  int vid = sid3D + t*DGC_localVolume3D;
+  int t=it+tid; if(t>=maxT) t=(source.w%DGC->localL[DIM_T])+t-maxT;
+  int vid = sid3D + t*DGC->localVolume3D;
   
   const Float2<float> (*g)[4];
   const short int (*gIn)[4][2];
@@ -35,7 +35,7 @@ __global__ void tetraquark_open_index_device(Float2<FloatC>* block2,
     accum[i]=0;
   
   
-    if (sid3D < DGC_localVolume3D){
+    if (sid3D < DGC->localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][N_COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][N_COLS];
     prop1Tex.get(prop1,vid);
@@ -80,9 +80,9 @@ __global__ void tetraquark_open_index_device(Float2<FloatC>* block2,
     int source_pos[3] = {source.x, source.y, source.z}; 
     fourier_transform_3D(block2, accum, shared_cache, site_size, sid3D, source_pos, moms, 0, +1, time_step, tid);
   } else{
-    if (sid3D < DGC_localVolume3D)
+    if (sid3D < DGC->localVolume3D)
       for(int iop = 0; iop < site_size; iop++)
-	block2[(tid*DGC_localVolume3D + sid3D)*site_size +iop] = accum[iop];
+	block2[(tid*DGC->localVolume3D + sid3D)*site_size +iop] = accum[iop];
   }
 
 }
@@ -108,7 +108,7 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
   listGammas.array= (GAMMAS*)  device_malloc(gammas.size()*sizeof(GAMMAS));
   qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
-  if(HGC_verbosity > 2)
+  if(HGC.verbosity > 2)
     if(corr.hasSource())
       printf("time_step = %d, t_size = %d, maxT = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", time_step, t_size, maxT, ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
 
@@ -175,11 +175,11 @@ if(gammas.size() != 1)
   if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
 
-  ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
+  ProfileStruct ps(HGC.localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
   
   Float2<FloatC> *result = NULL;
@@ -193,7 +193,7 @@ if(gammas.size() != 1)
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type(corr.H_elem()),
-		  MPI_SUM, HGC_spaceComm);
+		  MPI_SUM, HGC.spaceComm);
     hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   }
 // #else

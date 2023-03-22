@@ -51,23 +51,28 @@ using namespace std::chrono_literals;
 using namespace quda;
 
 namespace plegma {
-  //======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//
+
+//======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//
 #include <global/PLEGMA_prints.hpp>
 
   //======== Enumerations =========//
 #include <global/PLEGMA_enums.h>
 
-  //======== Templated types and functions =========//
+//======== Templated types and functions =========//
 #include <global/PLEGMA_templates.h>
 
-  //======== Some custom data struct =========//
-#include <global/PLEGMA_structs.h>
-
-  //======== Class for reading options from command line or file =========//
+//======== Class for reading options from command line or file =========//
 #include <global/PLEGMA_Options.h>
+
+      	//======== Some custom data struct =========//
+#include <global/PLEGMA_structs.h>
 
   //======== Global constants on host and device =========//
 #include <global/PLEGMA_global_constants.h>
+
+
+
+
 
 
 static inline void PLEGMA_memset(void *ptr, int value, size_t count){

@@ -40,7 +40,7 @@ static void V_reductions_host( ProfileStruct &ps, VRED V, PLEGMA_ScattCorrelator
 
 
   //value of some quantities
-  if(HGC_verbosity > 2){
+  if(HGC.verbosity > 2){
     PLEGMA_printf("t_size = %d, maxT = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
     PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
@@ -155,11 +155,11 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = Vout.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
   
   std::string kerName="V_reductions_V"+std::to_string(int(V))+"_gammas_";
@@ -171,7 +171,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 	      ps, V, Vout, result, Gammas, *vectorPhi,*vectorPhi,*propS, *propS);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC.spaceComm);
 
   hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 }
@@ -193,11 +193,11 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = Vout.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   std::string kerName="V_reductions_V"+std::to_string(int(V))+"_gammas_";
@@ -210,7 +210,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
 	      ps, V, Vout, result, Gammas, *vectorPhi,*vectorPhi, *propS1, *propS2);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC.spaceComm);
 
  hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
  
@@ -233,11 +233,11 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = Vout.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   std::string kerName="V_reductions_V"+std::to_string(int(V))+"_gammas_";
@@ -250,7 +250,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
               ps, V, Vout, result, Gammas, *vectorPhi1,*vectorPhi2, *propS1, *propS1);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC.spaceComm);
 
   hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 
@@ -274,11 +274,11 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = Vout.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   std::string kerName="V_reductions_V"+std::to_string(int(V));
@@ -292,7 +292,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
               ps, V, Vout, result, Gammas, *vectorPhi1,*vectorPhi2, *propS, *propS);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC.spaceComm);
 
  hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
  
@@ -313,12 +313,12 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
   hostMalloc(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = Vout.localT();
   int maxLocalT = myLocalT;
   std::vector<GAMMAS_SCATT> Gammas {};
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   std::string kerName="V_reductions_V"+std::to_string(int(V));
@@ -336,7 +336,7 @@ static void V_reductions(VRED V, PLEGMA_ScattCorrelator<FloatOut> &Vout,
               ps, V, Vout, result, Gammas, *vectorPhi1,*vectorPhi2,*propS,*propS);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Vout.H_elem(), Vout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC.spaceComm);
 
   hostFree(result, Vout.getTotalSize()*sizeof(Float2<FloatOut>));
 
@@ -365,7 +365,7 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
   int site_size = Tout.getSiteSize();
   int nblockspert = ps.tp.grid.x/time_step;
   
-  if(HGC_verbosity > 2){
+  if(HGC.verbosity > 2){
     PLEGMA_printf("t_size = %d, maxT = %d, time_step = %d, ps.tp.grid.x = %d, ps.tp.block.x = %d, ps.tp.shared_bytes = %d\n", t_size, maxT, time_step,  ps.tp.grid.x, ps.tp.block.x, ps.tp.shared_bytes);
     PLEGMA_printf("size = %d, volume = %d, nblockxt = %d\n", size, N_moms, nblockspert);
   }
@@ -405,7 +405,7 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
   qudaMemcpy(listGammas_i.array, gammas_i.data(), gammas_i.size()*sizeof(GAMMAS_SCATT), qudaMemcpyHostToDevice);
   qudaMemcpy(listGammas_f.array, gammas_f.data(), gammas_f.size()*sizeof(GAMMAS_SCATT), qudaMemcpyHostToDevice);
   checkQudaError();
-  if(HGC_verbosity > 2){
+  if(HGC.verbosity > 2){
     PLEGMA_printf("site_size= %d\n", listGammas_f.size*listGammas_i.size*N_SPINS*N_SPINS);
   }
   for(int it=0; it < t_size; it+=time_step) {
@@ -460,11 +460,11 @@ static void T_reductions(TRED T, PLEGMA_ScattCorrelator<FloatOut> &Tout,
   hostMalloc(result, Tout.getTotalSize()*sizeof(Float2<FloatOut>)); //N.B N_moms*Tlocal*site_size
 
   //allocation of a number of threads multiple of local3DVolume. the profiler will decide how much.
-  ProfileStruct ps(HGC_localVolume3D, shared_size);
+  ProfileStruct ps(HGC.localVolume3D, shared_size);
   int myLocalT = Tout.localT();
   int maxLocalT = myLocalT;
-  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC.fullComm);
+  ps.max_volume = HGC.localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
   std::string kerName="T_reductions_T"+std::to_string(int(T))+"_gammas_i_";
@@ -479,7 +479,7 @@ static void T_reductions(TRED T, PLEGMA_ScattCorrelator<FloatOut> &Tout,
 	      ps, T, Tout, result, Gammas_i, Gammas_f, *propS1, *propS2, *propS3);
 
   //reduction between spaceComm for the sum of Fourier transformation between nodes
-  MPI_Allreduce(result, Tout.H_elem(), Tout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(result, Tout.H_elem(), Tout.getTotalSize()*2, MPI_Type<FloatOut>(), MPI_SUM, HGC.spaceComm);
 
  hostFree(result, Tout.getTotalSize()*sizeof(Float2<FloatOut>));
  
