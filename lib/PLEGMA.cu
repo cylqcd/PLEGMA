@@ -167,12 +167,12 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
     // copying globals to device
 #if defined (__NVCC__)
-    cudaError_t cudaStatus = cudaGetSymbolAddress((void **)&DGC_ptr, &DGC_const);
+    cudaError_t cudaStatus = cudaGetSymbolAddress((void **)&DGC_ptr, DGC_const);
     if (cudaStatus != cudaSuccess) {
         PLEGMA_error("cudaGetSymbolAddress (dev_N) failed: %s\n", cudaGetErrorString(cudaStatus));
     }
 #elif defined (__HIP__)
-    hipError_t hipStatus = hipGetSymbolAddress((void **)&DGC_ptr, &DGC_const);
+    hipError_t hipStatus = hipGetSymbolAddress((void **)&DGC_ptr, DGC_const);
     if (hipStatus != hipSuccess) {
         PLEGMA_error("hipGetSymbolAddress (dev_N) failed: %s\n", hipGetErrorString(cudaStatus));
     }
