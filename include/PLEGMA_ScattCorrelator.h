@@ -101,7 +101,7 @@ namespace plegma {
      *          in most cases we do set this to false
      *
      **/
-    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2,bool conj_v=false );
+    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2,bool conj_v=true );
     /**
      *
      *  @brief performs V3 type reduction produces one spin and one color indices tensor from a fermion vector and a fermion propagator
@@ -138,7 +138,7 @@ namespace plegma {
      *
      *
      **/
-    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
+    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=true );
     /**
      *
      *  @brief performs V5 type reduction produces two spin and one color indices tensor from two fermion vectors

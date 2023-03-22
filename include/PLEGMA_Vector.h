@@ -102,10 +102,6 @@ namespace plegma {
     void pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
 
 
-
-    void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bool  broadcast=false);
-
-
   };
 
   template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
