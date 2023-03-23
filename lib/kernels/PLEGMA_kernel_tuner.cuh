@@ -203,7 +203,7 @@ public:
     sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d,maxvolume=%d,aux_range=(%d,%d,%d,%d)", ps.volume, N_DIMS, N_COLS, ps.max_volume, ps.aux_range.x, ps.aux_range.y, ps.aux_range.z, ps.aux_range.w);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
     setPolicyTuning(ps.tune_globally);
-    qudaMemcpy(&DGC,DGC_ptr, sizeof(void*), qudaMemcpyHostToDevice);
+    qudaMemcpy(DGC,DGC_ptr, sizeof(struct global_vars_both*), qudaMemcpyHostToDevice);
   }
 
   ~PLEGMA_kernel_tuner(){
