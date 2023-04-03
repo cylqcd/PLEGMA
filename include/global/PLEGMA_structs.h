@@ -87,7 +87,7 @@ struct pointer_holder {
     if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
     }
-#else
+#elif defined (__HIP__)
     HIP_CHECK(hipMemcpy(*devPointer, hostPointer, bytes*size, hipMemcpyHostToDevice));
 #endif
     }

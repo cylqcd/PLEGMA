@@ -1,4 +1,8 @@
 # basic setup for cmake
+if(POLICY CMP0074)
+  cmake_policy(SET CMP0074 NEW)
+endif()
+
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
@@ -9,9 +13,25 @@ set(CMAKE_CXX_STANDARD 17)
 include(CheckIncludeFileCXX)
 include(CheckSymbolExists)
 
-if(${CMAKE_VERSION} VERSION_GREATER "3.12.0") 
-  cmake_policy(SET CMP0074 NEW)
+
+# Disable in source builds this is only a temporary fix, but for now we need it as
+# cmake will otherwise overwrite the existing makefiles.
+set(CMAKE_DISABLE_SOURCE_CHANGES ON)
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+# add a directory for cmake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+
+
+# By default we will build DEVEL. The different build types will pass different
+# flags to the compiler which may be strict or permissive on warnings, or
+# very verbose at run time and/or compile time.
+if(DEFINED ENV{PLEGMA_BUILD_TYPE})
+  set(DEFBUILD $ENV{PLEGMA_BUILD_TYPE})
+else()
+  set(DEFBUILD "DEVEL")
 endif()
+
 
 set(VALID_BUILD_TYPES
     DEVEL
@@ -31,8 +51,51 @@ list(FIND VALID_BUILD_TYPES ${CHECK_BUILD_TYPE} BUILD_TYPE_VALID)
 if(BUILD_TYPE_VALID LESS 0)
   message(SEND_ERROR "Please specify a valid CMAKE_BUILD_TYPE type! Valid build types are:" "${VALID_BUILD_TYPES}")
 endif()
+find_package(Git)
+if(GIT_FOUND)
+  execute_process(COMMAND ${GIT_EXECUTABLE} show
+                  WORKING_DIRECTORY ${QUDA_SRC}
+                  RESULT_VARIABLE IS_GIT_REPOSIITORY
+                  OUTPUT_QUIET ERROR_QUIET)
+  if(${IS_GIT_REPOSIITORY} EQUAL 0)
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor b08233a7d1cee0145e56751ae04c5542ce98b3b5 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+                    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_b08233a)
+    endif()
+
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 775a033a84b4f085e8cf68812b89f989e6a5a816 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+                    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_775a033)
+    endif()
+
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 55782743d1ee8d99af21e1038be11a7023650d7d HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+                    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_55782743)
+    endif()
 
 
+    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 1dec1db7a57e4fe00b14e04ba2088ca5039f8760 HEAD
+                    WORKING_DIRECTORY ${QUDA_SRC}
+                    RESULT_VARIABLE QUDA_INCLUDES_IT
+                    OUTPUT_VARIABLE GITTAG
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(${QUDA_INCLUDES_IT} EQUAL 0)
+      add_compile_definitions(QUDA_INCLUDES_COMMIT_1dec1db)
+    endif()
+  endif()
+endif(GIT_FOUND)
 
 # QUDA may be built to run using CUDA, HIP or SYCL, which we call the
 # Target type. By default, the target is CUDA.
@@ -46,7 +109,7 @@ set(VALID_TARGET_TYPES CUDA HIP SYCL)
 set(PLEGMA_TARGET_TYPE
   "${DEFTARGET}"
   CACHE STRING "Choose the type of target, options are: ${VALID_TARGET_TYPES}")
-set_property(CACHE PLEGMA_TARGET_TYPE PROPERTY STRINGS CUDA HIP SYCL)
+set_property(CACHE PLEGMA_TARGET_TYPE PROPERTY STRINGS CUDA HIP)
 
 string(TOUPPER ${PLEGMA_TARGET_TYPE} CHECK_TARGET_TYPE)
 list(FIND VALID_TARGET_TYPES ${CHECK_TARGET_TYPE} TARGET_TYPE_VALID)
@@ -61,12 +124,26 @@ endif()
 # otherwise overwrite the existing makefiles
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
 # add a directory for cmake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 enable_language(C)
 enable_language(CXX)
 
-project("PLEGMA" VERSION 0.0.1 LANGUAGES)
+# Define the project
+project(
+  "PLEGMA"
+  VERSION 1.1.0
+  LANGUAGES)
+
+# Print the configuration details to stdout
+message(STATUS "")
+message(STATUS "${PROJECT_NAME} ${PROJECT_VERSION} (${GITVERSION}) **")
+message(STATUS "cmake version: ${CMAKE_VERSION}")
+message(STATUS "Source location: ${CMAKE_SOURCE_DIR}")
+message(STATUS "Build location: ${CMAKE_BINARY_DIR}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "PLEGMA target: ${PLEGMA_TARGET_TYPE}")
 
 # TODO: add authomatic download and compilation of QUDA
 set(QUDA_HOME "" CACHE PATH "path to QUDA")
@@ -90,52 +167,6 @@ set(QUDA_SRC "" CACHE PATH "path to QUDA src directory")
 if("${QUDA_SRC}" STREQUAL "")
   message( FATAL_ERROR "QUDA_SRC must be defined" )
 endif()
-
-find_package(Git)
-if(GIT_FOUND)
-  execute_process(COMMAND ${GIT_EXECUTABLE} show
-                  WORKING_DIRECTORY ${QUDA_SRC}
-                  RESULT_VARIABLE IS_GIT_REPOSIITORY
-                  OUTPUT_QUIET ERROR_QUIET)
-  if(${IS_GIT_REPOSIITORY} EQUAL 0)
-    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor b08233a7d1cee0145e56751ae04c5542ce98b3b5 HEAD
-                    WORKING_DIRECTORY ${QUDA_SRC}
-		    RESULT_VARIABLE QUDA_INCLUDES_IT
-                    OUTPUT_VARIABLE GITTAG
-		    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(${QUDA_INCLUDES_IT} EQUAL 0)
-      add_compile_definitions(QUDA_INCLUDES_COMMIT_b08233a)
-    endif()
-
-    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 775a033a84b4f085e8cf68812b89f989e6a5a816 HEAD
-                    WORKING_DIRECTORY ${QUDA_SRC}
-		    RESULT_VARIABLE QUDA_INCLUDES_IT
-                    OUTPUT_VARIABLE GITTAG
-		    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(${QUDA_INCLUDES_IT} EQUAL 0)
-      add_compile_definitions(QUDA_INCLUDES_COMMIT_775a033)
-    endif()
-
-    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 55782743d1ee8d99af21e1038be11a7023650d7d HEAD
-    	            WORKING_DIRECTORY ${QUDA_SRC}
-		    RESULT_VARIABLE QUDA_INCLUDES_IT
-                    OUTPUT_VARIABLE GITTAG
-		    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(${QUDA_INCLUDES_IT} EQUAL 0)
-      add_compile_definitions(QUDA_INCLUDES_COMMIT_55782743)
-    endif()
-
-
-    execute_process(COMMAND ${GIT_EXECUTABLE} merge-base --is-ancestor 1dec1db7a57e4fe00b14e04ba2088ca5039f8760 HEAD
-                    WORKING_DIRECTORY ${QUDA_SRC}
-		    RESULT_VARIABLE QUDA_INCLUDES_IT
-                    OUTPUT_VARIABLE GITTAG
-		    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(${QUDA_INCLUDES_IT} EQUAL 0)
-      add_compile_definitions(QUDA_INCLUDES_COMMIT_1dec1db)
-    endif()
-  endif()
-endif(GIT_FOUND)
 
 include(ExternalProject)
 
@@ -299,6 +330,32 @@ mark_as_advanced(PLEGMA_RUN_TESTS)
 #######################################################################
 # we need to check for some packages
 find_package(PythonInterp)
+if (${PLEGMA_TARGET_TYPE} STREQUAL "CUDA")
+  if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
+    find_package(CUDAWrapper)
+    set(USING_CUDA_LANG_SUPPORT True)
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED True)
+  else()
+    set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
+    mark_as_advanced(CUDA_HOST_COMPILER)
+    find_package(CUDA REQUIRED)
+    set(USING_CUDA_LANG_SUPPORT False)
+  endif()
+endif()
+
+if (${PLEGMA_TARGET_TYPE} STREQUAL "HIP")
+  if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
+	  set(USING_HIP_LANG_SUPPORT True)
+	  set(CMAKE_HIP_STANDARD 17)
+	  set(CMAKE_HIP_STANDARD_REQUIRED True)
+  else()
+	  set(HIP_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
+	  mark_as_advanced(HIP_HOST_COMPILER)
+	  find_package(HIP REQUIRED)
+	  set(USING_HIP_LANG_SUPPORT False)
+  endif()
+endif()
 
 # We need threads
 find_package(Threads REQUIRED)
