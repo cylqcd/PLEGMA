@@ -22,20 +22,25 @@
 #endif
 
 /*
-#ifdef ADD_TO_GLOBAL
-void *symbolAddress;
 #define global_host(dtype, name, ...)					\
   HGC_global_vars.add<dtype>(#name,					\
 				   PRODUCT(__VA_ARGS__),		\
 				   &HGC_##name PARENTHESES(0,__VA_ARGS__))
 
+#if defined (__HIP__)
 #define global_both(dtype, name, ...)					\
-  HIP_CHECK(hipGetSymbolAddress(&symbolAddress, HIP_SYMBOL(DGC_##name))); \
   HGC_global_vars.add<dtype>(#name,					\
 				   PRODUCT(__VA_ARGS__),		\
 				   &HGC_##name PARENTHESES(0,__VA_ARGS__), \
-			           (void**) &symbolAddress)
+			           (void**) &DGC_##name)
+#else
+#define global_both(dtype, name, ...)                                   \
+  HGC_global_vars.add<dtype>(#name,                                     \
+                                   PRODUCT(__VA_ARGS__),                \
+                                   &HGC_##name PARENTHESES(0,__VA_ARGS__), \
+                                   (void**) &DGC_##name)
 
+#endif
 #else
 */
 #ifdef ALLOCATE

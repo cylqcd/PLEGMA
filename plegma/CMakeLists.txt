@@ -1,4 +1,4 @@
-set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${MPI_CXX_LIBRARIES} )
+set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT}  ${MPI_CXX_LIBRARIES} ${QUDA_LIB} ${CUDA_LIBS} cublas cuda)
 
 LIST(APPEND PLEGMA_LIBS ${MPI_CXX_LIBRARIES})
 
@@ -34,7 +34,7 @@ endif(PLEGMA_MKL)
 
 #define PLEGMA executables
 
-add_executable(Plaquette Plaquette.cpp)
+cuda_add_executable(Plaquette Plaquette.cpp)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
 add_executable(Topo Topo.cpp)

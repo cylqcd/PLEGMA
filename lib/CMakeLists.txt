@@ -1,6 +1,6 @@
 # cmake-format: off
 
-# this allows simplified running of clang-tidy
+# this allows simplified running of clang-tid
 if(${CMAKE_BUILD_TYPE} STREQUAL "DEVEL")
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 endif()
@@ -16,7 +16,7 @@ if(DEBUG_BUILD)
 endif()
 
 set (PLEGMA_OBJS 
-  PLEGMA_Correlator.cu
+  PLEGMA_Correlator.cu 
   PLEGMA.cu
   PLEGMA_Propagator.cu
   PLEGMA_Vector.cu
@@ -24,6 +24,8 @@ set (PLEGMA_OBJS
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
+  kernels/PLEGMA_seqSourceNucleon.cu
+  PLEGMA_BLAS.cu
   kernels/PLEGMA_baryons_NtoN.cu
   kernels/PLEGMA_seqSourceNucleon.cu
   kernels/PLEGMA_threep_local.cu
@@ -36,12 +38,12 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_threep_threeD_part4.cu
   kernels/PLEGMA_threep_wilsonLine.cu
   kernels/PLEGMA_threep_staple.cu
-  kernels/PLEGMA_threep_qgq.cu	
+  kernels/PLEGMA_threep_qgq.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
   PLEGMA_Fmunu.cu
-  PLEGMA_U1Gauge.cu	
+  PLEGMA_U1Gauge.cu
 )
 if(PLEGMA_UDSC_BARYONS)
   LIST(APPEND PLEGMA_OBJS
@@ -85,6 +87,9 @@ FOREACH(item ${PLEGMA_OBJS})
 ENDFOREACH(item ${PLEGMA_OBJS})
 
 LIST(REMOVE_ITEM PLEGMA_OBJS ${PLEGMA_CU_OBJS})
+message(STATUS "PLEGMA_OBJS=${PLEGMA_OBJS}")
+message(STATUS "PLEGMA_CU_OBJS=${PLEGMA_CU_OBJS}")
+
 
 # PLEGMA_CU_OBJS should contain all cuda files now PLEGMA_OBJS all c, cpp, fortran sources
 # if we have a git version make version.cpp depend on git head so that it is rebuild if the git sha changed
@@ -92,9 +97,11 @@ LIST(REMOVE_ITEM PLEGMA_OBJS ${PLEGMA_CU_OBJS})
 if(PLEGMA_OBJS)
   add_library(plegma_cpp OBJECT ${PLEGMA_OBJS})
 
-  target_compile_definitions(plegma_cpp PUBLIC -DQUDA_HASH="${HASH}")
+  target_compile_definitions(plegma_cpp PUBLIC -DPLEGMA_HASH="${HASH}")
+  if(GITVERSION)
+    target_compile_definitions(plegma_cpp PUBLIC -DGITVERSION="${GITVERSION}")
+  endif()
   set_target_properties(plegma_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-
 endif()
 if(${CMAKE_BUILD_TYPE} STREQUAL "DEVEL")
   if(GITVERSION)
@@ -113,18 +120,16 @@ endif()
 # QUDA_CU_OBJS shoudl contain all cuda files now
 # PLEGMA_OBJS all c, cpp, fortran sources
 
-if(PLEGMA_BUILD_SHAREDLIB)
-  if (PLEGMA_OBJS)
-    set_target_properties(plegma_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-  endif()
-  add_library(plegma SHARED)
-else()
-  add_library(plegma STATIC)
-endif()
-add_library(PLEGMA::plegma ALIAS plegma)
 
 # add target specific files
 if(${PLEGMA_TARGET_TYPE} STREQUAL "CUDA")
+  enable_language(CUDA)
+  find_package(CUDAWrapper)
+  if(PLEGMA_BUILD_SHAREDLIB)
+   cuda_add_library(plegma SHARED ${PLEGMA_LIB})
+  else()
+   cuda_add_library(plegma STATIC ${PLEGMA_LIB})
+  endif()
   include(targets/cuda/target_cuda.cmake)
 endif()
 if(${PLEGMA_TARGET_TYPE} STREQUAL "HIP")
@@ -175,25 +180,25 @@ endif(PLEGMA_ARPACK)
 
 
 
-LIST(APPEND PLEGMA ${PLEGMA_GSL_LIB})
-LIST(APPEND PLEGMA ${PLEGMA_HDF5_LIB})
-LIST(APPEND PLEGMA ${PLEGMA_LIME_LIB})
+LIST(APPEND plegma ${PLEGMA_GSL_LIB})
+LIST(APPEND plegma ${PLEGMA_HDF5_LIB})
+LIST(APPEND plegma ${PLEGMA_LIME_LIB})
 if(PLEGMA_ARPACK)
-  LIST(APPEND PLEGMA ${PLEGMA_PARPACK_LIB})
-  LIST(APPEND PLEGMA ${PLEGMA_ARPACK_LIB})
+  LIST(APPEND plegma ${PLEGMA_PARPACK_LIB})
+  LIST(APPEND plegma ${PLEGMA_ARPACK_LIB})
 endif(PLEGMA_ARPACK)
 
 if(PLEGMA_OPENBLAS)
-  LIST(APPEND PLEGMA ${PLEGMA_OPENBLAS_GOMP})
-  LIST(APPEND PLEGMA ${PLEGMA_OPENBLAS_LIB})
+  LIST(APPEND plegma ${PLEGMA_OPENBLAS_GOMP})
+  LIST(APPEND plegma ${PLEGMA_OPENBLAS_LIB})
 endif(PLEGMA_OPENBLAS)
   
 if(PLEGMA_MKL)
-  LIST(APPEND PLEGMA ${PLEGMA_MKL_LIB_IOMP5})
-  LIST(APPEND PLEGMA ${PLEGMA_MKL_LIB_GFORTRAN})
-  LIST(APPEND PLEGMA ${PLEGMA_MKL_LIB_LP64})
-  LIST(APPEND PLEGMA ${PLEGMA_MKL_LIB_THREAD})
-  LIST(APPEND PLEGMA ${PLEGMA_MKL_LIB_CORE})
+  LIST(APPEND plegma ${PLEGMA_MKL_LIB_IOMP5})
+  LIST(APPEND plegma ${PLEGMA_MKL_LIB_GFORTRAN})
+  LIST(APPEND plegma ${PLEGMA_MKL_LIB_LP64})
+  LIST(APPEND plegma ${PLEGMA_MKL_LIB_THREAD})
+  LIST(APPEND plegma ${PLEGMA_MKL_LIB_CORE})
 endif(PLEGMA_MKL)
 
 
@@ -201,24 +206,28 @@ endif(PLEGMA_MKL)
 # add dependencies for linking
 # if CUDA_cuda_LIBRARY (driver api) is not found look for stubs
 #FIND_LIBRARY(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
-
-target_link_libraries(plegma PUBLIC ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${QUDA_LIBS}) # ${CUDA_cuda_LIBRARY})
+if(${PLEGMA_TARGET_TYPE} STREQUAL "CUDA")
+  target_link_libraries(plegma ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${CUDA_cuda_LIBRARY})
+endif()
+if(${PLEGMA_TARGET_TYPE} STREQUAL "HIP")
+  target_link_libraries(plegma ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ) # ${CUDA_cuda_LIBRARY})
+endif()
 add_dependencies(plegma BoostPP)
 
 if(QUDA_QMP)
-  target_link_libraries(PLEGMA ${QMP_LIB} ${MPI_CXX_LIBRARIES})
+  target_link_libraries(plegma ${QMP_LIB} ${MPI_CXX_LIBRARIES})
 endif()
 
 if(QUDA_MPI)
-  target_link_libraries(PLEGMA ${MPI_CXX_LIBRARIES})
+  target_link_libraries(plegma ${MPI_CXX_LIBRARIES})
 endif()
 
 if(QUDA_MAGMA)
-  target_link_libraries(PLEGMA ${MAGMA})
+  target_link_libraries(plegma ${MAGMA})
 endif()
 
 if(QUDA_ARPACK)
-  target_link_libraries(PLEGMA ${PARPACK_OR_ARPACK})
+  target_link_libraries(plegma ${PARPACK_OR_ARPACK})
 endif()
 
 configure_file(../include/plegma_define.h.in ../include/plegma_define.h @ONLY)
@@ -228,7 +237,7 @@ install(FILES "${CMAKE_BINARY_DIR}/include/plegma_define.h" DESTINATION include/
 # until we define an install step copy the include directory to the build directory
 ADD_CUSTOM_COMMAND(TARGET plegma POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)
 # some hackery to prevent having old shared / static builds of quda messing with the current build
-ADD_CUSTOM_COMMAND(TARGET plegma PRE_LINK COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.a ${CMAKE_CURRENT_BINARY_DIR}/libPLEGMA.so)
+ADD_CUSTOM_COMMAND(TARGET plegma PRE_LINK COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/libplegma.a ${CMAKE_CURRENT_BINARY_DIR}/libplegma.so)
 
 install(TARGETS plegma 
 	EXPORT PLEGMATargets

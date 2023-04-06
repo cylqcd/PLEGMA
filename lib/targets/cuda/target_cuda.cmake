@@ -2,7 +2,7 @@
 # malloc.cpp uses both the driver and runtime api
 # So we need to find the CUDA_cuda_LIBRARY (driver api) or the stub version
 find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
-target_link_libraries(plegma PUBLIC ${CUDA_cuda_LIBRARY})
+#target_link_libraries(plegma PUBLIC ${CUDA_cuda_LIBRARY})
 # CUDA specific part of CMakeLists
 include(CheckLanguage)
 check_language(CUDA)
@@ -31,18 +31,6 @@ endif()
 # we need to check for some packages
 find_package(PythonInterp)
 
-if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
-  find_package(CUDAWrapper)
-  set(USING_CUDA_LANG_SUPPORT True)
-  set(CMAKE_CUDA_STANDARD 17)
-  set(CMAKE_CUDA_STANDARD_REQUIRED True)
-else()
-  set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
-  mark_as_advanced(CUDA_HOST_COMPILER)
-  find_package(CUDA REQUIRED)
-  set(USING_CUDA_LANG_SUPPORT False)
-endif()
-
 # solve compiler issues with CUDA and tuples
 if( (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.5) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)  AND (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER 9.0) AND (CMAKE_CUDA_COMPILER_VERSION VERSION_LESS 9.2))
   message(FATAL_ERROR "This library will have compilation problems with CUDA 9.1 and gcc 6")
@@ -51,10 +39,10 @@ if( (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6) AND (CMAKE_CUDA_COMPILER_VERSION
   message(FATAL_ERROR "This library will have compilation problems with CUDA 9.2 and gcc < 6")
 endif()
 
-LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} ${CUDA_curand_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_nvrtc_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_nvToolsExt_LIBRARY})
+LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY} )
+LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} )
+LIST(APPEND CUDA_LIBS ${CUDA_curand_LIBRARY} )
+LIST(APPEND CUDA_LIBS ${CUDA_nvrtc_LIBRARY} ${CUDA_nvToolsExt_LIBRARY})
 
 find_package(LibDL)
 LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
@@ -62,7 +50,7 @@ LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
 add_definitions(-DMULTI_GPU)
 
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
-include_directories(lib/kernels)
+include_directories(kernels)
 
 
 # GPU ARCH
@@ -139,11 +127,7 @@ mark_as_advanced(CMAKE_CUDA_FLAGS_HOSTDEBUG)
 mark_as_advanced(CMAKE_CUDA_FLAGS_DEVICEDEBUG)
 
 # make one library
-#if(PLEGMA_BUILD_SHAREDLIB)
-#   cuda_add_library(plegma SHARED ${PLEGMA_LIB})
-#else()
-#  cuda_add_library(plegma STATIC ${PLEGMA_LIB})
-#endif()
+ 
 target_include_directories(plegma PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_include_directories(plegma PUBLIC ${QUDA_HOME}/include/targets/cuda)
