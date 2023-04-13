@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
-set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+set(CMAKE_HIP_SEPARABLE_COMPILATION ON)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 17)
 include(CheckIncludeFileCXX)
@@ -424,13 +424,21 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
+set(CPU_ARCH ${CMAKE_HOST_SYSTEM_PROCESSOR})
+if(${CPU_ARCH} STREQUAL "x86_64")
+  set(CXX_OPT "-mtune=native")
+elseif(${CPU_ARCH} STREQUAL "ppc64le")
+  set(CXX_OPT "-Ofast -mcpu=native -mtune=native")
+endif()
+
+
 
 #define CXX FLAGS
 set(CMAKE_CXX_FLAGS_DEVEL "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -Wall ${CLANG_FORCE_COLOR}" CACHE STRING
 "Flags used by the C++ compiler during regular development builds.")
 set(CMAKE_CXX_FLAGS_STRICT  "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -Wall -Werror ${CLANG_NOERROR}" CACHE STRING
 "Flags used by the C++ compiler during strict jenkins builds.")
-set(CMAKE_CXX_FLAGS_RELEASE "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -w" CACHE STRING
+set(CMAKE_CXX_FLAGS_RELEASE "${OpenMP_CXX_FLAGS} -std=c++17 -O3 -w ${CXX_OPT}" CACHE STRING
     "Flags used by the C++ compiler during release builds.")
 set(CMAKE_CXX_FLAGS_HOSTDEBUG "${OpenMP_CXX_FLAGS} -std=c++17 -Wall -Wno-unknown-pragmas -g -fno-inline -DHOST_DEBUG ${CLANG_FORCE_COLOR}" CACHE STRING
     "Flags used by the C++ compiler during host-debug builds.")
