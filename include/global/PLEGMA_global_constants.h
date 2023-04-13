@@ -22,18 +22,16 @@
 #endif
 #ifdef ADD_TO_GLOBAL
 
-void *symbolAddress;
 #define global_host(dtype, name, ...)					\
   HGC_global_vars.add<dtype>(#name,					\
 				   PRODUCT(__VA_ARGS__),		\
 				   &HGC_##name PARENTHESES(0,__VA_ARGS__))
 
 #define global_both(dtype, name, ...)					\
-  HIP_CHECK(hipGetSymbolAddress(&symbolAddress, HIP_SYMBOL(DGC_##name))); \
   HGC_global_vars.add<dtype>(#name,					\
 				   PRODUCT(__VA_ARGS__),		\
 				   &HGC_##name PARENTHESES(0,__VA_ARGS__), \
-			           (void**) &symbolAddress)
+			           (void**) &DGC_##name)
 
 #else
 #ifdef ALLOCATE
@@ -64,7 +62,7 @@ void *symbolAddress;
 #elif defined ( __HIP__ )
 #define global_both(dtype, name, ...)                                   \
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);                   \
-  extern __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);
+  static __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);
 #else
 #define global_both(dtype, name, ...)			\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
