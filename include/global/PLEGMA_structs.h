@@ -2,6 +2,7 @@
 #define HIP_CHECK(error)                                                                           \
   {                                                                                                \
     hipError_t localError = error;                                                                 \
+    PLEGMA_printf("Error in MemcpytoSymbol %d\n", error);					   \
     if ((localError != hipSuccess) && (localError != hipErrorPeerAccessAlreadyEnabled)) {          \
       PLEGMA_printf("Error: %s, Code %d\n", hipGetErrorString(localError), localError);            \
       PLEGMA_printf("FILE: %s, LINE %d\n", __FILE__, __LINE__ );			           \
@@ -87,8 +88,12 @@ struct pointer_holder {
     if (err != cudaSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
     }
-#else
-    HIP_CHECK(hipMemcpy(*devPointer, hostPointer, bytes*size, hipMemcpyHostToDevice));
+#elif defined(__HIP__)
+    hipError_t err = hipMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
+    if (err != hipSuccess) {
+        errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
+    }
+  //HIP_CHECK(hipMemcpyToSymbol(*devPointer, hostPointer, bytes*size));
 #endif
     }
   }
@@ -100,13 +105,16 @@ struct pointer_holder {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
       }
 #else
-     qudaMemcpy(hostPointer, *devPointer,  bytes*size,qudaMemcpyDeviceToHost);
+      hipError_t err = hipMemcpyFromSymbol(hostPointer, *devPointer, bytes*size, 0, hipMemcpyDeviceToHost);
+      if (err != hipSuccess) {
+        errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
+      }
 #endif
     }
   }
   bool checkDeviceConstant() {
-    if(false and devPointer != nullptr) {
-      char tmp[bytes*size];
+    if( devPointer != nullptr) {
+     char tmp[bytes*size];
       memcpy(tmp,hostPointer,bytes*size);
       copyFromDeviceConstant();
       bool check=true;
