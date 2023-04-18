@@ -1,3 +1,22 @@
+/*
+Here we compute quark loops, including smeared (for pi0) and local (for insertion),
+ with or without one-end-trick (oet not supported yet).
+
+The output data structure is like:
+sx00sy00sz00st00/stoc(seed_stoc)_(num_stoc))/[up or dn] dim=[N_time,N_mom,N_gamma,2 for real and imag]
+
+Only one of up and dn will be done for each run. up and dn are either conjugate or
+ negative-conjugate to each other (with momentum flipped)
+
+Each run should start with a random seed, and end up with either creating a new data file
+ or appending an existed data file with a group name indicating the random seed and number
+  of stochastic sources used.
+It is recommended to backup data files before a new run that increases the statistics
+ in case of the possibility that the new run destroys the existed data file.
+*/
+
+
+
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 std::vector<double> runtime;
@@ -305,7 +324,7 @@ int main(int argc, char **argv)
                         plegma::PLEGMA_Gauge3D<double> smearedGauge3D;
                         smearedGauge3D.absorb(smearedGauge, tc);
                         aux3D2.gaussianSmearing(aux3D, smearedGauge3D, nsmearGauss, alphaGauss);
-                        
+
                         stocPropSmeared.absorb(aux3D2, tc, tc == 0 ? true : false);
                     }
                     stocSrc.copy(stocSrcUnsmeared); // Note: smearing a prop Q gives SQS, with stoc, it's SQS\xi \xi^\dag, so no smearing is needed for the src.
@@ -320,7 +339,7 @@ int main(int argc, char **argv)
             {
                 struct plegma::site src({0, 0, 0, 0});
                 plegma::PLEGMA_ScattCorrelator<float> pi0Loop(src, momList2pt_pi2);
-                pi0Loop.initialize_diagram(gscatts_pi, "stocRead1_" + std::to_string(num_stoc) + "/dn");
+                pi0Loop.initialize_diagram(gscatts_pi, "stocRead1_" + std::to_string(num_stoc) + "/up");
 
                 plegma::PLEGMA_Vector<float> stocSrc, stocProp;
                 plegma::PLEGMA_Vector<double> stocSrcD, stocPropD;
@@ -340,6 +359,34 @@ int main(int argc, char **argv)
                 std::string outfilename = outdiagramPrefix + confnumber + "_pi0Loop";
                 pi0Loop.writeHDF5(outfilename);
             }
+        }
+        else if (caseToDo == "insertion")
+        {
+            struct plegma::site src({0, 0, 0, 0});
+            plegma::PLEGMA_ScattCorrelator<float> insertLoop(src, momList3pt_pc);
+            insertLoop.initialize_diagram(gscatts_c, "stoc" + std::to_string(seed_stoc) + "_" + std::to_string(num_stoc) + "/up");
+
+            plegma::PLEGMA_Vector<double> stocSrcUnsmeared, stocPropUnsmeared;
+            stocSrcUnsmeared.randInit(seed_stoc);
+            for (int i = 0; i < num_stoc; i++)
+            {
+                plegma::PLEGMA_Vector<float> stocSrc, stocProp;
+
+                stocSrcUnsmeared.stochastic_Z(4);
+                for (int tc = 0; tc < HGC_totalL[3]; tc++)
+                {
+                    plegma::PLEGMA_Vector<double> aux, aux2;
+                    aux.absorbTimeslice(stocSrcUnsmeared, tc, true);
+                    solve0(aux2, aux, u);
+                    stocPropUnsmeared.absorbTimeslice(aux2, tc, tc == 0 ? true : false);
+                }
+                stocSrc.copy(stocSrcUnsmeared);
+                stocProp.copy(stocPropUnsmeared);
+                insertLoop.Loop_diagrams(stocProp, stocSrc, i == 0 ? false : true);
+            }
+            insertLoop.normalize_nstoch(num_stoc);
+            std::string outfilename = outdiagramPrefix + confnumber + "_insertLoop";
+            insertLoop.writeHDF5(outfilename);
         }
         else
         {

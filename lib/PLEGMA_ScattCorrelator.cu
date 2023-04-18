@@ -2456,9 +2456,11 @@ This method calculates the quark loops without oet (The oet version can be done 
 It can be used for both smeared loops (pi0 case) or local loops (insertion case).
 Formally, it calculates <\bar{q} \Gamma q>=-Tr[Q \Gamma]=-Tr[Q \xi\xi^\dag \Gamma]=-\xi^\dag \Gamma Q \xi := - Phi_1 \Gamma Phi_0. 
 So Phi_0 should be the stochastic propagator, and Phi_1 the stoc source.
-By gamma5-Hermiticity, even before gauge average, the u-quark loop is complex conjugate to\
- either the d-quark loop (when g5 Gamma^\dag g5 = Gamma)\
-  or the negative d-quark loop (when g5 Gamma^\dag g5 = -Gamma).
+By gamma5-Hermiticity, even before gauge average, the u-quark loop is complex conjugate to
+ either the d-quark loop (when g5 Gamma^\dag g5 = Gamma)
+  or the negative d-quark loop (when g5 Gamma^\dag g5 = -Gamma)
+   in position space, or in momentum space with momentum flipped: \vec{p} -> -\vec{p}
+   
 Complex conjugate: 1, g5, gugv
 Negative complex conjugate: gu, g5gu
 */
