@@ -16,7 +16,6 @@ if(DEBUG_BUILD)
 endif()
 
 set (PLEGMA_OBJS 
-  PLEGMA_Correlator.cu
   PLEGMA.cu
   PLEGMA_Propagator.cu
   PLEGMA_Vector.cu
@@ -24,24 +23,8 @@ set (PLEGMA_OBJS
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
-  kernels/PLEGMA_baryons_NtoN.cu
   kernels/PLEGMA_seqSourceNucleon.cu
-  kernels/PLEGMA_threep_local.cu
-  kernels/PLEGMA_threep_noe.cu
-  kernels/PLEGMA_threep_oneD.cu
-  kernels/PLEGMA_threep_twoD.cu
-  kernels/PLEGMA_threep_threeD_part1.cu
-  kernels/PLEGMA_threep_threeD_part2.cu
-  kernels/PLEGMA_threep_threeD_part3.cu
-  kernels/PLEGMA_threep_threeD_part4.cu
-  kernels/PLEGMA_threep_wilsonLine.cu
-  kernels/PLEGMA_threep_staple.cu
-  kernels/PLEGMA_threep_qgq.cu	
-  PLEGMA_QLoops.cu
-  PLEGMA_FT.cu
   PLEGMA_BLAS.cu
-  PLEGMA_Fmunu.cu
-  PLEGMA_U1Gauge.cu	
 )
 if(PLEGMA_UDSC_BARYONS)
   LIST(APPEND PLEGMA_OBJS
@@ -128,6 +111,7 @@ if(${PLEGMA_TARGET_TYPE} STREQUAL "CUDA")
   include(targets/cuda/target_cuda.cmake)
 endif()
 if(${PLEGMA_TARGET_TYPE} STREQUAL "HIP")
+  find_package(HIPWrapper)
   include(targets/hip/target_hip.cmake)
 endif()
 if(${PLEGMA_TARGET_TYPE} STREQUAL "SYCL")
@@ -254,9 +238,9 @@ write_basic_package_version_file(
 include(CMakePackageConfigHelpers)
 
 configure_package_config_file(${CMAKE_SOURCE_DIR}/PLEGMAConfig.cmake.in PLEGMAConfig.cmake INSTALL_DESTINATION lib/cmake/PLEGMA)
-#export(EXPORT PLEGMATargets FILE "${CMAKE_CURRENT_BINARY_DIR}/PLEGMATargets.cmake" NAMESPACE quda::)
-#set(ConfigPackageLocation lib/cmake/quda/)
-#install(EXPORT PLEGMATargets NAMESPACE quda:: DESTINATION ${ConfigPackageLocation})
+export(EXPORT PLEGMATargets FILE "${CMAKE_CURRENT_BINARY_DIR}/PLEGMATargets.cmake" NAMESPACE quda::)
+set(ConfigPackageLocation lib/cmake/quda/)
+install(EXPORT PLEGMATargets NAMESPACE quda:: DESTINATION ${ConfigPackageLocation})
 
 
 add_custom_target(gen ${PYTHON_EXECUTABLE} ${PLEGMA_QUDA_HOME}/lib/generate/gen.py
