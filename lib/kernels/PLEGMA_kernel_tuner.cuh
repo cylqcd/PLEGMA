@@ -202,8 +202,16 @@ public:
     sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
     sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d,maxvolume=%d,aux_range=(%d,%d,%d,%d)", ps.volume, N_DIMS, N_COLS, ps.max_volume, ps.aux_range.x, ps.aux_range.y, ps.aux_range.z, ps.aux_range.w);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
+    PLEGMA_printf("Aux %s\n",aux);
+    PLEGMA_printf("Volstring %s\n",volString);
     setPolicyTuning(ps.tune_globally);
-  }
+    PLEGMA_printf("TUNING policy %s kernel name\n",kernelName.c_str());
+
+//    #define ADD_TO_GLOBAL
+//    #include<global/PLEGMA_global_constants.h>
+//    #undef ADD_TO_GLOBAL
+//    HGC_global_vars.copyToDevice();
+ }
 
   ~PLEGMA_kernel_tuner(){
     setPolicyTuning(false);
@@ -251,11 +259,24 @@ void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream){
 #else
   // performing tuning if we need to tune
   if( !ps.tuned && !activeTuning() && ps.tune_globally ) comm_barrier(); //syncronizing 
-  if( !ps.tuned ) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
-  if( !ps.tuned ) qudaGetLastError(); // ensuring that the error state has been clean
+  if( !ps.tuned ) {PLEGMA_printf("Tuner1 \n");
+	           fflush(stdout);
+		   ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
+  }
+  if( !ps.tuned ){
+	  PLEGMA_printf("Tuner2 \n");
+          fflush(stdout);
+	  qudaGetLastError(); // ensuring that the error state has been clean
+  }
+  PLEGMA_printf("Tuner3 \n");
+                   fflush(stdout);
   if( !activeTuning() ) ps.tuned = true;
+  PLEGMA_printf("Tuner4 \n");
+                   fflush(stdout);
   if( onlyTuning && !activeTuning() ) return;
 
+  PLEGMA_printf("Before launching kernels\n");
+  fflush(stdout);
   launchKernel(ps.tp,stream);
 
   // HACK: For unknown reason, the Out Of Memory error state is not seen in QUDA/lib/tune.cpp
@@ -275,13 +296,15 @@ void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream){
 }
 
 template<class ...types>
-void PLEGMA_kernel_tuner<types...>::apply(){ apply(device::get_stream(0)); }
+void PLEGMA_kernel_tuner<types...>::apply(){PLEGMA_printf("before device get stream\n");fflush(stdout); apply(device::get_stream(0)); }
   
 template<class ...types>
 void PLEGMA_kernel_tuner<types...>::run(){
 #ifdef PLEGMA_NO_TUNING
   if(!ps.tuned) tune();
-  launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
+  PLEGMA_printf("Here the kernel should launch\n");
+  fflush(stdout);
+  launchKernel(ps.tp,device::get_stream(0));//,ps.tp.shared_bytes,0);
 #else
   if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,device::get_stream(0));
@@ -304,6 +327,8 @@ void run(ProfileStruct &ps, std::string kname, void(* kernel)(typesK...), types&
 template<class ...types, class ...typesK>
 void tuneAndRun(ProfileStruct &ps, std::string kname, void(* kernel)(typesK...), types&&... kArgs){
   PLEGMA_kernel_tuner<typesK...> tuner(ps, kname, kernel, kArgs...);
+  PLEGMA_printf("before apppllly\n");
+  fflush(stdout);
   tuner.apply();
 }
 
