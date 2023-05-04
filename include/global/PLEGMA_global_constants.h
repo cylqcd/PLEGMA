@@ -62,7 +62,7 @@
 #elif defined ( __HIP__ )
 #define global_both(dtype, name, ...)                                   \
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);                   \
-  static __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);
+  extern __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);
 #else
 #define global_both(dtype, name, ...)			\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
