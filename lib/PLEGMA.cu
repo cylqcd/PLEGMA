@@ -166,6 +166,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
       HGC_procPosition[i] = comm_coord(i);
 
     // copying globals to device
+    printf("Local lattice volume %d \n",   HGC_localVolume);
     HGC_global_vars.copyToDevice();
 
     // create groups of process to use mpi reduce only on spatial points
@@ -201,9 +202,13 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     int tmp;
     MPI_Comm_rank(HGC_timeComm,&tmp);
     assert(tmp==HGC_timeRank);
-
-    //cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
-    //if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCreate failed with error %d", error);
+#ifdef __HIP__
+    hipblasStatus_t error = hipblasCreate(&HGC_hipblas_handle);
+    if (error != HIPBLAS_STATUS_SUCCESS) PLEGMA_error("hipblasCreate failed with error %d", error);
+#else
+    cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
+    if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCreate failed with error %d", error);
+#endif
     
     HGC_init_PLEGMA_flag = true;
     PLEGMA_printf("PLEGMA has been initialized\n");
