@@ -16,6 +16,7 @@ using namespace quda;
 //extern Topology *default_topo;
 std::vector<std::string> HDF5::open_files;
 Communicator &get_current_communicator();
+
 //Communicator default_t;
 //extern Topology *default_topo;
 
@@ -26,8 +27,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
 #define ADD_TO_GLOBAL
 #include<global/PLEGMA_global_constants.h>
-#undef ADD_TO_GLOBAL
-  
+#undef ADD_TO_GLOBAL 
   if(HGC_init_PLEGMA_flag == false){
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
