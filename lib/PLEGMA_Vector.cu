@@ -185,8 +185,6 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it,
   comm_barrier();
   checkQudaError();
 }
-
-
 // vec4D <- prop4D
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2){

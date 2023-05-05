@@ -46,20 +46,8 @@ target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 cuda_add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
 target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
 
-cuda_add_executable(Tetraquark Tetraquark.cpp)
-target_link_libraries(Tetraquark ${PLEGMA_LIBS})
-
-cuda_add_executable(TetraquarkBCUD TetraquarkBCUD.cpp)
-target_link_libraries(TetraquarkBCUD ${PLEGMA_LIBS})
-
 cuda_add_executable(TestFrame EXCLUDE_FROM_ALL TestFrame.cpp)
 target_link_libraries(TestFrame ${PLEGMA_LIBS})
-
-cuda_add_executable(StochasticTetraquark StochasticTetraquark.cpp)
-target_link_libraries(StochasticTetraquark ${PLEGMA_LIBS})
-
-cuda_add_executable(StochasticTetraquarkBCUD StochasticTetraquarkBCUD.cpp)
-target_link_libraries(StochasticTetraquarkBCUD ${PLEGMA_LIBS})
 
 cuda_add_executable(ComputeLightStochProp ComputeLightStochProp.cpp)
 target_link_libraries(ComputeLightStochProp ${PLEGMA_LIBS})
@@ -69,15 +57,6 @@ target_link_libraries(ComputeLightPointProp ${PLEGMA_LIBS})
 
 cuda_add_executable(Calc_2pt_charmonium Calc_2pt_charmonium.cpp)
 target_link_libraries(Calc_2pt_charmonium ${PLEGMA_LIBS})
-
-cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
-target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
-
-cuda_add_executable(TMDPDFs_nucleon TMDPDFs_nucleon.cpp)
-target_link_libraries(TMDPDFs_nucleon ${PLEGMA_LIBS})
-
-cuda_add_executable(PDFs_qgq_nucleon PDFs_qgq_nucleon.cpp)
-target_link_libraries(PDFs_qgq_nucleon ${PLEGMA_LIBS})
 
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
@@ -133,12 +112,6 @@ target_link_libraries(LowModesCalc ${PLEGMA_LIBS})
 cuda_add_executable(MG_tuner MG_tuner.cpp)
 target_link_libraries(MG_tuner ${PLEGMA_LIBS})
 
-cuda_add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark ${PLEGMA_LIBS})
-
-cuda_add_executable(TMDWFs_mesons  TMDWFs_mesons.cpp)
-target_link_libraries(TMDWFs_mesons ${PLEGMA_LIBS})
-
 cuda_add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
 target_link_libraries(quark_rms ${PLEGMA_LIBS})
 
@@ -154,17 +127,11 @@ target_link_libraries(Zfac ${PLEGMA_LIBS})
 cuda_add_executable(ZfacStaple ZfacStaple.cpp)
 target_link_libraries(ZfacStaple ${PLEGMA_LIBS})
 
-cuda_add_executable(SoftFunction SoftFunction.cpp)
-target_link_libraries(SoftFunction ${PLEGMA_LIBS})
+cuda_add_executable(TMDPDFs_mesons_Juwels TMDPDFs_mesons_Juwels.cpp)
+target_link_libraries(TMDPDFs_mesons_Juwels ${PLEGMA_LIBS})
 
-cuda_add_executable(SoftFunctionWall SoftFunctionWall.cpp)
-target_link_libraries(SoftFunctionWall ${PLEGMA_LIBS})
-
-cuda_add_executable(WallSourceNucleon WallSourceNucleon.cpp)
-target_link_libraries(WallSourceNucleon ${PLEGMA_LIBS})
-
-cuda_add_executable(TMDPDFs_pion TMDPDFs_pion.cpp)
-target_link_libraries(TMDPDFs_pion ${PLEGMA_LIBS})
+cuda_add_executable(new_TMDPDFs_mesons_Juwels new_TMDPDFs_mesons_Juwels.cpp)
+target_link_libraries(new_TMDPDFs_mesons_Juwels ${PLEGMA_LIBS})
 
 if (PLEGMA_SCATTERING_CONTRACTIONS)
   cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)

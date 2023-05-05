@@ -38,8 +38,8 @@ __global__ void threep_staple_device(Float2<FloatC>* block2,
     su3Tx.get(su3,vid);
 
     bool notZfac=(mu<0) && (nu<0) && (c1<0) && (c2<0);
-    if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3);
-    else open_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3,mu,nu,c1,c2);
+    if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+    else open_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
     for(int iop = 0; iop < listGammas.size; iop++){
       int opId=listGammas.array[iop];
