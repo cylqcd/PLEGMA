@@ -123,6 +123,12 @@ void PLEGMA_Vector<Float>::rotate_uk_ch_g5g4(){
   rotate_uk_ch_g5g4_k(toField2<vector2>(*this));
 }
 
+template<typename Float>
+void PLEGMA_Vector<Float>::rotate_uk_ch_etmc(){
+  rotate_uk_ch_etmc_k(toField2<vector2>(*this));
+}
+
+
 // vec4D <- Prop3D
 template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator3D<Float> &prop, int global_it, int nu , int c2){
