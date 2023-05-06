@@ -82,8 +82,8 @@ target_link_libraries(Dilution ${PLEGMA_LIBS})
 cuda_add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
 target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 
-cuda_add_executable(piNdiagrams_3pt_N_Npi EXCLUDE_FROM_ALL piNdiagrams_3pt_N_Npi.cpp)
-target_link_libraries(piNdiagrams_3pt_N_Npi ${PLEGMA_LIBS})
+# cuda_add_executable(piNdiagrams_3pt_N_Npi EXCLUDE_FROM_ALL piNdiagrams_3pt_N_Npi.cpp)
+# target_link_libraries(piNdiagrams_3pt_N_Npi ${PLEGMA_LIBS})
 
 cuda_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})
