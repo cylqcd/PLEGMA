@@ -19,10 +19,30 @@ static __global__ void rotate_uk_ch_g5g4_kernel(vector2<Float> vec){
 }
 
 template<typename Float>
+static __global__ void rotate_uk_ch_etmc_kernel(vector2<Float> vec){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<Float> Sin[N_SPINS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_COLS];
+  if (sid >= vec.volume()) return;
+  vec.get(Sin,sid);
+  U_uk_ch_etmc(Sout,Sin);
+  vec.set(Sout,sid);
+}
+
+
+template<typename Float>
 void rotate_uk_ch_g5g4_k(vector2<Float> vec){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (vec.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   rotate_uk_ch_g5g4_kernel<<<gridDim,blockDim>>>(vec);
+}
+
+
+template<typename Float>
+void rotate_uk_ch_etmc_k(vector2<Float> vec){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (vec.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
+  rotate_uk_ch_etmc_kernel<<<gridDim,blockDim>>>(vec);
 }
 
 
