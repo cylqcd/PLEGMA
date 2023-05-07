@@ -165,6 +165,21 @@ namespace plegma {
       vout[3][c1] = nrm * (vin[3][c1] + vin[1][c1]);
     }
   }
+
+
+  template<typename Float>
+  __inline__ __device__ void U_uk_ch_etmc(Float2<Float> vout[N_SPINS][N_COLS], Float2<Float>vin[N_SPINS][N_COLS]){
+    Float nrm=1./sqrt(2.);
+#pragma unroll
+    for(int c1 = 0; c1 < N_COLS; c1++){
+      vout[0][c1] = nrm * (vin[0][c1] + vin[2][c1]);
+      vout[1][c1] = nrm * (vin[1][c1] + vin[3][c1]);
+      vout[2][c1] = nrm * (vin[0][c1] - vin[2][c1]);
+      vout[3][c1] = nrm * (vin[1][c1] - vin[3][c1]);
+    }
+  }
+
+
   
   template<LEFTRIGHT LF,typename Float>
   __inline__ __device__ void gammaProp(Float2<Float> pout[N_SPINS][N_SPINS][N_COLS][N_COLS],
