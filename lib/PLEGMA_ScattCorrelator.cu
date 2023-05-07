@@ -2908,7 +2908,7 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_piNsink( PLEGMA_ScattCorrelator<F
 //T is build up from a T1 and a T2 reduction
 //source
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, bool accum){
+void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, int sign, bool accum){
 
   //checks between T1 T2
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
@@ -2956,7 +2956,7 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &
 //            loop_contribution[1]= loop_pointer[1];
 
             for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
-              temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + T2.Corr(t,i_mom_f1,gi1,gf1)[spin]);
+              temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + sign*T2.Corr(t,i_mom_f1,gi1,gf1)[spin]);
 /*            for(int spin=0; spin<N_SPINS*N_SPINS; ++spin){
               Float realpart,imagpart;
               realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
