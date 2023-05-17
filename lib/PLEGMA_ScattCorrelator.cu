@@ -2451,6 +2451,30 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLE
 
 }
 
+/*
+This method calculates the quark loops without oet (The oet version can be done with P_diagrams).
+It can be used for both smeared loops (pi0 case) or local loops (insertion case).
+Formally, it calculates <\bar{q} \Gamma q>=-Tr[Q \Gamma]=-Tr[Q \xi\xi^\dag \Gamma]=-\xi^\dag \Gamma Q \xi := - Phi_1 \Gamma Phi_0.
+So Phi_0 should be the stochastic propagator, and Phi_1 the stoc source.
+By gamma5-Hermiticity, even before gauge average, the u-quark loop is complex conjugate to
+ either the d-quark loop (when g5 Gamma^\dag g5 = Gamma)
+  or the negative d-quark loop (when g5 Gamma^\dag g5 = -Gamma)
+   in position space, or in momentum space with momentum flipped: \vec{p} -> -\vec{p}
+
+Complex conjugate: 1, g5, gugv
+Negative complex conjugate: gu, g5gu
+*/
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::Loop_diagrams( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum)
+{
+  clear_output(!accum);
+
+  PLEGMA_ScattCorrelator<Float> auxPhiPhi(this->source, pList(), this->getTotalT());
+  auxPhiPhi.PhiPhi(Phi_0, GList[0], Phi_1);
+  x_pe_sy(this->H_elem(), (Float) -1., auxPhiPhi.H_elem(), this->getTotalSize());
+}
+
+
 
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! 

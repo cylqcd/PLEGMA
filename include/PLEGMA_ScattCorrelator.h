@@ -293,6 +293,8 @@ namespace plegma {
 
     void T_diagrams_piNsink(PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3,int diagram_index, bool accum=false);
 
+    void Loop_diagrams( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum=false);
+
     void Loop_diagrams( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2,bool dn=false, bool accum=false);
     void P_diagrams( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum=false );
 
