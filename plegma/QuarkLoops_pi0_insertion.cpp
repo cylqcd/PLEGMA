@@ -13,6 +13,8 @@ Each run should start with a random seed, and end up with either creating a new 
   of stochastic sources used.
 It is recommended to backup data files before a new run that increases the statistics
  in case of the possibility that the new run destroys the existed data file.
+
+Here the f_0(500)/sigma resonance (ubaru+dbard) is also supported.
 */
 
 #include <PLEGMA.h>
@@ -41,9 +43,10 @@ int main(int argc, char **argv)
     HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
     HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
 
-    std::string caseToDo, readStocPath;
+    std::string caseToDo, whichMeson, readStocPath;
     int readStoc, seed_stoc, num_stoc;
-    HGC_options->set("caseToDo", "pi0 or insertion", verbosity, caseToDo);
+    HGC_options->set("caseToDo", "meson or insertion - saveSample or saveAverage", verbosity, caseToDo);
+    HGC_options->set("whichMeson", "pi0 or sigma", verbosity, whichMeson);
     HGC_options->set("readStocPath", "Path for stoc", verbosity, readStocPath);
     HGC_options->set("readStoc", "Set 1 to read stoc from NJNpi_N0P+", verbosity, readStoc);
     HGC_options->set("seed_stoc", "Seed for stoc", verbosity, seed_stoc);
@@ -266,10 +269,32 @@ int main(int argc, char **argv)
         free(ssource);
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_N = {CG_5};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_pi = {G_5};
         std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4};
         std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
+
+        std::vector<plegma::GAMMAS_SCATT> gscatts_meson = {};
+        std::string filenameEnd = "";
+        if (caseToDo == "meson-saveSample" || caseToDo == "meson-saveAverage")
+        {
+            if (whichMeson == "pi0")
+            {
+                gscatts_meson.push_back(G_5);
+                filenameEnd = "pi0Loop";
+            }
+            else if (whichMeson == "sigma")
+            {
+                gscatts_meson.push_back(ID);
+                filenameEnd = "sigmaLoop";
+            }
+            else
+            {
+                PLEGMA_error("whichMeson = %s not supported", whichMeson);
+            }
+        }
+        else
+        {
+            filenameEnd = "insertLoop";
+        }
 
         PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_twopt.c_str());
         plegma::momList momList2pt(3, pathListMomenta_twopt, {1, 2}); // pi2, pf1, pf2
@@ -293,7 +318,7 @@ int main(int argc, char **argv)
          *   Main
          *
          ******************************************************/
-        if (caseToDo == "pi0-saveSample")
+        if (caseToDo == "meson-saveSample")
         {
             if (readStoc == 0)
             {
@@ -303,7 +328,7 @@ int main(int argc, char **argv)
                 for (int i = 0; i < num_stoc; i++)
                 {
                     plegma::PLEGMA_ScattCorrelator<float> pi0Loop(src, momList2pt_pi2);
-                    pi0Loop.initialize_diagram(gscatts_pi, "stoc" + std::to_string(seed_stoc) + "id" + std::to_string(i) + "_1" + "/up");
+                    pi0Loop.initialize_diagram(gscatts_meson, "stoc" + std::to_string(seed_stoc) + "id" + std::to_string(i) + "_1" + "/up");
 
                     plegma::PLEGMA_Vector<float> stocSrc, stocProp;
                     plegma::PLEGMA_Vector<double> stocPropSmeared;
@@ -329,7 +354,7 @@ int main(int argc, char **argv)
                     stocProp.copy(stocPropSmeared);
                     pi0Loop.Loop_diagrams(stocProp, stocSrc, false);
 
-                    std::string outfilename = outdiagramPrefix + confnumber + "_pi0Loop";
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenameEnd;
                     pi0Loop.writeHDF5(outfilename);
                 }
             }
@@ -339,7 +364,7 @@ int main(int argc, char **argv)
                 for (int i = 0; i < num_stoc; i++)
                 {
                     plegma::PLEGMA_ScattCorrelator<float> pi0Loop(src, momList2pt_pi2);
-                    pi0Loop.initialize_diagram(gscatts_pi, "stocRead1id" + std::to_string(i) + "_1" + "/up");
+                    pi0Loop.initialize_diagram(gscatts_meson, "stocRead1id" + std::to_string(i) + "_1" + "/up");
 
                     plegma::PLEGMA_Vector<float> stocSrc, stocProp;
                     plegma::PLEGMA_Vector<double> stocSrcD, stocPropD;
@@ -354,18 +379,18 @@ int main(int argc, char **argv)
                     stocSrc.copy(stocSrcD);
                     pi0Loop.Loop_diagrams(stocProp, stocSrc, false);
 
-                    std::string outfilename = outdiagramPrefix + confnumber + "_pi0Loop";
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenameEnd;
                     pi0Loop.writeHDF5(outfilename);
                 }
             }
         }
-        else if (caseToDo == "pi0-saveAverage")
+        else if (caseToDo == "meson-saveAverage")
         {
             if (readStoc == 0)
             {
                 struct plegma::site src({0, 0, 0, 0});
                 plegma::PLEGMA_ScattCorrelator<float> pi0Loop(src, momList2pt_pi2);
-                pi0Loop.initialize_diagram(gscatts_pi, "stoc" + std::to_string(seed_stoc) + "_" + std::to_string(num_stoc) + "/up");
+                pi0Loop.initialize_diagram(gscatts_meson, "stoc" + std::to_string(seed_stoc) + "_" + std::to_string(num_stoc) + "/up");
 
                 plegma::PLEGMA_Vector<double> stocSrcUnsmeared;
                 stocSrcUnsmeared.randInit(seed_stoc);
@@ -396,14 +421,14 @@ int main(int argc, char **argv)
                     pi0Loop.Loop_diagrams(stocProp, stocSrc, i == 0 ? false : true);
                 }
                 pi0Loop.normalize_nstoch(num_stoc);
-                std::string outfilename = outdiagramPrefix + confnumber + "_pi0Loop";
+                std::string outfilename = outdiagramPrefix + confnumber + "_" + filenameEnd;
                 pi0Loop.writeHDF5(outfilename);
             }
             else if (readStoc == 1)
             {
                 struct plegma::site src({0, 0, 0, 0});
                 plegma::PLEGMA_ScattCorrelator<float> pi0Loop(src, momList2pt_pi2);
-                pi0Loop.initialize_diagram(gscatts_pi, "stocRead1_" + std::to_string(num_stoc) + "/up");
+                pi0Loop.initialize_diagram(gscatts_meson, "stocRead1_" + std::to_string(num_stoc) + "/up");
 
                 plegma::PLEGMA_Vector<float> stocSrc, stocProp;
                 plegma::PLEGMA_Vector<double> stocSrcD, stocPropD;
@@ -420,7 +445,7 @@ int main(int argc, char **argv)
                     pi0Loop.Loop_diagrams(stocProp, stocSrc, i == 0 ? false : true);
                 }
                 pi0Loop.normalize_nstoch(num_stoc);
-                std::string outfilename = outdiagramPrefix + confnumber + "_pi0Loop";
+                std::string outfilename = outdiagramPrefix + confnumber + "_" + filenameEnd;
                 pi0Loop.writeHDF5(outfilename);
             }
         }
@@ -448,7 +473,7 @@ int main(int argc, char **argv)
                 stocProp.copy(stocPropUnsmeared);
                 insertLoop.Loop_diagrams(stocProp, stocSrc, false);
 
-                std::string outfilename = outdiagramPrefix + confnumber + "_insertLoop";
+                std::string outfilename = outdiagramPrefix + confnumber + "_" + filenameEnd;
                 insertLoop.writeHDF5(outfilename);
             }
         }
@@ -477,7 +502,7 @@ int main(int argc, char **argv)
                 insertLoop.Loop_diagrams(stocProp, stocSrc, i == 0 ? false : true);
             }
             insertLoop.normalize_nstoch(num_stoc);
-            std::string outfilename = outdiagramPrefix + confnumber + "_insertLoop";
+            std::string outfilename = outdiagramPrefix + confnumber + "_" + filenameEnd;
             insertLoop.writeHDF5(outfilename);
         }
         else

@@ -1,3 +1,18 @@
+/*
+Here we compute the pi0 contracted with insertion.
+Both 'up' and 'dn' part will be done seperately, through they're
+supposely to be (anti)-conjugate to their momentum-flipped partner.
+
+The conj sign for pion isn't implemented here.
+To multiply it with the N-diagram, and construct the M-like NJNpi diagram,
+we need (up -/+ dn)*i/sqrt(2) for (u+d)/(u-d) insertion, where i/sqrt(2) comes from
+(-1) for adj-sign of pion and (-i)/sqrt(2) for prefactor of source pion.
+Note u+d insertion corresponds to up-dn construction.
+
+Here the f_0(500)/sigma resonance (ubaru+dbard) is also supported.
+Just u+d should correspond to up+dn this case.
+*/
+
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
 std::vector<double> runtime;
@@ -19,13 +34,13 @@ int main(int argc, char **argv)
      ******************************************************/
     initializeOptions(argc, argv, true, listOpt);
 
-    int seed_oet;
-    int confnumber_int;
-    std::string outdiagramPrefix = "";
+    int seed_oet, confnumber_int;
+    std::string outdiagramPrefix, whichMeson;
 
     HGC_options->set("seed_oet", "Seed for initialization of stochastic sources for the oet", verbosity, seed_oet);
     HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
     HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
+    HGC_options->set("whichMeson", "pi0 or sigma", verbosity, whichMeson);
 
     initializePLEGMA();
 
@@ -244,10 +259,25 @@ int main(int argc, char **argv)
         free(ssource);
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_N = {CG_5};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_pi = {G_5};
         std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4};
         std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
+
+        std::vector<plegma::GAMMAS_SCATT> gscatts_meson = {};
+        std::string filenamePost = "";
+        if (whichMeson == "pi0")
+        {
+            gscatts_meson.push_back(G_5);
+            filenamePost = "pi0Insert";
+        }
+        else if (whichMeson == "sigma")
+        {
+            gscatts_meson.push_back(ID);
+            filenamePost = "sigmaInsert";
+        }
+        else
+        {
+            PLEGMA_error("whichMeson = %s not supported", whichMeson);
+        }
 
         PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_threept.c_str());
         plegma::momList momList_3pt(4, pathListMomenta_threept, {1, 2, 3}); // pi2, pf1, pf2, pc
@@ -292,12 +322,18 @@ int main(int argc, char **argv)
 
                 plegma::PLEGMA_Vector<double> stocPhiD_ti_mpi2_SL;
                 plegma::PLEGMA_Vector3D<double> auxVector3D;
-                auxVector3D.absorb(stocXi, time_i);
+                {
+                    plegma::PLEGMA_Vector<double> aux;
+                    aux.copy(stocXi);
+                    aux.apply_gamma5();
+                    aux.apply_gamma_scatt(gscatts_meson[0]);
+                    auxVector3D.absorb(aux, time_i);
+                }
                 auxVector3D.mulMomentumPhases(mom_pi2, -1);
                 solve1(stocPhiD_ti_mpi2_SL, auxVector3D, time_i, d, SL);
 
                 plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
-                pi0Insertion.initialize_diagram(gscatts_pi, gscatts_c, str_pi2 + "/up");
+                pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/up");
                 {
                     plegma::PLEGMA_Vector<float> aux, aux_pi2;
                     aux.copy(stocPhiU_ti_SL);
@@ -308,7 +344,7 @@ int main(int argc, char **argv)
                 asprintf(&ssource, "st%03d", time_i);
                 std::string sourcepositiontext = (std::string) "_" + ssource;
                 free(ssource);
-                std::string outfilename = outdiagramPrefix + confnumber + sourcepositiontext + "_pi0Isert";
+                std::string outfilename = outdiagramPrefix + confnumber + sourcepositiontext + "_" + filenamePost;
 
                 pi0Insertion.writeHDF5(outfilename);
             }
@@ -321,12 +357,18 @@ int main(int argc, char **argv)
 
                 plegma::PLEGMA_Vector<double> stocPhiU_ti_mpi2_SL;
                 plegma::PLEGMA_Vector3D<double> auxVector3D;
-                auxVector3D.absorb(stocXi, time_i);
+                {
+                    plegma::PLEGMA_Vector<double> aux;
+                    aux.copy(stocXi);
+                    aux.apply_gamma5();
+                    aux.apply_gamma_scatt(gscatts_meson[0]);
+                    auxVector3D.absorb(aux, time_i);
+                }
                 auxVector3D.mulMomentumPhases(mom_pi2, -1);
                 solve1(stocPhiU_ti_mpi2_SL, auxVector3D, time_i, u, SL);
 
                 plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
-                pi0Insertion.initialize_diagram(gscatts_pi, gscatts_c, str_pi2 + "/dn");
+                pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/dn");
                 {
                     plegma::PLEGMA_Vector<float> aux, aux_pi2;
                     aux.copy(stocPhiD_ti_SL);
@@ -337,7 +379,7 @@ int main(int argc, char **argv)
                 asprintf(&ssource, "st%03d", time_i);
                 std::string sourcepositiontext = (std::string) "_" + ssource;
                 free(ssource);
-                std::string outfilename = outdiagramPrefix + confnumber + sourcepositiontext + "_pi0Isert";
+                std::string outfilename = outdiagramPrefix + confnumber + sourcepositiontext + "_" + filenamePost;
 
                 pi0Insertion.writeHDF5(outfilename);
             }
