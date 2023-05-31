@@ -1458,7 +1458,6 @@ int main(int argc, char **argv) {
           corrD1ff24710.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "D1ff2-4-7-10");
           corrD1ff1389.initialize_diagram(   glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "D1ff1-3-8-9");
 
-          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
           TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, propUP_SS_packed));
           TIME(corrTproton_protonpizero1.convertTreductiontoDiagram( reductionsT1, 0, false, true, true ));
@@ -1467,16 +1466,22 @@ int main(int argc, char **argv) {
           TIME(corrTproton_protonpizero2.convertTreductiontoDiagram( reductionsT2, 0, false, true, true ));
 
           TIME(corrD1ff24710.LT_diagrams( reductionsT1, reductionsT2, 1 ));
-          TIME(produceOutput_2pt_packed( corrD1ff24710, outfilename, "T", parallel_sources, attract_lookup_table));
 
           TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
           TIME(corrTproton_protonpizero3.convertTreductiontoDiagram( reductionsT1, 0, false, true, true ));
 
-          TIME(reductionsT1.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
-          TIME(corrTproton_protonpizero4.convertTreductiontoDiagram( reductionsT1, 0, false, true, true));
+          TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propTS_SS_packed));
+          TIME(corrTproton_protonpizero4.convertTreductiontoDiagram( reductionsT2, 0, false, true, true));
 
           TIME(corrD1ff1389.LT_diagrams( reductionsT1, reductionsT2, 1 ));
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
+
+	  TIME(produceOutput_2pt_packed( corrD1ff24710, outfilename, "T", parallel_sources, attract_lookup_table));
+
 	  TIME(produceOutput_2pt_packed( corrD1ff1389, outfilename, "T", parallel_sources, attract_lookup_table));
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
 	  TIME(produceOutput_2pt_packed(corrTproton_protonpizero1, outfilename, "T", parallel_sources, attract_lookup_table));
 	  TIME(produceOutput_2pt_packed(corrTproton_protonpizero2, outfilename, "T", parallel_sources, attract_lookup_table));
@@ -1786,6 +1791,13 @@ int main(int argc, char **argv) {
             TIME(produceOutput_2pt_packed(corrW15_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
             TIME(produceOutput_2pt_packed(corrW16_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
 
+	    TIME(produceOutput_2pt_packed(corrW29_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
+            TIME(produceOutput_2pt_packed(corrW30_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
+            TIME(produceOutput_2pt_packed(corrW31_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
+            TIME(produceOutput_2pt_packed(corrW32_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
+
+
+
 	  }
 
 
@@ -1902,10 +1914,12 @@ int main(int argc, char **argv) {
 
           TIME(corrD1ff15161920.LT_diagrams( reductionsT2, reductionsT1, -1 ));
 
-          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
 
           TIME(produceOutput_2pt_packed(corrD1ff13141718, outfilename, "T", parallel_sources, attract_lookup_table));
           TIME(produceOutput_2pt_packed(corrD1ff15161920, outfilename, "T", parallel_sources, attract_lookup_table));
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
 
 	  TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus1, outfilename, "T", parallel_sources, attract_lookup_table));
 	  TIME(produceOutput_2pt_packed(corrTproton_neutronpiplus2, outfilename, "T", parallel_sources, attract_lookup_table));
@@ -2286,6 +2300,9 @@ int main(int argc, char **argv) {
           TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, false, true, true ));
 
           TIME(corrD1ff56.LT_diagrams( reductionsT1, reductionsT2, 1 ));
+
+          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_D1ff";
+
           TIME(produceOutput_2pt_packed( corrD1ff56, outfilename, "T", parallel_sources, attract_lookup_table));
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_T";
