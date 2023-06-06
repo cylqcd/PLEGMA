@@ -5,6 +5,8 @@ Here we compute quark loops, including smeared (for pi0) and local (for insertio
 The output data structure is like:
 sx00sy00sz00st00/stoc(seed_stoc)_(num_stoc))/[up or dn] dim=[N_time,N_mom,N_gamma,2 for real and imag]
 
+The momenta are multiplied as sink momenta, i.e., with the Fourier phase exp(-i p x).
+
 Only one of up and dn will be done for each run. up and dn are either conjugate or
  negative-conjugate to each other (with momentum flipped)
 
