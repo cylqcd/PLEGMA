@@ -2102,8 +2102,8 @@ int main(int argc, char **argv) {
 
               TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));
 
-              TIME(corrW21_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 21, true, false));
-              TIME(corrW23_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 23, true, false));
+              TIME(corrW21_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 21, true, false));
+              TIME(corrW23_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 23, true, false));
 
 
               TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, true));
@@ -2113,8 +2113,8 @@ int main(int argc, char **argv) {
 
               TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
 
-              TIME(corrW22_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 22, true, false));
-              TIME(corrW24_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 24, true, false));
+              TIME(corrW22_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 22, true, false));
+              TIME(corrW24_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 24, true, false));
 
 
 	    }
