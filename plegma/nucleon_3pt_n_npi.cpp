@@ -2416,6 +2416,10 @@ int main(int argc, char **argv) {
               TIME(corrB7_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 7, true, false, false));
               TIME(corrB8_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 8, true, false, false));
 
+              stochastic_propagator_packed.unload();	      
+  	      stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
+              stochastic_propagator_packed.load();
+
 	      TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, false));
 
               TIME(corrW33_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 33, true, false));
