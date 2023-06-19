@@ -1274,12 +1274,12 @@ int main(int argc, char **argv) {
 
               stochastic_propagator_packed.apply_gamma5();
 
-	      TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, false));
+	      TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
 
               TIME(corrW33_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 33, true, false));
               TIME(corrW34_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 34, true, false));
 
-              TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, false));
+              TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
 
               TIME(corrW35_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 35, true, false));
               TIME(corrW36_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 36, true, false));
