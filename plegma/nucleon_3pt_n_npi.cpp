@@ -1006,7 +1006,8 @@ int main(int argc, char **argv) {
         } //end of for source sink separations
       } //end of for stochastic samples
 
-      auto &momentum_i2 =  mpi2_twopt[0];
+//      auto &momentum_i2 =  {0,0,0};//mpi2_twopt[0];
+      std::vector<int> momentum_i2= {0,0,0};
       //List of momenta corresponding to a fix value of p_i2
       momList filtered_sourcemomentumList_2pt_single = sourcemomentumList_twopt.extract(momentum_i2, 0);
 
@@ -2294,10 +2295,10 @@ int main(int argc, char **argv) {
           corrTproton_protonpizero6.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon,"12", "Tseq26");
 
           TIME(reductionsT1.T1(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propUP_SS_packed));
-          TIME(corrTproton_protonpizero5.convertTreductiontoDiagram( reductionsT1, false, true, true ));
+          TIME(corrTproton_protonpizero5.convertTreductiontoDiagram( reductionsT1, 0, false, true, true ));
 
           TIME(reductionsT2.T2(glist_source_nucleon,glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, propUP_SS_packed));
-          TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, false, true, true ));
+          TIME(corrTproton_protonpizero6.convertTreductiontoDiagram( reductionsT2, 0, false, true, true ));
 
           TIME(corrD1ff56.LT_diagrams( reductionsT1, reductionsT2, 1 ));
 
@@ -2419,6 +2420,8 @@ int main(int argc, char **argv) {
               stochastic_propagator_packed.unload();	      
   	      stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
               stochastic_propagator_packed.load();
+
+              stochastic_propagator_packed.apply_gamma5();
 
 	      TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, false));
 
