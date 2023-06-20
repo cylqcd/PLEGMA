@@ -203,14 +203,14 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, bo
   }
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
-      //cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
+//      cudaMemset(this->d_elem + mu*N_COLS*V4*2 + c1*V4*2, 0, V4*2*sizeof(Float));
       if(is_myIt){
         pointer_dst = (this->d_elem + mu*N_COLS*V4*2 +  c1*V4*2 + my_it*V3*2);
         pointer_src = (vec.D_elem()  + mu*N_COLS*V3*2 + c1*V3*2);
         cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
       }
     }
-  //comm_barrier();
+  comm_barrier();
   checkCudaError();
 }
 

@@ -52,6 +52,9 @@ target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
+cuda_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
+target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
+
 cuda_add_executable(mesons_3pt mesons_3pt.cpp)
 target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
 
@@ -117,6 +120,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(nucleon_delta_test ${PLEGMA_LIBS})
   cuda_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
   target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
+  cuda_add_executable(QuarkLoops_pi0_insertion EXCLUDE_FROM_ALL QuarkLoops_pi0_insertion.cpp)
+  target_link_libraries(QuarkLoops_pi0_insertion ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams_oet piNdiagrams_oet.cpp)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
   cuda_add_executable(checking_Doet checking_Doet.cpp)

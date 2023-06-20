@@ -415,6 +415,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_time_slice(int global_time_index){
   for(int i = 0 ; i < (N_DIMS-1); i++) coords[i] = 0;
   coords[N_DIMS-1]=global_time_index / HGC_localL[N_DIMS-1];
   int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+
   printf("rankHas %d\n",rankHas);
   MPI_Barrier(HGC_fullComm);
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
@@ -1578,8 +1579,9 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagrams(PLEGMA_ScattCorrelator<Float> 
   //only difference between them is the type of loop(pipi_aux): UP and 
   //DN in the former respectively in the latter
 
-  float signofFactor=-1.; 
-  Float factor[2]={signofFactor*loopcontribution[0],signofFactor*loopcontribution[1]};//-1 from eqs. (20),(23), ....
+//  float signofFactor=-1.; 
+//  Float factor[2]={signofFactor*loopcontribution[0],signofFactor*loopcontribution[1]};//-1 from eqs. (20),(23), ....
+  Float factor[2]={-1,0};//signofFactor*loopcontribution[0],signofFactor*loopcontribution[1]};//-1 from eqs. (20),(23), ....
   
   switch( diagram_index ){
     case 1:
@@ -1598,7 +1600,7 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagrams(PLEGMA_ScattCorrelator<Float> 
       this->V3V2reduction(        srcV3, srcV2, 2,  true, ig_i2, false, factor, true);//checked FP
       break;
     case 10:
-      this->V3V2reduction_matrix( srcV3, srcV2, 0, false, ig_i2, false, factor, true);//checked FP
+      this->V3V2reduction(        srcV3, srcV2, 0, false, ig_i2, false, factor, true);//checked FP
       break;
     case 13:
       this->V3V2reduction(        srcV3, srcV2, 2, false, ig_i2, true,  factor, false);//checked FP
@@ -2905,13 +2907,13 @@ void PLEGMA_ScattCorrelator<Float>::T_diagrams_piNsink( PLEGMA_ScattCorrelator<F
 //T is build up from a T1 and a T2 reduction
 //source
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, PLEGMA_ScattCorrelator<Float> &Loop, bool accum){
+void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1, PLEGMA_ScattCorrelator<Float> &T2, int sign, bool accum){
 
   //checks between T1 T2
   if(!T1.check_reduction(T_1)) PLEGMA_error("srcT1 seems not to have T1like shape\n");
   if(!T2.check_reduction(T_2)) PLEGMA_error("srcT2 seems not to have T2like shape\n");
 
-  if( T1.getMomList()!=T2.getMomList() || T1.getMomList()!=this->pList().pi(1) )
+  if( T1.getMomList()!=T2.getMomList() ) // || T1.getMomList()!=this->pList().pi(1) )
     PLEGMA_error("T1,T2 have not the the same mom list of N\n");
   assert( Nmoms()==this->pList().pi(0).size() );
 
@@ -2935,9 +2937,9 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
-    int i_mom_i2 = imap[i_m][0];
+//    int i_mom_i2 = imap[i_m][0];
     int i_mom_f1 = imap[i_m][1];
-    int i_mom_f2 = imap[i_m][2];
+//    int i_mom_f2 = imap[i_m][2];
 //    #pragma omp critical
 //    {
 //      PLEGMA_printf("IMOM thread: %d im %d i2 %d f1 %d f2 %d\n", omp_get_thread_num(), i_m, i_mom_i2, i_mom_f1, i_mom_f2 );
@@ -2947,20 +2949,21 @@ void PLEGMA_ScattCorrelator<Float>::LT_diagrams( PLEGMA_ScattCorrelator<Float> &
         Float temp[N_SPINS*N_SPINS*2];
         for( int gi1=0; gi1<n_gammas_i1; ++gi1 ){
           for( int gf1=0; gf1<n_gammas_f1; ++gf1 ){
-            Float *loop_pointer=Loop.Corr(t,i_mom_f2,gf2);
-            Float loop_contribution[2];
-            loop_contribution[0]= loop_pointer[0];
-            loop_contribution[1]= loop_pointer[1];
+//            Float *loop_pointer=Loop.Corr(t,i_mom_f2,gf2);
+//            Float loop_contribution[2];
+//            loop_contribution[0]= loop_pointer[0];
+//            loop_contribution[1]= loop_pointer[1];
 
             for(int spin=0; spin<N_SPINS*N_SPINS*2; ++spin)
-              temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + T2.Corr(t,i_mom_f1,gi1,gf1)[spin]);
-            for(int spin=0; spin<N_SPINS*N_SPINS; ++spin){
+              temp[spin] = (T1.Corr(t,i_mom_f1,gi1,gf1)[spin] + sign*T2.Corr(t,i_mom_f1,gi1,gf1)[spin]);
+/*            for(int spin=0; spin<N_SPINS*N_SPINS; ++spin){
               Float realpart,imagpart;
               realpart=temp[2*spin]*loop_contribution[0]-temp[2*spin+1]*loop_contribution[1];
               imagpart=temp[2*spin]*loop_contribution[1]+temp[2*spin+1]*loop_contribution[0];
               temp[2*spin+0]=realpart;
               temp[2*spin+1]=imagpart;
             }
+	    */
 
             for( int gei=0; gei<n_extgammas_i; ++gei ){
               for( int gef=0; gef<n_extgammas_f; ++gef ){
@@ -3634,7 +3637,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero){
 
-  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(2); //list of pf1 momenta needed here
+  std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(3); //list of pf1 momenta needed here
   std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
   std::vector<int> i_pinsertions = srcCorr.pList().u_posix( 0, moms_pinsertion_red); //list of positions of moms_pf1_red momenta in moms_pf1 array
 
@@ -3657,7 +3660,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelat
     if (i_mom_f1!=pf1){
       continue;
     }
-    int i_pc = i_pinsertions[imap[i_m][2]]; //position of pf1 in moms_pf1 (tempNN)
+    int i_pc = i_pinsertions[imap[i_m][3]]; //position of pc in mom list (tempNN)
 
     for(int t=0; t < TIME; ++t){
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
@@ -3685,7 +3688,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
 
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
 
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coord(3) * HGC_localL[3];
 
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
 

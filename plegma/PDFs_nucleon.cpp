@@ -37,6 +37,10 @@ int main(int argc, char **argv)
   size_t stepStout = 5;
   HGC_options->set("stout-steps", "Save the PDFs every step_stout stout smearing step", verbosity, stepStout);
 
+
+  bool calc3pt = true ;
+  HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
+
   /*
     We consider the momenta in the symmetric frame. Both P-momentum and Delta-momentum are vectors
     having three components. 
@@ -123,8 +127,17 @@ int main(int argc, char **argv)
 
   PLEGMA_Propagator<float> propUP(BOTH);
   PLEGMA_Propagator<float> propDN(BOTH);
+
   PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
   PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
+
+  PLEGMA_Vector<double> vectorIn;
+  PLEGMA_Vector<double> vectorOut;
+  PLEGMA_Vector<double> vectorAuxD;
+  PLEGMA_Vector<float> vectorAuxF;
+  PLEGMA_Propagator<float> *seqPropOut = new PLEGMA_Propagator<float>(BOTH);
+  PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);
+  PLEGMA_Propagator<float> *propExchange = nullptr;
   
     
   PLEGMA_Gauge<double> *AuxSinkGauge;
@@ -217,8 +230,8 @@ int main(int argc, char **argv)
 	PLEGMA_Su3field<float> WL;
 	PLEGMA_Su3field<float> tmp;
 
-	propUP->unload();
-	propDN->unload();
+	propUP.unload();
+	propDN.unload();
 	//seq source part 2Props and contraction block
 	{
 	  for(int nu = 0 ; nu < 4 ; nu++)
@@ -264,7 +277,7 @@ int main(int argc, char **argv)
     
 	  int signProps = (nucleon == PROTON) ? +1: -1;
 
-	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? &propUP : &propDN;
 
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
@@ -343,7 +356,7 @@ int main(int argc, char **argv)
     
 	  int signProps = (nucleon == PROTON) ? -1: +1;
 
-	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? &propDN : &propUP;
 	  gaugeWL.copy(gauge);
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
