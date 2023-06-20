@@ -1002,7 +1002,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
 
-  assert( name_of_diagram=="L" );
+//  assert( name_of_diagram=="L" );
 
   //Gamma list
   this->GList.clear();
@@ -1055,7 +1055,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
 
-  assert(( name_of_diagram=="P") ||  (name_of_diagram=="P0DN") ||  (name_of_diagram=="P0UP") ||  (name_of_diagram=="PPDN") ||  (name_of_diagram=="PPUP" ) );
+//  assert(( name_of_diagram=="P") ||  (name_of_diagram=="P0DN") ||  (name_of_diagram=="P0UP") ||  (name_of_diagram=="PPDN") ||  (name_of_diagram=="PPUP" ) );
 
   //Gamma list
   this->GList.clear();
