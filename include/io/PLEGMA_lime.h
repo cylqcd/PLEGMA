@@ -11,7 +11,7 @@ inline bool exists_file (const char* name) {
   return ( access( name, F_OK ) != -1 );
 }
 
-static void swap_8(double *Rd, int N)
+static inline void swap_8(double *Rd, int N)
 {
    char *i,*j,*k;
    char swap;
@@ -32,7 +32,7 @@ static void swap_8(double *Rd, int N)
    }
 }
 
-static void swap_4(float *Rd, int N)
+static inline void swap_4(float *Rd, int N)
 {
   char *i,*j,*k;
   char swap;
@@ -49,7 +49,7 @@ static void swap_4(float *Rd, int N)
   }
 }
 
-static int isBigEndian()
+static inline int isBigEndian()
 {
    union{
      char C[4];

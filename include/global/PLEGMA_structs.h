@@ -93,6 +93,9 @@ struct pointer_holder {
     if (err != hipSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
     }
+    else{
+        printf("No error in hipMemcpyToSymbol %d\n",err);
+    }
   //HIP_CHECK(hipMemcpyToSymbol(*devPointer, hostPointer, bytes*size));
 #endif
     }
@@ -153,8 +156,10 @@ struct global_vars {
       globals[i].copyToDeviceConstant();
     }
   }
-  bool check() {
+  bool check() { 
     for(size_t i = 0; i < globals.size(); i++) {
+
+      std::string line = "HGC_" + globals[i].get_value();
       if(globals[i].checkDeviceConstant() == false) return false;
     }
     return true;
@@ -167,7 +172,7 @@ struct global_vars {
       PLEGMA_printf("%s",line.c_str());
     }
     PLEGMA_printf("\nGlobal constants available on both, host and device:\n");
-    for(int i = 0; i < globals.size(); i++) {
+    for(int i = 0; i < (int)globals.size(); i++) {
       if(globals[i].devPointer == nullptr) continue;
       if(globals[i].checkDeviceConstant()) {
 	std::string line = "H/DGC_" + globals[i].get_value();

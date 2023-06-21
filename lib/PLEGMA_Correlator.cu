@@ -12,9 +12,9 @@
 #include <kernels/PLEGMA_threep.cuh>
 #include <functional>
 #ifdef PLEGMA_UDSC_BARYONS
-#include <PLEGMA_baryons_udsc.cuh>
-#include <PLEGMA_heavy_light_tetraquarks.cuh>
-#include <PLEGMA_bcud_tetraquarks.cuh>
+#include <kernels/PLEGMA_baryons_udsc.cuh>
+#include <kernels/PLEGMA_heavy_light_tetraquarks.cuh>
+#include <kernels/PLEGMA_bcud_tetraquarks.cuh>
 #endif
 
 using namespace plegma;

@@ -125,6 +125,7 @@ target_compile_options(
           -Wno-unknown-pragmas
           -Wno-unused-result
 	  -Wno-deprecated-register -dc
+	  -fgpu-rdc
 	  --hip-link
 	  -fopenmp
           $<$<CONFIG:STRICT>:-Werror

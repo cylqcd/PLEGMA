@@ -95,6 +95,13 @@ namespace plegma {
       return is4D ? HGC_localVolume : HGC_localVolume3D;
       #endif
     }
+    inline __host__ __device__ size_t volume_dev() const {
+      #if defined ( __CUDA_ARCH__ ) || ( __HIP_DEVICE_COMPILE__ )
+      return is4D ? DGC_localVolume : DGC_localVolume3D;
+      #else
+      return -1;
+      #endif
+    }
     /*
     inline __host__ __device__ size_t volume() const {
       #if defined ( __CUDA_ARCH__ ) || ( __HIP_DEVICE_COMPILE__ )

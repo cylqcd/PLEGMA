@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_bcud_tetraquarks.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_bcud_tetraquarks.cuh"
 
 
 template<typename FloatA, typename FloatC>

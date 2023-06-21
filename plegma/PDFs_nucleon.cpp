@@ -37,6 +37,14 @@ int main(int argc, char **argv)
   size_t stepStout = 5;
   HGC_options->set("stout-steps", "Save the PDFs every step_stout stout smearing step", verbosity, stepStout);
 
+  bool calc3pt = true ;
+  HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
+
+  std::string proj ;
+  HGC_options->set("which_projector", "Which projector to use for 3pt function", verbosity, proj);
+  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
+
+
   /*
     We consider the momenta in the symmetric frame. Both P-momentum and Delta-momentum are vectors
     having three components. 
@@ -119,14 +127,21 @@ int main(int argc, char **argv)
   
   // ensuring mu positive
   if(mu<0)  mu*=-1.;
-  TIME(QUDA_solver solver(mu));
+  QUDA_solver *solver = new QUDA_solver(mu);
 
-  PLEGMA_Propagator<float> propUP(BOTH);
-  PLEGMA_Propagator<float> propDN(BOTH);
-  PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
-  PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
-  
+  PLEGMA_Propagator<float> *propUP = new PLEGMA_Propagator<float>(BOTH);
+  PLEGMA_Propagator<float> *propDN = new PLEGMA_Propagator<float>(BOTH);
+
+  PLEGMA_Propagator<float> *propUP_SL=new PLEGMA_Propagator<float>(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
+  PLEGMA_Propagator<float> *propDN_SL=new PLEGMA_Propagator<float>(tSinks.size()>0 ? BOTH:NONE, FIRST_CORNER);
+
+  PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);  
+
+  PLEGMA_Propagator<float> *seqPropOut = new PLEGMA_Propagator<float>(BOTH);
+
+  PLEGMA_Propagator<float> *propExchange = nullptr;
     
+  PLEGMA_Gauge<float> gaugeWL;
   PLEGMA_Gauge<double> *AuxSinkGauge;
   if(isGPD) AuxSinkGauge = smearedGauge_sink;
   else AuxSinkGauge = &smearedGauge;
@@ -137,12 +152,12 @@ int main(int argc, char **argv)
     PLEGMA_Gauge3D<double> smearedGauge3D;
     smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
-    auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
+    auto computePropagator = [&](PLEGMA_Propagator<float>* prop_SS, PLEGMA_Propagator<float>* prop_SL,
 				 double run_mu) {
 			       // ensuring mu value
 			       if(mu != run_mu) {
 				 mu = run_mu;
-				 solver.UpdateSolver();
+				 solver->UpdateSolver();
 			       }
 			       for(int isc = 0 ; isc < 12 ; isc++){
 				 PLEGMA_Vector<double> vectorInOut;
@@ -155,18 +170,18 @@ int main(int argc, char **argv)
 				 // Inverting
 				 PLEGMA_printf("Going to invert %s for component %d\n",
 					       run_mu>0 ? "UP" : "DN", isc);
-				 TIME(solver.solve(vectorInOut, vectorInOut));
-				 if(prop_SL.getAllocation() != NONE) {
+				 TIME(solver->solve(vectorInOut, vectorInOut));
+				 if(prop_SL->getAllocation() != NONE) {
 				   PLEGMA_Vector<float> vectorAuxF;
 				   vectorAuxF.copy(vectorInOut);
-				   prop_SL.absorb(vectorAuxF, isc/3, isc%3);
+				   prop_SL->absorb(vectorAuxF, isc/3, isc%3);
 				 }
 				 { // Smearing the solution
 				   PLEGMA_Vector<double> vectorAuxD;
 				   PLEGMA_Vector<float> vectorAuxF;
 				   TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nsmearGauss, alphaGauss));
 				   vectorAuxF.copy(vectorAuxD);
-				   prop_SS.absorb(vectorAuxF, isc/3, isc%3);
+				   prop_SS->absorb(vectorAuxF, isc/3, isc%3);
 				 }
 			       }
 			     };
@@ -186,15 +201,14 @@ int main(int argc, char **argv)
       PLEGMA_Gauge3D<double> smearedGauge3D_sink;
       smearedGauge3D_sink.absorb(*AuxSinkGauge, global_fixSinkTime);
 
-      propUP3D.absorb(propUP_SL, global_fixSinkTime);
-      propDN3D.absorb(propDN_SL, global_fixSinkTime);
 
       for(int isc = 0 ; isc < 12 ; isc++){
 	PLEGMA_Vector3D<double> vectorAuxD;
 	PLEGMA_Vector3D<double> vectorAuxD2;
 	PLEGMA_Vector3D<float> vectorAuxF;
-	vectorAuxF.absorb(propUP3D,isc/3, isc%3);
+	vectorAuxF.absorb(*propUP_SL,global_fixSinkTime,isc/3, isc%3);
 	vectorAuxD2.copy(vectorAuxF);
+
 	TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
 	vectorAuxF.copy(vectorAuxD);
 	propUP3D.absorb(vectorAuxF,isc/3, isc%3);
@@ -203,7 +217,7 @@ int main(int argc, char **argv)
 	PLEGMA_Vector3D<double> vectorAuxD;
 	PLEGMA_Vector3D<double> vectorAuxD2;
 	PLEGMA_Vector3D<float> vectorAuxF;
-	vectorAuxF.absorb(propDN3D,isc/3, isc%3);
+	vectorAuxF.absorb(*propDN_SL,global_fixSinkTime,isc/3, isc%3);
 	vectorAuxD2.copy(vectorAuxF);
 	TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
 	vectorAuxF.copy(vectorAuxD);
@@ -224,6 +238,10 @@ int main(int argc, char **argv)
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
 	      PLEGMA_Vector3D<float> vectorAux3D;
+              PLEGMA_Vector<float> vectorAuxF;
+              PLEGMA_Vector<double> vectorAuxD;
+              PLEGMA_Vector<double> vectorOut,vectorIn;
+
 	      if(nucleon == PROTON)
 		vectorAux3D.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, nu, c2);
 	      else
@@ -274,7 +292,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir);
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,0, (std::string)"");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
 	      propExchange = propIn; propIn = propF; propF = propExchange;
@@ -287,7 +305,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,0, (std::string)"");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
@@ -303,6 +321,9 @@ int main(int argc, char **argv)
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
 	      PLEGMA_Vector3D<float> vectorAux3D;
+              PLEGMA_Vector<double> vectorOut,vectorIn;
+              PLEGMA_Vector<double> vectorAuxD;
+	      PLEGMA_Vector<float> vectorAuxF;
 	      if(nucleon == PROTON)
 		vectorAux3D.seqSourceNucleon(propUP3D, which_proj, nucleon, nu, c2);
 	      else
@@ -353,7 +374,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,0, (std::string)"");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
@@ -366,7 +387,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas,0, (std::string)"");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
@@ -379,16 +400,16 @@ int main(int argc, char **argv)
       }
     }
     
-    propUP.rotateToPhysicalBase_device(+1);
-    propDN.rotateToPhysicalBase_device(-1);
-    propUP.applyBoundaries_device(source[3]);
-    propDN.applyBoundaries_device(source[3]);
+    propUP->rotateToPhysicalBase_device(+1);
+    propDN->rotateToPhysicalBase_device(-1);
+    propUP->applyBoundaries_device(source[3]);
+    propDN->applyBoundaries_device(source[3]);
     
     PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-    TIME(corr.contractMesons(propUP, propDN));
+    TIME(corr.contractMesons(*propUP, *propDN));
     THREAD(corr.writeFile(twop_filename, corr_file_format));
     
-    TIME(corr.contractBaryons(propUP, propDN));
+    TIME(corr.contractBaryons(*propUP, *propDN));
     THREAD(corr.writeFile(twop_filename, corr_file_format));
   }
   if(isGPD) delete smearedGauge_sink;

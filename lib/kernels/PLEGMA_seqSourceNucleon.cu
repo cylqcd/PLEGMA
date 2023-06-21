@@ -26,7 +26,7 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
   }
   else{
     printf("Error: You can use only PROTON or NEUTRON\n");
-    asm("trap;"); 
+//    asm("s_trap;"); 
   }
 
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS

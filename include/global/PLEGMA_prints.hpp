@@ -50,7 +50,7 @@ extern class Options * HGC_options;
     HGC_options->checkErrors();						\
     if (HGC_init_PLEGMA_flag) {						\
       fprintf(getOutputFile(), "%sERROR: ", getOutputPrefix());		\
-      fprintf(getOutputFile(), __VA_ARGS__);				\
+      fprintf(getOutputFile(), "%s\n", __VA_ARGS__);				\
       fprintf(getOutputFile(), " (rank %d, host %s, " __FILE__ ":%d in %s())\n", \
              comm_rank(), comm_hostname(), __LINE__, __func__);         \
       fprintf(getOutputFile(), "%s       last kernel called was (name=%s,volume=%s,aux=%s)\n", \
@@ -65,12 +65,12 @@ extern class Options * HGC_options;
       if(rank) {							\
 	MPI_Comm_rank(MPI_COMM_WORLD,&rank);				\
 	printf( "ERROR: ");						\
-	printf(__VA_ARGS__);						\
+	printf("%s\n",__VA_ARGS__);						\
 	printf(" (rank %d, " __FILE__ ":%d in %s())\n",			\
 	       rank, __LINE__, __func__);				\
       } else {								\
 	printf( "ERROR: ");						\
-	printf(__VA_ARGS__);						\
+	printf("%s\n",__VA_ARGS__);						\
 	printf(" (" __FILE__ ":%d in %s())\n",				\
 	       __LINE__, __func__);					\
       }									\

@@ -1,4 +1,5 @@
-set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} /opt/cray/pe/hdf5-parallel/1.12.1.5/gnu/9.1/lib/libhdf5_parallel.so.200 ${MPI_CXX_LIBRARIES} /pfs/lustrep2/projappl/project_462000125/samantao-public/rocm/rocm-5.2.3/hip/lib/libamdhip64.so /pfs/lustrep2/projappl/project_462000125/samantao-public/rocm/rocm-5.2.3/rccl/lib/librccl.so)
+set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${MPI_CXX_LIBRARIES} ${HDF5_LIBRARIES}/libhdf5_parallel.so.200)
+#opt/cray/pe/hdf5-parallel/1.12.1.5/gnu/9.1/lib/libhdf5_parallel.so.200 ${MPI_CXX_LIBRARIES} /pfs/lustrep2/projappl/project_462000125/samantao-public/rocm/rocm-5.3.3/hip/lib/libamdhip64.so)
 
 LIST(APPEND PLEGMA_LIBS ${MPI_CXX_LIBRARIES})
 
@@ -33,8 +34,20 @@ if(PLEGMA_MKL)
 endif(PLEGMA_MKL)
 
 #define PLEGMA executables
-
-add_executable(Plaquette Plaquette.cpp)
+#if(NOT DEFINED(HCC_HOME))
+#  set(HCC_HOME "${HIP_PATH}/../llvm/bin")
+#endif()
+#set(CMAKE_HIP_LINK_EXECUTABLE "${HIP_HIPCC_CMAKE_LINKER_HELPER} ${HCC_HOME} <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+#set(CMAKE_HIP_LINK_EXECUTABLE "${HIP_HIPCC_CMAKE_LINKER_HELPER} ${HIP_CLANG_PATH} ${HIP_CLANG_PARALLEL_BUILD_LINK_OPTIONS} <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+#set(HIPCC "${HIP_PATH}/bin/hipcc")
+if(${PLEGMA_TARGET_TYPE} STREQUAL "HIP")
+  find_package(HIPWrapper)
+endif()
+hip_add_executable(Plaquette Plaquette.cpp)
+set_property(TARGET Plaquette PROPERTY HIP_ARCHITECTURES gfx90a)
+message("Stop ${CMAKE_HIP_COMPILE_OBJECT}")
+message("SAS ${CMAKE_HIP_LINK_EXECUTABLE}")
+#set_source_files_properties(Plaquette.cpp PROPERTIES LANGUAGE HIP)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
 add_executable(Topo Topo.cpp)

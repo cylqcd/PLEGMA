@@ -12,6 +12,7 @@ int main(int argc, char **argv)
 					     "corr-space", "tSinks","Projs","xiMomSm","sinkMom","which_particle","gammas"};
 
   initializeOptions(argc, argv, true, listOpt);
+  std::vector<int> sinkMom = {0,0,0};
 
   int L_LEN;
   HGC_options->set("l-len", "length of l", verbosity, L_LEN);
@@ -61,7 +62,7 @@ int main(int argc, char **argv)
   initGaugeQuda(gauge, true, QUDA_WILSON_LINKS);
   plaqQuda();
   
-  WHICHPARTICLE nucleon = which_particle;
+  WHICHPARTICLE nucleon = PROTON;
   if(nucleon!=NEUTRON && nucleon!=PROTON) PLEGMA_error("Only nucleon PDFs have been implemented so far\n");
   
   // Smearing

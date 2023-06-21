@@ -44,7 +44,7 @@ static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gTex, Float *p
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
-  if (sid < gTex.volume()) {
+  if (sid < gTex.volume_dev()) {
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];    
     Float trace = 0.;
@@ -85,6 +85,8 @@ static void calculatePlaquette_host(ProfileStruct& ps, TG gTex, Float& plaquette
   Float *d_partial_plaq = NULL;
   int gridDimX = ps.tp.grid.x;
   d_partial_plaq=(Float*)device_malloc( gridDimX * sizeof(Float));
+  PLEGMA_printf("calculate Plaquette host %d\n", gridDimX);
+  fflush(stdout);
   calculatePlaquette_device<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gTex, d_partial_plaq);
 
   Float *h_partial_plaq = NULL;
@@ -104,7 +106,11 @@ template<typename Float, typename FloatG, typename TG>
 static Float calculatePlaquette(TG gTex){
 
   assert(gTex.is4D); // TODO: For 3D we should not compute the plaquette in T
+  PLEGMA_printf("gTex.volume() %d\n", gTex.volume());
+  fflush(stdout);
   ProfileStruct ps(gTex.volume(),sizeof(Float));
+  PLEGMA_printf("ps.tp.grid.x %d\n", ps.tp.grid.x);
+  fflush(stdout);
   Float plaquette;
   std::string nameK;
   int normC;
@@ -117,6 +123,8 @@ static Float calculatePlaquette(TG gTex){
     normC=1;
   }
   else assert(false);
+  PLEGMA_printf("Before tuneAndRun\n");
+  fflush(stdout);
   tuneAndRun(ps, nameK, calculatePlaquette_host<Float,FloatG,TG>, ps, gTex, plaquette);
 
   Float globalPlaquette = 0.;
