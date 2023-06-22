@@ -459,7 +459,7 @@ int main(int argc, char **argv)
             for (int i = 0; i < num_stoc; i++)
             {
                 plegma::PLEGMA_ScattCorrelator<float> insertLoop(src, momList3pt_pc);
-                insertLoop.initialize_diagram(gscatts_c, "stoc" + std::to_string(seed_stoc) + "id" + std::to_string(i) + "_" + std::to_string(num_stoc) + "/up");
+                insertLoop.initialize_diagram(gscatts_c, "stoc" + std::to_string(seed_stoc) + "id" + std::to_string(i) + "_1" + "/up");
 
                 plegma::PLEGMA_Vector<float> stocSrc, stocProp;
 
