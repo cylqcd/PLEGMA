@@ -62,13 +62,13 @@ set(CMAKE_HIP_FLAGS_RELEASE
     "-O3 -w"
     CACHE STRING "Flags used by the CUDA compiler during release builds.")
 set(CMAKE_HIP_FLAGS_HOSTDEBUG
-    "-g"
+    "-g -O3"
     CACHE STRING "Flags used by the C++ compiler during host-debug builds.")
 set(CMAKE_HIP_FLAGS_DEBUG
-    "-g -G"
+    "-g -G -O3"
     CACHE STRING "Flags used by the C++ compiler during full (host+device) debug builds.")
 set(CMAKE_HIP_FLAGS_SANITIZE
-    "-g "
+    "-g -O3"
     CACHE STRING "Flags used by the C++ compiler during sanitizer debug builds.")
 
 mark_as_advanced(CMAKE_HIP_FLAGS_DEVEL)
@@ -122,6 +122,7 @@ target_compile_options(
   plegma 
   PRIVATE -Wall
           -Wextra
+	  -O3
           -Wno-unknown-pragmas
           -Wno-unused-result
 	  -Wno-deprecated-register -dc

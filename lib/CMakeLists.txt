@@ -148,7 +148,7 @@ target_link_options(plegma PRIVATE $<$<CONFIG:DEVEL>:$<${PLEGMA_LINKER_COMPRESS}
 # set up QUDA compile options, put them before target specific options
 target_compile_options(
   plegma BEFORE PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:
-               $<IF:$<CONFIG:RELEASE>,-w,-Wall -Wextra>
+               $<IF:$<CONFIG:RELEASE>,-w, -O3 -Wall -Wextra>
                $<$<CONFIG:STRICT>:-Werror>
   >)
 
