@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
   int nsmearGauss_c = 0;
   int startSource = 0;
   int nroots=4;
-  std::string prOrNt = "neutron";
+  std::string prOrNt = "proton";
   std::string srcInputFile = "./input.src";
   std::string outdiagramPrefix="";
   std::string outfilename;
@@ -175,10 +175,10 @@ int main(int argc, char **argv) {
      PLEGMA_error("twopt momentumList empty");
     if(sourcemomentumList_threept.empty())
      PLEGMA_error("threept momentumList empty");
-
+/*
     PLEGMA_Vector<double> vectorSource_oet;
     vectorSource_oet.randInit(rand_seed1);
-
+*/
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
 
@@ -189,15 +189,16 @@ int main(int argc, char **argv) {
       std::vector<std::vector<int>> mpi2_twopt = sourcemomentumList_twopt.uniq_p(0);
       momList list_mpi2_twopt(1,{mpi2_twopt,},{0,});
 
+      std::vector<std::vector<int>> mpf1_twopt = sourcemomentumList_twopt.uniq_p(1);
+      momList list_mpf1_twopt(1,{mpf1_twopt,},{0,});
+
       std::vector<std::vector<int>> mpi2_threept = sourcemomentumList_threept.uniq_p(0);
       momList list_mpi2_threept(1,{mpi2_threept,},{0,});
 
       std::vector<std::vector<int>> mpf1_threept = sourcemomentumList_threept.uniq_p(1);
       momList list_mpf1_threept(1,{mpf1_threept,},{0,});
 
-      std::vector<std::vector<int>> mpf1_twopt = sourcemomentumList_twopt.uniq_p(1);
-      momList list_mpf1_twopt(1,{mpf1_twopt,},{0,});
-
+/*
 
       PLEGMA_ScattCorrelator<float> corrP0UP(sourcePositions[isource], list_mpi2_twopt);
       PLEGMA_ScattCorrelator<float> corrP0DN(sourcePositions[isource], list_mpi2_twopt);
@@ -210,7 +211,7 @@ int main(int argc, char **argv) {
       corrPPDN.initialize_diagram(glist_source_meson, glist_sink_meson, "PPDN");
 
       vectorSource_oet.stochastic_Z(nroots);
-
+*/
       site& source = sourcePositions[isource];
 
       site source_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
@@ -221,7 +222,7 @@ int main(int argc, char **argv) {
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
-
+/*
       auto computeOetPropagator = [&](PLEGMA_Vector<float>& vec_SS, PLEGMA_Vector<float>& vec_SL,
                                    double run_mu, WHICHFLAVOR fl, int nSmear,  std::vector<int> sourceMom, bool finalize) {
 	                         // ensuring mu value
@@ -280,7 +281,7 @@ int main(int argc, char **argv) {
 				   vec_SS.copy(vectorAuxF);
 				 }
 
-      };
+      };*/
 
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
 				   double run_mu, WHICHFLAVOR fl, int nSmear,  bool finalize) {
@@ -345,7 +346,7 @@ int main(int argc, char **argv) {
       
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propDN;
-      
+/*      
       PLEGMA_Vector<float> oet_mom_zero_up_SS;
       PLEGMA_Vector<float> oet_mom_zero_dn_SS;
 
@@ -357,7 +358,7 @@ int main(int argc, char **argv) {
         oet_mom_fini_up_SS.push_back(new PLEGMA_Vector<float>(HOST));
         oet_mom_fini_dn_SS.push_back(new PLEGMA_Vector<float>(HOST));
       }
-
+*/
 
       PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1_twopt);
       TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
@@ -372,7 +373,7 @@ int main(int argc, char **argv) {
 	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
         PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
 
-        PLEGMA_Vector<float> oet_mom_zero_up_SL(tSinks.size()>0 ? BOTH:NONE);
+/*        PLEGMA_Vector<float> oet_mom_zero_up_SL(tSinks.size()>0 ? BOTH:NONE);
         PLEGMA_Vector<float> oet_mom_zero_dn_SL(tSinks.size()>0 ? BOTH:NONE);
 
         std::vector<PLEGMA_Vector<float>*> oet_mom_fini_up_SL;
@@ -382,7 +383,7 @@ int main(int argc, char **argv) {
           oet_mom_fini_up_SL.push_back(new PLEGMA_Vector<float>(HOST));
           oet_mom_fini_dn_SL.push_back(new PLEGMA_Vector<float>(HOST));
         }
-
+*/
 
 	bool computed_light = false;
 	// If twop_filename exists we hold the computation of the light props
@@ -392,10 +393,10 @@ int main(int argc, char **argv) {
 	  computed_light = true;
 	}
 
-        bool computed_light_oet = true;
+/*        bool computed_light_oet = true;
 	std::vector<int> zero_mom({0,0,0});
         TIME(computeOetPropagator(oet_mom_zero_up_SS, oet_mom_zero_up_SL,  mu_ud, LIGHT, nsmearGauss, zero_mom, false));
-        TIME(computeOetPropagator(oet_mom_zero_dn_SS, oet_mom_zero_dn_SL, -mu_ud, LIGHT, nsmearGauss, zero_mom, false));
+        TIME(computeOetPropagator(oet_mom_zero_dn_SS, oet_mom_zero_dn_SL, -mu_ud, LIGHT, nsmearGauss, zero_mom, false));*/
 
 
 
@@ -426,7 +427,7 @@ int main(int argc, char **argv) {
 	  //PLEGMA_printf("Nucleon diagram ready\n");
 
 	}
-
+/*
         //Section M diagrams 2pt functions 
 	{
           PLEGMA_Vector<float> vectorAuxF_SS;
@@ -502,7 +503,7 @@ int main(int argc, char **argv) {
 	  } //end of loop mpi2
 	}//section M diagram 2pt functions
 
-	            
+*/	            
 
 
         std::vector<int> filter={0,0,0};
@@ -536,8 +537,8 @@ int main(int argc, char **argv) {
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4};//,S12,S13,S23,S41,S42,S43};
           
-	  for (int alpha=0;alpha<N_SPINS; ++alpha){
-            for (int beta=0; beta<N_SPINS; ++beta){
+	  for (int alpha=0;alpha<2; ++alpha){
+            for (int beta=0; beta<2; ++beta){
 
 	      auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
 	        if(not computed_light) {
@@ -632,10 +633,14 @@ int main(int argc, char **argv) {
                     TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
 		  }
 		  else{
+#if 0
+	            seqProp.writeHDF5("seqProp"+fl+std::to_string(alpha)+std::to_string(beta));
+                    propF.writeHDF5("PropF"+fl+std::to_string(alpha)+std::to_string(beta));
+#endif
                     TIME(corr.contractNucleonThrp_local(seqProp, propF, 0, gammas));
                   }
 	          if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-//                THREAD(corr.writeFile(filename, corr_file_format));
+//                  corr.writeHDF5("TEST");
 
 		  if (fl=="up"){
                     corrUp.absorbSourceSinkSpinMom(corr, alpha, beta, i_pf1 );
@@ -667,6 +672,7 @@ int main(int argc, char **argv) {
 	    } //loop over beta
 	  }//loop over alpha
 
+/*
            
           auto computeOetInvThroughSink = [&](PLEGMA_Vector<float>& vec_SC, double run_mu, PLEGMA_Vector3D<float>& prop, int nSmear, WHICHFLAVOR fl, std::vector<int> momentum_f1, int i_gamma_i2, int i_gamma_f2 ) {
                // ensuring mu positive
@@ -960,6 +966,7 @@ int main(int argc, char **argv) {
 	    }
 
 	  }//momentum pi2
+	  */
 
           //Note that we compute NJN for the set 
 	  //of input momenta pf1 and perform the 
@@ -972,21 +979,21 @@ int main(int argc, char **argv) {
           //TIME(corrDn.apply_phase());
 
 	  if (nucleon==PROTON){
-           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protonup";
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_dt" + std::to_string(tsinkMtsource)+"_protonup";
           }
 	  else{
-           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutronup";
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_dt" + std::to_string(tsinkMtsource)+"_neutronup";
 	  }
           TIME(corrUp.writeHDF5(outfilename));
 
           if (nucleon==PROTON){
-            outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"protondn";
+            outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_dt" + std::to_string(tsinkMtsource)+"_protondn";
           }
           else{
-           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"neutrondn";
+           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_dt" + std::to_string(tsinkMtsource) +"_neutrondn";
           }
           TIME(corrDn.writeHDF5(outfilename));	  
-
+/*
           {
 	  PLEGMA_Vector3D<float> zero_momentum_light;
           zero_momentum_light.absorb(oet_mom_zero_up_SS, global_fixSinkTime);
@@ -1002,9 +1009,9 @@ int main(int argc, char **argv) {
           computeThreep_meson(+mu_ud, zero_momentum_light, nsmearGauss, LIGHT,"dn", "pizero");
   	  }
 
-
+*/
         }//tsink
-
+/*
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P";
         TIME(corrPPUP.apply_sign("P"));
@@ -1015,7 +1022,7 @@ int main(int argc, char **argv) {
         TIME(corrP0UP.writeHDF5( outfilename ));
         TIME(corrP0DN.apply_sign("P"));
         TIME(corrP0DN.writeHDF5( outfilename ));
-
+*/
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
         TIME( corrN0.apply_phase());
         TIME( corrN0.apply_sign("N"));
