@@ -318,6 +318,21 @@ namespace plegma {
 					PLEGMA_Su3field<Float> &su3,
 					int signProps, std::vector<GAMMAS> gammas,
 					int z, std::string quark);
+    
+    void contractNucleonThrp_staple(PLEGMA_Propagator<Float> &bwdProp,
+					PLEGMA_Propagator<Float> &fwdProp,
+					PLEGMA_Su3field<Float> &su3,
+					int signProps, std::vector<GAMMAS> gammas,
+					int l, int b, int z);
+
+    void contractMesonsFourp_ultralocal(PLEGMA_Propagator<Float> &prop1,
+					PLEGMA_Propagator<Float> &prop2,
+					PLEGMA_Propagator<Float> &prop3,
+					PLEGMA_Propagator<Float> &prop4,int b);
+
+    void contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
+				  PLEGMA_Propagator<Float> &prop2,
+                                  PLEGMA_Su3field<float> &staple, int l, int b, int z);
 
     void contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,

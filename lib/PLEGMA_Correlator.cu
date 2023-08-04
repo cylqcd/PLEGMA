@@ -5,6 +5,7 @@
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_TMDWF.cuh>
+#include <PLEGMA_QWF.cuh>
 #include <PLEGMA_mesonsNew.cuh>
 #include <PLEGMA_mesonsAll.cuh>
 #include <PLEGMA_baryons.cuh>
@@ -701,6 +702,59 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
+contractNucleonThrp_staple(PLEGMA_Propagator<Float> &bwdProp,
+			       PLEGMA_Propagator<Float> &fwdProp,
+			       PLEGMA_Su3field<Float> &su3,
+			       int signProps, std::vector<GAMMAS> gammas,
+			       int l, int b, int z){
+  /* if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,(int) gammas.size()};
+  else */ shape = {(int) gammas.size()};
+  datasets = {"l_"+std::to_string(l)+"b_"+std::to_string(b)+"z_"+std::to_string(z)};
+  groups =  {"staple"};
+
+  description = getGammasString(gammas);
+  initialize();
+  
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+  threep_wilsonLine(*this,bwdProp,fwdProp,signProps,su3,gammas);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
+                         PLEGMA_Propagator<Float> &prop2,
+                         PLEGMA_Su3field<float> &staple, int l, int b, int z){
+
+  shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,16};
+  char d1[50];
+  sprintf(d1,"l_%db_%dz_%d",l,b,z);
+  datasets =  {d1};
+  groups =  {"mesons"};
+  description = "g4 ";
+
+  initialize();
+  contract_TMDWF_mesons_zfac(prop1,prop2,*this, staple);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsFourp_ultralocal(PLEGMA_Propagator<Float> &prop1,
+               		       PLEGMA_Propagator<Float> &prop2, PLEGMA_Propagator<Float> &prop3,
+	                       PLEGMA_Propagator<Float> &prop4,int b){
+
+  shape = {16};
+  char d1[50];
+  sprintf(d1,"b_%d",b);
+  datasets =  {d1};
+  groups =  {"mesons"};
+  description = "gamma insertion";
+
+  initialize();
+  contract_mesons_fourp_ultralocal(prop1,prop2,prop3,prop4,*this);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
 contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
 			PLEGMA_Propagator<Float> &fwdProp,
 			PLEGMA_Su3field<Float> &su3_1,
@@ -957,7 +1011,7 @@ template class PLEGMA_Correlator<double>;
 
 
 
-template
+/* template
 void PLEGMA_Correlator<float>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
 		  PLEGMA_Propagator<float> &prop2 );
 
@@ -967,7 +1021,7 @@ void PLEGMA_Correlator<double>::contractMesonsNew<float>(PLEGMA_Propagator<float
 
 template
 void PLEGMA_Correlator<double>::contractMesonsNew<double>(PLEGMA_Propagator<double> &prop1,
-		  PLEGMA_Propagator<double> &prop2 );
+		  PLEGMA_Propagator<double> &prop2 ); */
 
 
 template

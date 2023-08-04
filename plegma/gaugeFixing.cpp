@@ -31,7 +31,8 @@ int main(int argc, char **argv){
 						      exactoverelaxPar,tolerance,20000,1000);
     else if (overelaxType == "stoch") G2.gFixingLandau(G1,stochoverelaxPar,tolerance);
     else PLEGMA_error("Overrelaxation type %s not implemented",overelaxType.c_str());
-    G2.writeLIME(prefix+"_lgfix."+confStr);
+    if(gaugeFixType==4) G2.writeLIME(prefix+"_lgfix."+confStr);
+    else G2.writeLIME(prefix+"_cgfix."+confStr);
   }
   finalize();
 }
