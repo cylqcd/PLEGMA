@@ -1089,18 +1089,9 @@ int main(int argc, char **argv) {
 
 #endif 
       vectorStoc_source_oet.stochastic_Z(nroots);
-#if 0
-
-/*      {
-        PLEGMA_Vector<float> tmm(BOTH);
-	tmm.copy(*stochastic_sources[0],HOST);
-	tmm.load();
-	vectorStoc_source_oet.copy(tmm);
-      }*/
 
       //PLEGMA_printf("DONE stochastic factors\n");
 
-#endif
 #if 1
     /******************************************************
      *
@@ -2273,7 +2264,7 @@ int main(int argc, char **argv) {
             //performing rotation to physical base
             vectorAuxD2.rotateToPhysicalBasis(vectorAuxD,-1);
             //performing smearing
-            vectorAuxF.copy(vectorAuxD);
+            vectorAuxF.copy(vectorAuxD2);
             propTS_SL.absorb(vectorAuxF, isc/3, isc%3);
             TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge, nsmearGauss, alphaGauss));
             vectorAuxF.copy(vectorAuxD);
