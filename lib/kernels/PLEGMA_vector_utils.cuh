@@ -169,6 +169,7 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
   Float2<FloatIn> *inOdd2 = (Float2<FloatIn> *) inOdd;
   Float2<FloatOut> *out2 = (Float2<FloatOut> *) out;
 
+
   #pragma unroll
   for(int mu = 0 ; mu < N_SPINS ; mu++) {
     #pragma unroll
@@ -191,6 +192,8 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
 template<typename FloatOut, typename FloatIn> 
 static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
   ProfileStruct ps(HGC_localVolume);
+  PLEGMA_printf("qudaVec.SiteSubset() %d \n",qudaVec.SiteSubset());
+  PLEGMA_printf("isEven() %d \n",isEven);
   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
       tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
@@ -270,8 +273,7 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
 
   checkQudaError();
   qudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), qudaMemcpyHostToDevice); checkQudaError();
-  qudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); 
-  //checkQudaError();
+  qudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkQudaError();
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + HGC_localVolume3D;
   typedef thrust::device_ptr<Float2<Float> > DpF2;
