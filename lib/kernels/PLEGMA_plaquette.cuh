@@ -85,8 +85,6 @@ static void calculatePlaquette_host(ProfileStruct& ps, TG gTex, Float& plaquette
   Float *d_partial_plaq = NULL;
   int gridDimX = ps.tp.grid.x;
   d_partial_plaq=(Float*)device_malloc( gridDimX * sizeof(Float));
-  PLEGMA_printf("calculate Plaquette host %d\n", gridDimX);
-  fflush(stdout);
   calculatePlaquette_device<<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(gTex, d_partial_plaq);
 
   Float *h_partial_plaq = NULL;
