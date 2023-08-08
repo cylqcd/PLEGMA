@@ -1,4 +1,4 @@
-set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${MPI_CXX_LIBRARIES} ${HDF5_LIBRARIES}/libhdf5_parallel.so.200)
+set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${MPI_CXX_LIBRARIES} ${HDF5_LIBRARIES}/libhdf5_parallel.so.200 -fopenmp )
 #opt/cray/pe/hdf5-parallel/1.12.1.5/gnu/9.1/lib/libhdf5_parallel.so.200 ${MPI_CXX_LIBRARIES} /pfs/lustrep2/projappl/project_462000125/samantao-public/rocm/rocm-5.3.3/hip/lib/libamdhip64.so)
 
 LIST(APPEND PLEGMA_LIBS ${MPI_CXX_LIBRARIES})
@@ -50,165 +50,168 @@ message("SAS ${CMAKE_HIP_LINK_EXECUTABLE}")
 #set_source_files_properties(Plaquette.cpp PROPERTIES LANGUAGE HIP)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
-add_executable(Topo Topo.cpp)
+hip_add_executable(Topo Topo.cpp)
 target_link_libraries(Topo ${PLEGMA_LIBS})
 
-add_executable(Calc_2pt Calc_2pt.cpp)
+hip_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
-add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
+hip_add_executable(Calc_2pt_marconi Calc_2pt_marconi.cpp)
+target_link_libraries(Calc_2pt_marconi ${PLEGMA_LIBS})
+
+hip_add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
 target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
 
-add_executable(Tetraquark Tetraquark.cpp)
+hip_add_executable(Tetraquark Tetraquark.cpp)
 target_link_libraries(Tetraquark ${PLEGMA_LIBS})
 
-add_executable(TetraquarkBCUD TetraquarkBCUD.cpp)
+hip_add_executable(TetraquarkBCUD TetraquarkBCUD.cpp)
 target_link_libraries(TetraquarkBCUD ${PLEGMA_LIBS})
 
-add_executable(TestFrame EXCLUDE_FROM_ALL TestFrame.cpp)
+hip_add_executable(TestFrame EXCLUDE_FROM_ALL TestFrame.cpp)
 target_link_libraries(TestFrame ${PLEGMA_LIBS})
 
-add_executable(StochasticTetraquark StochasticTetraquark.cpp)
+hip_add_executable(StochasticTetraquark StochasticTetraquark.cpp)
 target_link_libraries(StochasticTetraquark ${PLEGMA_LIBS})
 
-add_executable(StochasticTetraquarkBCUD StochasticTetraquarkBCUD.cpp)
+hip_add_executable(StochasticTetraquarkBCUD StochasticTetraquarkBCUD.cpp)
 target_link_libraries(StochasticTetraquarkBCUD ${PLEGMA_LIBS})
 
-add_executable(ComputeLightStochProp ComputeLightStochProp.cpp)
+hip_add_executable(ComputeLightStochProp ComputeLightStochProp.cpp)
 target_link_libraries(ComputeLightStochProp ${PLEGMA_LIBS})
 
-add_executable(ComputeLightPointProp ComputeLightPointProp.cpp)
+hip_add_executable(ComputeLightPointProp ComputeLightPointProp.cpp)
 target_link_libraries(ComputeLightPointProp ${PLEGMA_LIBS})
 
-add_executable(Calc_2pt_charmonium Calc_2pt_charmonium.cpp)
+hip_add_executable(Calc_2pt_charmonium Calc_2pt_charmonium.cpp)
 target_link_libraries(Calc_2pt_charmonium ${PLEGMA_LIBS})
 
-add_executable(PDFs_nucleon PDFs_nucleon.cpp)
+hip_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
-add_executable(TMDPDFs_nucleon TMDPDFs_nucleon.cpp)
+hip_add_executable(TMDPDFs_nucleon TMDPDFs_nucleon.cpp)
 target_link_libraries(TMDPDFs_nucleon ${PLEGMA_LIBS})
 
-add_executable(PDFs_qgq_nucleon PDFs_qgq_nucleon.cpp)
+hip_add_executable(PDFs_qgq_nucleon PDFs_qgq_nucleon.cpp)
 target_link_libraries(PDFs_qgq_nucleon ${PLEGMA_LIBS})
 
-add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
+hip_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
-add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
+hip_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
 target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
 
-add_executable(mesons_3pt mesons_3pt.cpp)
+hip_add_executable(mesons_3pt mesons_3pt.cpp)
 target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
 
-add_executable(correcting_ZM EXCLUDE_FROM_ALL correcting_ZM.cpp)
+hip_add_executable(correcting_ZM EXCLUDE_FROM_ALL correcting_ZM.cpp)
 target_link_libraries(correcting_ZM ${PLEGMA_LIBS})
 
-add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
+hip_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
 
-add_executable(Random EXCLUDE_FROM_ALL Random.cpp)
+hip_add_executable(Random EXCLUDE_FROM_ALL Random.cpp)
 target_link_libraries(Random ${PLEGMA_LIBS})
 
-add_executable(Dilution EXCLUDE_FROM_ALL Dilution.cpp)
+hip_add_executable(Dilution EXCLUDE_FROM_ALL Dilution.cpp)
 target_link_libraries(Dilution ${PLEGMA_LIBS})
 
-add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
+hip_add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
 target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 
-add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
+hip_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})
 
-add_executable(qLoops qLoops.cpp)
+hip_add_executable(qLoops qLoops.cpp)
 target_link_libraries(qLoops ${PLEGMA_LIBS})
 
-add_executable(qLoops_WilsonLine qLoops_WilsonLine.cpp)
+hip_add_executable(qLoops_WilsonLine qLoops_WilsonLine.cpp)
 target_link_libraries(qLoops_WilsonLine ${PLEGMA_LIBS})
 
-add_executable(gLoops_WilsonLine gLoops_WilsonLine.cpp)
+hip_add_executable(gLoops_WilsonLine gLoops_WilsonLine.cpp)
 target_link_libraries(gLoops_WilsonLine ${PLEGMA_LIBS})
 
-add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
+hip_add_executable(FT EXCLUDE_FROM_ALL FT.cpp)
 target_link_libraries(FT ${PLEGMA_LIBS})
 
-add_executable(LowModesCalc LowModesCalc.cpp)
+hip_add_executable(LowModesCalc LowModesCalc.cpp)
 target_link_libraries(LowModesCalc ${PLEGMA_LIBS})
 
-add_executable(MG_tuner MG_tuner.cpp)
+hip_add_executable(MG_tuner MG_tuner.cpp)
 target_link_libraries(MG_tuner ${PLEGMA_LIBS})
 
-add_executable(benchmark benchmark.cpp)
+hip_add_executable(benchmark benchmark.cpp)
 target_link_libraries(benchmark ${PLEGMA_LIBS})
 
-add_executable(TMDWFs_mesons  TMDWFs_mesons.cpp)
+hip_add_executable(TMDWFs_mesons  TMDWFs_mesons.cpp)
 target_link_libraries(TMDWFs_mesons ${PLEGMA_LIBS})
 
-add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
+hip_add_executable(quark_rms EXCLUDE_FROM_ALL quark_rms.cpp)
 target_link_libraries(quark_rms ${PLEGMA_LIBS})
 
-add_executable(Zfac_Vgg EXCLUDE_FROM_ALL Zfac_Vgg.cpp)
+hip_add_executable(Zfac_Vgg EXCLUDE_FROM_ALL Zfac_Vgg.cpp)
 target_link_libraries(Zfac_Vgg ${PLEGMA_LIBS})
 
-add_executable(testShifts EXCLUDE_FROM_ALL testShifts.cpp)
+hip_add_executable(testShifts EXCLUDE_FROM_ALL testShifts.cpp)
 target_link_libraries(testShifts ${PLEGMA_LIBS})
 
-add_executable(Zfac Zfac.cpp)
+hip_add_executable(Zfac Zfac.cpp)
 target_link_libraries(Zfac ${PLEGMA_LIBS})
 
-add_executable(ZfacStaple ZfacStaple.cpp)
+hip_add_executable(ZfacStaple ZfacStaple.cpp)
 target_link_libraries(ZfacStaple ${PLEGMA_LIBS})
 
-add_executable(SoftFunction SoftFunction.cpp)
+hip_add_executable(SoftFunction SoftFunction.cpp)
 target_link_libraries(SoftFunction ${PLEGMA_LIBS})
 
-add_executable(SoftFunctionWall SoftFunctionWall.cpp)
+hip_add_executable(SoftFunctionWall SoftFunctionWall.cpp)
 target_link_libraries(SoftFunctionWall ${PLEGMA_LIBS})
 
-add_executable(WallSourceNucleon WallSourceNucleon.cpp)
+hip_add_executable(WallSourceNucleon WallSourceNucleon.cpp)
 target_link_libraries(WallSourceNucleon ${PLEGMA_LIBS})
 
-add_executable(TMDPDFs_pion TMDPDFs_pion.cpp)
+hip_add_executable(TMDPDFs_pion TMDPDFs_pion.cpp)
 target_link_libraries(TMDPDFs_pion ${PLEGMA_LIBS})
 
 if (PLEGMA_SCATTERING_CONTRACTIONS)
-  add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
+  hip_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
-  add_executable(piNdiagrams piNdiagrams.cpp)
+  hip_add_executable(piNdiagrams piNdiagrams.cpp)
   target_link_libraries(piNdiagrams ${PLEGMA_LIBS})
-  add_executable(nucleon_delta_test EXCLUDE_FROM_ALL nucleon_delta_test.cpp)
+  hip_add_executable(nucleon_delta_test EXCLUDE_FROM_ALL nucleon_delta_test.cpp)
   target_link_libraries(nucleon_delta_test ${PLEGMA_LIBS})
-  add_executable(piNdiagrams_oet EXCLUDE_FROM_ALL piNdiagrams_oet.cpp)
+  hip_add_executable(piNdiagrams_oet EXCLUDE_FROM_ALL piNdiagrams_oet.cpp)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
-  add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
+  hip_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
   target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
-  add_executable(checking_Doet checking_Doet.cpp)
+  hip_add_executable(checking_Doet checking_Doet.cpp)
   target_link_libraries(checking_Doet ${PLEGMA_LIBS})
-  add_executable(omegamass EXCLUDE_FROM_ALL omegamass.cpp)
+  hip_add_executable(omegamass EXCLUDE_FROM_ALL omegamass.cpp)
   target_link_libraries(omegamass ${PLEGMA_LIBS})
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 
-add_executable(gaugeFixing gaugeFixing.cpp)
+hip_add_executable(gaugeFixing gaugeFixing.cpp)
 target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
 
-add_executable(invert invert.cpp)
+hip_add_executable(invert invert.cpp)
 target_link_libraries(invert ${PLEGMA_LIBS})
 
-add_executable(polarN EXCLUDE_FROM_ALL polarN.cpp)
+hip_add_executable(polarN EXCLUDE_FROM_ALL polarN.cpp)
 target_link_libraries(polarN ${PLEGMA_LIBS})
 
-add_executable(Zfac_GI Zfac_GI.cpp)
+hip_add_executable(Zfac_GI Zfac_GI.cpp)
 target_link_libraries(Zfac_GI ${PLEGMA_LIBS})
 
-add_executable(Zfac_GI_meson3pt Zfac_GI_meson3pt.cpp)
+hip_add_executable(Zfac_GI_meson3pt Zfac_GI_meson3pt.cpp)
 target_link_libraries(Zfac_GI_meson3pt ${PLEGMA_LIBS})
 
-add_executable(mesons_2pt  mesons_2pt.cpp)
+hip_add_executable(mesons_2pt  mesons_2pt.cpp)
 target_link_libraries(mesons_2pt ${PLEGMA_LIBS})
 
-add_executable(mesons_simple mesons_simple.cpp)
+hip_add_executable(mesons_simple mesons_simple.cpp)
 target_link_libraries(mesons_simple ${PLEGMA_LIBS})
 
-add_executable(Zfac_diagGI Zfac_diagGI.cpp)
+hip_add_executable(Zfac_diagGI Zfac_diagGI.cpp)
 target_link_libraries(Zfac_diagGI ${PLEGMA_LIBS})
