@@ -157,8 +157,7 @@ void contract_TMDWF_mesons_trick_zfac_host( ProfileStruct &ps,PLEGMA_Propagator<
 
   //cudaError_t error=cudaPeekAtLastError();
   if(h_partial_block==NULL) {
-    hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-    device_free(d_partial_block);
+    PLEGMA_error("failure allocating h_partial_block");
     return;
   }
 
@@ -232,8 +231,7 @@ void contract_TMDWF_mesons_zfac_host( ProfileStruct &ps,PLEGMA_Propagator<FloatA
 
   //cudaError_t error=cudaPeekAtLastError();
   if(h_partial_block==NULL) {
-    hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-    device_free(d_partial_block);
+    PLEGMA_error("failure allocating h_partial_block");
     return;
   }
 
