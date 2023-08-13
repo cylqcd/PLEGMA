@@ -167,7 +167,6 @@ static void threep_threeD_part1_host(ProfileStruct &ps, Float2<FloatC> *result, 
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
 //  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
   listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
   qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
