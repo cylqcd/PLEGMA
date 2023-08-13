@@ -152,7 +152,6 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
   int hostPtr[Nmoms()*N_DIMS];
   memset(hostPtr, 0, sizeof(hostPtr));
   devPtr=device_malloc(sizeof(hostPtr));
-//  cudaMalloc(&devPtr, sizeof(hostPtr));
   Float intp;
   for(int i=0; i<Nmoms(); i++) {
     for(int j=0; j<dims; j++) {
