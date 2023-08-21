@@ -267,6 +267,9 @@ int main(int argc, char **argv) {
 
     int *attract_lookup_table;
     attract_lookup_table=(int *)malloc(sizeof(int)*HGC_totalL[3]);
+    int *attract_lookup_table_backward;
+    attract_lookup_table_backward=(int *)malloc(sizeof(int)*HGC_totalL[3]);
+
 
 
     PLEGMA_Vector<double> vectorSource_stochastic;
@@ -621,6 +624,10 @@ int main(int argc, char **argv) {
 				 }
       };
 
+      PLEGMA_Propagator<float> propUP_SS_packed_backward;
+      PLEGMA_Propagator<float> propDN_SS_packed_backward;
+
+
       PLEGMA_Propagator<float> propUP_SS_packed;
       PLEGMA_Propagator<float> propDN_SS_packed;
 
@@ -632,6 +639,12 @@ int main(int argc, char **argv) {
 	  attract_lookup_table[(sourcePositions[isource][DIM_T]+max_source_sink_separations*i_source_parallel+sink)%HGC_totalL[3]]=(sourcePositions[isource][DIM_T]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
 	}
       }
+      for (int i_source_parallel=0; i_source_parallel < parallel_sources;++i_source_parallel){
+        for (int sink=0; sink<max_source_sink_separations;++sink){
+          attract_lookup_table_backward[(sourcePositions[isource][DIM_T]+max_source_sink_separations*i_source_parallel+sink)%HGC_totalL[3]]=(sourcePositions[isource][DIM_T]+(i_source_parallel+1)*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+        }
+      }
+
       for (int i_source_parallel=0; i_source_parallel < parallel_sources;++i_source_parallel){
 
 	PLEGMA_Propagator<float> propUP_SS;
@@ -652,6 +665,13 @@ int main(int argc, char **argv) {
         source_localPtSinkMtSource[1] = sourcePositions[isource][1];
         source_localPtSinkMtSource[2] = sourcePositions[isource][2];
         source_localPtSinkMtSource[3] = (sourcePositions[isource][DIM_T]+(i_source_parallel+1)*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
+
+        site source_localTotalMsink;
+        source_localTotalMsink[0] = sourcePositions[isource][0];
+        source_localTotalMsink[1] = sourcePositions[isource][1];
+        source_localTotalMsink[2] = sourcePositions[isource][2];
+        source_localTotalMsink[3] = ((sourcePositions[isource][DIM_T]+(i_source_parallel)*max_source_sink_separations)+HGC_totalL[3])%HGC_totalL[3];
+
 
 	site source_local_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
         source_local_reduction[3]=(sourcePositions[isource][3]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
@@ -724,6 +744,9 @@ int main(int argc, char **argv) {
 	
         propUP_SS_packed.pack_propagator_from_source_to_sink(propUP_SS, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
         propDN_SS_packed.pack_propagator_from_source_to_sink(propDN_SS, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+        propUP_SS_packed_backward.pack_propagator_from_source_to_sink(propUP_SS, source_localTotalMsink[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+        propDN_SS_packed_backward.pack_propagator_from_source_to_sink(propDN_SS, source_localTotalMsink[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
+
         propUP_SL_packed.pack_propagator_from_source_to_sink(propUP_SL, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
         propDN_SL_packed.pack_propagator_from_source_to_sink(propDN_SL, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
 
@@ -731,7 +754,10 @@ int main(int argc, char **argv) {
 
 
       PLEGMA_ScattCorrelator<float> corrNP_packed(source, list_mpf1_twopt);
+      PLEGMA_ScattCorrelator<float> corrNP_packed_backward(source, list_mpf1_twopt);
+
       TIME(corrNP_packed.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
+      TIME(corrNP_packed_backward.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
 
       if (dotwopoint==1){
  
@@ -745,6 +771,13 @@ int main(int argc, char **argv) {
           //PLEGMA_printf("Nucleon T2 reduction ready\n");
           TIME(corrNP_packed.N_diagrams( reductionsT1N, reductionsT2N ));
           //PLEGMA_printf("Nucleon diagram ready\n");
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed_backward, propDN_SS_packed_backward, propUP_SS_packed_backward));
+          //PLEGMA_printf("Nucleon T2 reduction\n");
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed_backward, propDN_SS_packed_backward, propUP_SS_packed_backward));
+          //PLEGMA_printf("Nucleon T2 reduction ready\n");
+          TIME(corrNP_packed_backward.N_diagrams( reductionsT1N, reductionsT2N ));
+
+
 
         }
 
@@ -1007,7 +1040,7 @@ int main(int argc, char **argv) {
       } //end of for stochastic samples
 
 //      auto &momentum_i2 =  {0,0,0};//mpi2_twopt[0];
-      std::vector<int> momentum_i2= {0,0,0};
+      std::vector<int> momentum_i2= {1,0,0};
       //List of momenta corresponding to a fix value of p_i2
       momList filtered_sourcemomentumList_2pt_single = sourcemomentumList_twopt.extract(momentum_i2, 0);
 
@@ -2884,6 +2917,18 @@ int main(int argc, char **argv) {
         TIME( corrNP_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
         TIME( corrNP_packed.writeHDF5(outfilename) );
 
+        outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N_2pt_backward";
+
+        TIME( corrNP_packed_backward.apply_phase() );
+        TIME( corrNP_packed_backward.apply_sign("N") );
+	for (int i=0; i<48;++i){
+		printf("TABLE %d %d\n",i,attract_lookup_table_backward[i]);
+	}
+        TIME( corrNP_packed_backward.applyBoundaryConditions( true, parallel_sources, attract_lookup_table_backward));
+        TIME( corrNP_packed_backward.writeHDF5(outfilename) );
+
+
+
 
 #endif
 
@@ -2943,6 +2988,7 @@ int main(int argc, char **argv) {
     }//loop over source position
 
     free(attract_lookup_table);
+    free(attract_lookup_table_backward);
 #if 1
     for(int i=0; i< n_stochastic_samples; ++i) {
       stochastic_sources.pop_back();
