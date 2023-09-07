@@ -61,6 +61,8 @@ struct tex_mom_list {
   inline __device__ int4 get(const size_t &i) const {
 #ifdef __NVCC__
     return tex1Dfetch<int4>(tex,i);
+#elif defined (__HIP__)
+    return tex1Dfetch<int4>(tex,i);
 #else
     return make_int4(0,0,0,0);
 #endif
