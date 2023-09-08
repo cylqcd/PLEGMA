@@ -1,16 +1,17 @@
 /*
-Here we compute the pi0 contracted with insertion.
-Both 'up' and 'dn' part will be done seperately, through they're
+Here we compute P (pion_pion) and jPi (insertion_pion) diagrams.
+All parts will be done seperately, through some of them are
 supposely to be (anti)-conjugate to their momentum-flipped partner.
 
-The conj sign for pion isn't implemented here.
-To multiply it with the N-diagram, and construct the M-like NJNpi diagram,
+For P, they have the same sign with pion 2pt 
+(except the possible 1/sqrt(2) for pi0). 
+(a possible 1j factor will cancel out between source and sink)
+For jPi, the sign is the same as if j is for a pion
+For juu_pi0u or jdd_pi0d case, 
+to multiply it with the N-diagram, and construct the M-like NJNpi diagram,
 we need (up -/+ dn)*i/sqrt(2) for (u+d)/(u-d) insertion, where i/sqrt(2) comes from
 (-1) for adj-sign of pion and (-i)/sqrt(2) for prefactor of source pion.
 Note u+d insertion corresponds to up-dn construction.
-
-Here the f_0(500)/sigma resonance (ubaru+dbard) is also supported.
-Just u+d should correspond to up+dn this case.
 */
 
 #include <PLEGMA.h>
@@ -23,7 +24,7 @@ std::vector<double> runtime;
     runtime.pop_back()
 
 extern int device;
-static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsrc", "src-filename", "seed1", "confnumber", "outdiagramPrefix", "momlistthreept-filename", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss"};
+static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "seed1", "confnumber", "outdiagramPrefix", "momlisttwopt-filename", "momlistthreept-filename", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss"};
 
 int main(int argc, char **argv)
 {
@@ -264,20 +265,33 @@ int main(int argc, char **argv)
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_meson = {};
         std::string filenamePost = "";
+        std::string filenamePost2 = "";
         if (whichMeson == "pi0")
         {
             gscatts_meson.push_back(G_5);
-            filenamePost = "pi0Insert";
+            filenamePost = "jPi";
+            filenamePost2 = "P";
         }
-        else if (whichMeson == "sigma")
-        {
-            gscatts_meson.push_back(ID);
-            filenamePost = "sigmaInsert";
-        }
+        // else if (whichMeson == "sigma")
+        // {
+        //     gscatts_meson.push_back(ID);
+        //     filenamePost = "jPsgmi";
+        //     filenamePost2 = "Psgm";
+        // }
         else
         {
             PLEGMA_error("whichMeson = %s not supported", whichMeson);
         }
+
+        PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_twopt.c_str());
+        plegma::momList momList2pt(3, pathListMomenta_twopt, {1, 2}); // pi2, pf1, pf2
+        PLEGMA_printf("N momenta in sourcemomentumList: %d\n", momList2pt.size());
+        if (momList2pt.empty())
+            PLEGMA_error("threept momentumList empty");
+        auto momVects2pt_pi2 = momList2pt.uniq_p(0);
+        auto momVects2pt_pf2 = momList2pt.uniq_p(2);
+        plegma::momList momList2pt_pi2(1, {momVects2pt_pi2}, {0});
+        plegma::momList momList2pt_pf2(1, {momVects2pt_pf2}, {0});
 
         PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_threept.c_str());
         plegma::momList momList_3pt(4, pathListMomenta_threept, {1, 2, 3}); // pi2, pf1, pf2, pc
@@ -285,6 +299,7 @@ int main(int argc, char **argv)
         if (momList_3pt.empty())
             PLEGMA_error("threept momentumList empty");
         auto momVects_pi2 = momList_3pt.uniq_p(0);
+        auto momVects_pf2 = momList_3pt.uniq_p(2);
         auto momVects_pc = momList_3pt.uniq_p(3);
         plegma::momList momList_pc(1, {momVects_pc}, {0});
 
@@ -293,11 +308,10 @@ int main(int argc, char **argv)
          *   Main
          *
          ******************************************************/
-        for (int isource = 0; isource < numSourcePositions; ++isource)
+
+        for (int st = 0; st < HGC_totalL[3]; st++)
         {
-            plegma::site &source = sourcePositions[isource];
-            PLEGMA_printf(("TestYan: source=" + std::to_string(source[0]) + "_" + std::to_string(source[1]) + "_" + std::to_string(source[2]) + "_" + std::to_string(source[3])).c_str());
-            assert(source[0] == source[1] == source[2] == 0 && 0 <= source[3] < HGC_totalL[3]);
+            struct plegma::site source({0, 0, 0, st});
 
             plegma::PLEGMA_Vector<double> stocXi;
             {
@@ -306,11 +320,12 @@ int main(int argc, char **argv)
             }
             int time_i = source[3];
 
+            plegma::PLEGMA_Vector<double> stocPhiU_ti_SS, stocPhiD_ti_SS;
             plegma::PLEGMA_Vector<double> stocPhiU_ti_SL, stocPhiD_ti_SL;
             plegma::PLEGMA_Vector3D<double> auxVector3D;
             auxVector3D.absorb(stocXi, time_i);
-            solve1(stocPhiU_ti_SL, auxVector3D, time_i, u, SL);
-            solve1(stocPhiD_ti_SL, auxVector3D, time_i, d, SL);
+            solve2(stocPhiU_ti_SS, stocPhiU_ti_SL, auxVector3D, time_i, u, SB);
+            solve2(stocPhiD_ti_SS, stocPhiD_ti_SL, auxVector3D, time_i, d, SB);
 
             // Here we do u and d separately for saving mu-changing time
             // This the u part
@@ -318,9 +333,9 @@ int main(int argc, char **argv)
             {
                 auto &mom_pi2 = momVects_pi2[i_pi2];
                 std::string str_pi2 = "pi2=" + std::to_string(mom_pi2[0]) + "_" + std::to_string(mom_pi2[1]) + "_" + std::to_string(mom_pi2[2]);
-                PLEGMA_printf(("TestYan: pi2=" + str_pi2).c_str());
+                PLEGMA_printf(("TestYan: " + str_pi2).c_str());
 
-                plegma::PLEGMA_Vector<double> stocPhiD_ti_mpi2_SL;
+                plegma::PLEGMA_Vector<double> stocPhiD_ti_mpi2_SS, stocPhiD_ti_mpi2_SL;
                 plegma::PLEGMA_Vector3D<double> auxVector3D;
                 {
                     plegma::PLEGMA_Vector<double> aux;
@@ -330,32 +345,66 @@ int main(int argc, char **argv)
                     auxVector3D.absorb(aux, time_i);
                 }
                 auxVector3D.mulMomentumPhases(mom_pi2, -1);
-                solve1(stocPhiD_ti_mpi2_SL, auxVector3D, time_i, d, SL);
+                solve2(stocPhiD_ti_mpi2_SS, stocPhiD_ti_mpi2_SL, auxVector3D, time_i, d, SB);
 
-                plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
-                pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/up");
                 {
-                    plegma::PLEGMA_Vector<float> aux, aux_pi2;
-                    aux.copy(stocPhiU_ti_SL);
-                    aux_pi2.copy(stocPhiD_ti_mpi2_SL);
-                    pi0Insertion.P_diagrams(aux, aux_pi2, -1);
+                    plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
+                    pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/juu_pi0u");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiU_ti_SL);
+                        aux_pi2.copy(stocPhiD_ti_mpi2_SL);
+                        pi0Insertion.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost;
+                    pi0Insertion.writeHDF5(outfilename);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
+                    pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/jud_pi-");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiD_ti_SL);
+                        aux_pi2.copy(stocPhiD_ti_mpi2_SL);
+                        pi0Insertion.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost;
+                    pi0Insertion.writeHDF5(outfilename);
                 }
 
-                asprintf(&ssource, "st%03d", time_i);
-                std::string sourcepositiontext = (std::string) "_" + ssource;
-                free(ssource);
-                std::string outfilename = outdiagramPrefix + confnumber + sourcepositiontext + "_" + filenamePost;
-
-                pi0Insertion.writeHDF5(outfilename);
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> P_Diagram(source, momList2pt_pf2);
+                    P_Diagram.initialize_diagram(gscatts_meson, gscatts_meson, str_pi2 + "/pi0u_pi0u");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiU_ti_SS);
+                        aux_pi2.copy(stocPhiD_ti_mpi2_SS);
+                        P_Diagram.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost2;
+                    P_Diagram.writeHDF5(outfilename);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> P_Diagram(source, momList2pt_pf2);
+                    P_Diagram.initialize_diagram(gscatts_meson, gscatts_meson, str_pi2 + "/pi-_pi-");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiD_ti_SS);
+                        aux_pi2.copy(stocPhiD_ti_mpi2_SS);
+                        P_Diagram.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost2;
+                    P_Diagram.writeHDF5(outfilename);
+                }
             }
             // This is the d part
             for (int i_pi2 = 0; i_pi2 < momVects_pi2.size(); ++i_pi2)
             {
                 auto &mom_pi2 = momVects_pi2[i_pi2];
                 std::string str_pi2 = "pi2=" + std::to_string(mom_pi2[0]) + "_" + std::to_string(mom_pi2[1]) + "_" + std::to_string(mom_pi2[2]);
-                PLEGMA_printf(("TestYan: pi2=" + str_pi2).c_str());
+                PLEGMA_printf(("TestYan: " + str_pi2).c_str());
 
-                plegma::PLEGMA_Vector<double> stocPhiU_ti_mpi2_SL;
+                plegma::PLEGMA_Vector<double> stocPhiU_ti_mpi2_SS, stocPhiU_ti_mpi2_SL;
                 plegma::PLEGMA_Vector3D<double> auxVector3D;
                 {
                     plegma::PLEGMA_Vector<double> aux;
@@ -365,23 +414,57 @@ int main(int argc, char **argv)
                     auxVector3D.absorb(aux, time_i);
                 }
                 auxVector3D.mulMomentumPhases(mom_pi2, -1);
-                solve1(stocPhiU_ti_mpi2_SL, auxVector3D, time_i, u, SL);
+                solve2(stocPhiU_ti_mpi2_SS, stocPhiU_ti_mpi2_SL, auxVector3D, time_i, u, SB);
 
-                plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
-                pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/dn");
                 {
-                    plegma::PLEGMA_Vector<float> aux, aux_pi2;
-                    aux.copy(stocPhiD_ti_SL);
-                    aux_pi2.copy(stocPhiU_ti_mpi2_SL);
-                    pi0Insertion.P_diagrams(aux, aux_pi2, -1);
+                    plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
+                    pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/jdu_pi+");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiU_ti_SL);
+                        aux_pi2.copy(stocPhiU_ti_mpi2_SL);
+                        pi0Insertion.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost;
+                    pi0Insertion.writeHDF5(outfilename);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> pi0Insertion(source, momList_pc);
+                    pi0Insertion.initialize_diagram(gscatts_meson, gscatts_c, str_pi2 + "/jdd_pi0d");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiD_ti_SL);
+                        aux_pi2.copy(stocPhiU_ti_mpi2_SL);
+                        pi0Insertion.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost;
+                    pi0Insertion.writeHDF5(outfilename);
                 }
 
-                asprintf(&ssource, "st%03d", time_i);
-                std::string sourcepositiontext = (std::string) "_" + ssource;
-                free(ssource);
-                std::string outfilename = outdiagramPrefix + confnumber + sourcepositiontext + "_" + filenamePost;
-
-                pi0Insertion.writeHDF5(outfilename);
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> P_Diagram(source, momList2pt_pf2);
+                    P_Diagram.initialize_diagram(gscatts_meson, gscatts_meson, str_pi2 + "/pi+_pi+");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiU_ti_SS);
+                        aux_pi2.copy(stocPhiU_ti_mpi2_SS);
+                        P_Diagram.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost2;
+                    P_Diagram.writeHDF5(outfilename);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> P_Diagram(source, momList2pt_pf2);
+                    P_Diagram.initialize_diagram(gscatts_meson, gscatts_meson, str_pi2 + "/pi0d_pi0d");
+                    {
+                        plegma::PLEGMA_Vector<float> aux, aux_pi2;
+                        aux.copy(stocPhiD_ti_SS);
+                        aux_pi2.copy(stocPhiU_ti_mpi2_SS);
+                        P_Diagram.P_diagrams(aux, aux_pi2, -1);
+                    }
+                    std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost2;
+                    P_Diagram.writeHDF5(outfilename);
+                }
             }
         }
     }
