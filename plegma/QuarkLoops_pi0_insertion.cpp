@@ -41,7 +41,8 @@ int main(int argc, char **argv)
     initializeOptions(argc, argv, true, listOpt);
 
     int confnumber_int;
-    std::string outdiagramPrefix;
+    std::string outdiagramPrefix, flagfile;
+    HGC_options->set("flagfile", "An empty file created indicating the completion of a run", verbosity, flagfile);
     HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
     HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
 
@@ -473,6 +474,8 @@ int main(int argc, char **argv)
                 }
                 stocSrc.copy(stocSrcUnsmeared);
                 stocProp.copy(stocPropUnsmeared);
+                // stocProp.writeHDF5(confnumber+"stocProp");
+                // stocSrc.writeHDF5(confnumber+"stocSrc");
                 insertLoop.Loop_diagrams(stocProp, stocSrc, false);
 
                 std::string outfilename = outdiagramPrefix + confnumber + "_" + filenameEnd;
@@ -514,5 +517,6 @@ int main(int argc, char **argv)
     }
 
     finalize();
+    std::ofstream output(flagfile);
     return 0;
 }

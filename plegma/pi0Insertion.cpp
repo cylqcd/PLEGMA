@@ -36,8 +36,9 @@ int main(int argc, char **argv)
     initializeOptions(argc, argv, true, listOpt);
 
     int seed_oet, confnumber_int;
-    std::string outdiagramPrefix, whichMeson;
+    std::string outdiagramPrefix, whichMeson, flagfile;
 
+    HGC_options->set("flagfile", "An empty file created indicating the completion of a run", verbosity, flagfile);
     HGC_options->set("seed_oet", "Seed for initialization of stochastic sources for the oet", verbosity, seed_oet);
     HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
     HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
@@ -470,5 +471,6 @@ int main(int argc, char **argv)
     }
 
     finalize();
+    std::ofstream output(flagfile);
     return 0;
 }
