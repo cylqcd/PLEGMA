@@ -3173,7 +3173,7 @@ int main(int argc, char **argv) {
               TIME( corrW9_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0,  9, true));
               TIME(corrW11_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 11, true));
 
-              TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));
+              TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_backward, propUP_SS_packed_backward, true));
 
               TIME(corrW10_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 10, true, false));
               TIME(corrW12_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 12, true, false));
@@ -3218,7 +3218,7 @@ int main(int argc, char **argv) {
               TIME(corrW33_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 33, true, false));
               TIME(corrW34_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 34, true, false));
 
-              TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
+              TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed_backward, propTS_SS_packed_backward, true));
 
               TIME(corrW35_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 35, true, false));
               TIME(corrW36_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 36, true, false));
@@ -3297,10 +3297,10 @@ int main(int argc, char **argv) {
             TIME(produceOutput_2pt_packed(corrB8_2pt_backward, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
 
             outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W_2pt_backward";
-            TIME(produceOutput_2pt_packed(corrW9_2pt , outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));//because of V4
-            TIME(produceOutput_2pt_packed(corrW10_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-            TIME(produceOutput_2pt_packed(corrW11_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-            TIME(produceOutput_2pt_packed(corrW12_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
+            TIME(produceOutput_2pt_packed(corrW9_2pt_backward , outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));//because of V4
+            TIME(produceOutput_2pt_packed(corrW10_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
+            TIME(produceOutput_2pt_packed(corrW11_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
+            TIME(produceOutput_2pt_packed(corrW12_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
 
             TIME(produceOutput_2pt_packed(corrW33_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));//because of V4
             TIME(produceOutput_2pt_packed(corrW34_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
