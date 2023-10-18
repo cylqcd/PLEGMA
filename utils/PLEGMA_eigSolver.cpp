@@ -49,6 +49,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   hostMalloc(h_eigVecs,size_NkV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NkV*2*sizeof(double));
 #elif defined(QUDAEIG)
+  eig_param = newQudaEigParam();
   hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
   hostMalloc(h_eigVecs_p, p.NeV*sizeof(double*)); // need to check if this does the trick
@@ -246,9 +247,9 @@ void EigSolver::initEigSolver(){
   else if(p.spectrumPart == "LR") eig_param.spectrum = QUDA_SPECTRUM_LR_EIG;
   else PLEGMA_error("Not implemented");
   eig_param.location = QUDA_CUDA_FIELD_LOCATION;
-  eig_param.nConv = p.NeV;
-  eig_param.nEv = p.NeV;
-  eig_param.nKr = p.NkV;
+  eig_param.n_conv = p.NeV;
+  eig_param.n_ev = p.NeV;
+  eig_param.n_kr = p.NkV;
   eig_param.tol = p.tol;
   eig_param.batched_rotate = p.batched_rotate;
   eig_param.require_convergence = QUDA_BOOLEAN_TRUE;
@@ -392,7 +393,7 @@ void EigSolver::computeEigVecs(){
   if(info == 1) PLEGMA_printf("Warning: Maximum number of iterations reached.\n");
   if(info == 3) PLEGMA_error("No shifts could be applied during implicit, Arnoldi update, try increasing NkV\n");
   int arpack_log_u = 9999;
-  if(!p.logFile.empty() && comm_rank() == 0)finilog_(&arpack_log_u);
+  if(!p.logFile.empty() && comm_rank() == 0) finilog_(&arpack_log_u);
 
   free(bmat);
   free(howmany);
