@@ -61,11 +61,11 @@ namespace plegma {
     int* arrlc; // array to hold the elementary coloring block
     void createElemColBlock(){for(int i = 0; i < Nc; i++) arrlc[i]=i;}
     void createColLattice(){
-      std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
+      std::vector<int> lL = {HGC.localL[0], HGC.localL[1], HGC.localL[2], HGC.localL[3]};
       std::vector<int> lu = {Lu,Lu,Lu,Lu};
       std::vector<int> bx(d);
       std::vector<int> lx(d);
-      for(size_t i=0; i < HGC_localVolume; i++){
+      for(size_t i=0; i < HGC.localVolume; i++){
 	std::vector<int> x = getIndToVec(i,lL);
 	for(int j = 0 ; j < d; j++) bx[j] = x[j]/lu[j];
 	int eo=0;
@@ -78,7 +78,7 @@ namespace plegma {
     //  void checkColoring();
   public:
     PLEGMA_Hprobing(int k_probing, int d=4):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr){
-      if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
+      if(!HGC.init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
       if(d != 4) PLEGMA_error("Hierarchical probing supports only 4D coloring up to now");
       if(k<=0) PLEGMA_error("The index of the Hprobing should greater than zero");
       Nc = 2*std::pow(2,d*(k-1));
@@ -88,12 +88,12 @@ namespace plegma {
       PLEGMA_printf("Distance of neigbors is %d\n",D);
       PLEGMA_printf("The extent of the elementary symmetric color block is %d\n",Lu);
       for(int i = 0 ; i < d ; i++){
-	if(D >= HGC_localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
-	if( (HGC_localL[i] % (2*Lu)) != 0 )
+	if(D >= HGC.localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
+	if( (HGC.localL[i] % (2*Lu)) != 0 )
 	  PLEGMA_error("2*Lu cannot fit in the local lattice extent in direction %d. Try to increase local size in this direction",i);
       }
       try{
-	h_arrVc = new int[HGC_localVolume];
+	h_arrVc = new int[HGC.localVolume];
 	arrlc = new int[Nc];
       }
       catch (const std::bad_alloc& err) {
@@ -102,9 +102,9 @@ namespace plegma {
       createElemColBlock();
       createColLattice();
       //  if(check)checkColoring();
-      d_arrVc=(int*)device_malloc(HGC_localVolume*sizeof(int));
+      d_arrVc=(int*)device_malloc(HGC.localVolume*sizeof(int));
 //      checkQudaError();
-      qudaMemcpy(d_arrVc, h_arrVc, HGC_localVolume*sizeof(int), qudaMemcpyHostToDevice);
+      qudaMemcpy(d_arrVc, h_arrVc, HGC.localVolume*sizeof(int), qudaMemcpyHostToDevice);
 //      checkQudaError();    
     }
     ~PLEGMA_Hprobing(){

@@ -16,7 +16,7 @@ template<> inline MPI_Datatype MPI_Type<unsigned long>() { return MPI_UNSIGNED_L
 template<> inline MPI_Datatype MPI_Type<long long>() { return MPI_LONG_LONG_INT; }
 
 // hostMalloc and hostFree: functions to use in replace of malloc and free
-extern long int HGC_used_memory;
+//extern struct global_vars_host HGC;
 template<typename T> inline void hostMalloc(T &ptr, size_t size) {
 #ifdef PLEGMA_HAVE_MEMALIGN
   ptr = static_cast<T>(memalign(PLEGMA_ALIGNMENT, size));
@@ -24,10 +24,10 @@ template<typename T> inline void hostMalloc(T &ptr, size_t size) {
   ptr = static_cast<T>(malloc(size));
 #endif
   if(ptr == static_cast<T>(NULL) ){
-    PLEGMA_warning("Bad alloc. Total memory in use: %lu\n", HGC_used_memory);
+//    PLEGMA_warning("Bad alloc. Total memory in use: %lu\n", HGC.used_memory);
     throw( std::bad_alloc() );
   }
-  HGC_used_memory += sizeof(T)*size;
+//  HGC.used_memory += sizeof(T)*size;
 }
 template<typename T> inline T* hostMalloc(size_t size) {
   T* ptr;
@@ -37,7 +37,7 @@ template<typename T> inline T* hostMalloc(size_t size) {
 template<typename T> inline void hostFree(T &ptr, size_t size) {
   free(ptr);
   ptr=NULL;
-  HGC_used_memory -= sizeof(T)*size;
+  //HGC.used_memory -= sizeof(T)*size;
 }
 template<typename T> inline void hostFree(T &ptr) {
   hostFree(ptr,0);
@@ -51,7 +51,7 @@ template<typename T> inline void hostMallocPinned(T &ptr, size_t size){
   //if (err != cudaSuccess) {
   //  errorQuda("Failed to allocate host memory of size %zu \n", size);
   //}
-  HGC_used_memory += size;
+  //HGC.used_memory += size;
 }
 
 template<typename T> inline void hostFreePinned(T &ptr, size_t size) {
@@ -61,7 +61,7 @@ template<typename T> inline void hostFreePinned(T &ptr, size_t size) {
   //}
   host_free(ptr);
   //ptr=NULL;
-  HGC_used_memory -= size;
+  //HGC.used_memory -= size;
 }
 template<typename T> inline void hostFreePinned(T &ptr) {
   hostFreePinned(ptr,0);
@@ -75,7 +75,7 @@ template<typename T> inline void hostReAlloc(T &ptr_new, size_t size_new, T &ptr
     fprintf(stderr,"Cannot reallocate memory of size %lu\n",size_new);
     exit(-1);
   }
-  HGC_used_memory += size_new-size_old;  
+  //HGC.used_memory += size_new-size_old;  
 }
 
 // type_char(): identifying char for the variable. It is later used in type_print()

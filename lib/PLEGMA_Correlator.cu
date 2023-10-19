@@ -26,14 +26,14 @@ using namespace plegma;
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 initialize() {
-  comm.reset(new MPI_Comm(HGC_fullComm), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
-  MPI_Comm_dup( HGC_fullComm, comm.get() );
+  comm.reset(new MPI_Comm(HGC.fullComm), [](MPI_Comm* ptr){MPI_Comm_free(ptr); delete ptr;});
+  MPI_Comm_dup( HGC.fullComm, comm.get() );
   if(corr_space == MOMENTUM_SPACE) {
     corr_mom_space.reset(new PLEGMA_FT<Float>(*corr_mom_space));
     corr_mom_space->checkAllocation(getSiteSize());
   }
   else if(corr_space == POSITION_SPACE) {
-    corr_pos_space.reset(new PLEGMA_Field<Float>(HOST, getSiteSize(), HGC_localVolume3D*localT(),
+    corr_pos_space.reset(new PLEGMA_Field<Float>(HOST, getSiteSize(), HGC.localVolume3D*localT(),
 						 NO_GHOSTS));
   }
   else {
@@ -198,7 +198,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
     }
   }
 
-  if(HGC_verbosity > 2) {
+  if(HGC.verbosity > 2) {
     PLEGMA_printf("contractBaryonsUDSC is going to run: ");
     for(auto name: datasets)
       PLEGMA_printf("%s, ", name.c_str());
@@ -254,7 +254,7 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
     }
   }
 
-  if(HGC_verbosity > 2) {
+  if(HGC.verbosity > 2) {
     PLEGMA_printf("contractTetraquarks is going to run: ");
     for(auto name: datasets)
       PLEGMA_printf("%s, ", name.c_str());
@@ -316,7 +316,7 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
     }
   }
 
-  if(HGC_verbosity > 2) {
+  if(HGC.verbosity > 2) {
     PLEGMA_printf("contractTetraquarksBCUD is going to run: ");
     for(auto name: datasets)
       PLEGMA_printf("%s, ", name.c_str());
@@ -375,7 +375,7 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
     }
   }
 
-  if(HGC_verbosity > 2) {
+  if(HGC.verbosity > 2) {
     PLEGMA_printf("contractTetraquarksStochastic is going to run: ");
     for(auto name: datasets)
       PLEGMA_printf("%s, ", name.c_str());
@@ -438,7 +438,7 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
     }
   }
 
-  if(HGC_verbosity > 2) {
+  if(HGC.verbosity > 2) {
     PLEGMA_printf("contractTetraquarksStochasticBCUD is going to run: ");
     for(auto name: datasets)
       PLEGMA_printf("%s, ", name.c_str());
@@ -860,18 +860,18 @@ writeASCII(std::string filename_out) const {
   size_t g_vol_size = getVolSize();
   int rank;
   
-  if(corr_space == MOMENTUM_SPACE && (HGC_timeRank > HGC_nProc[3] || HGC_timeRank <0 ))
+  if(corr_space == MOMENTUM_SPACE && (HGC.timeRank > HGC.nProc[3] || HGC.timeRank <0 ))
     return;
 
   switch(corr_space) {
   case MOMENTUM_SPACE:
-    g_vol_size *= HGC_nProc[3];
-    comm = HGC_timeComm;
-    rank = HGC_timeRank;
+    g_vol_size *= HGC.nProc[3];
+    comm = HGC.timeComm;
+    rank = HGC.timeRank;
     break;
   case POSITION_SPACE:
-    g_vol_size *= HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3];
-    comm = HGC_fullComm;
+    g_vol_size *= HGC.nProc[0]*HGC.nProc[1]*HGC.nProc[2]*HGC.nProc[3];
+    comm = HGC.fullComm;
     rank = comm_rank();
     PLEGMA_error("WriteASCII do not support writing in position space.\n");
     break;
@@ -889,18 +889,18 @@ writeASCII(std::string filename_out) const {
 
     int site_sizeR=getSiteSize()/(nDatasets()*nGroups());
 
-    for(int it=0; it<HGC_localL[3]; it++)
+    for(int it=0; it<HGC.localL[3]; it++)
       for(int imom=0; imom<Nmoms; imom++)
 	for(int id=0; id < nDatasets(); id++)
 	  for(int ig=0; ig < nGroups(); ig++)
 	    for(int is=0; is < site_sizeR; is++)
 	      for(int ri =0 ; ri < 2 ; ri++){
 		corrReorder[((((it*Nmoms+imom)*nDatasets()+id)*nGroups()+ig)*site_sizeR+is)*2+ri]=
-		  H_elem()[((((ig*nDatasets()+id)*HGC_localL[3]+it)*Nmoms+imom)*site_sizeR+is)*2+ri];
+		  H_elem()[((((ig*nDatasets()+id)*HGC.localL[3]+it)*Nmoms+imom)*site_sizeR+is)*2+ri];
 	      }
 
     //=============================================================================
-    // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for HGC_fullComm (POSITION SPACE)
+    // TODO: this works fine for timeComm (MOMENTUM_SPACE) but not for HGC.fullComm (POSITION SPACE)
     // in the second case requires reordering of the memory
     MPI_Gather(corrReorder,sizeof(corrReorder)/sizeof(Float),MPI_Type(corrReorder),
 	       corrGlobal,sizeof(corrReorder)/sizeof(Float),MPI_Type(corrReorder),
@@ -922,8 +922,8 @@ writeASCII(std::string filename_out) const {
     if(corr_space == MOMENTUM_SPACE) {
       int Nmoms = corr_mom_space->Nmoms();
       std::vector<std::vector<Float>> momV = corr_mom_space->MomList();
-      for(int it=0; it<HGC_totalL[3]; it++) {
-	int it_shift = (it + source[3])%HGC_totalL[3];
+      for(int it=0; it<HGC.totalL[3]; it++) {
+	int it_shift = (it + source[3])%HGC.totalL[3];
 	for(int imom=0; imom<Nmoms; imom++) {
 	  int ipos = (it_shift*Nmoms + imom)*getSiteSize();
 	  fprintf(ptr_out, "%d  %+d  %+d  %+d ", it, (int) round(momV[imom][0]),(int) round(momV[imom][1]),(int) round(momV[imom][2]));
@@ -962,9 +962,9 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
     descr += "/t/z/y/x";
     // Volume
     for(int i=N_DIMS-1; i>=0; i--) {
-      shape.push_back(i==DIM_T ? totalT : HGC_totalL[i]);
-      lshape.push_back(i==DIM_T ? localT() : HGC_localL[i]);
-      start.push_back(i==DIM_T ? startT() : ((HGC_procPosition[i]*HGC_localL[i] + HGC_totalL[i] - source[i]) % HGC_totalL[i]));
+      shape.push_back(i==DIM_T ? totalT : HGC.totalL[i]);
+      lshape.push_back(i==DIM_T ? localT() : HGC.localL[i]);
+      start.push_back(i==DIM_T ? startT() : ((HGC.procPosition[i]*HGC.localL[i] + HGC.totalL[i] - source[i]) % HGC.totalL[i]));
     }
     break;
   default:
@@ -1037,15 +1037,15 @@ writeHDF5(std::string filename) const {
   for(auto l: lshape) writeSize*=l;
   assert(corrSize==writeSize);
 
-  // In case of MOMENTUM_SPACE, all the processes in HGC_spaceComm has the same information.
+  // In case of MOMENTUM_SPACE, all the processes in HGC.spaceComm has the same information.
   // All of them will write a different piece
-  int nWriters = writeSize==0 ? 0 : ((corr_space == MOMENTUM_SPACE) ? HGC_spaceSize : 1);
-  int id = (corr_space == MOMENTUM_SPACE) ? HGC_spaceRank : 0;
+  int nWriters = writeSize==0 ? 0 : ((corr_space == MOMENTUM_SPACE) ? HGC.spaceSize : 1);
+  int id = (corr_space == MOMENTUM_SPACE) ? HGC.spaceRank : 0;
   size_t corrShift = writeSize==0 ? 0 : use_multiple_writers(shape, lshape, start, nWriters, id);
   
   if(id >= nWriters) lshape[0] = 0; // not writing
   if(nWriters>1) {
-    if(HGC_verbosity > 3) {
+    if(HGC.verbosity > 3) {
       std::string out = "rank: "+std::to_string(id)+
 	", shape: ("+str(shape.begin(), shape.end())+
 	"), lshape: ("+str(lshape.begin(), lshape.end())+

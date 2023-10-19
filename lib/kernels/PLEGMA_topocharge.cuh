@@ -206,7 +206,7 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
   }
   free(h_partial_Q);
 
-  MPI_Allreduce(&Q , &globalQ , 1 , MPI_Type(Q) , MPI_SUM , HGC_fullComm);  
+  MPI_Allreduce(&Q , &globalQ , 1 , MPI_Type(Q) , MPI_SUM , HGC.fullComm);  
   return globalQ/PI/PI/4.; // 8*( 3 indipendent ijkt index order ) /( 32 pi**2)
 }
 
@@ -265,6 +265,6 @@ static Float calcPlaqClovDef(gaugeTex<FloatG> gaugeTex){
     Plaq += h_partial_Plaq[i];
   free(h_partial_Plaq);
 
-  MPI_Allreduce(&Plaq , &globalPlaq , 1 , MPI_Type(Plaq) , MPI_SUM , HGC_fullComm);  
-  return globalPlaq/(HGC_totalVolume*N_COLS*6); // 6*N_sites Plaquettes(+ 3 colors to normalize the trace )
+  MPI_Allreduce(&Plaq , &globalPlaq , 1 , MPI_Type(Plaq) , MPI_SUM , HGC.fullComm);  
+  return globalPlaq/(HGC.totalVolume*N_COLS*6); // 6*N_sites Plaquettes(+ 3 colors to normalize the trace )
 }

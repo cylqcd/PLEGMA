@@ -266,9 +266,10 @@ public:
 	args.erase(args.begin()+i);
 	countF++;
       }
-    if(countF == 0) { if(visualize>1) print(name,p1,par...); return false; }
+    if(countF == 0) { //if(visualize>1) print(name,p1,par...); 
+	    return false; }
     else{
-      if(visualize)print(name,p1,par...);
+      //if(visualize)print(name,p1,par...);
       listSetOpt.push_back(name);
       if(countF>1) PLEGMA_printf("Warning: [%s] found %d times in the arguments. Last occurance is considered", name.c_str(), countF);
       return true;

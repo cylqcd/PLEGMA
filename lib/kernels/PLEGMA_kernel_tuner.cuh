@@ -199,10 +199,12 @@ public:
   // ctor
  PLEGMA_kernel_tuner( ProfileStruct &ps, std::string kname, void (*kernel)(types...), types... kArgs ) :
   kernel(kernel), args(std::tuple<types...>(kArgs...)), ps(ps), onlyTuning(false) {
-    sprintf(volString, "%lldx%lldx%lldx%lld", HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]);
+    sprintf(volString, "%lldx%lldx%lldx%lld", HGC.localL[0], HGC.localL[1], HGC.localL[2], HGC.localL[3]);
     sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d,maxvolume=%d,aux_range=(%d,%d,%d,%d)", ps.volume, N_DIMS, N_COLS, ps.max_volume, ps.aux_range.x, ps.aux_range.y, ps.aux_range.z, ps.aux_range.w);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
     setPolicyTuning(ps.tune_globally);
+    cudaError_t temp=cudaMemcpyToSymbol(DGC,&DGC_ptr, sizeof(struct global_vars_both*));
+    PLEGMA_printf("Return value of cudaMemcpyToSymbol is %d\n",temp);
   }
 
   ~PLEGMA_kernel_tuner(){
@@ -251,7 +253,7 @@ void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream){
 #else
   // performing tuning if we need to tune
   if( !ps.tuned && !activeTuning() && ps.tune_globally ) comm_barrier(); //syncronizing 
-  if( !ps.tuned ) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
+  if( !ps.tuned ) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC.verbosity);
   if( !ps.tuned ) qudaGetLastError(); // ensuring that the error state has been clean
   if( !activeTuning() ) ps.tuned = true;
   if( onlyTuning && !activeTuning() ) return;
@@ -283,7 +285,7 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!ps.tuned) tune();
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
+  if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC.verbosity);
   launchKernel(ps.tp,device::get_stream(0));
 #endif
   checkQudaError();

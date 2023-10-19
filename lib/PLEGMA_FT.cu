@@ -17,7 +17,7 @@ PLEGMA_FT<Float>::PLEGMA_FT(int Q2_max, int D3D4, bool accum, int dimT):
   Q2_max(Q2_max), dof(0), h_elem(nullptr), sizeN(0), dims(D3D4), dimT(D3D4==3?dimT:1), accum(accum){
   if(dims!= 3 && dims !=4) PLEGMA_error("This class transforms only 3 and 4 dimensions %d\n",dims);
   if(Q2_max < 0) PLEGMA_error("The maximum number of Q2 cannot be negative\n");
-  if(dimT<0 || dimT>HGC_localL[DIM_T]) PLEGMA_error("The time dimension cannot be negative or larger than local size\n");
+  if(dimT<0 || dimT>HGC.localL[DIM_T]) PLEGMA_error("The time dimension cannot be negative or larger than local size\n");
   createMom();
 }
 
@@ -188,8 +188,8 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
 template<typename Float>
 void PLEGMA_FT<Float>::applyNaive(const PLEGMA_Field<Float> &f, int sign){
   if(dims == 4) PLEGMA_error("This FT implementation is implemented for a 3D transformation only");
-  if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
-  if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
+  if(f.Total_length() != HGC.localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
+  if(f.Total_length() != HGC.localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
   field_name = f.Field_name();
   site_shape = f.getSiteShape();
@@ -209,8 +209,8 @@ void PLEGMA_FT<Float>::applyFFT(const PLEGMA_Field<Float> &f, int sign){
 
 template<typename Float>
 void PLEGMA_FT<Float>::applyGEMV(const PLEGMA_Field<Float> &f, int sign){
-  if(f.Total_length() != HGC_localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
-  if(f.Total_length() != HGC_localVolume) dimT=1; // if the field is 3D
+  if(f.Total_length() != HGC.localVolume && dims == 4) PLEGMA_error("Cannot do a 4D FT on a 3D field\n");
+  if(f.Total_length() != HGC.localVolume) dimT=1; // if the field is 3D
   checkAllocation(f.Field_length());
   field_name = f.Field_name();
   site_shape = f.getSiteShape();
@@ -238,7 +238,7 @@ void PLEGMA_FT<Float>::mulConstMomentumPhases(Vint src, int sign){
   std::complex<Float> *h2 = (std::complex<Float> *) h_elem.get();
   for(int imom = 0; imom < Nmoms(); imom++){
     phase=0.;
-    for(int i = 0; i < dims; i++) phase += ((Float) src[i] * momList[imom][i])/((Float) HGC_totalL[i]);
+    for(int i = 0; i < dims; i++) phase += ((Float) src[i] * momList[imom][i])/((Float) HGC.totalL[i]);
     phase *= 2. * PI;
     expPhase = (std::complex<Float>) { cos(phase), sign*sin(phase) };
     for(int idf = 0 ; idf < dof; idf++)
@@ -257,21 +257,21 @@ template<typename Float>
 void PLEGMA_FT<Float>::store3DFTs(std::complex<Float> *Ts, int timeshift, bool append) const{
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!h_elem) PLEGMA_error("Memory not allocated cannot write data");
-  if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in storing (TODO)\n");
+  if(dims == 3 && dimT != HGC.localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in storing (TODO)\n");
 
   std::shared_ptr<Float> helem_global = h_elem;
-  if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
-    helem_global.reset(new Float[HGC_nProc[DIM_T]*sizeN]);
-    if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
-    int error = MPI_Gather(h_elem.get(), sizeN, MPI_Type<Float>(), helem_global.get(), sizeN, MPI_Type<Float>(),0,HGC_timeComm);
+  if(dimT != 1 && HGC.nProc[3] != 1 && HGC.spaceRank == 0){
+    helem_global.reset(new Float[HGC.nProc[DIM_T]*sizeN]);
+    if(HGC.timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
+    int error = MPI_Gather(h_elem.get(), sizeN, MPI_Type<Float>(), helem_global.get(), sizeN, MPI_Type<Float>(),0,HGC.timeComm);
     if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
   }
 
   if(comm_rank() == 0){
-    int T = (dimT != 1)?HGC_totalL[DIM_T]:1;
+    int T = (dimT != 1)?HGC.totalL[DIM_T]:1;
     for(int idf = 0 ; idf < dof; idf++)
       for(int it = 0 ; it < T; it++){
-        int its = (it + timeshift)%HGC_totalL[DIM_T];
+        int its = (it + timeshift)%HGC.totalL[DIM_T];
         for(int imom = 0; imom < Nmoms(); imom++) 
 	  Ts[its*dof*Nmoms()+idf*Nmoms()+imom] = std::complex<Float>(helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0],
 								     helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1]);
@@ -284,13 +284,13 @@ template<typename Float>
 void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift, bool append) const{
   if(dims == 4 && timeshift > 0) PLEGMA_error("The temporal dimension has been reduced therefore cannot shift it\n");
   if(!h_elem) PLEGMA_error("Memory not allocated cannot write data");
-  if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
+  if(dims == 3 && dimT != HGC.localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
 
   std::shared_ptr<Float> helem_global = h_elem;
-  if(dimT != 1 && HGC_nProc[3] != 1 && HGC_spaceRank == 0){
-    helem_global.reset(new Float[HGC_nProc[DIM_T]*sizeN]);
-    if(HGC_timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
-    int error = MPI_Gather(h_elem.get(), sizeN, MPI_Type<Float>(), helem_global.get(), sizeN, MPI_Type<Float>(),0,HGC_timeComm);
+  if(dimT != 1 && HGC.nProc[3] != 1 && HGC.spaceRank == 0){
+    helem_global.reset(new Float[HGC.nProc[DIM_T]*sizeN]);
+    if(HGC.timeComm == MPI_COMM_NULL) PLEGMA_error("Try to use a NULL communicator for MPI Gather which will give an error");
+    int error = MPI_Gather(h_elem.get(), sizeN, MPI_Type<Float>(), helem_global.get(), sizeN, MPI_Type<Float>(),0,HGC.timeComm);
     if(error != MPI_SUCCESS) PLEGMA_error("MPI_Gather with %d\n",error);
   }
   
@@ -299,10 +299,10 @@ void PLEGMA_FT<Float>::writeASCII(std::string filename, int timeshift, bool appe
     //  Othereise, the order will be messed, and some iterms will be missing.
     FILE *ptr = append?fopen(filename.c_str(), "a"):fopen(filename.c_str(), "w");
     if(ptr == NULL) PLEGMA_error("Cannot open file:%s for writting\n",filename.c_str());
-    int T = (dimT != 1)?HGC_totalL[DIM_T]:1;
+    int T = (dimT != 1)?HGC.totalL[DIM_T]:1;
     for(int idf = 0 ; idf < dof; idf++)
       for(int it = 0 ; it < T; it++){
-	int its = (it + timeshift)%HGC_totalL[DIM_T];
+	int its = (it + timeshift)%HGC.totalL[DIM_T];
 	for(int imom = 0; imom < Nmoms(); imom++)
 	  fprintf(ptr, "%d %d  %+d %+d %+d \t %+16.15e %+15.15e\n", idf,it,(int) round(momList[imom][0]),(int) round(momList[imom][1]),(int) round(momList[imom][2]),
 		  helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+0], helem_global.get()[its*dof*Nmoms()*2+idf*Nmoms()*2+imom*2+1] );
@@ -319,11 +319,11 @@ fill_H5_shapes(std::vector<hsize_t> &shape, std::vector<hsize_t> &lshape, std::v
   std::string descr;
   
   // Time
-  if(dims==3 && dimT == HGC_localL[DIM_T]) {
+  if(dims==3 && dimT == HGC.localL[DIM_T]) {
     descr += "/time";
-    shape.push_back(HGC_totalL[DIM_T]);
-    lshape.push_back(HGC_localL[DIM_T]);
-    start.push_back((HGC_procPosition[DIM_T]*HGC_localL[DIM_T] + HGC_totalL[DIM_T] - timeshift) % HGC_totalL[DIM_T]);
+    shape.push_back(HGC.totalL[DIM_T]);
+    lshape.push_back(HGC.localL[DIM_T]);
+    start.push_back((HGC.procPosition[DIM_T]*HGC.localL[DIM_T] + HGC.totalL[DIM_T] - timeshift) % HGC.totalL[DIM_T]);
   } else {
     assert(dimT==1);
   }
@@ -392,7 +392,7 @@ static std::string str(T begin, T end) {
 template<typename Float>
 void PLEGMA_FT<Float>::
 writeHDF5(std::string filename, int timeshift, bool append) const{
-  if(dims == 3 && dimT != HGC_localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
+  if(dims == 3 && dimT != HGC.localL[DIM_T]) PLEGMA_error("Custom time dimension is not supported in writing (TODO)\n");
   std::vector<hsize_t> shape, lshape, start;
   std::string descr = fill_H5_shapes(shape, lshape, start, timeshift);
   
@@ -401,16 +401,16 @@ writeHDF5(std::string filename, int timeshift, bool append) const{
   assert(sizeN==writeSize);
 
   size_t shift = 0;
-  if(dims==3 && dimT != HGC_localL[DIM_T]) { // then it was a 3D Field. Using timeshift to determine the origin
-    int my_it = timeshift - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
-    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
+  if(dims==3 && dimT != HGC.localL[DIM_T]) { // then it was a 3D Field. Using timeshift to determine the origin
+    int my_it = timeshift - HGC.procPosition[DIM_T] * HGC.localL[DIM_T];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[DIM_T] );
     if(!is_myIt) lshape[0]=0; // not writing
   } else {
-    int nWriters = (dims==4) ? HGC_fullSize : HGC_spaceSize;
-    int id = (dims==4) ? HGC_fullRank : HGC_spaceRank;
+    int nWriters = (dims==4) ? HGC.fullSize : HGC.spaceSize;
+    int id = (dims==4) ? HGC.fullRank : HGC.spaceRank;
     shift = use_multiple_writers(shape, lshape, start, nWriters, id);
     if(id >= nWriters) lshape[0] = 0; // not writing
-    if(HGC_verbosity > 3) {
+    if(HGC.verbosity > 3) {
       std::string out = "rank: "+std::to_string(id)+
 	", shape: ("+str(shape.begin(), shape.end())+
 	"), lshape: ("+str(lshape.begin(), lshape.end())+
@@ -433,7 +433,7 @@ writeHDF5(std::string filename, int timeshift, bool append) const{
     }
   }
 
-  HDF5 writer(filename, HGC_fullComm);
+  HDF5 writer(filename, HGC.fullComm);
 
   writer.write_dataset(dataset, h_elem.get()+shift, shape, lshape, start);
   writer.write_attribute(dataset, "description", descr);

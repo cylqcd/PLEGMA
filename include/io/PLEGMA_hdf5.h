@@ -112,7 +112,7 @@ protected:
   }
 
   inline void wait(){
-    if(HGC_verbosity > 2) PLEGMA_printf("Waiting...\n");
+    if(HGC.verbosity > 2) PLEGMA_printf("Waiting...\n");
     MPI_Barrier(comm);
   }
 
@@ -214,7 +214,7 @@ protected:
     if(path_id.empty()) PLEGMA_error("Tried to go back but path_id is empty\n");
     H5Gclose(path_id.back());
     path_id.pop_back();
-    if(HGC_verbosity > 2) PLEGMA_printf("Closed group %s\n", path_str.back().c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Closed group %s\n", path_str.back().c_str());
     path_str.pop_back();
   }
 
@@ -225,9 +225,9 @@ protected:
 
   // Splitting, cleaning and checking until what point path is the same with the current path
   inline std::vector<std::string> prepare_path(std::string path) {
-    if(HGC_verbosity > 2) PLEGMA_printf("Path before cleaning %s\n", path.c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Path before cleaning %s\n", path.c_str());
     std::vector<std::string> vp = clean_path(split_path(path));
-    if(HGC_verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", join_path(vp, path[0]=='/').c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Path after cleaning %s\n", join_path(vp, path[0]=='/').c_str());
     // checking if starts with '/'
     if(!path_id.empty() && path[0]=='/') {
       if(vp.empty() || vp[0] != path_str[0]) go_top();
@@ -272,7 +272,7 @@ protected:
     if(exists(dir)){
       if(H5Oexists_by_name(current(), dir.c_str(), H5P_DEFAULT)) {
 	path_id.push_back(H5Gopen(current(), dir.c_str(), H5P_DEFAULT));
-	if(HGC_verbosity > 2) PLEGMA_printf("Opened group %s\n", dir.c_str());
+	if(HGC.verbosity > 2) PLEGMA_printf("Opened group %s\n", dir.c_str());
       }
       else {
 	PLEGMA_error("A link with dir %s exists but it is not a group\n File: %s\n Path: %s", dir.c_str(),
@@ -281,7 +281,7 @@ protected:
     }
     else {
       path_id.push_back(H5Gcreate(current(), dir.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT));
-      if(HGC_verbosity > 2) PLEGMA_printf("Created group %s\n", dir.c_str());
+      if(HGC.verbosity > 2) PLEGMA_printf("Created group %s\n", dir.c_str());
     }
     path_str.push_back(dir);
   }
@@ -397,7 +397,7 @@ protected:
     for(size_t i=0; i<shape.size(); i++) {
       if(start[i] + lshape[i] > shape[i]) { // then i it's exceeding
 	int exceeding = std::min(lshape[i], start[i] + lshape[i] - shape[i]);
-	if(HGC_verbosity > 2)
+	if(HGC.verbosity > 2)
 	  printf("rank %d: dir %d: exceeds of %d\n", comm_rank(), i, exceeding);
 	exceeding_id.push_back(i);
 	exceeding_shape.push_back(exceeding);
@@ -409,7 +409,7 @@ protected:
     if(!exceeding_id.empty())
       my_n_writings = 1<<exceeding_id.size();
     MPI_Allreduce( &my_n_writings, &n_writings, 1, MPI_Type(n_writings), MPI_MAX, comm);
-    if(HGC_verbosity > 2) PLEGMA_printf("%s: %d writing(s) are needed for writing the dataset\n", name.c_str(), n_writings);
+    if(HGC.verbosity > 2) PLEGMA_printf("%s: %d writing(s) are needed for writing the dataset\n", name.c_str(), n_writings);
 
     if(n_writings>1) {
       std::vector<size_t> my_writings = {0};
@@ -457,7 +457,7 @@ protected:
 	      shift[id] = tmp_lshape[id];
 	      tmp_lshape[id] = exceeding_shape[id];
 	      tmp_start[id] = 0;
-	      if(HGC_verbosity > 2)
+	      if(HGC.verbosity > 2)
 		printf("rank %d: iter %d: shifting id %d, shift[id] = %d, tmp_lshape[id] = %d\n", comm_rank(), i,
 		       id, shift[id], tmp_lshape[id]);
 	    }
@@ -541,7 +541,7 @@ public:
    *    i.e. name="./sample.h5/group1/group2" would create the file sample.h5 and
    *    then go to group1 and group2
    */
-  HDF5(std::string name, MPI_Comm comm=HGC_fullComm) : comm(comm) {
+  HDF5(std::string name, MPI_Comm comm=HGC.fullComm) : comm(comm) {
     // Creating filename and path from name
     std::string path = "/";
     // checking if .h5 is given and at the end of file
@@ -560,7 +560,7 @@ public:
     }
 
     // check if filename is open by another instance
-    if(HGC_verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filename.c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Checking if file is open %s\n", filename.c_str());
     while( isFileOpen(filename) )
       std::this_thread::sleep_for(1ms);
     
@@ -570,15 +570,15 @@ public:
     // checking if file exists or creating it
     if(access( filename.c_str(), F_OK ) != -1) {
       file_id = H5Fopen(filename.c_str(),  H5F_ACC_RDWR, fapl_id);
-      if(HGC_verbosity > 2) PLEGMA_printf("Opened file %s\n", filename.c_str());
+      if(HGC.verbosity > 2) PLEGMA_printf("Opened file %s\n", filename.c_str());
     } else {
       file_id = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
-      if(HGC_verbosity > 2) PLEGMA_printf("Created file %s\n", filename.c_str());
+      if(HGC.verbosity > 2) PLEGMA_printf("Created file %s\n", filename.c_str());
     }
     H5Pclose(fapl_id);
     
     // adding opened file to vector
-    if(HGC_verbosity > 2) PLEGMA_printf("Adding %s to open files\n", filename.c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Adding %s to open files\n", filename.c_str());
     open_files.push_back(filename);
     
     if(path != "/") {
@@ -598,10 +598,10 @@ public:
       PLEGMA_error("More than one objects open. The closing will hang, so we crash the code here.");
     }
     H5Fclose(file_id);
-    if(HGC_verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Closed file %s\n", filename.c_str());
     
     // remove opened file from vector
-    if(HGC_verbosity > 2) PLEGMA_printf("Removing %s from open files\n", filename.c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Removing %s from open files\n", filename.c_str());
     std::vector<std::string>::iterator posix = std::find(open_files.begin(), open_files.end(), filename);
     assert(posix != open_files.end());
     open_files.erase(posix);
@@ -619,14 +619,14 @@ public:
     if(check != std::string::npos)
       return write_attribute(object.substr(check+1), attr_name, attr_value,
 			     path+"/"+object.substr(0,check));
-    if(HGC_verbosity > 2) PLEGMA_printf("Going to write attribute %s in path %s \n", attr_name.c_str(),
+    if(HGC.verbosity > 2) PLEGMA_printf("Going to write attribute %s in path %s \n", attr_name.c_str(),
 					path.c_str());
 
     cd(path);
 
     _write_attribute(object, attr_name, attr_value);
 
-    if(HGC_verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("%s: written attribute %s: %s\n", object.c_str(), attr_name.c_str(), attr_value.c_str());
     cd("-");
  
   }
@@ -647,9 +647,9 @@ public:
     if(check != std::string::npos)
       return write_dataset(name.substr(check+1), buf, shape, lshape, start,
 			   (name[0]=='/' ? "/" : path)+"/"+name.substr(0,check));
-    if(HGC_verbosity > 2) PLEGMA_printf("Going to write dataset %s in path %s \n", name.c_str(),
+    if(HGC.verbosity > 2) PLEGMA_printf("Going to write dataset %s in path %s \n", name.c_str(),
 					path.c_str());
-    if(HGC_verbosity > 3) printf("RANK(%d) Dataset shape=(%s), lshape=(%s), start=(%s)\n", getRank(),
+    if(HGC.verbosity > 3) printf("RANK(%d) Dataset shape=(%s), lshape=(%s), start=(%s)\n", getRank(),
 				 toString(shape).c_str(), toString(lshape).c_str(), toString(start).c_str());
     cd(path);
 
@@ -673,7 +673,7 @@ public:
       else{
 	_write_dataset_parallel(name,buf,shape,lshape,start);
       }
-      if(HGC_verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
+      if(HGC.verbosity > 2) PLEGMA_printf("Written dataset %s in %s mode\n", name.c_str(),
 					  (lshape.empty() || comm_size == 1) ? "single" : "parallel");
     }
     cd("-");

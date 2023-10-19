@@ -71,13 +71,13 @@ static void print_xlf_info(LimeReader *limereader) {
   std::string css = lime_data;
   if(css.empty()) return;
   std::stringstream ss(css);
-  if(HGC_verbosity>1) PLEGMA_printf("Begin LIME header,...\n");
+  if(HGC.verbosity>1) PLEGMA_printf("Begin LIME header,...\n");
   while(ss.good()){
     std::string substr;
     getline( ss, substr, ',' );
-    if(HGC_verbosity>1) PLEGMA_printf("%s\n",substr.c_str());
+    if(HGC.verbosity>1) PLEGMA_printf("%s\n",substr.c_str());
   }
-  if(HGC_verbosity>1) PLEGMA_printf("End LIME header.\n");
+  if(HGC.verbosity>1) PLEGMA_printf("End LIME header.\n");
   
   hostFree(lime_data, lime_data_size+1);
 }
@@ -89,7 +89,7 @@ bool getValueFromXML(std::string str, std::string toMatch, T &value){
   while(ss.good()){
     std::string line;
     getline(ss,line,'\n');
-    if(HGC_verbosity > 2) PLEGMA_printf("Extract line: %s\n",line.c_str());
+    if(HGC.verbosity > 2) PLEGMA_printf("Extract line: %s\n",line.c_str());
     if(line.empty()) PLEGMA_error("Problem with extracting from LIME XML\n Message:\n %s",str.c_str());
     line = line.substr(line.find_first_not_of(" \t"),line.find_last_not_of(" \t")-line.find_first_not_of(" \t")+1);
     if(line.find(toMatch) != std::string::npos){
@@ -128,7 +128,7 @@ static void get_ildg_info(LimeReader *limereader, int &prec, int &dof){
   for(int i = 0; i < N_DIMS; i++){
     passCheck = getValueFromXML(string_lime_data, "l"+xyzt[i], ll);
     if(!passCheck) PLEGMA_error("LIME: Cannot extract Lattice extend for %s-direction from the ildg format",xyzt[i].c_str());
-    if(ll != HGC_totalL[i]) PLEGMA_error("LIME: Read l%s different from HGC_totalL[%d], (%d != %d)\n",xyzt[i].c_str(),i,ll,HGC_totalL[i]);
+    if(ll != HGC.totalL[i]) PLEGMA_error("LIME: Read l%s different from HGC_totalL[%d], (%d != %d)\n",xyzt[i].c_str(),i,ll,HGC.totalL[i]);
   }
   passCheck = getValueFromXML(string_lime_data,"dof",dof);
   if(!passCheck){
@@ -186,17 +186,17 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
   std::string msg_tmp = "X";
   MPI_Offset offset;
   if(comm_rank() == 0){
-    write_lime_header_type(limewriter,header,HGC_totalVolume*dof*2*sizeof(Float),0,0); // make one fake record write to set the offset
+    write_lime_header_type(limewriter,header,HGC.totalVolume*dof*2*sizeof(Float),0,0); // make one fake record write to set the offset
     write_lime_header_message(limewriter,msg_tmp);
     offset = ftell(fid)-1;
     fclose(fid);
   }
   comm_barrier();
-  int mpiErr = MPI_Bcast(&offset,sizeof(MPI_Offset),MPI_BYTE,0,HGC_fullComm);
+  int mpiErr = MPI_Bcast(&offset,sizeof(MPI_Offset),MPI_BYTE,0,HGC.fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
 
   Float *ftmp;
-  long int sizeVec=((long int) dof)*HGC_localVolume;
+  long int sizeVec=((long int) dof)*HGC.localVolume;
   hostMalloc(ftmp, sizeVec*2*sizeof(Float));
 
   MPI_Datatype subblock;  //MPI-type, (N_DIMS+1)d subarray
@@ -204,9 +204,9 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
   MPI_Status status;
   int sizes[N_DIMS+1], lsizes[N_DIMS+1], starts[N_DIMS+1];
   for(int i=0; i<N_DIMS; i++) {
-    sizes[i] = HGC_totalL[N_DIMS-1-i];
-    lsizes[i] = HGC_localL[N_DIMS-1-i];
-    starts[i] = HGC_procPosition[N_DIMS-1-i]*HGC_localL[N_DIMS-1-i];
+    sizes[i] = HGC.totalL[N_DIMS-1-i];
+    lsizes[i] = HGC.localL[N_DIMS-1-i];
+    starts[i] = HGC.procPosition[N_DIMS-1-i]*HGC.localL[N_DIMS-1-i];
   }
   lsizes[N_DIMS] = sizes[N_DIMS] = dof*2;
   starts[N_DIMS] = 0;
@@ -214,13 +214,13 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
   MPI_Type_create_subarray(N_DIMS+1,sizes,lsizes,starts,MPI_ORDER_C,MPI_Type(data),&subblock);
   MPI_Type_commit(&subblock);
 	
-  MPI_File_open(HGC_fullComm, filename.c_str(), MPI_MODE_WRONLY, MPI_INFO_NULL, &mpifid);
+  MPI_File_open(HGC.fullComm, filename.c_str(), MPI_MODE_WRONLY, MPI_INFO_NULL, &mpifid);
   MPI_File_set_view(mpifid, offset, MPI_Type(data), subblock, "native", MPI_INFO_NULL);
 
-  for(size_t i = 0; i < HGC_localVolume; i++) {
+  for(size_t i = 0; i < HGC.localVolume; i++) {
     for(int s = 0; s < dof; s++) {
-      ftmp[((long int) i)*dof*2 +s*2+0] = data[(s*HGC_localVolume + i)*2 + 0];
-      ftmp[((long int) i)*dof*2 +s*2+1] = data[(s*HGC_localVolume + i)*2 + 1];
+      ftmp[((long int) i)*dof*2 +s*2+0] = data[(s*HGC.localVolume + i)*2 + 0];
+      ftmp[((long int) i)*dof*2 +s*2+1] = data[(s*HGC.localVolume + i)*2 + 1];
     }
   }
 
@@ -252,7 +252,7 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
 #endif
 
   Float *ftmp;
-  long int sizeVec=((long int) dof)*HGC_localVolume;
+  long int sizeVec=((long int) dof)*HGC.localVolume;
   hostMalloc(ftmp, sizeVec*2*sizeof(Float));
 
 #ifdef	MULTI_GPU
@@ -261,9 +261,9 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
   MPI_Status status;
   int sizes[N_DIMS+1], lsizes[N_DIMS+1], starts[N_DIMS+1];
   for(int i=0; i<N_DIMS; i++) {
-    sizes[i] = HGC_totalL[N_DIMS-1-i];
-    lsizes[i] = HGC_localL[N_DIMS-1-i];
-    starts[i] = HGC_procPosition[N_DIMS-1-i]*HGC_localL[N_DIMS-1-i];
+    sizes[i] = HGC.totalL[N_DIMS-1-i];
+    lsizes[i] = HGC.localL[N_DIMS-1-i];
+    starts[i] = HGC.procPosition[N_DIMS-1-i]*HGC.localL[N_DIMS-1-i];
   }
   lsizes[N_DIMS] = sizes[N_DIMS] = dof*2;
   starts[N_DIMS] = 0;
@@ -271,7 +271,7 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
   MPI_Type_create_subarray(N_DIMS+1,sizes,lsizes,starts,MPI_ORDER_C,MPI_Type(data),&subblock);
   MPI_Type_commit(&subblock);
 	
-  MPI_File_open(HGC_fullComm, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifid);
+  MPI_File_open(HGC.fullComm, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifid);
   MPI_File_set_view(mpifid, offset, MPI_Type(data), subblock, "native", MPI_INFO_NULL);
 
   if(sizeVec*2 > 2147483648) PLEGMA_warning("Be careful for possible integer overflow in MPI_File_read_all function");
@@ -289,10 +289,10 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
     else PLEGMA_error("Cannot byte swap with this precision");
   }
 
-  for(size_t i = 0; i < HGC_localVolume; i++) {
+  for(size_t i = 0; i < HGC.localVolume; i++) {
     for(int s = 0; s < dof; s++) {
-      data[(s*HGC_localVolume + i)*2 + 0] = ftmp[((long int) i)*dof*2 +s*2+0];
-      data[(s*HGC_localVolume + i)*2 + 1] = ftmp[((long int) i)*dof*2 +s*2+1];
+      data[(s*HGC.localVolume + i)*2 + 0] = ftmp[((long int) i)*dof*2 +s*2+0];
+      data[(s*HGC.localVolume + i)*2 + 1] = ftmp[((long int) i)*dof*2 +s*2+1];
     }
   }
   hostFree(ftmp, sizeVec*2*sizeof(Float));

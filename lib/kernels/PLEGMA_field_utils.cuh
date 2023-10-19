@@ -45,10 +45,10 @@ static __global__ void copy_side_to_ghost_kernel(pFloat2<FloatInOut> F, short di
   #pragma unroll
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir) {
-      id[i] = sign==DIR_MINUS ? (DGC_localL[dir]-1):0;
+      id[i] = sign==DIR_MINUS ? (DGC->localL[dir]-1):0;
     } else {
-      id[i] = tmp_sid % DGC_localL[i];
-      tmp_sid /= DGC_localL[i];
+      id[i] = tmp_sid % DGC->localL[i];
+      tmp_sid /= DGC->localL[i];
     }
   }
   size_t vid = LEXIC_ID(id);
@@ -61,7 +61,7 @@ static __global__ void copy_side_to_ghost_kernel(pFloat2<FloatInOut> F, short di
 
 template<typename Float>
 static void copy_side_to_ghost(pFloat2<Float> F, short dir, short sign){
-  if( HGC_dimBreak[dir] ){
+  if( HGC.dimBreak[dir] ){
     ProfileStruct ps(F.sideGhostL(dir));
     tuneAndRun(ps, "copy_side_to_ghost_kernel_size_"+std::to_string(F.site_size), copy_side_to_ghost_kernel<Float>, F, dir, sign);
   }
@@ -74,12 +74,12 @@ static __global__ void copy_corner_to_ghost_kernel(pFloat2<FloatInOut> F, short 
   size_t id[4], tmp_sid=sid;
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir1) {
-      id[i] = sign1==DIR_MINUS ? (DGC_localL[dir1]-1):0;
+      id[i] = sign1==DIR_MINUS ? (DGC->localL[dir1]-1):0;
     } else if(i==dir2) {
-      id[i] = sign2==DIR_MINUS ? (DGC_localL[dir2]-1):0;      
+      id[i] = sign2==DIR_MINUS ? (DGC->localL[dir2]-1):0;      
     } else {
-      id[i] = tmp_sid % DGC_localL[i];
-      tmp_sid /= DGC_localL[i];
+      id[i] = tmp_sid % DGC->localL[i];
+      tmp_sid /= DGC->localL[i];
     }
   }
   size_t vid = LEXIC_ID(id);
@@ -92,7 +92,7 @@ static __global__ void copy_corner_to_ghost_kernel(pFloat2<FloatInOut> F, short 
 
 template<typename Float>
 static void copy_corner_to_ghost(pFloat2<Float> F, short dir1, short dir2, short sign1, short sign2){
-  if( (dir1 != dir2 ) && HGC_dimBreak[dir1] && HGC_dimBreak[dir2] ){
+  if( (dir1 != dir2 ) && HGC.dimBreak[dir1] && HGC.dimBreak[dir2] ){
     ProfileStruct ps(F.cornerGhostL(dir1, dir2));
     tuneAndRun(ps, "copy_corner_to_ghost_kernel_size_"+std::to_string(F.site_size), copy_corner_to_ghost_kernel<Float>, F, dir1, dir2, sign1, sign2);
   }
@@ -105,14 +105,14 @@ static __global__ void copy_vertex_to_ghost_kernel(pFloat2<FloatInOut> F, short 
   size_t id[4], tmp_sid=sid;
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir1) {
-      id[i] = sign1==DIR_MINUS ? (DGC_localL[dir1]-1):0;
+      id[i] = sign1==DIR_MINUS ? (DGC->localL[dir1]-1):0;
     } else if(i==dir2) {
-      id[i] = sign2==DIR_MINUS ? (DGC_localL[dir2]-1):0;      
+      id[i] = sign2==DIR_MINUS ? (DGC->localL[dir2]-1):0;      
     } else if(i==dir3) {
-      id[i] = sign3==DIR_MINUS ? (DGC_localL[dir3]-1):0;      
+      id[i] = sign3==DIR_MINUS ? (DGC->localL[dir3]-1):0;      
     } else {
-      id[i] = tmp_sid % DGC_localL[i];
-      tmp_sid /= DGC_localL[i];
+      id[i] = tmp_sid % DGC->localL[i];
+      tmp_sid /= DGC->localL[i];
     }
   }
   size_t vid = LEXIC_ID(id);
@@ -125,7 +125,7 @@ static __global__ void copy_vertex_to_ghost_kernel(pFloat2<FloatInOut> F, short 
 
 template<typename Float>
 static void copy_vertex_to_ghost(pFloat2<Float> F, short dir1, short dir2, short dir3, short sign1, short sign2, short sign3){
-  if( (dir1 != dir2 && dir1 != dir3 && dir3 != dir2 ) && HGC_dimBreak[dir1] && HGC_dimBreak[dir2] && HGC_dimBreak[dir3] ){
+  if( (dir1 != dir2 && dir1 != dir3 && dir3 != dir2 ) && HGC.dimBreak[dir1] && HGC.dimBreak[dir2] && HGC.dimBreak[dir3] ){
     ProfileStruct ps(F.vertexGhostL(dir1, dir2, dir3));
     tuneAndRun(ps, "copy_vertex_to_ghost_kernel_size_"+std::to_string(F.site_size), copy_vertex_to_ghost_kernel<Float>, F, dir1, dir2, dir3, sign1, sign2, sign3);
   }
@@ -208,7 +208,7 @@ __global__ void genStochasticUniform_kernel(RNGState *state, int length_field, F
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if( n < 2) return;
 
-  int V = is4D?DGC_localVolume:DGC_localVolume3D;
+  int V = is4D?DGC->localVolume:DGC->localVolume3D;
   for( int i = 0; i < length_field; ++i){
 
     Float tmp = PLEGMA_Random<Float, Uniform>(state[sid]);
@@ -293,7 +293,7 @@ struct HadCol{
 template<typename Float>
 static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   // make sure before that is not a 3D field
-  int V = HGC_localVolume;
+  int V = HGC.localVolume;
   thrust::device_ptr<int> th_c(d_colors);
   thrust::device_ptr<Float2<Float> > th_e((Float2<Float>*)d_elems);
   typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<Float2<Float> > > tplDIntDFl2;
@@ -338,7 +338,7 @@ static void traceMulFmunuSu3FmunuSu3_k(PLEGMA_Field<Float> &F, PLEGMA_Fmunu<Floa
 template<typename FloatA, typename FloatB>
 static void __global__ trPmunu_kernel(FloatA *out, gauge2<FloatA> u, int mu, int nu){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= DGC->localVolume) return;
   Float2<FloatA> *out2 = (Float2<FloatA> *) out;
   Float2<FloatB> U1[N_COLS][N_COLS], U2[N_COLS][N_COLS], U3[N_COLS][N_COLS];
     /**
@@ -357,7 +357,7 @@ static void __global__ trPmunu_kernel(FloatA *out, gauge2<FloatA> u, int mu, int
 template<typename FloatA, typename FloatB>
 static void __global__ SU3Trace_kernel(FloatA *out, su3_2<FloatA> su3){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (sid >= DGC_localVolume) return;
+  if (sid >= DGC->localVolume) return;
   Float2<FloatA> *out2 = (Float2<FloatA> *) out;
   Float2<FloatB> SU3[N_COLS][N_COLS];
   su3.get(SU3,sid);

@@ -13,7 +13,7 @@ static __global__ void constField_kernel(u1gauge2<Float> G, int mu, int nu, Floa
   for(int i =0; i < N_DIMS; i++){
     if(i==mu){
       Float val;
-      int xmx0=DGC_procPosition[nu]*DGC_localL[nu]+x[nu] - xnu_0;
+      int xmx0=DGC->procPosition[nu]*DGC->localL[nu]+x[nu] - xnu_0;
       val =   exparg * xmx0 ;
       gg.x = cos(val); gg.y = sin(val);
     }

@@ -120,6 +120,6 @@ static Float calculatePlaquette(TG gTex){
   tuneAndRun(ps, nameK, calculatePlaquette_host<Float,FloatG,TG>, ps, gTex, plaquette);
 
   Float globalPlaquette = 0.;
-  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , HGC_fullComm);  
-  return globalPlaquette/(HGC_totalVolume*normC*6);
+  MPI_Allreduce(&plaquette , &globalPlaquette , 1 , MPI_Type(plaquette) , MPI_SUM , HGC.fullComm);  
+  return globalPlaquette/(HGC.totalVolume*normC*6);
 }

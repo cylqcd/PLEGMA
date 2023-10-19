@@ -198,6 +198,6 @@ static Float sumRtraceU_k(PLEGMA_Su3field<FloatS> &su3M){
   tuneAndRun(ps, "sum_real_trace_host", sum_real_trace_host<Float,FloatS>, ps, su3M, sum);
 
   Float globalSum = 0.;
-  MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , HGC_fullComm);  
+  MPI_Allreduce(&sum , &globalSum , 1 , MPI_Type(sum) , MPI_SUM , HGC.fullComm);  
   return globalSum;
 }

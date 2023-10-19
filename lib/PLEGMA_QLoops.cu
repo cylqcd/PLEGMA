@@ -245,8 +245,8 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
   std::complex<Float> cr;
   cr.real(val);
   cr.imag(0.);
-  if(!(HGC_totalL[0] == HGC_totalL[1] && HGC_totalL[1] == HGC_totalL[2])) PLEGMA_error("Spatial total volume should be symmetric for this to work");
-  int L=HGC_totalL[0];
+  if(!(HGC.totalL[0] == HGC.totalL[1] && HGC.totalL[1] == HGC.totalL[2])) PLEGMA_error("Spatial total volume should be symmetric for this to work");
+  int L=HGC.totalL[0];
   if(L%2 != 0) PLEGMA_error("If spatial extent is not multiple of 2 then it will not work");
   int Lo2 = L/2;
   for(int wilsDir = 0 ; wilsDir < 3; wilsDir++){

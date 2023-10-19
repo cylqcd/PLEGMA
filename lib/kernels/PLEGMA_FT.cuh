@@ -15,11 +15,11 @@ struct MomF{
     int x[4] = GET_ID(id);
 #pragma unroll
     for(int i=0; i<4; i++)
-      x[i] += DGC_procPosition[i] * DGC_localL[i];
-    Float phase = ((Float) momx*x[0]) / ((Float) DGC_totalL[0])  +
-      ((Float) momy*x[1]) / ((Float) DGC_totalL[1]) +
-      ((Float) momz*x[2]) / ((Float) DGC_totalL[2]) +
-      ((Float) momt*x[3]) / ((Float) DGC_totalL[3]);
+      x[i] += DGC->procPosition[i] * DGC->localL[i];
+    Float phase = ((Float) momx*x[0]) / ((Float) DGC->totalL[0])  +
+      ((Float) momy*x[1]) / ((Float) DGC->totalL[1]) +
+      ((Float) momz*x[2]) / ((Float) DGC->totalL[2]) +
+      ((Float) momt*x[3]) / ((Float) DGC->totalL[3]);
     Float2<Float> &el = (thrust::get<1>(t));
     phase *= 2. * PI;
     el.x = cos(phase);
@@ -34,7 +34,7 @@ static void createMomField(Float2<Float> *x, std::vector<Float> mom, int D3D4, i
   else if (D3D4 == 4){
     if(mom.size() != 4) PLEGMA_error("A momentum vector in four dimensions need four components\n");}
   else PLEGMA_error("Not supported");
-  int V = (D3D4 == 3) ? HGC_localVolume/HGC_localL[3] : HGC_localVolume;
+  int V = (D3D4 == 3) ? HGC.localVolume/HGC.localL[3] : HGC.localVolume;
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + V;
   thrust::device_ptr<Float2<Float> > dev_ptr(x);
@@ -52,8 +52,8 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() == 0) PLEGMA_error("Momentum container is empty");
   int Nmom = mom.size();
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V = ft.Dims() == 3 ? V3 : HGC.localVolume;
   Float2<Float> *x;
   x=(Float*)device_malloc(V*2*sizeof(Float));
   qudaMemset(x,0,V*2*sizeof(Float));
@@ -63,8 +63,8 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
     for(int idf = 0 ; idf < f.Field_length(); idf++)
       for(int it = 0 ; it < ft.DimT(); it++){
 	Float2<Float> *y = (Float2<Float> *)f.D_elem() + idf*f.Total_length() + it*V3;
-	std::complex<Float> res = cuBLAS::dot((ft.Dims() == 3) ? V3 : HGC_localVolume, (Float*) x,(Float*) y,
-					      (ft.Dims() == 3) ? HGC_spaceComm : HGC_fullComm);
+	std::complex<Float> res = cuBLAS::dot((ft.Dims() == 3) ? V3 : HGC.localVolume, (Float*) x,(Float*) y,
+					      (ft.Dims() == 3) ? HGC.spaceComm : HGC.fullComm);
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 0] += res.real();
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.imag();
       }
@@ -77,8 +77,8 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() == 0) PLEGMA_error("Momentum container is empty");
   int Nmom = mom.size();
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V = ft.Dims() == 3 ? V3 : HGC.localVolume;
   Float2<Float> *x,*d_res;
   x=(Float2<Float>*)device_malloc(V*2*sizeof(Float));
   qudaMemset(x,0,V*2*sizeof(Float));
@@ -89,9 +89,9 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   Float one[2] = {1.,0.}, zero[2] = {0.,0.};
   for(int imom = 0; imom < Nmom; imom++){
     createMomField(x,mom[imom],ft.Dims(),sign); 
-    cuBLAS::gemv(TRANS,(ft.Dims() == 3) ? V3 : HGC_localVolume, f.Field_length() * ft.DimT(), one,
+    cuBLAS::gemv(TRANS,(ft.Dims() == 3) ? V3 : HGC.localVolume, f.Field_length() * ft.DimT(), one,
 		 (Float*) f.D_elem(), (Float*) x, zero, (Float*) d_res, (Float*) h_res,
-		 (ft.Dims() == 3) ? HGC_spaceComm : HGC_fullComm);
+		 (ft.Dims() == 3) ? HGC.spaceComm : HGC.fullComm);
     for(int idf = 0 ; idf < f.Field_length(); idf++)
       for(int it = 0 ; it < ft.DimT(); it++)
 	  h_ft[it*f.Field_length()*Nmom + idf*Nmom + imom] += h_res[idf*ft.DimT()+it];
@@ -105,9 +105,9 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
 template<typename Float>
 __global__ void fourier_transform_3D_kernel(Float* block, pFloat2<Float> in, tex_mom_list texMomList,int it, int sign){
   int vid = blockIdx.x*blockDim.x + threadIdx.x;
-  int sid = vid + it*DGC_localVolume3D;
+  int sid = vid + it*DGC->localVolume3D;
   Float2<Float> *block2 = (Float2<Float> *)block;
-  if(vid >= DGC_localVolume3D) return;
+  if(vid >= DGC->localVolume3D) return;
   Float2<Float> tmp;
   extern __shared__ int ext_shared_cache[];
   Float2<Float> *shared_cache = (Float2<Float> *) ext_shared_cache;
@@ -124,7 +124,7 @@ __global__ void fourier_transform_3D_kernel(Float* block, pFloat2<Float> in, tex
 
 template<typename Float>
 static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &field, tex_mom_list &texMomList, int it, int sign){
-  int SpVol = HGC_localVolume/HGC_localL[3];
+  int SpVol = HGC.localVolume/HGC.localL[3];
   Float *d_partial_block = NULL;
   int site_size = field.Field_length();
   int shared_size = 2*sizeof(Float);
@@ -150,7 +150,7 @@ static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Floa
       reduction[i*2+1] += h_partial_block[(i*gridDimX + j)*2+1];
     }
   }
-  MPI_Allreduce(MPI_IN_PLACE,reduction, ft.Nmoms()*site_size*2, MPI_Type(reduction), MPI_SUM, HGC_spaceComm);
+  MPI_Allreduce(MPI_IN_PLACE,reduction, ft.Nmoms()*site_size*2, MPI_Type(reduction), MPI_SUM, HGC.spaceComm);
   for(int imom = 0; imom < ft.Nmoms(); imom++)
     for(int idf = 0 ; idf < field.Field_length(); idf++)
       for(int ir = 0 ; ir < 2 ; ir++)

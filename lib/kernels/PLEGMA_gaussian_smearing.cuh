@@ -58,10 +58,10 @@ __global__ void gaussian_smearing_only_ghost_kernel(vectorTex<FloatOut>out,
   #pragma unroll
   for(int i = 0 ; i<N_DIMS; i++) {
     if(i==dir) {
-      id[i] = sign==DIR_PLUS ? (DGC_localL[dir]-1):0;
+      id[i] = sign==DIR_PLUS ? (DGC->localL[dir]-1):0;
     } else {
-      id[i] = sid % DGC_localL[i];
-      sid /= DGC_localL[i];
+      id[i] = sid % DGC->localL[i];
+      sid /= DGC->localL[i];
     }
   }
   sid = LEXIC_ID(id);
@@ -123,7 +123,7 @@ template<typename FloatOut,typename FloatIn, typename FloatGauge>
 static void gaussian_smearing_only_ghost(vectorTex<FloatOut>& out, vectorTex<FloatIn>& vecInTex, 
 					 gaugeTex<FloatGauge>& gaugeTex, FloatOut alpha){
   for(int dir = 0; dir < N_DIMS-1; dir++) {
-    if(HGC_dimBreak[dir]) {
+    if(HGC.dimBreak[dir]) {
       ProfileStruct ps(out.sideGhostL(dir)*2);
       tuneAndRun(ps, "gaussian_smearing_only_ghost_kernel", gaussian_smearing_only_ghost_kernel<FloatOut,FloatIn,FloatGauge>,
 		 out, vecInTex, gaugeTex, alpha, dir);

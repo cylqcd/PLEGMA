@@ -41,8 +41,8 @@ namespace plegma {
     bool hasSource(int dir) const {
       // Tells if the source is included in the local lattice for the given direction
       if(dir<0 || dir>N_DIMS) return false;
-      return ((HGC_procPosition[dir]*HGC_localL[dir]) <= source[dir])
-	&& (source[dir] < ((HGC_procPosition[dir]+1)*HGC_localL[dir]));
+      return ((HGC.procPosition[dir]*HGC.localL[dir]) <= source[dir])
+	&& (source[dir] < ((HGC.procPosition[dir]+1)*HGC.localL[dir]));
     }
     bool hasSource() const {
       bool ret=true;
@@ -53,15 +53,15 @@ namespace plegma {
     int startT() const {
       // Returns the starting point in time of the correlator wrt the source.
       // Zero is returned if the local time slice is not used.
-      int start=(HGC_procPosition[DIM_T] * HGC_localL[DIM_T] + HGC_totalL[DIM_T] - source[DIM_T] )
-	% HGC_totalL[DIM_T];
+      int start=(HGC.procPosition[DIM_T] * HGC.localL[DIM_T] + HGC.totalL[DIM_T] - source[DIM_T] )
+	% HGC.totalL[DIM_T];
       return (start>=totalT) ? 0 : start;
     }
     int endT() const {
       // Returns the end point
       int start = startT();
       if(start>0)
-	return std::min(totalT, HGC_localL[DIM_T]+start);
+	return std::min(totalT, HGC.localL[DIM_T]+start);
       else
 	return 0;
     }
@@ -71,18 +71,18 @@ namespace plegma {
 	// When the source is in the local lattice we may have two pieces:
 	// |-->  s   | from startT to endT
 	// |     s-->| from the source to the end
-	int t_source = source[DIM_T]%HGC_localL[DIM_T];
-	return endT() - startT() + std::min(totalT, HGC_localL[DIM_T]-t_source); 
+	int t_source = source[DIM_T]%HGC.localL[DIM_T];
+	return endT() - startT() + std::min(totalT, HGC.localL[DIM_T]-t_source); 
       } else {
 	return endT() - startT();
       }
     }
     
-    PLEGMA_Correlator(CORR_SPACE corr_space, site source, int Q2_max = 0, int totalT=HGC_totalL[DIM_T]):
+    PLEGMA_Correlator(CORR_SPACE corr_space, site source, int Q2_max = 0, int totalT=HGC.totalL[DIM_T]):
       source(source), totalT(totalT), corr_space(corr_space), corr_pos_space(nullptr),
       corr_mom_space(corr_space==MOMENTUM_SPACE ?
 		     new PLEGMA_FT<Float>(Q2_max, 3, false, localT()) : nullptr),
-      comm(new MPI_Comm(HGC_fullComm)) { }
+      comm(new MPI_Comm(HGC.fullComm)) { }
 
     ~PLEGMA_Correlator() {}
     

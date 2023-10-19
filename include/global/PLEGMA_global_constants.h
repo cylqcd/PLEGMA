@@ -20,8 +20,8 @@
 #else
 #include<cublas_v2.h>
 #endif
-#ifdef ADD_TO_GLOBAL
 
+/*
 #define global_host(dtype, name, ...)					\
   HGC_global_vars.add<dtype>(#name,					\
 				   PRODUCT(__VA_ARGS__),		\
@@ -42,19 +42,20 @@
 
 #endif
 #else
+*/
 #ifdef ALLOCATE
 
 #define global_host(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
-#if defined (  __NVCC__ ) 
+#ifdef __NVCC__
 #define global_both(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				\
-  __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);	
-#elif defined (__HIP__) 
+  __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);		
+#elif defined (__HIP__)                                                 \
 #define global_both(dtype, name, ...)                                   \
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);                          \
-  __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);     
-#else
+  __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);  \
+#else                                                                     
 #define global_both(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				
 #endif
@@ -63,9 +64,9 @@
 
 #define global_host(dtype, name, ...)					\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
-#if defined (  __NVCC__ ) 
+#ifdef __NVCC__
 #define global_both(dtype, name, ...)					\
-  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
+  extern dtype HGC PARENTHESES(1,__VA_ARGS__);			\
   extern __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__); 
 #elif defined ( __HIP__ )
 #define global_both(dtype, name, ...)                                   \
@@ -76,62 +77,31 @@
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
 #endif
 #endif
-#endif
 
 // ---------------- ADD_FROM_HERE ------------- //
 
-// Global variables
-global_host(bool, init_PLEGMA_flag);
-global_host(float, deviceMemory);
-global_host(int, verbosity);
-global_host(long int, used_memory);
-global_host(global_vars, global_vars);
-global_host(Options *, options);
-global_host(bool, hold_exit);
+
+#pragma message " HGC "
+#ifdef ALLOCATE
+struct global_vars_host HGC;
+struct global_vars_both *DGC_ptr;
+#if defined (__NVCC__) | (__HIP__)
+__constant__ struct global_vars_both DGC_const;
+#endif
+#else
+//static __device__ __constant__ volatile struct global_vars_both DGCS;
+
+//static __device__ volatile struct global_vars_both *DGC;
+#if defined (__NVCC__) | (__HIP__)
+static __device__ struct global_vars_both *DGC;
+#endif
+extern struct global_vars_host HGC;
+extern struct global_vars_both *DGC_ptr;
+#endif
 
 // variables visible on both host and device
-global_both(int, localL, N_DIMS);
-global_both(int, totalL, N_DIMS);
-global_both(int, procPosition, N_DIMS);
-global_both(size_t, sideGhost, N_DIMS, DIR_BOTH);
-global_both(size_t, cornerGhost, (N_DIMS*(N_DIMS-1))/2*DIR_BOTH*DIR_BOTH);
-global_both(size_t, vertexGhost, (N_DIMS*(N_DIMS-1)*(N_DIMS-2))/6*DIR_BOTH*DIR_BOTH*DIR_BOTH);
-global_both(size_t, sideGhostVolume);
-global_both(size_t, cornerGhostVolume);
-global_both(size_t, vertexGhostVolume);
-global_both(size_t, sideGhostVolume3D);
-global_both(size_t, cornerGhostVolume3D);
-global_both(size_t, vertexGhostVolume3D);
-global_both(size_t, surface3D, N_DIMS);
-global_both(size_t, surface2D, (N_DIMS*(N_DIMS-1))/2);
-global_both(size_t, surface1D, (N_DIMS*(N_DIMS-1)*(N_DIMS-2))/6);
-global_both(size_t, localVolume);
-global_both(size_t, localVolume3D);
-global_both(size_t, totalVolume);
 
 // for mpi use global variables (host only)
-global_both(bool, dimBreak, N_DIMS);
-global_host(Topology *, default_topo);
-global_host(int, nProc, N_DIMS);
-global_host(MPI_Group, fullGroup);
-global_host(MPI_Group, spaceGroup);
-global_host(MPI_Group, timeGroup);
-global_host(MPI_Comm, fullComm);
-global_host(MPI_Comm, spaceComm);
-global_host(MPI_Comm, timeComm);
-global_host(int, fullRank);
-global_host(int, fullSize);
-global_host(int, spaceRank);
-global_host(int, spaceSize);
-global_host(int, timeRank);
-global_host(int, timeSize);
-
-// for cublas use
-#if defined (__HIP__)
-global_host(hipblasHandle_t, hipblas_handle);
-#else
-global_host(cublasHandle_t, cublas_handle);
-#endif
 
 #undef global_both
 #undef global_host

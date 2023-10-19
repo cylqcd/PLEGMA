@@ -14,11 +14,11 @@ using namespace quda;
 static bool isInitOpt = false;
 
 void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::string> listOptPLEGMA){
-  HGC_options = new Options(argc,argv);
+  HGC.options = new Options(argc,argv);
 
   // initialize QMP/MPI, QUDA comms grid and RNG
   // we need to do it first for enabling the printing
-  HGC_options->setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", 0,
+  HGC.options->setForced("procs","Set number of processors (X Y Z T), e.g. 1 1 1 1", 0,
 			 procs[0], procs[1], procs[2], procs[3]);
     
   for(int i=0; i<4; i++) if( procs[i] <= 0 )
@@ -28,10 +28,10 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
   initComms(argc, argv, procs);
 
   // Reading plegma options
-  plegmaOptions(*HGC_options, listOptPLEGMA);
+  plegmaOptions(*HGC.options, listOptPLEGMA);
 
   if(withQuda) {
-    qudaOptions(*HGC_options);
+    qudaOptions(*HGC.options);
     // initialize the QUDA library
     if(verbosity>0) infoQuda();
   }
@@ -84,7 +84,7 @@ void updateOptions(WHICHFLAVOR fl){
 
 void initializePLEGMA() {
   if(!isInitOpt){fprintf(stderr,"initializeOptions should be called before initializePLEGMA");exit(EXIT_FAILURE);}
-  HGC_options->close();
+  HGC.options->close();
   initQuda(device_number);
   qudaInitialized=true;
   // initialize PLEGMA params
@@ -93,7 +93,7 @@ void initializePLEGMA() {
 }
 
 void finalize() {
-  delete HGC_options;
+  delete HGC.options;
   PLEGMA_end();
   
   saveTuneCache(false);
@@ -241,11 +241,11 @@ template void applyBoundaryConditions<double>(PLEGMA_Gauge<double> &gauge, bool 
 template void applyBoundaryConditions<float>(PLEGMA_Gauge<float> &gauge, bool antiperiodic);
 
 std::vector<int> createR2(std::vector<int> &vec){
-  if(!HGC_init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
+  if(!HGC.init_PLEGMA_flag) PLEGMA_error("Initialize PLEGMA first");
   if(vec.size() != 0) PLEGMA_error("The vector provided is not empty");
-  for(int xx = -HGC_totalL[0]/2; xx < HGC_totalL[0]/2; xx++)
-    for(int yy = -HGC_totalL[1]/2; yy < HGC_totalL[1]/2; yy++)
-      for(int zz = -HGC_totalL[2]/2; zz < HGC_totalL[2]/2; zz++)
+  for(int xx = -HGC.totalL[0]/2; xx < HGC.totalL[0]/2; xx++)
+    for(int yy = -HGC.totalL[1]/2; yy < HGC.totalL[1]/2; yy++)
+      for(int zz = -HGC.totalL[2]/2; zz < HGC.totalL[2]/2; zz++)
 	vec.push_back(xx*xx + yy*yy + zz*zz);
   return clearDuplicates(vec);
 }

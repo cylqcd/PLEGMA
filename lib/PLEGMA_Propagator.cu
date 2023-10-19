@@ -19,12 +19,12 @@ absorbVectorToHost(PLEGMA_Vector<Float> &vec, int nu, int c2){
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointProp_host = (this->h_elem + 
-			mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume*2 + 
-			nu*N_COLS*N_COLS*HGC_localVolume*2 + 
-			c1*N_COLS*HGC_localVolume*2 + 
-			c2*HGC_localVolume*2);
-      pointVec_dev = vec.D_elem() + mu*N_COLS*HGC_localVolume*2 + c1*HGC_localVolume*2;
-      qudaMemcpy(pointProp_host,pointVec_dev,HGC_localVolume*2*sizeof(Float),qudaMemcpyDeviceToHost); 
+			mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume*2 + 
+			nu*N_COLS*N_COLS*HGC.localVolume*2 + 
+			c1*N_COLS*HGC.localVolume*2 + 
+			c2*HGC.localVolume*2);
+      pointVec_dev = vec.D_elem() + mu*N_COLS*HGC.localVolume*2 + c1*HGC.localVolume*2;
+      qudaMemcpy(pointProp_host,pointVec_dev,HGC.localVolume*2*sizeof(Float),qudaMemcpyDeviceToHost); 
     }
   checkQudaError();
 }
@@ -37,12 +37,12 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int nu, int c2)
   for(int mu = 0 ; mu < N_SPINS ; mu++)
     for(int c1 = 0 ; c1 < N_COLS ; c1++){
       pointProp_dev = (this->d_elem + 
-		       mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume*2 + 
-		       nu*N_COLS*N_COLS*HGC_localVolume*2 + 
-		       c1*N_COLS*HGC_localVolume*2 + 
-		       c2*HGC_localVolume*2);
-      pointVec_dev = vec.D_elem() + mu*N_COLS*HGC_localVolume*2 + c1*HGC_localVolume*2;
-      qudaMemcpy(pointProp_dev,pointVec_dev,HGC_localVolume*2*sizeof(Float),
+		       mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume*2 + 
+		       nu*N_COLS*N_COLS*HGC.localVolume*2 + 
+		       c1*N_COLS*HGC.localVolume*2 + 
+		       c2*HGC.localVolume*2);
+      pointVec_dev = vec.D_elem() + mu*N_COLS*HGC.localVolume*2 + c1*HGC.localVolume*2;
+      qudaMemcpy(pointProp_dev,pointVec_dev,HGC.localVolume*2*sizeof(Float),
 		 qudaMemcpyDeviceToDevice); 
     }
   checkQudaError();
@@ -51,11 +51,11 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int nu, int c2)
 // Prop4D <- Vec4D (it)
 template<typename Float> 
 void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V4 = HGC.localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   static bool init_prop4D_vec4D = false;
@@ -83,11 +83,11 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, 
 //Prop4D <- Vec3D
 template<typename Float> 
 void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it, int nu, int c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V4 = HGC.localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   static bool init_prop4D_vec3D = false;
@@ -135,7 +135,7 @@ void PLEGMA_Propagator<Float>::pack_propagator_as_sink(PLEGMA_Propagator<Float> 
     vector1.absorb(in, sinktimeslice, isc/3, isc%3,true);
 
     for (int dt=0; dt<source_sink_separation; ++dt){
-      int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
+      int actualtimeslice= ((sinktimeslice-source_sink_separation+dt)+  HGC.totalL[DIM_T])%HGC.totalL[DIM_T];
       stmp.absorb(vector1, actualtimeslice, false);
     }
 
@@ -187,22 +187,22 @@ void PLEGMA_Propagator<Float>::rotateToPhysicalBase_host(int sign_int){
   imag_unit.real(0.0);
   imag_unit.imag(1.0);
 
-  for(int iv = 0 ; iv < HGC_localVolume ; iv++)
+  for(int iv = 0 ; iv < HGC.localVolume ; iv++)
     for(int c1 = 0 ; c1 < 3 ; c1++)
       for(int c2 = 0 ; c2 < 3 ; c2++){
 	      
 	for(int mu = 0 ; mu < 4 ; mu++)
 	  for(int nu = 0 ; nu < 4 ; nu++){
-	    //P[mu][nu].real() = this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume + nu*N_COLS*N_COLS*HGC_localVolume + c1*N_COLS*HGC_localVolume + c2*HGC_localVolume + iv)*2 + 0];
-	    //P[mu][nu].imag() = this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume + nu*N_COLS*N_COLS*HGC_localVolume + c1*N_COLS*HGC_localVolume + c2*HGC_localVolume + iv)*2 + 1]
-	    P[mu][nu].real(this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume + 
-				       nu*N_COLS*N_COLS*HGC_localVolume + 
-				       c1*N_COLS*HGC_localVolume + 
-				       c2*HGC_localVolume + iv)*2 + 0]);
-	    P[mu][nu].imag(this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume + 
-				       nu*N_COLS*N_COLS*HGC_localVolume + 
-				       c1*N_COLS*HGC_localVolume + 
-				       c2*HGC_localVolume + iv)*2 + 1]);
+	    //P[mu][nu].real() = this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume + nu*N_COLS*N_COLS*HGC.localVolume + c1*N_COLS*HGC.localVolume + c2*HGC.localVolume + iv)*2 + 0];
+	    //P[mu][nu].imag() = this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume + nu*N_COLS*N_COLS*HGC.localVolume + c1*N_COLS*HGC.localVolume + c2*HGC.localVolume + iv)*2 + 1]
+	    P[mu][nu].real(this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume + 
+				       nu*N_COLS*N_COLS*HGC.localVolume + 
+				       c1*N_COLS*HGC.localVolume + 
+				       c2*HGC.localVolume + iv)*2 + 0]);
+	    P[mu][nu].imag(this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume + 
+				       nu*N_COLS*N_COLS*HGC.localVolume + 
+				       c1*N_COLS*HGC.localVolume + 
+				       c2*HGC.localVolume + iv)*2 + 1]);
 	  }
 	
 	PT[0][0] = coeff * (P[0][0] + sign * ( imag_unit * P[0][2] ) + sign * ( imag_unit * P[2][0] ) - P[2][2]);
@@ -227,14 +227,14 @@ void PLEGMA_Propagator<Float>::rotateToPhysicalBase_host(int sign_int){
 
 	for(int mu = 0 ; mu < 4 ; mu++)
 	  for(int nu = 0 ; nu < 4 ; nu++){
-	    this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume + 
-			nu*N_COLS*N_COLS*HGC_localVolume + 
-			c1*N_COLS*HGC_localVolume + 
-			c2*HGC_localVolume + iv)*2 + 0] = PT[mu][nu].real();
-	    this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume + 
-			nu*N_COLS*N_COLS*HGC_localVolume + 
-			c1*N_COLS*HGC_localVolume + 
-			c2*HGC_localVolume + iv)*2 + 1] = PT[mu][nu].imag();
+	    this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume + 
+			nu*N_COLS*N_COLS*HGC.localVolume + 
+			c1*N_COLS*HGC.localVolume + 
+			c2*HGC.localVolume + iv)*2 + 0] = PT[mu][nu].real();
+	    this->h_elem[(mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume + 
+			nu*N_COLS*N_COLS*HGC.localVolume + 
+			c1*N_COLS*HGC.localVolume + 
+			c2*HGC.localVolume + iv)*2 + 1] = PT[mu][nu].imag();
 	  }
       }
 }
@@ -269,7 +269,7 @@ template<typename Float>
 void PLEGMA_Propagator3D<Float>::
 absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop, 
 			int timeslice){
-  int V3 = HGC_localVolume/HGC_localL[3];
+  int V3 = HGC.localVolume/HGC.localL[3];
   
   for(int mu = 0 ; mu < 4 ; mu++)
   for(int nu = 0 ; nu < 4 ; nu++)
@@ -281,10 +281,10 @@ absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop,
 		 nu*N_COLS*N_COLS*V3 + 
 		 c1*N_COLS*V3 + 
 		 c2*V3 + iv3)*2 + ipart] = 
-      prop.H_elem()[(mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume + 
-		     nu*N_COLS*N_COLS*HGC_localVolume + 
-		     c1*N_COLS*HGC_localVolume + 
-		     c2*HGC_localVolume + 
+      prop.H_elem()[(mu*N_SPINS*N_COLS*N_COLS*HGC.localVolume + 
+		     nu*N_COLS*N_COLS*HGC.localVolume + 
+		     c1*N_COLS*HGC.localVolume + 
+		     c2*HGC.localVolume + 
 		     timeslice*V3 + iv3)*2 + ipart];
   
   qudaMemcpy(this->d_elem,this->h_elem,
@@ -296,12 +296,12 @@ absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop,
 //Prop3D <- Vec4D
 template<typename Float> 
 void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2){
-  if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
-  bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+  if(global_it >= HGC.totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+  int my_it = global_it - HGC.procPosition[3] * HGC.localL[3];
+  bool is_myIt = (my_it >= 0) && ( my_it < HGC.localL[3] );
   this->activeTimeSlice = is_myIt;
-  int V3 = HGC_localVolume/HGC_localL[3];
-  int V4 = HGC_localVolume;
+  int V3 = HGC.localVolume/HGC.localL[3];
+  int V4 = HGC.localVolume;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
@@ -332,7 +332,7 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it
 template<typename Float> 
 void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int nu, int c2){
   this->activeTimeSlice = vec.includesActiveTimeSlice();
-  int V3 = HGC_localVolume/HGC_localL[3];
+  int V3 = HGC.localVolume/HGC.localL[3];
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   for(int mu = 0 ; mu < N_SPINS ; mu++)

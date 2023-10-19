@@ -53,17 +53,17 @@ namespace plegma {
     returnT writeFile(std::string filename, FILE_FORMAT format, argsT ... args) const {
       switch (format) {
       case ASCII_FORMAT:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to write file %s in ASCII format\n",filename.c_str());
 	return writeASCII(filename, args...);
       case HDF5_FORMAT:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in HDF5 format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to write file %s in HDF5 format\n",filename.c_str());
 	return writeHDF5(filename, args...);
       case LIME_FORMAT:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in LIME format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to write file %s in LIME format\n",filename.c_str());
 	return writeLIME(filename, args...);
       case DEFAULT_FORMAT:
       default:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to write file %s in DEFAULT format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to write file %s in DEFAULT format\n",filename.c_str());
 	return writeDEFAULT(filename, args...);
       }
     }
@@ -91,17 +91,17 @@ namespace plegma {
     returnT readFile(std::string filename, FILE_FORMAT format, argsT ... args) {
       switch (format) {
       case ASCII_FORMAT:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in ASCII format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to read file %s in ASCII format\n",filename.c_str());
 	return readASCII(filename, args...);
       case HDF5_FORMAT:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in HDF5 format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to read file %s in HDF5 format\n",filename.c_str());
 	return readHDF5(filename, args...);
       case LIME_FORMAT:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in LIME format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to read file %s in LIME format\n",filename.c_str());
 	return readLIME(filename, args...);
       case DEFAULT_FORMAT:
       default:
-	if(HGC_verbosity > 1) PLEGMA_printf("Going to read file %s in DEFAULT format\n",filename.c_str());
+	if(HGC.verbosity > 1) PLEGMA_printf("Going to read file %s in DEFAULT format\n",filename.c_str());
 	return readDEFAULT(filename, args...);
       }
     }

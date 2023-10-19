@@ -26,7 +26,7 @@ Float PLEGMA_Gauge<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
   this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
   auto tex = toTexture<gaugeTex>(*this);
   Float Q = calcTopoCharge<Float>(*tex, charge_def);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated topological charge is %.14f\n",Q);
+  if(HGC.verbosity>0) PLEGMA_printf("Calculated topological charge is %.14f\n",Q);
   return Q;
 }
 
@@ -35,7 +35,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaq(){
   this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
   auto tex = toTexture<gaugeTex>(*this);
   Float plaq = calculatePlaquette<Float,Float,gaugeTex<Float>>(*tex);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
+  if(HGC.verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
   return plaq;
 }
 
@@ -45,7 +45,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaqClover(){
   auto tex = toTexture<gaugeTex>(*this);
   Float plaqClover = calcPlaqClovDef<Float,Float>(*tex);
   Float plaq = calculatePlaquette<Float,Float,gaugeTex<Float>>(*tex);
-  if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette with clover is %f; diff with reference: %e\n",plaqClover, plaqClover-plaq);
+  if(HGC.verbosity>0) PLEGMA_printf("TEST: Calculated plaquette with clover is %f; diff with reference: %e\n",plaqClover, plaqClover-plaq);
   return plaqClover;
 }
 
@@ -67,7 +67,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaqShifts(){
       res.path(vspath, u_s, tmp);
       resV += res.sumRtraceU();
     }
-  Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
+  Float plaqShifts = resV/(HGC.totalVolume*N_COLS*6);
 
   this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
   auto tex = toTexture<gaugeTex>(*this);
@@ -90,7 +90,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaqStaples(){
   auto tex = toTexture<gaugeTex>(*this);
   Float plaq = calculatePlaquette<Float,Float,gaugeTex<Float>>(*tex);
 
-  if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette using staples is %f; diff with reference: %e\n", plaqStaples, plaqStaples-plaq);
+  if(HGC.verbosity>0) PLEGMA_printf("TEST: Calculated plaquette using staples is %f; diff with reference: %e\n", plaqStaples, plaqStaples-plaq);
   return plaqStaples;
 }
 
@@ -176,7 +176,7 @@ template<typename Float>
 void PLEGMA_Gauge<Float>::momPhase(Float phase[N_DIMS],int mom[N_DIMS]){
   std::complex<Float> scale[N_DIMS];
   for(int d=0; d<N_DIMS; d++) {
-    Float theta = 2.0*PI*((Float)mom[d])*phase[d]/((Float) HGC_totalL[d]);
+    Float theta = 2.0*PI*((Float)mom[d])*phase[d]/((Float) HGC.totalL[d]);
     scale[d] = {cos(theta), sin(theta)};
   }
   scaleDirWise(scale);

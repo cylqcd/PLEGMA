@@ -13,7 +13,7 @@ Float PLEGMA_U1Gauge<Float>::calculatePlaq(){
   this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
   auto tex = toTexture<u1gaugeTex>(*this);
   Float plaq = calculatePlaquette<Float,Float,u1gaugeTex<Float>>(*tex);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
+  if(HGC.verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
   return plaq;
 }
 
@@ -32,15 +32,15 @@ void PLEGMA_U1Gauge<Float>::modifyBoundaries(int mu, int nu, Float exparg){
 #endif
   if(last_node_in_mu){
     int x[4];
-    for(x[3]=0; x[3] < HGC_localL[3]; x[3]++)
-      for(x[2]=0; x[2] < HGC_localL[2]; x[2]++)
-	for(x[1]=0; x[1] < HGC_localL[1]; x[1]++)
-	  for(x[0]=0; x[0] < HGC_localL[0]; x[0]++){
-	    if(x[mu] == HGC_localL[mu]-1){
-	      size_t idx=((x[3]*HGC_localL[2]+x[2])*HGC_localL[1]+x[1])*HGC_localL[0]+x[0];
-	      size_t r=mu*HGC_localVolume+idx;
+    for(x[3]=0; x[3] < HGC.localL[3]; x[3]++)
+      for(x[2]=0; x[2] < HGC.localL[2]; x[2]++)
+	for(x[1]=0; x[1] < HGC.localL[1]; x[1]++)
+	  for(x[0]=0; x[0] < HGC.localL[0]; x[0]++){
+	    if(x[mu] == HGC.localL[mu]-1){
+	      size_t idx=((x[3]*HGC.localL[2]+x[2])*HGC.localL[1]+x[1])*HGC.localL[0]+x[0];
+	      size_t r=mu*HGC.localVolume+idx;
 	      if(nu > 0){
-		Float val = exparg*HGC_totalL[mu]*(HGC_procPosition[nu]*HGC_localL[nu] + x[nu]);
+		Float val = exparg*HGC.totalL[mu]*(HGC.procPosition[nu]*HGC.localL[nu] + x[nu]);
 		this->h_elem[2*r+0]=cos(val); this->h_elem[2*r+1]=sin(val);
 	      }
 	      else{
