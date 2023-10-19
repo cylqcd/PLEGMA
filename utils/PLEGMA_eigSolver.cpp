@@ -243,6 +243,7 @@ void EigSolver::initEigSolver(){
   primme_set_method(p.primme_method, &primme_pars);
 #elif QUDAEIG
   eig_param.eig_type = QUDA_EIG_TR_LANCZOS; // Up to now QUDA only provides the thick restarted Lanczos
+  eig_param.block_size = 1;
   if(p.spectrumPart == "SR") eig_param.spectrum = QUDA_SPECTRUM_SR_EIG;
   else if(p.spectrumPart == "LR") eig_param.spectrum = QUDA_SPECTRUM_LR_EIG;
   else PLEGMA_error("Not implemented");
