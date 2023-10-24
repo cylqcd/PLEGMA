@@ -5,6 +5,12 @@
 using namespace plegma;
 using namespace quda;
 
+//For calculating runtime.
+static std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;                 \
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back() 
+
 #ifdef HAVE_EIGENSOLVER
 
 static quda::QUDA_dirac *dOp;
@@ -94,11 +100,13 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   if(!isReadEigenVectors){
     initEigSolver();
     if(verbose) print();
-    computeEigVecs();
+    TIME(computeEigVecs());
   }
   else readEigenVectors(filenamePrefix);
   computeEigVals();    
-  if(isWriteEigenVectors) writeEigenVectors(filenamePrefix);
+  if(isWriteEigenVectors){
+    TIME(writeEigenVectors(filenamePrefix));
+  }  
   
   if(!isReadEigenVectors){
 #if defined(HAVE_ARPACK)
@@ -213,14 +221,14 @@ static void par_GlobalSumForDouble(void *sendBuf, void *recvBuf, int *count, pri
 void EigSolver::initEigSolver(){
 #ifdef HAVE_ARPACK
   int arpack_log_u = 9999;
-  if(!p.logFile.empty() && comm_rank() == 0){
+  /*if(!p.logFile.empty() && comm_rank() == 0){
     char *tmps = strdup(p.logFile.c_str());
     initlog_(&arpack_log_u, tmps, p.logFile.length());
     free(tmps);
     int msglvl0 = 0;//, msglvl1 = 1, msglvl2 = 2, msglvl3 = 3;
     int msglvl3 = 3;
     pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
-  }
+  }*/
 #elif HAVE_PRIMME
   primme_initialize(&primme_pars);
   primme_pars.matrixMatvec = applyOperator;
@@ -391,7 +399,7 @@ void EigSolver::computeEigVecs(){
   if(info == 1) PLEGMA_printf("Warning: Maximum number of iterations reached.\n");
   if(info == 3) PLEGMA_error("No shifts could be applied during implicit, Arnoldi update, try increasing NkV\n");
   int arpack_log_u = 9999;
-  if(!p.logFile.empty() && comm_rank() == 0)finilog_(&arpack_log_u);
+  //if(!p.logFile.empty() && comm_rank() == 0)finilog_(&arpack_log_u);
 
   free(bmat);
   free(howmany);
@@ -440,7 +448,7 @@ void EigSolver::computeEigVals(){
   std::sort(evalsOrdered.begin(), evalsOrdered.end());
   if(verbose)
     for (int j = 0; j < p.NeV; ++j)
-      PLEGMA_printf("Eval[%04d] = (%+e,%+e), Residual: %+e, Order Index: %d\n", j, std::get<0>(evalsOrdered[j]), std::get<1>(evalsOrdered[j]),
+      PLEGMA_printf("Eval[%04d] = (%+.15e,%+.15e), Residual: %+.15e, Order Index: %d\n", j, std::get<0>(evalsOrdered[j]), std::get<1>(evalsOrdered[j]),
 		 std::get<2>(evalsOrdered[j]), std::get<3>(evalsOrdered[j]));
 }
 
