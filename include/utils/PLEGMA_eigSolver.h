@@ -21,8 +21,8 @@
 #include <primme.h>
 #elif defined(HAVE_ARPACK)
 extern "C"{
-  extern int initlog_(int*, char*, int);
-  extern int finilog_(int*);
+  //extern int initlog_(int*, char*, int);
+  //extern int finilog_(int*);
   extern int pznaupd_(int *comm, int *ido, char *bmat, int *n, char *which, int *nev, double *tol,
 			    std::complex<double> *resid, int *ncv, std::complex<double> *v, int *ldv, 
 			    int *iparam, int *ipntr, std::complex<double> *workd, std::complex<double> *workl, 
@@ -33,7 +33,7 @@ extern "C"{
 			    int *ncv, std::complex<double> *v1, int *ldv1, int *iparam, int *ipntr, 
 			    std::complex<double> *workd, std::complex<double> *workl, int *lworkl, double *rwork, int *info,
 			    int howmany_size, int bmat_size, int which_size);
-  extern int pmcinitdebug_(int*,int*,int*,int*,int*,int*,int*,int*);
+  //extern int pmcinitdebug_(int*,int*,int*,int*,int*,int*,int*,int*);
 }
 #elif defined(QUDAEIG)
 #include <quda.h>

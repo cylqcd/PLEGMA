@@ -1,13 +1,12 @@
 #include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_mesons.cuh>
 using namespace plegma;
 
 template<typename FloatA, typename FloatB, typename FloatC, int COLS>
-__global__ void contract_mesons_new_device( propTex<FloatA> texProp1,
-					    propTex<FloatB> texProp2,
-					    Float2<FloatC> *block2,
-					    int it, int time_step, int maxT, int4 source,
-					    bool runFT, tex_mom_list moms, int ip){//
+__global__ void contract_mesons_open_device( propTex<FloatA> texProp1,
+					propTex<FloatB> texProp2,
+					Float2<FloatC> *block2,
+					int it, int time_step, int maxT, int4 source,
+					     bool runFT, tex_mom_list moms, int is){
 
   int grid3D = gridDim.x/time_step;
   int sid3D = (blockIdx.x % grid3D)*blockDim.x + threadIdx.x;
@@ -17,26 +16,22 @@ __global__ void contract_mesons_new_device( propTex<FloatA> texProp1,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   
-  register Float2<FloatC> accum=0;
+  register Float2<FloatC> accum = 0;
 
   if (sid3D < DGC_localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][COLS];
-    texProp1.get<COLS>(prop1,vid);
-    texProp2.get<COLS>(prop2,vid);
+    texProp1.get(prop1,vid);
+    texProp2.get(prop2,vid);
+    short int alpha = (is/N_SPINS/N_SPINS/N_SPINS)%N_SPINS;
+    short int beta = (is/N_SPINS/N_SPINS)%N_SPINS;
+    short int gamma = (is/N_SPINS)%N_SPINS;
+    short int delta = is%N_SPINS;
 #pragma unroll
-    for(int is = 0 ; is < N_SPINS*N_SPINS ; is++){
-      short int beta = mesons_indices[ip][is][0];
-      short int gamma = mesons_indices[ip][is][1];
-      short int delta = mesons_indices[ip][is][2];
-      short int alpha = mesons_indices[ip][is][3];
-      FloatC value = mesons_values[ip][is];
+    for(int b = 0 ; b < N_COLS ; b++){
 #pragma unroll
-      for(int b = 0 ; b < N_COLS ; b++){
-#pragma unroll
-	for(int a = 0 ; a < COLS; a++){ //
-	  accum = accum + value * prop1[alpha][beta][b][a] * conj(prop2[delta][gamma][b][a]);
-	}
+      for(int a = 0 ; a < COLS; a++){
+	accum = accum + prop1[alpha][beta][b][a] * conj(prop2[delta][gamma][b][a]);
       }
     }
   }
@@ -52,9 +47,9 @@ __global__ void contract_mesons_new_device( propTex<FloatA> texProp1,
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-void contract_mesons_new_host( ProfileStruct &ps,
+void contract_mesons_open_host( ProfileStruct &ps,
 			   PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
-			       PLEGMA_Correlator<FloatC>& corr, Float2<FloatC> *result, bool all_cols){ //
+			   PLEGMA_Correlator<FloatC>& corr, Float2<FloatC> *result, bool all_cols){
 
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
@@ -64,7 +59,7 @@ void contract_mesons_new_host( ProfileStruct &ps,
   size_t volume = corr.getVolSize()/t_size;
   int4 source = corr.getSource();
   auto moms = corr.getTexMomList();
-  int site_size = N_MESONS;
+  int site_size = N_SPINS*N_SPINS*N_SPINS*N_SPINS;
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -88,13 +83,13 @@ void contract_mesons_new_host( ProfileStruct &ps,
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
-    for(int ip=0; ip < N_MESONS; ip++) {
+    for(int ip=0; ip < site_size; ip++) {
       if(all_cols)
-	contract_mesons_new_device<FloatA, FloatB, FloatC, N_COLS>
+	contract_mesons_open_device<FloatA, FloatB, FloatC, N_COLS>
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms, ip);
       else
-	contract_mesons_new_device<FloatA, FloatB, FloatC, 1>
+	contract_mesons_open_device<FloatA, FloatB, FloatC, 1>
 	  <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	  (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms, ip);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
@@ -104,7 +99,7 @@ void contract_mesons_new_host( ProfileStruct &ps,
       
       if(runFT==true) {
 	int accumX = ps.tp.grid.x/time_step;
-	for(size_t v = 0 ; v < volume*std::min(t_size-it, time_step); v++){
+	for(size_t v = 0 ; v < volume*std::min(t_size-it, time_step); v++) {
 	  result[(it*volume+v)*site_size+ip] = 0;
 	  for(int j = 0 ; j < accumX; j++)
 	    result[(it*volume+v)*site_size+ip] += h_partial_block[v*accumX+j];
@@ -120,10 +115,10 @@ void contract_mesons_new_host( ProfileStruct &ps,
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
-static void contract_mesons_new(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
-				PLEGMA_Correlator<FloatC>& corr, bool all_cols){
+static void contract_mesons_open(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
+			    PLEGMA_Correlator<FloatC>& corr, bool all_cols){
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
-  int site_size = N_MESONS;
+  int site_size = N_SPINS*N_SPINS*N_SPINS*N_SPINS;
   
   if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
@@ -143,8 +138,8 @@ static void contract_mesons_new(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propaga
   ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
   
-  tuneAndRun( ps, "contract_mesons_new", contract_mesons_new_host<FloatA,FloatB,FloatC>,
-	      ps, prop1, prop2, corr, result, all_cols); //
+  tuneAndRun( ps, "contract_mesons_open", contract_mesons_open_host<FloatA,FloatB,FloatC>,
+	      ps, prop1, prop2, corr, result, all_cols);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);

@@ -29,16 +29,16 @@ void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
 			vectorTex<FloatV> &Phi, propTex<FloatP>& S1, propTex<FloatP>& S2){
 
   switch(listGammas.size){
-  case(1): V_kernels<(unsigned int)1,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
-  case(4): V_kernels<(unsigned int)4,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
-  case(9): V_kernels<(unsigned int)9,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
+    //case(1): V_kernels<(unsigned int)1,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
+    //case(4): V_kernels<(unsigned int)4,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
+    //case(9): V_kernels<(unsigned int)9,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   //case(4): V_kernels<(unsigned int)4,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(5): V_kernels<(unsigned int)5,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(6): V_kernels<(unsigned int)6,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(7): V_kernels<(unsigned int)7,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(8): V_kernels<(unsigned int)8,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(9): V_kernels<(unsigned int)9,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
-  // case(10): V_kernels<(unsigned int)10,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
+   case(10): V_kernels<(unsigned int)10,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(11): V_kernels<(unsigned int)11,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(12): V_kernels<(unsigned int)12,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(13): V_kernels<(unsigned int)13,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;

@@ -7,11 +7,13 @@
 #include <limits>
 #include <string.h>
 #include <PLEGMA_io.h>
+#include <communicator_quda.h>
+#include <comm_quda.h>
 
 //#define TIMING_REPORT
 using namespace plegma;
-extern Topology *default_topo;
 std::vector<std::string> HDF5::open_files;
+Communicator &get_current_communicator();
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
   HGC_hold_exit = false;
@@ -25,7 +27,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
 
-    HGC_default_topo = default_topo;
+    HGC_default_topo = get_current_communicator().default_topo;
     HGC_verbosity = verbosity;
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];

@@ -189,7 +189,7 @@ void threep_oneD(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& pro
   int myLocalT = corr.localT();
   int maxLocalT = myLocalT;
   MPI_Allreduce( &myLocalT, &maxLocalT, 1, MPI_Type(maxLocalT), MPI_MAX, HGC_fullComm);
-  ps.max_volume = HGC_localVolume3D*maxLocalT;
+  ps.max_volume = HGC_localVolume3D;
   ps.tune_globally = true;
   
   Float2<FloatC> *result = NULL;

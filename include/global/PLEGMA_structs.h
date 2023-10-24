@@ -27,6 +27,27 @@ inline std::istream& operator >> (std::istream &i, site &x){
 }
 
 
+struct momentum : std::array<int,3> {
+  momentum() = default;
+  momentum(const std::array<int,3>& val) : std::array<int,3>(val) {}
+};
+inline std::ostream& operator << (std::ostream &o, momentum &x){
+  o<<x[0];
+  for(int i=1; i<3; i++)   o<<"-"<<x[i];
+  return o;
+}
+inline std::istream& operator >> (std::istream &i, momentum &x){
+  for(int j=0; j<3; j++) {
+    bool check = static_cast<bool> (i >> x[j]);
+    if(!check) {
+      PLEGMA_warning("Not enough arguments to unpack momentum\n");
+      break;
+    }
+  }
+  return i;
+}
+
+
 // Global variable for mom list
 struct tex_mom_list {
   size_t Nmoms;
@@ -111,6 +132,7 @@ struct global_vars {
   }
   void copyToDevice() {
     for(size_t i = 0; i != globals.size(); i++) {
+      PLEGMA_printf("%s\n",globals[i].get_value().c_str());
       globals[i].copyToDeviceConstant();
     }
   }

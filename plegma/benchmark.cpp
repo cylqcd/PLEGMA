@@ -68,6 +68,7 @@ inline bool run(std::vector<std::string> run_for) {
 int main(int argc, char **argv) {
   
   static std::vector<std::string> listOpt = {"verbosity", "corr-space", "maxQsq"};
+  setbuf(stdout, NULL);
 
   initializeOptions(argc, argv, true, listOpt);
 
@@ -77,6 +78,21 @@ int main(int argc, char **argv) {
   
   initializePLEGMA();
 
+  if(run({"twop"})) {
+    PLEGMA_Propagator<double> prop_a,  prop_b;
+    site source;
+    source.fill(0);
+    PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
+    
+    // Benchmark Meson contration 
+    PLEGMA_benchmark(&corr,&PLEGMA_Correlator<double>::contractMesons,"Contraction mesons",prop_a, prop_b);
+
+    // Benchmark Baryons contractions 
+    //PLEGMA_benchmark(&corr,&PLEGMA_Correlator<float>::contractBaryons,"Contraction Baryons",prop_a, prop_b);
+
+  }
+
+  
   if(run({"twop","threep","PDFs","smearing"})) {
     PLEGMA_Gauge<double> gauge_a, gauge_b;
     PLEGMA_Vector<double> vector_a, vector_b;

@@ -375,7 +375,7 @@ int main(int argc, char **argv) {
     // set of parameters to tune with options
     auto mu_factor_ = variable(&mu_factor[mg_levels-1],"mu_factor",1.,101.,5.,true);
     auto coarse_solver_tol_ = variable(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
-    auto coarse_solver_ = variable(&coarse_solver[mg_levels-1],"Coarse solver", { QUDA_BICGSTAB_INVERTER, QUDA_GCR_INVERTER}, false);
+    //auto coarse_solver_ = variable(&coarse_solver[mg_levels-1],"Coarse solver", { QUDA_BICGSTAB_INVERTER, QUDA_GCR_INVERTER}, false);
 
     auto nu_pre_0 = variable(&nu_pre[0],"nu_pre_0",0,10,2, true);
     auto nu_post_0 = variable(&nu_post[0],"nu_post_0",1,10,1, true);
@@ -398,14 +398,14 @@ int main(int argc, char **argv) {
     auto block_1 = variable(&mg_block_volume[1],"block_1",{mg_block_volume[1]}, true);
 
     // Solver which control the set of parameters
-    auto solverT = solverTimings(solver, vectorIn, mu_factor_, coarse_solver_tol_, coarse_solver_,
+    auto solverT = solverTimings(solver, vectorIn, mu_factor_, coarse_solver_tol_,// coarse_solver_,
 				 nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0,
 				 nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1,
 				 nvec_0, nvec_1);
 
     // Splitting the parameters in smaller set and running nested minimizers
     // coarse, smoother_0, smoother_1 are indipendent minimizers calling solverT
-    auto coarse = minimizer(solverT, mu_factor_, coarse_solver_tol_, coarse_solver_);
+    auto coarse = minimizer(solverT, mu_factor_, coarse_solver_tol_);// coarse_solver_
     
     auto smoother_0 = minimizer(solverT, nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0);
     auto smoother_1 = minimizer(solverT, (1 < mg_levels-1)? true : false, //enabled only if needed
