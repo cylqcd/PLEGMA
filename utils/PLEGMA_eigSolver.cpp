@@ -75,11 +75,15 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
 #if defined(QUDAEIG)
   eig_inv_param = newQudaInvertParam();
   setInvertParam(eig_inv_param);
+  eig_inv_param.residual_type=QUDA_L2_ABSOLUTE_RESIDUAL;
+//  eig_inv_param.dagger=QUDA_DAG_YES;
   eig_inv_param.dslash_type = dslashType;
   eig_inv_param.solve_type = QUDA_DIRECT_SOLVE;
   eig_inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
   eig_inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
   eig_param.invert_param = &eig_inv_param;
+  eig_param.invert_param->cuda_prec_eigensolver = prec;
+  eig_param.invert_param->clover_cuda_prec_eigensolver = prec;
 #endif
   tmp1 = new PLEGMA_Vector<double>(DEVICE);
   tmp2 = new PLEGMA_Vector<double>(DEVICE);
@@ -257,6 +261,7 @@ void EigSolver::initEigSolver(){
   eig_param.check_interval = 10;
   eig_param.max_restarts = 1000;
   eig_param.cuda_prec_ritz = QUDA_DOUBLE_PRECISION;
+  eig_param.compute_gamma5= QUDA_BOOLEAN_FALSE;
   eig_param.use_norm_op = QUDA_BOOLEAN_TRUE; // put it on so it will do M^+ M
   eig_param.use_dagger = QUDA_BOOLEAN_FALSE;
   eig_param.compute_svd = QUDA_BOOLEAN_FALSE;
