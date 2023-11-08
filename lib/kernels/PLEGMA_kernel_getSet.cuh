@@ -772,7 +772,8 @@ namespace plegma {
       sidStride::shift<src>(dirs ...);
       return get(mu,nu,c1,c2);
     }
-    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS]) const {
+    template<int COLS>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][COLS]) const {
       #pragma unroll
       for(short mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
@@ -780,15 +781,16 @@ namespace plegma {
           #pragma unroll
 	  for(short c1 = 0 ; c1 < N_COLS ; c1++)
             #pragma unroll
-	    for(short c2 = 0 ; c2 < N_COLS ; c2++)
+	    for(short c2 = 0 ; c2 < COLS ; c2++)
 	      P[mu][nu][c1][c2] = get(mu, nu, c1, c2);
     }
-    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], const size_t& sid) {
+    template<int COLS>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][COLS], const size_t& sid) {
       sidStride::setSid(sid);
       get(P);
     }
-    template<get_from src, typename ...dir_t>
-    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], const size_t& sid, const dir_t&... dirs) {
+    template<get_from src, int COLS,typename ...dir_t>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][COLS], const size_t& sid, const dir_t&... dirs) {
       sidStride::setSid(sid);
       sidStride::shift<src>(dirs ...);
       get(P);

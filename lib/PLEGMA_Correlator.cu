@@ -4,6 +4,7 @@
 #include <string>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_mesonsNew.cuh>
+#include <PLEGMA_mesonsOpen.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <PLEGMA_threep.cuh>
 #include <functional>
@@ -40,10 +41,10 @@ void PLEGMA_Correlator<Float>::
 contractMesons(PLEGMA_Propagator<Float> &prop1,
 	       PLEGMA_Propagator<Float> &prop2 ){
 
-  shape = {10};
+  shape = {16};
   datasets =  {"twop_meson_1", "twop_meson_2"};
   groups =  {"mesons"};
-  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
+  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4,s12,s13,s23,s41,s42,s43";
   
   initialize();
   contract_mesons(prop1,prop2,*this);
@@ -53,15 +54,31 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
-		  PLEGMA_Propagator<Float> &prop2 ){
+		  PLEGMA_Propagator<Float> &prop2,
+		  bool all_cols){
 
-  shape = {10};
+  shape = {16};
   datasets =  {"twop_meson_new"};
   groups =  {"mesons"};
-  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4";
+  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4,s12,s13,s23,s41,s42,s43";
   
   initialize();
-  contract_mesons_new(prop1,prop2,*this);
+  contract_mesons_new(prop1,prop2,*this,all_cols);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2,
+		  bool all_cols){
+
+  shape = {4,4,4,4};
+  datasets =  {"twop_meson_open"};
+  groups =  {"mesons"};
+  description = "open_indeces, prop1_mu,nu prop2_ku,lu";
+  
+  initialize();
+  contract_mesons_open(prop1,prop2,*this,all_cols);
 }
 
 

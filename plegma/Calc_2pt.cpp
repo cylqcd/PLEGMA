@@ -27,18 +27,20 @@ int main(int argc, char **argv)
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
   bool run_ud = true;
-  HGC_options->set("run-ud", "Whether to run or not light quark flavors", verbosity, run_ud);
-  HGC_options->set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
-  HGC_options->set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
-  HGC_options->set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
-  HGC_options->set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
-  //=========================================================================================================//
+  std::string srcInputFile = "./input.src";
+  auto add_options = [&](Options& options) {
+    options.set("run-ud", "Whether to run or not light quark flavors", verbosity, run_ud);
+    options.set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
+    options.set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
+    options.set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
+    //options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
+    options.set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
+		     };
+ add_options(*HGC_options);
+   //=========================================================================================================//
   initializePLEGMA();
 
-  twop_filename += std::string("_") + ((nsmearGauss>0) ? "SS" : "LL") +
-    "_gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) +
-    "_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE);
-
+  std::string given_twop_filename = twop_filename;
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
     {
@@ -75,12 +77,23 @@ int main(int argc, char **argv)
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
 
+      //updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);     
       site& source = sourcePositions[isource];
       PLEGMA_Propagator<float> propUP(run_ud ? BOTH : NONE);
       PLEGMA_Propagator<float> propDN(run_ud ? BOTH : NONE);
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
+
+      char * src_string;
+      asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", source[0], source[1], source[2], source[3]);
+      twop_filename = given_twop_filename + std::string("_") + ((nsmearGauss>0) ? "SS" : "LL") +
+	"_gN" + std::to_string(nsmearGauss) + "a" + convNumToStr(alphaGauss) +
+	"_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE) + src_string + ".h5";
+      free(src_string);
+
+      if(access( twop_filename.c_str(), F_OK ) != -1)
+	continue;
 
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
 				 // ensuring mu value
