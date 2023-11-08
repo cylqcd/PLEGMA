@@ -130,6 +130,11 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     field_name = "PLEGMA_GAUGE3D";
     setSiteShape({N_DIMS, N_COLS, N_COLS});
     break;
+  case GAUGEU1:
+    initialize(alloc_flag, N_DIMS, HGC_localVolume);
+    field_name = "PLEGMA_GAUGEU1";
+    setSiteShape({N_DIMS});
+    break;    
   case VECTOR:
     initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_VECTOR";

@@ -239,6 +239,20 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
 
 template<typename Float>
 static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *limereader, Float *data, int dof){
+  bool cmplx;
+  n_uint64_t lime_data_size = limeReaderBytes(limereader);
+  n_uint64_t expected = HGC_totalVolume*dof;
+  if(lime_data_size/expected==2) {
+    cmplx = true;
+  }
+  else if(lime_data_size/expected==1){
+    PLEGMA_warning("Assuming real-only field in lime file\n");
+    cmplx = false;
+  }
+  else {
+    PLEGMA_error("Wrong size\n");
+  }
+
 #ifdef	MULTI_GPU
   MPI_Offset offset;
   // Read 1 byte to set file-pointer to start of binary data
@@ -252,8 +266,8 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
 #endif
 
   Float *ftmp;
-  long int sizeVec=((long int) dof)*HGC_localVolume;
-  hostMalloc(ftmp, sizeVec*2*sizeof(Float));
+  long int sizeVec=((long int) dof)*HGC_localVolume*(cmplx? 2:1);
+  hostMalloc(ftmp, sizeVec*sizeof(Float));
 
 #ifdef	MULTI_GPU
   MPI_Datatype subblock;  //MPI-type, (N_DIMS+1)d subarray
@@ -265,7 +279,7 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
     lsizes[i] = HGC_localL[N_DIMS-1-i];
     starts[i] = HGC_procPosition[N_DIMS-1-i]*HGC_localL[N_DIMS-1-i];
   }
-  lsizes[N_DIMS] = sizes[N_DIMS] = dof*2;
+  lsizes[N_DIMS] = sizes[N_DIMS] = dof*(cmplx? 2:1);
   starts[N_DIMS] = 0;
 
   MPI_Type_create_subarray(N_DIMS+1,sizes,lsizes,starts,MPI_ORDER_C,MPI_Type(data),&subblock);
@@ -274,28 +288,33 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
   MPI_File_open(HGC_fullComm, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifid);
   MPI_File_set_view(mpifid, offset, MPI_Type(data), subblock, "native", MPI_INFO_NULL);
 
-  if(sizeVec*2 > 2147483648) PLEGMA_warning("Be careful for possible integer overflow in MPI_File_read_all function");
+  if(sizeVec > 2147483648) PLEGMA_warning("Be careful for possible integer overflow in MPI_File_read_all function");
       
-  if(MPI_File_read_all(mpifid, ftmp, sizeVec*2, MPI_Type(data), &status) == 1)
+  if(MPI_File_read_all(mpifid, ftmp, sizeVec, MPI_Type(data), &status) == 1)
     PLEGMA_error("Error in MPI_File_read_all\n");
 #else
-  if(fread(ftmp, sizeof(Float), sizeVec*2, fid) != sizeVec*2) {
+  if(fread(ftmp, sizeof(Float), sizeVec, fid) != sizeVec) {
     PLEGMA_error("Error, could not read proper amount of data");
   }
 #endif
   if(!isBigEndian()){
-    if(sizeof(Float) == 8)swap_8((double*)ftmp,sizeVec*2);
-    else if(sizeof(Float) == 4) swap_4((float*)ftmp,sizeVec*2);
+    if(sizeof(Float) == 8)swap_8((double*)ftmp,sizeVec);
+    else if(sizeof(Float) == 4) swap_4((float*)ftmp,sizeVec);
     else PLEGMA_error("Cannot byte swap with this precision");
   }
 
   for(size_t i = 0; i < HGC_localVolume; i++) {
     for(int s = 0; s < dof; s++) {
-      data[(s*HGC_localVolume + i)*2 + 0] = ftmp[((long int) i)*dof*2 +s*2+0];
-      data[(s*HGC_localVolume + i)*2 + 1] = ftmp[((long int) i)*dof*2 +s*2+1];
+      if(cmplx){
+        data[(s*HGC_localVolume + i)*2 + 0] = ftmp[((long int) i)*dof*2 +s*2+0];
+        data[(s*HGC_localVolume + i)*2 + 1] = ftmp[((long int) i)*dof*2 +s*2+1];
+      } else {
+	data[(s*HGC_localVolume + i)*2 + 0] = ftmp[((long int) i)*dof +s];
+	data[(s*HGC_localVolume + i)*2 + 1] = 0;
+      }
     }
   }
-  hostFree(ftmp, sizeVec*2*sizeof(Float));
+  hostFree(ftmp, sizeVec*sizeof(Float));
   MPI_File_close(&mpifid);
   MPI_Type_free(&subblock);
 }
