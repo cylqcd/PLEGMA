@@ -84,6 +84,27 @@ contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
+contractMesons1ps(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2,
+		  PLEGMA_Gauge<Float> &gauge,
+		  bool all_cols){
+
+  shape = {N_DIMS};
+  datasets = {"twop_meson_1ps"};
+  groups =  {"mesons"};
+  description = "x,y,z,t";
+  initialize();
+
+  gauge.communicateSideGhost();
+  prop1.communicateGhost();
+  prop2.communicateGhost();
+  
+  mesons_noe(*this,prop1,prop2,gauge,all_cols);
+}
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
 contractBaryons(PLEGMA_Propagator<Float> &prop1,
 		PLEGMA_Propagator<Float> &prop2 ){
 

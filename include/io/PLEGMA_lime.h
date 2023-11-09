@@ -250,7 +250,8 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
     cmplx = false;
   }
   else {
-    PLEGMA_error("Wrong size\n");
+    cmplx = true;
+    PLEGMA_warning("Wrong size %l != %l\n", lime_data_size, expected);
   }
 
 #ifdef	MULTI_GPU

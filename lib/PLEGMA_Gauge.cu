@@ -273,6 +273,11 @@ void PLEGMA_Gauge<Float>::gluonField(PLEGMA_Gauge<Float> &uIn){
   gluonField_k( toField2<gauge2>(*this), toField2<gauge2>(uIn));
 }
 
+template<typename Float>
+void PLEGMA_Gauge<Float>::qedPhase(PLEGMA_GaugeU1<Float> &uIn, Float phase){
+  //qedPhase_k( toField2<gauge2>(*this), toField2<gaugeU12>(uIn), Float phase);
+}
+
 template class PLEGMA_Gauge<float>;
 template class PLEGMA_Gauge<double>;
 

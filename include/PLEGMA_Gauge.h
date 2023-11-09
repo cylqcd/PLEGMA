@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h>
+#include <PLEGMA_GaugeU1.h>
 #include "complex"
 
 #ifndef _PLEGMA_GAUGE_H
@@ -42,6 +43,7 @@ namespace plegma {
     void momPhase(Float phase[N_DIMS],int mom[N_DIMS]);
     void gFixingLandau(PLEGMA_Gauge<Float> &uIn,Float overelaxPar=0.2,Float tolerance=1.0e-12,int maxIter=10000, int seedOverRelax=123456);
     void gluonField(PLEGMA_Gauge<Float> &uIn);
+    void qedPhase(PLEGMA_GaugeU1<Float> &uIn, Float phase);
   };
 
   /////////////////////////////////////

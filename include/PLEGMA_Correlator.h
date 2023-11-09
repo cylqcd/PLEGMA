@@ -202,6 +202,11 @@ namespace plegma {
 			   PLEGMA_Propagator<Float> &prop2,
 			   bool all_cols=true);
 
+    void contractMesons1ps(PLEGMA_Propagator<Float> &prop1,
+			   PLEGMA_Propagator<Float> &prop2,
+			   PLEGMA_Gauge<Float> &gauge,
+			   bool all_cols=true);
+
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2);
     
