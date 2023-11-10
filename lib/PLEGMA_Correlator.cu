@@ -7,6 +7,7 @@
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_TMDWF.cuh>
 #include <PLEGMA_mesonsNew.cuh>
+#include <PLEGMA_mesonsOpen.cuh>
 #include <PLEGMA_mesonsAll.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <PLEGMA_threep.cuh>
@@ -70,6 +71,21 @@ contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 
   initialize();
   contract_mesons_new(prop1,prop2,*this);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2,
+		  bool all_cols){
+
+  shape = {4,4,4,4};
+  datasets =  {"twop_meson_open"};
+  groups =  {"mesons"};
+  description = "open_indeces, prop1_mu,nu prop2_ku,lu";
+  
+  initialize();
+  contract_mesons_open(prop1,prop2,*this,all_cols);
 }
 
 template<typename Float>

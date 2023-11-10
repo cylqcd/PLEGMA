@@ -65,7 +65,16 @@ int main(int argc, char **argv)
 
   //Initializing solver.
   updateOptions(LIGHT);
-  TIME(QUDA_solver solver(mu));
+  TIME(QUDA_solver *solver = new QUDA_solver(mu));
+  QudaInvertParam inv_params = solver->getInvParams();
+
+  QUDA_dirac *D = nullptr;
+  if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
+    D = new QUDA_dirac(QUDA_CLOVER_WILSON_DSLASH);
+  else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
+    D = new QUDA_dirac(QUDA_WILSON_DSLASH);
+  else
+    PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
 
   //Initializing stochastic vector using given random seed.
   PLEGMA_Vector<double> vector_stoc;
@@ -132,17 +141,18 @@ int main(int argc, char **argv)
         //double eigVal = std::get<0>(eigSol->getEigVals()[i]); //Doesn't this only get the real part of the eigenvector? Only real eigenvalues if Dirac operator is hermitian. However, here we have to take the twisted mass parameter into account!
         long int iorder = std::get<3>(eigSol->getEigVals()[i]);
         double *eigVec_tmp = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
-	PLEGMA_memcpy(eigVec.D_elem(), eigVec_tmp, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
+	      PLEGMA_memcpy(eigVec.D_elem(), eigVec_tmp, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
 //        cudaMemcpy(eigVec.D_elem(), eigVec_tmp, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice); //Copy eigVec_tmp (host) to eigVec (device).
         //checkCudaError();
-        
+	      //TIME(D->apply<M>(eigVecD,eigVec));
+	
         for(int j=0; j < eigSol->getEigVals().size(); j++){
           PLEGMA_ScattCorrelator<double> corr(site({0,0,0,tsink}), maxQsq);
           //std::vector<GAMMAS_SCATT> glist_src={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
           //std::vector<GAMMAS_SCATT> glist_sink={ID};
           std::string dataset_name = std::to_string(i) + std::to_string(j);
           //TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
-	  TIME(corr.initialize_diagram(glist_test, glist_sink, "P"));
+	        TIME(corr.initialize_diagram(glist_test, glist_sink, "P"));
 
           //double eigValP = std::get<0>(eigSol->getEigVals()[j]); 
           iorder = std::get<3>(eigSol->getEigVals()[j]);
@@ -150,14 +160,13 @@ int main(int argc, char **argv)
           PLEGMA_memcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
 //          cudaMemcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
           //checkCudaError();
-          eigVecP.apply_gamma5(); //Make eigVecP a left eigenvector by applying gamma5.
-	  TIME(D->apply<M>(eigVecD,eigVecP));
-	  
+          eigVecP.apply_gamma5(); //Make eigVecP a right eigenvector by applying gamma5.
+          TIME(D->apply<M>(eigVecD,eigVecP));
           //PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
           //PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
 
           //TIME(corr.PhiPhi(eigVec, glist_src, eigVecP));
-	  TIME(corr.PhiPhi(eigVec, glist_test, eigVecD));
+	        TIME(corr.PhiPhi(eigVec, glist_test, eigVecD));
           corr.setDatasets((std::vector<std::string>) {dataset_name});
           TIME(corr.writeHDF5( outfilename )); 
         }
