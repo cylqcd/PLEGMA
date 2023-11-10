@@ -4,6 +4,7 @@ set (PLEGMA_OBJS
   PLEGMA_Propagator.cu
   PLEGMA_Vector.cu
   PLEGMA_Gauge.cu
+  PLEGMA_GaugeU1.cu
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu

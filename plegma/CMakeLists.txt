@@ -46,6 +46,9 @@ target_link_libraries(pion_mix ${PLEGMA_LIBS})
 cuda_add_executable(pion_mix_LIBE pion_mix_LIBE.cpp)
 target_link_libraries(pion_mix_LIBE ${PLEGMA_LIBS})
 
+cuda_add_executable(pion_mix_qed pion_mix_qed.cpp)
+target_link_libraries(pion_mix_qed ${PLEGMA_LIBS})
+
 cuda_add_executable(Topo Topo.cpp)
 target_link_libraries(Topo ${PLEGMA_LIBS})
 

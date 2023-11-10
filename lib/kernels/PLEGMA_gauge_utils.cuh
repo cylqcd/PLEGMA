@@ -31,8 +31,8 @@ static void scale_dir_wise(gauge2<FloatGauge> gauge, Float* scale){
 }
 
 
-template< typename Float, typename FloatGauge>
-__global__ void qedPhase_kernel(gauge2<FloatGauge> gauge, gaugeU12<FloatGauge> gaugeU1, Float phase){
+template< typename Float>
+__global__ void qedPhase_kernel(gauge2<Float> gauge, gaugeU12<Float> gaugeU1, Float phase){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= gauge.volume()) return;
@@ -50,10 +50,8 @@ __global__ void qedPhase_kernel(gauge2<FloatGauge> gauge, gaugeU12<FloatGauge> g
 }
 
 
-template<typename Float, typename FloatGauge>
-static void qedPhase_k(gauge2<FloatGauge> gauge, gaugeU12<FloatGauge> gaugeU1, Float phase){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (gauge.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
-  qedPhase_kernel<Float,FloatGauge><<<gridDim,blockDim>>>(gauge, gaugeU1, phase);
-  checkCudaError();
+template<typename Float>
+static void qedPhase_k(gauge2<Float> gauge, gaugeU12<Float> gaugeU1, Float phase){
+  ProfileStruct ps(gauge.volume());
+  tuneAndRun(ps, "qedPhase_kernel", qedPhase_kernel<Float>, gauge, gaugeU1, phase);
 }

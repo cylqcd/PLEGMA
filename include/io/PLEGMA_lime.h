@@ -241,7 +241,7 @@ template<typename Float>
 static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *limereader, Float *data, int dof){
   bool cmplx;
   n_uint64_t lime_data_size = limeReaderBytes(limereader);
-  n_uint64_t expected = HGC_totalVolume*dof;
+  n_uint64_t expected = HGC_totalVolume*dof*8;
   if(lime_data_size/expected==2) {
     cmplx = true;
   }
@@ -251,7 +251,7 @@ static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *l
   }
   else {
     cmplx = true;
-    PLEGMA_warning("Wrong size %l != %l\n", lime_data_size, expected);
+    PLEGMA_warning("Wrong size %lu != %lu\n", lime_data_size, expected);
   }
 
 #ifdef	MULTI_GPU
