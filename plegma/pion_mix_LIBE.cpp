@@ -50,6 +50,8 @@ int main(int argc, char **argv)
   int ndmus = dmus.size();
   int ndks = dks.size();
   int ndms = ndmus+ndks;
+  double kappa0 = kappa;
+  double mass0 = mass;
 
   srand(rand_seed1);
   std::vector<int> seeds;
@@ -96,7 +98,7 @@ int main(int argc, char **argv)
 	if(mu!=mus[imu]){
 	  mu = mus[imu];
 	  PLEGMA_printf("\n ### Updating solver ###\n\n");
-	  solver.UpdateSolver();
+	  TIME(solver.UpdateSolver());
 	}    
 
 	for(int dits = 0; dits < dnts; dits++){
@@ -206,13 +208,13 @@ int main(int argc, char **argv)
       
 	for(int imu=0; imu<nmus; imu++){
 	  mu = mus[imu]+mus[imu]*dmu;
-	  if(kappa == -1.0) {
-	    mass = mass+dk;
+	  if(kappa0 == -1.0) {
+	    mass = mass0+dk;
 	  } else {
-	    kappa = kappa+dk;
+	    kappa = kappa0+dk;
 	  }
 	  PLEGMA_printf("\n ### Updating solver ###\n\n");
-	  solver.UpdateSolver();    
+	  TIME(solver.UpdateSolver());    
 
 	  for(int dits = 0; dits < dnts; dits++){
 	    int its = its2+dits;
@@ -244,13 +246,7 @@ int main(int argc, char **argv)
 	      prop1.absorb(vectortmp1, spinindex, 0);
 	    }
 	    prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
-	    prop1.applyBoundaries_device(tsink);
-	
-	    char * mu_string;
-	    asprintf(&mu_string, "%+.4e_%+.4e", mus[imu], mus[imu]);
-	    std::string dataset = mu_string;
-	    free(mu_string);
-	  
+	    prop1.applyBoundaries_device(tsink);	  
 	    prop1.unload();
 	    dprops.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
 	    dprops[imu*dnts+dits]->copy(prop1, HOST);
