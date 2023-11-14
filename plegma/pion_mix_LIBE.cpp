@@ -151,7 +151,7 @@ int main(int argc, char **argv)
 	  corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
 	  TIME(corr.writeHDF5( outfilename ));
 
-	  prop1.unload();
+	  TIME(prop1.unload());
 	  props.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
 	  props[imu*dnts+dits]->copy(prop1, HOST);
 	}
@@ -175,10 +175,10 @@ int main(int argc, char **argv)
       
 	for(int imu1=0; imu1<nmus; imu1++){
 	  prop1.copy(*props[imu1*dnts+dits], HOST);
-	  prop1.load();
+	  TIME(prop1.load());
 	  for(int imu2=imu1+1; imu2<nmus; imu2++){
 	    prop2.copy(*props[imu2*dnts+dits], HOST);
-	    prop2.load();
+	    TIME(prop2.load());
 	  
 	    char * mu_string;
 	    asprintf(&mu_string, "%+.4e_%+.4e", mus[imu1], mus[imu2]);
@@ -246,13 +246,69 @@ int main(int argc, char **argv)
 	      prop1.absorb(vectortmp1, spinindex, 0);
 	    }
 	    prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
-	    prop1.applyBoundaries_device(tsink);	  
-	    prop1.unload();
+	    prop1.applyBoundaries_device(tsink);
+
+	    char * mu_string;
+	    asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu], mus[imu],dmu,dk);
+	    std::string dataset = mu_string;
+	    free(mu_string);
+	  
+	    PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
+	    TIME(corr.contractMesonsNew(prop1, prop1, false));
+	    corr.setDatasets((std::vector<std::string>) {dataset});
+	    TIME(corr.writeHDF5( outfilename ));
+	    TIME(corr.contractMesonsOpen(prop1, prop1, false));
+	    corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	    TIME(corr.writeHDF5( outfilename ));
+	    TIME(corr.contractMesons1ps(prop1, prop1, gauge, false));
+	    corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
+	    TIME(corr.writeHDF5( outfilename ));
+	    
+	    TIME(prop1.unload());
 	    dprops.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
 	    dprops[imu*dnts+dits]->copy(prop1, HOST);
 	  }
 	}
-	
+
+	for(int dits = 0; dits < dnts; dits++){
+	  int its = its2+dits;
+	  if (its>=nts) break;
+	  int tsink = tSinks[its];
+      
+	  char * src_string;
+	  asprintf(&src_string, "_id%02d_st%03d", its, tsink);
+	  std::string outfilename = twop_filename + src_string + ".h5";
+	  free(src_string);
+      
+	  PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
+      
+	  PLEGMA_Propagator<double> prop1;
+	  PLEGMA_Propagator<double> prop2;
+      
+	  for(int imu1=0; imu1<nmus; imu1++){
+	    prop1.copy(*dprops[imu1*dnts+dits], HOST);
+	    TIME(prop1.load());
+	    for(int imu2=imu1+1; imu2<nmus; imu2++){
+	      prop2.copy(*dprops[imu2*dnts+dits], HOST);
+	      TIME(prop2.load());
+	  
+	      char * mu_string;
+	      asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu1], mus[imu2],dmu,dk);
+	      std::string dataset = mu_string;
+	      free(mu_string);
+	  
+	      TIME(corr.contractMesonsNew(prop1, prop2, false));
+	      corr.setDatasets((std::vector<std::string>) {dataset});
+	      TIME(corr.writeHDF5( outfilename ));
+	      TIME(corr.contractMesonsOpen(prop1, prop2, false));
+	      corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	      TIME(corr.writeHDF5( outfilename ));
+	      TIME(corr.contractMesons1ps(prop1, prop2, gauge, false));
+	      corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
+	      TIME(corr.writeHDF5( outfilename ));
+	    }
+	  }
+	}
 
 	for(int dits = 0; dits < dnts; dits++){
 	  int its = its2+dits;
@@ -271,10 +327,10 @@ int main(int argc, char **argv)
       
 	  for(int imu1=0; imu1<nmus; imu1++){
 	    prop1.copy(*props[imu1*dnts+dits], HOST);
-	    prop1.load();
+	    TIME(prop1.load());
 	    for(int imu2=0; imu2<nmus; imu2++){
 	      prop2.copy(*dprops[imu2*dnts+dits], HOST);
-	      prop2.load();
+	      TIME(prop2.load());
 	  
 	      char * mu_string;
 	      asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e", mus[imu1], mus[imu2],dmu,dk);

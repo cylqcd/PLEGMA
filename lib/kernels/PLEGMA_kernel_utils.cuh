@@ -483,8 +483,8 @@ namespace plegma {
 
   template<int COLS, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
   __inline__ __device__ void partial_trace_mul_Prop_G_Prop_meson(Float2<FloatA> A[N_SPINS][N_SPINS],
-								 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
-								 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+								 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][COLS],
+								 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][COLS],
 								 Float2<FloatD> D[N_COLS][N_COLS]){
     if(isGdag) Gdag(D);
 #pragma unroll

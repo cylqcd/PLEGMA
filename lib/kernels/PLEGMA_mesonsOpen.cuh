@@ -21,8 +21,8 @@ __global__ void contract_mesons_open_device( propTex<FloatA> texProp1,
   if (sid3D < DGC_localVolume3D){
     Float2<FloatA> prop1[N_SPINS][N_SPINS][N_COLS][COLS];
     Float2<FloatB> prop2[N_SPINS][N_SPINS][N_COLS][COLS];
-    texProp1.get(prop1,vid);
-    texProp2.get(prop2,vid);
+    texProp1.get<COLS>(prop1,vid);
+    texProp2.get<COLS>(prop2,vid);
     short int alpha = (is/N_SPINS/N_SPINS/N_SPINS)%N_SPINS;
     short int beta = (is/N_SPINS/N_SPINS)%N_SPINS;
     short int gamma = (is/N_SPINS)%N_SPINS;
