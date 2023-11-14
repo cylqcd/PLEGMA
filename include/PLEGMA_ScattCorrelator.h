@@ -198,7 +198,7 @@ namespace plegma {
      *  @param PLEGMA_Propagator<Float> &S3: propagator 3: won't be transposed
     **/
     void T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3 );
-    void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 );
+    void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 , bool transpQ = false);
 
     //manipulation
     //Note that in the case of oet B, W diagram g0 refers not to gamma_i2 but to gamma_f2

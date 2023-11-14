@@ -334,7 +334,7 @@ void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1) {
+void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1, bool transpQ) {
 
   int n_gammas = Gammas.size();
   this->GList.clear();
@@ -354,6 +354,9 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
     assert(this->source[i]==0);
 
   PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
+  if(transpQ){
+    this->apply_sign_transp(0);
+  }
 }
 //This routine filters the source time-slice from a PLEGMA_ScattCorrelator
 //object: i.e. it return all the momenta, gamma, spin, real-imag components
@@ -2370,7 +2373,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( std::vector<PLEGMA_Vector<Float>
       //PhixGf2xPhi
       //pipi_aux.PhiPhi( Phi_0[beta], this->GList[1], Phi_1[alfa]); //T x N_moms x n_gammas_f2
       std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
-      pipi_aux.PhiPhi( phi0beta, tmpGf2, phi1alfa); //T x N_moms x n_gammas_f2
+      pipi_aux.PhiPhi( phi0beta, tmpGf2, phi1alfa, true); //T x N_moms x n_gammas_f2
     
       if(i_pi2==-1){
         for( int im=0; im<N_moms; ++im)
@@ -2430,7 +2433,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLE
     std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
     double norm1=Phi_0.norm();
     double norm2=Phi_1.norm();
-    pipi_aux.PhiPhi( Phi_0, tmpGf2, Phi_1); //T x N_moms x n_gammas_f2
+    pipi_aux.PhiPhi( Phi_0, tmpGf2, Phi_1, true); //T x N_moms x n_gammas_f2
     Float g[2];
     g[0]=-1;//eq 13
     g[1]=0;
@@ -2471,7 +2474,7 @@ void PLEGMA_ScattCorrelator<Float>::Loop_diagrams( PLEGMA_Vector<Float> &Phi_0, 
   clear_output(!accum);
 
   PLEGMA_ScattCorrelator<Float> auxPhiPhi(this->source, pList(), this->getTotalT());
-  auxPhiPhi.PhiPhi(Phi_0, GList[0], Phi_1);
+  auxPhiPhi.PhiPhi(Phi_0, GList[0], Phi_1, true);
   x_pe_sy(this->H_elem(), (Float) -1., auxPhiPhi.H_elem(), this->getTotalSize());
 }
 
