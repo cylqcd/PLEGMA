@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   //Initialize gamma list.
   std::vector<GAMMAS_SCATT> glist_src={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
   std::vector<GAMMAS_SCATT> glist_sink={ID};
-  std::vector<GAMMAS_SCATT> glist_test={ID};
+  std::vector<GAMMAS_SCATT> glist_test={G_5};
 
   //Eigensolver to get eigenvalues
   #if defined(HAVE_EIGENSOLVER)
@@ -160,10 +160,11 @@ int main(int argc, char **argv)
           PLEGMA_memcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
 //          cudaMemcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
           //checkCudaError();
-          eigVecP.apply_gamma5(); //Make eigVecP a right eigenvector by applying gamma5.
+          //eigVecP.apply_gamma5(); //Make eigVecP a right eigenvector by applying gamma5.
           TIME(D->apply<M>(eigVecD,eigVecP));
-          //PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
-          //PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
+          PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
+          PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
+          PLEGMA_printf("eigVecDNorm: %f\n", eigVecD.norm());
 
           //TIME(corr.PhiPhi(eigVec, glist_src, eigVecP));
 	        TIME(corr.PhiPhi(eigVec, glist_test, eigVecD));
