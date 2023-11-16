@@ -28,12 +28,6 @@ int main(int argc, char **argv)
   int nroots=2;
   int rand_seed1=1234;
   HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
-  std::vector<double> mus;
-  HGC_options->set("extra-mu", "List of additional mu to run", verbosity, mus);
-  std::vector<double> dmus;
-  HGC_options->set("dmu", "dmu used for LIBE", verbosity, dmus);
-  std::vector<double> dks;
-  HGC_options->set("dkappa", "dkappa used for LIBE", verbosity, dks);
   std::vector<double> des;
   HGC_options->set("dqed", "dqed used for LIBE", verbosity, des);
   int nqed;
@@ -42,19 +36,34 @@ int main(int argc, char **argv)
   HGC_options->set("qed-filename", "The path to the QED field", verbosity, qedfile);
   int dnts = 2;
   HGC_options->set("nts_inner", "Number of timeslices to run in the inner loop", verbosity, dnts);
+  std::vector<double> mul;
+  HGC_options->set("extra-mul", "List of additional mu to run", verbosity, mul);
+  std::vector<double> muh;
+  HGC_options->set("muh", "List of additional mu to run", verbosity, muh);
 
   //=========================================================================================================//
   initializePLEGMA();
 
-  mus.insert(mus.begin(), mu);
-  int nmus = mus.size();
-  int nts  = tSinks.size();
+  mul.insert(mul.begin(), mu);
+  int nmul = mul.size();
+  int nmuh = muh.size();
+  int nts = tSinks.size();
   int ndes = des.size();
+
+  std::vector<double> mus;
+  for(int i=0; i<nmul; i++) {
+    mus.push_back(mul[i]);
+  }
+  for(int i=0; i<nmuh; i++) {
+    mus.push_back(muh[i]);
+  }
+  int nmus = mus.size();
   
   srand(rand_seed1);
   std::vector<int> seeds;
   for(int i=0; i<nts; i++) seeds.push_back(rand());
-
+  seeds[0] = rand_seed1;
+  
   double min_mu=mu;
   for(int i=0; i<nmus; i++) {
     if(min_mu>abs(mus[i])){
@@ -91,23 +100,30 @@ int main(int argc, char **argv)
 
       //gaugeU1.calculatePlaq();
 	
-      for(int ide=0; ide<ndes; ide++){
+      int its2=0;
+      while(its2 < nts){
+	for(int ide=0; ide<ndes; ide++){
 
-	PLEGMA_Gauge<double> gauge2;
-	gauge2.copy(gauge);
-	double phase = des[ide];
-	gauge2.qedPhase(gaugeU1, phase);
-	initGaugeQuda(gauge2, true);
-	plaqQuda();
+	  PLEGMA_Gauge<double> gauge2;
+	  gauge2.copy(gauge);
+	  double phase = des[ide];
+	  gauge2.qedPhase(gaugeU1, phase);
+	  gauge2.calculatePlaq();
+	  initGaugeQuda(gauge2, true);
+	  plaqQuda();
 
-	if(link_recon==QUDA_RECONSTRUCT_8 or link_recon_sloppy==QUDA_RECONSTRUCT_8 or link_recon_precondition==QUDA_RECONSTRUCT_8) {
-	  PLEGMA_error("QED does not support QUDA_RECONSTRUCT_8\n");
-	}
+	  PLEGMA_Gauge<double> contractGauge(BOTH);
+	  // Gauge for contractions
+	  contractGauge.copy(gauge2);
+	  // apply boundary conditions since is needed for the covariant derivative
+	  applyBoundaryConditions(contractGauge,true);
+    
+	  if(link_recon!=QUDA_RECONSTRUCT_NO or link_recon_sloppy!=QUDA_RECONSTRUCT_NO or link_recon_precondition!=QUDA_RECONSTRUCT_NO) {
+	    PLEGMA_error("QED requires QUDA_RECONSTRUCT_NO\n");
+	  }
 
-	PLEGMA_printf("\n ### Running on U1(%d) with de=%.4e ###\n\n",iph, phase);
+	  PLEGMA_printf("\n ### Running on U1(%d) with de=%.4e ###\n\n",iph, phase);
 	  
-	int its2=0;
-	while(its2 < nts){
 	  std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props;
 	  props.reserve(nmus*dnts);
 
@@ -118,7 +134,10 @@ int main(int argc, char **argv)
 
 	    for(int dits = 0; dits < dnts; dits++){
 	      int its = its2+dits;
-	      if (its>=nts) break;
+	      if (its>=nts) {
+		props.push_back(std::make_shared<PLEGMA_Propagator<double>>(NONE));
+		break;
+	      }
 	      int tsink = tSinks[its];
 	      PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e de=%+.4e begin now ###\n\n",
 			    its, tsink, mus[imu], phase);
@@ -145,6 +164,9 @@ int main(int argc, char **argv)
 		TIME(solver.solve(vectortmp1, vectortmp1));
 		prop1.absorb(vectortmp1, spinindex, 0);
 	      }
+	      PLEGMA_Propagator<double> prop0;
+	      prop0.copy(prop1);
+
 	      prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
 	      prop1.applyBoundaries_device(tsink);
 	
@@ -160,7 +182,7 @@ int main(int argc, char **argv)
 	      TIME(corr.contractMesonsOpen(prop1, prop1, false));
 	      corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
 	      TIME(corr.writeHDF5( outfilename ));
-	      TIME(corr.contractMesons1ps(prop1, prop1, gauge, false));
+	      TIME(corr.contractMesons1ps(prop0, prop0, contractGauge, false));
 	      corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
 	      TIME(corr.writeHDF5( outfilename ));
 
@@ -190,6 +212,8 @@ int main(int argc, char **argv)
 	      prop1.copy(*props[imu1*dnts+dits], HOST);
 	      prop1.load();
 	      for(int imu2=imu1+1; imu2<nmus; imu2++){
+		if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul))){ continue; }
+		
 		prop2.copy(*props[imu2*dnts+dits], HOST);
 		prop2.load();
 	  
@@ -204,14 +228,11 @@ int main(int argc, char **argv)
 		TIME(corr.contractMesonsOpen(prop1, prop2, false));
 		corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
 		TIME(corr.writeHDF5( outfilename ));
-		TIME(corr.contractMesons1ps(prop1, prop2, gauge, false));
-		corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
-		TIME(corr.writeHDF5( outfilename ));
 	      }	
 	    }
 	  }
-	  its2+=dnts;	    
-	}
+	} 
+	its2+=dnts;	    
       }
     }
   }

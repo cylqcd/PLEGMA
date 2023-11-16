@@ -36,10 +36,6 @@ int main(int argc, char **argv)
   HGC_options->set("dmu", "dmu used for LIBE", verbosity, dmus);
   std::vector<double> dks;
   HGC_options->set("dkappa", "dkappa used for LIBE", verbosity, dks);
-  std::vector<double> des;
-  HGC_options->set("dqed", "dqed used for LIBE", verbosity, des);
-  std::string qedfile;
-  HGC_options->set("qed-filename", "The path to the QED field", verbosity, qedfile);
   int dnts = 2;
   HGC_options->set("nts_inner", "Number of timeslices to run in the inner loop", verbosity, dnts);
 
@@ -64,9 +60,6 @@ int main(int argc, char **argv)
     mus.push_back(muh[i]);
   }
   int nmus = mus.size();
-  if(nmus != nmul+nmuh) {
-    PLEGMA_error("Foo\n");
-  }
   
   srand(rand_seed1);
   std::vector<int> seeds;
@@ -283,7 +276,6 @@ int main(int argc, char **argv)
 	    prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
 	    prop1.applyBoundaries_device(tsink);
 
-	    /*
 	    char * mu_string;
 	    asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu], mus[imu],dmu,dk);
 	    std::string dataset = mu_string;
@@ -299,7 +291,7 @@ int main(int argc, char **argv)
 	    TIME(corr.contractMesons1ps(prop0, prop0, contractGauge, false));
 	    corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
 	    TIME(corr.writeHDF5( outfilename ));
-	    */	    
+
 	    TIME(prop1.unload());
 	    dprops.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
 	    dprops[imu*dnts+dits]->copy(prop1, HOST);
@@ -321,7 +313,6 @@ int main(int argc, char **argv)
 	  PLEGMA_Propagator<double> prop1;
 	  PLEGMA_Propagator<double> prop2;
 
-	  /*
 	  for(int imu1=0; imu1<nmus; imu1++){
 	    prop1.copy(*dprops[imu1*dnts+dits], HOST);
 	    TIME(prop1.load());
@@ -344,12 +335,12 @@ int main(int argc, char **argv)
 	      TIME(corr.writeHDF5( outfilename ));
 	    }
 	  }
-	  */
+
 	  for(int imu1=0; imu1<nmus; imu1++){
 	    prop1.copy(*props[imu1*dnts+dits], HOST);
 	    TIME(prop1.load());
 	    for(int imu2=0; imu2<nmus; imu2++){
-	      if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul) or (imu2<nmul and imu1>=nmul))){ continue; }
+	      if(not (mus[imu1]==mus[imu2] or mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul) or (imu2<nmul and imu1>=nmul))){ continue; }
 	      
 	      prop2.copy(*dprops[imu2*dnts+dits], HOST);
 	      TIME(prop2.load());
