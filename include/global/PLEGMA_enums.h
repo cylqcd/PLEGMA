@@ -57,8 +57,16 @@ enum GAMMAS_SCATT {ID,
                    CG_4,
                    CG_5_G_4,
                    CG_4_G_5,
-                   CG_5_G_4_G_5}; // Do not change this order
-const std::string GAMMAS_SCATT_STR[35] = {"1",
+                   CG_5_G_4_G_5,
+                   S12,
+                   S13,
+		   S23,
+                   S41,
+                   S42,
+                   S43,
+                   MC,
+                   MCG5}; // Do not change this order
+const std::string GAMMAS_SCATT_STR[43] = {"1",
                                           "g1",
                                           "g2",
                                           "g3",
@@ -92,7 +100,15 @@ const std::string GAMMAS_SCATT_STR[35] = {"1",
                                           "Cg4",
                                           "Cg5g4",
                                           "Cg4g5",
-                                          "Cg5g4g5"};
+                                          "Cg5g4g5",
+                                          "S12",
+                                          "S13",
+                                          "S23",
+                                          "S41",
+                                          "S42",
+                                          "S43",
+                                          "MC",
+                                          "MCG5"};
  
 
  
