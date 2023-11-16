@@ -209,6 +209,14 @@ namespace plegma {
   }
 
   template<typename Float>
+  inline __host__ __device__ Float2<Float> xI(const Float2<Float>& a) {
+    Float2<Float> res;
+    res.x = -a.y;
+    res.y = a.x;
+    return res;
+  }
+
+  template<typename Float>
   inline __host__ __device__ Float norm2(const Float2<Float>& a) {
     return a.norm2();
   }

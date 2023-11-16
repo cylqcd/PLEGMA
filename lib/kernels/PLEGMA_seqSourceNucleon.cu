@@ -45,13 +45,13 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
     short c1 = eps[cc1][0];
     short c2 = eps[cc1][1];
     short c3 = eps[cc1][2];
-    #pragma unroll
+    //#pragma unroll
     for(short cc2 = 0 ; cc2 < 6 ; cc2++){
       short c1p = eps[cc2][0];
       short c2p = eps[cc2][1];
       short c3p = eps[cc2][2];
       if(c3p == c_c2)
-        #pragma unroll
+        //#pragma unroll
 	for(short idx = 0 ; idx < 16 ; idx++){
 	  short mu = NtoN_indices[idx][0];
 	  short nu = NtoN_indices[idx][1];

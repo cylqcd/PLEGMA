@@ -35,22 +35,22 @@ __global__ void mesons_noe_device(Float2<FloatC>* block2,
       // term x, x, x+dir
       prop1Tex.get<COLS>(prop1,vid); gaugeTex.get(su3,dir,vid); prop2Tex.get<Plus,COLS>(prop2,vid,dir);
       partial_trace_mul_Prop_G_Prop_meson<COLS,ACC_ZERO,false>(R,prop1,prop2,su3);
-      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) - trace_gamma_S<true>(ONE,NOROT,R);
+      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) - trace_gamma_S<true>(G5,NOROT,R);
 
       //term x, x-dir, x-dir
       gaugeTex.get<Minus>(su3,dir,vid,dir); prop2Tex.get<Minus,COLS>(prop2,vid,dir);
       partial_trace_mul_Prop_G_Prop_meson<COLS,ACC_ZERO,true>(R,prop1,prop2,su3);
-      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) + trace_gamma_S<true>(ONE,NOROT,R);
+      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) + trace_gamma_S<true>(G5,NOROT,R);
 
       //term x+dir, x, x
       prop1Tex.get<Plus,COLS>(prop1,vid,dir); gaugeTex.get(su3,dir,vid); prop2Tex.get<COLS>(prop2,vid);
       partial_trace_mul_Prop_G_Prop_meson<COLS,ACC_ZERO,true>(R,prop1,prop2,su3);
-      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) + trace_gamma_S<true>(ONE,NOROT,R);
+      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) + trace_gamma_S<true>(G5,NOROT,R);
 
       //term x-dir, x-dir, x
       prop1Tex.get<Minus,COLS>(prop1,vid,dir); gaugeTex.get<Minus>(su3,dir,vid,dir);
       partial_trace_mul_Prop_G_Prop_meson<COLS,ACC_ZERO,false>(R,prop1,prop2,su3);
-      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) - trace_gamma_S<true>(ONE,NOROT,R);
+      noeV[dir] += trace_gamma_S<true>(gamma_dir[dir],NOROT,R) - trace_gamma_S<true>(G5,NOROT,R);
     }    
   }
   

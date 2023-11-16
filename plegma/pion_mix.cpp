@@ -69,6 +69,11 @@ int main(int argc, char **argv)
       //We draw a different random vector for every source position
       vector_stoc.stochastic_Z(nroots);
       
+      if(access( outfilename.c_str(), F_OK ) != -1) {
+	PLEGMA_printf("File %s already exists. Skipping...", outfilename.c_str());
+	continue;
+      }
+
       //Store zero momentum oet propagators
       PLEGMA_Propagator<double> prop1;
       std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props;

@@ -44,6 +44,13 @@ int main(int argc, char **argv)
     gauge.readFile(latfile, LIME_FORMAT);
     gauge.calculatePlaq();
 
+    PLEGMA_Gauge<double> contractGauge(BOTH);
+    // Gauge for contractions
+    contractGauge.copy(gauge);
+    // apply boundary conditions since is needed for the covariant derivative
+    applyBoundaryConditions(contractGauge,true);
+
+
     // Loading to QUDA and computing plaquette also there
     initGaugeQuda(gauge, true);
     plaqQuda();
@@ -104,11 +111,27 @@ int main(int argc, char **argv)
          }
       }
 
+      PLEGMA_Propagator<double> propUP0;
+      PLEGMA_Propagator<double> propDN0;
+      propUP0.copy(propUP);
+      propDN0.copy(propDN);
+
+      
       propUP.rotateToPhysicalBase_device(+1);
       propUP.applyBoundaries_device(tsink);
       propDN.rotateToPhysicalBase_device(-1);
       propDN.applyBoundaries_device(tsink);
 
+      PLEGMA_Propagator<double> propUP5;
+      PLEGMA_Propagator<double> propDN5;
+
+      propUP5.copy(propUP0);
+      propDN5.copy(propDN0);
+      propUP5.apply_gamma(G5);
+      propUP5.conjugate();
+      propDN5.apply_gamma(G5);
+      propDN5.conjugate();
+      
       PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
       TIME(corr.contractMesonsNew(propUP, propUP, false));
       corr.setDatasets((std::vector<std::string>) {"uu"});
@@ -116,12 +139,26 @@ int main(int argc, char **argv)
       TIME(corr.contractMesonsOpen(propUP, propUP, false));
       corr.setDatasets((std::vector<std::string>) {"uu_open"});
       TIME(corr.writeHDF5( outfilename ));
+      TIME(corr.contractMesons1ps(propUP0, propUP0, contractGauge, false));
+      corr.setDatasets((std::vector<std::string>) {"uu_1ps"});
+      TIME(corr.writeHDF5( outfilename ));
+      TIME(corr.contractNucleonThrp_noe(propUP5, propUP0, contractGauge, +1));
+      corr.setDatasets((std::vector<std::string>) {"uu_1ps_check"});
+      TIME(corr.writeHDF5( outfilename ));
+      
       TIME(corr.contractMesonsNew(propDN, propDN, false));
       corr.setDatasets((std::vector<std::string>) {"dd"});
       TIME(corr.writeHDF5( outfilename ));
       TIME(corr.contractMesonsOpen(propDN, propDN, false));
       corr.setDatasets((std::vector<std::string>) {"dd_open"});
       TIME(corr.writeHDF5( outfilename ));
+      TIME(corr.contractMesons1ps(propDN0, propDN0, contractGauge, false));
+      corr.setDatasets((std::vector<std::string>) {"dd_1ps"});
+      TIME(corr.writeHDF5( outfilename ));
+      TIME(corr.contractNucleonThrp_noe(propDN5, propDN0, contractGauge, +1));
+      corr.setDatasets((std::vector<std::string>) {"dd_1ps_check"});
+      TIME(corr.writeHDF5( outfilename ));
+      
       TIME(corr.contractMesonsNew(propUP, propDN, false));
       corr.setDatasets((std::vector<std::string>) {"ud"});
       TIME(corr.writeHDF5( outfilename ));
