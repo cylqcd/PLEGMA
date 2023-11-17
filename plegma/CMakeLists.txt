@@ -46,6 +46,9 @@ target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 cuda_add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
 target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
 
+cuda_add_executable(Calc_2pt_marconi Calc_2pt_marconi.cpp)
+target_link_libraries(Calc_2pt_marconi ${PLEGMA_LIBS})
+
 cuda_add_executable(TestFrame EXCLUDE_FROM_ALL TestFrame.cpp)
 target_link_libraries(TestFrame ${PLEGMA_LIBS})
 
@@ -76,14 +79,17 @@ target_link_libraries(Source ${PLEGMA_LIBS})
 cuda_add_executable(Random EXCLUDE_FROM_ALL Random.cpp)
 target_link_libraries(Random ${PLEGMA_LIBS})
 
+cuda_add_executable(pion_LowModeAvg EXCLUDE_FROM_ALL pion_LowModeAvg.cpp)
+target_link_libraries(pion_LowModeAvg ${PLEGMA_LIBS})
+
+cuda_add_executable(eigVecs EXCLUDE_FROM_ALL eigVecs.cpp)
+target_link_libraries(eigVecs ${PLEGMA_LIBS})
+
 cuda_add_executable(Dilution EXCLUDE_FROM_ALL Dilution.cpp)
 target_link_libraries(Dilution ${PLEGMA_LIBS})
 
 cuda_add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
 target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
-
-cuda_add_executable(piNdiagrams_3pt_N_Npi EXCLUDE_FROM_ALL piNdiagrams_3pt_N_Npi.cpp)
-target_link_libraries(piNdiagrams_3pt_N_Npi ${PLEGMA_LIBS})
 
 cuda_add_executable(testYan EXCLUDE_FROM_ALL testYan.cpp)
 target_link_libraries(testYan ${PLEGMA_LIBS})
@@ -127,6 +133,9 @@ target_link_libraries(Zfac ${PLEGMA_LIBS})
 cuda_add_executable(ZfacStaple ZfacStaple.cpp)
 target_link_libraries(ZfacStaple ${PLEGMA_LIBS})
 
+cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
+target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
+
 cuda_add_executable(TMDPDFs_mesons_Juwels TMDPDFs_mesons_Juwels.cpp)
 target_link_libraries(TMDPDFs_mesons_Juwels ${PLEGMA_LIBS})
 
@@ -142,8 +151,13 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(nucleon_delta_test ${PLEGMA_LIBS})
   cuda_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
   target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
+  cuda_add_executable(nucleon_3pt_n_npi_test EXCLUDE_FROM_ALL nucleon_3pt_n_npi_test.cpp)
+  target_link_libraries(nucleon_3pt_n_npi_test ${PLEGMA_LIBS})
+
   cuda_add_executable(nucleon_3pt_n_npi_wd1ii EXCLUDE_FROM_ALL nucleon_3pt_n_npi_wd1ii.cpp)
   target_link_libraries(nucleon_3pt_n_npi_wd1ii ${PLEGMA_LIBS})
+  cuda_add_executable(nucleon_3pt_n_npi_factors EXCLUDE_FROM_ALL nucleon_3pt_n_npi_factors.cpp)
+  target_link_libraries(nucleon_3pt_n_npi_factors ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams_oet piNdiagrams_oet.cpp)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
   cuda_add_executable(checking_Doet checking_Doet.cpp)

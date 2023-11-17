@@ -189,7 +189,7 @@ static void contract_baryons_host( ProfileStruct &ps,
   
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  d_partial_block=(Float2<FloatC>*)device_malloc(sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size*sizeof(Float2<FloatC>) );
 //  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();

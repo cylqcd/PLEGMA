@@ -127,23 +127,23 @@ GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
     case(CG_3_G_4_G_5):
       return CG_3_G_4;
       break;    
-    case(S12):
-      return S43;
+    case(S_12):
+      return S_43;
       break;
-    case(S13):
-      return;
+    case(S_13):
+      return MC;
       break;
-    case(S23):
-      return S41;
+    case(S_23):
+      return S_41;
       break;
-    case(S41):
-      return S23;
+    case(S_41):
+      return S_23;
       break;
-    case(S42):
+    case(S_42):
       return CG_5; 
       break;
-    case(S43):
-      return;
+    case(S_43):
+      return S_12;
       break;
     }
     break;
@@ -206,23 +206,23 @@ GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
     case(CG_3_G_4_G_5):
       return CG_3_G_4;
       break;
-      case(S12):
-      return S43;
+    case(S_12):
+      return S_43;
       break;
-    case(S13):
+    case(S_13):
       return MC;
       break;
-    case(S23):
-      return S41;
+    case(S_23):
+      return S_41;
       break;
-    case(S41):
-      return S23;
+    case(S_41):
+      return S_23;
       break;
-    case(S42):
+    case(S_42):
       return CG_5;
       break;
-    case(S43):
-      return S12;
+    case(S_43):
+      return S_12;
       break;
     }
     default: 
