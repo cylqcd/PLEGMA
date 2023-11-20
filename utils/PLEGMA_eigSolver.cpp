@@ -221,11 +221,11 @@ void EigSolver::initEigSolver(){
   int arpack_log_u = 9999;
   if(!p.logFile.empty() && comm_rank() == 0){
     char *tmps = strdup(p.logFile.c_str());
-    initlog_(&arpack_log_u, tmps, p.logFile.length());
+//    initlog_(&arpack_log_u, tmps, p.logFile.length());
     free(tmps);
     int msglvl0 = 0;//, msglvl1 = 1, msglvl2 = 2, msglvl3 = 3;
     int msglvl3 = 3;
-    pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
+//    pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
   }
 #elif HAVE_PRIMME
   primme_initialize(&primme_pars);
@@ -399,7 +399,7 @@ void EigSolver::computeEigVecs(){
   if(info == 1) PLEGMA_printf("Warning: Maximum number of iterations reached.\n");
   if(info == 3) PLEGMA_error("No shifts could be applied during implicit, Arnoldi update, try increasing NkV\n");
   int arpack_log_u = 9999;
-  if(!p.logFile.empty() && comm_rank() == 0) finilog_(&arpack_log_u);
+//  if(!p.logFile.empty() && comm_rank() == 0) finilog_(&arpack_log_u);
 
   free(bmat);
   free(howmany);
