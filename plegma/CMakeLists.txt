@@ -82,15 +82,6 @@ target_link_libraries(Dilution ${PLEGMA_LIBS})
 cuda_add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
 target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 
-cuda_add_executable(piNdiagrams_3pt_N_Npi EXCLUDE_FROM_ALL piNdiagrams_3pt_N_Npi.cpp)
-target_link_libraries(piNdiagrams_3pt_N_Npi ${PLEGMA_LIBS})
-
-cuda_add_executable(testYan EXCLUDE_FROM_ALL testYan.cpp)
-target_link_libraries(testYan ${PLEGMA_LIBS})
-
-cuda_add_executable(pi0Insertion EXCLUDE_FROM_ALL pi0Insertion.cpp)
-target_link_libraries(pi0Insertion ${PLEGMA_LIBS})
-
 cuda_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})
 
@@ -176,3 +167,9 @@ target_link_libraries(mesons_simple ${PLEGMA_LIBS})
 
 cuda_add_executable(Zfac_diagGI Zfac_diagGI.cpp)
 target_link_libraries(Zfac_diagGI ${PLEGMA_LIBS})
+
+cuda_add_executable(eigVecs eigVecs.cpp)
+target_link_libraries(eigVecs ${PLEGMA_LIBS})
+
+cuda_add_executable(pion_LowModeAvg pion_LowModeAvg.cpp)
+target_link_libraries(pion_LowModeAvg ${PLEGMA_LIBS})

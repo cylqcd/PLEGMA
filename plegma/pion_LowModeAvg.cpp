@@ -77,13 +77,13 @@ int main(int argc, char **argv)
     PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
 
   //Initializing stochastic vector using given random seed.
-  PLEGMA_Vector<double> vector_stoc;
-  vector_stoc.randInit(rand_seed1);
+  //PLEGMA_Vector<double> vector_stoc;
+  //vector_stoc.randInit(rand_seed1);
 
   //Initialize gamma list.
   std::vector<GAMMAS_SCATT> glist_src={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
   std::vector<GAMMAS_SCATT> glist_sink={ID};
-  std::vector<GAMMAS_SCATT> glist_test={G_5};
+  //std::vector<GAMMAS_SCATT> glist_test={G_5};
 
   //Eigensolver to get eigenvalues
   #if defined(HAVE_EIGENSOLVER)
@@ -146,13 +146,11 @@ int main(int argc, char **argv)
         //checkCudaError();
 	      //TIME(D->apply<M>(eigVecD,eigVec));
 	
-        for(int j=0; j < eigSol->getEigVals().size(); j++){
+        for(int j=i; j < eigSol->getEigVals().size(); j++){
           PLEGMA_ScattCorrelator<double> corr(site({0,0,0,tsink}), maxQsq);
-          //std::vector<GAMMAS_SCATT> glist_src={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
-          //std::vector<GAMMAS_SCATT> glist_sink={ID};
           std::string dataset_name = std::to_string(i) + std::to_string(j);
           //TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
-	        TIME(corr.initialize_diagram(glist_test, glist_sink, "P"));
+	        TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
 
           //double eigValP = std::get<0>(eigSol->getEigVals()[j]); 
           iorder = std::get<3>(eigSol->getEigVals()[j]);
@@ -160,16 +158,15 @@ int main(int argc, char **argv)
           PLEGMA_memcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
 //          cudaMemcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
           //checkCudaError();
-          //eigVecP.apply_gamma5(); //Make eigVecP a right eigenvector by applying gamma5.
-          TIME(D->apply<M>(eigVecD,eigVecP));
-          PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
-          PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
-          PLEGMA_printf("eigVecDNorm: %f\n", eigVecD.norm());
+          eigVecP.apply_gamma5();
+          //PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
+          //PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
+          //PLEGMA_printf("eigVecDNorm: %f\n", eigVecD.norm());
 
-          //TIME(corr.PhiPhi(eigVec, glist_src, eigVecP));
-	        TIME(corr.PhiPhi(eigVec, glist_test, eigVecD));
+          TIME(corr.PhiPhi(eigVec, glist_src, eigVecP));
+	        //TIME(corr.PhiPhi(eigVecP, glist_test, eigVecD));
           corr.setDatasets((std::vector<std::string>) {dataset_name});
-          TIME(corr.writeHDF5( outfilename )); 
+          TIME(corr.writeHDF5( outfilename ));
         }
       }
       /*
