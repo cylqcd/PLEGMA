@@ -176,6 +176,18 @@ GAMMAS_SCATT apply_g5(GAMMAS_SCATT source, LEFTRIGHT LR)
     case(G_4):
       return G_5_G_4;
       break;
+    case(G_5_G_1):
+      return G_1;
+      break;
+    case(G_5_G_2):
+      return G_2;
+      break;
+    case(G_5_G_3):
+      return G_3;
+      break;
+    case(G_5_G_4):
+      return G_4;
+      break;
     case(G_5):
       return ID;
       break;

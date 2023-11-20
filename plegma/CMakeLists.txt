@@ -91,12 +91,6 @@ target_link_libraries(Dilution ${PLEGMA_LIBS})
 cuda_add_executable(testLinksSmearings EXCLUDE_FROM_ALL testLinksSmearings.cpp)
 target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 
-cuda_add_executable(testYan EXCLUDE_FROM_ALL testYan.cpp)
-target_link_libraries(testYan ${PLEGMA_LIBS})
-
-cuda_add_executable(pi0Insertion EXCLUDE_FROM_ALL pi0Insertion.cpp)
-target_link_libraries(pi0Insertion ${PLEGMA_LIBS})
-
 cuda_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})
 
@@ -164,6 +158,12 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(checking_Doet ${PLEGMA_LIBS})
   cuda_add_executable(omegamass EXCLUDE_FROM_ALL omegamass.cpp)
   target_link_libraries(omegamass ${PLEGMA_LIBS})
+  cuda_add_executable(pi0Insertion EXCLUDE_FROM_ALL pi0Insertion.cpp)
+  target_link_libraries(pi0Insertion ${PLEGMA_LIBS})
+  cuda_add_executable(QuarkLoops_pi0_insertion EXCLUDE_FROM_ALL QuarkLoops_pi0_insertion.cpp)
+  target_link_libraries(QuarkLoops_pi0_insertion ${PLEGMA_LIBS})
+  cuda_add_executable(testYan EXCLUDE_FROM_ALL testYan.cpp)
+  target_link_libraries(testYan ${PLEGMA_LIBS})
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 

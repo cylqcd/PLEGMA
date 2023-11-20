@@ -334,7 +334,7 @@ void PLEGMA_ScattCorrelator<Float>::T2( std::vector<GAMMAS_SCATT> &Gammas_i, std
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1) {
+void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1, bool transpQ) {
 
   int n_gammas = Gammas.size();
   this->GList.clear();
@@ -354,6 +354,9 @@ void PLEGMA_ScattCorrelator<Float>::PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::ve
     assert(this->source[i]==0);
 
   PhixGxPhi_k<Float,Float>( *this, Phi_0, Gammas, Phi_1);
+  if(transpQ){
+    this->apply_sign_transp(0);
+  }
 }
 //This routine filters the source time-slice from a PLEGMA_ScattCorrelator
 //object: i.e. it return all the momenta, gamma, spin, real-imag components
@@ -1003,7 +1006,7 @@ void PLEGMA_ScattCorrelator<Float>::V5V6reduction_matrix(PLEGMA_ScattCorrelator<
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
 
-  assert( name_of_diagram=="L" );
+  // assert( name_of_diagram=="L" );
 
   //Gamma list
   this->GList.clear();
@@ -1056,7 +1059,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT> &G_i2, std::vector<GAMMAS_SCATT> &G_f2, std::string name_of_diagram){
 
-  assert(( name_of_diagram=="P") ||  (name_of_diagram=="P0DN") ||  (name_of_diagram=="P0UP") ||  (name_of_diagram=="PPDN") ||  (name_of_diagram=="PPUP" ) );
+  // assert(( name_of_diagram=="P") ||  (name_of_diagram=="P0DN") ||  (name_of_diagram=="P0UP") ||  (name_of_diagram=="PPDN") ||  (name_of_diagram=="PPUP" ) );
 
   //Gamma list
   this->GList.clear();
@@ -2370,7 +2373,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( std::vector<PLEGMA_Vector<Float>
       //PhixGf2xPhi
       //pipi_aux.PhiPhi( Phi_0[beta], this->GList[1], Phi_1[alfa]); //T x N_moms x n_gammas_f2
       std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
-      pipi_aux.PhiPhi( phi0beta, tmpGf2, phi1alfa); //T x N_moms x n_gammas_f2
+      pipi_aux.PhiPhi( phi0beta, tmpGf2, phi1alfa, true); //T x N_moms x n_gammas_f2
     
       if(i_pi2==-1){
         for( int im=0; im<N_moms; ++im)
@@ -2430,7 +2433,7 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLE
     std::vector<GAMMAS_SCATT> tmpGf2 = apply_gamma5_scatt_gamma( this->GList[1], LEFT);
     double norm1=Phi_0.norm();
     double norm2=Phi_1.norm();
-    pipi_aux.PhiPhi( Phi_0, tmpGf2, Phi_1); //T x N_moms x n_gammas_f2
+    pipi_aux.PhiPhi( Phi_0, tmpGf2, Phi_1, true); //T x N_moms x n_gammas_f2
     Float g[2];
     g[0]=-1;//eq 13
     g[1]=0;
@@ -2452,6 +2455,28 @@ void PLEGMA_ScattCorrelator<Float>::P_diagrams( PLEGMA_Vector<Float> &Phi_0, PLE
 
 }
 
+/*
+This method calculates the quark loops without oet (The oet version can be done with P_diagrams). 
+It can be used for both smeared loops (pi0 case) or local loops (insertion case).
+Formally, it calculates <\bar{q} \Gamma q>=-Tr[Q \Gamma]=-Tr[Q \xi\xi^\dag \Gamma]=-\xi^\dag \Gamma Q \xi := - Phi_1 \Gamma Phi_0. 
+So Phi_0 should be the stochastic propagator, and Phi_1 the stoc source.
+By gamma5-Hermiticity, even before gauge average, the u-quark loop is complex conjugate to
+ either the d-quark loop (when g5 Gamma^\dag g5 = Gamma)
+  or the negative d-quark loop (when g5 Gamma^\dag g5 = -Gamma)
+   in position space, or in momentum space with momentum flipped: \vec{p} -> -\vec{p}
+   
+Complex conjugate: 1, g5, gugv
+Negative complex conjugate: gu, g5gu
+*/
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::Loop_diagrams( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum)
+{
+  clear_output(!accum);
+
+  PLEGMA_ScattCorrelator<Float> auxPhiPhi(this->source, pList(), this->getTotalT());
+  auxPhiPhi.PhiPhi(Phi_0, GList[0], Phi_1, true);
+  x_pe_sy(this->H_elem(), (Float) -1., auxPhiPhi.H_elem(), this->getTotalSize());
+}
 
 
 //here pi2 is looped outside in the building of the stocastic propagator. NB for moms_red I expect that pi2 is the same! 
