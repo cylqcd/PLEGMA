@@ -201,6 +201,11 @@ namespace plegma {
     
     void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 			   PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
+			    PLEGMA_Propagator<Float> &prop2,
+			    bool all_cols=true);
+    
     void contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
 			   PLEGMA_Propagator<Float> &prop2);
 

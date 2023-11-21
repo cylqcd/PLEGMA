@@ -41,6 +41,10 @@ int main(int argc, char **argv)
   HGC_options->set("readEigenVectors", "Where we want to read EigenVectors from file", verbosity, isReadEigenVecs);
   HGC_options->set("writeEigenVectors", "Where we want to read EigenVectors from file", verbosity, isWriteEigenVecs);
   HGC_options->set("prefixEigenVecsFile", "Path with prefix for the filenames of the eigenvectors", verbosity, fnameEigenVecsPrefix);
+  #ifdef QUDAEIG
+    int batched_rotate = 1;
+    HGC_options->set("batched-rotate", "The size of the batch during Ritz rotation", verbosity, batched_rotate);
+  #endif
 
   //=========================================================================================================//
 
@@ -66,6 +70,21 @@ int main(int argc, char **argv)
   //Initializing stochastic vector using given random seed.
   PLEGMA_Vector<double> vector_stoc;
   vector_stoc.randInit(rand_seed1);
+  
+  TIME(QUDA_solver *solver = new QUDA_solver(mu));
+  QudaInvertParam inv_params = solver->getInvParams();
+
+  QUDA_dirac *D = nullptr;
+  if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
+    D = new QUDA_dirac(QUDA_CLOVER_WILSON_DSLASH);
+  else if (inv_params.dslash_type == QUDA_TWISTED_MASS_DSLASH)
+    D = new QUDA_dirac(QUDA_WILSON_DSLASH);
+  else
+    PLEGMA_error("Only QUDA_TWISTED_CLOVER_DSLASH and QUDA_TWISTED_MASS_DSLASH are allowed for the one-end trick");
+
+  //Initializing stochastic vector using given random seed.
+  //PLEGMA_Vector<double> vector_stoc;
+  //vector_stoc.randInit(rand_seed1);
 
   //Initialize gamma list.
   std::vector<GAMMAS_SCATT> glist_src={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
@@ -116,7 +135,13 @@ int main(int argc, char **argv)
 
       PLEGMA_Vector<double> eigVec;
       PLEGMA_Vector<double> eigVecP;
+      PLEGMA_Vector<double> eigVecD;
 
+      char * src_string;
+      asprintf(&src_string, "exact-exact");
+      std::string outfilename = twop_filename + src_string + ".h5";
+      free(src_string);
+      
       for(int i=0; i < eigSol->getEigVals().size(); i++){
         //double eigVal = std::get<0>(eigSol->getEigVals()[i]); //Doesn't this only get the real part of the eigenvector? Only real eigenvalues if Dirac operator is hermitian. However, here we have to take the twisted mass parameter into account!
         long int iorder = std::get<3>(eigSol->getEigVals()[i]);
@@ -124,19 +149,13 @@ int main(int argc, char **argv)
 	PLEGMA_memcpy(eigVec.D_elem(), eigVec_tmp, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
 //        cudaMemcpy(eigVec.D_elem(), eigVec_tmp, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice); //Copy eigVec_tmp (host) to eigVec (device).
         //checkCudaError();
-        
-        for(int j=0; j < eigSol->getEigVals().size(); j++){
+	      //TIME(D->apply<M>(eigVecD,eigVec));
+	
+        for(int j=i; j < eigSol->getEigVals().size(); j++){
           PLEGMA_ScattCorrelator<double> corr(site({0,0,0,tsink}), maxQsq);
-          //std::vector<GAMMAS_SCATT> glist_src={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
-          //std::vector<GAMMAS_SCATT> glist_sink={ID};
           std::string dataset_name = std::to_string(i) + std::to_string(j);
-          TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
-	  PLEGMA_printf("sss");
-
-          char * src_string;
-          asprintf(&src_string, "exact-exact");
-          std::string outfilename = twop_filename + src_string + ".h5";
-          free(src_string);
+          //TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
+	        TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
 
           //double eigValP = std::get<0>(eigSol->getEigVals()[j]); 
           iorder = std::get<3>(eigSol->getEigVals()[j]);
@@ -144,16 +163,18 @@ int main(int argc, char **argv)
           PLEGMA_memcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
 //          cudaMemcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
           //checkCudaError();
-          eigVecP.apply_gamma5(); //Make eigVecP a left eigenvector by applying gamma5.
-
-          PLEGMA_printf("eigVecNorm: %d", eigVec.norm());
-          PLEGMA_printf("eigVecPNorm: %d", eigVecP.norm());
+          eigVecP.apply_gamma5();
+          //PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
+          //PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
+          //PLEGMA_printf("eigVecDNorm: %f\n", eigVecD.norm());
 
           TIME(corr.PhiPhi(eigVec, glist_src, eigVecP));
+	        //TIME(corr.PhiPhi(eigVecP, glist_test, eigVecD));
           corr.setDatasets((std::vector<std::string>) {dataset_name});
-          TIME(corr.writeHDF5( outfilename )); 
+          TIME(corr.writeHDF5( outfilename ));
         }
       }
+      /*
     //=========================================================================================================//
 
     //exact-stochastic part and stochastic-stochastic part
@@ -269,26 +290,23 @@ int main(int argc, char **argv)
             TIME(mix_corr.writeHDF5( outfilename_exactstoc ));
           }
 
-          PLEGMA_printf("Calculating stoc-stoc contributions... \n\n");
+          //PLEGMA_printf("Calculating stoc-stoc contributions... \n\n");
           //=========================================================================================================//
 
           //stochastic-stochastic contractions
           //=========================================================================================================//
-#if 0
-	  PLEGMA_Correlator<double> stoc_corr(corr_space, site({0,0,0,tsink}), maxQsq);
-          TIME(stoc_corr.contractMesonsNew(propUP, propUP, false));
           stoc_corr.setDatasets((std::vector<std::string>) {datasetPrefix + "uu"});
           TIME(stoc_corr.writeHDF5( outfilename_stocstoc ));
           TIME(stoc_corr.contractMesonsOpen(propUP, propUP, false));
           stoc_corr.setDatasets((std::vector<std::string>) {datasetPrefix + "uu_open"}); //Leave spin indices open (16x16 indices)
           TIME(stoc_corr.writeHDF5( outfilename_stocstoc ));
-          TIME(stoc_corr.contractMesonsNew(propDN, propDN, false));
+          TIME(stoc_corr.contractMesonsNew(propDN, propDN));
           stoc_corr.setDatasets((std::vector<std::string>) {datasetPrefix + "dd"});
           TIME(stoc_corr.writeHDF5( outfilename_stocstoc ));
           TIME(stoc_corr.contractMesonsOpen(propDN, propDN, false));
           stoc_corr.setDatasets((std::vector<std::string>) {datasetPrefix + "dd_open"});
           TIME(stoc_corr.writeHDF5( outfilename_stocstoc ));
-          TIME(stoc_corr.contractMesonsNew(propUP, propDN, false));
+          TIME(stoc_corr.contractMesonsNew(propUP, propDN));
           stoc_corr.setDatasets((std::vector<std::string>) {datasetPrefix + "ud"}); //"du" is just the conjugated one, so no need to compute it separately.
           TIME(stoc_corr.writeHDF5( outfilename_stocstoc ));
           TIME(stoc_corr.contractMesonsOpen(propUP, propDN, false));
@@ -300,6 +318,14 @@ int main(int argc, char **argv)
       }
     //}
   //}
+=======
+       
+          //=========================================================================================================//
+        }
+      }
+      //}
+  //}
+  */
   #endif
 
   //finalize();
@@ -307,16 +333,10 @@ int main(int argc, char **argv)
   return 0;
 }
 
-  /*Todo: 1) Find smallest eigenvalue of Dirac operator. 
-          2) Deflate Dirac operator.
-          3) Repeat until sufficient number of eigenvalues has been found. 
-            -> Eigensolver does all this (step 1)-3)). Accessible via eigSol->getEigVals().
-              Have only right eigenvectors. -> To get left one transpose and apply gamma5 from the left.
-              But which eigenvalues are those? Are these for both propagators, or only one of them? Eigenvalues and -vectors are actually the same. Have to perform double sum over them.
-              Are the vectors ordered in the same way as the eigenvalues? Line 96 gets the index of the eigenvector corresponding to a given eigenvalue.
-          4) Use eigenvalues and corresponding eigenvectors to construct terms (a,b)_t
-            -> Need to find a way to make the contractions. Specifically need to know how to apply gamma_5. Doable by copying the eigenvector (double) to a vector of type PLEGMA_vector.
-              How do we do this for each lattice site?
-              What is Gamma in our case? For pions its just gamma_5.
-          5) Contract propagators to find the exact-exact part of the correlation function.
+  /*Open questions: 
+          1) In the spin dilution part there's a random vector absorbed only for one color component. How do we deal with the other color components. 
+          2) Is computing eigenvectors for D^\dagger D correct? What about the mus then if we have fully real eigenvalues? They seem not to be taken into account.
+          3) Why do the contractions yield not just a number?
+          4) Are the eigenvectors determined by the eigensolver right, or left eigenvectors and are they already daggered or not?
+          5) How can the other terms, connected to the ones computed here by gamma_5 and daggering, be effectively determined?
   */

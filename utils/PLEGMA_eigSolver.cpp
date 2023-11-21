@@ -264,6 +264,7 @@ void EigSolver::initEigSolver(){
   eig_param.compute_gamma5= QUDA_BOOLEAN_FALSE;
   eig_param.use_norm_op = QUDA_BOOLEAN_TRUE; // put it on so it will do M^+ M
   eig_param.use_dagger = QUDA_BOOLEAN_FALSE;
+  eig_param.compute_gamma5 = QUDA_BOOLEAN_FALSE;
   eig_param.compute_svd = QUDA_BOOLEAN_FALSE;
   eig_param.use_poly_acc = G_isACC ? QUDA_BOOLEAN_TRUE : QUDA_BOOLEAN_FALSE;
   eig_param.poly_deg = G_PolyDeg;
