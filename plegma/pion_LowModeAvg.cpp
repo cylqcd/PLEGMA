@@ -138,10 +138,18 @@ int main(int argc, char **argv)
       PLEGMA_Vector<double> eigVecD;
 
       char * src_string;
+
+      std::vector<int> moms_pf={0,0,0};
+      momList momlist(1, {moms_pf,}, {0,});
+
+      PLEGMA_ScattCorrelator<double> corr(site({0,0,0,0}),momlist,HGC_totalL[DIM_T],Eig_NeV);
+
+      TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
       asprintf(&src_string, "exact-exact");
       std::string outfilename = twop_filename + src_string + ".h5";
       free(src_string);
       
+      int index=0;
       for(int i=0; i < eigSol->getEigVals().size(); i++){
         //double eigVal = std::get<0>(eigSol->getEigVals()[i]); //Doesn't this only get the real part of the eigenvector? Only real eigenvalues if Dirac operator is hermitian. However, here we have to take the twisted mass parameter into account!
         long int iorder = std::get<3>(eigSol->getEigVals()[i]);
@@ -152,10 +160,8 @@ int main(int argc, char **argv)
 	      //TIME(D->apply<M>(eigVecD,eigVec));
 	
         for(int j=i; j < eigSol->getEigVals().size(); j++){
-          PLEGMA_ScattCorrelator<double> corr(site({0,0,0,tsink}), maxQsq);
           std::string dataset_name = std::to_string(i) + std::to_string(j);
           //TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
-	        TIME(corr.initialize_diagram(glist_src, glist_sink, "P"));
 
           //double eigValP = std::get<0>(eigSol->getEigVals()[j]); 
           iorder = std::get<3>(eigSol->getEigVals()[j]);
@@ -164,16 +170,21 @@ int main(int argc, char **argv)
 //          cudaMemcpy(eigVecP.D_elem(), eigVecP_tmp, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
           //checkCudaError();
           eigVecP.apply_gamma5();
+
+	  PLEGMA_ScattCorrelator<float> corr_temp( site({0,0,0,0}),momlist);
+          TIME(corr_temp.initialize_diagram(glist_src, glist_sink, "P"));
+
           //PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
           //PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
           //PLEGMA_printf("eigVecDNorm: %f\n", eigVecD.norm());
 
-          TIME(corr.PhiPhi(eigVec, glist_src, eigVecP));
-	        //TIME(corr.PhiPhi(eigVecP, glist_test, eigVecD));
-          corr.setDatasets((std::vector<std::string>) {dataset_name});
-          TIME(corr.writeHDF5( outfilename ));
+          TIME(corr_temp.PhiPhi(eigVec, glist_src, eigVecP));
+	  TIME(corr.absorbEigIndex(corr_temp, index));
+	  index++;
         }
       }
+
+      TIME(corr.writeHDF5( outfilename ));
       /*
     //=========================================================================================================//
 
