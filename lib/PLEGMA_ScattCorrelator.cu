@@ -1108,7 +1108,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->datasets = {name_of_diagram,};
 
   //Shape
-  this->shape = { (int)(this->GList[0].size())*(int)(this->GList[1].size()) };
+  this->shape = { (int)(this->eigvecnum*(this->eigvecnum+1)/2.)*(int)(this->GList[0].size())*(int)(this->GList[1].size()) };
 
   //initialize
   this->initialize();
