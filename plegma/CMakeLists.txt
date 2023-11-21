@@ -79,12 +79,6 @@ target_link_libraries(Source ${PLEGMA_LIBS})
 cuda_add_executable(Random EXCLUDE_FROM_ALL Random.cpp)
 target_link_libraries(Random ${PLEGMA_LIBS})
 
-cuda_add_executable(pion_LowModeAvg EXCLUDE_FROM_ALL pion_LowModeAvg.cpp)
-target_link_libraries(pion_LowModeAvg ${PLEGMA_LIBS})
-
-cuda_add_executable(eigVecs EXCLUDE_FROM_ALL eigVecs.cpp)
-target_link_libraries(eigVecs ${PLEGMA_LIBS})
-
 cuda_add_executable(Dilution EXCLUDE_FROM_ALL Dilution.cpp)
 target_link_libraries(Dilution ${PLEGMA_LIBS})
 
@@ -145,13 +139,9 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(nucleon_delta_test ${PLEGMA_LIBS})
   cuda_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
   target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
-  cuda_add_executable(nucleon_3pt_n_npi_test EXCLUDE_FROM_ALL nucleon_3pt_n_npi_test.cpp)
-  target_link_libraries(nucleon_3pt_n_npi_test ${PLEGMA_LIBS})
 
   cuda_add_executable(nucleon_3pt_n_npi_wd1ii EXCLUDE_FROM_ALL nucleon_3pt_n_npi_wd1ii.cpp)
   target_link_libraries(nucleon_3pt_n_npi_wd1ii ${PLEGMA_LIBS})
-  cuda_add_executable(nucleon_3pt_n_npi_factors EXCLUDE_FROM_ALL nucleon_3pt_n_npi_factors.cpp)
-  target_link_libraries(nucleon_3pt_n_npi_factors ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams_oet piNdiagrams_oet.cpp)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
   cuda_add_executable(checking_Doet checking_Doet.cpp)

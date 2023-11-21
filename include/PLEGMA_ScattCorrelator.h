@@ -26,6 +26,7 @@ namespace plegma {
   protected:
 
     std::vector<std::vector<GAMMAS_SCATT>> GList;
+    int eigvecnum;
     momList plist;
 
     std::string labels;    //     index_struct = "gsssc" (because spin first)
@@ -41,7 +42,7 @@ namespace plegma {
 
     PLEGMA_ScattCorrelator(site source, std::vector<std::vector<int>> fixMomsVec, int totalT=HGC_totalL[DIM_T]);
 
-    PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT=HGC_totalL[DIM_T]);
+    PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT=HGC_totalL[DIM_T], int eigvecnum=1);
 
     ~PLEGMA_ScattCorrelator(){;}
 
@@ -227,6 +228,9 @@ namespace plegma {
 
     //manipulation to construct N like diagram from NjN
     void absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero=false);
+
+    // manipulation constructing  exact exact part of the deflated correlation function
+    void absorbEigIndex( PLEGMA_ScattCorrelator<Float> &srcCorr, int eigindex, bool forcetozero=false);
 
     //manipulation to construct P like diagram from pi j pi
     void absorbGammai2Gammaf2momentumf2(PLEGMA_ScattCorrelator<Float> &srcCorr, int  i_gamma_i2, int i_gamma_f2, int i_pf1, bool forcetozero=false );

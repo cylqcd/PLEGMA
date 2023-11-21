@@ -41,12 +41,19 @@ PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(site source, std::vector<i
 template<typename Float>
 PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(site source, std::vector<std::vector<int>> fixMomsList, int totalT):
   PLEGMA_Correlator<Float>(MOMENTUM_SPACE,source,0,totalT) { this->setFixMomList(fixMomsList); }
-
+/*
 template<typename Float>
 PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT): PLEGMA_Correlator<Float>(MOMENTUM_SPACE,source,0,totalT), plist(listmom) {
   auto mlist = this->plist.tolist();
   this->setFixMomList( mlist );
 }
+*/
+template<typename Float>
+PLEGMA_ScattCorrelator<Float>::PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT, int eigvecnum): PLEGMA_Correlator<Float>(MOMENTUM_SPACE,source,0,totalT), plist(listmom), eigvecnum(eigvecnum) {
+  auto mlist = this->plist.tolist();
+  this->setFixMomList( mlist );
+}
+
 
 //#########################
 //#  Auxiliary functions  #
@@ -60,6 +67,7 @@ void PLEGMA_ScattCorrelator<Float>::setOffsets( ){
     switch(l){
     case('t'): assert(this->corr_mom_space); ranges.push_back( this->corr_mom_space->DimT() ); break;
     case('m'): assert(this->corr_mom_space); ranges.push_back( this->corr_mom_space->Nmoms() ); break;
+    case('n'): assert(this->eigvecnum>1); ranges.push_back(this->eigvecnum*(this->eigvecnum+1)/2); break;
     case('g'): assert(g_count<GList.size()); ranges.push_back( GList[g_count].size() ); g_count++; break;
     case('s'): ranges.push_back( N_SPINS ); break;
     case('c'): ranges.push_back( N_COLS ); break;
@@ -1106,7 +1114,12 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->initialize();
 
   //Offsets
-  this->labels="tmgg";
+  if (this->eigvecnum ==1 ){
+    this->labels="tmgg";
+  }
+  else{
+    this->labels="ntmgg";
+  }
   this->setOffsets();
 
   this->clear_output(true);
@@ -3658,6 +3671,44 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
   }
 
+}
+template<typename Float>
+void PLEGMA_ScattCorrelator<Float>::absorbEigIndex( PLEGMA_ScattCorrelator<Float> &srcCorr, int eigindex){
+
+  int n_gammas_i1 = this->GList[0].size();
+  int n_gammas_f1 = this->GList[1].size();
+  int TIME = this->localT();
+
+  if (forcetozero == true && !this->labels.empty()){
+    int tot_size = 2*this->getTotalSize();
+    memset( this->H_elem(), 0, tot_size*sizeof(Float) );
+  }
+
+
+  if (TIME==0) return;
+  if ((eigindex <0) || (eigindex> (this->eigvecnum*(this->eigvecnum+1)/2))){ 
+    PLEGMA_error("Wrong eigenvectorindex in absorbEigIndex\n");
+  }
+
+
+  int Nmoms = srcCorr.Nmoms();
+  if (this->Nmoms() != Nmoms){
+    PLEGMA_error("Destination correlator has a different momentum list\n");
+
+  auto imap = this->pList().index_map();
+
+  #pragma omp parallel for
+  for(int i_m=0; i_m<imap.size(); i_m++){
+    for(int t=0; t < TIME; ++t){
+      for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
+        for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
+            this->Corr(eigindex,t,i_m,g1,g2)[0]=srcCorr.H_elem(t, i_m, g1, g2)[0];
+            this->Corr(eigindex,t,i_m,g1,g2)[1]=srcCorr.H_elem(t, i_m, g1, g2)[1];
+          }
+        }
+      }
+    }
+  }
 }
 
 template<typename Float>
