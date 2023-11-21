@@ -1079,6 +1079,9 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   //Description
   std::vector<std::vector<GAMMAS_SCATT>> tmpvector= {G_i2, G_f2};
   std::string tmp="";
+  if (this->eigvecnum !=1){
+    tmp+="/eigvecnum/";
+  }
   for (int i=0; i<tmpvector.size(); ++i){
     tmp+="{";
     std::vector<GAMMAS_SCATT> elements=tmpvector[i];
@@ -1108,7 +1111,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
   this->datasets = {name_of_diagram,};
 
   //Shape
-  this->shape = { (int)(this->eigvecnum*(this->eigvecnum+1)/2.)*(int)(this->GList[0].size())*(int)(this->GList[1].size()) };
+  this->shape = { (int)(this->eigvecnum*(this->eigvecnum+1)/2.),(int)(this->GList[0].size())*(int)(this->GList[1].size()) };
 
   //initialize
   this->initialize();
@@ -1118,7 +1121,7 @@ void PLEGMA_ScattCorrelator<Float>::initialize_diagram( std::vector<GAMMAS_SCATT
     this->labels="tmgg";
   }
   else{
-    this->labels="ntmgg";
+    this->labels="tmngg";
   }
   this->setOffsets();
 
@@ -3632,7 +3635,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
         }
       }
     }
-  }
+   }
   }
   else{
   int derivLoopLength;
@@ -3685,17 +3688,20 @@ void PLEGMA_ScattCorrelator<Float>::absorbEigIndex( PLEGMA_ScattCorrelator<Float
   }
 
 
+  int Nmoms = srcCorr.Nmoms();
+
+  auto imap = this->pList().index_map();
+
   if (TIME==0) return;
   if ((eigindex <0) || (eigindex> (this->eigvecnum*(this->eigvecnum+1)/2))){ 
     PLEGMA_error("Wrong eigenvectorindex in absorbEigIndex\n");
   }
 
 
-  int Nmoms = srcCorr.Nmoms();
   if (this->Nmoms() != Nmoms){
     PLEGMA_error("Destination correlator has a different momentum list\n");
+  }
 
-  auto imap = this->pList().index_map();
 
   #pragma omp parallel for
   for(int i_m=0; i_m<imap.size(); i_m++){
@@ -3703,13 +3709,12 @@ void PLEGMA_ScattCorrelator<Float>::absorbEigIndex( PLEGMA_ScattCorrelator<Float
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
         for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
 	    int index=t*Nmoms*2*n_gammas_f1*n_gammas_i1+i_m*2*n_gammas_f1*n_gammas_i1+g2*2*n_gammas_i1+2*g1;
-            this->Corr(eigindex,t,i_m,g1,g2)[0]=srcCorr.H_elem()[index];
-            this->Corr(eigindex,t,i_m,g1,g2)[1]=srcCorr.H_elem()[index+1];
+            this->Corr(t,i_m,eigindex,g1,g2)[0]=srcCorr.H_elem()[index];
+            this->Corr(t,i_m,eigindex,g1,g2)[1]=srcCorr.H_elem()[index+1];
           }
         }
       }
     }
-  }
 }
 
 template<typename Float>

@@ -87,8 +87,8 @@ int main(int argc, char **argv)
   //vector_stoc.randInit(rand_seed1);
 
   //Initialize gamma list.
-  std::vector<GAMMAS_SCATT> glist_src={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
-  std::vector<GAMMAS_SCATT> glist_sink={ID};
+  std::vector<GAMMAS_SCATT> glist_sink={ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};
+  std::vector<GAMMAS_SCATT> glist_src={ID};
 
   //Eigensolver to get eigenvalues
   #if defined(HAVE_EIGENSOLVER)
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
           //PLEGMA_printf("eigVecPNorm: %f\n", eigVecP.norm());
           //PLEGMA_printf("eigVecDNorm: %f\n", eigVecD.norm());
 
-          TIME(corr_temp.PhiPhi(eigVec, glist_src, eigVecP));
+          TIME(corr_temp.PhiPhi(eigVec, glist_sink, eigVecP));
 	  TIME(corr.absorbEigIndex(corr_temp, index));
 	  index++;
         }
