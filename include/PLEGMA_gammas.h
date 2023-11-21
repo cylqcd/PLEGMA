@@ -8,7 +8,7 @@ namespace plegma{
 #define CONSTANT
 #endif
 
-static const CONSTANT float gamma_scatt[43][4][2] =
+static const CONSTANT float gamma_scatt[37][4][2] =
     {{{1,0},{1,0},{1,0},{1,0}},     // 1
      {{0,1},{0,1},{0,-1},{0,-1}},   // g1
      {{1,0},{-1,0},{-1,0},{1,0}},   // g2
@@ -18,12 +18,12 @@ static const CONSTANT float gamma_scatt[43][4][2] =
      {{-1,0},{1,0},{1,0},{-1,0}},   // Cgx
      {{0,-1},{0,-1},{0,1},{0,1}},   // Cgy
      {{1,0},{1,0},{-1,0},{-1,0}},   // Cgz
-     {{-1,0},{1,0},{-1,0},{1,0}},   // Cgxgt
-     {{0,-1},{0,-1},{0,-1},{0,-1}}, // Cgygt
-     {{1,0},{1,0},{1,0},{1,0}},     // Cgzgt
-     {{-1,0},{1,0},{-1,0},{1,0}},   // Cgxgtg5
-     {{0,-1},{0,-1},{0,-1},{0,-1}}, // Cgygtg5
-     {{1,0},{1,0},{1,0},{1,0}},      //Cgzgtg5
+//     {{-1,0},{1,0},{-1,0},{1,0}},   // Cgxgt
+//     {{0,-1},{0,-1},{0,-1},{0,-1}}, // Cgygt
+//     {{1,0},{1,0},{1,0},{1,0}},     // Cgzgt
+//     {{-1,0},{1,0},{-1,0},{1,0}},   // Cgxgtg5
+//     {{0,-1},{0,-1},{0,-1},{0,-1}}, // Cgygtg5
+//     {{1,0},{1,0},{1,0},{1,0}},      //Cgzgtg5
      {{0,-1},{0,-1},{0,1},{0,1}},    //g5g1
      {{0,1},{0,1},{0,-1},{0,-1}},    //g1g5
      {{-1,0},{1,0},{1,0},{-1,0}},    //g5g2
@@ -53,7 +53,7 @@ static const CONSTANT float gamma_scatt[43][4][2] =
      {{0,1},{0,-1},{0,1},{0,-1}}, // -C
      {{0,1},{0,-1},{0,1},{0,-1}}, // -Cg5
     };
-static const CONSTANT short int gammaInd_scatt[43][4][2] =
+static const CONSTANT short int gammaInd_scatt[37][4][2] =
     {{{0,0},{1,1},{2,2},{3,3}},     // 1
      {{0,3},{1,2},{2,1},{3,0}},     // g1
      {{0,3},{1,2},{2,1},{3,0}},     // g2
@@ -63,12 +63,12 @@ static const CONSTANT short int gammaInd_scatt[43][4][2] =
      {{0,0},{1,1},{2,2},{3,3}},     // Cgx
      {{0,0},{1,1},{2,2},{3,3}},     // Cgy
      {{0,1},{1,0},{2,3},{3,2}},     // Cgz
-     {{0,0},{1,1},{2,2},{3,3}},     // Cgxgt
-     {{0,0},{1,1},{2,2},{3,3}},     // Cgygt
-     {{0,1},{1,0},{2,3},{3,2}},     // Cgzgt
-     {{0,2},{1,3},{2,0},{3,1}},     // Cgxgtg5
-     {{0,2},{1,3},{2,0},{3,1}},     // Cgygtg5
-     {{0,3},{1,2},{2,1},{3,0}},     // Cgzgtg5
+//     {{0,0},{1,1},{2,2},{3,3}},     // Cgxgt
+//     {{0,0},{1,1},{2,2},{3,3}},     // Cgygt
+//     {{0,1},{1,0},{2,3},{3,2}},     // Cgzgt
+//     {{0,2},{1,3},{2,0},{3,1}},     // Cgxgtg5
+//     {{0,2},{1,3},{2,0},{3,1}},     // Cgygtg5
+//     {{0,3},{1,2},{2,1},{3,0}},     // Cgzgtg5
      {{0,1},{1,0},{2,3},{3,2}},     // g5g1
      {{0,1},{1,0},{2,3},{3,2}},     // g1g5
      {{0,1},{1,0},{2,3},{3,2}},     // g5g2
@@ -99,7 +99,7 @@ static const CONSTANT short int gammaInd_scatt[43][4][2] =
      {{0,1},{1,0},{2,3},{3,2}},     // -Cg5
 
     }; 
-static const CONSTANT short int gammaTranspSign_scatt[43] = 
+static const CONSTANT short int gammaTranspSign_scatt[37] = 
      {
       +1,// 1
       -1,// g1
@@ -110,12 +110,12 @@ static const CONSTANT short int gammaTranspSign_scatt[43] =
       +1,// Cgx
       +1,// Cgy
       +1,// Cgz
-      +1,// Cgxgt
-      +1,// Cgygt
-      +1,// Cgzgt
-      +1,// Cgxgtg5
-      +1,// Cgygtg5
-      +1,// Cgzgtg5
+//    +1,// Cgxgt
+//    +1,// Cgygt
+//    +1,// Cgzgt
+//    +1,// Cgxgtg5
+//    +1,// Cgygtg5
+//    +1,// Cgzgtg5
       +1,// g5g1
       +1,// g1g5
       -1,// g5g2
@@ -147,7 +147,7 @@ static const CONSTANT short int gammaTranspSign_scatt[43] =
      };
 
 // gamma4 * G.T.conjugate() * gamma4 = gammaAdjointSign * G
-static const CONSTANT short int gammaAdjointSign_scatt[43] = 
+static const CONSTANT short int gammaAdjointSign_scatt[37] = 
      {
        +1,// 1
        -1,// g1
@@ -158,12 +158,12 @@ static const CONSTANT short int gammaAdjointSign_scatt[43] =
        +1,// Cgx
        -1,// Cgy
        +1,// Cgz
-       +1,// Cgxgt
-       -1,// Cgygt
-       +1,// Cgzgt
-       -1,// Cgxgtg5
-       +1,// Cgygtg5
-       -1,// Cgzgtg5
+//     +1,// Cgxgt
+//     -1,// Cgygt
+//     +1,// Cgzgt
+//     -1,// Cgxgtg5
+//     +1,// Cgygtg5
+//     -1,// Cgzgtg5
        -1,// g5g1
        -1,// g1g5
        -1,// g5g2
