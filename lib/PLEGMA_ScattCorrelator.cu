@@ -3673,7 +3673,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbGammai2Gammaf2momentumf2(PLEGMA_ScattC
 
 }
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorbEigIndex( PLEGMA_ScattCorrelator<Float> &srcCorr, int eigindex){
+void PLEGMA_ScattCorrelator<Float>::absorbEigIndex( PLEGMA_ScattCorrelator<Float> &srcCorr, int eigindex, bool forcetozero){
 
   int n_gammas_i1 = this->GList[0].size();
   int n_gammas_f1 = this->GList[1].size();
@@ -3702,8 +3702,9 @@ void PLEGMA_ScattCorrelator<Float>::absorbEigIndex( PLEGMA_ScattCorrelator<Float
     for(int t=0; t < TIME; ++t){
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
         for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-            this->Corr(eigindex,t,i_m,g1,g2)[0]=srcCorr.H_elem(t, i_m, g1, g2)[0];
-            this->Corr(eigindex,t,i_m,g1,g2)[1]=srcCorr.H_elem(t, i_m, g1, g2)[1];
+	    int index=t*Nmoms*2*n_gammas_f1*n_gammas_i1+i_m*2*n_gammas_f1*n_gammas_i1+g2*2*n_gammas_i1+2*g1;
+            this->Corr(eigindex,t,i_m,g1,g2)[0]=srcCorr.H_elem()[index];
+            this->Corr(eigindex,t,i_m,g1,g2)[1]=srcCorr.H_elem()[index+1];
           }
         }
       }

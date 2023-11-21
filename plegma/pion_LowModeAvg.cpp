@@ -71,8 +71,8 @@ int main(int argc, char **argv)
   PLEGMA_Vector<double> vector_stoc;
   vector_stoc.randInit(rand_seed1);
   
-  TIME(QUDA_solver *solver = new QUDA_solver(mu));
-  QudaInvertParam inv_params = solver->getInvParams();
+//  TIME(QUDA_solver *solver = ne QUDA_solver(mu));
+  QudaInvertParam inv_params = solver.getInvParams();
 
   QUDA_dirac *D = nullptr;
   if(inv_params.dslash_type == QUDA_TWISTED_CLOVER_DSLASH)
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
           //checkCudaError();
           eigVecP.apply_gamma5();
 
-	  PLEGMA_ScattCorrelator<float> corr_temp( site({0,0,0,0}),momlist);
+	  PLEGMA_ScattCorrelator<double> corr_temp( site({0,0,0,0}),momlist);
           TIME(corr_temp.initialize_diagram(glist_src, glist_sink, "P"));
 
           //PLEGMA_printf("eigVecNorm: %f\n", eigVec.norm());
