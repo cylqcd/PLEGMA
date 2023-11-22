@@ -173,3 +173,6 @@ target_link_libraries(eigVecs ${PLEGMA_LIBS})
 
 cuda_add_executable(pion_LowModeAvg pion_LowModeAvg.cpp)
 target_link_libraries(pion_LowModeAvg ${PLEGMA_LIBS})
+
+cuda_add_executable(pion_LowModeAvg_exact pion_LowModeAvg_exact.cpp)
+target_link_libraries(pion_LowModeAvg_exact ${PLEGMA_LIBS})
