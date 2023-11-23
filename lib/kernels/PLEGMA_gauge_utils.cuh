@@ -55,3 +55,28 @@ static void qedPhase_k(gauge2<Float> gauge, gaugeU12<Float> gaugeU1, Float phase
   ProfileStruct ps(gauge.volume());
   tuneAndRun(ps, "qedPhase_kernel", qedPhase_kernel<Float>, gauge, gaugeU1, phase);
 }
+
+
+template< typename Float>
+__global__ void mul_dag_kernel(gauge2<Float> gauge, gauge2<Float> gaugeIn){
+
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= gauge.volume()) return;
+  
+  Float2<Float> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS], G3[N_COLS][N_COLS];    
+
+#pragma unroll
+  for(int dir = 0; dir < N_DIMS; dir++) {
+    gauge.get(G1,dir,sid);
+    gaugeIn.get(G2,dir,sid);
+    mul_G_Gdag(G3,G1,G2);
+    gauge.set(G3, dir, sid);
+  }
+}
+
+
+template<typename Float>
+static void mul_dag_k(gauge2<Float> gauge, gauge2<Float> gaugeIn){
+  ProfileStruct ps(gauge.volume());
+  tuneAndRun(ps, "mul_dag_kernel", mul_dag_kernel<Float>, gauge, gaugeIn);
+}

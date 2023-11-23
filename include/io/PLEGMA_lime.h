@@ -239,31 +239,33 @@ static void write_binary_to_lime(std::string filename, FILE *fid, LimeWriter *li
 
 template<typename Float>
 static void read_binary_from_lime(std::string filename, FILE *fid, LimeReader *limereader, Float *data, int dof){
-  bool cmplx;
-  n_uint64_t lime_data_size = limeReaderBytes(limereader);
-  n_uint64_t expected = HGC_totalVolume*dof*8;
-  if(lime_data_size/expected==2) {
-    cmplx = true;
-  }
-  else if(lime_data_size/expected==1){
-    PLEGMA_warning("Assuming real-only field in lime file\n");
-    cmplx = false;
-  }
-  else {
-    cmplx = true;
-    PLEGMA_warning("Wrong size %lu != %lu\n", lime_data_size, expected);
-  }
 
+  bool cmplx;
 #ifdef	MULTI_GPU
   MPI_Offset offset;
   // Read 1 byte to set file-pointer to start of binary data
   if(comm_rank() == 0){
+    n_uint64_t lime_data_size = limeReaderBytes(limereader);
+    n_uint64_t expected = HGC_totalVolume*dof*8;
+    if(lime_data_size/expected==2) {
+      cmplx = true;
+    }
+    else if(lime_data_size/expected==1){
+      PLEGMA_warning("Assuming real-only field in lime file\n");
+      cmplx = false;
+    }
+    else {
+      cmplx = true;
+      PLEGMA_warning("Wrong size %lu != %lu\n", lime_data_size, expected);
+    }
+  
     n_uint64_t one=1;
     char dummy;
     limeReaderReadData(&dummy,&one,limereader);
     offset = ftell(fid)-1;
   }
   comm_broadcast(&offset,sizeof(MPI_Offset));
+  comm_broadcast(&cmplx,sizeof(bool));
 #endif
 
   Float *ftmp;

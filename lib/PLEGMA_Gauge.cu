@@ -33,7 +33,7 @@ Float PLEGMA_Gauge<Float>::calculatePlaq(){
   this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
   auto tex = toTexture<gaugeTex>(*this);
   Float plaq = calculatePlaquette<Float>(*tex);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %.14f\n",plaq);
   return plaq;
 }
 
@@ -166,6 +166,11 @@ template<typename Float>
 void PLEGMA_Gauge<Float>::scaleDirWise(std::complex<Float> scale[N_DIMS]){
   scale_dir_wise(toField2<gauge2>(*this), (Float*) scale);
   this->communicateGhost();
+}
+
+template<typename Float>
+void PLEGMA_Gauge<Float>::mul_dag(PLEGMA_Gauge<Float>& uIn){
+  mul_dag_k(toField2<gauge2>(*this), toField2<gauge2>(uIn));
 }
 
 template<typename Float>

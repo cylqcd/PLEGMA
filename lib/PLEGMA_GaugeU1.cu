@@ -1,6 +1,6 @@
 #include <PLEGMA_GaugeU1.h>
 #include <PLEGMA_Su3field.h>
-#include <PLEGMA_plaquette.cuh>
+#include <PLEGMA_plaquetteU1.cuh>
 #include <PLEGMA_plaquetteCorners.cuh>
 #include <PLEGMA_gauge_utils.cuh>
 #include <PLEGMA_gFixing.cuh>
@@ -18,29 +18,29 @@ template<typename Float>
 PLEGMA_GaugeU1<Float>::PLEGMA_GaugeU1(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, GAUGEU1, ghost_flag){ ; }
 
+template<typename Float>
+Float PLEGMA_GaugeU1<Float>::calculatePlaq(Float phase){
+  this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
+  auto tex = toTexture<gaugeU1Tex>(*this);
+  Float plaq = calculatePlaquetteU1<Float>(*tex, phase);
+  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette U1 with phase %f is %.14f\n",phase,plaq);
+  return plaq;
+}
+
 /*
 template<typename Float>
 Float PLEGMA_GaugeU1<Float>::calculateTopo( TOPO_CHARGE_DEF charge_def ){
   this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
-  auto tex = toTexture<gaugeTex>(*this);
+  auto tex = toTexture<gaugeU1Tex>(*this);
   Float Q = calcTopoCharge<Float>(*tex, charge_def);
   if(HGC_verbosity>0) PLEGMA_printf("Calculated topological charge is %.14f\n",Q);
   return Q;
 }
 
 template<typename Float>
-Float PLEGMA_GaugeU1<Float>::calculatePlaq(){
-  this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
-  auto tex = toTexture<gaugeTex>(*this);
-  Float plaq = calculatePlaquette<Float>(*tex);
-  if(HGC_verbosity>0) PLEGMA_printf("Calculated plaquette is %f\n",plaq);
-  return plaq;
-}
-
-template<typename Float>
 Float PLEGMA_GaugeU1<Float>::calculatePlaqClover(){
   this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
-  auto tex = toTexture<gaugeTex>(*this);
+  auto tex = toTexture<gaugeU1Tex>(*this);
   Float plaqClover = calcPlaqClovDef<Float,Float>(*tex);
   Float plaq = calculatePlaquette<Float>(*tex);
   if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette with clover is %f; diff with reference: %e\n",plaqClover, plaqClover-plaq);
@@ -68,7 +68,7 @@ Float PLEGMA_GaugeU1<Float>::calculatePlaqShifts(){
   Float plaqShifts = resV/(HGC_totalVolume*N_COLS*6);
 
   this->communicateGhost(-1,DIR_BOTH,FIRST_SIDE);
-  auto tex = toTexture<gaugeTex>(*this);
+  auto tex = toTexture<gaugeU1Tex>(*this);
   Float plaqRef = calculatePlaquette<Float>(*tex);
   PLEGMA_printf("TEST: Calculated plaquette with shifts is %f; diff with reference: %e\n", plaqShifts, plaqShifts-plaqRef);
 
@@ -85,7 +85,7 @@ Float PLEGMA_GaugeU1<Float>::calculatePlaqStaples(){
 
   Float plaqStaples = calcPlaqStaplesDef<Float>( toField2<gauge2>(*this) );
 
-  auto tex = toTexture<gaugeTex>(*this);
+  auto tex = toTexture<gaugeU1Tex>(*this);
   Float plaq = calculatePlaquette<Float>(*tex);
 
   if(HGC_verbosity>0) PLEGMA_printf("TEST: Calculated plaquette using staples is %f; diff with reference: %e\n", plaqStaples, plaqStaples-plaq);
@@ -95,7 +95,7 @@ Float PLEGMA_GaugeU1<Float>::calculatePlaqStaples(){
 template<typename Float>
 Float PLEGMA_GaugeU1<Float>::calculatePlaqCorners(){
   this->communicateGhost(-1,DIR_BOTH,FIRST_CORNER);
-  auto tex = toTexture<gaugeTex>(*this);
+  auto tex = toTexture<gaugeU1Tex>(*this);
   Float plaqCorners = calculatePlaquetteCorners<Float>(*tex);
   Float plaqRef = calculatePlaquette<Float>(*tex);
   PLEGMA_printf("TEST: Calculated plaquette with corners is %f; diff with reference: %e\n",plaqCorners, plaqCorners-plaqRef);

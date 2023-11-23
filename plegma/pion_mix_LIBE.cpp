@@ -36,8 +36,6 @@ int main(int argc, char **argv)
   HGC_options->set("dmu", "dmu used for LIBE", verbosity, dmus);
   std::vector<double> dks;
   HGC_options->set("dkappa", "dkappa used for LIBE", verbosity, dks);
-  int dnts = 2;
-  HGC_options->set("nts_inner", "Number of timeslices to run in the inner loop", verbosity, dnts);
 
   //=========================================================================================================//
   initializePLEGMA();
@@ -104,11 +102,24 @@ int main(int argc, char **argv)
     mu = min_mu2;
     TIME(QUDA_solver solver(mu));
 
-    int its2=0;
-    while(its2 < nts){
-      std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props;
-      props.reserve(nmus*dnts);
+    for(int its =0; its < nts; its++){
 
+      int tsink = tSinks[its];
+      
+      char * src_string;
+      asprintf(&src_string, "_id%02d_st%03d", its, tsink);
+      std::string outfilename = twop_filename + src_string + ".h5";
+      free(src_string);
+      
+      if(access( outfilename.c_str(), F_OK ) != -1) {
+	PLEGMA_printf("\nFile %s already exists. Skipping...\n", outfilename.c_str());
+	continue;
+      }
+      
+      std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props;
+      props.reserve(nmus);
+      PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
+	
       for(int imu=0; imu<nmus; imu++){
 	if(kappa0 == -1.0) {
 	  mass = mass0;
@@ -116,30 +127,108 @@ int main(int argc, char **argv)
 	  kappa = kappa0;
 	}
 	mu = mus[imu];
+	PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e  begin now ###\n\n",
+		      its, tsink, mus[imu]);
 	PLEGMA_printf("\n ### Updating solver ###\n\n");
 	TIME(solver.UpdateSolver());
 
-	for(int dits = 0; dits < dnts; dits++){
-	  int its = its2+dits;
-	  if (its>=nts) {
-	    props.push_back(std::make_shared<PLEGMA_Propagator<double>>(NONE));
-	    break;
-	  }
-	  int tsink = tSinks[its];
-	  PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e  begin now ###\n\n",
-		      its, tsink, mus[imu]);
 
-	  char * src_string;
-	  asprintf(&src_string, "_id%02d_st%03d", its, tsink);
-	  std::string outfilename = twop_filename + src_string + ".h5";
-	  free(src_string);
-
+	PLEGMA_Propagator<double> prop1;
 	
+	//Dilution
+	PLEGMA_Vector<double> vector_stoc, vectortmp1;
+	//We draw a different random vector for every source position
+	vector_stoc.randInit(seeds[its]);
+	vector_stoc.stochastic_Z(nroots);
+	vectortmp1.absorbTimeslice(vector_stoc, tsink);
+	vector_stoc.dilutespin(vectortmp1,0);
+
+	for (int spinindex=0; spinindex<4; ++spinindex){
+	  if (spinindex==0)
+	    vectortmp1.copy(vector_stoc);
+	  else
+	    vectortmp1.diluteSpinDisplace(vector_stoc,spinindex,0);
+	  TIME(solver.solve(vectortmp1, vectortmp1));
+	  prop1.absorb(vectortmp1, spinindex, 0);
+	}
+	PLEGMA_Propagator<double> prop0;
+	prop0.copy(prop1);
+
+	prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
+	prop1.applyBoundaries_device(tsink);
+	
+	char * mu_string;
+	asprintf(&mu_string, "%+.4e_%+.4e", mus[imu], mus[imu]);
+	std::string dataset = mu_string;
+	free(mu_string);
+	  
+	TIME(corr.contractMesonsNew(prop1, prop1, false));
+	corr.setDatasets((std::vector<std::string>) {dataset});
+	TIME(corr.writeHDF5( outfilename ));
+	TIME(corr.contractMesonsOpen(prop1, prop1, false));
+	corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	TIME(corr.writeHDF5( outfilename ));
+	TIME(corr.contractMesons1ps(prop0, prop0, contractGauge, false));
+	corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
+	TIME(corr.writeHDF5( outfilename ));
+
+	TIME(prop1.unload());
+	props.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
+	props[imu]->copy(prop1, HOST);
+      }
+      
+      PLEGMA_Propagator<double> prop1;
+      PLEGMA_Propagator<double> prop2;
+      
+      for(int imu1=0; imu1<nmus; imu1++){
+	prop1.copy(*props[imu1], HOST);
+	TIME(prop1.load());
+	for(int imu2=imu1+1; imu2<nmus; imu2++){
+	  if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul))){ continue; }
+	    
+	  prop2.copy(*props[imu2], HOST);
+	  TIME(prop2.load());
+	  
+	  char * mu_string;
+	  asprintf(&mu_string, "%+.4e_%+.4e", mus[imu1], mus[imu2]);
+	  std::string dataset = mu_string;
+	  free(mu_string);
+	  
+	  TIME(corr.contractMesonsNew(prop1, prop2, false));
+	  corr.setDatasets((std::vector<std::string>) {dataset});
+	  TIME(corr.writeHDF5( outfilename ));
+	  TIME(corr.contractMesonsOpen(prop1, prop2, false));
+	  corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	  TIME(corr.writeHDF5( outfilename ));
+	}
+      }
+
+      for(int idm=0; idm<ndms; idm++ ) {
+
+	std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> dprops;
+	dprops.reserve(nmus);
+      
+	double dmu = (idm<ndmus) ? dmus[idm]:0;
+	double dk = (idm>=ndmus) ? dks[idm-ndmus]:0;
+      
+	for(int imu=0; imu<nmus; imu++){
+	  
+	  mu = mus[imu]+mus[imu]*dmu;
+	  if(kappa0 == -1.0) {
+	    mass = mass0+dk;
+	  } else {
+	    kappa = kappa0+dk;
+	  }
+	  PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e, dmu=%+.4e, dk=%+.4e  begin now ###\n\n",
+			its, tsink, mus[imu], dmu, dk);
+	  PLEGMA_printf("\n ### Updating solver ###\n\n");
+	  TIME(solver.UpdateSolver());    
+
+      
 	  PLEGMA_Propagator<double> prop1;
 	
 	  //Dilution
-	  PLEGMA_Vector<double> vector_stoc, vectortmp1;
-	  //We draw a different random vector for every source position
+	  PLEGMA_Vector<double> vector_stoc,vectortmp1;
 	  vector_stoc.randInit(seeds[its]);
 	  vector_stoc.stochastic_Z(nroots);
 	  vectortmp1.absorbTimeslice(vector_stoc, tsink);
@@ -155,16 +244,14 @@ int main(int argc, char **argv)
 	  }
 	  PLEGMA_Propagator<double> prop0;
 	  prop0.copy(prop1);
-
 	  prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
 	  prop1.applyBoundaries_device(tsink);
-	
+
 	  char * mu_string;
-	  asprintf(&mu_string, "%+.4e_%+.4e", mus[imu], mus[imu]);
+	  asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu], mus[imu],dmu,dk);
 	  std::string dataset = mu_string;
 	  free(mu_string);
 	  
-	  PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
 	  TIME(corr.contractMesonsNew(prop1, prop1, false));
 	  corr.setDatasets((std::vector<std::string>) {dataset});
 	  TIME(corr.writeHDF5( outfilename ));
@@ -176,38 +263,47 @@ int main(int argc, char **argv)
 	  TIME(corr.writeHDF5( outfilename ));
 
 	  TIME(prop1.unload());
-	  props.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
-	  props[imu*dnts+dits]->copy(prop1, HOST);
+	  dprops.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
+	  dprops[imu]->copy(prop1, HOST);
 	}
-      }
-	
-
-      for(int dits = 0; dits < dnts; dits++){
-	int its = its2+dits;
-	if (its>=nts) break;
-	int tsink = tSinks[its];
-      
-	char * src_string;
-	asprintf(&src_string, "_id%02d_st%03d", its, tsink);
-	std::string outfilename = twop_filename + src_string + ".h5";
-	free(src_string);
-      
-	PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
       
 	PLEGMA_Propagator<double> prop1;
 	PLEGMA_Propagator<double> prop2;
-      
+
 	for(int imu1=0; imu1<nmus; imu1++){
-	  prop1.copy(*props[imu1*dnts+dits], HOST);
+	  prop1.copy(*dprops[imu1], HOST);
 	  TIME(prop1.load());
 	  for(int imu2=imu1+1; imu2<nmus; imu2++){
 	    if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul))){ continue; }
-	    
-	    prop2.copy(*props[imu2*dnts+dits], HOST);
+	      
+	    prop2.copy(*dprops[imu2], HOST);
 	    TIME(prop2.load());
 	  
 	    char * mu_string;
-	    asprintf(&mu_string, "%+.4e_%+.4e", mus[imu1], mus[imu2]);
+	    asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu1], mus[imu2],dmu,dk);
+	    std::string dataset = mu_string;
+	    free(mu_string);
+	  
+	    TIME(corr.contractMesonsNew(prop1, prop2, false));
+	    corr.setDatasets((std::vector<std::string>) {dataset});
+	    TIME(corr.writeHDF5( outfilename ));
+	    TIME(corr.contractMesonsOpen(prop1, prop2, false));
+	    corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	    TIME(corr.writeHDF5( outfilename ));
+	  }
+	}
+
+	for(int imu1=0; imu1<nmus; imu1++){
+	  prop1.copy(*props[imu1], HOST);
+	  TIME(prop1.load());
+	  for(int imu2=0; imu2<nmus; imu2++){
+	    if(not (mus[imu1]==mus[imu2] or mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul) or (imu2<nmul and imu1>=nmul))){ continue; }
+	      
+	    prop2.copy(*dprops[imu2], HOST);
+	    TIME(prop2.load());
+	  
+	    char * mu_string;
+	    asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e", mus[imu1], mus[imu2],dmu,dk);
 	    std::string dataset = mu_string;
 	    free(mu_string);
 	  
@@ -220,147 +316,6 @@ int main(int argc, char **argv)
 	  }
 	}
       }
-
-      for(int idm=0; idm<ndms; idm++ ) {
-
-	std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> dprops;
-	dprops.reserve(nmus*dnts);
-      
-	double dmu = (idm<ndmus) ? dmus[idm]:0;
-	double dk = (idm>=ndmus) ? dks[idm-ndmus]:0;
-      
-	for(int imu=0; imu<nmus; imu++){
-	  mu = mus[imu]+mus[imu]*dmu;
-	  if(kappa0 == -1.0) {
-	    mass = mass0+dk;
-	  } else {
-	    kappa = kappa0+dk;
-	  }
-	  PLEGMA_printf("\n ### Updating solver ###\n\n");
-	  TIME(solver.UpdateSolver());    
-
-	  for(int dits = 0; dits < dnts; dits++){
-	    int its = its2+dits;
-	    if (its>=nts) {
-	      dprops.push_back(std::make_shared<PLEGMA_Propagator<double>>(NONE));
-	      break;
-	    }
-	    int tsink = tSinks[its];
-	    PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e, dmu=%+.4e, dk=%+.4e  begin now ###\n\n",
-			  its, tsink, mus[imu], dmu, dk);
-      
-	    char * src_string;
-	    asprintf(&src_string, "_id%02d_st%03d", its, tsink);
-	    std::string outfilename = twop_filename + src_string + ".h5";
-	    free(src_string);
-
-	    PLEGMA_Propagator<double> prop1;
-	
-	    //Dilution
-	    PLEGMA_Vector<double> vector_stoc,vectortmp1;
-	    vector_stoc.randInit(seeds[its]);
-	    vector_stoc.stochastic_Z(nroots);
-	    vectortmp1.absorbTimeslice(vector_stoc, tsink);
-	    vector_stoc.dilutespin(vectortmp1,0);
-
-	    for (int spinindex=0; spinindex<4; ++spinindex){
-	      if (spinindex==0)
-		vectortmp1.copy(vector_stoc);
-	      else
-		vectortmp1.diluteSpinDisplace(vector_stoc,spinindex,0);
-	      TIME(solver.solve(vectortmp1, vectortmp1));
-	      prop1.absorb(vectortmp1, spinindex, 0);
-	    }
-	    PLEGMA_Propagator<double> prop0;
-	    prop0.copy(prop1);
-	    prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
-	    prop1.applyBoundaries_device(tsink);
-
-	    char * mu_string;
-	    asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu], mus[imu],dmu,dk);
-	    std::string dataset = mu_string;
-	    free(mu_string);
-	  
-	    PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
-	    TIME(corr.contractMesonsNew(prop1, prop1, false));
-	    corr.setDatasets((std::vector<std::string>) {dataset});
-	    TIME(corr.writeHDF5( outfilename ));
-	    TIME(corr.contractMesonsOpen(prop1, prop1, false));
-	    corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
-	    TIME(corr.writeHDF5( outfilename ));
-	    TIME(corr.contractMesons1ps(prop0, prop0, contractGauge, false));
-	    corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
-	    TIME(corr.writeHDF5( outfilename ));
-
-	    TIME(prop1.unload());
-	    dprops.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
-	    dprops[imu*dnts+dits]->copy(prop1, HOST);
-	  }
-	}
-
-	for(int dits = 0; dits < dnts; dits++){
-	  int its = its2+dits;
-	  if (its>=nts) break;
-	  int tsink = tSinks[its];
-      
-	  char * src_string;
-	  asprintf(&src_string, "_id%02d_st%03d", its, tsink);
-	  std::string outfilename = twop_filename + src_string + ".h5";
-	  free(src_string);
-      
-	  PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
-      
-	  PLEGMA_Propagator<double> prop1;
-	  PLEGMA_Propagator<double> prop2;
-
-	  for(int imu1=0; imu1<nmus; imu1++){
-	    prop1.copy(*dprops[imu1*dnts+dits], HOST);
-	    TIME(prop1.load());
-	    for(int imu2=imu1+1; imu2<nmus; imu2++){
-	      if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul))){ continue; }
-	      
-	      prop2.copy(*dprops[imu2*dnts+dits], HOST);
-	      TIME(prop2.load());
-	  
-	      char * mu_string;
-	      asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu1], mus[imu2],dmu,dk);
-	      std::string dataset = mu_string;
-	      free(mu_string);
-	  
-	      TIME(corr.contractMesonsNew(prop1, prop2, false));
-	      corr.setDatasets((std::vector<std::string>) {dataset});
-	      TIME(corr.writeHDF5( outfilename ));
-	      TIME(corr.contractMesonsOpen(prop1, prop2, false));
-	      corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
-	      TIME(corr.writeHDF5( outfilename ));
-	    }
-	  }
-
-	  for(int imu1=0; imu1<nmus; imu1++){
-	    prop1.copy(*props[imu1*dnts+dits], HOST);
-	    TIME(prop1.load());
-	    for(int imu2=0; imu2<nmus; imu2++){
-	      if(not (mus[imu1]==mus[imu2] or mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul) or (imu2<nmul and imu1>=nmul))){ continue; }
-	      
-	      prop2.copy(*dprops[imu2*dnts+dits], HOST);
-	      TIME(prop2.load());
-	  
-	      char * mu_string;
-	      asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e", mus[imu1], mus[imu2],dmu,dk);
-	      std::string dataset = mu_string;
-	      free(mu_string);
-	  
-	      TIME(corr.contractMesonsNew(prop1, prop2, false));
-	      corr.setDatasets((std::vector<std::string>) {dataset});
-	      TIME(corr.writeHDF5( outfilename ));
-	      TIME(corr.contractMesonsOpen(prop1, prop2, false));
-	      corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
-	      TIME(corr.writeHDF5( outfilename ));
-	    }
-	  }
-	}
-      }
-      its2+=dnts;
     }
   }
   finalize();

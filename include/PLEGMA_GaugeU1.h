@@ -15,11 +15,11 @@ namespace plegma {
   public:
     PLEGMA_GaugeU1(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_CORNER);
     ~PLEGMA_GaugeU1(){;}
+    Float calculatePlaq(Float phase);
    /* 
     void absorbDir_device(PLEGMA_Su3field<Float> &su,int dir);
     void absorbDir_host(PLEGMA_Su3field<Float> &su,int dir);
 
-    Float calculatePlaq();
 
     //PLEGMA_topocharge.cuh
     Float calculateTopo(TOPO_CHARGE_DEF charge_def);
