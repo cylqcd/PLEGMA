@@ -136,6 +136,7 @@ int main(int argc, char **argv) {
   PLEGMA_Propagator<float> *seqPropOut2 = new PLEGMA_Propagator<float>(BOTH);
   PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);
   PLEGMA_Propagator<float> *propExchange = nullptr;
+  PLEGMA_Propagator<float> *propF = new PLEGMA_Propagator<float>(BOTH);
 
   PLEGMA_Propagator3D<float> propUP3D;
   PLEGMA_Propagator3D<float> propDN3D;
@@ -334,10 +335,6 @@ int main(int argc, char **argv) {
     seqPropOut2->unload();
 
     int signProps2 = (nucleon == PROTON) ? +1: -1;
-
-
-    //propF11 for staple in Bdir1 and propF12 for staple in Bdir2
-    PLEGMA_Propagator<float> *propF = new PLEGMA_Propagator<float>(BOTH);
       
 
       /**********************************************************************
