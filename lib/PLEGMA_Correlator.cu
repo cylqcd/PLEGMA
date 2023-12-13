@@ -5,6 +5,8 @@
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_mesonsNew.cuh>
 #include <PLEGMA_mesonsOpen.cuh>
+#include <PLEGMA_mesonsSIB.cuh>
+#include <PLEGMA_mesonsOpenSIB.cuh>
 #include <PLEGMA_baryons.cuh>
 #include <PLEGMA_threep.cuh>
 #include <functional>
@@ -68,6 +70,20 @@ contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
+contractMesonsSIB(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2){
+
+  shape = {3,16};
+  datasets =  {"twop_meson_SIB"};
+  groups =  {"mesons"};
+  description = "pseudoscalar, scalar, g5g1, g5g2, g5g3, g5g4, g1, g2, g3, g4,s12,s13,s23,s41,s42,s43";
+  
+  initialize();
+  contract_mesons_SIB(prop1,prop2,*this);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
 contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
 		  PLEGMA_Propagator<Float> &prop2,
 		  bool all_cols){
@@ -79,6 +95,20 @@ contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
   
   initialize();
   contract_mesons_open(prop1,prop2,*this,all_cols);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsOpenSIB(PLEGMA_Propagator<Float> &prop1,
+		      PLEGMA_Propagator<Float> &prop2){
+
+  shape = {3,4,4,4,4};
+  datasets =  {"twop_meson_open_SIB"};
+  groups =  {"mesons"};
+  description = "open_indeces, prop1_mu,nu prop2_ku,lu";
+  
+  initialize();
+  contract_mesons_open_SIB(prop1,prop2,*this);
 }
 
 
@@ -102,6 +132,25 @@ contractMesons1ps(PLEGMA_Propagator<Float> &prop1,
   mesons_noe(*this,prop1,prop2,gauge,all_cols);
 }
 
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesons1psSIB(PLEGMA_Propagator<Float> &prop1,
+		     PLEGMA_Propagator<Float> &prop2,
+		     PLEGMA_Gauge<Float> &gauge){
+
+  shape = {3, N_DIMS};
+  datasets = {"twop_meson_1ps_SIB"};
+  groups =  {"mesons"};
+  description = "x,y,z,t";
+  initialize();
+
+  gauge.communicateSideGhost();
+  prop1.communicateGhost();
+  prop2.communicateGhost();
+  
+  mesons_noe_SIB(*this,prop1,prop2,gauge);
+}
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -111,6 +160,7 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"baryons/nucl_nucl",
+	     "baryons/nucl_nucl_OS",
 #ifdef PLEGMA_LIGHT_BARYONS
 	     "baryons/nucl_nucl2","baryons/nucl2_nucl","baryons/nucl2_nucl2",
 	     "baryons/deltap_deltaz_11","baryons/deltap_deltaz_22","baryons/deltap_deltaz_33",

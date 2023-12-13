@@ -37,11 +37,20 @@ endif(PLEGMA_MKL)
 cuda_add_executable(Plaquette Plaquette.cpp)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
+cuda_add_executable(omega omega.cpp)
+target_link_libraries(omega ${PLEGMA_LIBS})
+
+cuda_add_executable(omega_smear omega_smear.cpp)
+target_link_libraries(omega_smear ${PLEGMA_LIBS})
+
 cuda_add_executable(pion pion.cpp)
 target_link_libraries(pion ${PLEGMA_LIBS})
 
 cuda_add_executable(pion_mix pion_mix.cpp)
 target_link_libraries(pion_mix ${PLEGMA_LIBS})
+
+cuda_add_executable(pion_mix_SIB pion_mix_SIB.cpp)
+target_link_libraries(pion_mix_SIB ${PLEGMA_LIBS})
 
 cuda_add_executable(pion_mix_LIBE pion_mix_LIBE.cpp)
 target_link_libraries(pion_mix_LIBE ${PLEGMA_LIBS})

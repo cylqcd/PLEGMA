@@ -207,6 +207,16 @@ namespace plegma {
 			   PLEGMA_Gauge<Float> &gauge,
 			   bool all_cols=true);
 
+    void contractMesonsSIB(PLEGMA_Propagator<Float> &prop1,
+			   PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsOpenSIB(PLEGMA_Propagator<Float> &prop1,
+			       PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesons1psSIB(PLEGMA_Propagator<Float> &prop1,
+			      PLEGMA_Propagator<Float> &prop2,
+			      PLEGMA_Gauge<Float> &gauge);
+
     void contractBaryons(PLEGMA_Propagator<Float> &prop1,
 			 PLEGMA_Propagator<Float> &prop2);
     
