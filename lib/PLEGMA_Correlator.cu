@@ -1,5 +1,6 @@
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Correlator.h>
+#include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_mesons.cuh>
@@ -8,6 +9,8 @@
 #include <PLEGMA_baryons.cuh>
 #include <PLEGMA_threep.cuh>
 #include <functional>
+#include <PLEGMA_mesons_exact_exact.cuh>
+#include <PLEGMA_mesons_stoch_exact.cuh>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
 #endif
@@ -34,6 +37,32 @@ initialize() {
   else {
     PLEGMA_error("corr_space not supported by correlator");
   }
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractEigVecs(Float* ptr, int nvecs, size_t vec_size ){
+
+  shape = {(nvecs*(nvecs+1))/2, 16};
+  datasets =  {"exact_exact"};
+  groups =  {"mesons"};
+  description = "g5, g5g1, g5g2, g5g3, g5g4, 1, g1, g2, g3, g4, g5s12, g5s13, g5s23, g5s41, g5s42, g5s43";
+  
+  initialize();
+  contract_exact_exact(ptr,nvecs,vec_size,*this);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractPropEigVecs(PLEGMA_Propagator<Float> &prop1, Float *spinVals, Float* ptr, int nvecs, size_t vec_size ){
+
+  shape = {nvecs, 4, 4, 4, 4};
+  datasets =  {"stoch_exact"};
+  groups =  {"mesons"};
+  description = "g5, g5g1, g5g2, g5g3, g5g4, 1, g1, g2, g3, g4, g5s12, g5s13, g5s23, g5s41, g5s42, g5s43";
+  
+  initialize();
+  contract_stoch_exact(prop1, spinVals, ptr,nvecs,vec_size,*this);
 }
 
 template<typename Float>

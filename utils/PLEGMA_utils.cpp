@@ -7,6 +7,12 @@ using namespace quda;
 #include "utils/QUDA_params.h"
 #undef ALLOCATE
 
+static std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;                 \
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back()
+
+
 static bool isInitOpt = false;
 
 void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::string> listOptPLEGMA){
@@ -70,12 +76,12 @@ void updateOptions(WHICHFLAVOR fl){
 
 void initializePLEGMA() {
   if(!isInitOpt){fprintf(stderr,"initializeOptions should be called before initializePLEGMA");exit(EXIT_FAILURE);}
-  HGC_options->close();
-  initQuda(device_number);
+  TIME(HGC_options->close());
+  TIME(initQuda(device_number));
   qudaInitialized=true;
   // initialize PLEGMA params
-  PLEGMA_init(dims, procs, verbosity);
-  PLEGMA_status();
+  TIME(PLEGMA_init(dims, procs, verbosity));
+  TIME(PLEGMA_status());
 }
 
 void finalize() {

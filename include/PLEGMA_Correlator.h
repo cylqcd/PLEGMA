@@ -191,6 +191,11 @@ namespace plegma {
       std::vector<std::string> d = {s};
       setGroups(d);
     }
+    void contractEigVecs(Float *ptr, int nvecs, size_t vec_size);
+
+    void contractPropEigVecs(PLEGMA_Propagator<Float> &prop1, Float *spinVals,
+			     Float *ptr, int nvecs, size_t vec_size);
+
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
 
