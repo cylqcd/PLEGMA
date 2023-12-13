@@ -261,8 +261,8 @@ int main(int argc, char **argv)
         free(ssource);
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4};
-        std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
+        std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_12, S_23, S_13, S_41, S_42, S_43};
+        // std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_meson = {};
         std::string filenamePost = "";
@@ -425,6 +425,11 @@ int main(int argc, char **argv)
                         aux.copy(stocPhiU_ti_SL);
                         aux_pi2.copy(stocPhiU_ti_mpi2_SL);
                         pi0Insertion.P_diagrams(aux, aux_pi2, -1);
+                        // if(st==3 && mom_pi2[0]==0 && mom_pi2[1]==0 && mom_pi2[2]==0)
+                        // {
+                        //     aux.writeHDF5("aux");
+                        //     aux_pi2.writeHDF5("aux_pu2");
+                        // }
                     }
                     std::string outfilename = outdiagramPrefix + confnumber + "_" + filenamePost;
                     pi0Insertion.writeHDF5(outfilename);
