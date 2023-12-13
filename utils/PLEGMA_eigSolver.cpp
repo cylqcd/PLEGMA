@@ -45,10 +45,10 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
 #endif
 
 #if defined(HAVE_ARPACK)
-  hostMalloc(h_eigVecs,size_NkV*2*sizeof(double));
+  hostMallocPinned(h_eigVecs,size_NkV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NkV*2*sizeof(double));
 #elif defined(QUDAEIG)
-  hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
+  hostMallocPinned(h_eigVecs,size_NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
   hostMalloc(h_eigVecs_p, p.NeV*sizeof(double*)); // need to check if this does the trick
   double* ptr_tmp = h_eigVecs;
@@ -57,7 +57,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     ptr_tmp += size_per_Vec*2;
   }
 #elif defined(HAVE_PRIMME)
-  hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
+  hostMallocPinned(h_eigVecs,size_NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_rnorms,p.NeV*2*sizeof(double));
 #else
@@ -90,7 +90,13 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     else PLEGMA_error("Not implemented");
   }
 #endif
-  
+
+  if(p.littleD) {
+    PLEGMA_printf("LittleD allocated for NeV=%d \n",p.NeV);
+    hostMalloc(littleD, p.NeV*p.NeV*sizeof(std::complex<double>));
+    hostMalloc(littleD_inv, p.NeV*p.NeV*sizeof(std::complex<double>));
+  }
+
   if(!isReadEigenVectors){
     initEigSolver();
     if(verbose) print();
@@ -125,20 +131,23 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     primme_free(&primme_pars);
   }
 #endif
-  
 }
 
 EigSolver::~EigSolver(){
 #if defined(HAVE_ARPACK)
-    hostFree(h_eigVecs,size_NkV*2*sizeof(double));
+    hostFreePinned(h_eigVecs,size_NkV*2*sizeof(double));
 #elif defined(QUDAEIG)
-     hostFree(h_eigVecs,size_NeV*2*sizeof(double));
+     hostFreePinned(h_eigVecs,size_NeV*2*sizeof(double));
      hostFree(h_eigVecs_p, p.NeV*sizeof(double*));
 #elif defined(HAVE_PRIMME)
-    hostFree(h_eigVecs,size_NeV*2*sizeof(double));
+    hostFreePinned(h_eigVecs,size_NeV*2*sizeof(double));
 #else
   PLEGMA_error("Not implemented");
-#endif    
+#endif
+  if(p.littleD) {
+    hostFree(littleD, p.NeV*p.NeV*2*sizeof(double));
+    hostFree(littleD_inv, p.NeV*p.NeV*2*sizeof(double));
+  }
   //  delete[] h_eigVecs;
 }
 
@@ -213,6 +222,7 @@ static void par_GlobalSumForDouble(void *sendBuf, void *recvBuf, int *count, pri
 void EigSolver::initEigSolver(){
 #ifdef HAVE_ARPACK
   int arpack_log_u = 9999;
+  /*
   if(!p.logFile.empty() && comm_rank() == 0){
     char *tmps = strdup(p.logFile.c_str());
     initlog_(&arpack_log_u, tmps, p.logFile.length());
@@ -221,6 +231,7 @@ void EigSolver::initEigSolver(){
     int msglvl3 = 3;
     pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
   }
+  */
 #elif HAVE_PRIMME
   primme_initialize(&primme_pars);
   primme_pars.matrixMatvec = applyOperator;
@@ -361,12 +372,13 @@ void EigSolver::computeEigVecs(){
   bool checkIdo = true;
   int arpack_iter = 0;
   int ido = 0;
+  int size_per_Veci = size_per_Vec;
 
   // start solver
   do{
-    pznaupd_(&mpi_comm_f, &ido,bmat, &size_per_Vec, which_evals, 
+    pznaupd_(&mpi_comm_f, &ido,bmat, &size_per_Veci, which_evals, 
 	     &p.NeV, &p.tol, resid, &p.NkV,
-	     (std::complex<double>*)h_eigVecs, &size_per_Vec, iparam, ipntr, workd, 
+	     (std::complex<double>*)h_eigVecs, &size_per_Veci, iparam, ipntr, workd, 
 	     workl, &lworkl,rwork,&info,1,2);
     if(checkIdo){
       pin=workd+ipntr[0]-1;
@@ -385,14 +397,15 @@ void EigSolver::computeEigVecs(){
   if(verbose) PLEGMA_printf("EigSolver: Number of converged eigenvalues: %d\n", nconv);
 
   // compute eigenvectors
-  pzneupd_(&mpi_comm_f,&rvec,howmany, select, (std::complex<double>*) h_eigVals,(std::complex<double>*) h_eigVecs, &size_per_Vec,&sigma, 
-	   workev,bmat,&size_per_Vec,which_evals,&p.NeV,&p.tol, resid,&p.NkV, 
-	   (std::complex<double>*) h_eigVecs,&size_per_Vec,iparam,ipntr,workd,workl,&lworkl,rwork,&info,1,1,2);
+  pzneupd_(&mpi_comm_f,&rvec,howmany, select, (std::complex<double>*) h_eigVals,(std::complex<double>*) h_eigVecs, &size_per_Veci,&sigma, 
+	   workev,bmat,&size_per_Veci,which_evals,&p.NeV,&p.tol, resid,&p.NkV, 
+	   (std::complex<double>*) h_eigVecs,&size_per_Veci,iparam,ipntr,workd,workl,&lworkl,rwork,&info,1,1,2);
   if(info == 1) PLEGMA_printf("Warning: Maximum number of iterations reached.\n");
   if(info == 3) PLEGMA_error("No shifts could be applied during implicit, Arnoldi update, try increasing NkV\n");
+  /*
   int arpack_log_u = 9999;
   if(!p.logFile.empty() && comm_rank() == 0)finilog_(&arpack_log_u);
-
+  */
   free(bmat);
   free(howmany);
   free(which_evals);
@@ -424,17 +437,35 @@ void EigSolver::computeEigVecs(){
 }
 
 void EigSolver::computeEigVals(){
+  PLEGMA_Vector<double> tmp3;
+  
   double* ptr_tmp = h_eigVecs;
+  int veci = 0;
   for(int j = 0 ; j < p.NeV; j++){
     double one[2] = {1.,0.};
     cudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
     checkCudaError();
     dOp->apply<MdagM>(*tmp2,*tmp1);
+    dOp->apply<M>(tmp3,*tmp1,QUDA_MASS_NORMALIZATION);
+    tmp3.apply_gamma5();
     std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), HGC_fullComm);
     cuBLAS::scal(size_per_Vec,-eval.real(),tmp1->D_elem());
     cuBLAS::axpy(size_per_Vec,one,tmp2->D_elem(),tmp1->D_elem());
     std::complex<double> res = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), HGC_fullComm);
     evalsOrdered.push_back(std::make_tuple(eval.real(), eval.imag(), std::sqrt(res.real()), j));
+    for(int k = j ; k < (p.littleD ? p.NeV:(j+1)); k++){
+      cudaMemcpy(tmp1->D_elem(),ptr_tmp+(k-j)*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
+      std::complex<double> eval1= cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), HGC_fullComm);
+      std::complex<double> eval2 = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp3.D_elem(), HGC_fullComm);
+      if (p.littleD) {
+	littleD[k*p.NeV+j] = eval2;
+	if (k!=j) littleD[j*p.NeV+k] = std::conj(eval2);
+      }
+
+      if (k==j)
+	PLEGMA_printf("v_[%03d] DdagD v_[%03d] = (%+e,%+e)   v_[%03d] g5D v_[%03d] / 2*kappa = (%+e,%+e)\n", k, j, eval1, k, j, eval2);
+    }
+    
     ptr_tmp += size_per_Vec*2;
   }
   std::sort(evalsOrdered.begin(), evalsOrdered.end());
@@ -442,6 +473,9 @@ void EigSolver::computeEigVals(){
     for (int j = 0; j < p.NeV; ++j)
       PLEGMA_printf("Eval[%04d] = (%+e,%+e), Residual: %+e, Order Index: %d\n", j, std::get<0>(evalsOrdered[j]), std::get<1>(evalsOrdered[j]),
 		 std::get<2>(evalsOrdered[j]), std::get<3>(evalsOrdered[j]));
+  if (p.littleD) {
+    // TODO: compute LU
+  }
 }
 
 // vecOut = (1 - U * U^\dag) vecIn
@@ -466,7 +500,7 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<doubl
 
 
  // vecOut = (1 - U * U^\dag) vecIn where out and in are the same
-void EigSolver::projectVector(PLEGMA_Vector<double> &vec){
+ void EigSolver::projectVector(PLEGMA_Vector<double> &vec, double *tmpArr){
   if(p.NeV <= 0){
     if(verbose) PLEGMA_printf("Skipping deflation of source vector since NeV=%d\n",p.NeV);
     return;
@@ -474,13 +508,16 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vec){
   if(!vec.IsAllocHost()) PLEGMA_error("This functions needs vec to have also Host allocation");
   vec.unload();
   double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
-  double *tmpArr = nullptr;
-  try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
+  bool alloc=false;
+  if(tmpArr==nullptr) {
+    try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
+    alloc=true;
+  }
   memset(tmpArr,0,p.NeV*2*sizeof(double));
   cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
   cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
   vec.load();
-  delete[] tmpArr;
+  if(alloc) delete[] tmpArr;
 }
 
 void EigSolver::dumpEvalsVdagG5V(std::string filename){

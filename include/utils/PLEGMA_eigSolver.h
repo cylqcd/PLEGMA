@@ -46,6 +46,7 @@ namespace plegma{
   struct  EigSolverParams{
     int NeV; // total number of eigenvalues & eigenvectors
     std::string spectrumPart; // available options for arpack are (SR,LR)
+    bool littleD; // In case we want to compute little Dirac and use it in the projection
     bool isACC; // In case we want to use Polymonial accelerator
     int PolyDeg; // Order of the Polynomial
     double amin; // Low boundary for polymonial accelerator
@@ -87,7 +88,7 @@ namespace plegma{
     EigSolverParams p;
     bool verbose;
     int field_length;
-    int size_per_Vec;
+    size_t size_per_Vec;
     size_t size_NeV;
 #if defined(HAVE_ARPACK) || defined(QUDAEIG)
     size_t size_NkV;
@@ -108,6 +109,8 @@ namespace plegma{
     double *h_rnorms;
     primme_params primme_pars;
 #endif
+    std::complex<double> *littleD;
+    std::complex<double> *littleD_inv;
     std::vector< std::tuple<double,double,double,int> > evalsOrdered; // real, imag, residual, orderInd
 #if defined(HAVE_ARPACK)  
     void applyOperator(double *out, double *in);
@@ -123,9 +126,10 @@ namespace plegma{
 	      bool isWriteEigenVectors = false, std::string filenamePrefix = "", bool verbose=false);
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
-    void projectVector(PLEGMA_Vector<double> &vec);
+    void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr);
     void dumpEvalsVdagG5V(std::string filename);
     double* getEigVecs() const{return h_eigVecs;}
+    std::complex<double>* getLittleD() const{return littleD;}
     std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
     int getSize_per_Vec() const{return size_per_Vec;}
     size_t getBytes_per_Vec() const{return bytes_per_Vec;}

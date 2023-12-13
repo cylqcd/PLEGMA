@@ -52,6 +52,9 @@ target_link_libraries(pion_mix ${PLEGMA_LIBS})
 cuda_add_executable(pion_mix_SIB pion_mix_SIB.cpp)
 target_link_libraries(pion_mix_SIB ${PLEGMA_LIBS})
 
+cuda_add_executable(pion_defl pion_defl.cpp)
+target_link_libraries(pion_defl ${PLEGMA_LIBS})
+
 cuda_add_executable(pion_mix_LIBE pion_mix_LIBE.cpp)
 target_link_libraries(pion_mix_LIBE ${PLEGMA_LIBS})
 
@@ -70,8 +73,8 @@ target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
-cuda_add_executable(meson_2pt_3pt meson_2pt_3pt.cpp)
-target_link_libraries(meson_2pt_3pt ${PLEGMA_LIBS})
+#cuda_add_executable(meson_2pt_3pt meson_2pt_3pt.cpp)
+#target_link_libraries(meson_2pt_3pt ${PLEGMA_LIBS})
 
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})
