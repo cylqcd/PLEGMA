@@ -16,14 +16,22 @@ std::vector<std::string> HDF5::open_files;
 Communicator &get_current_communicator();
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
+  std::vector<double> runtime;
+#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;                 \
+  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+  runtime.pop_back()
+
+  TIME(
   HGC_hold_exit = false;
   HGC_options->checkErrors();
+       );
 
 #define ADD_TO_GLOBAL
 #include<global/PLEGMA_global_constants.h>
 #undef ADD_TO_GLOBAL
-  
+
   if(HGC_init_PLEGMA_flag == false){
+    TIME(
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
 
@@ -159,10 +167,14 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
     for(int i= 0 ; i < N_DIMS ; i++)
       HGC_procPosition[i] = comm_coords(HGC_default_topo)[i];
+	 );
 
+    TIME(
     // copying globals to device
     HGC_global_vars.copyToDevice();
-
+	 );
+    
+    TIME(
     // create groups of process to use mpi reduce only on spatial points
     MPI_Comm_dup(MPI_COMM_WORLD, &HGC_fullComm);
     MPI_Comm_group(HGC_fullComm, &HGC_fullGroup);
@@ -195,7 +207,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
     cublasStatus_t error = cublasCreate(&HGC_cublas_handle);
     if (error != CUBLAS_STATUS_SUCCESS) PLEGMA_error("cublasCreate failed with error %d", error);
-    
+	 );
     HGC_init_PLEGMA_flag = true;
     PLEGMA_printf("PLEGMA has been initialized\n");
   }  
