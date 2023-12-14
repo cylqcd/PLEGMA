@@ -844,6 +844,25 @@ namespace plegma {
       sidStride::shift<src>(dirs ...);
       get(P);
     }
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS], int c2) const {
+      #pragma unroll
+      for(short mu = 0 ; mu < N_SPINS ; mu++)
+        #pragma unroll
+	for(short nu = 0 ; nu < N_SPINS ; nu++)
+          #pragma unroll
+	  for(short c1 = 0 ; c1 < N_COLS ; c1++)
+	    P[mu][nu][c1] = get(mu, nu, c1, c2);
+    }
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS], int c2, const size_t& sid) {
+      sidStride::setSid(sid);
+      get(P,c2);
+    }
+    template<get_from src, typename ...dir_t>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS], int c2, const size_t& sid, const dir_t&... dirs) {
+      sidStride::setSid(sid);
+      sidStride::shift<src>(dirs ...);
+      get(P,c2);
+    }
     inline __device__ Float2<Float> getDag(const short& mu, const short& nu, const short& c1, const short& c2) const {
       return conj(T::getDag(((nu*N_SPINS + mu)*N_COLS + c1)*N_COLS + c2));
     }
