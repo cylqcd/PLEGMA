@@ -2,7 +2,7 @@
 
 #include <PLEGMA_kernel_utils.cuh>
 
-enum BARYONS_TYPE{NtoN,		
+enum BARYONS_TYPE{NtoN, NtoN_OS,
 #ifdef PLEGMA_LIGHT_BARYONS		
 		  NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,		
 		  DELTA_3O2_1, DELTA_3O2_2, DELTA_3O2_3,		
@@ -12,6 +12,9 @@ enum BARYONS_TYPE{NtoN,
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoN_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+
+template<typename FloatA, typename FloatB, typename FloatC>
+__device__ void contract_NtoN_OS_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoR_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
@@ -49,6 +52,9 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
     switch(ip){
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
+      break;
+    case NtoN_OS:
+      contract_NtoN_OS_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
 #ifdef PLEGMA_LIGHT_BARYONS
     case NtoR:

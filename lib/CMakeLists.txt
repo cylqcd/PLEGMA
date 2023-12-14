@@ -9,10 +9,12 @@ set (PLEGMA_OBJS
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
   kernels/PLEGMA_baryons_NtoN.cu
+  kernels/PLEGMA_baryons_NtoN_OS.cu
   kernels/PLEGMA_seqSourceNucleon.cu
   kernels/PLEGMA_threep_local.cu
   kernels/PLEGMA_threep_noe.cu
   kernels/PLEGMA_mesons_noe.cu
+  kernels/PLEGMA_mesons_noe_SIB.cu
   kernels/PLEGMA_threep_oneD.cu
   kernels/PLEGMA_threep_twoD.cu
   kernels/PLEGMA_threep_threeD_part1.cu
