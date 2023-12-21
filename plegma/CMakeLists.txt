@@ -70,6 +70,9 @@ target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
+cuda_add_executable(GPDs_nucleon GPDs_nucleon.cpp)
+target_link_libraries(GPDs_nucleon ${PLEGMA_LIBS})
+
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 

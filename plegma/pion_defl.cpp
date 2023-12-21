@@ -62,49 +62,49 @@ int main(int argc, char **argv)
   //applyBoundaryConditions(gauge,true);
 
   // In case we need LMR we need to compute the eigenvectors
+  EigSolver *eigSol = nullptr;
+  if(Eig_NeV>0) {
 #if defined(HAVE_EIGENSOLVER)
-  EigSolver *eigSol = nullptr;  
-#endif
-#if defined(HAVE_EIGENSOLVER)
-  EigSolverParams eigParam;
-  eigParam.NeV = Eig_NeV;
-  eigParam.isACC = Eig_isACC;
-  eigParam.littleD = true;
-  eigParam.PolyDeg = Eig_PolyDeg;
-  eigParam.amin = Eig_amin;
-  eigParam.amax = Eig_amax;
-  eigParam.spectrumPart = Eig_spectrumPart;
-  eigParam.tol = Eig_tol;
-  eigParam.maxIters = Eig_maxIters;
+    EigSolverParams eigParam;
+    eigParam.NeV = Eig_NeV;
+    eigParam.isACC = Eig_isACC;
+    eigParam.littleD = true;
+    eigParam.PolyDeg = Eig_PolyDeg;
+    eigParam.amin = Eig_amin;
+    eigParam.amax = Eig_amax;
+    eigParam.spectrumPart = Eig_spectrumPart;
+    eigParam.tol = Eig_tol;
+    eigParam.maxIters = Eig_maxIters;
 #ifdef QUDAEIG
-  eigParam.batched_rotate = batched_rotate;
+    eigParam.batched_rotate = batched_rotate;
 #endif
 #if defined(HAVE_ARPACK) || defined(QUDAEIG)
-  eigParam.NkV = Eig_NkV;
-  eigParam.logFile = Eig_logFile;
+    eigParam.NkV = Eig_NkV;
+    eigParam.logFile = Eig_logFile;
 #else
-  PLEGMA_error("No arpack or primme is compiled");
+    PLEGMA_error("No arpack or primme is compiled");
 #endif
-  TIME(eigSol = new EigSolver(eigParam, dslash_type, isReadEigenVecs, isWriteEigenVecs, fnameEigenVecsPrefix, true));
-#else
-  PLEGMA_error("No eigenSolver is compiled");
-#endif
+    TIME(eigSol = new EigSolver(eigParam, dslash_type, isReadEigenVecs, isWriteEigenVecs, fnameEigenVecsPrefix, true));
 
-  char * src_string;
-  asprintf(&src_string, "_exact_exact_nvec%03d", eigSol->getEigVals().size());
-  std::string outfilename = twop_filename + src_string + ".h5";
-  free(src_string);
+    char * src_string;
+    asprintf(&src_string, "_exact_exact_nvec%03d", Eig_NeV);
+    std::string outfilename = twop_filename + src_string + ".h5";
+    free(src_string);
 
-  if(access( outfilename.c_str(), F_OK ) == -1) {
-    {
-      HDF5 writer(outfilename);
-      std::vector<hsize_t> shape = {eigSol->getEigVals().size(), eigSol->getEigVals().size(), 2};
-      writer.write_dataset("littleD", (double*) eigSol->getLittleD(), shape);
-    }
+    if(access( outfilename.c_str(), F_OK ) == -1) {
+      {
+	HDF5 writer(outfilename);
+	std::vector<hsize_t> shape = {Eig_NeV, Eig_NeV, 2};
+	writer.write_dataset("littleD", (double*) eigSol->getLittleD(), shape);
+      }
     
-    PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,0}), maxQsq);
-    TIME(corr.contractEigVecs(eigSol->getEigVecs(), eigSol->getEigVals().size(), eigSol->getSize_per_Vec()*2));
-    TIME(corr.writeHDF5( outfilename ));
+      PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,0}), maxQsq);
+      TIME(corr.contractEigVecs(eigSol->getEigVecs(), Eig_NeV, eigSol->getSize_per_Vec()*2));
+      TIME(corr.writeHDF5( outfilename ));
+    }
+#else
+    PLEGMA_error("No eigenSolver is compiled");
+#endif
   }
   
   TIME(QUDA_solver solver(mu));
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 		  its, tsink);
       
     char * src_string;
-    asprintf(&src_string, "_nev%03d_id%02d_st%03d", eigSol->getEigVals().size(), its, tsink);
+    asprintf(&src_string, "_nev%03d_id%02d_st%03d", Eig_NeV, its, tsink);
     std::string outfilename = twop_filename + src_string + ".h5";
     free(src_string);
     
@@ -148,8 +148,7 @@ int main(int argc, char **argv)
 	mu = mus[imu];
 	solver.UpdateSolver();
 
-	int nev = eigSol->getEigVals().size();
-	double spinVals[4*nev*2];
+	double spinVals[4*Eig_NeV*2];
 	
 	for (int spinindex=0; spinindex<4; ++spinindex){
 	  
@@ -158,24 +157,31 @@ int main(int argc, char **argv)
 	  else
 	    vectortmp1.diluteSpinDisplace(vector_stoc,spinindex,0);
 	  
-	  TIME(eigSol->projectVector(vectortmp1, spinVals + spinindex*nev*2));
+	  if(Eig_NeV>0) {
+	    TIME(eigSol->projectVector(vectortmp1, spinVals + spinindex*Eig_NeV*2));
+	  }
 	  vectortmp1.apply_gamma(G5);
 	  TIME(solver.solve(vectortmp1, vectortmp1));
-	  TIME(eigSol->projectVector(vectortmp1));
+	  if(Eig_NeV>0) {
+	    TIME(eigSol->projectVector(vectortmp1));
+	  }
 	  prop1.absorb(vectortmp1, spinindex, 0);
 	}
+
+	if(Eig_NeV>0) {
+	  char * mu_string;
+	  asprintf(&mu_string, "%+.4e_stoch_exact", mus[imu]);
+	  std::string dataset = mu_string;
+	  free(mu_string);
 	  
+	  TIME(corr.contractPropEigVecs(prop1, spinVals, eigSol->getEigVecs(), Eig_NeV, eigSol->getSize_per_Vec()*2));
+	  corr.setDatasets((std::vector<std::string>) {dataset});
+	  TIME(corr.writeHDF5( outfilename ));
+	}
+	
 	char * mu_string;
-	asprintf(&mu_string, "%+.4e_stoch_exact", mus[imu]);
-	std::string dataset = mu_string;
-	free(mu_string);
-	
-	TIME(corr.contractPropEigVecs(prop1, spinVals, eigSol->getEigVecs(), eigSol->getEigVals().size(), eigSol->getSize_per_Vec()*2));
-	corr.setDatasets((std::vector<std::string>) {dataset});
-	TIME(corr.writeHDF5( outfilename ));
-	
 	asprintf(&mu_string, "%+.4e_%+.4e_stoch_stoch", mus[imu], mus[imu]);
-	dataset = mu_string;
+	std::string dataset = mu_string;
 	free(mu_string);
 	  
 	TIME(corr.contractMesonsOpen(prop1, prop1, false));
@@ -186,7 +192,7 @@ int main(int argc, char **argv)
 	props[imu]->copy(prop1, HOST);
       }
     }
-      
+    
     PLEGMA_Propagator<double> prop2;
       
     for(int imu1=0; imu1<nmus; imu1++){
