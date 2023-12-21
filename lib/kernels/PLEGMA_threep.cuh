@@ -38,3 +38,6 @@ void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
 void mesons_noe(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, PLEGMA_Gauge<FloatG>& gauge, bool all_cols);
+
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+void mesons_noe_SIB(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, PLEGMA_Gauge<FloatG>& gauge);

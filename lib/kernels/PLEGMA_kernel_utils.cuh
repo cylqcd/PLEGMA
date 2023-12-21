@@ -514,6 +514,37 @@ namespace plegma {
     if(isGdag) Gdag(D);
   }
 
+  template<ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G_Prop_meson(Float2<FloatA> A[N_SPINS][N_SPINS],
+								 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS],
+								 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS],
+								 Float2<FloatD> D[N_COLS][N_COLS]){
+    if(isGdag) Gdag(D);
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+	if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
+	  A[mu][nu].x=0.; A[mu][nu].y=0.;
+	}
+#pragma unroll
+	for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+	    for(int b = 0; b < N_COLS; b++)
+#pragma unroll
+	      for(int c = 0; c < N_COLS; c++){
+		if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
+		  A[mu][nu] +=  conj(B[mu][rho][b]) * D[b][c] * C[nu][rho][c];
+		}
+		else{
+		  A[mu][nu] -=  conj(B[mu][rho][b]) * D[b][c] * C[nu][rho][c];
+		}
+	      }
+	
+      }
+    if(isGdag) Gdag(D);
+  }
+
   
   template<bool isLeftTrans, ACCUM_TYPE aty, bool isG1dag, bool isG2dag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
   __inline__ __device__ void partial_trace_mul_Prop_G1_G2_Prop(Float2<FloatA> A[N_SPINS][N_SPINS],
@@ -598,6 +629,66 @@ namespace plegma {
 	   else outV[mu][j] += conj(G[k][j])*inV[mu][k];
 	 }
        }
+  }
+  
+  template<typename FloatOut, typename FloatG, typename FloatIn, ACCUM_TYPE accum=ACC_ZERO>
+    __inline__ __device__ void mul_G(Float2<FloatOut> out[N_SPINS][N_SPINS][N_COLS][N_COLS],
+				       Float2<FloatG> G[N_COLS][N_COLS],
+				       Float2<FloatIn> in[N_SPINS][N_SPINS][N_COLS][N_COLS]){
+    if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS)
+      #pragma unroll
+      for(int mu=0; mu<N_SPINS; mu++)
+        #pragma unroll
+	for(int nu=0; nu<N_SPINS; nu++)
+          #pragma unroll
+	  for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+	    for(int j=0; j<N_COLS; j++)
+	      out[mu][nu][i][j] = 0.;
+    
+    #pragma unroll
+    for(int mu=0; mu<N_SPINS; mu++)
+      #pragma unroll
+      for(int nu=0; nu<N_SPINS; nu++)
+        #pragma unroll
+	for(int j=0; j<N_COLS; j++)
+          #pragma unroll
+	  for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+	    for(int k=0; k<N_COLS; k++) {
+	      if(accum==ACC_MINUS || accum == ZERO_MINUS) out[mu][nu][j][i] -= G[j][k]*in[mu][nu][k][i];
+	      else out[mu][nu][j][i] += G[j][k]*in[mu][nu][k][i];
+	    }
+  }
+
+  template<typename FloatOut, typename FloatG, typename FloatIn, ACCUM_TYPE accum=ACC_ZERO>
+  __inline__ __device__ void mul_Gdag(Float2<FloatOut> out[N_SPINS][N_SPINS][N_COLS][N_COLS],
+				      Float2<FloatG> G[N_COLS][N_COLS],
+				      Float2<FloatIn> in[N_SPINS][N_SPINS][N_COLS][N_COLS]){
+    if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS)
+      #pragma unroll
+      for(int mu=0; mu<N_SPINS; mu++)
+        #pragma unroll
+	for(int nu=0; nu<N_SPINS; nu++)
+          #pragma unroll
+	  for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+	    for(int j=0; j<N_COLS; j++)
+	      out[mu][nu][i][j] = 0.;
+    
+    #pragma unroll
+    for(int mu=0; mu<N_SPINS; mu++)
+      #pragma unroll
+      for(int nu=0; nu<N_SPINS; nu++)
+        #pragma unroll
+	for(int j=0; j<N_COLS; j++)
+          #pragma unroll
+	  for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+	    for(int k=0; k<N_COLS; k++) {
+	      if(accum==ACC_MINUS || accum == ZERO_MINUS) out[mu][nu][j][i] -= conj(G[k][j])*in[mu][nu][k][i];
+	      else out[mu][nu][j][i] += conj(G[k][j])*in[mu][nu][k][i];
+	    }
   }
 
   template<typename FloatOutV, typename FloatInV>
