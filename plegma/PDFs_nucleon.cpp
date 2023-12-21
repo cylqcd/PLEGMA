@@ -13,9 +13,8 @@ int main(int argc, char **argv)
 
   initializeOptions(argc, argv, true, listOpt);
 
-  size_t WilsDir;
+  size_t WilsDir=DIM_Z;
   HGC_options->set("wilson_direction", "Direction of the wilson line", verbosity, WilsDir);
-  if(WilsDir>N_DIMS) PLEGMA_error("The direction of the WIlson line has to be smaller than 3");
 
   double rhoStout;
   HGC_options->set("rho_stout", "Rho parameter stout smearing", verbosity, rhoStout);
