@@ -76,7 +76,7 @@ namespace plegma {
 
   struct sidStride {
     const bool is4D;
-    bool changeValue;
+    const bool changeValue;
     bool returnZero;
     const int site_size;
     size_t sid;

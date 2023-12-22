@@ -373,23 +373,36 @@ int main(int argc, char **argv) {
     QUDA_solver solver(mu);
     
     // set of parameters to tune with options
-    auto mu_factor_ = variable(&mu_factor[mg_levels-1],"mu_factor",1.,101.,5.,true);
-    auto coarse_solver_tol_ = variable(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
+    //auto mu_factor_ = variable(&mu_factor[mg_levels-1],"mu_factor",1.,101.,5.,true);
+    //auto coarse_solver_tol_ = variable(&coarse_solver_tol[mg_levels-1],"coarse solver tolerance",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
     //auto coarse_solver_ = variable(&coarse_solver[mg_levels-1],"Coarse solver", { QUDA_BICGSTAB_INVERTER, QUDA_GCR_INVERTER}, false);
 
+    auto mu_factor_0 = variable(&mu_factor[0],"mu_factor_0",1.,101.,5.,true);
     auto nu_pre_0 = variable(&nu_pre[0],"nu_pre_0",0,10,2, true);
     auto nu_post_0 = variable(&nu_post[0],"nu_post_0",1,10,1, true);
     auto schwarz_0 = variable(&schwarz_type[0],"schwarz_type_0",{QUDA_INVALID_SCHWARZ}, false);
     auto schwarz_cycle_0 = variable(&schwarz_cycle[0],"schwarz_cycle_0",1,4,1, true);
     auto smoother_tol_0 = variable(&smoother_tol[0],"smoother_tol_0",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
-    auto smoother_type_0 = variable(&smoother_type[0],"smoother_type_0", { QUDA_MR_INVERTER}, false);
+    auto smoother_type_0 = variable(&smoother_type[0],"smoother_type_0", { QUDA_CA_GCR_INVERTER}, false);
+    auto coarse_solver_tol_0 = variable(&coarse_solver_tol[0],"coarse solver tolerance_0",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
 
+    auto mu_factor_1 = variable(&mu_factor[1],"mu_factor_1",1.,101.,5.,true);
     auto nu_pre_1 = variable(&nu_pre[1],"nu_pre_1",0,10,2, true);
     auto nu_post_1 = variable(&nu_post[1],"nu_post_1",1,10,1, true);
     auto schwarz_1 = variable(&schwarz_type[1],"schwarz_type_1",{QUDA_INVALID_SCHWARZ}, false);
     auto schwarz_cycle_1 = variable(&schwarz_cycle[1],"schwarz_cycle_1",1,4,1, true);
     auto smoother_tol_1 = variable(&smoother_tol[1],"smoother_tol_1", {0.01,0.022,0.046,0.1,0.22,0.46}, true);
-    auto smoother_type_1 = variable(&smoother_type[1],"smoother_type_1", { QUDA_MR_INVERTER}, false);
+    auto smoother_type_1 = variable(&smoother_type[1],"smoother_type_1", { QUDA_CA_GCR_INVERTER}, false);
+    auto coarse_solver_tol_1 = variable(&coarse_solver_tol[1],"coarse solver tolerance_1",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
+
+    auto mu_factor_2 = variable(&mu_factor[2],"mu_factor_2",1.,101.,5.,true);
+    auto nu_pre_2 = variable(&nu_pre[2],"nu_pre_2",0,10,2, true);
+    auto nu_post_2 = variable(&nu_post[2],"nu_post_2",1,10,1, true);
+    auto schwarz_2 = variable(&schwarz_type[2],"schwarz_type_2",{QUDA_INVALID_SCHWARZ}, false);
+    auto schwarz_cycle_2 = variable(&schwarz_cycle[2],"schwarz_cycle_2",1,4,1, true);
+    auto smoother_tol_2 = variable(&smoother_tol[2],"smoother_tol_2", {0.01,0.022,0.046,0.1,0.22,0.46}, true);
+    auto smoother_type_2 = variable(&smoother_type[2],"smoother_type_2", { QUDA_CA_GCR_INVERTER}, false);
+    auto coarse_solver_tol_2 = variable(&coarse_solver_tol[2],"coarse solver tolerance_2",{0.01,0.022,0.046,0.1,0.22,0.46}, true);
 
     auto nvec_0 = variable(&nvec[0],"nvec_0",{24,32}, true);
     auto nvec_1 = variable(&nvec[1],"nvec_1",{24,32}, true);
@@ -398,20 +411,23 @@ int main(int argc, char **argv) {
     auto block_1 = variable(&mg_block_volume[1],"block_1",{mg_block_volume[1]}, true);
 
     // Solver which control the set of parameters
-    auto solverT = solverTimings(solver, vectorIn, mu_factor_, coarse_solver_tol_,// coarse_solver_,
-				 nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0,
-				 nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1,
+    auto solverT = solverTimings(solver, vectorIn,// coarse_solver_,
+				 nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0, mu_factor_0, coarse_solver_tol_0,
+				 nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1, mu_factor_1, coarse_solver_tol_1,
+				 nu_pre_2, nu_post_2, schwarz_2, schwarz_cycle_2, smoother_tol_2, smoother_type_2, mu_factor_2, coarse_solver_tol_2,
 				 nvec_0, nvec_1);
 
     // Splitting the parameters in smaller set and running nested minimizers
     // coarse, smoother_0, smoother_1 are indipendent minimizers calling solverT
-    auto coarse = minimizer(solverT, mu_factor_, coarse_solver_tol_);// coarse_solver_
+    //auto coarse = minimizer(solverT, mu_factor_, coarse_solver_tol_);// coarse_solver_
     
-    auto smoother_0 = minimizer(solverT, nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0);
+    auto smoother_0 = minimizer(solverT, nu_pre_0, nu_post_0, schwarz_0, schwarz_cycle_0, smoother_tol_0, smoother_type_0, mu_factor_0, coarse_solver_tol_0);
     auto smoother_1 = minimizer(solverT, (1 < mg_levels-1)? true : false, //enabled only if needed
-				nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1);
+				nu_pre_1, nu_post_1, schwarz_1, schwarz_cycle_1, smoother_tol_1, smoother_type_1, mu_factor_1, coarse_solver_tol_1);
+    auto smoother_2 = minimizer(solverT, (2 < mg_levels-1)? true : false, //enabled only if needed
+				nu_pre_2, nu_post_2, schwarz_2, schwarz_cycle_2, smoother_tol_2, smoother_type_2, mu_factor_2, coarse_solver_tol_2);
 
-    auto inner_params = std::make_tuple(coarse,smoother_0,smoother_1);
+    auto inner_params = std::make_tuple(smoother_2,smoother_1,smoother_0);
 
     // setup_1 minimizes coarse, smoother_0, smoother_1
     auto setup_1 = minimizer(&inner_params, (1 < mg_levels-1)? true : false, //enabled only if needed

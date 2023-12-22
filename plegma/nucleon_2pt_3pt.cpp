@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
 	  WHICHPARTICLE nucleon = get_particle(prOrNt); 
 	  std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
 	  for(size_t iproj = 0; iproj < Projs.size(); iproj++){
-	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
+	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator<float>& prop1, PLEGMA_Propagator<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, PLEGMA_Propagator<float> &propF2, std::string fl) {
 	      std::string filename = threep_filename + "_" + Projs[iproj] + "_dt" + std::to_string(tsinkMtsource) + "_" + fl + ".h5";
 	      if(access( filename.c_str(), F_OK ) != -1) {
 		PLEGMA_printf("File %s already exists. Skipping...", filename.c_str());
@@ -226,13 +226,31 @@ int main(int argc, char **argv) {
 	      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	      THREAD(corr.writeFile( filename, corr_file_format));
+
+	      // LOCAL contractions
+	      TIME(corr.contractNucleonThrp_local(seqProp, propF2, signProps, gammas));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
+	      corr.setDatasets((std::vector<std::string>) {"threep_OS"});
+	      THREAD(corr.writeFile(filename, corr_file_format));
+				     
+	      // ONED contractions
+	      TIME(corr.contractNucleonThrp_oneD(seqProp, propF2, contractGauge, signProps, gammas));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	      corr.setDatasets((std::vector<std::string>) {"threep_OS"});
+	      THREAD(corr.writeFile( filename, corr_file_format));
+				     
+	      // noe contractions
+	      TIME(corr.contractNucleonThrp_noe(seqProp, propF2, contractGauge, signProps));
+	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+	      corr.setDatasets((std::vector<std::string>) {"threep_OS"});
+	      THREAD(corr.writeFile( filename, corr_file_format));
 	    };
 	    if(nucleon == PROTON) {
-	      TIME(computeThreep(-mu_ud, propUP, propDN, +1, propUP_SL, "up"));
-	      TIME(computeThreep( mu_ud, propUP, propUP, -1, propDN_SL, "dn"));
+	      TIME(computeThreep(-mu_ud, propUP, propDN, +1, propUP_SL, propDN_SL, "up"));
+	      TIME(computeThreep( mu_ud, propUP, propUP, -1, propDN_SL, propUP_SL, "dn"));
 	    } else {
-	      TIME(computeThreep( mu_ud, propDN, propUP, -1, propDN_SL, "dn"));
-	      TIME(computeThreep(-mu_ud, propDN, propDN, +1, propUP_SL, "up"));
+	      TIME(computeThreep( mu_ud, propDN, propUP, -1, propDN_SL, propUP_SL, "dn"));
+	      TIME(computeThreep(-mu_ud, propDN, propDN, +1, propUP_SL, propDN_SL, "up"));
 	    }
 	  }
 	}

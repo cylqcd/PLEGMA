@@ -58,7 +58,6 @@ struct gens<0, S...> {
 // class to perform the kernel tuning
 template<class ...types>
 class PLEGMA_kernel_tuner : public Tunable{
-
 protected:
 
   void (*kernel)(types...); // initialised only when tuning is required
@@ -206,6 +205,7 @@ public:
   void apply(const cudaStream_t &stream);
   void apply();
 
+  using Tunable::tuned;
   // utilities
   int getGridDimX(){ return ps.tp.grid.x; }
 
@@ -236,10 +236,12 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   run();
 #else
   // performing tuning if we need to tune
-  if( !ps.tuned && !activeTuning() && ps.tune_globally ) comm_barrier(); //syncronizing 
-  if( !ps.tuned ) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
-  if( !ps.tuned ) cudaGetLastError(); // ensuring that the error state has been clean
-  if( !activeTuning() ) ps.tuned = true;
+  if( !ps.tuned ) {
+    if( !tuned() && !activeTuning() && ps.tune_globally ) comm_barrier(); //syncronizing 
+    ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
+    cudaGetLastError(); // ensuring that the error state has been clean
+    if( !activeTuning() ) ps.tuned = true;
+  }
   if( onlyTuning && !activeTuning() ) return;
 
   launchKernel(ps.tp,stream);
@@ -271,6 +273,11 @@ void PLEGMA_kernel_tuner<types...>::run(){
   launchKernel(ps.tp,0);
 #endif
   checkCudaError();
+}
+
+template<class ...types, class ...typesK>
+PLEGMA_kernel_tuner<typesK...>* tuner(ProfileStruct &ps, std::string kname, void (*kernel)(typesK...), types&&... kArgs){
+  return new PLEGMA_kernel_tuner<typesK...>(ps, kname, kernel, kArgs...);
 }
 
 template<class ...types, class ...typesK>

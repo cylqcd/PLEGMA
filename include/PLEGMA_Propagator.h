@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h>
+#include <PLEGMA_Gauge.h>
 
 #ifndef _PLEGMA_PROPAGATOR_H
 #define _PLEGMA_PROPAGATOR_H
@@ -53,7 +54,16 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, int nu, int c2);
-    
+
+    /**
+       @brief Applies N times Gaussian(Wuppertal) smearing operator on all time-slices of a vector. NOTE: works also for Vector3D
+       @param PLEGMA_Vector<Float> &vecIn, The 4D input vector (Exchange of boundaries happens inside the function)
+       @param PLEGMA_Gauge<Float> &gauge, The gauge field that will be used in the Gaussian smearing operator (Exchange of boundaries happens inside the function)
+       @param int nsmearGauss, The number of times to apply the operator (if zero copies inVec to outVec)
+       @param Float alphaGauss, alpha parameter of the Gaussian smearing
+    **/
+    void gaussianSmearing(PLEGMA_Propagator<Float> &propIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss);
+
     void applyBoundaries_device(int t0);
     void rotateToPhysicalBase_host(int sign);
     void rotateToPhysicalBase_device(int sign);

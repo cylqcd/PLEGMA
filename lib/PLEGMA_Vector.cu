@@ -26,6 +26,13 @@ template<typename Float>
 void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 					    PLEGMA_Gauge<Float> &gauge,
 					    int nsmearGauss, Float alphaGauss){
+
+  std::vector<double> runtime;
+#define TIME(add,fnc)  runtime.push_back(MPI_Wtime()); fnc;	\
+  add += MPI_Wtime()-runtime.back();				\
+  runtime.pop_back()
+  
+  double start=0, finish=0, core=0, ghost=0;
   
   if(vecIn.IsAllocHost()) {
     vecIn.unload(); // backing up the vecIn
@@ -40,32 +47,43 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
   for(int i = 0 ; i < nsmearGauss ; i++){
     if( (i%2) == 0){
+      TIME(start,
       for(int dir=0; dir<N_DIMS-1; dir++) {
 	if(i==0) {
 	  gauge.communicateSideGhost(dir, DIR_BOTH, START);
 	}
 	vecIn.communicateSideGhost(dir, DIR_BOTH, START);
       }
-      gaussian_smearing_no_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss);
+	   );
+      TIME(core,
+	   gaussian_smearing_no_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss)
+	   );
+      TIME(finish,
       for(int dir=0; dir<N_DIMS-1; dir++) {
 	if(i==0) {
 	  gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
 	}
 	vecIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
-      }
-      gaussian_smearing_only_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss);
+      });
+      TIME(ghost,
+	   gaussian_smearing_only_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss));
     }
     else{
+      TIME(start,
       for(int dir=0; dir<N_DIMS-1; dir++) {
 	this->communicateSideGhost(dir, DIR_BOTH, START);
-      }
-      gaussian_smearing_no_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss);
+      });
+      TIME(core,
+	   gaussian_smearing_no_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss));
+      TIME(finish,
       for(int dir=0; dir<N_DIMS-1; dir++) {
 	this->communicateSideGhost(dir, DIR_BOTH, FINISH);
-      }
-      gaussian_smearing_only_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss);
+      });
+      TIME(ghost,
+	   gaussian_smearing_only_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss));
     }
   }
+  PLEGMA_printf("### GAUSSIAN SMEARING breakdown: comm-start %.2f, comm-finish %.2f, calc-core %.2f, calc-ghost %.2f\n", start, finish, core, ghost);
   if( (nsmearGauss%2) == 0)
     cudaMemcpy(this->D_elem(),vecIn.D_elem(),
 	       this->Bytes_total(),cudaMemcpyDeviceToDevice);

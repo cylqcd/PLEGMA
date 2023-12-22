@@ -13,6 +13,7 @@
 #include <functional>
 #include <PLEGMA_mesons_exact_exact.cuh>
 #include <PLEGMA_mesons_stoch_exact.cuh>
+#include <PLEGMA_mesons_stoch_exact_closed.cuh>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
 #endif
@@ -65,6 +66,19 @@ contractPropEigVecs(PLEGMA_Propagator<Float> &prop1, Float *spinVals, Float* ptr
   
   initialize();
   contract_stoch_exact(prop1, spinVals, ptr,nvecs,vec_size,*this);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractPropEigVecsClosed(PLEGMA_Propagator<Float> &prop1, Float *spinVals, Float* ptr, int nvecs, size_t vec_size ){
+
+  shape = {nvecs, 16};
+  datasets =  {"stoch_exact"};
+  groups =  {"mesons"};
+  description = "g5, g5g1, g5g2, g5g3, g5g4, 1, g1, g2, g3, g4, g5s12, g5s13, g5s23, g5s41, g5s42, g5s43";
+  
+  initialize();
+  contract_stoch_exact_closed(prop1, spinVals, ptr,nvecs,vec_size,*this);
 }
 
 template<typename Float>

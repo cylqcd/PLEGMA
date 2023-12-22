@@ -173,9 +173,9 @@ int main(int argc, char **argv)
 	  asprintf(&mu_string, "%+.4e_stoch_exact", mus[imu]);
 	  std::string dataset = mu_string;
 	  free(mu_string);
-	  
-	  TIME(corr.contractPropEigVecs(prop1, spinVals, eigSol->getEigVecs(), Eig_NeV, eigSol->getSize_per_Vec()*2));
-	  corr.setDatasets((std::vector<std::string>) {dataset});
+
+	  TIME(corr.contractPropEigVecsClosed(prop1, spinVals, eigSol->getEigVecs(), Eig_NeV, eigSol->getSize_per_Vec()*2));
+	  corr.setDatasets((std::vector<std::string>) {dataset+"_G_G"});
 	  TIME(corr.writeHDF5( outfilename ));
 	}
 	

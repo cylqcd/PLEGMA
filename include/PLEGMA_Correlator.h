@@ -196,6 +196,9 @@ namespace plegma {
     void contractPropEigVecs(PLEGMA_Propagator<Float> &prop1, Float *spinVals,
 			     Float *ptr, int nvecs, size_t vec_size);
 
+    void contractPropEigVecsClosed(PLEGMA_Propagator<Float> &prop1, Float *spinVals,
+				   Float *ptr, int nvecs, size_t vec_size);
+
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
 

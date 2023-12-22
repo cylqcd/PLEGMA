@@ -1,6 +1,7 @@
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_propagator_utils.cuh> 
+#include <PLEGMA_gaussian_smearing.cuh> 
 using namespace plegma;
 
 //-------------------------------//
@@ -10,6 +11,62 @@ using namespace plegma;
 template<typename Float>
 PLEGMA_Propagator<Float>::PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, PROPAGATOR, ghost_flag){;}
+
+template<typename Float>
+void PLEGMA_Propagator<Float>::gaussianSmearing(PLEGMA_Propagator<Float> &propIn,
+						PLEGMA_Gauge<Float> &gauge,
+						int nsmearGauss, Float alphaGauss){
+  
+  if(propIn.IsAllocHost()) {
+    propIn.unload(); // backing up the propIn
+  } else {
+    PLEGMA_warning("PropIn is not allocated on BOTH; gaussianSmearing will overwrite the device memory.\n");
+  }
+
+  assert(this->checkVolume(propIn, gauge));
+  auto texGauge = toTexture<gaugeTex>(gauge);
+  auto texPropIn = toTexture<propTex>(propIn);
+  auto texPropOut = toTexture<propTex>(*this);
+
+  for(int i = 0 ; i < nsmearGauss ; i++){
+    if( (i%2) == 0){
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) {
+	  gauge.communicateSideGhost(dir, DIR_BOTH, START);
+	}
+	propIn.communicateSideGhost(dir, DIR_BOTH, START);
+      }
+      gaussian_smearing_prop_no_ghost(*texPropOut,*texPropIn,*texGauge, alphaGauss);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	if(i==0) {
+	  gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
+	}
+	propIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
+      }
+      gaussian_smearing_prop_only_ghost(*texPropOut,*texPropIn,*texGauge, alphaGauss);
+    }
+    else{
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, DIR_BOTH, START);
+      }
+      gaussian_smearing_prop_no_ghost(*texPropIn, *texPropOut, *texGauge, alphaGauss);
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+	this->communicateSideGhost(dir, DIR_BOTH, FINISH);
+      }
+      gaussian_smearing_prop_only_ghost(*texPropIn, *texPropOut, *texGauge, alphaGauss);
+    }
+  }
+  if( (nsmearGauss%2) == 0)
+    cudaMemcpy(this->D_elem(),propIn.D_elem(),
+	       this->Bytes_total(),cudaMemcpyDeviceToDevice);
+  
+  checkCudaError();
+
+  if(propIn.IsAllocHost()) {
+    propIn.load(); // restoring propIn
+  }
+}
+
 
 template <typename Float>
 void PLEGMA_Propagator<Float>::
