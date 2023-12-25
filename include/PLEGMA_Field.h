@@ -29,6 +29,7 @@ namespace plegma {
     
     Float *h_elem;
     Float *d_elem;
+    Float *d_ext_ghost;
     Float *h_ext_ghost_r;
     Float *h_ext_ghost_s;
     Float *h_ext_ghost_corner_r;
@@ -80,9 +81,11 @@ namespace plegma {
     size_t Ghost_length() const { return ghost_length;} // the length of the ghost
     size_t GhostCorner_length() const { return ghost_corner_length;} // the length of the ghost for corners
     size_t GhostVertex_length() const { return ghost_vertex_length;} // the length of the ghost for vertex
-    size_t TotalPlusGhost_length() const { return Total_length()+Ghost_length()+GhostCorner_length()+GhostVertex_length();} // total + ghost
+    size_t TotalGhost_length() const { return Ghost_length()+GhostCorner_length()+GhostVertex_length();}
+    size_t TotalPlusGhost_length() const { return Total_length()+TotalGhost_length();} // total + ghost
 
     size_t Bytes_total() const { return this->Total_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_total_ghost() const { return this->TotalGhost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghost() const { return this->Ghost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostVertex() const { return this->GhostVertex_length()*this->Field_length()*2*sizeof(Float); }

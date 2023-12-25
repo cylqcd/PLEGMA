@@ -12,6 +12,7 @@
 #include <io/PLEGMA_lime.h>
 using namespace plegma;
 
+#define GPU_DIRECT
 #define DEVICE_MEMORY_REPORT
 #define CMPLX_FLOAT std::complex<Float>
 
@@ -94,7 +95,9 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, size_t localVol, GHOST_FLAG ghost_flag, bool isPinnedHost, bool checkErr):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), h_ext_ghost_vertex_r(NULL), h_ext_ghost_vertex_s(NULL), randstate_ptr(NULL), 
+  h_elem(NULL), d_elem(NULL), d_ext_ghost(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL),
+  h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL),
+  h_ext_ghost_vertex_r(NULL), h_ext_ghost_vertex_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(CUSTOM)
 {
   initialize(alloc_flag, site_size, localVol);
@@ -103,7 +106,9 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, int site_size, siz
 
 template<typename Float>
 PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT, GHOST_FLAG ghost_flag, bool isPinnedHost, bool checkErr):
-  h_elem(NULL), d_elem(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL), h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL), h_ext_ghost_vertex_r(NULL), h_ext_ghost_vertex_s(NULL), randstate_ptr(NULL), 
+  h_elem(NULL), d_elem(NULL), d_ext_ghost(NULL), h_ext_ghost_r(NULL), h_ext_ghost_s(NULL),
+  h_ext_ghost_corner_r(NULL), h_ext_ghost_corner_s(NULL),
+  h_ext_ghost_vertex_r(NULL), h_ext_ghost_vertex_s(NULL), randstate_ptr(NULL), 
   ghost_flag(ghost_flag), allocation(alloc_flag),isPinnedHost(isPinnedHost), isAllocHost(false), isAllocDevice(false), checkErr(checkErr), field_type(classT)
 {
   if(HGC_init_PLEGMA_flag == false) 
@@ -224,39 +229,44 @@ template<typename Float>
 void PLEGMA_Field<Float>::create_device(){
   cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
   if(checkErr) checkCudaError();
-#ifdef DEVICE_MEMORY_REPORT
+ #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
   HGC_deviceMemory += Bytes_total_plus_ghost()/(1024.*1024.);          
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
-#endif
+ #endif
   zero_device();
+ #ifdef GPU_DIRECT
+  cudaMalloc((void**)&d_ext_ghost, Bytes_total_ghost());
+  if(checkErr) checkCudaError();
+ #else
   if(ghost_flag >= FIRST_SIDE){
-#ifdef HAVE_PINNED_GHOST
+   #ifdef HAVE_PINNED_GHOST
     cudaMallocHost((void**)&h_ext_ghost_r, Bytes_ghost());
     cudaMallocHost((void**)&h_ext_ghost_s, Bytes_ghost());
-#else
+   #else
     hostMalloc(h_ext_ghost_r, Bytes_ghost());
     hostMalloc(h_ext_ghost_s, Bytes_ghost());
-#endif
+   #endif
   }
   if(ghost_flag >= FIRST_CORNER){
-#ifdef HAVE_PINNED_GHOST
+   #ifdef HAVE_PINNED_GHOST
     cudaMallocHost((void**)&h_ext_ghost_corner_r, Bytes_ghostCorner());
     cudaMallocHost((void**)&h_ext_ghost_corner_s, Bytes_ghostCorner());
-#else    
+   #else    
     hostMalloc(h_ext_ghost_corner_r, Bytes_ghostCorner());
     hostMalloc(h_ext_ghost_corner_s, Bytes_ghostCorner());
-#endif
+   #endif
   }
   if(ghost_flag >= FIRST_VERTEX){
-#ifdef HAVE_PINNED_GHOST
+   #ifdef HAVE_PINNED_GHOST
     cudaMallocHost((void**)&h_ext_ghost_vertex_r, Bytes_ghostVertex());
     cudaMallocHost((void**)&h_ext_ghost_vertex_s, Bytes_ghostVertex());
-#else    
+   #else    
     hostMalloc(h_ext_ghost_vertex_r, Bytes_ghostVertex());
     hostMalloc(h_ext_ghost_vertex_s, Bytes_ghostVertex());
-#endif
+   #endif
   }
+ #endif
   if(checkErr) checkCudaError();
   isAllocDevice = true;
 }
@@ -273,37 +283,41 @@ void PLEGMA_Field<Float>::destroy_device(){
   cudaFree(d_elem);
   if(checkErr) checkCudaError();
   d_elem = NULL;
-#ifdef DEVICE_MEMORY_REPORT
+ #ifdef DEVICE_MEMORY_REPORT
   HGC_deviceMemory -= Bytes_total_plus_ghost()/(1024.*1024.);
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
-#endif
+ #endif
+ #ifdef GPU_DIRECT
+    cudaFree(d_ext_ghost); d_ext_ghost=NULL;
+ #else
   if(ghost_flag >= FIRST_SIDE){
-#ifdef HAVE_PINNED_GHOST
+   #ifdef HAVE_PINNED_GHOST
     cudaFreeHost(h_ext_ghost_r); h_ext_ghost_r=NULL;
     cudaFreeHost(h_ext_ghost_s); h_ext_ghost_s=NULL;
-#else
+   #else
     hostFree(h_ext_ghost_r,Bytes_ghost()); h_ext_ghost_r=NULL;
     hostFree(h_ext_ghost_s,Bytes_ghost()); h_ext_ghost_s=NULL;
-#endif
+   #endif
   }
   if(ghost_flag >= FIRST_CORNER){
-#ifdef HAVE_PINNED_GHOST
+   #ifdef HAVE_PINNED_GHOST
     cudaFreeHost(h_ext_ghost_corner_r); h_ext_ghost_corner_r=NULL;
     cudaFreeHost(h_ext_ghost_corner_s); h_ext_ghost_corner_s=NULL;
-#else
+   #else
     hostFree(h_ext_ghost_corner_r,Bytes_ghostCorner()); h_ext_ghost_corner_r=NULL;
     hostFree(h_ext_ghost_corner_s,Bytes_ghostCorner()); h_ext_ghost_corner_s=NULL;
-#endif
+   #endif    
   }
   if(ghost_flag >= FIRST_VERTEX){
-#ifdef HAVE_PINNED_GHOST
+   #ifdef HAVE_PINNED_GHOST
     cudaFreeHost(h_ext_ghost_vertex_r); h_ext_ghost_vertex_r=NULL;
     cudaFreeHost(h_ext_ghost_vertex_s); h_ext_ghost_vertex_s=NULL;
-#else
+   #else
     hostFree(h_ext_ghost_vertex_r,Bytes_ghostVertex()); h_ext_ghost_vertex_r=NULL;
     hostFree(h_ext_ghost_vertex_s,Bytes_ghostVertex()); h_ext_ghost_vertex_s=NULL;
-#endif
+   #endif
   }
+ #endif
   if(checkErr) checkCudaError();
   isAllocDevice=false;
 }
@@ -409,30 +423,46 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
   bool runT = Total_length()==HGC_localVolume;
   size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
 
-  if(action==START || action==DO_ALL)
+  if(action==START || action==DO_ALL) {
     for(short i=0; i<N_DIMS; i++)
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
 	for(short s = 0; s < DIR_BOTH; s++)
 	  if(sign == s || sign==DIR_BOTH){
 	    // collecting elements from device
+	    #ifdef GPU_DIRECT
+	    copy_side_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, s);
+	    #else
 	    copy_side_to_ghost(toField2<pFloat2>(*this), i, s);
-
+	    #endif
+	  }
+    cudaDeviceSynchronize();
+    if(checkErr) checkCudaError();
+    for(short i=0; i<N_DIMS; i++)
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
+	for(short s = 0; s < DIR_BOTH; s++)
+	  if(sign == s || sign==DIR_BOTH){
+	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
+	    
+	    #ifdef GPU_DIRECT
+	    Float *pointer_receive = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
+	    Float *pointer_send = d_ext_ghost+HGC_sideGhost[i][s]/scaleT*field_length*2;
+	    #else
 	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
 	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
 	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
-	    int disp;
-	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
-	    
 	    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-	    if(checkErr) checkCudaError();
+	    #endif
 	      
+	    int disp;
 	    disp = (s==DIR_PLUS) ? +1 : -1;
 	    messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
 	    comm_start(messages.back());
 	    disp *= -1;
 	    messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
 	    comm_start(messages.back());
-	  }
+	  }	    
+    if(checkErr) checkCudaError();
+  }
   if(action==FINISH || action==DO_ALL) {
     // waiting for communications
     while (! messages.empty()) {
@@ -440,6 +470,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       comm_free(messages.back());
       messages.pop_back();
     }
+    #ifndef GPU_DIRECT
     //copying to device
     if(isAll && sign==DIR_BOTH) {
       Float *host = h_ext_ghost_r;
@@ -458,6 +489,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	      if(checkErr) checkCudaError();
 	    }
     }
+    #endif
   }
 }
 
@@ -479,7 +511,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 
   std::vector<MsgHandle*> messages;
 
-  if(action==START || action==DO_ALL)
+  if(action==START || action==DO_ALL) {
     for(short i=0; i<N_DIMS; i++)
       for(short j=i+1; j<N_DIMS; j++)
 	if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
@@ -487,18 +519,35 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
 		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
 		  // collecting elements from device
+                  #ifdef GPU_DIRECT
+		  copy_corner_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, j, s1, s2);
+                  #else
 		  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2);
-		  
+		  #endif
+		}		  
+    cudaDeviceSynchronize();
+    if(checkErr) checkCudaError();
+    for(short i=0; i<N_DIMS; i++)
+      for(short j=i+1; j<N_DIMS; j++)
+	if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
+	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
+	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
+		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+		  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
+
+                  #ifdef GPU_DIRECT
+		  Float *pointer_receive = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
+		  Float *pointer_send = d_ext_ghost + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+ghost_length)*field_length*2;
+
+                  #else
 		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
 		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
 		  Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
-		  int disp[N_DIMS] = {0};
-		  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
-
 		  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-		  if(checkErr) checkCudaError();
-	    
+		  #endif
+		  
 		  // communicating
+		  int disp[N_DIMS] = {0};
 		  disp[i] = (s1==DIR_PLUS) ? +1 : -1;
 		  disp[j] = (s2==DIR_PLUS) ? +1 : -1;
 		  messages.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
@@ -509,6 +558,8 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 		  disp[i] = 0; disp[j] = 0;	  
 		  comm_start(messages.back());
 		}
+    if(checkErr) checkCudaError();		  
+  }
   if(action==FINISH || action==DO_ALL) {
     // waiting for communications
     while (! messages.empty()) {
@@ -516,6 +567,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
       comm_free(messages.back());
       messages.pop_back();
     }
+    #ifndef GPU_DIRECT
     //copying to device
     if(isAll && sign==DIR_BOTH) {
       Float *hostCorner = h_ext_ghost_corner_r;
@@ -536,6 +588,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 		    if(checkErr) checkCudaError();
 		  }
     }
+    #endif
   }
 }
 
@@ -555,7 +608,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 
   std::vector<MsgHandle*> messages;
 
-  if(action==START || action==DO_ALL)
+  if(action==START || action==DO_ALL) {
     for(short i=0; i<N_DIMS; i++)
       for(short j=i+1; j<N_DIMS; j++)
 	for(short k=j+1; k<N_DIMS; k++)
@@ -565,18 +618,38 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		for(short s3 = 0; s3 < DIR_BOTH; s3++)
 		  if(sign == s1 || sign == s2  || sign == s3 || sign==DIR_BOTH) {
 		    // collecting elements from device
+                    #ifdef GPU_DIRECT
+		    copy_vertex_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, j, k, s1, s2, s3);
+                    #else
 		    copy_vertex_to_ghost(toField2<pFloat2>(*this), i, j, k, s1, s2, s3);
-		  
+		    #endif
+		  }
+    cudaDeviceSynchronize();
+    if(checkErr) checkCudaError();
+    for(short i=0; i<N_DIMS; i++)
+      for(short j=i+1; j<N_DIMS; j++)
+	for(short k=j+1; k<N_DIMS; k++)
+	  if( HGC_dimBreak[i] && HGC_dimBreak[j] && HGC_dimBreak[k] && (dir == i || dir == j || dir == k || isAll) && (k < N_DIMS-1 || runT))
+	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
+	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
+		for(short s3 = 0; s3 < DIR_BOTH; s3++)
+		  if(sign == s1 || sign == s2  || sign == s3 || sign==DIR_BOTH) {
+		    size_t nbytes = HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float);
+		    
+                    #ifdef GPU_DIRECT
+		    Float *pointer_receive = d_elem + (HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
+		    Float *pointer_send = d_ext_ghost + (HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+ghost_length+ghost_corner_length)*field_length*2;
+
+                    #else
 		    Float *pointer_receive = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
 		    Float *pointer_send = h_ext_ghost_vertex_s + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
 		    Float *pointer_device = d_elem + (HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
-		    int disp[N_DIMS] = {0};
-		    size_t nbytes = HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float);
 
 		    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-		    if(checkErr) checkCudaError();
-	    
+		    #endif
+		    
 		    // communicating
+		    int disp[N_DIMS] = {0};
 		    disp[i] = (s1==DIR_PLUS) ? +1 : -1;
 		    disp[j] = (s2==DIR_PLUS) ? +1 : -1;
 		    disp[k] = (s3==DIR_PLUS) ? +1 : -1;	
@@ -589,6 +662,8 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		    disp[i] = 0; disp[j] = 0; disp[k] = 0;  
 		    comm_start(messages.back());
 		  }
+    if(checkErr) checkCudaError();	    
+  }
   if(action==FINISH || action==DO_ALL) {
     // waiting for communications
     while (! messages.empty()) {
@@ -596,6 +671,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
       comm_free(messages.back());
       messages.pop_back();
     }
+    #ifndef GPU_DIRECT
     //copying to device
     if(isAll && sign==DIR_BOTH) {
       Float *hostVertex = h_ext_ghost_vertex_r;
@@ -618,6 +694,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		      if(checkErr) checkCudaError();
 		  }
     }
+    #endif
   }
 }
 

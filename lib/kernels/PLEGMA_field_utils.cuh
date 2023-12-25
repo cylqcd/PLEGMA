@@ -125,6 +125,105 @@ static void copy_vertex_to_ghost(pFloat2<Float> F, short dir1, short dir2, short
 }
 
 template<typename Float>
+static __global__ void copy_side_to_ghost_ext_kernel(pFloat2<Float> F, Float* F_ext, short dir, short sign){
+  size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= F.sideGhostL(dir)) return;
+  
+  size_t id[4], tmp_sid=sid;
+  #pragma unroll
+  for(int i = 0 ; i<N_DIMS; i++) {
+    if(i==dir) {
+      id[i] = sign==DIR_MINUS ? (DGC_localL[dir]-1):0;
+    } else {
+      id[i] = tmp_sid % DGC_localL[i];
+      tmp_sid /= DGC_localL[i];
+    }
+  }
+  size_t vid = LEXIC_ID(id);
+  F.setSid(vid);
+  pFloat2<Float> F_ghost=F;
+  F_ghost.p = (Float2<Float>*) F_ext;
+  F_ghost.accessSideGhost(LEXIC_3D(dir,id), dir, (ORIENTATION) sign, true);
+  for(int i = 0 ; i < F.site_size ; i++)
+    F_ghost.set(i, F.get(i));
+}
+
+template<typename Float>
+static void copy_side_to_ghost_ext(pFloat2<Float> F, Float* F_ext, short dir, short sign){
+  if( HGC_dimBreak[dir] ){
+    ProfileStruct ps(F.sideGhostL(dir));
+    tuneAndRun(ps, "copy_side_to_ghost_ext_kernel_size_"+std::to_string(F.site_size), copy_side_to_ghost_ext_kernel<Float>, F, F_ext, dir, sign);
+  }
+}
+
+template<typename Float>
+static __global__ void copy_corner_to_ghost_ext_kernel(pFloat2<Float> F, Float* F_ext, short dir1, short dir2, short sign1, short sign2){
+  size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= F.cornerGhostL(dir1,dir2)) return;
+  size_t id[4], tmp_sid=sid;
+  for(int i = 0 ; i<N_DIMS; i++) {
+    if(i==dir1) {
+      id[i] = sign1==DIR_MINUS ? (DGC_localL[dir1]-1):0;
+    } else if(i==dir2) {
+      id[i] = sign2==DIR_MINUS ? (DGC_localL[dir2]-1):0;      
+    } else {
+      id[i] = tmp_sid % DGC_localL[i];
+      tmp_sid /= DGC_localL[i];
+    }
+  }
+  size_t vid = LEXIC_ID(id);
+  F.setSid(vid);
+  pFloat2<Float> F_ghost=F;
+  F_ghost.p = (Float2<Float>*) F_ext;
+  F_ghost.accessCornerGhost(LEXIC_2D(dir1,dir2,id), dir1, dir2, (ORIENTATION) sign1, (ORIENTATION) sign2, true);
+  for(int i = 0 ; i < F.site_size ; i++)
+    F_ghost.set(i, F.get(i));
+}
+
+template<typename Float>
+static void copy_corner_to_ghost_ext(pFloat2<Float> F, Float* F_ext, short dir1, short dir2, short sign1, short sign2){
+  if( (dir1 != dir2 ) && HGC_dimBreak[dir1] && HGC_dimBreak[dir2] ){
+    ProfileStruct ps(F.cornerGhostL(dir1, dir2));
+    tuneAndRun(ps, "copy_corner_to_ghost_ext_kernel_size_"+std::to_string(F.site_size), copy_corner_to_ghost_ext_kernel<Float>, F, F_ext, dir1, dir2, sign1, sign2);
+  }
+}
+
+template<typename Float>
+static __global__ void copy_vertex_to_ghost_ext_kernel(pFloat2<Float> F, Float* F_ext, short dir1, short dir2, short dir3, short sign1, short sign2, short sign3){
+  size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= F.vertexGhostL(dir1,dir2,dir3)) return;
+  size_t id[4], tmp_sid=sid;
+  for(int i = 0 ; i<N_DIMS; i++) {
+    if(i==dir1) {
+      id[i] = sign1==DIR_MINUS ? (DGC_localL[dir1]-1):0;
+    } else if(i==dir2) {
+      id[i] = sign2==DIR_MINUS ? (DGC_localL[dir2]-1):0;      
+    } else if(i==dir3) {
+      id[i] = sign3==DIR_MINUS ? (DGC_localL[dir3]-1):0;      
+    } else {
+      id[i] = tmp_sid % DGC_localL[i];
+      tmp_sid /= DGC_localL[i];
+    }
+  }
+  size_t vid = LEXIC_ID(id);
+  F.setSid(vid);
+  pFloat2<Float> F_ghost=F;
+  F_ghost.p = (Float2<Float>*) F_ext;
+  F_ghost.accessVertexGhost(LEXIC_1D(dir1,dir2,dir3,id), dir1, dir2, dir3, (ORIENTATION) sign1, (ORIENTATION) sign2, (ORIENTATION) sign3, true);
+  for(int i = 0 ; i < F.site_size ; i++)
+    F_ghost.set(i, F.get(i));
+}
+
+template<typename Float>
+static void copy_vertex_to_ghost_ext(pFloat2<Float> F, Float* F_ext, short dir1, short dir2, short dir3, short sign1, short sign2, short sign3){
+  if( (dir1 != dir2 && dir1 != dir3 && dir3 != dir2 ) && HGC_dimBreak[dir1] && HGC_dimBreak[dir2] && HGC_dimBreak[dir3] ){
+    ProfileStruct ps(F.vertexGhostL(dir1, dir2, dir3));
+    tuneAndRun(ps, "copy_vertex_to_ghost_ext_kernel_size_"+std::to_string(F.site_size), copy_vertex_to_ghost_ext_kernel<Float>, F, F_ext, dir1, dir2, dir3, sign1, sign2, sign3);
+  }
+}
+
+
+template<typename Float>
 static __global__ void conjugate_kernel(generic2<Float> field){
 
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
