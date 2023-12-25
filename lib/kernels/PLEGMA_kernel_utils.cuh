@@ -41,6 +41,11 @@ __device__ double atomicAdd(double* address, double val) {
 }
 #endif
 
+__inline__ int get_time_step(int grid, int block){
+  int nblocks= (HGC_localVolume3D+block-1)/block;
+  return  grid/nblocks;
+}
+
 using namespace plegma;
 
 namespace plegma {

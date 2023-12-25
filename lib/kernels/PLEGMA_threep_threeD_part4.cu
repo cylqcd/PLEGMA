@@ -131,7 +131,7 @@ static void threep_threeD_part4_host(ProfileStruct &ps, Float2<FloatC> *result, 
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
   int extra=N_DIMS*(N_DIMS-1)*(N_DIMS-2);
