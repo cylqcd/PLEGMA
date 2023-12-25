@@ -174,19 +174,19 @@ namespace plegma {
     template<get_from src>
     inline __device__ void shift(const short& dir1, const short& dir2, const short& dir3);
     
-    inline __host__ __device__ void accessSideGhost(const size_t& sid3D, const short& dir, const ORIENTATION& sign) {
+    inline __host__ __device__ void accessSideGhost(const size_t& sid3D, const short& dir, const ORIENTATION& sign, bool only_ghost=false) {
       this->stride = sideGhostL(dir);
-      this->sid = (volume()+sideGhostShift(dir, sign))*site_size + sid3D;
+      this->sid = ((only_ghost ? 0 : volume())+sideGhostShift(dir, sign))*site_size + sid3D;
     }
 
-    inline __host__ __device__ void accessCornerGhost(const size_t& sid2D, const short& dir1, const short& dir2, const ORIENTATION& sign1, const ORIENTATION& sign2) {
+    inline __host__ __device__ void accessCornerGhost(const size_t& sid2D, const short& dir1, const short& dir2, const ORIENTATION& sign1, const ORIENTATION& sign2, bool only_ghost=false) {
       this->stride = cornerGhostL(dir1, dir2);
-      this->sid = (volume()+sideGhostVolume()+cornerGhostShift(dir1,dir2,sign1,sign2))*site_size + sid2D;
+      this->sid = ((only_ghost ? 0 : volume())+sideGhostVolume()+cornerGhostShift(dir1,dir2,sign1,sign2))*site_size + sid2D;
     }
 
-    inline __host__ __device__ void accessVertexGhost(const size_t& sid1D, const short& dir1, const short& dir2, const short& dir3, const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) {
+    inline __host__ __device__ void accessVertexGhost(const size_t& sid1D, const short& dir1, const short& dir2, const short& dir3, const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3, bool only_ghost=false) {
       this->stride = vertexGhostL(dir1, dir2, dir3);
-      this->sid = (volume()+sideGhostVolume()+cornerGhostVolume()+vertexGhostShift(dir1,dir2,dir3,sign1,sign2,sign3))*site_size + sid1D;
+      this->sid = ((only_ghost ? 0 : volume())+sideGhostVolume()+cornerGhostVolume()+vertexGhostShift(dir1,dir2,dir3,sign1,sign2,sign3))*site_size + sid1D;
     }
 };
 
