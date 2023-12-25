@@ -66,7 +66,8 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 	vecIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
       });
       TIME(ghost,
-	   gaussian_smearing_only_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss));
+	   gaussian_smearing_only_ghost(*texVecOut,*texVecIn,*texGauge, alphaGauss);
+	   cudaDeviceSynchronize());
     }
     else{
       TIME(start,
@@ -80,7 +81,8 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 	this->communicateSideGhost(dir, DIR_BOTH, FINISH);
       });
       TIME(ghost,
-	   gaussian_smearing_only_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss));
+	   gaussian_smearing_only_ghost(*texVecIn, *texVecOut, *texGauge, alphaGauss);
+	   cudaDeviceSynchronize());
     }
   }
   PLEGMA_printf("### GAUSSIAN SMEARING breakdown: comm-start %.2f, comm-finish %.2f, calc-core %.2f, calc-ghost %.2f\n", start, finish, core, ghost);
