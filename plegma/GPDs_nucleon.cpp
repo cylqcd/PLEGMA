@@ -43,10 +43,8 @@ int main(int argc, char **argv)
   bool calc3pt = true ;
   HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
 
-  std::string proj ;
+  std::string proj = "P4_P" ;
   HGC_options->set("which-projector", "Which projector to use for 3pt function", verbosity, proj);
-  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
-
 
   /*
     We consider the momenta in the symmetric frame. Both P-momentum and Delta-momentum are vectors
@@ -66,11 +64,13 @@ int main(int argc, char **argv)
 
   std::string aux_str = "proton";
   HGC_options->set("which-particle", "Choice of the nucleon interpolator to insert in the three point function (neutron,proton)", verbosity, aux_str);
-  WHICHPARTICLE nucleon = get_particle(aux_str.c_str());
 
   
   //=========================================================================================================//
   initializePLEGMA();
+  
+  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
+  WHICHPARTICLE nucleon = get_particle(aux_str.c_str());
 
   if(DeltaMom.size() > 3 || PMom.size() > 3) PLEGMA_error("DeltaMom and PMom have to be vectors with lenght three\n");
   if(DeltaMom.size()!=PMom.size()) PLEGMA_error("PMom has to have the same size of DeltaMom\n");
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
     TIME(computePropagator(propDN, propDN_SL, mu<0 ? mu : -mu));
     
     for(int ts=0;ts<tSinks.size();ts++) {
-      PLEGMA_Correlator<float> corrThrpWL(corr_space,source,0,tSinks[ts]+1,maxQsq3pt);
+      PLEGMA_Correlator<float> corrThrpWL(corr_space,source,maxQsq3pt,tSinks[ts]+1);
       int signPer = (tSinks[ts] + source[3]) >= HGC_totalL[3] ? -1 : +1;
       int global_fixSinkTime = (tSinks[ts] + source[3])%HGC_totalL[3]; 
 
