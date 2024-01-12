@@ -54,7 +54,7 @@ int main(int argc, char **argv)
   */
 
   bool symm = true ;
-  HGC_options->set("Delta-symm", "If true delta is applied symmetrically otherwise asymmetrically", verbosity, calc3pt);
+  HGC_options->set("Delta-symm", "If true delta is applied symmetrically otherwise asymmetrically", verbosity, symm);
 
   std::vector<int> PMom = {0,0,0};
   HGC_options->set("P-momentum", "If added to the momentum transfer delta gives the sink momentum", verbosity, PMom);
@@ -303,7 +303,7 @@ int main(int argc, char **argv)
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
 	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-	      corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
+	      corrThrpWL.writeFile( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".h5").c_str(), corr_file_format ); 
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); 
 	      propF->shift(*propIn, 4+WilsDir);
@@ -316,7 +316,7 @@ int main(int argc, char **argv)
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
 	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	      corrThrpWL.writeFile( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".h5").c_str(), corr_file_format );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
 	      propF->shift(*propIn, WilsDir);
@@ -385,7 +385,7 @@ int main(int argc, char **argv)
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
 	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	      corrThrpWL.writeFile( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".h5").c_str(), corr_file_format );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, 4+WilsDir); // build Wilson line in the +z direction
 	      propF->shift(*propIn, 4+WilsDir);
@@ -398,7 +398,7 @@ int main(int argc, char **argv)
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
 	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
+	      corrThrpWL.writeFile( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".h5").c_str(), corr_file_format );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
 	      WL.wilsonLineUpdate(su3, tmp, WilsDir); // build Wilson line in the +z direction
 	      propF->shift(*propIn, WilsDir);
