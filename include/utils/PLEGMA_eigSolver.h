@@ -126,7 +126,7 @@ namespace plegma{
 	      bool isWriteEigenVectors = false, std::string filenamePrefix = "", bool verbose=false);
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
-    void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr);
+    void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr, int global_t=-1, int spin=-1, int col=-1);
     void dumpEvalsVdagG5V(std::string filename);
     double* getEigVecs() const{return h_eigVecs;}
     std::complex<double>* getLittleD() const{return littleD;}

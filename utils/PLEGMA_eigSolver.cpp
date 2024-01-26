@@ -477,7 +477,7 @@ void EigSolver::computeEigVals(){
     // TODO: compute LU
   }
 }
-
+ 
 // vecOut = (1 - U * U^\dag) vecIn
 void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn){
   if(p.NeV <= 0){
@@ -500,26 +500,68 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<doubl
 
 
  // vecOut = (1 - U * U^\dag) vecIn where out and in are the same
- void EigSolver::projectVector(PLEGMA_Vector<double> &vec, double *tmpArr){
-  if(p.NeV <= 0){
-    if(verbose) PLEGMA_printf("Skipping deflation of source vector since NeV=%d\n",p.NeV);
-    return;
-  }
-  if(!vec.IsAllocHost()) PLEGMA_error("This functions needs vec to have also Host allocation");
-  vec.unload();
-  double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
-  bool alloc=false;
-  if(tmpArr==nullptr) {
-    try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
+ void EigSolver::projectVector(PLEGMA_Vector<double> &vec, double *tmpArr, int global_t, int spin, int col){
+   if(p.NeV <= 0){
+     if(verbose) PLEGMA_printf("Skipping deflation of source vector since NeV=%d\n",p.NeV);
+     return;
+   }
+   if(!vec.IsAllocHost()) PLEGMA_error("This functions needs vec to have also Host allocation");
+   vec.unload();
+   double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
+   bool alloc=false;
+   if(tmpArr==nullptr) {
+     try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
     alloc=true;
-  }
-  memset(tmpArr,0,p.NeV*2*sizeof(double));
-  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
-  cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
-  vec.load();
-  if(alloc) delete[] tmpArr;
-}
+   }
+   memset(tmpArr,0,p.NeV*2*sizeof(double));
 
+   if(global_t<0 and spin<0 and col<0) {
+     cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
+   } else {
+     // esplicit implementation specialized for running on selected spin, col and t
+     int my_it=-1;
+     bool is_my_it = true;
+     if(global_t>=0) {
+       my_it = global_t - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
+       is_my_it = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
+     }
+
+     if(is_my_it) {
+       #pragma omp parallel for
+       for(int ivec=0; ivec<p.NeV; ivec++) {
+	 std::complex<double> out = 0;
+	 for(int mu = 0 ; mu < N_SPINS ; mu++) {
+	   if(spin>=0 and mu != spin) continue;
+	   for(int c1 = 0 ; c1 < N_COLS ; c1++){
+	     if(col>=0 and c1 != col) continue;
+	     for(int t = 0 ; t < HGC_localL[DIM_T] ; t++){
+	       if(my_it>=0 and t != my_it) continue;
+	       std::complex<double> * eV = ((std::complex<double> *) h_eigVecs)+(ivec*size_per_Vec+((mu*N_COLS+c1)*HGC_localL[DIM_T]+t)*HGC_localVolume3D);
+	       std::complex<double> * rhs = ((std::complex<double> *) vec.H_elem())+((mu*N_COLS+c1)*HGC_localL[DIM_T]+t)*HGC_localVolume3D;
+	       for(size_t idx=0; idx<HGC_localVolume3D; idx++) {
+		 out += std::conj(eV[idx])*rhs[idx];
+	       }
+	     }
+	   }
+	 }
+	 tmpArr[ivec*2+0] = out.real();
+	 tmpArr[ivec*2+1] = out.imag();
+       }
+     }
+     
+     double *yr = nullptr;
+     try{yr = new double[p.NeV*2];} catch (std::bad_alloc& err){ PLEGMA_error(err.what());}
+     int mpiErr = MPI_Allreduce(tmpArr,yr,p.NeV*2,MPI_Type(yr),MPI_SUM,HGC_fullComm);
+     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
+     memcpy(tmpArr,yr,p.NeV*2*sizeof(double));
+     delete[] yr;
+    }
+   
+   cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
+   vec.load();
+   if(alloc) delete[] tmpArr;
+ }
+ 
 void EigSolver::dumpEvalsVdagG5V(std::string filename){
   if(p.NeV <= 0){ PLEGMA_printf("Skipping dumping of evals v^+ g5 v since NeV=%d\n",p.NeV); return;}
   PLEGMA_Vector<double> g5V(DEVICE);

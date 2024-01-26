@@ -41,6 +41,8 @@ int main(int argc, char **argv)
   HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
   std::vector<double> mus;
   HGC_options->set("extra-mu", "List of additional mu to run", verbosity, mus);
+  bool postProj = false;
+  HGC_options->set("postProj", "Whether we project also after inverting", verbosity, postProj);
 
   //=========================================================================================================//
   TIME(initializePLEGMA());
@@ -139,33 +141,35 @@ int main(int argc, char **argv)
 
     {
       //Dilution
-      PLEGMA_Vector<double> vectortmp1;
-      vectortmp1.absorbTimeslice(vector_stoc, tsink);
-      vector_stoc.dilutespin(vectortmp1,0);
+      PLEGMA_Vector<double> vectorsrc[4], vectorsol;
+      vectorsrc[0].absorbTimeslice(vector_stoc, tsink);
+      vector_stoc.dilutespin(vectorsrc[0],0);
 
+      double spinVals[4*Eig_NeV*2];
+      
       for(int imu=0; imu<nmus; imu++){
 	props.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
 	mu = mus[imu];
 	solver.UpdateSolver();
 
-	double spinVals[4*Eig_NeV*2];
-	
 	for (int spinindex=0; spinindex<4; ++spinindex){
-	  
-	  if (spinindex==0)
-	    vectortmp1.copy(vector_stoc);
-	  else
-	    vectortmp1.diluteSpinDisplace(vector_stoc,spinindex,0);
-	  
-	  if(Eig_NeV>0) {
-	    TIME(eigSol->projectVector(vectortmp1, spinVals + spinindex*Eig_NeV*2));
+
+	  if(imu==0) {
+	    if (spinindex==0)
+	      vectorsrc[spinindex].copy(vector_stoc);
+	    else
+	      vectorsrc[spinindex].diluteSpinDisplace(vector_stoc,spinindex,0);
+	    
+	    if(Eig_NeV>0) {
+	      TIME(eigSol->projectVector(vectorsrc[spinindex], spinVals + spinindex*Eig_NeV*2,tsink,spinindex));
+	    }
+	    vectorsrc[spinindex].apply_gamma(G5);
 	  }
-	  vectortmp1.apply_gamma(G5);
-	  TIME(solver.solve(vectortmp1, vectortmp1));
-	  if(Eig_NeV>0) {
-	    TIME(eigSol->projectVector(vectortmp1));
+	  TIME(solver.solve(vectorsol, vectorsrc[spinindex]));
+	  if(postProj and Eig_NeV>0) {
+	    TIME(eigSol->projectVector(vectorsol));
 	  }
-	  prop1.absorb(vectortmp1, spinindex, 0);
+	  prop1.absorb(vectorsol, spinindex, 0);
 	}
 
 	if(Eig_NeV>0) {
