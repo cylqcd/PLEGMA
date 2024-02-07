@@ -4,7 +4,7 @@
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_FT.h>
 #include <PLEGMA_BLAS.h>
-#include <PLEGMA_contractG5_bilinear.cuh>
+#include <kernels/PLEGMA_contractG5_bilinear.cuh>
 #include <functional>
 using namespace plegma;
   
@@ -319,9 +319,9 @@ void PLEGMA_QLoops<Float>::write_ASCII(std::string filename_local, std::string f
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::load(Float* h_ptr){
-  cudaMemcpy(this->D_elem(), h_ptr, this->Bytes_total(), cudaMemcpyHostToDevice );
+  qudaMemcpy(this->D_elem(), h_ptr, this->Bytes_total(), qudaMemcpyHostToDevice );
 }
 
 
-template class PLEGMA_QLoops<float>;
-template class PLEGMA_QLoops<double>;
+template class plegma::PLEGMA_QLoops<float>;
+template class plegma::PLEGMA_QLoops<double>;

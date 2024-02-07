@@ -1,8 +1,8 @@
 #pragma once
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_Correlator.h>
-#include <PLEGMA_bcud_tetraquarks_arrays.cuh>
-#include <PLEGMA_bcud_tetraquarks_arrays_stoch.cuh>
+#include "PLEGMA_bcud_tetraquarks_arrays.cuh"
+#include "PLEGMA_bcud_tetraquarks_arrays_stoch.cuh"
 
 template<typename FloatA, typename FloatC>
 void contract_tetraquarks_bcud(PLEGMA_Propagator<FloatA>& propLT, PLEGMA_Propagator<FloatA>& propST, 

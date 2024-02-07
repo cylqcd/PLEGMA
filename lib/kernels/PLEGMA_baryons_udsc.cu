@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_baryons_udsc.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_baryons_udsc.cuh"
 
 template<typename FloatA, typename FloatC>
 __global__ void create_prop_product(genericTex<FloatC> *propProd,
@@ -162,19 +162,19 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   Float2<FloatC> *d_partial_block = NULL;
   size_t alloc_size = (runFT==true) ? (volume * (ps.tp.grid.x/time_step)):volume;
   hostMalloc(h_partial_block, alloc_size * sizeof(Float2<FloatC>));
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size * sizeof(Float2<FloatC>) );
   
   short *idxs;
   Float2<float> *vals;
   int size = 0;
   for(int j=0; j<BP_prop_prods_count[i].size(); j++)
     size += BP_prop_prods_count[i][j];
-  cudaMalloc((void**)&idxs, 6*size*sizeof(short));
-  cudaMalloc((void**)&vals, size*sizeof(Float2<float>));
+  idxs=(short*)device_malloc(6*size*sizeof(short));
+  vals=(Float2<float>*)device_malloc(size*sizeof(Float2<float>));
   int shift = 0;
   for(int j=0; j<BP_prop_prods_count[i].size(); j++) {
-    cudaMemcpy(idxs+6*shift, BP_prop_prods_idxs[i][j], 6*BP_prop_prods_count[i][j]*sizeof(short), cudaMemcpyHostToDevice);
-    cudaMemcpy(vals+shift, BP_prop_prods_vals[i][j], BP_prop_prods_count[i][j]*sizeof(Float2<float>), cudaMemcpyHostToDevice);
+    qudaMemcpy(idxs+6*shift, BP_prop_prods_idxs[i][j], 6*BP_prop_prods_count[i][j]*sizeof(short), qudaMemcpyHostToDevice);
+    qudaMemcpy(vals+shift, BP_prop_prods_vals[i][j], BP_prop_prods_count[i][j]*sizeof(Float2<float>), qudaMemcpyHostToDevice);
     shift += BP_prop_prods_count[i][j];
   }
     
@@ -183,19 +183,19 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   PLEGMA_Field3D<FloatC> *propProd[time_step];
   genericTex<FloatC> *texPropProd = NULL;
   if (ps.tp.aux.x == 2) {
-    cudaMalloc((void**)&texPropProd, time_step * sizeof(genericTex<FloatC>) );
+    texPropProd=(genericTex<FloatC>*)device_malloc( time_step * sizeof(genericTex<FloatC>) );
     for(int t=0; t<time_step; t++) {
       propProd[t] = new PLEGMA_Field3D<FloatC>(DEVICE, N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS*N_SPINS, NO_GHOSTS, false, false);
     }
-    cudaError_t error=cudaPeekAtLastError();
-    if(error != cudaSuccess) { goto exit; }
+    //cudaError_t error=cudaPeekAtLastError();
+    //if(error != cudaSuccess) { goto exit; }
     for(int t=0; t<time_step; t++) {
       holder.push_back(toTexture<genericTex>(*(propProd[t])));
-      cudaMemcpy(texPropProd+t, holder.back().get(), sizeof(genericTex<FloatC>), cudaMemcpyHostToDevice);
+      qudaMemcpy(texPropProd+t, holder.back().get(), sizeof(genericTex<FloatC>), qudaMemcpyHostToDevice);
     }
   } else {
-    cudaError_t error=cudaPeekAtLastError();
-    if(error != cudaSuccess) { goto exit; }
+    //cudaError_t error=cudaPeekAtLastError();
+    //if(error != cudaSuccess) { goto exit; }
   }
 
   for(int it=0; it < t_size; it+=time_step) {
@@ -226,7 +226,7 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
 	  (*propTex1, *propTex2, *propTex3, d_partial_block, BP_prop_prods_count[i][j], idxs+6*shift, vals+shift,
 	   source, runFT, *moms, it, std::min(t_size-it, time_step), maxT);
       }
-      cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+      qudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
       if(runFT==true){
 	int accumX = ps.tp.grid.x/time_step;
 	Float2<FloatC> *reduction = result + (j*t_size + it)*volume3D;
@@ -245,13 +245,13 @@ void contract_baryons_udsc_host(ProfileStruct &ps,
   }
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
-  cudaFree(d_partial_block); d_partial_block=NULL;
+  device_free(d_partial_block); d_partial_block=NULL;
   
-  cudaFree(idxs);
-  cudaFree(vals);
+  device_free(idxs);
+  device_free(vals);
   
   if (ps.tp.aux.x == 2) {
-    cudaFree(texPropProd);
+    device_free(texPropProd);
     holder.clear();
     for(int t=0; t<time_step; t++) {
       delete propProd[t];

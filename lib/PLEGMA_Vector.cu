@@ -3,15 +3,16 @@
 #include <cuda_fp16.h>
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_Propagator.h>
-#include <PLEGMA_vector_utils.cuh> 
-#include <PLEGMA_gaussian_smearing.cuh> 
-#include <PLEGMA_seqSourceNucleon.cuh> 
-#include <PLEGMA_covD.cuh>
+#include <kernels/PLEGMA_vector_utils.cuh> 
+#include <kernels/PLEGMA_gaussian_smearing.cuh> 
+#include <kernels/PLEGMA_seqSourceNucleon.cuh> 
+#include <kernels/PLEGMA_covD.cuh>
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS
 #include <PLEGMA_gammas.h>
 #include <kernels/PLEGMA_gammas_scatt.cuh>
 #endif
 #include <communicator_quda.h>
+#include <comm_quda.h>
 #include <quda_api.h>
 #include <device.h>
 using namespace plegma;
@@ -387,7 +388,7 @@ void PLEGMA_Vector<Float>::pointSource(const site& sourceposition, int spin, int
 template<typename Float>
 std::shared_ptr<Float> PLEGMA_Vector<Float>::getPointSource( const site& sourceposition, ALLOCATION_FLAG where){
   if (where == HOST){
-    std::shared_ptr<Float> ptr((Float *)malloc(sizeof(Float)*N_SPINS*N_COLS*2), free);
+    std::shared_ptr<Float> ptr(new Float[N_SPINS*N_COLS*2]);
 
     for(int i = 0; i < N_DIMS; i++)
       if(sourceposition[i] >= HGC_totalL[i]) PLEGMA_error("Source position component in dir=%d, is %d >= %d the lattice extent", i, sourceposition[i],HGC_totalL[i]);
@@ -457,8 +458,8 @@ void PLEGMA_Vector<Float>::mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Fl
 }
 
 
-template class PLEGMA_Vector<float>;
-template class PLEGMA_Vector<double>;
+template class plegma::PLEGMA_Vector<float>;
+template class plegma::PLEGMA_Vector<double>;
 
 namespace plegma{
   
@@ -642,6 +643,6 @@ namespace plegma{
   }
   
   
-  template class PLEGMA_Vector3D<float>;
-  template class PLEGMA_Vector3D<double>;
+  template class plegma::PLEGMA_Vector3D<float>;
+  template class plegma::PLEGMA_Vector3D<double>;
 }

@@ -2,7 +2,13 @@
 #include <tune_quda.h>
 #include <comm_quda.h>
 #include <PLEGMA_utils.h>
+
+#ifdef __NVCC__
 #include <targets/cuda/quda_cuda_api.h>
+#elif __HIP__
+#include <targets/hip/quda_hip_api.h>
+#endif
+
 using namespace quda;
 
 #ifndef PLEGMA_KERNEL_TUNER_H
@@ -11,7 +17,7 @@ using namespace quda;
 #define THREADS_PER_BLOCK 64
 
 
-extern __device__ cudaDeviceProp devProp;
+//extern __device__ cudaDeviceProp devProp;
 
 // struct that contains all variables
 //  necessary for the tuning evaluation
@@ -49,14 +55,14 @@ struct ProfileStruct{
 };
 
 template<int ...>
-struct seq { };
+struct sequ { };
 
 template<int N, int ...S>
 struct gens : gens<N-1, N-1, S...> { };
 
 template<int ...S>
 struct gens<0, S...> {
-  typedef seq<S...> type;
+  typedef sequ<S...> type;
 };
 
 // class to perform the kernel tuning
@@ -171,12 +177,16 @@ protected:
 
   // launching utilities  
   template<int ...S>
-  void callKernel(TuneParam tp, const qudaStream_t stream, seq<S...>) {
+  void callKernel(TuneParam tp, const qudaStream_t stream, sequ<S...>) {
     if( typeid(ProfileStruct &)==typeid(std::get<0>(args))) {
       // in case ProfileStruct is the first argument we call it as a function
       (*kernel)(std::get<S>(args)...);
     } else {
-      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,target::cuda::get_stream(stream)>>>(std::get<S>(args)...);
+      #ifdef __NVCC__
+      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes,quda::target::cuda::get_stream(stream)>>>(std::get<S>(args)...);
+      #elif __HIP__
+      (*kernel)<<<tp.grid,tp.block,tp.shared_bytes, quda::target::hip::get_stream(stream)>>>(std::get<S>(args)...);
+      #endif
     }      
    // cudaDeviceSynchronize();
   }
@@ -193,7 +203,12 @@ public:
     sprintf(aux, "volume=%lld,Ndims=%d,Ncols=%d,maxvolume=%d,aux_range=(%d,%d,%d,%d)", ps.volume, N_DIMS, N_COLS, ps.max_volume, ps.aux_range.x, ps.aux_range.y, ps.aux_range.z, ps.aux_range.w);
     kernelName = kname + (std::string) typeid(*kernel).name(); // with cupti no longer necessary
     setPolicyTuning(ps.tune_globally);
-  }
+
+//    #define ADD_TO_GLOBAL
+//    #include<global/PLEGMA_global_constants.h>
+//    #undef ADD_TO_GLOBAL
+//    HGC_global_vars.copyToDevice();
+ }
 
   ~PLEGMA_kernel_tuner(){
     setPolicyTuning(false);
@@ -241,8 +256,12 @@ void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream){
 #else
   // performing tuning if we need to tune
   if( !ps.tuned && !activeTuning() && ps.tune_globally ) comm_barrier(); //syncronizing 
-  if( !ps.tuned ) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
-  if( !ps.tuned ) qudaGetLastError(); // ensuring that the error state has been clean
+  if( !ps.tuned ) {
+		   ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
+  }
+  if( !ps.tuned ){
+	  qudaGetLastError(); // ensuring that the error state has been clean
+  }
   if( !activeTuning() ) ps.tuned = true;
   if( onlyTuning && !activeTuning() ) return;
 
@@ -265,13 +284,14 @@ void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream){
 }
 
 template<class ...types>
-void PLEGMA_kernel_tuner<types...>::apply(){ apply(device::get_stream(0)); }
+void PLEGMA_kernel_tuner<types...>::apply(){
+apply(device::get_stream(0)); }
   
 template<class ...types>
 void PLEGMA_kernel_tuner<types...>::run(){
 #ifdef PLEGMA_NO_TUNING
   if(!ps.tuned) tune();
-  launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
+ launchKernel(ps.tp,device::get_stream(0));//,ps.tp.shared_bytes,0);
 #else
   if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,device::get_stream(0));
@@ -294,7 +314,7 @@ void run(ProfileStruct &ps, std::string kname, void(* kernel)(typesK...), types&
 template<class ...types, class ...typesK>
 void tuneAndRun(ProfileStruct &ps, std::string kname, void(* kernel)(typesK...), types&&... kArgs){
   PLEGMA_kernel_tuner<typesK...> tuner(ps, kname, kernel, kArgs...);
-  tuner.apply();
+ tuner.apply();
 }
 
 #endif

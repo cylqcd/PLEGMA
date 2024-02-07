@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
-#include <PLEGMA_kernel_complex.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
-#include <PLEGMA_gammas.cuh>
+#include "PLEGMA_kernel_complex.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
+#include "PLEGMA_gammas.cuh"
 
 #ifndef PLEGMA_KERNEL_UTILS_CUH
 #define PLEGMA_KERNEL_UTILS_CUH
@@ -820,10 +820,10 @@ namespace plegma {
     int r = blockDim.x%2;
     while (i > 0){
       __syncthreads();
-      if(threadIdx.x < i){
+      if((int)threadIdx.x < i){
 	for(int ip = 0 ; ip < n_comp ; ip++) {
 	  shared_cache[ip*blockDim.x + threadIdx.x] = shared_cache[ip*blockDim.x + threadIdx.x] + shared_cache[ip*blockDim.x + threadIdx.x + i];
-	  if(r==1 && threadIdx.x==i-1)
+	  if(r==1 && (int)threadIdx.x==i-1)
 	    shared_cache[ip*blockDim.x + threadIdx.x] =  shared_cache[ip*blockDim.x + threadIdx.x] + shared_cache[ip*blockDim.x + threadIdx.x + i+1];
 	}
       }
@@ -1080,10 +1080,11 @@ namespace plegma {
   }
   
 }
-
-//---------------------------//
-// Used in Plegma_topocharge |
-//---------------------------\\
+/**
+  ---------------------------
+   Used in Plegma_topocharge
+   ---------------------------
+ **/
 
 template<typename Float>
 __inline__ __device__ void init_to_zero(Float2<Float> a[N_COLS][N_COLS]){

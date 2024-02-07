@@ -1,7 +1,7 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_projectors.cuh>
+#include <kernels/PLEGMA_kernel_utils.cuh>
+#include <kernels/PLEGMA_projectors.cuh>
 #include <PLEGMA_Vector.h>
-#include <PLEGMA_seqSourceNucleon.cuh>
+#include <kernels/PLEGMA_seqSourceNucleon.cuh>
 
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 static const __device__ short int NtoN_indices[16][4] = {0,1,0,1,0,1,1,0,0,1,2,3,0,1,3,2,1,0,0,1,1,0,1,0,1,0,2,3,1,0,3,2,2,3,0,1,2,3,1,0,2,3,2,3,2,3,3,2,3,2,0,1,3,2,1,0,3,2,2,3,3,2,3,2};
@@ -26,7 +26,7 @@ __device__ void contractNucleonSeqSource(vector2<FloatC>& vec, propTex<FloatA>& 
   }
   else{
     printf("Error: You can use only PROTON or NEUTRON\n");
-    asm("trap;"); 
+//    asm("s_trap;"); 
   }
 
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS

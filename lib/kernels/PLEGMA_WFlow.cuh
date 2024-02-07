@@ -1,6 +1,6 @@
 #pragma once
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
 #include <malloc_quda.h>
 using namespace plegma;
 
@@ -17,22 +17,22 @@ __device__ void calculatestaples(Float2<FloatG> U[N_COLS][N_COLS], gauge2<FloatG
     int nu = (dir+i)%4;
       
     //fwd
-    gaugep.get<Plus>(u1,dir,sid,nu);  // u1 = U(i+\nu)^(\mu)
+    gaugep.template get<Plus>(u1,dir,sid,nu);  // u1 = U(i+\nu)^(\mu)
     gaugep.get(u2, nu, sid);          // u2 = U(i)^(\nu)
     mul_Gdag_Gdag(aux,u1,u2);         // aux = u1+*u2+
     
-    gaugep.get<Plus>(u2,nu,sid,dir); // u2 = U(i+\mu)^(\nu)
+    gaugep.template get<Plus>(u2,nu,sid,dir); // u2 = U(i+\mu)^(\nu)
     mul_G_G(u1,u2,aux);              // u1 = U(i+\mu)^(\nu)*U(i+\nu)^(+\mu)*U(i)^(+\nu) = staple_fwd 
 
     G_plus_aG(U, u1, 1.);//U += u1
     //bwd
     //nu+=4;
         
-    gaugep.get<PlusMinus>(u1,nu,sid,dir,nu);  // u1 = U(i+\mu-\nu)^(\nu)
-    gaugep.get<Minus>(u2, dir, sid, nu);      // u2 = U(i-\nu)^(\mu)
+    gaugep.template get<PlusMinus>(u1,nu,sid,dir,nu);  // u1 = U(i+\mu-\nu)^(\nu)
+    gaugep.template get<Minus>(u2, dir, sid, nu);      // u2 = U(i-\nu)^(\mu)
     mul_Gdag_Gdag(aux,u1,u2);                 // aux =  u1+*u2+ 
 
-    gaugep.get<Minus>(u2, nu, sid, nu);       // u2 = U(i-\nu)^(\nu)
+    gaugep.template get<Minus>(u2, nu, sid, nu);       // u2 = U(i-\nu)^(\nu)
     mul_G_G(u1,aux,u2);                       // u1 = U(i+\mu-\nu)^(+\nu)*U(i-\nu)^(+\mu)*U(i-\nu)^(\nu) = staple_bwd
 
     G_plus_aG( U, u1, 1.);  //U += staple
@@ -109,7 +109,7 @@ __inline__ void GFlow_substep( gauge2<FloatG> W, gauge2<FloatG> Z, FloatE e_work
   //FloatG* debug_array;
   
   ZUpdate<FloatG,FloatE><<<gridDim,blockDim>>>( W, Z, e_work, e_save );
-  cudaDeviceSynchronize();
+//  cudaDeviceSynchronize();
 
   WUpdate<FloatG><<<gridDim,blockDim>>>( W, Z );
   checkQudaError();
@@ -197,8 +197,8 @@ static FloatG calcPlaqStaplesDef(gauge2<FloatG> gaugep){
 
   calcPlaqStaplesDef_kernel<FloatG><<<gridDim,blockDim>>>( gaugep, d_partial_plaq );
 
-  cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDim.x * sizeof(FloatG) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_plaq);
+  qudaMemcpy(h_partial_plaq, d_partial_plaq , gridDim.x * sizeof(FloatG) , qudaMemcpyDeviceToHost);
+  device_free(d_partial_plaq);
   checkQudaError();
   
   for(int i = 0 ; i < gridDim.x ; i++)

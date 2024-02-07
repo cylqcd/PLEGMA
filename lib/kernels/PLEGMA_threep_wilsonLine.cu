@@ -1,9 +1,9 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Su3field.h>
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_gammas.cuh>
-#include <PLEGMA_threep.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_gammas.cuh"
+#include "PLEGMA_threep.cuh"
 
 using namespace plegma;
 template<typename T>
@@ -75,8 +75,8 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  listGammas.array=(GAMMAS*)device_malloc( gammas.size()*sizeof(GAMMAS));
+  qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -86,15 +86,15 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size * sizeof(Float2<FloatC>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<propTex>(prop1);
   auto propTex2 = toTexture<propTex>(prop2);
   auto su3tex = toTexture<su3Tex>(su3);
 
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
+//  cudaError_t error=cudaPeekAtLastError();
+//  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     int t_step = std::min(t_size-it, time_step);
     dim3 grid = ps.tp.grid;
@@ -103,10 +103,10 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (d_partial_block, *propTex1, *propTex2, *su3tex, listGammas, it, t_step, maxT,
        source, signProps, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+    qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
+//    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
@@ -127,12 +127,12 @@ static void threep_wilsonLine_host(ProfileStruct &ps, Float2<FloatC> *result,
 
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-static void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr,
+void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr,
 			      PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
 			      int signProps, PLEGMA_Su3field<FloatS>& su3, std::vector<GAMMAS>& gammas){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK

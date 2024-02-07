@@ -1,5 +1,7 @@
 #include <PLEGMA_global.h>
-#include <curand_kernel.h>
+#include <random_helper.h>
+
+//#include <curand_kernel.h>
 #ifndef _PLEGMA_RANDOM_H
 #define _PLEGMA_RANDOM_H
 
@@ -14,6 +16,7 @@ namespace plegma {
    *  XORWOW- XOR bit dependent RNG
    *  MRG32K3a- MRG32 dependent RNG
    *  */
+/*
 #if defined(XORWOW)
   typedef struct curandStateXORWOW cuRNGState;
 #elif defined(MRG32k3a)
@@ -21,6 +24,7 @@ namespace plegma {
 #else
   typedef struct curandStateMRG32k3a cuRNGState;
 #endif
+*/
   enum DIST { Uniform, Normal };
 
   /**
@@ -41,13 +45,13 @@ namespace plegma {
       /*! @brief Backup CURAND array states initialization */
       void backup();
       /*! array with current curand rng state */
-      __host__ __device__ __inline__ cuRNGState* State(){ return state;};
+      __host__ __device__ __inline__ RNGState* State(){ return state;};
       //cuRNGState *state;
     private:
       /*! array with current curand rng state */
-      cuRNGState *state;
+      RNGState *state;
       /*! array for backup of current curand rng state */
-      cuRNGState *backup_state;
+      RNGState *backup_state;
       /*! initial rng seed */
       int seed;
       /*! @brief number of curand states */
@@ -73,29 +77,29 @@ namespace plegma {
    *    */
 
   template<typename Float, DIST sampling>
-    inline  __device__ Float PLEGMA_Random(cuRNGState &state, Float a, Float b){
+    inline  __device__ Float PLEGMA_Random(RNGState &state, Float a, Float b){
       Float res;
       return res;
     }
 
   template<>
-    inline  __device__ float PLEGMA_Random<float, Uniform>(cuRNGState &state, float a, float b){
-      return a + (b - a) * curand_uniform(&state);
+    inline  __device__ float PLEGMA_Random<float, Uniform>(RNGState &state, float a, float b){
+      return a + (b - a) * uniform<float>::rand(state);
     }
 
   template<>
-    inline  __device__ double PLEGMA_Random<double, Uniform>(cuRNGState &state, double a, double b){
-      return a + (b - a) * curand_uniform_double(&state);
+    inline  __device__ double PLEGMA_Random<double, Uniform>(RNGState &state, double a, double b){
+      return a + (b - a) * uniform<double>::rand(state);
     }
 
   template<>
-    inline  __device__ float PLEGMA_Random<float, Normal>(cuRNGState &state, float a, float b){
-      return a + b * curand_normal(&state);
+    inline  __device__ float PLEGMA_Random<float, Normal>(RNGState &state, float a, float b){
+      return a + b * normal<float>::rand(state);
     }
 
   template<>
-    inline  __device__ double PLEGMA_Random<double, Normal>(cuRNGState &state, double a, double b){
-      return a + b * curand_normal_double(&state);
+    inline  __device__ double PLEGMA_Random<double, Normal>(RNGState &state, double a, double b){
+      return a + b * normal<float>::rand(state);
     }
 
   /**
@@ -104,29 +108,29 @@ namespace plegma {
    *    @return  random number in range 0,1
    *    */
   template<typename Float, DIST sampling>
-    inline  __device__ Float PLEGMA_Random(cuRNGState &state){
+    inline  __device__ Float PLEGMA_Random(RNGState &state){
       Float res;
       return res;
     }
 
   template<>
-    inline  __device__ float PLEGMA_Random<float, Uniform>(cuRNGState &state){
-      return curand_uniform(&state);
+    inline  __device__ float PLEGMA_Random<float, Uniform>(RNGState &state){
+      return uniform<float>::rand(state);
     }
 
   template<>
-    inline  __device__ double PLEGMA_Random<double, Uniform>(cuRNGState &state){
-      return curand_uniform_double(&state);
+    inline  __device__ double PLEGMA_Random<double, Uniform>(RNGState &state){
+      return uniform<double>::rand(state);
     }
 
   template<>
-    inline  __device__ float PLEGMA_Random<float, Normal>(cuRNGState &state){
-      return curand_normal(&state);
+    inline  __device__ float PLEGMA_Random<float, Normal>(RNGState &state){
+      return normal<float>::rand(state);
     }
 
   template<>
-    inline  __device__ double PLEGMA_Random<double, Normal>(cuRNGState &state){
-      return curand_normal_double(&state);
+    inline  __device__ double PLEGMA_Random<double, Normal>(RNGState &state){
+      return normal<double>::rand(state);
     }
 
 }

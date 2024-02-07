@@ -1,0 +1,34 @@
+/**
+   @file quda_define.h
+   @brief Macros defined set by the cmake build system.  This file
+   should not be edited manually.
+ */
+
+/**
+ * @def   __COMPUTE_CAPABILITY__
+ * @brief This macro sets the target GPU architecture, which is
+ * defined on both host and device.
+ */
+#define __COMPUTE_CAPABILITY__ @COMP_CAP@0
+
+/**
+ * @def QUDA_TARGET_CUDA
+ * @brief This macro is set by CMake if the CUDA Build Target is selected
+ */
+#cmakedefine QUDA_TARGET_CUDA @QUDA_TARGET_CUDA@
+
+/**
+ * @def QUDA_TARGET_HIP
+ * @brief This macro is set by CMake if the HIP Build target is selected
+ */
+#cmakedefine QUDA_TARGET_HIP @QUDA_TARGET_HIP@
+
+/**
+ * @def QUDA_TARGET_SYCL
+ * @brief This macro is set by CMake if the SYCL Build target is selected
+ */
+#cmakedefine QUDA_TARGET_SYCL @QUDA_TARGET_SYCL@
+
+#if !defined(QUDA_TARGET_CUDA) && !defined(QUDA_TARGET_HIP) && !defined(QUDA_TARGET_SYCL)
+#error "No QUDA_TARGET selected"
+#endif

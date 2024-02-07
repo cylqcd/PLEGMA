@@ -1,5 +1,5 @@
 #pragma once
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <PLEGMA_global.h>
 using namespace plegma;
 
@@ -19,11 +19,11 @@ __device__ void clover_term( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> 
   
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
   gaugeTex.get(G1,dir1,sid);
-  gaugeTex.get<Plus>(G2,dir2,sid,dir1);
+  gaugeTex.template get<Plus>(G2,dir2,sid,dir1);
 
   mul_G_G(G3,G1,G2);
 
-  gaugeTex.get<Plus>(G1,dir1,sid,dir2);
+  gaugeTex.template get<Plus>(G1,dir1,sid,dir2);
   gaugeTex.get(G2,dir2,sid);
       
   mul_Gdag_Gdag(G4,G1,G2);
@@ -33,12 +33,12 @@ __device__ void clover_term( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> 
 	
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
   gaugeTex.get(G1,dir2,sid);
-  gaugeTex.get<MinusPlus>(G2,dir1,sid,dir1,dir2);
+  gaugeTex.template get<MinusPlus>(G2,dir1,sid,dir1,dir2);
       
   mul_G_Gdag(G3,G1,G2);
       
-  gaugeTex.get<Minus>(G1,dir2,sid,dir1);
-  gaugeTex.get<Minus>(G2,dir1,sid,dir1);
+  gaugeTex.template get<Minus>(G1,dir2,sid,dir1);
+  gaugeTex.template get<Minus>(G2,dir1,sid,dir1);
       
   mul_Gdag_G(G4,G1,G2);
 
@@ -46,13 +46,13 @@ __device__ void clover_term( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> 
   G_plus_aG( C, P, 1.);
 
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-  gaugeTex.get<Minus>(G1,dir1,sid,dir1);
-  gaugeTex.get<MinusMinus>(G2,dir2,sid,dir1,dir2);
+  gaugeTex.template get<Minus>(G1,dir1,sid,dir1);
+  gaugeTex.template get<MinusMinus>(G2,dir2,sid,dir1,dir2);
 
   mul_Gdag_Gdag(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
   
-  gaugeTex.get<MinusMinus>(G1,dir1,sid,dir1,dir2);
-  gaugeTex.get<Minus>(G2,dir2,sid,dir2);
+  gaugeTex.template get<MinusMinus>(G1,dir1,sid,dir1,dir2);
+  gaugeTex.template get<Minus>(G2,dir2,sid,dir2);
       
   mul_G_G(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
       
@@ -60,12 +60,12 @@ __device__ void clover_term( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> 
   G_plus_aG( C, P, 1.);
   
   // term trace[U^{i}(id) * U^{j}(id+i) * U^{i+}(id+j) * U^{j+}(id)]
-  gaugeTex.get<Minus>(G1,dir2,sid,dir2);
-  gaugeTex.get<Minus>(G2,dir1,sid,dir2);
+  gaugeTex.template get<Minus>(G1,dir2,sid,dir2);
+  gaugeTex.template get<Minus>(G2,dir1,sid,dir2);
     
   mul_Gdag_G(G3,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
 
-  gaugeTex.get<PlusMinus>(G1,dir2,sid,dir1,dir2);
+  gaugeTex.template get<PlusMinus>(G1,dir2,sid,dir1,dir2);
   gaugeTex.get(G2,dir1,sid);
       
   mul_G_Gdag(G4,G1,G2); // flops = N_COLS*N_COLS*N_COLS*2
@@ -124,12 +124,12 @@ __device__ void plaquette( Float2<FloatG> C[N_COLS][N_COLS], gaugeTex<FloatG> &g
 
   //G3 = U^{dir1}(id) * U^{dir2}(id+dir1)
   gaugeTex.get(G1,dir1,sid);
-  gaugeTex.get<Plus>(G2,dir2,sid,dir1);
+  gaugeTex.template get<Plus>(G2,dir2,sid,dir1);
   
   mul_G_G(G3,G1,G2);
   
   //G4 = U^{dir1+}(id+dir2) * U^{dir2+}(id)
-  gaugeTex.get<Plus>(G1,dir1,sid,dir2);
+  gaugeTex.template get<Plus>(G1,dir1,sid,dir2);
   gaugeTex.get(G2,dir2,sid);
   
   mul_Gdag_Gdag(G4,G1,G2);
@@ -185,7 +185,7 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
   Float *d_partial_Q = NULL;
   h_partial_Q = (Float*) malloc(gridDim.x * sizeof(Float) );
   if(h_partial_Q == NULL) errorQuda("Error allocate memory for host partial plaq");
-  cudaMalloc((void**)&d_partial_Q, gridDim.x * sizeof(Float));
+  d_partial_Q=(Float*)device_malloc(gridDim.x * sizeof(Float));
 
   switch(charge_def){
   case PLAQUETTE:
@@ -197,8 +197,8 @@ static Float calcTopoCharge(gaugeTex<FloatG> gaugeTex, TOPO_CHARGE_DEF charge_de
     }
   checkQudaError();
 
-  cudaMemcpy(h_partial_Q, d_partial_Q , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_Q);
+  qudaMemcpy(h_partial_Q, d_partial_Q , gridDim.x * sizeof(Float) , qudaMemcpyDeviceToHost);
+  device_free(d_partial_Q);
   checkQudaError();
 
   for(int i = 0 ; i < gridDim.x ; i++){
@@ -253,12 +253,12 @@ static Float calcPlaqClovDef(gaugeTex<FloatG> gaugeTex){
   Float *d_partial_Plaq = NULL;
   h_partial_Plaq = (Float*) malloc(gridDim.x * sizeof(Float) );
   if(h_partial_Plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
-  cudaMalloc((void**)&d_partial_Plaq, gridDim.x * sizeof(Float));
+  d_partial_Plaq=(Float*)device_malloc(gridDim.x * sizeof(Float));
 
   calcPlaqClovDef_kernel<FloatG,Float><<<gridDim,blockDim>>>( gaugeTex, d_partial_Plaq );
 
-  cudaMemcpy(h_partial_Plaq, d_partial_Plaq , gridDim.x * sizeof(Float) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_Plaq);
+  qudaMemcpy(h_partial_Plaq, d_partial_Plaq , gridDim.x * sizeof(Float) , qudaMemcpyDeviceToHost);
+  device_free(d_partial_Plaq);
   checkQudaError();
 
   for(int i = 0 ; i < gridDim.x ; i++)

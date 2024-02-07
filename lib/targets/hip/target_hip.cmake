@@ -1,0 +1,165 @@
+# ######################################################################################################################
+# HIP specific part of CMakeLists
+include(CheckLanguage)
+check_language(HIP)
+
+set(plegma_TARGET_HIP ON)
+
+if(DEFINED ENV{GPU_ARCH})
+  set(DEFAULT_GPU_ARCH $ENV{GPU_ARCH})
+else()
+  set(DEFAULT_GPU_ARCH gfx908)
+endif()
+
+set(GPU_ARCH
+    ${DEFAULT_GPU_ARCH}
+    CACHE STRING "set the GPU architecture (gfx906 gfx908 gfx90a)")
+set_property(CACHE GPU_ARCH PROPERTY STRINGS gfx906 gfx908 gfx90a)
+
+set(CMAKE_HIP_ARCHITECTURES "${GPU_ARCH}")
+set(GPU_TARGETS "${GPU_ARCH}")
+
+mark_as_advanced(GPU_TARGETS)
+mark_as_advanced(CMAKE_HIP_ARCHITECTURES)
+message(STATUS "Building for GPU Architectures: ${GPU_ARCH}")
+
+if(NOT DEFINED HIP_PATH)
+    if(NOT DEFINED ENV{HIP_PATH})
+        set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
+    else()
+        set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
+    endif()
+endif()
+set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+find_package(HIP)
+
+find_package(HIP)
+find_package(hipfft REQUIRED)
+find_package(hiprand REQUIRED)
+find_package(rocrand REQUIRED)
+find_package(hipblas REQUIRED)
+find_package(rocblas REQUIRED)
+find_package(hipcub REQUIRED)
+find_package(rocprim REQUIRED)
+
+
+# ######################################################################################################################
+# define CUDA flags
+set(CMAKE_HIP_HOST_COMPILER
+    "${CMAKE_CXX_COMPILER}"
+    CACHE FILEPATH "Host compiler to be used by hip")
+set(CMAKE_HIP_STANDARD ${QUDA_CXX_STANDARD})
+set(CMAKE_HIP_STANDARD_REQUIRED True)
+mark_as_advanced(CMAKE_HIP_HOST_COMPILER)
+
+set(CMAKE_HIP_FLAGS_DEVEL
+    "-g -O3 "
+    CACHE STRING "Flags used by the CUDA compiler during regular development builds.")
+set(CMAKE_HIP_FLAGS_STRICT
+    "-g -O3"
+    CACHE STRING "Flags used by the CUDA compiler during strict jenkins builds.")
+set(CMAKE_HIP_FLAGS_RELEASE
+    "-O3 -w"
+    CACHE STRING "Flags used by the CUDA compiler during release builds.")
+set(CMAKE_HIP_FLAGS_HOSTDEBUG
+    "-g -O3"
+    CACHE STRING "Flags used by the C++ compiler during host-debug builds.")
+set(CMAKE_HIP_FLAGS_DEBUG
+    "-g -G -O3"
+    CACHE STRING "Flags used by the C++ compiler during full (host+device) debug builds.")
+set(CMAKE_HIP_FLAGS_SANITIZE
+    "-g -O3"
+    CACHE STRING "Flags used by the C++ compiler during sanitizer debug builds.")
+
+mark_as_advanced(CMAKE_HIP_FLAGS_DEVEL)
+mark_as_advanced(CMAKE_HIP_FLAGS_STRICT)
+mark_as_advanced(CMAKE_HIP_FLAGS_RELEASE)
+mark_as_advanced(CMAKE_HIP_FLAGS_DEBUG)
+mark_as_advanced(CMAKE_HIP_FLAGS_HOSTDEBUG)
+mark_as_advanced(CMAKE_HIP_FLAGS_SANITIZE)
+enable_language(HIP)
+message(STATUS "HIP Compiler is" ${CMAKE_HIP_COMPILER})
+message(STATUS "Compiler ID is " ${CMAKE_HIP_COMPILER_ID})
+
+# ######################################################################################################################
+# CUDA specific QUDA options options
+set(QUDA_HETEROGENEOUS_ATOMIC OFF)
+mark_as_advanced(QUDA_HETEROGENEOUS_ATOMIC)
+
+# ######################################################################################################################
+# CUDA specific variables
+set_target_properties(plegma PROPERTIES HIP_ARCHITECTURES ${CMAKE_HIP_ARCHITECTURES})
+
+# QUDA_HASH for tunecache
+set(HASH cpu_arch=${CPU_ARCH},gpu_arch=${GPU_ARCH},hip_version=${CMAKE_HIP_COMPILER_VERSION})
+set(GITVERSION "${PROJECT_VERSION}-${GITVERSION}-${GPU_ARCH}")
+
+
+
+# ######################################################################################################################
+# cuda specific compile options
+
+# Use CUDA textures
+set(PLEGMA_TEXTURE TRUE CACHE BOOL "Wheater to use or not CUDA textures")
+mark_as_advanced(PLEGMA_TEXTURE)
+if(PLEGMA_TEXTURE)
+  add_definitions(-DPLEGMA_TEXTURE)
+else()
+
+endif()
+
+
+#target_include_directories(plegma PRIVATE ${CMAKE_SOURCE_DIR}/include/targets/hip)
+#target_include_directories(plegma PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/targets/hip>
+#                                       $<INSTALL_INTERFACE:include/targets/hip>)
+
+
+#set_source_files_properties(block_orthogonalize.cu PROPERTIES COMPILE_OPTIONS "-mllvm;-pragma-unroll-threshold=4096")
+
+add_definitions(-DMULTI_GPU)
+
+target_compile_options(
+  plegma 
+  PRIVATE -Wall
+          -Wextra
+	  -O3
+          -Wno-unknown-pragmas
+          -Wno-unused-result
+	  -Wno-deprecated-register -dc
+	  -fgpu-rdc
+	  --hip-link
+	  -fopenmp
+          $<$<CONFIG:STRICT>:-Werror
+          -Wno-error=pass-failed>
+          $<$<CONFIG:SANITIZE>:-fsanitize=address
+          -fsanitize=undefined>)
+
+target_link_options(
+  plegma
+  PRIVATE -Wall
+          -Wextra
+	  -O3
+          -Wno-unknown-pragmas
+          -Wno-unused-result
+          -Wno-deprecated-register -dc
+          -fgpu-rdc
+          --hip-link
+          -fopenmp
+          $<$<CONFIG:STRICT>:-Werror
+          -Wno-error=pass-failed>
+          $<$<CONFIG:SANITIZE>:-fsanitize=address
+          -fsanitize=undefined>)
+
+  set_source_files_properties( ${PLEGMA_CU_OBJS} PROPERTIES LANGUAGE HIP)
+# malloc.cpp uses both the driver and runtime api So we need to find the CUDA_CUDA_LIBRARY (driver api) or the stub
+# version for cmake 3.8 and later this has been integrated into  FindCUDALibs.cmake
+target_link_libraries(plegma PUBLIC hip::hiprand roc::rocrand hip::hipcub roc::rocprim_hip)
+target_link_libraries(plegma PUBLIC roc::hipblas roc::rocblas )
+target_include_directories(plegma PUBLIC /users/pittlerf/code/quda/build2/_deps/eigen-src/)
+target_include_directories(plegma PUBLIC ${ROCM_PATH}/hipfft/include)
+target_include_directories(plegma PUBLIC ${QUDA_HOME}/include/targets/hip)
+target_link_libraries(plegma PUBLIC hip::hipfft)
+
+#add_subdirectory(targets/hip)
+
+install(FILES ${CMAKE_SOURCE_DIR}/cmake/find_target_hip_dependencies.cmake DESTINATION lib/cmake/PLEGMA)

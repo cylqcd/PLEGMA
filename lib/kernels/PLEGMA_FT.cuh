@@ -1,6 +1,7 @@
+#pragma once
 #include <PLEGMA_Field.h>
 #include <PLEGMA_FT.h>
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 
 using namespace plegma;
 template<typename Float>
@@ -54,8 +55,8 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
   int V3 = HGC_localVolume/HGC_localL[3];
   int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
   Float2<Float> *x;
-  cudaMalloc((void**)&x, V*2*sizeof(Float));
-  cudaMemset(x,0,V*2*sizeof(Float));
+  x=(Float*)device_malloc(V*2*sizeof(Float));
+  qudaMemset(x,0,V*2*sizeof(Float));
   checkQudaError();
   for(int imom = 0; imom < Nmom; imom++){
     createMomField(x,mom[imom],ft.Dims(),-sign); // change sign to compensate dagger
@@ -68,7 +69,7 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.imag();
       }
   }
-  cudaFree(x);
+  device_free(x);
 }
 
 template<typename Float>
@@ -79,9 +80,9 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   int V3 = HGC_localVolume/HGC_localL[3];
   int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
   Float2<Float> *x,*d_res;
-  cudaMalloc((void**)&x, V*2*sizeof(Float));
-  cudaMemset(x,0,V*2*sizeof(Float));
-  cudaMalloc((void**)&d_res, f.Field_length() * ft.DimT() * 2*sizeof(Float));
+  x=(Float2<Float>*)device_malloc(V*2*sizeof(Float));
+  qudaMemset(x,0,V*2*sizeof(Float));
+  d_res=(Float2<Float>*)device_malloc(f.Field_length() * ft.DimT() * 2*sizeof(Float2<Float>));
   checkQudaError();
   Float2<Float> h_res[f.Field_length()*ft.DimT()];
   Float2<Float> *h_ft = (Float2<Float> *) ft.H_elem();
@@ -95,8 +96,8 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
       for(int it = 0 ; it < ft.DimT(); it++)
 	  h_ft[it*f.Field_length()*Nmom + idf*Nmom + imom] += h_res[idf*ft.DimT()+it];
   }
-  cudaFree(x);
-  cudaFree(d_res);
+  device_free(x);
+  device_free(d_res);
 }
 
 
@@ -130,14 +131,14 @@ static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Floa
   ProfileStruct ps(SpVol, shared_size);
   tune(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   size_t alloc_size=ft.Nmoms()*site_size*ps.tp.grid.x*2*sizeof(Float);
-  cudaMalloc((void**)&d_partial_block, alloc_size);
+  d_partial_block=(Float *)device_malloc( alloc_size);
   checkQudaError();
   run(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   Float *h_partial_block = NULL;
   hostMalloc(h_partial_block,alloc_size);
-  cudaMemcpy(h_partial_block,d_partial_block,alloc_size,cudaMemcpyDeviceToHost);
+  qudaMemcpy(h_partial_block,d_partial_block,alloc_size,qudaMemcpyDeviceToHost);
   checkQudaError();
-  cudaFree(d_partial_block);
+  device_free(d_partial_block);
   int gridDimX = ps.tp.grid.x;
   Float *reduction;
   hostMalloc(reduction,ft.Nmoms()*site_size*2*sizeof(Float));

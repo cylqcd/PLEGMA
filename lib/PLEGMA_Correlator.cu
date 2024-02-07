@@ -1101,8 +1101,8 @@ writeHDF5(std::string filename) const {
 }
 
 
-template class PLEGMA_Correlator<float>;
-template class PLEGMA_Correlator<double>;
+template class plegma::PLEGMA_Correlator<float>;
+template class plegma::PLEGMA_Correlator<double>;
 
 
 

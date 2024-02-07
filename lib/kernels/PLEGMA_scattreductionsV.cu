@@ -1,12 +1,12 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <PLEGMA_ScattCorrelator.h>
-#include <PLEGMA_scattreductions.cuh>
-#include <PLEGMA_scattreductionsV2.cuh>
-#include <PLEGMA_scattreductionsV3.cuh>
-#include <PLEGMA_scattreductionsV4.cuh>
-#include <PLEGMA_scattreductionsV5.cuh>
-#include <PLEGMA_scattreductionsV6.cuh>
-#include <PLEGMA_scattreductionsV6_red.cuh>
+#include "PLEGMA_scattreductions.cuh"
+#include "PLEGMA_scattreductionsV2.cuh"
+#include "PLEGMA_scattreductionsV3.cuh"
+#include "PLEGMA_scattreductionsV4.cuh"
+#include "PLEGMA_scattreductionsV5.cuh"
+#include "PLEGMA_scattreductionsV6.cuh"
+#include "PLEGMA_scattreductionsV6_red.cuh"
 
 using namespace plegma;
 

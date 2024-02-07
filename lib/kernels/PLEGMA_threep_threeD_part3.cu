@@ -1,9 +1,9 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Gauge.h>
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_gammas.cuh>
-#include <PLEGMA_threep.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_gammas.cuh"
+#include "PLEGMA_threep.cuh"
 #include <PLEGMA_Vector.h>
 #include <malloc_quda.h>
 #include <quda_api.h>
@@ -186,8 +186,8 @@ static void threep_threeD_part3_host(ProfileStruct &ps, Float2<FloatC> *result, 
   auto propTex2 = toTexture<PorVtex<b,FloatB>>(prop2);
   auto gaugetex = toTexture<gaugeTex>(gauge);
 
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
+  //cudaError_t error=cudaPeekAtLastError();
+  //if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     for(int et=0; et < extra; et++) {
       int dir1 = (et/(N_DIMS-1)/(N_DIMS-2)) % N_DIMS;
@@ -219,10 +219,10 @@ static void threep_threeD_part3_host(ProfileStruct &ps, Float2<FloatC> *result, 
 	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
 	(d_partial_block, *propTex1, *propTex2, *gaugetex, listGammas, it, t_step, maxT,
 	 source, signProps, runFT, *moms, dir1,dir2,dir3,mu,nu,c1,c2);
-      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
       
       qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
-      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
       
       if(runFT==true){
 	int accumX = ps.tp.grid.x/time_step;

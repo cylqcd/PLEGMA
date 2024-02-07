@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_tuner.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_tuner.cuh"
 using namespace plegma;
 
 template<typename Float>
@@ -20,8 +20,8 @@ __device__ void clover_leaves(Float2<Float> F[N_COLS][N_COLS], gauge2<Float> &u,
     x|-->--|
    **/
   // U_\mu(x) * U_\nu(x+\mu) * U^dag_\mu(x+nu) * U^\dag_\nu(x)
-  u.get(U1,mu,sid); u.get<Plus>(U2,nu,sid,mu); mul_G_G(P,U1,U2);
-  u.get<Plus>(U2,mu,sid,nu); mul_G_Gdag(U1,P,U2);
+  u.get(U1,mu,sid); u.template get<Plus>(U2,nu,sid,mu); mul_G_G(P,U1,U2);
+  u.template get<Plus>(U2,mu,sid,nu); mul_G_Gdag(U1,P,U2);
   u.get(U2,nu,sid); mul_G_Gdag(P,U1,U2);
   G_plus_aG( F, P, 1.);
 
@@ -33,9 +33,9 @@ __device__ void clover_leaves(Float2<Float> F[N_COLS][N_COLS], gauge2<Float> &u,
      |-->--|x
    **/
   // U_\nu(x) * U^dag_\mu(x-mu+nu) * U^dag_\nu(x-mu) * U_\mu(x-mu)
-  u.get(U1,nu,sid); u.get<MinusPlus>(U2,mu,sid,mu,nu); mul_G_Gdag(P,U1,U2);
-  u.get<Minus>(U2,nu,sid,mu); mul_G_Gdag(U1,P,U2);
-  u.get<Minus>(U2,mu,sid,mu); mul_G_G(P,U1,U2);
+  u.get(U1,nu,sid); u.template get<MinusPlus>(U2,mu,sid,mu,nu); mul_G_Gdag(P,U1,U2);
+  u.template get<Minus>(U2,nu,sid,mu); mul_G_Gdag(U1,P,U2);
+  u.template get<Minus>(U2,mu,sid,mu); mul_G_G(P,U1,U2);
   G_plus_aG( F, P, 1.);
 
 
@@ -46,9 +46,9 @@ __device__ void clover_leaves(Float2<Float> F[N_COLS][N_COLS], gauge2<Float> &u,
      |-->--|
    **/
   //U^\dag_\mu(x-mu) * U^\dag_\nu(x-nu-mu) * U_\mu(x-nu-mu) * U_\nu(x-nu)
-  u.get<Minus>(U1,mu,sid,mu); u.get<MinusMinus>(U2,nu,sid,nu,mu); mul_Gdag_Gdag(P,U1,U2);
-  u.get<MinusMinus>(U2,mu,sid,nu,mu); mul_G_G(U1,P,U2);
-  u.get<Minus>(U2,nu,sid,nu); mul_G_G(P,U1,U2);
+  u.template get<Minus>(U1,mu,sid,mu); u.template get<MinusMinus>(U2,nu,sid,nu,mu); mul_Gdag_Gdag(P,U1,U2);
+  u.template get<MinusMinus>(U2,mu,sid,nu,mu); mul_G_G(U1,P,U2);
+  u.template get<Minus>(U2,nu,sid,nu); mul_G_G(P,U1,U2);
   G_plus_aG( F, P, 1.);
 
   /**
@@ -58,8 +58,8 @@ __device__ void clover_leaves(Float2<Float> F[N_COLS][N_COLS], gauge2<Float> &u,
      |-->--|
    **/
   //U^\dag_\nu(x-nu) * U_\mu(x-nu) * U_\nu(x+mu-nu) * U^\dag_\mu(x)
-  u.get<Minus>(U1,nu,sid,nu); u.get<Minus>(U2,mu,sid,nu); mul_Gdag_G(P,U1,U2);
-  u.get<PlusMinus>(U2,nu,sid,mu,nu); mul_G_G(U1,P,U2);
+  u.template get<Minus>(U1,nu,sid,nu); u.template get<Minus>(U2,mu,sid,nu); mul_Gdag_G(P,U1,U2);
+  u.template get<PlusMinus>(U2,nu,sid,mu,nu); mul_G_G(U1,P,U2);
   u.get(U2,mu,sid); mul_G_Gdag(P,U1,U2);
   G_plus_aG( F, P, 1.);
 

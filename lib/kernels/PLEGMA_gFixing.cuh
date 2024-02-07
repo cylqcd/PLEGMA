@@ -1,5 +1,5 @@
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_SU3_projection.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_SU3_projection.cuh"
 
 template<typename Float>
 static __global__ void gluonField_kernel(gauge2<Float> Rout, gauge2<Float> Rin){
@@ -45,7 +45,7 @@ static __global__ void gTransformLandau_kernel(su3_2<Float> Rg, gauge2<Float> RA
   for(int mu = 0; mu < N_DIMS; mu++){
     RA.get(AS,mu,sid);
     G_plus_aG(gS,AS,1.);
-    RA.get<Minus>(AS,mu,sid,mu);
+    RA.template get<Minus>(AS,mu,sid,mu);
     Gdag(AS);
     G_plus_aG(gS,AS,1.);
   }
@@ -82,7 +82,7 @@ static __global__ void gTransformMulALandau_kernel(su3_2<Float> Rg, gauge2<Float
 #pragma unroll
     for(int mu = 0 ; mu < N_DIMS; mu++){
       RA.get(AS,mu,sid);
-      Rg.get<Plus>(gS,sid,mu);
+      Rg.template get<Plus>(gS,sid,mu);
       mul_G_Gdag(tmp,AS,gS);
       RA.set(tmp,mu,sid);
     }

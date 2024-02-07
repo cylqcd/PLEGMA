@@ -1,10 +1,10 @@
-#include <PLEGMA_kernel_utils.cuh>
+#include "PLEGMA_kernel_utils.cuh"
 #include <malloc_quda.h>
 #include <quda_api.h>
 using namespace plegma;
 const int N_TMDWF_MESONS=1;
 // TODO: This is hard to extend. These variables should replaced by compile-time functions.
-const __device__ short int mesons_TMDWF_indices[N_TMDWF_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,0,2,2,0,0,3,3,1,1,0,0,1,1,1,1,1,1,2,2,1,1,3,3,2,2,0,0,2,2,1,1,2,2,2,2,2,2,3,3,3,3,0,0,3,3,1,1,3,3,2,2,3,3,3,3};
+const __device__ short int mesons_TMDWF_indices[N_TMDWF_MESONS][16][4] = {{0,0,0,0,0,0,1,1,0,0,2,2,0,0,3,3,1,1,0,0,1,1,1,1,1,1,2,2,1,1,3,3,2,2,0,0,2,2,1,1,2,2,2,2,2,2,3,3,3,3,0,0,3,3,1,1,3,3,2,2,3,3,3,3}};
 
 const __device__ float mesons_TMDWF_values[N_TMDWF_MESONS][16] = {-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,1,1,1,1,1};
 
@@ -24,7 +24,7 @@ __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   
-  register Float2<FloatC> accum[2*N_TMDWF_MESONS];
+  Float2<FloatC> accum[2*N_TMDWF_MESONS];
   for(int i = 0 ; i < 2*N_TMDWF_MESONS ; i++){
     accum[i] = 0.;
   }
@@ -99,11 +99,11 @@ void contract_TMDWF_mesons_host( ProfileStruct &ps,
   //cudaMalloc((void**)&d_partial_block, alloc_size*sizeof(Float2<FloatC>));
   d_partial_block=(Float2<FloatC> *)device_malloc(alloc_size*sizeof(Float2<FloatC>));
   // Checking for allocation error. In case we return and let the tuner handle the error.
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess) {
-    cudaFree(d_partial_block);
-    return;
-  }
+  //cudaError_t error=cudaPeekAtLastError();
+  //if(error != cudaSuccess) {
+  //  cudaFree(d_partial_block);
+  //  return;
+  //}
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<propTex>(prop1);
@@ -115,10 +115,10 @@ void contract_TMDWF_mesons_host( ProfileStruct &ps,
     contract_TMDWF_mesons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
       (*propTex1, *propTex2, *stapleTex  ,d_partial_block, it, std::min(t_size-it, time_step), maxT, source, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
     qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
       
     if(runFT==true) {
       int accumX = ps.tp.grid.x/time_step;

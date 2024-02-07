@@ -1,8 +1,8 @@
 #include <PLEGMA_Su3field.h>
 #include <PLEGMA_Gauge.h>
-#include <PLEGMA_su3field.cuh>
-#include <PLEGMA_field_utils.cuh>
-#include <PLEGMA_SU3_projection.cuh>
+#include <kernels/PLEGMA_su3field.cuh>
+#include <kernels/PLEGMA_field_utils.cuh>
+#include <kernels/PLEGMA_SU3_projection.cuh>
 #include <quda_api.h>
 using namespace plegma;
 
@@ -166,5 +166,5 @@ void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLE
   
 }
 
-template class PLEGMA_Su3field<float>;
-template class PLEGMA_Su3field<double>;
+template class plegma::PLEGMA_Su3field<float>;
+template class plegma::PLEGMA_Su3field<double>;

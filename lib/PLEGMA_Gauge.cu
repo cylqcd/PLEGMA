@@ -1,13 +1,13 @@
 #include <PLEGMA_Gauge.h>
 #include <PLEGMA_U1Gauge.h>
 #include <PLEGMA_Su3field.h>
-#include <PLEGMA_plaquette.cuh>
-#include <PLEGMA_plaquetteCorners.cuh>
-#include <PLEGMA_gauge_utils.cuh>
-#include <PLEGMA_gFixing.cuh>
+#include <kernels/PLEGMA_plaquette.cuh>
+#include <kernels/PLEGMA_plaquetteCorners.cuh>
+#include <kernels/PLEGMA_gauge_utils.cuh>
+#include <kernels/PLEGMA_gFixing.cuh>
 #include <PLEGMA_io.h>
-#include <PLEGMA_topocharge.cuh>
-#include <PLEGMA_WFlow.cuh>
+#include <kernels/PLEGMA_topocharge.cuh>
+#include <kernels/PLEGMA_WFlow.cuh>
 #include <quda_api.h>
 
 using namespace plegma;
@@ -282,8 +282,8 @@ void PLEGMA_Gauge<Float>::U3xU1(PLEGMA_Gauge<Float> &u3, PLEGMA_U1Gauge<Float> &
   U3xU1_k(*this,u3,u1);
 }
 
-template class PLEGMA_Gauge<float>;
-template class PLEGMA_Gauge<double>;
+template class plegma::PLEGMA_Gauge<float>;
+template class plegma::PLEGMA_Gauge<double>;
 
-template class PLEGMA_Gauge3D<float>;
-template class PLEGMA_Gauge3D<double>;
+template class plegma::PLEGMA_Gauge3D<float>;
+template class plegma::PLEGMA_Gauge3D<double>;

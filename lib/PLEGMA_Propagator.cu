@@ -1,6 +1,6 @@
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_Vector.h>
-#include <PLEGMA_propagator_utils.cuh> 
+#include <kernels/PLEGMA_propagator_utils.cuh> 
 using namespace plegma;
 
 //-------------------------------//
@@ -344,7 +344,7 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int nu, int
   checkQudaError();
 }
 
-template  class PLEGMA_Propagator<double>;
-template  class PLEGMA_Propagator3D<double>;
-template  class PLEGMA_Propagator<float>;
-template  class PLEGMA_Propagator3D<float>;
+template  class plegma::PLEGMA_Propagator<double>;
+template  class plegma::PLEGMA_Propagator3D<double>;
+template  class plegma::PLEGMA_Propagator<float>;
+template  class plegma::PLEGMA_Propagator3D<float>;

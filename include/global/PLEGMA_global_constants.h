@@ -15,7 +15,11 @@
  *   - on host:                "dtype" HGC_"name" "[s1][s2][..]"
  *   - on device: __constant__ "dtype" DGC_"name" "[s1][s2][..]"
  */
-
+#ifdef __HIP__
+#include<hipblas.h>
+#else
+#include<cublas_v2.h>
+#endif
 #ifdef ADD_TO_GLOBAL
 
 #define global_host(dtype, name, ...)					\
@@ -34,10 +38,14 @@
 
 #define global_host(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
-#ifdef __NVCC__
+#if defined (  __NVCC__ ) 
 #define global_both(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				\
-  __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);		
+  __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);	
+#elif defined (__HIP__) 
+#define global_both(dtype, name, ...)                                   \
+  dtype HGC_##name PARENTHESES(1,__VA_ARGS__);                          \
+  __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);     
 #else
 #define global_both(dtype, name, ...)					\
   dtype HGC_##name PARENTHESES(1,__VA_ARGS__);				
@@ -47,10 +55,14 @@
 
 #define global_host(dtype, name, ...)					\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
-#ifdef __NVCC__
+#if defined (  __NVCC__ ) 
 #define global_both(dtype, name, ...)					\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);			\
   extern __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__); 
+#elif defined ( __HIP__ )
+#define global_both(dtype, name, ...)                                   \
+  extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);                   \
+  extern __device__ __constant__ dtype DGC_##name PARENTHESES(1,__VA_ARGS__);
 #else
 #define global_both(dtype, name, ...)			\
   extern dtype HGC_##name PARENTHESES(1,__VA_ARGS__);
@@ -70,9 +82,6 @@ global_host(Options *, options);
 global_host(bool, hold_exit);
 
 // variables visible on both host and device
-global_both(size_t, localVolume);
-global_both(size_t, localVolume3D);
-global_both(size_t, totalVolume);
 global_both(int, localL, N_DIMS);
 global_both(int, totalL, N_DIMS);
 global_both(int, procPosition, N_DIMS);
@@ -88,6 +97,9 @@ global_both(size_t, vertexGhostVolume3D);
 global_both(size_t, surface3D, N_DIMS);
 global_both(size_t, surface2D, (N_DIMS*(N_DIMS-1))/2);
 global_both(size_t, surface1D, (N_DIMS*(N_DIMS-1)*(N_DIMS-2))/6);
+global_both(size_t, localVolume);
+global_both(size_t, localVolume3D);
+global_both(size_t, totalVolume);
 
 // for mpi use global variables (host only)
 global_both(bool, dimBreak, N_DIMS);
@@ -107,7 +119,11 @@ global_host(int, timeRank);
 global_host(int, timeSize);
 
 // for cublas use
+#if defined (__HIP__)
+global_host(hipblasHandle_t, hipblas_handle);
+#else
 global_host(cublasHandle_t, cublas_handle);
+#endif
 
 #undef global_both
 #undef global_host

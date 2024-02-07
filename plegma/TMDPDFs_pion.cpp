@@ -16,7 +16,8 @@ int main(int argc, char **argv)
   if(mu<0){
     mu *= -1.0;
   }
-  
+
+  std::vector<int> sinkMom = {0,0,0};  
   double mu_ud = mu;
   
   double mu_s;

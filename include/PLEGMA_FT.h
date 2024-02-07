@@ -63,11 +63,17 @@ namespace plegma {
        @params bool accum = false: In case we want to accumulation results from each transformation on the class buffer
        @params bool dimT = HGC_localL[DIM_T]: Size of the time dimension in case we want to transform only part of the vector
      **/
-    template<typename T>
-    PLEGMA_FT(std::vector<T> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
+    PLEGMA_FT(std::vector<int> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
 
-    template<typename T>
-    PLEGMA_FT( std::vector<std::vector<T>> &moms, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
+    PLEGMA_FT( std::vector<std::vector<int>> &moms, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
+
+    PLEGMA_FT(std::vector<float> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
+
+    PLEGMA_FT( std::vector<std::vector<float>> &moms, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
+
+    PLEGMA_FT(std::vector<double> mom, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
+
+    PLEGMA_FT( std::vector<std::vector<double>> &moms, int D3D4 = 3, bool accum = false, int dimT = HGC_localL[DIM_T]);
 
     ~PLEGMA_FT() {};
     

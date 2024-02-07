@@ -1,9 +1,9 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Su3field.h>
-#include <PLEGMA_kernel_utils.cuh>
-#include <PLEGMA_kernel_getSet.cuh>
-#include <PLEGMA_gammas.cuh>
-#include <PLEGMA_threep.cuh>
+#include "PLEGMA_kernel_utils.cuh"
+#include "PLEGMA_kernel_getSet.cuh"
+#include "PLEGMA_gammas.cuh"
+#include "PLEGMA_threep.cuh"
 #include <quda_api.h>
 using namespace plegma;
 template<typename T>
@@ -104,8 +104,8 @@ static void threep_staple_host(ProfileStruct &ps, Float2<FloatC> *result,
   auto propTex2 = toTexture<propTex>(prop2);
   auto su3tex = toTexture<su3Tex>(su3);
 
-  cudaError_t error=cudaPeekAtLastError();
-  if(error != cudaSuccess || h_partial_block==NULL) goto exit;
+  //cudaError_t error=cudaPeekAtLastError();
+  //if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     for(int et=0; et < extra; et++) {
       int mu=-1, nu=-1, c1=-1, c2=-1;
@@ -122,10 +122,10 @@ static void threep_staple_host(ProfileStruct &ps, Float2<FloatC> *result,
         <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
         (d_partial_block, *propTex1, *propTex2, *su3tex, listGammas, it, t_step, maxT,
          source, signProps, runFT, *moms, mu,nu,c1,c2);
-      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
       qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
-      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+//      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
       if(runFT==true){
         int accumX = ps.tp.grid.x/time_step;
@@ -147,12 +147,12 @@ static void threep_staple_host(ProfileStruct &ps, Float2<FloatC> *result,
 
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatS>
-static void threep_staple(PLEGMA_Correlator<FloatC> &corr,
+void threep_staple(PLEGMA_Correlator<FloatC> &corr,
 			      PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
 			      int signProps, PLEGMA_Su3field<FloatS>& su3, std::vector<GAMMAS>& gammas,bool isZfac){
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK

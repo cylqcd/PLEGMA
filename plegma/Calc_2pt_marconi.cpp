@@ -124,6 +124,10 @@ int main(int argc, char **argv)
 				 }
 				   for(int isc = 0 ; isc < 12 ; isc++){
 				     PLEGMA_Vector<double> vectorInOut;
+<<<<<<< HEAD
+=======
+				     vectorInOut.zero_where(BOTH);
+>>>>>>> origin/hip_lumi_working
 				     { // Smearing the source
 				       PLEGMA_Vector3D<double> vector1, vector2;
 				       vector1.pointSource(source, isc/3, isc%3, DEVICE);
@@ -134,11 +138,19 @@ int main(int argc, char **argv)
 				     PLEGMA_printf("Going to invert %s for component %d\n",
 						   fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
 				     vectorInOut.unload();
+<<<<<<< HEAD
 				     vectorInOut.writeHDF5("testinputbooster");
 				     vectorInOut.load();
 				     TIME(solver.solve(vectorInOut, vectorInOut));
 				     vectorInOut.unload();
                                      vectorInOut.writeHDF5("testoutputbooster");
+=======
+				     vectorInOut.writeHDF5("testinput");
+				     vectorInOut.load();
+				     TIME(solver.solve(vectorInOut, vectorInOut));
+				     vectorInOut.unload();
+                                     vectorInOut.writeHDF5("testoutput");
+>>>>>>> origin/hip_lumi_working
 				     vectorInOut.load();
 
 				     { // Smearing the solution
@@ -170,6 +182,10 @@ int main(int argc, char **argv)
       THREAD(corr.writeFile(twop_filename, corr_file_format));
       
 #ifdef PLEGMA_UDSC_BARYONS
+<<<<<<< HEAD
+=======
+#if 0
+>>>>>>> origin/hip_lumi_working
       PLEGMA_Propagator<float> none(NONE);
       TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
       
@@ -179,6 +195,10 @@ int main(int argc, char **argv)
       free(group);
       THREAD(corr.writeFile(twop_filename, corr_file_format));
 #endif
+<<<<<<< HEAD
+=======
+#endif
+>>>>>>> origin/hip_lumi_working
     }
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }
