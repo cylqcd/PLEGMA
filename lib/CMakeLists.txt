@@ -25,18 +25,18 @@ set (PLEGMA_OBJS
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
   kernels/PLEGMA_baryons_NtoN.cu
-  kernels/PLEGMA_seqSourceNucleon.cu
-  kernels/PLEGMA_threep_local.cu
-  kernels/PLEGMA_threep_noe.cu
-  kernels/PLEGMA_threep_oneD.cu
-  kernels/PLEGMA_threep_twoD.cu
-  kernels/PLEGMA_threep_threeD_part1.cu
-  kernels/PLEGMA_threep_threeD_part2.cu
-  kernels/PLEGMA_threep_threeD_part3.cu
-  kernels/PLEGMA_threep_threeD_part4.cu
-  kernels/PLEGMA_threep_wilsonLine.cu
-  kernels/PLEGMA_threep_staple.cu
-  kernels/PLEGMA_threep_qgq.cu
+  #kernels/PLEGMA_seqSourceNucleon.cu
+  #kernels/PLEGMA_threep_local.cu
+  #kernels/PLEGMA_threep_noe.cu
+  #kernels/PLEGMA_threep_oneD.cu
+  #kernels/PLEGMA_threep_twoD.cu
+  #  kernels/PLEGMA_threep_threeD_part1.cu
+  #kernels/PLEGMA_threep_threeD_part2.cu
+  #kernels/PLEGMA_threep_threeD_part3.cu
+  #kernels/PLEGMA_threep_threeD_part4.cu
+  #kernels/PLEGMA_threep_wilsonLine.cu
+  #kernels/PLEGMA_threep_staple.cu
+  #kernels/PLEGMA_threep_qgq.cu
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
