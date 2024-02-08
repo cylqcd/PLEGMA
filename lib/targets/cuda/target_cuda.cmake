@@ -2,7 +2,8 @@
 # malloc.cpp uses both the driver and runtime api
 # So we need to find the CUDA_cuda_LIBRARY (driver api) or the stub version
 find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib/ ${CUDA_TOOLKIT_ROOT_DIR}/lib/stubs)
-target_link_libraries(plegma PUBLIC ${CUDA_cuda_LIBRARY})
+#target_link_libraries(plegma PUBLIC ${CUDA_cuda_LIBRARY})
+#target_link_libraries(plegma PUBLIC ${CUDA_cuda_LIBRARY})
 # CUDA specific part of CMakeLists
 include(CheckLanguage)
 check_language(CUDA)
@@ -51,10 +52,10 @@ if( (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6) AND (CMAKE_CUDA_COMPILER_VERSION
   message(FATAL_ERROR "This library will have compilation problems with CUDA 9.2 and gcc < 6")
 endif()
 
-LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} ${CUDA_curand_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_nvrtc_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_nvToolsExt_LIBRARY})
+LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY} )
+LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} )
+LIST(APPEND CUDA_LIBS ${CUDA_curand_LIBRARY} )
+LIST(APPEND CUDA_LIBS ${CUDA_nvrtc_LIBRARY} ${CUDA_nvToolsExt_LIBRARY})
 
 find_package(LibDL)
 LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
@@ -62,7 +63,7 @@ LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
 add_definitions(-DMULTI_GPU)
 
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
-include_directories(lib/kernels)
+include_directories(kernels)
 
 
 # GPU ARCH

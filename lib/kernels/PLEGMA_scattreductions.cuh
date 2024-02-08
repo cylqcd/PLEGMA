@@ -371,10 +371,6 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
   
   // Checking for allocation error. In case we return and let the tuner handle the error.
   //cudaError_t error=cudaPeekAtLastError();
-  //if(error != cudaSuccess) {
-  //  PLEGMA_printf("ERROR0\n");
-  //  return;
-  //}
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatOut>));
 
   KernelArr<GAMMAS_SCATT> listGammas_i, listGammas_f;

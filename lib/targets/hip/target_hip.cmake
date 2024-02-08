@@ -23,6 +23,7 @@ mark_as_advanced(GPU_TARGETS)
 mark_as_advanced(CMAKE_HIP_ARCHITECTURES)
 message(STATUS "Building for GPU Architectures: ${GPU_ARCH}")
 
+<<<<<<< HEAD
 if(NOT DEFINED HIP_PATH)
     if(NOT DEFINED ENV{HIP_PATH})
         set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
@@ -33,6 +34,8 @@ endif()
 set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
 find_package(HIP)
 
+=======
+>>>>>>> 26062d2203a439ef998fe342239c37b22d974066
 find_package(HIP)
 find_package(hipfft REQUIRED)
 find_package(hiprand REQUIRED)
@@ -62,6 +65,7 @@ set(CMAKE_HIP_FLAGS_RELEASE
     "-O3 -w"
     CACHE STRING "Flags used by the CUDA compiler during release builds.")
 set(CMAKE_HIP_FLAGS_HOSTDEBUG
+<<<<<<< HEAD
     "-g -O3"
     CACHE STRING "Flags used by the C++ compiler during host-debug builds.")
 set(CMAKE_HIP_FLAGS_DEBUG
@@ -69,6 +73,15 @@ set(CMAKE_HIP_FLAGS_DEBUG
     CACHE STRING "Flags used by the C++ compiler during full (host+device) debug builds.")
 set(CMAKE_HIP_FLAGS_SANITIZE
     "-g -O3"
+=======
+    "-g"
+    CACHE STRING "Flags used by the C++ compiler during host-debug builds.")
+set(CMAKE_HIP_FLAGS_DEBUG
+    "-g -G"
+    CACHE STRING "Flags used by the C++ compiler during full (host+device) debug builds.")
+set(CMAKE_HIP_FLAGS_SANITIZE
+    "-g "
+>>>>>>> 26062d2203a439ef998fe342239c37b22d974066
     CACHE STRING "Flags used by the C++ compiler during sanitizer debug builds.")
 
 mark_as_advanced(CMAKE_HIP_FLAGS_DEVEL)
@@ -122,18 +135,26 @@ target_compile_options(
   plegma 
   PRIVATE -Wall
           -Wextra
+<<<<<<< HEAD
 	  -O3
           -Wno-unknown-pragmas
           -Wno-unused-result
 	  -Wno-deprecated-register -dc
 	  -fgpu-rdc
 	  --hip-link
+=======
+          -Wno-unknown-pragmas
+          -Wno-unused-result
+	  -Wno-deprecated-register -dc
+	  -fgpu-rdc #--amdgpu-target=gfx90a 
+>>>>>>> 26062d2203a439ef998fe342239c37b22d974066
 	  -fopenmp
           $<$<CONFIG:STRICT>:-Werror
           -Wno-error=pass-failed>
           $<$<CONFIG:SANITIZE>:-fsanitize=address
           -fsanitize=undefined>)
 
+<<<<<<< HEAD
 target_link_options(
   plegma
   PRIVATE -Wall
@@ -150,12 +171,19 @@ target_link_options(
           $<$<CONFIG:SANITIZE>:-fsanitize=address
           -fsanitize=undefined>)
 
+=======
+>>>>>>> 26062d2203a439ef998fe342239c37b22d974066
   set_source_files_properties( ${PLEGMA_CU_OBJS} PROPERTIES LANGUAGE HIP)
 # malloc.cpp uses both the driver and runtime api So we need to find the CUDA_CUDA_LIBRARY (driver api) or the stub
 # version for cmake 3.8 and later this has been integrated into  FindCUDALibs.cmake
 target_link_libraries(plegma PUBLIC hip::hiprand roc::rocrand hip::hipcub roc::rocprim_hip)
+<<<<<<< HEAD
 target_link_libraries(plegma PUBLIC roc::hipblas roc::rocblas )
 target_include_directories(plegma PUBLIC /users/pittlerf/code/quda/build2/_deps/eigen-src/)
+=======
+target_link_libraries(plegma PUBLIC roc::hipblas roc::rocblas)
+
+>>>>>>> 26062d2203a439ef998fe342239c37b22d974066
 target_include_directories(plegma PUBLIC ${ROCM_PATH}/hipfft/include)
 target_include_directories(plegma PUBLIC ${QUDA_HOME}/include/targets/hip)
 target_link_libraries(plegma PUBLIC hip::hipfft)

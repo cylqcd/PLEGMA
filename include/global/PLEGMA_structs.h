@@ -114,6 +114,8 @@ struct pointer_holder {
       if (err != hipSuccess) {
         errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
       }
+#else
+     qudaMemcpy(hostPointer, *devPointer,  bytes*size,qudaMemcpyDeviceToHost);
 #endif
     }
   }
