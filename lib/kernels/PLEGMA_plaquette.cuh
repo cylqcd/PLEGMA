@@ -44,7 +44,7 @@ static __global__ void calculatePlaquette_device(gaugeTex<FloatG> gTex, Float *p
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   int cacheIndex = threadIdx.x;
   
-  if (sid < gTex.volume_dev()) {
+  if (sid < gTex.volume()) {
     Float2<FloatG> G1[N_COLS][N_COLS], G2[N_COLS][N_COLS],
       G3[N_COLS][N_COLS], G4[N_COLS][N_COLS];    
     Float trace = 0.;
