@@ -199,57 +199,58 @@ int main(int argc, char **argv)
     TIME(computePropagator(propUP, propUP_SL, mu>0 ? mu : -mu));
     TIME(computePropagator(propDN, propDN_SL, mu<0 ? mu : -mu));
     
-    for(int ts=0;ts<tSinks.size();ts++) {
-      PLEGMA_Correlator<float> corrThrpWL(corr_space,source,maxQsq3pt,tSinks[ts]+1);
-      int signPer = (tSinks[ts] + source[3]) >= HGC_totalL[3] ? -1 : +1;
-      int global_fixSinkTime = (tSinks[ts] + source[3])%HGC_totalL[3]; 
-
-      // 3D propagators at t_sink
-      PLEGMA_Propagator3D<float> propUP3D;
-      PLEGMA_Propagator3D<float> propDN3D;
-      PLEGMA_Gauge3D<double> smearedGauge3D_sink;
-      smearedGauge3D_sink.absorb(*AuxSinkGauge, global_fixSinkTime);
-
-
-      for(int isc = 0 ; isc < 12 ; isc++){
-	PLEGMA_Vector3D<double> vectorAuxD;
-	PLEGMA_Vector3D<double> vectorAuxD2;
-	PLEGMA_Vector3D<float> vectorAuxF;
-	vectorAuxF.absorb(*propUP_SL,global_fixSinkTime,isc/3, isc%3);
-	vectorAuxD2.copy(vectorAuxF);
-
-	TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
-	vectorAuxF.copy(vectorAuxD);
-	propUP3D.absorb(vectorAuxF,isc/3, isc%3);
-      }
-      for(int isc = 0 ; isc < 12 ; isc++){
-	PLEGMA_Vector3D<double> vectorAuxD;
-	PLEGMA_Vector3D<double> vectorAuxD2;
-	PLEGMA_Vector3D<float> vectorAuxF;
-	vectorAuxF.absorb(*propDN_SL,global_fixSinkTime,isc/3, isc%3);
-	vectorAuxD2.copy(vectorAuxF);
-	TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
-	vectorAuxF.copy(vectorAuxD);
-	propDN3D.absorb(vectorAuxF,isc/3, isc%3);
-      }
+    if(calc3pt){
+      for(int ts=0;ts<tSinks.size();ts++) {
 	
-      
-      if(calc3pt){
+	PLEGMA_Correlator<float> corrThrpWL(corr_space,source,maxQsq3pt,tSinks[ts]+1);
+	int signPer = (tSinks[ts] + source[3]) >= HGC_totalL[3] ? -1 : +1;
+	int global_fixSinkTime = (tSinks[ts] + source[3])%HGC_totalL[3]; 
+
+	// 3D propagators at t_sink
+	PLEGMA_Propagator3D<float> propUP3D;
+	PLEGMA_Propagator3D<float> propDN3D;
+	PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+	smearedGauge3D_sink.absorb(*AuxSinkGauge, global_fixSinkTime);
+
+
+	for(int isc = 0 ; isc < 12 ; isc++){
+	  PLEGMA_Vector3D<double> vectorAuxD;
+	  PLEGMA_Vector3D<double> vectorAuxD2;
+	  PLEGMA_Vector3D<float> vectorAuxF;
+	  vectorAuxF.absorb(*propUP_SL,global_fixSinkTime,isc/3, isc%3);
+	  vectorAuxD2.copy(vectorAuxF);
+
+	  TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
+	  vectorAuxF.copy(vectorAuxD);
+	  propUP3D.absorb(vectorAuxF,isc/3, isc%3);
+	}
+	for(int isc = 0 ; isc < 12 ; isc++){
+	  PLEGMA_Vector3D<double> vectorAuxD;
+	  PLEGMA_Vector3D<double> vectorAuxD2;
+	  PLEGMA_Vector3D<float> vectorAuxF;
+	  vectorAuxF.absorb(*propDN_SL,global_fixSinkTime,isc/3, isc%3);
+	  vectorAuxD2.copy(vectorAuxF);
+	  TIME(vectorAuxD.gaussianSmearing(vectorAuxD2, smearedGauge3D_sink, nsmearGauss, alphaGauss));
+	  vectorAuxF.copy(vectorAuxD);
+	  propDN3D.absorb(vectorAuxF,isc/3, isc%3);
+	}
+	
 
 	PLEGMA_Su3field<float> su3;
 	PLEGMA_Su3field<float> WL;
 	PLEGMA_Su3field<float> tmp;
 
-	propUP->unload();
-	propDN->unload();
+	propUP_SL->unload();
+	propDN_SL->unload();
+
 	//seq source part 2Props and contraction block
 	{
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
 	      PLEGMA_Vector3D<float> vectorAux3D;
+	      PLEGMA_Vector3D<double> vectorAux3D_1, vectorAux3D_2;
               PLEGMA_Vector<float> vectorAuxF;
-              PLEGMA_Vector<double> vectorAuxD;
-              PLEGMA_Vector<double> vectorOut,vectorIn;
+              PLEGMA_Vector<double> vectorInOut;
 
 	      if(nucleon == PROTON)
 		vectorAux3D.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, nu, c2);
@@ -263,9 +264,10 @@ int main(int argc, char **argv)
 	      vectorAux3D.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 	      vectorAux3D.conjugate();
 	      vectorAux3D.apply_gamma(G5);
-	      vectorAuxF.absorb(vectorAux3D, global_fixSinkTime);
-	      vectorAuxD.copy(vectorAuxF);
-	      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
+	      vectorAux3D_1.copy(vectorAux3D);
+	      vectorAux3D_2.gaussianSmearing(vectorAux3D_1, smearedGauge3D_sink, nsmearGauss, alphaGauss);
+	      vectorInOut.absorb(vectorAux3D_2, global_fixSinkTime);
+
 	      // check if we need to normalize the seqsource for mix precision solver
 	      if(nucleon == PROTON){
 		if(mu>0) {
@@ -279,11 +281,11 @@ int main(int argc, char **argv)
 		  solver->UpdateSolver();
 		}
 	      }
-	      double norm = vectorIn.norm();
-	      vectorIn.cscale(1/norm);
-	      solver->solve(vectorOut, vectorIn);
-	      vectorOut.cscale(norm);    
-	      vectorAuxF.copy(vectorOut);
+	      double norm = vectorInOut.norm();
+	      vectorInOut.cscale(1/norm);
+	      solver->solve(vectorInOut, vectorInOut);
+	      vectorInOut.cscale(norm);    
+	      vectorAuxF.copy(vectorInOut);
 	      seqPropOut->absorb(vectorAuxF, nu, c2);
 	    }
 	  seqPropOut->apply_gamma(G5);
@@ -291,8 +293,8 @@ int main(int argc, char **argv)
     
 	  int signProps = (nucleon == PROTON) ? +1: -1;
 
-	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
-
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP_SL : propDN_SL;
+	  gaugeWL.copy(gauge);
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	  for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
@@ -330,9 +332,9 @@ int main(int argc, char **argv)
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
 	      PLEGMA_Vector3D<float> vectorAux3D;
-              PLEGMA_Vector<double> vectorOut,vectorIn;
-              PLEGMA_Vector<double> vectorAuxD;
-	      PLEGMA_Vector<float> vectorAuxF;
+	      PLEGMA_Vector3D<double> vectorAux3D_1, vectorAux3D_2;
+              PLEGMA_Vector<float> vectorAuxF;
+              PLEGMA_Vector<double> vectorInOut;
 	      if(nucleon == PROTON)
 		vectorAux3D.seqSourceNucleon(propUP3D, which_proj, nucleon, nu, c2);
 	      else
@@ -345,9 +347,9 @@ int main(int argc, char **argv)
 	      vectorAux3D.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
 	      vectorAux3D.conjugate();
 	      vectorAux3D.apply_gamma(G5);
-	      vectorAuxF.absorb(vectorAux3D, global_fixSinkTime);
-	      vectorAuxD.copy(vectorAuxF);
-	      vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
+	      vectorAux3D_1.copy(vectorAux3D);
+	      vectorAux3D_2.gaussianSmearing(vectorAux3D_1, smearedGauge3D_sink, nsmearGauss, alphaGauss);
+	      vectorInOut.absorb(vectorAux3D_2, global_fixSinkTime);
 	    
 	      if(nucleon == PROTON){
 		if(mu<0) {
@@ -361,11 +363,11 @@ int main(int argc, char **argv)
 		  solver->UpdateSolver();
 		}
 	      }
-	      double norm = vectorIn.norm();
-	      vectorIn.cscale(1/norm);
-	      solver->solve(vectorOut, vectorIn);
-	      vectorOut.cscale(norm);
-	      vectorAuxF.copy(vectorOut);
+	      double norm = vectorInOut.norm();
+	      vectorInOut.cscale(1/norm);
+	      solver->solve(vectorInOut, vectorInOut);
+	      vectorInOut.cscale(norm);
+	      vectorAuxF.copy(vectorInOut);
 	      seqPropOut->absorb(vectorAuxF, nu, c2);
 	    }
 	  seqPropOut->apply_gamma(G5);
@@ -373,7 +375,7 @@ int main(int argc, char **argv)
     
 	  int signProps = (nucleon == PROTON) ? -1: +1;
 
-	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN_SL : propUP_SL;
 	  gaugeWL.copy(gauge);
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
