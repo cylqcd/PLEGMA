@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
   static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 					     "nsrc", "src-filename", "maxQsq", "twop-filename","threep-filename",  "corr-file-format",
-					     "corr-space", "tSinks","xiMomSm","gammas"};
+					     "corr-space", "tSinks","xiMomSm","gammas", "Projs"};
 
   initializeOptions(argc, argv, true, listOpt);
 
@@ -43,9 +43,6 @@ int main(int argc, char **argv)
   bool calc3pt = true ;
   HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
 
-  std::string proj = "P4_P" ;
-  HGC_options->set("which-projector", "Which projector to use for 3pt function", verbosity, proj);
-
   /*
     We consider the momenta in the symmetric frame. Both P-momentum and Delta-momentum are vectors
     having three components. 
@@ -69,7 +66,6 @@ int main(int argc, char **argv)
   //=========================================================================================================//
   initializePLEGMA();
   
-  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
   WHICHPARTICLE nucleon = get_particle(aux_str.c_str());
 
   if(DeltaMom.size() > 3 || PMom.size() > 3) PLEGMA_error("DeltaMom and PMom have to be vectors with lenght three\n");
@@ -212,7 +208,6 @@ int main(int argc, char **argv)
 	PLEGMA_Gauge3D<double> smearedGauge3D_sink;
 	smearedGauge3D_sink.absorb(*AuxSinkGauge, global_fixSinkTime);
 
-
 	for(int isc = 0 ; isc < 12 ; isc++){
 	  PLEGMA_Vector3D<double> vectorAuxD;
 	  PLEGMA_Vector3D<double> vectorAuxD2;
@@ -244,7 +239,8 @@ int main(int argc, char **argv)
 	propDN_SL->unload();
 
 	//seq source part 2Props and contraction block
-	{
+	for(size_t iproj = 0; iproj < Projs.size(); iproj++) {
+	  WHICHPROJECTOR which_proj = get_projector(Projs[iproj]);
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
 	      PLEGMA_Vector3D<float> vectorAux3D;
@@ -298,7 +294,7 @@ int main(int argc, char **argv)
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	  for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
-	    std::string suff = "_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	    std::string suff = "_"+Projs[iproj]+"_CP2_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
 	    if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
 	    su3.absorbDir_device(gaugeWL, WilsDir);
 	    WL.setUnit( (std::vector<int>) {0,4,8});
@@ -311,7 +307,7 @@ int main(int argc, char **argv)
 	      propF->shift(*propIn, 4+WilsDir);
 	    }
 
-	    suff="_CP2_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	    suff="_"+Projs[iproj]+"_CP2_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
 	    propF->load();
 	    su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 	    WL.setUnit( (std::vector<int>) {0,4,8});
@@ -325,10 +321,7 @@ int main(int argc, char **argv)
 	    }
 	    propF->load();
 	  }
-	}
-
-	//seq source part 1Props and contraction block
-	{
+	  
 	  for(int nu = 0 ; nu < 4 ; nu++)
 	    for(int c2 = 0 ; c2 < 3 ; c2++){
 	      PLEGMA_Vector3D<float> vectorAux3D;
@@ -373,15 +366,15 @@ int main(int argc, char **argv)
 	  seqPropOut->apply_gamma(G5);
 	  seqPropOut->conjugate();
     
-	  int signProps = (nucleon == PROTON) ? -1: +1;
+	  signProps = (nucleon == PROTON) ? -1: +1;
 
-	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN_SL : propUP_SL;
+	  propF = (nucleon == PROTON) ? propDN_SL : propUP_SL;
 	  gaugeWL.copy(gauge);
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
 	  for(int stIt=0;stIt<=(int)(maxStout/stepStout);stIt++){
 	    if(stIt>0) gaugeWL.stoutSmearing(gaugeWL,stepStout,rhoStout,3);
-	    std::string suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
+	    std::string suff="_"+Projs[iproj]+"_CP1_stout_"+std::to_string(stIt*stepStout)+"_Plus_";
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
@@ -394,7 +387,7 @@ int main(int argc, char **argv)
 	    }
     
 	    propF->load();
-	    suff="_CP1_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
+	    suff="_"+Projs[iproj]+"_CP1_stout_"+std::to_string(stIt*stepStout)+"_Minus_";
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
