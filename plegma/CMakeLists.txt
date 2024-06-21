@@ -109,6 +109,21 @@ target_link_libraries(SoftFunctionWall ${PLEGMA_LIBS})
 cuda_add_executable(SoftFunction SoftFunction.cpp)
 target_link_libraries(SoftFunction ${PLEGMA_LIBS})
 
+cuda_add_executable(SoftFunction2 SoftFunction2.cpp)
+target_link_libraries(SoftFunction2 ${PLEGMA_LIBS})
+
+cuda_add_executable(SoftFunction_new SoftFunction_new.cpp)
+target_link_libraries(SoftFunction_new ${PLEGMA_LIBS})
+
+cuda_add_executable(formfactor formfactor.cpp)
+target_link_libraries(formfactor ${PLEGMA_LIBS})
+
+cuda_add_executable(TMDPDFs_nucleon TMDPDFs_nucleon.cpp)
+target_link_libraries(TMDPDFs_nucleon ${PLEGMA_LIBS})
+
+cuda_add_executable(TMDPDFs_nucleon_source_loop TMDPDFs_nucleon_source_loop.cpp)
+target_link_libraries(TMDPDFs_nucleon_source_loop ${PLEGMA_LIBS})
+
 cuda_add_executable(correcting_ZM EXCLUDE_FROM_ALL correcting_ZM.cpp)
 target_link_libraries(correcting_ZM ${PLEGMA_LIBS})
 

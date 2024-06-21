@@ -197,7 +197,7 @@ namespace plegma {
     void contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
 			     PLEGMA_Propagator<Float> &prop2,
 			     PLEGMA_Su3field<float> &staple,
-			     int l);
+			     int l, int b, int z);
     
     void contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 			   PLEGMA_Propagator<Float> &prop2);
@@ -332,7 +332,11 @@ namespace plegma {
 
     void contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
 				  PLEGMA_Propagator<Float> &prop2,
-                                  PLEGMA_Su3field<float> &staple, int l, int b, int z);
+                                  PLEGMA_Su3field<float> &staple, int l, int b, int z, bool zfac = false);
+
+    void contractTMDWFMesonsNew(PLEGMA_Propagator<Float> &prop1,
+		    PLEGMA_Propagator<Float> &prop2,
+		    PLEGMA_Su3field<float> &staple, int l, int b, int z);
 
     void contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
 				 PLEGMA_Propagator<Float> &fwdProp,
