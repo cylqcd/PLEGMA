@@ -226,3 +226,4 @@ echo `date`
 eval ${RUN_COMMAND}
 echo `date`
 
+pkill -u sbacchio

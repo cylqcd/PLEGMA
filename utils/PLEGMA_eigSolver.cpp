@@ -2,10 +2,17 @@
 #include <PLEGMA_utils.h>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
+#include <quda_api.h>
 using namespace plegma;
 using namespace quda;
 
+#define FASTIO
+
 #ifdef HAVE_EIGENSOLVER
+
+static std::vector<std::thread> threads;
+
+#define THREAD(fnc) threads.push_back(std::thread([&]() { fnc; }))
 
 static quda::QUDA_dirac *dOp;
 static PLEGMA_Vector<double> *d_in;
@@ -16,6 +23,7 @@ static int G_PolyDeg;
 static bool G_isACC;
 static double G_amin;
 static double G_amax;
+
 
 EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isReadEigenVectors,bool isWriteEigenVectors,std::string filenamePrefix,
 		     bool verbose):verbose(verbose),p(params),
@@ -51,10 +59,10 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   hostMallocPinned(h_eigVecs,size_NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
   hostMalloc(h_eigVecs_p, p.NeV*sizeof(double*)); // need to check if this does the trick
-  double* ptr_tmp = h_eigVecs;
+  double* ptr_vecs = h_eigVecs;
   for(int i = 0; i < p.NeV; i++){
-    h_eigVecs_p[i] = ptr_tmp;
-    ptr_tmp += size_per_Vec*2;
+    h_eigVecs_p[i] = ptr_vecs;
+    ptr_vecs += size_per_Vec*2;
   }
 #elif defined(HAVE_PRIMME)
   hostMallocPinned(h_eigVecs,size_NeV*2*sizeof(double));
@@ -71,13 +79,17 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
 
   dOp = new QUDA_dirac(dslashType);
 #if defined(QUDAEIG)
+  eig_param = newQudaEigParam();
   eig_inv_param = newQudaInvertParam();
   setInvertParam(eig_inv_param);
+  eig_inv_param.residual_type=QUDA_L2_ABSOLUTE_RESIDUAL;
   eig_inv_param.dslash_type = dslashType;
   eig_inv_param.solve_type = QUDA_DIRECT_SOLVE;
   eig_inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
   eig_inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
   eig_param.invert_param = &eig_inv_param;
+  eig_param.invert_param->cuda_prec_eigensolver = prec;
+  eig_param.invert_param->clover_cuda_prec_eigensolver = prec;
 #endif
   tmp1 = new PLEGMA_Vector<double>(DEVICE);
   tmp2 = new PLEGMA_Vector<double>(DEVICE);
@@ -101,10 +113,21 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     initEigSolver();
     if(verbose) print();
     computeEigVecs();
+    if(isWriteEigenVectors) {
+      if(p.fastio) {
+	THREAD(writeEigenVectors(filenamePrefix));
+      } else {
+	writeEigenVectors(filenamePrefix);
+      }
+    }
   }
   else readEigenVectors(filenamePrefix);
+  if(p.deviceAlloc) {
+    cudaMalloc((void**)& d_eigVecs,size_NeV*2*sizeof(double));
+    cudaMemcpy(d_eigVecs, h_eigVecs, size_NeV*2*sizeof(double), cudaMemcpyHostToDevice);
+    checkCudaError();
+  }
   computeEigVals();    
-  if(isWriteEigenVectors) writeEigenVectors(filenamePrefix);
   
   if(!isReadEigenVectors){
 #if defined(HAVE_ARPACK)
@@ -134,6 +157,8 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
 }
 
 EigSolver::~EigSolver(){
+    while(not threads.empty()) {threads.back().join(); threads.pop_back();}
+    
 #if defined(HAVE_ARPACK)
     hostFreePinned(h_eigVecs,size_NkV*2*sizeof(double));
 #elif defined(QUDAEIG)
@@ -148,6 +173,10 @@ EigSolver::~EigSolver(){
     hostFree(littleD, p.NeV*p.NeV*2*sizeof(double));
     hostFree(littleD_inv, p.NeV*p.NeV*2*sizeof(double));
   }
+  if(p.deviceAlloc) {
+    cudaFree(d_eigVecs);
+  }
+
   //  delete[] h_eigVecs;
 }
 
@@ -252,19 +281,21 @@ void EigSolver::initEigSolver(){
   primme_set_method(p.primme_method, &primme_pars);
 #elif QUDAEIG
   eig_param.eig_type = QUDA_EIG_TR_LANCZOS; // Up to now QUDA only provides the thick restarted Lanczos
+  eig_param.block_size = 0;
   if(p.spectrumPart == "SR") eig_param.spectrum = QUDA_SPECTRUM_SR_EIG;
   else if(p.spectrumPart == "LR") eig_param.spectrum = QUDA_SPECTRUM_LR_EIG;
   else PLEGMA_error("Not implemented");
   eig_param.location = QUDA_CUDA_FIELD_LOCATION;
-  eig_param.nConv = p.NeV;
-  eig_param.nEv = p.NeV;
-  eig_param.nKr = p.NkV;
+  eig_param.n_conv = p.NeV;
+  eig_param.n_ev = p.NeV;
+  eig_param.n_kr = p.NkV;
   eig_param.tol = p.tol;
   eig_param.batched_rotate = p.batched_rotate;
   eig_param.require_convergence = QUDA_BOOLEAN_TRUE;
   eig_param.check_interval = 10;
   eig_param.max_restarts = 1000;
   eig_param.cuda_prec_ritz = QUDA_DOUBLE_PRECISION;
+  eig_param.compute_gamma5= QUDA_BOOLEAN_FALSE;
   eig_param.use_norm_op = QUDA_BOOLEAN_TRUE; // put it on so it will do M^+ M
   eig_param.use_dagger = QUDA_BOOLEAN_FALSE;
   eig_param.compute_svd = QUDA_BOOLEAN_FALSE;
@@ -421,14 +452,15 @@ void EigSolver::computeEigVecs(){
 #elif defined(HAVE_PRIMME)
   zprimme(h_eigVals, (std::complex<double> *) h_eigVecs, h_rnorms, &primme_pars);
 #elif defined(QUDAEIG)
+  printQudaEigParam(&eig_param);
   eigensolveQuda((void**)h_eigVecs_p, (double _Complex *) h_eigVals, &eig_param);
   double *vtmp;
   hostMalloc(vtmp,bytes_per_Vec);
-  double* ptr_tmp = h_eigVecs;
+  double* ptr_vecs = h_eigVecs;
   for(int i = 0; i < p.NeV; i++){
-    memcpy(vtmp,ptr_tmp,bytes_per_Vec);
-    packVectorToNormal(ptr_tmp,vtmp,HGC_localVolume);
-    ptr_tmp += size_per_Vec*2;
+    memcpy(vtmp,ptr_vecs,bytes_per_Vec);
+    packVectorToNormal(ptr_vecs,vtmp,HGC_localVolume);
+    ptr_vecs += size_per_Vec*2;
   }
   hostFree(vtmp,bytes_per_Vec);
 #else
@@ -437,26 +469,37 @@ void EigSolver::computeEigVecs(){
 }
 
 void EigSolver::computeEigVals(){
-  PLEGMA_Vector<double> tmp3;
-  
-  double* ptr_tmp = h_eigVecs;
+  PLEGMA_Vector<double> tmp3(p.deviceAlloc ? NONE : DEVICE);
+
+  double* ptr_vecs = p.deviceAlloc ? d_eigVecs : h_eigVecs;
+
   int veci = 0;
   for(int j = 0 ; j < p.NeV; j++){
-    double one[2] = {1.,0.};
-    cudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
-    checkCudaError();
-    dOp->apply<MdagM>(*tmp2,*tmp1);
-    dOp->apply<M>(tmp3,*tmp1,QUDA_MASS_NORMALIZATION);
-    tmp3.apply_gamma5();
-    std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), HGC_fullComm);
-    cuBLAS::scal(size_per_Vec,-eval.real(),tmp1->D_elem());
-    cuBLAS::axpy(size_per_Vec,one,tmp2->D_elem(),tmp1->D_elem());
+    if(p.deviceAlloc) {
+      tmp3.D_elem(ptr_vecs);
+    } else {
+      cudaMemcpy(tmp3.D_elem(),ptr_vecs,bytes_per_Vec,cudaMemcpyHostToDevice);
+      checkCudaError();
+    }
+    dOp->apply<MdagM>(*tmp1,tmp3);
+    dOp->apply<M>(*tmp2,tmp3,QUDA_MASS_NORMALIZATION);
+    tmp2->apply_gamma5();
+    std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp3.D_elem(), tmp1->D_elem(), HGC_fullComm);
+    
+    double ev[2] = {eval.real(),0.};
+    double mev[2] = {-eval.real(),0.};
+    cuBLAS::axpy(size_per_Vec,mev,tmp3.D_elem(),tmp1->D_elem());
     std::complex<double> res = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp1->D_elem(), HGC_fullComm);
+    cuBLAS::axpy(size_per_Vec,ev,tmp3.D_elem(),tmp1->D_elem());
     evalsOrdered.push_back(std::make_tuple(eval.real(), eval.imag(), std::sqrt(res.real()), j));
     for(int k = j ; k < (p.littleD ? p.NeV:(j+1)); k++){
-      cudaMemcpy(tmp1->D_elem(),ptr_tmp+(k-j)*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
-      std::complex<double> eval1= cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), HGC_fullComm);
-      std::complex<double> eval2 = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp3.D_elem(), HGC_fullComm);
+      if(p.deviceAlloc) {
+	tmp3.D_elem(ptr_vecs+(k-j)*size_per_Vec*2);
+      } else {
+	cudaMemcpy(tmp3.D_elem(),ptr_vecs+(k-j)*size_per_Vec*2,bytes_per_Vec,cudaMemcpyHostToDevice);
+      }
+      std::complex<double> eval1= cuBLAS::dot(size_per_Vec, tmp3.D_elem(), tmp1->D_elem(), HGC_fullComm);
+      std::complex<double> eval2 = cuBLAS::dot(size_per_Vec, tmp3.D_elem(), tmp2->D_elem(), HGC_fullComm);
       if (p.littleD) {
 	littleD[k*p.NeV+j] = eval2;
 	if (k!=j) littleD[j*p.NeV+k] = std::conj(eval2);
@@ -466,7 +509,7 @@ void EigSolver::computeEigVals(){
 	PLEGMA_printf("v_[%03d] DdagD v_[%03d] = (%+e,%+e)   v_[%03d] g5D v_[%03d] / 2*kappa = (%+e,%+e)\n", k, j, eval1, k, j, eval2);
     }
     
-    ptr_tmp += size_per_Vec*2;
+    ptr_vecs += size_per_Vec*2;
   }
   std::sort(evalsOrdered.begin(), evalsOrdered.end());
   if(verbose)
@@ -485,97 +528,132 @@ void EigSolver::projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<doubl
     vecOut.copy(vecIn);
     return;
   }
-  if(!vecOut.IsAllocHost() || !vecIn.IsAllocHost()) PLEGMA_error("This functions needs both vecs to have also Host allocation");
-  vecIn.unload();
   double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
   double *tmpArr = nullptr;
-  try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
-  memset(tmpArr,0,p.NeV*2*sizeof(double));
-  cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vecIn.H_elem(), b, tmpArr, HGC_fullComm);
-  cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, b, vecOut.H_elem());
-  cBLAS::axpy(size_per_Vec, aP, vecIn.H_elem(), vecOut.H_elem());
-  vecOut.load();
-  delete[] tmpArr;
+  if(p.deviceAlloc) {
+    cudaMalloc((void**)&tmpArr, p.NeV*2*sizeof(double));
+    cudaMemset(tmpArr, 0, p.NeV*2*sizeof(double));
+    cuBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, d_eigVecs, vecIn.D_elem(), b, tmpArr, HGC_fullComm);
+    cuBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, d_eigVecs, tmpArr, b, vecOut.D_elem());
+    cuBLAS::axpy(size_per_Vec, aP, vecIn.D_elem(), vecOut.D_elem());
+    cudaFree(tmpArr);
+  } else {
+    if(!vecOut.IsAllocHost() || !vecIn.IsAllocHost()) PLEGMA_error("This functions needs both vecs to have also Host allocation");
+    vecIn.unload();
+    double *tmpArr = nullptr;
+    try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
+    memset(tmpArr,0,p.NeV*2*sizeof(double));
+    cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vecIn.H_elem(), b, tmpArr, HGC_fullComm);
+    cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, b, vecOut.H_elem());
+    cBLAS::axpy(size_per_Vec, aP, vecIn.H_elem(), vecOut.H_elem());
+    vecOut.load();
+    delete[] tmpArr;
+  }
 }
 
-
- // vecOut = (1 - U * U^\dag) vecIn where out and in are the same
+// vecOut = (1 - U * U^\dag) vecIn where out and in are the same
  void EigSolver::projectVector(PLEGMA_Vector<double> &vec, double *tmpArr, int global_t, int spin, int col){
    if(p.NeV <= 0){
      if(verbose) PLEGMA_printf("Skipping deflation of source vector since NeV=%d\n",p.NeV);
      return;
    }
-   if(!vec.IsAllocHost()) PLEGMA_error("This functions needs vec to have also Host allocation");
-   vec.unload();
    double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
-   bool alloc=false;
-   if(tmpArr==nullptr) {
-     try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
-    alloc=true;
-   }
-   memset(tmpArr,0,p.NeV*2*sizeof(double));
+   if(p.deviceAlloc) {
+     double *tmpArr_d = nullptr;
+     cudaMalloc((void**)&tmpArr_d, p.NeV*2*sizeof(double));
+     cudaMemset(tmpArr_d,0,p.NeV*2*sizeof(double));
 
-   if(global_t<0 and spin<0 and col<0) {
-     cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
-   } else {
+     // if(global_t<0 and spin<0 and col<0) {
+     cuBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, d_eigVecs, vec.D_elem(), b, tmpArr_d, HGC_fullComm);
+     // } else {
      // esplicit implementation specialized for running on selected spin, col and t
-     int my_it=-1;
-     bool is_my_it = true;
-     if(global_t>=0) {
-       my_it = global_t - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
-       is_my_it = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
+     // TODO
+     // }
+   
+     cuBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, d_eigVecs, tmpArr_d, aP, vec.D_elem());
+     if(tmpArr!=nullptr) {
+       cudaMemcpy(tmpArr, tmpArr_d, p.NeV*2*sizeof(double),cudaMemcpyDeviceToHost);
      }
+     cudaFree(tmpArr_d);
+     checkCudaError();
+   } else {
+     if(!vec.IsAllocHost()) PLEGMA_error("This functions needs vec to have also Host allocation");
+     vec.unload();
+     bool alloc=false;
+     if(tmpArr==nullptr) {
+       try { tmpArr = new double[p.NeV*2]; } catch (std::bad_alloc &err) { PLEGMA_error(err.what());}
+       alloc=true;
+     }
+     memset(tmpArr,0,p.NeV*2*sizeof(double));
 
-     if(is_my_it) {
-       #pragma omp parallel for
-       for(int ivec=0; ivec<p.NeV; ivec++) {
-	 std::complex<double> out = 0;
-	 for(int mu = 0 ; mu < N_SPINS ; mu++) {
-	   if(spin>=0 and mu != spin) continue;
-	   for(int c1 = 0 ; c1 < N_COLS ; c1++){
-	     if(col>=0 and c1 != col) continue;
-	     for(int t = 0 ; t < HGC_localL[DIM_T] ; t++){
-	       if(my_it>=0 and t != my_it) continue;
-	       std::complex<double> * eV = ((std::complex<double> *) h_eigVecs)+(ivec*size_per_Vec+((mu*N_COLS+c1)*HGC_localL[DIM_T]+t)*HGC_localVolume3D);
-	       std::complex<double> * rhs = ((std::complex<double> *) vec.H_elem())+((mu*N_COLS+c1)*HGC_localL[DIM_T]+t)*HGC_localVolume3D;
-	       for(size_t idx=0; idx<HGC_localVolume3D; idx++) {
-		 out += std::conj(eV[idx])*rhs[idx];
+     if(global_t<0 and spin<0 and col<0) {
+       cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, vec.H_elem(), b, tmpArr, HGC_fullComm);
+     } else {
+       // esplicit implementation specialized for running on selected spin, col and t
+       int my_it=-1;
+       bool is_my_it = true;
+       if(global_t>=0) {
+	 my_it = global_t - HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
+	 is_my_it = (my_it >= 0) && ( my_it < HGC_localL[DIM_T] );
+       }
+
+       if(is_my_it) {
+#pragma omp parallel for
+	 for(int ivec=0; ivec<p.NeV; ivec++) {
+	   std::complex<double> out = 0;
+	   for(int mu = 0 ; mu < N_SPINS ; mu++) {
+	     if(spin>=0 and mu != spin) continue;
+	     for(int c1 = 0 ; c1 < N_COLS ; c1++){
+	       if(col>=0 and c1 != col) continue;
+	       for(int t = 0 ; t < HGC_localL[DIM_T] ; t++){
+		 if(my_it>=0 and t != my_it) continue;
+		 std::complex<double> * eV = ((std::complex<double> *) h_eigVecs)+(ivec*size_per_Vec+((mu*N_COLS+c1)*HGC_localL[DIM_T]+t)*HGC_localVolume3D);
+		 std::complex<double> * rhs = ((std::complex<double> *) vec.H_elem())+((mu*N_COLS+c1)*HGC_localL[DIM_T]+t)*HGC_localVolume3D;
+		 for(size_t idx=0; idx<HGC_localVolume3D; idx++) {
+		   out += std::conj(eV[idx])*rhs[idx];
+		 }
 	       }
 	     }
 	   }
+	   tmpArr[ivec*2+0] = out.real();
+	   tmpArr[ivec*2+1] = out.imag();
 	 }
-	 tmpArr[ivec*2+0] = out.real();
-	 tmpArr[ivec*2+1] = out.imag();
        }
-     }
      
-     double *yr = nullptr;
-     try{yr = new double[p.NeV*2];} catch (std::bad_alloc& err){ PLEGMA_error(err.what());}
-     int mpiErr = MPI_Allreduce(tmpArr,yr,p.NeV*2,MPI_Type(yr),MPI_SUM,HGC_fullComm);
-     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
-     memcpy(tmpArr,yr,p.NeV*2*sizeof(double));
-     delete[] yr;
-    }
+       double *yr = nullptr;
+       try{yr = new double[p.NeV*2];} catch (std::bad_alloc& err){ PLEGMA_error(err.what());}
+       int mpiErr = MPI_Allreduce(tmpArr,yr,p.NeV*2,MPI_Type(yr),MPI_SUM,HGC_fullComm);
+       if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
+       memcpy(tmpArr,yr,p.NeV*2*sizeof(double));
+       delete[] yr;
+     }
    
-   cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
-   vec.load();
-   if(alloc) delete[] tmpArr;
+     cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, tmpArr, aP, vec.H_elem());
+     vec.load();
+     if(alloc) delete[] tmpArr;
+   }
  }
  
 void EigSolver::dumpEvalsVdagG5V(std::string filename){
   if(p.NeV <= 0){ PLEGMA_printf("Skipping dumping of evals v^+ g5 v since NeV=%d\n",p.NeV); return;}
   PLEGMA_Vector<double> g5V(DEVICE);
-  PLEGMA_Vector<double> V(DEVICE);
+  PLEGMA_Vector<double> V(p.deviceAlloc ? NONE : DEVICE);
   std::vector<double> VdagG5V;
-  double* ptr_tmp = h_eigVecs;
+
+  double* ptr_vecs = p.deviceAlloc ? d_eigVecs : h_eigVecs;
+
   for (int j = 0; j < p.NeV; ++j) {
-    cudaMemcpy(g5V.D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
-    checkCudaError();
-    V.copy(g5V);
+    if(p.deviceAlloc) {
+      V.D_elem(ptr_vecs);
+    } else {
+      cudaMemcpy(V.D_elem(),ptr_vecs,bytes_per_Vec,cudaMemcpyHostToDevice);
+      checkCudaError();
+    }
+    g5V.copy(V);
     g5V.apply_gamma(G5);
     std::complex<double> res = cuBLAS::dot(size_per_Vec, V.D_elem(), g5V.D_elem(),HGC_fullComm);
     VdagG5V.push_back(res.real());
-    ptr_tmp += size_per_Vec*2;
+    ptr_vecs += size_per_Vec*2;
   }
   if(comm_rank() == 0){
     FILE *ptr = fopen(filename.c_str(), "w");
@@ -587,23 +665,122 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
 
  void EigSolver::readEigenVectors(std::string filenamePrefix){
    if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
-   PLEGMA_Vector<double> tmp(HOST);
-   for(int i = 0 ; i < p.NeV; i++){
-     double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
-     tmp.readLIME(filenamePrefix + "_eV" + std::to_string(i),false);
-     memcpy(eigVec,tmp.H_elem(),bytes_per_Vec);
-     if(verbose) PLEGMA_printf("Eigenvector %d loaded\n", i);
+   auto start = MPI_Wtime();
+   if(not p.fastio) {
+     PLEGMA_Vector<double> tmp(HOST);
+     for(int i = 0 ; i < p.NeV; i++){
+       double *eigVec = h_eigVecs + ((long int) i) * size_per_Vec*2;
+       tmp.readLIME(filenamePrefix + "_eV" + std::to_string(i),false);
+       memcpy(eigVec,tmp.H_elem(),bytes_per_Vec);
+       if(verbose) PLEGMA_printf("Eigenvector %d loaded\n", i);
+     }
+   } else {
+     FILE *fptr;
+     
+     if ((fptr = fopen((filenamePrefix + "_NeV" + std::to_string(p.NeV) + "_coord" + std::to_string(HGC_procPosition[0]) + std::to_string(HGC_procPosition[1]) + std::to_string(HGC_procPosition[2]) + std::to_string(HGC_procPosition[3]) + ".dat").c_str(),"rb")) == NULL){
+       printf("Error! opening file");
+       
+       // Program exits if the file pointer returns NULL.
+       exit(1);
+     }
+     
+     fread(h_eigVecs, 2*sizeof(double), size_NeV, fptr); 
+     fclose(fptr);
    }
+   PLEGMA_printf("TIME for EigSolver::readEigenVectors %f sec\n", MPI_Wtime()-start);
  }
 
  void EigSolver::writeEigenVectors(std::string filenamePrefix){
    if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
-   PLEGMA_Vector<double> tmp(HOST);
-   for(int i = 0 ; i < p.NeV; i++){
-     double *eigVec = h_eigVecs + ((long int) std::get<3>(evalsOrdered[i])) * size_per_Vec*2;
-     memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
-     tmp.writeLIME(filenamePrefix + "_eV" + std::to_string(i),false);
-     if(verbose) PLEGMA_printf("Eigenvector %d is written\n", i);
-   }   
+   auto start = MPI_Wtime();
+   if(not p.fastio) {
+     PLEGMA_Vector<double> tmp(HOST);
+     for(int i = 0 ; i < p.NeV; i++){
+       double *eigVec = h_eigVecs + ((long int) std::get<3>(evalsOrdered[i])) * size_per_Vec*2;
+       memcpy(tmp.H_elem(),eigVec,bytes_per_Vec);
+       tmp.writeLIME(filenamePrefix + "_eV" + std::to_string(i),false);
+       if(verbose) PLEGMA_printf("Eigenvector %d is written\n", i);
+     }
+   } else {
+     FILE *fptr;
+     
+     if ((fptr = fopen((filenamePrefix + "_NeV" + std::to_string(p.NeV) + "_coord" + std::to_string(HGC_procPosition[0]) + std::to_string(HGC_procPosition[1]) + std::to_string(HGC_procPosition[2]) + std::to_string(HGC_procPosition[3]) + ".dat").c_str(),"wb")) == NULL){
+       printf("Error! opening file");
+       
+       // Program exits if the file pointer returns NULL.
+       exit(1);
+     }
+     
+     fwrite(h_eigVecs, 2*sizeof(double), size_NeV, fptr); 
+     fclose(fptr);
+   }
+   PLEGMA_printf("TIME for EigSolver::writeEigenVectors %f sec\n", MPI_Wtime()-start);
  }
+
+ void EigSolver::qLoops_exact(PLEGMA_Gauge<double> &gauge, std::string loopsPrefix, std::string confID, int nev, FILE_FORMAT format, int maxQsq, bool oneDLoops, bool twoDLoops) {
+
+   if(nev<0) nev = p.NeV;
+   std::string suffix = (format == ASCII_FORMAT)? ".dat": ".h5";
+
+   char * tmp_string;
+   asprintf(&tmp_string, "_nev%03d_exact_IR", nev);
+   std::string outfilename = loopsPrefix + tmp_string;
+   free(tmp_string);
+
+   
+   if(access( (outfilename + "_std" + suffix).c_str(), F_OK ) != -1 and access( (outfilename + "_gen" + suffix).c_str(), F_OK ) != -1)
+     return;
+
+   if(oneDLoops) gauge.communicateGhost();
+   checkCudaError();
+
+   PLEGMA_FT<double> *ft[2]={nullptr};
+   ft[0] = new PLEGMA_FT<double>(maxQsq, 3);
+   if(twoDLoops) ft[1] = new PLEGMA_FT<double>(0, 3);
+   
+   PLEGMA_QLoops<double> qloops_std(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
+   PLEGMA_QLoops<double> qloops_gen(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
+
+   PLEGMA_Vector<double> *tmp[16] = {nullptr};
+   PLEGMA_QLoops<double> *qLtmp = nullptr;
+   if(oneDLoops) tmp[0] = new PLEGMA_Vector<double>(DEVICE);
+   if(twoDLoops){
+     for(int i = 1 ; i < 16; i++) tmp[i] = new PLEGMA_Vector<double>(DEVICE);
+     qLtmp = new PLEGMA_QLoops<double>(DEVICE,FIRST_SIDE,true); // this we need to do the shifts where needed
+   }
+
+   double* ptr_vecs = p.deviceAlloc ? d_eigVecs : h_eigVecs;
+   PLEGMA_Vector<double> phi;
+   checkCudaError();
+
+   for(int i=0; i<nev; i++){
+     double eigVal = std::get<0>(evalsOrdered[i]);
+     long int iorder = std::get<3>(evalsOrdered[i]);
+     double *eigVec = ptr_vecs + iorder*size_per_Vec*2;
+     if(p.deviceAlloc) {
+       cudaMemcpy(phi.D_elem(),eigVec,bytes_per_Vec,cudaMemcpyDeviceToDevice);
+     } else {
+       cudaMemcpy(phi.D_elem(),eigVec,bytes_per_Vec,cudaMemcpyHostToDevice);
+     }
+     checkCudaError();
+
+     double eigVal2 = littleD[iorder*(p.NeV+1)].real()*2*eig_inv_param.kappa;
+     
+     if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1./eigVal,true,+eigVal2/eigVal,&qloops_gen); //standard one-end trick
+     else qloops_std.oneEnd_trick(phi,phi,-1./eigVal,true,+eigVal2/eigVal,&qloops_gen); //standard one-end trick
+   }
+   
+   qloops_std.dumpLoops(ft, outfilename + "_std", confID, format);
+   qloops_gen.dumpLoops(ft, outfilename + "_gen", confID, format);
+   
+   delete ft[0];
+   if(oneDLoops) delete tmp[0];
+   if(twoDLoops){
+     for(int i = 1 ; i < 16; i++) delete tmp[i];
+     delete qLtmp;
+     delete ft[1];
+   }
+   
+ }
+
 #endif

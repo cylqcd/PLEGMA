@@ -179,7 +179,7 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
 template<typename Float>
 PLEGMA_Field<Float>::~PLEGMA_Field(){
   if(isAllocHost) destroy_host();
-  if(isAllocDevice) destroy_device();
+  if(isAllocDevice && allocation!=NONE) destroy_device();
 }
 
 template<typename Float>

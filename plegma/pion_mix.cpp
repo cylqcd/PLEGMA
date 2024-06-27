@@ -50,6 +50,11 @@ int main(int argc, char **argv)
 
     updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu));
+    bool in_use_mg = use_mg;
+    QudaInverterType in_inv_type = inv_type;
+    double in_tol_hq = tol_hq;
+    double in_reliable_delta = reliable_delta;
+    int in_niter = niter;
 
     PLEGMA_Vector<double> vector_stoc;
     vector_stoc.randInit(rand_seed1);
@@ -88,6 +93,19 @@ int main(int argc, char **argv)
 	for(int imu=0; imu<nmus; imu++){
 	  props.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
 	  mu = mus[imu];
+	  if(mu*mu>0.01) {
+	    use_mg = false;
+	    inv_type = get_solver_type("cgnr");
+	    tol_hq = 1e-13;
+	    reliable_delta = 1e-10;
+	    niter = 500;
+	  } else {
+	    use_mg = in_use_mg;
+	    inv_type = in_inv_type;
+	    tol_hq = in_tol_hq;
+	    reliable_delta = in_reliable_delta;
+	    niter = in_niter;
+	  }
 	  solver.UpdateSolver();
 	
 	  for (int spinindex=0; spinindex<4; ++spinindex){

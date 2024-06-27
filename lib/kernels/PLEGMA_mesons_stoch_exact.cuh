@@ -115,7 +115,7 @@ void contract_stoch_exact_host( ProfileStruct &ps,
 
 template<typename Float>
 static void contract_stoch_exact(PLEGMA_Propagator<Float> &prop, Float *spinVals,
-				 Float* ptr, int nvecs, size_t vec_size,
+				 Float* ptr, int nvecs, size_t vec_size, bool dev_ptr,
 				 PLEGMA_Correlator<Float>& corr){
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size = corr.getSiteSize();
@@ -139,14 +139,18 @@ static void contract_stoch_exact(PLEGMA_Propagator<Float> &prop, Float *spinVals
   ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
-  const int ils = 4;
+  const int ils = dev_ptr ? 1 : 4;
   std::vector<PLEGMA_Vector<Float>*> vec;
   size_t vec_bytes = vec_size*sizeof(Float);
   cudaStream_t stream[ils];
   for(int k=0; k<ils; k++) {
-    vec.push_back(new PLEGMA_Vector<Float>());
+    vec.push_back(new PLEGMA_Vector<Float>(dev_ptr ? NONE : DEVICE));
     cudaStreamCreate(stream+k) ;
-    cudaMemcpyAsync(vec[k]->D_elem(), ptr+k*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+    if(dev_ptr) {
+      vec[k]->D_elem(ptr+k*vec_size);
+    } else {
+      cudaMemcpyAsync(vec[k]->D_elem(), ptr+k*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+    }
   }
 
   Spin<Float> spin;
@@ -157,14 +161,21 @@ static void contract_stoch_exact(PLEGMA_Propagator<Float> &prop, Float *spinVals
     }
     
     int k=i%ils;
-    cudaStreamSynchronize(stream[k]);
-    checkCudaError();
+    if(not dev_ptr) {
+      cudaStreamSynchronize(stream[k]);
+      checkCudaError();
+    }
     tuneAndRun( ps, "contract_stoch_exact", contract_stoch_exact_host<Float>,
 		ps, prop, *vec[k], spin, corr, result, i);
     
     // Start copying next vector to use
-    if(i+ils<nvecs)
-      cudaMemcpyAsync(vec[k]->D_elem(), ptr+(i+ils)*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+    if(i+ils<nvecs) {
+      if(dev_ptr) {
+	vec[k]->D_elem(ptr+(i+ils)*vec_size);
+      } else {
+	cudaMemcpyAsync(vec[k]->D_elem(), ptr+(i+ils)*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+      }
+    }
   }
   
   for(int k=0; k<ils; k++) {

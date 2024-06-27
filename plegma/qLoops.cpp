@@ -36,54 +36,6 @@ static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "Eig-isACC
 };
 
 
-static void dumpLoops(PLEGMA_QLoops<double> &qLoops, PLEGMA_FT<double> *ft[2],
-		      std::string filenamePrefix, std::string confID, FILE_FORMAT format, int isc=-1){
-  using sv=std::vector<std::string>;
-  std::string fname_base;
-  if(format != ASCII_FORMAT && format != HDF5_FORMAT) PLEGMA_error("This executable can write only in ascii and hdf5 format");
-  std::string suffix = (format == ASCII_FORMAT)? ".dat": ".h5";
-  if(isc >= 0)
-    fname_base = join(sv({"Conf"+confID,"Ns"+std::to_string(isc)}),"/");
-  else
-    fname_base = join(sv({"Conf"+confID}),"/");
-  
-
-  qLoops.load(qLoops.H_loc());
-  ft[0]->apply(qLoops,FT_GEMV);
-  std::string fnameUl = fname_base + join(sv({"localLoops","loop"}),"/");
-  ft[0]->writeFile( (format == HDF5_FORMAT)? filenamePrefix+suffix+fnameUl: filenamePrefix+findAndReplace(fnameUl,'/','_')+suffix, format);
-
-
-  if(qLoops.IsOneD())
-    for(int mu = 0 ; mu < N_DIMS ; mu++){
-      std::string fnameOneD = fname_base + join(sv({"oneD","dir"+std::to_string(mu),"loop"}),"/");
-      std::string fnameOneDC = fname_base + join(sv({"oneDC","dir"+std::to_string(mu),"loop"}),"/");
-      qLoops.load(qLoops.H_oneD()[mu]);
-      ft[0]->apply(qLoops,FT_GEMV);
-      ft[0]->scale(0.25); // put the 1/4 of the symmetric covariant derivative
-      ft[0]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameOneD: filenamePrefix+findAndReplace(fnameOneD,'/','_')+suffix, format);
-
-      qLoops.load(qLoops.H_oneDC()[mu]);
-      ft[0]->apply(qLoops,FT_GEMV);
-      ft[0]->scale(0.25);
-      ft[0]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameOneDC: filenamePrefix+findAndReplace(fnameOneDC,'/','_')+suffix, format);      
-    }
-
-  int count=0;
-  if(qLoops.IsTwoD()){
-    for(auto munu : qLoops.get_twoD_index()){
-      int mu=std::get<0>(munu), nu=std::get<1>(munu);
-      std::string fnameTwoD = fname_base + join(sv({"twoD","dirs"+std::to_string(mu)+std::to_string(nu),"loop"}),"/");
-      qLoops.load(qLoops.H_twoD()[count]);
-      ft[1]->apply(qLoops,FT_GEMV);
-      if(mu != 3 && nu != 3) ft[1]->scale(0.25);
-      else ft[1]->scale(0.125);
-      ft[1]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameTwoD: filenamePrefix+findAndReplace(fnameTwoD,'/','_')+suffix, format);
-      count++;
-    }
-  }  
-}
-
 int main(int argc, char **argv)
 {
   initializeOptions(argc, argv, true, listOpt); // Put list of options later
@@ -169,6 +121,8 @@ int main(int argc, char **argv)
     EigSolverParams eigParam;
     eigParam.NeV = Eig_NeV;
     eigParam.littleD = false;
+    eigParam.fastio = false;
+    eigParam.deviceAlloc = false;
     eigParam.isACC = Eig_isACC;
     eigParam.PolyDeg = Eig_PolyDeg;
     eigParam.amin = Eig_amin;
@@ -258,8 +212,8 @@ int main(int argc, char **argv)
 
 #if defined(HAVE_EIGENSOLVER)
   if(lowModesRecon){
-    dumpLoops(qloops_std, ft, loopsPrefix + "/exact_part_std", confID, corr_file_format);
-    dumpLoops(qloops_gen, ft, loopsPrefix + "/exact_part_gen", confID, corr_file_format);
+    qloops_std.dumpLoops(ft, loopsPrefix + "/exact_part_std", confID, corr_file_format);
+    qloops_gen.dumpLoops(ft, loopsPrefix + "/exact_part_gen", confID, corr_file_format);
   }
 #endif
 
@@ -300,8 +254,8 @@ int main(int argc, char **argv)
 
     double t1=MPI_Wtime();
     if((isrc+1)%NdumpStep == 0){
-      dumpLoops(qloops_std, ft, loopsPrefix + "/stoch_part_std", confID, corr_file_format,isrc);
-      dumpLoops(qloops_gen, ft, loopsPrefix + "/stoch_part_gen", confID, corr_file_format,isrc);
+      qloops_std.dumpLoops(ft, loopsPrefix + "/stoch_part_std", confID, corr_file_format,isrc);
+      qloops_gen.dumpLoops(ft, loopsPrefix + "/stoch_part_gen", confID, corr_file_format,isrc);
     }
     double t2=MPI_Wtime();
     PLEGMA_printf("FT and dump data time is %f\n",t2-t1);

@@ -40,9 +40,6 @@ target_link_libraries(Plaquette ${PLEGMA_LIBS})
 cuda_add_executable(omega omega.cpp)
 target_link_libraries(omega ${PLEGMA_LIBS})
 
-cuda_add_executable(omega_smear omega_smear.cpp)
-target_link_libraries(omega_smear ${PLEGMA_LIBS})
-
 cuda_add_executable(pion pion.cpp)
 target_link_libraries(pion ${PLEGMA_LIBS})
 
@@ -55,11 +52,23 @@ target_link_libraries(pion_mix_SIB ${PLEGMA_LIBS})
 cuda_add_executable(pion_defl pion_defl.cpp)
 target_link_libraries(pion_defl ${PLEGMA_LIBS})
 
+cuda_add_executable(pion_defl_IR pion_defl_IR.cpp)
+target_link_libraries(pion_defl_IR ${PLEGMA_LIBS})
+
+cuda_add_executable(nucl_defl_IR nucl_defl_IR.cpp)
+target_link_libraries(nucl_defl_IR ${PLEGMA_LIBS})
+
+cuda_add_executable(pion_defl_IR_opt pion_defl_IR_opt.cpp)
+target_link_libraries(pion_defl_IR_opt ${PLEGMA_LIBS})
+
 cuda_add_executable(pion_mix_LIBE pion_mix_LIBE.cpp)
 target_link_libraries(pion_mix_LIBE ${PLEGMA_LIBS})
 
 cuda_add_executable(pion_mix_qed pion_mix_qed.cpp)
 target_link_libraries(pion_mix_qed ${PLEGMA_LIBS})
+
+cuda_add_executable(pion_full pion_full.cpp)
+target_link_libraries(pion_full ${PLEGMA_LIBS})
 
 cuda_add_executable(Topo Topo.cpp)
 target_link_libraries(Topo ${PLEGMA_LIBS})
@@ -75,6 +84,9 @@ target_link_libraries(GPDs_nucleon ${PLEGMA_LIBS})
 
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
+
+cuda_add_executable(nucleon_2der nucleon_2der.cpp)
+target_link_libraries(nucleon_2der ${PLEGMA_LIBS})
 
 #cuda_add_executable(meson_2pt_3pt meson_2pt_3pt.cpp)
 #target_link_libraries(meson_2pt_3pt ${PLEGMA_LIBS})

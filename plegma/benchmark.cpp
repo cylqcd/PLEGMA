@@ -190,8 +190,8 @@ int main(int argc, char **argv) {
 
     // Benchmark standard one-end trick
     // Since the function is overloaded we need to select one version of it
-    PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, double , bool  )>
-		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true);
+    PLEGMA_benchmark(&loops,static_cast<void (PLEGMA_QLoops<double>::*)(PLEGMA_Vector<double> &, PLEGMA_Vector<double> &, double , bool, double, PLEGMA_QLoops<double>*  )>
+		     (&PLEGMA_QLoops<double>::oneEnd_trick),"Loops one-end trick",vector_a,vector_b,-1.,true,0,nullptr);
 
     
     // Benchmark standard one-end trick

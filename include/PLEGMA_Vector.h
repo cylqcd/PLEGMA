@@ -120,6 +120,16 @@ namespace plegma {
     void absorb(PLEGMA_Propagator3D<Float> &prop, int nu, int c2);
 
     /**
+       @brief Absorbs elements nu, c2 (if specified) from a 4D vector to a 3D vector
+       @param PLEGMA_Vector<Float> vect, The 4D vector
+       @param int global_it, The global time slice which we want to extract
+       @param int nu, The spin index we want to extract, default -1
+       @param int c2, The color index we want to extract, default -1
+       @return void
+     **/    
+    void absorb(PLEGMA_Vector<Float> &vect, int global_it, int nu=-1, int c2=-1);
+
+    /**
        @brief Absorbs elements nu, c2 from a 4D propagator at specific global time and puts it in a 3D vector
        @param PLEGMA_Propagator<Float> prop, The 4D propagator
        @param int global_it, The global time slice which we want to extract

@@ -223,7 +223,7 @@ static void threep_threeD_part2_host(ProfileStruct &ps, Float2<FloatC> *result, 
 template<typename FloatC,typename FloatA,typename FloatB,typename FloatG>
 void threep_threeD_part2(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2,
 		 int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac){
-#ifdef _PLEGMA_NUCLEON_3PF_FIX_SINK
+#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
   if(gammas.size() <= 0)
     PLEGMA_error("Error the container of gamma matrices cannot be zero");
   if(gammas.size() > N_SPINS*N_SPINS)

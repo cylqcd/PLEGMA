@@ -198,7 +198,7 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 
     int spaceId = (HGC_procPosition[0] * HGC_nProc[1] + HGC_procPosition[1]) * HGC_nProc[2] + HGC_procPosition[2];
     for(int i=0 ; i < HGC_nProc[3] ; i++)
-      ranksTime[i] = spaceId+i;
+      ranksTime[i] = spaceId*HGC_nProc[3]+i;
     
     MPI_Group_incl(HGC_fullGroup,HGC_nProc[3], ranksTime, &HGC_timeGroup);
     MPI_Group_rank(HGC_timeGroup, &HGC_timeRank);

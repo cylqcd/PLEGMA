@@ -48,11 +48,13 @@ namespace plegma{
     std::string spectrumPart; // available options for arpack are (SR,LR)
     bool littleD; // In case we want to compute little Dirac and use it in the projection
     bool isACC; // In case we want to use Polymonial accelerator
+    bool fastio; // In case we want to use dump the memory instead of lime format
     int PolyDeg; // Order of the Polynomial
     double amin; // Low boundary for polymonial accelerator
     double amax; // High boundary for polynomial accelerator
     double tol;          // tolerance of the eigen solver
     int maxIters;        // maximum number of iterations for solver
+    bool deviceAlloc;
 #if defined(QUDAEIG)
     int batched_rotate; // batched size of TRLM. Set 1 for small memory need but loose of performance
 #endif
@@ -105,6 +107,7 @@ namespace plegma{
 #endif
     double *h_eigVecs;
     double *h_eigVals;
+    double *d_eigVecs;
 #if defined(HAVE_PRIMME)
     double *h_rnorms;
     primme_params primme_pars;
@@ -128,11 +131,12 @@ namespace plegma{
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
     void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr, int global_t=-1, int spin=-1, int col=-1);
     void dumpEvalsVdagG5V(std::string filename);
-    double* getEigVecs() const{return h_eigVecs;}
+    double* getEigVecs() const{return p.deviceAlloc ? d_eigVecs : h_eigVecs;}
     std::complex<double>* getLittleD() const{return littleD;}
     std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
     int getSize_per_Vec() const{return size_per_Vec;}
     size_t getBytes_per_Vec() const{return bytes_per_Vec;}
+    void qLoops_exact(PLEGMA_Gauge<double> &gauge, std::string loopPrefix, std::string confID, int nev=-1, FILE_FORMAT format=HDF5_FORMAT, int maxQsq=64, bool oneDLoops=true, bool twoDLoops=false);
   };
 }
 #endif /* HAVE_EIGENSOLVER */

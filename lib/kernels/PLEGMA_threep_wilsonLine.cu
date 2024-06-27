@@ -158,8 +158,9 @@ static void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr,
     hostMalloc(result, corr.getTotalSize()*sizeof(Float2<FloatC>));
   else
     result = (Float2<FloatC> *) corr.H_elem();
-  
-  tuneAndRun( ps, "threep_wilsonLine", threep_wilsonLine_host<FloatC,FloatA,FloatB,FloatS>,
+
+  std::string str =  "threep_wilsonLine_Ngammas"+std::to_string(gammas.size());
+  tuneAndRun( ps, str, threep_wilsonLine_host<FloatC,FloatA,FloatB,FloatS>,
 	      ps, result, corr, prop1, prop2, signProps, su3, gammas);
 
   if(runFT) {

@@ -34,6 +34,7 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Vector<Float> &vec, int nu, int c2);
+    void absorb_host(PLEGMA_Vector<Float> &vec, int nu, int c2);
 
     /**
        @brief Absorbs elements from a 4D vector to a 4D propagator at nu, c2 but at specific global time-slice 
@@ -67,6 +68,8 @@ namespace plegma {
     void applyBoundaries_device(int t0);
     void rotateToPhysicalBase_host(int sign);
     void rotateToPhysicalBase_device(int sign);
+
+    void buildExactPropagator(Float *spinVals, Float *eigVals, Float* eigVecs, int nvecs, size_t vec_size, bool dev_ptr=true);
   };
 
   ///////////////////////////////

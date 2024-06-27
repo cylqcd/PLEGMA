@@ -123,6 +123,24 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int nu, int c2)
   checkCudaError();
 }
 
+// Prop4D <- Vec4D
+template <typename Float>
+void PLEGMA_Propagator<Float>::absorb_host(PLEGMA_Vector<Float> &vec, int nu, int c2){
+  Float *pointProp;
+  Float *pointVec;
+  for(int mu = 0 ; mu < N_SPINS ; mu++)
+    for(int c1 = 0 ; c1 < N_COLS ; c1++){
+      pointProp = (this->h_elem + 
+		   mu*N_SPINS*N_COLS*N_COLS*HGC_localVolume*2 + 
+		   nu*N_COLS*N_COLS*HGC_localVolume*2 + 
+		   c1*N_COLS*HGC_localVolume*2 + 
+		   c2*HGC_localVolume*2);
+      pointVec = vec.H_elem() + mu*N_COLS*HGC_localVolume*2 + c1*HGC_localVolume*2;
+      cudaMemcpy(pointProp, pointVec,HGC_localVolume*2*sizeof(Float),
+		 cudaMemcpyHostToHost); 
+    }
+}
+
 // Prop4D <- Vec4D (it)
 template<typename Float> 
 void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2){
@@ -265,6 +283,12 @@ template<typename Float>
 void  PLEGMA_Propagator<Float>::apply_gamma5(){
   apply_gamma5_propagator(*this);
 }
+
+template<typename Float>
+void  PLEGMA_Propagator<Float>::buildExactPropagator(Float *spinVals, Float *eigVals, Float* eigVecs, int nvecs, size_t vec_size, bool dev_ptr){
+  build_exact_propagator(*this, spinVals, eigVals, eigVecs, nvecs, vec_size, dev_ptr);
+}
+
 
 //----------------------------------//
 // class PLEGMA_ Propagator3D //

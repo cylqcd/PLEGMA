@@ -70,6 +70,7 @@ namespace plegma {
     
     Float* H_elem() const { return h_elem; }
     Float* D_elem() const { return d_elem; }
+    void D_elem(Float* ptr) { d_elem = ptr; isAllocDevice=true; }
 
     bool IsAllocHost() const { return isAllocHost;}
     bool IsAllocDevice() const { return isAllocDevice;}

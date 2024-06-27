@@ -5,6 +5,7 @@
 #include <PLEGMA_FT.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_contractG5_bilinear.cuh>
+#include <PLEGMA_utils.h>
 #include <functional>
 using namespace plegma;
   
@@ -99,7 +100,7 @@ void PLEGMA_QLoops<Float>::contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<F
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
-					Float val , bool accum ){
+					Float val , bool accum, Float val2, PLEGMA_QLoops<Float> *other ){
   if(isOneD) PLEGMA_error("This function cannot do the oneD");
   int NN = (this->Field_length()) * (this->Total_length());
   Float valsP[] = {val,0.};
@@ -111,13 +112,21 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
     memcpy(h_loc, this->H_elem(), this->Bytes_total());
     cBLAS::scal<Float>(NN,valsP[0],h_loc);
   }
+  if(val2!=0 and other!=nullptr) {
+    Float vals2[] = {val2,0.};
+    if(accum) cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_loc());
+    else{
+      memcpy(other->H_loc(), this->H_elem(), this->Bytes_total());
+      cBLAS::scal<Float>(NN,vals2[0],other->H_loc());
+    }    
+  }
 }
 
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 					PLEGMA_Vector<Float> *tmp[16], PLEGMA_QLoops<Float> *qLtmp,
-					PLEGMA_Gauge<Float> &gauge, Float val , bool accum ){
+					PLEGMA_Gauge<Float> &gauge, Float val , bool accum, Float val2, PLEGMA_QLoops<Float> *other ){
   if(!isOneD && !isTwoD) PLEGMA_error("This function is capable to do the oneD and twoD, if you do not need derivative call the other function");
   int NN = (this->Field_length()) * (this->Total_length());
   Float valsP[] = {val,0.};
@@ -129,6 +138,14 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
   else{
     memcpy(h_loc, this->H_elem(), this->Bytes_total());
     cBLAS::scal<Float>(NN,valsP[0],h_loc);
+  }
+  if(val2!=0 and other!=nullptr) {
+    Float vals2[] = {val2,0.};
+    if(accum) cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_loc());
+    else{
+      memcpy(other->H_loc(), this->H_elem(), this->Bytes_total());
+      cBLAS::scal<Float>(NN,vals2[0],other->H_loc());
+    }    
   }
 
   //Derivatives part
@@ -145,13 +162,25 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	contractG5(*(tmp[0]), x_r, ACC_PLUS); //Term 0 + Term 3
 	this->unload();
 	if(accum){
-	  cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneD[mu]);
-	  cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneDC[mu]);
+	  cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_oneD[mu]);
+	  cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_oneDC[mu]);
 	}
 	else{
 	  memcpy(h_oneD[mu], this->H_elem(), this->Bytes_total());
 	  cBLAS::scal<Float>(NN,valsP[0],h_oneD[mu]);
 	  memcpy(h_oneDC[mu], h_oneD[mu], this->Bytes_total());
+	}
+	if(val2!=0 and other!=nullptr) {
+	  Float vals2[] = {val2,0.};
+	  if(accum){
+	    cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneD()[mu]);
+	    cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneDC()[mu]);
+	  }
+	  else{
+	    memcpy(other->H_oneD()[mu], this->H_elem(), this->Bytes_total());
+	    cBLAS::scal<Float>(NN,vals2[0],other->H_oneD()[mu]);
+	    memcpy(other->H_oneDC()[mu], h_oneD[mu], this->Bytes_total());
+	  }
 	}
 
       
@@ -160,14 +189,21 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	tmp[0]->covD(x_r,gauge,mu+4);
 	contractG5(x_l,*(tmp[0]), ACC_PLUS); // Term2 + Term1
 	this->unload();
-	cBLAS::axpy(NN,valsM, (Float*) this->H_elem(), (Float*) h_oneD[mu]); // (0+3-(1+2))
-	cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_oneDC[mu]); // (0+3+(1+2))
+	cBLAS::axpy<Float>(NN,valsM, this->H_elem(), h_oneD[mu]); // (0+3-(1+2))
+	cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_oneDC[mu]); // (0+3+(1+2))
+	if(val2!=0 and other!=nullptr) {
+	  Float vals2[] = {-val2,0.};
+	  cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneD()[mu]); // (0+3-(1+2))
+	  vals2[0] = val2;
+	  cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneDC()[mu]); // (0+3+(1+2))
+	}
 	// factor of 1/4 should be added later
       }
   }
 
   if(isTwoD){
     //twoD part
+    Float vals2[] = {val2,0.};
     for(int i = 1 ; i < 16; i++) if(tmp[i] == nullptr) PLEGMA_error("Need to allocate memory for tmp[%d] to use in the twoD",i);
     if(qLtmp == nullptr) PLEGMA_error("Need to allocate memory for qLtmp to use in the twoD");
     int count=0;
@@ -185,7 +221,10 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	contractG5(*(tmp[8+mu*2+1]), *(tmp[nu*2+1]), ACC_MINUS);
 	contractG5(*(tmp[8+mu*2+0]), *(tmp[nu*2+0]), ACC_MINUS);
 	this->unload();
-	cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_twoD[count]);
+	cBLAS::axpy<Float>(NN,valsP,this->H_elem(),h_twoD[count]);
+	if(val2!=0 and other!=nullptr) {
+	  cBLAS::axpy<Float>(NN,vals2,this->H_elem(),other->H_twoD()[count]);
+	}
       }
       else if(mu == 3 || nu == 3){
 	if(mu == 3){
@@ -200,7 +239,10 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	this->shift(*qLtmp,mu==3?mu+4:nu+4);
 	this->add(*qLtmp,(std::complex<Float>) {1.,0.});
 	this->unload();
-	cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_twoD[count]);
+	cBLAS::axpy<Float>(NN,valsP,this->H_elem(),h_twoD[count]);
+	if(val2!=0 and other!=nullptr) {
+	  cBLAS::axpy<Float>(NN,vals2,this->H_elem(),other->H_twoD()[count]);
+	}
 	if(mu == 3){
 	  qLtmp->contractG5(*(tmp[8+mu*2+0]), *(tmp[nu*2+1]));
 	  qLtmp->contractG5(*(tmp[8+mu*2+0]), *(tmp[nu*2+0]), ACC_MINUS);
@@ -212,7 +254,10 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	this->shift(*qLtmp,mu==3?mu:nu);
 	this->add(*qLtmp,(std::complex<Float>) {1.,0.});
 	this->unload();
-	cBLAS::axpy(NN,valsP, (Float*) this->H_elem(), (Float*) h_twoD[count]);
+	cBLAS::axpy<Float>(NN,valsP,this->H_elem(),h_twoD[count]);
+	if(val2!=0 and other!=nullptr) {
+	  cBLAS::axpy<Float>(NN,vals2,this->H_elem(),other->H_twoD()[count]);
+	}
       }
       else{
 	PLEGMA_error("Something Fishy is going on here");
@@ -251,7 +296,8 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
   int Lo2 = L/2;
   for(int wilsDir = 0 ; wilsDir < 3; wilsDir++){
     su3.absorbDir_device(gauge,wilsDir);
-    WL.setUnit((std::vector<int>) {0,4,8});
+    std::vector<int> ids = {0,4,8};
+    WL.setUnit(ids);
     vec_ptr = &x_r;
     for(int i = 0 ; i < Lo2;i++){
       vecTmp.mulGV(*vec_ptr,WL);
@@ -266,7 +312,7 @@ void PLEGMA_QLoops<Float>::oneEnd_trick_wilsonLine(PLEGMA_Vector<Float> &x_l, PL
 
     vec_ptr->load();
     su3.absorbDir_device(gauge,wilsDir);
-    WL.setUnit((std::vector<int>) {0,4,8});
+    WL.setUnit(ids);
     for(int i = 0 ; i < Lo2;i++){
       vecTmp.mulGV(*vec_ptr,WL);
       contractG5(x_l,vecTmp);
@@ -321,6 +367,52 @@ template<typename Float>
 void PLEGMA_QLoops<Float>::load(Float* h_ptr){
   cudaMemcpy(this->D_elem(), h_ptr, this->Bytes_total(), cudaMemcpyHostToDevice );
 }
+
+template<typename Float>
+void PLEGMA_QLoops<Float>::dumpLoops(PLEGMA_FT<Float> *ft[2], std::string filenamePrefix, std::string confID, FILE_FORMAT format) {
+  using sv=std::vector<std::string>;
+  std::string fname_base;
+  if(format != ASCII_FORMAT && format != HDF5_FORMAT) PLEGMA_error("This executable can write only in ascii and hdf5 format");
+  std::string suffix = (format == ASCII_FORMAT)? ".dat": ".h5";
+  fname_base = join(sv({"Conf"+confID}),"/");
+  
+
+  this->load(this->H_loc());
+  ft[0]->apply(*this,FT_GEMV);
+  std::string fnameUl = fname_base + join(sv({"localLoops","loop"}),"/");
+  ft[0]->writeFile( (format == HDF5_FORMAT)? filenamePrefix+suffix+fnameUl: filenamePrefix+findAndReplace(fnameUl,'/','_')+suffix, format);
+
+
+  if(this->IsOneD())
+    for(int mu = 0 ; mu < N_DIMS ; mu++){
+      std::string fnameOneD = fname_base + join(sv({"oneD","dir"+std::to_string(mu),"loop"}),"/");
+      std::string fnameOneDC = fname_base + join(sv({"oneDC","dir"+std::to_string(mu),"loop"}),"/");
+      this->load(this->H_oneD()[mu]);
+      ft[0]->apply(*this,FT_GEMV);
+      ft[0]->scale(0.25); // put the 1/4 of the symmetric covariant derivative
+      ft[0]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameOneD: filenamePrefix+findAndReplace(fnameOneD,'/','_')+suffix, format);
+
+      this->load(this->H_oneDC()[mu]);
+      ft[0]->apply(*this,FT_GEMV);
+      ft[0]->scale(0.25);
+      ft[0]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameOneDC: filenamePrefix+findAndReplace(fnameOneDC,'/','_')+suffix, format);      
+    }
+
+  int count=0;
+  if(this->IsTwoD()){
+    for(auto munu : this->get_twoD_index()){
+      int mu=std::get<0>(munu), nu=std::get<1>(munu);
+      std::string fnameTwoD = fname_base + join(sv({"twoD","dirs"+std::to_string(mu)+std::to_string(nu),"loop"}),"/");
+      this->load(this->H_twoD()[count]);
+      ft[1]->apply(*this,FT_GEMV);
+      if(mu != 3 && nu != 3) ft[1]->scale(0.25);
+      else ft[1]->scale(0.125);
+      ft[1]->writeFile((format == HDF5_FORMAT)? filenamePrefix+suffix+fnameTwoD: filenamePrefix+findAndReplace(fnameTwoD,'/','_')+suffix, format);
+      count++;
+    }
+  }  
+}
+
 
 
 template class PLEGMA_QLoops<float>;
