@@ -82,7 +82,7 @@ void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &
   double* buf[N_DIMS];
   for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gaugeIn.Bytes_total()/N_DIMS);
   unpackGaugeToEvenOdd(buf, gaugeIn);
-  computeGaugeFixingOVRQuda(buf,type,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param,nullptr);
+  computeGaugeFixingOVRQuda(buf,type,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param);
   packGaugeToNormal(gaugeOut,buf);
   gaugeOut.load();
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gaugeIn.Bytes_total()/N_DIMS);
@@ -195,7 +195,7 @@ QUDA_solver::QUDA_solver(double mu) {
   // Create Solvers
   solverParam = new SolverParam(inv_param);
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-			  *MPre, *MPre, *profiler);
+			  *MPre, *MPre);
 
   quda::lat_dim_t X = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
 
@@ -353,7 +353,7 @@ void QUDA_solver::UpdateSolver()
   solverParam = new SolverParam(inv_param);
   
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-  			 *MPre, *MPre, *profiler);
+  			 *MPre, *MPre );
 
   profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+to_string(mu)).c_str();
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
@@ -365,7 +365,7 @@ ColorSpinorField *QUDA_solver::solve(ColorSpinorField * rhs){
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
   ColorSpinorField *in = NULL;
   ColorSpinorField *out = NULL;
-  D->prepare(in,out,*x,*rhs,inv_param.solution_type);
+  D->prepare(*in,*out,*x,*rhs,inv_param.solution_type);
   (*solver)(*out, *in);
   D->reconstruct(*x,*rhs,inv_param.solution_type);
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);

@@ -74,6 +74,8 @@ LIST(REMOVE_ITEM PLEGMA_OBJS ${QUDA_CU_OBJS})
 
 # include_directories
 include_directories(${QUDA_HOME}/lib/)
+include_directories(${QUDA_HOME}/_deps/eigen-src/)
+include_directories(${QUDA_SRC}/include/targets/cuda/)
 #PLEGMA: 
 include_directories(code_pieces)
 include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)
