@@ -25,8 +25,8 @@ namespace plegma {
     PLEGMA_Vector(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Vector(){;}
     
-    void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
-    void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
+    void copyToQUDA( std::vector<quda::ColorSpinorField>cudaVector, bool isEv = false);
+    void copyFromQUDA( std::vector<quda::ColorSpinorField> cudaVector, bool isEv = false);
 
     /**
        @brief Applies N times Gaussian(Wuppertal) smearing operator on all time-slices of a vector. NOTE: works also for Vector3D
@@ -105,8 +105,8 @@ namespace plegma {
 
   };
 
-  template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
-  template<typename Float> void copyFromQUDA(Float* delem, quda::ColorSpinorField *cudaVector, bool isEv = false);
+  template<typename Float> void copyToQUDA(std::vector<quda::ColorSpinorField> cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
+  template<typename Float> void copyFromQUDA(Float* delem, std::vector<quda::ColorSpinorField> cudaVector, bool isEv = false);
 
   /////////////////////////////////////
   // CLASS: PLEGMA_Vector3D ///////////

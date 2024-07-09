@@ -82,13 +82,13 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
 
 template<typename Float>
-void PLEGMA_Vector<Float>::copyToQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_to_QUDA(this->d_elem, *qudaVector, isEv);
+void PLEGMA_Vector<Float>::copyToQUDA(std::vector<ColorSpinorField>qudaVector, bool isEv){
+  copy_to_QUDA(this->d_elem, qudaVector[0], isEv);
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::copyFromQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_from_QUDA(this->d_elem, *qudaVector, isEv);
+void PLEGMA_Vector<Float>::copyFromQUDA(std::vector<ColorSpinorField>qudaVector, bool isEv){
+  copy_from_QUDA(this->d_elem, qudaVector[0], isEv);
 }
 
 template<typename Float>
