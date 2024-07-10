@@ -199,7 +199,7 @@ static void contract_baryons_EEE(Float* evecs, Float* evals, int nvecs, size_t v
       }
     
       if(dev_ptr) {
-	      vec2.D_elem(evecs+i*vec_size); //Difference between . and -> operators?
+	      vec2.D_elem(evecs+i*vec_size);
       } else {
 	      cudaMemcpy(vec2.D_elem(), evecs+i*vec_size, vec_bytes, cudaMemcpyHostToDevice);
 	      checkCudaError();

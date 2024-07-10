@@ -122,6 +122,10 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     }
   }
   else readEigenVectors(filenamePrefix);
+  if(isReadEigenVectors and not p.fastio) {
+    p.fastio = true;
+    THREAD(writeEigenVectors(filenamePrefix));
+  }
   if(p.deviceAlloc) {
     cudaMalloc((void**)& d_eigVecs,size_NeV*2*sizeof(double));
     cudaMemcpy(d_eigVecs, h_eigVecs, size_NeV*2*sizeof(double), cudaMemcpyHostToDevice);

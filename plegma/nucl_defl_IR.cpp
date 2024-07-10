@@ -57,7 +57,7 @@ int main(int argc, char **argv)
   bool exact = false;
   HGC_options->set("exact", "Whether the exact part should be computed", verbosity, exact);
   bool pointToAll = false;
-  HGC_options->set("point-to-all", "Whether the point-to-all sources part should be computed", verbosity, exact);
+  HGC_options->set("point-to-all", "Whether the point-to-all sources part should be computed", verbosity, pointToAll);
   //=========================================================================================================//
   TIME(initializePLEGMA());
 
@@ -130,9 +130,9 @@ int main(int argc, char **argv)
 
 
     if(exact){
-      PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,0}), maxQsq);
+      PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,0}), 0); //maxQsq set to 0 here!
 
-      for(int inev=1; inev < nevs.size(); inev++){ // Loop over NeV //inev set to one because we have to read 400evs with fastio but actuall want to use less!
+      for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV //inev set to one because we have to read 400evs with fastio but actuall want to use less!
         TIC();
         int nev = nevs[inev];
       
@@ -207,7 +207,7 @@ int main(int argc, char **argv)
         for(int ivec = 0; ivec < Eig_NeV; ivec++){
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
-              cudaMemcpy(spinEVals_d + (ivec*N_SPINS*N_COLS + spin*N_COLS+color)*2, eigVecs + (ivec*N_SPINS*N_COLS*V4 + (spin*N_COLS+color)*V4 + id)*2, 2*sizeof(double), cudaMemcpyDeviceToDevice); 
+              cudaMemcpy(spinEVals_d + (ivec*N_SPINS*N_COLS + spin*N_COLS+color)*2, eigVecs + (ivec*N_SPINS*N_COLS*V4 + (((spin+2)%N_SPINS)*N_COLS+color)*V4 + id)*2, 2*sizeof(double), cudaMemcpyDeviceToDevice); //((spin+2)%N_SPINS) because of gamma_5 
             }
           }
         }
@@ -229,7 +229,8 @@ int main(int argc, char **argv)
         twop_filename = given_twop_filename + src_string + ".h5";
         threep_filename = given_threep_filename + src_string;
         free(src_string);
-
+        
+        TIC();
         // PLEGMA_printf("tmp up:\n");
         for(int spin = 0; spin < N_SPINS; spin++){
           for(int color = 0; color < N_COLS; color++){
@@ -265,27 +266,28 @@ int main(int argc, char **argv)
         propDN.rotateToPhysicalBase_device(-1);
         propUP.applyBoundaries_device(source[3]);
         propDN.applyBoundaries_device(source[3]);
+        TOC("Constructing propagators");
         
         {
           PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-          TIME(corr.contractMesonsNew(propUP, propDN));
-          char *dset;
-          asprintf(&dset, "twop_mesons_new_u[%+1.1e]d[%+1.1e]", mu, -1*mu);
-          corr.setDatasets((std::vector<std::string>) {dset});
-          free(dset);
-          THREAD(corr.writeFile(twop_filename, corr_file_format));
+          // TIME(corr.contractMesonsNew(propUP, propDN));
+          // char *dset;
+          // asprintf(&dset, "twop_mesons_new_u[%+1.1e]d[%+1.1e]", mu, -1*mu);
+          // corr.setDatasets((std::vector<std::string>) {dset});
+          // free(dset);
+          // THREAD(corr.writeFile(twop_filename, corr_file_format));
 
-          TIME(corr.contractMesonsNew(propUP, propUP));
-          asprintf(&dset, "twop_mesons_new_u[%+1.1e]u[%+1.1e]", mu, mu);
-          corr.setDatasets((std::vector<std::string>) {dset});
-          free(dset);
-          THREAD(corr.writeFile(twop_filename, corr_file_format));
+          // TIME(corr.contractMesonsNew(propUP, propUP));
+          // asprintf(&dset, "twop_mesons_new_u[%+1.1e]u[%+1.1e]", mu, mu);
+          // corr.setDatasets((std::vector<std::string>) {dset});
+          // free(dset);
+          // THREAD(corr.writeFile(twop_filename, corr_file_format));
 
-          TIME(corr.contractMesonsNew(propDN, propDN));
-          asprintf(&dset, "twop_mesons_new_d[%+1.1e]d[%+1.1e]", -mu, -mu);
-          corr.setDatasets((std::vector<std::string>) {dset});
-          free(dset);
-          THREAD(corr.writeFile(twop_filename, corr_file_format));
+          // TIME(corr.contractMesonsNew(propDN, propDN));
+          // asprintf(&dset, "twop_mesons_new_d[%+1.1e]d[%+1.1e]", -mu, -mu);
+          // corr.setDatasets((std::vector<std::string>) {dset});
+          // free(dset);
+          // THREAD(corr.writeFile(twop_filename, corr_file_format));
 
           TIME(corr.contractBaryons(propUP, propDN));
           THREAD(corr.writeFile(twop_filename, corr_file_format));
