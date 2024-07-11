@@ -28,7 +28,7 @@ namespace quda {
     void UpdateSolver();
     QUDA_solver(double mu);
     virtual ~QUDA_solver();
-    std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>  rhs);
+    std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
     template<typename Float>
     std::vector<ColorSpinorField> solve(PLEGMA_Vector<Float> &vectorIn);
     template<typename Float>

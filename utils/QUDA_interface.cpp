@@ -203,6 +203,7 @@ QUDA_solver::QUDA_solver(double mu) {
 			    inv_param.input_location);
   ColorSpinorParam cudaParam(cpuParam, inv_param,inv_param.input_location);
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
+
   b.push_back(ColorSpinorField(cudaParam));
   x.push_back(ColorSpinorField(cudaParam));
 
@@ -363,13 +364,14 @@ void QUDA_solver::UpdateSolver()
   profiler->TPRESET();
 }
 
-std::vector<ColorSpinorField> QUDA_solver::solve(std::vector<ColorSpinorField>  rhs){
+std::vector<ColorSpinorField> QUDA_solver::solve(std::vector<ColorSpinorField>&  rhs){
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
-  std::vector<quda::ColorSpinorField> in(1);
-  std::vector<quda::ColorSpinorField> out(1);
-//  ColorSpinorField *in = NULL;
-//  ColorSpinorField *out = NULL;
-  D->prepare(in,out,x,rhs,inv_param.solution_type);
+
+  ColorSpinorField in;
+  ColorSpinorField out;
+
+  D->prepare(out,in,x[0],rhs[0],inv_param.solution_type);
+
   (*solver)(out, in);
   D->reconstruct(x,rhs,inv_param.solution_type);
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
@@ -401,6 +403,7 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
     vectorOut.scale(2*inv_param.kappa);
   }
+
 }
 
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
