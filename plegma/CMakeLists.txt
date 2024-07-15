@@ -1,4 +1,6 @@
 set(PLEGMA_LIBS PLEGMA PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${CUDA_LIBS} cuda)
+include_directories(${QUDA_HOME}/_deps/eigen-src/)
+
 
 LIST(APPEND PLEGMA_LIBS ${MPI_CXX_LIBRARIES})
 
