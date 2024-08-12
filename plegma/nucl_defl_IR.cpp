@@ -52,6 +52,8 @@ int main(int argc, char **argv)
   HGC_options->set("extra-nev", "List of additional nev to run", verbosity, nevs);
   bool fastio = false;
   HGC_options->set("fastio", "Whether eigenvectors are read using fastio", verbosity, fastio);
+  bool single_prec = false;
+  HGC_options->set("single-prec", "Whether to use single precision eigenvectors", verbosity, single_prec);
   int startSource = 0;
   HGC_options->set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
   bool exact = false;
@@ -91,6 +93,7 @@ int main(int argc, char **argv)
     eigParam.isACC = Eig_isACC;
     eigParam.littleD = true;
     eigParam.fastio = fastio;
+    eigParam.single_prec = single_prec;
     eigParam.deviceAlloc = isDeviceEigenVecs;
     eigParam.PolyDeg = Eig_PolyDeg;
     eigParam.amin = Eig_amin;
@@ -184,7 +187,20 @@ int main(int argc, char **argv)
       site& source = sourcePositions[isource];
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, source[0], source[1], source[2], source[3]);
+      
+      bool all_exist=true;
+      for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
+        int nev = nevs[inev];
 
+        char * src_string;
+        asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_nev%03d", source[0], source[1], source[2], source[3], nev);
+        twop_filename = given_twop_filename + src_string + ".h5";
+        //threep_filename = given_threep_filename + src_string;
+        free(src_string);
+        if(access( twop_filename.c_str(), F_OK ) == -1)
+	        all_exist=false;
+      }
+      if(all_exist) continue;
 
       // create prop up and dn
       memset(spinEVals, 0, 12*Eig_NeV*2*sizeof(double));
@@ -200,7 +216,7 @@ int main(int argc, char **argv)
 
         id = id * HGC_localL[i] + my_src[i];
       }
-      // This make it work also for vector3D
+      // This makes it work also for vector3D
       //id = id % this->Total_length();
 
       if(mine) {

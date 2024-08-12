@@ -100,51 +100,47 @@ void PLEGMA_QLoops<Float>::contractG5(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<F
 
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
-					Float val , bool accum, Float val2, PLEGMA_QLoops<Float> *other ){
+					std::complex<Float> val , bool accum, std::complex<Float> val2, PLEGMA_QLoops<Float> *other ){
   if(isOneD) PLEGMA_error("This function cannot do the oneD");
   int NN = (this->Field_length()) * (this->Total_length());
-  Float valsP[] = {val,0.};
   //local contraction
   contractG5(x_l, x_r); 
   this->unload();
-  if(accum) cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_loc);
+  if(accum) cBLAS::axpy<Float>(NN, (Float*) &val, this->H_elem(), h_loc);
   else{
     memcpy(h_loc, this->H_elem(), this->Bytes_total());
-    cBLAS::scal<Float>(NN,valsP[0],h_loc);
+    cBLAS::cscal<Float>(NN,(Float*) &val,h_loc);
   }
-  if(val2!=0 and other!=nullptr) {
-    Float vals2[] = {val2,0.};
-    if(accum) cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_loc());
+  if(other!=nullptr) {
+    if(accum) cBLAS::axpy<Float>(NN, (Float*) &val2, this->H_elem(), other->H_loc());
     else{
       memcpy(other->H_loc(), this->H_elem(), this->Bytes_total());
-      cBLAS::scal<Float>(NN,vals2[0],other->H_loc());
+      cBLAS::cscal<Float>(NN,(Float*) &val2,other->H_loc());
     }    
   }
 }
 
-
 template<typename Float>
 void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
 					PLEGMA_Vector<Float> *tmp[16], PLEGMA_QLoops<Float> *qLtmp,
-					PLEGMA_Gauge<Float> &gauge, Float val , bool accum, Float val2, PLEGMA_QLoops<Float> *other ){
+					PLEGMA_Gauge<Float> &gauge, std::complex<Float> val , bool accum, std::complex<Float> val2, PLEGMA_QLoops<Float> *other ){
   if(!isOneD && !isTwoD) PLEGMA_error("This function is capable to do the oneD and twoD, if you do not need derivative call the other function");
   int NN = (this->Field_length()) * (this->Total_length());
-  Float valsP[] = {val,0.};
-  Float valsM[] = {-val,0.};
+  std::complex<Float> valM = -val;
+  std::complex<Float> valM2 = -val2;
   // local contraction
   contractG5(x_l, x_r);
   this->unload();
-  if(accum) cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_loc);
+  if(accum) cBLAS::axpy<Float>(NN,(Float*) &val, this->H_elem(), h_loc);
   else{
     memcpy(h_loc, this->H_elem(), this->Bytes_total());
-    cBLAS::scal<Float>(NN,valsP[0],h_loc);
+    cBLAS::cscal<Float>(NN,(Float*) &val,h_loc);
   }
-  if(val2!=0 and other!=nullptr) {
-    Float vals2[] = {val2,0.};
-    if(accum) cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_loc());
+  if(other!=nullptr) {
+    if(accum) cBLAS::axpy<Float>(NN,(Float*) &val2, this->H_elem(), other->H_loc());
     else{
       memcpy(other->H_loc(), this->H_elem(), this->Bytes_total());
-      cBLAS::scal<Float>(NN,vals2[0],other->H_loc());
+      cBLAS::cscal<Float>(NN,(Float*) &val2,other->H_loc());
     }    
   }
 
@@ -162,23 +158,22 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	contractG5(*(tmp[0]), x_r, ACC_PLUS); //Term 0 + Term 3
 	this->unload();
 	if(accum){
-	  cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_oneD[mu]);
-	  cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_oneDC[mu]);
+	  cBLAS::axpy<Float>(NN,(Float*) &val, this->H_elem(), h_oneD[mu]);
+	  cBLAS::axpy<Float>(NN,(Float*) &val, this->H_elem(), h_oneDC[mu]);
 	}
 	else{
 	  memcpy(h_oneD[mu], this->H_elem(), this->Bytes_total());
-	  cBLAS::scal<Float>(NN,valsP[0],h_oneD[mu]);
+	  cBLAS::cscal<Float>(NN,(Float*) &val,h_oneD[mu]);
 	  memcpy(h_oneDC[mu], h_oneD[mu], this->Bytes_total());
 	}
-	if(val2!=0 and other!=nullptr) {
-	  Float vals2[] = {val2,0.};
+	if(other!=nullptr) {
 	  if(accum){
-	    cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneD()[mu]);
-	    cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneDC()[mu]);
+	    cBLAS::axpy<Float>(NN,(Float*) &val2, this->H_elem(), other->H_oneD()[mu]);
+	    cBLAS::axpy<Float>(NN,(Float*) &val2, this->H_elem(), other->H_oneDC()[mu]);
 	  }
 	  else{
 	    memcpy(other->H_oneD()[mu], this->H_elem(), this->Bytes_total());
-	    cBLAS::scal<Float>(NN,vals2[0],other->H_oneD()[mu]);
+	    cBLAS::cscal<Float>(NN,(Float*) &val2,other->H_oneD()[mu]);
 	    memcpy(other->H_oneDC()[mu], h_oneD[mu], this->Bytes_total());
 	  }
 	}
@@ -189,13 +184,11 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	tmp[0]->covD(x_r,gauge,mu+4);
 	contractG5(x_l,*(tmp[0]), ACC_PLUS); // Term2 + Term1
 	this->unload();
-	cBLAS::axpy<Float>(NN,valsM, this->H_elem(), h_oneD[mu]); // (0+3-(1+2))
-	cBLAS::axpy<Float>(NN,valsP, this->H_elem(), h_oneDC[mu]); // (0+3+(1+2))
-	if(val2!=0 and other!=nullptr) {
-	  Float vals2[] = {-val2,0.};
-	  cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneD()[mu]); // (0+3-(1+2))
-	  vals2[0] = val2;
-	  cBLAS::axpy<Float>(NN,vals2, this->H_elem(), other->H_oneDC()[mu]); // (0+3+(1+2))
+	cBLAS::axpy<Float>(NN,(Float*) &valM, this->H_elem(), h_oneD[mu]); // (0+3-(1+2))
+	cBLAS::axpy<Float>(NN,(Float*) &val, this->H_elem(), h_oneDC[mu]); // (0+3+(1+2))
+	if(other!=nullptr) {
+	  cBLAS::axpy<Float>(NN,(Float*) &valM2, this->H_elem(), other->H_oneD()[mu]); // (0+3-(1+2))
+	  cBLAS::axpy<Float>(NN,(Float*) &val2, this->H_elem(), other->H_oneDC()[mu]); // (0+3+(1+2))
 	}
 	// factor of 1/4 should be added later
       }
@@ -203,7 +196,6 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 
   if(isTwoD){
     //twoD part
-    Float vals2[] = {val2,0.};
     for(int i = 1 ; i < 16; i++) if(tmp[i] == nullptr) PLEGMA_error("Need to allocate memory for tmp[%d] to use in the twoD",i);
     if(qLtmp == nullptr) PLEGMA_error("Need to allocate memory for qLtmp to use in the twoD");
     int count=0;
@@ -221,9 +213,9 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	contractG5(*(tmp[8+mu*2+1]), *(tmp[nu*2+1]), ACC_MINUS);
 	contractG5(*(tmp[8+mu*2+0]), *(tmp[nu*2+0]), ACC_MINUS);
 	this->unload();
-	cBLAS::axpy<Float>(NN,valsP,this->H_elem(),h_twoD[count]);
-	if(val2!=0 and other!=nullptr) {
-	  cBLAS::axpy<Float>(NN,vals2,this->H_elem(),other->H_twoD()[count]);
+	cBLAS::axpy<Float>(NN,(Float*) &val,this->H_elem(),h_twoD[count]);
+	if(other!=nullptr) {
+	  cBLAS::axpy<Float>(NN,(Float*) &val2,this->H_elem(),other->H_twoD()[count]);
 	}
       }
       else if(mu == 3 || nu == 3){
@@ -239,9 +231,9 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	this->shift(*qLtmp,mu==3?mu+4:nu+4);
 	this->add(*qLtmp,(std::complex<Float>) {1.,0.});
 	this->unload();
-	cBLAS::axpy<Float>(NN,valsP,this->H_elem(),h_twoD[count]);
-	if(val2!=0 and other!=nullptr) {
-	  cBLAS::axpy<Float>(NN,vals2,this->H_elem(),other->H_twoD()[count]);
+	cBLAS::axpy<Float>(NN,(Float*) &val,this->H_elem(),h_twoD[count]);
+	if(other!=nullptr) {
+	  cBLAS::axpy<Float>(NN,(Float*) &val2,this->H_elem(),other->H_twoD()[count]);
 	}
 	if(mu == 3){
 	  qLtmp->contractG5(*(tmp[8+mu*2+0]), *(tmp[nu*2+1]));
@@ -254,9 +246,9 @@ void PLEGMA_QLoops<Float>::oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector
 	this->shift(*qLtmp,mu==3?mu:nu);
 	this->add(*qLtmp,(std::complex<Float>) {1.,0.});
 	this->unload();
-	cBLAS::axpy<Float>(NN,valsP,this->H_elem(),h_twoD[count]);
-	if(val2!=0 and other!=nullptr) {
-	  cBLAS::axpy<Float>(NN,vals2,this->H_elem(),other->H_twoD()[count]);
+	cBLAS::axpy<Float>(NN,(Float*) &val,this->H_elem(),h_twoD[count]);
+	if(other!=nullptr) {
+	  cBLAS::axpy<Float>(NN,(Float*) &val2,this->H_elem(),other->H_twoD()[count]);
 	}
       }
       else{

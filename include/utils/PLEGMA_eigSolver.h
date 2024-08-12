@@ -49,6 +49,7 @@ namespace plegma{
     bool littleD; // In case we want to compute little Dirac and use it in the projection
     bool isACC; // In case we want to use Polymonial accelerator
     bool fastio; // In case we want to use dump the memory instead of lime format
+    bool single_prec; // TEST
     int PolyDeg; // Order of the Polynomial
     double amin; // Low boundary for polymonial accelerator
     double amax; // High boundary for polynomial accelerator
@@ -137,6 +138,7 @@ namespace plegma{
     int getSize_per_Vec() const{return size_per_Vec;}
     size_t getBytes_per_Vec() const{return bytes_per_Vec;}
     void qLoops_exact(PLEGMA_Gauge<double> &gauge, std::string loopPrefix, std::string confID, int nev=-1, FILE_FORMAT format=HDF5_FORMAT, int maxQsq=64, bool oneDLoops=true, bool twoDLoops=false);
+    QudaInvertParam getInvParams() const{return eig_inv_param;}    
   };
 }
 #endif /* HAVE_EIGENSOLVER */

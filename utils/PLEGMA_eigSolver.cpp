@@ -126,6 +126,15 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
     p.fastio = true;
     THREAD(writeEigenVectors(filenamePrefix));
   }
+  /*
+  if(p.single_prec) {
+    PLEGMA_printf("WARNING: converting eigvecs to single precisions!!!\n");
+    for(size_t i=0; i<size_NeV*2; i++) {
+      float d_float = static_cast<float>(h_eigVecs[i]);
+      h_eigVecs[i] = static_cast<double>(d_float);
+    }
+  }
+  */
   if(p.deviceAlloc) {
     cudaMalloc((void**)& d_eigVecs,size_NeV*2*sizeof(double));
     cudaMemcpy(d_eigVecs, h_eigVecs, size_NeV*2*sizeof(double), cudaMemcpyHostToDevice);
@@ -668,6 +677,9 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
 }
 
  void EigSolver::readEigenVectors(std::string filenamePrefix){
+   PLEGMA_printf("read eigenvectors, rank0 before barrier\n");
+   MPI_Barrier(MPI_COMM_WORLD);
+   PLEGMA_printf("read eigenvectors, all after barrier\n");
    if(filenamePrefix.empty()) PLEGMA_error("Filename for eigenVectors is empty");
    auto start = MPI_Wtime();
    if(not p.fastio) {
@@ -678,19 +690,42 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
        memcpy(eigVec,tmp.H_elem(),bytes_per_Vec);
        if(verbose) PLEGMA_printf("Eigenvector %d loaded\n", i);
      }
+   } else if(p.single_prec) {
+     FILE *fptr;
+     std::string filename = filenamePrefix + "_NeV" + std::to_string(p.NeV) + "_coord" + std::to_string(HGC_procPosition[0]) + std::to_string(HGC_procPosition[1]) + std::to_string(HGC_procPosition[2]) + std::to_string(HGC_procPosition[3]) + ".dat.single";
+     
+     PLEGMA_printf("Reading in single precision\n");
+     if ((fptr = fopen(filename.c_str(),"rb")) == NULL){
+       PLEGMA_error("opening file %s\n",filename.c_str());
+     }
+
+     const int Nbuf = 16384;
+     float tmp[Nbuf];
+     for(size_t i=0; i<size_NeV*2; i+=Nbuf) {
+       int read = fread(tmp, sizeof(float), Nbuf, fptr);
+       for(int j=0; j<read; j+=4) {
+	 h_eigVecs[i+j+0] = tmp[j+0];
+	 h_eigVecs[i+j+1] = tmp[j+1];
+	 h_eigVecs[i+j+2] = tmp[j+2];
+	 h_eigVecs[i+j+3] = tmp[j+3];
+       }
+     }
+     fclose(fptr);     
    } else {
      FILE *fptr;
+     std::string filename = filenamePrefix + "_NeV" + std::to_string(p.NeV) + "_coord" + std::to_string(HGC_procPosition[0]) + std::to_string(HGC_procPosition[1]) + std::to_string(HGC_procPosition[2]) + std::to_string(HGC_procPosition[3]) + ".dat";
      
-     if ((fptr = fopen((filenamePrefix + "_NeV" + std::to_string(p.NeV) + "_coord" + std::to_string(HGC_procPosition[0]) + std::to_string(HGC_procPosition[1]) + std::to_string(HGC_procPosition[2]) + std::to_string(HGC_procPosition[3]) + ".dat").c_str(),"rb")) == NULL){
-       printf("Error! opening file");
-       
-       // Program exits if the file pointer returns NULL.
-       exit(1);
+     if ((fptr = fopen(filename.c_str(),"rb")) == NULL){
+       PLEGMA_error("opening file %s\n",filename.c_str());
      }
-     
+
+     printf("Start reading %s\n", filename.c_str());
      fread(h_eigVecs, 2*sizeof(double), size_NeV, fptr); 
      fclose(fptr);
+     printf("Finished reading %s\n", filename.c_str());
    }
+   PLEGMA_printf("read eigenvectors, rank0 finished\n");
+   MPI_Barrier(MPI_COMM_WORLD);
    PLEGMA_printf("TIME for EigSolver::readEigenVectors %f sec\n", MPI_Wtime()-start);
  }
 
@@ -732,7 +767,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    free(tmp_string);
 
    
-   if(access( (outfilename + "_std" + suffix).c_str(), F_OK ) != -1 and access( (outfilename + "_gen" + suffix).c_str(), F_OK ) != -1)
+   if(access( (outfilename + suffix).c_str(), F_OK ) != -1)
      return;
 
    if(oneDLoops) gauge.communicateGhost();
@@ -742,8 +777,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    ft[0] = new PLEGMA_FT<double>(maxQsq, 3);
    if(twoDLoops) ft[1] = new PLEGMA_FT<double>(0, 3);
    
-   PLEGMA_QLoops<double> qloops_std(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
-   PLEGMA_QLoops<double> qloops_gen(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
+   PLEGMA_QLoops<double> qloops(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
 
    PLEGMA_Vector<double> *tmp[16] = {nullptr};
    PLEGMA_QLoops<double> *qLtmp = nullptr;
@@ -758,9 +792,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    checkCudaError();
 
    for(int i=0; i<nev; i++){
-     double eigVal = std::get<0>(evalsOrdered[i]);
-     long int iorder = std::get<3>(evalsOrdered[i]);
-     double *eigVec = ptr_vecs + iorder*size_per_Vec*2;
+     double *eigVec = ptr_vecs + i*size_per_Vec*2;
      if(p.deviceAlloc) {
        cudaMemcpy(phi.D_elem(),eigVec,bytes_per_Vec,cudaMemcpyDeviceToDevice);
      } else {
@@ -768,14 +800,13 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
      }
      checkCudaError();
 
-     double eigVal2 = littleD[iorder*(p.NeV+1)].real()*2*eig_inv_param.kappa;
+     std::complex<double> eigVal = std::conj(littleD[i*(p.NeV+1)])*2.*eig_inv_param.kappa;
      
-     if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1./eigVal,true,+eigVal2/eigVal,&qloops_gen); //standard one-end trick
-     else qloops_std.oneEnd_trick(phi,phi,-1./eigVal,true,+eigVal2/eigVal,&qloops_gen); //standard one-end trick
+     if(oneDLoops || twoDLoops) qloops.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,1./eigVal,true);
+     else qloops.oneEnd_trick(phi,phi,1./eigVal,true);
    }
    
-   qloops_std.dumpLoops(ft, outfilename + "_std", confID, format);
-   qloops_gen.dumpLoops(ft, outfilename + "_gen", confID, format);
+   qloops.dumpLoops(ft, outfilename, confID, format);
    
    delete ft[0];
    if(oneDLoops) delete tmp[0];

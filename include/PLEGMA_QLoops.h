@@ -41,8 +41,8 @@ namespace plegma{
        @param bool accum, A flag to choose if we want to accumulate or clear
      **/
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
-		      Float val , bool accum, Float val2=0, PLEGMA_QLoops<Float>*other=nullptr);
-
+		      std::complex<Float> val , bool accum, std::complex<Float> val2=0, PLEGMA_QLoops<Float>*other=nullptr);
+    
     /**
        @brief Computes the one-end trick with Wilson line where fields is shifted to appear ultralocal
        @param PLEGMA_Vector<Float> &x_l, left solution vector
@@ -66,7 +66,7 @@ namespace plegma{
        @param bool accum, A flag to choose if we want to accumulate or clear
      **/
     void oneEnd_trick(PLEGMA_Vector<Float> &x_l, PLEGMA_Vector<Float> &x_r,
-		      PLEGMA_Vector<Float> *tmp[16], PLEGMA_QLoops<Float> *qLtmp, PLEGMA_Gauge<Float> &gauge, Float val , bool accum, Float val2=0, PLEGMA_QLoops<Float>*other=nullptr );
+		      PLEGMA_Vector<Float> *tmp[16], PLEGMA_QLoops<Float> *qLtmp, PLEGMA_Gauge<Float> &gauge, std::complex<Float> val , bool accum, std::complex<Float> val2=0, PLEGMA_QLoops<Float>*other=nullptr );
     /**
        @brief contracts two vectors over color space with gamma5 between allowing open the general gamma structure.
        @param PLEGMA_Vector<Float> &x_l, left solution vector
