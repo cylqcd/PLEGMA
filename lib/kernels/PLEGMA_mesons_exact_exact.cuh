@@ -129,7 +129,7 @@ void contract_exact_exact_host( ProfileStruct &ps,
 
 
 template<typename Float>
-static void contract_exact_exact(Float* ptr, int nvecs, size_t vec_size,
+static void contract_exact_exact(Float* ptr, int nvecs, size_t vec_size, bool dev_ptr,
 				 PLEGMA_Correlator<Float>& corr){
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size = (nvecs*(nvecs+1)*N_SPINS*N_SPINS)/2;
@@ -153,25 +153,33 @@ static void contract_exact_exact(Float* ptr, int nvecs, size_t vec_size,
   ps.max_volume = HGC_localVolume3D*maxLocalT;
   ps.tune_globally = true;
 
-  const int ils = 4;
-  PLEGMA_Vector<Float> vec1;
+  const int ils = dev_ptr ? 1 : 4;
+  PLEGMA_Vector<Float> vec1(dev_ptr ? NONE : DEVICE);
   std::vector<PLEGMA_Vector<Float>*> vec2;
   size_t vec_bytes = vec_size*sizeof(Float);
   int veci = 0;
   cudaStream_t stream[ils];
   for(int k=0; k<ils; k++) {
-    vec2.push_back(new PLEGMA_Vector<Float>());
+    vec2.push_back(new PLEGMA_Vector<Float>(dev_ptr ? NONE : DEVICE));
     cudaStreamCreate(stream+k) ;
   }
   
   for(int i=0; i<nvecs; i++) {
     PLEGMA_printf("### Contractions for exact_exact vector %d, %s\n", i, getDateAndTime().c_str());
     for(int k=0; k<ils and i+k+1<nvecs; k++) {
-      cudaMemcpyAsync(vec2[k]->D_elem(), ptr+(i+k+1)*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+      if(dev_ptr) {
+	vec2[k]->D_elem(ptr+(i+k+1)*vec_size);
+      } else {
+	cudaMemcpyAsync(vec2[k]->D_elem(), ptr+(i+k+1)*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+      }
     }
     
-    cudaMemcpy(vec1.D_elem(), ptr+i*vec_size, vec_bytes, cudaMemcpyHostToDevice);
-    checkCudaError();
+    if(dev_ptr) {
+      vec1.D_elem(ptr+i*vec_size);
+    } else {
+      cudaMemcpy(vec1.D_elem(), ptr+i*vec_size, vec_bytes, cudaMemcpyHostToDevice);
+      checkCudaError();
+    }
     
     for(int j=i; j<nvecs; j++) {
       if(j==i) {
@@ -179,13 +187,20 @@ static void contract_exact_exact(Float* ptr, int nvecs, size_t vec_size,
 			 ps, vec1, vec1, corr, result, veci);
       } else {
 	int k=(j-i-1)%ils;
-	cudaStreamSynchronize(stream[k]);
-	checkCudaError();
+	if(not dev_ptr) {
+	  cudaStreamSynchronize(stream[k]);
+	  checkCudaError();
+	}
 	tuneAndRun( ps, "contract_exact_exact", contract_exact_exact_host<Float>,
 			 ps, vec1, *vec2[k], corr, result, veci);
 	// Start copying next vector to use
-	if(j+ils<nvecs)
-	  cudaMemcpyAsync(vec2[k]->D_elem(), ptr+(j+ils)*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+	if(j+ils<nvecs) {
+	  if(dev_ptr) {
+	    vec2[k]->D_elem(ptr+(j+ils)*vec_size);
+	  } else {
+	    cudaMemcpyAsync(vec2[k]->D_elem(), ptr+(j+ils)*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+	  }
+	}
       }
       veci++;
     }

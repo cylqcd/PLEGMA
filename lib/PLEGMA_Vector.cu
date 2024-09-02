@@ -359,6 +359,33 @@ namespace plegma{
     checkCudaError();
   }
 
+  // vec3D <- vec4D
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, int nu, int c2){
+    if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
+    int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
+    bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+    this->activeTimeSlice = is_myIt;
+    int V3 = HGC_localVolume/HGC_localL[3];
+    int V4 = HGC_localVolume;
+    Float *pointer_src = NULL;
+    Float *pointer_dst = NULL;
+    for(int mu = 0 ; mu < N_SPINS ; mu++) {
+      if(nu>=0 and mu!=nu) continue;
+      for(int c1 = 0 ; c1 < N_COLS ; c1++){
+	if(c2>=0 and c1!=c2) continue;
+	pointer_dst = (this->d_elem + mu*N_COLS*V3*2 + c1*V3*2);
+	if(is_myIt){
+	  pointer_src = (vec.D_elem() + mu*N_COLS*V4*2 + c1*V4*2 + my_it*V3*2);
+	  cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+	}
+	else
+	  cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
+      }
+    }
+    checkCudaError();
+  }
+
   // vec3D <- Prop4D
   template<typename Float>
   void PLEGMA_Vector3D<Float>::absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu , int c2){

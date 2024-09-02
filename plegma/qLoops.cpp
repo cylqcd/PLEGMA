@@ -169,6 +169,7 @@ int main(int argc, char **argv)
     EigSolverParams eigParam;
     eigParam.NeV = Eig_NeV;
     eigParam.littleD = false;
+    eigParam.deviceAlloc = false;
     eigParam.isACC = Eig_isACC;
     eigParam.PolyDeg = Eig_PolyDeg;
     eigParam.amin = Eig_amin;

@@ -34,14 +34,17 @@ endif(PLEGMA_MKL)
 
 #define PLEGMA executables
 
+cuda_add_executable(test2d test2d.cpp)
+target_link_libraries(test2d ${PLEGMA_LIBS})
+
+cuda_add_executable(test2d2 test2d2.cpp)
+target_link_libraries(test2d2 ${PLEGMA_LIBS})
+
 cuda_add_executable(Plaquette Plaquette.cpp)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
 cuda_add_executable(omega omega.cpp)
 target_link_libraries(omega ${PLEGMA_LIBS})
-
-cuda_add_executable(omega_smear omega_smear.cpp)
-target_link_libraries(omega_smear ${PLEGMA_LIBS})
 
 cuda_add_executable(pion pion.cpp)
 target_link_libraries(pion ${PLEGMA_LIBS})
@@ -73,11 +76,17 @@ target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 cuda_add_executable(GPDs_nucleon GPDs_nucleon.cpp)
 target_link_libraries(GPDs_nucleon ${PLEGMA_LIBS})
 
+cuda_add_executable(GPDs_nucleon_test_der GPDs_nucleon_test_der.cpp)
+target_link_libraries(GPDs_nucleon_test_der ${PLEGMA_LIBS})
+
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
-#cuda_add_executable(meson_2pt_3pt meson_2pt_3pt.cpp)
-#target_link_libraries(meson_2pt_3pt ${PLEGMA_LIBS})
+cuda_add_executable(nucleon_2der nucleon_2der.cpp)
+target_link_libraries(nucleon_2der ${PLEGMA_LIBS})
+
+cuda_add_executable(meson_2pt_3pt meson_2pt_3pt.cpp)
+target_link_libraries(meson_2pt_3pt ${PLEGMA_LIBS})
 
 cuda_add_executable(Source EXCLUDE_FROM_ALL Source.cpp)
 target_link_libraries(Source ${PLEGMA_LIBS})

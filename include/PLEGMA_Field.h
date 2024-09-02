@@ -26,6 +26,8 @@ namespace plegma {
     size_t ghost_length;
     size_t ghost_corner_length;
     size_t ghost_vertex_length;
+    size_t single_ghost_length;
+    size_t single_corner_length;
     
     Float *h_elem;
     Float *d_elem;
@@ -70,6 +72,7 @@ namespace plegma {
     
     Float* H_elem() const { return h_elem; }
     Float* D_elem() const { return d_elem; }
+    void D_elem(Float* ptr) { d_elem = ptr; }
 
     bool IsAllocHost() const { return isAllocHost;}
     bool IsAllocDevice() const { return isAllocDevice;}
@@ -79,7 +82,9 @@ namespace plegma {
     int Field_length() const { return field_length;} // degrees of freedom per lattice point
     size_t Total_length() const { return total_length;} // the length of the field (local)
     size_t Ghost_length() const { return ghost_length;} // the length of the ghost
+    size_t SingleGhost_length() const { return single_ghost_length;} // the length of a single ghost
     size_t GhostCorner_length() const { return ghost_corner_length;} // the length of the ghost for corners
+    size_t SingleCorner_length() const { return single_corner_length;} // the length of a single ghost for corners
     size_t GhostVertex_length() const { return ghost_vertex_length;} // the length of the ghost for vertex
     size_t TotalGhost_length() const { return Ghost_length()+GhostCorner_length()+GhostVertex_length();}
     size_t TotalPlusGhost_length() const { return Total_length()+TotalGhost_length();} // total + ghost
@@ -87,7 +92,9 @@ namespace plegma {
     size_t Bytes_total() const { return this->Total_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_total_ghost() const { return this->TotalGhost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghost() const { return this->Ghost_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_singleghost() const { return this->SingleGhost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_singleCorner() const { return this->SingleCorner_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostVertex() const { return this->GhostVertex_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_total_plus_ghost() const { return this->TotalPlusGhost_length()*this->Field_length()*2*sizeof(Float); }
 
@@ -109,7 +116,10 @@ namespace plegma {
     } 
     void printInfo();
     void communicateSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateSecondSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateThirdSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateSecondCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateVertexGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, GHOST_FLAG which_ghost=ALL_GHOSTS, ACTION action=DO_ALL);
 

@@ -14,7 +14,7 @@ std::vector<std::thread> threads;
 //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
 #define THREAD(fnc) TIME(fnc)
 
-#define abs(a) (((a)>=0) ? (a):-(a))
+#define sign(a) (((a)>=0) ? +1:-1)
 
 extern int device;
 static std::vector<std::string> listOpt = {"verbosity", "load-gauge","nsrc","src-filename","tSinks","twop-filename", "maxQsq"};
@@ -28,14 +28,14 @@ int main(int argc, char **argv)
   int nroots=2;
   int rand_seed1=1234;
   HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
+  double des;
+  HGC_options->set("dqed", "dqed used for LIBE", verbosity, des);
+  std::string qedfile;
+  HGC_options->set("qed-filename", "The path to the QED field", verbosity, qedfile);
   std::vector<double> mul;
   HGC_options->set("extra-mul", "List of additional mu to run", verbosity, mul);
   std::vector<double> muh;
   HGC_options->set("muh", "List of additional mu to run", verbosity, muh);
-  std::vector<double> dmus;
-  HGC_options->set("dmu", "dmu used for LIBE", verbosity, dmus);
-  std::vector<double> dks;
-  HGC_options->set("dkappa", "dkappa used for LIBE", verbosity, dks);
 
   //=========================================================================================================//
   initializePLEGMA();
@@ -44,11 +44,6 @@ int main(int argc, char **argv)
   int nmul = mul.size();
   int nmuh = muh.size();
   int nts = tSinks.size();
-  int ndmus = dmus.size();
-  int ndks = dks.size();
-  int ndms = ndmus+ndks;
-  double kappa0 = kappa;
-  double mass0 = mass;
 
   std::vector<double> mus;
   for(int i=0; i<nmul; i++) {
@@ -70,250 +65,161 @@ int main(int argc, char **argv)
       min_mu=abs(mus[i]);
     }
   }
-  double min_mu2=min_mu;
-  for(int i=0; i<ndmus; i++) {
-    if(min_mu2>abs(min_mu*(1+dmus[i]))){
-      min_mu2=abs(min_mu*(1+dmus[i]));
-    }
+  double mu_setup=min_mu;
+
+  if(link_recon!=QUDA_RECONSTRUCT_NO or link_recon_sloppy!=QUDA_RECONSTRUCT_NO or link_recon_precondition!=QUDA_RECONSTRUCT_NO) {
+    PLEGMA_error("QED requires QUDA_RECONSTRUCT_NO\n");
   }
-  double mu_setup=min_mu2;
+  
   {
 
     // Reading from Lime file and loading to device
     PLEGMA_Gauge<double> gauge;
     gauge.readFile(latfile, LIME_FORMAT);
     gauge.calculatePlaq();
-        
-    //PLEGMA_GaugeU1<double> gaugeU1;
-    //gauge.readFile(qedfile, LIME_FORMAT);
-    
-    PLEGMA_Gauge<double> contractGauge(BOTH);
-    // Gauge for contractions
-    contractGauge.copy(gauge);
-    // apply boundary conditions since is needed for the covariant derivative
-    applyBoundaryConditions(contractGauge,true);
-    
+
     // Loading to QUDA and computing plaquette also there
     initGaugeQuda(gauge, true);
     plaqQuda();
-
+    
     updateOptions(LIGHT);
-    PLEGMA_printf("\n ### Running setup for mu=%.4e ###\n\n",min_mu2);
-    mu = min_mu2;
+    PLEGMA_printf("\n ### Running setup for mu=%.4e ###\n\n",min_mu);
+    mu = min_mu;
     TIME(QUDA_solver solver(mu));
 
+    PLEGMA_Propagator<double> props[nmus];
+    PLEGMA_Propagator<double> props2[nmus];
+    PLEGMA_Propagator3D<double> prop3D;
+    PLEGMA_Gauge<double> gauge2;
+    PLEGMA_GaugeU1<double> gaugeU1;
+    PLEGMA_Vector3D<double> vect3D;
+    std::string U1_conf = qedfile;// + src_string;
+    PLEGMA_printf("\n ### Going to read %s ###\n\n", U1_conf.c_str());
+    gaugeU1.readFile(U1_conf, LIME_FORMAT);
+   
     for(int its =0; its < nts; its++){
-
+	
       int tsink = tSinks[its];
-      
+      PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
+      PLEGMA_Correlator<double> corr3D(corr_space, site({0,0,0,tsink}), maxQsq, 1);
+
       char * src_string;
       asprintf(&src_string, "_id%02d_st%03d", its, tsink);
       std::string outfilename = twop_filename + src_string + ".h5";
       free(src_string);
-      
+
       if(access( outfilename.c_str(), F_OK ) != -1) {
 	PLEGMA_printf("\nFile %s already exists. Skipping...\n", outfilename.c_str());
 	continue;
       }
-      
-      std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props;
-      props.reserve(nmus);
-      PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
-	
+ 
+      for(int isgn=0; isgn<3; isgn++) {
+	  
+	gauge2.copy(gauge);
+	double phase = (isgn-1)*des;
+	gaugeU1.calculatePlaq(phase);
+	gauge2.qedPhase(gaugeU1, phase);
+	gauge2.calculatePlaq();
+	initGaugeQuda(gauge2, true);
+	plaqQuda();
+
+	//applyBoundaryConditions(gauge2,true);
+    
+	PLEGMA_printf("\n ### Running on U1(%d) with de=%.4e ###\n\n",its, phase);
+	  
+	for(int imu=0; imu<nmus; imu++){
+	  mu = mus[imu];
+	  PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e de=%+.4e begin now ###\n\n", its, tsink, mus[imu], phase);
+	  PLEGMA_printf("\n ### Updating solver ###\n\n");
+	  solver.UpdateSolver();
+
+	  //Dilution
+	  PLEGMA_Vector<double> vector_stoc, vectortmp;
+	  //We draw a different random vector for every source position
+	  vector_stoc.randInit(seeds[its]);
+	  vector_stoc.stochastic_Z(nroots);
+	  vectortmp.absorbTimeslice(vector_stoc, tsink);
+	  vector_stoc.dilutespin(vectortmp,0);
+	  
+	  for (int spinindex=0; spinindex<4; ++spinindex){
+	    if (spinindex==0)
+	      vectortmp.copy(vector_stoc);
+	    else
+	      vectortmp.diluteSpinDisplace(vector_stoc,spinindex,0);
+	    if (imu==0)
+	      vect3D.absorb(vectortmp, tsink, spinindex);
+	    
+	    TIME(solver.solve(vectortmp, vectortmp));
+	    props[imu].absorb(vectortmp, spinindex, isgn);
+
+	    if(isgn==1) {
+	      props2[imu].absorb(vectortmp, spinindex, 0);
+	      TIME(solver.solve(vectortmp, vectortmp));
+	      props2[imu].absorb(vectortmp, spinindex, 1);
+	      vectortmp.absorb(props2[imu], spinindex, 0);
+	      vectortmp.apply_gamma5();
+	      TIME(solver.solve(vectortmp, vectortmp));
+	      props2[imu].absorb(vectortmp, spinindex, 2);
+	    }
+	  }
+	}
+      }
+
       for(int imu=0; imu<nmus; imu++){
-	if(kappa0 == -1.0) {
-	  mass = mass0;
-	} else {
-	  kappa = kappa0;
-	}
-	mu = mus[imu];
-	PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e  begin now ###\n\n",
-		      its, tsink, mus[imu]);
-	PLEGMA_printf("\n ### Updating solver ###\n\n");
-	TIME(solver.UpdateSolver());
+	props[imu].rotateToPhysicalBase_device(mus[imu]>0? +1:-1);
+	props[imu].applyBoundaries_device(tsink);
+	props2[imu].rotateToPhysicalBase_device(mus[imu]>0? +1:-1);
+	props2[imu].applyBoundaries_device(tsink);
+      }
 
-
-	PLEGMA_Propagator<double> prop1;
-	
-	//Dilution
-	PLEGMA_Vector<double> vector_stoc, vectortmp1;
-	//We draw a different random vector for every source position
-	vector_stoc.randInit(seeds[its]);
-	vector_stoc.stochastic_Z(nroots);
-	vectortmp1.absorbTimeslice(vector_stoc, tsink);
-	vector_stoc.dilutespin(vectortmp1,0);
-
-	for (int spinindex=0; spinindex<4; ++spinindex){
-	  if (spinindex==0)
-	    vectortmp1.copy(vector_stoc);
-	  else
-	    vectortmp1.diluteSpinDisplace(vector_stoc,spinindex,0);
-	  TIME(solver.solve(vectortmp1, vectortmp1));
-	  prop1.absorb(vectortmp1, spinindex, 0);
-	}
-	PLEGMA_Propagator<double> prop0;
-	prop0.copy(prop1);
-
-	prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
-	prop1.applyBoundaries_device(tsink);
-	
+      for(int imu1=0; imu1<nmus; imu1++){
 	char * mu_string;
-	asprintf(&mu_string, "%+.4e_%+.4e", mus[imu], mus[imu]);
+	asprintf(&mu_string, "%+.4e_%+.4e", mus[imu1], mus[imu1]);
 	std::string dataset = mu_string;
 	free(mu_string);
 	  
-	TIME(corr.contractMesonsNew(prop1, prop1, false));
-	corr.setDatasets((std::vector<std::string>) {dataset});
+	TIME(corr.contractMesonsLIBE(props[imu1], props[imu1]));
+	corr.setDatasets((std::vector<std::string>) {dataset+"_qed"});
 	TIME(corr.writeHDF5( outfilename ));
-	TIME(corr.contractMesonsOpen(prop1, prop1, false));
-	corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	TIME(corr.contractMesonsOpenLIBE(props[imu1], props[imu1]));
+	corr.setDatasets((std::vector<std::string>) {dataset+"_qed_open"});
 	TIME(corr.writeHDF5( outfilename ));
-	TIME(corr.contractMesons1ps(prop0, prop0, contractGauge, false));
-	corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
-	TIME(corr.writeHDF5( outfilename ));
+	prop3D.absorb(props[imu1], tsink);
+	TIME(corr3D.contractLoopSIB(vect3D, prop3D));
+	corr3D.setDatasets((std::vector<std::string>) {dataset+"_qed_loop"});
+	TIME(corr3D.writeHDF5( outfilename ));
 
-	TIME(prop1.unload());
-	props.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
-	props[imu]->copy(prop1, HOST);
-      }
-      
-      PLEGMA_Propagator<double> prop1;
-      PLEGMA_Propagator<double> prop2;
-      
-      for(int imu1=0; imu1<nmus; imu1++){
-	prop1.copy(*props[imu1], HOST);
-	TIME(prop1.load());
-	for(int imu2=imu1+1; imu2<nmus; imu2++){
+	TIME(corr.contractMesonsSIB(props2[imu1], props2[imu1]));
+	corr.setDatasets((std::vector<std::string>) {dataset+"_sib"});
+	TIME(corr.writeHDF5( outfilename ));
+	TIME(corr.contractMesonsOpenSIB(props2[imu1], props2[imu1]));
+	corr.setDatasets((std::vector<std::string>) {dataset+"_sib_open"});
+	TIME(corr.writeHDF5( outfilename ));
+	prop3D.absorb(props2[imu1], tsink);
+	TIME(corr3D.contractLoopSIB(vect3D, prop3D));
+	corr3D.setDatasets((std::vector<std::string>) {dataset+"_sib_loop"});
+	TIME(corr3D.writeHDF5( outfilename ));
+	
+	for(int imu2=imu1; imu2<nmus; imu2++){
 	  if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul))){ continue; }
-	    
-	  prop2.copy(*props[imu2], HOST);
-	  TIME(prop2.load());
-	  
 	  char * mu_string;
 	  asprintf(&mu_string, "%+.4e_%+.4e", mus[imu1], mus[imu2]);
 	  std::string dataset = mu_string;
 	  free(mu_string);
 	  
-	  TIME(corr.contractMesonsNew(prop1, prop2, false));
-	  corr.setDatasets((std::vector<std::string>) {dataset});
+	  TIME(corr.contractMesonsLIBE(props[imu1], props[imu2]));
+	  corr.setDatasets((std::vector<std::string>) {dataset+"_qed"});
 	  TIME(corr.writeHDF5( outfilename ));
-	  TIME(corr.contractMesonsOpen(prop1, prop2, false));
-	  corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	  TIME(corr.contractMesonsOpenLIBE(props[imu1], props[imu2]));
+	  corr.setDatasets((std::vector<std::string>) {dataset+"_qed_open"});
 	  TIME(corr.writeHDF5( outfilename ));
-	}
-      }
-
-      for(int idm=0; idm<ndms; idm++ ) {
-
-	std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> dprops;
-	dprops.reserve(nmus);
-      
-	double dmu = (idm<ndmus) ? dmus[idm]:0;
-	double dk = (idm>=ndmus) ? dks[idm-ndmus]:0;
-      
-	for(int imu=0; imu<nmus; imu++){
 	  
-	  mu = mus[imu]+mus[imu]*dmu;
-	  if(kappa0 == -1.0) {
-	    mass = mass0+dk;
-	  } else {
-	    kappa = kappa0+dk;
-	  }
-	  PLEGMA_printf("\n ### Calculations for stochastic source its=%d(%02d), mu=%+.4e, dmu=%+.4e, dk=%+.4e  begin now ###\n\n",
-			its, tsink, mus[imu], dmu, dk);
-	  PLEGMA_printf("\n ### Updating solver ###\n\n");
-	  TIME(solver.UpdateSolver());    
-
-      
-	  PLEGMA_Propagator<double> prop1;
-	
-	  //Dilution
-	  PLEGMA_Vector<double> vector_stoc,vectortmp1;
-	  vector_stoc.randInit(seeds[its]);
-	  vector_stoc.stochastic_Z(nroots);
-	  vectortmp1.absorbTimeslice(vector_stoc, tsink);
-	  vector_stoc.dilutespin(vectortmp1,0);
-
-	  for (int spinindex=0; spinindex<4; ++spinindex){
-	    if (spinindex==0)
-	      vectortmp1.copy(vector_stoc);
-	    else
-	      vectortmp1.diluteSpinDisplace(vector_stoc,spinindex,0);
-	    TIME(solver.solve(vectortmp1, vectortmp1));
-	    prop1.absorb(vectortmp1, spinindex, 0);
-	  }
-	  PLEGMA_Propagator<double> prop0;
-	  prop0.copy(prop1);
-	  prop1.rotateToPhysicalBase_device(mu>0? +1:-1);
-	  prop1.applyBoundaries_device(tsink);
-
-	  char * mu_string;
-	  asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu], mus[imu],dmu,dk);
-	  std::string dataset = mu_string;
-	  free(mu_string);
-	  
-	  TIME(corr.contractMesonsNew(prop1, prop1, false));
-	  corr.setDatasets((std::vector<std::string>) {dataset});
+	  TIME(corr.contractMesonsSIB(props2[imu1], props2[imu2]));
+	  corr.setDatasets((std::vector<std::string>) {dataset+"_sib"});
 	  TIME(corr.writeHDF5( outfilename ));
-	  TIME(corr.contractMesonsOpen(prop1, prop1, false));
-	  corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
+	  TIME(corr.contractMesonsOpenSIB(props2[imu1], props2[imu2]));
+	  corr.setDatasets((std::vector<std::string>) {dataset+"_sib_open"});
 	  TIME(corr.writeHDF5( outfilename ));
-	  TIME(corr.contractMesons1ps(prop0, prop0, contractGauge, false));
-	  corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
-	  TIME(corr.writeHDF5( outfilename ));
-
-	  TIME(prop1.unload());
-	  dprops.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
-	  dprops[imu]->copy(prop1, HOST);
-	}
-      
-	PLEGMA_Propagator<double> prop1;
-	PLEGMA_Propagator<double> prop2;
-
-	for(int imu1=0; imu1<nmus; imu1++){
-	  prop1.copy(*dprops[imu1], HOST);
-	  TIME(prop1.load());
-	  for(int imu2=imu1+1; imu2<nmus; imu2++){
-	    if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul))){ continue; }
-	      
-	    prop2.copy(*dprops[imu2], HOST);
-	    TIME(prop2.load());
-	  
-	    char * mu_string;
-	    asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e_both", mus[imu1], mus[imu2],dmu,dk);
-	    std::string dataset = mu_string;
-	    free(mu_string);
-	  
-	    TIME(corr.contractMesonsNew(prop1, prop2, false));
-	    corr.setDatasets((std::vector<std::string>) {dataset});
-	    TIME(corr.writeHDF5( outfilename ));
-	    TIME(corr.contractMesonsOpen(prop1, prop2, false));
-	    corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
-	    TIME(corr.writeHDF5( outfilename ));
-	  }
-	}
-
-	for(int imu1=0; imu1<nmus; imu1++){
-	  prop1.copy(*props[imu1], HOST);
-	  TIME(prop1.load());
-	  for(int imu2=0; imu2<nmus; imu2++){
-	    if(not (mus[imu1]==mus[imu2] or mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul) or (imu2<nmul and imu1>=nmul))){ continue; }
-	      
-	    prop2.copy(*dprops[imu2], HOST);
-	    TIME(prop2.load());
-	  
-	    char * mu_string;
-	    asprintf(&mu_string, "%+.4e_%+.4e_dmu%+.4e_dk%+.4e", mus[imu1], mus[imu2],dmu,dk);
-	    std::string dataset = mu_string;
-	    free(mu_string);
-	  
-	    TIME(corr.contractMesonsNew(prop1, prop2, false));
-	    corr.setDatasets((std::vector<std::string>) {dataset});
-	    TIME(corr.writeHDF5( outfilename ));
-	    TIME(corr.contractMesonsOpen(prop1, prop2, false));
-	    corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
-	    TIME(corr.writeHDF5( outfilename ));
-	  }
 	}
       }
     }

@@ -86,15 +86,13 @@ int main(int argc, char **argv)
     PLEGMA_printf("\n ### Running setup for mu=%.4e ###\n\n",min_mu);
     mu = min_mu;
     TIME(QUDA_solver solver(mu));
-    
-    std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props;
-    for(int i=0; i<nmus; i++)
-      props.push_back(std::make_shared<PLEGMA_Propagator<double>>(HOST));
-    PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
+
+    PLEGMA_Propagator<double> props[nmus];
     
     for(int its =0; its < nts; its++){
 	
       int tsink = tSinks[its];
+      PLEGMA_Correlator<double> corr(corr_space, site({0,0,0,tsink}), maxQsq);
 
       char * src_string;
       asprintf(&src_string, "_id%02d_st%03d", its, tsink);
@@ -107,7 +105,6 @@ int main(int argc, char **argv)
       }
  
       PLEGMA_GaugeU1<double> gaugeU1;
-      char *src_string;
       asprintf(&src_string, "%04d", its);
       std::string U1_conf = qedfile + src_string;
       PLEGMA_printf("\n ### Going to read %s ###\n\n",U1_conf.c_str());
@@ -127,7 +124,7 @@ int main(int argc, char **argv)
 
 	applyBoundaryConditions(gauge2,true);
     
-	PLEGMA_printf("\n ### Running on U1(%d) with de=%.4e ###\n\n",iph, phase);
+	PLEGMA_printf("\n ### Running on U1(%d) with de=%.4e ###\n\n",its, phase);
 	  
 	for(int imu=0; imu<nmus; imu++){
 	  mu = mus[imu];
@@ -149,53 +146,43 @@ int main(int argc, char **argv)
 	    else
 	      vectortmp.diluteSpinDisplace(vector_stoc,spinindex,0);
 	    TIME(solver.solve(vectortmp, vectortmp));
-	    props[imu]->absorbVectorToHost(vectortmp, spinindex, isgn);
+	    props[imu].absorb(vectortmp, spinindex, isgn);
 	  }
 	}
       }
-      
-      PLEGMA_Propagator<double> prop0, prop1, prop2;
+
+      for(int imu=0; imu<nmus; imu++){
+	props[imu].rotateToPhysicalBase_device(mus[imu]>0? +1:-1);
+	props[imu].applyBoundaries_device(tsink);
+      }
+
       for(int imu1=0; imu1<nmus; imu1++){
-	prop0.copy(*props[imu1], HOST);
-	prop0.load();
-	prop1.copy(prop0);
-	
-	prop1.rotateToPhysicalBase_device(mus[imu1]>0? +1:-1);
-	prop1.applyBoundaries_device(tsink);
-	
 	char * mu_string;
 	asprintf(&mu_string, "%+.4e_%+.4e", mus[imu1], mus[imu1]);
 	std::string dataset = mu_string;
 	free(mu_string);
 	  
-	TIME(corr.contractMesonsNew(prop1, prop1, false));
+	TIME(corr.contractMesonsLIBE(props[imu1], props[imu1]));
 	corr.setDatasets((std::vector<std::string>) {dataset});
 	TIME(corr.writeHDF5( outfilename ));
-	TIME(corr.contractMesonsOpen(prop1, prop1, false));
+	TIME(corr.contractMesonsOpenLIBE(props[imu1], props[imu1]));
 	corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
 	TIME(corr.writeHDF5( outfilename ));
-	TIME(corr.contractMesons1ps(prop0, prop0, contractGauge, false));
-	corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
-	TIME(corr.writeHDF5( outfilename ));
+	//TIME(corr.contractMesons1psLIBE(prop0, prop0, gauge2));
+	//corr.setDatasets((std::vector<std::string>) {dataset+"_1ps"});
+	//TIME(corr.writeHDF5( outfilename ));
 	
 	for(int imu2=imu1; imu2<nmus; imu2++){
-	  if(not (mus[imu1]==-mus[imu2] or (imu1==imu2 and isgn1!=isgn2) or (imu1<nmul and imu2>=nmul))){ continue; }
-
-	  prop2.copy(*props[imu2], HOST);
-	  prop2.load();
-
-	  prop2.rotateToPhysicalBase_device(mus[imu2]>0? +1:-1);
-	  prop2.applyBoundaries_device(tsink);
-
+	  if(not (mus[imu1]==-mus[imu2] or (imu1<nmul and imu2>=nmul))){ continue; }
 	  char * mu_string;
 	  asprintf(&mu_string, "%+.4e_%+.4e", mus[imu1], mus[imu2]);
 	  std::string dataset = mu_string;
 	  free(mu_string);
 	  
-	  TIME(corr.contractMesonsNew(prop1, prop2, false));
+	  TIME(corr.contractMesonsLIBE(props[imu1], props[imu2]));
 	  corr.setDatasets((std::vector<std::string>) {dataset});
 	  TIME(corr.writeHDF5( outfilename ));
-	  TIME(corr.contractMesonsOpen(prop1, prop2, false));
+	  TIME(corr.contractMesonsOpenLIBE(props[imu1], props[imu2]));
 	  corr.setDatasets((std::vector<std::string>) {dataset+"_open"});
 	  TIME(corr.writeHDF5( outfilename ));
 	}

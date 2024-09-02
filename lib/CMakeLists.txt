@@ -15,6 +15,7 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_threep_noe.cu
   kernels/PLEGMA_mesons_noe.cu
   kernels/PLEGMA_mesons_noe_SIB.cu
+  kernels/PLEGMA_mesons_noe_LIBE.cu
   kernels/PLEGMA_threep_oneD.cu
   kernels/PLEGMA_threep_twoD.cu
   kernels/PLEGMA_threep_threeD_part1.cu

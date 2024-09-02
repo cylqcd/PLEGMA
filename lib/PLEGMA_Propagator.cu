@@ -266,6 +266,12 @@ void  PLEGMA_Propagator<Float>::apply_gamma5(){
   apply_gamma5_propagator(*this);
 }
 
+template<typename Float>
+void  PLEGMA_Propagator<Float>::buildExactPropagator(Float *spinVals, Float *eigVals, Float* eigVecs, int nvecs, size_t vec_size, bool dev_ptr){
+  build_exact_propagator(*this, spinVals, eigVals, eigVecs, nvecs, vec_size, dev_ptr);
+}
+
+
 //----------------------------------//
 // class PLEGMA_ Propagator3D //
 //----------------------------------//

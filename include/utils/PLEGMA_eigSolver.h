@@ -53,6 +53,7 @@ namespace plegma{
     double amax; // High boundary for polynomial accelerator
     double tol;          // tolerance of the eigen solver
     int maxIters;        // maximum number of iterations for solver
+    bool deviceAlloc;
 #if defined(QUDAEIG)
     int batched_rotate; // batched size of TRLM. Set 1 for small memory need but loose of performance
 #endif
@@ -105,6 +106,7 @@ namespace plegma{
 #endif
     double *h_eigVecs;
     double *h_eigVals;
+    double *d_eigVecs;
 #if defined(HAVE_PRIMME)
     double *h_rnorms;
     primme_params primme_pars;
@@ -126,9 +128,9 @@ namespace plegma{
 	      bool isWriteEigenVectors = false, std::string filenamePrefix = "", bool verbose=false);
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
-    void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr);
+    void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr, int global_t=-1, int spin=-1, int col=-1);
     void dumpEvalsVdagG5V(std::string filename);
-    double* getEigVecs() const{return h_eigVecs;}
+    double* getEigVecs() const{return p.deviceAlloc ? d_eigVecs : h_eigVecs;}
     std::complex<double>* getLittleD() const{return littleD;}
     std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
     int getSize_per_Vec() const{return size_per_Vec;}

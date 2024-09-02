@@ -132,3 +132,93 @@ void rotateToPhysicalBase(Float* inOut, int sign){
   rotateToPhysicalBase_kernel<Float><<<gridDim,blockDim>>>((Float*) inOut,sign);
   checkCudaError();
 }
+
+template<typename Float>
+struct Spin { Float2<Float> vals[N_SPINS]; };
+
+template<typename Float>
+__global__ void build_exact_propagator_kernel( prop2<Float> prop,
+					       vectorTex<Float> texVec,
+					       Spin<Float> spin,
+					       Float2<Float> eval){
+
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  if (sid >= prop.volume()) return;
+  
+  Float2<Float> inOut[N_SPINS][N_SPINS][N_COLS][N_COLS];
+  Float2<Float> vec[N_SPINS][N_COLS];
+  prop.get(inOut,sid);
+  texVec.get(vec,sid);
+  
+  #pragma unroll
+  for(int alpha = 0 ; alpha < N_SPINS ; alpha++)
+    #pragma unroll
+    for(int beta = 0 ; beta < N_SPINS ; beta++)
+      #pragma unroll
+      for(int b = 0 ; b < N_COLS ; b++) {
+	Float2<Float> val = vec[alpha][b] * spin.vals[beta];
+	inOut[alpha][beta][b][0] += val/eval;
+	inOut[alpha][beta][b][1] += val/conj(eval);
+      }
+  prop.set(inOut,sid);
+}
+
+template<typename Float>
+void build_exact_propagator(PLEGMA_Propagator<Float>& out, Float *spinVals, Float *eigVals, Float* eigVecs, int nvecs, size_t vec_size, bool dev_ptr){
+  auto prop = toField2<prop2>(out);
+
+  ProfileStruct ps(HGC_localVolume);
+
+  const int ils = dev_ptr ? 1 : 4;
+  std::vector<PLEGMA_Vector<Float>*> vec;
+  size_t vec_bytes = vec_size*sizeof(Float);
+  cudaStream_t stream[ils];
+  for(int k=0; k<ils; k++) {
+    vec.push_back(new PLEGMA_Vector<Float>(dev_ptr ? NONE : DEVICE));
+    cudaStreamCreate(stream+k);
+    if(dev_ptr) {
+      vec[k]->D_elem(eigVecs+k*vec_size);
+    } else {
+      cudaMemcpyAsync(vec[k]->D_elem(), eigVecs+k*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+    }
+  }
+
+  Spin<Float> spin;
+  
+  for(int i=0; i<nvecs; i++) {
+    for(int mu=0; mu<4; mu++) {
+      spin.vals[mu] = {spinVals[mu*nvecs*2+i*2+0], spinVals[mu*nvecs*2+i*2+1]};
+    }
+    Float2<Float> eval = {eigVals[i*2+0], eigVals[i*2+1]};
+    int k=i%ils;
+    if(not dev_ptr) {
+      cudaStreamSynchronize(stream[k]);
+      checkCudaError();
+    }
+    auto vecT = toTexture<vectorTex>(*vec[k]);
+    if(i==0) {
+      auto kernel = tuner(ps, "build_exact_propagator_kernel",  build_exact_propagator_kernel<Float>,
+			  prop, *vecT, spin, eval);
+      if(not kernel->tuned()) {
+	kernel->tune();
+      }
+      out.zero_device();      
+    }
+    run( ps, "build_exact_propagator_kernel", build_exact_propagator_kernel<Float>,
+	 prop, *vecT, spin, eval);
+    
+    // Start copying next vector to use
+    if(i+ils<nvecs) {
+      if(dev_ptr) {
+	vec[k]->D_elem(eigVecs+(i+ils)*vec_size);
+      } else {
+	cudaMemcpyAsync(vec[k]->D_elem(), eigVecs+(i+ils)*vec_size, vec_bytes, cudaMemcpyHostToDevice, stream[k]);
+      }
+    }
+  }
+  
+  for(int k=0; k<ils; k++) {
+    delete vec[k];
+    cudaStreamDestroy(stream[k]);
+  }
+}
