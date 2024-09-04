@@ -189,7 +189,7 @@ int main(int argc, char **argv)
 		    isource, source[0], source[1], source[2], source[3]);
       
       bool all_exist=true;
-      for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
+      for(int inev=1; inev < nevs.size(); inev++){ // Loop over NeV
         int nev = nevs[inev];
 
         char * src_string;
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
       //   PLEGMA_printf("%f+%f\n", spinEVals[i].real(), spinEVals[i].imag());
       // }
       
-      for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
+      for(int inev=1; inev < nevs.size(); inev++){ // Loop over NeV
         TIC();
         int nev = nevs[inev];
 

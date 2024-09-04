@@ -27,6 +27,7 @@ int main(int argc, char **argv)
   int nsmearGauss_s = nsmearGauss/2;
   int nsmearGauss_c = 0;
   bool run_ud = true;
+  int start_src = 0;
   std::string srcInputFile = "./input.src";
   auto add_options = [&](Options& options) {
     options.set("run-ud", "Whether to run or not light quark flavors", verbosity, run_ud);
@@ -35,6 +36,7 @@ int main(int argc, char **argv)
     options.set("nsmear-gauss-s", "Number of Gaussian smearing step for the strange quark propagator", verbosity, nsmearGauss_s);
     //options.set("src-input-file", "Use the file to update option at every source. The file searched is [src-input-file]+str(n) where n is the source (0, 1, ...)", verbosity, srcInputFile);
     options.set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
+	options.set("start-src", "The source position from which to start the calculation", verbosity, start_src);
 		     };
  add_options(*HGC_options);
    //=========================================================================================================//
@@ -72,7 +74,7 @@ int main(int argc, char **argv)
     std::vector<std::thread> threads;
 
     
-    for(int isource = 0 ; isource < numSourcePositions; isource++){
+    for(int isource = start_src ; isource < numSourcePositions; isource++){
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, sourcePositions[isource][0], sourcePositions[isource][1],
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
