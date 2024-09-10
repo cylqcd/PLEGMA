@@ -133,6 +133,7 @@ namespace plegma{
     void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr, int global_t=-1, int spin=-1, int col=-1);
     void dumpEvalsVdagG5V(std::string filename);
     double* getEigVecs() const{return p.deviceAlloc ? d_eigVecs : h_eigVecs;}
+    double* getHEigVecs() const{return h_eigVecs;}
     std::complex<double>* getLittleD() const{return littleD;}
     std::vector< std::tuple<double,double,double,int> > getEigVals() const{return evalsOrdered;}
     int getSize_per_Vec() const{return size_per_Vec;}

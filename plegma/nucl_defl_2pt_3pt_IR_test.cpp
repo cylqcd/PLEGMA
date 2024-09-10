@@ -70,7 +70,12 @@ int main(int argc, char **argv) {
   add_options(*HGC_options);
   if(prOrNt != "proton" && prOrNt != "neutron") PLEGMA_error("This exec is only for nucleon, %s is not allowed",prOrNt.c_str());
   //=========================================================================================================//
-  initializePLEGMA();
+  TIME(initializePLEGMA());
+
+  nevs.insert(nevs.begin(), Eig_NeV);
+  for(int inev=1; inev < nevs.size(); inev++){ // Loop over NeV
+    if(nevs[inev]>nevs[0]) PLEGMA_error("extra-nev can only be smaller");
+  }
 
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
@@ -128,8 +133,8 @@ int main(int argc, char **argv) {
     }
 
 
-    updateOptions(LIGHT);
-    TIME(QUDA_solver solver(mu));
+    // updateOptions(LIGHT);
+    // TIME(QUDA_solver solver(mu));
 
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
@@ -139,24 +144,22 @@ int main(int argc, char **argv) {
     PLEGMA_Vector<double> vec;
     
     // Smear the eigenvectors but also keep track of unsmeared ones
+    size_t vec_size = size_per_Vec*2*sizeof(double);
     double *eigVecs_d = eigSol->getEigVecs();
-    double *eigVecs_hL;
-    eigVecs_hL = (double*)malloc(Eig_NeV*size_per_Vec);
-    cudaMemcpy(eigVecs_hL, eigVecs_d, Eig_NeV*size_per_Vec, cudaMemcpyDeviceToHost);
+    double *eigVecs_hL = eigSol->getHEigVecs();
     PLEGMA_Vector<double> tmp1;
     PLEGMA_Vector<double> tmp2;
     PLEGMA_Vector<double> tmp3(NONE);
-    size_t vec_size = eigSol->getSize_per_Vec()*2;
     PLEGMA_printf("\n ### Smearing the eigenvectors ###\n\n");
     for(int i=0; i<Eig_NeV; i++){
-      tmp3.D_elem(eigSol->getEigVecs()+i*vec_size);
+      tmp3.D_elem(eigSol->getEigVecs()+i*size_per_Vec*2);
       tmp1.copy(tmp3);
       TIME(tmp2.gaussianSmearing(tmp1, smearedGauge, nsmearGauss, alphaGauss));
       tmp3.copy(tmp2);
     }
     double *eigVecs_hS;
-    eigVecs_hS = (double*)malloc(Eig_NeV*size_per_Vec);
-    cudaMemcpy(eigVecs_hS, eigVecs_d, Eig_NeV*size_per_Vec, cudaMemcpyDeviceToHost);
+    eigVecs_hS = (double*)malloc(Eig_NeV*vec_size);
+    cudaMemcpy(eigVecs_hS, eigVecs_d, Eig_NeV*vec_size, cudaMemcpyDeviceToHost);
     std::complex<double> spinEVals[12*Eig_NeV];
     double *spinEVals_d;
     size_t V4 = HGC_localVolume;
@@ -165,10 +168,10 @@ int main(int argc, char **argv) {
     for(int i=0; i<Eig_NeV; i++) {
       evals[i] = eigSol->getLittleD()[i*(Eig_NeV+1)];
     }
-    double spinVals[4*Eig_NeV*2];
+    double spinVals[Eig_NeV*2];
     double *spinVals_d, *source_d, *evecs_d;
     size_t V3 = V4/HGC_localL[3];
-    cudaMalloc((void**)&spinVals_d, 4*3*2*Eig_NeV*sizeof(double));
+    cudaMalloc((void**)&spinVals_d, 2*Eig_NeV*sizeof(double));
     cudaMalloc((void**)&source_d, 2*V3*sizeof(double));
     cudaMalloc((void**)&evecs_d, 2*Eig_NeV*V3*sizeof(double));
 
@@ -238,15 +241,15 @@ int main(int argc, char **argv) {
           PLEGMA_Gauge3D<double> smearedGauge3D;
           smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
-          cudaMemcpy(eigVecs_d, eigVecs_hS, nev*size_per_Vec, cudaMemcpyHostToDevice);
+          cudaMemcpy(eigVecs_d, eigVecs_hS, nev*vec_size, cudaMemcpyHostToDevice);
           // Inverting
           if(isUP){
             for(int spin = 0; spin < N_SPINS; spin++){
               for(int color = 0; color < N_COLS; color++){
                 for(int ivec = 0; ivec < nev; ivec++){
-                  tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/evals[ivec];
+                  tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS + color])/evals[ivec];
                 }
-                cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice); // Does it work to use nev here?
+                cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
 
                 cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs_d, spinEVals_d, b, vec.D_elem());
                 PLEGMA_Vector<float> vectorAuxF;
@@ -255,7 +258,7 @@ int main(int argc, char **argv) {
               }
             }
 
-            cudaMemcpy(eigVecs_d, eigVecs_hL, nev*size_per_Vec, cudaMemcpyHostToDevice);
+            cudaMemcpy(eigVecs_d, eigVecs_hL, nev*vec_size, cudaMemcpyHostToDevice);
             for(int spin = 0; spin < N_SPINS; spin++){
               for(int color = 0; color < N_COLS; color++){
                 cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs_d, spinEVals_d, b, vec.D_elem()); //Same calc with unsmeared sink
@@ -280,7 +283,7 @@ int main(int argc, char **argv) {
               }
             }
 
-            cudaMemcpy(eigVecs_d, eigVecs_hL, nev*size_per_Vec, cudaMemcpyHostToDevice);
+            cudaMemcpy(eigVecs_d, eigVecs_hL, nev*vec_size, cudaMemcpyHostToDevice);
             for(int spin = 0; spin < N_SPINS; spin++){
               for(int color = 0; color < N_COLS; color++){
                 cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs_d, spinEVals_d, b, vec.D_elem()); //Same calc with unsmeared sink
@@ -315,7 +318,6 @@ int main(int argc, char **argv) {
           bool computed_light = false;
           // If twop_filename exists we hold the computation of the light props
           if(access( twop_filename.c_str(), F_OK ) == -1) {
-            PLEGMA_printf("\nPropagator computation starts now!\n");
             TIME(computePropagator(propUP, propUP_SL, true, nsmearGauss, false));
             TIME(computePropagator(propDN, propDN_SL, false, nsmearGauss, false));
             computed_light = true;
@@ -346,11 +348,11 @@ int main(int argc, char **argv) {
                   }
                   PLEGMA_Propagator<float> seqProp;
                   // ensuring mu positive
-                  if(mu != run_mu) {
-                    updateOptions(LIGHT);
-                    mu = run_mu;
-                    solver.UpdateSolver();
-                  }
+                  // if(mu != run_mu) {
+                  //   updateOptions(LIGHT);
+                  //   mu = run_mu;
+                  //   solver.UpdateSolver();
+                  // }
                   
                   {
                     // 3D propagators at t_sink
@@ -364,7 +366,6 @@ int main(int argc, char **argv) {
                     for(int nu = 0 ; nu < 4 ; nu++)
                     for(int c2 = 0 ; c2 < 3 ; c2++){
                       PLEGMA_Vector<double> vectorInOut;
-                      PLEGMA_printf("\nConstructing sequential source nu=%d, c=%d\n", nu, c2);
                       {
                         // PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
                         PLEGMA_Vector3D<float> vectorAuxF;
@@ -386,38 +387,34 @@ int main(int argc, char **argv) {
 
 
                       // Projecting the source
-                      PLEGMA_printf("\nProjecting sequential source nu=%d, c=%d\n", nu, c2);
                       int my_it = tsinkMtsource - HGC_procPosition[3] * HGC_localL[3];
                       bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
                       
                       if(not proj_done) {
                         TIC();
                         if(not is_myIt) {
-                          memset(spinVals, 0, 4*nev*2*sizeof(double));
+                          memset(spinVals, 0, nev*2*sizeof(double));
                         } else {
                           // // Copy the non-zero part of the source
-                          PLEGMA_printf("\nCopy non-zero part\n");
                           double *dst = source_d;
-                          double *src = vectorInOut.D_elem() + nu*3*V3*2 + c2*V3*2;      // I think V4 shouldn't be here, because vectorInOut has fixed tsink already!
+                          double *src = vectorInOut.D_elem() + nu*3*V3*2 + c2*V3*2;
                           cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyDeviceToDevice);
                           checkCudaError();
                             
                           // Copy the needed part of the evecs
-                          PLEGMA_printf("\nCopy needed part of evecs\n");
                           for(int iv = 0 ; iv < nev ; iv++){
-                            double *dst = evecs_d + iv*3*V3*2;
+                            double *dst = evecs_d + iv*V3*2;
                             double *src = eigVecs_hS + iv*4*3*V4*2 + nu*3*V4*2 + c2*V4*2 + my_it*V3*2; // Currently evecs_d would be smeared. Is this correct?
                             cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyHostToDevice);
                           }
                           checkCudaError();
                   
-                          cuBLAS::gemv(DAGGER, 3*V3, nev, aP, evecs_d, source_d, b, spinVals_d+2*nev*nu);
+                          cuBLAS::gemv(DAGGER, V3, nev, aP, evecs_d, source_d, b, spinVals_d);
                           checkCudaError();
-                          PLEGMA_printf("\nCopy spinvals back to host\n");
-                          cudaMemcpy(spinVals, spinVals_d, 4*nev*2*sizeof(double), cudaMemcpyDeviceToHost);
+                          cudaMemcpy(spinVals, spinVals_d, nev*2*sizeof(double), cudaMemcpyDeviceToHost);
                           checkCudaError();
                         }
-                        MPI_Allreduce(MPI_IN_PLACE,spinVals,4*nev*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
+                        MPI_Allreduce(MPI_IN_PLACE,spinVals,nev*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
                         proj_done=true;
                         TOC("projecting the source");
                       }
@@ -425,21 +422,20 @@ int main(int argc, char **argv) {
 
                       // Copy the needed part of the evecs
                       for(int iv = 0 ; iv < nev ; iv++){
-                        double *dst = evecs_d + iv*3*V3*2;
+                        double *dst = evecs_d + iv*V3*2;
                         double *src = eigVecs_hL + iv*4*3*V4*2 + nu*3*V4*2 + c2*V4*2 + my_it*V3*2;
                         cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyHostToDevice);
                       }
                       checkCudaError();
 
                       // Building propagators
-                      PLEGMA_printf("\nBuilding propagators for sequential source nu=%d, c=%d\n", nu, c2);
                       TIC();
-                      std::complex<double> *vals = (std::complex<double> *) (spinVals+nu*nev*2);
+                      std::complex<double> *vals = (std::complex<double> *) (spinVals);
                       for(int i=0; i<nev; i++) {
                         tmp[i] = vals[i]/evals[i];
                       }
                       cudaMemcpy(spinVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
-                      cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, evecs_d, spinVals_d, b, vec.D_elem()); // Here evecs_d should be the unsmeared one, correct?
+                      cuBLAS::gemv(NOTRANS, V3, nev, aP, evecs_d, spinVals_d, b, vec.D_elem()); // Here evecs_d should be the unsmeared one, correct?
 
                       PLEGMA_Vector<float> vectorAuxF;
                       vectorAuxF.copy(vec);
@@ -453,7 +449,6 @@ int main(int argc, char **argv) {
                   seqProp.apply_gamma(G5);
                   seqProp.conjugate();
                       
-                  PLEGMA_printf("\nContracting propagators\n");
                   PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
               
                   // LOCAL contractions
@@ -490,7 +485,6 @@ int main(int argc, char **argv) {
                   THREAD(corr.writeFile( filename, corr_file_format));
                 };
 
-                PLEGMA_printf("\nComputation of three-point function starts now!\n");
                 if(nucleon == PROTON) {
                   TIME(computeThreep(-mu_ud, propUP, propDN, +1, propUP_SL, propDN_SL, "up"));
                   TIME(computeThreep( mu_ud, propUP, propUP, -1, propDN_SL, propUP_SL, "dn"));
