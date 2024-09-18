@@ -82,13 +82,13 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
 
 template<typename Float>
-void PLEGMA_Vector<Float>::copyToQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_to_QUDA(this->d_elem, *qudaVector, isEv);
+void PLEGMA_Vector<Float>::copyToQUDA(std::vector<ColorSpinorField>& qudaVector, bool isEv){
+  copy_to_QUDA(this->d_elem, (qudaVector), isEv);
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::copyFromQUDA(ColorSpinorField *qudaVector, bool isEv){
-  copy_from_QUDA(this->d_elem, *qudaVector, isEv);
+void PLEGMA_Vector<Float>::copyFromQUDA( std::vector<ColorSpinorField>& qudaVector, bool isEv){
+  copy_from_QUDA(this->d_elem, (qudaVector), isEv);
 }
 
 template<typename Float>
@@ -463,19 +463,19 @@ template class PLEGMA_Vector<double>;
 namespace plegma{
   
   template<typename Float>
-  void copyToQUDA(ColorSpinorField *qudaVector, Float* delem, bool isEv){
-    copy_to_QUDA(delem, *qudaVector, isEv);
+  void copyToQUDA(std::vector<ColorSpinorField>& qudaVector, Float* delem, bool isEv){
+    copy_to_QUDA(delem, qudaVector, isEv);
   }
-  template void copyToQUDA<float>(ColorSpinorField *qudaVector, float* delem, bool isEv);
-  template void copyToQUDA<double>(ColorSpinorField *qudaVector, double* delem, bool isEv);
+  template void copyToQUDA<float>(std::vector<ColorSpinorField>&qudaVector, float* delem, bool isEv);
+  template void copyToQUDA<double>(std::vector<ColorSpinorField>&qudaVector, double* delem, bool isEv);
 
   template<typename Float>
-  void copyFromQUDA(Float* delem, ColorSpinorField *qudaVector, bool isEv){
-    copy_from_QUDA(delem, *qudaVector, isEv);
+  void copyFromQUDA(Float* delem, std::vector<ColorSpinorField>&qudaVector, bool isEv){
+    copy_from_QUDA(delem, qudaVector, isEv);
   }
 
-  template void copyFromQUDA<float>(float* delem, ColorSpinorField *qudaVector, bool isEv);
-  template void copyFromQUDA<double>(double* delem, ColorSpinorField *qudaVector, bool isEv);
+  template void copyFromQUDA<float>(float* delem, std::vector<ColorSpinorField>& qudaVector, bool isEv);
+  template void copyFromQUDA<double>(double* delem, std::vector<ColorSpinorField>& qudaVector, bool isEv);
 
   //----------------------------------//
   // class PLEGMA_Vector3D //

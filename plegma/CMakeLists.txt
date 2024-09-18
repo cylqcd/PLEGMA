@@ -1,4 +1,6 @@
 set(PLEGMA_LIBS PLEGMA PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${CUDA_LIBS} cuda)
+include_directories(${QUDA_HOME}/_deps/eigen-src/)
+
 
 LIST(APPEND PLEGMA_LIBS ${MPI_CXX_LIBRARIES})
 
@@ -195,9 +197,6 @@ target_link_libraries(mesons_simple ${PLEGMA_LIBS})
 
 cuda_add_executable(Zfac_diagGI Zfac_diagGI.cpp)
 target_link_libraries(Zfac_diagGI ${PLEGMA_LIBS})
-
-cuda_add_executable(eigVecs eigVecs.cpp)
-target_link_libraries(eigVecs ${PLEGMA_LIBS})
 
 cuda_add_executable(pion_LowModeAvg pion_LowModeAvg.cpp)
 target_link_libraries(pion_LowModeAvg ${PLEGMA_LIBS})

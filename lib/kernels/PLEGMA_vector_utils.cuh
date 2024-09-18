@@ -142,26 +142,26 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
 }
 
 template<typename FloatIn, typename FloatOut> 
-static void copy_to_QUDA(FloatIn* in,ColorSpinorField &qudaVec, bool isEven){
+static void copy_to_QUDA(FloatIn* in, std::vector<ColorSpinorField>& qudaVec, bool isEven){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
+  if( (qudaVec[0]).SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) qudaVec.V(), NULL);
+      copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) (qudaVec[0]).data(), NULL);
     else
-      copy_to_QUDA<FloatIn,FloatOut,false,true><<<gridDim,blockDim>>>(in, NULL,(FloatOut*) qudaVec.V());
+      copy_to_QUDA<FloatIn,FloatOut,false,true><<<gridDim,blockDim>>>(in, NULL,(FloatOut*) (qudaVec[0]).data());
   } else
-    copy_to_QUDA<FloatIn,FloatOut,true,true><<<gridDim,blockDim>>>(in, (FloatOut*) qudaVec.Even().V(),(FloatOut*) qudaVec.Odd().V());
+    copy_to_QUDA<FloatIn,FloatOut,true,true><<<gridDim,blockDim>>>(in, (FloatOut*) (qudaVec[0]).Even().data(),(FloatOut*) (qudaVec[0]).Odd().data());
 }
 
 template<typename FloatIn> 
-static void copy_to_QUDA(FloatIn* in, ColorSpinorField &qudaVec, bool isEven){
-  if( qudaVec.Precision() == QUDA_SINGLE_PRECISION )
+static void copy_to_QUDA(FloatIn* in,std::vector<ColorSpinorField>& qudaVec, bool isEven){
+  if( (qudaVec[0]).Precision() == QUDA_SINGLE_PRECISION )
     copy_to_QUDA<FloatIn,float>(in, qudaVec, isEven);
-  else if ( qudaVec.Precision() == QUDA_DOUBLE_PRECISION )
+  else if ( (qudaVec[0]).Precision() == QUDA_DOUBLE_PRECISION )
     copy_to_QUDA<FloatIn,double>(in, qudaVec, isEven);
   else
-    PLEGMA_error("Precision %d not supported", qudaVec.Precision());
+    PLEGMA_error("Precision %d not supported", (qudaVec[0]).Precision());
 
   checkQudaError();
 }
@@ -208,25 +208,25 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
 }
 
 template<typename FloatOut, typename FloatIn> 
-static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
+static void copy_from_QUDA(FloatOut* out, std::vector<ColorSpinorField>& qudaVec, bool isEven){
   ProfileStruct ps(HGC_localVolume);
-  if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
+  if( (qudaVec[0]).SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) (qudaVec[0]).data(), (FloatIn*) NULL);
     else
-      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) (qudaVec[0]).data());
   } else
-    tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+    tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) (qudaVec[0]).Even().data(),(FloatIn*) (qudaVec[0]).Odd().data());
 }
 
 template<typename FloatOut> 
-static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
-  if( qudaVec.Precision() == QUDA_SINGLE_PRECISION )
+static void copy_from_QUDA(FloatOut* out, std::vector<ColorSpinorField> &qudaVec, bool isEven){
+  if( (qudaVec[0]).Precision() == QUDA_SINGLE_PRECISION )
     copy_from_QUDA<FloatOut,float>(out, qudaVec, isEven);
-  else if ( qudaVec.Precision() == QUDA_DOUBLE_PRECISION )
+  else if ( (qudaVec[0]).Precision() == QUDA_DOUBLE_PRECISION )
     copy_from_QUDA<FloatOut,double>(out, qudaVec, isEven);
   else
-    PLEGMA_error("Precision %d not supported", qudaVec.Precision());
+    PLEGMA_error("Precision %d not supported", (qudaVec[0]).Precision());
   
   checkQudaError();
 }

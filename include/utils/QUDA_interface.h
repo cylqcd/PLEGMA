@@ -17,7 +17,7 @@ namespace quda {
     QudaMultigridParam mg_param;
     Dirac *D, *DSloppy, *DPre;
     DiracMatrix *M, *MSloppy, *MPre;
-    ColorSpinorField *b, *x;
+    std::vector<ColorSpinorField> b, x;
 #ifdef QUDA_INCLUDES_COMMIT_775a033
     QudaEigParam *mg_eig_param;
 #endif
@@ -28,9 +28,9 @@ namespace quda {
     void UpdateSolver();
     QUDA_solver(double mu);
     virtual ~QUDA_solver();
-    ColorSpinorField* solve(ColorSpinorField * rhs);
+    std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
     template<typename Float>
-    ColorSpinorField* solve(PLEGMA_Vector<Float> &vectorIn);
+    std::vector<ColorSpinorField> solve(PLEGMA_Vector<Float> &vectorIn);
     template<typename Float>
     void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
     template<typename Float>
@@ -43,7 +43,7 @@ namespace quda {
     DiracParam dParam;
     QudaInvertParam inv_param;
     Dirac *D;
-    ColorSpinorField *in, *out;
+    std::vector<ColorSpinorField> in, out;
     template<APP_TYPE type> void apply();
   public:
      //only QUDA_WILSON_DSLASH, QUDA_CLOVER_WILSON_DSLASH, QUDA_TWISTED_MASS_DSLASH, QUDA_TWISTED_CLOVER_DSLASH

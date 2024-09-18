@@ -82,7 +82,7 @@ void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &
   double* buf[N_DIMS];
   for(int i=0; i<N_DIMS; i++) hostMalloc(buf[i], gaugeIn.Bytes_total()/N_DIMS);
   unpackGaugeToEvenOdd(buf, gaugeIn);
-  computeGaugeFixingOVRQuda(buf,type,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param,nullptr);
+  computeGaugeFixingOVRQuda(buf,type,maxiter,verbosePerSteps,overelaxPar,tolerance,reunit_interval,stop_theta,&gauge_param);
   packGaugeToNormal(gaugeOut,buf);
   gaugeOut.load();
   for(int i=0; i<N_DIMS; i++) hostFree(buf[i], gaugeIn.Bytes_total()/N_DIMS);
@@ -195,7 +195,7 @@ QUDA_solver::QUDA_solver(double mu) {
   // Create Solvers
   solverParam = new SolverParam(inv_param);
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-			  *MPre, *MPre, *profiler);
+			  *MPre, *MPre);
 
   quda::lat_dim_t X = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
 
@@ -203,8 +203,9 @@ QUDA_solver::QUDA_solver(double mu) {
 			    inv_param.input_location);
   ColorSpinorParam cudaParam(cpuParam, inv_param,inv_param.input_location);
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
-  b = new ColorSpinorField(cudaParam);
-  x = new ColorSpinorField(cudaParam);
+
+  b.push_back(ColorSpinorField(cudaParam));
+  x.push_back(ColorSpinorField(cudaParam));
 
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
@@ -221,8 +222,10 @@ QUDA_solver::~QUDA_solver(){
   delete solver;
   delete solverParam;
   delete profiler;
-  delete b;
-  delete x;
+  b.pop_back();
+  x.pop_back();
+  //delete b;
+  //delete x;
   delete M;
   delete MSloppy;
   delete MPre;
@@ -353,7 +356,7 @@ void QUDA_solver::UpdateSolver()
   solverParam = new SolverParam(inv_param);
   
   solver = Solver::create(*solverParam, *M, *MSloppy, 
-  			 *MPre, *MPre, *profiler);
+  			 *MPre, *MPre );
 
   profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+to_string(mu)).c_str();
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
@@ -361,13 +364,16 @@ void QUDA_solver::UpdateSolver()
   profiler->TPRESET();
 }
 
-ColorSpinorField *QUDA_solver::solve(ColorSpinorField * rhs){
+std::vector<ColorSpinorField> QUDA_solver::solve(std::vector<ColorSpinorField>&  rhs){
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
-  ColorSpinorField *in = NULL;
-  ColorSpinorField *out = NULL;
-  D->prepare(in,out,*x,*rhs,inv_param.solution_type);
-  (*solver)(*out, *in);
-  D->reconstruct(*x,*rhs,inv_param.solution_type);
+
+  ColorSpinorField in;
+  ColorSpinorField out;
+
+  D->prepare(out,in,x[0],rhs[0],inv_param.solution_type);
+
+  (*solver)(out, in);
+  D->reconstruct(x,rhs,inv_param.solution_type);
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();
@@ -376,7 +382,7 @@ ColorSpinorField *QUDA_solver::solve(ColorSpinorField * rhs){
 
 
 template<typename Float>
-ColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
+std::vector<quda::ColorSpinorField> QUDA_solver::solve(PLEGMA_Vector<Float> &vectorIn){
   bool flag_eo=false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
@@ -397,13 +403,14 @@ void QUDA_solver::solve(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &v
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
     vectorOut.scale(2*inv_param.kappa);
   }
+
 }
 
 template void QUDA_solver::solve(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
 template void QUDA_solver::solve(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
 
-template ColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
-template ColorSpinorField *QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
+template std::vector<ColorSpinorField> QUDA_solver::solve(PLEGMA_Vector<float> &vectorIn);
+template std::vector<ColorSpinorField> QUDA_solver::solve(PLEGMA_Vector<double> &vectorIn);
 
 template<typename Float>
 void QUDA_solver::runOneIter(PLEGMA_Vector<Float> &vectorOut, PLEGMA_Vector<Float> &vectorIn){
@@ -420,7 +427,7 @@ template void QUDA_solver::runOneIter(PLEGMA_Vector<double> &vectorOut, PLEGMA_V
 //######################### Quda Dirac operator class ################################
 
 QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
-  D(nullptr), in(nullptr), out(nullptr){
+  D(nullptr), in(), out(){
   if(dslashType != QUDA_WILSON_DSLASH
      && dslashType != QUDA_CLOVER_WILSON_DSLASH
      && dslashType != QUDA_TWISTED_MASS_DSLASH
@@ -439,24 +446,26 @@ QUDA_dirac::QUDA_dirac(QudaDslashType dslashType):
 			    inv_param.input_location);
   ColorSpinorParam cudaParam(cpuParam, inv_param,inv_param.input_location);
   cudaParam.create = QUDA_ZERO_FIELD_CREATE;
-  in = new ColorSpinorField(cudaParam);
-  out = new ColorSpinorField(cudaParam);
-  if(in->SiteSubset() != QUDA_FULL_SITE_SUBSET || out->SiteSubset() != QUDA_FULL_SITE_SUBSET)
-    PLEGMA_error("cudaColorSpinorField should be a full vector for this class");
+  in.push_back(ColorSpinorField(cudaParam));
+  out.push_back(ColorSpinorField(cudaParam));
+//  if(in[0]->SiteSubset() != QUDA_FULL_SITE_SUBSET || out[0]->SiteSubset() != QUDA_FULL_SITE_SUBSET)
+//    PLEGMA_error("cudaColorSpinorField should be a full vector for this class");
 }
 
 QUDA_dirac::~QUDA_dirac(){
   delete D;
-  delete in;
-  delete out;
+  in.pop_back();
+  out.pop_back();
+//  delete in;
+//  delete out;
 }
 
 template<APP_TYPE type> void QUDA_dirac::apply(){
   switch (type){
-  case(M): D->M(*out,*in); break;
-  case(Mdag): D->Mdag(*out,*in); break;
-  case(MdagM): D->MdagM(*out,*in);  break;
-  case(MMdag): D->MMdag(*out,*in); break;
+  case(M): D->M(out,in); break;
+  case(Mdag): D->Mdag(out,in); break;
+  case(MdagM): D->MdagM(out,in);  break;
+  case(MMdag): D->MMdag(out,in); break;
   }
 }
 
