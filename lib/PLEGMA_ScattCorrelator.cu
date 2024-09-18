@@ -1644,6 +1644,35 @@ void PLEGMA_ScattCorrelator<Float>::D1ii_diagrams(PLEGMA_ScattCorrelator<Float> 
   }
 
 }
+
+template<typename Float> 
+void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float>	&srcV3, 
+		                                  PLEGMA_ScattCorrelator<Float> &srcV2, 
+						  bool matrix, 
+						  int index_abs, 
+						  bool transp_source_sink, 
+						  int ig_i2, 
+						  bool transpgamma_i1, 
+						  bool transpgamma_f1, 
+						  bool oet, 
+						  bool threept,
+						  bool accum){
+
+  if(ig_i2 >= this->GList[3].size()) PLEGMA_error("ig_i2 = %d but Gi2 list size is %d\n", ig_i2, this->GList[3].size() );
+
+  this->clear_output(!accum, 5, ig_i2);
+
+  Float factor[2]={-1.,0.};//-1 from eqs. (20),(23), ....
+
+  if (matrix == true){
+     this->V3V2reduction_matrix( srcV3, srcV2, index_abs, transp_source_sink,i_gi2, transpgamma_i1, factor, transpgamma_f1, oet, threept);
+  }
+  else{
+     this->V3V2reduction( srcV3, srcV2, index_abs, transp_source_sink, ig_i2, transpgamma_i1, factor, transpgamma_f1, oet, threept);
+  }
+
+}
+
 template<typename Float>
 void PLEGMA_ScattCorrelator<Float>::B_diagrams(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum, bool oet, bool threept) {
 
@@ -3290,14 +3319,18 @@ void PLEGMA_ScattCorrelator<Float>::contractMesonThrp_local(PLEGMA_Vector<Float>
                        PLEGMA_Vector<Float> &fwdProp,
                        std::vector<GAMMAS_SCATT> gammas){
   this->shape = {(int) gammas.size()};
-  this->datasets = {"threep"};
-  this->groups =  {"Local"};
+//  this->datasets = {"threep"};
+//  if (this->groups.empty()){
+//    this->groups =  {"Local"};
+//  }
   this->description = getGammasString_scatt(gammas);
   this->initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
   PhixGxPhi_k<Float,Float>(*this,fwdProp, gammas, bwdProp);
+
+  this->apply_sign_transp(0);
 
 }
 

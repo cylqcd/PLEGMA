@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
 
   std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired={ID};
   std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired={ID};
-  std::vector<GAMMAS_SCATT> glist_insertion = {ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4};//,S12,S13,S23,S41,S42,S43};
+  std::vector<GAMMAS_SCATT> glist_insertion = {ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4,S_12,S_13,S_23,S_41,S_42,S_43};
 
   int n_stochastic_samples;
   int max_source_sink_separations;
@@ -350,8 +350,10 @@ int main(int argc, char **argv) {
       if (readStochSamples==0){
         
 	vectorSource_stochastic.stochastic_Z(nroots);
-        vectorSource_stochastic.unload();
-        vectorSource_stochastic.writeLIME("globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
+	PLEGMA_Vector<float> tempf;
+	tempf.copy(vectorSource_stochastic);
+	tempf.unload();
+        tempf.writeLIME("globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
 #if 0
 	PLEGMA_Vector<float> vectorRead(BOTH);
 	vectorRead.readFile("stochastic_source.0000.00000_plegma_conventions.lime",LIME_FORMAT);
@@ -361,17 +363,16 @@ int main(int argc, char **argv) {
 	vectorRead.unload();
         stochastic_sources[i]->copy(vectorRead,HOST);
 #endif
-        stochastic_sources[i]->copy(vectorSource_stochastic,HOST);
+        stochastic_sources[i]->copy(tempf,HOST);
 	vectorSource_stochastic.load();
       }
       else{
         std::string inputfilename="globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
         PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
-        PLEGMA_Vector<double> vectorRead(BOTH);
-        vectorRead.readFile(inputfilename,LIME_FORMAT);
-        stochastic_sources[i]->copy(vectorRead,HOST);
-        inputfilename="globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
 	PLEGMA_Vector<float> vectorFloat(BOTH);
+        vectorFloat.readFile(inputfilename,LIME_FORMAT);
+        stochastic_sources[i]->copy(vectorFloat,HOST);
+        inputfilename="globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
         PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
         vectorFloat.readFile(inputfilename,LIME_FORMAT);
         stochastic_propagator_2pt_SS[i]->copy(vectorFloat,HOST);
@@ -1128,7 +1129,7 @@ int main(int argc, char **argv) {
       } //end of for stochastic samples
 
 //      auto &momentum_i2 =  {0,0,0};//mpi2_twopt[0];
-      std::vector<int> momentum_i2= {1,0,0};
+      std::vector<int> momentum_i2= {0,0,0};
       //List of momenta corresponding to a fix value of p_i2
       momList filtered_sourcemomentumList_2pt_single = sourcemomentumList_twopt.extract(momentum_i2, 0);
 
@@ -1201,32 +1202,37 @@ int main(int argc, char **argv) {
 
       for (int i=0; i<n_stochastic_samples; ++i){
 
-        TIME(corrD1ii1.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V2_GAMMAF1D_U_2pt[i], NULL, 0, 1, true));
-        TIME(corrD1ii2.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V4_GAMMAF1U_D_2pt[i], NULL, 0, 2, true));
-        TIME(corrD1ii3.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V2_GAMMAF1D_U_2pt[i], NULL, 0, 3, true));
-        TIME(corrD1ii4.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V4_GAMMAF1U_D_2pt[i], NULL, 0, 4, true));
+        TIME(corrD1ii1.Recombination(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V2_GAMMAF1D_U_2pt[i], false, 0, false, 0, true, false, true));
+        TIME(corrD1ii2.Recombination(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V4_GAMMAF1U_D_2pt[i], false, 2, false, 0, true, true, true));
+	TIME(corrD1ii3.Recombination(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V2_GAMMAF1D_U_2pt[i], true, 1, false, 0, true, false, true));
+        TIME(corrD1ii4.Recombination(*reductions_UU_V3_GAMMAF2U_2pt[i], *reductions_UU_V4_GAMMAF1U_D_2pt[i], true, 0, false, 0, false, true, true));
 
-        TIME(corrD1ii9.D1ii_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i], *reductions_DD_V2_GAMMAF1U_U_2pt[i],NULL, 0, 9, true));
-        TIME(corrD1ii10.D1ii_diagrams(*reductions_DD_V3_GAMMAF2D_2pt[i], *reductions_DD_V2_GAMMAF1U_U_2pt[i],NULL, 0, 10, true));
+        TIME(corrD1ii9.Recombination( *reductions_DD_V3_GAMMAF2D_2pt[i], *reductions_DD_V2_GAMMAF1U_U_2pt[i], false, 2, true, 0, false, true, true));
+        TIME(corrD1ii10.Recombination(*reductions_DD_V3_GAMMAF2D_2pt[i], *reductions_DD_V2_GAMMAF1U_U_2pt[i], false, 0, false, 0,false, true, true));
 
-        TIME(corrD1ii13.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V4_GAMMAF1U_D_2pt[i],NULL, 0, 13, true));
-        TIME(corrD1ii14.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V4_GAMMAF1U_D_2pt[i],NULL, 0, 14, true));
-        TIME(corrD1ii15.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V2_GAMMAF1U_D_2pt[i],NULL, 0, 15, true));
-        TIME(corrD1ii16.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V2_GAMMAF1U_D_2pt[i],NULL, 0, 16, true));
+        TIME(corrD1ii13.Recombination(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V4_GAMMAF1U_D_2pt[i], false, 2, false, 0, true, false, true));
+        TIME(corrD1ii14.Recombination(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V4_GAMMAF1U_D_2pt[i], true, 0, false, 0, false, false, true));
+        TIME(corrD1ii15.Recombination(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V2_GAMMAF1U_D_2pt[i], false, 2, true, 0, true, false, true));
+        TIME(corrD1ii16.Recombination(*reductions_DD_V3_GAMMAF2U_2pt[i], *reductions_DD_V2_GAMMAF1U_D_2pt[i], true, 1, false, 0, false, false,true));
+
+
+
 #if defined (COMPUTEBACKWARD)
 
-        TIME(corrD1ii1_backward.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i], NULL, 0, 1, true));
-        TIME(corrD1ii2_backward.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i], NULL, 0, 2, true));
-        TIME(corrD1ii3_backward.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i], NULL, 0, 3, true));
-        TIME(corrD1ii4_backward.D1ii_diagrams(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i], NULL, 0, 4, true));
+        TIME(corrD1ii1_backward.Recombination(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i], false, 0, false, 0, true, false, true));
+        TIME(corrD1ii2_backward.Recombination(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i], false, 2, false, 0, true, true, true));
+        TIME(corrD1ii3_backward.Recombination(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i], true, 1, false, 0, true, false, true));
+        TIME(corrD1ii4_backward.Recombination(*reductions_UU_V3_GAMMAF2U_2pt_backward[i], *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i], true, 0, false, 0, false, true, true));
 
-        TIME(corrD1ii9_backward.D1ii_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i],NULL, 0, 9, true));
-        TIME(corrD1ii10_backward.D1ii_diagrams(*reductions_DD_V3_GAMMAF2D_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i],NULL, 0, 10, true));
+        TIME(corrD1ii9_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i], false, 2, true, 0, false, true, true));
+        TIME(corrD1ii10_backward.Recombination(*reductions_DD_V3_GAMMAF2D_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i], false, 0, false, 0,false, true, true));
 
-        TIME(corrD1ii13_backward.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V4_GAMMAF1U_D_2pt_backward[i],NULL, 0, 13, true));
-        TIME(corrD1ii14_backward.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V4_GAMMAF1U_D_2pt_backward[i],NULL, 0, 14, true));
-        TIME(corrD1ii15_backward.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_D_2pt_backward[i],NULL, 0, 15, true));
-        TIME(corrD1ii16_backward.D1ii_diagrams(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_D_2pt_backward[i],NULL, 0, 16, true));
+        TIME(corrD1ii13_backward.Recombination(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V4_GAMMAF1U_D_2pt_backward[i], false, 2, false, 0, true, false, true));
+        TIME(corrD1ii14_backward.Recombination(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V4_GAMMAF1U_D_2pt_backward[i], true, 0, false, 0, false, false, true));
+        TIME(corrD1ii15_backward.Recombination(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_D_2pt_backward[i], false, 2, true, 0, true, false, true));
+        TIME(corrD1ii16_backward.Recombination(*reductions_DD_V3_GAMMAF2U_2pt_backward[i], *reductions_DD_V2_GAMMAF1U_D_2pt_backward[i], true, 1, false, 0, false, false,true));
+
+
 
 #endif
       } //stochastic samples
@@ -1953,18 +1959,19 @@ int main(int argc, char **argv) {
             //V3
             TIME(reductionsV3_2pt.V3( stochastic_piece, glist_sink_meson, propTS_SS_packed, true));
 
-            TIME(corrB3_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 3, true));
-            TIME(corrB4_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 4, true));
-            TIME(corrB5_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 5, true));
-            TIME(corrB6_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 6, true));
+            TIME(corrB3_2pt.Recombination(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], false, 0, false, 0, true, false, true));
+            TIME(corrB4_2pt.Recombination(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], false, 2, false, 0, true, true,  true));
+            TIME(corrB5_2pt.Recombination(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], true,  1, false, 0, true, false, true));
+            TIME(corrB6_2pt.Recombination(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], true,  0, false, 0, false, true, true));
 #if defined (COMPUTEBACKWARD)
 
             TIME(reductionsV3_2pt.V3( stochastic_piece, glist_sink_meson, propTS_SS_packed_backward, true));
 
-	    TIME(corrB3_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample], 0, 3, true));
-            TIME(corrB4_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample], 0, 4, true));
-            TIME(corrB5_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample], 0, 5, true));
-            TIME(corrB6_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample], 0, 6, true));
+            TIME(corrB3_2pt_backward.Recombination(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample], false, 0, false, 0, true, false, true));
+            TIME(corrB4_2pt_backward.Recombination(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample], false, 2, false, 0, true, true,  true));
+            TIME(corrB5_2pt_backward.Recombination(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample], true,  1, false, 0, true, false, true));
+            TIME(corrB6_2pt_backward.Recombination(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample], true,  0, false, 0, false, true, true));
+
 #endif
 
 

@@ -262,6 +262,18 @@ namespace plegma {
 
     
     //diagrams
+    void Recombination(PLEGMA_ScattCorrelator<Float> &srcV3, 
+	               PLEGMA_ScattCorrelator<Float> &srcV2, 
+	               bool matrix, 
+		       int index_abs, 
+		       bool transp_source_sink, 
+		       int ig_i2, 
+		       bool transpgamma_i1, 
+		       bool transpgamma_f1, 
+		       bool oet=false, 
+		       bool threept=false, 
+		       bool accum=false);
+
     void B_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false, bool oet=false, bool threept=false );
     void W_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false, bool threept=false );
     void W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_f2, int diagram_index, bool accum=false);
