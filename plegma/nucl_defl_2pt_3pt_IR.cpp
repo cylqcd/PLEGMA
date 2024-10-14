@@ -1,10 +1,13 @@
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <PLEGMA_BLAS.h>
 
-std::vector<double> runtime;
-#define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;			\
-  PLEGMA_printf("TIME for "#fnc" %f sec\n", MPI_Wtime()-runtime.back()); \
+static std::vector<double> runtime;
+#define TIC()  runtime.push_back(MPI_Wtime())
+#define TOC(str)  PLEGMA_printf("TIME for %s %f sec\n", str, MPI_Wtime()-runtime.back()); \
   runtime.pop_back()
+
+#define TIME(fnc)  TIC(); fnc;	TOC(#fnc)
 
 std::vector<std::thread> threads;
 //#define THREAD(fnc) threads.push_back(std::thread([=]() { TIME(fnc); }))
@@ -18,7 +21,7 @@ static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "Eig-isAC
 					   "Eig-NkV", "Eig-logFile",
 #endif 
             "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
-					  "nsrc", "src-filename", "maxQsq", "rng-seed", "twop-filename", "corr-file-format", "corr-space", "tSinks","Projs", "threep-filename"};
+					  "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space", "tSinks", "Projs", "threep-filename"};
   
 int main(int argc, char **argv) {
   initializeOptions(argc, argv, true, listOpt);
@@ -43,8 +46,6 @@ int main(int argc, char **argv) {
     options.set("start-src", "The index of the source position where to start the calculation", verbosity, startSource);
 	};
 
-  std::string loopsPrefix="./";
-  HGC_options->set("output-path", "Path to the directory to dump results", verbosity, loopsPrefix);
   std::string Eig_outputFile = "./eigsVdagG5V.dat";
   HGC_options->set("Eig-outputFile", "Path to dump the eigenvalues and vdag g5 v if low-modes-recon is enabled",verbosity, Eig_outputFile);
   bool isReadEigenVecs = false, isWriteEigenVecs = false, isDeviceEigenVecs = false;
@@ -57,9 +58,6 @@ int main(int argc, char **argv) {
     int batched_rotate = 1;
     HGC_options->set("batched-rotate", "The size of the batch during Ritz rotation", verbosity, batched_rotate);
   #endif
-  int nroots=2;
-  int rand_seed1=1234;
-  HGC_options->set("seed1", "Seed for initialization of stochastic sources for the oet", verbosity, rand_seed1);
   std::vector<double> mus;
   HGC_options->set("extra-mu", "List of additional mu to run", verbosity, mus);
   std::vector<double> nevs;
@@ -72,7 +70,12 @@ int main(int argc, char **argv) {
   add_options(*HGC_options);
   if(prOrNt != "proton" && prOrNt != "neutron") PLEGMA_error("This exec is only for nucleon, %s is not allowed",prOrNt.c_str());
   //=========================================================================================================//
-  initializePLEGMA();
+  TIME(initializePLEGMA());
+
+  nevs.insert(nevs.begin(), Eig_NeV);
+  for(int inev=1; inev < nevs.size(); inev++){ // Loop over NeV
+    if(nevs[inev]>nevs[0]) PLEGMA_error("extra-nev can only be smaller");
+  }
 
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
@@ -130,46 +133,42 @@ int main(int argc, char **argv) {
     }
 
 
-    updateOptions(LIGHT);
-    TIME(QUDA_solver solver(mu));
+    // updateOptions(LIGHT);
+    // TIME(QUDA_solver solver(mu));
 
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
 
-    double aP[2]={1.,0.}, b[2]={0.,0.};
+    double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
 	  size_t size_per_Vec = eigSol->getSize_per_Vec();
-    PLEGMA_Vector<double> vec;
     
     // Smear the eigenvectors but also keep track of unsmeared ones
-    double eigVecsL[Eig_NeV];
-    double tmp0;
+    size_t vec_size = size_per_Vec*2*sizeof(double);
+    double *eigVecs_d = eigSol->getEigVecs();
+    double *eigVecs_hL = eigSol->getHEigVecs();
     PLEGMA_Vector<double> tmp1;
     PLEGMA_Vector<double> tmp2;
     PLEGMA_Vector<double> tmp3(NONE);
-    size_t vec_size = eigSol->getSize_per_Vec()*2;
+    PLEGMA_printf("\n ### Smearing the eigenvectors ###\n\n");
     for(int i=0; i<Eig_NeV; i++){
-      tmp0 = eigSol->getEigVecs()+i*vec_size;
-      eigVecsL[i] = *tmp0
-      tmp3.D_elem(tmp0);
+      tmp3.D_elem(eigSol->getEigVecs()+i*size_per_Vec*2);
       tmp1.copy(tmp3);
       TIME(tmp2.gaussianSmearing(tmp1, smearedGauge, nsmearGauss, alphaGauss));
       tmp3.copy(tmp2);
     }
-    double *eigVecs = eigSol->getEigVecs();
+    double *eigVecs_hS;
+    eigVecs_hS = (double*)malloc(Eig_NeV*vec_size);
+    cudaMemcpy(eigVecs_hS, eigVecs_d, Eig_NeV*vec_size, cudaMemcpyDeviceToHost);
     std::complex<double> spinEVals[12*Eig_NeV];
     double *spinEVals_d;
     size_t V4 = HGC_localVolume;
+    size_t V3 = V4/HGC_localL[3];
     cudaMalloc((void**)&spinEVals_d, 12*2*Eig_NeV*sizeof(double));
-    std::complex<double> evals[Eig_NeV], tmp[Eig_NeV];
+    std::complex<double> evals[Eig_NeV];
     for(int i=0; i<Eig_NeV; i++) {
       evals[i] = eigSol->getLittleD()[i*(Eig_NeV+1)];
     }
-    double spinVals[4*Eig_NeV*2];
-    double *spinVals_d, *source_d, *evecs_d;
-    size_t V3 = V4/HGC_localL[3];
-    cudaMalloc((void**)&spinVals_d, 4*2*Eig_NeV*sizeof(double));
-    cudaMalloc((void**)&source_d, 3*2*V3*sizeof(double));
-    cudaMalloc((void**)&evecs_d, 3*2*Eig_NeV*V3*sizeof(double));
+    PLEGMA_Vector<double> vec;
 
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
@@ -178,7 +177,6 @@ int main(int argc, char **argv) {
 		    isource, source[0], source[1], source[2], source[3]);
       updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
-      bool proj_done=false;
       bool all_exist=true;
       for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
         int nev = nevs[inev];
@@ -192,6 +190,8 @@ int main(int argc, char **argv) {
             all_exist=false;
       }
       if(all_exist) continue;
+
+      cudaMemcpy(eigVecs_d, eigVecs_hS, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
 
       // create prop up and dn
       memset(spinEVals, 0, 12*Eig_NeV*2*sizeof(double));
@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
         for(int ivec = 0; ivec < Eig_NeV; ivec++){
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
-              cudaMemcpy(spinEVals_d + (ivec*N_SPINS*N_COLS + spin*N_COLS+color)*2, eigVecs + (ivec*N_SPINS*N_COLS*V4 + (((spin+2)%N_SPINS)*N_COLS+color)*V4 + id)*2, 2*sizeof(double), cudaMemcpyDeviceToDevice); //((spin+2)%N_SPINS) because of gamma_5 
+              cudaMemcpy(spinEVals_d + (ivec*N_SPINS*N_COLS + spin*N_COLS+color)*2, eigVecs_d + (ivec*N_SPINS*N_COLS*V4 + (((spin+2)%N_SPINS)*N_COLS+color)*V4 + id)*2, 2*sizeof(double), cudaMemcpyDeviceToDevice); //((spin+2)%N_SPINS) because of gamma_5 
             }
           }
         }
@@ -226,6 +226,7 @@ int main(int argc, char **argv) {
       for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
         TIC();
         int nev = nevs[inev];
+        std::complex<double>tmp[nev];
 
         char * src_string;
         asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_nev%03d", source[0], source[1], source[2], source[3], nev);
@@ -233,50 +234,76 @@ int main(int argc, char **argv) {
         threep_filename = given_threep_filename + src_string;
         free(src_string);
 
-        auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL, bool isUP, int nSmear, bool finalize) { //What about WHICHFLAVOR fl? How does choosing a different flavor affect the computation?
+        auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS_UP, PLEGMA_Propagator<float>& prop_SL_UP, PLEGMA_Propagator<float>& prop_SS_DN, PLEGMA_Propagator<float>& prop_SL_DN, bool finalize) { //What about WHICHFLAVOR fl? How does choosing a different flavor affect the computation?
           PLEGMA_Gauge3D<double> smearedGauge3D;
           smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
-            // Inverting
-            if(isUP){
-              for(int spin = 0; spin < N_SPINS; spin++){
-                for(int color = 0; color < N_COLS; color++){
-                  for(int ivec = 0; ivec < nev; ivec++){
-                    tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/evals[ivec];
-                  }
-                  cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
-                  cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs, spinEVals_d, b, vec.D_elem());
-                  prop_SS.absorb(vec, spin, color);
-                  cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecsL, spinEVals_d, b, vec.D_elem()); //Same calc with unsmeared sink
-                  prop_SL.absorb(vec, spin, color);
-                }
+          // Inverting
+          cudaMemcpy(eigVecs_d, eigVecs_hS, nev*vec_size, cudaMemcpyHostToDevice);
+          for(int spin = 0; spin < N_SPINS; spin++){
+            for(int color = 0; color < N_COLS; color++){
+              for(int ivec = 0; ivec < nev; ivec++){
+                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS + color])/evals[ivec];
               }
-            }
-            else{
-              for(int spin = 0; spin < N_SPINS; spin++){
-                for(int color = 0; color < N_COLS; color++){
-                  for(int ivec = 0; ivec < nev; ivec++){
-                    tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/std::conj(evals[ivec]);
-                  }
-                  cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
-                  cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs, spinEVals_d, b, vec.D_elem());
-                  prop_SS.absorb(vec, spin, color);
-                  cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecsL, spinEVals_d, b, vec.D_elem());
-                  prop_SL.absorb(vec, spin, color);
-                }
-              }
-            }
-            
-            // Smearing the solution
-            // Is this still necessary to do? I believe the sink is already smeared for prop_SS
+              cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
 
+              cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem());
+              PLEGMA_Vector<float> vectorAuxF;
+              vectorAuxF.copy(vec);
+              prop_SS_UP.absorb(vectorAuxF, spin, color);
+            }
+          }
+
+          for(int spin = 0; spin < N_SPINS; spin++){
+            for(int color = 0; color < N_COLS; color++){
+              for(int ivec = 0; ivec < nev; ivec++){
+                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/std::conj(evals[ivec]);
+              }
+              cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+
+              cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem());
+              PLEGMA_Vector<float> vectorAuxF;
+              vectorAuxF.copy(vec);
+              prop_SS_DN.absorb(vectorAuxF, spin, color);
+            }
+          }
+
+          cudaMemcpy(eigVecs_d, eigVecs_hL, nev*vec_size, cudaMemcpyHostToDevice);
+          for(int spin = 0; spin < N_SPINS; spin++){
+            for(int color = 0; color < N_COLS; color++){
+              for(int ivec = 0; ivec < nev; ivec++){
+                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS + color])/evals[ivec];
+              }
+              cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+
+              cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem()); 
+              PLEGMA_Vector<float> vectorAuxF;
+              vectorAuxF.copy(vec);
+              prop_SL_UP.absorb(vectorAuxF, spin, color);
+            }
+          }
+
+          for(int spin = 0; spin < N_SPINS; spin++){
+            for(int color = 0; color < N_COLS; color++){
+              for(int ivec = 0; ivec < nev; ivec++){
+                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/std::conj(evals[ivec]);
+              }
+              cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+
+              cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem()); 
+              PLEGMA_Vector<float> vectorAuxF;
+              vectorAuxF.copy(vec);
+              prop_SL_DN.absorb(vectorAuxF, spin, color);
+            }
+          }
             
           if(finalize) {
-            prop_SS.rotateToPhysicalBase_device(run_mu/abs(run_mu));
-            prop_SS.applyBoundaries_device(source[DIM_T]);
+            prop_SS_UP.rotateToPhysicalBase_device(+1);
+            prop_SS_DN.rotateToPhysicalBase_device(-1);
+            prop_SS_UP.applyBoundaries_device(source[DIM_T]);
+            prop_SS_DN.applyBoundaries_device(source[DIM_T]);
           }
         };
-
 
         PLEGMA_Propagator<float> propUP;
         PLEGMA_Propagator<float> propDN;
@@ -287,12 +314,17 @@ int main(int argc, char **argv) {
           bool computed_light = false;
           // If twop_filename exists we hold the computation of the light props
           if(access( twop_filename.c_str(), F_OK ) == -1) {
-            TIME(computePropagator(propUP, propUP_SL, true, nsmearGauss, false));
-            TIME(computePropagator(propDN, propDN_SL, false, nsmearGauss, false));
+            TIME(computePropagator(propUP, propUP_SL, propDN, propDN_SL, false));
             computed_light = true;
           }
 	
           //#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
+            double spinVals[nev*2];
+            double *spinVals_d, *source_d, *evecs_d;
+            cudaMalloc((void**)&spinVals_d, 2*nev*sizeof(double));
+            // cudaMalloc((void**)&source_d, 2*V3*sizeof(double));
+            cudaMalloc((void**)&evecs_d, 12*2*nev*V3*sizeof(double));
+
             for(size_t its = 0; its < tSinks.size(); its++){
               int tsinkMtsource = tSinks[its];
               if(tsinkMtsource >= HGC_totalL[3])
@@ -311,100 +343,119 @@ int main(int argc, char **argv) {
                     return;
                   }
                   if(not computed_light) {
-                    TIME(computePropagator(propUP, propUP_SL, true, nsmearGauss, false));
-                    TIME(computePropagator(propDN, propDN_SL, false, nsmearGauss, false));
+                    TIME(computePropagator(propUP, propUP_SL, propDN, propDN_SL, false));
                     computed_light = true;
                   }
                   PLEGMA_Propagator<float> seqProp;
-                  // ensuring mu positive
-                  if(mu != run_mu) {
-                    updateOptions(LIGHT);
-                    mu = run_mu;
-                    solver.UpdateSolver();
-                  }
-                  
+                  cudaMemcpy(eigVecs_d, eigVecs_hL, nev*vec_size, cudaMemcpyHostToDevice);
+        
                   {
                     // 3D propagators at t_sink
                     PLEGMA_Propagator3D<float> prop13D;
                     PLEGMA_Propagator3D<float> prop23D;
                     prop13D.absorb(prop1, global_fixSinkTime);
                     prop23D.absorb(prop2, global_fixSinkTime);
-                    PLEGMA_Gauge3D<double> smearedGauge3D_sink;
-                    smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
+                    // PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+                    // smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
+
+                    PLEGMA_Vector3D<double> vectorAuxD;
+                    PLEGMA_Vector3D<float> vectorAuxF3D;
+                    PLEGMA_Vector<float> vectorAuxF;
 
                     for(int nu = 0 ; nu < 4 ; nu++)
                     for(int c2 = 0 ; c2 < 3 ; c2++){
-                      PLEGMA_Vector<double> vectorInOut;
+
+                      // PLEGMA_Vector<double> vectorInOut;
                       {
-                        PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
-                        PLEGMA_Vector3D<float> vectorAuxF;
+                        // PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
                         if(&prop1 != &prop2)
-                          vectorAuxF.seqSourceNucleon(prop13D, prop23D, get_projector(Projs[iproj]), nucleon, nu, c2);
+                          vectorAuxF3D.seqSourceNucleon(prop13D, prop23D, get_projector(Projs[iproj]), nucleon, nu, c2);
                         else
-                          vectorAuxF.seqSourceNucleon(prop13D, get_projector(Projs[iproj]), nucleon, nu, c2);
-                          
+                          vectorAuxF3D.seqSourceNucleon(prop13D, get_projector(Projs[iproj]), nucleon, nu, c2);
+                    
                         // put a momentum in the sink later
-                        vectorAuxF.conjugate();
-                        vectorAuxF.apply_gamma(G5); //Careful with g5 here! Must apply it correctly!
-                        vectorAuxD1.copy(vectorAuxF);
-                        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
-                        vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+                        vectorAuxF3D.conjugate();
+                        // vectorAuxF3D.apply_gamma(G5); // I think this cancels with the G5 from the left eigenvectors
+                        vectorAuxD.copy(vectorAuxF3D);
+                        // TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
+                        // vectorInOut.absorb(vectorAuxD, global_fixSinkTime);
+                      }
+                      if(nu==0 && c2==0){
+                        vectorAuxD.unload();
+                        vectorAuxD.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxD.h5");
                       }
                       //Invert
-                      ////////////////////TODO//////////////////////////////
-
-
                       // Projecting the source
-                      if(not proj_done) {
-                        TIC();
-                        int my_it = tsinkMtsource - HGC_procPosition[3] * HGC_localL[3];
-                        bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-
-                        if(not is_myIt) {
-                          memset(spinVals, 0, 4*nev*2*sizeof(double));
-                        } else {
-                          // Copy the non-zero part of the source
-                          double *dst = source_d + c2*V3*2;
-                          double *src = vectorInOut.D_elem() + c2*V4*2 + my_it*V3*2;      // I think V4 shouldn't be here, because vectorInOut has fixed tsink already!
-                          cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyDeviceToDevice);
-                          checkCudaError();
-                            
-                          // Copy the needed part of the evecs
-                          for(int iv = 0 ; iv < nev ; iv++){
-                            double *dst = evecs_d + iv*3*V3*2  + c2*V3*2;
-                            double *src = eigVecs + iv*4*3*V4*2 + nu*3*V4*2 + c2*V4*2 + my_it*V3*2;
-                            cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyDeviceToDevice);
+                      int my_it = global_fixSinkTime - HGC_procPosition[3] * HGC_localL[3];
+                      bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+                      
+                      TIC();
+                      if(not is_myIt) {
+                        memset(spinVals, 0, nev*2*sizeof(double));
+                      } else {
+                        // Copy the non-zero part of the source
+                        // double *dst = source_d;
+                        // double *src = vectorAuxD.D_elem() + nu*3*V3*2 + c2*V3*2;
+                        // cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyDeviceToDevice);
+                        // checkCudaError();
+                          
+                        // Copy the needed part of the evecs
+                        for(int iv = 0 ; iv < nev ; iv++){
+                          for (int spinindex=0; spinindex<4; ++spinindex){
+                            for(int c1 = 0 ; c1 < N_COLS ; c1++){
+                              double *dst = evecs_d + iv*4*3*V3*2 + spinindex*3*V3*2 + c1*V3*2;
+                              double *src = eigVecs_hS + iv*4*3*V4*2 + spinindex*3*V4*2 + c1*V4*2 + my_it*V3*2;
+                              cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyHostToDevice);
+                            }
                           }
-                          checkCudaError();
-                  
-                          cuBLAS::gemv(DAGGER, 3*V3, nev, aP, evecs_d, source_d, b, spinVals_d+2*nev*nu);
-                          checkCudaError();
-                          cudaMemcpy(spinVals, spinVals_d, 4*nev*2*sizeof(double), cudaMemcpyDeviceToHost);
-                          checkCudaError();
-                        }
-                        MPI_Allreduce(MPI_IN_PLACE,spinVals,4*nev*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
-                        proj_done=true;
-                        TOC("projecting the source");
+                        }  
+                        checkCudaError();
+
+                        cuBLAS::gemv(DAGGER, 12*V3, nev, aP, evecs_d, vectorAuxD.D_elem(), b, spinVals_d);
+                        checkCudaError();
+                        cudaMemcpy(spinVals, spinVals_d, nev*2*sizeof(double), cudaMemcpyDeviceToHost);
+                        checkCudaError();
                       }
+                      MPI_Allreduce(MPI_IN_PLACE,spinVals,nev*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
+                      TOC("projecting the source");
                       checkCudaError();
+
+                      // if(nu==0 && c2==0){
+                      //   PLEGMA_printf("spinVals:\n");
+                      //   for(int i=0; i<2*nev; i++){
+                      //     PLEGMA_printf("%e\n", spinVals[i]);
+                      //   }
+                      // }
 
                       // Building propagators
                       TIC();
-                      std::complex<double> *vals = (std::complex<double> *) (spinVals+nu*nev*2);
                       for(int i=0; i<nev; i++) {
-                        tmp[i] = vals[i]/evals[i];
+                        evals[i].imag(run_mu);
                       }
-                      cudaMemcpy(spinVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
-                      cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs, spinVals_d, b, vec.D_elem());
-                      
+                      std::complex<double> *vals = (std::complex<double> *) (spinVals);
+                      // if(fl=="up") {
+                      for(int i=0; i<nev; i++) {
+                        vals[i] /= evals[i];
+                      }
+                      // }
+                      // else if(fl=="dn"){
+                      //   for(int i=0; i<nev; i++) {
+                      //     tmp[i] = vals[i]/std::conj(evals_test[i]);
+                      //   }
+                      // }
+                      // else {
+                      //   PLEGMA_error("Flavor %s not recognized",fl.c_str());
+                      // }
+                      cudaMemcpy(spinVals_d, vals, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+                      cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinVals_d, b, vec.D_elem());
 
-                      PLEGMA_Vector<float> vectorAuxF;
                       vectorAuxF.copy(vec);
+                      if(nu==0 && c2==0){
+                        vectorAuxF.unload();
+                        vectorAuxF.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxF.h5");
+                      }
                       seqProp.absorb(vectorAuxF, nu, c2);
                       TOC("building propagators");
-
-
-                      //////////////////////////////////////////////////////////////
                     }
                   }
                   seqProp.apply_gamma(G5);
@@ -445,6 +496,7 @@ int main(int argc, char **argv) {
                   corr.setDatasets((std::vector<std::string>) {"threep_OS"});
                   THREAD(corr.writeFile( filename, corr_file_format));
                 };
+
                 if(nucleon == PROTON) {
                   TIME(computeThreep(-mu_ud, propUP, propDN, +1, propUP_SL, propDN_SL, "up"));
                   TIME(computeThreep( mu_ud, propUP, propUP, -1, propDN_SL, propUP_SL, "dn"));
@@ -454,7 +506,7 @@ int main(int argc, char **argv) {
                 }
               }
             }
-          #endif
+          //#endif
         }
         // If twop_filename exists we skip the rest
         if(access( twop_filename.c_str(), F_OK ) != -1) {
@@ -469,207 +521,34 @@ int main(int argc, char **argv) {
         
         {
           PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-          TIME(corr.contractMesonsNew(propUP, propDN));
-          char *dset;
-          asprintf(&dset, "twop_mesons_new_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
-          corr.setDatasets((std::vector<std::string>) {dset});
-          free(dset);
-          THREAD(corr.writeFile(twop_filename, corr_file_format));
+          // TIME(corr.contractMesonsNew(propUP, propDN));
+          // char *dset;
+          // asprintf(&dset, "twop_mesons_new_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
+          // corr.setDatasets((std::vector<std::string>) {dset});
+          // free(dset);
+          // THREAD(corr.writeFile(twop_filename, corr_file_format));
 
-          TIME(corr.contractMesonsNew(propUP, propUP));
-          asprintf(&dset, "twop_mesons_new_u[%+1.1e]u[%+1.1e]", mu_ud, mu_ud);
-          corr.setDatasets((std::vector<std::string>) {dset});
-          free(dset);
-          THREAD(corr.writeFile(twop_filename, corr_file_format));
+          // TIME(corr.contractMesonsNew(propUP, propUP));
+          // asprintf(&dset, "twop_mesons_new_u[%+1.1e]u[%+1.1e]", mu_ud, mu_ud);
+          // corr.setDatasets((std::vector<std::string>) {dset});
+          // free(dset);
+          // THREAD(corr.writeFile(twop_filename, corr_file_format));
 
-          TIME(corr.contractMesonsNew(propDN, propDN));
-          asprintf(&dset, "twop_mesons_new_d[%+1.1e]d[%+1.1e]", -mu_ud, -mu_ud);
-          corr.setDatasets((std::vector<std::string>) {dset});
-          free(dset);
-          THREAD(corr.writeFile(twop_filename, corr_file_format));
-
+          // TIME(corr.contractMesonsNew(propDN, propDN));
+          // asprintf(&dset, "twop_mesons_new_d[%+1.1e]d[%+1.1e]", -mu_ud, -mu_ud);
+          // corr.setDatasets((std::vector<std::string>) {dset});
+          // free(dset);
+          // THREAD(corr.writeFile(twop_filename, corr_file_format));
           
           TIME(corr.contractBaryons(propUP, propDN));
           THREAD(corr.writeFile(twop_filename, corr_file_format));
-        }
-
-        //D diagram
-        if(false){
-          std::vector<GAMMAS_SCATT> glist_source_delta={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
-          std::vector<GAMMAS_SCATT> glist_sink_delta={CG_1,CG_2,CG_3,CG_1_G_4,CG_2_G_4,CG_3_G_4};
-          std::vector<GAMMAS_SCATT> glist_source_delta_unpaired={ID};
-          std::vector<GAMMAS_SCATT> glist_sink_delta_unpaired={ID};
-          site source0=site({0,0,0,source[3]});
-          PLEGMA_ScattCorrelator<float> reductionsT1(source0, 3);
-          PLEGMA_ScattCorrelator<float> reductionsT2(source0, 3);
-          momList list_mtot(1,{reductionsT1.getMomList(),},{0,});
-          PLEGMA_ScattCorrelator<float> corrD(source, list_mtot);
-
-          //initialize diagram
-          corrD.initialize_diagram( glist_source_delta_unpaired, glist_sink_delta_unpaired, glist_source_delta, glist_sink_delta,"D");
-          TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
-          TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propUP, propUP));
-
-          //write D
-          asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d", source[0], source[1], source[2], source[3]);
-          auto outfilename = given_twop_filename + "D" + src_string + ".h5";
-          free(src_string);
-          
-          TIME( corrD.D_diagramms( reductionsT1, reductionsT2 ));
-          TIME( corrD.apply_phase() );
-          TIME( corrD.apply_sign("D") );
-          TIME( corrD.applyBoundaryConditions( true ) );
-          TIME( corrD.writeHDF5(outfilename) );
-        }
-
-        // Storing only the smaller and then computing on the fly the other
-        int nSmaller = std::min(mu_s.size(),mu_c.size());
-        char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
-        
-        PLEGMA_Propagator<float> none(NONE);
-        PLEGMA_Propagator<float> propS[nSmaller];
-        for(int ismall=0; ismall < nSmaller; ismall++) {
-          for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
-            double run_mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
-            int nsmear = (cSmaller=='s') ? nsmearGauss_s : nsmearGauss_c;
-            TIME(computePropagator(propS[ismall], none, run_mu, (cSmaller=='s') ? STRANGE : CHARM, nsmear, true));
-        }
-        
-        int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
-        if(nLarger > 0) {
-          PLEGMA_Propagator<float> propL;
-          for(int ilarge=0; ilarge < nLarger; ilarge++) {
-            double run_mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
-            int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
-            TIME(computePropagator(propL, none, run_mu, (cSmaller!='s') ? STRANGE : CHARM, nsmear, true));
-
-            if(nSmaller>0) {
-              for(int ismall=0; ismall < nSmaller; ismall++) {
-                PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
-                PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
-                PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-                bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
-                bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
-                #ifdef PLEGMA_UDSC_BARYONS
-                  TIME(corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch));
-                  char * group;
-                
-                  asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]s[%+1.1e]c[%+1.1e]%s%s", mu_ud, -1*mu_ud, mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge],
-                    only_st ? "_only-s" : "", only_ch ? "_only-c" : "");
-                  corr.setGroups(group);
-                  free(group);
-                  THREAD(corr.writeFile(twop_filename, corr_file_format));
-                #endif
-                TIME(corr.contractMesonsNew(propST, propCH));
-                char *dset;
-                asprintf(&dset, "twop_mesons_new_s[%+1.1e]c[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
-                corr.setDatasets((std::vector<std::string>) {dset});
-                free(dset);
-                THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-                TIME(corr.contractMesonsNew(propST, propST));
-                asprintf(&dset, "twop_mesons_new_s[%+1.1e]s[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_s[cSmaller=='s'? ismall:ilarge]);
-                corr.setDatasets((std::vector<std::string>) {dset});
-                free(dset);
-                THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-                TIME(corr.contractMesonsNew(propCH, propCH));
-                asprintf(&dset, "twop_mesons_new_c[%+1.1e]c[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_c[cSmaller=='c'? ismall:ilarge]);
-                corr.setDatasets((std::vector<std::string>) {dset});
-                free(dset);
-                THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-                if(!only_ch) {
-                  TIME(corr.contractMesonsNew(propST, propUP));
-                  asprintf(&dset, "twop_mesons_new_s[%+1.1e]u[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], mu_ud);
-                  corr.setDatasets((std::vector<std::string>) {dset});
-                  free(dset);
-                  THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-                  TIME(corr.contractMesonsNew(propST, propDN));
-                  asprintf(&dset, "twop_mesons_new_s[%+1.1e]d[%+1.1e]", mu_s[cSmaller=='s'? ismall:ilarge], -mu_ud);
-                  corr.setDatasets((std::vector<std::string>) {dset});
-                  free(dset);
-                  THREAD(corr.writeFile(twop_filename, corr_file_format));
-                }
-
-                if(!only_st) {
-                  TIME(corr.contractMesonsNew(propCH, propUP));
-                  asprintf(&dset, "twop_mesons_new_c[%+1.1e]u[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], mu_ud);
-                  corr.setDatasets((std::vector<std::string>) {dset});
-                  free(dset);
-                  THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-                  TIME(corr.contractMesonsNew(propCH, propDN));
-                  asprintf(&dset, "twop_mesons_new_c[%+1.1e]d[%+1.1e]", mu_c[cSmaller=='c'? ismall:ilarge], -mu_ud);
-                  corr.setDatasets((std::vector<std::string>) {dset});
-                  free(dset);
-                  THREAD(corr.writeFile(twop_filename, corr_file_format));
-                }
-              }
-            } else {
-              PLEGMA_Propagator<float> none(NONE);
-              PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? none : propL;
-              PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? none : propL;
-              PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-              bool only_st = (ilarge>0 && cSmaller!='s');
-              bool only_ch = (ilarge>0 && cSmaller!='c');
-              #ifdef PLEGMA_UDSC_BARYONS
-                TIME(corr.contractBaryonsUDSC(propUP, propDN, propST, propCH, only_st, only_ch));
-                char * group;
-
-                if(cSmaller=='s') {
-                  asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]c[%+1.1e]%s", mu_ud, -1*mu_ud, mu_c[ilarge], only_ch ? "_only-c" : "");
-                } else {
-                  asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]s[%+1.1e]%s", mu_ud, -1*mu_ud, mu_s[ilarge], only_st ? "_only-s" : "");
-                }
-                corr.setGroups(group);
-                free(group);
-                THREAD(corr.writeFile(twop_filename, corr_file_format));
-              #endif
-              if(!only_ch && !only_st) {
-                TIME(corr.contractMesonsNew((cSmaller=='s') ? propCH : propST, propUP));
-                char *dset;
-                if(cSmaller=='s') {
-                  asprintf(&dset, "twop_mesons_new_c[%+1.1e]u[%+1.1e]", mu_c[ilarge], mu_ud);
-                } else {
-                  asprintf(&dset, "twop_mesons_new_s[%+1.1e]u[%+1.1e]", mu_s[ilarge], mu_ud);
-                }
-                corr.setDatasets((std::vector<std::string>) {dset});
-                free(dset);
-                THREAD(corr.writeFile(twop_filename, corr_file_format));
-                
-                TIME(corr.contractMesonsNew((cSmaller=='s') ? propCH : propST, propDN));
-                if(cSmaller=='s') {
-                  asprintf(&dset, "twop_mesons_new_c[%+1.1e]d[%+1.1e]", mu_c[ilarge], -mu_ud);
-                } else {
-                  asprintf(&dset, "twop_mesons_new_s[%+1.1e]d[%+1.1e]", mu_s[ilarge], -mu_ud);		
-                }
-                corr.setDatasets((std::vector<std::string>) {dset});
-                free(dset);
-                THREAD(corr.writeFile(twop_filename, corr_file_format));
-              }
-            }
-          }
-        } else {
-          #ifdef PLEGMA_UDSC_BARYONS
-            PLEGMA_Propagator<float> none(NONE);
-            PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-            TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
-            char * group;
-            
-            asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
-            corr.setGroups(group);
-            free(group);
-            THREAD(corr.writeFile(twop_filename, corr_file_format));
-          #endif
         }
       }
     }
     while(not threads.empty()) {threads.back().join(); threads.pop_back();}
   }
 
-  //finalize();
+  finalize();
   return 0;
 }
 

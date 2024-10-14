@@ -58,8 +58,11 @@ target_link_libraries(pion_defl_IR ${PLEGMA_LIBS})
 cuda_add_executable(nucl_defl_IR nucl_defl_IR.cpp)
 target_link_libraries(nucl_defl_IR ${PLEGMA_LIBS})
 
-cuda_add_executable(nucl_defl_2pt_3pt_IR nucl_defl_2pt_3pt_IR_test.cpp)
+cuda_add_executable(nucl_defl_2pt_3pt_IR nucl_defl_2pt_3pt_IR.cpp)
 target_link_libraries(nucl_defl_2pt_3pt_IR ${PLEGMA_LIBS})
+
+cuda_add_executable(nucl_defl_2pt_3pt_IR_cross_check nucl_defl_2pt_3pt_IR_cross_check.cpp)
+target_link_libraries(nucl_defl_2pt_3pt_IR_cross_check ${PLEGMA_LIBS})
 
 cuda_add_executable(pion_defl_IR_opt pion_defl_IR_opt.cpp)
 target_link_libraries(pion_defl_IR_opt ${PLEGMA_LIBS})

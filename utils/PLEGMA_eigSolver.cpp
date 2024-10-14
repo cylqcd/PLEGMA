@@ -818,4 +818,47 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
    
  }
 
+void EigSolver::solve(PLEGMA_Vector<double> &inOut, double mu) { // Construct 1/lambda v v^dagger eta
+  inOut.apply_gamma5();
+  std::complex<double> evals[p.NeV];
+  for(int i=0; i<p.NeV; i++) {
+    evals[i] = littleD[i*(p.NeV+1)];
+    evals[i].imag(mu);
+  }
+
+  double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
+  std::complex<double> h_out[p.NeV];
+  if(p.deviceAlloc) {
+    double *d_out = nullptr;
+    cudaMalloc((void**)&d_out, p.NeV*2*sizeof(double));
+    cudaMemset(d_out, 0, p.NeV*2*sizeof(double));
+    cuBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, d_eigVecs, inOut.D_elem(), b, d_out, (double*) h_out, HGC_fullComm);
+
+    PLEGMA_printf("spinVals:\n");
+    for(int i=0; i<p.NeV; i++){
+      PLEGMA_printf("%e+%e\n", h_out[i].real(), h_out[i].imag());
+    }
+
+    for (int i = 0; i < p.NeV; i++) {
+        h_out[i] /= evals[i];
+    }
+    cudaMemcpy(d_out, h_out, p.NeV*2*sizeof(double), cudaMemcpyHostToDevice);
+
+    cuBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, d_eigVecs, d_out, b, inOut.D_elem());
+
+    cudaFree(d_out);
+  } else {
+    if(!inOut.IsAllocHost()) PLEGMA_error("This functions needs the vec to have also Host allocation");
+    inOut.unload();
+    memset(h_out,0,p.NeV*2*sizeof(double));
+    cBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, h_eigVecs, inOut.H_elem(), b, (double*) h_out, HGC_fullComm);
+    for (int i = 0; i < p.NeV; i++) {
+        h_out[i] /= evals[i];
+    }
+    cBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, h_eigVecs, (double*) h_out, b, inOut.H_elem());
+
+    inOut.load();
+  }
+}
+
 #endif

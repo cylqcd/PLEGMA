@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
 
-    double aP[2]={1.,0.}, b[2]={0.,0.};
+    double aP[2]={1.,0.}, b[2]={0.,0.}, aM[2]={-1.,0.};
 	  size_t size_per_Vec = eigSol->getSize_per_Vec();
     PLEGMA_Vector<double> vec;
     PLEGMA_Propagator<double> propUP;
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
               // PLEGMA_printf("%f\n", tmp[ivec]);
             }
             cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
-            cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs, spinEVals_d, b, vec.D_elem());
+            cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs, spinEVals_d, b, vec.D_elem());
             propUP.absorb(vec, spin, color);
             // if(spin==0 && color==0){
             //   vec.unload();
@@ -273,7 +273,7 @@ int main(int argc, char **argv)
               // PLEGMA_printf("%f\n", tmp[ivec]);
             }
             cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
-            cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aP, eigVecs, spinEVals_d, b, vec.D_elem());
+            cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs, spinEVals_d, b, vec.D_elem());
             propDN.absorb(vec, spin, color);
           }
         }

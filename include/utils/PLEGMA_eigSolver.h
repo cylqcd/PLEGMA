@@ -131,6 +131,7 @@ namespace plegma{
     ~EigSolver();
     void projectVector(PLEGMA_Vector<double> &vecOut, PLEGMA_Vector<double> &vecIn);
     void projectVector(PLEGMA_Vector<double> &vec, double* spinVals=nullptr, int global_t=-1, int spin=-1, int col=-1);
+    void solve(PLEGMA_Vector<double> &inOut, double mu);
     void dumpEvalsVdagG5V(std::string filename);
     double* getEigVecs() const{return p.deviceAlloc ? d_eigVecs : h_eigVecs;}
     double* getHEigVecs() const{return h_eigVecs;}

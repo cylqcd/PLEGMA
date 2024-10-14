@@ -232,7 +232,7 @@ void PLEGMA_Field<Float>::create_device(){
  #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
   HGC_deviceMemory += Bytes_total_plus_ghost()/(1024.*1024.);          
-  if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
+  if(HGC_verbosity>2) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
  #endif
   zero_device();
  #ifdef GPU_DIRECT
@@ -285,7 +285,7 @@ void PLEGMA_Field<Float>::destroy_device(){
   d_elem = NULL;
  #ifdef DEVICE_MEMORY_REPORT
   HGC_deviceMemory -= Bytes_total_plus_ghost()/(1024.*1024.);
-  if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
+  if(HGC_verbosity>2) PLEGMA_printf("Device memory in use is %f MB D PLEGMA\n",HGC_deviceMemory);
  #endif
  #ifdef GPU_DIRECT
     cudaFree(d_ext_ghost); d_ext_ghost=NULL;
