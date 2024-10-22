@@ -159,17 +159,40 @@ int main(int argc, char **argv) {
     double *eigVecs_hS;
     eigVecs_hS = (double*)malloc(Eig_NeV*vec_size);
     cudaMemcpy(eigVecs_hS, eigVecs_d, Eig_NeV*vec_size, cudaMemcpyDeviceToHost);
+    checkCudaError();
     std::complex<double> spinEVals[12*Eig_NeV];
     double *spinEVals_d;
     size_t V4 = HGC_localVolume;
     size_t V3 = V4/HGC_localL[3];
     cudaMalloc((void**)&spinEVals_d, 12*2*Eig_NeV*sizeof(double));
+    checkCudaError();
     std::complex<double> evals[Eig_NeV];
     for(int i=0; i<Eig_NeV; i++) {
       evals[i] = eigSol->getLittleD()[i*(Eig_NeV+1)];
     }
     PLEGMA_Vector<double> vec;
 
+    std::complex<double>tmp[Eig_NeV];
+    double spinVals[Eig_NeV*2];
+    double *spinVals_d, *evecs_d;
+    cudaMalloc((void**)&spinVals_d, 2*Eig_NeV*sizeof(double));
+    checkCudaError();
+    cudaMalloc((void**)&evecs_d, 12*2*Eig_NeV*V3*sizeof(double));
+    checkCudaError();
+
+    PLEGMA_Propagator<float> propUP;
+    PLEGMA_Propagator<float> propDN;
+    PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
+    PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
+
+    PLEGMA_Propagator3D<float> prop13D;
+    PLEGMA_Propagator3D<float> prop23D;
+    PLEGMA_Vector3D<double> vectorAuxD;
+    PLEGMA_Vector3D<float> vectorAuxF3D;
+    PLEGMA_Vector<float> vectorAuxF;
+    std::complex<double> *vals;
+    PLEGMA_Propagator<float> seqProp;
+    
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
       site& source = sourcePositions[isource];
@@ -192,10 +215,11 @@ int main(int argc, char **argv) {
       if(all_exist) continue;
 
       cudaMemcpy(eigVecs_d, eigVecs_hS, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
-
+      checkCudaError();
       // create prop up and dn
       memset(spinEVals, 0, 12*Eig_NeV*2*sizeof(double));
       cudaMemset(spinEVals_d, 0, 12*Eig_NeV*2*sizeof(double));
+      checkCudaError();
       int my_src[N_DIMS];
       bool mine = true;
       size_t id=0;
@@ -215,6 +239,7 @@ int main(int argc, char **argv) {
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
               cudaMemcpy(spinEVals_d + (ivec*N_SPINS*N_COLS + spin*N_COLS+color)*2, eigVecs_d + (ivec*N_SPINS*N_COLS*V4 + (((spin+2)%N_SPINS)*N_COLS+color)*V4 + id)*2, 2*sizeof(double), cudaMemcpyDeviceToDevice); //((spin+2)%N_SPINS) because of gamma_5 
+              checkCudaError();
             }
           }
         }
@@ -224,9 +249,8 @@ int main(int argc, char **argv) {
       MPI_Allreduce(MPI_IN_PLACE,spinEVals,12*Eig_NeV*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
 
       for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
-        TIC();
+        PLEGMA_printf("Allocating device memory");
         int nev = nevs[inev];
-        std::complex<double>tmp[nev];
 
         char * src_string;
         asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_nev%03d", source[0], source[1], source[2], source[3], nev);
@@ -235,20 +259,22 @@ int main(int argc, char **argv) {
         free(src_string);
 
         auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS_UP, PLEGMA_Propagator<float>& prop_SL_UP, PLEGMA_Propagator<float>& prop_SS_DN, PLEGMA_Propagator<float>& prop_SL_DN, bool finalize) { //What about WHICHFLAVOR fl? How does choosing a different flavor affect the computation?
-          PLEGMA_Gauge3D<double> smearedGauge3D;
-          smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
+          // PLEGMA_Gauge3D<double> smearedGauge3D;
+          // smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
           // Inverting
-          cudaMemcpy(eigVecs_d, eigVecs_hS, nev*vec_size, cudaMemcpyHostToDevice);
+          cudaMemcpy(eigVecs_d, eigVecs_hS, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
+          checkCudaError();
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
               for(int ivec = 0; ivec < nev; ivec++){
                 tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS + color])/evals[ivec];
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+              checkCudaError();
 
               cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem());
-              PLEGMA_Vector<float> vectorAuxF;
+              // PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(vec);
               prop_SS_UP.absorb(vectorAuxF, spin, color);
             }
@@ -260,24 +286,27 @@ int main(int argc, char **argv) {
                 tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/std::conj(evals[ivec]);
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+              checkCudaError();
 
               cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem());
-              PLEGMA_Vector<float> vectorAuxF;
+              // PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(vec);
               prop_SS_DN.absorb(vectorAuxF, spin, color);
             }
           }
 
-          cudaMemcpy(eigVecs_d, eigVecs_hL, nev*vec_size, cudaMemcpyHostToDevice);
+          cudaMemcpy(eigVecs_d, eigVecs_hL, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
+          checkCudaError();
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
               for(int ivec = 0; ivec < nev; ivec++){
                 tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS + color])/evals[ivec];
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+              checkCudaError();
 
               cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem()); 
-              PLEGMA_Vector<float> vectorAuxF;
+              // PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(vec);
               prop_SL_UP.absorb(vectorAuxF, spin, color);
             }
@@ -289,9 +318,10 @@ int main(int argc, char **argv) {
                 tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/std::conj(evals[ivec]);
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+              checkCudaError();
 
               cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem()); 
-              PLEGMA_Vector<float> vectorAuxF;
+              // PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(vec);
               prop_SL_DN.absorb(vectorAuxF, spin, color);
             }
@@ -305,12 +335,7 @@ int main(int argc, char **argv) {
           }
         };
 
-        PLEGMA_Propagator<float> propUP;
-        PLEGMA_Propagator<float> propDN;
-        { // Whithin this scope we keep track also of the propagator non smeared on the sink
-          PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
-          PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
-
+        {
           bool computed_light = false;
           // If twop_filename exists we hold the computation of the light props
           if(access( twop_filename.c_str(), F_OK ) == -1) {
@@ -319,11 +344,8 @@ int main(int argc, char **argv) {
           }
 	
           //#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
-            double spinVals[nev*2];
-            double *spinVals_d, *source_d, *evecs_d;
-            cudaMalloc((void**)&spinVals_d, 2*nev*sizeof(double));
-            // cudaMalloc((void**)&source_d, 2*V3*sizeof(double));
-            cudaMalloc((void**)&evecs_d, 12*2*nev*V3*sizeof(double));
+            cudaMemset(spinVals_d, 0, Eig_NeV*2*sizeof(double));
+            cudaMemset(evecs_d, 0, 12*Eig_NeV*V3*2*sizeof(double));
 
             for(size_t its = 0; its < tSinks.size(); its++){
               int tsinkMtsource = tSinks[its];
@@ -332,6 +354,7 @@ int main(int argc, char **argv) {
               int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
               int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
 
+              PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
 
               WHICHPARTICLE nucleon = get_particle(prOrNt); 
               std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
@@ -346,21 +369,15 @@ int main(int argc, char **argv) {
                     TIME(computePropagator(propUP, propUP_SL, propDN, propDN_SL, false));
                     computed_light = true;
                   }
-                  PLEGMA_Propagator<float> seqProp;
-                  cudaMemcpy(eigVecs_d, eigVecs_hL, nev*vec_size, cudaMemcpyHostToDevice);
+                  cudaMemcpy(eigVecs_d, eigVecs_hL, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
+                  checkCudaError();
         
                   {
                     // 3D propagators at t_sink
-                    PLEGMA_Propagator3D<float> prop13D;
-                    PLEGMA_Propagator3D<float> prop23D;
                     prop13D.absorb(prop1, global_fixSinkTime);
                     prop23D.absorb(prop2, global_fixSinkTime);
                     // PLEGMA_Gauge3D<double> smearedGauge3D_sink;
                     // smearedGauge3D_sink.absorb(smearedGauge, global_fixSinkTime);
-
-                    PLEGMA_Vector3D<double> vectorAuxD;
-                    PLEGMA_Vector3D<float> vectorAuxF3D;
-                    PLEGMA_Vector<float> vectorAuxF;
 
                     for(int nu = 0 ; nu < 4 ; nu++)
                     for(int c2 = 0 ; c2 < 3 ; c2++){
@@ -380,10 +397,10 @@ int main(int argc, char **argv) {
                         // TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
                         // vectorInOut.absorb(vectorAuxD, global_fixSinkTime);
                       }
-                      if(nu==0 && c2==0){
-                        vectorAuxD.unload();
-                        vectorAuxD.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxD.h5");
-                      }
+                      // if(nu==0 && c2==0){
+                      //   vectorAuxD.unload();
+                      //   vectorAuxD.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxD.h5");
+                      // }
                       //Invert
                       // Projecting the source
                       int my_it = global_fixSinkTime - HGC_procPosition[3] * HGC_localL[3];
@@ -432,7 +449,7 @@ int main(int argc, char **argv) {
                       for(int i=0; i<nev; i++) {
                         evals[i].imag(run_mu);
                       }
-                      std::complex<double> *vals = (std::complex<double> *) (spinVals);
+                      vals = (std::complex<double> *) (spinVals);
                       // if(fl=="up") {
                       for(int i=0; i<nev; i++) {
                         vals[i] /= evals[i];
@@ -447,21 +464,20 @@ int main(int argc, char **argv) {
                       //   PLEGMA_error("Flavor %s not recognized",fl.c_str());
                       // }
                       cudaMemcpy(spinVals_d, vals, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
+                      checkCudaError();
                       cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinVals_d, b, vec.D_elem());
 
                       vectorAuxF.copy(vec);
-                      if(nu==0 && c2==0){
-                        vectorAuxF.unload();
-                        vectorAuxF.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxF.h5");
-                      }
+                      // if(nu==0 && c2==0){
+                      //   vectorAuxF.unload();
+                      //   vectorAuxF.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxF.h5");
+                      // }
                       seqProp.absorb(vectorAuxF, nu, c2);
                       TOC("building propagators");
                     }
                   }
                   seqProp.apply_gamma(G5);
                   seqProp.conjugate();
-                      
-                  PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
               
                   // LOCAL contractions
                   TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
