@@ -72,9 +72,6 @@ target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
 cuda_add_executable(mesons_3pt mesons_3pt.cpp)
 target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
 
-cuda_add_executable(mesons_3pt_npi mesons_3pt_npi.cpp)
-target_link_libraries(mesons_3pt_npi ${PLEGMA_LIBS})
-
 cuda_add_executable(correcting_ZM EXCLUDE_FROM_ALL correcting_ZM.cpp)
 target_link_libraries(correcting_ZM ${PLEGMA_LIBS})
 
@@ -129,9 +126,6 @@ target_link_libraries(ZfacStaple ${PLEGMA_LIBS})
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
-cuda_add_executable(GPDs_nucleon GPDs_nucleon.cpp)
-target_link_libraries(GPDs_nucleon ${PLEGMA_LIBS})
-
 cuda_add_executable(TMDPDFs_mesons_Juwels TMDPDFs_mesons_Juwels.cpp)
 target_link_libraries(TMDPDFs_mesons_Juwels ${PLEGMA_LIBS})
 
@@ -151,12 +145,6 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   cuda_add_executable(nucleon_3pt_n_npi_wd1ii EXCLUDE_FROM_ALL nucleon_3pt_n_npi_wd1ii.cpp)
   target_link_libraries(nucleon_3pt_n_npi_wd1ii ${PLEGMA_LIBS})
 
-  cuda_add_executable(nucleon_3pt_n_npi_T EXCLUDE_FROM_ALL nucleon_3pt_n_npi_T.cpp)
-  target_link_libraries(nucleon_3pt_n_npi_T ${PLEGMA_LIBS})
-
-  cuda_add_executable(nucleon_3pt_n_npi_N EXCLUDE_FROM_ALL nucleon_3pt_n_npi_N.cpp)
-  target_link_libraries(nucleon_3pt_n_npi_N ${PLEGMA_LIBS})
-
   cuda_add_executable(piNdiagrams_oet piNdiagrams_oet.cpp)
   target_link_libraries(piNdiagrams_oet ${PLEGMA_LIBS})
   cuda_add_executable(checking_Doet checking_Doet.cpp)
@@ -169,8 +157,6 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(QuarkLoops_pi0_insertion ${PLEGMA_LIBS})
   cuda_add_executable(testYan EXCLUDE_FROM_ALL testYan.cpp)
   target_link_libraries(testYan ${PLEGMA_LIBS})
-  cuda_add_executable(converttofloat EXCLUDE_FROM_ALL convert_double_float.cpp)
-  target_link_libraries(converttofloat  ${PLEGMA_LIBS})
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 

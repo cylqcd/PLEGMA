@@ -1769,64 +1769,98 @@ int main(int argc, char **argv) {
 
 	    stochastic_piece.apply_gamma5();
 	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));//checked
+            TIME(corrW13_2pt.Recombination(*reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 0, false, 0, false, true, false, false, true));
 
-            TIME(corrW13_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 13, true, false));
+//            TIME(corrW13_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 13, true, false));
 
-            TIME(corrW15_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 15, true, false));
+	    TIME(corrW15_2pt.Recombination( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 2, true, 0, false, true, false, false, true));
+	    
+	    //TIME(corrW15_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 15, true, false));
 
 #if defined (COMPUTEBACKWARD)
 
             TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed_backward, propUP_SS_packed_backward, true));//checked
 
-            TIME(corrW13_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 13, true, false));
+            TIME(corrW13_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, false, 0, false, 0, false, true, false, false, true));
+	    
+	    //TIME(corrW13_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 13, true, false));
 
-            TIME(corrW15_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 15, true, false));
+	    TIME(corrW15_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt,  false, 2, true, 0, false, true, false, false, true));
+
+            //TIME(corrW15_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 15, true, false));
 #endif
 
 
             TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));//checked
 
-            TIME(corrW14_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 14, true, false));
+            TIME(corrW14_2pt.Recombination( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 2, true, 0, false, true, false, false, true));
 
-            TIME(corrW16_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 16, true, false));
+//            TIME(corrW14_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 14, true, false));
+
+            TIME(corrW16_2pt.Recombination( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 0, false, 0, false, true, false, false, true));
+
+//            TIME(corrW16_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 16, true, false));
 
 #if defined (COMPUTEBACKWARD)
 
             TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propUP_SS_packed_backward, propTS_SS_packed_backward, true));//checked
 
-	    TIME(corrW14_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 14, true, false));
+	    TIME(corrW14_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, false, 2, true, 0, false, true, false, false, true));
 
-            TIME(corrW16_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 16, true, false));
+//          TIME(corrW14_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 14, true, false));
+
+  	    TIME(corrW16_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt,  false, 0, false, 0, false, true, false, false, true));
+
+//          TIME(corrW16_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 16, true, false));
 
 #endif
-
 	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, true));//checked
 
-            TIME(corrW31_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 31, true, false));
-            TIME(corrW32_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 32, true, false));
+	    TIME(corrW31_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, false, false, false, false, true));
+
+//          TIME(corrW31_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 31, true, false));
+
+	    TIME(corrW32_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 2, true, 0, true, false, false, false, true));
+          
+//            TIME(corrW32_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 32, true, false));
 
 #if defined (COMPUTEBACKWARD)
 
 	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed_backward, propDN_SS_packed_backward, true));//checked
 
-            TIME(corrW31_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 31, true, false));
-            TIME(corrW32_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 32, true, false));
+
+	    TIME(corrW31_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 1, false, 0, false, false, false, false, true));
+
+//          TIME(corrW31_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 31, true, false));
+
+	    TIME(corrW32_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  false, 2, true, 0, true, false, false, false, true));
+
+//            TIME(corrW32_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 32, true, false));
 #endif
 
             TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, true));//checked
 
-            TIME(corrW29_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 29, true, false));
-            TIME(corrW30_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 30, true, false));
+            TIME(corrW29_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 0, false, false, false, false, true));
+
+//          TIME(corrW29_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 29, true, false));
+//
+            TIME(corrW30_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 2, false, 0,true, false, false, false, true));
+
+//            TIME(corrW30_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 30, true, false));
 
 #if defined (COMPUTEBACKWARD)
 
             TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propTS_SS_packed_backward, propDN_SS_packed_backward, true));//checked
 
-            TIME(corrW29_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 29, true, false));
-            TIME(corrW30_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 30, true, false));
+
+	    TIME(corrW29_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  true, 0, false, 0, false, false, false, false, true));
+
+//            TIME(corrW29_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 29, true, false));
+
+            TIME(corrW30_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  false, 2, false, 0,true, false, false, false, true));
+
+//	    TIME(corrW30_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 30, true, false));
 #endif
-
-
 
 
 	    stochastic_piece.unload();
@@ -1834,31 +1868,45 @@ int main(int argc, char **argv) {
 	    stochastic_piece.load();
 	    TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propDN_SS_packed, propTS_SS_packed, true));//checked
 
-            TIME(corrW5_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 5, true, false));
+            TIME(corrW5_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 0,true, false, false, false, true));
 
-            TIME(corrW7_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 7, true, false));
+//	    TIME(corrW5_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 5, true, false));
+
+            TIME(corrW7_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 1, false, 0, true, false, false, false, true));
+//  	    TIME(corrW7_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 7, true, false));
 
 #if defined (COMPUTEBACKWARD)
 	                
 	    TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propDN_SS_packed_backward, propTS_SS_packed_backward, true));//checked
 
-            TIME(corrW5_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 5, true, false));
+	    TIME(corrW5_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 0, false, 0,true, false, false, false, true));
 
-            TIME(corrW7_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 7, true, false));
+//	    TIME(corrW5_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 5, true, false));
+
+            TIME(corrW7_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 1, false, 0, true, false, false, false, true));
+
+//          TIME(corrW7_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 7, true, false));
 #endif
 
 	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propDN_SS_packed, propTS_SS_packed, true));//checked
 
-            TIME(corrW6_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 6, true, false));
+            TIME(corrW6_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, true, false, false, false, true));
 
-            TIME(corrW8_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 8, true, false));
+//            TIME(corrW6_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 6, true, false));
+
+            TIME(corrW8_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 0, false, 0, true, false, false, false, true));
+
+//            TIME(corrW8_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 8, true, false));
 
 #if defined (COMPUTEBACKWARD)
             TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propDN_SS_packed_backward, propTS_SS_packed_backward, true));//checked
 
-            TIME(corrW6_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 6, true, false));
+            TIME(corrW6_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 1, false, 0, true, false, false, false, true));
+//            TIME(corrW6_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 6, true, false));
 
-            TIME(corrW8_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 8, true, false));
+            TIME(corrW8_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 0, false, 0, true, false, false, false, true));
+
+//            TIME(corrW8_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 8, true, false));
 #endif
 
 	  } //loop over sample
@@ -1953,10 +2001,21 @@ int main(int argc, char **argv) {
 	    //V3
             TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion, propTS_SL_packed, true));
 
-	    TIME(corrB3.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 3, true, false, true));
-            TIME(corrB4.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 4, true, false, true));
-	    TIME(corrB5.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 5, true, false, true));
-            TIME(corrB6.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 6, true, false, true));
+            TIME(corrB3.Recombination(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], false,0,false,0,true,false,false,true,true));
+
+//          TIME(corrB3.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 3, true, false, true));
+         
+            TIME(corrB4.Recombination(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], false,2,false,0,true,true,false, true,true));
+
+//	    TIME(corrB4.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 4, true, false, true));
+
+	    TIME(corrB5.Recombination(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], true,1,false,0,true,false,false,true,true));
+
+//	    TIME(corrB5.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 5, true, false, true));
+            
+           TIME(corrB6.Recombination(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], true,0,false,0,false,true,false,true,true));
+
+//	    TIME(corrB6.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 6, true, false, true));
 
 	    stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
 	    stochastic_propagator_packed.load();
@@ -1971,23 +2030,55 @@ int main(int argc, char **argv) {
 
             TIME(reductionsV2.V4( stochastic_source_packed, glist_sink_nucleon, propDNpacked_to_sink, propTS_SS_packed_to_sink, true));//checked
 
-	    TIME(corrW5.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 5, true, true));
+	    TIME(corrW5.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, true, 0, false, 0,true, false, false, true, true));
 
-	    TIME(corrW7.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 7, true, true));
+
+
+//	    TIME(corrW5.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 5, true, true));
+
+	    TIME(corrW7.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, false, 1, false, 0, true, false, false, true, true));
+
+
+//	    TIME(corrW7.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 7, true, true));
 
             TIME(reductionsV2.V2( stochastic_source_packed, glist_sink_nucleon, propDNpacked_to_sink, propTS_SS_packed_to_sink, true));//checked
 
-            TIME(corrW6.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 6, true, true));
-            TIME(corrW8.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 8, true, true));
+
+	    TIME(corrW6.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2,  true, 1, false, 0, true, false, false, true, true));
+
+
+//            TIME(corrW6.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 6, true, true));
+
+	    TIME(corrW8.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, false, 0, false, 0, true, false, false, true, true));
+
+
+
+//	    TIME(corrW8.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 8, true, true));
 
             TIME(reductionsV2.V2( stochastic_source_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, true));//checked
 
-            TIME(corrW13.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 13, true, true));
-            TIME(corrW15.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 15, true, true));
+
+	    TIME(corrW13.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, false, 0, false, 0, false, true, false, true, true));
+
+
+ //           TIME(corrW13.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 13, true, true));
+
+	    TIME(corrW15.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, false, 2, true, 0, false, true, false, true, true));
+
+
+//	    TIME(corrW15.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 15, true, true));
 
             TIME(reductionsV2.V2( stochastic_source_packed, glist_sink_nucleon, propUPpacked_to_sink, propTS_SS_packed_to_sink, true));//checked
-            TIME(corrW14.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 14, true, true));
-            TIME(corrW16.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 16, true, true));
+
+	    TIME(corrW14.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2,  false, 2, true, 0, false, true, false, true, true));
+
+
+//            TIME(corrW14.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 14, true, true));
+
+	    TIME(corrW16.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, false, 0, false, 0, false, true, false, true, true));
+
+
+//            TIME(corrW16.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 16, true, true));
 
 	  }//loop over stochastic samples
 
@@ -2290,42 +2381,68 @@ int main(int argc, char **argv) {
 	      stochastic_propagator_packed.load();
 
               TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));
+              TIME( corrW9_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt,  false, 0, false, 0, true, false, false, false, true));
 
-              TIME( corrW9_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0,  9, true));
-              TIME(corrW11_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 11, true));
+//              TIME( corrW9_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0,  9, true));
+
+	      TIME(corrW11_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, true, false, false, false, true));
+//              TIME(corrW11_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 11, true));
 
               TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));
 
-              TIME(corrW10_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 10, true, false));
-              TIME(corrW12_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 12, true, false));
+              TIME(corrW10_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt,false, 1, false, 0, true, false, false, false, true ));
+//            TIME(corrW10_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 10, true, false));
+
+              TIME(corrW12_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 9, true, false, false, false, true));
+//            TIME(corrW12_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 12, true, false));
 
 #if defined (COMPUTEBACKWARD)
 	      TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_backward, propUP_SS_packed_backward, true));
 
-              TIME( corrW9_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0,  9, true));
-              TIME(corrW11_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 11, true));
+              TIME( corrW9_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 0, false, 0, true, false, false, false, true));
+
+//              TIME( corrW9_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0,  9, true));
+
+	      TIME(corrW11_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,true, 1, false, 0, true, false, false, false, true));
+              
+//	      TIME(corrW11_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 11, true));
 
               TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_backward, propUP_SS_packed_backward, true));
 
-              TIME(corrW10_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 10, true, false));
-              TIME(corrW12_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 12, true, false));
+              TIME(corrW10_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 1, false, 0, true, false, false, false, true ));
+
+//              TIME(corrW10_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 10, true, false));
+
+	      TIME(corrW12_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 0, false, 9, true, false, false, false, true));
+
+//              TIME(corrW12_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 12, true, false));
 #endif
 
 	      stochastic_propagator_packed.apply_gamma5();
 
               TIME(reductionsV3_2pt.V3( stochastic_propagator_packed, glist_sink_meson,   propTS_SS_packed, true));
 
-              TIME(corrB7_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 7, true, false, false));
-	      TIME(corrB8_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 8, true, false, false));
+	      TIME(corrB7_2pt.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], false, 2, true, 0, false, true, false, false, true));
+
+//            TIME(corrB7_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 7, true, false, false));
+
+	      TIME(corrB8_2pt.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], false, 0, false, 0, false, true, false, false, true));
+
+//	      TIME(corrB8_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 8, true, false, false));
 
 #if defined (COMPUTEBACKWARD)
 
 	      TIME(reductionsV3_2pt.V3( stochastic_propagator_packed, glist_sink_meson,   propTS_SS_packed_backward, true));
-              TIME(corrB7_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], 0, 7, true, false, false));
-              TIME(corrB8_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], 0, 8, true, false, false));
+
+	      TIME(corrB7_2pt_backward.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], false, 2, true, 0, false, true, false, false, true));
+
+//              TIME(corrB7_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], 0, 7, true, false, false));
+
+	      TIME(corrB8_2pt_backward.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], false, 0, false, 0, false, true, false, false, true));
+
+//              TIME(corrB8_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], 0, 8, true, false, false));
 
 #endif
-
 
               stochastic_propagator_packed.unload();	      
   	      stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
@@ -2335,25 +2452,46 @@ int main(int argc, char **argv) {
 
 	      TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
 
-              TIME(corrW33_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 33, true, false));
-              TIME(corrW34_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 34, true, false));
+              TIME(corrW33_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 2, false, 0, true, false, false, false, true));
+
+//	      TIME(corrW33_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 33, true, false));
+
+              TIME(corrW34_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 0, false, false, false, false, true));
+
+//            TIME(corrW34_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 34, true, false));
+
 
               TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
 
-              TIME(corrW35_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 35, true, false));
-              TIME(corrW36_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 36, true, false));
+	      TIME(corrW35_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt,false, 2, true, 0, true, false, false, false, true));
+
+//              TIME(corrW35_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 35, true, false));
+
+              TIME(corrW36_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, false, false, false, false, true));
+
+//	      TIME(corrW36_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 36, true, false));
 
 #if defined (COMPUTEBACKWARD)
 
               TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed_backward, propTS_SS_packed_backward, true));
 
-              TIME(corrW33_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 33, true, false));
-              TIME(corrW34_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 34, true, false));
+              TIME(corrW33_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,false, 2, false, 0, true, false, false, false, true));
+
+//              TIME(corrW33_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 33, true, false));
+
+              TIME(corrW34_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 0, false, 0, false, false, false, false, true));
+
+//              TIME(corrW34_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 34, true, false));
 
               TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed_backward, propTS_SS_packed_backward, true));
 
-              TIME(corrW35_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 35, true, false));
-              TIME(corrW36_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 36, true, false));
+              TIME(corrW35_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 2, true, 0, true, false, false, false, true));
+	      
+//	      TIME(corrW35_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 35, true, false));
+
+              TIME(corrW36_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  true, 1, false, 0, false, false, false, false, true));
+
+//              TIME(corrW36_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 36, true, false));
 #endif
 
 
@@ -2386,13 +2524,24 @@ int main(int argc, char **argv) {
 
 	    TIME(reductionsV2.V2( stochastic_source_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, true));
 
-            TIME( corrW9.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0,  9, true, true));
-            TIME(corrW11.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 11, true, true));
+            TIME( corrW9.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2,false, 0, false, 0, true, false, false, true, true));
+
+//            TIME( corrW9.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0,  9, true, true));
+
+            TIME(corrW11.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, true, 1, false, 0, true, false, false, true, true));
+
+//            TIME(corrW11.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 11, true, true));
 
             TIME(reductionsV2.V4( stochastic_source_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, true));
 
-            TIME(corrW10.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 10, true, true));
-            TIME(corrW12.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 12, true, true));
+	    
+            TIME(corrW10.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, false, 1, false, 0, true, false, false, true, true ));
+
+//            TIME(corrW10.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 10, true, true));
+
+            TIME(corrW12.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, true, 0, false, 9, true, false, false, true, true));
+
+//            TIME(corrW12.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 12, true, true));
 
 	  } //loop over stochastic samples
 
@@ -2747,57 +2896,135 @@ int main(int argc, char **argv) {
       if (dotwopoint==1){
 
 #if defined (COMPUTEBACKWARD)
+          TIME(corrZ5_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, false, 0, false, 0, true, false, false, false, true ));
 
-	  TIME(corrZ5_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 5, false ));
-          TIME(corrZ7_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 7, false ));
+//	  TIME(corrZ5_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 5, false ));
 
-          TIME(corrZ6_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 6, false ));
-          TIME(corrZ8_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 8, false ));
+	  TIME(corrZ7_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, true, 1, false, 0, true, false, false, false, true ));
 
-          TIME( corrZ9_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, 0, 9, false ));
-          TIME(corrZ10_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, 0, 10,false ));
+//	  TIME(corrZ7_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 7, false ));
 
-          TIME(corrZ11_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 11, false ));
-          TIME(corrZ13_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 13, false ));
+          TIME(corrZ6_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, false, 1, false, 0, true, false, false, false, true ));
 
-          TIME(corrZ12_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 12, false ));
-          TIME(corrZ14_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 14, false ));
+//	  TIME(corrZ6_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 6, false ));
 
-          TIME(corrZ15_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward, 0, 15, false ));
-          TIME(corrZ16_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward, 0, 16, false ));
+          TIME(corrZ8_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward,  true, 0, false, 0, true, false, false, false , true ));
 
-          TIME(corrZ17_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, 0, 17, false ));
-          TIME(corrZ18_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, 0, 18, false ));
+//	  TIME(corrZ8_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 8, false ));
 
-          TIME(corrZ19_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, 0, 19, false ));
-          TIME(corrZ20_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, 0, 20, false ));
+          TIME( corrZ9_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, false, 2, true, 0, false, true, false, false, true));
+
+
+//	  TIME( corrZ9_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, 0, 9, false ));
+
+          TIME(corrZ10_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward,false, 0, false, 0, false, true, false, false, true ));
+
+//	  TIME(corrZ10_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, 0, 10,false ));
+//
+          TIME(corrZ11_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward,false, 2, true, 0, true, false, false, false, true));
+
+//          TIME(corrZ11_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 11, false ));
+
+          TIME(corrZ13_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward,true, 1, false, 0, false, false, false, false, true ));
+
+//	  TIME(corrZ13_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 13, false ));
+
+          TIME(corrZ12_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, false, 2, false, 0, true, false, false, false, true));
+//	  TIME(corrZ12_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 12, false ));
+
+	  TIME(corrZ14_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, true, 0, false, 0, false, false, false, false, true ));
+
+//          TIME(corrZ14_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 14, false ));
+
+          TIME(corrZ15_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward,  false, 0, false, 0, false, true, false, false, true));
+
+//          TIME(corrZ15_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward, 0, 15, false ));
+          TIME(corrZ16_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward,  false, 2, true, 0, false, true, false, false, true));
+
+//	  TIME(corrZ16_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward, 0, 16, false ));
+
+	  TIME(corrZ17_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, false, 2, true, 0, true, false, false, false, true));
+
+//          TIME(corrZ17_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, 0, 17, false ));
+          TIME(corrZ18_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, true, 1, false, 0, false, false, false, false, true));
+
+//	  TIME(corrZ18_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, 0, 18, false ));
+
+	  TIME(corrZ19_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, false, 2, false, 0, true, false, false, false, true));
+
+//          TIME(corrZ19_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, 0, 19, false ));
+
+	  TIME(corrZ20_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, true, 0, false, 0, false, false, false, false, true ));
+
+//	  TIME(corrZ20_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, 0, 20, false ));
+
 
 #endif
 
 
-	  TIME(corrZ5_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 5, false ));
-          TIME(corrZ7_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 7, false ));
+	  TIME(corrZ5_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, false, 0, false, 0, true, false, false, false, true ));
 
-          TIME(corrZ6_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 6, false ));
-          TIME(corrZ8_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 8, false ));
+//	  TIME(corrZ5_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 5, false ));
 
-          TIME( corrZ9_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 9, false ));
-          TIME(corrZ10_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 10,false ));
+	  TIME(corrZ7_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, true, 1, false, 0, true, false, false, false, true ));
 
-	  TIME(corrZ11_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 11, false ));
-          TIME(corrZ13_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 13, false ));
+//        TIME(corrZ7_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 7, false ));
 
-          TIME(corrZ12_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 12, false ));
-	  TIME(corrZ14_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 14, false ));
+	  TIME(corrZ6_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, false, 1, false, 0, true, false, false, false, true ));
 
-          TIME(corrZ15_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, 0, 15, false ));
-          TIME(corrZ16_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, 0, 16, false ));
+//          TIME(corrZ6_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 6, false ));
 
-          TIME(corrZ17_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, 0, 17, false ));
-          TIME(corrZ18_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, 0, 18, false ));
+          TIME(corrZ8_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, true, 0, false, 0, true, false, false, false , true ));
+	  
+//        TIME(corrZ8_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 8, false ));
 
-          TIME(corrZ19_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, 0, 19, false ));
-          TIME(corrZ20_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, 0, 20, false ));
+          TIME( corrZ9_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, false, 2, true, 0, false, true, false, false, true));
+
+//	  TIME( corrZ9_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 9, false ));
+
+	  TIME(corrZ10_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt,false, 0, false, 0, false, true, false, false, true ));
+
+ //         TIME(corrZ10_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 10,false ));
+
+          TIME(corrZ11_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, false, 2, true, 0, true, false, false, false, true));
+
+//	  TIME(corrZ11_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 11, false ));
+
+	  TIME(corrZ13_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, true, 1, false, 0, false, false, false, false, true ));
+
+//	  TIME(corrZ13_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 13, false ));
+
+          TIME(corrZ12_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt,false, 2, false, 0, true, false, false, false, true));
+
+//          TIME(corrZ12_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 12, false ));
+
+	  TIME(corrZ14_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, true, 0, false, 0, false, false, false, false, true ));
+
+//	  TIME(corrZ14_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 14, false ));
+
+          TIME(corrZ15_2pt.Recombonation( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, false, 0, false, 0, false, true, false, false, true));
+
+//	  TIME(corrZ15_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, 0, 15, false ));
+
+          TIME(corrZ16_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, false, 2, true, 0, false, true, false, false, true));
+
+//	  TIME(corrZ16_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, 0, 16, false ));
+
+          TIME(corrZ17_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, false, 2, true, 0, true, false, false, false, true));
+
+//          TIME(corrZ17_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, 0, 17, false ));
+
+          TIME(corrZ18_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt,true, 1, false, 0, false, false, false, false, true));
+
+//          TIME(corrZ18_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, 0, 18, false ));
+
+	  TIME(corrZ19_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, false, 2, false, 0, true, false, false, false, true));
+
+//          TIME(corrZ19_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, 0, 19, false ));
+
+	  TIME(corrZ20_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, true, 0, false, 0, false, false, false, false, true ));
+
+//          TIME(corrZ20_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, 0, 20, false ));
 
 #endif
 
@@ -2926,21 +3153,52 @@ int main(int argc, char **argv) {
           corrZ14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_insertion, "12", ssource);
 	  free(ssource);
 
-	  TIME(corrZ5.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 5, false, true ));
-          TIME(corrZ7.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 7, false, true ));
+	  TIME(corrZ5.Recombination( reductionsV3_diluted_D_UP, *reductionsV2_diluted_STOCHU_DN_UP[k], false, 0, false, 0, true, false, false, true, true ));
 
-	  TIME(corrZ6.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, k, 6, false, true ));
-          TIME(corrZ8.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, k, 8, false, true ));
+//	  TIME(corrZ5.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 5, false, true ));
 
-          TIME(corrZ9.Z_diagrams_without_dilution(  reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP,k, 9, false, true ));
-          TIME(corrZ10.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP,k, 10,false, true ));
+          TIME(corrZ7.Recombination( reductionsV3_diluted_D_UP, *reductionsV2_diluted_STOCHU_DN_UP[k], true, 1, false, 0, true, false, false, true, true ));
 
 
-	  TIME(corrZ11.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP,k, 11, false, true ));
-          TIME(corrZ13.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP,k, 13, false, true ));
+//	  TIME(corrZ7.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 7, false, true ));
 
-	  TIME(corrZ12.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP,k, 12, false, true ));
-          TIME(corrZ14.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP,k, 14, false, true ));
+	  TIME(corrZ6.Recombination( reductionsV3_diluted_D_UP, *reductionsV4_diluted_STOCHU_DN_UP[k], false, 1, false, 0, true, false, false, true, true ));
+
+
+//          TIME(corrZ6.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, k, 6, false, true ));
+
+	  TIME(corrZ8.Recombination( reductionsV3_diluted_D_UP, *reductionsV4_diluted_STOCHU_DN_UP[k], true, 0, false, 0, true, false, false, true , true ));
+
+//	  TIME(corrZ8.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, k, 8, false, true ));
+
+          TIME(corrZ9.Recombination(  reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHD_UP_UP[k],false, 2, true, 0, false, true, false, true, true));
+
+//	  TIME(corrZ9.Z_diagrams_without_dilution(  reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP,k, 9, false, true ));
+
+	  TIME(corrZ10.Recombination( reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHD_UP_UP[k],false, 0, false, 0, false, true, false, true, true ));
+
+
+//	  TIME(corrZ10.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP,k, 10,false, true ));
+
+          TIME(corrZ11.Recombination( reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHU_DN_UP[k],false, 2, true, 0, true, false, false,  true, true));
+
+
+//	  TIME(corrZ11.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP,k, 11, false, true ));
+
+	  TIME(corrZ13.Recombination( reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHU_DN_UP[k],true, 1, false, 0, false, false, false, true, true ));
+
+
+//	  TIME(corrZ13.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP,k, 13, false, true ));
+
+	  TIME(corrZ12.Recombination( reductionsV3_diluted_U_DN, *reductionsV4_diluted_STOCHU_DN_UP[k], false, 2, false, 0, true, false, false,true, true));
+
+
+//	  TIME(corrZ12.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP,k, 12, false, true ));
+
+	  TIME(corrZ14.Recombination( reductionsV3_diluted_U_DN, *reductionsV4_diluted_STOCHU_DN_UP[k], true, 0, false, 0, false, false, false, true, true ));
+
+
+ //         TIME(corrZ14.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP,k, 14, false, true ));
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
