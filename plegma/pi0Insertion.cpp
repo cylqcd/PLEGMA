@@ -267,11 +267,21 @@ int main(int argc, char **argv)
         std::vector<plegma::GAMMAS_SCATT> gscatts_meson = {};
         std::string filenamePost = "";
         std::string filenamePost2 = "";
+
+        bool smearMesonQ; 
         if (whichMeson == "pi0")
         {
             gscatts_meson.push_back(G_5);
             filenamePost = "jPi";
             filenamePost2 = "P";
+            smearMesonQ = true;
+        }
+        else if (whichMeson == "pi0_axial_local")
+        {
+            gscatts_meson.push_back(G_5_G_4);
+            filenamePost = "jPi_axial_local";
+            filenamePost2 = "P_axial_local";
+            smearMesonQ = false;
         }
         // else if (whichMeson == "sigma")
         // {
