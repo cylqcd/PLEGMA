@@ -29,8 +29,8 @@ namespace plegma{
 
   template<typename Float>
   static void apply_gamma_scatt_vector(LEFTRIGHT LR, vector2<Float> inOut, GAMMAS_SCATT r){
-    dim3 blockDim( inOut.volume() , 1, 1);
-    dim3 gridDim( ( + blockDim.x -1)/blockDim.x , 1 , 1);
+    dim3 blockDim( THREADS_PER_BLOCK, 1, 1);
+    dim3 gridDim( ( inOut.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
     switch(LR){
       case(LEFT):
         apply_gamma_scatt_vector_kernel<LEFT><<<gridDim,blockDim>>>(inOut, r);
