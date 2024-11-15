@@ -1352,6 +1352,7 @@ int main(int argc, char **argv)
 
             PLEGMA_Vector3D<double> vector1, vector2;
             vector1.absorb(vectorStoc_source_oet, source_local[DIM_T]);
+            vector1.apply_gamma5();
             PLEGMA_Gauge3D<double> smearedGauge3D;
             smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
             TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
@@ -1422,6 +1423,7 @@ int main(int argc, char **argv)
 
             PLEGMA_Vector3D<double> vector1, vector2;
             vector1.absorb(vectorStoc_source_oet, source_local[3]);
+            vector1.apply_gamma5();
             PLEGMA_Gauge3D<double> smearedGauge3D;
             smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
             TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
