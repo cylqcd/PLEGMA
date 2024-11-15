@@ -522,14 +522,6 @@ int main(int argc, char **argv) {
               //Step(6) We rotate back the propagator to the physical basis
               TIME(vectorAuxD1.rotateToPhysicalBasis(vectorInOut,-1));
 
-              //Step(7) Smearing all the time slice in the propagator
-              //TIME(vectorInOut.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
-
-              //vectorAuxD1.unload();
-	      //PLEGMA_printf("Save the stochastic source for sample %d\n",i);
-              //std::string nstoch=std::to_string(i);
-              //vectorAuxD1.writeHDF5("stochastic_propagators_DN"+nstoch+"_t"+std::to_string(timeSlice));
-
 	      vectorAuxD1.unload();
               stochastic_propags_DN_SL.push_back(new PLEGMA_Vector<float>(HOST));
 	      stochastic_propags_DN_SL[countindex]->copy(vectorAuxD1, HOST);
@@ -718,11 +710,8 @@ int main(int argc, char **argv) {
             PLEGMA_ScattCorrelator<float> reductionsT2N(source_local_reduction, sourcemomentumList_twopt.uniq_p(1));
             //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
             TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
-            //PLEGMA_printf("Nucleon T2 reduction\n");
             TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN_SS, propUP_SS, propDN_SS));
-            //PLEGMA_printf("Nucleon T2 reduction ready\n");
             TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
-	    //PLEGMA_printf("Nucleon diagram ready\n");
 	  } 
 
 	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N";
@@ -736,19 +725,6 @@ int main(int argc, char **argv) {
           TIME( corrNP.applyBoundaryConditions( true ) );
           TIME( corrNP.writeHDF5(outfilename) );
 	}
-
-	/*{
-	  PLEGMA_printf("Save propagator for the up  and dn quark\n");
-          PLEGMA_Vector<float> vectorAuxPrint(BOTH);
-          for(int isc = 0 ; isc < 12 ; isc++){
-            std::string spin=std::to_string(isc/3);
-            std::string col=std::to_string(isc%3);
-
-            vectorAuxPrint.absorb(propUP_SS,isc/3,isc%3);
-            vectorAuxPrint.unload();
-            vectorAuxPrint.writeHDF5("propUPSS_"+spin+"_c"+col+"_t_"+std::to_string(source_local[3]));
-          }
-	}*/
 	
         propUP_SS_packed.pack_propagator_from_source_to_sink(propUP_SS, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
         propDN_SS_packed.pack_propagator_from_source_to_sink(propDN_SS, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
@@ -762,56 +738,6 @@ int main(int argc, char **argv) {
         propDN_SL_packed.pack_propagator_from_source_to_sink(propDN_SL, source_localPtSinkMtSource[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
 
       } //parallel source position
-
-
-      PLEGMA_ScattCorrelator<float> corrNP_packed(source, list_mpf1_twopt);
-      //PLEGMA_ScattCorrelator<float> corrNP_packed_backward(source, list_mpf1_twopt);
-
-      TIME(corrNP_packed.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
-      //TIME(corrNP_packed_backward.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
-
-      if (dotwopoint==1){
- 
-        {
-          PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propUP_SS_packed));
-          //PLEGMA_printf("Nucleon T2 reduction\n");
-          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, propUP_SS_packed));
-          //PLEGMA_printf("Nucleon T2 reduction ready\n");
-          TIME(corrNP_packed.N_diagrams( reductionsT1N, reductionsT2N ));
-          //PLEGMA_printf("Nucleon diagram ready\n");
-          //TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed_backward, propDN_SS_packed_backward, propUP_SS_packed_backward));
-          //PLEGMA_printf("Nucleon T2 reduction\n");
-          //TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP_SS_packed_backward, propDN_SS_packed_backward, propUP_SS_packed_backward));
-          //PLEGMA_printf("Nucleon T2 reduction ready\n");
-          //TIME(corrNP_packed_backward.N_diagrams( reductionsT1N, reductionsT2N ));
-
-
-
-        }
-
-      }
-
-      PLEGMA_ScattCorrelator<float> corrN0_packed(source, list_mpf1_twopt);
-      TIME(corrN0_packed.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
-
-      if (dotwopoint==1){ 
-
-        {
-          PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-          PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
-          //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN_SS_packed, propUP_SS_packed, propDN_SS_packed));
-          //PLEGMA_printf("Nucleon T2 reduction\n");
-          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN_SS_packed, propUP_SS_packed, propDN_SS_packed));
-          //PLEGMA_printf("Nucleon T2 reduction ready\n");
-          TIME(corrN0_packed.N_diagrams( reductionsT1N, reductionsT2N ));
-          //PLEGMA_printf("Nucleon diagram ready\n");
-        }
-
-      }
 
     /******************************************************
      *
@@ -876,13 +802,7 @@ int main(int argc, char **argv) {
 #if defined (COMPUTEBACKWARD)
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_U_2pt_backward;
 #endif
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1U_D_2pt;//implemented
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_D_2pt;//implemented
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U_2pt;//implemented
 #if defined (COMPUTEBACKWARD)
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V4_GAMMAF1U_D_2pt_backward;//implemented
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V2_GAMMAF1U_D_2pt_backward;//implemented
-      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_DD_V3_GAMMAF2U_2pt_backward;//implemented
 #endif
 
 
@@ -891,28 +811,22 @@ int main(int argc, char **argv) {
 
       for(int i=0; i< n_stochastic_samples; ++i) {
 	if (dotwopoint==1){
-          reductions_DD_V2_GAMMAF1U_D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
           reductions_DD_V2_GAMMAF1U_U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
-          reductions_DD_V4_GAMMAF1U_D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
 
           reductions_UU_V2_GAMMAF1D_U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
           reductions_UU_V4_GAMMAF1U_D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
 
 
 	  reductions_UU_V3_GAMMAF2U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
- 	  reductions_DD_V3_GAMMAF2U_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
           reductions_DD_V3_GAMMAF2D_2pt.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
 #if defined (COMPUTEBACKWARD)
-	  reductions_DD_V2_GAMMAF1U_D_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
           reductions_DD_V2_GAMMAF1U_U_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
-          reductions_DD_V4_GAMMAF1U_D_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
 
           reductions_UU_V2_GAMMAF1D_U_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
           reductions_UU_V4_GAMMAF1U_D_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf1_twopt));
 
 
           reductions_UU_V3_GAMMAF2U_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
-          reductions_DD_V3_GAMMAF2U_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
           reductions_DD_V3_GAMMAF2D_2pt_backward.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, list_mpf2_twopt));
 #endif
 
@@ -998,15 +912,11 @@ int main(int argc, char **argv) {
 	     stoch_piece.apply_gamma5();
              TIME(reductions_DD_V2_GAMMAF1U_U_2pt[i_sample]->V2( stoch_piece,     glist_sink_nucleon, propUP_SS_packed, propUP_SS_packed, true));
 
-             TIME(reductions_DD_V2_GAMMAF1U_D_2pt[i_sample]->V2( stoch_piece,     glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, true));
 
-             TIME(reductions_DD_V4_GAMMAF1U_D_2pt[i_sample]->V4( stoch_piece,     glist_sink_nucleon, propUP_SS_packed, propDN_SS_packed, true));
 #if defined (COMPUTEBACKWARD)
              TIME(reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample]->V2( stoch_piece,     glist_sink_nucleon, propUP_SS_packed_backward, propUP_SS_packed_backward, true));
 
-             TIME(reductions_DD_V2_GAMMAF1U_D_2pt_backward[i_sample]->V2( stoch_piece,     glist_sink_nucleon, propUP_SS_packed_backward, propDN_SS_packed_backward, true));
 
-             TIME(reductions_DD_V4_GAMMAF1U_D_2pt_backward[i_sample]->V4( stoch_piece,     glist_sink_nucleon, propUP_SS_packed_backward, propDN_SS_packed_backward, true));
 #endif
 
              stoch_piece.unload();
@@ -1026,11 +936,9 @@ int main(int argc, char **argv) {
 
              TIME(reductions_DD_V3_GAMMAF2D_2pt[i_sample]->V3( stoch_piece, glist_sink_meson,   propDN_SS_packed, true));
 
-	     TIME(reductions_DD_V3_GAMMAF2U_2pt[i_sample]->V3( stoch_piece, glist_sink_meson,   propUP_SS_packed, true));
 #if defined (COMPUTEBACKWARD)
              TIME(reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample]->V3( stoch_piece, glist_sink_meson,   propDN_SS_packed_backward, true));
 
-             TIME(reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample]->V3( stoch_piece, glist_sink_meson,   propUP_SS_packed_backward, true));
 #endif
 
 
@@ -1185,7 +1093,6 @@ int main(int argc, char **argv) {
            //Gaussian smearing of the propagator
            TIME(vectortmp2.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
 
-	   //temporary1.pack_propagator_from_source_to_sink(temporary2, maxinsertion_local[3], max_source_sink_separations, l == 0 ? true : false);
 	   PLEGMA_Vector<float> vectorAuxF;
 	   vectorAuxF.copy(vectortmp2);
 	   stochastic_oet_prop_u_zero_mom_SS.pack_propagator_from_source_to_sink(vectorAuxF, maxinsertion_local[3], max_source_sink_separations, i_source_parallel == 0 ? true : false);
@@ -1198,10 +1105,6 @@ int main(int argc, char **argv) {
 
 
          } //end of loop on parallel sources
-
-	 //stochastic_oet_prop_u_zero_mom_SS.unload();
-         //stochastic_oet_prop_u_zero_mom_SS.writeHDF5("zero_momentum_oet_smeared_u");
-         //stochastic_oet_prop_u_zero_mom_SS.load();
 
 
 	 //PLEGMA_printf("DONE OET zero mom up\n");
@@ -1251,7 +1154,6 @@ int main(int argc, char **argv) {
            }
 
 	   vectortmp2.rotateToPhysicalBasis(vectortmp1,-1);
-           //stochastic_source_spin_diluted_momzero.writeLIME(outfile_V+"source_reduction_momentum"+std::to_string(spinindex));
            //Doing the zero momentum stochastic propagator with spin dilution
            //Doing the inversion
            TIME(solver.solve(vectortmp2, vectortmp2));
@@ -1352,7 +1254,6 @@ int main(int argc, char **argv) {
          sink_local[1] = sourcePositions[isource][1];
          sink_local[2] = sourcePositions[isource][2];
          sink_local[3] = (source[3]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
-          //int global_fixSinkTime = (tsinkMtsource + source[3]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
          propUPpacked_to_sink.pack_propagator_as_sink(propUP_SS_packed,  sink_local[3], tsinkMtsource, i_source_parallel==0 ? true : false);
          propDNpacked_to_sink.pack_propagator_as_sink(propDN_SS_packed,  sink_local[3], tsinkMtsource, i_source_parallel==0 ? true : false);
        }
@@ -1368,7 +1269,6 @@ int main(int argc, char **argv) {
           sink_local[2] = sourcePositions[isource][2];
           sink_local[3] = (source[DIM_T]+tSinks[k]+i_source_parallel*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
 
-          //int global_fixSinkTime = (tsinkMtsource + source[3]+j*max_source_sink_separations+HGC_totalL[3])%HGC_totalL[3];
           st_oet_u_zeropacked_to_sink.pack_propagator_as_sink(stochastic_oet_prop_u_zero_mom_SS,  sink_local[3], tsinkMtsource, i_source_parallel==0 ? true : false);
           st_oet_d_zeropacked_to_sink.pack_propagator_as_sink(stochastic_oet_prop_d_zero_mom_SS,  sink_local[3], tsinkMtsource, i_source_parallel==0 ? true : false);
        }
@@ -1657,10 +1557,6 @@ int main(int argc, char **argv) {
         PLEGMA_ScattCorrelator<float> corrW15_2pt(source, filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrW16_2pt(source, filtered_sourcemomentumList_2pt);
 
-        PLEGMA_ScattCorrelator<float> corrW29_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW30_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW31_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW32_2pt(source, filtered_sourcemomentumList_2pt);
 
 #if defined (COMPUTEBACKWARD)
 
@@ -1679,10 +1575,6 @@ int main(int argc, char **argv) {
         PLEGMA_ScattCorrelator<float> corrW15_2pt_backward(source, filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrW16_2pt_backward(source, filtered_sourcemomentumList_2pt);
 
-        PLEGMA_ScattCorrelator<float> corrW29_2pt_backward(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW30_2pt_backward(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW31_2pt_backward(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW32_2pt_backward(source, filtered_sourcemomentumList_2pt);
 
 #endif
 
@@ -1701,10 +1593,6 @@ int main(int argc, char **argv) {
         corrW15_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W15");
         corrW16_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W16");
 
-        corrW29_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W29");
-        corrW30_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W30");
-        corrW31_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W31");
-        corrW32_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W32");
 
 #if defined (COMPUTEBACKWARD)
 
@@ -1723,10 +1611,6 @@ int main(int argc, char **argv) {
         corrW15_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W15");
         corrW16_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W16");
 
-        corrW29_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W29");
-        corrW30_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W30");
-        corrW31_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W31");
-        corrW32_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W32");
 #endif
 #endif
 
@@ -1743,25 +1627,17 @@ int main(int argc, char **argv) {
             //V3
             TIME(reductionsV3_2pt.V3( stochastic_piece, glist_sink_meson, propTS_SS_packed, true));
 
-//          TIME(corrB3_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 3, true));
 	    TIME(corrB3_2pt.Recombination(reductionsV3_2pt,*reductions_UU_V2_GAMMAF1D_U_2pt[i_sample],false,0,false,0,true,false,false,false,true));
-//          TIME(corrB4_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 4, true));
             TIME(corrB4_2pt.Recombination(reductionsV3_2pt,*reductions_UU_V4_GAMMAF1U_D_2pt[i_sample],false,2,false,0,true,true,false,false,true));
-//          TIME(corrB5_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample], 0, 5, true));
             TIME(corrB5_2pt.Recombination(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt[i_sample],true,1,false,0,true,false,false,false,true));
-//          TIME(corrB6_2pt.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample], 0, 6, true));
             TIME(corrB6_2pt.Recombination(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt[i_sample],true,0,false,0,false,true,false,false,true));
 #if defined (COMPUTEBACKWARD)
 
             TIME(reductionsV3_2pt.V3( stochastic_piece, glist_sink_meson, propTS_SS_packed_backward, true));
 
-//	    TIME(corrB3_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample], 0, 3, true));
             TIME(corrB3_2pt_backward.Recombination(reductionsV3_2pt,*reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample],false,0,false,0,true,false,false,false,true));
-//          TIME(corrB4_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample], 0, 4, true));
             TIME(corrB4_2pt_backward.Recombination(reductionsV3_2pt,*reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample],false,2,false,0,true,true,false,false,true));           
-//          TIME(corrB5_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample], 0, 5, true));
             TIME(corrB5_2pt_backward.Recombination(reductionsV3_2pt,*reductions_UU_V2_GAMMAF1D_U_2pt_backward[i_sample],true,1,false,0,true,false,false,false,true));
-//          TIME(corrB6_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample], 0, 6, true));
             TIME(corrB6_2pt_backward.Recombination(reductionsV3_2pt,*reductions_UU_V4_GAMMAF1U_D_2pt_backward[i_sample],true,0,false,0,false,true,false,false,true));
             
 #endif
@@ -1771,11 +1647,8 @@ int main(int argc, char **argv) {
 	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));//checked
             TIME(corrW13_2pt.Recombination(*reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 0, false, 0, false, true, false, false, true));
 
-//            TIME(corrW13_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 13, true, false));
-
 	    TIME(corrW15_2pt.Recombination( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 2, true, 0, false, true, false, false, true));
 	    
-	    //TIME(corrW15_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 15, true, false));
 
 #if defined (COMPUTEBACKWARD)
 
@@ -1783,11 +1656,8 @@ int main(int argc, char **argv) {
 
             TIME(corrW13_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, false, 0, false, 0, false, true, false, false, true));
 	    
-	    //TIME(corrW13_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 13, true, false));
-
 	    TIME(corrW15_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt,  false, 2, true, 0, false, true, false, false, true));
 
-            //TIME(corrW15_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 15, true, false));
 #endif
 
 
@@ -1795,11 +1665,8 @@ int main(int argc, char **argv) {
 
             TIME(corrW14_2pt.Recombination( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 2, true, 0, false, true, false, false, true));
 
-//            TIME(corrW14_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 14, true, false));
-
             TIME(corrW16_2pt.Recombination( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, false, 0, false, 0, false, true, false, false, true));
 
-//            TIME(corrW16_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt[i_sample], reductionsV2_2pt, 0, 16, true, false));
 
 #if defined (COMPUTEBACKWARD)
 
@@ -1807,59 +1674,8 @@ int main(int argc, char **argv) {
 
 	    TIME(corrW14_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, false, 2, true, 0, false, true, false, false, true));
 
-//          TIME(corrW14_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 14, true, false));
-
   	    TIME(corrW16_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt,  false, 0, false, 0, false, true, false, false, true));
 
-//          TIME(corrW16_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2D_2pt_backward[i_sample], reductionsV2_2pt, 0, 16, true, false));
-
-#endif
-	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, true));//checked
-
-	    TIME(corrW31_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, false, false, false, false, true));
-
-//          TIME(corrW31_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 31, true, false));
-
-	    TIME(corrW32_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 2, true, 0, true, false, false, false, true));
-          
-//            TIME(corrW32_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 32, true, false));
-
-#if defined (COMPUTEBACKWARD)
-
-	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propTS_SS_packed_backward, propDN_SS_packed_backward, true));//checked
-
-
-	    TIME(corrW31_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 1, false, 0, false, false, false, false, true));
-
-//          TIME(corrW31_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 31, true, false));
-
-	    TIME(corrW32_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  false, 2, true, 0, true, false, false, false, true));
-
-//            TIME(corrW32_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 32, true, false));
-#endif
-
-            TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propTS_SS_packed, propDN_SS_packed, true));//checked
-
-            TIME(corrW29_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 0, false, false, false, false, true));
-
-//          TIME(corrW29_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 29, true, false));
-//
-            TIME(corrW30_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 2, false, 0,true, false, false, false, true));
-
-//            TIME(corrW30_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 30, true, false));
-
-#if defined (COMPUTEBACKWARD)
-
-            TIME(reductionsV2_2pt.V4( stochastic_piece, glist_sink_nucleon, propTS_SS_packed_backward, propDN_SS_packed_backward, true));//checked
-
-
-	    TIME(corrW29_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  true, 0, false, 0, false, false, false, false, true));
-
-//            TIME(corrW29_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 29, true, false));
-
-            TIME(corrW30_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  false, 2, false, 0,true, false, false, false, true));
-
-//	    TIME(corrW30_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 30, true, false));
 #endif
 
 
@@ -1870,10 +1686,7 @@ int main(int argc, char **argv) {
 
             TIME(corrW5_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 0,true, false, false, false, true));
 
-//	    TIME(corrW5_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 5, true, false));
-
             TIME(corrW7_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 1, false, 0, true, false, false, false, true));
-//  	    TIME(corrW7_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 7, true, false));
 
 #if defined (COMPUTEBACKWARD)
 	                
@@ -1881,38 +1694,28 @@ int main(int argc, char **argv) {
 
 	    TIME(corrW5_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 0, false, 0,true, false, false, false, true));
 
-//	    TIME(corrW5_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 5, true, false));
-
             TIME(corrW7_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 1, false, 0, true, false, false, false, true));
 
-//          TIME(corrW7_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 7, true, false));
 #endif
 
 	    TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propDN_SS_packed, propTS_SS_packed, true));//checked
 
             TIME(corrW6_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, true, false, false, false, true));
 
-//            TIME(corrW6_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 6, true, false));
-
             TIME(corrW8_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 0, false, 0, true, false, false, false, true));
-
-//            TIME(corrW8_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 8, true, false));
 
 #if defined (COMPUTEBACKWARD)
             TIME(reductionsV2_2pt.V2( stochastic_piece, glist_sink_nucleon, propDN_SS_packed_backward, propTS_SS_packed_backward, true));//checked
 
             TIME(corrW6_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 1, false, 0, true, false, false, false, true));
-//            TIME(corrW6_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 6, true, false));
 
             TIME(corrW8_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 0, false, 0, true, false, false, false, true));
 
-//            TIME(corrW8_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 8, true, false));
 #endif
 
 	  } //loop over sample
 
-	  
-
+	 
 	}//loop over doing twopoint
  
 	for (int k=0; k<tSinks.size(); ++k){
@@ -2002,20 +1805,12 @@ int main(int argc, char **argv) {
             TIME(reductionsV3.V3( stochastic_propagator_packed, glist_insertion, propTS_SL_packed, true));
 
             TIME(corrB3.Recombination(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], false,0,false,0,true,false,false,true,true));
-
-//          TIME(corrB3.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 3, true, false, true));
-         
+ 
             TIME(corrB4.Recombination(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], false,2,false,0,true,true,false, true,true));
 
-//	    TIME(corrB4.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 4, true, false, true));
-
 	    TIME(corrB5.Recombination(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], true,1,false,0,true,false,false,true,true));
-
-//	    TIME(corrB5.B_diagrams(reductionsV3, *reductions_UU_V2_GAMMAF1D_U[i_sample*tSinks.size()+k], 0, 5, true, false, true));
-            
-           TIME(corrB6.Recombination(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], true,0,false,0,false,true,false,true,true));
-
-//	    TIME(corrB6.B_diagrams(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], 0, 6, true, false, true));
+ 
+            TIME(corrB6.Recombination(reductionsV3, *reductions_UU_V4_GAMMAF1U_D[i_sample*tSinks.size()+k], true,0,false,0,false,true,false,true,true));
 
 	    stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
 	    stochastic_propagator_packed.load();
@@ -2032,53 +1827,28 @@ int main(int argc, char **argv) {
 
 	    TIME(corrW5.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, true, 0, false, 0,true, false, false, true, true));
 
-
-
-//	    TIME(corrW5.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 5, true, true));
-
 	    TIME(corrW7.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, false, 1, false, 0, true, false, false, true, true));
-
-
-//	    TIME(corrW7.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 7, true, true));
 
             TIME(reductionsV2.V2( stochastic_source_packed, glist_sink_nucleon, propDNpacked_to_sink, propTS_SS_packed_to_sink, true));//checked
 
-
 	    TIME(corrW6.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2,  true, 1, false, 0, true, false, false, true, true));
-
-
-//            TIME(corrW6.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 6, true, true));
 
 	    TIME(corrW8.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, false, 0, false, 0, true, false, false, true, true));
 
-
-
-//	    TIME(corrW8.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()], reductionsV2, 0, 8, true, true));
 
             TIME(reductionsV2.V2( stochastic_source_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, true));//checked
 
 
 	    TIME(corrW13.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, false, 0, false, 0, false, true, false, true, true));
 
-
- //           TIME(corrW13.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 13, true, true));
-
 	    TIME(corrW15.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, false, 2, true, 0, false, true, false, true, true));
-
-
-//	    TIME(corrW15.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 15, true, true));
 
             TIME(reductionsV2.V2( stochastic_source_packed, glist_sink_nucleon, propUPpacked_to_sink, propTS_SS_packed_to_sink, true));//checked
 
 	    TIME(corrW14.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2,  false, 2, true, 0, false, true, false, true, true));
 
 
-//            TIME(corrW14.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 14, true, true));
-
 	    TIME(corrW16.Recombination( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, false, 0, false, 0, false, true, false, true, true));
-
-
-//            TIME(corrW16.W_diagrams( *reductions_DD_V3_GAMMAF2D[i_sample*tSinks.size()+k], reductionsV2, 0, 16, true, true));
 
 	  }//loop over stochastic samples
 
@@ -2128,10 +1898,6 @@ int main(int argc, char **argv) {
             TIME(produceOutput_2pt_packed(corrW15_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
             TIME(produceOutput_2pt_packed(corrW16_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
 
-	    TIME(produceOutput_2pt_packed(corrW29_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
-            TIME(produceOutput_2pt_packed(corrW30_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
-            TIME(produceOutput_2pt_packed(corrW31_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
-            TIME(produceOutput_2pt_packed(corrW32_2pt, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
 
 #if defined (COMPUTEBACKWARD)
 	    outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_W_2pt_backward";
@@ -2145,10 +1911,6 @@ int main(int argc, char **argv) {
             TIME(produceOutput_2pt_packed(corrW15_2pt_backward, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
             TIME(produceOutput_2pt_packed(corrW16_2pt_backward, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
 
-            TIME(produceOutput_2pt_packed(corrW29_2pt_backward, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-            TIME(produceOutput_2pt_packed(corrW30_2pt_backward, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-            TIME(produceOutput_2pt_packed(corrW31_2pt_backward, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-            TIME(produceOutput_2pt_packed(corrW32_2pt_backward, outfilename, "4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
 #endif
 	  }
 
@@ -2272,10 +2034,6 @@ int main(int argc, char **argv) {
         PLEGMA_ScattCorrelator<float> corrW11_2pt(source, filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrW12_2pt(source, filtered_sourcemomentumList_2pt);
 
-        PLEGMA_ScattCorrelator<float> corrW33_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW34_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW35_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW36_2pt(source, filtered_sourcemomentumList_2pt);
 
 
 	corrB7_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B7");
@@ -2286,11 +2044,6 @@ int main(int argc, char **argv) {
         corrW11_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W11");
         corrW12_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W12");
 
-        corrW33_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W33");
-        corrW34_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W34");
-        corrW35_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W35");
-        corrW36_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W36");
-
 #if defined (COMPUTEBACKWARD)
 	PLEGMA_ScattCorrelator<float> corrB7_2pt_backward(source, filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrB8_2pt_backward(source, filtered_sourcemomentumList_2pt);
@@ -2300,11 +2053,6 @@ int main(int argc, char **argv) {
         PLEGMA_ScattCorrelator<float> corrW11_2pt_backward(source, filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrW12_2pt_backward(source, filtered_sourcemomentumList_2pt);
 
-        PLEGMA_ScattCorrelator<float> corrW33_2pt_backward(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW34_2pt_backward(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW35_2pt_backward(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrW36_2pt_backward(source, filtered_sourcemomentumList_2pt);
-
 
         corrB7_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B7");
         corrB8_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "B8");
@@ -2313,11 +2061,6 @@ int main(int argc, char **argv) {
         corrW10_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W10");
         corrW11_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W11");
         corrW12_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W12");
-
-        corrW33_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W33");
-        corrW34_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W34");
-        corrW35_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W35");
-        corrW36_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "W36");
 
 #endif
 
@@ -2383,39 +2126,27 @@ int main(int argc, char **argv) {
               TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));
               TIME( corrW9_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt,  false, 0, false, 0, true, false, false, false, true));
 
-//              TIME( corrW9_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0,  9, true));
-
 	      TIME(corrW11_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, true, false, false, false, true));
-//              TIME(corrW11_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 11, true));
 
               TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed, propUP_SS_packed, true));
 
               TIME(corrW10_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt,false, 1, false, 0, true, false, false, false, true ));
-//            TIME(corrW10_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 10, true, false));
 
-              TIME(corrW12_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 9, true, false, false, false, true));
-//            TIME(corrW12_2pt.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 12, true, false));
+              TIME(corrW12_2pt.Recombination( *reductions_UU_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 0, true, false, false, false, true));
 
 #if defined (COMPUTEBACKWARD)
 	      TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_backward, propUP_SS_packed_backward, true));
 
               TIME( corrW9_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 0, false, 0, true, false, false, false, true));
 
-//              TIME( corrW9_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0,  9, true));
-
 	      TIME(corrW11_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,true, 1, false, 0, true, false, false, false, true));
               
-//	      TIME(corrW11_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 11, true));
-
               TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propTS_SS_packed_backward, propUP_SS_packed_backward, true));
 
               TIME(corrW10_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 1, false, 0, true, false, false, false, true ));
 
-//              TIME(corrW10_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 10, true, false));
+	      TIME(corrW12_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 0, false, 0, true, false, false, false, true));
 
-	      TIME(corrW12_2pt_backward.Recombination( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 0, false, 9, true, false, false, false, true));
-
-//              TIME(corrW12_2pt_backward.W_diagrams( *reductions_UU_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 12, true, false));
 #endif
 
 	      stochastic_propagator_packed.apply_gamma5();
@@ -2424,11 +2155,9 @@ int main(int argc, char **argv) {
 
 	      TIME(corrB7_2pt.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], false, 2, true, 0, false, true, false, false, true));
 
-//            TIME(corrB7_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 7, true, false, false));
 
 	      TIME(corrB8_2pt.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], false, 0, false, 0, false, true, false, false, true));
 
-//	      TIME(corrB8_2pt.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt[i_sample], 0, 8, true, false, false));
 
 #if defined (COMPUTEBACKWARD)
 
@@ -2436,64 +2165,11 @@ int main(int argc, char **argv) {
 
 	      TIME(corrB7_2pt_backward.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], false, 2, true, 0, false, true, false, false, true));
 
-//              TIME(corrB7_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], 0, 7, true, false, false));
 
 	      TIME(corrB8_2pt_backward.Recombination(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], false, 0, false, 0, false, true, false, false, true));
 
-//              TIME(corrB8_2pt_backward.B_diagrams(reductionsV3_2pt, *reductions_DD_V2_GAMMAF1U_U_2pt_backward[i_sample], 0, 8, true, false, false));
 
 #endif
-
-              stochastic_propagator_packed.unload();	      
-  	      stochastic_propagator_packed.copy(*stochastic_sources[i_sample],HOST);
-              stochastic_propagator_packed.load();
-
-              stochastic_propagator_packed.apply_gamma5();
-
-	      TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
-
-              TIME(corrW33_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, false, 2, false, 0, true, false, false, false, true));
-
-//	      TIME(corrW33_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 33, true, false));
-
-              TIME(corrW34_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 0, false, 0, false, false, false, false, true));
-
-//            TIME(corrW34_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 34, true, false));
-
-
-              TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed, propTS_SS_packed, true));
-
-	      TIME(corrW35_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt,false, 2, true, 0, true, false, false, false, true));
-
-//              TIME(corrW35_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 35, true, false));
-
-              TIME(corrW36_2pt.Recombination( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, true, 1, false, 0, false, false, false, false, true));
-
-//	      TIME(corrW36_2pt.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt[i_sample], reductionsV2_2pt, 0, 36, true, false));
-
-#if defined (COMPUTEBACKWARD)
-
-              TIME(reductionsV2_2pt.V4( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed_backward, propTS_SS_packed_backward, true));
-
-              TIME(corrW33_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,false, 2, false, 0, true, false, false, false, true));
-
-//              TIME(corrW33_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 33, true, false));
-
-              TIME(corrW34_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, true, 0, false, 0, false, false, false, false, true));
-
-//              TIME(corrW34_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 34, true, false));
-
-              TIME(reductionsV2_2pt.V2( stochastic_propagator_packed, glist_sink_nucleon, propUP_SS_packed_backward, propTS_SS_packed_backward, true));
-
-              TIME(corrW35_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, false, 2, true, 0, true, false, false, false, true));
-	      
-//	      TIME(corrW35_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 35, true, false));
-
-              TIME(corrW36_2pt_backward.Recombination( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt,  true, 1, false, 0, false, false, false, false, true));
-
-//              TIME(corrW36_2pt_backward.W_diagrams( *reductions_DD_V3_GAMMAF2U_2pt_backward[i_sample], reductionsV2_2pt, 0, 36, true, false));
-#endif
-
 
 	    }
             for (int i_source_parallel=0; i_source_parallel<HGC_totalL[3]/max_source_sink_separations;++i_source_parallel){
@@ -2526,22 +2202,14 @@ int main(int argc, char **argv) {
 
             TIME( corrW9.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2,false, 0, false, 0, true, false, false, true, true));
 
-//            TIME( corrW9.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0,  9, true, true));
-
             TIME(corrW11.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, true, 1, false, 0, true, false, false, true, true));
-
-//            TIME(corrW11.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 11, true, true));
 
             TIME(reductionsV2.V4( stochastic_source_packed, glist_sink_nucleon, propTS_SS_packed_to_sink, propUPpacked_to_sink, true));
 
 	    
             TIME(corrW10.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, false, 1, false, 0, true, false, false, true, true ));
 
-//            TIME(corrW10.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 10, true, true));
-
-            TIME(corrW12.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, true, 0, false, 9, true, false, false, true, true));
-
-//            TIME(corrW12.W_diagrams( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, 0, 12, true, true));
+            TIME(corrW12.Recombination( *reductions_UU_V3_GAMMAF2U[i_sample*tSinks.size()+k], reductionsV2, true, 0, false, 0, true, false, false, true, true));
 
 	  } //loop over stochastic samples
 
@@ -2566,10 +2234,6 @@ int main(int argc, char **argv) {
             TIME(produceOutput_2pt_packed(corrW11_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
             TIME(produceOutput_2pt_packed(corrW12_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
 
-	    TIME(produceOutput_2pt_packed(corrW33_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));//because of V4
-            TIME(produceOutput_2pt_packed(corrW34_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
-            TIME(produceOutput_2pt_packed(corrW35_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
-            TIME(produceOutput_2pt_packed(corrW36_2pt, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table));
 
 #if defined (COMPUTEBACKWARD)
 
@@ -2582,11 +2246,6 @@ int main(int argc, char **argv) {
             TIME(produceOutput_2pt_packed(corrW10_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
             TIME(produceOutput_2pt_packed(corrW11_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
             TIME(produceOutput_2pt_packed(corrW12_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-
-            TIME(produceOutput_2pt_packed(corrW33_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));//because of V4
-            TIME(produceOutput_2pt_packed(corrW34_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-            TIME(produceOutput_2pt_packed(corrW35_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
-            TIME(produceOutput_2pt_packed(corrW36_2pt_backward, outfilename,"4pt", n_stochastic_samples, parallel_sources, attract_lookup_table_backward));
 
 #endif
 
@@ -2795,18 +2454,6 @@ int main(int argc, char **argv) {
         PLEGMA_ScattCorrelator<float> corrZ9_2pt(source,  filtered_sourcemomentumList_2pt);
         PLEGMA_ScattCorrelator<float> corrZ10_2pt(source, filtered_sourcemomentumList_2pt);
 
-        PLEGMA_ScattCorrelator<float> corrZ11_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrZ12_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrZ13_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrZ14_2pt(source, filtered_sourcemomentumList_2pt);
-
-        PLEGMA_ScattCorrelator<float> corrZ15_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrZ16_2pt(source, filtered_sourcemomentumList_2pt);
-
-        PLEGMA_ScattCorrelator<float> corrZ17_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrZ18_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrZ19_2pt(source, filtered_sourcemomentumList_2pt);
-        PLEGMA_ScattCorrelator<float> corrZ20_2pt(source, filtered_sourcemomentumList_2pt);
 
 
 	corrZ5_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z5");
@@ -2817,26 +2464,6 @@ int main(int argc, char **argv) {
 
         corrZ9_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z9");
         corrZ10_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z10");
-
-        corrZ11_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z11");
-        corrZ12_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z12");
-
-        corrZ13_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z13");
-        corrZ14_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z14");
-
-        corrZ15_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z15");
-        corrZ16_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z16");
-
-        corrZ17_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z17");
-        corrZ18_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z18");
-	corrZ19_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z19");
-        corrZ20_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z20");
-
-
-//	corrM.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MNPPP");
-//        corrD1if34.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP01");
-//        corrD1if12.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP02");
-//        corrD1if56.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MN0PP");
 
 #if defined (COMPUTEBACKWARD)
 
@@ -2871,26 +2498,6 @@ int main(int argc, char **argv) {
         corrZ9_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z9");
         corrZ10_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z10");
 
-        corrZ11_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z11");
-        corrZ12_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z12");
-
-        corrZ13_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z13");
-        corrZ14_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z14");
-
-        corrZ15_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z15");
-        corrZ16_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z16");
-
-        corrZ17_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z17");
-        corrZ18_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z18");
-        corrZ19_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z19");
-        corrZ20_2pt_backward.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z20");
-
-
-//        corrM_backward.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "32", "MNPPP");
-//        corrD1if34_backward.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP01");
-//        corrD1if12_backward.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MNPP02");
-//        corrD1if56_backward.initialize_diagram(  glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "MN0PP");
-
 #endif
 
       if (dotwopoint==1){
@@ -2898,133 +2505,36 @@ int main(int argc, char **argv) {
 #if defined (COMPUTEBACKWARD)
           TIME(corrZ5_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, false, 0, false, 0, true, false, false, false, true ));
 
-//	  TIME(corrZ5_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 5, false ));
 
 	  TIME(corrZ7_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, true, 1, false, 0, true, false, false, false, true ));
 
-//	  TIME(corrZ7_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 7, false ));
 
           TIME(corrZ6_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, false, 1, false, 0, true, false, false, false, true ));
 
-//	  TIME(corrZ6_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 6, false ));
 
           TIME(corrZ8_2pt_backward.Recombination( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward,  true, 0, false, 0, true, false, false, false , true ));
 
-//	  TIME(corrZ8_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 8, false ));
 
           TIME( corrZ9_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, false, 2, true, 0, false, true, false, false, true));
 
 
-//	  TIME( corrZ9_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, 0, 9, false ));
-
           TIME(corrZ10_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward,false, 0, false, 0, false, true, false, false, true ));
-
-//	  TIME(corrZ10_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHD_UP_UP_2pt_backward, 0, 10,false ));
-//
-          TIME(corrZ11_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward,false, 2, true, 0, true, false, false, false, true));
-
-//          TIME(corrZ11_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 11, false ));
-
-          TIME(corrZ13_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward,true, 1, false, 0, false, false, false, false, true ));
-
-//	  TIME(corrZ13_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV2_diluted_STOCHU_DN_UP_2pt_backward, 0, 13, false ));
-
-          TIME(corrZ12_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, false, 2, false, 0, true, false, false, false, true));
-//	  TIME(corrZ12_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 12, false ));
-
-	  TIME(corrZ14_2pt_backward.Recombination( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, true, 0, false, 0, false, false, false, false, true ));
-
-//          TIME(corrZ14_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt_backward, reductionsV4_diluted_STOCHU_DN_UP_2pt_backward, 0, 14, false ));
-
-          TIME(corrZ15_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward,  false, 0, false, 0, false, true, false, false, true));
-
-//          TIME(corrZ15_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward, 0, 15, false ));
-          TIME(corrZ16_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward,  false, 2, true, 0, false, true, false, false, true));
-
-//	  TIME(corrZ16_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHU_DN_DN_2pt_backward, 0, 16, false ));
-
-	  TIME(corrZ17_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, false, 2, true, 0, true, false, false, false, true));
-
-//          TIME(corrZ17_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, 0, 17, false ));
-          TIME(corrZ18_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, true, 1, false, 0, false, false, false, false, true));
-
-//	  TIME(corrZ18_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV2_diluted_STOCHD_UP_DN_2pt_backward, 0, 18, false ));
-
-	  TIME(corrZ19_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, false, 2, false, 0, true, false, false, false, true));
-
-//          TIME(corrZ19_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, 0, 19, false ));
-
-	  TIME(corrZ20_2pt_backward.Recombination( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, true, 0, false, 0, false, false, false, false, true ));
-
-//	  TIME(corrZ20_2pt_backward.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt_backward, reductionsV4_diluted_STOCHD_UP_DN_2pt_backward, 0, 20, false ));
-
 
 #endif
 
 
 	  TIME(corrZ5_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, false, 0, false, 0, true, false, false, false, true ));
 
-//	  TIME(corrZ5_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 5, false ));
-
 	  TIME(corrZ7_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, true, 1, false, 0, true, false, false, false, true ));
-
-//        TIME(corrZ7_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 7, false ));
 
 	  TIME(corrZ6_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, false, 1, false, 0, true, false, false, false, true ));
 
-//          TIME(corrZ6_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 6, false ));
-
           TIME(corrZ8_2pt.Recombination( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, true, 0, false, 0, true, false, false, false , true ));
 	  
-//        TIME(corrZ8_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 8, false ));
-
           TIME( corrZ9_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, false, 2, true, 0, false, true, false, false, true));
-
-//	  TIME( corrZ9_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 9, false ));
 
 	  TIME(corrZ10_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt,false, 0, false, 0, false, true, false, false, true ));
 
- //         TIME(corrZ10_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHD_UP_UP_2pt, 0, 10,false ));
-
-          TIME(corrZ11_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, false, 2, true, 0, true, false, false, false, true));
-
-//	  TIME(corrZ11_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 11, false ));
-
-	  TIME(corrZ13_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, true, 1, false, 0, false, false, false, false, true ));
-
-//	  TIME(corrZ13_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV2_diluted_STOCHU_DN_UP_2pt, 0, 13, false ));
-
-          TIME(corrZ12_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt,false, 2, false, 0, true, false, false, false, true));
-
-//          TIME(corrZ12_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 12, false ));
-
-	  TIME(corrZ14_2pt.Recombination( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, true, 0, false, 0, false, false, false, false, true ));
-
-//	  TIME(corrZ14_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN_2pt, reductionsV4_diluted_STOCHU_DN_UP_2pt, 0, 14, false ));
-
-          TIME(corrZ15_2pt.Recombonation( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, false, 0, false, 0, false, true, false, false, true));
-
-//	  TIME(corrZ15_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, 0, 15, false ));
-
-          TIME(corrZ16_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, false, 2, true, 0, false, true, false, false, true));
-
-//	  TIME(corrZ16_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHU_DN_DN_2pt, 0, 16, false ));
-
-          TIME(corrZ17_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, false, 2, true, 0, true, false, false, false, true));
-
-//          TIME(corrZ17_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, 0, 17, false ));
-
-          TIME(corrZ18_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt,true, 1, false, 0, false, false, false, false, true));
-
-//          TIME(corrZ18_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV2_diluted_STOCHD_UP_DN_2pt, 0, 18, false ));
-
-	  TIME(corrZ19_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, false, 2, false, 0, true, false, false, false, true));
-
-//          TIME(corrZ19_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, 0, 19, false ));
-
-	  TIME(corrZ20_2pt.Recombination( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, true, 0, false, 0, false, false, false, false, true ));
-
-//          TIME(corrZ20_2pt.Z_diagrams_without_dilution( reductionsV3_diluted_U_UP_2pt, reductionsV4_diluted_STOCHD_UP_DN_2pt, 0, 20, false ));
 
 #endif
 
@@ -3044,11 +2554,6 @@ int main(int argc, char **argv) {
 
 #if 1
 
-//	  TIME(corrM.M_diagrams( corrNP_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS ));
-//          TIME(corrD1if56.M_diagrams( corrN0_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS));
-//          TIME(corrD1if34.M_diagrams( corrNP_packed, stochastic_oet_prop_d_zero_mom_SS, stochastic_oet_prop_u_fini_mom_SS));
-//          TIME(corrD1if12.M_diagrams( corrNP_packed, stochastic_oet_prop_u_zero_mom_SS, stochastic_oet_prop_d_fini_mom_SS));
-
 	  outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z_2pt";
 
 
@@ -3060,18 +2565,6 @@ int main(int argc, char **argv) {
           TIME(produceOutput_2pt_packed(corrZ9_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
           TIME(produceOutput_2pt_packed(corrZ10_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
 
-          TIME(produceOutput_2pt_packed(corrZ11_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-          TIME(produceOutput_2pt_packed(corrZ12_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-          TIME(produceOutput_2pt_packed(corrZ13_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-          TIME(produceOutput_2pt_packed(corrZ14_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-
-          TIME(produceOutput_2pt_packed(corrZ15_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
-          TIME(produceOutput_2pt_packed(corrZ16_2pt, outfilename, "4pt", parallel_sources, attract_lookup_table));
-
-          TIME(produceOutput_2pt_packed(corrZ17_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-          TIME(produceOutput_2pt_packed(corrZ18_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-          TIME(produceOutput_2pt_packed(corrZ19_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
-          TIME(produceOutput_2pt_packed(corrZ20_2pt, outfilename,"4pt", parallel_sources, attract_lookup_table));
 
 #if defined (COMPUTEBACKWARD)
 
@@ -3085,27 +2578,7 @@ int main(int argc, char **argv) {
           TIME(produceOutput_2pt_packed(corrZ9_2pt_backward, outfilename, "4pt", parallel_sources, attract_lookup_table_backward));
           TIME(produceOutput_2pt_packed(corrZ10_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
 
-          TIME(produceOutput_2pt_packed(corrZ11_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-          TIME(produceOutput_2pt_packed(corrZ12_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-          TIME(produceOutput_2pt_packed(corrZ13_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-          TIME(produceOutput_2pt_packed(corrZ14_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-
-          TIME(produceOutput_2pt_packed(corrZ15_2pt_backward, outfilename, "4pt", parallel_sources, attract_lookup_table_backward));
-          TIME(produceOutput_2pt_packed(corrZ16_2pt_backward, outfilename, "4pt", parallel_sources, attract_lookup_table_backward));
-
-          TIME(produceOutput_2pt_packed(corrZ17_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-          TIME(produceOutput_2pt_packed(corrZ18_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-          TIME(produceOutput_2pt_packed(corrZ19_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-          TIME(produceOutput_2pt_packed(corrZ20_2pt_backward, outfilename,"4pt", parallel_sources, attract_lookup_table_backward));
-
 #endif
-
-// outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_M_correct_2pt";
-//        TIME(produceOutput_2pt_packed(corrM, outfilename,"4pt", parallel_sources, attract_lookup_table));
-//        TIME(produceOutput_2pt_packed(corrD1if12, outfilename,"4pt", parallel_sources, attract_lookup_table));
-//        TIME(produceOutput_2pt_packed(corrD1if34, outfilename,"4pt", parallel_sources, attract_lookup_table));
-//        TIME(produceOutput_2pt_packed(corrD1if56, outfilename,"4pt", parallel_sources, attract_lookup_table));
-
 
         }
 #endif
@@ -3120,11 +2593,6 @@ int main(int argc, char **argv) {
 
           PLEGMA_ScattCorrelator<float> corrZ9(source,  filtered_sourcemomentumList);
           PLEGMA_ScattCorrelator<float> corrZ10(source, filtered_sourcemomentumList);
-
-	  PLEGMA_ScattCorrelator<float> corrZ11(source, filtered_sourcemomentumList);
-    	  PLEGMA_ScattCorrelator<float> corrZ12(source, filtered_sourcemomentumList);
-          PLEGMA_ScattCorrelator<float> corrZ13(source, filtered_sourcemomentumList);
-          PLEGMA_ScattCorrelator<float> corrZ14(source, filtered_sourcemomentumList);
 
 	  ssource=(char *)malloc(sizeof(char)*100);
           sprintf(ssource,"Z5_deltat_%d",tSinks[k]);
@@ -3142,63 +2610,16 @@ int main(int argc, char **argv) {
           sprintf(ssource,"Z10_deltat_%d",tSinks[k]);
           corrZ10.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_insertion, "12", ssource);
 
-	  sprintf(ssource,"Z11_deltat_%d",tSinks[k]);
-          corrZ11.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_insertion, "12", ssource);
-          sprintf(ssource,"Z12_deltat_%d",tSinks[k]);
-          corrZ12.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_insertion, "12", ssource);
-
-          sprintf(ssource,"Z13_deltat_%d",tSinks[k]);
-          corrZ13.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_insertion, "12", ssource);
-          sprintf(ssource,"Z14_deltat_%d",tSinks[k]);
-          corrZ14.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_insertion, "12", ssource);
 	  free(ssource);
 
 	  TIME(corrZ5.Recombination( reductionsV3_diluted_D_UP, *reductionsV2_diluted_STOCHU_DN_UP[k], false, 0, false, 0, true, false, false, true, true ));
-
-//	  TIME(corrZ5.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 5, false, true ));
-
           TIME(corrZ7.Recombination( reductionsV3_diluted_D_UP, *reductionsV2_diluted_STOCHU_DN_UP[k], true, 1, false, 0, true, false, false, true, true ));
-
-
-//	  TIME(corrZ7.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV2_diluted_STOCHU_DN_UP, k, 7, false, true ));
-
 	  TIME(corrZ6.Recombination( reductionsV3_diluted_D_UP, *reductionsV4_diluted_STOCHU_DN_UP[k], false, 1, false, 0, true, false, false, true, true ));
-
-
-//          TIME(corrZ6.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, k, 6, false, true ));
-
 	  TIME(corrZ8.Recombination( reductionsV3_diluted_D_UP, *reductionsV4_diluted_STOCHU_DN_UP[k], true, 0, false, 0, true, false, false, true , true ));
-
-//	  TIME(corrZ8.Z_diagrams_without_dilution( reductionsV3_diluted_D_UP, reductionsV4_diluted_STOCHU_DN_UP, k, 8, false, true ));
-
           TIME(corrZ9.Recombination(  reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHD_UP_UP[k],false, 2, true, 0, false, true, false, true, true));
-
-//	  TIME(corrZ9.Z_diagrams_without_dilution(  reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP,k, 9, false, true ));
 
 	  TIME(corrZ10.Recombination( reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHD_UP_UP[k],false, 0, false, 0, false, true, false, true, true ));
 
-
-//	  TIME(corrZ10.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHD_UP_UP,k, 10,false, true ));
-
-          TIME(corrZ11.Recombination( reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHU_DN_UP[k],false, 2, true, 0, true, false, false,  true, true));
-
-
-//	  TIME(corrZ11.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP,k, 11, false, true ));
-
-	  TIME(corrZ13.Recombination( reductionsV3_diluted_U_DN, *reductionsV2_diluted_STOCHU_DN_UP[k],true, 1, false, 0, false, false, false, true, true ));
-
-
-//	  TIME(corrZ13.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV2_diluted_STOCHU_DN_UP,k, 13, false, true ));
-
-	  TIME(corrZ12.Recombination( reductionsV3_diluted_U_DN, *reductionsV4_diluted_STOCHU_DN_UP[k], false, 2, false, 0, true, false, false,true, true));
-
-
-//	  TIME(corrZ12.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP,k, 12, false, true ));
-
-	  TIME(corrZ14.Recombination( reductionsV3_diluted_U_DN, *reductionsV4_diluted_STOCHU_DN_UP[k], true, 0, false, 0, false, false, false, true, true ));
-
-
- //         TIME(corrZ14.Z_diagrams_without_dilution( reductionsV3_diluted_U_DN, reductionsV4_diluted_STOCHU_DN_UP,k, 14, false, true ));
 
           outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_Z";
 
@@ -3210,11 +2631,6 @@ int main(int argc, char **argv) {
           TIME(produceOutput_3pt(corrZ9, outfilename, "4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
           TIME(produceOutput_3pt(corrZ10, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
 
-          TIME(produceOutput_3pt(corrZ11, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
-          TIME(produceOutput_3pt(corrZ12, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
-          TIME(produceOutput_3pt(corrZ13, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
-          TIME(produceOutput_3pt(corrZ14, outfilename,"4pt", parallel_sources, attract_lookup_table, tSinks[k] ));
-
 
 	}//end for loop source sink separations
 #endif
@@ -3222,30 +2638,6 @@ int main(int argc, char **argv) {
       }//loop over mpi2
 
       if (dotwopoint==1){
-
-#if 1
-	outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N_2pt";
-        TIME( corrN0_packed.apply_phase());
-        TIME( corrN0_packed.apply_sign("N"));
-        TIME( corrN0_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
-        TIME( corrN0_packed.writeHDF5(outfilename));
-
-        TIME( corrNP_packed.apply_phase() );
-        TIME( corrNP_packed.apply_sign("N") );
-        TIME( corrNP_packed.applyBoundaryConditions( true, parallel_sources, attract_lookup_table));
-        TIME( corrNP_packed.writeHDF5(outfilename) );
-
-        //outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_N_2pt_backward";
-
-        //TIME( corrNP_packed_backward.apply_phase() );
-        //TIME( corrNP_packed_backward.apply_sign("N") );
-        //TIME( corrNP_packed_backward.applyBoundaryConditions( true, parallel_sources, attract_lookup_table_backward));
-        //TIME( corrNP_packed_backward.writeHDF5(outfilename) );
-
-
-
-
-#endif
 
         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_2pt";
         TIME(corrP0UP.apply_sign("P"));
@@ -3287,27 +2679,21 @@ int main(int argc, char **argv) {
       for(int i_samples=0; i_samples< n_stochastic_samples; ++i_samples) {
 	if (dotwopoint==1){
           reductions_DD_V2_GAMMAF1U_U_2pt.pop_back();
-          reductions_DD_V2_GAMMAF1U_D_2pt.pop_back();
-          reductions_DD_V4_GAMMAF1U_D_2pt.pop_back();
 
           reductions_UU_V4_GAMMAF1U_D_2pt.pop_back();
 	  reductions_UU_V2_GAMMAF1D_U_2pt.pop_back();
 
           reductions_UU_V3_GAMMAF2U_2pt.pop_back();
-          reductions_DD_V3_GAMMAF2U_2pt.pop_back();
           reductions_DD_V3_GAMMAF2D_2pt.pop_back();
 
 #if defined (COMPUTEBACKWARD)
 
 	  reductions_DD_V2_GAMMAF1U_U_2pt_backward.pop_back();
-          reductions_DD_V2_GAMMAF1U_D_2pt_backward.pop_back();
-          reductions_DD_V4_GAMMAF1U_D_2pt_backward.pop_back();
 
           reductions_UU_V4_GAMMAF1U_D_2pt_backward.pop_back();
           reductions_UU_V2_GAMMAF1D_U_2pt_backward.pop_back();
 
           reductions_UU_V3_GAMMAF2U_2pt_backward.pop_back();
-          reductions_DD_V3_GAMMAF2U_2pt_backward.pop_back();
           reductions_DD_V3_GAMMAF2D_2pt_backward.pop_back();
 #endif
 
