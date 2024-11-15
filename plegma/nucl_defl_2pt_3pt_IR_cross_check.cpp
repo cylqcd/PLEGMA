@@ -162,6 +162,10 @@ int main(int argc, char **argv) {
 				   if(prop_SL.getAllocation() != NONE) {
 				     PLEGMA_Vector<float> vectorAuxF;
 				     vectorAuxF.copy(vectorInOut);
+					if(isc==0 && run_mu==-mu_ud){
+                        vectorAuxF.unload();
+                    	vectorAuxF.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt_cc/vecAuxF_DN_SL.h5");
+                    }
 				     prop_SL.absorb(vectorAuxF, isc/3, isc%3);
 				   }
 				   { // Smearing the solution
@@ -193,9 +197,9 @@ int main(int argc, char **argv) {
 	bool computed_light = false;
 	// If twop_filename exists we hold the computation of the light props
 	if(access( twop_filename.c_str(), F_OK ) == -1) {
-	  TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
-	  TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
-	  computed_light = true;
+		TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
+		TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
+	  	computed_light = true;
 	}
 	
 // #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
@@ -243,7 +247,7 @@ int main(int argc, char **argv) {
 		for(int c2 = 0 ; c2 < 3 ; c2++){
 		  PLEGMA_Vector<double> vectorInOut;
 		  {
-		    PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
+		    PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2, vectorAuxD3;
 		    PLEGMA_Vector3D<float> vectorAuxF;
 		    if(&prop1 != &prop2)
 		      vectorAuxF.seqSourceNucleon(prop13D, prop23D, get_projector(Projs[iproj]), nucleon, nu, c2);
@@ -253,15 +257,15 @@ int main(int argc, char **argv) {
 		    // put a momentum in the sink later
 		    vectorAuxF.conjugate();
 			if(nu==0 && c2==0){
-				vectorAuxD2.copy(vectorAuxF);
-				vectorAuxD2.unload();
-				vectorAuxD2.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt_cc/vecAuxD.h5");
+				vectorAuxD3.copy(vectorAuxF);
+				vectorAuxD3.unload();
+				vectorAuxD3.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt_cc/vecAuxD.h5");
 			}
 		    vectorAuxF.apply_gamma(G5);
 		    vectorAuxD1.copy(vectorAuxF);
 
-		    // TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
-		    vectorInOut.absorb(vectorAuxD1, global_fixSinkTime);
+		    TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
+		    vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
 		  }
 		//   double norm = vectorInOut.norm();
 		//   vectorInOut.scale(1/norm);

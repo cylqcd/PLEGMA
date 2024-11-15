@@ -834,15 +834,18 @@ void EigSolver::solve(PLEGMA_Vector<double> &inOut, double mu) { // Construct 1/
     cudaMemset(d_out, 0, p.NeV*2*sizeof(double));
     cuBLAS::gemv(DAGGER, size_per_Vec, p.NeV, aP, d_eigVecs, inOut.D_elem(), b, d_out, (double*) h_out, HGC_fullComm);
 
-    PLEGMA_printf("spinVals:\n");
-    for(int i=0; i<p.NeV; i++){
-      PLEGMA_printf("%e+%e\n", h_out[i].real(), h_out[i].imag());
-    }
+    // PLEGMA_printf("spinVals:\n");
+    // PLEGMA_printf("mu:%d\n", mu);
+    // for(int i=0; i<p.NeV; i++){
+    //   PLEGMA_printf("%e+%e\n", h_out[i].real(), h_out[i].imag());
+    // }
 
     for (int i = 0; i < p.NeV; i++) {
         h_out[i] /= evals[i];
+        PLEGMA_printf("%e+%e\n", h_out[i].real(), h_out[i].imag());
     }
     cudaMemcpy(d_out, h_out, p.NeV*2*sizeof(double), cudaMemcpyHostToDevice);
+
 
     cuBLAS::gemv(NOTRANS, size_per_Vec, p.NeV, aM, d_eigVecs, d_out, b, inOut.D_elem());
 

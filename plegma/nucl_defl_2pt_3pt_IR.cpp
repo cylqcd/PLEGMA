@@ -180,11 +180,6 @@ int main(int argc, char **argv) {
     cudaMalloc((void**)&evecs_d, 12*2*Eig_NeV*V3*sizeof(double));
     checkCudaError();
 
-    PLEGMA_Propagator<float> propUP;
-    PLEGMA_Propagator<float> propDN;
-    PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
-    PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
-
     PLEGMA_Propagator3D<float> prop13D;
     PLEGMA_Propagator3D<float> prop23D;
     PLEGMA_Vector3D<double> vectorAuxD;
@@ -192,13 +187,18 @@ int main(int argc, char **argv) {
     PLEGMA_Vector<float> vectorAuxF;
     std::complex<double> *vals;
     PLEGMA_Propagator<float> seqProp;
+
+    PLEGMA_Propagator<float> propUP;
+    PLEGMA_Propagator<float> propDN;
+    PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
+    PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
     
     
     for(int isource = startSource; isource < numSourcePositions; isource++){
       site& source = sourcePositions[isource];
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, source[0], source[1], source[2], source[3]);
-      updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
+      // updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
       bool all_exist=true;
       for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
@@ -248,6 +248,17 @@ int main(int argc, char **argv) {
       }
       MPI_Allreduce(MPI_IN_PLACE,spinEVals,12*Eig_NeV*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
 
+      
+      // PLEGMA_printf("spinVals:\n");
+      // for(int spin = 0; spin < N_SPINS; spin++){
+      //   for(int color = 0; color < N_COLS; color++){
+      //     for(int ivec = 0; ivec < Eig_NeV; ivec++){
+      //       PLEGMA_printf("%e+%e\n", spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color].real(), spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color].imag());
+      //       checkCudaError();
+      //     }
+      //   }
+      // }
+
       for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
         PLEGMA_printf("Allocating device memory");
         int nev = nevs[inev];
@@ -258,13 +269,27 @@ int main(int argc, char **argv) {
         threep_filename = given_threep_filename + src_string;
         free(src_string);
 
-        auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS_UP, PLEGMA_Propagator<float>& prop_SL_UP, PLEGMA_Propagator<float>& prop_SS_DN, PLEGMA_Propagator<float>& prop_SL_DN, bool finalize) { //What about WHICHFLAVOR fl? How does choosing a different flavor affect the computation?
+        auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS_UP, PLEGMA_Propagator<float>& prop_SL_UP, PLEGMA_Propagator<float>& prop_SS_DN, PLEGMA_Propagator<float>& prop_SL_DN, double run_mu, bool finalize) {
           // PLEGMA_Gauge3D<double> smearedGauge3D;
           // smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
           // Inverting
           cudaMemcpy(eigVecs_d, eigVecs_hS, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
           checkCudaError();
+
+          // PLEGMA_printf("\neigVec smeared:\n");
+          // for(int spin = 0; spin < N_SPINS; spin++){
+          //   for(int color = 0; color < N_COLS; color++){
+          //       PLEGMA_printf("%e\n", eigVecs_hS[((spin*N_COLS+color)*V4)*2]);
+          //       checkCudaError();
+          //   }
+          // }
+
+          // Ensuring mu
+          for(int i=0; i<nev; i++) {
+            evals[i].imag(run_mu);
+          }
+
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
               for(int ivec = 0; ivec < nev; ivec++){
@@ -280,10 +305,15 @@ int main(int argc, char **argv) {
             }
           }
 
+          // Ensuring mu
+          for(int i=0; i<nev; i++) {
+            evals[i].imag(-run_mu);
+          }
+
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
               for(int ivec = 0; ivec < nev; ivec++){
-                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/std::conj(evals[ivec]);
+                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/evals[ivec];
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
               checkCudaError();
@@ -297,10 +327,27 @@ int main(int argc, char **argv) {
 
           cudaMemcpy(eigVecs_d, eigVecs_hL, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
           checkCudaError();
+
+          // PLEGMA_printf("\neigVec local:\n");
+          // for(int spin = 0; spin < N_SPINS; spin++){
+          //   for(int color = 0; color < N_COLS; color++){
+          //     // for(int ivec = 0; ivec < Eig_NeV; ivec++){
+          //       PLEGMA_printf("%e\n", eigVecs_hL[((spin*N_COLS+color)*V4)*2]);
+          //       checkCudaError();
+          //     // }
+          //   }
+          // }
+          
+          // Ensuring mu
+          for(int i=0; i<nev; i++) {
+            evals[i].imag(run_mu);
+          }
+
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
               for(int ivec = 0; ivec < nev; ivec++){
                 tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS + color])/evals[ivec];
+                // PLEGMA_printf("%e+%e\n", tmp[ivec].real(), tmp[ivec].imag());
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
               checkCudaError();
@@ -312,17 +359,26 @@ int main(int argc, char **argv) {
             }
           }
 
+          // Ensuring mu
+          for(int i=0; i<nev; i++) {
+            evals[i].imag(-run_mu);
+          }
+
           for(int spin = 0; spin < N_SPINS; spin++){
             for(int color = 0; color < N_COLS; color++){
               for(int ivec = 0; ivec < nev; ivec++){
-                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/std::conj(evals[ivec]);
+                tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color])/evals[ivec];
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
               checkCudaError();
-
+              
               cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem()); 
               // PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(vec);
+              // if(spin==0 && color==0){
+              //   vectorAuxF.unload();
+              //   vectorAuxF.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxF_DN_SL.h5");
+              // }
               prop_SL_DN.absorb(vectorAuxF, spin, color);
             }
           }
@@ -339,7 +395,7 @@ int main(int argc, char **argv) {
           bool computed_light = false;
           // If twop_filename exists we hold the computation of the light props
           if(access( twop_filename.c_str(), F_OK ) == -1) {
-            TIME(computePropagator(propUP, propUP_SL, propDN, propDN_SL, false));
+            TIME(computePropagator(propUP, propUP_SL, propDN, propDN_SL, mu_ud, false));
             computed_light = true;
           }
 	
@@ -352,9 +408,45 @@ int main(int argc, char **argv) {
               if(tsinkMtsource >= HGC_totalL[3])
                 PLEGMA_error("Provided tsink=%d is >= than temporal extent",tsinkMtsource);
               int signPer = (tsinkMtsource+source[3]) >= HGC_totalL[3] ? -1 : +1;
-              int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3]; 
+              int global_fixSinkTime = (tsinkMtsource + source[3])%HGC_totalL[3];
 
               PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
+
+              // Projecting the source
+              int my_it = global_fixSinkTime - HGC_procPosition[3] * HGC_localL[3];
+              bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
+                
+              TIC();
+              if(not is_myIt) {
+                memset(spinVals, 0, nev*2*sizeof(double));
+              } else {
+                // Copy the non-zero part of the source
+                // double *dst = source_d;
+                // double *src = vectorAuxD.D_elem() + nu*3*V3*2 + c2*V3*2;
+                // cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyDeviceToDevice);
+                // checkCudaError();
+                  
+                // Copy the needed part of the evecs
+                for(int iv = 0 ; iv < nev ; iv++){
+                  for (int spinindex=0; spinindex<4; ++spinindex){
+                    for(int c1 = 0 ; c1 < N_COLS ; c1++){
+                      double *dst = evecs_d + iv*4*3*V3*2 + spinindex*3*V3*2 + c1*V3*2;
+                      double *src = eigVecs_hS + iv*4*3*V4*2 + spinindex*3*V4*2 + c1*V4*2 + my_it*V3*2;
+                      cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyHostToDevice);
+                    }
+                  }
+                }  
+                checkCudaError();
+
+                cuBLAS::gemv(DAGGER, 12*V3, nev, aP, evecs_d, vectorAuxD.D_elem(), b, spinVals_d);
+                checkCudaError();
+                cudaMemcpy(spinVals, spinVals_d, nev*2*sizeof(double), cudaMemcpyDeviceToHost);
+                checkCudaError();
+              }
+              MPI_Allreduce(MPI_IN_PLACE,spinVals,nev*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
+              TOC("projecting the source");
+              checkCudaError();
+
 
               WHICHPARTICLE nucleon = get_particle(prOrNt); 
               std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
@@ -366,7 +458,7 @@ int main(int argc, char **argv) {
                     return;
                   }
                   if(not computed_light) {
-                    TIME(computePropagator(propUP, propUP_SL, propDN, propDN_SL, false));
+                    TIME(computePropagator(propUP, propUP_SL, propDN, propDN_SL, mu_ud, false));
                     computed_light = true;
                   }
                   cudaMemcpy(eigVecs_d, eigVecs_hL, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
@@ -402,40 +494,6 @@ int main(int argc, char **argv) {
                       //   vectorAuxD.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxD.h5");
                       // }
                       //Invert
-                      // Projecting the source
-                      int my_it = global_fixSinkTime - HGC_procPosition[3] * HGC_localL[3];
-                      bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-                      
-                      TIC();
-                      if(not is_myIt) {
-                        memset(spinVals, 0, nev*2*sizeof(double));
-                      } else {
-                        // Copy the non-zero part of the source
-                        // double *dst = source_d;
-                        // double *src = vectorAuxD.D_elem() + nu*3*V3*2 + c2*V3*2;
-                        // cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyDeviceToDevice);
-                        // checkCudaError();
-                          
-                        // Copy the needed part of the evecs
-                        for(int iv = 0 ; iv < nev ; iv++){
-                          for (int spinindex=0; spinindex<4; ++spinindex){
-                            for(int c1 = 0 ; c1 < N_COLS ; c1++){
-                              double *dst = evecs_d + iv*4*3*V3*2 + spinindex*3*V3*2 + c1*V3*2;
-                              double *src = eigVecs_hS + iv*4*3*V4*2 + spinindex*3*V4*2 + c1*V4*2 + my_it*V3*2;
-                              cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyHostToDevice);
-                            }
-                          }
-                        }  
-                        checkCudaError();
-
-                        cuBLAS::gemv(DAGGER, 12*V3, nev, aP, evecs_d, vectorAuxD.D_elem(), b, spinVals_d);
-                        checkCudaError();
-                        cudaMemcpy(spinVals, spinVals_d, nev*2*sizeof(double), cudaMemcpyDeviceToHost);
-                        checkCudaError();
-                      }
-                      MPI_Allreduce(MPI_IN_PLACE,spinVals,nev*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
-                      TOC("projecting the source");
-                      checkCudaError();
 
                       // if(nu==0 && c2==0){
                       //   PLEGMA_printf("spinVals:\n");
@@ -450,19 +508,10 @@ int main(int argc, char **argv) {
                         evals[i].imag(run_mu);
                       }
                       vals = (std::complex<double> *) (spinVals);
-                      // if(fl=="up") {
                       for(int i=0; i<nev; i++) {
                         vals[i] /= evals[i];
                       }
-                      // }
-                      // else if(fl=="dn"){
-                      //   for(int i=0; i<nev; i++) {
-                      //     tmp[i] = vals[i]/std::conj(evals_test[i]);
-                      //   }
-                      // }
-                      // else {
-                      //   PLEGMA_error("Flavor %s not recognized",fl.c_str());
-                      // }
+
                       cudaMemcpy(spinVals_d, vals, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
                       checkCudaError();
                       cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinVals_d, b, vec.D_elem());
