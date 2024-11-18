@@ -1665,7 +1665,7 @@ void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float>	
   Float factor[2]={-1.,0.};//-1 from eqs. (20),(23), ....
 
   if (matrix == true){
-     this->V3V2reduction_matrix( srcV3, srcV2, index_abs, transp_source_sink,i_gi2, transpgamma_i1, factor, transpgamma_f1, oet, threept);
+     this->V3V2reduction_matrix( srcV3, srcV2, index_abs, transp_source_sink,ig_i2, transpgamma_i1, factor, transpgamma_f1, oet, threept);
   }
   else{
      this->V3V2reduction( srcV3, srcV2, index_abs, transp_source_sink, ig_i2, transpgamma_i1, factor, transpgamma_f1, oet, threept);
