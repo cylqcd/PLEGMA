@@ -288,6 +288,10 @@ void qudaOptions(Options &opt){
   isFound=opt.set("Q-mg-nu-pre", "Number of pre-smoother applications, 0-20", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, nu_pre, 0, 128, "ERROR: invalid pre-smoother applications");
 
+  default_map_MG(tpl_int_int, 1);
+  isFound=opt.set("Q-mg-n-vec-batch", "batch size when computing null space vectors, 1-20", verbosity, tpl_int_int);
+  map_to_array_MG<int>(tpl_int_int, n_vec_batch, 0, 128, "ERROR: invalid n-vec-batch");
+
   default_map_MG(tpl_int_int, 4);
   isFound=opt.set("Q-mg-nu-post", "Number of post-smoother applications, 0-20", verbosity, tpl_int_int);
   map_to_array_MG<int>(tpl_int_int, nu_post, 0, 128, "ERROR: invalid post-smoother applications");
