@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
   std::vector<GAMMAS_SCATT> glist_source_nucleon_unpaired = {ID};
   std::vector<GAMMAS_SCATT> glist_sink_nucleon_unpaired = {ID};
-  std::vector<GAMMAS_SCATT> glist_insertion = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4}; //,S12,S13,S23,S41,S42,S43};
+  std::vector<GAMMAS_SCATT> glist_insertion = {ID,G_1,G_2,G_3,G_4,G_5,G_5_G_1,G_5_G_2,G_5_G_3,G_5_G_4,S_12,S_13,S_23,S_41,S_42,S_43};
 
   int n_stochastic_samples;
   int max_source_sink_separations;

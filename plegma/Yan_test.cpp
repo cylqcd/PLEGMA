@@ -20,7 +20,8 @@ int main(int argc, char **argv)
     initializeOptions(argc, argv, true, listOpt);
 
     int confnumber_int;
-    std::string outdiagramPrefix;
+    std::string outdiagramPrefix, flagFinish;
+    HGC_options->set("flagFinish", "An empty file created indicating the completion of a run", verbosity, flagFinish);
     HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
     HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
 
@@ -505,6 +506,6 @@ int main(int argc, char **argv)
         }
     }
     finalize();
-    PLEGMA_printf("finished_flagYan");
+    std::ofstream output(flagFinish);
     return 0;
 }

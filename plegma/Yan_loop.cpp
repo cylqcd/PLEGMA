@@ -2,6 +2,8 @@
 Here we compute <(qbar.G.q)(x,t) e^(-i.pf.xf)> = - PhiPhi(phi0,Gf,phi1,true)
 To get data for the above formula, the output file requires the following additional changes:
 # (-1) for the (-1) in front of PhiPhi
+# (+i) for tensor in G
+# (-1) for S_13 in G
 # we compute q=u here, flavor d can be got from g5-Hermiticity
 */
 
@@ -27,7 +29,8 @@ int main(int argc, char **argv)
     initializeOptions(argc, argv, true, listOpt);
 
     int confnumber_int;
-    std::string outdiagramPrefix;
+    std::string outdiagramPrefix, flagFinish;
+    HGC_options->set("flagFinish", "An empty file created indicating the completion of a run", verbosity, flagFinish);
     HGC_options->set("confnumber", "Integer determining the index of the gauge configuration", verbosity, confnumber_int);
     HGC_options->set("outdiagramPrefix", "Prefix of the resulting diagrams", verbosity, outdiagramPrefix);
 
@@ -173,7 +176,7 @@ int main(int argc, char **argv)
         std::string confnumber = ssource;
         free(ssource);
 
-        std::string outfilename = outdiagramPrefix + "_" + confnumber + "_loop";
+        std::string outfilename = outdiagramPrefix + "_" + confnumber + "_loop" + SorL;
 
         std::vector<plegma::GAMMAS_SCATT> gscatts = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43};
 
@@ -195,8 +198,6 @@ int main(int argc, char **argv)
         stocSrcUnsmeared.randInit(seed_stoc);
         for (int i = 0; i < num_stoc; i++)
         {
-            plegma::PLEGMA_ScattCorrelator<float> auxPhiPhi(src, momList);
-            auxPhiPhi.initialize_diagram(gscatts, "");
 
             plegma::PLEGMA_Vector<float> phi0, phi1;
             plegma::PLEGMA_Vector<double> stocPropSmeared;
@@ -225,13 +226,13 @@ int main(int argc, char **argv)
                 solve0(stocPropUnsmeared, aux, u);
                 aux3D.absorb(stocPropUnsmeared, tc);
 
-                if (SorL == "true")
+                if (SorL == "S")
                 {
                     plegma::PLEGMA_Gauge3D<double> smearedGauge3D;
                     smearedGauge3D.absorb(smearedGauge, tc);
                     aux3D2.gaussianSmearing(aux3D, smearedGauge3D, nsmearGauss, alphaGauss);
                 }
-                else if (SorL == "false")
+                else if (SorL == "L")
                 {
                     aux3D2.copy(aux3D);
                 }
@@ -240,8 +241,10 @@ int main(int argc, char **argv)
             }
             phi1.copy(stocSrcUnsmeared); // Note: smearing a prop Q gives SQS, with stoc, it's SQS\xi \xi^\dag, so no smearing is needed for the src.
             phi0.copy(stocPropSmeared);
+            
+            plegma::PLEGMA_ScattCorrelator<float> auxPhiPhi(src, momList);
+            auxPhiPhi.initialize_diagram(gscatts, "");
             auxPhiPhi.PhiPhi(phi0, gscatts, phi1, true); // Additional (-1) needed
-
             auxPhiPhi.setGroups(std::vector<std::string>{"PhiPhi"}); 
             auxPhiPhi.setDatasets(std::vector<std::string>{"seed=" + std::to_string(seed_stoc) + "/id=" + std::to_string(i) + "/up"});
             auxPhiPhi.writeHDF5(outfilename);
@@ -249,6 +252,6 @@ int main(int argc, char **argv)
     }
 
     finalize();
-    PLEGMA_printf("Yan_flagFinish");
+    std::ofstream output(flagFinish);
     return 0;
 }
