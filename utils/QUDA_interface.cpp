@@ -382,22 +382,16 @@ std::vector<ColorSpinorField> QUDA_solver::solve(std::vector<ColorSpinorField>& 
   std::vector<ColorSpinorField> in(rhs.size());
   std::vector<ColorSpinorField> out(rhs.size());
 
-  PLEGMA_printf("Prepare starts\n");
   D->prepare(out,in,x,rhs,inv_param.solution_type);
-  PLEGMA_printf("Prepare ends\n");
 
-  if (getVerbosity() >= 0) {
-    auto in_norm = blas::norm2(in);
-    auto out_norm = blas::norm2(out);
-    for (auto i = 0u; i < in.size(); i++)
-      PLEGMA_printf("Prepared: source = %g, solution = %g\n", in_norm[i], out_norm[i]);
-  }
-  printf("Maxiter %d\n",solverParam->maxiter);
   (*solver)(out, in);
-
-  PLEGMA_printf("Solver done");
-  if (inv_param.iter == solverParam->maxiter){
-	  PLEGMA_error("Max iteration reached in the inversion\n");
+#if 0
+  for (int i=0;i<rhs.size();++i){
+    PLEGMA_printf("Solver done in iteration %d %d %f\n",solverParam->num_src, solverParam->iter, solverParam->true_res[i]);
+  }
+#endif
+  if (solverParam->iter == solverParam->maxiter){
+	  PLEGMA_error("Max iteration reached in the inversion %d\n",solverParam->iter);
   }
   D->reconstruct(x,rhs,inv_param.solution_type);
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
