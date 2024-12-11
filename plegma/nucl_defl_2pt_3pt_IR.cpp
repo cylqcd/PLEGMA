@@ -200,19 +200,19 @@ int main(int argc, char **argv) {
 		    isource, source[0], source[1], source[2], source[3]);
       // updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
-      bool all_exist=true;
-      for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
-        int nev = nevs[inev];
+      // bool all_exist=true;
+      // for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
+      //   int nev = nevs[inev];
       
-        char * src_string;
-        asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_nev%03d", source[0], source[1], source[2], source[3], nev);
-        twop_filename = given_twop_filename + src_string + ".h5";
-        threep_filename = given_threep_filename + src_string;
-        free(src_string);
-        if(access( twop_filename.c_str(), F_OK ) == -1)
-            all_exist=false;
-      }
-      if(all_exist) continue;
+      //   char * src_string;
+      //   asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_nev%03d", source[0], source[1], source[2], source[3], nev);
+      //   twop_filename = given_twop_filename + src_string + ".h5";
+      //   threep_filename = given_threep_filename + src_string;
+      //   free(src_string);
+        // if(access( twop_filename.c_str(), F_OK ) == -1)
+        //     all_exist=false;
+      // }
+      // if(all_exist) continue;
 
       cudaMemcpy(eigVecs_d, eigVecs_hS, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
       checkCudaError();
@@ -248,17 +248,6 @@ int main(int argc, char **argv) {
       }
       MPI_Allreduce(MPI_IN_PLACE,spinEVals,12*Eig_NeV*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
 
-      
-      // PLEGMA_printf("spinVals:\n");
-      // for(int spin = 0; spin < N_SPINS; spin++){
-      //   for(int color = 0; color < N_COLS; color++){
-      //     for(int ivec = 0; ivec < Eig_NeV; ivec++){
-      //       PLEGMA_printf("%e+%e\n", spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color].real(), spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS+color].imag());
-      //       checkCudaError();
-      //     }
-      //   }
-      // }
-
       for(int inev=0; inev < nevs.size(); inev++){ // Loop over NeV
         PLEGMA_printf("Allocating device memory");
         int nev = nevs[inev];
@@ -269,21 +258,13 @@ int main(int argc, char **argv) {
         threep_filename = given_threep_filename + src_string;
         free(src_string);
 
-        auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS_UP, PLEGMA_Propagator<float>& prop_SL_UP, PLEGMA_Propagator<float>& prop_SS_DN, PLEGMA_Propagator<float>& prop_SL_DN, double run_mu, bool finalize) {
+        auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS_UP, PLEGMA_Propagator<float>& prop_SL_UP, PLEGMA_Propagator<float>& prop_SS_DN, PLEGMA_Propagator<float>& prop_SL_DN, double run_mu, bool finalize) { //What about WHICHFLAVOR fl? How does choosing a different flavor affect the computation?
           // PLEGMA_Gauge3D<double> smearedGauge3D;
           // smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
           // Inverting
           cudaMemcpy(eigVecs_d, eigVecs_hS, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
           checkCudaError();
-
-          // PLEGMA_printf("\neigVec smeared:\n");
-          // for(int spin = 0; spin < N_SPINS; spin++){
-          //   for(int color = 0; color < N_COLS; color++){
-          //       PLEGMA_printf("%e\n", eigVecs_hS[((spin*N_COLS+color)*V4)*2]);
-          //       checkCudaError();
-          //   }
-          // }
 
           // Ensuring mu
           for(int i=0; i<nev; i++) {
@@ -327,16 +308,6 @@ int main(int argc, char **argv) {
 
           cudaMemcpy(eigVecs_d, eigVecs_hL, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
           checkCudaError();
-
-          // PLEGMA_printf("\neigVec local:\n");
-          // for(int spin = 0; spin < N_SPINS; spin++){
-          //   for(int color = 0; color < N_COLS; color++){
-          //     // for(int ivec = 0; ivec < Eig_NeV; ivec++){
-          //       PLEGMA_printf("%e\n", eigVecs_hL[((spin*N_COLS+color)*V4)*2]);
-          //       checkCudaError();
-          //     // }
-          //   }
-          // }
           
           // Ensuring mu
           for(int i=0; i<nev; i++) {
@@ -347,7 +318,6 @@ int main(int argc, char **argv) {
             for(int color = 0; color < N_COLS; color++){
               for(int ivec = 0; ivec < nev; ivec++){
                 tmp[ivec] = std::conj(spinEVals[ivec*N_SPINS*N_COLS + spin*N_COLS + color])/evals[ivec];
-                // PLEGMA_printf("%e+%e\n", tmp[ivec].real(), tmp[ivec].imag());
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
               checkCudaError();
@@ -371,14 +341,10 @@ int main(int argc, char **argv) {
               }
               cudaMemcpy(spinEVals_d, tmp, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
               checkCudaError();
-              
+
               cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinEVals_d, b, vec.D_elem()); 
               // PLEGMA_Vector<float> vectorAuxF;
               vectorAuxF.copy(vec);
-              // if(spin==0 && color==0){
-              //   vectorAuxF.unload();
-              //   vectorAuxF.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxF_DN_SL.h5");
-              // }
               prop_SL_DN.absorb(vectorAuxF, spin, color);
             }
           }
@@ -400,7 +366,6 @@ int main(int argc, char **argv) {
           }
 	
           //#ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
-            cudaMemset(spinVals_d, 0, Eig_NeV*2*sizeof(double));
             cudaMemset(evecs_d, 0, 12*Eig_NeV*V3*2*sizeof(double));
 
             for(size_t its = 0; its < tSinks.size(); its++){
@@ -412,41 +377,25 @@ int main(int argc, char **argv) {
 
               PLEGMA_Correlator<float> corr(corr_space, source, maxQsq, tsinkMtsource+1);
 
-              // Projecting the source
+              // Copying needed part of evecs
               int my_it = global_fixSinkTime - HGC_procPosition[3] * HGC_localL[3];
               bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-                
-              TIC();
-              if(not is_myIt) {
-                memset(spinVals, 0, nev*2*sizeof(double));
-              } else {
-                // Copy the non-zero part of the source
-                // double *dst = source_d;
-                // double *src = vectorAuxD.D_elem() + nu*3*V3*2 + c2*V3*2;
-                // cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyDeviceToDevice);
-                // checkCudaError();
-                  
-                // Copy the needed part of the evecs
-                for(int iv = 0 ; iv < nev ; iv++){
-                  for (int spinindex=0; spinindex<4; ++spinindex){
-                    for(int c1 = 0 ; c1 < N_COLS ; c1++){
-                      double *dst = evecs_d + iv*4*3*V3*2 + spinindex*3*V3*2 + c1*V3*2;
-                      double *src = eigVecs_hS + iv*4*3*V4*2 + spinindex*3*V4*2 + c1*V4*2 + my_it*V3*2;
-                      cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyHostToDevice);
+
+                  TIC();
+                  if(is_myIt) {                  
+                    for(int iv = 0 ; iv < nev ; iv++){
+                      for (int spinindex=0; spinindex<4; ++spinindex){
+                        for(int c1 = 0 ; c1 < N_COLS ; c1++){
+                          double *dst = evecs_d + iv*4*3*V3*2 + spinindex*3*V3*2 + c1*V3*2;
+                          double *src = eigVecs_hS + iv*4*3*V4*2 + spinindex*3*V4*2 + c1*V4*2 + my_it*V3*2;
+                          cudaMemcpy(dst, src, 2*V3*sizeof(double), cudaMemcpyHostToDevice);
+                        }
+                      }
                     }
+                    checkCudaError();
                   }
-                }  
-                checkCudaError();
-
-                cuBLAS::gemv(DAGGER, 12*V3, nev, aP, evecs_d, vectorAuxD.D_elem(), b, spinVals_d);
-                checkCudaError();
-                cudaMemcpy(spinVals, spinVals_d, nev*2*sizeof(double), cudaMemcpyDeviceToHost);
-                checkCudaError();
-              }
-              MPI_Allreduce(MPI_IN_PLACE,spinVals,nev*2,MPI_DOUBLE,MPI_SUM,HGC_fullComm);
-              TOC("projecting the source");
-              checkCudaError();
-
+                  TOC("Copying the 3d evecs");
+                  checkCudaError();
 
               WHICHPARTICLE nucleon = get_particle(prOrNt); 
               std::vector<GAMMAS> gammas = {ONE,G1,G2,G3,G4,G5,G5G1,G5G2,G5G3,G5G4,S12,S13,S23,S41,S42,S43};
@@ -463,7 +412,7 @@ int main(int argc, char **argv) {
                   }
                   cudaMemcpy(eigVecs_d, eigVecs_hL, Eig_NeV*vec_size, cudaMemcpyHostToDevice);
                   checkCudaError();
-        
+
                   {
                     // 3D propagators at t_sink
                     prop13D.absorb(prop1, global_fixSinkTime);
@@ -494,6 +443,17 @@ int main(int argc, char **argv) {
                       //   vectorAuxD.writeHDF5("/leonardo_scratch/large/userexternal/cschneid/B64/nucl_defl_3pt/vecAuxD.h5");
                       // }
                       //Invert
+                      if (is_myIt) {
+                          cudaMemset(spinVals_d, 0, Eig_NeV*2*sizeof(double));
+                          cuBLAS::gemv(DAGGER, 12 * V3, nev, aP, evecs_d, vectorAuxD.D_elem(), b, spinVals_d);
+                          checkCudaError();
+                          cudaMemcpy(spinVals, spinVals_d, nev * 2 * sizeof(double), cudaMemcpyDeviceToHost);
+                          checkCudaError();
+                      }
+                      else {
+                        memset(spinVals, 0, nev*2*sizeof(double));
+                      }
+                      MPI_Allreduce(MPI_IN_PLACE, spinVals, nev * 2, MPI_DOUBLE, MPI_SUM, HGC_fullComm);
 
                       // if(nu==0 && c2==0){
                       //   PLEGMA_printf("spinVals:\n");
@@ -508,10 +468,19 @@ int main(int argc, char **argv) {
                         evals[i].imag(run_mu);
                       }
                       vals = (std::complex<double> *) (spinVals);
+                      // if(fl=="up") {
                       for(int i=0; i<nev; i++) {
                         vals[i] /= evals[i];
                       }
-
+                      // }
+                      // else if(fl=="dn"){
+                      //   for(int i=0; i<nev; i++) {
+                      //     tmp[i] = vals[i]/std::conj(evals_test[i]);
+                      //   }
+                      // }
+                      // else {
+                      //   PLEGMA_error("Flavor %s not recognized",fl.c_str());
+                      // }
                       cudaMemcpy(spinVals_d, vals, 2*nev*sizeof(double), cudaMemcpyHostToDevice);
                       checkCudaError();
                       cuBLAS::gemv(NOTRANS, size_per_Vec, nev, aM, eigVecs_d, spinVals_d, b, vec.D_elem());
@@ -533,33 +502,33 @@ int main(int argc, char **argv) {
                   if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
                   THREAD(corr.writeFile(filename, corr_file_format));
                       
-                  // ONED contractions
-                  TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
-                  if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-                  THREAD(corr.writeFile( filename, corr_file_format));
+                  // // ONED contractions
+                  // TIME(corr.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
+                  // if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+                  // THREAD(corr.writeFile( filename, corr_file_format));
                       
-                  // noe contractions
-                  TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
-                  if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-                  THREAD(corr.writeFile( filename, corr_file_format));
+                  // // noe contractions
+                  // TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
+                  // if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+                  // THREAD(corr.writeFile( filename, corr_file_format));
 
-                  // LOCAL contractions
-                  TIME(corr.contractNucleonThrp_local(seqProp, propF2, signProps, gammas));
-                  if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-                  corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-                  THREAD(corr.writeFile(filename, corr_file_format));
+                  // // LOCAL contractions
+                  // TIME(corr.contractNucleonThrp_local(seqProp, propF2, signProps, gammas));
+                  // if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
+                  // corr.setDatasets((std::vector<std::string>) {"threep_OS"});
+                  // THREAD(corr.writeFile(filename, corr_file_format));
                       
-                  // ONED contractions
-                  TIME(corr.contractNucleonThrp_oneD(seqProp, propF2, contractGauge, signProps, gammas));
-                  if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-                  corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-                  THREAD(corr.writeFile( filename, corr_file_format));
+                //   // ONED contractions
+                //   TIME(corr.contractNucleonThrp_oneD(seqProp, propF2, contractGauge, signProps, gammas));
+                //   if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+                //   corr.setDatasets((std::vector<std::string>) {"threep_OS"});
+                //   THREAD(corr.writeFile( filename, corr_file_format));
                       
-                  // noe contractions
-                  TIME(corr.contractNucleonThrp_noe(seqProp, propF2, contractGauge, signProps));
-                  if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-                  corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-                  THREAD(corr.writeFile( filename, corr_file_format));
+                //   // noe contractions
+                //   TIME(corr.contractNucleonThrp_noe(seqProp, propF2, contractGauge, signProps));
+                //   if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
+                //   corr.setDatasets((std::vector<std::string>) {"threep_OS"});
+                //   THREAD(corr.writeFile( filename, corr_file_format));
                 };
 
                 if(nucleon == PROTON) {

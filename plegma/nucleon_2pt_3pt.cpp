@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
       site& source = sourcePositions[isource];
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 		    isource, source[0], source[1], source[2], source[3]);
-      updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
+    //   updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);
 
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_SS, PLEGMA_Propagator<float>& prop_SL,
 				   double run_mu, WHICHFLAVOR fl, int nSmear, bool finalize) {
