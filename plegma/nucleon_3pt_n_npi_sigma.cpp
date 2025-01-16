@@ -326,8 +326,10 @@ int main(int argc, char **argv) {
       if (readStochSamples==0){
         
 	vectorSource_stochastic.stochastic_Z(nroots);
-        vectorSource_stochastic.unload();
-        vectorSource_stochastic.writeLIME("globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
+        PLEGMA_Vector<float> vectorAuxF;
+        vectorAuxF.copy(vectorSource_stochastic);
+        vectorAuxF.unload();
+        vectorAuxF.writeLIME("globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
 #if 0
 	PLEGMA_Vector<float> vectorRead(BOTH);
 	vectorRead.readFile("stochastic_source.0000.00000_plegma_conventions.lime",LIME_FORMAT);
@@ -337,13 +339,14 @@ int main(int argc, char **argv) {
 	vectorRead.unload();
         stochastic_sources[i]->copy(vectorRead,HOST);
 #endif
+        vectorSource_stochastic.unload();
         stochastic_sources[i]->copy(vectorSource_stochastic,HOST);
 	vectorSource_stochastic.load();
       }
       else{
         std::string inputfilename="globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
         PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
-        PLEGMA_Vector<double> vectorRead(BOTH);
+        PLEGMA_Vector<float> vectorRead(BOTH);
         vectorRead.readFile(inputfilename,LIME_FORMAT);
         stochastic_sources[i]->copy(vectorRead,HOST);
         inputfilename="globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
