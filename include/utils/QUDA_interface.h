@@ -29,12 +29,12 @@ namespace quda {
     QUDA_solver(double mu, int nsrc);
     virtual ~QUDA_solver();
     std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
-    template<typename Float>
-    std::vector<ColorSpinorField> solve(std::vector<PLEGMA_Vector<Float>> &vectorIn);
-    template<typename Float>
-    void solve(std::vector<PLEGMA_Vector<Float>> &out, std::vector<PLEGMA_Vector<Float>> &in);
-    template<typename Float>
-    void runOneIter(std::vector<PLEGMA_Vector<Float>> &out, std::vector<PLEGMA_Vector<Float>> &in);
+    template<bool bl, typename Float>
+    std::vector<ColorSpinorField> solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorIn);
+    template<bool bl, typename Float>
+    void solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &out, typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &in);
+    template<bool bl, typename Float>
+    void runOneIter(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &out, typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &in);
   };
 
   enum APP_TYPE {M,Mdag,MdagM,MMdag};
@@ -52,7 +52,7 @@ namespace quda {
     void print(){dParam.print();}
     void switchMu(double mu);
     void switchKappa(double kappa);
-    template<APP_TYPE type, typename Float> void apply(std::vector<PLEGMA_Vector<Float>> &out, std::vector<PLEGMA_Vector<Float>> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
+    template<APP_TYPE type, bool bl, typename Float> void apply(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &out, typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
     template<APP_TYPE type, typename Float> void apply(Float *dout, Float *din, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is without any normalization // Note that dout and din are device pointers
   };
 }

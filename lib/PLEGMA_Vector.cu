@@ -82,13 +82,13 @@ void PLEGMA_Vector<Float>::gaussianSmearing(PLEGMA_Vector<Float> &vecIn,
 
 
 template<typename Float>
-void PLEGMA_Vector<Float>::copyToQUDA(std::vector<ColorSpinorField>& qudaVector, int src, bool isEv){
-  copy_to_QUDA(this->d_elem, (qudaVector), src, isEv);
+void PLEGMA_Vector<Float>::copyToQUDA(std::vector<ColorSpinorField> &qudaVector, bool isEv){
+  copy_to_QUDA(this->d_elem, (qudaVector), 0, isEv);
 }
 
 template<typename Float>
-void PLEGMA_Vector<Float>::copyFromQUDA( std::vector<ColorSpinorField>& qudaVector, int src, bool isEv){
-  copy_from_QUDA(this->d_elem, (qudaVector), src, isEv);
+void PLEGMA_Vector<Float>::copyFromQUDA( std::vector<ColorSpinorField> &qudaVector, bool isEv){
+  copy_from_QUDA(this->d_elem, (qudaVector), 0, isEv);
 }
 
 template<typename Float>
@@ -463,15 +463,15 @@ template class PLEGMA_Vector<double>;
 namespace plegma{
   
   template<typename Float>
-  void copyToQUDA(std::vector<ColorSpinorField>& qudaVector, Float* delem, int src, bool isEv){
-    copy_to_QUDA(delem, qudaVector, src, isEv);
+  void copyToQUDA(std::vector<ColorSpinorField>& qudaVector, Float* delem,  bool isEv){
+    copy_to_QUDA(delem, qudaVector, isEv);
   }
-  template void copyToQUDA<float>(std::vector<ColorSpinorField>&qudaVector, float* delem, int src, bool isEv);
-  template void copyToQUDA<double>(std::vector<ColorSpinorField>&qudaVector, double* delem, int src, bool isEv);
+  template void copyToQUDA<float>(std::vector<ColorSpinorField>&qudaVector, float* delem, bool isEv);
+  template void copyToQUDA<double>(std::vector<ColorSpinorField>&qudaVector, double* delem, bool isEv);
 
   template<typename Float>
-  void copyFromQUDA(Float* delem, std::vector<ColorSpinorField>&qudaVector, int src, bool isEv){
-    copy_from_QUDA(delem, qudaVector, src, isEv);
+  void copyFromQUDA(Float* delem, std::vector<ColorSpinorField>&qudaVector,  bool isEv){
+    copy_from_QUDA(delem, qudaVector, isEv);
   }
 
   template void copyFromQUDA<float>(float* delem, std::vector<ColorSpinorField>& qudaVector, int src, bool isEv);

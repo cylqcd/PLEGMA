@@ -401,52 +401,56 @@ std::vector<ColorSpinorField> QUDA_solver::solve(std::vector<ColorSpinorField>& 
 }
 
 
-template<typename Float>
-std::vector<quda::ColorSpinorField> QUDA_solver::solve(std::vector<PLEGMA_Vector<Float>> &vectorIn){
+template<bool bl, typename Float>
+std::vector<quda::ColorSpinorField> QUDA_solver::solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorIn){
   bool flag_eo=false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
 
-  for (int i=0; i<inv_param.num_src; ++i){
-    (vectorIn[i]).copyToQUDA(b,i,flag_eo);
-    PLEGMA_printf("copyToQUDA i%d\n",i);
-  }
+  vectorIn.copyToQUDA(b, flag_eo);
   return solve(b);
 }
 
-template<typename Float>
-void QUDA_solver::solve(std::vector<PLEGMA_Vector<Float>> &vectorOut, std::vector<PLEGMA_Vector<Float>> &vectorIn){
+template<bool bl, typename Float>
+void QUDA_solver::solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorOut,
+                        typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorIn){
   bool flag_eo = false;
   if( inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN )
     flag_eo = true;
 
-  x = solve(vectorIn); 
-  for (int i=0; i<inv_param.num_src; ++i)
-    (vectorOut[i]).copyFromQUDA( x, i, flag_eo);
+  x = solve<bl,Float>(vectorIn); 
+  vectorOut.copyFromQUDA( x, flag_eo);
   if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION || 
       inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION) {
-    for (int i=0; i<inv_param.num_src; ++i)
-      (vectorOut[i]).scale(2*inv_param.kappa);
+      vectorOut.scale(2*inv_param.kappa);
   }
 
 }
 
-template void QUDA_solver::solve(std::vector<PLEGMA_Vector<float>> &vectorOut, std::vector<PLEGMA_Vector<float>> &vectorIn);
-template void QUDA_solver::solve(std::vector<PLEGMA_Vector<double>> &vectorOut, std::vector<PLEGMA_Vector<double>> &vectorIn);
+template void QUDA_solver::solve<true,float>(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
+template void QUDA_solver::solve<true,double>(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
+template void QUDA_solver::solve<false,float>(PLEGMA_Propagator<float> &vectorOut, PLEGMA_Propagator<float> &vectorIn);
+template void QUDA_solver::solve<false,double>(PLEGMA_Propagator<double> &vectorOut, PLEGMA_Propagator<double> &vectorIn);
 
-template std::vector<ColorSpinorField> QUDA_solver::solve(std::vector<PLEGMA_Vector<float>> &vectorIn);
-template std::vector<ColorSpinorField> QUDA_solver::solve(std::vector<PLEGMA_Vector<double>> &vectorIn);
+template std::vector<ColorSpinorField> QUDA_solver::solve<true, float>(PLEGMA_Vector<float> &vectorIn);
+template std::vector<ColorSpinorField> QUDA_solver::solve<true, double>(PLEGMA_Vector<double> &vectorIn);
 
-template<typename Float>
-void QUDA_solver::runOneIter(std::vector<PLEGMA_Vector<Float>> &vectorOut, std::vector<PLEGMA_Vector<Float>> &vectorIn){
+template std::vector<ColorSpinorField> QUDA_solver::solve<false, float>(PLEGMA_Propagator<float> &vectorIn);
+template std::vector<ColorSpinorField> QUDA_solver::solve<false, double>(PLEGMA_Propagator<double> &vectorIn);
+
+template<bool bl, typename Float>
+void QUDA_solver::runOneIter(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorOut,
+                             typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorIn){
   int maxiter = solverParam->maxiter;
   solverParam->maxiter = 1;
-  solve(vectorOut, vectorIn);
+  solve<bl,Float>(vectorOut, vectorIn);
   solverParam->maxiter = maxiter;
 }
 
-template void QUDA_solver::runOneIter(std::vector<PLEGMA_Vector<float>> &vectorOut, std::vector<PLEGMA_Vector<float>> &vectorIn);
-template void QUDA_solver::runOneIter(std::vector<PLEGMA_Vector<double>> &vectorOut,std::vector<PLEGMA_Vector<double>>&vectorIn);
+template void QUDA_solver::runOneIter<true, float>(PLEGMA_Vector<float> &vectorOut, PLEGMA_Vector<float> &vectorIn);
+template void QUDA_solver::runOneIter<true, double>(PLEGMA_Vector<double> &vectorOut, PLEGMA_Vector<double> &vectorIn);
+template void QUDA_solver::runOneIter<false, float>(PLEGMA_Propagator<float> &vectorOut, PLEGMA_Propagator<float> &vectorIn);
+template void QUDA_solver::runOneIter<false, double>(PLEGMA_Propagator<double> &vectorOut, PLEGMA_Propagator<double> &vectorIn);
 
 
 //######################### Quda Dirac operator class ################################
@@ -494,40 +498,49 @@ template<APP_TYPE type> void QUDA_dirac::apply(){
   }
 }
 
-template<APP_TYPE type,typename Float>
-void QUDA_dirac::apply(std::vector<PLEGMA_Vector<Float>> &Pout, std::vector<PLEGMA_Vector<Float>> &Pin, QudaMassNormalization normType){
-  for (int i=0; i<inv_param.num_src; ++i)
-    (Pin[i]).copyToQUDA(in,i);
+template<APP_TYPE type,bool bl, typename Float>
+void QUDA_dirac::apply(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &Pout,
+                       typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &Pin,
+                       QudaMassNormalization normType){
+  Pin.copyToQUDA(in);
   apply<type>();
-  for (int i=0; i<inv_param.num_src; ++i)
-    (Pout[i].copyFromQUDA(out,i));
+  Pout.copyFromQUDA(out);
   if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION){
-	 for (int i=0; i<inv_param.num_src; ++i){
-	   (Pout[i]).scale(1./(2*inv_param.kappa));
-	 }
+    Pout.scale(1./(2*inv_param.kappa));
   }
 }
 
-template void QUDA_dirac::apply<M>(std::vector<PLEGMA_Vector<float>> &Pout, std::vector<PLEGMA_Vector<float>> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<M>(std::vector<PLEGMA_Vector<double>> &Pout, std::vector<PLEGMA_Vector<double>> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<Mdag>(std::vector<PLEGMA_Vector<float>> &Pout, std::vector<PLEGMA_Vector<float>> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<Mdag>(std::vector<PLEGMA_Vector<double>> &Pout, std::vector<PLEGMA_Vector<double>> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MdagM>(std::vector<PLEGMA_Vector<float>> &Pout, std::vector<PLEGMA_Vector<float>> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MdagM>(std::vector<PLEGMA_Vector<double>> &Pout, std::vector<PLEGMA_Vector<double>> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MMdag>(std::vector<PLEGMA_Vector<float>> &Pout, std::vector<PLEGMA_Vector<float>> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MMdag>(std::vector<PLEGMA_Vector<double>> &Pout, std::vector<PLEGMA_Vector<double>>&Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M, true,float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M, true,double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M, false,float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<M, false,double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
 
-template<APP_TYPE type,typename Float>
+template void QUDA_dirac::apply<Mdag, true,float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag, true,double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag, false,float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<Mdag, false,double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
+
+template void QUDA_dirac::apply<MdagM, true,float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM, true,double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM, false,float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MdagM, false,double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
+
+template void QUDA_dirac::apply<MMdag, true,float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag, true,double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag, false,float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
+template void QUDA_dirac::apply<MMdag, false,double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
+
+
+template<APP_TYPE type, typename Float>
 void QUDA_dirac::apply(Float *dout, Float *din, QudaMassNormalization normType){
-  for (int i=0; i<inv_param.num_src; ++i){
-    plegma::copyToQUDA(in,(Float *)din,i);
-  }
+  plegma::copyToQUDA(in,(Float *)din);
+  
   apply<type>();
-  for (int i=0; i<inv_param.num_src; ++i){
-    plegma::copyFromQUDA((Float *)dout,out,i);
-  }
+  
+  plegma::copyFromQUDA((Float *)dout,out);
+  
   if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
-    cuBLAS::scal<Float>(inv_param.num_src*N_SPINS*N_COLS*HGC_localVolume, (Float) (1./(2*inv_param.kappa)), dout);
+    cuBLAS::scal<Float>(N_SPINS*N_COLS*HGC_localVolume, (Float) (1./(2*inv_param.kappa)), dout);
 }
 
 template void QUDA_dirac::apply<M>(float *dout, float *din, QudaMassNormalization normType);

@@ -11,6 +11,82 @@ template<typename Float>
 PLEGMA_Propagator<Float>::PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag, GHOST_FLAG ghost_flag): 
   PLEGMA_Field<Float>(alloc_flag, PROPAGATOR, ghost_flag){;}
 
+
+
+template<typename Float>
+void PLEGMA_Propagator<Float>::gaussianSmearing(PLEGMA_Propagator<Float> &propIn,
+                                                PLEGMA_Gauge<Float> &gauge,
+                                                int nsmearGauss, Float alphaGauss){
+  std::vector<double> runtime;
+  double start=0, finish=0, core=0, ghost=0;
+#define TIME(add,fnc)  runtime.push_back(MPI_Wtime()); fnc;     \
+  add += MPI_Wtime()-runtime.back();                            \
+  runtime.pop_back()
+
+  if(propIn.IsAllocHost()) {
+    propIn.unload(); // backing up the propIn
+  } else {
+    PLEGMA_warning("PropIn is not allocated on BOTH; gaussianSmearing will overwrite the device memory.\n");
+  }
+
+  assert(this->checkVolume(propIn, gauge));
+  auto texGauge = toTexture<gaugeTex>(gauge);
+  auto texPropIn = toTexture<propTex>(propIn);
+  auto texPropOut = toTexture<propTex>(*this);
+
+  for(int i = 0 ; i < nsmearGauss ; i++){
+    if( (i%2) == 0){
+      TIME(start,
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+        if(i==0) {
+          gauge.communicateSideGhost(dir, DIR_BOTH, START);
+        }
+        propIn.communicateSideGhost(dir, DIR_BOTH, START);
+      }
+           );
+      TIME(core,
+           gaussian_smearing_prop_no_ghost(*texPropOut,*texPropIn,*texGauge, alphaGauss);
+           );
+      TIME(finish,
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+        if(i==0) {
+          gauge.communicateSideGhost(dir, DIR_BOTH, FINISH);
+        }
+        propIn.communicateSideGhost(dir, DIR_BOTH, FINISH);
+      });
+      TIME(ghost,
+           gaussian_smearing_prop_only_ghost(*texPropOut,*texPropIn,*texGauge, alphaGauss);
+           cudaDeviceSynchronize());
+    }
+    else{
+      TIME(start,
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+        this->communicateSideGhost(dir, DIR_BOTH, START);
+      });
+      TIME(core,
+           gaussian_smearing_prop_no_ghost(*texPropIn, *texPropOut, *texGauge, alphaGauss));
+      TIME(finish,
+      for(int dir=0; dir<N_DIMS-1; dir++) {
+        this->communicateSideGhost(dir, DIR_BOTH, FINISH);
+      });
+      TIME(ghost,
+           gaussian_smearing_prop_only_ghost(*texPropIn, *texPropOut, *texGauge, alphaGauss);
+           cudaDeviceSynchronize());
+    }
+  }
+  PLEGMA_printf("### GAUSSIAN SMEARING breakdown: comm-start %.2f, comm-finish %.2f, calc-core %.2f, calc-ghost %.2f\n", start, finish, core, ghost);
+  if( (nsmearGauss%2) == 0)
+    cudaMemcpy(this->D_elem(),propIn.D_elem(),
+               this->Bytes_total(),cudaMemcpyDeviceToDevice);
+
+  checkCudaError();
+
+  if(propIn.IsAllocHost()) {
+    propIn.load(); // restoring propIn
+  }
+}
+
+
 template <typename Float>
 void PLEGMA_Propagator<Float>::
 absorbVectorToHost(PLEGMA_Vector<Float> &vec, int nu, int c2){
@@ -259,6 +335,26 @@ void PLEGMA_Propagator<Float>::PropmulVVdag(PLEGMA_Vector<Float> &vec1,PLEGMA_Ve
   prop_mul_V_Vdag(toField2<prop2>(*this), *vectex1, *vectex2);
   checkQudaError();
 }
+
+template<typename Float>
+void PLEGMA_Propagator<Float>::copyToQUDA(std::vector<ColorSpinorField> &qudaVector, bool isEv){
+
+  for (int isc=0; isc<12; ++isc){
+    PLEGMA_Vector<Float> temporary;
+    temporary.absorb(this, isc/3, isc%3);
+    copy_to_QUDA(temporary->d_elem, (qudaVector), isc, isEv);
+  }
+} 
+
+template<typename Float>
+void PLEGMA_Propagator<Float>::copyFromQUDA( std::vector<ColorSpinorField> &qudaVector, bool isEv){
+  for (int isc=0; isc<12; ++isc){
+    PLEGMA_Vector<Float> temporary; 
+    copy_from_QUDA(temporary, (qudaVector), isc, isEv);
+    this->absorb(temporary, isc/3, isc%3);
+  }
+} 
+
 	      
 
 //----------------------------------//
