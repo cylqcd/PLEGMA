@@ -1,7 +1,12 @@
 #include <PLEGMA_Propagator.h>
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_propagator_utils.cuh> 
+#include <PLEGMA_gaussian_smearing.cuh>
+#include <PLEGMA_vector_utils.cuh>
+
 using namespace plegma;
+
+using namespace quda;
 
 //-------------------------------//
 // class PLEGMA_Propagator //
@@ -79,7 +84,7 @@ void PLEGMA_Propagator<Float>::gaussianSmearing(PLEGMA_Propagator<Float> &propIn
     cudaMemcpy(this->D_elem(),propIn.D_elem(),
                this->Bytes_total(),cudaMemcpyDeviceToDevice);
 
-  checkCudaError();
+  //checkCudaError();
 
   if(propIn.IsAllocHost()) {
     propIn.load(); // restoring propIn
@@ -337,20 +342,20 @@ void PLEGMA_Propagator<Float>::PropmulVVdag(PLEGMA_Vector<Float> &vec1,PLEGMA_Ve
 }
 
 template<typename Float>
-void PLEGMA_Propagator<Float>::copyToQUDA(std::vector<ColorSpinorField> &qudaVector, bool isEv){
+void PLEGMA_Propagator<Float>::copyToQUDA(std::vector<quda::ColorSpinorField> &qudaVector, bool isEv){
 
   for (int isc=0; isc<12; ++isc){
     PLEGMA_Vector<Float> temporary;
     temporary.absorb(this, isc/3, isc%3);
-    copy_to_QUDA(temporary->d_elem, (qudaVector), isc, isEv);
+    copy_to_QUDA(temporary.D_elem(), (qudaVector), isc, isEv);
   }
 } 
 
 template<typename Float>
-void PLEGMA_Propagator<Float>::copyFromQUDA( std::vector<ColorSpinorField> &qudaVector, bool isEv){
+void PLEGMA_Propagator<Float>::copyFromQUDA( std::vector<quda::ColorSpinorField> &qudaVector, bool isEv){
   for (int isc=0; isc<12; ++isc){
     PLEGMA_Vector<Float> temporary; 
-    copy_from_QUDA(temporary, (qudaVector), isc, isEv);
+    copy_from_QUDA(temporary.D_elem(), (qudaVector), isc, isEv);
     this->absorb(temporary, isc/3, isc%3);
   }
 } 

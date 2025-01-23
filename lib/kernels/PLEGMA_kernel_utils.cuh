@@ -368,6 +368,70 @@ namespace plegma {
       }
     return res;
   }
+
+  template<typename FloatOut, typename FloatG, typename FloatIn, ACCUM_TYPE accum=ACC_ZERO>
+    __inline__ __device__ void mul_G(Float2<FloatOut> out[N_SPINS][N_SPINS][N_COLS][N_COLS],
+                                       Float2<FloatG> G[N_COLS][N_COLS],
+                                       Float2<FloatIn> in[N_SPINS][N_SPINS][N_COLS][N_COLS]){
+    if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS)
+      #pragma unroll
+      for(int mu=0; mu<N_SPINS; mu++)
+        #pragma unroll
+        for(int nu=0; nu<N_SPINS; nu++)
+          #pragma unroll
+          for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+            for(int j=0; j<N_COLS; j++)
+              out[mu][nu][i][j] = 0.;
+
+    #pragma unroll
+    for(int mu=0; mu<N_SPINS; mu++)
+      #pragma unroll
+      for(int nu=0; nu<N_SPINS; nu++)
+        #pragma unroll
+        for(int j=0; j<N_COLS; j++)
+          #pragma unroll
+          for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+            for(int k=0; k<N_COLS; k++) {
+              if(accum==ACC_MINUS || accum == ZERO_MINUS) out[mu][nu][j][i] -= G[j][k]*in[mu][nu][k][i];
+              else out[mu][nu][j][i] += G[j][k]*in[mu][nu][k][i];
+            }
+  }
+
+
+  template<typename FloatOut, typename FloatG, typename FloatIn, ACCUM_TYPE accum=ACC_ZERO>
+  __inline__ __device__ void mul_Gdag(Float2<FloatOut> out[N_SPINS][N_SPINS][N_COLS][N_COLS],
+                                      Float2<FloatG> G[N_COLS][N_COLS],
+                                      Float2<FloatIn> in[N_SPINS][N_SPINS][N_COLS][N_COLS]){
+    if(accum==ACC_ZERO || accum == ZERO_PLUS || accum == ZERO_MINUS)
+      #pragma unroll
+      for(int mu=0; mu<N_SPINS; mu++)
+        #pragma unroll
+        for(int nu=0; nu<N_SPINS; nu++)
+          #pragma unroll
+          for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+            for(int j=0; j<N_COLS; j++)
+              out[mu][nu][i][j] = 0.;
+
+    #pragma unroll
+    for(int mu=0; mu<N_SPINS; mu++)
+      #pragma unroll
+      for(int nu=0; nu<N_SPINS; nu++)
+        #pragma unroll
+        for(int j=0; j<N_COLS; j++)
+          #pragma unroll
+          for(int i=0; i<N_COLS; i++)
+            #pragma unroll
+            for(int k=0; k<N_COLS; k++) {
+              if(accum==ACC_MINUS || accum == ZERO_MINUS) out[mu][nu][j][i] -= conj(G[k][j])*in[mu][nu][k][i];
+              else out[mu][nu][j][i] += conj(G[k][j])*in[mu][nu][k][i];
+            }
+  }
+
+
+
   
   template<typename FloatA, typename FloatB, typename FloatC>
   __inline__ __device__ void mul_G_Gdag(Float2<FloatA> a[N_COLS][N_COLS], Float2<FloatB> b[N_COLS][N_COLS], Float2<FloatC> c[N_COLS][N_COLS]){

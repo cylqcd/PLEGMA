@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h>
+#include <color_spinor_field.h>
 
 #ifndef _PLEGMA_PROPAGATOR_H
 #define _PLEGMA_PROPAGATOR_H
@@ -18,8 +19,8 @@ namespace plegma {
     PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Propagator(){;}
 
-    void copyToQUDA( std::vector<quda::ColorSpinorField>& cudaVector,  bool isEv = false);
-    void copyFromQUDA( std::vector<quda::ColorSpinorField>& cudaVector, bool isEv = false);
+    void copyToQUDA( std::vector<ColorSpinorField>& cudaVector,  bool isEv = false);
+    void copyFromQUDA( std::vector<ColorSpinorField>& cudaVector, bool isEv = false);
 
     
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
