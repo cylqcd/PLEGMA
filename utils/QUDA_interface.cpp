@@ -136,7 +136,7 @@ void plaqQuda() {
 }
 
 QUDA_solver::QUDA_solver(double mu, int nsrc) {
-  profiler = new TimeProfile(("Solver profiler mu="+to_string(mu)).c_str());
+  profiler = new TimeProfile(("Solver profiler mu="+std::to_string(mu)).c_str());
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
 
   if(use_mg){
@@ -370,7 +370,7 @@ void QUDA_solver::UpdateSolver()
   solver = Solver::create(*solverParam, *M, *MSloppy, 
   			 *MPre, *MPre );
 
-  profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+to_string(mu)).c_str();
+  profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+std::to_string(mu)).c_str();
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();

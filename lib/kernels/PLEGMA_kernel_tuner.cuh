@@ -280,6 +280,11 @@ void PLEGMA_kernel_tuner<types...>::run(){
 }
 
 template<class ...types, class ...typesK>
+PLEGMA_kernel_tuner<typesK...>* tuner(ProfileStruct &ps, std::string kname, void (*kernel)(typesK...), types&&... kArgs){
+  return new PLEGMA_kernel_tuner<typesK...>(ps, kname, kernel, kArgs...);
+}
+
+template<class ...types, class ...typesK>
 void tune(ProfileStruct &ps, std::string kname, void (*kernel)(typesK...), types&&... kArgs){
   PLEGMA_kernel_tuner<typesK...> tuner(ps, kname, kernel, kArgs...);
   tuner.tune();
