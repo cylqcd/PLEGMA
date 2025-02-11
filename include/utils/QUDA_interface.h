@@ -29,6 +29,37 @@ namespace quda {
     QUDA_solver(double mu, int nsrc);
     virtual ~QUDA_solver();
     std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
+
+    template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Vector<Float> &vectorIn);
+    template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Propagator<Float> &vectorIn);
+
+/*
+    std::vector<ColorSpinorField> solve(PLEGMA_Vector<float> &vectorIn);
+    std::vector<ColorSpinorField> solve(PLEGMA_Vector<double> &vectorIn);
+
+    std::vector<ColorSpinorField> solve(PLEGMA_Propagator<float> &vectorIn);
+    std::vector<ColorSpinorField> solve(PLEGMA_Propagator<double> &vectorIn);*/
+
+
+    template<typename Float> void solve(PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in);
+    template<typename Float> void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+/*
+    void solve( PLEGMA_Vector<float> &out, PLEGMA_Vector<float> &in); 
+    void solve( PLEGMA_Vector<double> &out, PLEGMA_Vector<double> &in);
+
+    void solve( PLEGMA_Propagator<float> &out, PLEGMA_Propagator<float> &in);
+    void solve( PLEGMA_Propagator<double> &out, PLEGMA_Propagator<double> &in);*/
+
+    template<typename Float> void runOneIter( PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+    template<typename Float> void runOneIter( PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in);
+
+/*
+    void runOneIter( PLEGMA_Vector<float> &out, PLEGMA_Vector<float> &in);
+    void runOneIter( PLEGMA_Vector<double> &out, PLEGMA_Vector<double> &in);
+
+    void runOneIter( PLEGMA_Propagator<float> &out, PLEGMA_Propagator<float> &in);
+    void runOneIter( PLEGMA_Propagator<double> &out, PLEGMA_Propagator<double> &in);*/
+
     template<bool bl, typename Float>
     std::vector<ColorSpinorField> solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorIn);
     template<bool bl, typename Float>
@@ -53,6 +84,9 @@ namespace quda {
     void switchMu(double mu);
     void switchKappa(double kappa);
     template<APP_TYPE type, bool bl, typename Float> void apply(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &out, typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
+    template<APP_TYPE type, typename Float> void apply(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
+    template<APP_TYPE type, typename Float> void apply(PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
+
     template<APP_TYPE type, typename Float> void apply(Float *dout, Float *din, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is without any normalization // Note that dout and din are device pointers
   };
 }
