@@ -98,6 +98,7 @@ namespace plegma {
     void rotate_uk_ch_etmc();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
+    void pack_propagator(PLEGMA_Vector<Float> &in_ppa, PLEGMA_Vector<Float> &in_pma, int t0, int deltat, bool initialize=true);
     void pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime);
 
     void pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
