@@ -157,6 +157,10 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   target_link_libraries(QuarkLoops_pi0_insertion ${PLEGMA_LIBS})
   cuda_add_executable(testYan EXCLUDE_FROM_ALL testYan.cpp)
   target_link_libraries(testYan ${PLEGMA_LIBS})
+
+  cuda_add_executable(piN_scattering_length_12 EXCLUDE_FROM_ALL piN_scattering_length_12.cpp)
+  target_link_libraries(piN_scattering_length_12 ${PLEGMA_LIBS})
+
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 
