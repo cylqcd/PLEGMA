@@ -296,7 +296,8 @@ void PLEGMA_Vector<Float>::pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>
 
 }
 
-template<typename Float>::pack_propagator(PLEGMA_Vector<Float> &in_ppa, PLEGMA_Vector<Float> &in_pma, int t0, int deltat, bool initialize){
+template<typename Float>
+void PLEGMA_Vector<Float>::pack_propagator(PLEGMA_Vector<Float> &in_ppa, PLEGMA_Vector<Float> &in_pma, int t0, int deltat, bool initialize){
   PLEGMA_Vector<Float> stmp;
   if (initialize==true){
     stmp.zero_where(DEVICE);
@@ -311,12 +312,12 @@ template<typename Float>::pack_propagator(PLEGMA_Vector<Float> &in_ppa, PLEGMA_V
     if ((t1>=0) && (t1<HGC_totalL[DIM_T])){
       int t_tmp=t1;
       PLEGMA_printf("# [pack_propagator] packing v1 timslice t = %3d for t0 = %3d and dt = %3d\n", t_tmp, t0, dt_tmp );
-      stmp.absorb(in_ppa, t_tmp,false);
+      stmp.absorbTimeslice(in_ppa, t_tmp,false);
     }
     else{
       int t_tmp=(t1+HGC_totalL[DIM_T])%HGC_totalL[DIM_T];
-      PLEGMA_printf("# [pack_propagator] packing v2 timslice t = %3d for t0 = %3d and dt = %3d\n", t_tmp, t0, dt_tmp )
-      stmp.absorb(in_pma, t_tmp,false);
+      PLEGMA_printf("# [pack_propagator] packing v2 timslice t = %3d for t0 = %3d and dt = %3d\n", t_tmp, t0, dt_tmp );
+      stmp.absorbTimeslice(in_pma, t_tmp,false);
     }
   }
   this->copy(stmp);
