@@ -90,6 +90,52 @@ void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &
   gaugeOut.calculatePlaq();
 }
 
+void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, bool antiperiodic){
+
+  updateGaugeQuda(gaugeIn, antiperiodic);
+
+  QudaGaugeParam gauge_param = newQudaGaugeParam();
+  setGaugeParam(gauge_param);
+  gauge_param.type = QUDA_WILSON_LINKS;
+  gauge_param.make_resident_gauge = 0;
+
+  double* new_gauge[N_DIMS];
+  for(int i=0; i<N_DIMS; i++) hostMalloc(new_gauge[i], gaugeIn.Bytes_total()/N_DIMS);
+  
+  QudaGaugeObservableParam *obs_param = new QudaGaugeObservableParam[2];
+
+  for (int i = 0; i < 2; i++) {
+    obs_param[i] = newQudaGaugeObservableParam();
+    obs_param[i].compute_plaquette = QUDA_BOOLEAN_TRUE;
+    obs_param[i].compute_qcharge = QUDA_BOOLEAN_FALSE;
+    obs_param[i].su_project = QUDA_BOOLEAN_TRUE ;
+  }
+
+  // We here set all the problem parameters for all possible smearing types.
+  QudaGaugeSmearParam smear_param = newQudaGaugeSmearParam();
+  smear_param.smear_type = QUDA_GAUGE_SMEAR_HYP;
+  smear_param.n_steps = 2;
+  smear_param.meas_interval = 1;
+  smear_param.alpha = 0;
+  smear_param.rho = 0;
+  smear_param.epsilon = 0;
+  smear_param.alpha1 = 0.95;
+  smear_param.alpha2 = 0.76;
+  smear_param.alpha3 = 0.38;
+
+  performGaugeSmearQuda(&smear_param, obs_param);
+
+  saveGaugeQuda(new_gauge, &gauge_param);
+  
+  packGaugeToNormal(gaugeOut,new_gauge);
+  gaugeOut.load();
+  gaugeOut.calculatePlaq();
+
+  for(int i=0; i<N_DIMS; i++) hostFree(new_gauge[i], gaugeIn.Bytes_total()/N_DIMS);
+
+}
+
+
 void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType type) {
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);

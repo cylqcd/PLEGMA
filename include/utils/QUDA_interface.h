@@ -33,6 +33,9 @@ namespace quda {
     template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Vector<Float> &vectorIn);
     template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Propagator<Float> &vectorIn);
 
+    template<typename Float> void gSmear_QUDA(PLEGMA_Gauge<Float> &gaugeOut,PLEGMA_Gauge<Float> &gaugeIn, bool antiperiodic);
+
+
 /*
     std::vector<ColorSpinorField> solve(PLEGMA_Vector<float> &vectorIn);
     std::vector<ColorSpinorField> solve(PLEGMA_Vector<double> &vectorIn);
