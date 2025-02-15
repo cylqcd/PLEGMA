@@ -14,7 +14,7 @@ namespace quda {
     void *mg_preconditioner;
     QudaInvertParam inv_param;
     QudaInvertParam mg_inv_param;
-    QudaMultigridParam mg_param;
+   QudaMultigridParam mg_param;
     Dirac *D, *DSloppy, *DPre;
     DiracMatrix *M, *MSloppy, *MPre;
     std::vector<ColorSpinorField> b, x;
@@ -26,6 +26,11 @@ namespace quda {
     QudaInvertParam getInvParams() const{return inv_param;}
     SolverParam* getSolverParam() const{return solverParam;}
     void UpdateSolver();
+
+
+    double Mu() const { return inv_param.mu;}
+    int Nrhs()  const { return inv_param.num_src;}
+
     QUDA_solver(double mu, int nsrc);
     virtual ~QUDA_solver();
     std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
@@ -33,35 +38,13 @@ namespace quda {
     template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Vector<Float> &vectorIn);
     template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Propagator<Float> &vectorIn);
 
-    template<typename Float> void gSmear_QUDA(PLEGMA_Gauge<Float> &gaugeOut,PLEGMA_Gauge<Float> &gaugeIn, bool antiperiodic);
-
-
-/*
-    std::vector<ColorSpinorField> solve(PLEGMA_Vector<float> &vectorIn);
-    std::vector<ColorSpinorField> solve(PLEGMA_Vector<double> &vectorIn);
-
-    std::vector<ColorSpinorField> solve(PLEGMA_Propagator<float> &vectorIn);
-    std::vector<ColorSpinorField> solve(PLEGMA_Propagator<double> &vectorIn);*/
-
 
     template<typename Float> void solve(PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in);
     template<typename Float> void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
-/*
-    void solve( PLEGMA_Vector<float> &out, PLEGMA_Vector<float> &in); 
-    void solve( PLEGMA_Vector<double> &out, PLEGMA_Vector<double> &in);
-
-    void solve( PLEGMA_Propagator<float> &out, PLEGMA_Propagator<float> &in);
-    void solve( PLEGMA_Propagator<double> &out, PLEGMA_Propagator<double> &in);*/
 
     template<typename Float> void runOneIter( PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
     template<typename Float> void runOneIter( PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in);
 
-/*
-    void runOneIter( PLEGMA_Vector<float> &out, PLEGMA_Vector<float> &in);
-    void runOneIter( PLEGMA_Vector<double> &out, PLEGMA_Vector<double> &in);
-
-    void runOneIter( PLEGMA_Propagator<float> &out, PLEGMA_Propagator<float> &in);
-    void runOneIter( PLEGMA_Propagator<double> &out, PLEGMA_Propagator<double> &in);*/
 
     template<bool bl, typename Float>
     std::vector<ColorSpinorField> solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorIn);

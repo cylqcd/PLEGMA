@@ -486,6 +486,7 @@ template <typename Float> void QUDA_solver::solve( PLEGMA_Vector<Float> &vectorO
   return solve<true, Float>(vectorOut, vectorIn);
 }
 template <typename Float> void QUDA_solver::solve( PLEGMA_Propagator<Float> &vectorOut, PLEGMA_Propagator<Float> &vectorIn ){
+  assertNrhs(this);
   return solve<false, Float>(vectorOut, vectorIn);
 }
 
