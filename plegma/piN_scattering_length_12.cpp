@@ -141,7 +141,6 @@ int main(int argc, char **argv) {
   HGC_options->set("dotwopoint", "Doing also the twopoint functions", verbosity,dotwopoint);
   HGC_options->set("readStochSamples", "Flag for switching read/building stochastic propagators", verbosity, readstochastic);
   HGC_options->set("time-dilution", "Flag for switching time-dilution in stochastic propagators", verbosity, timedilution);
-  HGC_options->set("readStochSamples", "Flag for switching read/building stochastic propagators", verbosity, readstochastic);
 
 
 
@@ -151,42 +150,29 @@ int main(int argc, char **argv) {
 
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);
-    {
-      // Reading from Lime file and loading to device
-      PLEGMA_Gauge<double> gauge;
-      gauge.readFile(latfile, LIME_FORMAT);
-      gauge.calculatePlaq();
       
-      // Loading to QUDA and computing plaquette also there
-      initGaugeQuda(gauge, true);
-      plaqQuda();
+    // Reading from Lime file and loading to device
+    PLEGMA_Gauge<double> gauge;
+    gauge.readFile(latfile, LIME_FORMAT);
+    gauge.calculatePlaq();
       
-      // Smearing
-      TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
-      PLEGMA_printf("Plaquette after smearing:\n");
-      smearedGauge.calculatePlaq();
-
-    }
-
+    // Loading to QUDA and computing plaquette also there
+    initGaugeQuda(gauge, true);
+    plaqQuda();
+      
+    // Smearing
+    TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
+    PLEGMA_printf("Plaquette after smearing:\n");
+    smearedGauge.calculatePlaq();
+    
+ 
     updateOptions(LIGHT);
     TIME(QUDA_solver solver_a(mu,1));
 
-    {
-      // Reading from Lime file and loading to device
-      PLEGMA_Gauge<double> gauge;
-      gauge.readFile(latfile, LIME_FORMAT);
-      gauge.calculatePlaq();
 
-      // Loading to QUDA and computing plaquette also there
-      initGaugeQuda(gauge, false);
-      plaqQuda();
-
-      // Smearing
-      TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
-      PLEGMA_printf("Plaquette after smearing:\n");
-      smearedGauge.calculatePlaq();
-
-    }
+    // Loading to QUDA and computing plaquette also there
+    updateGaugeQuda(gauge, false);
+    plaqQuda();
 
     updateOptions(LIGHT);
     TIME(QUDA_solver solver_p(mu,1));
@@ -197,10 +183,6 @@ int main(int argc, char **argv) {
     std::string confnumber= ssource;
     free(ssource);
 
-
-    std::string given_twop_filename = twop_filename;
-
-    //Reading the momentum lists
     momList sourcemomentumList_twopt(3,pathListMomenta_twopt,{1,2,});
     //For the twopoint functions we have also three momentum
     //first is pi2
@@ -208,6 +190,13 @@ int main(int argc, char **argv) {
     //third is pf2
     //and in this case the total momentum is defined as the sum of pf1 and pf2
     //to get pi1 we have to subtract pi2 from the total momentum
+                    
+                    
+    if(sourcemomentumList_twopt.empty())
+     PLEGMA_error("twopt momentumList empty");
+
+
+    std::string given_twop_filename = twop_filename;
 
 
     if(sourcemomentumList_twopt.empty())
@@ -253,12 +242,8 @@ int main(int argc, char **argv) {
 
 
 
-    PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_p;
-    PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_a;
-
-
-    PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_a;
-    PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_p;
+    PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_packed;
+    PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_packed;
 
     if (readstochastic==0){
 
@@ -308,11 +293,15 @@ int main(int argc, char **argv) {
             //Step(5) pick out a particular timeslice from the source
             vectorInOut_a.absorbTimeslice(vectorAuxD1, timeidx);
             //Step(6) Solve
+            updateGaugeQuda(gauge, true);
+            solver_a.UpdateSolver();
             solver_a.solve(vectorInOut_a, vectorInOut_a);
 
             //Step(7) pick out a particular timeslice from the source
             vectorInOut_p.absorbTimeslice(vectorAuxD1, timeidx);
             //Step(8) Solve
+            updateGaugeQuda(gauge, false);
+            solver_p.UpdateSolver();
             solver_p.solve(vectorInOut_p, vectorInOut_p);
 
             vectorTmp.copy(vectorInOut_p);
@@ -332,9 +321,13 @@ int main(int argc, char **argv) {
         else{
           PLEGMA_printf("#piN_scattering_length_12: No time dilution is used n stochastic propagators\n");
           vectorInOut_a.copy(vectorAuxD1);
+          updateGaugeQuda(gauge, true);
+          solver_a.UpdateSolver();
           solver_a.solve(vectorInOut_a, vectorInOut_a);
 
           vectorInOut_p.copy(vectorAuxD1);
+          updateGaugeQuda(gauge, false);
+          solver_p.UpdateSolver();
           solver_p.solve(vectorInOut_p, vectorInOut_p);
 
           vectorTmp.copy(vectorInOut_p);
@@ -390,35 +383,115 @@ int main(int argc, char **argv) {
 
       } //loop over the stochastic samples
 
+    }
+    else{
+      for (int i=0; i<n_stochastic_samples; ++i){
+        std::string inputfilename=outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
+        PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
+        PLEGMA_Vector<float> vectorRead(BOTH);
+        vectorRead.readFile(inputfilename,LIME_FORMAT);
+        stochastic_sources[i]->copy(vectorRead,HOST);
+        inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch_ppa"+std::to_string(i)+"_"+confnumber;
+        PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
+        vectorRead.readFile(inputfilename,LIME_FORMAT);
+        stochastic_propagator_ppa[i]->copy(vectorRead,HOST);
+        inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch_pma"+std::to_string(i)+"_"+confnumber;
+        PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
+        vectorRead.readFile(inputfilename,LIME_FORMAT);
+        stochastic_propagator_pma[i]->copy(vectorRead,HOST);   
       }
-      else{
-        for (int i=0; i<n_stochastic_samples; ++i){
-          std::string inputfilename=outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
-          PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
-          PLEGMA_Vector<float> vectorRead(BOTH);
-          vectorRead.readFile(inputfilename,LIME_FORMAT);
-          stochastic_sources[i]->copy(vectorRead,HOST);
-          inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch_ppa"+std::to_string(i)+"_"+confnumber;
-          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
-          vectorRead.readFile(inputfilename,LIME_FORMAT);
-          stochastic_propagator_ppa[i]->copy(vectorRead,HOST);
-          inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch_pma"+std::to_string(i)+"_"+confnumber;
-          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
-          vectorRead.readFile(inputfilename,LIME_FORMAT);
-          stochastic_propagator_pma[i]->copy(vectorRead,HOST);
+    }
+    for(int isource = startSource; isource < numSourcePositions; isource++){
+
+
+      site source = sourcePositions[isource];
+
+      site source_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
+
+      PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",isource, source[0], source[1], source[2], source[3]);
+
+    /******************************************************
+     *
+     * Step 5: Computing OET propagators
+     *          
+     *
+     ******************************************************/
+      {
+        //Doing for +mu for the UP propagator spin dilution oet
+
+        site source_local = sourcePositions[isource];
+           
+        PLEGMA_Vector<double> vectortmp1;
+
+        PLEGMA_Vector<double> vectorInOut_p;
+        PLEGMA_Vector<double> vectorInOut_a;
+
+        PLEGMA_Vector<double> vectorInOut_ppa;
+        PLEGMA_Vector<double> vectorInOut_pma;
+
+        {  // Smearing the source
+
+          PLEGMA_Vector3D<double> vector1, vector2;
+          vector1.absorb(vectorStoc_source_oet, source_local[DIM_T]);
+          PLEGMA_Gauge3D<double> smearedGauge3D;
+          smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
+          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+          vectortmp1.absorb(vector2, source_local[DIM_T]);
 
         }
+
+        vectorInOut_a.copy(vectortmp1);
+        updateGaugeQuda(gauge, true);
+        solver_a.UpdateSolver();
+        TIME(solver_a.solve(vectorInOut_a, vectorInOut_a));
+
+        vectorInOut_p.copy(vectortmp1);
+        updateGaugeQuda(gauge, false);
+        solver_p.UpdateSolver();
+        TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
+
+        vectorInOut_ppa.copy(vectorInOut_p);
+        vectorInOut_ppa.add(vectorInOut_a,1);
+
+        vectorInOut_pma.copy(vectorInOut_p);
+        vectorInOut_pma.add(vectorInOut_a,-1);
+
+        vectortmp1.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source_local[DIM_T],  HGC_totalL[DIM_T]/2);
+
+      
+        //Gaussian smearing of the propagator
+        TIME(vectorInOut_a.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
+
+        stochastic_oet_prop_zero_mom_packed.copy(vectorInOut_a);   
+
+      }//end of do_stochastic_oet
+      //uu case
+      { 
+
+        //We first have a loop over all unique the source meson momentum p_i2     
+        for (int i_mpi2=0; i_mpi2<mpi2_twopt.size(); ++i_mpi2){
+
+          auto &momentum_i2 =  mpi2_twopt[i_mpi2];
+          //List of momenta corresponding to a fix value of p_i2
+          momList filtered_sourcemomentumList = sourcemomentumList_twopt.extract(momentum_i2, 0);
+
+          std::string pi2x=std::to_string(momentum_i2[0]);
+          std::string pi2y=std::to_string(momentum_i2[1]);
+          std::string pi2z=std::to_string(momentum_i2[2]);
+
+          PLEGMA_ScattCorrelator<float> corrPION(source, filtered_sourcemomentumList);
+
+          corrPION.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+
+          TIME(corrPION.P_diagrams( stochastic_oet_prop_zero_mom_packed, stochastic_oet_prop_fini_mom_packed, i_mpi2));
+         }
       }
-    
+    }
     for(int i=0; i< n_stochastic_samples; ++i) {
       stochastic_sources.pop_back();
       stochastic_propagator_ppa.pop_back();
       stochastic_propagator_pma.pop_back();
     }
-
-
-
-
   }//loop in finalize
   finalize();
   return 0;
