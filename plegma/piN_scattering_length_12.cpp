@@ -413,6 +413,132 @@ int main(int argc, char **argv) {
       std::string sourcepositiontext= (std::string)"_" + ssource;
       free(ssource);
 
+      PLEGMA_Propagator<float> prop_packed(BOTH); //To be saved for all the coherent sources.
+      PLEGMA_Propagator<float> prop_PPA(BOTH); //To be saved for all the coherent sources.
+      PLEGMA_Propagator<float> prop_PMA(BOTH); //To be saved for all the coherent sources.
+
+      PLEGMA_Gauge3D<double> smearedGauge3D;
+      smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
+
+      auto computePropagator = [&](PLEGMA_Propagator<float>& prop_packed,
+                                   PLEGMA_Propagator<float>& prop_PPA,
+                                   PLEGMA_Propagator<float>& prop_PMA,
+                                   int nSmear) {
+                                 
+                                 for(int isc = 0 ; isc < 12 ; isc++){
+
+                                   PLEGMA_Vector<double> vectorAuxD;
+                                   PLEGMA_Vector<float> vectorAuxF;
+
+                                   PLEGMA_Vector<double> vectorInOut_a;
+                                   PLEGMA_Vector<double> vectorInOut_p;
+ 
+                                   PLEGMA_Vector<double> vectorInOut_ppa;
+                                   PLEGMA_Vector<double> vectorInOut_pma;
+
+                                   { // Smearing the source
+                                     PLEGMA_Vector3D<double> vector1, vector2;
+                                     vector1.pointSource(source, isc/3, isc%3, DEVICE);
+                                     TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear, alphaGauss));
+                                     vectorInOut_a.absorb(vector2,source[DIM_T]);
+                                   }
+                                   // Inverting
+                                   PLEGMA_printf("Going to invert for component %d\n", isc);
+
+                                   updateGaugeQuda(gauge, true);
+                                   solver_a.UpdateSolver();
+                                   TIME(solver_a.solve(vectorInOut_a, vectorInOut_a));
+
+                                   { // Smearing the source
+                                     PLEGMA_Vector3D<double> vector1, vector2;
+                                     vector1.pointSource(source, isc/3, isc%3, DEVICE);
+                                     TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear, alphaGauss));
+                                     vectorInOut_p.absorb(vector2,source[DIM_T]);
+                                   }
+                                   // Inverting
+                                   PLEGMA_printf("Going to invert for component %d\n", isc);
+
+                                   updateGaugeQuda(gauge, false);
+                                   solver_p.UpdateSolver();
+                                   TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
+
+                                   vectorInOut_ppa.copy(vectorInOut_p);
+                                   vectorInOut_ppa.add(vectorInOut_a,1);
+
+                                   TIME(vectorAuxD.gaussianSmearing(vectorInOut_ppa, smearedGauge, nSmear, alphaGauss));
+                                   vectorInOut_ppa.copy(vectorAuxD);
+                                   vectorAuxF.copy(vectorAuxD);
+                                   prop_PPA.absorb(vectorAuxF, isc/3, isc%3);
+
+
+                                   vectorInOut_pma.copy(vectorInOut_p);
+                                   vectorInOut_pma.add(vectorInOut_a,-1);
+
+                                   TIME(vectorAuxD.gaussianSmearing(vectorInOut_ppa, smearedGauge, nSmear, alphaGauss));
+                                   vectorInOut_ppa.copy(vectorAuxD);
+                                   vectorAuxF.copy(vectorAuxD);
+                                   prop_PMA.absorb(vectorAuxF, isc/3, isc%3);
+
+                                   vectorAuxD.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source[DIM_T],  HGC_totalL[DIM_T]/2);
+                                   vectorAuxF.copy(vectorAuxD);
+                                   prop_packed.absorb(vectorAuxF, isc/3, isc%3);
+                                   
+                                 }
+                               };
+      TIME(computePropagator(prop_packed, prop_PPA, prop_PMA, nsmearGauss));
+
+     //N diagram
+      {
+        std::vector<std::vector<int>> mtot = sourcemomentumList_twopt.uniq_p(3);
+        momList list_mtot(1,{mtot,},{0,});
+        PLEGMA_ScattCorrelator<float> corrN(source,list_mtot);
+        PLEGMA_ScattCorrelator<float> corrN_PPA(source,list_mtot);
+        PLEGMA_ScattCorrelator<float> corrN_PMA(source,list_mtot);
+
+
+        //initialize diagram
+        corrN.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
+        corrN_PPA.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
+        corrN_PMA.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
+
+
+        PLEGMA_ScattCorrelator<float> reductionsT1(source_reduction, mtot);
+        PLEGMA_ScattCorrelator<float> reductionsT2(source_reduction, mtot);
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, prop_packed, prop_packed, prop_packed));
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, prop_packed, prop_packed, prop_packed));
+
+        //write N
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N";
+
+        TIME( corrN.N_diagrams( reductionsT1, reductionsT2 ) );
+        TIME( corrN.apply_phase() );
+        TIME( corrN.apply_sign("N"));
+        TIME( corrN.writeHDF5(outfilename));
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, prop_PPA, prop_PPA, prop_PPA));
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, prop_PPA, prop_PPA, prop_PPA));
+
+        //write N
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N_PPA";
+
+        TIME( corrN_PPA.N_diagrams( reductionsT1, reductionsT2 ) );
+        TIME( corrN_PPA.apply_phase() );
+        TIME( corrN_PPA.apply_sign("N"));
+        TIME( corrN_PPA.writeHDF5(outfilename));
+
+        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, prop_PMA, prop_PMA, prop_PMA));
+        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, prop_PMA, prop_PMA, prop_PMA));
+
+        //write N
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N_PMA";
+
+        TIME( corrN_PMA.N_diagrams( reductionsT1, reductionsT2 ) );
+        TIME( corrN_PMA.apply_phase() );
+        TIME( corrN_PMA.apply_sign("N"));
+        TIME( corrN_PMA.writeHDF5(outfilename));
+
+      }
 
     /******************************************************
      *
