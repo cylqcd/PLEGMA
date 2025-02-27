@@ -245,6 +245,13 @@ int main(int argc, char **argv) {
     PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_packed;
     PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_packed;
 
+    PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_ppa;
+    PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_ppa;
+
+    PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_pma;
+    PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_pma;
+
+
     if (readstochastic==0){
 
       PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
@@ -278,9 +285,7 @@ int main(int argc, char **argv) {
 
         //Step(3) Smearing all the time slice
         TIME(vectorTmp.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
-
-        //Step(4) We rotate the source to the physical basis
-        TIME(vectorAuxD1.rotateToPhysicalBasis(vectorTmp,+1));
+        vectorAuxD1.copy(vectorTmp);
 
         //In vectorAuxD2 we store the results for the inversion
 
@@ -342,43 +347,37 @@ int main(int argc, char **argv) {
 
         }
 
-        //Step(6) We rotate back the propagator to the physical basis
-        TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2_ppa,+1));
-
         //Step(7) Smearing all the time slice in the propagator
-        TIME(vectorAuxD2_ppa.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+        TIME(vectorAuxD1.gaussianSmearing(vectorAuxD2_ppa, smearedGauge, nsmearGauss, alphaGauss ));
 
         //Step(8) Save the propagator to the disk
         {
           PLEGMA_Vector<float> vectorAuxF;
-          vectorAuxF.copy(vectorAuxD2_ppa);
+          vectorAuxF.copy(vectorAuxD1);
           vectorAuxF.unload();
           vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch_ppa"+std::to_string(i)+"_"+confnumber);
         }
 
         //Step(9) Save the propagator to the host memory
-        vectorAuxD2_ppa.unload();
-        stochastic_propagator_ppa[i]->copy(vectorAuxD2_ppa,HOST);
-        vectorAuxD2_ppa.load();
-
-        //Step(10) We rotate back the propagator to the physical basis
-        TIME(vectorAuxD1.rotateToPhysicalBasis(vectorAuxD2_pma,+1));
+        vectorAuxD1.unload();
+        stochastic_propagator_ppa[i]->copy(vectorAuxD1,HOST);
+        vectorAuxD1.load();
 
         //Step(7) Smearing all the time slice in the propagator
-        TIME(vectorAuxD2_pma.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
+        TIME(vectorAuxD1.gaussianSmearing(vectorAuxD2_pma, smearedGauge, nsmearGauss, alphaGauss ));
 
         //Step(8) Save the propagator to the disk
         {
           PLEGMA_Vector<float> vectorAuxF;
-          vectorAuxF.copy(vectorAuxD2_pma);
+          vectorAuxF.copy(vectorAuxD1);
           vectorAuxF.unload();
           vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch_pma"+std::to_string(i)+"_"+confnumber);
         }
 
         //Step(9) Save the propagator to the host memory
-        vectorAuxD2_pma.unload();
-        stochastic_propagator_pma[i]->copy(vectorAuxD2_pma,HOST);
-        vectorAuxD2_pma.load();
+        vectorAuxD1.unload();
+        stochastic_propagator_pma[i]->copy(vectorAuxD1,HOST);
+        vectorAuxD1.load();
 
 
       } //loop over the stochastic samples
@@ -410,12 +409,19 @@ int main(int argc, char **argv) {
 
       PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",isource, source[0], source[1], source[2], source[3]);
 
+      asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", sourcePositions[isource][0], sourcePositions[isource][1], sourcePositions[isource][2], sourcePositions[isource][3]); 
+      std::string sourcepositiontext= (std::string)"_" + ssource;
+      free(ssource);
+
+
     /******************************************************
      *
      * Step 5: Computing OET propagators
      *          
      *
      ******************************************************/
+      vectorStoc_source_oet.stochastic_Z(nroots);
+
       {
         //Doing for +mu for the UP propagator spin dilution oet
 
@@ -456,17 +462,39 @@ int main(int argc, char **argv) {
         vectorInOut_pma.copy(vectorInOut_p);
         vectorInOut_pma.add(vectorInOut_a,-1);
 
+        TIME(vectorInOut_a.gaussianSmearing(vectorInOut_ppa, smearedGauge, nsmearGauss, alphaGauss));
+        vectorInOut_ppa.copy(vectorInOut_a);
+
+        TIME(vectorInOut_a.gaussianSmearing(vectorInOut_pma, smearedGauge, nsmearGauss, alphaGauss));
+        vectorInOut_pma.copy(vectorInOut_a);
+
+
+
         vectortmp1.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source_local[DIM_T],  HGC_totalL[DIM_T]/2);
 
       
         //Gaussian smearing of the propagator
-        TIME(vectorInOut_a.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
+        //TIME(vectorInOut_a.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
 
-        stochastic_oet_prop_zero_mom_packed.copy(vectorInOut_a);   
+        stochastic_oet_prop_zero_mom_ppa.copy(vectorInOut_ppa);   
+        stochastic_oet_prop_zero_mom_pma.copy(vectorInOut_pma);   
+
+        stochastic_oet_prop_zero_mom_packed.copy(vectortmp1);   
 
       }//end of do_stochastic_oet
-      //uu case
       { 
+
+        PLEGMA_ScattCorrelator<float> corrPION(source, list_mpi2_twopt);
+
+        PLEGMA_ScattCorrelator<float> corrPION_PPA(source, list_mpi2_twopt);
+        PLEGMA_ScattCorrelator<float> corrPION_PMA(source, list_mpi2_twopt);
+
+
+        corrPION.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+
+        corrPION_PPA.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+        corrPION_PMA.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+
 
         //We first have a loop over all unique the source meson momentum p_i2     
         for (int i_mpi2=0; i_mpi2<mpi2_twopt.size(); ++i_mpi2){
@@ -479,12 +507,91 @@ int main(int argc, char **argv) {
           std::string pi2y=std::to_string(momentum_i2[1]);
           std::string pi2z=std::to_string(momentum_i2[2]);
 
-          PLEGMA_ScattCorrelator<float> corrPION(source, filtered_sourcemomentumList);
+          //Multiplying by the appropriate momentum phase finite momentum OET
+          {
 
-          corrPION.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
+            site source_local = sourcePositions[isource];
+
+            PLEGMA_Vector<double> vectortmp1;
+
+            PLEGMA_Vector<double> vectorInOut_p;
+            PLEGMA_Vector<double> vectorInOut_a;
+
+            PLEGMA_Vector<double> vectorInOut_ppa;
+            PLEGMA_Vector<double> vectorInOut_pma;
+
+            vectortmp1.copy(vectorStoc_source_oet);
+  
+            std::vector<int> tmp_4Dmom= momentum_i2 ;
+            tmp_4Dmom.push_back(0);
+            vectortmp1.mulMomentumPhases(tmp_4Dmom,-1);
+          
+            {  // Smearing the source
+
+              PLEGMA_Vector3D<double> vector1, vector2;
+              vector1.absorb(vectortmp1, source_local[DIM_T]);
+              PLEGMA_Gauge3D<double> smearedGauge3D;
+              smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
+              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
+              vectortmp1.absorb(vector2, source_local[DIM_T],true);
+
+            }
+  
+            vectorInOut_a.copy(vectortmp1);
+            updateGaugeQuda(gauge, true);
+            solver_a.UpdateSolver();
+            TIME(solver_a.solve(vectorInOut_a, vectorInOut_a));
+
+            vectorInOut_p.copy(vectortmp1);
+            updateGaugeQuda(gauge, false);
+            solver_p.UpdateSolver();
+            TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
+
+            vectorInOut_ppa.copy(vectorInOut_p);
+            vectorInOut_ppa.add(vectorInOut_a,1);
+
+            vectorInOut_pma.copy(vectorInOut_p);
+            vectorInOut_pma.add(vectorInOut_a,-1);
+            
+            TIME(vectortmp1.gaussianSmearing(vectorInOut_ppa, smearedGauge, nsmearGauss, alphaGauss));
+            stochastic_oet_prop_fini_mom_ppa.copy(vectortmp1);
+
+            TIME(vectortmp1.gaussianSmearing(vectorInOut_pma, smearedGauge, nsmearGauss, alphaGauss));
+            stochastic_oet_prop_fini_mom_pma.copy(vectortmp1);
+
+            vectortmp1.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source_local[DIM_T],  HGC_totalL[DIM_T]/2);
+
+
+            //Gaussian smearing of the propagator
+            TIME(vectorInOut_a.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
+
+            stochastic_oet_prop_fini_mom_packed.copy(vectorInOut_a);
+
+          }
+
+          TIME(corrPION_PMA.P_diagrams( stochastic_oet_prop_zero_mom_pma, stochastic_oet_prop_fini_mom_pma, i_mpi2));
+
+          TIME(corrPION_PPA.P_diagrams( stochastic_oet_prop_zero_mom_ppa, stochastic_oet_prop_fini_mom_ppa, i_mpi2));
 
           TIME(corrPION.P_diagrams( stochastic_oet_prop_zero_mom_packed, stochastic_oet_prop_fini_mom_packed, i_mpi2));
+
          }
+         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_2pt";
+
+         TIME(corrPION.apply_sign("P"));
+         TIME(corrPION.writeHDF5( outfilename ));
+
+         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_PPA_2pt";
+
+         TIME(corrPION_PPA.apply_sign("P"));
+         TIME(corrPION_PPA.writeHDF5( outfilename ));
+
+         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_PMA_2pt";
+
+         TIME(corrPION_PMA.apply_sign("P"));
+         TIME(corrPION_PMA.writeHDF5( outfilename ));
+
+
       }
     }
     for(int i=0; i< n_stochastic_samples; ++i) {
