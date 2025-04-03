@@ -99,8 +99,6 @@ void produceOutput_3pt( PLEGMA_ScattCorrelator<float> source,
 int main(int argc, char **argv) {
   initializeOptions(argc, argv, true, listOpt);
   //================ Add your options in this between initializeOptions and initializePLEGMA ================//
-  std::vector<double> mu_s;
-  std::vector<double> mu_c;
   bool timedilution;
   int rand_seed1=1234;
   int rand_seed2=5678;
@@ -229,16 +227,10 @@ int main(int argc, char **argv) {
     //Step (7) doing the recombination
     //Step (8) doing the one end trick calculation for the Z diagrams
 
-    std::vector<PLEGMA_Vector<float>*> stochastic_sources;
+    PLEGMA_Vector<float> stochastic_sources;
 
-    std::vector<PLEGMA_Vector<float>*> stochastic_propagator_ppa;
-    std::vector<PLEGMA_Vector<float>*> stochastic_propagator_pma;
-
-    for(int i=0; i< n_stochastic_samples; ++i) {
-      stochastic_sources.push_back(new PLEGMA_Vector<float>(HOST));
-      stochastic_propagator_ppa.push_back(new PLEGMA_Vector<float>(HOST));
-      stochastic_propagator_pma.push_back(new PLEGMA_Vector<float>(HOST));
-    }
+    PLEGMA_Vector<float> stochastic_propagator_ppa;
+    PLEGMA_Vector<float> stochastic_propagator_pma;
 
 
 
@@ -252,154 +244,6 @@ int main(int argc, char **argv) {
     PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_pma;
 
 
-    if (readstochastic==0){
-
-      PLEGMA_Vector<double> vectorAuxD1(BOTH);//For storing the source (rotated and smeared)
-      PLEGMA_Vector<double> vectorAuxD2_ppa(BOTH);//For storing the propagotor for the time-slices
-      PLEGMA_Vector<double> vectorAuxD2_pma(BOTH);//For storing the propagotor for the time-slices
-      PLEGMA_Vector<double> vectorInOut_a; //temporary vector using in solve
-      PLEGMA_Vector<double> vectorInOut_p; //temporary vector using in solve
-      PLEGMA_Vector<double> vectorTmp; //temporary vector using in solve
-
-      PLEGMA_Vector<double> vectorSource(BOTH);//For storing the source 
-      vectorSource.randInit(rand_seed2);
-
-      for (int i=0; i<n_stochastic_samples; ++i){
-        //Step(1) Creating the time-diluted stochastic source
-        vectorSource.stochastic_Z(nroots);
-
-        //Step(2) Save it on the host memory
-        {
-           PLEGMA_Vector<float> vectorAuxF;
-           vectorAuxF.copy(vectorSource);
-           vectorAuxF.unload();
-           vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
-        }
-
-
-        vectorSource.unload();
-        stochastic_sources[i]->copy(vectorSource,HOST);
-        vectorSource.load();
-           
-        vectorAuxD1.copy(vectorSource);
-
-        //Step(3) Smearing all the time slice
-        TIME(vectorTmp.gaussianSmearing(vectorAuxD1, smearedGauge, nsmearGauss, alphaGauss ));
-        vectorAuxD1.copy(vectorTmp);
-
-        //In vectorAuxD2 we store the results for the inversion
-
-        vectorAuxD2_ppa.scale(0.0);
-        vectorAuxD2_pma.scale(0.0);
-
-        if (timedilution){
-          PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
-          for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
-            //Step(5) pick out a particular timeslice from the source
-            vectorInOut_a.absorbTimeslice(vectorAuxD1, timeidx);
-            //Step(6) Solve
-            updateGaugeQuda(gauge, true);
-            solver_a.UpdateSolver();
-            solver_a.solve(vectorInOut_a, vectorInOut_a);
-
-            //Step(7) pick out a particular timeslice from the source
-            vectorInOut_p.absorbTimeslice(vectorAuxD1, timeidx);
-            //Step(8) Solve
-            updateGaugeQuda(gauge, false);
-            solver_p.UpdateSolver();
-            solver_p.solve(vectorInOut_p, vectorInOut_p);
-
-            vectorTmp.copy(vectorInOut_p);
-            vectorTmp.add(vectorInOut_a,1); 
-
-            //Step(7) absorbing the particular timeslice to a 4d vector
-            vectorAuxD2_ppa.absorbTimeslice(vectorTmp, timeidx, false);
-
-            vectorTmp.copy(vectorInOut_p);
-            vectorTmp.add(vectorInOut_a,-1);           
-
-            //Step(7) absorbing the particular timeslice to a 4d vector
-            vectorAuxD2_pma.absorbTimeslice(vectorTmp, timeidx, false);
-
-          }
-        }
-        else{
-          PLEGMA_printf("#piN_scattering_length_12: No time dilution is used n stochastic propagators\n");
-          vectorInOut_a.copy(vectorAuxD1);
-          updateGaugeQuda(gauge, true);
-          solver_a.UpdateSolver();
-          solver_a.solve(vectorInOut_a, vectorInOut_a);
-
-          vectorInOut_p.copy(vectorAuxD1);
-          updateGaugeQuda(gauge, false);
-          solver_p.UpdateSolver();
-          solver_p.solve(vectorInOut_p, vectorInOut_p);
-
-          vectorTmp.copy(vectorInOut_p);
-          vectorTmp.add(vectorInOut_a,1);  
-
-          vectorAuxD2_ppa.copy(vectorTmp);
-
-          vectorTmp.copy(vectorInOut_p);
-          vectorTmp.add(vectorInOut_a,-1);  
-
-          vectorAuxD2_pma.copy(vectorTmp);
-
-        }
-
-        //Step(7) Smearing all the time slice in the propagator
-        TIME(vectorAuxD1.gaussianSmearing(vectorAuxD2_ppa, smearedGauge, nsmearGauss, alphaGauss ));
-
-        //Step(8) Save the propagator to the disk
-        {
-          PLEGMA_Vector<float> vectorAuxF;
-          vectorAuxF.copy(vectorAuxD1);
-          vectorAuxF.unload();
-          vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch_ppa"+std::to_string(i)+"_"+confnumber);
-        }
-
-        //Step(9) Save the propagator to the host memory
-        vectorAuxD1.unload();
-        stochastic_propagator_ppa[i]->copy(vectorAuxD1,HOST);
-        vectorAuxD1.load();
-
-        //Step(7) Smearing all the time slice in the propagator
-        TIME(vectorAuxD1.gaussianSmearing(vectorAuxD2_pma, smearedGauge, nsmearGauss, alphaGauss ));
-
-        //Step(8) Save the propagator to the disk
-        {
-          PLEGMA_Vector<float> vectorAuxF;
-          vectorAuxF.copy(vectorAuxD1);
-          vectorAuxF.unload();
-          vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch_pma"+std::to_string(i)+"_"+confnumber);
-        }
-
-        //Step(9) Save the propagator to the host memory
-        vectorAuxD1.unload();
-        stochastic_propagator_pma[i]->copy(vectorAuxD1,HOST);
-        vectorAuxD1.load();
-
-
-      } //loop over the stochastic samples
-
-    }
-    else{
-      for (int i=0; i<n_stochastic_samples; ++i){
-        std::string inputfilename=outfile_V+"globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
-        PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
-        PLEGMA_Vector<float> vectorRead(BOTH);
-        vectorRead.readFile(inputfilename,LIME_FORMAT);
-        stochastic_sources[i]->copy(vectorRead,HOST);
-        inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch_ppa"+std::to_string(i)+"_"+confnumber;
-        PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
-        vectorRead.readFile(inputfilename,LIME_FORMAT);
-        stochastic_propagator_ppa[i]->copy(vectorRead,HOST);
-        inputfilename=outfile_V+"globalTfulltimedilution_propagator_nstoch_pma"+std::to_string(i)+"_"+confnumber;
-        PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
-        vectorRead.readFile(inputfilename,LIME_FORMAT);
-        stochastic_propagator_pma[i]->copy(vectorRead,HOST);   
-      }
-    }
     for(int isource = startSource; isource < numSourcePositions; isource++){
 
 
@@ -539,6 +383,125 @@ int main(int argc, char **argv) {
         TIME( corrN_PMA.writeHDF5(outfilename));
 
       }
+
+      
+      for (int i=0; i<n_stochastic_samples;++i){
+
+        if (readStochSamples==0){
+
+          vectorSource_stochastic.stochastic_Z(nroots);
+          PLEGMA_Vector<float> vectorAuxF;
+          vectorAuxF.copy(vectorSource_stochastic);
+          vectorAuxF.unload();
+          vectorAuxF.writeLIME("globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
+          //In vectorAuxD2 we store the results for the inversion
+
+          vectorAuxD2_ppa.scale(0.0);
+          vectorAuxD2_pma.scale(0.0);
+
+          if (timedilution){
+            PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
+            for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+              //Step(5) pick out a particular timeslice from the source
+              vectorInOut_a.absorbTimeslice(vectorSource_stochastic, timeidx);
+              //Step(6) Solve
+              updateGaugeQuda(gauge, true);
+              solver_a.UpdateSolver();
+              solver_a.solve(vectorInOut_a, vectorInOut_a);
+
+              //Step(7) pick out a particular timeslice from the source
+              vectorInOut_p.absorbTimeslice(vectorSource_stochastic, timeidx);
+              //Step(8) Solve
+              updateGaugeQuda(gauge, false);
+              solver_p.UpdateSolver();
+              solver_p.solve(vectorInOut_p, vectorInOut_p);
+
+              vectorTmp.copy(vectorInOut_p);
+              vectorTmp.add(vectorInOut_a,1);
+
+              //Step(7) absorbing the particular timeslice to a 4d vector
+              vectorAuxD2_ppa.absorbTimeslice(vectorTmp, timeidx, false);
+
+              vectorTmp.copy(vectorInOut_p);
+              vectorTmp.add(vectorInOut_a,-1);
+
+              //Step(7) absorbing the particular timeslice to a 4d vector
+              vectorAuxD2_pma.absorbTimeslice(vectorTmp, timeidx, false);
+
+            }
+          }
+          else{
+            PLEGMA_printf("#piN_scattering_length_12: No time dilution is used n stochastic propagators\n");
+            vectorInOut_a.copy(vectorSource_stochastic);
+            updateGaugeQuda(gauge, true);
+            solver_a.UpdateSolver();
+            solver_a.solve(vectorInOut_a, vectorInOut_a);
+
+            vectorInOut_p.copy(vectorSource_stochastic,);
+            updateGaugeQuda(gauge, false);
+            solver_p.UpdateSolver();
+            solver_p.solve(vectorInOut_p, vectorInOut_p);
+
+            vectorTmp.copy(vectorInOut_p);
+            vectorTmp.add(vectorInOut_a,1);
+
+            vectorAuxD2_ppa.copy(vectorTmp);
+
+            vectorTmp.copy(vectorInOut_p);
+            vectorTmp.add(vectorInOut_a,-1);
+
+            vectorAuxD2_pma.copy(vectorTmp);
+
+          }
+
+          //Step(7) Smearing all the time slice in the propagator
+          TIME(vectorAuxD1.gaussianSmearing(vectorAuxD2_ppa, smearedGauge, nsmearGauss, alphaGauss ));
+
+          {
+            PLEGMA_Vector<float> vectorAuxF;
+            vectorAuxF.copy(vectorAuxD1);
+            vectorAuxF.unload();
+            vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch_ppa"+std::to_string(i)+"_"+confnumber);
+          }
+
+          stochastic_propagator_ppa.copy(vectorAuxD1);
+
+          //Step(7) Smearing all the time slice in the propagator
+          TIME(vectorAuxD1.gaussianSmearing(vectorAuxD2_pma, smearedGauge, nsmearGauss, alphaGauss ));
+
+          {
+            PLEGMA_Vector<float> vectorAuxF;
+            vectorAuxF.copy(vectorAuxD1);
+            vectorAuxF.unload();
+            vectorAuxF.writeLIME(outfile_V+"globalTfulltimedilution_propagator_nstoch_pma"+std::to_string(i)+"_"+confnumber);
+          }
+
+          stochastic_propagator_pma.copy(vectorAuxD1);
+
+        }
+        else{
+          std::string inputfilename="globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
+          PLEGMA_printf("Read stochastic source from: %s\n",inputfilename.c_str());
+          PLEGMA_Vector<float> vectorRead(BOTH);
+          vectorRead.readFile(inputfilename,LIME_FORMAT);
+          vectorRead.load();
+          vectorSource_stochastic.copy(vectorRead);
+          inputfilename="globalTfulltimedilution_propagator_ppa_nstoch"+std::to_string(i)+"_"+confnumber;
+          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
+          vectorRead.readFile(inputfilename,LIME_FORMAT);
+          stochastic_propagator_2pt_SS_ppa.copy(vectorFloat,HOST);
+          stochastic_propagator_2pt_SS_ppa.load();
+          inputfilename="globalTfulltimedilution_propagator_pma_nstoch"+std::to_string(i)+"_"+confnumber;
+          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
+          vectorRead.readFile(inputfilename,LIME_FORMAT);
+          stochastic_propagator_2pt_SS_pma.copy(vectorFloat,HOST);
+          stochastic_propagator_2pt_SS_pma.load();
+
+        }
+        
+      }
+
+      readStochSamples=1;
 
     /******************************************************
      *
