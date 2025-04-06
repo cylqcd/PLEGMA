@@ -294,107 +294,47 @@ int main(int argc, char **argv)
          *
          ******************************************************/
         // Get the confnumber for latfile
-        char *ssource;
-        asprintf(&ssource, "%04d", confnumber_int);
-        std::string confnumber = ssource;
-        free(ssource);
+        // char *ssource;
+        // asprintf(&ssource, "%04d", confnumber_int);
+        // std::string confnumber = ssource;
+        // free(ssource);
 
-        std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
-        // std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
+        // // std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
 
-        std::vector<plegma::GAMMAS_SCATT> gscatts_i1 = {CG_5};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_f1 = {CG_5};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_i2 = {G_5};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_f2 = {G_5};
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_i1 = {CG_5};
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_f1 = {CG_5};
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_i2 = {G_5};
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_f2 = {G_5};
 
-        PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_twopt.c_str());
-        plegma::momList momList2pt(3, pathListMomenta_twopt, {1, 2}); // pi2, pf1, pf2
-        PLEGMA_printf("N momenta in sourcemomentumList: %d\n", momList2pt.size());
-        if (momList2pt.empty())
-            PLEGMA_error("threept momentumList empty");
-        auto momVects2pt_pi2 = momList2pt.uniq_p(0);
-        plegma::momList momList2pt_pi2(1, {momVects2pt_pi2}, {0});
+        // PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_twopt.c_str());
+        // plegma::momList momList2pt(3, pathListMomenta_twopt, {1, 2}); // pi2, pf1, pf2
+        // PLEGMA_printf("N momenta in sourcemomentumList: %d\n", momList2pt.size());
+        // if (momList2pt.empty())
+        //     PLEGMA_error("threept momentumList empty");
+        // auto momVects2pt_pi2 = momList2pt.uniq_p(0);
+        // plegma::momList momList2pt_pi2(1, {momVects2pt_pi2}, {0});
 
-        PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_threept.c_str());
-        plegma::momList momList3pt(4, pathListMomenta_threept, {1, 2, 3}); // pi2, pf1, pf2, pc
-        PLEGMA_printf("N momenta in sourcemomentumList: %d\n", momList3pt.size());
-        if (momList3pt.empty())
-            PLEGMA_error("threept momentumList empty");
-        auto momVects3pt_pf1 = momList3pt.uniq_p(1);
-        auto momVects3pt_pi2 = momList3pt.uniq_p(0);
-        auto momVects3pt_pf2 = momList3pt.uniq_p(2);
-        auto momVects3pt_pc = momList3pt.uniq_p(3);
-        plegma::momList momList3pt_pf1(1, {momVects3pt_pf1}, {0});
-        plegma::momList momList3pt_pc(1, {momVects3pt_pc}, {0});
-        plegma::momList momList_0(1, {{{0,0,0}}}, {0});
-        std::vector<std::vector<int>> momVects_0 = {{0,0,0}};
+        // PLEGMA_printf("###Momentum list read from : %s", pathListMomenta_threept.c_str());
+        // plegma::momList momList3pt(4, pathListMomenta_threept, {1, 2, 3}); // pi2, pf1, pf2, pc
+        // PLEGMA_printf("N momenta in sourcemomentumList: %d\n", momList3pt.size());
+        // if (momList3pt.empty())
+        //     PLEGMA_error("threept momentumList empty");
+        // auto momVects3pt_pf1 = momList3pt.uniq_p(1);
+        // auto momVects3pt_pi2 = momList3pt.uniq_p(0);
+        // auto momVects3pt_pf2 = momList3pt.uniq_p(2);
+        // auto momVects3pt_pc = momList3pt.uniq_p(3);
+        // plegma::momList momList3pt_pc(1, {momVects3pt_pc}, {0});
+        // plegma::momList momList_0(1, {{{0,0,0}}}, {0});
+        // std::vector<std::vector<int>> momVects_0 = {{0,0,0}};
 
         /******************************************************
          *
          *   Main
          *
          ******************************************************/
-        for(int i_src = 0; i_src < numSourcePositions; i_src++)
-        {
-            auto src = sourcePositions[i_src];
-            struct plegma::site src_zero({0, 0, 0, src[DIM_T]});
 
-            asprintf(&ssource,"sx%02dsy%02dsz%02dst%03d", src[0], src[1], src[2], src[3]);
-            std::string sourcepositiontext= (std::string)"_" + ssource;
-            std::string outfilename = outdiagramPrefix + "_Bm_" + confnumber + sourcepositiontext;
-
-            int ti,tf;
-            ti=src[DIM_T];
-
-            plegma::PLEGMA_Propagator<float> propUSS, propUSL;
-            plegma::PLEGMA_Propagator<float> propDSS, propDSL;
-
-            PLEGMA_printf("flagYan: before setupPoint");
-            setupPointPropagator2(propUSS, propUSL, src, u, SB);
-            setupPointPropagator2(propDSS, propDSL, src, d, SB);
-            PLEGMA_printf("flagYan: after setupPoint");
-
-            plegma::PLEGMA_Vector<double> stoc, stocXi, stocEta;
-            stoc.randInit(seed_stoc); 
-            stoc.stochastic_Z(4); stocXi.copy(stoc);
-            stoc.stochastic_Z(4); stocEta.copy(stoc);
-
-            PLEGMA_printf("flagYan: before corrNP");
-            plegma::PLEGMA_ScattCorrelator<float> corrNP(src, momList3pt_pf1);
-            corrNP.initialize_diagram(gscatts_ID, gscatts_ID, gscatts_i1, gscatts_f1, "NP");
-            {
-                PLEGMA_printf("flagYan: before reductionsT1N");
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT1N(src_zero, momVects3pt_pf1);
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT2N(src_zero, momVects3pt_pf1);
-                PLEGMA_printf("flagYan: before T1");
-                reductionsT1N.T1(gscatts_i1, gscatts_f1, propUSS, propDSS, propUSS);
-                reductionsT2N.T2(gscatts_i1, gscatts_f1, propUSS, propDSS, propUSS);
-                PLEGMA_printf("flagYan: before N_diag");
-                corrNP.N_diagrams(reductionsT1N, reductionsT2N);
-                corrNP.apply_phase();
-                corrNP.apply_sign("N");
-                corrNP.applyBoundaryConditions(true);
-                PLEGMA_printf("flagYan: before write");
-                corrNP.writeHDF5(outdiagramPrefix + "_N_" + confnumber + sourcepositiontext);
-            }
-            
-            PLEGMA_printf("flagYan: before N0");
-            plegma::PLEGMA_ScattCorrelator<float> corrN0(src, momList3pt_pf1);
-            corrN0.initialize_diagram(gscatts_ID, gscatts_ID, gscatts_i1, gscatts_f1, "N0");
-            {
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT1N(src_zero, momVects3pt_pf1);
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT2N(src_zero, momVects3pt_pf1);
-                reductionsT1N.T1(gscatts_i1, gscatts_f1, propDSS, propUSS, propDSS);
-                reductionsT2N.T2(gscatts_i1, gscatts_f1, propDSS, propUSS, propDSS);
-                corrN0.N_diagrams(reductionsT1N, reductionsT2N);
-                corrN0.apply_phase();
-                corrN0.apply_sign("N");
-                corrN0.applyBoundaryConditions(true);
-                corrN0.writeHDF5(outdiagramPrefix + "_N_" + confnumber + sourcepositiontext);
-            }
-
-        }
     }
     finalize();
     std::ofstream output(flagFinish);

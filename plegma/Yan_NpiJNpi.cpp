@@ -276,7 +276,7 @@ int main(int argc, char **argv)
                 {
                     plegma::PLEGMA_Vector3D<float> aux3D;
                     aux3D.absorb(phi,dt);
-                    float *auxFloat = V3.Corr(dt, 0, 0);
+                    float *auxFloat = V3.Corr(dt % V3.localT(), 0, 0);
                     std::complex<float> auxC(auxFloat[2 * isc + 0], auxFloat[2 * isc + 1]);
                     aux3D.cscale(auxC);
                     aux.absorb(aux3D,dt,false);
@@ -300,8 +300,9 @@ int main(int argc, char **argv)
         free(ssource);
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
         // std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
+        std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_12, S_23, S_13, S_41, S_42, S_43};
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_i1 = {CG_5};
         std::vector<plegma::GAMMAS_SCATT> gscatts_f1 = {CG_5};
@@ -325,7 +326,6 @@ int main(int argc, char **argv)
         auto momVects3pt_pi2 = momList3pt.uniq_p(0);
         auto momVects3pt_pf2 = momList3pt.uniq_p(2);
         auto momVects3pt_pc = momList3pt.uniq_p(3);
-        plegma::momList momList3pt_pf1(1, {momVects3pt_pf1}, {0});
         plegma::momList momList3pt_pc(1, {momVects3pt_pc}, {0});
         plegma::momList momList_0(1, {{{0,0,0}}}, {0});
         std::vector<std::vector<int>> momVects_0 = {{0,0,0}};
@@ -350,50 +350,160 @@ int main(int argc, char **argv)
             plegma::PLEGMA_Propagator<float> propUSS, propUSL;
             plegma::PLEGMA_Propagator<float> propDSS, propDSL;
 
-            PLEGMA_printf("flagYan: before setupPoint");
             setupPointPropagator2(propUSS, propUSL, src, u, SB);
             setupPointPropagator2(propDSS, propDSL, src, d, SB);
-            PLEGMA_printf("flagYan: after setupPoint");
 
             plegma::PLEGMA_Vector<double> stoc, stocXi, stocEta;
             stoc.randInit(seed_stoc); 
             stoc.stochastic_Z(4); stocXi.copy(stoc);
             stoc.stochastic_Z(4); stocEta.copy(stoc);
 
-            PLEGMA_printf("flagYan: before corrNP");
-            plegma::PLEGMA_ScattCorrelator<float> corrNP(src, momList3pt_pf1);
-            corrNP.initialize_diagram(gscatts_ID, gscatts_ID, gscatts_i1, gscatts_f1, "NP");
-            {
-                PLEGMA_printf("flagYan: before reductionsT1N");
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT1N(src_zero, momVects3pt_pf1);
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT2N(src_zero, momVects3pt_pf1);
-                PLEGMA_printf("flagYan: before T1");
-                reductionsT1N.T1(gscatts_i1, gscatts_f1, propUSS, propDSS, propUSS);
-                reductionsT2N.T2(gscatts_i1, gscatts_f1, propUSS, propDSS, propUSS);
-                PLEGMA_printf("flagYan: before N_diag");
-                corrNP.N_diagrams(reductionsT1N, reductionsT2N);
-                corrNP.apply_phase();
-                corrNP.apply_sign("N");
-                corrNP.applyBoundaryConditions(true);
-                PLEGMA_printf("flagYan: before write");
-                corrNP.writeHDF5(outdiagramPrefix + "_N_" + confnumber + sourcepositiontext);
-            }
             
-            PLEGMA_printf("flagYan: before N0");
-            plegma::PLEGMA_ScattCorrelator<float> corrN0(src, momList3pt_pf1);
-            corrN0.initialize_diagram(gscatts_ID, gscatts_ID, gscatts_i1, gscatts_f1, "N0");
+
+            for (int i_pi2 = 0; i_pi2 < momVects3pt_pi2.size(); ++i_pi2)
             {
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT1N(src_zero, momVects3pt_pf1);
-                plegma::PLEGMA_ScattCorrelator<float> reductionsT2N(src_zero, momVects3pt_pf1);
-                reductionsT1N.T1(gscatts_i1, gscatts_f1, propDSS, propUSS, propDSS);
-                reductionsT2N.T2(gscatts_i1, gscatts_f1, propDSS, propUSS, propDSS);
-                corrN0.N_diagrams(reductionsT1N, reductionsT2N);
-                corrN0.apply_phase();
-                corrN0.apply_sign("N");
-                corrN0.applyBoundaryConditions(true);
-                corrN0.writeHDF5(outdiagramPrefix + "_N_" + confnumber + sourcepositiontext);
+                auto &mom_pi2 = momVects3pt_pi2[i_pi2];
+                std::string str_pi2 = "pi2=" + std::to_string(mom_pi2[0]) + "_" + std::to_string(mom_pi2[1]) + "_" + std::to_string(mom_pi2[2]);
+
+                plegma::PLEGMA_Vector<double> stoc_Uci_Gi2_Eta;
+                {
+                    plegma::PLEGMA_Vector3D<double> aux;
+                    aux.absorb(stocEta, ti);
+                    aux.apply_gamma_scatt(gscatts_i2[0]);
+                    aux.mulMomentumPhases(mom_pi2, +1);
+                    solve1(stoc_Uci_Gi2_Eta, aux, ti, u, SL);
+                }
+
+                for (int i_tfi=0; i_tfi< tSinks.size(); ++i_tfi)
+                {
+                    std::string str_dt = "dt=" + std::to_string(tSinks[i_tfi]);
+                    tf=(ti+tSinks[i_tfi])% HGC_totalL[3];
+
+                    for (int i_pf2 = 0; i_pf2 < momVects3pt_pf2.size(); ++i_pf2)
+                    {
+                        auto &mom_pf2 = momVects3pt_pf2[i_pf2];
+                        std::string str_pf2 = "pf2=" + std::to_string(mom_pf2[0]) + "_" + std::to_string(mom_pf2[1]) + "_" + std::to_string(mom_pf2[2]);
+
+                        plegma::PLEGMA_Vector<double> stoc_g5_Dcf_g5_Gf2dgr_Xi;
+                        {
+                            plegma::PLEGMA_Vector3D<double> aux;
+                            aux.absorb(stocXi, tf);
+                            aux.apply_gamma_scatt(gscatts_f2[0]); // Should be \dagger of G_f2
+                            aux.mulMomentumPhases(mom_pf2, +1);
+                            aux.apply_gamma5();
+                            solve1(stoc_g5_Dcf_g5_Gf2dgr_Xi, aux, tf, d, SL);
+                            stoc_g5_Dcf_g5_Gf2dgr_Xi.apply_gamma5();
+                        }
+
+                        plegma::PLEGMA_ScattCorrelator<float> auxPhiPhi(src_zero, momList3pt_pc);
+                        auxPhiPhi.initialize_diagram(gscatts_c, "");
+                        {
+                            plegma::PLEGMA_Vector<float> aux1, aux2;
+                            aux1.copy(stoc_Uci_Gi2_Eta);
+                            aux2.copy(stoc_g5_Dcf_g5_Gf2dgr_Xi); 
+                            auxPhiPhi.PhiPhi(aux1,gscatts_c,aux2,true);
+                        }
+                        auxPhiPhi.setGroups(std::vector<std::string>{"PhiPhi"});
+                        auxPhiPhi.setDatasets(std::vector<std::string>{str_pi2 + "/" + str_pf2 + "/" + str_dt});
+                        auxPhiPhi.writeHDF5(outfilename);
+
+                    } 
+                }
             }
 
+            plegma::PLEGMA_ScattCorrelator<float> auxV3(src_zero, momList_0);
+            {
+                plegma::PLEGMA_Vector<float> aux, aux2;
+                plegma::PLEGMA_Propagator<float> auxProp;
+                aux2.copy(stocEta);
+                packVector(aux, aux2, ti);
+                packPropagator(auxProp, propUSS, ti);
+                auxV3.V3(aux, gscatts_ID, auxProp);
+
+                auxV3.setGroups(std::vector<std::string>{"V3"});
+                auxV3.setDatasets(std::vector<std::string>{"data"});
+                auxV3.writeHDF5(outfilename);
+            }
+
+            for (int i_tfi=0; i_tfi< tSinks.size(); ++i_tfi)
+            {
+                std::string str_dt = "dt=" + std::to_string(tSinks[i_tfi]);
+                tf=(ti+tSinks[i_tfi])% HGC_totalL[3];
+
+                plegma::PLEGMA_Propagator<float> propUSS_tf, propDSS_tf;
+                packPropagator(propUSS_tf, propUSS, tf);
+                packPropagator(propDSS_tf, propDSS, tf);
+
+                plegma::PLEGMA_Vector<double> stoc_Uff_Xi;
+                {
+                    plegma::PLEGMA_Vector3D<double> aux;
+                    aux.absorb(stocXi,tf);
+                    solve1(stoc_Uff_Xi, aux, tf, u, SS);
+                }
+                plegma::PLEGMA_Propagator<float> prop_phiV3_tf;
+                {
+                    plegma::PLEGMA_Propagator<float> prop_phiV3;
+                    plegma::PLEGMA_Vector<float> aux;
+                    aux.copy(stoc_Uff_Xi);
+                    phiV3(prop_phiV3, aux, auxV3);
+                    packPropagator(prop_phiV3_tf, prop_phiV3, tf);
+                }
+
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> sc(src_zero, momVects3pt_pf1);
+                    plegma::PLEGMA_Vector<float> aux;
+                    aux.copy(stoc_Uff_Xi);
+                    sc.V2(aux, gscatts_f1, propDSS_tf, propUSS_tf); 
+                    sc.setGroups(std::vector<std::string>{"V24"});
+                    sc.setDatasets(std::vector<std::string>{"V2/" + str_dt});
+                    sc.writeHDF5(outfilename);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> sc(src_zero, momVects3pt_pf1);
+                    plegma::PLEGMA_Vector<float> aux;
+                    aux.copy(stoc_Uff_Xi);
+                    sc.V4(aux, gscatts_f1, propUSS_tf, propDSS_tf); 
+                    sc.setGroups(std::vector<std::string>{"V24"});
+                    sc.setDatasets(std::vector<std::string>{"V4/" + str_dt});
+                    sc.writeHDF5(outfilename);
+                }
+
+                auto outputfile = [&](plegma::PLEGMA_ScattCorrelator<float> sc, std::string name, float factor)
+                {
+                    float temp_sgn[2] = {factor, 0.};
+                    x_e_cx<float>(sc.H_elem(), temp_sgn, sc.getTotalSize());
+
+                    if (tf < ti)
+                    {
+                        float overall_sign[2] = {-1., 0.};
+                        x_e_cx<float>(sc.H_elem(), overall_sign, sc.getTotalSize());
+                    }
+                    
+                    sc.setGroups(std::vector<std::string>{"Bm"});
+                    sc.setDatasets(std::vector<std::string>{name + "/" + str_dt});
+                    sc.writeHDF5(outfilename);
+                };
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> aux(src_zero, momVects3pt_pf1);
+                    aux.T1(gscatts_i1, gscatts_f1, propUSS_tf, propDSS_tf, prop_phiV3_tf);
+                    outputfile(aux, "1", 1);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> aux(src_zero, momVects3pt_pf1);
+                    aux.T2(gscatts_i1, gscatts_f1, propUSS_tf, propDSS_tf, prop_phiV3_tf);
+                    outputfile(aux, "2", 1);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> aux(src_zero, momVects3pt_pf1);
+                    aux.T2(gscatts_i1, gscatts_f1, prop_phiV3_tf, propDSS_tf, propUSS_tf);
+                    outputfile(aux, "3", 1);
+                }
+                {
+                    plegma::PLEGMA_ScattCorrelator<float> aux(src_zero, momVects3pt_pf1);
+                    aux.T1(gscatts_i1, gscatts_f1, prop_phiV3_tf, propDSS_tf, propUSS_tf);
+                    outputfile(aux, "4", 1);
+                }
+            }
         }
     }
     finalize();
