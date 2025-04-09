@@ -211,7 +211,6 @@ int main(int argc, char **argv) {
 
 
     PLEGMA_Vector<double> vectorSource_stochastic;
-    vectorSource_stochastic.randInit(rand_seed1);
 
     PLEGMA_Vector<double> vectorStoc_source_oet;
     vectorStoc_source_oet.randInit(rand_seed1);
@@ -226,12 +225,6 @@ int main(int argc, char **argv) {
     //Step (6) produce factors with the sequential
     //Step (7) doing the recombination
     //Step (8) doing the one end trick calculation for the Z diagrams
-
-    PLEGMA_Vector<float> stochastic_sources;
-
-    PLEGMA_Vector<float> stochastic_propagator_ppa;
-    PLEGMA_Vector<float> stochastic_propagator_pma;
-
 
 
     PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_packed;
@@ -248,7 +241,7 @@ int main(int argc, char **argv) {
 
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_V3_GAMMAF2_U;//implemented
       std::vector<PLEGMA_ScattCorrelator<float>*> reductions_V3_GAMMAF2GAMMA5_U;//implemented
-
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_V4_GAMMAF1_U_U;
       site source = sourcePositions[isource];
 
       site source_reduction=site({0,0,0,sourcePositions[isource][DIM_T]});
@@ -260,8 +253,6 @@ int main(int argc, char **argv) {
       free(ssource);
 
       PLEGMA_Propagator<float> prop_packed(BOTH); //To be saved for all the coherent sources.
-      PLEGMA_Propagator<float> prop_PPA(BOTH); //To be saved for all the coherent sources.
-      PLEGMA_Propagator<float> prop_PMA(BOTH); //To be saved for all the coherent sources.
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
@@ -443,8 +434,11 @@ int main(int argc, char **argv) {
 #endif
       }
 
-      
+      vectorSource_stochastic.randInit(rand_seed1);
+
       for (int i=0; i<n_stochastic_samples;++i){
+
+	reductions_V4_GAMMAF1_U_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, sourcemomentumList_twopt.uniq_p(1)));
 
         reductions_V3_GAMMAF2_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, sourcemomentumList_twopt.uniq_p(2)));
 	reductions_V3_GAMMAF2GAMMA5_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, sourcemomentumList_twopt.uniq_p(2)));
@@ -590,11 +584,14 @@ int main(int argc, char **argv) {
 	{
 	   PLEGMA_Vector<float> vectorAuxF;
 	   vectorAuxF.copy(vectorPropagator_stochastic);
-        TIME(reductions_V3_GAMMAF2_U[i]->V3(vectorAuxF, glist_sink_meson,   prop_packed, true));
+           TIME(reductions_V3_GAMMAF2_U[i]->V3(vectorAuxF, glist_sink_meson,   prop_packed, true));
 
 	   vectorAuxF.apply_gamma5();
 
            TIME(reductions_V3_GAMMAF2GAMMA5_U[i]->V3(vectorAuxF, glist_sink_meson,   prop_packed, true));
+
+	   vectorAuxF.copy(vectorSource_stochastic);
+	   TIME(reductions_V4_GAMMAF1_U_U[i]->V4( vectorAuxF, glist_sink_meson, prop_packed, prop_packed, false));
 	}
         
       }
@@ -620,6 +617,16 @@ int main(int argc, char **argv) {
 
         PLEGMA_Propagator<float> propTS;
 
+        PLEGMA_ScattCorrelator<float> corrB13_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB14_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB15_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrB16_2pt(source, filtered_sourcemomentumList);
+
+
+	corrB13_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B13");
+        corrB14_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B14");
+        corrB15_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B15");
+        corrB16_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B16");
 
 
         //pi plus at the source
@@ -637,6 +644,55 @@ int main(int argc, char **argv) {
           vectorAuxF.copy(vectorAuxD);
           propTS.absorb(vectorAuxF, isc/3, isc%3);
 	}
+
+        vectorSource_stochastic.randInit(rand_seed1);
+
+        for (int i=0; i<n_stochastic_samples;++i){
+
+          vectorSource_stochastic.stochastic_Z(nroots);
+
+          PLEGMA_ScattCorrelator<float> reductions_V3_GAMMAF2_SEQ(source_reduction, sourcemomentumList_twopt.uniq_p(2));//implemented
+
+	  {
+	    PLEGMA_Vector<float> vectorAuxF;
+	    vectorAuxF.copy(vectorSource_stochastic);
+
+	    TIME(reductions_V3_GAMMAF2_SEQ.V3(vectorAuxF, glist_sink_meson, propTS, true));
+
+
+            TIME(corrB13_2pt.Recombination(reductions_V3_GAMMAF2_SEQ, 
+				           *reductions_V4_GAMMAF1_U_U[i],
+					   false,
+					   1,
+					   false,
+					   0,
+					   true,
+					   false,
+					   false,
+					   false,
+					   true));
+
+	  }
+
+
+          
+	  PLEGMA_ScattCorrelator<float> reductions_V4_GAMMAF1_1(source_reduction, sourcemomentumList_twopt.uniq_p(1));
+	  PLEGMA_ScattCorrelator<float> reductions_V4_GAMMAF1_2(source_reduction, sourcemomentumList_twopt.uniq_p(1));
+
+	  {
+            PLEGMA_Vector<float> vectorAuxF;
+            vectorAuxF.copy(vectorSource_stochastic);
+
+            TIME(reductions_V4_GAMMAF1_1.V4( vectorAuxF,  glist_sink_nucleon, prop_packed,  propTS, false));
+            TIME(reductions_V4_GAMMAF1_2.V4( vectorAuxF,  glist_sink_nucleon, propTS,  prop_packed, false));
+
+	  }
+
+
+
+	
+	}
+
 
       }
 
