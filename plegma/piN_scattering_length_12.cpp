@@ -264,6 +264,60 @@ int main(int argc, char **argv) {
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
+      auto solve1 = [&](plegma::PLEGMA_Vector<double> &out, 
+		        plegma::PLEGMA_Vector3D<double> &in
+			site source){
+	    PLEGMA_Vector<double> vectorInOut_a;
+            PLEGMA_Vector<double> vectorInOut_p;
+            PLEGMA_Vector<double> vectorInOut_ppa;
+            PLEGMA_Vector<double> vectorInOut_pma;
+
+	    { // Smearing the source
+               PLEGMA_Vector3D<double> vector1;
+               TIME(vector1.gaussianSmearing(in, smearedGauge3D, nSmear, alphaGauss));
+               vectorInOut_a.absorb(vector1,source[DIM_T]);
+            }
+	    vectorInOut_p.copy(vectorInOut_a);
+            // Inverting
+            PLEGMA_printf("Going to invert for antiperiodic case\n" );
+            updateGaugeQuda(gauge, true);
+            solver_a.UpdateSolver();
+            TIME(solver_a.solve(vectorInOut_a, vectorInOut_a));
+            PLEGMA_printf("Going to invert for periodic case \n");
+            updateGaugeQuda(gauge, false);
+            solver_p.UpdateSolver();
+            TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
+
+	    vectorInOut_ppa.copy(vectorInOut_p);
+            vectorInOut_ppa.add(vectorInOut_a,1);
+
+            vectorInOut_ppa.copy(vectorAuxD);
+
+	    vectorInOut_pma.copy(vectorInOut_p);
+            vectorInOut_pma.add(vectorInOut_a,-1);
+
+            vectorAuxD.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source[DIM_T],  HGC_totalL[DIM_T]/2);
+
+            TIME(out.gaussianSmearing(vectorAuxD, smearedGauge, nSmear, alphaGauss));
+	    out.copy(vectorAuxD);
+      }
+      auto computePropagator = [&](PLEGMA_Propagator<float>& prop_packed
+                                   ) {
+	    for(int isc = 0 ; isc < 12 ; isc++){
+              PLEGMA_Vector<double> vectorInOut;
+	      PLEGMA_Vector<float>  vectorAuxF;
+              PLEGMA_Vector3D<double> vector1;
+              vector1.pointSource(source, isc/3, isc%3, DEVICE);
+              solve1(vecrorInOut, vector1, source);
+	      vectorAuxF.copy(vectorAuxD);
+              prop_packed.absorb(vectorAuxF, isc/3, isc%3);
+	    };
+
+      }
+      TIME(computePropagator(prop_packed));
+
+		
+#if 0
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_packed,
                                    PLEGMA_Propagator<float>& prop_PPA,
                                    PLEGMA_Propagator<float>& prop_PMA,
@@ -318,8 +372,8 @@ int main(int argc, char **argv) {
                                    vectorInOut_pma.copy(vectorInOut_p);
                                    vectorInOut_pma.add(vectorInOut_a,-1);
 
-                                   TIME(vectorAuxD.gaussianSmearing(vectorInOut_ppa, smearedGauge, nSmear, alphaGauss));
-                                   vectorInOut_ppa.copy(vectorAuxD);
+                                   TIME(vectorAuxD.gaussianSmearing(vectorInOut_pma, smearedGauge, nSmear, alphaGauss));
+                                   vectorInOut_pma.copy(vectorAuxD);
                                    vectorAuxF.copy(vectorAuxD);
                                    prop_PMA.absorb(vectorAuxF, isc/3, isc%3);
 
@@ -330,20 +384,21 @@ int main(int argc, char **argv) {
                                  }
                                };
       TIME(computePropagator(prop_packed, prop_PPA, prop_PMA, nsmearGauss));
+#endif
 
      //N diagram
       {
         std::vector<std::vector<int>> mtot = sourcemomentumList_twopt.uniq_p(3);
         momList list_mtot(1,{mtot,},{0,});
         PLEGMA_ScattCorrelator<float> corrN(source,list_mtot);
-        PLEGMA_ScattCorrelator<float> corrN_PPA(source,list_mtot);
-        PLEGMA_ScattCorrelator<float> corrN_PMA(source,list_mtot);
+        //PLEGMA_ScattCorrelator<float> corrN_PPA(source,list_mtot);
+        //PLEGMA_ScattCorrelator<float> corrN_PMA(source,list_mtot);
 
 
         //initialize diagram
         corrN.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
-        corrN_PPA.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
-        corrN_PMA.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
+        //corrN_PPA.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
+        //corrN_PMA.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired,glist_source_nucleon, glist_sink_nucleon,"N");
 
 
         PLEGMA_ScattCorrelator<float> reductionsT1(source_reduction, mtot);
@@ -364,6 +419,7 @@ int main(int argc, char **argv) {
         TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, prop_PPA, prop_PPA, prop_PPA));
 
         //write N
+#if 0
         outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_N_PPA";
 
         TIME( corrN_PPA.N_diagrams( reductionsT1, reductionsT2 ) );
@@ -381,14 +437,39 @@ int main(int argc, char **argv) {
         TIME( corrN_PMA.apply_phase() );
         TIME( corrN_PMA.apply_sign("N"));
         TIME( corrN_PMA.writeHDF5(outfilename));
-
+#endif
       }
 
       
       for (int i=0; i<n_stochastic_samples;++i){
-
+        PLEGMA_Vector<double> vectorPropagator_stochastic;
         if (readStochSamples==0){
+	  vectorSource_stochastic.stochastic_Z(nroots);
+          PLEGMA_Vector<float> vectorAuxF;
+          vectorAuxF.copy(vectorSource_stochastic);
+          vectorAuxF.unload();
+          vectorAuxF.writeLIME("globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
+          vectorPropagator_stochastic.scale(0.0);
+          if (timedilution){
+            PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
+            for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+              PLEGMA_Vector3D<double> vectorIn;
+	      vectorIn.absorb(vectorSource_stochastic,timeidx);
+              solve1(vecrorInOut, vectorIn, timeidx);
+	      vectorPropagator_stochastic.absorbTimeslice(vectorInOut, timeidx, false);
+	    }
+	  }
 
+
+
+
+
+          //In vectorAuxD2 we store the results for the inversion
+
+          //vectorAuxD2_ppa.scale(0.0);
+          //vectorAuxD2_pma.scale(0.0);
+
+#if 0
           vectorSource_stochastic.stochastic_Z(nroots);
           PLEGMA_Vector<float> vectorAuxF;
           vectorAuxF.copy(vectorSource_stochastic);
@@ -402,6 +483,7 @@ int main(int argc, char **argv) {
           if (timedilution){
             PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
             for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
+
               //Step(5) pick out a particular timeslice from the source
               vectorInOut_a.absorbTimeslice(vectorSource_stochastic, timeidx);
               //Step(6) Solve
@@ -410,7 +492,7 @@ int main(int argc, char **argv) {
               solver_a.solve(vectorInOut_a, vectorInOut_a);
 
               //Step(7) pick out a particular timeslice from the source
-              vectorInOut_p.absorbTimeslice(vectorSource_stochastic, timeidx);
+              vectorInOut_p.absorbTimeslice(vectorSource_stochastic, timeidx);1
               //Step(8) Solve
               updateGaugeQuda(gauge, false);
               solver_p.UpdateSolver();
@@ -478,6 +560,8 @@ int main(int argc, char **argv) {
 
           stochastic_propagator_pma.copy(vectorAuxD1);
 
+#endif
+
         }
         else{
           std::string inputfilename="globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber;
@@ -486,22 +570,56 @@ int main(int argc, char **argv) {
           vectorRead.readFile(inputfilename,LIME_FORMAT);
           vectorRead.load();
           vectorSource_stochastic.copy(vectorRead);
-          inputfilename="globalTfulltimedilution_propagator_ppa_nstoch"+std::to_string(i)+"_"+confnumber;
+          inputfilename="globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
           PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
           vectorRead.readFile(inputfilename,LIME_FORMAT);
-          stochastic_propagator_2pt_SS_ppa.copy(vectorFloat,HOST);
-          stochastic_propagator_2pt_SS_ppa.load();
-          inputfilename="globalTfulltimedilution_propagator_pma_nstoch"+std::to_string(i)+"_"+confnumber;
-          PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
-          vectorRead.readFile(inputfilename,LIME_FORMAT);
-          stochastic_propagator_2pt_SS_pma.copy(vectorFloat,HOST);
-          stochastic_propagator_2pt_SS_pma.load();
+          vectorPropagator_stochastic.copy(vectorFloat,HOST);
+          vectorPropagator_stochastic.load();
 
         }
         
       }
 
       readStochSamples=1;
+
+      //We first have a loop over all unique the source meson momentum p_i2
+      for (int i_mpi2=0; i_mpi2<mpi2_threept.size(); ++i_mpi2){
+
+        auto &momentum_i2 =  mpi2_threept[i_mpi2];
+        //List of momenta corresponding to a fix value of p_i2
+        momList filtered_sourcemomentumList = sourcemomentumList_threept.extract(momentum_i2, 0);
+
+        momList filtered_sourcemomentumList_2pt = sourcemomentumList_twopt.extract(momentum_i2, 0);
+
+        std::vector<std::vector<int>> mptot_filt = filtered_sourcemomentumList_2pt.uniq_p(3);
+
+        std::vector<std::vector<int>> mpi2_filt  ;
+        mpi2_filt.assign(mptot_filt.size(),momentum_i2);
+        //PLEGMA_printf("mptot_filt.size() %d\n",mptot_filt.size());
+        momList list_mpi2ptot(2,{mpi2_filt,mptot_filt},{1,});
+
+        PLEGMA_Propagator<float> propTS;
+
+
+
+        //pi plus at the source
+        for(int isc = 0 ; isc < 12 ; isc++){
+          PLEGMA_Vector<double> vectorAuxD;
+          PLEGMA_Vector<float> vectorAuxF;
+          //Performing the smearing
+          PLEGMA_Vector3D<double> vector1;
+          vectorAuxF.absorb(prop_packed, isc/3, isc%3);
+          vectorAuxD.copy(vectorAuxF);
+          vector1.absorb( vectorAuxD, source[3]);
+          vector1.mulMomentumPhases(momentum_i2,1);
+	  vector1.apply_gamma_scatt(glist_source_meson[0]);
+	  solve1(vectorAuxD, vector1, source);
+          vectorAuxF.copy(vectorAuxD);
+          propTS.absorb(vectorAuxF, isc/3, isc%3);
+	}
+
+      }
+
 
     /******************************************************
      *
