@@ -246,6 +246,8 @@ int main(int argc, char **argv) {
 
     for(int isource = startSource; isource < numSourcePositions; isource++){
 
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_V3_GAMMAF2_U;//implemented
+      std::vector<PLEGMA_ScattCorrelator<float>*> reductions_V3_GAMMAF2GAMMA5_U;//implemented
 
       site source = sourcePositions[isource];
 
@@ -265,16 +267,17 @@ int main(int argc, char **argv) {
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
       auto solve1 = [&](plegma::PLEGMA_Vector<double> &out, 
-		        plegma::PLEGMA_Vector3D<double> &in
+		        plegma::PLEGMA_Vector3D<double> &in,
 			site source){
 	    PLEGMA_Vector<double> vectorInOut_a;
             PLEGMA_Vector<double> vectorInOut_p;
             PLEGMA_Vector<double> vectorInOut_ppa;
             PLEGMA_Vector<double> vectorInOut_pma;
+	    PLEGMA_Vector<double> vectorAuxD;
 
 	    { // Smearing the source
                PLEGMA_Vector3D<double> vector1;
-               TIME(vector1.gaussianSmearing(in, smearedGauge3D, nSmear, alphaGauss));
+               TIME(vector1.gaussianSmearing(in, smearedGauge3D, nsmearGauss, alphaGauss));
                vectorInOut_a.absorb(vector1,source[DIM_T]);
             }
 	    vectorInOut_p.copy(vectorInOut_a);
@@ -298,9 +301,9 @@ int main(int argc, char **argv) {
 
             vectorAuxD.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source[DIM_T],  HGC_totalL[DIM_T]/2);
 
-            TIME(out.gaussianSmearing(vectorAuxD, smearedGauge, nSmear, alphaGauss));
+            TIME(out.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 	    out.copy(vectorAuxD);
-      }
+      };
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_packed
                                    ) {
 	    for(int isc = 0 ; isc < 12 ; isc++){
@@ -308,12 +311,12 @@ int main(int argc, char **argv) {
 	      PLEGMA_Vector<float>  vectorAuxF;
               PLEGMA_Vector3D<double> vector1;
               vector1.pointSource(source, isc/3, isc%3, DEVICE);
-              solve1(vecrorInOut, vector1, source);
-	      vectorAuxF.copy(vectorAuxD);
+              solve1(vectorInOut, vector1, source);
+	      vectorAuxF.copy(vectorInOut);
               prop_packed.absorb(vectorAuxF, isc/3, isc%3);
 	    };
 
-      }
+      };
       TIME(computePropagator(prop_packed));
 
 		
@@ -415,8 +418,8 @@ int main(int argc, char **argv) {
         TIME( corrN.apply_sign("N"));
         TIME( corrN.writeHDF5(outfilename));
 
-        TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, prop_PPA, prop_PPA, prop_PPA));
-        TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, prop_PPA, prop_PPA, prop_PPA));
+        //TIME(reductionsT1.T1(glist_source_nucleon, glist_sink_nucleon, prop_PPA, prop_PPA, prop_PPA));
+        //TIME(reductionsT2.T2(glist_source_nucleon, glist_sink_nucleon, prop_PPA, prop_PPA, prop_PPA));
 
         //write N
 #if 0
@@ -442,8 +445,13 @@ int main(int argc, char **argv) {
 
       
       for (int i=0; i<n_stochastic_samples;++i){
+
+        reductions_V3_GAMMAF2_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, sourcemomentumList_twopt.uniq_p(2)));
+	reductions_V3_GAMMAF2GAMMA5_U.push_back(new PLEGMA_ScattCorrelator<float>(source_reduction, sourcemomentumList_twopt.uniq_p(2)));
+
         PLEGMA_Vector<double> vectorPropagator_stochastic;
-        if (readStochSamples==0){
+	PLEGMA_Vector<double> vectorInOut;
+        if (readstochastic==0){
 	  vectorSource_stochastic.stochastic_Z(nroots);
           PLEGMA_Vector<float> vectorAuxF;
           vectorAuxF.copy(vectorSource_stochastic);
@@ -455,7 +463,8 @@ int main(int argc, char **argv) {
             for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
               PLEGMA_Vector3D<double> vectorIn;
 	      vectorIn.absorb(vectorSource_stochastic,timeidx);
-              solve1(vecrorInOut, vectorIn, timeidx);
+              site source_in=site({0,0,0,timeidx});
+              solve1(vectorInOut, vectorIn, source_in);
 	      vectorPropagator_stochastic.absorbTimeslice(vectorInOut, timeidx, false);
 	    }
 	  }
@@ -573,21 +582,32 @@ int main(int argc, char **argv) {
           inputfilename="globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber;
           PLEGMA_printf("Read propagator from: %s\n",inputfilename.c_str());
           vectorRead.readFile(inputfilename,LIME_FORMAT);
-          vectorPropagator_stochastic.copy(vectorFloat,HOST);
+          vectorPropagator_stochastic.copy(vectorRead,HOST);
           vectorPropagator_stochastic.load();
 
         }
+
+	{
+	   PLEGMA_Vector<float> vectorAuxF;
+	   vectorAuxF.copy(vectorPropagator_stochastic);
+        TIME(reductions_V3_GAMMAF2_U[i]->V3(vectorAuxF, glist_sink_meson,   prop_packed, true));
+
+	   vectorAuxF.apply_gamma5();
+
+           TIME(reductions_V3_GAMMAF2GAMMA5_U[i]->V3(vectorAuxF, glist_sink_meson,   prop_packed, true));
+	}
         
       }
 
-      readStochSamples=1;
+      readstochastic=1;
+
 
       //We first have a loop over all unique the source meson momentum p_i2
-      for (int i_mpi2=0; i_mpi2<mpi2_threept.size(); ++i_mpi2){
+      for (int i_mpi2=0; i_mpi2<mpi2_twopt.size(); ++i_mpi2){
 
-        auto &momentum_i2 =  mpi2_threept[i_mpi2];
+        auto &momentum_i2 =  mpi2_twopt[i_mpi2];
         //List of momenta corresponding to a fix value of p_i2
-        momList filtered_sourcemomentumList = sourcemomentumList_threept.extract(momentum_i2, 0);
+        momList filtered_sourcemomentumList = sourcemomentumList_twopt.extract(momentum_i2, 0);
 
         momList filtered_sourcemomentumList_2pt = sourcemomentumList_twopt.extract(momentum_i2, 0);
 
@@ -800,11 +820,6 @@ int main(int argc, char **argv) {
 
 
       }
-    }
-    for(int i=0; i< n_stochastic_samples; ++i) {
-      stochastic_sources.pop_back();
-      stochastic_propagator_ppa.pop_back();
-      stochastic_propagator_pma.pop_back();
     }
   }//loop in finalize
   finalize();
