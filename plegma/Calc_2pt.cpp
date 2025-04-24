@@ -66,7 +66,7 @@ int main(int argc, char **argv)
       updateOptions(CHARM);
       mu = mu_c[0];
     }
-    TIME(QUDA_solver solver(mu,12));
+    TIME(QUDA_solver solver(mu,1));
     std::vector<std::thread> threads;
 
     
@@ -89,26 +89,25 @@ int main(int argc, char **argv)
 				   mu = run_mu;
 				   solver.UpdateSolver();
 				 }
-
-				 std::vector<PLEGMA_Vector<double>> vectorInOut(12);
 				 for(int isc = 0 ; isc < 12 ; isc++){
+
+				    PLEGMA_Vector<double> vectorInOut;
+				    PLEGMA_Vector<double> vectorAuxD;
+                                    PLEGMA_Vector<float> vectorAuxF;
 				    // Smearing the source
 				    PLEGMA_Vector3D<double> vector1, vector2;
 				    vector1.pointSource(source, isc/3, isc%3, DEVICE);
 				    TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear, alphaGauss));
-				    (vectorInOut[isc]).absorb(vector2,source[DIM_T]);
-				 }
-				   // Inverting
-				 PLEGMA_printf("Going to invert %s for all component\n",
+				    (vectorInOut).absorb(vector2,source[DIM_T]);
+				 
+				    // Inverting
+				    PLEGMA_printf("Going to invert %s for all component\n",
 						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"));
-				 TIME(solver.solve(vectorInOut, vectorInOut));
-                                 for(int isc = 0 ; isc < 12 ; isc++)
-				 { // Smearing the solution
-				     PLEGMA_Vector<double> vectorAuxD;
-				     PLEGMA_Vector<float> vectorAuxF;
-				     TIME(vectorAuxD.gaussianSmearing(vectorInOut[isc], smearedGauge, nSmear, alphaGauss));
-				     vectorAuxF.copy(vectorAuxD);
-				     prop.absorb(vectorAuxF, isc/3, isc%3);
+				    TIME(solver.solve(vectorInOut, vectorInOut));
+				    // Smearing the solution
+				    TIME(vectorAuxD.gaussianSmearing(vectorInOut, smearedGauge, nSmear, alphaGauss));
+				    vectorAuxF.copy(vectorAuxD);
+				    prop.absorb(vectorAuxF, isc/3, isc%3);
 				 }  
 				 prop.rotateToPhysicalBase_device(run_mu/abs(run_mu));
 				 prop.applyBoundaries_device(source[DIM_T]);
