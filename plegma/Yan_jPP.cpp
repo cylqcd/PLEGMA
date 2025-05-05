@@ -209,8 +209,9 @@ int main(int argc, char **argv)
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
         std::vector<plegma::GAMMAS_SCATT> gscatts_f = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
-        std::vector<plegma::GAMMAS_SCATT> gscatts_i = {ID, G_5, G_5_G_4}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
-        
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_i = {ID, G_5, G_5_G_4}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
+        std::vector<plegma::GAMMAS_SCATT> gscatts_i = {ID};
+
         std::string outfilename = outdiagramPrefix + "_" + confnumber + "_jPP";
 
         std::vector<SmearFlagYan> smearFlags = {LL, SL, SS};
