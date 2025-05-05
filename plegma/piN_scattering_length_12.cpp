@@ -23,37 +23,6 @@ void produceOutput( PLEGMA_ScattCorrelator<float> source,
                     int n_stochastic_samples){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions( true ));
-  TIME(source.normalize_nstoch(n_stochastic_samples));
-  TIME(source.writeHDF5( outputFilename ));
-
-}
-
-void produceOutput_2pt_packed( PLEGMA_ScattCorrelator<float> source,
-                    std::string outputFilename,
-                    std::string diagram_name,
-                    int n_stochastic_samples,
-		    int n_coherent_source,
-		    int *attract_look_up_table){
-  TIME(source.apply_phase());
-  TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions( true, n_coherent_source, attract_look_up_table ));
-  TIME(source.normalize_nstoch(n_stochastic_samples));
-  TIME(source.writeHDF5( outputFilename ));
-
-}
-
-
-void produceOutput_3pt( PLEGMA_ScattCorrelator<float> source,
-                    std::string outputFilename,
-                    std::string diagram_name,
-                    int n_stochastic_samples,
-		    int n_coherent_source,
-                    int *attract_look_up_table,
-		    int source_sink_separation){
-  TIME(source.apply_phase());
-  TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions_3pt( true, n_coherent_source, attract_look_up_table, source_sink_separation ));
   TIME(source.normalize_nstoch(n_stochastic_samples));
   TIME(source.writeHDF5( outputFilename ));
 
@@ -65,19 +34,6 @@ void produceOutput( PLEGMA_ScattCorrelator<float> source,
                   ){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions( true ));
-  TIME(source.writeHDF5( outputFilename ));
-}
-
-void produceOutput_2pt_packed( PLEGMA_ScattCorrelator<float> source,
-                    std::string outputFilename,
-                    std::string diagram_name,
-		    int n_coherent_source,
-                    int *attract_look_up_table
-                  ){
-  TIME(source.apply_phase());
-  TIME(source.apply_sign(diagram_name));
-  TIME(source.applyBoundaryConditions( true, n_coherent_source, attract_look_up_table ));
   TIME(source.writeHDF5( outputFilename ));
 }
 
@@ -229,12 +185,6 @@ int main(int argc, char **argv) {
 
     PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_packed;
     PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_packed;
-
-    PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_ppa;
-    PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_ppa;
-
-    PLEGMA_Vector<float> stochastic_oet_prop_zero_mom_pma;
-    PLEGMA_Vector<float> stochastic_oet_prop_fini_mom_pma;
 
 /*  PART I: Computing point to all  propagators:
           a; nucleon correlation function
@@ -466,18 +416,44 @@ int main(int argc, char **argv) {
         PLEGMA_ScattCorrelator<float> corrB5_2pt(source, filtered_sourcemomentumList);
 
 
+        PLEGMA_ScattCorrelator<float> corrW1_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW2_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW3_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW4_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW5_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW6_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW7_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW8_2pt(source, filtered_sourcemomentumList);
+        PLEGMA_ScattCorrelator<float> corrW9_2pt(source, filtered_sourcemomentumList);
 
 
 	corrB1_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B1");
 
         corrB2_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B2");
 
-        corrB3_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B2");
+        corrB3_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B3");
 
-        corrB4_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B2");
+        corrB4_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B4");
 
-        corrB5_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B2");
+        corrB5_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "B5");
 
+        corrW1_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W1");
+
+        corrW2_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W2");
+
+        corrW3_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W3");
+
+        corrW4_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W4");
+
+        corrW5_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W5");
+
+        corrW6_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W6");
+
+        corrW7_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W7");
+
+        corrW8_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W8");
+
+        corrW9_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson,"12", "W9");
 
         //pi plus at the source
         for(int isc = 0 ; isc < 12 ; isc++){
@@ -509,49 +485,52 @@ int main(int argc, char **argv) {
 
           PLEGMA_ScattCorrelator<float> reductions_V3_B(source_reduction, sourcemomentumList_twopt.uniq_p(2));//implemented
 
-	  {
-	    PLEGMA_Vector<float> vectorAuxF;
-	    vectorAuxF.copy(vectorSource_stochastic);
+          PLEGMA_ScattCorrelator<float> reductions_V4_W(source_reduction, sourcemomentumList_twopt.uniq_p(1));//implemented
 
-	    TIME(reductions_V3_B.V3(vectorAuxF, glist_sink_meson, propTS, true));
+          PLEGMA_ScattCorrelator<float> reductions_V2_W1(source_reduction, sourcemomentumList_twopt.uniq_p(1));//implemented
+
+          PLEGMA_ScattCorrelator<float> reductions_V2_W2(source_reduction, sourcemomentumList_twopt.uniq_p(1));//implemented
+
+	  
+	  PLEGMA_Vector<float> vectorAuxF;
+	  vectorAuxF.copy(vectorSource_stochastic);
+
+	  TIME(reductions_V3_B.V3(vectorAuxF, glist_sink_meson, propTS, true));
+
+          vectorAuxF.apply_gamma5();
+
+          TIME(reductions_V4_W.V4(vectorAuxF, glist_sink_nucleon, prop_packed, propTS, true));
+
+          TIME(reductions_V2_W1.V2(vectorAuxF, glist_sink_nucleon, prop_packed, propTS, true));
+
+          TIME(reductions_V2_W2.V2(vectorAuxF, glist_sink_nucleon, propTS, prop_packed, true));
 
 
-            TIME(corrB1_2pt.Recombination(reductions_V3_B, 
-				         *reductions_V4_B[i],
-					   false,
-					   1,
-					   false,
-					   0,
-					   true,
-					   false,
-					   false,
-					   false,
-					   true));
-/*template<typename Float> 
-void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float> &srcV3,
-                                                  PLEGMA_ScattCorrelator<Float> &srcV2,
-                                                  bool matrix,
-                                                  int index_abs,
-                                                  bool transp_source_sink,
-                                                  int ig_i2, 
-                                                  bool transpgamma_i1,
-                                                  bool transpgamma_f1,
-                                                  bool oet,
-                                                  bool threept,
-                                                  bool accum){*/
-            TIME(corrB2_2pt.Recombination(reductions_V3_B,
+          TIME(corrB1_2pt.Recombination(reductions_V3_B, 
+	                               *reductions_V4_B[i],
+			                false,
+					1,
+					false,
+					0,
+					true,//checked
+					false,
+					false,
+					false,
+					true));
+
+          TIME(corrB2_2pt.Recombination(reductions_V3_B,
                                          *reductions_V4_B[i],
                                            true,
                                            0,
                                            false,
                                            0,
-                                           true,
+                                           true,//checked
                                            false,
                                            false,
                                            false,
                                            true));
 
-            TIME(corrB3_2pt.Recombination(reductions_V3_B,
+          TIME(corrB3_2pt.Recombination(reductions_V3_B,
                                          *reductions_V2_B[i],
                                            false,
                                            0,
@@ -563,7 +542,7 @@ void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float> 
                                            false,
                                            true));
 
-            TIME(corrB4_2pt.Recombination(reductions_V3_B,
+          TIME(corrB4_2pt.Recombination(reductions_V3_B,
                                          *reductions_V2_B[i],
                                            true,
                                            1,
@@ -575,7 +554,7 @@ void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float> 
                                            false,
                                            true));
 
-            TIME(corrB5_2pt.Recombination(reductions_V3_B,
+          TIME(corrB5_2pt.Recombination(reductions_V3_B,
                                          *reductions_V2_B[i],
                                            true,
                                            2,
@@ -587,11 +566,134 @@ void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float> 
                                            false,
                                            true));
 
+          TIME(corrW1_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V4_W,
+                                           false,
+                                           1,
+                                           false,
+                                           0,
+                                           true,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
 
-	  }
+          TIME(corrW2_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V4_W,
+                                           false,
+                                           2,
+                                           false,
+                                           0,
+                                           true,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+          TIME(corrW3_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V2_W1,
+                                           false,
+                                           0,
+                                           false,
+                                           0,
+                                           false,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+          TIME(corrW4_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V2_W1,
+                                           false,
+                                           2, 
+                                           true,
+                                           0,
+                                           false,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+          TIME(corrW5_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V4_W,
+                                           true,
+                                           0, 
+                                           false,
+                                           0,
+                                           false,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+          TIME(corrW6_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V2_W1,
+                                           true,
+                                           1, 
+                                           false,
+                                           0,
+                                           false,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+          TIME(corrW7_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V2_W2,
+                                           false,
+                                           2, 
+                                           true,
+                                           0,
+                                           true,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+          TIME(corrW8_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V2_W2,
+                                           true,
+                                           1, 
+                                           false,
+                                           0,
+                                           false,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+          TIME(corrW9_2pt.Recombination(*reductions_V3_W[i],
+                                          reductions_V2_W2,
+                                           false,
+                                           0, 
+                                           false,
+                                           0,
+                                           false,
+                                           false,
+                                           false,
+                                           false,
+                                           true));
+
+	  
 
 	
 	}
+
+        TIME(produceOutput(corrB1_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrB2_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrB3_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrB4_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrB5_2pt, outfilename, "4pt", n_stochastic_samples));
+
+        TIME(produceOutput(corrW1_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW2_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW3_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW4_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW5_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW6_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW7_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW8_2pt, outfilename, "4pt", n_stochastic_samples));
+        TIME(produceOutput(corrW9_2pt, outfilename, "4pt", n_stochastic_samples));
 
 
       }
@@ -609,65 +711,38 @@ void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float> 
         //Doing for +mu for the UP propagator spin dilution oet
 
         site source_local = sourcePositions[isource];
-           
-        PLEGMA_Vector<double> vectortmp1;
+        PLEGMA_Vector3D<double> vectorIn1;
+        vectorIn1.absorb(vectorSource_stochastic,source_local[DIM_T]);
 
-        PLEGMA_Vector<double> vectorInOut_p;
-        PLEGMA_Vector<double> vectorInOut_a;
+        PLEGMA_Vector<double> vectorAuxD;
+        PLEGMA_Vector<double> vectorInOut_ppa, vectorInOut_pma;
 
-        PLEGMA_Vector<double> vectorInOut_ppa;
-        PLEGMA_Vector<double> vectorInOut_pma;
-
-        {  // Smearing the source
-
-          PLEGMA_Vector3D<double> vector1, vector2;
-          vector1.absorb(vectorStoc_source_oet, source_local[DIM_T]);
-          PLEGMA_Gauge3D<double> smearedGauge3D;
-          smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
-          TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-          vectortmp1.absorb(vector2, source_local[DIM_T]);
-
-        }
-
-        vectorInOut_a.copy(vectortmp1);
-        updateGaugeQuda(gauge, true);
-        solver_a.UpdateSolver();
-        TIME(solver_a.solve(vectorInOut_a, vectorInOut_a));
-
-        vectorInOut_p.copy(vectortmp1);
-        updateGaugeQuda(gauge, false);
-        solver_p.UpdateSolver();
-        TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
-
-        vectorInOut_ppa.copy(vectorInOut_p);
-        vectorInOut_ppa.add(vectorInOut_a,1);
-
-        vectorInOut_pma.copy(vectorInOut_p);
-        vectorInOut_pma.add(vectorInOut_a,-1);
-
-        TIME(vectorInOut_a.gaussianSmearing(vectorInOut_ppa, smearedGauge, nsmearGauss, alphaGauss));
-        vectorInOut_ppa.copy(vectorInOut_a);
-
-        TIME(vectorInOut_a.gaussianSmearing(vectorInOut_pma, smearedGauge, nsmearGauss, alphaGauss));
-        vectorInOut_pma.copy(vectorInOut_a);
+        solve1(vectorInOut_ppa, vectorInOut_pma, vectorIn1, source_local);
+        vectorAuxD.pack_propagator(vectorInOut_ppa,
+                                   vectorInOut_pma,
+                                   source_local[DIM_T],
+                                   HGC_totalL[DIM_T]/2);
 
 
-
-        vectortmp1.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source_local[DIM_T],  HGC_totalL[DIM_T]/2);
-
-      
-        //Gaussian smearing of the propagator
-        //TIME(vectorInOut_a.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
-
-        stochastic_oet_prop_zero_mom_ppa.copy(vectorInOut_ppa);   
-        stochastic_oet_prop_zero_mom_pma.copy(vectorInOut_pma);   
-
-        stochastic_oet_prop_zero_mom_packed.copy(vectortmp1);   
+        stochastic_oet_prop_zero_mom_packed.copy(vectorAuxD);   
 
       }//end of do_stochastic_oet
+
+      PLEGMA_ScattCorrelator<float> reductionsV2_Z(source_reduction, list_mpf1_twopt);
+      PLEGMA_ScattCorrelator<float> reductionsV4_Z(source_reduction, list_mpf1_twopt);
+
+      TIME(reductionsV2_Z.V2( stochastic_oet_prop_zero_mom_packed, glist_sink_nucleon, prop_packed, prop_packed, true));
+      TIME(reductionsV4_Z.V4( stochastic_oet_prop_zero_mom_packed, glist_sink_nucleon, prop_packed, prop_packed, true));
+
+
       { 
 
+        PLEGMA_ScattCorrelator<float> reductionsV3_Z(source_reduction, list_mpf2_twopt);
+
+
         PLEGMA_ScattCorrelator<float> corrPION(source, list_mpi2_twopt);
+
+
 
         PLEGMA_ScattCorrelator<float> corrPION_PPA(source, list_mpi2_twopt);
         PLEGMA_ScattCorrelator<float> corrPION_PMA(source, list_mpi2_twopt);
@@ -675,16 +750,31 @@ void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float> 
 
         corrPION.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
 
-        corrPION_PPA.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
-        corrPION_PMA.initialize_diagram(glist_source_meson, glist_sink_meson, "PPUP");
-
 
         //We first have a loop over all unique the source meson momentum p_i2     
         for (int i_mpi2=0; i_mpi2<mpi2_twopt.size(); ++i_mpi2){
 
           auto &momentum_i2 =  mpi2_twopt[i_mpi2];
           //List of momenta corresponding to a fix value of p_i2
-          momList filtered_sourcemomentumList = sourcemomentumList_twopt.extract(momentum_i2, 0);
+          momList filtered_sourcemomentumList_2pt = sourcemomentumList_twopt.extract(momentum_i2, 0);
+
+
+          PLEGMA_ScattCorrelator<float> corrZ1_2pt(source, filtered_sourcemomentumList_2pt);
+          PLEGMA_ScattCorrelator<float> corrZ2_2pt(source, filtered_sourcemomentumList_2pt);
+          PLEGMA_ScattCorrelator<float> corrZ3_2pt(source, filtered_sourcemomentumList_2pt);
+          PLEGMA_ScattCorrelator<float> corrZ4_2pt(source, filtered_sourcemomentumList_2pt);
+          PLEGMA_ScattCorrelator<float> corrZ5_2pt(source, filtered_sourcemomentumList_2pt);
+
+
+          corrZ1_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z1");
+
+          corrZ2_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z2");
+
+          corrZ3_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z3");
+
+          corrZ4_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z4");
+
+          corrZ5_2pt.initialize_diagram( glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_meson, glist_sink_nucleon, glist_sink_meson, "12", "Z5");
 
           std::string pi2x=std::to_string(momentum_i2[0]);
           std::string pi2y=std::to_string(momentum_i2[1]);
@@ -694,86 +784,61 @@ void PLEGMA_ScattCorrelator<Float>::Recombination(PLEGMA_ScattCorrelator<Float> 
           {
 
             site source_local = sourcePositions[isource];
+            PLEGMA_Vector3D<double> vectorIn1;
+            vectorIn1.absorb(vectorSource_stochastic,source_local[DIM_T]);
+            vectorIn1.mulMomentumPhases(momentum_i2,-1);
 
-            PLEGMA_Vector<double> vectortmp1;
-
-            PLEGMA_Vector<double> vectorInOut_p;
-            PLEGMA_Vector<double> vectorInOut_a;
-
-            PLEGMA_Vector<double> vectorInOut_ppa;
-            PLEGMA_Vector<double> vectorInOut_pma;
-
-            vectortmp1.copy(vectorStoc_source_oet);
-  
-            std::vector<int> tmp_4Dmom= momentum_i2 ;
-            tmp_4Dmom.push_back(0);
-            vectortmp1.mulMomentumPhases(tmp_4Dmom,-1);
           
-            {  // Smearing the source
+            PLEGMA_Vector<double> vectorAuxD;
+            PLEGMA_Vector<double> vectorInOut_ppa, vectorInOut_pma;
+            PLEGMA_Vector<float> vectorAuxF;
+    
+            solve1(vectorInOut_ppa, vectorInOut_pma, vectorIn1, source_local);
+            vectorAuxD.pack_propagator(vectorInOut_ppa,
+                                       vectorInOut_pma,
+                                       source_local[DIM_T],
+                                       HGC_totalL[DIM_T]/2);
 
-              PLEGMA_Vector3D<double> vector1, vector2;
-              vector1.absorb(vectortmp1, source_local[DIM_T]);
-              PLEGMA_Gauge3D<double> smearedGauge3D;
-              smearedGauge3D.absorb(smearedGauge, source_local[DIM_T]);
-              TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nsmearGauss, alphaGauss));
-              vectortmp1.absorb(vector2, source_local[DIM_T],true);
-
-            }
-  
-            vectorInOut_a.copy(vectortmp1);
-            updateGaugeQuda(gauge, true);
-            solver_a.UpdateSolver();
-            TIME(solver_a.solve(vectorInOut_a, vectorInOut_a));
-
-            vectorInOut_p.copy(vectortmp1);
-            updateGaugeQuda(gauge, false);
-            solver_p.UpdateSolver();
-            TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
-
-            vectorInOut_ppa.copy(vectorInOut_p);
-            vectorInOut_ppa.add(vectorInOut_a,1);
-
-            vectorInOut_pma.copy(vectorInOut_p);
-            vectorInOut_pma.add(vectorInOut_a,-1);
             
-            TIME(vectortmp1.gaussianSmearing(vectorInOut_ppa, smearedGauge, nsmearGauss, alphaGauss));
-            stochastic_oet_prop_fini_mom_ppa.copy(vectortmp1);
-
-            TIME(vectortmp1.gaussianSmearing(vectorInOut_pma, smearedGauge, nsmearGauss, alphaGauss));
-            stochastic_oet_prop_fini_mom_pma.copy(vectortmp1);
-
-            vectortmp1.pack_propagator(vectorInOut_ppa, vectorInOut_pma, source_local[DIM_T],  HGC_totalL[DIM_T]/2);
-
-
-            //Gaussian smearing of the propagator
-            TIME(vectorInOut_a.gaussianSmearing(vectortmp1, smearedGauge, nsmearGauss, alphaGauss));
-
-            stochastic_oet_prop_fini_mom_packed.copy(vectorInOut_a);
+            stochastic_oet_prop_fini_mom_packed.copy(vectorAuxD);
+    
 
           }
 
-          TIME(corrPION_PMA.P_diagrams( stochastic_oet_prop_zero_mom_pma, stochastic_oet_prop_fini_mom_pma, i_mpi2));
+          PLEGMA_Vector<float> st_oet_fini;
+          st_oet_fini.copy(stochastic_oet_prop_fini_mom_packed);
 
-          TIME(corrPION_PPA.P_diagrams( stochastic_oet_prop_zero_mom_ppa, stochastic_oet_prop_fini_mom_ppa, i_mpi2));
+          st_oet_fini.apply_gamma5();
+
+          TIME(reductionsV3_Z.V3( st_oet_fini, glist_sink_meson, prop_packed, true));
+
+          
+          TIME(corrZ1_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, false, 0, false,  0, true, false, false, false, true ));
+
+          TIME(corrZ2_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, false, 2, true,  0, true, false, false, true, false ));
+
+          TIME(corrZ3_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, true,  1, false, 0, true, false, false, false, true ));
+
+          TIME(corrZ4_2pt.Recombination( reductionsV3_Z, reductionsV4_Z, false, 2, false, 0, true, false, false, false, true ));
+          
+          TIME(corrZ5_2pt.Recombination( reductionsV3_Z, reductionsV4_Z, true, 0, false, 0, true, false, false, false, true ));
+
+          TIME(produceOutput(corrZ1_2pt, outfilename, "4pt"));
+          TIME(produceOutput(corrZ2_2pt, outfilename, "4pt"));
+          TIME(produceOutput(corrZ3_2pt, outfilename, "4pt"));
+          TIME(produceOutput(corrZ4_2pt, outfilename, "4pt"));
+          TIME(produceOutput(corrZ5_2pt, outfilename, "4pt"));
+
+
 
           TIME(corrPION.P_diagrams( stochastic_oet_prop_zero_mom_packed, stochastic_oet_prop_fini_mom_packed, i_mpi2));
+
 
          }
          outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_2pt";
 
          TIME(corrPION.apply_sign("P"));
          TIME(corrPION.writeHDF5( outfilename ));
-
-         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_PPA_2pt";
-
-         TIME(corrPION_PPA.apply_sign("P"));
-         TIME(corrPION_PPA.writeHDF5( outfilename ));
-
-         outfilename = outdiagramPrefix+confnumber+sourcepositiontext+"_P_PMA_2pt";
-
-         TIME(corrPION_PMA.apply_sign("P"));
-         TIME(corrPION_PMA.writeHDF5( outfilename ));
-
 
       }
     }
