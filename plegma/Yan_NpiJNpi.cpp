@@ -187,8 +187,8 @@ int main(int argc, char **argv)
         };
 #endif
 
-#if 0 // setupSequentialPropagator
-        auto setupSequentialPropagator1 = [&](plegma::PLEGMA_Propagator<float> &out, plegma::PLEGMA_Propagator<float> &in, int inTime, plegma::GAMMAS Gamma, std::vector<int> mom, int momSign, FlavorYan f, SmearFlagYan s)
+#if 1 // setupSequentialPropagator
+        auto setupSequentialPropagator1 = [&](plegma::PLEGMA_Propagator<float> &out, plegma::PLEGMA_Propagator<float> &in, int inTime, plegma::GAMMAS_SCATT Gamma, std::vector<int> mom, int momSign, FlavorYan f, SmearFlagYan s)
         {
             assert(s < single2double);
 
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
             for (int isc = 0; isc < 12; isc++)
             {
                 auxVector3DF.absorb(in, inTime, isc / 3, isc % 3);
-                auxVector3DF.apply_gamma(Gamma);
+                auxVector3DF.apply_gamma_scatt(Gamma);
                 auxVector3DF.mulMomentumPhases(mom, momSign);
                 auxVector3DD.copy(auxVector3DF);
                 solve1(auxVectorD, auxVector3DD, inTime, f, s);
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
                 out.absorb(auxVectorF, isc / 3, isc % 3);
             }
         };
-        auto setupSequentialPropagator2 = [&](plegma::PLEGMA_Propagator<float> &outS, plegma::PLEGMA_Propagator<float> &outL, plegma::PLEGMA_Propagator<float> &in, int inTime, plegma::GAMMAS Gamma, std::vector<int> mom, int momSign, FlavorYan f, SmearFlagYan s)
+        auto setupSequentialPropagator2 = [&](plegma::PLEGMA_Propagator<float> &outS, plegma::PLEGMA_Propagator<float> &outL, plegma::PLEGMA_Propagator<float> &in, int inTime, plegma::GAMMAS_SCATT Gamma, std::vector<int> mom, int momSign, FlavorYan f, SmearFlagYan s)
         {
             assert(s > single2double);
 
@@ -220,8 +220,7 @@ int main(int argc, char **argv)
             for (int isc = 0; isc < 12; isc++)
             {
                 auxVector3DF.absorb(in, inTime, isc / 3, isc % 3);
-                // auxVector3DF.apply_gamma_scatt(G_5);
-                auxVector3DF.apply_gamma(Gamma);
+                auxVector3DF.apply_gamma_scatt(Gamma);
                 auxVector3DF.mulMomentumPhases(mom, momSign);
                 auxVector3DD.copy(auxVector3DF);
                 solve2(auxVectorDS, auxVectorDL, auxVector3DD, inTime, f, s);
@@ -302,7 +301,8 @@ int main(int argc, char **argv)
         std::vector<plegma::GAMMAS_SCATT> gscatts_ID = {ID};
         // std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43}; //  S_ij=-i*[gi,gj]/2; (+i) required to make [gi,gj]/2 from S_jk ; (-1) required to make S_31 from S_13;
         // std::vector<plegma::GAMMAS> gammas_c = {ONE, G1, G2, G3, G4, G5, G5G1, G5G2, G5G3, G5G4};
-        std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_12, S_23, S_13, S_41, S_42, S_43};
+        std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4, S_23, S_13, S_12, S_41, S_42, S_43};
+        // std::vector<plegma::GAMMAS_SCATT> gscatts_c = {ID, G_1, G_2, G_3, G_4, G_5, G_5_G_1, G_5_G_2, G_5_G_3, G_5_G_4};
 
         std::vector<plegma::GAMMAS_SCATT> gscatts_i1 = {CG_5};
         std::vector<plegma::GAMMAS_SCATT> gscatts_f1 = {CG_5};
@@ -358,20 +358,39 @@ int main(int argc, char **argv)
             stoc.stochastic_Z(4); stocXi.copy(stoc);
             stoc.stochastic_Z(4); stocEta.copy(stoc);
 
-            
+            {
+                plegma::PLEGMA_Vector<float> aux;
+                aux.copy(stocXi);
+                aux.writeHDF5("stocXi");
+
+                plegma::PLEGMA_Vector<double> vectorRead(BOTH);
+                vectorRead.readFile("globalTfulltimedilution_source_nstoch0_0000",LIME_FORMAT);
+                aux.copy(vectorRead);
+                aux.writeHDF5("vectorRead");
+            }
 
             for (int i_pi2 = 0; i_pi2 < momVects3pt_pi2.size(); ++i_pi2)
             {
                 auto &mom_pi2 = momVects3pt_pi2[i_pi2];
                 std::string str_pi2 = "pi2=" + std::to_string(mom_pi2[0]) + "_" + std::to_string(mom_pi2[1]) + "_" + std::to_string(mom_pi2[2]);
+                
+                plegma::PLEGMA_Propagator<float> seq_USS_USS, seq_USL_USS, seq_DSS_USS, seq_DSL_USS;
+                plegma::PLEGMA_Propagator<float> seq_USS_DSS, seq_USL_DSS, seq_DSS_DSS, seq_DSL_DSS;
 
-                plegma::PLEGMA_Vector<double> stoc_Uci_Gi2_Eta;
+                setupSequentialPropagator2(seq_USS_USS, seq_USL_USS, propUSS, ti, gscatts_i2[0], mom_pi2, +1, u, SB);
+                // setupSequentialPropagator2(seq_DSS_USS, seq_DSL_USS, propUSS, ti, gscatts_i2[0], mom_pi2, +1, d, SB);
+                // setupSequentialPropagator2(seq_USS_DSS, seq_USL_DSS, propDSS, ti, gscatts_i2[0], mom_pi2, +1, u, SB);
+                // setupSequentialPropagator2(seq_DSS_DSS, seq_DSL_DSS, propDSS, ti, gscatts_i2[0], mom_pi2, +1, d, SB);
+
+                plegma::PLEGMA_Vector<float> stoc_Uci_Gi2_Eta;
                 {
+                    plegma::PLEGMA_Vector<double> aux2;
                     plegma::PLEGMA_Vector3D<double> aux;
                     aux.absorb(stocEta, ti);
                     aux.apply_gamma_scatt(gscatts_i2[0]);
                     aux.mulMomentumPhases(mom_pi2, +1);
-                    solve1(stoc_Uci_Gi2_Eta, aux, ti, u, SL);
+                    solve1(aux2, aux, ti, u, SL);
+                    stoc_Uci_Gi2_Eta.copy(aux2);
                 }
 
                 for (int i_tfi=0; i_tfi< tSinks.size(); ++i_tfi)
@@ -384,24 +403,34 @@ int main(int argc, char **argv)
                         auto &mom_pf2 = momVects3pt_pf2[i_pf2];
                         std::string str_pf2 = "pf2=" + std::to_string(mom_pf2[0]) + "_" + std::to_string(mom_pf2[1]) + "_" + std::to_string(mom_pf2[2]);
 
-                        plegma::PLEGMA_Vector<double> stoc_g5_Dcf_g5_Gf2dgr_Xi;
+                        plegma::PLEGMA_Vector<float> stoc_g5_Dcf_g5_Gf2dgr_Xi;
                         {
+                            plegma::PLEGMA_Vector<double> aux2;
                             plegma::PLEGMA_Vector3D<double> aux;
                             aux.absorb(stocXi, tf);
                             aux.apply_gamma_scatt(gscatts_f2[0]); // Should be \dagger of G_f2
                             aux.mulMomentumPhases(mom_pf2, +1);
                             aux.apply_gamma5();
-                            solve1(stoc_g5_Dcf_g5_Gf2dgr_Xi, aux, tf, d, SL);
-                            stoc_g5_Dcf_g5_Gf2dgr_Xi.apply_gamma5();
+                            solve1(aux2, aux, tf, d, SL);
+                            aux2.apply_gamma5();
+                            stoc_g5_Dcf_g5_Gf2dgr_Xi.copy(aux2);
+                        }
+
+                        plegma::PLEGMA_ScattCorrelator<float> auxV3(src_zero, momList3pt_pc);
+                        {
+                            auxV3.V3(stoc_g5_Dcf_g5_Gf2dgr_Xi, gscatts_c, seq_USL_USS);
+            
+                            auxV3.setGroups(std::vector<std::string>{"V3_seq"});
+                            auxV3.setDatasets(std::vector<std::string>{"data"});
+                            auxV3.writeHDF5(outfilename);
                         }
 
                         plegma::PLEGMA_ScattCorrelator<float> auxPhiPhi(src_zero, momList3pt_pc);
                         auxPhiPhi.initialize_diagram(gscatts_c, "");
                         {
-                            plegma::PLEGMA_Vector<float> aux1, aux2;
-                            aux1.copy(stoc_Uci_Gi2_Eta);
-                            aux2.copy(stoc_g5_Dcf_g5_Gf2dgr_Xi); 
-                            auxPhiPhi.PhiPhi(aux1,gscatts_c,aux2,true);
+                            auxPhiPhi.PhiPhi(stoc_Uci_Gi2_Eta,gscatts_c,stoc_g5_Dcf_g5_Gf2dgr_Xi,true);
+                            // stoc_Uci_Gi2_Eta.writeHDF5("stoc_Uci_Gi2_Eta_"+str_pi2 + "_" + str_pf2 + "_" + str_dt);
+                            // stoc_g5_Dcf_g5_Gf2dgr_Xi.writeHDF5("stoc_g5_Dcf_g5_Gf2dgr_Xi_"+str_pi2 + "_" + str_pf2 + "_" + str_dt);
                         }
                         auxPhiPhi.setGroups(std::vector<std::string>{"PhiPhi"});
                         auxPhiPhi.setDatasets(std::vector<std::string>{str_pi2 + "/" + str_pf2 + "/" + str_dt});

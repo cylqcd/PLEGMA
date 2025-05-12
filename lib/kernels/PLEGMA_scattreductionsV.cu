@@ -58,13 +58,14 @@ void V_kernels_wrapper( ProfileStruct &ps, VRED V, Float2<FloatOut> *block2,
   // case(7): V_kernels<(unsigned int)7,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(8): V_kernels<(unsigned int)8,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(9): V_kernels<(unsigned int)9,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
-  case(10): V_kernels<CONJ_P,C1,C2,(unsigned int)10,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2, S1, S2 ); break;
+  // case(10): V_kernels<CONJ_P,C1,C2,(unsigned int)10,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2, S1, S2 ); break;
   // case(11): V_kernels<(unsigned int)11,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(12): V_kernels<(unsigned int)12,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(13): V_kernels<(unsigned int)13,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(14): V_kernels<(unsigned int)14,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(15): V_kernels<(unsigned int)15,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
   // case(16): V_kernels<(unsigned int)16,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi, S1, S2 ); break;
+  case(16): V_kernels<CONJ_P,C1,C2,(unsigned int)16,FloatOut,FloatV,FloatP>( ps, V, block2, it, time_step, maxT, source, moms, listGammas, Phi1, Phi2, S1, S2 ); break;
   default: PLEGMA_error("not initialized for nGammas=%d\n",listGammas.size);
   }
 }
