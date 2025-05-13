@@ -15,6 +15,28 @@ using namespace quda;
 static std::vector<std::string> listOpt = { "verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
 					    "nsrc", "src-filename", "maxQsq", "twop-filename", "corr-file-format", "corr-space"};
 
+std::string make_group_name_LIBE(const std::string& type,
+                            int val_u, int val_d,
+                            int val_s, int val_c) {
+    char* group;
+    asprintf(&group, "baryon_%s_u[%+d]_d[%+d]_s[%+d]_c[%+d]",
+             type.c_str(), val_u, val_d, val_s, val_c);
+    std::string result(group);
+    free(group);
+    return result;
+}
+
+std::string make_group_name_SIB(const std::string& type,
+                            double val_u, double val_d,
+                            double val_s, double val_c) {
+    char* group;
+    asprintf(&group, "baryon_%s_u[%+.4e]_d[%+.4e]_s[%+.4e]_c[%+.4e]",
+             type.c_str(), val_u, val_d, val_s, val_c);
+    std::string result(group);
+    free(group);
+    return result;
+}
+
 int main(int argc, char **argv)
 {
 	initializeOptions(argc, argv, true, listOpt);
@@ -28,8 +50,6 @@ int main(int argc, char **argv)
 	int nsmearGauss_s = nsmearGauss/2;
 	int nsmearGauss_c = 0;
 	bool run_ud = true;
-	bool only_st = false;
-	bool only_ch = false;
 	int start_src = 0;
 	double des;
 	std::string qedfile;
@@ -45,8 +65,6 @@ int main(int argc, char **argv)
 		options.set("start-src", "The source position from which to start the calculation", verbosity, start_src);
 		options.set("dqed", "dqed used for LIBE", verbosity, des);
 		options.set("qed-filename", "The path to the QED field", verbosity, qedfile);
-		options.set("only-st", "Whether to run only for baryons containing at least one strange", verbosity, only_st);
-		options.set("only-ch", "Whether to run only for baryons containing at least one charm", verbosity, only_ch);
 	};
 	add_options(*HGC_options);
    	//=========================================================================================================//
@@ -227,6 +245,11 @@ int main(int argc, char **argv)
 					bool only_up = false, only_dn = false, only_st = false, only_ch = false;
 
 					TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch));
+					
+					std::string group = make_group_name_LIBE("all", 0, 0, 0, 0);
+					std::string full_group = "LIBE/" + group;
+					corr.setGroups(full_group.c_str());
+					THREAD(corr.writeFile(twop_filename, corr_file_format));
 				}
 
 				// Now vary one sign at a time: indices 0 (-1) and 2 (+1)
@@ -243,6 +266,11 @@ int main(int argc, char **argv)
 						bool only_up = true, only_dn = false, only_st = false, only_ch = false;
 
 						TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch));
+
+						std::string group = make_group_name_LIBE("only_up", sign_idx-1, 0, 0, 0);
+						std::string full_group = "LIBE/" + group;
+						corr.setGroups(full_group.c_str());
+						THREAD(corr.writeFile(twop_filename, corr_file_format));
 					}
 
 					// Vary down
@@ -256,6 +284,11 @@ int main(int argc, char **argv)
 						bool only_up = false, only_dn = true, only_st = false, only_ch = false;
 
 						TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch));
+
+						std::string group = make_group_name_LIBE("only_dn", 0, sign_idx-1, 0, 0);
+						std::string full_group = "LIBE/" + group;
+						corr.setGroups(full_group.c_str());
+						THREAD(corr.writeFile(twop_filename, corr_file_format));
 					}
 
 					// Vary strange
@@ -269,6 +302,11 @@ int main(int argc, char **argv)
 						bool only_up = false, only_dn = false, only_st = true, only_ch = false;
 
 						TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch));
+
+						std::string group = make_group_name_LIBE("only_st", 0, 0, sign_idx-1, 0);
+						std::string full_group = "LIBE/" + group;
+						corr.setGroups(full_group.c_str());
+						THREAD(corr.writeFile(twop_filename, corr_file_format));
 					}
 
 					// Vary charm
@@ -282,183 +320,59 @@ int main(int argc, char **argv)
 						bool only_up = false, only_dn = false, only_st = false, only_ch = true;
 
 						TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch));
+
+						std::string group = make_group_name_LIBE("only_ch", 0, 0, 0, sign_idx-1);
+						std::string full_group = "LIBE/" + group;
+						corr.setGroups(full_group.c_str());
+						THREAD(corr.writeFile(twop_filename, corr_file_format));
 					}
 				}
 
 				// Loop over all pairs of flavors to assign +1 and -1
-				for (int i = 0; i < 4; ++i) {
-				for (int j = 0; j < 4; ++j) {
-					if (i >= j) continue; // unordered pairs
+				for (int i = 0; i < 4; i++) {
+					for (int j = 0; j < 4; j++) {
+						if (i >= j) continue; // unordered pairs
 
-					// Two permutations: i=+, j=- and i=-, j=+
-					for (int sign_case = 0; sign_case < 2; ++sign_case) {
-						std::array<int, 4> sign_idx = {0, 0, 0, 0};
+						// Two permutations: i=+, j=- and i=-, j=+
+						for (int sign_case = 0; sign_case < 2; sign_case++) {
+							std::array<int, 4> sign_idx = {0, 0, 0, 0};
 
-						sign_idx[i] = (sign_case == 0) ? +1 : -1;
-						sign_idx[j] = (sign_case == 0) ? +1 : -1;
+							sign_idx[i] = (sign_case == 0) ? +1 : -1;
+							sign_idx[j] = (sign_case == 0) ? +1 : -1;
 
-						PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+							PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 
-						prop_u.copy(*props_u[sign_idx[0]], HOST); prop_u.load();
-						prop_d.copy(*props_d[sign_idx[1]], HOST); prop_d.load();
-						prop_s.copy(*props_s[sign_idx[2]], HOST); prop_s.load();
-						prop_c.copy(*props_c[sign_idx[3]], HOST); prop_c.load();
+							prop_u.copy(*props_u[sign_idx[0]], HOST); prop_u.load();
+							prop_d.copy(*props_d[sign_idx[1]], HOST); prop_d.load();
+							prop_s.copy(*props_s[sign_idx[2]], HOST); prop_s.load();
+							prop_c.copy(*props_c[sign_idx[3]], HOST); prop_c.load();
 
-						TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_mixed=true));
+							TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_mixed=true));
+
+							std::string group = make_group_name_LIBE("mixed", sign_idx[0]-1, sign_idx[1]-1, sign_idx[2]-1, sign_idx[3]-1);
+							std::string full_group = "LIBE/" + group;
+							corr.setGroups(full_group.c_str());
+							THREAD(corr.writeFile(twop_filename, corr_file_format));
+						}
 					}
 				}
-				}
-
-
-				// for(int isgnUP=0; isgnUP < 3; isgnUP++) {
-				// 	for(int isgnDN=0; isgnDN < 3; isgnDN++) {
-				// 		{
-				// 			PLEGMA_Correlator<float> corr(corr_space, source, maxQsq); // Redefine to prevent oom error
-				// 			prop_u.copy(*props_u[isgnUP], HOST);
-				// 			prop_u.load();
-
-				// 			prop_d.copy(*props_d[isgnDN], HOST);
-				// 			prop_d.load();
-							
-				// 			TIME(corr.contractBaryons(prop_u, prop_d));
-
-				// 			char * group;
-				// 			asprintf(&group, "nucl_u[%+.4e,%d]_d[%+.4e,%d]", mu_ud, isgnUP-1, -mu_ud, isgnDN-1);
-				// 			corr.setGroups(group);
-				// 			free(group);
-				// 			THREAD(corr.writeFile(twop_filename, corr_file_format));
-							
-				// 			#ifdef PLEGMA_UDSC_BARYONS
-				// 			TIME(corr.contractBaryonsUDSC(prop_u, prop_d, none, none));
-				// 			asprintf(&group, "baryons_u[%+.4e,%d]_d[%+.4e,%d]", mu_ud, isgnUP - 1, -mu_ud, isgnDN - 1);
-
-				// 			corr.setGroups(group);
-				// 			free(group);
-				// 			THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-							
-				// 			bool has_s = mu_s.size() > 0;
-				// 			bool has_c = mu_c.size() > 0;
-
-				// 			// Contract over combinations of only_st / only_ch
-				// 			const struct {
-				// 				bool only_st, only_ch;
-				// 			} udsc_modes[] = {
-				// 				{true,  false}, // UDS-only
-				// 				{false, true},   // UDC-only
-				// 			};
-
-				// 			for (const auto& mode : udsc_modes) {
-				// 				if ((mode.only_st && !has_s) || (mode.only_ch && !has_c))
-				// 					continue; // skip if required flavor isn't available
-
-				// 				int st_range = mode.only_ch ? 1 : 3; // don't loop over s if only_ch
-				// 				int ch_range = mode.only_st ? 1 : 3; // don't loop over c if only_st
-
-				// 				for (int isgnST = 0; isgnST < st_range; isgnST++) {
-				// 					PLEGMA_Propagator<float> used_s;
-				// 					if (mode.only_st) {
-				// 						TIME(used_s.copy(*props_s[isgnST], HOST));
-				// 						TIME(used_s.load());		
-				// 					} else {
-				// 						used_s = PLEGMA_Propagator<float>(NONE);
-				// 					}
-
-				// 					for (int isgnCH = 0; isgnCH < ch_range; isgnCH++) {
-				// 						PLEGMA_Propagator<float> used_c;
-				// 						if (mode.only_ch) {
-				// 							TIME(used_c.copy(*props_c[isgnCH], HOST));
-				// 							TIME(used_c.load());
-				// 						} else {
-				// 							used_c = PLEGMA_Propagator<float>(NONE);
-				// 						}
-
-				// 						TIME(corr.contractBaryonsUDSC(prop_u, prop_d, used_s, used_c, mode.only_st, mode.only_ch));
-
-				// 						// char *group = nullptr;
-				// 						if (mode.only_st) {
-				// 							asprintf(&group,
-				// 									"baryons_u[%+.4e,%d]_d[%+.4e,%d]_s[%+.4e,%d]",
-				// 									mu_ud, isgnUP - 1, -mu_ud, isgnDN - 1,
-				// 									mu_s[0], isgnST - 1);
-				// 						} else if (mode.only_ch) {
-				// 							asprintf(&group,
-				// 									"baryons_u[%+.4e,%d]_d[%+.4e,%d]_c[%+.4e,%d]",
-				// 									mu_ud, isgnUP - 1, -mu_ud, isgnDN - 1,
-				// 									mu_c[0], isgnCH - 1);
-				// 						}
-				// 						else{
-				// 							continue;
-				// 						}
-				// 						corr.setGroups(group);
-				// 						free(group);
-				// 						THREAD(corr.writeFile(twop_filename, corr_file_format));
-				// 					}
-				// 				}
-				// 			}
-				// 			#endif
-				// 		}
-				// 	}
-				}
-
-						// #ifdef PLEGMA_UDSC_BARYONS
-						// for(int isgnST=0; isgnST < 3; isgnST++) {
-						// 	for(int isgnCH=0; isgnCH < 3; isgnCH++) {
-						// 		prop_s.copy(*props_s[isgnST], HOST);
-						// 		prop_s.load();
-	
-						// 		prop_c.copy(*props_c[isgnCH], HOST);
-						// 		prop_c.load();
-
-						// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_st, only_ch));
-
-						// 		char * group;
-						// 		asprintf(&group, "baryons_u[%+.4e,%d]_d[%+.4e,%d]_s[%+.4e,%d]_c[%+.4e,%d]", mu_ud, isgnUP-1, -mu_ud, isgnDN-1, mu_s[0], isgnST-1, mu_c[0], isgnCH-1);
-						// 		corr.setGroups(group);
-						// 		free(group);
-						// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
-						// 	}
-						// }
-						// #endif
 			}
 
 			//--------------------- SIB ---------------------
-			PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 			updateGaugeQuda(gauge, true);
 			solver.UpdateSolver();
 
 			if (run_ud) {
-				TIME(computePropagator(propSIBUP, mu_ud + delta_mu, LIGHT, nsmearGauss));
-				TIME(computePropagator(propSIBDN, -mu_ud - delta_mu, LIGHT, nsmearGauss));
+				double run_mu_up = mu_ud + delta_mu;
+				double run_mu_dn = -mu_ud - delta_mu;
+				TIME(computePropagator(propSIBUP, run_mu_up, LIGHT, nsmearGauss));
+				TIME(computePropagator(propSIBDN, run_mu_dn, LIGHT, nsmearGauss));
 			}
 
-			{
-				prop_d.copy(*props_d[1], HOST);
-				prop_d.load();
-				TIME(corr.contractBaryons(propSIBUP, prop_d));
-
-				char * group;
-				asprintf(&group, "nucl_SIB_u[%+.4e,%+.4e]_d[%+.4e]", mu_ud, delta_mu, -mu_ud);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
-			}
-			
-			{
-				prop_u.copy(*props_u[1], HOST);
-				prop_u.load();
-				TIME(corr.contractBaryons(prop_u, propSIBDN));
-
-				char * group;
-				asprintf(&group, "nucl_SIB_u[%+.4e]_d[%+.4e,%+.4e]", mu_ud, -mu_ud, -delta_mu);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
-			}
-
-
-			TIME(computePropagator(propSIBST, 1.005 * mu_s[0], STRANGE, nsmearGauss_s));
-			TIME(computePropagator(propSIBCH, 1.005 * mu_c[0], CHARM, nsmearGauss_c));
+			double run_mu_st = 1.005 * mu_s[0];
+			double run_mu_ch = 1.005 * mu_c[0];
+			TIME(computePropagator(propSIBST, run_mu_st, STRANGE, nsmearGauss_s));
+			TIME(computePropagator(propSIBCH, run_mu_ch, CHARM, nsmearGauss_c));
 
 			{
 				prop_u.copy(*props_u[1], HOST);
@@ -470,86 +384,56 @@ int main(int argc, char **argv)
 				prop_c.copy(*props_c[1], HOST);
 				prop_c.load();
 
-				// UDS
-				TIME(corr.contractBaryonsUDSC(propSIBUP, prop_d, prop_s, prop_c, true, false));
+				PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
 
-				char * group;
-				asprintf(&group, "baryons_SIB_u[%+.4e,%+.4e]_d[%+.4e]_s[%+.4e]", mu_ud, delta_mu, -mu_ud, mu_s[0]);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
+				for (int flavor = 0; flavor < 4; flavor++) {
+					bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_mixed = false;
 
-				TIME(corr.contractBaryonsUDSC(prop_u, propSIBDN, prop_s, prop_c, true, false));
+					// Modify the respective propagator
+					switch (flavor) {
+						case 0:
+							only_up = true;
+							TIME(corr.contractBaryonsUDSC(propSIBUP, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_mixed));
 
-				asprintf(&group, "baryons_SIB_u[%+.4e]_d[%+.4e,%+.4e]_s[%+.4e]", mu_ud, -mu_ud, -delta_mu, mu_s[0]);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
+							make_group_name_SIB("only_up", run_mu_up, -mu_ud, mu_s[0], mu_c[0]);
+							std::string full_group = "SIB/" + group;
+							corr.setGroups(full_group.c_str());
+							THREAD(corr.writeFile(twop_filename, corr_file_format));
+							break;
+						case 1:
+							only_dn = true;
+							TIME(corr.contractBaryonsUDSC(prop_u, propSIBDN, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_mixed));
 
-				TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, true, false));
+							make_group_name_SIB("only_dn", mu_ud, run_mu_dn, mu_s[0], mu_c[0]);
+							std::string full_group = "SIB/" + group;
+							corr.setGroups(full_group.c_str());
+							THREAD(corr.writeFile(twop_filename, corr_file_format));
+							break;
+						case 2:
+							only_st = true;
+							TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_mixed));
 
-				asprintf(&group, "baryons_SIB_u[%+.4e]_d[%+.4e]_s[%+.4e,%+.4e]", mu_ud, -mu_ud, mu_s[0], 1.005 * mu_s[0]);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
+							make_group_name_SIB("only_st", mu_ud, -mu_ud, run_mu_st, mu_c[0]);
+							std::string full_group = "SIB/" + group;
+							corr.setGroups(full_group.c_str());
+							THREAD(corr.writeFile(twop_filename, corr_file_format));
+							break;
+						case 3:
+							only_ch = true;
+							TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_mixed));
 
-				// UDC
-				TIME(corr.contractBaryonsUDSC(propSIBUP, prop_d, prop_s, prop_c, false, true));
-
-				asprintf(&group, "baryons_SIB_u[%+.4e,%+.4e]_d[%+.4e]_c[%+.4e]", mu_ud, delta_mu, -mu_ud, mu_c[0]);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-				TIME(corr.contractBaryonsUDSC(prop_u, propSIBDN, prop_s, prop_c, false, true));
-
-				asprintf(&group, "baryons_SIB_u[%+.4e]_d[%+.4e,%+.4e]_c[%+.4e]", mu_ud, -mu_ud, -delta_mu, mu_c[0]);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-				TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, false, true));
-
-				asprintf(&group, "baryons_SIB_u[%+.4e]_d[%+.4e]_c[%+.4e,%+.4e]", mu_ud, -mu_ud, mu_c[0], 1.005 * mu_c[0]);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-				// UD
-				TIME(corr.contractBaryonsUDSC(propSIBUP, prop_d, none, none, false, false));
-
-				asprintf(&group, "baryons_SIB_u[%+.4e,%+.4e]_d[%+.4e]", mu_ud, delta_mu, -mu_ud);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
-
-				TIME(corr.contractBaryonsUDSC(prop_u, propSIBDN, none, none, false, false));
-				
-				asprintf(&group, "baryons_SIB_u[%+.4e]_d[%+.4e,%+.4e]", mu_ud, -mu_ud, -delta_mu);
-				corr.setGroups(group);
-				free(group);
-				THREAD(corr.writeFile(twop_filename, corr_file_format));
+							make_group_name_SIB("only_ch", mu_ud, -mu_ud, mu_s[0], run_mu_ch);
+							std::string full_group = "SIB/" + group;
+							corr.setGroups(full_group.c_str());
+							THREAD(corr.writeFile(twop_filename, corr_file_format));
+							break;
+					}
+				}
 			}
-
       	}
-			
-			// if(run_ud) {
-			// 	#ifdef PLEGMA_UDSC_BARYONS
-			// 	PLEGMA_Propagator<float> none(NONE);
-			// 	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
-			// 	TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
-				
-			// 	char * group;
-			// 	asprintf(&group, "baryons_u[%+1.1e]d[%+1.1e]", mu_ud, -1*mu_ud);
-			// 	corr.setGroups(group);
-			// 	free(group);
-			// 	THREAD(corr.writeFile(twop_filename, corr_file_format));
-			// 	#endif
-			// }
 	}
 	while(not threads.empty()) {threads.back().join(); threads.pop_back();}
 
 	//finalize();
 	return 0;
 }
-
