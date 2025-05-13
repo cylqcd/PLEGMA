@@ -82,6 +82,9 @@ target_link_libraries(Topo ${PLEGMA_LIBS})
 cuda_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
+cuda_add_executable(Calc_2pt_LIBE Calc_2pt_LIBE.cpp)
+target_link_libraries(Calc_2pt_LIBE ${PLEGMA_LIBS})
+
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
@@ -112,8 +115,8 @@ target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 cuda_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})
 
-cuda_add_executable(qLoops qLoops.cpp)
-target_link_libraries(qLoops ${PLEGMA_LIBS})
+# cuda_add_executable(qLoops qLoops.cpp)
+# target_link_libraries(qLoops ${PLEGMA_LIBS})
 
 cuda_add_executable(qLoops_WilsonLine qLoops_WilsonLine.cpp)
 target_link_libraries(qLoops_WilsonLine ${PLEGMA_LIBS})

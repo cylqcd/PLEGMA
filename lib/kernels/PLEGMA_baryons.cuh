@@ -2,7 +2,7 @@
 
 #include <PLEGMA_kernel_utils.cuh>
 
-enum BARYONS_TYPE{NtoN, NtoN_OS,
+enum BARYONS_TYPE{NtoN,//NtoN_OS,
 #ifdef PLEGMA_LIGHT_BARYONS		
 		  NtoR, RtoN, RtoR, DELTA_1O2_1, DELTA_1O2_2, DELTA_1O2_3,		
 		  DELTA_3O2_1, DELTA_3O2_2, DELTA_3O2_3,		
@@ -53,9 +53,9 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
     case NtoN:
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
       break;
-    case NtoN_OS:
-      contract_NtoN_OS_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
-      break;
+    // case NtoN_OS:
+    //   contract_NtoN_OS_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
+    //   break;
 #ifdef PLEGMA_LIGHT_BARYONS
     case NtoR:
       contract_NtoR_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);

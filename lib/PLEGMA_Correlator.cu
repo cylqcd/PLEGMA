@@ -345,7 +345,7 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
   shape = {16};
   datasets = {"twop_baryon_1", "twop_baryon_2"};
   groups =  {"baryons/nucl_nucl",
-	     "baryons/nucl_nucl_OS",
+	     //"baryons/nucl_nucl_OS",
 #ifdef PLEGMA_LIGHT_BARYONS
 	     "baryons/nucl_nucl2","baryons/nucl2_nucl","baryons/nucl2_nucl2",
 	     "baryons/deltap_deltaz_11","baryons/deltap_deltaz_22","baryons/deltap_deltaz_33",
@@ -364,7 +364,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
 		    PLEGMA_Propagator<Float> &propCH, 
-		    bool only_st, bool only_ch){
+		    bool only_up, bool only_dn, bool only_st, bool only_ch, bool only_mixed){
 
 #ifdef PLEGMA_UDSC_BARYONS
   shape = {};
@@ -387,14 +387,22 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
       continue;
     if(not_ch && BP_prop_prods[i].find('c')!=std::string::npos)
       continue;
+    if(only_up && BP_prop_prods[i].find('u')==std::string::npos)
+      continue;
+    if(only_dn && BP_prop_prods[i].find('d')==std::string::npos)
+      continue;
     if(only_st && BP_prop_prods[i].find('s')==std::string::npos)
       continue;
     if(only_ch && BP_prop_prods[i].find('c')==std::string::npos)
       continue;
+    if (only_mixed) {
+      std::set<char> quark_set(BP_prop_prods[i].begin(), BP_prop_prods[i].end());
+      if (quark_set.size() != 3) continue;  // Skip if not exactly 3 distinct flavors
+    }
     if(true) {
       todo.push_back(i);
       for(auto name: BP_prop_prods_names[i])
-	datasets.push_back(name);
+	    datasets.push_back(name);
     }
   }
 
