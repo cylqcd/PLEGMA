@@ -260,7 +260,7 @@ namespace plegma {
 			     PLEGMA_Propagator<Float> &propDN, 
 			     PLEGMA_Propagator<Float> &propST, 
 			     PLEGMA_Propagator<Float> &propCH,
-			     bool only_up=false, bool only_dn=false, bool only_st=false, bool only_ch=false, bool only_mixed=false);
+			     bool only_up=false, bool only_dn=false, bool only_st=false, bool only_ch=false, bool only_light=false, const std::vector<std::string>* allowed_baryons = nullptr);
     
     void contractNucleonThrp_local(PLEGMA_Propagator<Float> &bwdProp,
 				   PLEGMA_Propagator<Float> &fwdProp,

@@ -3,6 +3,7 @@
 #include <PLEGMA_Vector.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
+#include <set>
 #include <PLEGMA_mesons_loop.cuh>
 #include <PLEGMA_mesons_loop_SIB.cuh>
 #include <PLEGMA_mesons.cuh>
@@ -364,7 +365,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
 		    PLEGMA_Propagator<Float> &propCH, 
-		    bool only_up, bool only_dn, bool only_st, bool only_ch, bool only_mixed){
+		    bool only_up, bool only_dn, bool only_st, bool only_ch, bool only_light, const std::vector<std::string>* allowed_baryons){
 
 #ifdef PLEGMA_UDSC_BARYONS
   shape = {};
@@ -379,26 +380,33 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 
   std::vector<int> todo;
   for(int i=0; i<BP_prop_prods.size(); i++) {
-    if(not_up && BP_prop_prods[i].find('u')!=std::string::npos)
+    if (allowed_baryons) {
+      if (allowed_baryons && std::find(allowed_baryons->begin(), allowed_baryons->end(), BP_prop_prods[i]) == allowed_baryons->end())
       continue;
-    if(not_dn && BP_prop_prods[i].find('d')!=std::string::npos)
-      continue;
-    if(not_st && BP_prop_prods[i].find('s')!=std::string::npos)
-      continue;
-    if(not_ch && BP_prop_prods[i].find('c')!=std::string::npos)
-      continue;
-    if(only_up && BP_prop_prods[i].find('u')==std::string::npos)
-      continue;
-    if(only_dn && BP_prop_prods[i].find('d')==std::string::npos)
-      continue;
-    if(only_st && BP_prop_prods[i].find('s')==std::string::npos)
-      continue;
-    if(only_ch && BP_prop_prods[i].find('c')==std::string::npos)
-      continue;
-    if (only_mixed) {
-      std::set<char> quark_set(BP_prop_prods[i].begin(), BP_prop_prods[i].end());
-      if (quark_set.size() != 3) continue;  // Skip if not exactly 3 distinct flavors
+    } else {
+      if(not_up && BP_prop_prods[i].find('u')!=std::string::npos)
+        continue;
+      if(not_dn && BP_prop_prods[i].find('d')!=std::string::npos)
+        continue;
+      if(not_st && BP_prop_prods[i].find('s')!=std::string::npos)
+        continue;
+      if(not_ch && BP_prop_prods[i].find('c')!=std::string::npos)
+        continue;
+      if(only_light && BP_prop_prods[i].find('u')==std::string::npos && BP_prop_prods[i].find('d')==std::string::npos)
+        continue;
+      // If only_light we override the other two flags
+      if(!only_light) { 
+        if(only_up && BP_prop_prods[i].find('u')==std::string::npos)
+          continue;
+        if(only_dn && BP_prop_prods[i].find('d')==std::string::npos)
+          continue;
+      }
+      if(only_st && BP_prop_prods[i].find('s')==std::string::npos)
+        continue;
+      if(only_ch && BP_prop_prods[i].find('c')==std::string::npos)
+        continue;
     }
+    
     if(true) {
       todo.push_back(i);
       for(auto name: BP_prop_prods_names[i])
