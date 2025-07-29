@@ -81,7 +81,7 @@ int main(int argc, char **argv)
       updateOptions(CHARM);
       mu = mu_c[0];
     }
-    TIME(QUDA_solver solver(mu));
+    TIME(QUDA_solver solver(mu,1));
     std::vector<std::thread> threads;
 
     

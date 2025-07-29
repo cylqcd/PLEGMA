@@ -145,6 +145,7 @@ target_link_options(
           -fgpu-rdc
           --hip-link
           -fopenmp
+	   -fno-cray-openmp
           $<$<CONFIG:STRICT>:-Werror
           -Wno-error=pass-failed>
           $<$<CONFIG:SANITIZE>:-fsanitize=address

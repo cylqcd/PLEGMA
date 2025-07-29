@@ -92,8 +92,8 @@ LIST(REMOVE_ITEM PLEGMA_OBJS ${PLEGMA_CU_OBJS})
 if(PLEGMA_OBJS)
   add_library(plegma_cpp OBJECT ${PLEGMA_OBJS})
 
-  target_compile_definitions(plegma_cpp PUBLIC -DQUDA_HASH="${HASH}")
-  set_target_properties(plegma_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+  target_compile_definitions(plegma_cpp PUBLIC -DQUDA_HASH="${HASH}" -fPIC)
+  set_target_properties(plegma_cpp PROPERTIES POSITION_INDEPENDENT_CODE TRUE -fPIC)
 
 endif()
 if(${CMAKE_BUILD_TYPE} STREQUAL "DEVEL")
@@ -141,15 +141,15 @@ target_sources(plegma PRIVATE ${PLEGMA_CU_OBJS})
 #	                      ${PLEGMA_CU_OBJS})
 
 include(CheckLinkerFlag)
-check_linker_flag(CXX "-Wl,--compress-debug-sections=zlib" PLEGMA_LINKER_COMPRESS)
-target_link_options(plegma PRIVATE $<$<CONFIG:DEVEL>:$<${PLEGMA_LINKER_COMPRESS}:-Wl,--compress-debug-sections=zlib>>)
+check_linker_flag(CXX "-Wl,--compress-debug-sections=zlib -fPIC" PLEGMA_LINKER_COMPRESS)
+target_link_options(plegma PRIVATE $<$<CONFIG:DEVEL>:$<${PLEGMA_LINKER_COMPRESS}:-Wl,--compress-debug-sections=zlib -fPIC>>)
 
 
 # set up QUDA compile options, put them before target specific options
 # You have to set -O3
 target_compile_options(
   plegma BEFORE PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:
-               $<IF:$<CONFIG:RELEASE>,-w, -O3 -Wall -Wextra>
+               $<IF:$<CONFIG:RELEASE>,-w, -O3 -Wall -Wextra -fPIC>
                $<$<CONFIG:STRICT>:-Werror>
   >)
 

@@ -293,14 +293,20 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!ps.tuned) tune();
  launchKernel(ps.tp,device::get_stream(0));//,ps.tp.shared_bytes,0);
 #else
-  if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
+  if(!ps.tuned) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,device::get_stream(0));
 #endif
   checkQudaError();
 }
 
 template<class ...types, class ...typesK>
+PLEGMA_kernel_tuner<typesK...>* tuner(ProfileStruct &ps, std::string kname, void (*kernel)(typesK...), types&&... kArgs){
+  return new PLEGMA_kernel_tuner<typesK...>(ps, kname, kernel, kArgs...);
+}
+
+template<class ...types, class ...typesK>
 void tune(ProfileStruct &ps, std::string kname, void (*kernel)(typesK...), types&&... kArgs){
+
   PLEGMA_kernel_tuner<typesK...> tuner(ps, kname, kernel, kArgs...);
   tuner.tune();
 }
@@ -314,7 +320,7 @@ void run(ProfileStruct &ps, std::string kname, void(* kernel)(typesK...), types&
 template<class ...types, class ...typesK>
 void tuneAndRun(ProfileStruct &ps, std::string kname, void(* kernel)(typesK...), types&&... kArgs){
   PLEGMA_kernel_tuner<typesK...> tuner(ps, kname, kernel, kArgs...);
- tuner.apply();
+  tuner.apply();
 }
 
 #endif

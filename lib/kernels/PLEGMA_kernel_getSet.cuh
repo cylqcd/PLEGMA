@@ -827,6 +827,90 @@ namespace plegma {
       #pragma unroll
       for(short mu = 0 ; mu < N_SPINS ; mu++)
         #pragma unroll
+        for(short nu = 0 ; nu < N_SPINS ; nu++)
+          #pragma unroll
+          for(short c1 = 0 ; c1 < N_COLS ; c1++)
+            #pragma unroll
+            for(short c2 = 0 ; c2 < N_COLS ; c2++)
+              set(mu, nu, c1, c2, P[mu][nu][c1][c2]);
+    }
+
+    inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2) const {
+      return T::get(((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2);
+    }
+    inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2, const size_t& sid) {
+      sidStride::setSid(sid);
+      return get(mu, nu, c1, c2);
+    }
+    template<get_from src, typename ...dir_t>
+    inline __device__ Float2<Float> get(const short& mu, const short& nu, const short& c1, const short& c2, const size_t& sid, const dir_t&... dirs) {
+      sidStride::setSid(sid);
+      sidStride::shift<src>(dirs ...);
+      return get(mu,nu,c1,c2);
+    }
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS]) const {
+      #pragma unroll
+      for(short mu = 0 ; mu < N_SPINS ; mu++)
+        #pragma unroll
+        for(short nu = 0 ; nu < N_SPINS ; nu++)
+          #pragma unroll
+          for(short c1 = 0 ; c1 < N_COLS ; c1++)
+            #pragma unroll
+            for(short c2 = 0 ; c2 < N_COLS ; c2++)
+              P[mu][nu][c1][c2] = get(mu, nu, c1, c2);
+    }
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], const size_t& sid) {
+      sidStride::setSid(sid);
+      get(P);
+    }
+    template<get_from src, typename ...dir_t>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][N_COLS], const size_t& sid, const dir_t&... dirs) {
+      sidStride::setSid(sid);
+      sidStride::shift<src>(dirs ...);
+      get(P);
+    }
+
+    template<int COLS>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][COLS]) const {
+      #pragma unroll
+      for(short mu = 0 ; mu < N_SPINS ; mu++)
+        #pragma unroll
+        for(short nu = 0 ; nu < N_SPINS ; nu++)
+          #pragma unroll
+          for(short c1 = 0 ; c1 < N_COLS ; c1++)
+            #pragma unroll
+            for(short c2 = 0 ; c2 < COLS ; c2++)
+              P[mu][nu][c1][c2] = get(mu, nu, c1, c2);
+    }
+    template<int COLS>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][COLS], const size_t& sid) {
+      sidStride::setSid(sid);
+      get(P);
+    }
+    template<get_from src, int COLS,typename ...dir_t>
+    inline __device__ void get(Float2<Float> P[N_SPINS][N_SPINS][N_COLS][COLS], const size_t& sid, const dir_t&... dirs) {
+      sidStride::setSid(sid);
+      sidStride::shift<src>(dirs ...);
+      get(P);
+    }
+  };
+#if 0
+
+  template<typename T, typename Float>
+    struct genericProp : generic<T,Float>  {
+    using generic<T,Float>::generic;
+    inline __device__ void set(const short& mu, const short& nu, const short& c1, const short& c2, const Float2<Float>& v) {
+      T::set((((mu*N_SPINS + nu)*N_COLS + c1)*N_COLS + c2),v);
+    }
+    inline __device__ void set(const short& mu, const short& nu, const short& c1, const short& c2, const size_t& sid, const Float2<Float>& v) {
+      sidStride::setSid(sid);
+      set(mu, nu, c1, c2,v);
+    }
+    inline __device__ void set(Float2<Float> P[4][4][3][3], const size_t& sid) {
+      sidStride::setSid(sid);
+      #pragma unroll
+      for(short mu = 0 ; mu < N_SPINS ; mu++)
+        #pragma unroll
 	for(short nu = 0 ; nu < N_SPINS ; nu++)
           #pragma unroll
 	  for(short c1 = 0 ; c1 < N_COLS ; c1++)
@@ -870,7 +954,7 @@ namespace plegma {
       get(P);
     }
   };
-
+#endif
   template<typename Float>
   using propTex = genericProp< texture<Float>, Float>;
 
