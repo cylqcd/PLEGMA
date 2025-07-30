@@ -1,4 +1,4 @@
-set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${MPI_CXX_LIBRARIES} ${PLEGMA_HDF5HOME}/lib/libhdf5_parallel.so.200 -fopenmp -I${PLEGMA_HDF5HOME}/include/)
+set(PLEGMA_LIBS plegma PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${MPI_CXX_LIBRARIES} ${PLEGMA_HDF5HOME}/lib/libhdf5_parallel.so.200 -fopenmp -I${PLEGMA_HDF5HOME}/include/ -I${MPICH_DIR}/include -L${MPICH_DIR}/lib -lmpi ${PE_MPICH_GTL_DIR_amd_gfx90a} ${PE_MPICH_GTL_LIBS_amd_gfx90a})
 #opt/cray/pe/hdf5-parallel/1.12.1.5/gnu/9.1/lib/libhdf5_parallel.so.200 ${MPI_CXX_LIBRARIES} /pfs/lustrep2/projappl/project_462000125/samantao-public/rocm/rocm-5.3.3/hip/lib/libamdhip64.so)
 
 LIST(APPEND PLEGMA_LIBS ${MPI_CXX_LIBRARIES})
