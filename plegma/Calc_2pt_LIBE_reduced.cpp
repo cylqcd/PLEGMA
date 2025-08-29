@@ -359,59 +359,60 @@ int main(int argc, char **argv)
 							THREAD(corr.writeFile(twop_filename, corr_file_format));
 						}
 
-						// STRANGE
-						{
-							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-							TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
-							TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
-							TIME(prop_s.copy(*props_s[sign_idx], HOST); prop_s.load());
-							TIME(prop_c.copy(*props_c[1], HOST); prop_c.load());
+						// Don't vary sign for single flavor that is not light. Not needed for mass difference
+						// // STRANGE
+						// {
+						// 	PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
+						// 	TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
+						// 	TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
+						// 	TIME(prop_s.copy(*props_s[sign_idx], HOST); prop_s.load());
+						// 	TIME(prop_c.copy(*props_c[1], HOST); prop_c.load());
 
-							if (imu == 0) {	
-								bool only_up = false, only_dn = false, only_st = true, only_ch = false, only_light = false;
-								TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+						// 	if (imu == 0) {	
+						// 		bool only_up = false, only_dn = false, only_st = true, only_ch = false, only_light = false;
+						// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
 
-								std::string group = make_group_name_QED("only_st", mu_val, 0, 0, sign_idx - 1, 0);
-								std::string full_group = "QED/" + group;
-								corr.setGroups(full_group.c_str());
-								THREAD(corr.writeFile(twop_filename, corr_file_format));
-							} else {
-								bool only_up = false, only_dn = false, only_st = true, only_ch = false, only_light = true;
-								TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+						// 		std::string group = make_group_name_QED("only_st", mu_val, 0, 0, sign_idx - 1, 0);
+						// 		std::string full_group = "QED/" + group;
+						// 		corr.setGroups(full_group.c_str());
+						// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+						// 	} else {
+						// 		bool only_up = false, only_dn = false, only_st = true, only_ch = false, only_light = true;
+						// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
 
-								std::string group = make_group_name_QED("light_st", mu_val, 0, 0, sign_idx - 1, 0);
-								std::string full_group = "QED/" + group;
-								corr.setGroups(full_group.c_str());
-								THREAD(corr.writeFile(twop_filename, corr_file_format));
-							}
-						}
+						// 		std::string group = make_group_name_QED("light_st", mu_val, 0, 0, sign_idx - 1, 0);
+						// 		std::string full_group = "QED/" + group;
+						// 		corr.setGroups(full_group.c_str());
+						// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+						// 	}
+						// }
 
-						// CHARM
-						{
-							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-							TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
-							TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
-							TIME(prop_s.copy(*props_s[1], HOST); prop_s.load());
-							TIME(prop_c.copy(*props_c[sign_idx], HOST); prop_c.load());
+						// // CHARM
+						// {
+						// 	PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
+						// 	TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
+						// 	TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
+						// 	TIME(prop_s.copy(*props_s[1], HOST); prop_s.load());
+						// 	TIME(prop_c.copy(*props_c[sign_idx], HOST); prop_c.load());
 
-							if (imu == 0) {	
-								bool only_up = false, only_dn = false, only_st = false, only_ch = true, only_light = false;
-								TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+						// 	if (imu == 0) {	
+						// 		bool only_up = false, only_dn = false, only_st = false, only_ch = true, only_light = false;
+						// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
 
-								std::string group = make_group_name_QED("only_ch", mu_val, 0, 0, 0, sign_idx - 1);
-								std::string full_group = "QED/" + group;
-								corr.setGroups(full_group.c_str());
-								THREAD(corr.writeFile(twop_filename, corr_file_format));
-							} else {
-								bool only_up = false, only_dn = false, only_st = false, only_ch = true, only_light = true;
-								TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+						// 		std::string group = make_group_name_QED("only_ch", mu_val, 0, 0, 0, sign_idx - 1);
+						// 		std::string full_group = "QED/" + group;
+						// 		corr.setGroups(full_group.c_str());
+						// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+						// 	} else {
+						// 		bool only_up = false, only_dn = false, only_st = false, only_ch = true, only_light = true;
+						// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
 
-								std::string group = make_group_name_QED("light_ch", mu_val, 0, 0, 0, sign_idx - 1);
-								std::string full_group = "QED/" + group;
-								corr.setGroups(full_group.c_str());
-								THREAD(corr.writeFile(twop_filename, corr_file_format));
-							}
-						}
+						// 		std::string group = make_group_name_QED("light_ch", mu_val, 0, 0, 0, sign_idx - 1);
+						// 		std::string full_group = "QED/" + group;
+						// 		corr.setGroups(full_group.c_str());
+						// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+						// 	}
+						// }
 					}
 
 					// --------- All combinations of +1 and -1 on 2 flavors -------------
@@ -459,9 +460,13 @@ int main(int argc, char **argv)
 									if (flavors.count('d') && changed[1]) distinct_changed++;
 									if (flavors.count('s') && changed[2]) distinct_changed++;
 									if (flavors.count('c') && changed[3]) distinct_changed++;
-
-									if (distinct_changed == 2)
-										filtered_baryons.push_back(b); // save all baryons with exactly 2 distinct changed flavors
+									
+									// Save all baryons with exactly 2 distinct changed flavors but explicitly skip the case where the only two are s and c, since they do not contribute to the mass difference.
+									if (distinct_changed == 2) {
+										if (!(flavors.count('s') && changed[2] && flavors.count('c') && changed[3])) { // 
+											filtered_baryons.push_back(b);
+										}
+									}
 								}
 
 								// std::string combined;
@@ -493,10 +498,11 @@ int main(int argc, char **argv)
 				updateGaugeQuda(gauge, true);
 				solver.UpdateSolver();
 
-				double run_mu_st = 1.005 * mu_s[0];
-				double run_mu_ch = 1.005 * mu_c[0];
-				TIME(computePropagator(propSIBST, run_mu_st, STRANGE, nsmearGauss_s));
-				TIME(computePropagator(propSIBCH, run_mu_ch, CHARM, nsmearGauss_c));
+				// Need only light quark insertions for now
+				// double run_mu_st = 1.005 * mu_s[0];
+				// double run_mu_ch = 1.005 * mu_c[0];
+				// TIME(computePropagator(propSIBST, run_mu_st, STRANGE, nsmearGauss_s));
+				// TIME(computePropagator(propSIBCH, run_mu_ch, CHARM, nsmearGauss_c));
 
 				TIME(prop_s.copy(*props_s[1], HOST));
 				prop_s.load();
@@ -525,7 +531,7 @@ int main(int argc, char **argv)
 
 						PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 
-						for (int flavor = 0; flavor < 4; flavor++) {
+						for (int flavor = 0; flavor < 2; flavor++) {	// Only run up to flavor=1, since we only need light quark insertions for now
 							bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
 
 							// Modify the respective propagator
@@ -603,8 +609,9 @@ int main(int argc, char **argv)
 
 					double run_mu_st = mu_s[0];
 					double run_mu_ch = mu_c[0];
-					TIME(computePropagator(propCMST, run_mu_st, STRANGE, nsmearGauss_s));
-					TIME(computePropagator(propCMCH, run_mu_ch, CHARM, nsmearGauss_c));
+					// Need only light quark insertions for now
+					// TIME(computePropagator(propCMST, run_mu_st, STRANGE, nsmearGauss_s));
+					// TIME(computePropagator(propCMCH, run_mu_ch, CHARM, nsmearGauss_c));
 
 					for (size_t imu = 0; imu < mu_l.size(); ++imu) {
 						double run_mu = mu_l[imu];
@@ -620,7 +627,7 @@ int main(int argc, char **argv)
 						TIME(prop_c.copy(*props_c[1], HOST));
 						prop_c.load();
 
-						for (int flavor = 0; flavor < 4; flavor++) {
+						for (int flavor = 0; flavor < 2; flavor++) {	// Only run up to flavor=1, since we only need light quark insertions for now
 							bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
 							std::string group, full_group;
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);

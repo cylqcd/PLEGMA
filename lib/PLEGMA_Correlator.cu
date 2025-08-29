@@ -381,7 +381,7 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
   std::vector<int> todo;
   for(int i=0; i<BP_prop_prods.size(); i++) {
     if (allowed_baryons) {
-      if (allowed_baryons && std::find(allowed_baryons->begin(), allowed_baryons->end(), BP_prop_prods[i]) == allowed_baryons->end())
+      if (std::find(allowed_baryons->begin(), allowed_baryons->end(), BP_prop_prods[i]) == allowed_baryons->end())
       continue;
     } else {
       if(not_up && BP_prop_prods[i].find('u')!=std::string::npos)
