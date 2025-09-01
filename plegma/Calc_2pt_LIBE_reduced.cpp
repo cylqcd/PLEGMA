@@ -509,9 +509,10 @@ int main(int argc, char **argv)
 				TIME(prop_c.copy(*props_c[1], HOST));
 				prop_c.load();
 
-				for (size_t imu = 0; imu < mu_l.size(); imu++) {
+				// Only one mu at physical point needed since we are already very precise.
+				// for (size_t imu = 0; imu < mu_l.size(); imu++) {	
 					
-					double run_mu = mu_l[imu];
+					double run_mu = mu_l[0];
 					double run_mu_up = 1.005 * run_mu;
 					double run_mu_dn = -1.005 * run_mu;
 					if (run_ud) {
@@ -554,50 +555,50 @@ int main(int argc, char **argv)
 									corr.setGroups(full_group.c_str());
 									THREAD(corr.writeFile(twop_filename, corr_file_format));
 									break;
-								case 2:
-									if (imu == 0) {
-										only_st = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+								// case 2:
+								// 	if (imu == 0) {
+								// 		only_st = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
 
-										group = make_group_name_SIB("only_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									} else {
-										only_st = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+								// 		group = make_group_name_SIB("only_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
+								// 		full_group = "SIB/" + group;
+								// 		corr.setGroups(full_group.c_str());
+								// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+								// 		break;
+								// 	} else {
+								// 		only_st = true, only_light = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
 
-										group = make_group_name_SIB("light_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									}
-								case 3:
-									if (imu == 0) {
-										only_ch = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
+								// 		group = make_group_name_SIB("light_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
+								// 		full_group = "SIB/" + group;
+								// 		corr.setGroups(full_group.c_str());
+								// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+								// 		break;
+								// 	}
+								// case 3:
+								// 	if (imu == 0) {
+								// 		only_ch = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
 
-										group = make_group_name_SIB("only_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									} else {
-										only_ch = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
+								// 		group = make_group_name_SIB("only_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
+								// 		full_group = "SIB/" + group;
+								// 		corr.setGroups(full_group.c_str());
+								// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+								// 		break;
+								// 	} else {
+								// 		only_ch = true, only_light = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
 
-										group = make_group_name_SIB("light_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									}
+								// 		group = make_group_name_SIB("light_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
+								// 		full_group = "SIB/" + group;
+								// 		corr.setGroups(full_group.c_str());
+								// 		THREAD(corr.writeFile(twop_filename, corr_file_format));
+								// 		break;
+								// 	}
 							}
 						}
 					}
-				}
+				// }
 			}
 
 			// === Critical Mass Correction ===
@@ -643,30 +644,30 @@ int main(int argc, char **argv)
 									TIME(corr.contractBaryonsUDSC(prop_u, propCMDN, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
 									group = make_group_name_CM("only_dn", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
 									break;
-								case 2:
-									if (imu == 0) {
-										only_st = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("only_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-										break;
-									} else {
-										only_st = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("light_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-										break;
-									}
-								case 3:
-									if (imu == 0) {
-										only_ch = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("only_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-										break;
-									} else {
-										only_ch = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("light_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-										break;
-									}
+								// case 2:
+								// 	if (imu == 0) {
+								// 		only_st = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+								// 		group = make_group_name_CM("only_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+								// 		break;
+								// 	} else {
+								// 		only_st = true, only_light = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+								// 		group = make_group_name_CM("light_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+								// 		break;
+								// 	}
+								// case 3:
+								// 	if (imu == 0) {
+								// 		only_ch = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
+								// 		group = make_group_name_CM("only_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+								// 		break;
+								// 	} else {
+								// 		only_ch = true, only_light = true;
+								// 		TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
+								// 		group = make_group_name_CM("light_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+								// 		break;
+								// 	}
 							}
 							full_group = "CM/" + group;
 							corr.setGroups(full_group.c_str());
