@@ -34,7 +34,6 @@ namespace plegma {
     return x;
   }
 
-
   /* ================ Small introduction to Hierarchical probing ============
      # There is an unsigned integer "k" running from 1 until ...
      # From this integer we can specify several important quantities regarding the coloring
@@ -46,35 +45,36 @@ namespace plegma {
      # And that Ls%(2*Lu)=0 and Lt%(2*Lu)=0
   */
 
-  class PLEGMA_Hprobing{
+  class PLEGMA_Cprobing{
     private:
-      int k;  // index for the coloring distance
       int Nc; // Number of colors = Number of Hadamard vectors
       short d; // Number of dimension of Hprob (For now d=4)
       short D; // Distance of coloring D=2^k
-      short Lu; // extent of the elementaty coloring block (assume symmetric block)
-      int* h_arrVc; // array to hold the coloring of the lattice on HOST
-      int* d_arrVc; // array to hold the coloring of the lattice on Device
-      int* arrlc; // array to hold the elementary coloring block
+      // short Lu; // extent of the elementaty coloring block (assume symmetric block)
+      // int* h_arrVc; // array to hold the coloring of the lattice on HOST
+      // int* d_arrVc; // array to hold the coloring of the lattice on Device
+      // int* arrlc; // array to hold the elementary coloring block
+      int* localColors; // array to hold the local colors for each MPI task
+      localColors = (int*)malloc(HGC_localVolume * sizeof(int));
+      std::vector<int> sigma(4);
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       void createElemColBlock(){for(int i = 0; i < Nc; i++) arrlc[i]=i;}
-      void createColLattice(){
+      void graph_coloring(){
         std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
         std::vector<int> lu = {Lu,Lu,Lu,Lu};
         std::vector<int> bx(d);
-        std::vector<int> lx(d); 
+        std::vector<int> lx(d);
         for(size_t i=0; i < HGC_localVolume; i++){
           std::vector<int> x = getIndToVec(i,lL);
-          for(int j = 0 ; j < d; j++) bx[j] = x[j]/lu[j];
-          int eo=0;
-          for(int j = 0 ; j < d; j++) eo += bx[j];
-          eo=eo & 1;
-          for(int j = 0 ; j < d; j++)  lx[j] = x[j] - lu[j] * bx[j];
-          h_arrVc[i] = arrlc[getVecToInd(lx,lu)*2+eo];
+          std::vector<int> global_x = rank * HGC_localVolume + x;
+          int col = sigma[0]*x[3] + sigma[1]*x[0] + sigma[2]*x[1] + sigma[3]*x[2]; // fix ordering to xyzt
+
         }
       }
       //  void checkColoring();
     public:
-      PLEGMA_Hprobing(int k_probing, int d=4):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr){
+      PLEGMA_Cprobing(int k_probing, int d=4):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr){
         if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
         if(d != 4) PLEGMA_error("Hierarchical probing supports only 4D coloring up to now");
         if(k<=0) PLEGMA_error("The index of the Hprobing should greater than zero");
@@ -97,7 +97,7 @@ namespace plegma {
           PLEGMA_error(err.what());
         }
         createElemColBlock();
-        createColLattice();
+        graph_coloring();
         //  if(check)checkColoring();
         cudaMalloc((void**)&d_arrVc, HGC_localVolume*sizeof(int));
         checkCudaError();
@@ -113,6 +113,87 @@ namespace plegma {
       int* H_arrVc() const{return h_arrVc;}
       int* D_arrVc() const{return d_arrVc;}
       int get_NHad() const{return Nc;}
+
+      void get_sigma_4D(){ // works only for 64x32^3
+  
+        if(D == 1){ // fix index ordering to xyzt
+          sigma[0] = 1;
+          sigma[1] = 1;
+          sigma[2] = 1;
+          sigma[3] = 1;
+          
+          Nc = 2;
+        }
+        
+        if(D == 2){
+          sigma[0] = 1;
+          sigma[1] = 2;
+          sigma[2] = 3;
+          sigma[3] = 4;
+          
+          Nc = 10;
+        }
+        
+        if(D == 3){
+          sigma[0] = 1;
+          sigma[1] = 5;
+          sigma[2] = 55;
+          sigma[3] = 61;
+          
+          Nc = 16;
+        }
+        
+        if(D == 4){
+          sigma[0] = 1;
+          sigma[1] = 8;
+          sigma[2] = 12;
+          sigma[3] = 18;
+          
+          Nc = 64;
+        }
+        
+      }
+
+      void get_sigma_3D(){  // works only for 32^3
+        
+        if(D == 1){
+          sigma[0] = 0;
+          sigma[1] = 1;
+          sigma[2] = 1;
+          sigma[3] = 1;
+          
+          Nc = 2;
+        }
+        
+        if(D == 2){
+          sigma[0] = 0;
+          sigma[1] = 1;
+          sigma[2] = 2;
+          sigma[3] = 3;
+          
+          Nc = 8;
+        }
+        
+        if(D == 3){
+          sigma[0] = 0;
+          sigma[1] = 1;
+          sigma[2] = 3;
+          sigma[3] = 5;
+          
+          Nc = 16;
+        }
+        
+        if(D == 4){
+          sigma[0] = 0;
+          sigma[1] = 1;
+          sigma[2] = 6;
+          sigma[3] = 9;
+          
+          Nc = 32;
+        }
+        
+      }
+
   };
 }
 
