@@ -1,122 +1,88 @@
 #pragma once
 
 namespace plegma {
-  inline int getVecToInd(std::vector<int> x, std::vector<int> L){
-    if(x.size() != L.size()) PLEGMA_error("Dimensions do not match");
-    if(x.size() == 0)PLEGMA_error("Size of the vector is zero");
-    int D=x.size();
-    for(int i = 0 ; i < D; i++)
-      if(x[i] >= L[i])
-	      PLEGMA_error("Error the position of the vector exceeds the extent of dimension %d", i);
-    int acc=x[D-1];
-    for(int i = D-2 ; i >= 0; i--) acc = acc*L[i] + x[i];
-    return acc;
-  }
+  // inline int getVecToInd(std::vector<int> x, std::vector<int> L){
+  //   if(x.size() != L.size()) PLEGMA_error("Dimensions do not match");
+  //   if(x.size() == 0)PLEGMA_error("Size of the vector is zero");
+  //   int D=x.size();
+  //   for(int i = 0 ; i < D; i++)
+  //     if(x[i] >= L[i])
+	//       PLEGMA_error("Error the position of the vector exceeds the extent of dimension %d", i);
+  //   int acc=x[D-1];
+  //   for(int i = D-2 ; i >= 0; i--) acc = acc*L[i] + x[i];
+  //   return acc;
+  // }
 
-  inline std::vector<int> getIndToVec(int ind, std::vector<int> L){
-    int V=1;
-    std::vector<int> x;
-    if(L.size() == 0)PLEGMA_error("Size of the vector is zero");
-    if(ind < 0 )PLEGMA_error("Ind provided is negative");
-    int D = L.size();
-    for(int i = 0 ; i < D-1; i++ ) V *= L[i];
-    if(V<0) PLEGMA_error("The volume is negative which is not allowed");
-    if(V==0) PLEGMA_error("One or more directions are zero");
-    if(ind >= V*L[D-1]) PLEGMA_error("The ind exceeds the total volume");
-    int sub=0;
-    for(int i = D-1; i >= 0; i--){
-      ind -= sub;
-      x.insert(x.begin(), ind/V);
-      if(V==1) break;
-      sub=x[0]*V;
-      V /= L[i-1];
-    }
-    return x;
-  }
-
-  /* ================ Small introduction to Hierarchical probing ============
-     # There is an unsigned integer "k" running from 1 until ...
-     # From this integer we can specify several important quantities regarding the coloring
-     # The total number of colors is given by N_{hc} = 2 * 2^{d(k-1)} where d is the number of dimensions
-     # The distance seperating neighbors carrying the same color is D=2^k
-     # The extent of the elementary coloring block is given L_u=2^{k-1}
-     # A condition must be fulfilled in order to be able to do the coloring for a specific k
-     # The condition must be that the number of blocks in each direction must be even
-     # And that Ls%(2*Lu)=0 and Lt%(2*Lu)=0
-  */
+  // inline std::vector<int> getIndToVec(int ind, std::vector<int> L){
+  //   int V=1;
+  //   std::vector<int> x;
+  //   if(L.size() == 0)PLEGMA_error("Size of the vector is zero");
+  //   if(ind < 0 )PLEGMA_error("Ind provided is negative");
+  //   int D = L.size();
+  //   for(int i = 0 ; i < D-1; i++ ) V *= L[i];
+  //   if(V<0) PLEGMA_error("The volume is negative which is not allowed");
+  //   if(V==0) PLEGMA_error("One or more directions are zero");
+  //   if(ind >= V*L[D-1]) PLEGMA_error("The ind exceeds the total volume");
+  //   int sub=0;
+  //   for(int i = D-1; i >= 0; i--){
+  //     ind -= sub;
+  //     x.insert(x.begin(), ind/V);
+  //     if(V==1) break;
+  //     sub=x[0]*V;
+  //     V /= L[i-1];
+  //   }
+  //   return x;
+  // }
 
   class PLEGMA_Cprobing{
     private:
-      int Nc; // Number of colors = Number of Hadamard vectors
-      short d; // Number of dimension of Hprob (For now d=4)
-      short D; // Distance of coloring D=2^k
+      int Nc; // Number of colors
+      short probing_dimension; // Number of dimension of Cprob (For now probing_dimension={3,4})
+      short coloring_distance; // Distance of coloring
       // short Lu; // extent of the elementaty coloring block (assume symmetric block)
       // int* h_arrVc; // array to hold the coloring of the lattice on HOST
       // int* d_arrVc; // array to hold the coloring of the lattice on Device
       // int* arrlc; // array to hold the elementary coloring block
-      int* localColors; // array to hold the local colors for each MPI task
-      localColors = (int*)malloc(HGC_localVolume * sizeof(int));
-      std::vector<int> sigma(4);
-      int rank;
-      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      void createElemColBlock(){for(int i = 0; i < Nc; i++) arrlc[i]=i;}
+      int* h_localColors; // array to hold the local colors for each MPI task on host
+      int* d_localColors; // array to hold the local colors for each MPI task on device
+      std::vector<int> sigma; // vector to hold the sigma values
       void graph_coloring(){
-        std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
-        std::vector<int> lu = {Lu,Lu,Lu,Lu};
-        std::vector<int> bx(d);
-        std::vector<int> lx(d);
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]}; // local lattice
+        std::vector<int> nProc = {HGC_nProc[0], HGC_nProc[1], HGC_nProc[2], HGC_nProc[3]}; // MPI grid
+        if(probing_dimension == 3)
+          get_sigma_3D();
+        else
+          get_sigma_4D();
+        PLEGMA_printf("Sigma is (%d,%d,%d,%d)\n",sigma[0],sigma[1],sigma[2],sigma[3]);
+        std::vector<int> rank_coord = getIndToVec(rank, nProc); // Compute rank coordinates in MPI grid
         for(size_t i=0; i < HGC_localVolume; i++){
-          std::vector<int> x = getIndToVec(i,lL);
-          std::vector<int> global_x = rank * HGC_localVolume + x;
-          int col = sigma[0]*x[3] + sigma[1]*x[0] + sigma[2]*x[1] + sigma[3]*x[2]; // fix ordering to xyzt
+          std::vector<int> x_local = getIndToVec(i, lL); // Local coordinates
+          // Global coordinates
+          std::vector<int> x_global(4);
+          for(int d = 0; d < 4; d++)
+            x_global[d] = x_local[d] + rank_coord[d] * lL[d];
 
+          int col = sigma[0]*x_global[3] + sigma[1]*x_global[0] + sigma[2]*x_global[1] + sigma[3]*x_global[2]; // ordering xyzt
+          col = col % Nc + 1;
+          h_localColors[i] = col;
         }
       }
       //  void checkColoring();
-    public:
-      PLEGMA_Cprobing(int k_probing, int d=4):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr){
-        if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
-        if(d != 4) PLEGMA_error("Hierarchical probing supports only 4D coloring up to now");
-        if(k<=0) PLEGMA_error("The index of the Hprobing should greater than zero");
-        Nc = 2*std::pow(2,d*(k-1));
-        D = std::pow(2,k);
-        Lu = std::pow(2,k-1);
-        PLEGMA_printf("Number of colors for hierarchical probing is %d\n",Nc);
-        PLEGMA_printf("Distance of neigbors is %d\n",D);
-        PLEGMA_printf("The extent of the elementary symmetric color block is %d\n",Lu);
-        for(int i = 0 ; i < d ; i++){
-          if(D >= HGC_localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
-          if( (HGC_localL[i] % (2*Lu)) != 0 )
-            PLEGMA_error("2*Lu cannot fit in the local lattice extent in direction %d. Try to increase local size in this direction",i);
-        }
-        try{
-          h_arrVc = new int[HGC_localVolume];
-          arrlc = new int[Nc];
-        }
-        catch (const std::bad_alloc& err) {
-          PLEGMA_error(err.what());
-        }
-        createElemColBlock();
-        graph_coloring();
-        //  if(check)checkColoring();
-        cudaMalloc((void**)&d_arrVc, HGC_localVolume*sizeof(int));
-        checkCudaError();
-        cudaMemcpy(d_arrVc, h_arrVc, HGC_localVolume*sizeof(int), cudaMemcpyHostToDevice);
-        checkCudaError();    
-      }
-      ~PLEGMA_Hprobing(){
-        delete[] h_arrVc;
-        delete[] arrlc;
-        cudaFree(d_arrVc);
-        checkCudaError();
-      }
-      int* H_arrVc() const{return h_arrVc;}
-      int* D_arrVc() const{return d_arrVc;}
-      int get_NHad() const{return Nc;}
 
       void get_sigma_4D(){ // works only for 64x32^3
   
-        if(D == 1){ // fix index ordering to xyzt
+        if(coloring_distance == 0){
+          sigma[0] = 0;
+          sigma[1] = 0;
+          sigma[2] = 0;
+          sigma[3] = 0;
+          
+          Nc = 1;
+        }
+
+        if(coloring_distance == 1){ // fix index ordering to xyzt
           sigma[0] = 1;
           sigma[1] = 1;
           sigma[2] = 1;
@@ -125,7 +91,7 @@ namespace plegma {
           Nc = 2;
         }
         
-        if(D == 2){
+        if(coloring_distance == 2){
           sigma[0] = 1;
           sigma[1] = 2;
           sigma[2] = 3;
@@ -134,7 +100,7 @@ namespace plegma {
           Nc = 10;
         }
         
-        if(D == 3){
+        if(coloring_distance == 3){
           sigma[0] = 1;
           sigma[1] = 5;
           sigma[2] = 55;
@@ -143,7 +109,7 @@ namespace plegma {
           Nc = 16;
         }
         
-        if(D == 4){
+        if(coloring_distance == 4){
           sigma[0] = 1;
           sigma[1] = 8;
           sigma[2] = 12;
@@ -156,7 +122,16 @@ namespace plegma {
 
       void get_sigma_3D(){  // works only for 32^3
         
-        if(D == 1){
+        if(coloring_distance == 0){
+          sigma[0] = 0;
+          sigma[1] = 0;
+          sigma[2] = 0;
+          sigma[3] = 0;
+          
+          Nc = 1;
+        }
+
+        if(coloring_distance == 1){
           sigma[0] = 0;
           sigma[1] = 1;
           sigma[2] = 1;
@@ -165,7 +140,7 @@ namespace plegma {
           Nc = 2;
         }
         
-        if(D == 2){
+        if(coloring_distance == 2){
           sigma[0] = 0;
           sigma[1] = 1;
           sigma[2] = 2;
@@ -174,7 +149,7 @@ namespace plegma {
           Nc = 8;
         }
         
-        if(D == 3){
+        if(coloring_distance == 3){
           sigma[0] = 0;
           sigma[1] = 1;
           sigma[2] = 3;
@@ -183,7 +158,7 @@ namespace plegma {
           Nc = 16;
         }
         
-        if(D == 4){
+        if(coloring_distance == 4){
           sigma[0] = 0;
           sigma[1] = 1;
           sigma[2] = 6;
@@ -193,6 +168,33 @@ namespace plegma {
         }
         
       }
+
+    public:
+      PLEGMA_Cprobing(int coloring_distance, int probing_dimension=4):Nc(0),coloring_distance(coloring_distance),probing_dimension(probing_dimension),sigma(4, 0){
+        if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
+        if(probing_dimension != 4 && probing_dimension != 3) PLEGMA_error("Classical probing supports only 3D and 4D coloring");
+        PLEGMA_printf("Distance of neigbors is %d\n",coloring_distance);
+        for(int i = 0 ; i < probing_dimension ; i++){
+          if(coloring_distance >= HGC_localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
+        }
+        h_localColors = (int*)malloc(HGC_localVolume * sizeof(int));
+        graph_coloring();
+        PLEGMA_printf("Number of colors classical probing is %d\n",Nc);
+        //  if(check)checkColoring();
+        cudaMalloc((void**)&d_localColors, HGC_localVolume*sizeof(int));
+        checkCudaError();
+        cudaMemcpy(d_localColors, h_localColors, HGC_localVolume*sizeof(int), cudaMemcpyHostToDevice);
+        checkCudaError();    
+      }
+      ~PLEGMA_Cprobing(){
+        free(h_localColors);
+        cudaFree(d_localColors);
+        checkCudaError();
+      }
+      int* H_localColors() const{return h_localColors;}
+      int* D_localColors() const{return d_localColors;}
+      int get_Ncol() const{return Nc;}
+      int get_dimension() const { return probing_dimension; }
 
   };
 }

@@ -916,6 +916,55 @@ void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_H
   }
 }
 
+template<typename Float>
+void PLEGMA_Field<Float>::applyCprobColoring(PLEGMA_Field<Float> &fin,
+                                             PLEGMA_Cprobing &cprob,
+                                             int color_index,
+                                             const std::vector<int> &indDof)
+{
+  if (fin.Total_length() != HGC_localVolume || total_length != HGC_localVolume)
+    PLEGMA_error("Classical probing currently supports only fields with total_length == local volume.");
+
+  int dim = cprob.get_dimension();
+  if (dim != 3 && dim != 4)
+    PLEGMA_error("Only 3D or 4D classical probing supported.");
+
+  int Nc = cprob.get_Ncol();
+  if (color_index < 1 || color_index > Nc)
+    PLEGMA_error("Color index %d out of range [1..%d].", color_index, Nc);
+
+  // Copy input to device
+  copy(fin, DEVICE);
+
+  // --- Apply coloring per DoF ---
+  for (int i = 0; i < Field_length(); i++) {
+    // Check if this DoF is selected
+    if (std::find(indDof.begin(), indDof.end(), i) != indDof.end()) {
+      Float *ptr = D_elem() + i * total_length * 2;
+      int *d_colors = cprob.D_localColors();
+
+      if (dim == 4)
+        apply_cprob_coloring_4D(ptr, d_colors, color_index);
+      else
+        apply_cprob_coloring_3D(ptr, d_colors, color_index);  // identical logic, just 3D volume
+    }
+  }
+}
+
+
+// template<typename Float>
+// void PLEGMA_Field<Float>::applyCpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Cprobing &cprob, int ih, std::vector<int> indDof){
+//   if(total_length != HGC_localVolume || fin.Total_length() != HGC_localVolume) PLEGMA_error("Probing for now works only for 4D fields");
+//   copy(fin,DEVICE);
+//   for(int i = 0 ; i < Field_length(); i++){
+//     std::vector<int>::iterator it = std::find(indDof.begin(), indDof.end(), i);
+//     if(it != indDof.end()){
+//       apply_cprob_coloring_4D(D_elem() + i*total_length*2, cprob.D_localColors(), ih);
+//     }
+//   }
+// }
+
+
 // field4D <- field3D
 template<typename Float>
 void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it){

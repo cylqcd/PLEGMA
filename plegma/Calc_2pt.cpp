@@ -42,6 +42,7 @@ int main(int argc, char **argv)
    //=========================================================================================================//
   initializePLEGMA();
 
+  
   std::string given_twop_filename = twop_filename;
   {
     PLEGMA_Gauge<double> smearedGauge(BOTH);

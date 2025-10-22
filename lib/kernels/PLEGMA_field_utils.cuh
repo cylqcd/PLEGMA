@@ -394,6 +394,53 @@ static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   thrust::for_each(z1,z2,HadCol<Float>(ih));
 }
 
+template<typename Float>
+struct CprobMask {
+    int wanted_color;
+
+    __device__ CprobMask(int ic) : wanted_color(ic) {}
+
+    template <typename Tuple>
+    __device__ void operator()(Tuple t) const {
+        const int c = thrust::get<0>(t);
+        Float2<Float>& val = thrust::get<1>(t);
+        if (c != wanted_color) { val.x = 0; val.y = 0; }
+    }
+};
+
+template<typename Float>
+static void apply_cprob_coloring_4D(Float* d_elems, const int *d_colors, int ic) {
+    const int V = HGC_localVolume;
+    thrust::device_ptr<const int> th_c(d_colors);
+    thrust::device_ptr<Float2<Float>> th_e(reinterpret_cast<Float2<Float>*>(d_elems));
+    auto z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c, th_e));
+    auto z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c + V, th_e + V));
+    thrust::for_each(z1, z2, CprobMask<Float>(ic));
+}
+
+template<typename Float>
+static void apply_cprob_coloring_3D(Float* d_elems, const int *d_colors, int ic) {
+    const int V = HGC_localVolume3D; // same idea, but 3D lattice volume
+    thrust::device_ptr<const int> th_c(d_colors);
+    thrust::device_ptr<Float2<Float>> th_e(reinterpret_cast<Float2<Float>*>(d_elems));
+    auto z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c, th_e));
+    auto z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c + V, th_e + V));
+    thrust::for_each(z1, z2, CprobMask<Float>(ic));
+}
+
+// template<typename Float>
+// static void apply_cprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
+//   // make sure before that is not a 3D field
+//   int V = HGC_localVolume;
+//   thrust::device_ptr<int> th_c(d_colors);
+//   thrust::device_ptr<Float2<Float> > th_e((Float2<Float>*)d_elems);
+//   typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<Float2<Float> > > tplDIntDFl2;
+//   typedef thrust::zip_iterator<tplDIntDFl2> zipTplDIntDFl2;
+//   zipTplDIntDFl2 z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c,th_e));
+//   zipTplDIntDFl2 z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c+V,th_e+V));
+//   thrust::for_each(z1,z2,HadCol<Float>(ih));
+// }
+
 template<typename Float, typename FloatA, typename FloatB, typename FloatC, typename FloatD>
 static __global__ void traceMulFmunuSu3FmunuSu3_kernel(Float *F, su3_2<FloatA> RA, su3_2<FloatB> RB, su3_2<FloatC> RC, su3_2<FloatD> RD){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
