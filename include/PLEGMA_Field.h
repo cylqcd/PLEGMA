@@ -1,6 +1,7 @@
 #include <PLEGMA_global.h>
 #include <PLEGMA_Random.h>
 #include <PLEGMA_Hprobing.h>
+#include <PLEGMA_Cprobing.h>
 #include <PLEGMA_io.h>
 #include <vector>
 #ifndef _PLEGMA_FIELD_H
@@ -155,6 +156,8 @@ namespace plegma {
     void cscale(std::complex<Float> val);
     
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
+
+    void applyCprobColoring(PLEGMA_Field<Float> &fin,PLEGMA_Cprobing &cprob,int color_index,const std::vector<int> &indDof);
 
     void absorbTimeslice(PLEGMA_Field<Float> &srcfield, int global_it, bool forcetozero=true);
 

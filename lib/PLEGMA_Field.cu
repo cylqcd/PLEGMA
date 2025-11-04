@@ -951,20 +951,6 @@ void PLEGMA_Field<Float>::applyCprobColoring(PLEGMA_Field<Float> &fin,
   }
 }
 
-
-// template<typename Float>
-// void PLEGMA_Field<Float>::applyCpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Cprobing &cprob, int ih, std::vector<int> indDof){
-//   if(total_length != HGC_localVolume || fin.Total_length() != HGC_localVolume) PLEGMA_error("Probing for now works only for 4D fields");
-//   copy(fin,DEVICE);
-//   for(int i = 0 ; i < Field_length(); i++){
-//     std::vector<int>::iterator it = std::find(indDof.begin(), indDof.end(), i);
-//     if(it != indDof.end()){
-//       apply_cprob_coloring_4D(D_elem() + i*total_length*2, cprob.D_localColors(), ih);
-//     }
-//   }
-// }
-
-
 // field4D <- field3D
 template<typename Float>
 void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_it){
