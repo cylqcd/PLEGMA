@@ -14,7 +14,7 @@ namespace quda {
     void *mg_preconditioner;
     QudaInvertParam inv_param;
     QudaInvertParam mg_inv_param;
-   QudaMultigridParam mg_param;
+    QudaMultigridParam mg_param;
     Dirac *D, *DSloppy, *DPre;
     DiracMatrix *M, *MSloppy, *MPre;
     std::vector<ColorSpinorField> b, x;
@@ -26,7 +26,7 @@ namespace quda {
     QudaInvertParam getInvParams() const{return inv_param;}
     SolverParam* getSolverParam() const{return solverParam;}
     void UpdateSolver();
-
+    void UpdateGaugeSolver();
 
     double Mu() const { return inv_param.mu;}
     int Nrhs()  const { return inv_param.num_src;}
@@ -75,4 +75,24 @@ namespace quda {
 
     template<APP_TYPE type, typename Float> void apply(Float *dout, Float *din, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is without any normalization // Note that dout and din are device pointers
   };
+
+  // Forwarding overloads for PLEGMA_Vector
+  template<quda::APP_TYPE type, typename Float>
+  void quda::QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout,
+                             PLEGMA_Vector<Float> &Pin,
+                             QudaMassNormalization normType)
+  {
+    // Forward to the generic bl=true template
+    return apply<type, true, Float>(Pout, Pin, normType);
+  }
+
+  // Forwarding overloads for PLEGMA_Propagator
+  template<quda::APP_TYPE type, typename Float>
+  void quda::QUDA_dirac::apply(PLEGMA_Propagator<Float> &Pout,
+                             PLEGMA_Propagator<Float> &Pin,
+                             QudaMassNormalization normType)
+  {
+    // Forward to the generic bl=false template
+    return apply<type, false, Float>(Pout, Pin, normType);
+  }
 }

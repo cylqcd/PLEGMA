@@ -96,34 +96,37 @@ void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, b
 
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
-  gauge_param.type = QUDA_WILSON_LINKS;
-  gauge_param.make_resident_gauge = 0;
+  gauge_param.type = QUDA_SMEARED_LINKS;
+  gauge_param.reconstruct=QUDA_RECONSTRUCT_NO;
+  gauge_param.make_resident_gauge =0;
 
   double* new_gauge[N_DIMS];
   for(int i=0; i<N_DIMS; i++) hostMalloc(new_gauge[i], gaugeIn.Bytes_total()/N_DIMS);
   
-  QudaGaugeObservableParam *obs_param = new QudaGaugeObservableParam[2];
+  QudaGaugeObservableParam *obs_param = new QudaGaugeObservableParam[51];
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 51; i++) {
     obs_param[i] = newQudaGaugeObservableParam();
+    obs_param[i].compute_polyakov_loop = QUDA_BOOLEAN_TRUE;
     obs_param[i].compute_plaquette = QUDA_BOOLEAN_TRUE;
     obs_param[i].compute_qcharge = QUDA_BOOLEAN_FALSE;
-    obs_param[i].su_project = QUDA_BOOLEAN_TRUE ;
-  }
-
+    obs_param[i].su_project = QUDA_BOOLEAN_FALSE; 
+ }
   // We here set all the problem parameters for all possible smearing types.
   QudaGaugeSmearParam smear_param = newQudaGaugeSmearParam();
   smear_param.smear_type = QUDA_GAUGE_SMEAR_HYP;
   smear_param.n_steps = 2;
   smear_param.meas_interval = 1;
-  smear_param.alpha = 0;
-  smear_param.rho = 0;
-  smear_param.epsilon = 0;
-  smear_param.alpha1 = 0.95;
-  smear_param.alpha2 = 0.76;
-  smear_param.alpha3 = 0.38;
+  smear_param.alpha1 = 0.75;  // typical HYP values
+  smear_param.alpha2 = 0.60;
+  smear_param.alpha3 = 0.30;
+  smear_param.restart = QUDA_BOOLEAN_TRUE;
+  //smear_param.return_result = QUDA_BOOLEAN_TRUE;
+ 
 
   performGaugeSmearQuda(&smear_param, obs_param);
+  plaqQuda();
+
 
   saveGaugeQuda(new_gauge, &gauge_param);
   
@@ -135,6 +138,74 @@ void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, b
 
 }
 
+void wilsonFlow_QUDA(PLEGMA_Gauge<double> &gaugeOut,
+                            PLEGMA_Gauge<double> &gaugeIn,
+                            int n_steps, double epsilon, double t0_start,
+                            bool compute_plaquette, bool compute_qcharge) {
+  if (n_steps < 0) n_steps = 0;
+
+  // Upload input as QUDA resident (precise)
+  // updateGaugeQuda(gaugeIn, false);
+
+  // Host↔device metadata for saves
+  QudaGaugeParam gauge_param = newQudaGaugeParam();
+  setGaugeParam(gauge_param);
+  gauge_param.make_resident_gauge = 0;
+  gauge_param.t_boundary =  QUDA_PERIODIC_T;
+
+  auto do_one_step = [&](double t0, bool restart_flag) {
+    QudaGaugeSmearParam sp = newQudaGaugeSmearParam();
+    sp.smear_type    = QUDA_GAUGE_SMEAR_WILSON_FLOW;
+    sp.n_steps       = 1;                // advance exactly one step per call
+    sp.epsilon       = epsilon;
+    sp.t0            = t0;
+    sp.restart       = restart_flag ? QUDA_BOOLEAN_TRUE : QUDA_BOOLEAN_FALSE;
+    sp.meas_interval = 2;                // n_steps(=1) + 1
+
+    QudaGaugeObservableParam op = newQudaGaugeObservableParam();
+    op.compute_plaquette = compute_plaquette ? QUDA_BOOLEAN_TRUE :
+    QUDA_BOOLEAN_FALSE; op.compute_qcharge   = compute_qcharge   ? QUDA_BOOLEAN_TRUE : QUDA_BOOLEAN_FALSE;
+
+    performWFlowQuda(&sp, &op);
+  };
+
+  // Step 0
+  do_one_step(t0_start, false);
+
+  // Steps 1..n_steps-1
+  for (int step = 1; step < n_steps; ++step) {
+    const double t0 = t0_start + step * epsilon;
+    do_one_step(t0, true);
+
+    // Save smeared gauge right before the final step (to mirror PyQUDA)
+    if (step == n_steps - 1) {
+      QudaLinkType old_type = gauge_param.type;
+      QudaReconstructType old_recon = gauge_param.reconstruct;
+
+      double *new_gauge[N_DIMS];
+      // PLEGMA_printf(N_DIMS);
+        PLEGMA_printf("DIM to invert %d for all component\n",N_DIMS);
+      for (int mu = 0; mu < N_DIMS; ++mu)
+        hostMalloc(new_gauge[mu], gaugeIn.Bytes_total() / N_DIMS);
+
+      gauge_param.type = QUDA_SMEARED_LINKS;
+      gauge_param.reconstruct = QUDA_RECONSTRUCT_NO;
+      saveGaugeQuda(new_gauge, &gauge_param);
+      gauge_param.type = QUDA_WILSON_LINKS;
+
+      packGaugeToNormal(gaugeOut, new_gauge);
+      gaugeOut.load();
+      gaugeOut.calculatePlaq();
+      //  initGaugeQuda(gaugeOut, false);
+      // plaqQuda();
+      // gaugeOut.load();
+
+      for (int mu = 0; mu < N_DIMS; ++mu)
+        hostFree(new_gauge[mu], gaugeIn.Bytes_total() / N_DIMS);
+
+    }
+  }
+}
 
 void initGaugeQuda(PLEGMA_Gauge<double> &gauge, bool antiperiodic, QudaLinkType type) {
   QudaGaugeParam gauge_param = newQudaGaugeParam();
@@ -366,6 +437,44 @@ static void updateMultigridParam(MG* mg, MGParam* current, QudaMultigridParam* p
   }
 }
 
+void QUDA_solver::UpdateGaugeSolver()
+{
+  profiler->TPSTART(QUDA_PROFILE_TOTAL);
+  delete solver;
+  delete solverParam;
+  delete M;
+  delete MSloppy;
+  delete MPre;
+
+
+  delete D; D = NULL;
+  delete DSloppy; DSloppy = NULL;
+  delete DPre; DPre = NULL;
+
+  loadCloverQuda(NULL, NULL, &inv_param);
+
+  bool pc_solve = true;
+  createDirac(D, DSloppy, DPre, inv_param, pc_solve);
+
+  // Create Operators
+  M = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*D)) : static_cast<DiracMatrix*>(new DiracM(*D));
+  MSloppy = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DSloppy)) : static_cast<DiracMatrix*>(new DiracM(*DSloppy));
+  MPre = (inv_param.inv_type == QUDA_CG_INVERTER || inv_param.inv_type ==  QUDA_CA_CG_INVERTER) ? static_cast<DiracMatrix*>(new DiracMdagM(*DPre)) : static_cast<DiracMatrix*>(new DiracM(*DPre));
+
+  // Create Solvers
+  solverParam = new SolverParam(inv_param);
+
+  solver = Solver::create(*solverParam, *M, *MSloppy,
+                         *MPre, *MPre );
+
+  profiler->*get(Profiler_name()) = ((std::string)("Solver profiler mu=")+std::to_string(mu)).c_str();
+  profiler->TPSTOP(QUDA_PROFILE_TOTAL);
+  profiler->Print();
+  profiler->TPRESET();
+
+
+}
+
 void QUDA_solver::UpdateSolver()
 {
   profiler->TPSTART(QUDA_PROFILE_TOTAL);
@@ -585,33 +694,37 @@ void QUDA_dirac::apply(typename std::conditional<bl==true, PLEGMA_Vector<Float>,
     Pout.scale(1./(2*inv_param.kappa));
   }
 }
-template<APP_TYPE type, typename Float>void QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout, PLEGMA_Vector<Float> &Pin, QudaMassNormalization normType){
-  return apply<type>( Pout, Pin, normType);
-}
-template<APP_TYPE type, typename Float>void QUDA_dirac::apply(PLEGMA_Propagator<Float> &Pout, PLEGMA_Propagator<Float> &Pin, QudaMassNormalization normType){
-  return apply<type>( Pout, Pin, normType);
-}
+
+template void QUDA_dirac::apply<M, true, float>(
+    PLEGMA_Vector<float>&, PLEGMA_Vector<float>&, QudaMassNormalization_s);
+
+template void QUDA_dirac::apply<M, true, double>(
+    PLEGMA_Vector<double>&, PLEGMA_Vector<double>&, QudaMassNormalization_s);
+
+template void QUDA_dirac::apply<Mdag, true, float>(
+    PLEGMA_Vector<float>&, PLEGMA_Vector<float>&, QudaMassNormalization_s);
+
+template void QUDA_dirac::apply<Mdag, true, double>(
+    PLEGMA_Vector<double>&, PLEGMA_Vector<double>&, QudaMassNormalization_s);
+
+template void QUDA_dirac::apply<MdagM, true, float>(
+    PLEGMA_Vector<float>&, PLEGMA_Vector<float>&, QudaMassNormalization_s);
+
+template void QUDA_dirac::apply<MdagM, true, double>(
+    PLEGMA_Vector<double>&, PLEGMA_Vector<double>&, QudaMassNormalization_s);
+
+template void QUDA_dirac::apply<MMdag, true, float>(
+    PLEGMA_Vector<float>&, PLEGMA_Vector<float>&, QudaMassNormalization_s);
+
+template void QUDA_dirac::apply<MMdag, true, double>(
+    PLEGMA_Vector<double>&, PLEGMA_Vector<double>&, QudaMassNormalization_s);
 
 
-template void QUDA_dirac::apply<M, float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<M, double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<M, float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<M, double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
+// For PLEGMA_Propagator
+template void quda::QUDA_dirac::apply<M, float>(PLEGMA_Propagator<float>&, PLEGMA_Propagator<float>&, QudaMassNormalization_s);
+template void quda::QUDA_dirac::apply<M, double>(PLEGMA_Propagator<double>&, PLEGMA_Propagator<double>&, QudaMassNormalization_s);
 
-template void QUDA_dirac::apply<Mdag, float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<Mdag, double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<Mdag, float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<Mdag, double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
 
-template void QUDA_dirac::apply<MdagM, float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MdagM, double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MdagM, float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MdagM, double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
-
-template void QUDA_dirac::apply<MMdag, float>(PLEGMA_Vector<float> &Pout, PLEGMA_Vector<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MMdag, double>(PLEGMA_Vector<double> &Pout, PLEGMA_Vector<double> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MMdag, float>(PLEGMA_Propagator<float> &Pout, PLEGMA_Propagator<float> &Pin, QudaMassNormalization normType);
-template void QUDA_dirac::apply<MMdag, double>(PLEGMA_Propagator<double> &Pout, PLEGMA_Propagator<double> &Pin, QudaMassNormalization normType);
 
 
 template<APP_TYPE type, typename Float>
@@ -623,7 +736,7 @@ void QUDA_dirac::apply(Float *dout, Float *din, QudaMassNormalization normType){
   plegma::copyFromQUDA((Float *)dout,out);
   
   if (normType == QUDA_MASS_NORMALIZATION || normType == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
-    cuBLAS::scal<Float>(N_SPINS*N_COLS*HGC_localVolume, (Float) (1./(2*inv_param.kappa)), dout);
+    cuBLAS::scal<Float>(N_SPINS*N_COLS*HGC_localVolume, (Float) (1./(2*inv_param.kappa)), dout);	
 }
 
 template void QUDA_dirac::apply<M>(float *dout, float *din, QudaMassNormalization normType);
