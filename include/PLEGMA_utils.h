@@ -51,6 +51,12 @@ void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut, PLEGMA_Gauge<double> 
 			   int maxiter=10000,int verbosePerSteps=1, int reunit_interval=1, int stop_theta=0);
 void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, bool antiperiodic);
 
+void wilsonFlow_QUDA(PLEGMA_Gauge<double> &gaugeOut,
+                     PLEGMA_Gauge<double> &gaugeIn, int n_steps, double epsilon,
+                     double t0_start, bool compute_plaquette,
+                     bool compute_qcharge);
+
+
 
 //============= QUDA_params.cpp ===================================//
 void infoQuda();
