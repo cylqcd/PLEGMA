@@ -179,7 +179,7 @@ namespace plegma {
         }
         h_localColors = (int*)malloc(HGC_localVolume * sizeof(int));
         graph_coloring();
-        PLEGMA_printf("Number of colors classical probing is %d\n",Nc);
+        PLEGMA_printf("Number of colors for classical probing is %d\n",Nc);
         //  if(check)checkColoring();
         cudaMalloc((void**)&d_localColors, HGC_localVolume*sizeof(int));
         checkCudaError();
