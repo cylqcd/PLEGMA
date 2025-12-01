@@ -923,7 +923,7 @@ void PLEGMA_Field<Float>::applyCprobColoring(PLEGMA_Field<Float> &fin,
                                              const std::vector<int> &indDof)
 {
   if (fin.Total_length() != HGC_localVolume || total_length != HGC_localVolume)
-    PLEGMA_error("Classical probing currently supports only fields with total_length == local volume.");
+    PLEGMA_error("Classical probing currently supports only 4D fields.");
 
   int dim = cprob.get_dimension();
   if (dim != 3 && dim != 4)
@@ -942,11 +942,7 @@ void PLEGMA_Field<Float>::applyCprobColoring(PLEGMA_Field<Float> &fin,
     if (std::find(indDof.begin(), indDof.end(), i) != indDof.end()) {
       Float *ptr = D_elem() + i * total_length * 2;
       int *d_colors = cprob.D_localColors();
-
-      if (dim == 4)
-        apply_cprob_coloring_4D(ptr, d_colors, color_index);
-      else
-        apply_cprob_coloring_3D(ptr, d_colors, color_index);  // identical logic, just 3D volume
+      apply_cprob_coloring(ptr, d_colors, color_index);
     }
   }
 }

@@ -99,6 +99,8 @@ int main(int argc, char **argv)
 		
 	};
 	add_options(*HGC_options);
+	double des_u = 2*des;
+	double des_d = des;
    	//=========================================================================================================//
 	initializePLEGMA();
 
@@ -286,28 +288,30 @@ int main(int argc, char **argv)
 			};
 
 			//--------------------- QED ---------------------
-			
+
 			// --- Main phase/sign loop ---
 			for (int isgn = 0; isgn < 3; isgn++) {
 				if (des == 0 && isgn != 1) continue;
 
-				double phase = (isgn - 1) * des;
-				PLEGMA_printf("\nPhase: %.4f\n", phase);
+				double phase_u = (isgn - 1) * des_u;
+				double phase_d = (isgn - 1) * des_d;
+				PLEGMA_printf("\nPhase U: %.4f, Phase D: %.4f\n", phase_u, phase_d);
+
 
 				if (isgn != 1) {
-					PLEGMA_Gauge<double> gauge2;
-					gauge2.copy(gauge);
-					gaugeU1.calculatePlaq(phase);
-					gauge2.qedPhase(gaugeU1, phase);
-					gauge2.calculatePlaq();
-					updateGaugeQuda(gauge2, true);
+					PLEGMA_Gauge<double> gaugeUT;
+					gaugeUT.copy(gauge);
+					gaugeU1.calculatePlaq(phase_u);
+					gaugeUT.qedPhase(gaugeU1, phase_u);
+					gaugeUT.calculatePlaq();
+					updateGaugeQuda(gaugeUT, true);
 					plaqQuda();
 				} else {
 					updateGaugeQuda(gauge, true);
 				}
 				solver.UpdateSolver();
 
-				// --- Light propagators ---
+				// --- up-type propagators ---
 				for (int imu = 0; imu < Nmu; ++imu) {
 					double mu = mu_l[imu];
 
@@ -316,6 +320,31 @@ int main(int argc, char **argv)
 						propUP.unload();
 						props_u[imu][isgn]->copy(propUP, HOST);
 					}
+				}
+
+				if (mu_c != 0 && needC[isgn]) {
+					TIME(computePropagator(propCH, mu_c, CHARM, nsmearGauss_c));
+					propCH.unload();
+					props_c[isgn]->copy(propCH, HOST);
+				}
+
+				// --- down-type propagators ---
+
+				if (isgn != 1) {
+					PLEGMA_Gauge<double> gaugeDT;
+					gaugeDT.copy(gauge);
+					gaugeU1.calculatePlaq(phase_d);
+					gaugeDT.qedPhase(gaugeU1, phase_d);
+					gaugeDT.calculatePlaq();
+					updateGaugeQuda(gaugeDT, true);
+					plaqQuda();
+				} else {
+					updateGaugeQuda(gauge, true);
+				}
+				solver.UpdateSolver();
+
+				for (int imu = 0; imu < Nmu; ++imu) {
+					double mu = mu_l[imu];
 
 					if (needD[imu][isgn]) {
 						TIME(computePropagator(propDN, -mu, LIGHT, nsmearGauss));
@@ -324,17 +353,10 @@ int main(int argc, char **argv)
 					}
 				}
 
-				// --- Strange and Charm propagators ---
 				if (mu_s != 0 && needS[isgn]) {
 					TIME(computePropagator(propST, mu_s, STRANGE, nsmearGauss_s));
 					propST.unload();
 					props_s[isgn]->copy(propST, HOST);
-				}
-
-				if (mu_c != 0 && needC[isgn]) {
-					TIME(computePropagator(propCH, mu_c, CHARM, nsmearGauss_c));
-					propCH.unload();
-					props_c[isgn]->copy(propCH, HOST);
 				}
 			}
 			

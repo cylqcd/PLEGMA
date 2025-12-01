@@ -34,6 +34,26 @@ namespace plegma {
   //   return x;
   // }
 
+inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
+  if(nProc.empty()) PLEGMA_error("Size of the vector is zero");
+  if(ind < 0) PLEGMA_error("Ind provided is negative");
+
+  int V = 1;
+  for(size_t i = 0; i < nProc.size(); i++){
+    if(nProc[i] <= 0) PLEGMA_error("One or more directions are zero or negative");
+    V *= (int)nProc[i];
+  }
+  if(ind >= V) PLEGMA_error("The ind exceeds the total volume");
+
+  std::vector<int> x(nProc.size(), 0);
+  int cur = ind;
+  for(int i = (int)nProc.size()-1; i >= 0; i--){
+    x[i] = cur % nProc[i];
+    cur /= nProc[i];
+  }
+  return x;
+}
+
   class PLEGMA_Cprobing{
     private:
       int Nc; // Number of colors
@@ -53,19 +73,27 @@ namespace plegma {
         std::vector<int> nProc = {HGC_nProc[0], HGC_nProc[1], HGC_nProc[2], HGC_nProc[3]}; // MPI grid
         if(probing_dimension == 3)
           get_sigma_3D();
-        else
+        else if(probing_dimension == 4)
           get_sigma_4D();
+        else PLEGMA_error("Classical probing supports only 3D and 4D coloring");
         PLEGMA_printf("Sigma is (%d,%d,%d,%d)\n",sigma[0],sigma[1],sigma[2],sigma[3]);
-        std::vector<int> rank_coord = getIndToVec(rank, nProc); // Compute rank coordinates in MPI grid
+        std::vector<int> rank_coord = getRankCoord(rank, nProc); // Compute rank coordinates in MPI grid
+        std::vector<int> proc_offset(4);
+        for(int d=0; d<4; ++d) proc_offset[d] = rank_coord[d] * lL[d];
         for(size_t i=0; i < HGC_localVolume; i++){
           std::vector<int> x_local = getIndToVec(i, lL); // Local coordinates
           // Global coordinates
           std::vector<int> x_global(4);
           for(int d = 0; d < 4; d++)
-            x_global[d] = x_local[d] + rank_coord[d] * lL[d];
+            x_global[d] = x_local[d] + proc_offset[d];
+          
+          // PLEGMA_printf("Local coord (%d,%d,%d,%d) ",x_local[0],x_local[1],x_local[2],x_local[3]);
+          // PLEGMA_printf("Rank coord (%d,%d,%d,%d) ",rank_coord[0],rank_coord[1],rank_coord[2],rank_coord[3]);
+          // PLEGMA_printf("Local L (%d,%d,%d,%d) ",lL[0],lL[1],lL[2],lL[3]);
+          // PLEGMA_printf("Global coord (%d,%d,%d,%d)\n",x_global[0],x_global[1],x_global[2],x_global[3]);
 
-          int col = sigma[0]*x_global[3] + sigma[1]*x_global[0] + sigma[2]*x_global[1] + sigma[3]*x_global[2]; // ordering xyzt
-          col = col % Nc + 1;
+          int col = sigma[0]*x_global[3] + sigma[1]*x_global[2] + sigma[2]*x_global[1] + sigma[3]*x_global[0]; // ordering xyzt
+          col = (col % Nc) + 1;
           h_localColors[i] = col;
         }
       }
