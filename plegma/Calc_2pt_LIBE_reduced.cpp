@@ -493,7 +493,7 @@ int main(int argc, char **argv)
 					}
 
 					// --------- All combinations of +1 and -1 on 2 flavors -------------
-					if (imu == 0) {	// Only for the first mu value, since exchange is precise enough at physical mu.
+					// if (imu == 0) {	// Only for the first mu value, since exchange is precise enough at physical mu.
 						const int minus = 0, zero = 1, plus = 2; // Map indices to phases
 						for (int i = 0; i < 4; i++) {
 							for (int j = i+1; j < 4; j++) {
@@ -566,7 +566,7 @@ int main(int argc, char **argv)
 								}
 							}
 						}
-					}
+					// }
 				}
 			}
 

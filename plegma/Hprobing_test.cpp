@@ -54,6 +54,7 @@ int main(int argc, char **argv)
 	} else {
 		tag += "_nodil";
 	}
+	tag += "_nsrc" + std::to_string(numSourcePositions);
    	//=========================================================================================================//
 	initializePLEGMA();
 
@@ -87,6 +88,7 @@ int main(int argc, char **argv)
 	PLEGMA_QLoops<double> qloops_std(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
 	PLEGMA_Vector<double> phi;
 	PLEGMA_Vector<double> source(DEVICE);
+	int rng_seed = 42;
 	source.randInit(rng_seed);
 
 	PLEGMA_Hprobing *hprob = nullptr;
@@ -97,8 +99,14 @@ int main(int argc, char **argv)
 
 	hprob = new PLEGMA_Hprobing(k_probing);
 
+	int N_probes_h = (k_probing>0) ? (hadamHgh - hadamLow) : 1;
+	std::complex<double> scale_val = std::complex<double>(-1.0 / double(N_probes_h), 0.0);
+	// PLEGMA_printf("DEBUG: hierarchical N_probes_h=%d scale_val=% .12e\n", N_probes_h, scale_val.real());
+
+
 	std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
 	for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
+		PLEGMA_printf("\n ### Calculations for source-position %d begin now ###\n\n", isrc);
     	source.stochastic_Z(2);
 		for(int ih = hadamLow; ih < hadamHgh; ih++){
 			for(int isc = 0; isc < Nsc; isc++){
@@ -111,16 +119,17 @@ int main(int argc, char **argv)
 					TIME(solver->solve(phi,source));
 				}
 				phi.scale(1./(2.*inv_params.kappa));
-				if(spinColorDil || k_probing){ 
-					TIME(qloops_std.oneEnd_trick(phi,*sourceDil,-1.,true)); 
+				// PLEGMA_printf("DEBUG: scale_val = (% .12e, % .12e)\n", scale_val.real(), scale_val.imag());
+				if(spinColorDil || k_probing>0){ 
+					TIME(qloops_std.oneEnd_trick(phi,*sourceDil,scale_val,true)); 
 				} else {
-					TIME(qloops_std.oneEnd_trick(phi,source,-1.,true));
+					TIME(qloops_std.oneEnd_trick(phi,source,scale_val,true));
 				}
 			}
 		}
       
 		if((isrc+1)%NdumpStep == 0){
-		qloops_std.dumpLoops(ft, loopsPrefix + tag, confID, corr_file_format, isrc);
+		TIME(qloops_std.dumpLoops(ft, loopsPrefix + tag, confID, corr_file_format, isrc));
 		}
 		if(!accumFlag){ // In case we do not accumulate we clear the buffers
 		qloops_std.clearAccumBuffs();
