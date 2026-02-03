@@ -27,8 +27,8 @@
 #include <PLEGMA_mesons_stoch_exact_closed.cuh>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
-#include <PLEGMA_heavy_light_tetraquarks.cuh>
-#include <PLEGMA_bcud_tetraquarks.cuh>
+//#include <PLEGMA_heavy_light_tetraquarks.cuh>
+//#include <PLEGMA_bcud_tetraquarks.cuh>
 #endif
 
 using namespace plegma;
@@ -344,6 +344,7 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
             PLEGMA_Propagator<Float2> &propBT,
             bool only_st, bool only_ch){
 #ifdef PLEGMA_UDSC_BARYONS
+#if 0
   shape = {};
   description = "";
   datasets = {};
@@ -391,6 +392,7 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks(propLT, propST, propCH, propBT, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -410,7 +412,7 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
   description = "";
   datasets = {};
   groups = {};
-
+#if 0
   bool not_lt = propLT.getAllocation() == NONE;
   bool not_st = propST.getAllocation() == NONE;
   bool not_ch = propCH.getAllocation() == NONE;
@@ -453,6 +455,7 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud(propLT, propST, propCH, propBT, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -476,6 +479,7 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
   description = "";
   datasets = {};
   groups = {};
+#if 0
 
   bool not_lt = propLT1.getAllocation() == NONE;
   bool not_st = propST1.getAllocation() == NONE;
@@ -512,6 +516,7 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_stochastic(propLT1, propLT2,propST1, propST2, propBT1, propBT2, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -536,7 +541,7 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
   description = "";
   datasets = {};
   groups = {};
-
+#if 0
   bool not_lt = propLT1.getAllocation() == NONE;
   bool not_st = propST1.getAllocation() == NONE;
   bool not_ch = propCH1.getAllocation() == NONE;
@@ -575,6 +580,7 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud_stochastic(propLT1, propLT2,propST1, propST2, propCH1, propCH2, propBT1, propBT2, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -588,6 +594,7 @@ void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks){
 #ifdef PLEGMA_UDSC_BARYONS
+#if 0
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
 
@@ -617,6 +624,7 @@ contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
 
    initialize();
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -630,7 +638,7 @@ void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks){
 #ifdef PLEGMA_UDSC_BARYONS
-
+#if 0
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
    std::string GammaString = getGammasString(gammas);
@@ -656,6 +664,7 @@ contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1
 
 //     PLEGMA_printf("contractTetraquarkScatteringOpenIndexStochastic is going to run:");
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
