@@ -161,9 +161,9 @@ int main(int argc, char **argv)
       if(isgn!=1){
         PLEGMA_Gauge<double> gauge2;
         gauge2.copy(gauge);
-        gaugeU1.calculatePlaq(phase);
+        //gaugeU1.calculatePlaq(phase);
         gauge2.qedPhase(gaugeU1, phase);
-        gauge2.calculatePlaq();
+        //gauge2.calculatePlaq();
         updateGaugeQuda(gauge2, true);
         plaqQuda();
         solver.UpdateSolver();
@@ -218,9 +218,9 @@ int main(int argc, char **argv)
       if(isgn!=1){
         PLEGMA_Gauge<double> gauge2;
         gauge2.copy(gauge);
-        gaugeU1.calculatePlaq(phase);
+        //gaugeU1.calculatePlaq(phase);
         gauge2.qedPhase(gaugeU1, phase);
-        gauge2.calculatePlaq();
+        //gauge2.calculatePlaq();
         updateGaugeQuda(gauge2, true);
         plaqQuda();
         solver.UpdateSolver();

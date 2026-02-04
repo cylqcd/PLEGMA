@@ -45,6 +45,9 @@ target_link_libraries(Topo ${PLEGMA_LIBS})
 cuda_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 
+cuda_add_executable(Calc_2pt_LIBE Calc_2pt_LIBE.cpp)
+target_link_libraries(Calc_2pt_LIBE ${PLEGMA_LIBS})
+
 cuda_add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
 target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
 
