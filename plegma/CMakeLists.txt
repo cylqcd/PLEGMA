@@ -42,6 +42,9 @@ target_link_libraries(Plaquette ${PLEGMA_LIBS})
 cuda_add_executable(Topo Topo.cpp)
 target_link_libraries(Topo ${PLEGMA_LIBS})
 
+cuda_add_executable(Cprobing_test Cprobing_test.cpp)
+target_link_libraries(Cprobing_test ${PLEGMA_LIBS})
+
 cuda_add_executable(Calc_2pt Calc_2pt.cpp)
 target_link_libraries(Calc_2pt ${PLEGMA_LIBS})
 

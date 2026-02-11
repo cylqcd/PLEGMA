@@ -1,6 +1,7 @@
 #include <PLEGMA_global.h>
 #include <PLEGMA_Random.h>
 #include <PLEGMA_Hprobing.h>
+#include <PLEGMA_Cprobing.h>
 #include <PLEGMA_io.h>
 #include <vector>
 #ifndef _PLEGMA_FIELD_H
@@ -324,6 +325,14 @@ namespace plegma {
      * @param indDof: choose the d.o.fs where the application of the Hadamard vectors will take place
      */
     void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
+    /**
+     * @brief Given a coloring multiplies Hadamard vectors to a field
+     * @param fin: Input field 
+     * @param cprob: coloring
+     * @param color_index: index of the color to move over
+     * @param indDof: choose the d.o.fs where the application of the coloring vectors will take place
+     */
+    void applyCprobColoring(PLEGMA_Field<Float> &fin,PLEGMA_Cprobing &cprob,int color_index,const std::vector<int> &indDof);
     void absorbTimeslice(PLEGMA_Field<Float> &srcfield, int global_it, bool forcetozero=true);
     /**
      * @brief Contracts two gluon field strength tensors (FST) connected SU3 matrices and then take a trace

@@ -87,6 +87,9 @@ namespace plegma{
     void load(Float* h_ptr);
     void clearAccumBuffs();
 
+    void dumpLoops(PLEGMA_FT<Float> *ft[2], std::string filenamePrefix, std::string confID, FILE_FORMAT format);
+    void dumpLoops(PLEGMA_FT<Float> *ft[2], std::string filenamePrefix, std::string confID, FILE_FORMAT format, int isc);
+
   };
 
 }
