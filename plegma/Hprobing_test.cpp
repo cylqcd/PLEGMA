@@ -31,6 +31,7 @@ int main(int argc, char **argv)
 	int Nhadam = (k_probing>0) ? 2*std::pow(2,N_DIMS*(k_probing-1)) : 1;
 	int hadamHgh = Nhadam;
 	bool spinColorDil = false;
+	bool vectorOp = false;
 	auto add_options = [&](Options& options) {
 		options.set("accum-loops", "Accumulate loops over the stochastic source vectors", verbosity, accumFlag);
 		options.set("dump-step", "If accumulation is ON, Every how many stochastic vector to dump results", verbosity, NdumpStep);
@@ -38,6 +39,7 @@ int main(int argc, char **argv)
 		options.set("hadamard-low", "From which Hadamard vector to start (Options:[0,max))", verbosity, hadamLow);
 		options.set("hadamard-high", "Up to which Hadamard vector to stop (Options: 0>= , <=max) (default max)", verbosity, hadamHgh);
 		options.set("spin-color-dil", "Whether we want spin color dilution",verbosity,spinColorDil);
+		options.set("vector-op", "Whether we want to use vector operations", verbosity, vectorOp);
 	};
 	add_options(*HGC_options);
 	int Nsc = spinColorDil ? N_SPINS*N_COLS : 1;
@@ -45,16 +47,20 @@ int main(int argc, char **argv)
 	if((k_probing>0) && (hadamLow>hadamHgh))  PLEGMA_error("hadamard-high should be > hadamard-low");
 	if((k_probing>0) && (hadamHgh>Nhadam)) PLEGMA_error("hadamard-high should be <= from max number of Hadamard vectors");
 	std::string tag = "/trace";
+	std::string options_tag = "";
 	if (k_probing>0) {
 		int coloring_distance = std::pow(2,k_probing-1);
-		tag += "_cD" + std::to_string(coloring_distance);
+		options_tag += "_cD" + std::to_string(coloring_distance);
 	}
 	if (spinColorDil) {
-		tag += "_dil";
+		options_tag += "_dil";
 	} else {
-		tag += "_nodil";
+		options_tag += "_nodil";
 	}
-	tag += "_nsrc" + std::to_string(numSourcePositions);
+	options_tag += "_nsrc" + std::to_string(numSourcePositions);
+	if (hadamHgh != Nhadam) {
+		options_tag += "_hadamHgh" + std::to_string(hadamHgh);
+	}
    	//=========================================================================================================//
 	initializePLEGMA();
 
@@ -78,15 +84,24 @@ int main(int argc, char **argv)
 	QudaInvertParam inv_params = solver->getInvParams();
 
 	PLEGMA_Vector<double> *sourceDil = nullptr;
-  	sourceDil = new PLEGMA_Vector<double>(BOTH);
+  	if(spinColorDil || k_probing>0) sourceDil = new PLEGMA_Vector<double>(BOTH);
 
 	PLEGMA_FT<double> *ft[2]={nullptr,nullptr};
 	ft[0] = new PLEGMA_FT<double>(maxQsq, 3);
 
 	bool oneDLoops = false;
   	bool twoDLoops = false;
-	PLEGMA_QLoops<double> qloops_std(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
+	PLEGMA_QLoops<double> *qloops_std = nullptr;
+	if(!vectorOp) qloops_std = new PLEGMA_QLoops<double>(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
+	PLEGMA_QLoops<double> *qloops_mu[4] = {nullptr};
+	if(vectorOp){
+		for(int mu=0; mu<4; mu++){
+			qloops_mu[mu] = new PLEGMA_QLoops<double>(BOTH, NO_GHOSTS, true, oneDLoops, twoDLoops);
+		}
+	}
 	PLEGMA_Vector<double> phi;
+	PLEGMA_Vector<double> *phi_op = nullptr;
+	if(vectorOp) phi_op = new PLEGMA_Vector<double>(DEVICE);
 	PLEGMA_Vector<double> source(DEVICE);
 	int rng_seed = 42;
 	source.randInit(rng_seed);
@@ -103,8 +118,8 @@ int main(int argc, char **argv)
 	std::complex<double> scale_val = std::complex<double>(-1.0 / double(N_probes_h), 0.0);
 	// PLEGMA_printf("DEBUG: hierarchical N_probes_h=%d scale_val=% .12e\n", N_probes_h, scale_val.real());
 
-
 	std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
+	GAMMAS g5gmu[4] = {G5G1, G5G2, G5G3, G5G4};
 	for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
 		PLEGMA_printf("\n ### Calculations for source-position %d begin now ###\n\n", isrc);
     	source.stochastic_Z(2);
@@ -120,23 +135,56 @@ int main(int argc, char **argv)
 				}
 				phi.scale(1./(2.*inv_params.kappa));
 				// PLEGMA_printf("DEBUG: scale_val = (% .12e, % .12e)\n", scale_val.real(), scale_val.imag());
-				if(spinColorDil || k_probing>0){ 
-					TIME(qloops_std.oneEnd_trick(phi,*sourceDil,scale_val,true)); 
-				} else {
-					TIME(qloops_std.oneEnd_trick(phi,source,scale_val,true));
+				if(vectorOp){
+					for(int mu=0; mu<4; mu++){
+						phi_op->copy(phi);
+						phi_op->apply_gamma(g5gmu[mu], LEFT);
+						if(spinColorDil || k_probing>0) {
+							TIME(qloops_mu[mu]->oneEnd_trick(*phi_op, *sourceDil, scale_val, true));
+						} else {
+							TIME(qloops_mu[mu]->oneEnd_trick(*phi_op, source, scale_val, true));
+						}
+					}
+				}
+				else{
+					if(spinColorDil || k_probing>0){ 
+						TIME(qloops_std->oneEnd_trick(phi,*sourceDil,scale_val,true)); 
+					} else {
+						TIME(qloops_std->oneEnd_trick(phi,source,scale_val,true));
+					}
 				}
 			}
 		}
       
 		if((isrc+1)%NdumpStep == 0){
-		TIME(qloops_std.dumpLoops(ft, loopsPrefix + tag, confID, corr_file_format, isrc));
+			if(vectorOp){
+				for(int mu=0; mu<4; mu++){
+					std::string tag_mu = tag + "_g" + std::to_string(mu+1);
+					TIME(qloops_mu[mu]->dumpLoops(ft, loopsPrefix + tag_mu + options_tag, confID, corr_file_format, isrc));
+				}
+			}
+			else {
+				TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + "_g5" + options_tag, confID, corr_file_format, isrc));
+			}
 		}
 		if(!accumFlag){ // In case we do not accumulate we clear the buffers
-		qloops_std.clearAccumBuffs();
+			if(vectorOp){
+				for(int mu=0; mu<4; mu++)
+					qloops_mu[mu]->clearAccumBuffs();
+			} else {
+				qloops_std->clearAccumBuffs();
+			}
 		}
   	}
 
+	if(qloops_std) delete qloops_std;
+	if(sourceDil) delete sourceDil;
+	if(phi_op) delete phi_op;
+	for(int mu=0; mu<4; mu++){
+		if(qloops_mu[mu]) delete qloops_mu[mu];
+	}
 	delete hprob;
+
 	while(not threads.empty()) {threads.back().join(); threads.pop_back();}
 
 	delete solver;

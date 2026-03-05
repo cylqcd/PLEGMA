@@ -62,6 +62,7 @@ int main(int argc, char **argv)
 	double mu_s = 0;
 	double mu_c = 0;
 	std::vector<double> mu_l;
+	double mu_phys = mu;
 	double mu_ud = mu;
 	double mu_ud_factor[QUDA_MAX_MG_LEVEL];
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_ud_factor[i] = mu_factor[i];
@@ -82,7 +83,8 @@ int main(int argc, char **argv)
 		options.set("run-ud", "Whether to run or not light quark flavors", verbosity, run_ud);
 		options.set("run-SIB", "Whether to run or not strong isospin breaking", verbosity, run_SIB);
 		options.set("run-CM", "Whether to run or not critical mass", verbosity, run_CM);
-		options.set("mu-l", "List of additional mu-light to run for the light quarks in baryons", verbosity, mu_l); // mul-factors=1,4,7,10
+		options.set("mu-l-phys", "The physical mu-light to run for the light quarks in baryons", verbosity, mu_phys);
+		options.set("mu-l", "List of additional mu-light to run for the light quarks in baryons", verbosity, mu_l);
 		options.set("mu-s", "List of mu_s to run for the strange quark in baryons", verbosity, mu_s);
 		options.set("mu-c", "List of mu_c to run for the charm quark in baryons", verbosity, mu_c);
 		// options.set("delta-mu", "The mass difference for SIB", verbosity, delta_mu);
@@ -91,7 +93,7 @@ int main(int argc, char **argv)
 		options.set("nsmear-gauss-c", "Number of Gaussian smearing step for the charm quark propagator", verbosity, nsmearGauss_c);
 		options.set("start-src", "The source position from which to start the calculation", verbosity, start_src);
 		options.set("dqed", "dqed used for LIBE", verbosity, des);
-  		HGC_options->set("dkappa", "dkappa used for LIBE", verbosity, dks);
+  		options.set("dkappa", "dkappa used for LIBE", verbosity, dks);
 		options.set("qed-filename", "The path to the QED field", verbosity, qedfile);
 		options.set("do-all-self-energy", "Whether to do all self energy diagrams (true) or only light quark (false)", verbosity, do_all_self_energy);
 		options.set("run-heavy-SIB", "Whether to run SIB for strange and charm quarks", verbosity, run_heavy_SIB);
@@ -99,7 +101,7 @@ int main(int argc, char **argv)
 		
 	};
 	add_options(*HGC_options);
-	double des_u = 2*des;
+	double des_u = des;
 	double des_d = des;
    	//=========================================================================================================//
 	initializePLEGMA();
@@ -594,7 +596,7 @@ int main(int argc, char **argv)
 				TIME(prop_c.copy(*props_c[1], HOST));
 				prop_c.load();
 					
-				double run_mu = mu_l[0];
+				double run_mu = mu_phys;
 				double run_mu_up = 1.005 * run_mu;
 				double run_mu_dn = -1.005 * run_mu;
 				if (run_ud) {

@@ -1,38 +1,6 @@
 #pragma once
 
 namespace plegma {
-  // inline int getVecToInd(std::vector<int> x, std::vector<int> L){
-  //   if(x.size() != L.size()) PLEGMA_error("Dimensions do not match");
-  //   if(x.size() == 0)PLEGMA_error("Size of the vector is zero");
-  //   int D=x.size();
-  //   for(int i = 0 ; i < D; i++)
-  //     if(x[i] >= L[i])
-	//       PLEGMA_error("Error the position of the vector exceeds the extent of dimension %d", i);
-  //   int acc=x[D-1];
-  //   for(int i = D-2 ; i >= 0; i--) acc = acc*L[i] + x[i];
-  //   return acc;
-  // }
-
-  // inline std::vector<int> getIndToVec(int ind, std::vector<int> L){
-  //   int V=1;
-  //   std::vector<int> x;
-  //   if(L.size() == 0)PLEGMA_error("Size of the vector is zero");
-  //   if(ind < 0 )PLEGMA_error("Ind provided is negative");
-  //   int D = L.size();
-  //   for(int i = 0 ; i < D-1; i++ ) V *= L[i];
-  //   if(V<0) PLEGMA_error("The volume is negative which is not allowed");
-  //   if(V==0) PLEGMA_error("One or more directions are zero");
-  //   if(ind >= V*L[D-1]) PLEGMA_error("The ind exceeds the total volume");
-  //   int sub=0;
-  //   for(int i = D-1; i >= 0; i--){
-  //     ind -= sub;
-  //     x.insert(x.begin(), ind/V);
-  //     if(V==1) break;
-  //     sub=x[0]*V;
-  //     V /= L[i-1];
-  //   }
-  //   return x;
-  // }
 
 inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
   if(nProc.empty()) PLEGMA_error("Size of the vector is zero");
@@ -59,10 +27,6 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
       int Nc; // Number of colors
       short probing_dimension; // Number of dimension of Cprob (For now probing_dimension={3,4})
       short coloring_distance; // Distance of coloring
-      // short Lu; // extent of the elementaty coloring block (assume symmetric block)
-      // int* h_arrVc; // array to hold the coloring of the lattice on HOST
-      // int* d_arrVc; // array to hold the coloring of the lattice on Device
-      // int* arrlc; // array to hold the elementary coloring block
       int* h_localColors; // array to hold the local colors for each MPI task on host
       int* d_localColors; // array to hold the local colors for each MPI task on device
       std::vector<int> sigma; // vector to hold the sigma values
@@ -86,18 +50,12 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
           std::vector<int> x_global(4);
           for(int d = 0; d < 4; d++)
             x_global[d] = x_local[d] + proc_offset[d];
-          
-          // PLEGMA_printf("Local coord (%d,%d,%d,%d) ",x_local[0],x_local[1],x_local[2],x_local[3]);
-          // PLEGMA_printf("Rank coord (%d,%d,%d,%d) ",rank_coord[0],rank_coord[1],rank_coord[2],rank_coord[3]);
-          // PLEGMA_printf("Local L (%d,%d,%d,%d) ",lL[0],lL[1],lL[2],lL[3]);
-          // PLEGMA_printf("Global coord (%d,%d,%d,%d)\n",x_global[0],x_global[1],x_global[2],x_global[3]);
 
           int col = sigma[0]*x_global[3] + sigma[1]*x_global[2] + sigma[2]*x_global[1] + sigma[3]*x_global[0]; // ordering xyzt
           col = (col % Nc) + 1;
           h_localColors[i] = col;
         }
       }
-      //  void checkColoring();
 
       void get_sigma_4D(){ // works only for 64x32^3
   
@@ -145,7 +103,33 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
           
           Nc = 64;
         }
-        
+
+        if(coloring_distance == 5){
+          sigma[0] = 1;
+          sigma[1] = 12;
+          sigma[2] = 16;
+          sigma[3] = 38;
+          
+          Nc = 128;
+        }
+
+        if(coloring_distance == 6){
+          sigma[0] = 3;
+          sigma[1] = 20;
+          sigma[2] = 48;
+          sigma[3] = 50;
+          
+          Nc = 320;
+        }
+
+        if(coloring_distance == 7){
+          sigma[0] = 32;
+          sigma[1] = 33;
+          sigma[2] = 40;
+          sigma[3] = 61;
+          
+          Nc = 512;
+        }
       }
 
       void get_sigma_3D(){  // works only for 32^3
@@ -194,7 +178,51 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
           
           Nc = 32;
         }
-        
+      
+        if(coloring_distance == 5){ 
+          sigma[0] = 0; 
+          sigma[1] = 1; 
+          sigma[2] = 11; 
+          sigma[3] = 27; 
+
+          Nc = 88; 
+        } 
+
+        if(coloring_distance == 6){ 
+          sigma[0] = 0; 
+          sigma[1] = 1; 
+          sigma[2] = 8; 
+          sigma[3] = 44; 
+
+          Nc = 128; 
+        } 
+
+        if(coloring_distance == 7){ 
+          sigma[0] = 0; 
+          sigma[1] = 1; 
+          sigma[2] = 9; 
+          sigma[3] = 33; 
+
+          Nc = 176; 
+        } 
+
+        if(coloring_distance == 8){ 
+          sigma[0] = 0; 
+          sigma[1] = 7; 
+          sigma[2] = 48; 
+          sigma[3] = 51; 
+
+          Nc = 272; 
+        }
+
+        if(coloring_distance == 9){ 
+          sigma[0] = 0; 
+          sigma[1] = 1; 
+          sigma[2] = 33; 
+          sigma[3] = 45; 
+
+          Nc = 352; 
+        }
       }
 
     public:
@@ -208,7 +236,6 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
         h_localColors = (int*)malloc(HGC_localVolume * sizeof(int));
         graph_coloring();
         PLEGMA_printf("Number of colors for classical probing is %d\n",Nc);
-        //  if(check)checkColoring();
         cudaMalloc((void**)&d_localColors, HGC_localVolume*sizeof(int));
         checkCudaError();
         cudaMemcpy(d_localColors, h_localColors, HGC_localVolume*sizeof(int), cudaMemcpyHostToDevice);
@@ -226,48 +253,3 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
 
   };
 }
-
-
-/* inline static int boundaryCheck(int x, int L){ */
-/*   int y=x; */
-/*   if (y >= L) */
-/*     y=y%L; */
-/*   if (y < 0) */
-/*     y=y+L; */
-/*   return y; */
-/* } */
-
-/* void Hprobing::checkColoring(){ */
-/*   if(HGC_nProc[0]*HGC_nProc[1]*HGC_nProc[2]*HGC_nProc[3] != 1) PLEGMA_error("The coloring check works only with 1 MPI task"); */
-/*   std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]}; */
-/*   for(int t = 0 ; t < HGC_totalL[3] ; t++) */
-/*     for(int z = 0 ; z < HGC_totalL[2] ; z++) */
-/*       for(int y = 0 ; y < HGC_totalL[1] ; y++) */
-/* 	for(int x = 0 ; x < HGC_totalL[0] ; x++){ */
-/* 	  std::vector<int> xx = {x,y,z,t}; */
-/* 	  int c1 = h_arrVc[getVecToInd(xx, lL)]; */
-/* 	  for(int dx = -D+1 ; dx < D ; dx++) */
-/* 	    for(int dy = -D+1 ; dy < D ; dy++) */
-/* 	      for(int dz = -D+1 ; dz < D ; dz++) */
-/* 		for(int dt = -D+1 ; dt < D ; dt++){ */
-/* 		  int ds = abs(dx) + abs(dy) + abs(dz) + abs(dt); */
-/* 		  if ((ds<D) && (ds != 0)){ */
-/* 		    int xn = x + dx; */
-/* 		    xn = boundaryCheck(xn,HGC_totalL[0]); */
-/* 		    int yn = y + dy; */
-/* 		    yn = boundaryCheck(yn,HGC_totalL[1]); */
-/* 		    int zn = z + dz; */
-/* 		    zn = boundaryCheck(zn,HGC_totalL[2]); */
-/* 		    int tn = t + dt; */
-/* 		    tn = boundaryCheck(tn,HGC_totalL[3]); */
-/* 		    xx[0] = xn; xx[1] = yn; xx[2] = zn; xx[3] = tn; */
-/* 		    int c2 = h_arrVc[getVecToInd(xx, lL)]; */
-/* 		    if(c1 == c2){ */
-/* 		      PLEGMA_printf("Colors (%d,%d)\n",c1,c2); */
-/* 		      PLEGMA_error("Mistake found in the coloring with (%d,%d,%d,%d) and (%d,%d,%d,%d)",x,y,z,t,xn,yn,zn,tn); */
-/* 		    } */
-/* 		  } */
-/* 		} */
-/* 	} */
-/*   PLEGMA_printf("Check in coloring passed successfully\n"); */
-/* } */

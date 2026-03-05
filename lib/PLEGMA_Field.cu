@@ -12,7 +12,7 @@
 #include <io/PLEGMA_lime.h>
 using namespace plegma;
 
-#define GPU_DIRECT
+// #define GPU_DIRECT
 #define DEVICE_MEMORY_REPORT
 #define CMPLX_FLOAT std::complex<Float>
 

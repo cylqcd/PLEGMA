@@ -418,16 +418,6 @@ static void apply_cprob_coloring(Float* d_elems, const int *d_colors, int ic) {
     thrust::for_each(z1, z2, CprobMask<Float>(ic));
 }
 
-// template<typename Float>
-// static void apply_cprob_coloring_3D(Float* d_elems, const int *d_colors, int ic) {
-//     const int V = HGC_localVolume3D; // same idea, but 3D lattice volume
-//     thrust::device_ptr<const int> th_c(d_colors);
-//     thrust::device_ptr<Float2<Float>> th_e(reinterpret_cast<Float2<Float>*>(d_elems));
-//     auto z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c, th_e));
-//     auto z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c + V, th_e + V));
-//     thrust::for_each(z1, z2, CprobMask<Float>(ic));
-// }
-
 template<typename Float, typename FloatA, typename FloatB, typename FloatC, typename FloatD>
 static __global__ void traceMulFmunuSu3FmunuSu3_kernel(Float *F, su3_2<FloatA> RA, su3_2<FloatB> RB, su3_2<FloatC> RC, su3_2<FloatD> RD){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
