@@ -40,7 +40,7 @@ int main(int argc, char **argv)
    //=========================================================================================================//
   initializePLEGMA();
 
-  std::vector<int> sinkMom = {0,0,0};
+  std::vector<int> sinkMom = {4,0,0};
 
   std::string given_twop_filename = twop_filename;
   {
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
       updateOptions(CHARM);
       mu = mu_c[0];
     }
-    TIME(QUDA_solver solver(mu));
+    TIME(QUDA_solver solver(mu,1));
     std::vector<std::thread> threads;
 
     

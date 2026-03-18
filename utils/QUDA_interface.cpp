@@ -115,7 +115,7 @@ void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, b
   // We here set all the problem parameters for all possible smearing types.
   QudaGaugeSmearParam smear_param = newQudaGaugeSmearParam();
   smear_param.smear_type = QUDA_GAUGE_SMEAR_HYP;
-  smear_param.n_steps = 2;
+  smear_param.n_steps = 1;
   smear_param.meas_interval = 1;
   smear_param.alpha1 = 0.75;  // typical HYP values
   smear_param.alpha2 = 0.60;

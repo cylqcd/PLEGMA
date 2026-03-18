@@ -11,6 +11,8 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_baryons_NtoN.cu
   kernels/PLEGMA_baryons_NtoN_OS.cu
   kernels/PLEGMA_seqSourceNucleon.cu
+  kernels/PLEGMA_seqSourceNucleonDelta.cu
+  kernels/PLEGMA_seqSourceNucleonDeltaSource.cu
   kernels/PLEGMA_threep_local.cu
   kernels/PLEGMA_threep_noe.cu
   kernels/PLEGMA_mesons_noe.cu

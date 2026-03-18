@@ -64,7 +64,6 @@
 #define IS_MINUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == 0)
 #define IS_PLUS_GHOST(i,id) (DGC_dimBreak[i] == true && id[i] == (DGC_localL[i]-1))
 
-
 namespace plegma {
   enum get_from { Me,
 		  Plus, Minus,
@@ -130,6 +129,14 @@ namespace plegma {
       #endif
     }
 
+    inline __host__ __device__ size_t vertexGhostVolume() const {
+      #ifdef __CUDA_ARCH__
+      return is4D ? DGC_vertexGhostVolume : DGC_vertexGhostVolume3D;
+      #else
+      return is4D ? HGC_vertexGhostVolume : HGC_vertexGhostVolume3D;
+      #endif
+    }
+
     inline __host__ __device__ size_t vertexGhostL(const short& dir1, const short& dir2, const short& dir3) const {
       #ifdef __CUDA_ARCH__
       return is4D ? DGC_surface1D[OFF3(dir1,dir2,dir3)] : (DGC_surface1D[OFF3(dir1,dir2,dir3)]/DGC_localL[DIM_T]);
@@ -174,19 +181,34 @@ namespace plegma {
     template<get_from src>
     inline __device__ void shift(const short& dir1, const short& dir2, const short& dir3);
     
-    inline __host__ __device__ void accessSideGhost(const size_t& sid3D, const short& dir, const ORIENTATION& sign) {
+    inline __host__ __device__ void accessSideGhost(const size_t& sid3D, const short& dir, const ORIENTATION& sign, bool only_ghost=false) {
       this->stride = sideGhostL(dir);
-      this->sid = (volume()+sideGhostShift(dir, sign))*site_size + sid3D;
+      this->sid = ((only_ghost ? 0 : volume())+sideGhostShift(dir, sign))*site_size + sid3D;
     }
 
-    inline __host__ __device__ void accessCornerGhost(const size_t& sid2D, const short& dir1, const short& dir2, const ORIENTATION& sign1, const ORIENTATION& sign2) {
+    inline __host__ __device__ void accessSecondSideGhost(const size_t& sid3D, const short& dir, const ORIENTATION& sign, bool only_ghost=false) {
+      this->stride = sideGhostL(dir);
+      this->sid = ((only_ghost ? 0 : volume())+sideGhostVolume()+cornerGhostVolume()+vertexGhostVolume()+sideGhostShift(dir,sign))*site_size + sid3D;
+    }
+    inline __host__ __device__ void accessThirdSideGhost(const size_t& sid3D, const short& dir, const ORIENTATION& sign, bool only_ghost=false) {
+      this->stride = sideGhostL(dir);
+      this->sid = ((only_ghost ? 0 : volume())+2*sideGhostVolume()+3*cornerGhostVolume()+vertexGhostVolume()+sideGhostShift(dir,sign))*site_size + sid3D;
+    }
+
+    inline __host__ __device__ void accessCornerGhost(const size_t& sid2D, const short& dir1, const short& dir2, const ORIENTATION& sign1, const ORIENTATION& sign2, bool only_ghost=false) {
       this->stride = cornerGhostL(dir1, dir2);
-      this->sid = (volume()+sideGhostVolume()+cornerGhostShift(dir1,dir2,sign1,sign2))*site_size + sid2D;
+      this->sid = ((only_ghost ? 0 : volume())+sideGhostVolume()+cornerGhostShift(dir1,dir2,sign1,sign2))*site_size + sid2D;
     }
 
-    inline __host__ __device__ void accessVertexGhost(const size_t& sid1D, const short& dir1, const short& dir2, const short& dir3, const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3) {
+    inline __host__ __device__ void accessSecondCornerGhost(const size_t& sid2D, const short& dir1, const short& dir2, const ORIENTATION& sign1, const ORIENTATION& sign2, bool only_ghost=false) {
+      //Assume 2 times first direction
+      this->stride = cornerGhostL(dir1, dir2);
+      this->sid = ((only_ghost ? 0 : volume())+2*sideGhostVolume()+(dir1<dir2 ? 1 : 2)*cornerGhostVolume()+vertexGhostVolume()+cornerGhostShift(dir1,dir2,sign1,sign2))*site_size + sid2D;
+    }
+
+    inline __host__ __device__ void accessVertexGhost(const size_t& sid1D, const short& dir1, const short& dir2, const short& dir3, const ORIENTATION& sign1, const ORIENTATION& sign2, const ORIENTATION& sign3, bool only_ghost=false) {
       this->stride = vertexGhostL(dir1, dir2, dir3);
-      this->sid = (volume()+sideGhostVolume()+cornerGhostVolume()+vertexGhostShift(dir1,dir2,dir3,sign1,sign2,sign3))*site_size + sid1D;
+      this->sid = ((only_ghost ? 0 : volume())+sideGhostVolume()+cornerGhostVolume()+vertexGhostShift(dir1,dir2,dir3,sign1,sign2,sign3))*site_size + sid1D;
     }
 };
 
@@ -271,6 +293,18 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<MinusMinus>(const short& dirMinus1, const short& dirMinus2) {
     if(dirMinus1 == dirMinus2 && DGC_dimBreak[dirMinus1]) {
+      size_t id[4] = GET_ID(sid);
+      bool minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
+      if(minus_ghost) this->accessSecondSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+      else {
+        id[dirMinus1] = ID_MINUS(dirMinus1, id);        
+        minus_ghost = IS_MINUS_GHOST(dirMinus1,id);     
+        if(minus_ghost) this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+        else {
+        id[dirMinus1] = ID_MINUS(dirMinus1, id);
+        this->sid = LEXIC_ID_3D4D(id,is4D);
+        }
+      }
       printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);

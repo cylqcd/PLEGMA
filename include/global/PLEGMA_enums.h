@@ -10,9 +10,34 @@ enum FILE_FORMAT{ASCII_FORMAT, HDF5_FORMAT, LIME_FORMAT, DEFAULT_FORMAT};
 enum ALLOCATION_FLAG{EVERY=-1,NONE=0,HOST,DEVICE,BOTH};
 
 enum CLASS_ENUM{CUSTOM,SCALAR,SU3FIELD,GAUGE,GAUGE3D,GAUGEU1,VECTOR,VECTOR3D,PROPAGATOR,PROPAGATOR3D,QLOOPS,FMUNU,U1GAUGE};
-enum GHOST_FLAG{ALL_GHOSTS=-1,NO_GHOSTS,FIRST_SIDE,FIRST_CORNER,FIRST_VERTEX};
+enum GHOST_FLAG{ALL_GHOSTS=-1,NO_GHOSTS,FIRST_SIDE,FIRST_CORNER,FIRST_VERTEX,SECOND_SIDE,SECOND_CORNER,THIRD_SIDE};
+
 enum WHICHPARTICLE{PROTON,NEUTRON};
-enum WHICHPROJECTOR{P4_P,P4G5G1_P,P4G5G2_P,P4G5G3_P,P4_M,P4G5G1_M,P4G5G2_M,P4G5G3_M,P_00,P_01,P_02,P_03,P_10, P_11, P_12, P_13, P_20, P_21, P_22, P_23, P_30, P_31, P_32, P_33, N_PROJS}; // Do not change this order and keep N_PROJS last
+enum WHICHPROJECTOR{P4_P,
+                    P4G5G1_P,
+                    P4G5G2_P,
+                    P4G5G3_P,
+                    P4_M,
+                    P4G5G1_M,
+                    P4G5G2_M,
+                    P4G5G3_M,
+                    P_00,
+                    P_01,
+                    P_02,
+                    P_03,
+                    P_10,
+                    P_11,
+                    P_12, 
+                    P_13, 
+                    P_20,
+                    P_21, 
+                    P_22, 
+                    P_23, 
+                    P_30, 
+                    P_31, 
+                    P_32, 
+                    P_33, 
+                    N_PROJS}; // Do not change this order and keep N_PROJS last
 enum WHICHFLAVOR{LIGHT,STRANGE,CHARM};
 enum THRP_TYPE{THRP_LOCAL2,THRP_NOETHER2,THRP_ONED2};
 

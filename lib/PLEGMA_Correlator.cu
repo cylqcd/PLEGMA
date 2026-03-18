@@ -793,30 +793,31 @@ contractNucleonThrp_twoD(PLEGMA_Vector<Float> &bwdProp,
   threep_twoD<false,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
 }
 
+
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_threeD(PLEGMA_Propagator<Float> &bwdProp,
-			   PLEGMA_Propagator<Float> &fwdProp,
-			   PLEGMA_Gauge<Float> &gauge,
-			   int signProps, std::vector<GAMMAS> gammas, bool isZfac){
-  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
-  else shape = {N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
+                           PLEGMA_Propagator<Float> &fwdProp,
+                           PLEGMA_Gauge<Float> &gauge,
+                           int signProps, std::vector<GAMMAS> gammas, bool isZfac){
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*N_DIMS*N_DIMS, (int) gammas.size()};
+  else shape = {N_DIMS*N_DIMS*N_DIMS, (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"ThreeD"};
-  description = "xyz,xyt,xzy,xzt,xty,xtz,yxz,yxt,yzx,yzt,ytx,ytz,zxy,zxt,zyx,zyt,ztx,zty,txy,txz,tyx,tyz,tzx,tzy / "+getGammasString(gammas);
+  description = "xxx,xxy,xxz,xxt,xyx,xyy,xyz,xyt,xzx,xzy,xzz,xzt,xtx,xty,xtz,xtt,yxx,yxy,yxz,yxt,yyx,yyy,yyz,yyt,yzx,yzy,yzz,yzt,ytx,yty,ytz,ytt,zxx,zxy,zxz,zxt,zyx,zyy,zyz,zyt,zzx,zzy,zzz,zzt,ztx,zty,ztz,ztt,txx,txy,txz,txt,tyx,tyy,tyz,tyt,tzx,tzy,tzz,tzt,ttx,tty,ttz,ttt / "+getGammasString(gammas);
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-
-  gauge.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
-  bwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
-  fwdProp.communicateGhost(-1,DIR_BOTH,FIRST_VERTEX);
+    
+  gauge.communicateGhost(-1,DIR_BOTH,THIRD_SIDE);
+  bwdProp.communicateGhost(-1,DIR_BOTH,THIRD_SIDE);
+  fwdProp.communicateGhost(-1,DIR_BOTH,THIRD_SIDE);
   
   threep_threeD_part1<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
   threep_threeD_part2<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
   threep_threeD_part3<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
   threep_threeD_part4<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
-}
+} 
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
