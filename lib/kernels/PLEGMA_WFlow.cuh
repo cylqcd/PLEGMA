@@ -1,7 +1,7 @@
 #pragma once
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_getSet.cuh>
-
+#include <malloc_quda.h>
 using namespace plegma;
 
 template<typename FloatG>
@@ -112,7 +112,7 @@ __inline__ void GFlow_substep( gauge2<FloatG> W, gauge2<FloatG> Z, FloatE e_work
   cudaDeviceSynchronize();
 
   WUpdate<FloatG><<<gridDim,blockDim>>>( W, Z );
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -142,7 +142,7 @@ __inline__ void unitarize_dev( gauge2<FloatG> gauge )
   dim3 gridDim( (gauge.volume() + blockDim.x -1)/blockDim.x, 1, 1);
   
   unitarize_dev_kernel<<<gridDim,blockDim>>>( gauge );
-  checkCudaError();
+  checkQudaError();
 }
 
 //#####################################################################################
@@ -192,13 +192,14 @@ static FloatG calcPlaqStaplesDef(gauge2<FloatG> gaugep){
    
   h_partial_plaq = (FloatG*) malloc(gridDim.x * sizeof(FloatG) );
   if(h_partial_plaq == NULL) errorQuda("Error allocate memory for host partial plaq");
-  cudaMalloc((void**)&d_partial_plaq, gridDim.x * sizeof(FloatG));
+  d_partial_plaq=(FloatG*)device_malloc( gridDim.x * sizeof(FloatG));
+  //cudaMalloc((void**)&d_partial_plaq, gridDim.x * sizeof(FloatG));
 
   calcPlaqStaplesDef_kernel<FloatG><<<gridDim,blockDim>>>( gaugep, d_partial_plaq );
 
   cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDim.x * sizeof(FloatG) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_plaq);
-  checkCudaError();
+  checkQudaError();
   
   for(int i = 0 ; i < gridDim.x ; i++)
     plaquette += h_partial_plaq[i];

@@ -2,6 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <PLEGMA_Hprobing.h>
 #include <stdio.h>
+#include <quda_api.h>
 using namespace plegma;
 using namespace quda;
 
@@ -181,8 +182,8 @@ int main(int argc, char **argv)
       if(mu_h>0.) eigVal += 4.*inv_params.kappa*inv_params.kappa*(mu_h*mu_h-mu*mu);
       long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
-      cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
-      checkCudaError();      
+      qudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
+      checkQudaError();      
       phi_r.copy(phi);
       qloops_std.oneEnd_trick_wilsonLine(phi,phi_r,-1./eigVal,gaugeStout,ft_std);
       D->apply<M>(phi_r,phi);

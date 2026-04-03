@@ -8,7 +8,6 @@ extern bool HGC_hold_exit; // used to hold exit until all the errors have been p
 extern bool HGC_init_PLEGMA_flag;
 extern struct global_vars HGC_global_vars;
 extern class Options * HGC_options;
-
 #define PLEGMA_exit(value) do {			\
     if(! HGC_hold_exit) {			\
       if (HGC_init_PLEGMA_flag) {		\
@@ -53,7 +52,7 @@ extern class Options * HGC_options;
       fprintf(getOutputFile(), "%sERROR: ", getOutputPrefix());		\
       fprintf(getOutputFile(), __VA_ARGS__);				\
       fprintf(getOutputFile(), " (rank %d, host %s, " __FILE__ ":%d in %s())\n", \
-	      comm_rank(), comm_hostname(), __LINE__, __func__);	\
+             comm_rank(), comm_hostname(), __LINE__, __func__);         \
       fprintf(getOutputFile(), "%s       last kernel called was (name=%s,volume=%s,aux=%s)\n", \
 	      getOutputPrefix(), getLastTuneKey().name,			\
 	      getLastTuneKey().volume, getLastTuneKey().aux);		\

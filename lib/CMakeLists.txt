@@ -18,6 +18,7 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_threep_threeD_part3.cu
   kernels/PLEGMA_threep_threeD_part4.cu
   kernels/PLEGMA_threep_wilsonLine.cu
+  kernels/PLEGMA_threep_staple.cu
   kernels/PLEGMA_threep_qgq.cu	
   PLEGMA_QLoops.cu
   PLEGMA_FT.cu

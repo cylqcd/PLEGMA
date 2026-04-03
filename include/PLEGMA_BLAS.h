@@ -13,6 +13,8 @@
 
 #include <cublas_v2.h>
 #include <mpi.h>
+#include <PLEGMA_utils.h>
+#include <quda_api.h>
 #pragma once
 enum OPER_MATR_BLAS {NOTRANS, TRANS, DAGGER};
 namespace cBLAS{
@@ -232,8 +234,8 @@ namespace cuBLAS{
     if(trans == NOTRANS) PLEGMA_error("Use gemv without MPI comm");
     if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
     cuBLAS::gemv_(trans, m, n, alpha, A, x, beta, y);
-    cudaMemcpy(yHost,y,n*2*sizeof(Float),cudaMemcpyDeviceToHost);
-    checkCudaError();
+    qudaMemcpy(yHost,y,n*2*sizeof(Float),qudaMemcpyDeviceToHost);
+    checkQudaError();
     int mpiErr = MPI_Allreduce(MPI_IN_PLACE,yHost,n*2,MPI_Type(yHost),MPI_SUM,comm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
   }
@@ -244,8 +246,8 @@ namespace cuBLAS{
   inline void gemv(OPER_MATR_BLAS trans, int m, int n, Float alpha[2], Float* A, Float* x, Float beta[2], Float* y, MPI_Comm comm){
     Float yHost[n*2];
     cuBLAS::gemv(trans,m, n, alpha, A, x, beta, y, yHost,comm);
-    cudaMemcpy(y,yHost,sizeof(yHost),cudaMemcpyHostToDevice);
-    checkCudaError();
+    qudaMemcpy(y,yHost,sizeof(yHost),qudaMemcpyHostToDevice);
+    checkQudaError();
   }
 }
 //=================================================================//

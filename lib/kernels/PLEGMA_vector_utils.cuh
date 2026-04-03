@@ -49,7 +49,7 @@ static void apply_gamma_vector(LEFTRIGHT LR,vector2<Float> inOut,GAMMAS r){
     apply_gamma_vector_kernel<RIGHT><<<gridDim,blockDim>>>(inOut, r);
     break;
   }
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -143,7 +143,7 @@ static void copy_to_QUDA(FloatIn* in, ColorSpinorField &qudaVec, bool isEven){
   else
     PLEGMA_error("Precision %d not supported", qudaVec.Precision());
 
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatOut, typename FloatIn, bool inEvenB, bool inOddB> 
@@ -208,7 +208,7 @@ static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven
   else
     PLEGMA_error("Precision %d not supported", qudaVec.Precision());
   
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -261,10 +261,15 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   int *d_listR2 = nullptr;
   Float *d_absPsi = nullptr;
   if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");
-  cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int)); checkCudaError();
-  cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); checkCudaError();
-  cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkCudaError();
-  cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkCudaError();
+//  cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int));
+  d_listR2=(int *)device_malloc(listR2.size() * sizeof(int));
+  checkQudaError();
+//  cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); 
+  d_absPsi=(Float *)device_malloc(absPsi.size() * sizeof(Float));
+
+  checkQudaError();
+  cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkQudaError();
+  cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkQudaError();
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + HGC_localVolume3D;
   typedef thrust::device_ptr<Float2<Float> > DpF2;
@@ -274,7 +279,7 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
   zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+HGC_localVolume3D));
   thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
-  cudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), cudaMemcpyDeviceToHost); checkCudaError();
+  cudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), cudaMemcpyDeviceToHost); checkQudaError();
   cudaFree(d_listR2);
   cudaFree(d_absPsi);
 }
@@ -297,5 +302,5 @@ template<typename FloatVo, typename FloatS, typename FloatVi>
 static void mulGV_k(vector2<FloatVo> Vo, su3_2<FloatS> u, vector2<FloatVi> Vi){
   ProfileStruct ps(Vo.volume());
   tuneAndRun(ps,"mulGV_kernel", mulGV_kernel<FloatVo,FloatS,FloatVi>, Vo, u, Vi);
-  checkCudaError();
+  checkQudaError();
 }

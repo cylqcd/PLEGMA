@@ -56,7 +56,7 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
   Float2<Float> *x;
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset(x,0,V*2*sizeof(Float));
-  checkCudaError();
+  checkQudaError();
   for(int imom = 0; imom < Nmom; imom++){
     createMomField(x,mom[imom],ft.Dims(),-sign); // change sign to compensate dagger
     for(int idf = 0 ; idf < f.Field_length(); idf++)
@@ -82,7 +82,7 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   cudaMalloc((void**)&x, V*2*sizeof(Float));
   cudaMemset(x,0,V*2*sizeof(Float));
   cudaMalloc((void**)&d_res, f.Field_length() * ft.DimT() * 2*sizeof(Float));
-  checkCudaError();
+  checkQudaError();
   Float2<Float> h_res[f.Field_length()*ft.DimT()];
   Float2<Float> *h_ft = (Float2<Float> *) ft.H_elem();
   Float one[2] = {1.,0.}, zero[2] = {0.,0.};
@@ -131,12 +131,12 @@ static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Floa
   tune(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   size_t alloc_size=ft.Nmoms()*site_size*ps.tp.grid.x*2*sizeof(Float);
   cudaMalloc((void**)&d_partial_block, alloc_size);
-  checkCudaError();
+  checkQudaError();
   run(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   Float *h_partial_block = NULL;
   hostMalloc(h_partial_block,alloc_size);
   cudaMemcpy(h_partial_block,d_partial_block,alloc_size,cudaMemcpyDeviceToHost);
-  checkCudaError();
+  checkQudaError();
   cudaFree(d_partial_block);
   int gridDimX = ps.tp.grid.x;
   Float *reduction;

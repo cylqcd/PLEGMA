@@ -5,7 +5,8 @@
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_threep.cuh>
 #include <PLEGMA_Vector.h>
-
+#include <malloc_quda.h>
+#include <quda_api.h>
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
@@ -165,8 +166,9 @@ static void threep_twoD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
+//  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -176,7 +178,8 @@ static void threep_twoD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+//  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC> *)device_malloc(alloc_size * sizeof(Float2<FloatC>));
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<PorVtex<b,FloatA>>(prop1);
@@ -207,7 +210,7 @@ static void threep_twoD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
 	 source, signProps, runFT, *moms, dir1,dir2,mu,nu,c1,c2);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
       
-      cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+      qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
       
       if(runFT==true){
@@ -230,8 +233,8 @@ static void threep_twoD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
 
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 template<bool b, typename FloatC,typename FloatA,typename FloatB,typename FloatG>

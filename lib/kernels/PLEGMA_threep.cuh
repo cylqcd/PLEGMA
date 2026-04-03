@@ -46,11 +46,11 @@ void threep_threeD_part4(PLEGMA_Correlator<FloatC> &corr, typename std::conditio
                  typename std::conditional<b==true, PLEGMA_Propagator<FloatB>&, PLEGMA_Vector<FloatB>&>::type prop2,
 int signProps, PLEGMA_Gauge<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
 
-
-
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
 void threep_wilsonLine(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Su3field<FloatG>& gauge, std::vector<GAMMAS>& gammas);
 
+template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>
+void threep_staple(PLEGMA_Correlator<FloatC> &corr, PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, int signProps, PLEGMA_Su3field<FloatG>& gauge, std::vector<GAMMAS>& gammas, bool isZfac);
 
 template<typename Float>
 void threep_qgq(PLEGMA_Correlator<Float> &corr,

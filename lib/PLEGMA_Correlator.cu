@@ -3,6 +3,7 @@
 #include <PLEGMA_Correlator.h>
 #include <PLEGMA_Propagator.h>
 #include <string>
+#include <PLEGMA_QWF.cuh>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_TMDWF.cuh>
 #include <PLEGMA_mesonsNew.cuh>
@@ -12,9 +13,9 @@
 #include <functional>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
-#endif
 #include <PLEGMA_heavy_light_tetraquarks.cuh>
 #include <PLEGMA_bcud_tetraquarks.cuh>
+#endif
 
 using namespace plegma;
 
@@ -58,7 +59,7 @@ contractMesons(PLEGMA_Propagator<Float> &prop1,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
-                  PLEGMA_Propagator<Float> &prop2 ){
+		  PLEGMA_Propagator<Float> &prop2 ){
 
   shape = {10};
   datasets =  {"twop_meson"};
@@ -136,6 +137,29 @@ contractBaryons(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
+contractBaryonsWall(PLEGMA_Propagator<Float> &prop1,
+                    PLEGMA_Propagator<Float> &prop2,
+		    PLEGMA_Propagator<Float> &prop3,
+		    PLEGMA_Propagator<Float> &prop4){
+
+  shape = {16};
+  datasets = {"twop_baryon_1", "twop_baryon_2"};
+  groups =  {"baryons/nucl_nucl",
+#ifdef PLEGMA_LIGHT_BARYONS
+             "baryons/nucl_nucl2","baryons/nucl2_nucl","baryons/nucl2_nucl2",
+	     "baryons/deltap_deltaz_11","baryons/deltap_deltaz_22","baryons/deltap_deltaz_33",
+	     "baryons/deltapp_deltamm_11","baryons/deltapp_deltamm_22","baryons/deltapp_deltamm_33"
+#endif
+  };
+  description = "1,g1,g2,g3,g4,g5,g5g1,g5g2,g5g3,g5g4,s12,s13,s23,s41,s42,s43";
+
+  initialize();
+  contract_baryons_wall(prop1,prop2,prop3,prop4,*this);
+}
+    
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
 contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
@@ -196,7 +220,7 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
             PLEGMA_Propagator<Float2> &propCH,
             PLEGMA_Propagator<Float2> &propBT,
             bool only_st, bool only_ch){
-
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -244,6 +268,10 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks(propLT, propST, propCH, propBT, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -254,7 +282,7 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
             PLEGMA_Propagator<Float2> &propCH,
             PLEGMA_Propagator<Float2> &propBT,
             bool only_st, bool only_ch){
-
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -302,6 +330,10 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud(propLT, propST, propCH, propBT, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -316,6 +348,7 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
             PLEGMA_Propagator<Float2> &propBT1,
             PLEGMA_Propagator<Float2> &propBT2){
 
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -356,6 +389,10 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_stochastic(propLT1, propLT2,propST1, propST2, propBT1, propBT2, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -371,7 +408,7 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
             PLEGMA_Propagator<Float2> &propCH2,
             PLEGMA_Propagator<Float2> &propBT1,
             PLEGMA_Propagator<Float2> &propBT2){
-
+#ifdef PLEGMA_UDSC_BARYONS
   shape = {};
   description = "";
   datasets = {};
@@ -415,6 +452,10 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud_stochastic(propLT1, propLT2,propST1, propST2, propCH1, propCH2, propBT1, propBT2, *this, todo);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -423,7 +464,7 @@ template<typename Float> template<typename Float2>
 void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks){
-
+#ifdef PLEGMA_UDSC_BARYONS
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
 
@@ -453,6 +494,10 @@ contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
 
    initialize();
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 
@@ -461,6 +506,7 @@ template<typename Float> template<typename Float2>
 void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks){
+#ifdef PLEGMA_UDSC_BARYONS
 
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
@@ -487,6 +533,10 @@ contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1
 
 //     PLEGMA_printf("contractTetraquarkScatteringOpenIndexStochastic is going to run:");
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#else
+  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+#endif
+
 }
 
 template<typename Float>
@@ -697,6 +747,91 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
   
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
   threep_wilsonLine(*this,bwdProp,fwdProp,signProps,su3,gammas);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractNucleonThrp_staple(PLEGMA_Propagator<Float> &bwdProp,
+                           PLEGMA_Propagator<Float> &fwdProp,
+			   PLEGMA_Su3field<Float> &su3,
+			   int signProps, std::vector<GAMMAS> gammas, bool isZfac,int b, int l, int z){			   
+  if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,(int) gammas.size()};
+  else shape = {(int) gammas.size()};
+  char d1[50];
+  sprintf(d1,"b_%d_l_%d_z_%d",b,l,z);
+  datasets =  {d1};	
+  groups =  {"staple"};
+  description = getGammasString(gammas);
+  initialize();
+
+  if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
+  threep_staple(*this,bwdProp,fwdProp,signProps,su3,gammas,isZfac);  
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsFourp_ultralocal(PLEGMA_Propagator<Float> &prop1,
+               		       PLEGMA_Propagator<Float> &prop2, PLEGMA_Propagator<Float> &prop3,
+	                       PLEGMA_Propagator<Float> &prop4,int b){
+
+  shape = {16};
+  char d1[50];
+  sprintf(d1,"b_%d",b);
+  datasets =  {d1};
+  groups =  {"mesons"};
+  description = "gamma insertion";
+
+  initialize();
+  contract_mesons_fourp_ultralocal(prop1,prop2,prop3,prop4,*this);
+}
+    
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsFourp_ultralocal_oneendtrick(PLEGMA_Propagator<Float> &prop1,
+                                           PLEGMA_Propagator<Float> &prop2,int b){
+
+  shape = {16};
+  char d1[50];
+  sprintf(d1,"b_%d",b);
+  datasets =  {d1};
+  groups =  {"mesons"};
+  description = "gamma insertion";
+
+  initialize();
+  contract_mesons_fourp_ultralocal_oneendtrick(prop1,prop2,*this);
+}    
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractTMDWFMesonsTrick_Zfac(PLEGMA_Propagator<Float> &prop1,
+                              PLEGMA_Su3field<float> &staple, int b, int l){
+
+  shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,16};
+  char d1[50];
+  sprintf(d1,"b_%d_l_%d",b,l);
+  datasets =  {d1};
+  groups =  {"mesons"};
+  description = "g4 ";
+
+  initialize();
+  contract_TMDWF_mesons_trick_zfac(prop1,*this, staple);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
+                         PLEGMA_Propagator<Float> &prop2,
+                         PLEGMA_Su3field<float> &staple, int b, int l){
+
+  shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,16};
+  char d1[50];
+  sprintf(d1,"b_%d_l_%d",b,l);
+  datasets =  {d1};
+  groups =  {"mesons"};
+  description = "g4 ";
+
+  initialize();
+  contract_TMDWF_mesons_zfac(prop1,prop2,*this, staple);
 }
 
 template<typename Float>
@@ -957,17 +1092,17 @@ template class PLEGMA_Correlator<double>;
 
 
 
-template
-void PLEGMA_Correlator<float>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
-		  PLEGMA_Propagator<float> &prop2 );
+//template
+//void PLEGMA_Correlator<float>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
+//		  PLEGMA_Propagator<float> &prop2 );
 
-template
-void PLEGMA_Correlator<double>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
-		  PLEGMA_Propagator<float> &prop2 );
+//template
+//void PLEGMA_Correlator<double>::contractMesonsNew<float>(PLEGMA_Propagator<float> &prop1,
+//		  PLEGMA_Propagator<float> &prop2 );
 
-template
-void PLEGMA_Correlator<double>::contractMesonsNew<double>(PLEGMA_Propagator<double> &prop1,
-		  PLEGMA_Propagator<double> &prop2 );
+//template
+//void PLEGMA_Correlator<double>::contractMesonsNew<double>(PLEGMA_Propagator<double> &prop1,
+//		  PLEGMA_Propagator<double> &prop2 );
 
 
 template

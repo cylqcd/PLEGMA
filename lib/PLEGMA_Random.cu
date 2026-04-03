@@ -77,14 +77,14 @@ PLEGMA_RNG::~PLEGMA_RNG(){
   PLEGMA_printf("Free array of random numbers with rng_size: %.2f MB\n", ((float)rng_size  * (float)sizeof(cuRNGState))/(1024*1024));
   rng_size = 0;
   state = NULL;
-  checkCudaError();
+  checkQudaError();
 }
 
 /*! @brief Generating random numbers from random distribution */
 /*! @brief Restore CURAND array states initialization */
 void PLEGMA_RNG::restore() {
   cudaMemcpy(state, backup_state, rng_size * sizeof(cuRNGState), cudaMemcpyHostToDevice);
-  checkCudaError();
+  checkQudaError();
   hostFree(backup_state, rng_size * sizeof(cuRNGState));
 }
 
@@ -92,6 +92,6 @@ void PLEGMA_RNG::restore() {
 void PLEGMA_RNG::backup() {
   hostMalloc(backup_state, rng_size * sizeof(cuRNGState));
   cudaMemcpy(backup_state, state, rng_size * sizeof(cuRNGState), cudaMemcpyDeviceToHost);
-  checkCudaError();
+  checkQudaError();
 }
 

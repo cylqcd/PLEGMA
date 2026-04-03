@@ -96,5 +96,5 @@ static void clover_leaves_k(PLEGMA_Fmunu<Float> &fmunu, PLEGMA_Gauge<Float> &gau
   assert(fmunu.checkVolume(gauge));
   ProfileStruct ps(gauge.Total_length());
   tuneAndRun(ps,"clover_leaves_kernel", clover_leaves_kernel<Float>, toField2<pFloat2>(fmunu), toField2<gauge2>(gauge));
-  checkCudaError();
+  checkQudaError();
 }

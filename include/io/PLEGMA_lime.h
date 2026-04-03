@@ -2,7 +2,7 @@
 extern "C" {
 #include <lime.h>
 }
-
+#include <tune_quda.h>
 #include <PLEGMA_global.h>
 #include <unistd.h>
 #include <stdio.h>

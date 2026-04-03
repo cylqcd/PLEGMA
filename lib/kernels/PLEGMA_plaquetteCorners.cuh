@@ -109,7 +109,7 @@ static void calculatePlaquetteCorners_host(ProfileStruct& ps, gaugeTex<FloatG> g
   if(h_partial_plaq == NULL) PLEGMA_error("Error allocate memory for host partial plaq");
   cudaMemcpy(h_partial_plaq, d_partial_plaq , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_plaq);
-  checkCudaError();
+  checkQudaError();
 
   plaquette = 0.;
   for(int i = 0 ; i < gridDimX ; i++)

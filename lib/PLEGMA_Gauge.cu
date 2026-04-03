@@ -8,7 +8,7 @@
 #include <PLEGMA_io.h>
 #include <PLEGMA_topocharge.cuh>
 #include <PLEGMA_WFlow.cuh>
-
+#include <quda_api.h>
 
 using namespace plegma;
 
@@ -106,9 +106,9 @@ Float PLEGMA_Gauge<Float>::calculatePlaqCorners(){
 
 template<typename Float>
 void PLEGMA_Gauge<Float>::absorbDir_device(PLEGMA_Su3field<Float> &su,int dir){
-  cudaMemcpy(this->d_elem + dir*(su.Field_length())*(su.Total_length())*2 , su.D_elem(),
-  	     su.Bytes_total(), cudaMemcpyDeviceToDevice);
-  checkCudaError();
+  qudaMemcpy(this->d_elem + dir*(su.Field_length())*(su.Total_length())*2 , su.D_elem(),
+  	     su.Bytes_total(), qudaMemcpyDeviceToDevice);
+  checkQudaError();
 }
 
 template<typename Float>
@@ -121,8 +121,8 @@ void PLEGMA_Gauge<Float>::absorbDir_host(PLEGMA_Su3field<Float> &su,int dir){
 template<typename Float>
 void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double rho, int D3D4, bool S4D){
   if(nSmear < 1){
-    cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
-    checkCudaError();
+    qudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), qudaMemcpyDeviceToDevice);
+    checkQudaError();
     return;
   }
   int smearD = (S4D)? 3:D3D4;
@@ -157,8 +157,8 @@ void PLEGMA_Gauge<Float>::stoutSmearing(PLEGMA_Gauge<Float> &uin, int nSmear, do
   for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);
   if(D3D4 == 3){// || S4D
     int offset = 3*(tmp1.Field_length())*(tmp1.Total_length())*2;
-    cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
-    checkCudaError();
+    qudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), qudaMemcpyDeviceToDevice );
+    checkQudaError();
   }
   for(int idir = 0; idir < D3D4 ; idir++){
     delete u_s1[idir];
@@ -185,8 +185,8 @@ void PLEGMA_Gauge<Float>::momPhase(Float phase[N_DIMS],int mom[N_DIMS]){
 template<typename Float>
 void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, double alpha, int D3D4){
   if(nSmear < 1){
-    cudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
-    checkCudaError();
+    qudaMemcpy(this->D_elem(), uin.D_elem(), this->Bytes_total(), qudaMemcpyDeviceToDevice);
+    checkQudaError();
     return;
   }
   PLEGMA_Su3field<Float> tmp1(BOTH);
@@ -219,8 +219,8 @@ void PLEGMA_Gauge<Float>::APEsmearing(PLEGMA_Gauge<Float> &uin, int nSmear, doub
   for(int idir = 0 ; idir < D3D4; idir++) this->absorbDir_device(*(u_s1[idir]), idir);
   if(D3D4 == 3){
     int offset = 3*(tmp1.Field_length())*(tmp1.Total_length())*2;
-    cudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), cudaMemcpyDeviceToDevice );
-    checkCudaError();
+    qudaMemcpy(this->D_elem() + offset, uin.D_elem() + offset, tmp1.Bytes_total(), qudaMemcpyDeviceToDevice );
+    checkQudaError();
   }
   
   for(int idir = 0; idir < D3D4 ; idir++){

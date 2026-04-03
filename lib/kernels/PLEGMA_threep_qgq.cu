@@ -7,7 +7,7 @@
 #include <PLEGMA_threep.cuh>
 #include <cmath>
 #include <cfloat>
-
+#include <malloc_quda.h>
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
@@ -93,7 +93,8 @@ static void threep_qgq_host(ProfileStruct &ps, Float2<Float> *result,
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  //cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
   cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
@@ -104,7 +105,8 @@ static void threep_qgq_host(ProfileStruct &ps, Float2<Float> *result,
 
   Float2<Float> *h_partial_block = NULL;
   Float2<Float> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<Float>) );
+ // cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<Float>) );
+  d_partial_block=(Float2<Float>*)device_malloc( alloc_size * sizeof(Float2<Float>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<Float>));
 
 

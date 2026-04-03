@@ -3,7 +3,8 @@
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_heavy_light_tetraquarks.cuh>
-
+#include <quda_api.h>
+#include <malloc_quda.h>
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
@@ -94,7 +95,7 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
   
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT(); 
-  int time_step = ps.tp.grid.x*ps.tp.block.x/HGC_localVolume3D;
+  int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
   size_t size = corr.getTotalSize()/t_size*time_step;
@@ -104,8 +105,8 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
   
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  listGammas.array= (GAMMAS*)  device_malloc(gammas.size()*sizeof(GAMMAS));
+  qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -115,7 +116,7 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block = (Float2<FloatC>*)device_malloc( alloc_size * sizeof(Float2<FloatC>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   
   auto propTex1 = toTexture<propTex>(prop1);
@@ -132,7 +133,7 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
       (d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, runFT, *moms, s1);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    qudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
     if(runFT==true){
@@ -154,8 +155,8 @@ static void tetraquark_open_index_host(ProfileStruct &ps, Float2<FloatC> *result
 
  exit:
   hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB>

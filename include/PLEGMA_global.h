@@ -43,6 +43,9 @@ using namespace std::chrono_literals;
 
 //======== Preprocessor macros =========//
 #include <global/PLEGMA_macros.hpp>
+#include <tune_quda.h>
+#include <comm_quda.h>
+using namespace quda;
 
 namespace plegma {
   //======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//
@@ -64,5 +67,11 @@ namespace plegma {
 #include <global/PLEGMA_global_constants.h>
 
 
+static inline void PLEGMA_memset(void *ptr, int value, size_t count){
+   return qudaMemset(ptr,value,count);
+}
+static inline void PLEGMA_memcpy(void *dst, const void *src, size_t count,qudaMemcpyKind kind){
+   return qudaMemcpy(dst,src,count,kind);
+}
 }
 using namespace plegma; // TODO: This one shouldn't be here.. But helps avoiding missing namespace.

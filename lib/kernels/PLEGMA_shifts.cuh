@@ -20,7 +20,7 @@ static void shiftField(PLEGMA_Field<Float> &Fin, PLEGMA_Field<Float> &Fout, int 
   assert(Fin.checkVolume(Fout));
   ProfileStruct ps( Fin.Total_length() );
   tuneAndRun(ps, "shifts1_kernel", shifts1_kernel<Float>, toField2<pFloat2>(Fin), toField2<pFloat2>(Fout),dirOr);
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -45,7 +45,7 @@ static void shiftField(PLEGMA_Field<Float> &Fin, PLEGMA_Field<Float> &Fout, int 
   assert(Fin.checkVolume(Fout));
   ProfileStruct ps( Fin.Total_length() );
   tuneAndRun(ps, "shifts2_kernel", shifts2_kernel<Float>, toField2<pFloat2>(Fin), toField2<pFloat2>(Fout),dirOr1,dirOr2);
-  checkCudaError();
+  checkQudaError();
 }
 
 
@@ -74,5 +74,5 @@ static void shiftField(PLEGMA_Field<Float> &Fin, PLEGMA_Field<Float> &Fout, int 
   assert(Fin.checkVolume(Fout));
   ProfileStruct ps( Fin.Total_length() );
   tuneAndRun(ps, "shifts3_kernel", shifts3_kernel<Float>, toField2<pFloat2>(Fin), toField2<pFloat2>(Fout),dirOr1,dirOr2,dirOr3);
-  checkCudaError();
+  checkQudaError();
 }

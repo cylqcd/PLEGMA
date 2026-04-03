@@ -38,6 +38,16 @@ void initializeOptions(int argc, char **argv, bool withQuda, std::vector<std::st
   isInitOpt=true;
 }
 
+void checkQudaError(){
+   auto error = qudaGetLastError();
+   if (error != QUDA_SUCCESS) { // check we don't have a sticky error
+     qudaDeviceSynchronize();
+     if (qudaGetLastError() != QUDA_SUCCESS)
+      errorQuda("Failed to clear error state %s\n", qudaGetLastErrorString().c_str());
+   }
+}
+
+
 void updateOptions(std::string filename, std::vector<std::string>& listOpt, std::function<void(Options&)> add_options){
   PLEGMA_printf("Reading options from file %s\n", filename.c_str());
   if(!filename.empty() and access( filename.c_str(), F_OK ) != -1){

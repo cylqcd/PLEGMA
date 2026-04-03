@@ -2,6 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
+#include <quda_api.h>
 using namespace plegma;
 using namespace quda;
 
@@ -150,8 +151,8 @@ static void applyOperator(double *out, double *in, int size_per_Vec){
 #else
 void EigSolver::applyOperator(double *out, double *in){  
 #endif
-  cudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,cudaMemcpyHostToDevice);
-  checkCudaError();
+  qudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,qudaMemcpyHostToDevice);
+  checkQudaError();
   
   if(!G_isACC) dOp->apply<MdagM>(*d_out,*d_in);
   else{
@@ -188,8 +189,8 @@ void EigSolver::applyOperator(double *out, double *in){
       }
     }
   }
-  cudaMemcpy(out,d_out->D_elem(),bytes_per_Vec,cudaMemcpyDeviceToHost);
-  checkCudaError();
+  qudaMemcpy(out,d_out->D_elem(),bytes_per_Vec,qudaMemcpyDeviceToHost);
+  checkQudaError();
 }
 
 #if defined(HAVE_PRIMME)
@@ -427,8 +428,8 @@ void EigSolver::computeEigVals(){
   double* ptr_tmp = h_eigVecs;
   for(int j = 0 ; j < p.NeV; j++){
     double one[2] = {1.,0.};
-    cudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
-    checkCudaError();
+    qudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,qudaMemcpyHostToDevice);
+    checkQudaError();
     dOp->apply<MdagM>(*tmp2,*tmp1);
     std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), HGC_fullComm);
     cuBLAS::scal(size_per_Vec,-eval.real(),tmp1->D_elem());
@@ -493,8 +494,8 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
   std::vector<double> VdagG5V;
   double* ptr_tmp = h_eigVecs;
   for (int j = 0; j < p.NeV; ++j) {
-    cudaMemcpy(g5V.D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
-    checkCudaError();
+    qudaMemcpy(g5V.D_elem(),ptr_tmp,bytes_per_Vec,qudaMemcpyHostToDevice);
+    checkQudaError();
     V.copy(g5V);
     g5V.apply_gamma(G5);
     std::complex<double> res = cuBLAS::dot(size_per_Vec, V.D_elem(), g5V.D_elem(),HGC_fullComm);

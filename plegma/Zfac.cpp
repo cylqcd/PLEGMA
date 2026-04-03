@@ -59,27 +59,25 @@ int main(int argc, char **argv)
       vecOut.apply_gamma(G4,LEFT);
       rprop.absorb(vecOut, isc/3, isc%3); // propagator in g0 convention in UKQCD (implicit flavor flip from g5g4)
     }
-    rprop.rotateToPhysicalBase_device(-1); // propagator in g0 convention in chiral (flipped flavor sign)
+    //rprop.rotateToPhysicalBase_device(-1); // propagator in g0 convention in chiral (flipped flavor sign)
     // compute the prop in momentum space
     PLEGMA_FT<double> ft((std::vector<double>) {(double)mom[0], (double)mom[1], (double)mom[2], mom[3]+0.5},4,false); // half twist in temporal direction
     //    rprop.scale(1./HGC_totalVolume);
     ft.apply(rprop, FT_GEMV,-1);
     //    rprop.scale(HGC_totalVolume);
-    ft.writeASCII(filesPrefix+"GpropMom_"+pxpypzpt+"_conf_"+confStr+".dat",0);
+    ft.writeASCII(filesPrefix+"zfac_GpropMom_"+pxpypzpt+"_conf_"+confStr+".dat",0);
     ///////////
     lprop.copy(rprop);
-
-    
 
     // lprop.rotateToPhysicalBase_device(+1); // this needs to be in (1+ig5)
 
     // lprop.rotateToPhysicalBase_device(+1);
-    // lprop.apply_gamma(G5,LEFT);
-    // lprop.apply_gamma(G5,RIGHT);
+    lprop.apply_gamma(G5,LEFT);
+    lprop.apply_gamma(G5,RIGHT);
     // lprop.rotateToPhysicalBase_device(-1);
 
-    lprop.rotateToPhysicalBase_device(+1);
-    lprop.rotateToPhysicalBase_device(+1);
+    //lprop.rotateToPhysicalBase_device(+1);
+    //lprop.rotateToPhysicalBase_device(+1);
     lprop.conjugate(); // this is to make the dagger, trans is in the code
 
     site source({0,0,0,0});
@@ -87,10 +85,10 @@ int main(int argc, char **argv)
 
     PLEGMA_Correlator<double> corr(MOMENTUM_SPACE, source, 0, HGC_totalL[3]);
     corr.contractNucleonThrp_local(lprop,rprop,0,gammas,true);
-    corr.writeFile(filesPrefix+"Vloc_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
+    corr.writeFile(filesPrefix+"zfac_Vloc_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
 
     corr.contractNucleonThrp_oneD(lprop,rprop,gauge,0,gammas,true);
-    corr.writeFile(filesPrefix+"VoneD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
+    corr.writeFile(filesPrefix+"zfac_VoneD_"+pxpypzpt+"_conf_"+confStr,HDF5_FORMAT);
 
     if(isTwoD){
       corr.contractNucleonThrp_twoD(lprop,rprop,gauge,0,gammas,true);
