@@ -63,14 +63,18 @@ struct pointer_holder {
 
   void copyToDeviceConstant() {
     if(devPointer != nullptr) {
-      cudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
-      checkCudaError();
+      cudaError_t err = cudaMemcpyToSymbol( *devPointer, hostPointer, bytes*size);
+      if (err != cudaSuccess) {
+        errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
+      }
     }
   }
   void copyFromDeviceConstant() {
     if(false and devPointer != nullptr) {
-      cudaMemcpyFromSymbol(hostPointer, *devPointer, bytes*size, 0, cudaMemcpyDeviceToHost);
-      checkCudaError();
+      cudaError_t err = cudaMemcpyFromSymbol(hostPointer, *devPointer, bytes*size, 0, cudaMemcpyDeviceToHost);
+      if (err != cudaSuccess) {
+        errorQuda("Failed to copy constant host memory of size to device %zu \n", size);
+      }
     }
   }
   bool checkDeviceConstant() {

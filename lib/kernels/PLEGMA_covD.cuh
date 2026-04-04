@@ -32,5 +32,5 @@ template<typename FloatOut, typename FloatIn, typename FloatGauge>
 static void covD_k(vector2<FloatOut> out, vectorTex<FloatIn> v, gaugeTex<FloatGauge> g, int dirOr){
   ProfileStruct ps(out.volume());
   tuneAndRun(ps, "covD_kernel", covD_kernel<FloatOut,FloatIn,FloatGauge>, out, v, g, dirOr);
-  checkCudaError();
+  checkQudaError();
 }

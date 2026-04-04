@@ -73,6 +73,9 @@ target_link_libraries(Calc_2pt_charmonium ${PLEGMA_LIBS})
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
+cuda_add_executable(TMDPDFs_nucleon TMDPDFs_nucleon.cpp)
+target_link_libraries(TMDPDFs_nucleon ${PLEGMA_LIBS})
+
 cuda_add_executable(PDFs_qgq_nucleon PDFs_qgq_nucleon.cpp)
 target_link_libraries(PDFs_qgq_nucleon ${PLEGMA_LIBS})
 
@@ -139,6 +142,21 @@ target_link_libraries(testShifts ${PLEGMA_LIBS})
 cuda_add_executable(Zfac Zfac.cpp)
 target_link_libraries(Zfac ${PLEGMA_LIBS})
 
+cuda_add_executable(ZfacStaple ZfacStaple.cpp)
+target_link_libraries(ZfacStaple ${PLEGMA_LIBS})
+
+cuda_add_executable(SoftFunction SoftFunction.cpp)
+target_link_libraries(SoftFunction ${PLEGMA_LIBS})
+
+cuda_add_executable(SoftFunctionWall SoftFunctionWall.cpp)
+target_link_libraries(SoftFunctionWall ${PLEGMA_LIBS})
+
+cuda_add_executable(WallSourceNucleon WallSourceNucleon.cpp)
+target_link_libraries(WallSourceNucleon ${PLEGMA_LIBS})
+
+cuda_add_executable(TMDPDFs_pion TMDPDFs_pion.cpp)
+target_link_libraries(TMDPDFs_pion ${PLEGMA_LIBS})
+
 if (PLEGMA_SCATTERING_CONTRACTIONS)
   cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
@@ -155,7 +173,7 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 
-cuda_add_executable(gaugeFixing EXCLUDE_FROM_ALL gaugeFixing.cpp)
+cuda_add_executable(gaugeFixing gaugeFixing.cpp)
 target_link_libraries(gaugeFixing ${PLEGMA_LIBS})
 
 cuda_add_executable(invert invert.cpp)

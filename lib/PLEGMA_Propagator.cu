@@ -26,7 +26,7 @@ absorbVectorToHost(PLEGMA_Vector<Float> &vec, int nu, int c2){
       pointVec_dev = vec.D_elem() + mu*N_COLS*HGC_localVolume*2 + c1*HGC_localVolume*2;
       cudaMemcpy(pointProp_host,pointVec_dev,HGC_localVolume*2*sizeof(Float),cudaMemcpyDeviceToHost); 
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 // Prop4D <- Vec4D
@@ -45,7 +45,7 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int nu, int c2)
       cudaMemcpy(pointProp_dev,pointVec_dev,HGC_localVolume*2*sizeof(Float),
 		 cudaMemcpyDeviceToDevice); 
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 // Prop4D <- Vec4D (it)
@@ -68,7 +68,7 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it, 
       }
     }
   comm_barrier();
-  checkCudaError();
+  checkQudaError();
 }
 
 //Prop4D <- Vec3D
@@ -91,7 +91,7 @@ void PLEGMA_Propagator<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int global_it
       }
     }
   comm_barrier();
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
@@ -191,6 +191,18 @@ void  PLEGMA_Propagator<Float>::apply_gamma5(){
   apply_gamma5_propagator(*this);
 }
 
+template<typename Float>
+void PLEGMA_Propagator<Float>::PropmulVVdag(PLEGMA_Vector<Float> &vec1,PLEGMA_Vector<Float> &vec2){
+  this->zero_device();
+  assert(this->checkVolume(vec1));
+  assert(this->checkVolume(vec2));
+  auto vectex1 = toTexture<vectorTex>(vec1);
+  auto vectex2 = toTexture<vectorTex>(vec2);
+  prop_mul_V_Vdag(toField2<prop2>(*this), *vectex1, *vectex2);
+  checkQudaError();
+}
+	      
+
 //----------------------------------//
 // class PLEGMA_ Propagator3D //
 //----------------------------------//
@@ -220,7 +232,7 @@ absorbTimeSliceFromHost(PLEGMA_Propagator<Float> &prop,
   cudaMemcpy(this->d_elem,this->h_elem,
 	     N_SPINS*N_SPINS*N_COLS*N_COLS*V3*2*sizeof(Float),
 	     cudaMemcpyHostToDevice);
-  checkCudaError();
+  checkQudaError();
 }
 
 //Prop3D <- Vec4D
@@ -244,7 +256,7 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector<Float> &vec, int global_it
       else
 	cudaMemset(pointer_dst, 0, V3*2 * sizeof(Float));
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 //Prop3D <- Vec3D
@@ -260,7 +272,7 @@ void PLEGMA_Propagator3D<Float>::absorb(PLEGMA_Vector3D<Float> &vec, int nu, int
       pointer_src = (vec.D_elem() + mu*N_COLS*V3*2 + c1*V3*2);
       cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
     }
-  checkCudaError();
+  checkQudaError();
 }
 
 template  class PLEGMA_Propagator<double>;

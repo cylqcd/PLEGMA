@@ -13,6 +13,7 @@
 
 #include <cublas_v2.h>
 #include <mpi.h>
+#include <PLEGMA_utils.h>
 #pragma once
 enum OPER_MATR_BLAS {NOTRANS, TRANS, DAGGER};
 namespace cBLAS{
@@ -233,7 +234,7 @@ namespace cuBLAS{
     if(comm == MPI_COMM_NULL) PLEGMA_error("Communicator is NULL and cannot be used for MPI reduction");
     cuBLAS::gemv_(trans, m, n, alpha, A, x, beta, y);
     cudaMemcpy(yHost,y,n*2*sizeof(Float),cudaMemcpyDeviceToHost);
-    checkCudaError();
+    checkQudaError();
     int mpiErr = MPI_Allreduce(MPI_IN_PLACE,yHost,n*2,MPI_Type(yHost),MPI_SUM,comm);
     if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Allreduce failed with error %d\n", mpiErr);
   }
@@ -245,7 +246,7 @@ namespace cuBLAS{
     Float yHost[n*2];
     cuBLAS::gemv(trans,m, n, alpha, A, x, beta, y, yHost,comm);
     cudaMemcpy(y,yHost,sizeof(yHost),cudaMemcpyHostToDevice);
-    checkCudaError();
+    checkQudaError();
   }
 }
 //=================================================================//

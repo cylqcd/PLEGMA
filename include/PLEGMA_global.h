@@ -43,6 +43,9 @@ using namespace std::chrono_literals;
 
 //======== Preprocessor macros =========//
 #include <global/PLEGMA_macros.hpp>
+#include <tune_quda.h>
+#include <comm_quda.h>
+using namespace quda;
 
 namespace plegma {
   //======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//

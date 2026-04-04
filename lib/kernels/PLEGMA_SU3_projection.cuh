@@ -80,5 +80,5 @@ static void su3Projection_k(PLEGMA_Su3field<Float> &S){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (S.Total_length() + blockDim.x -1)/blockDim.x , 1 , 1);
   su3Projection_kernel<Float><<<gridDim,blockDim>>>(toField2<su3_2>(S));
-  checkCudaError();
+  checkQudaError();
 }

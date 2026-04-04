@@ -124,7 +124,7 @@ static void U_plus_eq_aU_k( PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> 
   assert(A.checkVolume(B));
   ProfileStruct ps(A.Total_length());
   run(ps, "U_plus_eq_aU_kernel", U_plus_eq_aU_kernel<FloatA,FloatB,FloatC>, toField2<su3_2>(A), toField2<su3_2>(B), c);
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatA, typename FloatB>
@@ -132,7 +132,7 @@ static void traceHerExpMap_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB>
   assert(A.checkVolume(B));
   ProfileStruct ps(A.Total_length());
   tuneAndRun(ps, "traceHerExpMap_kernel", traceHerExpMap_kernel<FloatA,FloatB>, toField2<su3_2>(A), toField2<su3_2>(B));
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatA, typename FloatB>
@@ -140,14 +140,14 @@ static void Udag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B){
   assert(A.checkVolume(B));
   ProfileStruct ps(A.Total_length());
   tuneAndRun(ps, "Udag_kernel", Udag_kernel<FloatA,FloatB>,toField2<su3_2>(A), toField2<su3_2>(B));
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float>
 static void Udag_k(PLEGMA_Su3field<Float> &A){
   ProfileStruct ps(A.Total_length());
   run(ps, "Udag_kernel", Udag_kernel<Float>,toField2<su3_2>(A));
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
@@ -155,7 +155,7 @@ static void UxU_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLEGMA
   assert(A.checkVolume(B,C));
   ProfileStruct ps(A.Total_length());
   tuneAndRun(ps, "UxU_kernel", UxU_kernel<FloatA,FloatB,FloatC>,toField2<su3_2>(A), toField2<su3_2>(B),toField2<su3_2>(C));
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
@@ -163,7 +163,7 @@ static void UxUdag_k(PLEGMA_Su3field<FloatA> &A, PLEGMA_Su3field<FloatB> &B, PLE
   assert(A.checkVolume(B,C));
   ProfileStruct ps(A.Total_length());
   tuneAndRun(ps, "UxUdag_kernel", UxUdag_kernel<FloatA,FloatB,FloatC>, toField2<su3_2>(A), toField2<su3_2>(B),toField2<su3_2>(C));
-  checkCudaError();
+  checkQudaError();
 }
 
 template<typename Float, typename FloatS>
@@ -175,12 +175,13 @@ static void sum_real_trace_host(ProfileStruct& ps, PLEGMA_Su3field<FloatS> &su3M
   
   hostMalloc(h_partial_sum, gridDimX * sizeof(Float) );
   cudaMalloc((void**)&d_partial_sum, gridDimX * sizeof(Float));
+//  d_partial_sum=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, gridDimX * sizeof(Float));
 
   sum_real_trace_kernel<Float,FloatS><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(toField2<su3_2>(su3M), d_partial_sum);
 
   cudaMemcpy(h_partial_sum, d_partial_sum , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
   cudaFree(d_partial_sum);
-  checkCudaError();
+  checkQudaError();
 
   for(int i = 0 ; i < gridDimX ; i++)
     sum += h_partial_sum[i];

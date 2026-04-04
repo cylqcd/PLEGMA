@@ -6,6 +6,7 @@
 #include <PLEGMA_utils.h>
 #include <omp.h>
 #include  <memory>
+#include <communicator_quda.h>
 using namespace plegma;
 
 bool gammas_isSym( std::vector<GAMMAS_SCATT> &Gammas ){
@@ -376,7 +377,7 @@ Float *PLEGMA_ScattCorrelator<Float>::get_source_time_slice(){
   memcpy(ptr, this->H_elem()+t_source_local*size_timeslice, sizeof(Float)*size_timeslice); 
   int coords[4];
   for(int i = 0 ; i < N_DIMS; i++) coords[i] = this->getSource()[i] / HGC_localL[i];
-  int rankHas = comm_rank_from_coords(HGC_default_topo, coords);
+  int rankHas = quda::comm_rank_from_coords(HGC_default_topo, coords);
 
   int mpiErr = MPI_Bcast(ptr, size_timeslice, MPI_Type<Float>(), rankHas, HGC_fullComm);
   if(mpiErr != MPI_SUCCESS) PLEGMA_error("MPI_Bcast failed with error %d\n", mpiErr);
@@ -3458,7 +3459,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbTimeslice(PLEGMA_ScattCorrelator<Float
 
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
 
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - comm_coord(3) * HGC_localL[3];
 
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
 

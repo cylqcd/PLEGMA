@@ -151,8 +151,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
   inv_param.Ls = 1;
 
-  inv_param.sp_pad = 0;
-  inv_param.cl_pad = 0;
+//  inv_param.sp_pad = 0;
+//  inv_param.cl_pad = 0;
 
   inv_param.cpu_prec = cpu_prec;
   inv_param.cuda_prec = cuda_prec;
@@ -331,8 +331,8 @@ void setInvertParam(QudaInvertParam &inv_param) {
 
   inv_param.Ls = 1;
 
-  inv_param.sp_pad = 0;
-  inv_param.cl_pad = 0;
+//  inv_param.sp_pad = 0;
+//  inv_param.cl_pad = 0;
 
   inv_param.cpu_prec = cpu_prec;
   inv_param.cuda_prec = cuda_prec;

@@ -190,7 +190,7 @@ namespace plegma {
     void T1( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3 );
     /**
      *  @brief performs T2 type reduction to compute baryon 2pt functions
-     *  T2_{alpha,beta}=\epsilon_{a,b,c}\epsilon_{l,m,n}S2^{c,l}_{alpha,beta}\Gamma_{i}_{alpha0,alpha1}S2^{b,m}_{beta0,alpha1}\Gamma_{f}_{beta0,beta1}S3^{a,n}_{beta1,alpha0} 
+     *  T2_{alpha,beta}=\epsilon_{a,b,c}\epsilon_{l,m,n}S1^{c,l}_{alpha,beta}\Gamma_{i}_{alpha0,alpha1}S2^{b,m}_{beta0,alpha1}\Gamma_{f}_{beta0,beta1}S3^{a,n}_{beta1,alpha0} 
      *  @param std::vector<GAMMAS_SCATT> &Gammas_i: list of gammas at the source for the contractions
      *  @param std::vector<GAMMAS_SCATT> &Gammas_f: list of gammas at the sink for the contractions
      *  @param PLEGMA_Propagator<Float> &S1: propagator to the sink spin from the source spin index

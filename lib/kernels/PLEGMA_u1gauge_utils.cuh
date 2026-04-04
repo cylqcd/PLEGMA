@@ -29,5 +29,5 @@ void constFieldU1(u1gauge2<Float> G, int mu, int nu, Float exparg, int xnu_0){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (G.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   constField_kernel<<<gridDim,blockDim>>>(G,mu,nu,exparg,xnu_0);
-  checkCudaError();
+  checkQudaError();
 }

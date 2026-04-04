@@ -1,4 +1,6 @@
 #pragma once
+//#include <PLEGMA_utils.h>
+#include <tune_quda.h>
 
 namespace plegma {
   inline int getVecToInd(std::vector<int> x, std::vector<int> L){
@@ -100,15 +102,15 @@ namespace plegma {
       createColLattice();
       //  if(check)checkColoring();
       cudaMalloc((void**)&d_arrVc, HGC_localVolume*sizeof(int));
-      checkCudaError();
+//      checkQudaError();
       cudaMemcpy(d_arrVc, h_arrVc, HGC_localVolume*sizeof(int), cudaMemcpyHostToDevice);
-      checkCudaError();    
+//      checkQudaError();    
     }
     ~PLEGMA_Hprobing(){
       delete[] h_arrVc;
       delete[] arrlc;
       cudaFree(d_arrVc);
-      checkCudaError();
+      //checkQudaError();
     }
     int* H_arrVc() const{return h_arrVc;}
     int* D_arrVc() const{return d_arrVc;}
