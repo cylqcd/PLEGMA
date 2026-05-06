@@ -53,7 +53,7 @@ __global__ void qedPhase_kernel(gauge2<Float> gauge, gaugeU12<Float> gaugeU1, Fl
 template<typename Float>
 static void qedPhase_k(gauge2<Float> gauge, gaugeU12<Float> gaugeU1, Float phase){
   ProfileStruct ps(gauge.volume());
-  tuneAndRun(ps, "qedPhase_kernel", qedPhase_kernel<Float>, gauge, gaugeU1, phase);
+  run(ps, "qedPhase_kernel", qedPhase_kernel<Float>, gauge, gaugeU1, phase);
 }
 
 

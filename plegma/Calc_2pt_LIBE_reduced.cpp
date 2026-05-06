@@ -101,12 +101,10 @@ int main(int argc, char **argv)
 		
 	};
 	add_options(*HGC_options);
-	double des_u = des;
-	double des_d = des;
    	//=========================================================================================================//
 	initializePLEGMA();
 
-	mu_l.insert(mu_l.begin(), mu);
+	// mu_l.insert(mu_l.begin(), mu);
 	double kappa0 = kappa;
 
 	if(link_recon!=QUDA_RECONSTRUCT_NO or link_recon_sloppy!=QUDA_RECONSTRUCT_NO or link_recon_precondition!=QUDA_RECONSTRUCT_NO) {
@@ -213,7 +211,6 @@ int main(int argc, char **argv)
 				kappa = kappa0;
 				solver.UpdateSolver();
 			}
-			
 
 			//updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);     
 			site& source = sourcePositions[isource];
@@ -260,11 +257,11 @@ int main(int argc, char **argv)
 
 			auto computePropagator = [&](PLEGMA_Propagator<double>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
 				// ensuring mu value
-				if(mu != run_mu) {
+				// if(mu != run_mu) {
 					// updateOptions(fl);
-					mu = run_mu;
-					solver.UpdateSolver();
-				}
+				mu = run_mu;
+				solver.UpdateSolver();
+				// }
 				for(int isc = 0 ; isc < 12 ; isc++){
 					PLEGMA_Vector<double> vectorInOut;
 					{ // Smearing the source
@@ -295,61 +292,34 @@ int main(int argc, char **argv)
 			for (int isgn = 0; isgn < 3; isgn++) {
 				if (des == 0 && isgn != 1) continue;
 
-				double phase_u = (isgn - 1) * des_u;
-				double phase_d = (isgn - 1) * des_d;
-				PLEGMA_printf("\nPhase U: %.4f, Phase D: %.4f\n", phase_u, phase_d);
+				double phase = (isgn - 1) * des;
+				PLEGMA_printf("\nPhase: %.4f\n", phase);
 
-
-				if (isgn != 1) {
-					PLEGMA_Gauge<double> gaugeUT;
-					gaugeUT.copy(gauge);
-					gaugeU1.calculatePlaq(phase_u);
-					gaugeUT.qedPhase(gaugeU1, phase_u);
-					gaugeUT.calculatePlaq();
-					updateGaugeQuda(gaugeUT, true);
+				if(isgn!=1){
+					PLEGMA_Gauge<double> gauge2;
+					gauge2.copy(gauge);
+					gaugeU1.calculatePlaq(phase);
+					gauge2.qedPhase(gaugeU1, phase);
+					gauge2.calculatePlaq();
+					updateGaugeQuda(gauge2, true);
 					plaqQuda();
+					//applyBoundaryConditions(gauge2,true);
 				} else {
-					updateGaugeQuda(gauge, true);
+					updateGaugeQuda(gauge, true);	
 				}
 				solver.UpdateSolver();
 
-				// --- up-type propagators ---
 				for (int imu = 0; imu < Nmu; ++imu) {
-					double mu = mu_l[imu];
-
 					if (needU[imu][isgn]) {
-						TIME(computePropagator(propUP,  mu, LIGHT, nsmearGauss));
+						TIME(computePropagator(propUP, mu_l[imu], LIGHT, nsmearGauss));
 						propUP.unload();
 						props_u[imu][isgn]->copy(propUP, HOST);
 					}
 				}
 
-				if (mu_c != 0 && needC[isgn]) {
-					TIME(computePropagator(propCH, mu_c, CHARM, nsmearGauss_c));
-					propCH.unload();
-					props_c[isgn]->copy(propCH, HOST);
-				}
-
-				// --- down-type propagators ---
-
-				if (isgn != 1) {
-					PLEGMA_Gauge<double> gaugeDT;
-					gaugeDT.copy(gauge);
-					gaugeU1.calculatePlaq(phase_d);
-					gaugeDT.qedPhase(gaugeU1, phase_d);
-					gaugeDT.calculatePlaq();
-					updateGaugeQuda(gaugeDT, true);
-					plaqQuda();
-				} else {
-					updateGaugeQuda(gauge, true);
-				}
-				solver.UpdateSolver();
-
 				for (int imu = 0; imu < Nmu; ++imu) {
-					double mu = mu_l[imu];
-
 					if (needD[imu][isgn]) {
-						TIME(computePropagator(propDN, -mu, LIGHT, nsmearGauss));
+						TIME(computePropagator(propDN, -mu_l[imu], LIGHT, nsmearGauss));
 						propDN.unload();
 						props_d[imu][isgn]->copy(propDN, HOST);
 					}
@@ -360,6 +330,12 @@ int main(int argc, char **argv)
 					propST.unload();
 					props_s[isgn]->copy(propST, HOST);
 				}
+
+				if (mu_c != 0 && needC[isgn]) {
+					TIME(computePropagator(propCH, mu_c, CHARM, nsmearGauss_c));
+					propCH.unload();
+					props_c[isgn]->copy(propCH, HOST);
+				}
 			}
 			
 			PLEGMA_Propagator<double> prop_u;
@@ -367,12 +343,20 @@ int main(int argc, char **argv)
 			PLEGMA_Propagator<double> prop_s(mu_s!=0 ? BOTH : NONE);
 			PLEGMA_Propagator<double> prop_c(mu_c!=0 ? BOTH : NONE);
 
+			auto has_prop = [](const auto &ptr) {
+				return ptr != nullptr;
+			};
+
 			for (int imu = 0; imu < mu_l.size(); imu++) {
 				double mu_val = mu_l[imu];
 
 				if (des != 0 && run_ud) {
 
 					// --------- All signs zero -------------
+					if (has_prop(props_u[imu][1]) &&
+						has_prop(props_d[imu][1]) &&
+						has_prop(props_s[1]) &&
+						has_prop(props_c[1]))
 					{
 						PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 						TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
@@ -403,6 +387,7 @@ int main(int argc, char **argv)
 					for (int sign_idx : {0, 2}) {
 
 						// UP
+						if (has_prop(props_u[imu][sign_idx]) && has_prop(props_d[imu][1]))
 						{
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 							TIME(prop_u.copy(*props_u[imu][sign_idx], HOST); prop_u.load());
@@ -420,6 +405,7 @@ int main(int argc, char **argv)
 						}
 
 						// DOWN
+						if (has_prop(props_d[imu][sign_idx]) && has_prop(props_u[imu][1]))
 						{
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 							TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
@@ -439,6 +425,7 @@ int main(int argc, char **argv)
 					
 						if (do_all_self_energy) {
 							// STRANGE
+							if (has_prop(props_s[sign_idx]) && has_prop(props_u[imu][1]) && has_prop(props_d[imu][1]))
 							{
 								PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 								TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
@@ -466,6 +453,10 @@ int main(int argc, char **argv)
 							}
 
 							// CHARM
+							if (has_prop(props_u[imu][1]) &&
+								has_prop(props_d[imu][1]) &&
+								has_prop(props_s[1]) &&
+								has_prop(props_c[sign_idx]))
 							{
 								PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 								TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
@@ -514,57 +505,63 @@ int main(int argc, char **argv)
 									sign_idx[i] = sign_i;
 									sign_idx[j] = sign_j;
 
-									TIME(prop_u.copy(*props_u[imu][sign_idx[0]], HOST); prop_u.load());
-									TIME(prop_d.copy(*props_d[imu][sign_idx[1]], HOST); prop_d.load());
-									TIME(prop_s.copy(*props_s[sign_idx[2]], HOST); prop_s.load());
-									TIME(prop_c.copy(*props_c[sign_idx[3]], HOST); prop_c.load());
+									if (has_prop(props_u[imu][sign_idx[0]]) &&
+										has_prop(props_d[imu][sign_idx[1]]) &&
+										has_prop(props_s[sign_idx[2]]) &&
+										has_prop(props_c[sign_idx[3]]))
+									{
+										TIME(prop_u.copy(*props_u[imu][sign_idx[0]], HOST); prop_u.load());
+										TIME(prop_d.copy(*props_d[imu][sign_idx[1]], HOST); prop_d.load());
+										TIME(prop_s.copy(*props_s[sign_idx[2]], HOST); prop_s.load());
+										TIME(prop_c.copy(*props_c[sign_idx[3]], HOST); prop_c.load());
 
-									PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
+										PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 
-									bool changed[4] = {
-										sign_idx[0] != zero,
-										sign_idx[1] != zero,
-										sign_idx[2] != zero,
-										sign_idx[3] != zero
-									};
+										bool changed[4] = {
+											sign_idx[0] != zero,
+											sign_idx[1] != zero,
+											sign_idx[2] != zero,
+											sign_idx[3] != zero
+										};
 
-									std::vector<std::string> filtered_baryons;
-									for (const std::string& b : BP_prop_prods) {
-										std::set<char> flavors(b.begin(), b.end());
-										if (imu > 0 && flavors.find('u') == flavors.end() && flavors.find('d') == flavors.end())
-											continue;
-										int distinct_changed = 0;	// Evaluate how many distinct flavors have changed from phase 0
-										if (flavors.count('u') && changed[0]) distinct_changed++;
-										if (flavors.count('d') && changed[1]) distinct_changed++;
-										if (flavors.count('s') && changed[2]) distinct_changed++;
-										if (flavors.count('c') && changed[3]) distinct_changed++;
-										
-										// Save all baryons with exactly 2 distinct changed flavors but explicitly skip the case where the only two are s and c, since they do not contribute to the mass difference.
-										if (distinct_changed == 2) {
-											if (!(flavors.count('s') && changed[2] && flavors.count('c') && changed[3])) { // 
-												filtered_baryons.push_back(b);
+										std::vector<std::string> filtered_baryons;
+										for (const std::string& b : BP_prop_prods) {
+											std::set<char> flavors(b.begin(), b.end());
+											if (imu > 0 && flavors.find('u') == flavors.end() && flavors.find('d') == flavors.end())
+												continue;
+											int distinct_changed = 0;	// Evaluate how many distinct flavors have changed from phase 0
+											if (flavors.count('u') && changed[0]) distinct_changed++;
+											if (flavors.count('d') && changed[1]) distinct_changed++;
+											if (flavors.count('s') && changed[2]) distinct_changed++;
+											if (flavors.count('c') && changed[3]) distinct_changed++;
+											
+											// Save all baryons with exactly 2 distinct changed flavors but explicitly skip the case where the only two are s and c, since they do not contribute to the mass difference.
+											if (distinct_changed == 2) {
+												if (!(flavors.count('s') && changed[2] && flavors.count('c') && changed[3])) { // 
+													filtered_baryons.push_back(b);
+												}
 											}
 										}
+
+										// std::string combined;
+										// for (const auto& baryon : filtered_baryons) {
+										// 	combined += baryon + " ";
+										// }
+										// PLEGMA_printf("imu=%lu, i=%d, j=%d, sign_i=%d, sign_j=%d | Filtered baryons: %s\n", imu, i, j, sign_i, sign_j, combined.c_str());
+
+										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c,
+																	false, false, false, false, false,
+																	&filtered_baryons));
+
+										std::string group = make_group_name_QED("mixed", mu_val,
+																				sign_idx[0] - 1,
+																				sign_idx[1] - 1,
+																				sign_idx[2] - 1,
+																				sign_idx[3] - 1);
+										std::string full_group = "QED/" + group;
+										corr.setGroups(full_group.c_str());
+										THREAD(corr.writeFile(twop_filename, corr_file_format));
 									}
-
-									// std::string combined;
-									// for (const auto& baryon : filtered_baryons) {
-									// 	combined += baryon + " ";
-									// }
-									// PLEGMA_printf("imu=%lu, i=%d, j=%d, sign_i=%d, sign_j=%d | Filtered baryons: %s\n", imu, i, j, sign_i, sign_j, combined.c_str());
-
-									TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, prop_c,
-																false, false, false, false, false,
-																&filtered_baryons));
-
-									std::string group = make_group_name_QED("mixed", mu_val,
-																			sign_idx[0] - 1,
-																			sign_idx[1] - 1,
-																			sign_idx[2] - 1,
-																			sign_idx[3] - 1);
-									std::string full_group = "QED/" + group;
-									corr.setGroups(full_group.c_str());
-									THREAD(corr.writeFile(twop_filename, corr_file_format));
 								}
 							}
 						}
@@ -590,11 +587,15 @@ int main(int argc, char **argv)
 						TIME(computePropagator(*propSIBCH, run_mu_ch, CHARM, nsmearGauss_c));
 					}
 				}
-
-				TIME(prop_s.copy(*props_s[1], HOST));
-				prop_s.load();
-				TIME(prop_c.copy(*props_c[1], HOST));
-				prop_c.load();
+				if (mu_s != 0 && has_prop(props_s[1])) {
+					TIME(prop_s.copy(*props_s[1], HOST));
+					prop_s.load();
+				}
+				
+				if (mu_c != 0 && has_prop(props_c[1])) {
+					TIME(prop_c.copy(*props_c[1], HOST));
+					prop_c.load();
+				}
 					
 				double run_mu = mu_phys;
 				double run_mu_up = 1.005 * run_mu;
@@ -605,6 +606,11 @@ int main(int argc, char **argv)
 				}
 
 				{
+					if (!has_prop(props_u[0][1]) || !has_prop(props_d[0][1])) {
+						PLEGMA_printf("[WARN] Missing base light propagators in SIB\n");
+						continue;
+					}
+
 					TIME(prop_u.copy(*props_u[0][1], HOST));
 					prop_u.load();
 					TIME(prop_d.copy(*props_d[0][1], HOST));
@@ -622,6 +628,11 @@ int main(int argc, char **argv)
 						}
 
 						bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
+
+						if (run_ud && (!propSIBUP || !propSIBDN)) {
+							PLEGMA_printf("[WARN] Missing SIB light propagators\n");
+							continue;
+						}
 
 						// Modify the respective propagator
 						switch (flavor) {
@@ -683,6 +694,11 @@ int main(int argc, char **argv)
 					}
 
 					for (size_t imu = 0; imu < mu_l.size(); ++imu) {
+						if (!has_prop(props_u[imu][1]) || !has_prop(props_d[imu][1])) continue;
+
+						if (mu_s != 0 && !has_prop(props_s[1])) continue;
+						if (mu_c != 0 && !has_prop(props_c[1])) continue;
+
 						double run_mu = mu_l[imu];
 						TIME(computePropagator(*propCMUP, run_mu, LIGHT, nsmearGauss));
 						TIME(computePropagator(*propCMDN, -run_mu, LIGHT, nsmearGauss));
@@ -700,6 +716,7 @@ int main(int argc, char **argv)
 							if (!run_heavy_CM && flavor > 1) { // Skip strange and charm CM if not running heavy CM
 								continue;
 							}
+							if (run_ud && (!propCMUP || !propCMDN)) continue;
 
 							bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
 							std::string group, full_group;

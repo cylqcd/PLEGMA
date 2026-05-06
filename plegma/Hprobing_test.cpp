@@ -32,6 +32,7 @@ int main(int argc, char **argv)
 	int hadamHgh = Nhadam;
 	bool spinColorDil = false;
 	bool vectorOp = false;
+	int start_src = 0;
 	auto add_options = [&](Options& options) {
 		options.set("accum-loops", "Accumulate loops over the stochastic source vectors", verbosity, accumFlag);
 		options.set("dump-step", "If accumulation is ON, Every how many stochastic vector to dump results", verbosity, NdumpStep);
@@ -39,14 +40,15 @@ int main(int argc, char **argv)
 		options.set("hadamard-low", "From which Hadamard vector to start (Options:[0,max))", verbosity, hadamLow);
 		options.set("hadamard-high", "Up to which Hadamard vector to stop (Options: 0>= , <=max) (default max)", verbosity, hadamHgh);
 		options.set("spin-color-dil", "Whether we want spin color dilution",verbosity,spinColorDil);
-		options.set("vector-op", "Whether we want to use vector operations", verbosity, vectorOp);
+		options.set("vector-op", "Whether we want to use gmuD instead", verbosity, vectorOp);
+		options.set("start-src", "Starting index for the stochastic sources (inclusive)", verbosity, start_src);
 	};
 	add_options(*HGC_options);
 	int Nsc = spinColorDil ? N_SPINS*N_COLS : 1;
 	if((k_probing>0) && (hadamLow<0 || hadamHgh<0)) PLEGMA_error("Negative values for number of Hadamard vector not allowed");
 	if((k_probing>0) && (hadamLow>hadamHgh))  PLEGMA_error("hadamard-high should be > hadamard-low");
 	if((k_probing>0) && (hadamHgh>Nhadam)) PLEGMA_error("hadamard-high should be <= from max number of Hadamard vectors");
-	std::string tag = "/trace";
+	std::string tag = "/traceH";
 	std::string options_tag = "";
 	if (k_probing>0) {
 		int coloring_distance = std::pow(2,k_probing-1);
@@ -120,7 +122,7 @@ int main(int argc, char **argv)
 
 	std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
 	GAMMAS g5gmu[4] = {G5G1, G5G2, G5G3, G5G4};
-	for(int isrc = 0; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
+	for(int isrc = start_src; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
 		PLEGMA_printf("\n ### Calculations for source-position %d begin now ###\n\n", isrc);
     	source.stochastic_Z(2);
 		for(int ih = hadamLow; ih < hadamHgh; ih++){

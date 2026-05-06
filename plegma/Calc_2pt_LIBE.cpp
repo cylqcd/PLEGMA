@@ -69,8 +69,11 @@ int main(int argc, char **argv)
 	bool run_ud = true;
 	bool run_SIB = true;
 	bool run_CM = true;
+	bool run_heavy_SIB = false;
+	bool run_heavy_CM = false;
 	int start_src = 0;
 	double des;
+	int SIB_shift_sign = 1;
 	std::vector<double> dks;
 	std::string qedfile;
 	std::string srcInputFile = "./input.src";
@@ -89,12 +92,15 @@ int main(int argc, char **argv)
 		options.set("dqed", "dqed used for LIBE", verbosity, des);
   		HGC_options->set("dkappa", "dkappa used for LIBE", verbosity, dks);
 		options.set("qed-filename", "The path to the QED field", verbosity, qedfile);
+		options.set("run-heavy-SIB", "Whether to run SIB for strange and charm quarks", verbosity, run_heavy_SIB);
+		options.set("run-heavy-CM", "Whether to run CM for strange and charm quarks", verbosity, run_heavy_CM);
+		options.set("SIB-shift-sgn", "The sign of the shift for SIB", verbosity, SIB_shift_sign);
 	};
 	add_options(*HGC_options);
    	//=========================================================================================================//
 	initializePLEGMA();
 
-	mu_l.insert(mu_l.begin(), mu);
+	// mu_l.insert(mu_l.begin(), mu);
 	double kappa0 = kappa;
 
 	if(link_recon!=QUDA_RECONSTRUCT_NO or link_recon_sloppy!=QUDA_RECONSTRUCT_NO or link_recon_precondition!=QUDA_RECONSTRUCT_NO) {
@@ -149,11 +155,9 @@ int main(int argc, char **argv)
 
 		std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_s(3);
 		std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_c(3);
-		if (des != 0) {
-			for (int isgn = 0; isgn < 3; isgn++) {
-				props_s[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
-				props_c[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
-			}
+		for (int isgn = 0; isgn < 3; isgn++) {
+			props_s[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
+			props_c[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
 		}
     
 		for(int isource = start_src ; isource < numSourcePositions; isource++){
@@ -176,12 +180,12 @@ int main(int argc, char **argv)
 			PLEGMA_Propagator<double> propCH;
 			PLEGMA_Propagator<double> propSIBUP(run_ud ? BOTH : NONE);
 			PLEGMA_Propagator<double> propSIBDN(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propSIBST;
-			PLEGMA_Propagator<double> propSIBCH;
+			PLEGMA_Propagator<double> propSIBST(run_SIB ? BOTH : NONE);
+			PLEGMA_Propagator<double> propSIBCH(run_SIB ? BOTH : NONE);
 			PLEGMA_Propagator<double> propCMUP(run_ud ? BOTH : NONE);
 			PLEGMA_Propagator<double> propCMDN(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propCMST;
-			PLEGMA_Propagator<double> propCMCH;
+			PLEGMA_Propagator<double> propCMST(run_CM ? BOTH : NONE);
+			PLEGMA_Propagator<double> propCMCH(run_CM ? BOTH : NONE);
 
 			PLEGMA_Gauge3D<double> smearedGauge3D;
 			smearedGauge3D.absorb(smearedGauge, source[DIM_T]);	
@@ -259,11 +263,11 @@ int main(int argc, char **argv)
 
 				if (run_ud) {
 					for (int imu = 0; imu < mu_l.size(); imu++) {
-							double mu = mu_l[imu];
+							PLEGMA_printf("[QED] Running inversion for mu = %.6e\n", mu_l[imu]);
 
 							// Compute and store light quark propagators
-							TIME(computePropagator(propUP,  mu, LIGHT, nsmearGauss));
-							TIME(computePropagator(propDN, -mu, LIGHT, nsmearGauss));
+							TIME(computePropagator(propUP,  mu_l[imu], LIGHT, nsmearGauss));
+							TIME(computePropagator(propDN, -mu_l[imu], LIGHT, nsmearGauss));
 
 							propUP.unload();
 							propDN.unload();
@@ -493,8 +497,10 @@ int main(int argc, char **argv)
 				updateGaugeQuda(gauge, true);
 				solver.UpdateSolver();
 
-				double run_mu_st = 1.005 * mu_s[0];
-				double run_mu_ch = 1.005 * mu_c[0];
+				assert(SIB_shift_sign == 1 || SIB_shift_sign == -1);
+
+				double run_mu_st = (1 + SIB_shift_sign * 0.005) * mu_s[0];
+				double run_mu_ch = (1 + SIB_shift_sign * 0.005) * mu_c[0];
 				TIME(computePropagator(propSIBST, run_mu_st, STRANGE, nsmearGauss_s));
 				TIME(computePropagator(propSIBCH, run_mu_ch, CHARM, nsmearGauss_c));
 
@@ -504,10 +510,10 @@ int main(int argc, char **argv)
 				prop_c.load();
 
 				for (size_t imu = 0; imu < mu_l.size(); imu++) {
-					
 					double run_mu = mu_l[imu];
-					double run_mu_up = 1.005 * run_mu;
-					double run_mu_dn = -1.005 * run_mu;
+					PLEGMA_printf("[SIB] Running inversion for mu = %.6e\n", run_mu);
+					double run_mu_up = (1 + SIB_shift_sign * 0.005) * run_mu;
+					double run_mu_dn = -(1 + SIB_shift_sign * 0.005) * run_mu;
 					if (run_ud) {
 						TIME(computePropagator(propSIBUP, run_mu_up, LIGHT, nsmearGauss));
 						TIME(computePropagator(propSIBDN, run_mu_dn, LIGHT, nsmearGauss));
@@ -526,6 +532,10 @@ int main(int argc, char **argv)
 						PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 
 						for (int flavor = 0; flavor < 4; flavor++) {
+							if (!run_heavy_SIB && flavor > 1) { // Skip strange and charm SIB if not running heavy SIB
+								continue;
+							}
+
 							bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
 
 							// Modify the respective propagator
@@ -601,6 +611,8 @@ int main(int argc, char **argv)
 					kappa = (1 + dk) * kappa0;
 					solver.UpdateSolver();
 
+					PLEGMA_printf("[CM] Running inversion with kappa = %.6e\n", kappa);
+
 					double run_mu_st = mu_s[0];
 					double run_mu_ch = mu_c[0];
 					TIME(computePropagator(propCMST, run_mu_st, STRANGE, nsmearGauss_s));
@@ -621,6 +633,10 @@ int main(int argc, char **argv)
 						prop_c.load();
 
 						for (int flavor = 0; flavor < 4; flavor++) {
+							if (!run_heavy_CM && flavor > 1) { // Skip strange and charm CM if not running heavy CM
+								continue;
+							}
+
 							bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
 							std::string group, full_group;
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);

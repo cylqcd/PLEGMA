@@ -30,16 +30,17 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
       int* h_localColors; // array to hold the local colors for each MPI task on host
       int* d_localColors; // array to hold the local colors for each MPI task on device
       std::vector<int> sigma; // vector to hold the sigma values
+
       void graph_coloring(){
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]}; // local lattice
         std::vector<int> nProc = {HGC_nProc[0], HGC_nProc[1], HGC_nProc[2], HGC_nProc[3]}; // MPI grid
-        if(probing_dimension == 3)
-          get_sigma_3D();
-        else if(probing_dimension == 4)
-          get_sigma_4D();
-        else PLEGMA_error("Classical probing supports only 3D and 4D coloring");
+        // if(probing_dimension == 3)
+        //   get_sigma_3D();
+        // else if(probing_dimension == 4)
+        //   get_sigma_4D();
+        // else PLEGMA_error("Classical probing supports only 3D and 4D coloring");
         PLEGMA_printf("Sigma is (%d,%d,%d,%d)\n",sigma[0],sigma[1],sigma[2],sigma[3]);
         std::vector<int> rank_coord = getRankCoord(rank, nProc); // Compute rank coordinates in MPI grid
         std::vector<int> proc_offset(4);
@@ -57,183 +58,89 @@ inline std::vector<int> getRankCoord(int ind, const std::vector<int>& nProc){
         }
       }
 
-      void get_sigma_4D(){ // works only for 64x32^3
-  
-        if(coloring_distance == 0){
-          sigma[0] = 0;
-          sigma[1] = 0;
-          sigma[2] = 0;
-          sigma[3] = 0;
-          
-          Nc = 1;
-        }
+      bool load_sigma_from_file(const std::string& file,
+                                int dim,
+                                int distance,
+                                std::vector<int>& sigma,
+                                int& Nc)
+      {
+          int rank;
+          MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-        if(coloring_distance == 1){ // fix index ordering to xyzt
-          sigma[0] = 1;
-          sigma[1] = 1;
-          sigma[2] = 1;
-          sigma[3] = 1;
-          
-          Nc = 2;
-        }
-        
-        if(coloring_distance == 2){
-          sigma[0] = 1;
-          sigma[1] = 2;
-          sigma[2] = 3;
-          sigma[3] = 4;
-          
-          Nc = 10;
-        }
-        
-        if(coloring_distance == 3){
-          sigma[0] = 1;
-          sigma[1] = 5;
-          sigma[2] = 55;
-          sigma[3] = 61;
-          
-          Nc = 16;
-        }
-        
-        if(coloring_distance == 4){
-          sigma[0] = 1;
-          sigma[1] = 8;
-          sigma[2] = 12;
-          sigma[3] = 18;
-          
-          Nc = 64;
-        }
+          if(rank == 0)
+              PLEGMA_printf("Loading sigma config file: %s\n", file.c_str());
 
-        if(coloring_distance == 5){
-          sigma[0] = 1;
-          sigma[1] = 12;
-          sigma[2] = 16;
-          sigma[3] = 38;
-          
-          Nc = 128;
-        }
+          std::ifstream f(file);
+          if(!f.is_open()) {
+              if(rank == 0)
+                  PLEGMA_printf("ERROR: Could not open sigma config file: %s\n", file.c_str());
+              return false;
+          }
 
-        if(coloring_distance == 6){
-          sigma[0] = 3;
-          sigma[1] = 20;
-          sigma[2] = 48;
-          sigma[3] = 50;
-          
-          Nc = 320;
-        }
+          // compute global lattice size
+          int globalL[4];
+          for(int i = 0; i < 4; i++)
+              globalL[i] = HGC_localL[i] * HGC_nProc[i];
 
-        if(coloring_distance == 7){
-          sigma[0] = 32;
-          sigma[1] = 33;
-          sigma[2] = 40;
-          sigma[3] = 61;
-          
-          Nc = 512;
-        }
+          std::string lattice_key =
+              std::to_string(globalL[0]) + "x" +
+              std::to_string(globalL[1]) + "x" +
+              std::to_string(globalL[2]) + "x" +
+              std::to_string(globalL[3]);
+
+          if(rank == 0)
+              PLEGMA_printf("Looking for lattice key %s (dim=%d, dist=%d)\n",
+                            lattice_key.c_str(), dim, distance);
+
+          std::string line;
+          while(std::getline(f, line)) {
+
+              if(line.empty() || line[0] == '#') continue;
+
+              std::istringstream iss(line);
+
+              std::string lat;
+              int d, dist, nc;
+              int s0, s1, s2, s3;
+
+              if(!(iss >> lat >> d >> dist >> s0 >> s1 >> s2 >> s3 >> nc))
+                  continue;
+
+              if(lat == lattice_key && d == dim && dist == distance){
+                  sigma = {s0, s1, s2, s3};
+                  Nc = nc;
+
+                  if(rank == 0)
+                      PLEGMA_printf("Loaded sigma = (%d,%d,%d,%d), Nc = %d\n",
+                                    s0, s1, s2, s3, nc);
+
+                  return true;
+              }
+          }
+
+          if(rank == 0)
+              PLEGMA_printf("ERROR: No matching sigma found for key %s (dim=%d, dist=%d)\n",
+                            lattice_key.c_str(), dim, distance);
+
+          return false;
       }
 
-      void get_sigma_3D(){  // works only for 32^3
-        
-        if(coloring_distance == 0){
-          sigma[0] = 0;
-          sigma[1] = 0;
-          sigma[2] = 0;
-          sigma[3] = 0;
-          
-          Nc = 1;
-        }
-
-        if(coloring_distance == 1){
-          sigma[0] = 0;
-          sigma[1] = 1;
-          sigma[2] = 1;
-          sigma[3] = 1;
-          
-          Nc = 2;
-        }
-        
-        if(coloring_distance == 2){
-          sigma[0] = 0;
-          sigma[1] = 1;
-          sigma[2] = 2;
-          sigma[3] = 3;
-          
-          Nc = 8;
-        }
-        
-        if(coloring_distance == 3){
-          sigma[0] = 0;
-          sigma[1] = 1;
-          sigma[2] = 3;
-          sigma[3] = 5;
-          
-          Nc = 16;
-        }
-        
-        if(coloring_distance == 4){
-          sigma[0] = 0;
-          sigma[1] = 1;
-          sigma[2] = 6;
-          sigma[3] = 9;
-          
-          Nc = 32;
-        }
-      
-        if(coloring_distance == 5){ 
-          sigma[0] = 0; 
-          sigma[1] = 1; 
-          sigma[2] = 11; 
-          sigma[3] = 27; 
-
-          Nc = 88; 
-        } 
-
-        if(coloring_distance == 6){ 
-          sigma[0] = 0; 
-          sigma[1] = 1; 
-          sigma[2] = 8; 
-          sigma[3] = 44; 
-
-          Nc = 128; 
-        } 
-
-        if(coloring_distance == 7){ 
-          sigma[0] = 0; 
-          sigma[1] = 1; 
-          sigma[2] = 9; 
-          sigma[3] = 33; 
-
-          Nc = 176; 
-        } 
-
-        if(coloring_distance == 8){ 
-          sigma[0] = 0; 
-          sigma[1] = 7; 
-          sigma[2] = 48; 
-          sigma[3] = 51; 
-
-          Nc = 272; 
-        }
-
-        if(coloring_distance == 9){ 
-          sigma[0] = 0; 
-          sigma[1] = 1; 
-          sigma[2] = 33; 
-          sigma[3] = 45; 
-
-          Nc = 352; 
-        }
-      }
 
     public:
-      PLEGMA_Cprobing(int coloring_distance, int probing_dimension=4):Nc(0),coloring_distance(coloring_distance),probing_dimension(probing_dimension),sigma(4, 0){
-        if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
+      PLEGMA_Cprobing(int coloring_distance, int probing_dimension=4, const std::string& config_file = ""):Nc(0),coloring_distance(coloring_distance),probing_dimension(probing_dimension),sigma(4, 0){
+        if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before using this class"); exit(-1);}
         if(probing_dimension != 4 && probing_dimension != 3) PLEGMA_error("Classical probing supports only 3D and 4D coloring");
         PLEGMA_printf("Distance of neigbors is %d\n",coloring_distance);
         for(int i = 0 ; i < probing_dimension ; i++){
           if(coloring_distance >= HGC_localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
         }
         h_localColors = (int*)malloc(HGC_localVolume * sizeof(int));
+
+        // --- load sigma from config, or throw if missing
+        if(config_file.empty()) PLEGMA_error("Config file must be specified for sigma values");
+        bool loaded = load_sigma_from_file(config_file, probing_dimension, coloring_distance, sigma, Nc);
+        if(!loaded) PLEGMA_error("Could not load sigma for this lattice/coloring distance from file: %s", config_file.c_str());
+
         graph_coloring();
         PLEGMA_printf("Number of colors for classical probing is %d\n",Nc);
         cudaMalloc((void**)&d_localColors, HGC_localVolume*sizeof(int));
