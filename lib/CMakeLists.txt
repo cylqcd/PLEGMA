@@ -59,6 +59,23 @@ if(PLEGMA_LIGHT_BARYONS)
   )
 endif()
 
+# --- Wilson flow for fermions (adjointFermionFlow_QUDA: experimental, not validated) ---
+LIST(APPEND PLEGMA_OBJS QUDA_wilson_flow.cpp)
+
+# --- Higher-order covariant derivative contractions ---
+# Contracts up to 6th order using 5 directions (X, Y, Z, T+, T-).
+# Covers both connected (nucleon 3pt) and disconnected (quark loop) diagrams.
+# Also includes fast device-side QLoops accumulator (avoids repeated D2H transfers).
+option(PLEGMA_HIGHER_DERIV "Build higher-order covariant derivative contractions" OFF)
+if(PLEGMA_HIGHER_DERIV)
+  LIST(APPEND PLEGMA_OBJS
+    PLEGMA_fiveD.cu
+    PLEGMA_fiveD_QLoops.cu
+    kernels/PLEGMA_oneD.cu
+    kernels/contractG5_fast.cu
+  )
+endif()
+
 ## split source into cu and cpp files
 FOREACH(item ${PLEGMA_OBJS})
   STRING(REGEX MATCH ".+\\.cu$" item_match ${item})
