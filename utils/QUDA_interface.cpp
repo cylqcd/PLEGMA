@@ -21,6 +21,7 @@ using namespace quda;
 namespace quda{
   void createDirac(Dirac *&d, Dirac *&dSloppy, Dirac *&dPre, QudaInvertParam &param, const bool pc_solve);
   void setDiracParam(DiracParam &diracParam, QudaInvertParam *inv_param, const bool pc);
+  QUDA_solver::QUDA_solver(double mu) : QUDA_solver(mu, 1) {}
 }
 
 static TimeProfile profileQUDA("QUDA"); 

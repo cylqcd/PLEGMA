@@ -96,7 +96,7 @@ namespace plegma {
 	arrlc = new int[Nc];
       }
       catch (const std::bad_alloc& err) {
-	PLEGMA_error(err.what());
+	PLEGMA_error("%s", err.what());
       }
       createElemColBlock();
       createColLattice();

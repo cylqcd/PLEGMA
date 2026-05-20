@@ -32,6 +32,7 @@ namespace quda {
     int Nrhs()  const { return inv_param.num_src;}
 
     QUDA_solver(double mu, int nsrc);
+    explicit QUDA_solver(double mu);  // convenience: nsrc=1
     virtual ~QUDA_solver();
     std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
 

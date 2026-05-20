@@ -3,7 +3,13 @@
 namespace plegma{
 
 #ifdef __CUDA_ARCH__
-#define CONSTANT __constant__
+#  ifdef PLEGMA_CONST_TO_DEVICE
+     // On some GPU/driver combinations __constant__ in device functions causes issues;
+     // enable PLEGMA_CONST_TO_DEVICE to fall back to plain __device__ memory.
+#    define CONSTANT __device__
+#  else
+#    define CONSTANT __constant__
+#  endif
 #else
 #define CONSTANT
 #endif

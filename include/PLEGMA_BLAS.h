@@ -1,22 +1,39 @@
+#pragma once
+
+// Prevent NVCC from injecting bfloat16 into the global namespace before
+// OpenBLAS headers are included (avoids type-redefinition conflicts).
+#ifdef __CUDACC__
+#  ifndef __CUDA_NO_BFLOAT16_TYPE__
+#    define __CUDA_NO_BFLOAT16_TYPE__
+#  endif
+#endif
+
 #if defined(HAVE_MKL) && defined(HAVE_OPENBLAS)
-#error Cannot define both mkl and openBLAS
+  #error Cannot define both mkl and openBLAS
 #endif
 
 #if defined(HAVE_MKL)
-#include <mkl.h>
+
+  #include <mkl.h>
+
 #elif defined(HAVE_OPENBLAS)
-#include <cblas.h>
-//#include <common.h> // do not know when is needed or not
+
+  // Shadow OpenBLAS's bfloat16 typedef so it does not clash with CUDA's.
+  #define bfloat16 openblas_bfloat16_shadow
+  #include <cblas.h>
+  #undef bfloat16
+  // #include <common.h> // include only when needed
+
 #else
-#error Neither mkl nor openBLAS have been defined
+  #error Neither mkl nor openBLAS have been defined
 #endif
 
 #include <cublas_v2.h>
 #include <mpi.h>
 #include <PLEGMA_utils.h>
 #include <quda_api.h>
-#pragma once
-enum OPER_MATR_BLAS {NOTRANS, TRANS, DAGGER};
+
+enum OPER_MATR_BLAS { NOTRANS, TRANS, DAGGER };
 namespace cBLAS{
   //========================================================//
   template<typename Float>

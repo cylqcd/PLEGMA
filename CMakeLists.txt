@@ -4,6 +4,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+# Uncomment to use __device__ instead of __constant__ for gamma arrays
+# (needed on some GPU/driver combinations where __constant__ causes issues):
+# add_compile_definitions(PLEGMA_CONST_TO_DEVICE)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 17)
 include(CheckIncludeFileCXX)

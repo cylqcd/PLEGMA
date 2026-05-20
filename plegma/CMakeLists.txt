@@ -1,4 +1,6 @@
 set(PLEGMA_LIBS PLEGMA PLEGMAutils ${CMAKE_THREAD_LIBS_INIT} ${QUDA_LIB} ${CUDA_LIBS} cuda)
+set(CMAKE_CUDA_SEPARABLE_COMPILATION OFF CACHE BOOL "" FORCE)
+add_compile_definitions(PLEGMA_CONST_TO_DEVICE)
 include_directories(${QUDA_HOME}/_deps/eigen-src/)
 
 
@@ -190,3 +192,15 @@ target_link_libraries(Zfac_diagGI ${PLEGMA_LIBS})
 
 cuda_add_executable(pion_LowModeAvg pion_LowModeAvg.cpp)
 target_link_libraries(pion_LowModeAvg ${PLEGMA_LIBS})
+
+# --- Higher-order covariant derivative applications (requires PLEGMA_HIGHER_DERIV=ON) ---
+if(PLEGMA_HIGHER_DERIV)
+  cuda_add_executable(meson_2pt_3pt_flowed meson_2pt_3pt_flowed.cpp)
+  target_link_libraries(meson_2pt_3pt_flowed ${PLEGMA_LIBS})
+
+  cuda_add_executable(meson_2pt_3pt_flowed_stoch meson_2pt_3pt_flowed_stoch.cpp)
+  target_link_libraries(meson_2pt_3pt_flowed_stoch ${PLEGMA_LIBS})
+
+  cuda_add_executable(qLoops_patterns qLoops_patterns.cpp)
+  target_link_libraries(qLoops_patterns ${PLEGMA_LIBS})
+endif()
