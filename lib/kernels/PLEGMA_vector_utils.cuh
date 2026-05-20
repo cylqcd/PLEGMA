@@ -150,9 +150,85 @@ static void copy_to_QUDA(FloatIn* in, std::vector<ColorSpinorField>& qudaVec, in
       copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) (qudaVec[src]).data(), NULL);
     else
       copy_to_QUDA<FloatIn,FloatOut,false,true><<<gridDim,blockDim>>>(in, NULL,(FloatOut*) (qudaVec[src]).data());
-  } else
+  } else{
+
     copy_to_QUDA<FloatIn,FloatOut,true,true><<<gridDim,blockDim>>>(in, (FloatOut*) (qudaVec[src]).Even().data(),(FloatOut*) (qudaVec[src]).Odd().data());
+logQuda(QUDA_SUMMARIZE, "qudaVec[0] norm2 = %.16e\n", blas::norm2(qudaVec[0]))
+  }
 }
+// template<typename FloatIn, typename FloatOut>
+// static void copy_to_QUDA(FloatIn* in, std::vector<ColorSpinorField>& qudaVec, int src, bool isEven)
+// {
+//   dim3 blockDim(THREADS_PER_BLOCK, 1, 1);
+//   dim3 gridDim((HGC_localVolume + blockDim.x - 1) / blockDim.x, 1, 1);
+
+//   auto &v = qudaVec[src];
+
+//   // ---- FULL DEBUG PRINTS (VERY VERBOSE) ----
+//   logQuda(QUDA_SUMMARIZE,
+//           "[DEBUG copy_to_QUDA] ENTER src=%d isEven=%d  HGC_localVolume=%d  blockDim.x=%d  gridDim.x=%d\n",
+//           src, (int)isEven, (int)HGC_localVolume, (int)blockDim.x, (int)gridDim.x);
+
+//   logQuda(QUDA_SUMMARIZE,
+//           "[DEBUG copy_to_QUDA] qudaVec[%d]: SiteSubset=%d (PARITY=%d)  Precision=%d  Ncolor=%d Nspin=%d\n",
+//           src, (int)v.SiteSubset(), (int)QUDA_PARITY_SITE_SUBSET,
+//           (int)v.Precision(), (int)v.Ncolor(), (int)v.Nspin());
+
+//   logQuda(QUDA_SUMMARIZE,
+//           "[DEBUG copy_to_QUDA] ptrs: in=%p  v.data()=%p  v.Even().data()=%p  v.Odd().data()=%p\n",
+//           (void*)in, (void*)v.data(), (void*)v.Even().data(), (void*)v.Odd().data());
+
+//   // norm2 BEFORE (may be expensive)
+//   {
+//     double n2_before = blas::norm2(v);
+//     logQuda(QUDA_SUMMARIZE,
+//             "[DEBUG copy_to_QUDA] qudaVec[%d] norm2 BEFORE = %.16e\n",
+//             src, n2_before);
+//   }
+
+//   // ---- ORIGINAL LOGIC ----
+//   if (v.SiteSubset() == QUDA_PARITY_SITE_SUBSET) {
+//     if (isEven) {
+//       logQuda(QUDA_SUMMARIZE,
+//               "[DEBUG copy_to_QUDA] Launch PARITY subset kernel (EVEN only): outEven=v.data(), outOdd=NULL\n");
+//       copy_to_QUDA<FloatIn, FloatOut, true, false><<<gridDim, blockDim>>>(
+//         in, (FloatOut*)v.data(), NULL);
+//     } else {
+//       logQuda(QUDA_SUMMARIZE,
+//               "[DEBUG copy_to_QUDA] Launch PARITY subset kernel (ODD only): outEven=NULL, outOdd=v.data()\n");
+//       copy_to_QUDA<FloatIn, FloatOut, false, true><<<gridDim, blockDim>>>(
+//         in, NULL, (FloatOut*)v.data());
+//     }
+//   } else {
+//     logQuda(QUDA_SUMMARIZE,
+//             "[DEBUG copy_to_QUDA] Launch FULL subset kernel (Even+Odd): outEven=v.Even().data(), outOdd=v.Odd().data()\n");
+//     copy_to_QUDA<FloatIn, FloatOut, true, true><<<gridDim, blockDim>>>(
+//       in,
+//       (FloatOut*)v.Even().data(),
+//       (FloatOut*)v.Odd().data());
+//   }
+
+//   // ---- FULL ERROR + SYNC ----
+//   cudaError_t e = cudaGetLastError();
+//   if (e != cudaSuccess) {
+//     logQuda(QUDA_SUMMARIZE,
+//             "[DEBUG copy_to_QUDA] cudaGetLastError AFTER launch: %s\n",
+//             cudaGetErrorString(e));
+//   }
+//   cudaDeviceSynchronize();
+//   checkQudaError();
+
+//   // norm2 AFTER
+//   {
+//     double n2_after = blas::norm2(v);
+//     logQuda(QUDA_SUMMARIZE,
+//             "[DEBUG copy_to_QUDA] qudaVec[%d] norm2 AFTER  = %.16e\n",
+//             src, n2_after);
+//   }
+
+//   logQuda(QUDA_SUMMARIZE,
+//           "[DEBUG copy_to_QUDA] EXIT  src=%d\n", src);
+// }
 
 template<typename FloatIn> 
 static void copy_to_QUDA(FloatIn* in,std::vector<ColorSpinorField>& qudaVec,int src,  bool isEven){

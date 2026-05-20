@@ -184,7 +184,7 @@ static void threep_oneD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
   }
   
  exit:
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   cudaFree(d_partial_block);
   cudaFree(listGammas.array);
 }

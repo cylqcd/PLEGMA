@@ -7,6 +7,7 @@
 #include <PLEGMA_gaussian_smearing.cuh> 
 #include <PLEGMA_seqSourceNucleon.cuh> 
 #include <PLEGMA_covD.cuh>
+#include <split_grid.h>  // single-arg comm_rank_from_coords(const int*)
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS
 #include <PLEGMA_gammas.h>
 #include <kernels/PLEGMA_gammas_scatt.cuh>

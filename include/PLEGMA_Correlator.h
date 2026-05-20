@@ -191,6 +191,9 @@ namespace plegma {
       std::vector<std::string> d = {s};
       setGroups(d);
     }
+    void preparePatternMetadata(const std::string &group,
+                                const std::string &dataset,
+                                const std::string &descr, bool isZfac = false);
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
 

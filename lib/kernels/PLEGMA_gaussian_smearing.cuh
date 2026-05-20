@@ -127,11 +127,11 @@ static void gaussian_smearing_only_ghost(vectorTex<FloatOut>& out, vectorTex<Flo
       ProfileStruct ps(out.sideGhostL(dir)*2);
       auto kernel = tuner(ps, "gaussian_smearing_only_ghost_kernel", gaussian_smearing_only_ghost_kernel<FloatOut,FloatIn,FloatGauge>,
 			  out, vecInTex, gaugeTex, alpha, dir, 0);
-      if(not kernel->tuned()) {
+      if(not ps.tuned) {
 	tune(ps, "gaussian_smearing_only_ghost_kernel", gaussian_smearing_only_ghost_kernel<FloatOut,FloatIn,FloatGauge>,
 			  out, vecInTex, gaugeTex, alpha, dir, 1);
       }
-      if(not kernel->tuned()) {
+      if(not ps.tuned) {
 	PLEGMA_warning("ISSUE: Tuning again???!!!!");
       }
       kernel->apply();
@@ -275,11 +275,11 @@ static void gaussian_smearing_prop_only_ghost(propTex<FloatOut>& out, propTex<Fl
       ProfileStruct ps(out.sideGhostL(dir)*2);
       auto kernel = tuner(ps, "gaussian_smearing_prop_only_ghost_kernel", gaussian_smearing_prop_only_ghost_kernel<FloatOut,FloatIn,FloatGauge>,
 			  out, propInTex, gaugeTex, alpha, dir, 0);
-      if(not kernel->tuned()) {
+      if(not ps.tuned) {
 	tune(ps, "gaussian_smearing_prop_only_ghost_kernel", gaussian_smearing_prop_only_ghost_kernel<FloatOut,FloatIn,FloatGauge>,
 	     out, propInTex, gaugeTex, alpha, dir, 1);
       }
-      if(not kernel->tuned()) {
+      if(not ps.tuned) {
 	PLEGMA_warning("ISSUE: Tuning again???!!!!");
       }
       kernel->apply();

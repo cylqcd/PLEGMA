@@ -162,6 +162,12 @@ set(PLEGMA_LIGHT_BARYONS FALSE CACHE BOOL "compile contractions for all light ba
 if(PLEGMA_LIGHT_BARYONS)
   add_definitions(-DPLEGMA_LIGHT_BARYONS)
 endif()
+# compile three-point functions with 3-derivative operators
+set(PLEGMA_THREEP_THREED TRUE CACHE BOOL "compile three-point function threD kernels")
+if(PLEGMA_THREEP_THREED)
+  add_definitions(-DPLEGMA_THREEP_THREED)
+endif()
+
 set(PLEGMA_SCATTERING_CONTRACTIONS FALSE CACHE BOOL "compile contractions for pi-N scattering")
 if (PLEGMA_SCATTERING_CONTRACTIONS)
   add_definitions(-DPLEGMA_SCATTERING_CONTRACTIONS)

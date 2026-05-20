@@ -49,7 +49,22 @@ void finalizeGaugeQuda();
 void plaqQuda();
 void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut, PLEGMA_Gauge<double> &gaugeIn, int type, double overelaxPar=1.5, double tolerance=1e-12,
 			   int maxiter=10000,int verbosePerSteps=1, int reunit_interval=1, int stop_theta=0);
-void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, bool antiperiodic);
+// void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, bool antiperiodic);
+
+void wilsonFlow_QUDA(PLEGMA_Gauge<double> &gaugeOut,
+                     PLEGMA_Gauge<double> &gaugeIn,
+                     int n_steps, double epsilon, double t0, bool restart,
+                     bool antiperiodic,
+                     bool compute_plaquette, bool compute_qcharge);
+void wilsonFlow_collectEnergy_QUDA(std::vector<double> &energy_out,
+                                   PLEGMA_Gauge<double> *gaugeOut, // 可为 nullptr：不保存
+                                   PLEGMA_Gauge<double> &gaugeIn,
+                                   int n_steps, double epsilon, double t0_start,
+                                   bool antiperiodic,
+                                   bool compute_plaquette, bool compute_qcharge,
+                                   bool save_final);
+                                  
+
 
 
 //============= QUDA_params.cpp ===================================//

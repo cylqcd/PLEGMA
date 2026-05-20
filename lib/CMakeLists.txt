@@ -7,16 +7,24 @@ set (PLEGMA_OBJS
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
+  PLEGMA_prop_quda_offset.cu
   kernels/PLEGMA_baryons_NtoN.cu
   kernels/PLEGMA_seqSourceNucleon.cu
   kernels/PLEGMA_threep_local.cu
   kernels/PLEGMA_threep_noe.cu
   kernels/PLEGMA_threep_oneD.cu
   kernels/PLEGMA_threep_twoD.cu
-  kernels/PLEGMA_threep_threeD_part1.cu
-  kernels/PLEGMA_threep_threeD_part2.cu
-  kernels/PLEGMA_threep_threeD_part3.cu
-  kernels/PLEGMA_threep_threeD_part4.cu
+)
+if(PLEGMA_THREEP_THREED)
+  LIST(APPEND PLEGMA_OBJS
+    kernels/PLEGMA_threep_threeD_part1.cu
+    kernels/PLEGMA_threep_threeD_part2.cu
+    kernels/PLEGMA_threep_threeD_part3.cu
+    kernels/PLEGMA_threep_threeD_part4.cu
+  )
+endif()
+
+LIST(APPEND PLEGMA_OBJS
   kernels/PLEGMA_threep_wilsonLine.cu
   kernels/PLEGMA_threep_staple.cu
   kernels/PLEGMA_threep_qgq.cu	
@@ -60,7 +68,7 @@ if(PLEGMA_LIGHT_BARYONS)
 endif()
 
 # --- Wilson flow for fermions (adjointFermionFlow_QUDA: experimental, not validated) ---
-LIST(APPEND PLEGMA_OBJS QUDA_wilson_flow.cpp)
+LIST(APPEND PLEGMA_OBJS QUDA_wilson_flow.cu)
 
 # --- Higher-order covariant derivative contractions ---
 # Contracts up to 6th order using 5 directions (X, Y, Z, T+, T-).

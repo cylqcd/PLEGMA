@@ -45,6 +45,21 @@ using namespace std::chrono_literals;
 #include <global/PLEGMA_macros.hpp>
 #include <tune_quda.h>
 #include <comm_quda.h>
+// The following CCCL headers must be included before 'using namespace quda'
+// to avoid double4 ambiguity: CUDA 13 defines quda::double4 = ::double4_32a,
+// but CCCL (thrust/cub/cuda::std) specialize templates for ::double4.
+// After 'using namespace quda', bare 'double4' becomes ambiguous between
+// ::double4 and quda::double4. Pre-including ensures the specializations are
+// processed before that ambiguity exists (#pragma once prevents re-processing).
+#include <curand_kernel.h>
+// Pre-include CCCL headers (cub/util_type.cuh pulls in cuda_fp8.h/cuda_fp6.h;
+// thrust and cuda::std include further FP type specializations).
+// Must be OUTSIDE __CUDACC__ guard: driver_types.h (included by CUDA runtime)
+// includes cuda_fp8.h in CUDA 13, so g++-compiled .cpp files also trigger
+// the double4 ambiguity unless these are pre-included before 'using namespace quda'.
+#include <thrust/type_traits/is_trivially_relocatable.h>
+#include <cub/util_type.cuh>
+#include <cuda/std/tuple>
 using namespace quda;
 
 namespace plegma {
