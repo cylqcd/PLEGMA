@@ -210,4 +210,7 @@ if(PLEGMA_HIGHER_DERIV)
 
   cuda_add_executable(qLoops_patterns qLoops_patterns.cpp)
   target_link_libraries(qLoops_patterns ${PLEGMA_LIBS})
+
+  cuda_add_executable(meson_flowed_haobo meson_flowed_haobo.cpp)
+  target_link_libraries(meson_flowed_haobo ${PLEGMA_LIBS})
 endif()
