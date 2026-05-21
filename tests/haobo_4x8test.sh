@@ -3,18 +3,18 @@
 # Corresponds to the original haobo_4x8test.sh used on the home machine.
 #
 # Usage:
-#   cd /path/to/run/dir
-#   CNF=/path/to/conf.0000 bash /path/to/tests/haobo_4x8test.sh
+#   EXEC=/path/to/meson_flowed_haobo CNF=/path/to/conf.0000 bash tests/haobo_4x8test.sh
 #
-# Or set CNF inside this script below.
+# Both EXEC and CNF can also be set in the USER CONFIGURATION section below.
 set -euo pipefail
 
-# === Jupiter build path ===
-EXEC=/e/home/jusers/hu16/jupiter/work/opt/quda_stack_latest/build/plegma_wilson_flow/plegma/meson_flowed_haobo
+# ============================= USER CONFIGURATION ===========================
+# Path to the compiled meson_flowed_haobo executable:
+: "${EXEC:?'EXEC is not set. Please set EXEC=/path/to/meson_flowed_haobo'}"
 
-# === Gauge configuration ===
-# Set CNF externally or override here:
-: "${CNF:=conf.0000}"
+# Gauge configuration file:
+: "${CNF:?'CNF is not set. Please set CNF=/path/to/conf.0000'}"
+# ============================= END CONFIGURATION ============================
 
 export QUDA_RESOURCE_PATH=.cache
 export CUDA_DEVICE_MAX_CONNECTIONS=1
@@ -42,10 +42,6 @@ RECON_SLOPPY=18
 RECON_PRECON=18
 
 echo "=== $(date) ==="
-
-# Clean up old HDF5 outputs
-touch aa.h5
-rm -f ./*.h5
 
 export ROTATEQ=1
 export PIPLUSQ=1
