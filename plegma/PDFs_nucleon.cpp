@@ -53,7 +53,13 @@ int main(int argc, char **argv)
   HGC_options->set("which-particle", "Choice of the nucleon interpolator to insert in the three point function (neutron,proton)", verbosity, aux_str);
   WHICHPARTICLE nucleon = get_particle(aux_str.c_str());
 
-  
+  bool calc3pt = true;
+  HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
+
+  std::string proj = "Unpol";
+  HGC_options->set("which_projector", "Which projector to use for 3pt function", verbosity, proj);
+  WHICHPROJECTOR which_proj = get_projector(proj.c_str());
+
   //=========================================================================================================//
   initializePLEGMA();
 
@@ -216,9 +222,17 @@ int main(int argc, char **argv)
 	PLEGMA_Su3field<float> su3;
 	PLEGMA_Su3field<float> WL;
 	PLEGMA_Su3field<float> tmp;
+	PLEGMA_Vector<float> vectorAuxF;
+	PLEGMA_Vector<double> vectorAuxD;
+	PLEGMA_Vector<double> vectorIn;
+	PLEGMA_Vector<double> vectorOut;
+	PLEGMA_Propagator<float> *seqPropOut = new PLEGMA_Propagator<float>(BOTH);
+	PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);
+	PLEGMA_Propagator<float> *propExchange = nullptr;
+	PLEGMA_Gauge<float> gaugeWL;
 
-	propUP->unload();
-	propDN->unload();
+	propUP.unload();
+	propDN.unload();
 	//seq source part 2Props and contraction block
 	{
 	  for(int nu = 0 ; nu < 4 ; nu++)
@@ -243,18 +257,18 @@ int main(int argc, char **argv)
 	      if(nucleon == PROTON){
 		if(mu>0) {
 		  mu*=-1.;
-		  solver->UpdateSolver();
+		  solver.UpdateSolver();
 		}
 	      }
 	      else{
 		if(mu<0) {
 		  mu*=-1.;
-		  solver->UpdateSolver();
+		  solver.UpdateSolver();
 		}
 	      }
 	      double norm = vectorIn.norm();
 	      vectorIn.cscale(1/norm);
-	      solver->solve(vectorOut, vectorIn);
+	      solver.solve(vectorOut, vectorIn);
 	      vectorOut.cscale(norm);    
 	      vectorAuxF.copy(vectorOut);
 	      seqPropOut->absorb(vectorAuxF, nu, c2);
@@ -264,7 +278,7 @@ int main(int argc, char **argv)
     
 	  int signProps = (nucleon == PROTON) ? +1: -1;
 
-	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propUP : propDN;
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? &propUP : &propDN;
 
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
@@ -274,7 +288,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir);
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ 
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, i, "");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename +  suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts])  + ".dat").c_str() ); 
 	      propExchange = propIn; propIn = propF; propF = propExchange;
@@ -287,7 +301,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); // only for z direction
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, i, "");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) +  "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
@@ -322,18 +336,18 @@ int main(int argc, char **argv)
 	      if(nucleon == PROTON){
 		if(mu<0) {
 		  mu*=-1.;
-		  solver->UpdateSolver();
+		  solver.UpdateSolver();
 		}
 	      }
 	      else{
 		if(mu>0) {
 		  mu*=-1.;
-		  solver->UpdateSolver();
+		  solver.UpdateSolver();
 		}
 	      }
 	      double norm = vectorIn.norm();
 	      vectorIn.cscale(1/norm);
-	      solver->solve(vectorOut, vectorIn);
+	      solver.solve(vectorOut, vectorIn);
 	      vectorOut.cscale(norm);
 	      vectorAuxF.copy(vectorOut);
 	      seqPropOut->absorb(vectorAuxF, nu, c2);
@@ -343,7 +357,7 @@ int main(int argc, char **argv)
     
 	  int signProps = (nucleon == PROTON) ? -1: +1;
 
-	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? propDN : propUP;
+	  PLEGMA_Propagator<float> *propF = (nucleon == PROTON) ? &propDN : &propUP;
 	  gaugeWL.copy(gauge);
 
 	  //!!!!!!!!!!!!!!!!!!!!!!!!! if spatial extent is not multiple of 2 then it will not work
@@ -353,7 +367,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, i, "");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;
@@ -366,7 +380,7 @@ int main(int argc, char **argv)
 	    su3.absorbDir_device(gaugeWL, WilsDir); 
 	    WL.setUnit( (std::vector<int>) {0,4,8});
 	    for(int i = 0 ; i < HGC_totalL[WilsDir]/2;i++){ // HGC_totalL[2] only for z direction
-	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas);
+	      corrThrpWL.contractNucleonThrp_wilsonLine(*seqPropOut, *propF, WL, signProps, gammas, i, "");
 	      if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
 	      corrThrpWL.writeASCII( (threep_filename + suff + std::to_string(i) + "_ts_" + std::to_string(tSinks[ts]) + ".dat").c_str() );
 	      propExchange = propIn; propIn = propF; propF = propExchange;

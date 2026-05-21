@@ -57,6 +57,9 @@ using namespace std::chrono_literals;
 // Must be OUTSIDE __CUDACC__ guard: driver_types.h (included by CUDA runtime)
 // includes cuda_fp8.h in CUDA 13, so g++-compiled .cpp files also trigger
 // the double4 ambiguity unless these are pre-included before 'using namespace quda'.
+// Note: on CUDA 13 platforms where CCCL lives under include/cccl/ (no top-level
+// symlinks), CMakeLists.txt adds include/cccl/ as a system include so these
+// bare paths resolve correctly for both nvcc and g++.
 #include <thrust/type_traits/is_trivially_relocatable.h>
 #include <cub/util_type.cuh>
 #include <cuda/std/tuple>

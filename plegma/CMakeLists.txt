@@ -20,7 +20,7 @@ if(PLEGMA_PRIMME)
 endif()
 
 LIST(APPEND PLEGMA_LIBS ${PLEGMA_GSL_LIB})
-LIST(APPEND PLEGMA_LIBS ${HDF5_C_LIBRARY_hdf5})
+LIST(APPEND PLEGMA_LIBS HDF5::HDF5)
 LIST(APPEND PLEGMA_LIBS ${PLEGMA_LIME_LIB})
 
 if(PLEGMA_OPENBLAS)
@@ -68,11 +68,8 @@ target_link_libraries(Calc_2pt_charmonium ${PLEGMA_LIBS})
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
-cuda_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
-target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
-
-cuda_add_executable(mesons_3pt mesons_3pt.cpp)
-target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
+# cuda_add_executable(mesons_3pt mesons_3pt.cpp)
+# target_link_libraries(mesons_3pt ${PLEGMA_LIBS})
 
 cuda_add_executable(correcting_ZM EXCLUDE_FROM_ALL correcting_ZM.cpp)
 target_link_libraries(correcting_ZM ${PLEGMA_LIBS})
@@ -135,6 +132,8 @@ cuda_add_executable(new_TMDPDFs_mesons_Juwels new_TMDPDFs_mesons_Juwels.cpp)
 target_link_libraries(new_TMDPDFs_mesons_Juwels ${PLEGMA_LIBS})
 
 if (PLEGMA_SCATTERING_CONTRACTIONS)
+  cuda_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
+  target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
   cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
   cuda_add_executable(piNdiagrams piNdiagrams.cpp)

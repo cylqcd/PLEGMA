@@ -7,6 +7,7 @@
 #include <omp.h>
 #include  <memory>
 #include <comm_quda.h>
+#include <split_grid.h>
 #include <communicator_quda.h>
 using namespace plegma;
 using namespace quda;

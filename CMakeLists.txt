@@ -419,6 +419,21 @@ add_definitions(-DMPI_COMMS)
 # COMPILER OPTIONS and BUILD types
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
+# CUDA 13 moved CCCL (thrust/cub/cuda::std) to include/cccl/ with no top-level
+# symlinks. nvcc auto-searches cccl/; g++ needs it added explicitly.
+# Normalize CUDA_INCLUDE_DIRS to resolve any embedded ".." (e.g. lib/../include).
+foreach(_cuda_inc ${CUDA_INCLUDE_DIRS})
+  get_filename_component(_cuda_inc_real "${_cuda_inc}" REALPATH)
+  if(EXISTS "${_cuda_inc_real}/cccl")
+    include_directories(SYSTEM "${_cuda_inc_real}/cccl")
+    # Add CUDA lib dir as rpath-link so the linker can resolve libhwloc's
+    # transitive DT_NEEDED on libcudart.so.13 (OpenMPI hwloc built with CUDA).
+    get_filename_component(_cuda_inc_parent "${_cuda_inc_real}" DIRECTORY)
+    set(CMAKE_EXE_LINKER_FLAGS
+        "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath-link,${_cuda_inc_parent}/lib")
+    break()
+  endif()
+endforeach()
 include_directories(include)
 include_directories(utils)
 include_directories(lib)
