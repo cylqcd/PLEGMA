@@ -98,7 +98,7 @@ endif(GIT_FOUND)
 include(ExternalProject)
 
 cmake_policy(SET CMP0167 NEW)
-find_package(Boost)
+find_package(Boost QUIET)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 else()
@@ -276,8 +276,6 @@ mark_as_advanced(PLEGMA_RUN_TESTS)
 # everything below here is processing the setup
 #######################################################################
 # we need to check for some packages
-cmake_policy(SET CMP0148 NEW)
-find_package(PythonInterp)
 
 if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
   find_package(CUDAWrapper)
