@@ -670,7 +670,11 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
   bwdProp.communicateGhost(-1,DIR_BOTH,SECOND_SIDE);
   fwdProp.communicateGhost(-1,DIR_BOTH,SECOND_SIDE);
   
+#ifdef PLEGMA_THREEP_THREED
   threep_twoD<true,Float,Float,Float>(*this,bwdProp,fwdProp,signProps,gauge,gammas,isZfac);
+#else
+  PLEGMA_error("contractNucleonThrp_twoD: PLEGMA built without PLEGMA_THREEP_THREED support\n");
+#endif
 }
 
 template<typename Float>

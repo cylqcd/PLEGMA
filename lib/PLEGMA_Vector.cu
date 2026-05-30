@@ -669,7 +669,11 @@ namespace plegma{
     this->zero_device();
 
     auto texProp = toTexture<propTex>(prop);
+#ifdef PLEGMA_THREEP_THREED
     contractNucleonSeqSource<Float,Float>(toField2<vector2>(*this), *texProp, proj, particle, c_nu, c_c2);
+#else
+    PLEGMA_error("seqSourceNucleon: PLEGMA built without PLEGMA_THREEP_THREED support\n");
+#endif
   }
   
   template<typename Float>
@@ -679,7 +683,11 @@ namespace plegma{
 
     auto texProp1 = toTexture<propTex>(prop1);
     auto texProp2 = toTexture<propTex>(prop2);
+#ifdef PLEGMA_THREEP_THREED
     contractNucleonSeqSource<Float,Float,Float>(toField2<vector2>(*this), *texProp1, *texProp2, proj, particle, c_nu, c_c2);
+#else
+    PLEGMA_error("seqSourceNucleon: PLEGMA built without PLEGMA_THREEP_THREED support\n");
+#endif
   }
   
   

@@ -37,10 +37,8 @@ static void createMomField(Float2<Float> *x, std::vector<Float> mom, int D3D4, i
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + V;
   thrust::device_ptr<Float2<Float> > dev_ptr(x);
-  typedef thrust::tuple<thrust::counting_iterator<int>, thrust::device_ptr<Float2<Float> > > tplIntDev;
-  typedef thrust::zip_iterator<tplIntDev> zipTplIntDev;
-  zipTplIntDev z1 = thrust::make_zip_iterator(thrust::make_tuple(first,dev_ptr));
-  zipTplIntDev z2 = thrust::make_zip_iterator(thrust::make_tuple(last,dev_ptr + V));
+  auto z1 = thrust::make_zip_iterator(first, dev_ptr);
+  auto z2 = thrust::make_zip_iterator(last, dev_ptr + V);
   if(D3D4 == 3) thrust::for_each(z1,z2,MomF<Float>(sign,mom[0],mom[1],mom[2],0));
   else thrust::for_each(z1,z2,MomF<Float>(sign,mom[0],mom[1],mom[2],mom[3]));
 }

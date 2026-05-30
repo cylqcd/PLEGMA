@@ -29,11 +29,8 @@ namespace plegma{
       typedef thrust::device_ptr<Float2<Float> > DevF2;
       DevF2 dev_x_2(x_2);
       DevF2 dev_y_2(y_2);
-      typedef thrust::tuple<DevF2,DevF2> tplDevF2DevF2;
-      typedef thrust::zip_iterator<tplDevF2DevF2> zipTplDevF2DevF2;
-
-      zipTplDevF2DevF2 z1 = thrust::make_zip_iterator(thrust::make_tuple(dev_x_2,dev_y_2));
-      zipTplDevF2DevF2 z2 = thrust::make_zip_iterator(thrust::make_tuple(dev_x_2+NN,dev_y_2+NN));
+      auto z1 = thrust::make_zip_iterator(dev_x_2, dev_y_2);
+      auto z2 = thrust::make_zip_iterator(dev_x_2+NN, dev_y_2+NN);
       thrust::for_each(z1,z2,ElemWiseMul<Float>());
     }
     catch(thrust::system_error &err){
@@ -71,11 +68,9 @@ namespace plegma{
     DevF2 dev_x_2(x_2);
     DevF2 dev_y_2(y_2);
     DevF2 dev_z_2(z_2);
-    typedef thrust::tuple<DevF2,DevF2,DevF2> tplDevF2DevF2DevF2;
-    typedef thrust::zip_iterator<tplDevF2DevF2DevF2> zipTplDevF2DevF2DevF2;
     try{
-      zipTplDevF2DevF2DevF2 z1 = thrust::make_zip_iterator(thrust::make_tuple(dev_x_2,dev_y_2,dev_z_2));
-      zipTplDevF2DevF2DevF2 z2 = thrust::make_zip_iterator(thrust::make_tuple(dev_x_2+NN,dev_y_2+NN,dev_z_2+NN));
+      auto z1 = thrust::make_zip_iterator(dev_x_2, dev_y_2, dev_z_2);
+      auto z2 = thrust::make_zip_iterator(dev_x_2+NN, dev_y_2+NN, dev_z_2+NN);
       thrust::for_each(z1,z2,Axpbypcz<Float>(a2,b2,c2));
     }
     catch(thrust::system_error &err){

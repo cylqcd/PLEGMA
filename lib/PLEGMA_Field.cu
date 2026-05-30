@@ -1612,6 +1612,32 @@ template<typename Float>
 void PLEGMA_Field<Float>::SU3Trace(PLEGMA_Su3field<Float> &su3field){
   SU3Trace_k(*this,su3field);
 }
+
+template<typename Float>
+Float PLEGMA_Field<Float>::norm(){
+  return cuBLAS::norm(total_length*field_length, d_elem, HGC_fullComm);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::scale(Float val){
+  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
+  cuBLAS::scal(field_length*total_length, val, d_elem);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
+  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
+  cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem);
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &Fin, std::complex<Float> alpha){
+  if(field_length != Fin.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
+  if(total_length != Fin.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
+  Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
+  cuBLAS::axpy(total_length*field_length, a, Fin.D_elem(), d_elem);
+}
+
 template class PLEGMA_Field<float>;
 template class PLEGMA_Field<double>;
 // Forcing initialization of the following cases

@@ -97,7 +97,9 @@ endif(GIT_FOUND)
 
 include(ExternalProject)
 
-cmake_policy(SET CMP0167 NEW)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
+  cmake_policy(SET CMP0167 NEW)
+endif()
 find_package(Boost QUIET)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})

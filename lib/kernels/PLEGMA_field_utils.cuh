@@ -426,10 +426,8 @@ static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
   int V = HGC_localVolume;
   thrust::device_ptr<int> th_c(d_colors);
   thrust::device_ptr<Float2<Float> > th_e((Float2<Float>*)d_elems);
-  typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<Float2<Float> > > tplDIntDFl2;
-  typedef thrust::zip_iterator<tplDIntDFl2> zipTplDIntDFl2;
-  zipTplDIntDFl2 z1 = thrust::make_zip_iterator(thrust::make_tuple(th_c,th_e));
-  zipTplDIntDFl2 z2 = thrust::make_zip_iterator(thrust::make_tuple(th_c+V,th_e+V));
+  auto z1 = thrust::make_zip_iterator(th_c, th_e);
+  auto z2 = thrust::make_zip_iterator(th_c+V, th_e+V);
   thrust::for_each(z1,z2,HadCol<Float>(ih));
 }
 

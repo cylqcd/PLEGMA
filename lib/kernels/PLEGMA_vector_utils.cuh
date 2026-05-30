@@ -370,10 +370,8 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   thrust::counting_iterator<int> last = first + HGC_localVolume3D;
   typedef thrust::device_ptr<Float2<Float> > DpF2;
   DpF2 y( (Float2<Float>*) vec.D_elem());
-  typedef thrust::tuple<thrust::counting_iterator<int>,DpF2> tplIntDev2;
-  typedef thrust::zip_iterator<tplIntDev2> zipTplIntDev2;
-  zipTplIntDev2 z1 = thrust::make_zip_iterator(thrust::make_tuple(first,y));
-  zipTplIntDev2 z2 = thrust::make_zip_iterator(thrust::make_tuple(last,y+HGC_localVolume3D));
+  auto z1 = thrust::make_zip_iterator(first, y);
+  auto z2 = thrust::make_zip_iterator(last, y+HGC_localVolume3D);
   thrust::for_each(z1,z2,computeRMS<Float>(sourceposition[0],sourceposition[1],sourceposition[2],listR2.size(),d_listR2,d_absPsi));
   cudaMemcpy(absPsi.data(), d_absPsi, absPsi.size() * sizeof(Float), cudaMemcpyDeviceToHost); checkQudaError();
   cudaFree(d_listR2);
