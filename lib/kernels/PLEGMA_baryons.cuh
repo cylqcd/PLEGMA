@@ -10,11 +10,13 @@ enum BARYONS_TYPE{NtoN,
 		  // add here		
 		  N_BARYONS}; // N_BARYONS must be last 
 
+#ifdef PLEGMA_THREEP_THREED
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoN_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoN_wall_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, propTex<FloatA>& texProp3, propTex<FloatB>& texProp4, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+#endif
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoR_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
@@ -51,7 +53,9 @@ __global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB
   if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
     switch(ip){
     case NtoN:
+#ifdef PLEGMA_THREEP_THREED
       contract_NtoN_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, accum, vid);
+#endif
       break;
 #ifdef PLEGMA_LIGHT_BARYONS
     case NtoR:
@@ -118,7 +122,9 @@ __global__ void contract_baryons_wall_device(propTex<FloatA> texProp1, propTex<F
   if (sid3D < DGC_localVolume3D){ // I work only on the spatial volume
     switch(ip){
     case NtoN:
+#ifdef PLEGMA_THREEP_THREED
       contract_NtoN_wall_kernel<FloatA,FloatB,FloatC>(texProp1, texProp2, texProp3, texProp4, accum, vid);
+#endif
       break;
 #ifdef PLEGMA_LIGHT_BARYONS
     case NtoR:
@@ -312,6 +318,9 @@ static void contract_baryons_wall_host( ProfileStruct &ps,
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void contract_baryons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, PLEGMA_Correlator<FloatC> &corr){
+#ifndef PLEGMA_THREEP_THREED
+  PLEGMA_error("NtoN baryon contractions require PLEGMA_THREEP_THREED=ON\n");
+#endif
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size=2*N_SPINS*N_SPINS;
   
@@ -351,6 +360,9 @@ static void contract_baryons(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator
 
 template<typename FloatA, typename FloatB, typename FloatC>
 static void contract_baryons_wall(PLEGMA_Propagator<FloatA>& prop1, PLEGMA_Propagator<FloatB>& prop2, PLEGMA_Propagator<FloatA>& prop3, PLEGMA_Propagator<FloatB>& prop4, PLEGMA_Correlator<FloatC> &corr){
+#ifndef PLEGMA_THREEP_THREED
+  PLEGMA_error("NtoN baryon wall contractions require PLEGMA_THREEP_THREED=ON\n");
+#endif
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
   int site_size=2*N_SPINS*N_SPINS;
 

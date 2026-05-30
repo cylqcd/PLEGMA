@@ -132,9 +132,17 @@ int main(int argc, char **argv) {
     PLEGMA_printf("Plaquette after APE-smearing:\n");
     smearedGauge.calculatePlaq();
 
+    auto print_gpu_mem = [](const char *tag) {
+      size_t free_bytes = 0, total_bytes = 0;
+      cudaMemGetInfo(&free_bytes, &total_bytes);
+      PLEGMA_printf("[GPU_MEM] %s: free=%.2f GiB  total=%.2f GiB\n", tag,
+                    free_bytes / 1073741824.0, total_bytes / 1073741824.0);
+    };
+
     // ---- Solver ----
     updateOptions(LIGHT);
-    TIME(QUDA_solver solver(mu, 1));
+    auto solver_up = std::make_unique<QUDA_solver>(mu, 1);
+    QUDA_solver &solver = *solver_up;
 
     const std::string twop_base   = twop_filename;
     const std::string threep_base = threep_filename;
@@ -475,8 +483,253 @@ int main(int argc, char **argv) {
       //          noise vectors whose product has unit-scale fluctuations and
       //          can become negative, destroying the signal.
       //          => seed_s = seed_sd = seed_q  (all kaon quarks share eta_u)
+      // ── Data holder for one channel's pre-computed sequential propagators ──────
+      struct SeqChannelData {
+        std::string tag;
+        bool active_as_bwd = false;
+        std::unique_ptr<PLEGMA_Propagator<float>> fwd_backup;     // HOST-only
+        std::vector<std::unique_ptr<PLEGMA_Propagator<float>>> seq_host; // HOST-only per tsink
+      };
+
+      // ── Phase-1 lambda: solve all seq props for one channel, store HOST copies ──
+      auto solve_seq_channel = [&](
+          const std::string &tag,
+          PLEGMA_Propagator<float> &fwd_full,
+          PLEGMA_Propagator<float> &fwd_smeared,
+          WHICHFLAVOR seq_fl, double seq_mu,
+          bool active_as_bwd = false) -> SeqChannelData {
+        PLEGMA_printf("\n--- solve_seq_channel: tag='%s' seq_fl=%s seq_mu=%g ---\n",
+                      tag.c_str(),
+                      seq_fl == LIGHT ? "LIGHT" : (seq_fl == STRANGE ? "STRANGE" : "CHARM"),
+                      seq_mu);
+        updateOptions(seq_fl);
+        mu = seq_mu;
+        PLEGMA_printf("mu after updateOptions %f\n", mu);
+        solver.UpdateSolver();
+        const int seq_nsmear = (seq_fl == LIGHT) ? nsmearGauss : nsmearGauss_s;
+
+        // Pre-extract 3D slices of the smeared fwd prop at each sink time
+        std::vector<std::unique_ptr<PLEGMA_Propagator3D<float>>> prop_3D_slices;
+        prop_3D_slices.reserve(tSinks.size());
+        for (size_t i = 0; i < tSinks.size(); ++i) {
+          const int st = (src[3] + tSinks[i]) % HGC_totalL[3];
+          auto p = std::make_unique<PLEGMA_Propagator3D<float>>();
+          p->absorb(fwd_smeared, st);
+          prop_3D_slices.push_back(std::move(p));
+        }
+
+        // HOST backup of fwd_full; device copy freed
+        fwd_full.unload();
+        SeqChannelData cd;
+        cd.tag = tag;
+        cd.active_as_bwd = active_as_bwd;
+        cd.fwd_backup = std::make_unique<PLEGMA_Propagator<float>>(HOST);
+        cd.fwd_backup->copy(fwd_full, HOST);
+
+        // Solve seq prop for each tsink; keep only HOST copy to save GPU memory
+        for (size_t its = 0; its < tSinks.size(); ++its) {
+          const int dt_sink = tSinks[its];
+          if (dt_sink >= HGC_totalL[3])
+            PLEGMA_error("Provided tsink=%d is >= temporal extent", dt_sink);
+          const int sink_t = (src[3] + dt_sink) % HGC_totalL[3];
+
+          gauge.calculatePlaq();
+          solver.UpdateSolver();
+
+          PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+          smearedGauge3D_sink.absorb(smearedGauge, sink_t);
+
+          PLEGMA_Propagator3D<float> &prop_q_3D = *prop_3D_slices[its];
+          prop_q_3D.apply_gamma(G5, LEFT);
+
+          auto seq_h = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          {
+            PLEGMA_Propagator<float> seqProp(BOTH);
+
+            for (int nu = 0; nu < 4; ++nu) {
+              for (int c2 = 0; c2 < 3; ++c2) {
+                PLEGMA_Vector3D<float> seq3D_f;
+                seq3D_f.absorb(prop_q_3D, nu, c2);
+                PLEGMA_Vector3D<double> seq3D;
+                seq3D.copy(seq3D_f);
+
+                PLEGMA_Vector3D<double> seq3D_sm_d;
+                TIME(seq3D_sm_d.gaussianSmearing(seq3D, smearedGauge3D_sink,
+                                                 seq_nsmear, alphaGauss));
+
+                PLEGMA_Vector<double> rhs4D1, rhs4D2;
+                rhs4D2.absorb(seq3D_sm_d, sink_t);
+                PLEGMA_printf("[SEQDBG] sink_t=%d dt_sink=%d nu=%d c2=%d\n",
+                              sink_t, dt_sink, nu, c2);
+                PLEGMA_printf("[SEQDBG] rhs4D2.norm=%e\n", rhs4D2.norm());
+
+                const double nrm = rhs4D2.norm();
+                if (nrm > 0.0) rhs4D2.scale(1.0 / nrm);
+                if (rotateQ) rhs4D1.rotateToPhysicalBasis(rhs4D2, mu / abs(mu));
+                else         rhs4D1.copy(rhs4D2);
+
+                TIME(solver.solve(rhs4D1, rhs4D1));
+                if (rotateQ) rhs4D2.rotateToPhysicalBasis(rhs4D1, mu / abs(mu));
+                else         rhs4D2.copy(rhs4D1);
+
+                if (nrm > 0.0) rhs4D2.scale(nrm);
+
+                PLEGMA_Vector<float> rhs4D2_f;
+                rhs4D2_f.copy(rhs4D2);
+                seqProp.absorb(rhs4D2_f, nu, c2);
+              }
+            }
+            seq_h->copy(seqProp);
+          } // seqProp freed
+          seq_h->unload();  // free device; keep HOST for later contraction
+          cd.seq_host.push_back(std::move(seq_h));
+        }
+        return cd;
+      }; // solve_seq_channel
+
+      // ── Phase-2 lambda: FiveD+flow contractions using pre-computed seq props ──
+      auto contract_channel = [&](const SeqChannelData &cd) {
+        PLEGMA_printf("\n--- contract_channel: tag='%s' active_as_bwd=%d ---\n",
+                      cd.tag.c_str(), (int)cd.active_as_bwd);
+
+        const double epsilon     = 0.02;
+        const double t0          = flow_t0;
+        const double t_target    = 2.5 * t0;
+        const int    n_steps     = (int)std::lround(t_target / epsilon);
+        const int    n_flow_save = (int)std::lround(t_target / (0.1 * t0));
+
+        for (size_t its = 0; its < tSinks.size(); ++its) {
+          const int dt_sink = tSinks[its];
+
+          // Load fwd prop: HOST float -> device double
+          PLEGMA_Propagator<double> prop_tmp_a(BOTH);
+          prop_tmp_a.copy(*cd.fwd_backup, HOST);
+          prop_tmp_a.load();
+
+          // Load seq prop: HOST float -> float device -> double device+host
+          PLEGMA_Propagator<double> seq_in_a(BOTH);
+          {
+            PLEGMA_Propagator<float> seq_f(BOTH);
+            seq_f.copy(*cd.seq_host[its], HOST);
+            seq_f.load();
+            seq_in_a.copy(seq_f);
+          } // seq_f freed
+
+          PLEGMA_Propagator<double> *in     = &prop_tmp_a;
+          PLEGMA_Propagator<double> *seq_in = &seq_in_a;
+
+          PLEGMA_Gauge<float> contractGauge(BOTH);
+          contractGauge.copy(gauge);
+          applyBoundaryConditions(contractGauge, true);
+
+          PLEGMA_Correlator<float> corr3_oneD(corr_space, src, maxQsq);
+
+          double t    = 0.0;
+          int    step = 0;
+
+          // nt=0 checkpoint (no flow)
+          {
+            const std::string base = threep_out + cd.tag + "_dt"
+                                   + std::to_string(dt_sink) + "_tau00";
+            const std::string threep_name_local = base + "_local";
+            const std::string threep_name_oneD  = base + "_oneD";
+            const std::string threep_patterns   = base + "_patterns";
+
+            PLEGMA_Propagator<float> in_f(BOTH);
+            PLEGMA_Propagator<float> seq_in_f(BOTH);
+            in_f.copy(*in);
+            seq_in_f.copy(*seq_in);
+            PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
+            PLEGMA_Propagator<float> *fwd_contract = &in_f;
+            if (cd.active_as_bwd) {
+              in_f.conjugate();
+              in_f.apply_gamma(G5, LEFT);
+              bwd_contract = &in_f;
+              fwd_contract = &seq_in_f;
+            } else {
+              seq_in_f.conjugate();
+              seq_in_f.apply_gamma(G5, LEFT);
+            }
+            // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
+            //                                      0, {G1,G2,G3,G4,G5G4}));
+            TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
+                                                      contractGauge, 0, {G1,G2,G3,G4,G5G4}));
+            TIME(contractNucleonThrp_fiveD_patterns(
+                *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
+                maxQsq, threep_patterns, max_order));
+            // TIME(corr3.writeFile(threep_name_local, corr_file_format));
+            TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
+          }
+
+          // Flow output buffers
+          PLEGMA_Propagator<double> prop_tmp_b(BOTH);
+          PLEGMA_Propagator<double> *out = &prop_tmp_b;
+          PLEGMA_Propagator<double> seq_tmp_b(BOTH);
+          PLEGMA_Propagator<double> *seq_out = &seq_tmp_b;
+          PLEGMA_Gauge<double> gauge_flowed(BOTH);
+
+          for (int ic = 1; ic <= n_flow_save; ++ic) {
+            const int target_step  = (int)std::lround((double)n_steps * ic / n_flow_save);
+            const int chunk_steps  = target_step - step;
+            if (chunk_steps <= 0) continue;
+
+            TIME(fermionFlow_PLEGMA(*out, *in, *seq_out, *seq_in, gauge_flowed,
+                                    gauge, chunk_steps, epsilon, t,
+                                    false, false, true, true, 1));
+            std::swap(in,  out);
+            std::swap(seq_in, seq_out);
+            step = target_step;
+            t    = step * epsilon;
+            PLEGMA_printf("  checkpoint %d/%d: step=%d  t=%.6f\n",
+                          ic, n_flow_save, step, t);
+
+            {
+              char tau_tag[32];
+              snprintf(tau_tag, sizeof(tau_tag), "_tau%02d",
+                       (int)std::lround(t / (0.1 * t0)));
+              const std::string base = threep_out + cd.tag + "_dt"
+                                     + std::to_string(dt_sink) + tau_tag;
+              const std::string threep_name_local  = base + "_local";
+              const std::string threep_name_oneD   = base + "_oneD";
+              const std::string threep_patterns    = base + "_patterns";
+
+              contractGauge.copy(gauge_flowed);
+
+              PLEGMA_Propagator<float> in_f(BOTH);
+              PLEGMA_Propagator<float> seq_in_f(BOTH);
+              in_f.copy(*in);
+              seq_in_f.copy(*seq_in);
+              PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
+              PLEGMA_Propagator<float> *fwd_contract = &in_f;
+              if (cd.active_as_bwd) {
+                in_f.conjugate();
+                in_f.apply_gamma(G5, LEFT);
+                bwd_contract = &in_f;
+                fwd_contract = &seq_in_f;
+              } else {
+                seq_in_f.conjugate();
+                seq_in_f.apply_gamma(G5, LEFT);
+              }
+              // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
+              //                                      0, {G1,G2,G3,G4,G5G4}));
+              TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
+                                                        contractGauge, 0, {G1,G2,G3,G4,G5G4}));
+              TIME(contractNucleonThrp_fiveD_patterns(
+                  *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
+                  maxQsq, threep_patterns, max_order));
+              // TIME(corr3.writeFile(threep_name_local, corr_file_format));
+              TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
+            }
+          } // checkpoint loop
+        }   // tsink loop
+      }; // contract_channel
+
+      // Storage for pre-computed seq props across all noise samples
+      std::vector<std::vector<SeqChannelData>> sample_seq_data;
+
       // ------------------------------------------------------------------
       for (int ir = 0; ir < nsamples; ++ir) {
+        sample_seq_data.emplace_back();  // one entry per sample
         const std::string sample_tag = (nsamples > 1)
                                        ? ("_sample" + std::to_string(ir))
                                        : "";
@@ -552,23 +805,35 @@ int main(int argc, char **argv) {
           TIME(corr2.writeFile(twop_out + "_kaon" + sample_tag, corr_file_format));
         }
 
-        // ---- 3-point functions ----
+        // ---- 3-point: Phase 1 – solve all seq props for this sample ----
         const double seq_mu_light = -std::abs(mu_ud_save);
 
         if (pionQ) {
-          run_3pt_channel("_pion_uins" + sample_tag, *prop_q_sl_ptr, *prop_q_ss_ptr,
-                          LIGHT, seq_mu_light);
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_pion_uins" + sample_tag, *prop_q_sl_ptr, *prop_q_ss_ptr,
+                                LIGHT, seq_mu_light));
         }
         if (kaonQ_uins) {
-          run_3pt_channel("_kaon_uins" + sample_tag, *prop_q_sl_ptr, *prop_s_ss_d_ptr,
-                          LIGHT, seq_mu_light);
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_kaon_uins" + sample_tag, *prop_q_sl_ptr, *prop_s_ss_d_ptr,
+                                LIGHT, seq_mu_light));
         }
         if (kaonQ_sins) {
           const double seq_mu_s = -std::abs(mu_s);
-          run_3pt_channel("_kaon_sins" + sample_tag, *prop_s_sl_d_ptr, *prop_q_ss_ptr,
-                          STRANGE, seq_mu_s, true);
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_kaon_sins" + sample_tag, *prop_s_sl_d_ptr, *prop_q_ss_ptr,
+                                STRANGE, seq_mu_s, true));
         }
       } // noise sample loop
+
+      // Free solver (MG + clover) before FiveD contractions
+      solver_up.reset();
+      print_gpu_mem("after_solver_freed");
+
+      // Phase 2: FiveD + Wilson-flow contractions for all samples
+      for (auto &sample_cds : sample_seq_data)
+        for (auto &cd : sample_cds)
+          contract_channel(cd);
 
       free(src_tag);
     } // source loop

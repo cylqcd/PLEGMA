@@ -304,6 +304,7 @@ void PLEGMA_Field<Float>::destroy_host(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_device(){
+  freeSideGhostP2P();  // must precede device_free(d_elem)
   device_free(d_elem);
   if(checkErr) checkQudaError();
   d_elem = NULL;
@@ -430,6 +431,142 @@ void PLEGMA_Field<Float>::printInfo(){
   PLEGMA_printf("The flag for the device allocation is %d\n",(int) isAllocDevice);
 }
 
+// ---------------------------------------------------------------------------
+// CUDA IPC P2P side-ghost initialisation / teardown
+// ---------------------------------------------------------------------------
+template<typename Float>
+void PLEGMA_Field<Float>::initSideGhostP2P() {
+  // Close any previously opened handles first (re-init safety)
+  for (int i = 0; i < N_DIMS; i++)
+    for (int s = 0; s < 2; s++) {
+      if (p2p_side_avail[i][s] && p2p_peer_d_elem[i][s])
+        cudaIpcCloseMemHandle(p2p_peer_d_elem[i][s]);
+      p2p_side_avail[i][s]  = false;
+      p2p_side_recv_avail[i][s] = false;
+      p2p_peer_d_elem[i][s] = nullptr;
+    }
+  p2p_side_any = false;
+
+  if (comm_size() == 1) return;
+
+  // Get IPC handle for this field's device allocation (cudaMalloc base ptr).
+  // Every rank must participate in the following reduction, otherwise a rank
+  // with IPC disabled would make its neighbours hang during handle exchange.
+  cudaIpcMemHandle_t my_handle;
+  int handle_ok = (cudaIpcGetMemHandle(&my_handle, static_cast<void*>(d_elem)) == cudaSuccess) ? 1 : 0;
+  int handle_ok_sum = handle_ok;
+  comm_allreduce_int(handle_ok_sum);
+  if (handle_ok_sum != static_cast<int>(comm_size())) {
+    if (HGC_verbosity > 0 && comm_rank() == 0)
+      PLEGMA_printf("[P2P] cudaIpcGetMemHandle failed on at least one rank - using MPI fallback\n");
+    return;
+  }
+
+  // For each split dimension open the allocation of the neighbour we write to:
+  //   s=DIR_PLUS  -> send goes to MINUS neighbour (disp=-1)
+  //   s=DIR_MINUS -> send goes to PLUS  neighbour (disp=+1)
+  const int delta[2] = {-1, +1};  // delta[DIR_PLUS]=-1, delta[DIR_MINUS]=+1
+  for (int i = 0; i < N_DIMS; i++) {
+    if (!HGC_dimBreak[i] || comm_dim(i) == 1) continue;
+    for (int s = 0; s < 2; s++) {
+      cudaIpcMemHandle_t peer_handle;
+      MsgHandle *recv_handle = comm_declare_receive_relative(&peer_handle, i, delta[s], sizeof(cudaIpcMemHandle_t));
+      MsgHandle *send_handle = comm_declare_send_relative(&my_handle, i, -delta[s], sizeof(cudaIpcMemHandle_t));
+      comm_start(recv_handle);
+      comm_start(send_handle);
+      comm_wait(recv_handle);
+      comm_wait(send_handle);
+      comm_free(recv_handle);
+      comm_free(send_handle);
+
+      void *mapped = nullptr;
+      cudaError_t err = cudaIpcOpenMemHandle(&mapped, peer_handle,
+                                             cudaIpcMemLazyEnablePeerAccess);
+      if (err == cudaSuccess) {
+        p2p_peer_d_elem[i][s] = mapped;
+        p2p_side_avail[i][s]  = true;
+      } else if (comm_rank() == 0) {
+        PLEGMA_printf("[P2P] cudaIpcOpenMemHandle failed for (dim=%d,s=%d) - MPI fallback\n", i, s);
+      }
+    }
+  }
+
+  // Tell each target whether we will write its ghost slot through P2P.  The
+  // receive side must be tracked separately from the send side because mixed
+  // intra-node / inter-node decompositions may use P2P in only one direction.
+  bool local_p2p_any = false;
+  for (int i = 0; i < N_DIMS; i++) {
+    if (!HGC_dimBreak[i] || comm_dim(i) == 1) continue;
+    for (int s = 0; s < 2; s++) {
+      unsigned char send_status = p2p_side_avail[i][s] ? 1 : 0;
+      unsigned char recv_status = 0;
+      MsgHandle *recv_handle = comm_declare_receive_relative(&recv_status, i, -delta[s], sizeof(recv_status));
+      MsgHandle *send_handle = comm_declare_send_relative(&send_status, i, delta[s], sizeof(send_status));
+      comm_start(recv_handle);
+      comm_start(send_handle);
+      comm_wait(recv_handle);
+      comm_wait(send_handle);
+      comm_free(recv_handle);
+      comm_free(send_handle);
+
+      p2p_side_recv_avail[i][s] = (recv_status != 0);
+      local_p2p_any = local_p2p_any || p2p_side_avail[i][s] || p2p_side_recv_avail[i][s];
+    }
+  }
+
+  int p2p_any_sum = local_p2p_any ? 1 : 0;
+  comm_allreduce_int(p2p_any_sum);
+  p2p_side_any = (p2p_any_sum != 0);
+
+  if (HGC_verbosity > 0 && comm_rank() == 0)
+    PLEGMA_printf("[P2P] Side ghost P2P: %s\n",
+                  p2p_side_any ? "ENABLED (NVLink D2D)" : "disabled (MPI fallback)");
+
+  // Allocate staging buffer: separates pack source from ghost receive slot.
+  // This prevents the race where rank A reads d_elem_A[ghost[i][s]] to push to a
+  // neighbour while another neighbour simultaneously writes into d_elem_A[ghost[i][s]].
+  for (int i = 0; i < N_DIMS; i++)
+    for (int s = 0; s < 2; s++)
+      d_side_ghost_pack_ptr[i][s] = nullptr;
+  if (p2p_side_any) {
+    if (d_side_ghost_pack_stage) { device_free(d_side_ghost_pack_stage); d_side_ghost_pack_stage = nullptr; }
+    size_t stage_floats = 0;
+    for (int i = 0; i < N_DIMS; i++)
+      for (int s = 0; s < 2; s++)
+        if (p2p_side_avail[i][s]) stage_floats += HGC_surface3D[i] * field_length * 2;
+    if (stage_floats > 0) {
+      d_side_ghost_pack_stage = static_cast<Float*>(device_malloc(stage_floats * sizeof(Float)));
+      Float *cur = d_side_ghost_pack_stage;
+      for (int i = 0; i < N_DIMS; i++)
+        for (int s = 0; s < 2; s++)
+          if (p2p_side_avail[i][s]) {
+            d_side_ghost_pack_ptr[i][s] = cur;
+            cur += HGC_surface3D[i] * field_length * 2;
+          }
+    }
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::freeSideGhostP2P() {
+  for (int i = 0; i < N_DIMS; i++)
+    for (int s = 0; s < 2; s++) {
+      if (p2p_side_avail[i][s] && p2p_peer_d_elem[i][s]) {
+        cudaIpcCloseMemHandle(p2p_peer_d_elem[i][s]);
+        p2p_peer_d_elem[i][s] = nullptr;
+        p2p_side_avail[i][s]  = false;
+      }
+      p2p_side_recv_avail[i][s] = false;
+    }
+  p2p_side_any       = false;
+  p2p_side_init_done = false;
+  if (d_side_ghost_pack_stage) { device_free(d_side_ghost_pack_stage); d_side_ghost_pack_stage = nullptr; }
+  for (int i = 0; i < N_DIMS; i++)
+    for (int s = 0; s < 2; s++)
+      d_side_ghost_pack_ptr[i][s] = nullptr;
+}
+// ---------------------------------------------------------------------------
+
 template<typename Float>
 void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
@@ -441,6 +578,12 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
   if(sign<0 || sign>DIR_BOTH)
     PLEGMA_error("Directions should be an orientation enum");
+
+  // Lazy P2P initialisation (once per field instance, after QUDA/MPI are ready)
+  if (!p2p_side_init_done) {
+    p2p_side_init_done = true;
+    if (ghost_flag >= FIRST_SIDE && comm_size() > 1) initSideGhostP2P();
+  }
 
   bool isAll = (dir<0) ? true:false;
   bool runT = Total_length()==HGC_localVolume;
@@ -457,60 +600,106 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	}
       }
     }
+    double t_sync0 = MPI_Wtime();
     qudaDeviceSynchronize();
+    double t_d2h0 = MPI_Wtime();
     if(checkErr) checkQudaError();
+    // Pre-BARRIER: copy pack data to staging buffer (local D2D, no NVLink).
+    // This fixes the race in the PUSH model: after BARRIER, rank A's d_elem[ghost[i][s]]
+    // is simultaneously read (outgoing push) and written (incoming push from neighbour).
+    if (p2p_side_any && d_side_ghost_pack_stage) {
+      for (short i = 0; i < N_DIMS; i++) {
+        if (!((dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT))) continue;
+        for (short s = 0; s < DIR_BOTH; s++) {
+          if (!(sign == s || sign == DIR_BOTH)) continue;
+          if (!p2p_side_avail[i][s] || !d_side_ghost_pack_ptr[i][s]) continue;
+          size_t nb = HGC_surface3D[i]/scaleT * field_length * 2 * sizeof(Float);
+          Float *src = d_elem + (HGC_sideGhost[i][s]/scaleT + total_length) * field_length * 2;
+          qudaMemcpy(d_side_ghost_pack_ptr[i][s], src, nb, qudaMemcpyDeviceToDevice);
+        }
+      }
+    }
+    // P2P barrier: all ranks' pack kernels and staging copies must finish before any P2P write
+    if (p2p_side_any) comm_barrier();
+    size_t total_nbytes = 0;
+    size_t p2p_nbytes   = 0;
+    size_t mpi_send_nbytes = 0;
     for(short i=0; i<N_DIMS; i++){
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
 	for(short s = 0; s < DIR_BOTH; s++){
 	  if(sign == s || sign==DIR_BOTH){
 	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
-	    
-	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
+	    total_nbytes += nbytes;
 	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
-	    qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
-	      
-	    int disp;
-	    disp = (s==DIR_PLUS) ? +1 : -1;
-	    messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
-	    comm_start(messages.back());
-	    disp *= -1;
-	    messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
-	    comm_start(messages.back());
+      const bool outgoing_p2p = p2p_side_avail[i][s];
+      const bool incoming_p2p = p2p_side_recv_avail[i][s];
+      int disp = (s==DIR_PLUS) ? +1 : -1;
+      if (!incoming_p2p) {
+        Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
+        messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
+        comm_start(messages.back());
+      }
+      if (outgoing_p2p) {
+	      // P2P PUSH from staging buffer (not from d_elem ghost slot).
+	      // d_elem ghost slot is now receive-only; staging is the send source.
+	      Float *peer_dst = static_cast<Float*>(p2p_peer_d_elem[i][s])
+	                        + (HGC_sideGhost[i][s]/scaleT + total_length) * field_length * 2;
+	      Float *stage_src = d_side_ghost_pack_ptr[i][s] ? d_side_ghost_pack_ptr[i][s] : pointer_device;
+	      qudaMemcpy(peer_dst, stage_src, nbytes, qudaMemcpyDeviceToDevice);
+	      p2p_nbytes += nbytes;
+	    } else {
+	      Float *pointer_send    = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
+	      qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
+	      disp *= -1;
+	      messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
+	      comm_start(messages.back());
+        mpi_send_nbytes += nbytes;
+	    }
 	  }	    
 	}
       }
     }
+    double t_mpi0 = MPI_Wtime();
+    PLEGMA_printf("  [SGhost] sync=%.4fs D2H+MPI=%.4fs p2p_bytes=%zu mpi_bytes=%zu\n",
+                  t_d2h0-t_sync0, t_mpi0-t_d2h0, p2p_nbytes, mpi_send_nbytes);
     if(checkErr) checkQudaError();
   }
   if(action==FINISH || action==DO_ALL) {
-    // waiting for communications
+    double t_wait0 = MPI_Wtime();
+    // P2P: synchronous qudaMemcpy already complete; barrier ensures all peers' writes are done
+    if (p2p_side_any) comm_barrier();
+    // Wait for any remaining MPI messages (non-P2P directions)
     while (! messages.empty()) {
       comm_wait(messages.back());
       comm_free(messages.back());
       messages.pop_back();
     }
-    //copying to device
-    if(isAll && sign==DIR_BOTH) {
-      Float *host = h_ext_ghost_r;
-      Float *device = d_elem+total_length*field_length*2;
-      qudaMemcpy(device, host, Bytes_ghost(),qudaMemcpyHostToDevice);
-      if(checkErr) checkQudaError();
-    } else {
-      for(short i=0; i<N_DIMS; i++){
-	if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
-	  for(short s = 0; s < DIR_BOTH; s++){
-	    if(sign == s || sign==DIR_BOTH){
-	      Float *host = h_ext_ghost_r + HGC_sideGhost[dir][s]/scaleT*field_length*2;
-	      Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length)*field_length*2;
-	      qudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
-			 qudaMemcpyHostToDevice);
+    double t_h2d0 = MPI_Wtime();
+    // Copy received data to device – skip P2P pairs (already landed in d_elem)
+    size_t total_h2d = 0;
+    size_t total_p2d = 0;
+    for(short i=0; i<N_DIMS; i++){
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+	for(short s = 0; s < DIR_BOTH; s++){
+	  if(sign == s || sign==DIR_BOTH){
+	    size_t nb = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
+      if (p2p_side_recv_avail[i][s]) {
+	      total_p2d += nb;  // already in d_elem via P2P
+	    } else {
+	      Float *host   = h_ext_ghost_r + HGC_sideGhost[i][s]/scaleT*field_length*2;
+	      Float *device = d_elem + (HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
+	      total_h2d += nb;
+	      qudaMemcpy(device, host, nb, qudaMemcpyHostToDevice);
 	      if(checkErr) checkQudaError();
 	    }
 	  }
 	}
       }
     }
+    double t_h2d1 = MPI_Wtime();
+    PLEGMA_printf("  [SGhost] wait=%.4fs H2D=%.4fs p2p_bytes=%zu h2d_bytes=%zu\n",
+                  t_h2d0-t_wait0, t_h2d1-t_h2d0, total_p2d, total_h2d);
+    if(checkErr) checkQudaError();
   }
 }
 
@@ -541,7 +730,7 @@ void PLEGMA_Field<Float>::communicateSecondSideGhost(short dir, ORIENTATION sign
 	}
       }
     }
-    qudaDeviceSynchronize();
+    qudaStreamSynchronize(device::get_stream(0));
     if(checkErr) checkQudaError();
     for(short i=0; i<N_DIMS; i++){
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
@@ -625,7 +814,7 @@ void PLEGMA_Field<Float>::communicateThirdSideGhost(short dir, ORIENTATION sign,
 	}
       }
     }
-    qudaDeviceSynchronize();
+    qudaStreamSynchronize(device::get_stream(0));
     if(checkErr) checkQudaError();
     for(short i=0; i<N_DIMS; i++){
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
@@ -715,7 +904,7 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 	}
       }
     }		  
-    qudaDeviceSynchronize();
+    qudaStreamSynchronize(device::get_stream(0));
     if(checkErr) checkQudaError();
     for(short i=0; i<N_DIMS; i++){
       for(short j=i+1; j<N_DIMS; j++){
@@ -819,7 +1008,7 @@ void PLEGMA_Field<Float>::communicateSecondCornerGhost(short dir, ORIENTATION si
 	}	
       }
     }
-    qudaDeviceSynchronize();
+    qudaStreamSynchronize(device::get_stream(0));
     if(checkErr) checkQudaError();
     for(short i=0; i<N_DIMS; i++){
       for(short j=0; j<N_DIMS; j++){
@@ -920,7 +1109,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		    // collecting elements from device
 		    copy_vertex_to_ghost(toField2<pFloat2>(*this), i, j, k, s1, s2, s3);
 		  }
-    qudaDeviceSynchronize();
+    qudaStreamSynchronize(device::get_stream(0));
     if(checkErr) checkQudaError();
     for(short i=0; i<N_DIMS; i++)
       for(short j=i+1; j<N_DIMS; j++)
@@ -1122,47 +1311,7 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   for(int dof = 0; dof < field_length; dof++)
     plegma::elemWiseMul(V,(Float*) x, d_elem + dof*total_length*2);
   device_free(x);
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::mulThetaPhase(Float theta, bool dagger){
-  int sign = dagger?+1:-1;
-  std::vector<Float> mom = {0.,0.,0.,static_cast<Float>(theta*0.5)};
-  mulMomentumPhases(mom,sign);
-}
-
-// y=a*x+y
-template<typename Float>
-void PLEGMA_Field<Float>::add(PLEGMA_Field<Float> &fieldIn, std::complex<Float> alpha){
-  if(field_length != fieldIn.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
-  if(total_length != fieldIn.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
-  Float a[2]; a[0]=alpha.real(); a[1]=alpha.imag();
-  cuBLAS::axpy(total_length*field_length, a, fieldIn.D_elem(), d_elem);
-}
-
-
-template<typename Float>
-std::complex<Float> PLEGMA_Field<Float>::dot(PLEGMA_Field<Float> &fieldIn){
-  if(field_length != fieldIn.Field_length()) PLEGMA_error("The d.o.f of the fields do not match\n");
-  if(total_length != fieldIn.Total_length()) PLEGMA_error("The lattice points of the fields do not match\n");
-  return cuBLAS::dot(total_length*field_length, d_elem, fieldIn.D_elem(), HGC_fullComm);
-}
-
-template<typename Float>
-Float PLEGMA_Field<Float>::norm(){
-  return cuBLAS::norm(total_length*field_length, d_elem, HGC_fullComm);
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::scale(Float val){
-  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
-  cuBLAS::scal(field_length*total_length, val, d_elem );
-}
-
-template<typename Float>
-void PLEGMA_Field<Float>::cscale(std::complex<Float> val){
-  if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
-  cuBLAS::cscal(field_length*total_length, reinterpret_cast<Float(&)[2]>(val), d_elem );
+  if(checkErr) checkQudaError();
 }
 
 template<typename FloatOut, typename FloatIn>

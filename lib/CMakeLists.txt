@@ -8,15 +8,15 @@ set (PLEGMA_OBJS
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
   PLEGMA_prop_quda_offset.cu
-  kernels/PLEGMA_baryons_NtoN.cu
-  kernels/PLEGMA_seqSourceNucleon.cu
   kernels/PLEGMA_threep_local.cu
   kernels/PLEGMA_threep_noe.cu
   kernels/PLEGMA_threep_oneD.cu
-  kernels/PLEGMA_threep_twoD.cu
 )
 if(PLEGMA_THREEP_THREED)
   LIST(APPEND PLEGMA_OBJS
+  kernels/PLEGMA_threep_twoD.cu
+  kernels/PLEGMA_baryons_NtoN.cu
+  kernels/PLEGMA_seqSourceNucleon.cu
     kernels/PLEGMA_threep_threeD_part1.cu
     kernels/PLEGMA_threep_threeD_part2.cu
     kernels/PLEGMA_threep_threeD_part3.cu

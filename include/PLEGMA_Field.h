@@ -39,6 +39,16 @@ namespace plegma {
     Float *h_ext_ghost_corner_s; /*!< Member variable pointer to the corner ghost elements of the field on CPU (send version)*/
     Float *h_ext_ghost_vertex_r;
     Float *h_ext_ghost_vertex_s;
+    // P2P (CUDA IPC) direct GPU-to-GPU ghost exchange
+    bool  p2p_side_avail[N_DIMS][2]  = {};  // outgoing P2P active for this (dim,sign)
+    bool  p2p_side_recv_avail[N_DIMS][2] = {};  // incoming ghost slot is filled by P2P
+    void *p2p_peer_d_elem[N_DIMS][2] = {};  // IPC-mapped peer d_elem base ptrs
+    bool  p2p_side_any       = false;       // communicator has at least one P2P transfer
+    bool  p2p_side_init_done = false;       // lazy-init flag
+    // Staging buffer: isolates pack source from ghost receive slot, eliminating P2P race.
+    // Each rank writes its pack data here before BARRIER, then pushes from here to peer.
+    Float *d_side_ghost_pack_stage           = nullptr;
+    Float *d_side_ghost_pack_ptr[N_DIMS][2]  = {};
     PLEGMA_RNG *randstate_ptr; /*!< Member variable a PLEGMA_RNG allowing a field to create random numbers */
     
     GHOST_FLAG ghost_flag; /*!< Choose what kind of ghosts the field has, options (NO_GHOSTS,FIRST_SIDE,FIRST_CORNER)*/
@@ -218,6 +228,11 @@ namespace plegma {
     void communicateSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateSecondSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateThirdSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    /**
+     * @brief Initialise / finalise CUDA IPC P2P side-ghost exchange
+     */
+    void initSideGhostP2P();
+    void freeSideGhostP2P();
     /**
      * @brief Communicates side+corner ghosts in chosen direction,orientation
      * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
