@@ -139,27 +139,6 @@ int main(int argc, char **argv)
 		PLEGMA_printf("\n ### Running setup for mu=%.4e ###\n\n",mu);
 		TIME(QUDA_solver solver(mu));
 
-		std::vector<std::vector<std::shared_ptr<PLEGMA_Propagator<double>>>> props_u;
-		std::vector<std::vector<std::shared_ptr<PLEGMA_Propagator<double>>>> props_d;
-
-		int Nmu = mu_l.size();
-		props_u.resize(Nmu, std::vector<std::shared_ptr<PLEGMA_Propagator<double>>>(3));
-		props_d.resize(Nmu, std::vector<std::shared_ptr<PLEGMA_Propagator<double>>>(3));
-
-		for (int imu = 0; imu < Nmu; imu++) {
-			for (int isgn = 0; isgn < 3; ++isgn) {
-				props_u[imu][isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
-				props_d[imu][isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
-			}
-		}
-
-		std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_s(3);
-		std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_c(3);
-		for (int isgn = 0; isgn < 3; isgn++) {
-			props_s[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
-			props_c[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
-		}
-    
 		for(int isource = start_src ; isource < numSourcePositions; isource++){
 			PLEGMA_printf("\n ### Calculations for source-position %d - %02d.%02d.%02d.%02d begin now ###\n\n",
 				isource, sourcePositions[isource][0], sourcePositions[isource][1],
@@ -170,22 +149,15 @@ int main(int argc, char **argv)
 				solver.UpdateSolver();
 			}
 			
+			std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_s(3);
+			std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_c(3);
+			for (int isgn = 0; isgn < 3; isgn++) {
+				props_s[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
+				props_c[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
+			}
 
 			//updateOptions(srcInputFile + std::to_string(isource), listOpt, add_options);     
 			site& source = sourcePositions[isource];
-			PLEGMA_Propagator<double> none(NONE);
-			PLEGMA_Propagator<double> propUP(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propDN(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propST;
-			PLEGMA_Propagator<double> propCH;
-			PLEGMA_Propagator<double> propSIBUP(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propSIBDN(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propSIBST(run_SIB ? BOTH : NONE);
-			PLEGMA_Propagator<double> propSIBCH(run_SIB ? BOTH : NONE);
-			PLEGMA_Propagator<double> propCMUP(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propCMDN(run_ud ? BOTH : NONE);
-			PLEGMA_Propagator<double> propCMST(run_CM ? BOTH : NONE);
-			PLEGMA_Propagator<double> propCMCH(run_CM ? BOTH : NONE);
 
 			PLEGMA_Gauge3D<double> smearedGauge3D;
 			smearedGauge3D.absorb(smearedGauge, source[DIM_T]);	
@@ -206,8 +178,11 @@ int main(int argc, char **argv)
 			"_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE) + src_string + ".h5";
 			free(src_string);
 
-			if(access( twop_filename.c_str(), F_OK ) != -1)
-			continue;
+			if(access( twop_filename.c_str(), F_OK ) != -1) {
+				PLEGMA_printf("File %s already exists, skipping source %d\n", twop_filename.c_str(), isource);
+				continue;
+			}
+
 
 			auto computePropagator = [&](PLEGMA_Propagator<double>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
 				// ensuring mu value
@@ -240,70 +215,91 @@ int main(int argc, char **argv)
 				prop.applyBoundaries_device(source[DIM_T]);
 			};
 
-			//--------------------- QED ---------------------
-			
-			for(int isgn=0; isgn<3; isgn++) {
-				if(des==0 and isgn!=1) continue;
+			bool heavy_props_ready = false;
 
-				double phase = (isgn-1)*des;
-				PLEGMA_printf("\nPhase: %.4f\n", phase);
-				if(isgn!=1){
-					PLEGMA_Gauge<double> gauge2;
-					gauge2.copy(gauge);
-					gaugeU1.calculatePlaq(phase);
-					gauge2.qedPhase(gaugeU1, phase);
-					gauge2.calculatePlaq();
-					updateGaugeQuda(gauge2, true);
-					plaqQuda();
-					//applyBoundaryConditions(gauge2,true);
-				} else {
-					updateGaugeQuda(gauge, true);	
+			for (int imu = 0; imu < mu_l.size(); imu++) {
+				double run_mu = mu_l[imu];
+
+				std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_u(3);
+				std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_d(3);
+
+				for (int isgn = 0; isgn < 3; ++isgn) {
+					props_u[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
+					props_d[isgn] = std::make_shared<PLEGMA_Propagator<double>>(HOST);
 				}
-				solver.UpdateSolver();
 
-				if (run_ud) {
-					for (int imu = 0; imu < mu_l.size(); imu++) {
-							PLEGMA_printf("[QED] Running inversion for mu = %.6e\n", mu_l[imu]);
+				//--------------------- QED ---------------------
+				
+				for(int isgn=0; isgn<3; isgn++) {
+					if(des==0 and isgn!=1) continue;
+
+					double phase = (isgn-1)*des;
+					PLEGMA_printf("\nPhase: %.4f\n", phase);
+					if(isgn!=1){
+						PLEGMA_Gauge<double> gauge2;
+						gauge2.copy(gauge);
+						gaugeU1.calculatePlaq(phase);
+						gauge2.qedPhase(gaugeU1, phase);
+						gauge2.calculatePlaq();
+						updateGaugeQuda(gauge2, true);
+						plaqQuda();
+						//applyBoundaryConditions(gauge2,true);
+					} else {
+						updateGaugeQuda(gauge, true);	
+					}
+					solver.UpdateSolver();
+
+					{
+						PLEGMA_Propagator<double> propUP(run_ud ? BOTH : NONE);
+						PLEGMA_Propagator<double> propDN(run_ud ? BOTH : NONE);
+
+						if (run_ud) {
+							PLEGMA_printf("[QED] Running inversion for mu = %.6e\n", run_mu);
 
 							// Compute and store light quark propagators
-							TIME(computePropagator(propUP,  mu_l[imu], LIGHT, nsmearGauss));
-							TIME(computePropagator(propDN, -mu_l[imu], LIGHT, nsmearGauss));
+							TIME(computePropagator(propUP,  run_mu, LIGHT, nsmearGauss));
+							TIME(computePropagator(propDN, -run_mu, LIGHT, nsmearGauss));
 
 							propUP.unload();
 							propDN.unload();
 
-							props_u[imu][isgn]->copy(propUP, HOST);
-							props_d[imu][isgn]->copy(propDN, HOST);
+							props_u[isgn]->copy(propUP, HOST);
+							props_d[isgn]->copy(propDN, HOST);
 						}
-				}
+					}
 
-				if (mu_s.size()>0) {
-					TIME(computePropagator(propST, mu_s[0], STRANGE, nsmearGauss_s));
-					propST.unload();
-					props_s[isgn]->copy(propST, HOST);
-				}
-				if (mu_c.size()>0) {
-					TIME(computePropagator(propCH, mu_c[0], CHARM, nsmearGauss_c));
-					propCH.unload();
-					props_c[isgn]->copy(propCH, HOST);
-				}
-			}
-			
-			PLEGMA_Propagator<double> prop_u;
-			PLEGMA_Propagator<double> prop_d;
-			PLEGMA_Propagator<double> prop_s;
-			PLEGMA_Propagator<double> prop_c;
+					PLEGMA_Propagator<double> propST(!heavy_props_ready ? BOTH : NONE);
+					PLEGMA_Propagator<double> propCH(!heavy_props_ready ? BOTH : NONE);
 
-			for (int imu = 0; imu < mu_l.size(); imu++) {
-				double mu_val = mu_l[imu];
+					if (!heavy_props_ready) {
+						if (mu_s.size()>0) {
+							TIME(computePropagator(propST, mu_s[0], STRANGE, nsmearGauss_s));
+							propST.unload();
+							props_s[isgn]->copy(propST, HOST);
+						}
+						if (mu_c.size()>0) {
+							TIME(computePropagator(propCH, mu_c[0], CHARM, nsmearGauss_c));
+							propCH.unload();
+							props_c[isgn]->copy(propCH, HOST);
+						}
+						if (isgn == 2) heavy_props_ready = true;
+					}
+				}
+				
+				PLEGMA_Propagator<double> prop_u;
+				PLEGMA_Propagator<double> prop_d;
+				PLEGMA_Propagator<double> prop_s;
+				PLEGMA_Propagator<double> prop_c;
+
+				double mu_val = run_mu;
 
 				if (des != 0 && run_ud) {
 
 					// --------- All signs zero -------------
 					{
 						PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-						TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
-						TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
+						TIME(prop_u.copy(*props_u[1], HOST); prop_u.load());
+						TIME(prop_d.copy(*props_d[1], HOST); prop_d.load());
 						TIME(prop_s.copy(*props_s[1], HOST); prop_s.load());
 						TIME(prop_c.copy(*props_c[1], HOST); prop_c.load());
 						
@@ -332,8 +328,8 @@ int main(int argc, char **argv)
 						// UP
 						{
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-							TIME(prop_u.copy(*props_u[imu][sign_idx], HOST); prop_u.load());
-							TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
+							TIME(prop_u.copy(*props_u[sign_idx], HOST); prop_u.load());
+							TIME(prop_d.copy(*props_d[1], HOST); prop_d.load());
 							TIME(prop_s.copy(*props_s[1], HOST); prop_s.load());
 							TIME(prop_c.copy(*props_c[1], HOST); prop_c.load());
 
@@ -349,8 +345,8 @@ int main(int argc, char **argv)
 						// DOWN
 						{
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-							TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
-							TIME(prop_d.copy(*props_d[imu][sign_idx], HOST); prop_d.load());
+							TIME(prop_u.copy(*props_u[1], HOST); prop_u.load());
+							TIME(prop_d.copy(*props_d[sign_idx], HOST); prop_d.load());
 							TIME(prop_s.copy(*props_s[1], HOST); prop_s.load());
 							TIME(prop_c.copy(*props_c[1], HOST); prop_c.load());
 
@@ -366,8 +362,8 @@ int main(int argc, char **argv)
 						// STRANGE
 						{
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-							TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
-							TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
+							TIME(prop_u.copy(*props_u[1], HOST); prop_u.load());
+							TIME(prop_d.copy(*props_d[1], HOST); prop_d.load());
 							TIME(prop_s.copy(*props_s[sign_idx], HOST); prop_s.load());
 							TIME(prop_c.copy(*props_c[1], HOST); prop_c.load());
 
@@ -393,8 +389,8 @@ int main(int argc, char **argv)
 						// CHARM
 						{
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-							TIME(prop_u.copy(*props_u[imu][1], HOST); prop_u.load());
-							TIME(prop_d.copy(*props_d[imu][1], HOST); prop_d.load());
+							TIME(prop_u.copy(*props_u[1], HOST); prop_u.load());
+							TIME(prop_d.copy(*props_d[1], HOST); prop_d.load());
 							TIME(prop_s.copy(*props_s[1], HOST); prop_s.load());
 							TIME(prop_c.copy(*props_c[sign_idx], HOST); prop_c.load());
 
@@ -439,8 +435,8 @@ int main(int argc, char **argv)
 								sign_idx[i] = sign_i;
 								sign_idx[j] = sign_j;
 
-								TIME(prop_u.copy(*props_u[imu][sign_idx[0]], HOST); prop_u.load());
-								TIME(prop_d.copy(*props_d[imu][sign_idx[1]], HOST); prop_d.load());
+								TIME(prop_u.copy(*props_u[sign_idx[0]], HOST); prop_u.load());
+								TIME(prop_d.copy(*props_d[sign_idx[1]], HOST); prop_d.load());
 								TIME(prop_s.copy(*props_s[sign_idx[2]], HOST); prop_s.load());
 								TIME(prop_c.copy(*props_c[sign_idx[3]], HOST); prop_c.load());
 
@@ -490,199 +486,210 @@ int main(int argc, char **argv)
 						}
 					}
 				}
-			}
 
-			//--------------------- SIB ---------------------
-			if (run_SIB) {
-				updateGaugeQuda(gauge, true);
-				solver.UpdateSolver();
+				//--------------------- SIB ---------------------
+				{
+					PLEGMA_Propagator<double> propSIBUP(run_SIB && run_ud ? BOTH : NONE);
+					PLEGMA_Propagator<double> propSIBDN(run_SIB && run_ud ? BOTH : NONE);
+					PLEGMA_Propagator<double> propSIBST(run_SIB ? BOTH : NONE);
+					PLEGMA_Propagator<double> propSIBCH(run_SIB ? BOTH : NONE);
 
-				assert(SIB_shift_sign == 1 || SIB_shift_sign == -1);
+					if (run_SIB) {
+						updateGaugeQuda(gauge, true);
+						solver.UpdateSolver();
 
-				double run_mu_st = (1 + SIB_shift_sign * 0.005) * mu_s[0];
-				double run_mu_ch = (1 + SIB_shift_sign * 0.005) * mu_c[0];
-				TIME(computePropagator(propSIBST, run_mu_st, STRANGE, nsmearGauss_s));
-				TIME(computePropagator(propSIBCH, run_mu_ch, CHARM, nsmearGauss_c));
+						assert(SIB_shift_sign == 1 || SIB_shift_sign == -1);
 
-				TIME(prop_s.copy(*props_s[1], HOST));
-				prop_s.load();
-				TIME(prop_c.copy(*props_c[1], HOST));
-				prop_c.load();
+						double run_mu_st = (1 + SIB_shift_sign * 0.005) * mu_s[0];
+						double run_mu_ch = (1 + SIB_shift_sign * 0.005) * mu_c[0];
+						TIME(computePropagator(propSIBST, run_mu_st, STRANGE, nsmearGauss_s));
+						TIME(computePropagator(propSIBCH, run_mu_ch, CHARM, nsmearGauss_c));
 
-				for (size_t imu = 0; imu < mu_l.size(); imu++) {
-					double run_mu = mu_l[imu];
-					PLEGMA_printf("[SIB] Running inversion for mu = %.6e\n", run_mu);
-					double run_mu_up = (1 + SIB_shift_sign * 0.005) * run_mu;
-					double run_mu_dn = -(1 + SIB_shift_sign * 0.005) * run_mu;
-					if (run_ud) {
-						TIME(computePropagator(propSIBUP, run_mu_up, LIGHT, nsmearGauss));
-						TIME(computePropagator(propSIBDN, run_mu_dn, LIGHT, nsmearGauss));
-					}
-
-					{
-						TIME(prop_u.copy(*props_u[imu][1], HOST));
-						prop_u.load();
-						TIME(prop_d.copy(*props_d[imu][1], HOST));
-						prop_d.load();
-
-						
-						std::string group;
-						std::string full_group;
-
-						PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
-
-						for (int flavor = 0; flavor < 4; flavor++) {
-							if (!run_heavy_SIB && flavor > 1) { // Skip strange and charm SIB if not running heavy SIB
-								continue;
-							}
-
-							bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
-
-							// Modify the respective propagator
-							switch (flavor) {
-								case 0:
-									only_up = true;
-									TIME(corr.contractBaryonsUDSC(propSIBUP, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-
-									group = make_group_name_SIB("only_up", run_mu_up, -run_mu, mu_s[0], mu_c[0]);
-									full_group = "SIB/" + group;
-									corr.setGroups(full_group.c_str());
-									THREAD(corr.writeFile(twop_filename, corr_file_format));
-									break;
-								case 1:
-									only_dn = true;
-									TIME(corr.contractBaryonsUDSC(prop_u, propSIBDN, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-
-									group = make_group_name_SIB("only_dn", run_mu, run_mu_dn, mu_s[0], mu_c[0]);
-									full_group = "SIB/" + group;
-									corr.setGroups(full_group.c_str());
-									THREAD(corr.writeFile(twop_filename, corr_file_format));
-									break;
-								case 2:
-									if (imu == 0) {
-										only_st = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-
-										group = make_group_name_SIB("only_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									} else {
-										only_st = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-
-										group = make_group_name_SIB("light_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									}
-								case 3:
-									if (imu == 0) {
-										only_ch = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
-
-										group = make_group_name_SIB("only_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									} else {
-										only_ch = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
-
-										group = make_group_name_SIB("light_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
-										full_group = "SIB/" + group;
-										corr.setGroups(full_group.c_str());
-										THREAD(corr.writeFile(twop_filename, corr_file_format));
-										break;
-									}
-							}
-						}
-					}
-				}
-			}
-
-			// === Critical Mass Correction ===
-			if (run_CM) {
-				for (size_t idk = 0; idk < dks.size(); idk++) {
-					double dk = dks[idk];
-					kappa = (1 + dk) * kappa0;
-					solver.UpdateSolver();
-
-					PLEGMA_printf("[CM] Running inversion with kappa = %.6e\n", kappa);
-
-					double run_mu_st = mu_s[0];
-					double run_mu_ch = mu_c[0];
-					TIME(computePropagator(propCMST, run_mu_st, STRANGE, nsmearGauss_s));
-					TIME(computePropagator(propCMCH, run_mu_ch, CHARM, nsmearGauss_c));
-
-					for (size_t imu = 0; imu < mu_l.size(); ++imu) {
-						double run_mu = mu_l[imu];
-						TIME(computePropagator(propCMUP, run_mu, LIGHT, nsmearGauss));
-						TIME(computePropagator(propCMDN, -run_mu, LIGHT, nsmearGauss));
-
-						TIME(prop_u.copy(*props_u[imu][1], HOST));
-						prop_u.load();
-						TIME(prop_d.copy(*props_d[imu][1], HOST));
-						prop_d.load();
 						TIME(prop_s.copy(*props_s[1], HOST));
 						prop_s.load();
 						TIME(prop_c.copy(*props_c[1], HOST));
 						prop_c.load();
 
-						for (int flavor = 0; flavor < 4; flavor++) {
-							if (!run_heavy_CM && flavor > 1) { // Skip strange and charm CM if not running heavy CM
-								continue;
-							}
+						PLEGMA_printf("[SIB] Running inversion for mu = %.6e\n", run_mu);
+						double run_mu_up = (1 + SIB_shift_sign * 0.005) * run_mu;
+						double run_mu_dn = -(1 + SIB_shift_sign * 0.005) * run_mu;
+						if (run_ud) {
+							TIME(computePropagator(propSIBUP, run_mu_up, LIGHT, nsmearGauss));
+							TIME(computePropagator(propSIBDN, run_mu_dn, LIGHT, nsmearGauss));
+						}
 
-							bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
-							std::string group, full_group;
+						{
+							TIME(prop_u.copy(*props_u[1], HOST));
+							prop_u.load();
+							TIME(prop_d.copy(*props_d[1], HOST));
+							prop_d.load();
+
+							
+							std::string group;
+							std::string full_group;
+
 							PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 
-							switch (flavor) {
-								case 0:
-									only_up = true;
-									TIME(corr.contractBaryonsUDSC(propCMUP, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-									group = make_group_name_CM("only_up", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-									break;
-								case 1:
-									only_dn = true;
-									TIME(corr.contractBaryonsUDSC(prop_u, propCMDN, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-									group = make_group_name_CM("only_dn", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-									break;
-								case 2:
-									if (imu == 0) {
-										only_st = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("only_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+							for (int flavor = 0; flavor < 4; flavor++) {
+								if (!run_heavy_SIB && flavor > 1) { // Skip strange and charm SIB if not running heavy SIB
+									continue;
+								}
+
+								bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
+
+								// Modify the respective propagator
+								switch (flavor) {
+									case 0:
+										only_up = true;
+										TIME(corr.contractBaryonsUDSC(propSIBUP, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+
+										group = make_group_name_SIB("only_up", run_mu_up, -run_mu, mu_s[0], mu_c[0]);
+										full_group = "SIB/" + group;
+										corr.setGroups(full_group.c_str());
+										THREAD(corr.writeFile(twop_filename, corr_file_format));
 										break;
-									} else {
-										only_st = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("light_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+									case 1:
+										only_dn = true;
+										TIME(corr.contractBaryonsUDSC(prop_u, propSIBDN, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+
+										group = make_group_name_SIB("only_dn", run_mu, run_mu_dn, mu_s[0], mu_c[0]);
+										full_group = "SIB/" + group;
+										corr.setGroups(full_group.c_str());
+										THREAD(corr.writeFile(twop_filename, corr_file_format));
 										break;
-									}
-								case 3:
-									if (imu == 0) {
-										only_ch = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("only_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-										break;
-									} else {
-										only_ch = true, only_light = true;
-										TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
-										group = make_group_name_CM("light_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
-										break;
-									}
+									case 2:
+										if (imu == 0) {
+											only_st = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+
+											group = make_group_name_SIB("only_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
+											full_group = "SIB/" + group;
+											corr.setGroups(full_group.c_str());
+											THREAD(corr.writeFile(twop_filename, corr_file_format));
+											break;
+										} else {
+											only_st = true, only_light = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propSIBST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+
+											group = make_group_name_SIB("light_st", run_mu, -run_mu, run_mu_st, mu_c[0]);
+											full_group = "SIB/" + group;
+											corr.setGroups(full_group.c_str());
+											THREAD(corr.writeFile(twop_filename, corr_file_format));
+											break;
+										}
+									case 3:
+										if (imu == 0) {
+											only_ch = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
+
+											group = make_group_name_SIB("only_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
+											full_group = "SIB/" + group;
+											corr.setGroups(full_group.c_str());
+											THREAD(corr.writeFile(twop_filename, corr_file_format));
+											break;
+										} else {
+											only_ch = true, only_light = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propSIBCH, only_up, only_dn, only_st, only_ch, only_light));
+
+											group = make_group_name_SIB("light_ch", run_mu, -run_mu, mu_s[0], run_mu_ch);
+											full_group = "SIB/" + group;
+											corr.setGroups(full_group.c_str());
+											THREAD(corr.writeFile(twop_filename, corr_file_format));
+											break;
+										}
+								}
 							}
-							full_group = "CM/" + group;
-							corr.setGroups(full_group.c_str());
-							THREAD(corr.writeFile(twop_filename, corr_file_format));
+						}
+					}
+
+				}
+
+				// === Critical Mass Correction ===
+				{
+
+					PLEGMA_Propagator<double> propCMUP(run_CM && run_ud ? BOTH : NONE);
+					PLEGMA_Propagator<double> propCMDN(run_CM && run_ud ? BOTH : NONE);
+					PLEGMA_Propagator<double> propCMST(run_CM ? BOTH : NONE);
+					PLEGMA_Propagator<double> propCMCH(run_CM ? BOTH : NONE);
+
+					if (run_CM) {
+						for (size_t idk = 0; idk < dks.size(); idk++) {
+							double dk = dks[idk];
+							kappa = (1 + dk) * kappa0;
+							solver.UpdateSolver();
+
+							PLEGMA_printf("[CM] Running inversion with kappa = %.6e\n", kappa);
+
+							double run_mu_st = mu_s[0];
+							double run_mu_ch = mu_c[0];
+							TIME(computePropagator(propCMST, run_mu_st, STRANGE, nsmearGauss_s));
+							TIME(computePropagator(propCMCH, run_mu_ch, CHARM, nsmearGauss_c));
+
+							TIME(computePropagator(propCMUP, run_mu, LIGHT, nsmearGauss));
+							TIME(computePropagator(propCMDN, -run_mu, LIGHT, nsmearGauss));
+
+							TIME(prop_u.copy(*props_u[1], HOST));
+							prop_u.load();
+							TIME(prop_d.copy(*props_d[1], HOST));
+							prop_d.load();
+							TIME(prop_s.copy(*props_s[1], HOST));
+							prop_s.load();
+							TIME(prop_c.copy(*props_c[1], HOST));
+							prop_c.load();
+
+							for (int flavor = 0; flavor < 4; flavor++) {
+								if (!run_heavy_CM && flavor > 1) { // Skip strange and charm CM if not running heavy CM
+									continue;
+								}
+
+								bool only_up = false, only_dn = false, only_st = false, only_ch = false, only_light = false;
+								std::string group, full_group;
+								PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
+
+								switch (flavor) {
+									case 0:
+										only_up = true;
+										TIME(corr.contractBaryonsUDSC(propCMUP, prop_d, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+										group = make_group_name_CM("only_up", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+										break;
+									case 1:
+										only_dn = true;
+										TIME(corr.contractBaryonsUDSC(prop_u, propCMDN, prop_s, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+										group = make_group_name_CM("only_dn", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+										break;
+									case 2:
+										if (imu == 0) {
+											only_st = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+											group = make_group_name_CM("only_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+											break;
+										} else {
+											only_st = true, only_light = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, propCMST, prop_c, only_up, only_dn, only_st, only_ch, only_light));
+											group = make_group_name_CM("light_st", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+											break;
+										}
+									case 3:
+										if (imu == 0) {
+											only_ch = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
+											group = make_group_name_CM("only_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+											break;
+										} else {
+											only_ch = true, only_light = true;
+											TIME(corr.contractBaryonsUDSC(prop_u, prop_d, prop_s, propCMCH, only_up, only_dn, only_st, only_ch, only_light));
+											group = make_group_name_CM("light_ch", run_mu, -run_mu, run_mu_st, run_mu_ch, dk);
+											break;
+										}
+								}
+								full_group = "CM/" + group;
+								corr.setGroups(full_group.c_str());
+								THREAD(corr.writeFile(twop_filename, corr_file_format));
+							}
 						}
 					}
 				}
+
 			}
 		}
 	}

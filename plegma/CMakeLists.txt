@@ -91,6 +91,9 @@ target_link_libraries(Calc_2pt_LIBE_reduced ${PLEGMA_LIBS})
 cuda_add_executable(Cprobing_test Cprobing_test.cpp)
 target_link_libraries(Cprobing_test ${PLEGMA_LIBS})
 
+cuda_add_executable(Hprobing_test Hprobing_test.cpp)
+target_link_libraries(Hprobing_test ${PLEGMA_LIBS})
+
 cuda_add_executable(PDFs_nucleon PDFs_nucleon.cpp)
 target_link_libraries(PDFs_nucleon ${PLEGMA_LIBS})
 
