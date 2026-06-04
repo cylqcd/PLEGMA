@@ -39,6 +39,9 @@ endif(PLEGMA_MKL)
 cuda_add_executable(Plaquette Plaquette.cpp)
 target_link_libraries(Plaquette ${PLEGMA_LIBS})
 
+cuda_add_executable(nucleon_2der nucleon_2der.cpp)
+target_link_libraries(nucleon_2der ${PLEGMA_LIBS})
+
 cuda_add_executable(Topo Topo.cpp)
 target_link_libraries(Topo ${PLEGMA_LIBS})
 
@@ -69,11 +72,11 @@ target_link_libraries(Calc_2pt_charmonium ${PLEGMA_LIBS})
 cuda_add_executable(nucleon_2pt_3pt nucleon_2pt_3pt.cpp)
 target_link_libraries(nucleon_2pt_3pt ${PLEGMA_LIBS})
 
-cuda_add_executable(nucleon_2pt_3pt_delta nucleon_2pt_3pt_delta.cpp)
-target_link_libraries(nucleon_2pt_3pt_delta ${PLEGMA_LIBS})
+#cuda_add_executable(nucleon_2pt_3pt_delta nucleon_2pt_3pt_delta.cpp)
+#target_link_libraries(nucleon_2pt_3pt_delta ${PLEGMA_LIBS})
 
-cuda_add_executable(nucleon_2pt_3pt_delta_check nucleon_2pt_3pt_delta_check.cpp)
-target_link_libraries(nucleon_2pt_3pt_delta_check ${PLEGMA_LIBS})
+#cuda_add_executable(nucleon_2pt_3pt_delta_check nucleon_2pt_3pt_delta_check.cpp)
+#target_link_libraries(nucleon_2pt_3pt_delta_check ${PLEGMA_LIBS})
 
 cuda_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
 target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
@@ -99,17 +102,17 @@ target_link_libraries(testLinksSmearings ${PLEGMA_LIBS})
 cuda_add_executable(testHDF5 EXCLUDE_FROM_ALL testHDF5.cpp)
 target_link_libraries(testHDF5 ${PLEGMA_LIBS})
 
-cuda_add_executable(GPDs_nucleon GPDs_nucleon.cpp)
-target_link_libraries(GPDs_nucleon ${PLEGMA_LIBS})
+#cuda_add_executable(GPDs_nucleon GPDs_nucleon.cpp)
+#target_link_libraries(GPDs_nucleon ${PLEGMA_LIBS})
 
-cuda_add_executable(qLoops_gregoris qLoops_gregoris.cpp)
-target_link_libraries(qLoops_gregoris ${PLEGMA_LIBS})
+#cuda_add_executable(qLoops_gregoris qLoops_gregoris.cpp)
+#target_link_libraries(qLoops_gregoris ${PLEGMA_LIBS})
 
 cuda_add_executable(qLoops qLoops.cpp)
 target_link_libraries(qLoops ${PLEGMA_LIBS})
 
-cuda_add_executable(nucleon_2der_P111 nucleon_2der_P111.cpp)
-target_link_libraries(nucleon_2der_P111 ${PLEGMA_LIBS})
+#cuda_add_executable(nucleon_2der_P111 nucleon_2der_P111.cpp)
+#target_link_libraries(nucleon_2der_P111 ${PLEGMA_LIBS})
 
 cuda_add_executable(qLoops_WilsonLine qLoops_WilsonLine.cpp)
 target_link_libraries(qLoops_WilsonLine ${PLEGMA_LIBS})
@@ -151,8 +154,8 @@ cuda_add_executable(new_TMDPDFs_mesons_Juwels new_TMDPDFs_mesons_Juwels.cpp)
 target_link_libraries(new_TMDPDFs_mesons_Juwels ${PLEGMA_LIBS})
 
 if (PLEGMA_SCATTERING_CONTRACTIONS)
-  cuda_add_executable(pion_2pt EXCLUDE_FROM_ALL pion_2pt.cpp)
-  target_link_libraries(pion_2pt ${PLEGMA_LIBS})
+  #cuda_add_executable(pion_2pt EXCLUDE_FROM_ALL pion_2pt.cpp)
+  #target_link_libraries(pion_2pt ${PLEGMA_LIBS})
 
   cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
@@ -164,8 +167,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   cuda_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
   target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
 
-  cuda_add_executable(nucleon_3pt_n_npi_delta EXCLUDE_FROM_ALL nucleon_3pt_n_npi_delta.cpp)
-  target_link_libraries(nucleon_3pt_n_npi_delta ${PLEGMA_LIBS})
+  #cuda_add_executable(nucleon_3pt_n_npi_delta EXCLUDE_FROM_ALL nucleon_3pt_n_npi_delta.cpp)
+  #target_link_libraries(nucleon_3pt_n_npi_delta ${PLEGMA_LIBS})
 
   cuda_add_executable(nucleon_3pt_n_npi_wd1ii EXCLUDE_FROM_ALL nucleon_3pt_n_npi_wd1ii.cpp)
   target_link_libraries(nucleon_3pt_n_npi_wd1ii ${PLEGMA_LIBS})
@@ -186,8 +189,8 @@ if (PLEGMA_SCATTERING_CONTRACTIONS)
   cuda_add_executable(piN_scattering_length_12 EXCLUDE_FROM_ALL piN_scattering_length_12.cpp)
   target_link_libraries(piN_scattering_length_12 ${PLEGMA_LIBS})
 
-  cuda_add_executable(Yan_NpiScattering_Wilson EXCLUDE_FROM_ALL Yan_NpiScattering_Wilson.cpp)
-  target_link_libraries(Yan_NpiScattering_Wilson ${PLEGMA_LIBS})
+  #cuda_add_executable(Yan_NpiScattering_Wilson EXCLUDE_FROM_ALL Yan_NpiScattering_Wilson.cpp)
+  #target_link_libraries(Yan_NpiScattering_Wilson ${PLEGMA_LIBS})
 
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 

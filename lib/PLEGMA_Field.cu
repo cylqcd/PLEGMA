@@ -63,6 +63,7 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 
 	for(int j = i+1; j < N_DIMS; j++){
 	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[OFF2(i,j)];
+	  if(ghost_flag >= SECOND_CORNER) ghost_corner_length += 8*HGC_surface2D[OFF2(i,j)];
 	  for(int k = j+1; k < N_DIMS; k++){
 	    if(ghost_flag >= FIRST_VERTEX) ghost_vertex_length += 8*HGC_surface1D[OFF3(i,j,k)];
 	  }	

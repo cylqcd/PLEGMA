@@ -49,7 +49,7 @@ __global__ void threep_threeD_part4_device(Float2<FloatC>* block2,
     Float2<FloatG> su3_1[N_COLS][N_COLS];
     Float2<FloatG> su3_2[N_COLS][N_COLS];
     Float2<FloatG> su3_3[N_COLS][N_COLS];
-#if 0
+#if 1
     // + term x-dir1, x-dir1, x, x+dir2, x+dir2+dir3
     texture1.get<Minus>(prop1,vid,dir1); gaugeTex.get<Minus>(su3_1,dir1,vid,dir1); gaugeTex.get(su3_2,dir2,vid); gaugeTex.get<Plus>(su3_3,dir3,vid,dir2); texture2.get<PlusPlus>(prop2,vid,dir2,dir3);
     partial_trace_mul_Prop_G1_G2_G3_Prop<true,ZERO_PLUS,false,false,false>(R,prop1,prop2,su3_1,su3_2,su3_3,mu,nu,c1,c2);
@@ -158,7 +158,7 @@ static void threep_threeD_part4_host(ProfileStruct &ps, Float2<FloatC> *result, 
 
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
-  int extra=N_DIMS*(N_DIMS-1)*(N_DIMS-2);
+  int extra=N_DIMS*N_DIMS*N_DIMS;
   if(isZfac) extra*=N_SPINS*N_SPINS*N_COLS*N_COLS;
   size_t size = corr.getTotalSize()/extra/t_size*time_step;
   int site_size = corr.getSiteSize()/extra;
@@ -192,23 +192,13 @@ static void threep_threeD_part4_host(ProfileStruct &ps, Float2<FloatC> *result, 
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     for(int et=0; et < extra; et++) {
-      int dir1 = (et/(N_DIMS-1)/(N_DIMS-2)) % N_DIMS;
-      int dir2 = (et/(N_DIMS-2)) % (N_DIMS-1);
-      int dir3 = et % (N_DIMS-2);
-      if(dir2>=dir1) dir2++;
-      if(dir3>=dir1){
-	dir3++;
-	if(dir3>=dir2)
-	  dir3++;
-      } else if(dir3>=dir2){
-	dir3++;
-	if(dir3>=dir1)
-	  dir3++;
-      }
+      int dir1 = ((et/N_DIMS)/N_DIMS)%N_DIMS;
+      int dir2 = (et/N_DIMS)%N_DIMS;
+      int dir3 = et%N_DIMS;
 
       int mu=-1, nu=-1, c1=-1, c2=-1;
       if(isZfac) {
-	int tt = et/N_DIMS/(N_DIMS-1)/(N_DIMS-2);
+	int tt = et/(N_DIMS*N_DIMS*N_DIMS);
 	mu=tt/N_SPINS/N_COLS/N_COLS;
 	nu=(tt/N_COLS/N_COLS)%N_SPINS;
 	c1=(tt/N_COLS)%N_COLS;
@@ -261,7 +251,7 @@ void threep_threeD_part4(PLEGMA_Correlator<FloatC> &corr,
     PLEGMA_error("Error maximum number of gamma matrices is 16");
 
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
-  int site_size = N_DIMS*(N_DIMS-1)*(N_DIMS-2)*gammas.size();
+  int site_size = N_DIMS*N_DIMS*N_DIMS*gammas.size();
   
   if(isZfac)
     site_size *= N_SPINS*N_SPINS*N_COLS*N_COLS;

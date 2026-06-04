@@ -26,7 +26,7 @@
 #include <PLEGMA_mesons_stoch_exact.cuh>
 #include <PLEGMA_mesons_stoch_exact_closed.cuh>
 #ifdef PLEGMA_UDSC_BARYONS
-#include <PLEGMA_baryons_udsc.cuh>
+//#include <PLEGMA_baryons_udsc.cuh>
 //#include <PLEGMA_heavy_light_tetraquarks.cuh>
 //#include <PLEGMA_bcud_tetraquarks.cuh>
 #endif
@@ -289,7 +289,8 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    bool only_up, bool only_dn, 
 		    bool only_st, bool only_ch, bool excludeHeavyOnly){
 
-#ifdef PLEGMA_UDSC_BARYONS
+//#ifdef PLEGMA_UDSC_BARYONS
+#if 0
   shape = {};
   description = "";
   datasets = {};
@@ -329,10 +330,11 @@ contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
   }
 
   initialize();
-  contract_baryons_udsc(propUP, propDN, propST, propCH, *this, todo);
-#else
-  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+//  contract_baryons_udsc(propUP, propDN, propST, propCH, *this, todo);
 #endif
+//#else
+//  PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
+//#endif
 }
 
 
@@ -755,11 +757,11 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
                          PLEGMA_Propagator<Float> &fwdProp,
 			 PLEGMA_Gauge<Float> &gauge,
 			 int signProps, std::vector<GAMMAS> gammas, bool isZfac){
-  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1), (int) gammas.size()};
-  else shape = {N_DIMS*(N_DIMS-1), (int) gammas.size()};
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*N_DIMS, (int) gammas.size()};
+  else shape = {N_DIMS*N_DIMS, (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"TwoD"};
-  description = "xy,xz,xt,yx,yz,yt,zx,zy,zt,tx,ty,tz / "+getGammasString(gammas);
+  description = "xx,xy,xz,xt,yx,yy,yz,yt,zx,zy,zz,zt,tx,ty,tz,tt / "+getGammasString(gammas);
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
@@ -777,11 +779,11 @@ contractNucleonThrp_twoD(PLEGMA_Vector<Float> &bwdProp,
                          PLEGMA_Vector<Float> &fwdProp,
                          PLEGMA_Gauge<Float> &gauge,
                          int signProps, std::vector<GAMMAS> gammas, bool isZfac){
-  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1), (int) gammas.size()};
-  else shape = {N_DIMS*(N_DIMS-1), (int) gammas.size()};
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*N_DIMS, (int) gammas.size()};
+  else shape = {N_DIMS*N_DIMS, (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"TwoD"};
-  description = "xy,xz,xt,yx,yz,yt,zx,zy,zt,tx,ty,tz / "+getGammasString(gammas);
+  description = "xx,xy,xz,xt,yx,yy,yz,yt,zx,zy,zz,zt,tx,ty,tz,tt / "+getGammasString(gammas);
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
@@ -825,11 +827,11 @@ contractNucleonThrp_threeD(PLEGMA_Vector<Float> &bwdProp,
                            PLEGMA_Vector<Float> &fwdProp,
                            PLEGMA_Gauge<Float> &gauge,
                            int signProps, std::vector<GAMMAS> gammas, bool isZfac){
-  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
-  else shape = {N_DIMS*(N_DIMS-1)*(N_DIMS-2), (int) gammas.size()};
+  if(isZfac) shape={N_SPINS,N_SPINS,N_COLS,N_COLS,N_DIMS*N_DIMS*N_DIMS, (int) gammas.size()};
+  else shape = {N_DIMS*N_DIMS*N_DIMS, (int) gammas.size()};
   datasets = {"threep"};
   groups =  {"ThreeD"};
-  description = "xyz,xyt,xzy,xzt,xty,xtz,yxz,yxt,yzx,yzt,ytx,ytz,zxy,zxt,zyx,zyt,ztx,zty,txy,txz,tyx,tyz,tzx,tzy / "+getGammasString(gammas);
+  description = "xxx,xxy,xxz,xxt,xyx,xyy,xyz,xyt,xzx,xzy,xzz,xzt,xtx,xty,xtz,xtt,yxx,yxy,yxz,yxt,yyx,yyy,yyz,yyt,yzx,yzy,yzz,yzt,ytx,yty,ytz,ytt,zxx,zxy,zxz,zxt,zyx,zyy,zyz,zyt,zzx,zzy,zzz,zzt,ztx,zty,ztz,ztt,txx,txy,txz,txt,tyx,tyy,tyz,tyt,tzx,tzy,tzz,tzt,ttx,tty,ttz,ttt / "+getGammasString(gammas);
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
@@ -879,7 +881,7 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
   initialize();
   
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_wilsonLine(*this,bwdProp,fwdProp,signProps,su3,gammas);
+  //threep_wilsonLine(*this,bwdProp,fwdProp,signProps,su3,gammas);
 }
 
 template<typename Float>
@@ -898,7 +900,7 @@ contractNucleonThrp_staple(PLEGMA_Propagator<Float> &bwdProp,
   initialize();
 
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_staple(*this,bwdProp,fwdProp,signProps,su3,gammas,isZfac);  
+  //threep_staple(*this,bwdProp,fwdProp,signProps,su3,gammas,isZfac);  
 }
 
 template<typename Float>
@@ -982,7 +984,7 @@ contractNucleonThrp_qgq(PLEGMA_Propagator<Float> &bwdProp,
   initialize();
   
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_qgq(*this,bwdProp,fwdProp,signProps,su3_1,Fmunu,munu,su3_2,gammas);
+  //threep_qgq(*this,bwdProp,fwdProp,signProps,su3_1,Fmunu,munu,su3_2,gammas);
 }
 
 

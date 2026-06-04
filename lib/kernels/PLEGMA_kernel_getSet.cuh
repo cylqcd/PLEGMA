@@ -271,7 +271,19 @@ namespace plegma {
   template<>
   inline __device__ void sidStride::shift<PlusPlus>(const short& dirPlus1, const short& dirPlus2) {
     if(dirPlus1 == dirPlus2 && DGC_dimBreak[dirPlus1]) {
-      printf(" !!! ERROR: in PlusPlus we cannot access the second neighbour !!!");
+      size_t id[4] = GET_ID(sid);
+      bool plus_ghost = IS_PLUS_GHOST(dirPlus1,id);
+      if(plus_ghost) this->accessSecondSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+      else {
+        id[dirPlus1] = ID_PLUS(dirPlus1, id);
+        plus_ghost = IS_PLUS_GHOST(dirPlus1,id);
+        if(plus_ghost) this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+        else {
+          id[dirPlus1] = ID_PLUS(dirPlus1, id);
+          this->sid = LEXIC_ID_3D4D(id,is4D);
+        }
+      }
+      //printf(" !!! ERROR: in PlusPlus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
       bool plus1_ghost = IS_PLUS_GHOST(dirPlus1, id);
@@ -280,13 +292,13 @@ namespace plegma {
       if(!plus2_ghost) id[dirPlus2] = ID_PLUS(dirPlus2, id);
 
       if(plus1_ghost && plus2_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
+        this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
       } else if(plus1_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
       } else if(plus2_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
       } else {
-	this->sid = LEXIC_ID_3D4D(id,is4D);
+        this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
   }
@@ -297,15 +309,15 @@ namespace plegma {
       bool minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
       if(minus_ghost) this->accessSecondSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
       else {
-        id[dirMinus1] = ID_MINUS(dirMinus1, id);        
-        minus_ghost = IS_MINUS_GHOST(dirMinus1,id);     
+        id[dirMinus1] = ID_MINUS(dirMinus1, id);
+        minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
         if(minus_ghost) this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
         else {
         id[dirMinus1] = ID_MINUS(dirMinus1, id);
         this->sid = LEXIC_ID_3D4D(id,is4D);
         }
       }
-      printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
+      //printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
       bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
@@ -314,13 +326,13 @@ namespace plegma {
       if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
 
       if(minus1_ghost && minus2_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
+        this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
       } else if(minus1_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+        this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
       } else if(minus2_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
+        this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
       } else {
-	this->sid = LEXIC_ID_3D4D(id,is4D);
+        this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
   }
@@ -353,8 +365,48 @@ namespace plegma {
 
   template<>
   inline __device__ void sidStride::shift<PlusPlusPlus>(const short& dirPlus1, const short& dirPlus2, const short& dirPlus3) {
-    if(dirPlus1 == dirPlus2 || dirPlus1 == dirPlus3 || dirPlus3 == dirPlus2) {
-      printf(" !!! ERROR: in PlusPlusPlus we cannot access the second neighbour !!!");
+    if((dirPlus1 == dirPlus2 && DGC_dimBreak[dirPlus1]) || (dirPlus1 == dirPlus3 && DGC_dimBreak[dirPlus1]) || (dirPlus3 == dirPlus2 && DGC_dimBreak[dirPlus2])) {
+      if((dirPlus1 == dirPlus2) && (dirPlus2 == dirPlus3)){
+        size_t id[4] = GET_ID(sid);
+        bool plus_ghost = IS_PLUS_GHOST(dirPlus1,id);
+        if(plus_ghost) this->accessThirdSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+        else {
+          id[dirPlus1] = ID_PLUS(dirPlus1, id);
+          plus_ghost = IS_PLUS_GHOST(dirPlus1,id);
+          if(plus_ghost) this->accessSecondSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+          else {
+            id[dirPlus1] = ID_PLUS(dirPlus1, id);
+            plus_ghost = IS_PLUS_GHOST(dirPlus1,id);
+            if(plus_ghost) this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+            else {
+              id[dirPlus1] = ID_PLUS(dirPlus1, id);
+              this->sid = LEXIC_ID_3D4D(id,is4D);
+            }
+          }
+        }
+      }
+      if(dirPlus1 == dirPlus2 && dirPlus1 != dirPlus3){
+        size_t id[4] = GET_ID(sid);
+        bool plus1_ghost = IS_PLUS_GHOST(dirPlus1,id);
+        bool plus3_ghost = IS_PLUS_GHOST(dirPlus3,id);
+        if(!plus3_ghost) id[dirPlus3] = ID_PLUS(dirPlus3, id);
+        if(plus1_ghost && plus3_ghost) this->accessSecondCornerGhost(LEXIC_2D(dirPlus1,dirPlus3,id), dirPlus1, dirPlus3, DIR_PLUS, DIR_PLUS);
+        else if(plus1_ghost) this->accessSecondSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+        else if(!plus1_ghost){
+          id[dirPlus1] = ID_PLUS(dirPlus1, id);
+          plus1_ghost = IS_PLUS_GHOST(dirPlus1,id);
+          if(!plus1_ghost) id[dirPlus1] = ID_PLUS(dirPlus1, id);
+          if(plus1_ghost && plus3_ghost) this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus3,id), dirPlus1, dirPlus3, DIR_PLUS, DIR_PLUS);
+          else if(plus1_ghost) this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+          else if(plus3_ghost) this->accessSideGhost(LEXIC_3D(dirPlus3,id), dirPlus3, DIR_PLUS);
+          else {
+            this->sid = LEXIC_ID_3D4D(id,is4D);
+          }
+        }
+      }
+      if(dirPlus1 == dirPlus3 && dirPlus1 != dirPlus2) return this->shift<PlusPlusPlus>(dirPlus1,dirPlus3,dirPlus2);
+      if(dirPlus2 == dirPlus3 && dirPlus1 != dirPlus2) return this->shift<PlusPlusPlus>(dirPlus2,dirPlus3,dirPlus1);
+      //printf(" !!! ERROR: in PlusPlusPlus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
       bool plus1_ghost = IS_PLUS_GHOST(dirPlus1, id);
@@ -365,28 +417,47 @@ namespace plegma {
       if(!plus3_ghost) id[dirPlus3] = ID_PLUS(dirPlus3, id);
 
       if(plus1_ghost && plus2_ghost && plus3_ghost){
-	this->accessVertexGhost(LEXIC_1D(dirPlus1,dirPlus2,dirPlus3,id), dirPlus1, dirPlus2, dirPlus3, DIR_PLUS, DIR_PLUS, DIR_PLUS);
+        this->accessVertexGhost(LEXIC_1D(dirPlus1,dirPlus2,dirPlus3,id), dirPlus1, dirPlus2, dirPlus3, DIR_PLUS, DIR_PLUS, DIR_PLUS);
       } else if(plus1_ghost && plus2_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
+        this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
       } else if(plus1_ghost && plus3_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus3,id), dirPlus1, dirPlus3, DIR_PLUS, DIR_PLUS);
+        this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus3,id), dirPlus1, dirPlus3, DIR_PLUS, DIR_PLUS);
       } else if(plus2_ghost && plus3_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirPlus2,dirPlus3,id), dirPlus2, dirPlus3, DIR_PLUS, DIR_PLUS);
+        this->accessCornerGhost(LEXIC_2D(dirPlus2,dirPlus3,id), dirPlus2, dirPlus3, DIR_PLUS, DIR_PLUS);
       } else if(plus1_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
       } else if(plus2_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
       } else if(plus3_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus3,id), dirPlus3, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus3,id), dirPlus3, DIR_PLUS);
       } else {
-	this->sid = LEXIC_ID_3D4D(id,is4D);
+        this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
   }
   template<>
   inline __device__ void sidStride::shift<PlusPlusMinus>(const short& dirPlus1, const short& dirPlus2, const short& dirMinus) {
-    if(dirPlus1 == dirPlus2 || dirPlus1 == dirMinus || dirMinus == dirPlus2) {
-      printf(" !!! ERROR: in PlusPlusMinus we cannot access the second neighbour !!!");
+    if(dirPlus1 == dirMinus) return this->shift<Plus>(dirPlus2);
+    if(dirPlus2 == dirMinus) return this->shift<Plus>(dirPlus1);
+    if(dirPlus1 == dirPlus2 && DGC_dimBreak[dirPlus1]) { //|| dirPlus1 == dirMinus || dirMinus == dirPlus2) {
+      size_t id[4] = GET_ID(sid);
+      bool plus_ghost = IS_PLUS_GHOST(dirPlus1,id);
+      bool minus_ghost = IS_MINUS_GHOST(dirMinus,id);
+      if(!minus_ghost) id[dirMinus] = ID_MINUS(dirMinus, id);
+      if(plus_ghost && minus_ghost) this->accessSecondCornerGhost(LEXIC_2D(dirPlus1,dirMinus,id), dirPlus1, dirMinus, DIR_PLUS, DIR_MINUS);
+      else if(plus_ghost) this->accessSecondSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+      else if(!plus_ghost){
+        id[dirPlus1] = ID_PLUS(dirPlus1, id);
+        plus_ghost = IS_PLUS_GHOST(dirPlus1,id);
+        if(!plus_ghost) id[dirPlus1] = ID_PLUS(dirPlus1, id);
+        if(plus_ghost && minus_ghost) this->accessCornerGhost(LEXIC_2D(dirPlus1,dirMinus,id), dirPlus1, dirMinus, DIR_PLUS, DIR_MINUS);
+        else if(plus_ghost) this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+        else if(minus_ghost) this->accessSideGhost(LEXIC_3D(dirMinus,id), dirMinus, DIR_MINUS);
+        else {
+          this->sid = LEXIC_ID_3D4D(id,is4D);
+        }
+      }
+      //printf(" !!! ERROR: in PlusPlusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
       bool plus1_ghost = IS_PLUS_GHOST(dirPlus1, id);
@@ -397,21 +468,21 @@ namespace plegma {
       if(!minus_ghost) id[dirMinus] = ID_MINUS(dirMinus, id);
 
       if(plus1_ghost && plus2_ghost && minus_ghost){
-	this->accessVertexGhost(LEXIC_1D(dirPlus1,dirPlus2,dirMinus,id), dirPlus1, dirPlus2, dirMinus, DIR_PLUS, DIR_PLUS, DIR_MINUS);
+        this->accessVertexGhost(LEXIC_1D(dirPlus1,dirPlus2,dirMinus,id), dirPlus1, dirPlus2, dirMinus, DIR_PLUS, DIR_PLUS, DIR_MINUS);
       } else if(plus1_ghost && plus2_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
+        this->accessCornerGhost(LEXIC_2D(dirPlus1,dirPlus2,id), dirPlus1, dirPlus2, DIR_PLUS, DIR_PLUS);
       } else if(plus1_ghost && minus_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirPlus1,dirMinus,id), dirPlus1, dirMinus, DIR_PLUS, DIR_MINUS);
+        this->accessCornerGhost(LEXIC_2D(dirPlus1,dirMinus,id), dirPlus1, dirMinus, DIR_PLUS, DIR_MINUS);
       } else if(plus2_ghost && minus_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirPlus2,dirMinus,id), dirPlus2, dirMinus, DIR_PLUS, DIR_MINUS);
+        this->accessCornerGhost(LEXIC_2D(dirPlus2,dirMinus,id), dirPlus2, dirMinus, DIR_PLUS, DIR_MINUS);
       } else if(plus1_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus1,id), dirPlus1, DIR_PLUS);
       } else if(plus2_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus2,id), dirPlus2, DIR_PLUS);
       } else if(minus_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus,id), dirMinus, DIR_MINUS);
+        this->accessSideGhost(LEXIC_3D(dirMinus,id), dirMinus, DIR_MINUS);
       } else {
-	this->sid = LEXIC_ID_3D4D(id,is4D);
+        this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
   }
@@ -426,40 +497,99 @@ namespace plegma {
   
   template<>
   inline __device__ void sidStride::shift<MinusMinusMinus>(const short& dirMinus1, const short& dirMinus2, const short& dirMinus3) {
-    if(dirMinus1 == dirMinus2 || dirMinus1 == dirMinus3 || dirMinus3 == dirMinus2) {
-      printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
-    } else {
-      size_t id[4] = GET_ID(sid);
-      bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
-      if(!minus1_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
-      bool minus2_ghost = IS_MINUS_GHOST(dirMinus2, id);
-      if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
-      bool minus3_ghost = IS_MINUS_GHOST(dirMinus3, id);
-      if(!minus3_ghost) id[dirMinus3] = ID_MINUS(dirMinus3, id);
-
-      if(minus1_ghost && minus2_ghost && minus3_ghost){
-	this->accessVertexGhost(LEXIC_1D(dirMinus1,dirMinus2,dirMinus3,id), dirMinus1, dirMinus2, dirMinus3, DIR_MINUS, DIR_MINUS, DIR_MINUS);
-      } else if(minus1_ghost && minus2_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
-      } else if(minus1_ghost && minus3_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus3,id), dirMinus1, dirMinus3, DIR_MINUS, DIR_MINUS);
-      } else if(minus2_ghost && minus3_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirMinus2,dirMinus3,id), dirMinus2, dirMinus3, DIR_MINUS, DIR_MINUS);
-      } else if(minus1_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
-      } else if(minus2_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
-      } else if(minus3_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus3,id), dirMinus3, DIR_MINUS);
-      } else {
-	this->sid = LEXIC_ID_3D4D(id,is4D);
+    if((dirMinus1 == dirMinus2 && DGC_dimBreak[dirMinus1]) || (dirMinus1 == dirMinus3 && DGC_dimBreak[dirMinus1]) || (dirMinus3 == dirMinus2 && DGC_dimBreak[dirMinus2])) {
+      if((dirMinus1 == dirMinus2) && (dirMinus2 == dirMinus3)){
+        size_t id[4] = GET_ID(sid);
+        bool minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
+        if(minus_ghost) this->accessThirdSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+        else {
+          id[dirMinus1] = ID_MINUS(dirMinus1, id);
+          minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
+          if(minus_ghost) this->accessSecondSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+          else {
+            id[dirMinus1] = ID_MINUS(dirMinus1, id);
+            minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
+            if(minus_ghost) this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+            else {
+              id[dirMinus1] = ID_MINUS(dirMinus1, id);
+              this->sid = LEXIC_ID_3D4D(id,is4D);
+            }
+          }
+        }
       }
+      if(dirMinus1 == dirMinus2 && dirMinus1 != dirMinus3){
+        size_t id[4] = GET_ID(sid);
+        bool minus1_ghost = IS_MINUS_GHOST(dirMinus1,id);
+        bool minus3_ghost = IS_MINUS_GHOST(dirMinus3,id);
+        if(!minus3_ghost) id[dirMinus3] = ID_MINUS(dirMinus3, id);
+        if(minus1_ghost && minus3_ghost) this->accessSecondCornerGhost(LEXIC_2D(dirMinus1,dirMinus3,id), dirMinus1, dirMinus3, DIR_MINUS, DIR_MINUS);
+        else if(minus1_ghost) this->accessSecondSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+        else if(!minus1_ghost){
+          id[dirMinus1] = ID_MINUS(dirMinus1, id);
+          minus1_ghost = IS_MINUS_GHOST(dirMinus1,id);
+          if(!minus1_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
+          if(minus1_ghost && minus3_ghost) this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus3,id), dirMinus1, dirMinus3, DIR_MINUS, DIR_MINUS);
+          else if(minus1_ghost) this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+          else if(minus3_ghost) this->accessSideGhost(LEXIC_3D(dirMinus3,id), dirMinus3, DIR_MINUS);
+          else {
+            this->sid = LEXIC_ID_3D4D(id,is4D);
+          }
+        }
+      }
+      if(dirMinus1 == dirMinus3 && dirMinus1 != dirMinus2) return this->shift<MinusMinusMinus>(dirMinus1,dirMinus3,dirMinus2);
+      if(dirMinus2 == dirMinus3 && dirMinus1 != dirMinus2) return this->shift<MinusMinusMinus>(dirMinus2,dirMinus3,dirMinus1);
+      //printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
+    } else {
+        size_t id[4] = GET_ID(sid);
+        bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
+        if(!minus1_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
+        bool minus2_ghost = IS_MINUS_GHOST(dirMinus2, id);
+        if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
+        bool minus3_ghost = IS_MINUS_GHOST(dirMinus3, id);
+        if(!minus3_ghost) id[dirMinus3] = ID_MINUS(dirMinus3, id);
+
+        if(minus1_ghost && minus2_ghost && minus3_ghost){
+          this->accessVertexGhost(LEXIC_1D(dirMinus1,dirMinus2,dirMinus3,id), dirMinus1, dirMinus2, dirMinus3, DIR_MINUS, DIR_MINUS, DIR_MINUS);
+        } else if(minus1_ghost && minus2_ghost){
+          this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
+        } else if(minus1_ghost && minus3_ghost){
+          this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus3,id), dirMinus1, dirMinus3, DIR_MINUS, DIR_MINUS);
+        } else if(minus2_ghost && minus3_ghost){
+          this->accessCornerGhost(LEXIC_2D(dirMinus2,dirMinus3,id), dirMinus2, dirMinus3, DIR_MINUS, DIR_MINUS);
+        } else if(minus1_ghost) {
+          this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+        } else if(minus2_ghost) {
+          this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
+        } else if(minus3_ghost) {
+          this->accessSideGhost(LEXIC_3D(dirMinus3,id), dirMinus3, DIR_MINUS);
+        } else {
+          this->sid = LEXIC_ID_3D4D(id,is4D);
+        }
     }
   }
   template<>
   inline __device__ void sidStride::shift<MinusMinusPlus>(const short& dirMinus1, const short& dirMinus2, const short& dirPlus) {
-    if(dirMinus1 == dirMinus2 || dirMinus1 == dirPlus || dirPlus == dirMinus2) {
-      printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
+    if(dirMinus1 == dirPlus) return this->shift<Minus>(dirMinus2);
+    if(dirMinus2 == dirPlus) return this->shift<Minus>(dirMinus1);
+    if(dirMinus1 == dirMinus2 && DGC_dimBreak[dirMinus1]) {//|| dirMinus1 == dirPlus || dirPlus == dirMinus2) {
+      size_t id[4] = GET_ID(sid);
+      bool minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
+      bool plus_ghost = IS_PLUS_GHOST(dirPlus,id);
+      if(!plus_ghost) id[dirPlus] = ID_PLUS(dirPlus, id);
+      if(minus_ghost && plus_ghost) this->accessSecondCornerGhost(LEXIC_2D(dirMinus1,dirPlus,id), dirMinus1, dirPlus, DIR_MINUS, DIR_PLUS);
+      else if(minus_ghost) this->accessSecondSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+      else if(!minus_ghost){
+        id[dirMinus1] = ID_MINUS(dirMinus1, id);
+        minus_ghost = IS_MINUS_GHOST(dirMinus1,id);
+        if(!minus_ghost) id[dirMinus1] = ID_MINUS(dirMinus1, id);
+        if(minus_ghost && plus_ghost) this->accessCornerGhost(LEXIC_2D(dirMinus1,dirPlus,id), dirMinus1, dirPlus, DIR_MINUS, DIR_PLUS);
+        else if(minus_ghost) this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+        else if(plus_ghost) this->accessSideGhost(LEXIC_3D(dirPlus,id), dirPlus, DIR_PLUS);
+        else {
+          this->sid = LEXIC_ID_3D4D(id,is4D);
+        }
+      }
+      //printf(" !!! ERROR: in MinusMinus we cannot access the second neighbour !!!");
     } else {
       size_t id[4] = GET_ID(sid);
       bool minus1_ghost = IS_MINUS_GHOST(dirMinus1, id);
@@ -468,23 +598,22 @@ namespace plegma {
       if(!minus2_ghost) id[dirMinus2] = ID_MINUS(dirMinus2, id);
       bool plus_ghost = IS_PLUS_GHOST(dirPlus, id);
       if(!plus_ghost) id[dirPlus] = ID_PLUS(dirPlus, id);
-
       if(minus1_ghost && minus2_ghost && plus_ghost){
-	this->accessVertexGhost(LEXIC_1D(dirMinus1,dirMinus2,dirPlus,id), dirMinus1, dirMinus2, dirPlus, DIR_MINUS, DIR_MINUS, DIR_PLUS);
+        this->accessVertexGhost(LEXIC_1D(dirMinus1,dirMinus2,dirPlus,id), dirMinus1, dirMinus2, dirPlus, DIR_MINUS, DIR_MINUS, DIR_PLUS);
       } else if(minus1_ghost && minus2_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
+        this->accessCornerGhost(LEXIC_2D(dirMinus1,dirMinus2,id), dirMinus1, dirMinus2, DIR_MINUS, DIR_MINUS);
       } else if(minus1_ghost && plus_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirMinus1,dirPlus,id), dirMinus1, dirPlus, DIR_MINUS, DIR_PLUS);
+        this->accessCornerGhost(LEXIC_2D(dirMinus1,dirPlus,id), dirMinus1, dirPlus, DIR_MINUS, DIR_PLUS);
       } else if(minus2_ghost && plus_ghost){
-	this->accessCornerGhost(LEXIC_2D(dirMinus2,dirPlus,id), dirMinus2, dirPlus, DIR_MINUS, DIR_PLUS);
+        this->accessCornerGhost(LEXIC_2D(dirMinus2,dirPlus,id), dirMinus2, dirPlus, DIR_MINUS, DIR_PLUS);
       } else if(minus1_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
+        this->accessSideGhost(LEXIC_3D(dirMinus1,id), dirMinus1, DIR_MINUS);
       } else if(minus2_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
+        this->accessSideGhost(LEXIC_3D(dirMinus2,id), dirMinus2, DIR_MINUS);
       } else if(plus_ghost) {
-	this->accessSideGhost(LEXIC_3D(dirPlus,id), dirPlus, DIR_PLUS);
+        this->accessSideGhost(LEXIC_3D(dirPlus,id), dirPlus, DIR_PLUS);
       } else {
-	this->sid = LEXIC_ID_3D4D(id,is4D);
+        this->sid = LEXIC_ID_3D4D(id,is4D);
       }
     }
   }
