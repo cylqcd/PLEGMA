@@ -38,6 +38,14 @@ QudaInvertParam make_flow_inv_param(QudaPrecision prec)
   return inv_param;
 }
 
+void resetFermionFlowSmearedGauge()
+{
+  if (gaugeSmeared) {
+    freeUniqueGaugeQuda(QUDA_SMEARED_LINKS);
+    gaugeSmeared = nullptr;
+  }
+}
+
 
 void wilsonFlow_QUDA(PLEGMA_Gauge<double> &gaugeOut,
                             PLEGMA_Gauge<double> &gaugeIn,

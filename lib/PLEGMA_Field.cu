@@ -519,8 +519,8 @@ void PLEGMA_Field<Float>::initSideGhostP2P() {
   p2p_side_any = (p2p_any_sum != 0);
 
   if (HGC_verbosity > 0 && comm_rank() == 0)
-    PLEGMA_printf("[P2P] Side ghost P2P: %s\n",
-                  p2p_side_any ? "ENABLED (NVLink D2D)" : "disabled (MPI fallback)");
+    PLEGMA_printf("[P2P] Side ghost CUDA IPC P2P: %s\n",
+                  p2p_side_any ? "enabled" : "disabled (MPI fallback)");
 
   // Allocate staging buffer: separates pack source from ghost receive slot.
   // This prevents the race where rank A reads d_elem_A[ghost[i][s]] to push to a
@@ -604,7 +604,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     qudaDeviceSynchronize();
     double t_d2h0 = MPI_Wtime();
     if(checkErr) checkQudaError();
-    // Pre-BARRIER: copy pack data to staging buffer (local D2D, no NVLink).
+    // Pre-BARRIER: copy pack data to a local device staging buffer.
     // This fixes the race in the PUSH model: after BARRIER, rank A's d_elem[ghost[i][s]]
     // is simultaneously read (outgoing push) and written (incoming push from neighbour).
     if (p2p_side_any && d_side_ghost_pack_stage) {
@@ -660,8 +660,9 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       }
     }
     double t_mpi0 = MPI_Wtime();
-    PLEGMA_printf("  [SGhost] sync=%.4fs D2H+MPI=%.4fs p2p_bytes=%zu mpi_bytes=%zu\n",
-                  t_d2h0-t_sync0, t_mpi0-t_d2h0, p2p_nbytes, mpi_send_nbytes);
+    if(HGC_verbosity>2)
+      PLEGMA_printf("  [SGhost] sync=%.4fs stage+send=%.4fs p2p_bytes=%zu mpi_bytes=%zu\n",
+                    t_d2h0-t_sync0, t_mpi0-t_d2h0, p2p_nbytes, mpi_send_nbytes);
     if(checkErr) checkQudaError();
   }
   if(action==FINISH || action==DO_ALL) {
@@ -697,8 +698,9 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       }
     }
     double t_h2d1 = MPI_Wtime();
-    PLEGMA_printf("  [SGhost] wait=%.4fs H2D=%.4fs p2p_bytes=%zu h2d_bytes=%zu\n",
-                  t_h2d0-t_wait0, t_h2d1-t_h2d0, total_p2d, total_h2d);
+    if(HGC_verbosity>2)
+      PLEGMA_printf("  [SGhost] wait=%.4fs H2D=%.4fs p2p_bytes=%zu h2d_bytes=%zu\n",
+                    t_h2d0-t_wait0, t_h2d1-t_h2d0, total_p2d, total_h2d);
     if(checkErr) checkQudaError();
   }
 }

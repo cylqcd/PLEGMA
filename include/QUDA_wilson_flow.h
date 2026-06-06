@@ -2,6 +2,7 @@
 #include <PLEGMA_utils.h>
 
 QudaInvertParam make_flow_inv_param(QudaPrecision prec = QUDA_DOUBLE_PRECISION);
+void resetFermionFlowSmearedGauge();
 
 void wilsonFlow_QUDA(PLEGMA_Gauge<double> &gaugeOut,
                      PLEGMA_Gauge<double> &gaugeIn, int n_steps, double epsilon,

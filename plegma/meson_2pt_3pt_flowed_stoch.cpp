@@ -139,17 +139,44 @@ int main(int argc, char **argv) {
                     free_bytes / 1073741824.0, total_bytes / 1073741824.0);
     };
 
-    // ---- Solver ----
-    updateOptions(LIGHT);
-    auto solver_up = std::make_unique<QUDA_solver>(mu, 1);
-    QUDA_solver &solver = *solver_up;
-
     const std::string twop_base   = twop_filename;
     const std::string threep_base = threep_filename;
     const double mu_ud_save = mu_ud;
 
-    // ---- Source loop ----
-    for (int isrc = 0; isrc < numSourcePositions; ++isrc) {
+    struct SeqChannelData {
+      std::string tag;
+      bool active_as_bwd = false;
+      std::shared_ptr<PLEGMA_Propagator<float>> fwd_backup;     // HOST-only
+      std::vector<std::unique_ptr<PLEGMA_Propagator<float>>> seq_host; // HOST-only per tsink
+    };
+
+    struct SourceSeqData {
+      site src;
+      std::string threep_out;
+      std::vector<std::vector<SeqChannelData>> sample_seq_data;
+    };
+
+    auto run_channel_pass = [&](bool do_pion,
+                                bool do_kaon_uins,
+                                bool do_kaon_sins,
+                                const char *pass_name) {
+      PLEGMA_printf("\n========== Channel pass: %s (pion=%d kaon_uins=%d kaon_sins=%d) =========="
+                    "\n", pass_name, (int)do_pion, (int)do_kaon_uins,
+                    (int)do_kaon_sins);
+
+      updateOptions(LIGHT);
+      mu    = mu_ud_save;
+      mu_ud = mu_ud_save;
+      TIME(resetFermionFlowSmearedGauge());
+      TIME(updateGaugeQuda(gauge, true));
+      auto solver_up = std::make_unique<QUDA_solver>(mu, 1);
+      QUDA_solver &solver = *solver_up;
+
+      std::vector<SourceSeqData> all_source_seq_data;
+      all_source_seq_data.reserve(numSourcePositions);
+
+      // ---- Source loop ----
+      for (int isrc = 0; isrc < numSourcePositions; ++isrc) {
       updateOptions(LIGHT);
       mu    = mu_ud_save;
       mu_ud = mu_ud_save;
@@ -248,233 +275,14 @@ int main(int argc, char **argv) {
       const std::string twop_out   = twop_base   + src_tag + "_chi." + conf_tag;
       const std::string threep_out = threep_base + src_tag + "_chi." + conf_tag;
 
-      // ------------------------------------------------------------------
-      // 3pt channel runner (identical logic to point-source version;
-      // output tag carries the sample suffix via the `tag` argument)
-      // ------------------------------------------------------------------
-      auto run_3pt_channel = [&](const std::string &tag,
-                                 PLEGMA_Propagator<float> &fwd_full,
-                                 PLEGMA_Propagator<float> &fwd_smeared,
-                                 WHICHFLAVOR seq_fl,
-                                 double seq_mu,
-                                 bool active_as_bwd = false) {
-        PLEGMA_printf("\n--- 3pt channel: tag='%s' seq_fl=%s seq_mu=%g active_as_bwd=%d ---\n",
-                      tag.c_str(),
-                      seq_fl == LIGHT ? "LIGHT" : (seq_fl == STRANGE ? "STRANGE" : "CHARM"),
-                      seq_mu, (int)active_as_bwd);
-        updateOptions(seq_fl);
-        mu = seq_mu;
-        PLEGMA_printf("mu after updateOptions %f\n", mu);
-        solver.UpdateSolver();
-        const int seq_nsmear = (seq_fl == LIGHT) ? nsmearGauss : nsmearGauss_s;
-
-        // Pre-extract 3D slices for all tsinks
-        std::vector<std::unique_ptr<PLEGMA_Propagator3D<float>>> prop_3D_slices;
-        for (size_t i = 0; i < tSinks.size(); ++i) {
-          const int st = (src[3] + tSinks[i]) % HGC_totalL[3];
-          auto p = std::make_unique<PLEGMA_Propagator3D<float>>();
-          p->absorb(fwd_smeared, st);
-          prop_3D_slices.push_back(std::move(p));
-        }
-
-        // HOST backup of fwd_full (D2H once); device copy left intact for caller
-        fwd_full.unload();
-        PLEGMA_Propagator<float> prop_fwd_backup(HOST);
-        prop_fwd_backup.copy(fwd_full, HOST);
-
-        for (size_t its = 0; its < tSinks.size(); ++its) {
-          const int dt_sink = tSinks[its];
-          if (dt_sink >= HGC_totalL[3])
-            PLEGMA_error("Provided tsink=%d is >= temporal extent", dt_sink);
-
-          const int sink_t = (src[3] + dt_sink) % HGC_totalL[3];
-
-          gauge.calculatePlaq();
-          solver.UpdateSolver();
-
-          PLEGMA_Gauge3D<double> smearedGauge3D_sink;
-          smearedGauge3D_sink.absorb(smearedGauge, sink_t);
-
-          PLEGMA_Propagator3D<float> &prop_q_3D = *prop_3D_slices[its];
-
-          // Sink-side dressing for the sequential source
-          prop_q_3D.apply_gamma(G5, LEFT);
-
-          PLEGMA_Propagator<float> seq_tmp_a(BOTH);
-          {
-            PLEGMA_Propagator<float> seqProp(BOTH);
-
-            for (int nu = 0; nu < 4; ++nu) {
-              for (int c2 = 0; c2 < 3; ++c2) {
-                PLEGMA_Vector3D<float> seq3D_f;
-                seq3D_f.absorb(prop_q_3D, nu, c2);
-                PLEGMA_Vector3D<double> seq3D;
-                seq3D.copy(seq3D_f);
-
-                PLEGMA_Vector3D<double> seq3D_sm_d;
-                TIME(seq3D_sm_d.gaussianSmearing(seq3D, smearedGauge3D_sink,
-                                                 seq_nsmear, alphaGauss));
-
-                PLEGMA_Vector<double> rhs4D1, rhs4D2;
-                rhs4D2.absorb(seq3D_sm_d, sink_t);
-                PLEGMA_printf("[SEQDBG] sink_t=%d dt_sink=%d nu=%d c2=%d\n",
-                              sink_t, dt_sink, nu, c2);
-                PLEGMA_printf("[SEQDBG] rhs4D2.norm=%e\n", rhs4D2.norm());
-
-                const double nrm = rhs4D2.norm();
-                if (nrm > 0.0) rhs4D2.scale(1.0 / nrm);
-                if (rotateQ) rhs4D1.rotateToPhysicalBasis(rhs4D2, mu / abs(mu));
-                else         rhs4D1.copy(rhs4D2);
-
-                TIME(solver.solve(rhs4D1, rhs4D1));
-                if (rotateQ) rhs4D2.rotateToPhysicalBasis(rhs4D1, mu / abs(mu));
-                else         rhs4D2.copy(rhs4D1);
-
-                if (nrm > 0.0) rhs4D2.scale(nrm);
-
-                PLEGMA_Vector<float> rhs4D2_f;
-                rhs4D2_f.copy(rhs4D2);
-                seqProp.absorb(rhs4D2_f, nu, c2);
-              }
-            }
-
-            seq_tmp_a.copy(seqProp);
-          } // seqProp dtor frees device memory
-
-          // Contract: all bilinear channels in one shot
-          PLEGMA_Correlator<float> corr3(corr_space, src, maxQsq);
-          PLEGMA_Correlator<float> corr3_oneD(corr_space, src, maxQsq);
-
-          PLEGMA_Propagator<double> prop_tmp_a(BOTH);
-          PLEGMA_Propagator<double> *in = &prop_tmp_a;
-          prop_tmp_a.copy(prop_fwd_backup, HOST);
-          prop_tmp_a.load();
-
-          PLEGMA_Propagator<double> seq_in_a(BOTH);
-          seq_in_a.copy(seq_tmp_a);
-          PLEGMA_Propagator<double> *seq_in = &seq_in_a;
-
-          PLEGMA_Gauge<float> contractGauge(BOTH);
-          contractGauge.copy(gauge);
-          applyBoundaryConditions(contractGauge, true);
-
-          const double epsilon    = 0.02;
-          const double t0         = flow_t0;
-          const double t_target   = 2.5 * t0;
-          const int    n_steps    = (int)std::lround(t_target / epsilon);
-          const int    n_flow_save = (int)std::lround(t_target / (0.1 * t0));
-
-          double t    = 0.0;
-          int    step = 0;
-
-          // nt=0 checkpoint (no flow)
-          {
-            const std::string base = threep_out + tag + "_dt"
-                                   + std::to_string(dt_sink) + "_tau00";
-            const std::string threep_name_local  = base + "_local";
-            const std::string threep_name_oneD   = base + "_oneD";
-            const std::string threep_patterns    = base + "_patterns";
-
-            PLEGMA_Propagator<float> in_f(BOTH);
-            PLEGMA_Propagator<float> seq_in_f(BOTH);
-            in_f.copy(*in);
-            seq_in_f.copy(*seq_in);
-            PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
-            PLEGMA_Propagator<float> *fwd_contract = &in_f;
-            if (active_as_bwd) {
-              in_f.conjugate();
-              in_f.apply_gamma(G5, LEFT);
-              bwd_contract = &in_f;
-              fwd_contract = &seq_in_f;
-            } else {
-              seq_in_f.conjugate();
-              seq_in_f.apply_gamma(G5, LEFT);
-            }
-
-            // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
-            //                                      0, {G1,G2,G3,G4,G5G4}));
-            TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
-                                                      contractGauge, 0, {G1,G2,G3,G4,G5G4}));
-            TIME(contractNucleonThrp_fiveD_patterns(
-                *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
-                maxQsq, threep_patterns, max_order));
-            // TIME(corr3.writeFile(threep_name_local, corr_file_format));
-            TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
-          }
-
-          // Flow output buffers
-          PLEGMA_Propagator<double> prop_tmp_b(BOTH);
-          PLEGMA_Propagator<double> *out = &prop_tmp_b;
-          PLEGMA_Propagator<double> seq_tmp_b(BOTH);
-          PLEGMA_Propagator<double> *seq_out = &seq_tmp_b;
-          PLEGMA_Gauge<double> gauge_flowed(BOTH);
-
-          for (int ic = 1; ic <= n_flow_save; ++ic) {
-            const int target_step  = (int)std::lround((double)n_steps * ic / n_flow_save);
-            const int chunk_steps  = target_step - step;
-            if (chunk_steps <= 0) continue;
-
-            TIME(fermionFlow_PLEGMA(*out, *in, *seq_out, *seq_in, gauge_flowed,
-                                    gauge, chunk_steps, epsilon, t,
-                                    false, false, true, true, 1));
-            std::swap(in,  out);
-            std::swap(seq_in, seq_out);
-            step = target_step;
-            t    = step * epsilon;
-            PLEGMA_printf("  checkpoint %d/%d: step=%d  t=%.6f\n",
-                          ic, n_flow_save, step, t);
-
-            {
-              char tau_tag[32];
-              snprintf(tau_tag, sizeof(tau_tag), "_tau%02d",
-                       (int)std::lround(t / (0.1 * t0)));
-              const std::string base = threep_out + tag + "_dt"
-                                     + std::to_string(dt_sink) + tau_tag;
-              const std::string threep_name_local  = base + "_local";
-              const std::string threep_name_oneD   = base + "_oneD";
-              const std::string threep_patterns    = base + "_patterns";
-
-              contractGauge.copy(gauge_flowed);
-
-              PLEGMA_Propagator<float> in_f(BOTH);
-              PLEGMA_Propagator<float> seq_in_f(BOTH);
-              in_f.copy(*in);
-              seq_in_f.copy(*seq_in);
-              PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
-              PLEGMA_Propagator<float> *fwd_contract = &in_f;
-              if (active_as_bwd) {
-                in_f.conjugate();
-                in_f.apply_gamma(G5, LEFT);
-                bwd_contract = &in_f;
-                fwd_contract = &seq_in_f;
-              } else {
-                seq_in_f.conjugate();
-                seq_in_f.apply_gamma(G5, LEFT);
-              }
-
-              // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
-              //                                      0, {G1,G2,G3,G4,G5G4}));
-              TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
-                                                        contractGauge, 0, {G1,G2,G3,G4,G5G4}));
-              TIME(contractNucleonThrp_fiveD_patterns(
-                  *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
-                  maxQsq, threep_patterns, max_order));
-              // TIME(corr3.writeFile(threep_name_local, corr_file_format));
-              TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
-            }
-          } // checkpoint loop
-        }   // tsink loop
-      };    // run_3pt_channel
+      SourceSeqData source_seq_data;
+      source_seq_data.src = src;
+      source_seq_data.threep_out = threep_out;
 
       // ------------------------------------------------------------------
       // Noise sample loop
       // ------------------------------------------------------------------
       // Seed scheme:
-      //   Pion:  u (+mu) and d (-mu) use DIFFERENT seeds to avoid spurious
-      //          correlations between the degenerate-doublet propagators.
-      //          C2_pion = contractMesonsNew(u, u) uses the SAME propagator
-      //          object twice, so it is automatically positive-definite.
-      //
       //   Kaon:  C2_kaon = contractMesonsNew(u, sbar) and all C3_kaon channels
       //          involve the pair (u, sbar).  For the stochastic estimate of
       //          C2 to avoid fluctuating through zero (which would blow up the
@@ -483,18 +291,10 @@ int main(int argc, char **argv) {
       //          noise vectors whose product has unit-scale fluctuations and
       //          can become negative, destroying the signal.
       //          => seed_s = seed_sd = seed_q  (all kaon quarks share eta_u)
-      // ── Data holder for one channel's pre-computed sequential propagators ──────
-      struct SeqChannelData {
-        std::string tag;
-        bool active_as_bwd = false;
-        std::unique_ptr<PLEGMA_Propagator<float>> fwd_backup;     // HOST-only
-        std::vector<std::unique_ptr<PLEGMA_Propagator<float>>> seq_host; // HOST-only per tsink
-      };
-
       // ── Phase-1 lambda: solve all seq props for one channel, store HOST copies ──
       auto solve_seq_channel = [&](
           const std::string &tag,
-          PLEGMA_Propagator<float> &fwd_full,
+          std::shared_ptr<PLEGMA_Propagator<float>> fwd_backup,
           PLEGMA_Propagator<float> &fwd_smeared,
           WHICHFLAVOR seq_fl, double seq_mu,
           bool active_as_bwd = false) -> SeqChannelData {
@@ -508,25 +308,14 @@ int main(int argc, char **argv) {
         solver.UpdateSolver();
         const int seq_nsmear = (seq_fl == LIGHT) ? nsmearGauss : nsmearGauss_s;
 
-        // Pre-extract 3D slices of the smeared fwd prop at each sink time
-        std::vector<std::unique_ptr<PLEGMA_Propagator3D<float>>> prop_3D_slices;
-        prop_3D_slices.reserve(tSinks.size());
-        for (size_t i = 0; i < tSinks.size(); ++i) {
-          const int st = (src[3] + tSinks[i]) % HGC_totalL[3];
-          auto p = std::make_unique<PLEGMA_Propagator3D<float>>();
-          p->absorb(fwd_smeared, st);
-          prop_3D_slices.push_back(std::move(p));
-        }
-
-        // HOST backup of fwd_full; device copy freed
-        fwd_full.unload();
         SeqChannelData cd;
         cd.tag = tag;
         cd.active_as_bwd = active_as_bwd;
-        cd.fwd_backup = std::make_unique<PLEGMA_Propagator<float>>(HOST);
-        cd.fwd_backup->copy(fwd_full, HOST);
+        cd.fwd_backup = std::move(fwd_backup);
+        if (!cd.fwd_backup)
+          PLEGMA_error("Missing HOST backup for sequential channel '%s'", tag.c_str());
 
-        // Solve seq prop for each tsink; keep only HOST copy to save GPU memory
+        // Solve seq prop for each tsink; keep only a HOST copy to save GPU memory.
         for (size_t its = 0; its < tSinks.size(); ++its) {
           const int dt_sink = tSinks[its];
           if (dt_sink >= HGC_totalL[3])
@@ -539,101 +328,306 @@ int main(int argc, char **argv) {
           PLEGMA_Gauge3D<double> smearedGauge3D_sink;
           smearedGauge3D_sink.absorb(smearedGauge, sink_t);
 
-          PLEGMA_Propagator3D<float> &prop_q_3D = *prop_3D_slices[its];
+          PLEGMA_Propagator3D<float> prop_q_3D;
+          prop_q_3D.absorb(fwd_smeared, sink_t);
           prop_q_3D.apply_gamma(G5, LEFT);
 
-          auto seq_h = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
-          {
-            PLEGMA_Propagator<float> seqProp(BOTH);
+          auto seq_h = std::make_unique<PLEGMA_Propagator<float>>(HOST);
+          for (int nu = 0; nu < 4; ++nu) {
+            for (int c2 = 0; c2 < 3; ++c2) {
+              PLEGMA_Vector3D<float> seq3D_f;
+              seq3D_f.absorb(prop_q_3D, nu, c2);
+              PLEGMA_Vector3D<double> seq3D;
+              seq3D.copy(seq3D_f);
 
-            for (int nu = 0; nu < 4; ++nu) {
-              for (int c2 = 0; c2 < 3; ++c2) {
-                PLEGMA_Vector3D<float> seq3D_f;
-                seq3D_f.absorb(prop_q_3D, nu, c2);
-                PLEGMA_Vector3D<double> seq3D;
-                seq3D.copy(seq3D_f);
+              PLEGMA_Vector3D<double> seq3D_sm_d;
+              TIME(seq3D_sm_d.gaussianSmearing(seq3D, smearedGauge3D_sink,
+                                               seq_nsmear, alphaGauss));
 
-                PLEGMA_Vector3D<double> seq3D_sm_d;
-                TIME(seq3D_sm_d.gaussianSmearing(seq3D, smearedGauge3D_sink,
-                                                 seq_nsmear, alphaGauss));
+              PLEGMA_Vector<double> rhs4D1, rhs4D2;
+              rhs4D2.absorb(seq3D_sm_d, sink_t);
+              PLEGMA_printf("[SEQDBG] sink_t=%d dt_sink=%d nu=%d c2=%d\n",
+                            sink_t, dt_sink, nu, c2);
+              PLEGMA_printf("[SEQDBG] rhs4D2.norm=%e\n", rhs4D2.norm());
 
-                PLEGMA_Vector<double> rhs4D1, rhs4D2;
-                rhs4D2.absorb(seq3D_sm_d, sink_t);
-                PLEGMA_printf("[SEQDBG] sink_t=%d dt_sink=%d nu=%d c2=%d\n",
-                              sink_t, dt_sink, nu, c2);
-                PLEGMA_printf("[SEQDBG] rhs4D2.norm=%e\n", rhs4D2.norm());
+              const double nrm = rhs4D2.norm();
+              if (nrm > 0.0) rhs4D2.scale(1.0 / nrm);
+              if (rotateQ) rhs4D1.rotateToPhysicalBasis(rhs4D2, mu / abs(mu));
+              else         rhs4D1.copy(rhs4D2);
 
-                const double nrm = rhs4D2.norm();
-                if (nrm > 0.0) rhs4D2.scale(1.0 / nrm);
-                if (rotateQ) rhs4D1.rotateToPhysicalBasis(rhs4D2, mu / abs(mu));
-                else         rhs4D1.copy(rhs4D2);
+              TIME(solver.solve(rhs4D1, rhs4D1));
+              if (rotateQ) rhs4D2.rotateToPhysicalBasis(rhs4D1, mu / abs(mu));
+              else         rhs4D2.copy(rhs4D1);
 
-                TIME(solver.solve(rhs4D1, rhs4D1));
-                if (rotateQ) rhs4D2.rotateToPhysicalBasis(rhs4D1, mu / abs(mu));
-                else         rhs4D2.copy(rhs4D1);
+              if (nrm > 0.0) rhs4D2.scale(nrm);
 
-                if (nrm > 0.0) rhs4D2.scale(nrm);
-
-                PLEGMA_Vector<float> rhs4D2_f;
-                rhs4D2_f.copy(rhs4D2);
-                seqProp.absorb(rhs4D2_f, nu, c2);
-              }
+              PLEGMA_Vector<float> rhs4D2_f;
+              rhs4D2_f.copy(rhs4D2);
+              seq_h->absorbVectorToHost(rhs4D2_f, nu, c2);
             }
-            seq_h->copy(seqProp);
-          } // seqProp freed
-          seq_h->unload();  // free device; keep HOST for later contraction
+          }
           cd.seq_host.push_back(std::move(seq_h));
         }
         return cd;
       }; // solve_seq_channel
 
-      // ── Phase-2 lambda: FiveD+flow contractions using pre-computed seq props ──
-      auto contract_channel = [&](const SeqChannelData &cd) {
-        PLEGMA_printf("\n--- contract_channel: tag='%s' active_as_bwd=%d ---\n",
-                      cd.tag.c_str(), (int)cd.active_as_bwd);
+      // Storage for pre-computed seq props across all noise samples for this source
+      auto &sample_seq_data = source_seq_data.sample_seq_data;
 
-        const double epsilon     = 0.02;
-        const double t0          = flow_t0;
-        const double t_target    = 2.5 * t0;
-        const int    n_steps     = (int)std::lround(t_target / epsilon);
-        const int    n_flow_save = (int)std::lround(t_target / (0.1 * t0));
+      // ------------------------------------------------------------------
+      for (int ir = 0; ir < nsamples; ++ir) {
+        sample_seq_data.emplace_back();  // one entry per sample
+        const std::string sample_tag = (nsamples > 1)
+                                       ? ("_sample" + std::to_string(ir))
+                                       : "";
+        // Use src[3] (source timeslice) rather than the loop index isrc so that
+        // the seed depends only on the physical source position, not on how
+        // many sources are batched together in the same run.
+        const int seed_q  = seed + src[3] * 100000 + ir * 10 + 0;  // u  (+mu)
+        // Kaon noise cancellation: s and sbar reuse the same seed as u so that
+        // all kaon propagators are derived from the same eta_full.
+        const int seed_s  = seed_q;   // s  (-mu_s): same eta as u
+        const int seed_sd = seed_q;   // sbar (+mu_s): same eta as u
 
-        for (size_t its = 0; its < tSinks.size(); ++its) {
-          const int dt_sink = tSinks[its];
+        PLEGMA_printf("\n  --- Noise sample %d / %d (seed_q=%d) ---\n",
+                      ir, nsamples, seed_q);
 
-          // Load fwd prop: HOST float -> device double
-          PLEGMA_Propagator<double> prop_tmp_a(BOTH);
-          prop_tmp_a.copy(*cd.fwd_backup, HOST);
-          prop_tmp_a.load();
-
-          // Load seq prop: HOST float -> float device -> double device+host
-          PLEGMA_Propagator<double> seq_in_a(BOTH);
+        // ---- Light sector ----
+        //   prop_q_sl (+mu_ud, SL): pion || kaon_uins
+        //   prop_q_ss (+mu_ud, SS): pion || kaon_uins || kaon_sins
+        std::unique_ptr<PLEGMA_Propagator<float>> prop_q_sl_ptr, prop_q_ss_ptr;
+        if (do_pion || do_kaon_uins) {
+          prop_q_sl_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          TIME(build_quark_prop_stoch(*prop_q_sl_ptr, *prop_q_ss_ptr, +mu_ud_save, LIGHT,
+                                      nsmearGauss, src, smearedGauge3D_src, seed_q));
+        } else if (do_kaon_sins) {
+          prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
           {
-            PLEGMA_Propagator<float> seq_f(BOTH);
-            seq_f.copy(*cd.seq_host[its], HOST);
-            seq_f.load();
-            seq_in_a.copy(seq_f);
-          } // seq_f freed
+            PLEGMA_Propagator<float> dummy_sl(BOTH);
+            TIME(build_quark_prop_stoch(dummy_sl, *prop_q_ss_ptr, +mu_ud_save, LIGHT,
+                                        nsmearGauss, src, smearedGauge3D_src, seed_q));
+          }
+        }
 
-          PLEGMA_Propagator<double> *in     = &prop_tmp_a;
-          PLEGMA_Propagator<double> *seq_in = &seq_in_a;
-
-          PLEGMA_Gauge<float> contractGauge(BOTH);
-          contractGauge.copy(gauge);
-          applyBoundaryConditions(contractGauge, true);
-
-          PLEGMA_Correlator<float> corr3_oneD(corr_space, src, maxQsq);
-
-          double t    = 0.0;
-          int    step = 0;
-
-          // nt=0 checkpoint (no flow)
+        // ---- Strange sector ----
+        //   prop_s_ss_d (+mu_s, SS): kaon_uins  (kaon 2pt + uins seq smear)
+        //   prop_s_sl_d (+mu_s, SL): kaon_sins  (sins fwd line)
+        std::unique_ptr<PLEGMA_Propagator<float>> prop_s_ss_d_ptr, prop_s_sl_d_ptr;
+        if (do_kaon_uins && do_kaon_sins) {
+          prop_s_sl_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          prop_s_ss_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          TIME(build_quark_prop_stoch(*prop_s_sl_d_ptr, *prop_s_ss_d_ptr, +mu_s,
+                                      STRANGE, nsmearGauss_s, src,
+                                      smearedGauge3D_src, seed_s));
+        } else if (do_kaon_uins) {
+          prop_s_ss_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
           {
+            PLEGMA_Propagator<float> dummy_sl(BOTH);
+            TIME(build_quark_prop_stoch(dummy_sl, *prop_s_ss_d_ptr, +mu_s,
+                                        STRANGE, nsmearGauss_s, src,
+                                        smearedGauge3D_src, seed_sd));
+          }
+        } else if (do_kaon_sins) {
+          prop_s_sl_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          {
+            PLEGMA_Propagator<float> dummy_ss(BOTH);
+            TIME(build_quark_prop_stoch(*prop_s_sl_d_ptr, dummy_ss, +mu_s,
+                                        STRANGE, nsmearGauss_s, src,
+                                        smearedGauge3D_src, seed_s));
+          }
+        }
+
+        // Restore light options after potential STRANGE updateOptions in kaon channels
+        updateOptions(LIGHT);
+        mu    = mu_ud_save;
+        mu_ud = mu_ud_save;
+        solver.UpdateSolver();
+
+        // ---- 2-point functions ----
+        if (do_pion) {
+          PLEGMA_Correlator<float> corr2(corr_space, src, maxQsq);
+          TIME(corr2.contractMesonsNew(*prop_q_ss_ptr, *prop_q_ss_ptr));
+          TIME(corr2.writeFile(twop_out + "_pion" + sample_tag, corr_file_format));
+        }
+        if (do_kaon_uins) {
+          PLEGMA_Correlator<float> corr2(corr_space, src, maxQsq);
+          TIME(corr2.contractMesonsNew(*prop_q_ss_ptr, *prop_s_ss_d_ptr));
+          TIME(corr2.writeFile(twop_out + "_kaon" + sample_tag, corr_file_format));
+        }
+
+        auto make_host_prop_backup = [&](std::unique_ptr<PLEGMA_Propagator<float>> &prop,
+                                         const char *label) {
+          if (!prop) return std::shared_ptr<PLEGMA_Propagator<float>>();
+          PLEGMA_printf("[MEM] backing up %s to HOST and releasing device copy before seq solves\n",
+                        label);
+          prop->unload();
+          auto backup = std::make_shared<PLEGMA_Propagator<float>>(HOST);
+          backup->copy(*prop, HOST);
+          prop.reset();
+          print_gpu_mem(label);
+          return backup;
+        };
+
+        // These forward lines are only needed again in the later flow/contraction
+        // phase, so keep HOST backups and release their device allocations before
+        // the memory-heavy sequential inversions.
+        auto prop_q_sl_backup = make_host_prop_backup(prop_q_sl_ptr, "after_q_sl_backup");
+        auto prop_s_sl_backup = make_host_prop_backup(prop_s_sl_d_ptr, "after_s_sl_backup");
+
+        // ---- 3-point: Phase 1 – solve all seq props for this sample ----
+        const double seq_mu_light = -std::abs(mu_ud_save);
+
+        // First solve all channels that need q_ss as the sink-smeared forward
+        // propagator, then release q_ss before moving to s_ss-only channels.
+        if (do_pion) {
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_pion_uins" + sample_tag, prop_q_sl_backup, *prop_q_ss_ptr,
+                                LIGHT, seq_mu_light));
+        }
+        if (do_kaon_sins) {
+          const double seq_mu_s = -std::abs(mu_s);
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_kaon_sins" + sample_tag, prop_s_sl_backup, *prop_q_ss_ptr,
+                                STRANGE, seq_mu_s, true));
+        }
+        prop_q_ss_ptr.reset();
+        print_gpu_mem("after_q_ss_released");
+
+        if (do_kaon_uins) {
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_kaon_uins" + sample_tag, prop_q_sl_backup, *prop_s_ss_d_ptr,
+                                LIGHT, seq_mu_light));
+        }
+        prop_s_ss_d_ptr.reset();
+        print_gpu_mem("after_s_ss_released");
+      } // noise sample loop
+
+      all_source_seq_data.push_back(std::move(source_seq_data));
+      free(src_tag);
+    } // source loop
+
+    // Free solver (MG + clover) only after all sources/samples/channels have
+    // been solved and copied to HOST memory.
+    solver_up.reset();
+    print_gpu_mem("after_solver_freed");
+
+    // Phase 2: FiveD + Wilson-flow contractions for all cached sources.
+    auto contract_cached_channel = [&](const SourceSeqData &source_seq_data,
+                                       const SeqChannelData &cd) {
+      site src = source_seq_data.src;
+      const std::string &threep_out = source_seq_data.threep_out;
+
+      PLEGMA_printf("\n--- contract_channel: src=(%02d,%02d,%02d,%02d) tag='%s' active_as_bwd=%d ---\n",
+                    src[0], src[1], src[2], src[3],
+                    cd.tag.c_str(), (int)cd.active_as_bwd);
+
+      const double epsilon     = 0.02;
+      const double t0          = flow_t0;
+      const double t_target    = 2.5 * t0;
+      const int    n_steps     = (int)std::lround(t_target / epsilon);
+      const int    n_flow_save = (int)std::lround(t_target / (0.1 * t0));
+
+      for (size_t its = 0; its < tSinks.size(); ++its) {
+        const int dt_sink = tSinks[its];
+
+        // Load fwd prop: HOST float -> device double
+        PLEGMA_Propagator<double> prop_tmp_a(BOTH);
+        prop_tmp_a.copy(*cd.fwd_backup, HOST);
+        prop_tmp_a.load();
+
+        // Load seq prop: HOST float -> float device -> double device+host
+        PLEGMA_Propagator<double> seq_in_a(BOTH);
+        {
+          PLEGMA_Propagator<float> seq_f(BOTH);
+          seq_f.copy(*cd.seq_host[its], HOST);
+          seq_f.load();
+          seq_in_a.copy(seq_f);
+        } // seq_f freed
+
+        PLEGMA_Propagator<double> *in     = &prop_tmp_a;
+        PLEGMA_Propagator<double> *seq_in = &seq_in_a;
+
+        PLEGMA_Gauge<float> contractGauge(BOTH);
+        contractGauge.copy(gauge);
+        applyBoundaryConditions(contractGauge, true);
+
+        PLEGMA_Correlator<float> corr3_oneD(corr_space, src, maxQsq);
+
+        double t    = 0.0;
+        int    step = 0;
+
+        // nt=0 checkpoint (no flow)
+        {
+          const std::string base = threep_out + cd.tag + "_dt"
+                                 + std::to_string(dt_sink) + "_tau00";
+          const std::string threep_name_local = base + "_local";
+          const std::string threep_name_oneD  = base + "_oneD";
+          const std::string threep_patterns   = base + "_patterns";
+
+          PLEGMA_Propagator<float> in_f(BOTH);
+          PLEGMA_Propagator<float> seq_in_f(BOTH);
+          in_f.copy(*in);
+          seq_in_f.copy(*seq_in);
+          PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
+          PLEGMA_Propagator<float> *fwd_contract = &in_f;
+          if (cd.active_as_bwd) {
+            in_f.conjugate();
+            in_f.apply_gamma(G5, LEFT);
+            bwd_contract = &in_f;
+            fwd_contract = &seq_in_f;
+          } else {
+            seq_in_f.conjugate();
+            seq_in_f.apply_gamma(G5, LEFT);
+          }
+          // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
+          //                                      0, {G1,G2,G3,G4,G5G4}));
+          TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
+                                                    contractGauge, 0, {G1,G2,G3,G4,G5G4}));
+          TIME(contractNucleonThrp_fiveD_patterns(
+              *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
+              maxQsq, threep_patterns, max_order));
+          // TIME(corr3.writeFile(threep_name_local, corr_file_format));
+          TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
+        }
+
+        // Flow output buffers
+        PLEGMA_Propagator<double> prop_tmp_b(BOTH);
+        PLEGMA_Propagator<double> *out = &prop_tmp_b;
+        PLEGMA_Propagator<double> seq_tmp_b(BOTH);
+        PLEGMA_Propagator<double> *seq_out = &seq_tmp_b;
+        PLEGMA_Gauge<double> gauge_flowed(BOTH);
+
+        TIME(resetFermionFlowSmearedGauge());
+        TIME(updateGaugeQuda(gauge, true));
+
+        for (int ic = 1; ic <= n_flow_save; ++ic) {
+          const int target_step  = (int)std::lround((double)n_steps * ic / n_flow_save);
+          const int chunk_steps  = target_step - step;
+          if (chunk_steps <= 0) continue;
+          const bool keep_flow_gauge = (ic < n_flow_save);
+
+          TIME(fermionFlow_PLEGMA(*out, *in, *seq_out, *seq_in, gauge_flowed,
+                                  gauge, chunk_steps, epsilon, t,
+                                  false, false, true, keep_flow_gauge, 1));
+          std::swap(in,  out);
+          std::swap(seq_in, seq_out);
+          step = target_step;
+          t    = step * epsilon;
+          PLEGMA_printf("  checkpoint %d/%d: step=%d  t=%.6f\n",
+                        ic, n_flow_save, step, t);
+
+          {
+            char tau_tag[32];
+            snprintf(tau_tag, sizeof(tau_tag), "_tau%02d",
+                     (int)std::lround(t / (0.1 * t0)));
             const std::string base = threep_out + cd.tag + "_dt"
-                                   + std::to_string(dt_sink) + "_tau00";
-            const std::string threep_name_local = base + "_local";
-            const std::string threep_name_oneD  = base + "_oneD";
-            const std::string threep_patterns   = base + "_patterns";
+                                   + std::to_string(dt_sink) + tau_tag;
+            const std::string threep_name_local  = base + "_local";
+            const std::string threep_name_oneD   = base + "_oneD";
+            const std::string threep_patterns    = base + "_patterns";
+
+            contractGauge.copy(gauge_flowed);
 
             PLEGMA_Propagator<float> in_f(BOTH);
             PLEGMA_Propagator<float> seq_in_f(BOTH);
@@ -660,183 +654,28 @@ int main(int argc, char **argv) {
             // TIME(corr3.writeFile(threep_name_local, corr_file_format));
             TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
           }
+        } // checkpoint loop
+      }   // tsink loop
+    }; // contract_cached_channel
 
-          // Flow output buffers
-          PLEGMA_Propagator<double> prop_tmp_b(BOTH);
-          PLEGMA_Propagator<double> *out = &prop_tmp_b;
-          PLEGMA_Propagator<double> seq_tmp_b(BOTH);
-          PLEGMA_Propagator<double> *seq_out = &seq_tmp_b;
-          PLEGMA_Gauge<double> gauge_flowed(BOTH);
-
-          for (int ic = 1; ic <= n_flow_save; ++ic) {
-            const int target_step  = (int)std::lround((double)n_steps * ic / n_flow_save);
-            const int chunk_steps  = target_step - step;
-            if (chunk_steps <= 0) continue;
-
-            TIME(fermionFlow_PLEGMA(*out, *in, *seq_out, *seq_in, gauge_flowed,
-                                    gauge, chunk_steps, epsilon, t,
-                                    false, false, true, true, 1));
-            std::swap(in,  out);
-            std::swap(seq_in, seq_out);
-            step = target_step;
-            t    = step * epsilon;
-            PLEGMA_printf("  checkpoint %d/%d: step=%d  t=%.6f\n",
-                          ic, n_flow_save, step, t);
-
-            {
-              char tau_tag[32];
-              snprintf(tau_tag, sizeof(tau_tag), "_tau%02d",
-                       (int)std::lround(t / (0.1 * t0)));
-              const std::string base = threep_out + cd.tag + "_dt"
-                                     + std::to_string(dt_sink) + tau_tag;
-              const std::string threep_name_local  = base + "_local";
-              const std::string threep_name_oneD   = base + "_oneD";
-              const std::string threep_patterns    = base + "_patterns";
-
-              contractGauge.copy(gauge_flowed);
-
-              PLEGMA_Propagator<float> in_f(BOTH);
-              PLEGMA_Propagator<float> seq_in_f(BOTH);
-              in_f.copy(*in);
-              seq_in_f.copy(*seq_in);
-              PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
-              PLEGMA_Propagator<float> *fwd_contract = &in_f;
-              if (cd.active_as_bwd) {
-                in_f.conjugate();
-                in_f.apply_gamma(G5, LEFT);
-                bwd_contract = &in_f;
-                fwd_contract = &seq_in_f;
-              } else {
-                seq_in_f.conjugate();
-                seq_in_f.apply_gamma(G5, LEFT);
-              }
-              // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
-              //                                      0, {G1,G2,G3,G4,G5G4}));
-              TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
-                                                        contractGauge, 0, {G1,G2,G3,G4,G5G4}));
-              TIME(contractNucleonThrp_fiveD_patterns(
-                  *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
-                  maxQsq, threep_patterns, max_order));
-              // TIME(corr3.writeFile(threep_name_local, corr_file_format));
-              TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
-            }
-          } // checkpoint loop
-        }   // tsink loop
-      }; // contract_channel
-
-      // Storage for pre-computed seq props across all noise samples
-      std::vector<std::vector<SeqChannelData>> sample_seq_data;
-
-      // ------------------------------------------------------------------
-      for (int ir = 0; ir < nsamples; ++ir) {
-        sample_seq_data.emplace_back();  // one entry per sample
-        const std::string sample_tag = (nsamples > 1)
-                                       ? ("_sample" + std::to_string(ir))
-                                       : "";
-        // Use src[3] (source timeslice) rather than the loop index isrc so that
-        // the seed depends only on the physical source position, not on how
-        // many sources are batched together in the same run.
-        const int seed_q  = seed + src[3] * 100000 + ir * 10 + 0;  // u  (+mu)
-        // const int seed_qd = seed + src[3] * 100000 + ir * 10 + 1;  // d  (-mu) -- unused
-        // Kaon noise cancellation: s and sbar reuse the same seed as u so that
-        // all kaon propagators are derived from the same eta_full.
-        const int seed_s  = seed_q;   // s  (-mu_s): same eta as u
-        const int seed_sd = seed_q;   // sbar (+mu_s): same eta as u
-
-        PLEGMA_printf("\n  --- Noise sample %d / %d (seed_q=%d) ---\n",
-                      ir, nsamples, seed_q);
-
-        // ---- Light sector ----
-        //   prop_q_sl (+mu_ud, SL): pionQ || kaonQ_uins
-        //   prop_q_ss (+mu_ud, SS): pionQ || kaonQ_uins || kaonQ_sins
-        std::unique_ptr<PLEGMA_Propagator<float>> prop_q_sl_ptr, prop_q_ss_ptr;
-        if (pionQ || kaonQ_uins) {
-          prop_q_sl_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
-          prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
-          TIME(build_quark_prop_stoch(*prop_q_sl_ptr, *prop_q_ss_ptr, +mu_ud_save, LIGHT,
-                                      nsmearGauss, src, smearedGauge3D_src, seed_q));
-        } else if (kaonQ_sins) {
-          prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
-          {
-            PLEGMA_Propagator<float> dummy_sl(BOTH);
-            TIME(build_quark_prop_stoch(dummy_sl, *prop_q_ss_ptr, +mu_ud_save, LIGHT,
-                                        nsmearGauss, src, smearedGauge3D_src, seed_q));
-          }
+    for (auto &source_seq_data : all_source_seq_data) {
+      for (auto &sample_cds : source_seq_data.sample_seq_data) {
+        for (auto &cd : sample_cds) {
+          contract_cached_channel(source_seq_data, cd);
         }
+      }
+    }
 
-        // ---- Strange sector ----
-        //   prop_s_ss_d (+mu_s, SS): kaonQ_uins  (kaon 2pt + uins seq smear; SL discarded)
-        //   prop_s_sl_d (+mu_s, SL): kaonQ_sins  (sins fwd line; SS discarded)
-        std::unique_ptr<PLEGMA_Propagator<float>> prop_s_ss_d_ptr, prop_s_sl_d_ptr;
-        if (kaonQ_uins) {
-          prop_s_ss_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
-          {
-            PLEGMA_Propagator<float> dummy_sl(BOTH);
-            TIME(build_quark_prop_stoch(dummy_sl, *prop_s_ss_d_ptr, +mu_s,
-                                        STRANGE, nsmearGauss_s, src,
-                                        smearedGauge3D_src, seed_sd));
-          }
-        }
-        if (kaonQ_sins) {
-          prop_s_sl_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
-          {
-            PLEGMA_Propagator<float> dummy_ss(BOTH);
-            TIME(build_quark_prop_stoch(*prop_s_sl_d_ptr, dummy_ss, +mu_s,
-                                        STRANGE, nsmearGauss_s, src,
-                                        smearedGauge3D_src, seed_s));
-          }
-}
+    all_source_seq_data.clear();
+    print_gpu_mem(pass_name);
+    }; // run_channel_pass
 
-        // Restore light options after potential STRANGE updateOptions in kaon channels
-        updateOptions(LIGHT);
-        mu    = mu_ud_save;
-        mu_ud = mu_ud_save;
-        solver.UpdateSolver();
-
-        // ---- 2-point functions ----
-        if (pionQ) {
-          PLEGMA_Correlator<float> corr2(corr_space, src, maxQsq);
-          TIME(corr2.contractMesonsNew(*prop_q_ss_ptr, *prop_q_ss_ptr));
-          TIME(corr2.writeFile(twop_out + "_pion" + sample_tag, corr_file_format));
-        }
-        if (kaonQ_uins) {
-          PLEGMA_Correlator<float> corr2(corr_space, src, maxQsq);
-          TIME(corr2.contractMesonsNew(*prop_q_ss_ptr, *prop_s_ss_d_ptr));
-          TIME(corr2.writeFile(twop_out + "_kaon" + sample_tag, corr_file_format));
-        }
-
-        // ---- 3-point: Phase 1 – solve all seq props for this sample ----
-        const double seq_mu_light = -std::abs(mu_ud_save);
-
-        if (pionQ) {
-          sample_seq_data.back().push_back(
-              solve_seq_channel("_pion_uins" + sample_tag, *prop_q_sl_ptr, *prop_q_ss_ptr,
-                                LIGHT, seq_mu_light));
-        }
-        if (kaonQ_uins) {
-          sample_seq_data.back().push_back(
-              solve_seq_channel("_kaon_uins" + sample_tag, *prop_q_sl_ptr, *prop_s_ss_d_ptr,
-                                LIGHT, seq_mu_light));
-        }
-        if (kaonQ_sins) {
-          const double seq_mu_s = -std::abs(mu_s);
-          sample_seq_data.back().push_back(
-              solve_seq_channel("_kaon_sins" + sample_tag, *prop_s_sl_d_ptr, *prop_q_ss_ptr,
-                                STRANGE, seq_mu_s, true));
-        }
-      } // noise sample loop
-
-      // Free solver (MG + clover) before FiveD contractions
-      solver_up.reset();
-      print_gpu_mem("after_solver_freed");
-
-      // Phase 2: FiveD + Wilson-flow contractions for all samples
-      for (auto &sample_cds : sample_seq_data)
-        for (auto &cd : sample_cds)
-          contract_channel(cd);
-
-      free(src_tag);
-    } // source loop
+    if (pionQ)
+      run_channel_pass(true, false, false, "pion");
+    if (kaonQ_uins)
+      run_channel_pass(false, true, false, "kaon_uins");
+    if (kaonQ_sins)
+      run_channel_pass(false, false, true, "kaon_sins");
 
     while (not threads.empty()) {
       threads.back().join();
