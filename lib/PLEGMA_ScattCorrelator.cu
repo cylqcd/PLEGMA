@@ -3756,7 +3756,7 @@ void PLEGMA_ScattCorrelator<Float>::absorbEigIndex( PLEGMA_ScattCorrelator<Float
 }
 
 template<typename Float>
-void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero){
+void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int gf1index, int pf1, bool forcetozero){
 
   std::vector<std::vector<int>> moms_pinsertion_red = this->pList().uniq_p(3); //list of pf1 momenta needed here
   std::vector<std::vector<int>> moms_pinsertion = srcCorr.pList().uniq_p(0); //list of pf1 in Nucleons PLEGMA_SC
@@ -3769,6 +3769,9 @@ void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelat
   int n_gammas_c = this->GList[4].size();
   int TIME = this->localT();
   if (TIME==0) return;
+  if (gf1index>=n_gammas_f1){
+    PLEGMA_error("Destination correlator has a different momentum list\n");
+  }
 
   int Nmoms_c = srcCorr.Nmoms();
 
@@ -3785,12 +3788,10 @@ void PLEGMA_ScattCorrelator<Float>::absorbSourceSinkSpinMom(PLEGMA_ScattCorrelat
 
     for(int t=0; t < TIME; ++t){
       for (int g1=0 ; g1 < n_gammas_i1 ; ++g1 ){//pi
-        for (int g2=0 ; g2 < n_gammas_f1 ; ++g2 ){//pf1
-          for (int g3=0; g3 < n_gammas_c; ++g3 ){
-            this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[0]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0];
-            this->Corr(t,i_m,0,0,g1,g2,g3,alpha,beta)[1]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
-          }
-	}
+        for (int g3=0; g3 < n_gammas_c; ++g3 ){
+          this->Corr(t,i_m,0,0,g1,gf1index,g3,alpha,beta)[0]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+0];
+          this->Corr(t,i_m,0,0,g1,gf1index,g3,alpha,beta)[1]=srcCorr.H_elem()[2*t*Nmoms_c*n_gammas_c+2*i_pc*n_gammas_c+2*g3+1];//srcCorr.H_elem(t, i_pc, g3)[1];
+        }
       }
     }
   }
