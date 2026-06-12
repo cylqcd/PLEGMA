@@ -225,10 +225,10 @@ int main(int argc, char **argv) {
       PLEGMA_Propagator<float> propDN;
 
       PLEGMA_ScattCorrelator<float> corrNP(sourcePositions[isource], list_mpf1_twopt);
-      TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"NP"));
+      TIME(corrNP.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_nucleon,"NP"));
 
       PLEGMA_ScattCorrelator<float> corrN0(sourcePositions[isource], list_mpf1_twopt);
-      TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_sink_nucleon,"N0"));
+      TIME(corrN0.initialize_diagram(glist_source_nucleon_unpaired, glist_sink_nucleon_unpaired, glist_source_nucleon, glist_source_nucleon,"N0"));
 
 
 #if 1
@@ -250,9 +250,9 @@ int main(int argc, char **argv) {
           PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
           PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
           //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_source_nucleon, propUP, propDN, propUP));
           //PLEGMA_printf("Nucleon T2 reduction\n");
-          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propUP, propDN, propUP));
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_source_nucleon, propUP, propDN, propUP));
           //PLEGMA_printf("Nucleon T2 reduction ready\n");
           TIME(corrNP.N_diagrams( reductionsT1N, reductionsT2N ));
           //PLEGMA_printf("Nucleon diagram ready\n");
@@ -264,9 +264,9 @@ int main(int argc, char **argv) {
           PLEGMA_ScattCorrelator<float> reductionsT1N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
           PLEGMA_ScattCorrelator<float> reductionsT2N(source_reduction, sourcemomentumList_twopt.uniq_p(1));
           //First we compute N+ (proton) (we need for M diagram (N+p+)) and for spin half (N+ pi_0)
-          TIME(reductionsT1N.T1(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+          TIME(reductionsT1N.T1(glist_source_nucleon, glist_source_nucleon, propDN, propUP, propDN));
           //PLEGMA_printf("Nucleon T2 reduction\n");
-          TIME(reductionsT2N.T2(glist_source_nucleon, glist_sink_nucleon, propDN, propUP, propDN));
+          TIME(reductionsT2N.T2(glist_source_nucleon, glist_source_nucleon, propDN, propUP, propDN));
           //PLEGMA_printf("Nucleon T2 reduction ready\n");
           TIME(corrN0.N_diagrams( reductionsT1N, reductionsT2N ));
           //PLEGMA_printf("Nucleon diagram ready\n");
@@ -313,13 +313,13 @@ int main(int argc, char **argv) {
             for (int beta=0; beta<2; ++beta){
 
 	    auto computeThreep = [&](double run_mu, PLEGMA_Propagator3D<float>& prop1, PLEGMA_Propagator3D<float>& prop2, int signProps, PLEGMA_Propagator<float> &propF, std::string fl) {
-              if(not computed_light) {
+             /* if(not computed_light) {
                   TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
                   TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
                   propUP3D.absorb(propUP, global_fixSinkTime);
                   propDN3D.absorb(propDN, global_fixSinkTime);
                   computed_light = true;
-                }
+                }*/
 
 	      PLEGMA_Propagator<float> seqProp;
 	      // ensuring mu positive
@@ -350,6 +350,10 @@ int main(int argc, char **argv) {
                       {
 		        PLEGMA_Vector3D<double> vectorAuxD1,vectorAuxD2;
 		        PLEGMA_Vector3D<float> vectorAuxF;
+                        double norm2=prop1.norm();
+                        PLEGMA_printf("Norm of propagator 1 %e\n", norm2);
+                        norm2=prop2.norm();
+                        PLEGMA_printf("Norm of propagator 2 %e\n", norm2);
 		        if(&prop1 != &prop2){
 		          vectorAuxF.seqSourceNucleonDelta(prop1, prop2, get_projector(alpha, beta), nucleon, nu, c2, sigma);
                         } 
@@ -357,7 +361,9 @@ int main(int argc, char **argv) {
                         {
 		          vectorAuxF.seqSourceNucleonDelta(prop1, get_projector(alpha, beta), nucleon, nu, c2, sigma);
                         }
-			 
+                             
+			double norm=vectorAuxF.norm();
+                        PLEGMA_printf("Norm calculating %e\n",norm);
                         // put a momentum in the sink
                         vectorAuxF.mulMomentumPhases(momentum_f1,-1);//At the sink the momenta should be -
                                                                      //We have initially -
@@ -369,6 +375,10 @@ int main(int argc, char **argv) {
 		        vectorAuxD1.copy(vectorAuxF);
 		        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nsmearGauss, alphaGauss));
 		        vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);
+                        norm=vectorInOut.norm();
+                        PLEGMA_printf("After Norm calculating %e\n",norm);
+                        fflush(stdout);
+
 		      }
 		      double norm = vectorInOut.norm();
 		      vectorInOut.scale(1/norm);

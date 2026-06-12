@@ -159,6 +159,7 @@ __device__ void contractNucleonDeltaSeqSource(vector2<FloatC>& vec, propTex<Floa
               factor=factor*pr[proj][nz];
 	      if(!isTwoPropDiff){
 	        if(lu == c_nu){
+                 #pragma unroll
                  for(short gu = 0 ; gu < 4 ; gu++){
 	            if ( nu == gu ) spinor[gu][c3] += factor * P[mu][b][c1][c1p] * P[a][ku][c2][c2p];
 		    if ( nu == gu ) spinor[gu][c3] += factor * P[mu][ku][c1][c1p] * P[a][b][c2][c2p];
@@ -184,23 +185,28 @@ __device__ void contractNucleonDeltaSeqSource(vector2<FloatC>& vec, propTex<Floa
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS
             int b = prIndscatt[proj][0];
             int a = prIndscatt[proj][1];
-            Float2<FloatC> factor ((-1)*sgn_eps[cc1]*sgn_eps[cc2]*NtoDelta_values[c_gamma][idx][0],(-1)*sgn_eps[cc1]*sgn_eps[cc2]*NtoDelta_values[c_gamma][idx][0]);
+            Float2<FloatC> factor ((-1)*sgn_eps[cc1]*sgn_eps[cc2]*NtoDelta_values[c_gamma][idx][0],(-1)*sgn_eps[cc1]*sgn_eps[cc2]*NtoDelta_values[c_gamma][idx][1]);
             factor=factor*prscatt[proj];
             if(!isTwoPropDiff){
               if(lu == c_nu){
-                spinor[nu][c3] += factor * P[mu][b][c1][c1p] * P[a][ku][c2][c2p];
-                spinor[nu][c3] += factor * P[mu][ku][c1][c1p] * P[a][b][c2][c2p];
-                spinor[nu][c3] += factor * P[mu][b][c1][c1p] * P[a][ku][c2][c2p];
-
+                for(short gu = 0 ; gu < 4 ; gu++){
+                  if ( nu == gu ) spinor[gu][c3] += factor * P[mu][b][c1][c1p] * P[a][ku][c2][c2p];
+                  if ( nu == gu ) spinor[gu][c3] += factor * P[mu][ku][c1][c1p] * P[a][b][c2][c2p];
+                  if ( a == gu )  spinor[gu][c3] += factor * P[mu][ku][c1][c1p] * P[nu][b][c2][c2p];
+                }
               }
             }
             else
-#pragma unroll
+	    #pragma unroll
               for(short gu = 0 ; gu < 4 ; gu++){
                 if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][ku][c2][c2p];
                 if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
                 if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
                 if( a == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][b][c2][c2p];
+
+                if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[a][lu][c1][c1p] * P[nu][b][c2][c2p];
+                if( mu == gu &&  b == c_nu ) spinor[gu][c3] += factor * P2[a][lu][c1][c1p] * P[nu][ku][c2][c2p];
+
               }
 #endif
 	    } 

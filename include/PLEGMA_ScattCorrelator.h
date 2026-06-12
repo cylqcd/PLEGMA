@@ -227,7 +227,7 @@ namespace plegma {
     void absorbTimeslice(PLEGMA_ScattCorrelator<Float> &srcCorr, int global_it, bool forcetozero=false); 
 
     //manipulation to construct N like diagram from NjN
-    void absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero=false);
+    void absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int gf1index, int pf1, bool forcetozero=false);
 
     // manipulation constructing  exact exact part of the deflated correlation function
     void absorbEigIndex( PLEGMA_ScattCorrelator<Float> &srcCorr, int eigindex, bool forcetozero=false);
