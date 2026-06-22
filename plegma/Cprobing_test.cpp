@@ -32,6 +32,7 @@ int main(int argc, char **argv)
 	bool c_probing = false;
 	bool spinColorDil = false;
 	bool vectorOp = false;
+	bool plainOp = false;
 	std::string sigma_conf_path = "";
 	int start_src = 0;
   	auto add_options = [&](Options& options) {
@@ -43,6 +44,7 @@ int main(int argc, char **argv)
 		options.set("c-probing", "Whether to use classical probing", verbosity, c_probing);
 		options.set("spin-color-dil", "Whether we want spin color dilution",verbosity, spinColorDil);
 		options.set("vector-op", "Whether we want to use gmuD instead", verbosity, vectorOp);
+		options.set("plain-op", "Whether we want to use the plain dirac operator without gamma_5", verbosity, plainOp);
 		options.set("sigma-config-path", "Path to the configuration file for the sigma factors", verbosity, sigma_conf_path);
 		options.set("start-src", "Starting index for the stochastic sources (inclusive)", verbosity, start_src);
 	};
@@ -272,15 +274,19 @@ int main(int argc, char **argv)
 					}
 				}
 				else{
+
+					phi_op->copy(phi);
+					if(plainOp) phi_op->apply_gamma5();
+
 					if(spinColorDil || c_probing){
-						TIME(qloops_std->oneEnd_trick(phi,*sourceDil,scale_val,true));
+						TIME(qloops_std->oneEnd_trick(*phi_op,*sourceDil,scale_val,true));
 					} else {
-						TIME(qloops_std->oneEnd_trick(phi,source,scale_val,true));
+						TIME(qloops_std->oneEnd_trick(*phi_op,source,scale_val,true));
 					}
 				}
 			}
 		}	
-	
+
 		if((isrc+1)%NdumpStep == 0){
 			if(vectorOp){
 				for(int mu=0; mu<4; mu++){

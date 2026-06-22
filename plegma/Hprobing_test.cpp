@@ -32,6 +32,7 @@ int main(int argc, char **argv)
 	int hadamHgh = Nhadam;
 	bool spinColorDil = false;
 	bool vectorOp = false;
+	bool plainOp = false;
 	int start_src = 0;
 	auto add_options = [&](Options& options) {
 		options.set("accum-loops", "Accumulate loops over the stochastic source vectors", verbosity, accumFlag);
@@ -41,6 +42,7 @@ int main(int argc, char **argv)
 		options.set("hadamard-high", "Up to which Hadamard vector to stop (Options: 0>= , <=max) (default max)", verbosity, hadamHgh);
 		options.set("spin-color-dil", "Whether we want spin color dilution",verbosity,spinColorDil);
 		options.set("vector-op", "Whether we want to use gmuD instead", verbosity, vectorOp);
+		options.set("plain-op", "Whether we want to use the plain dirac operator without gamma_5", verbosity, plainOp);
 		options.set("start-src", "Starting index for the stochastic sources (inclusive)", verbosity, start_src);
 	};
 	add_options(*HGC_options);
@@ -103,7 +105,7 @@ int main(int argc, char **argv)
 	}
 	PLEGMA_Vector<double> phi;
 	PLEGMA_Vector<double> *phi_op = nullptr;
-	if(vectorOp) phi_op = new PLEGMA_Vector<double>(DEVICE);
+	phi_op = new PLEGMA_Vector<double>(DEVICE);
 	PLEGMA_Vector<double> source(DEVICE);
 	int rng_seed = 42;
 	source.randInit(rng_seed);
@@ -114,7 +116,7 @@ int main(int argc, char **argv)
 	if(foundPos == std::string::npos) PLEGMA_error("Cannot find (conf.) in configuration path to get confID");
 	std::string confID = latfile.substr(foundPos+5,latfile.length());
 
-	hprob = new PLEGMA_Hprobing(k_probing);
+	if(k_probing>0) hprob = new PLEGMA_Hprobing(k_probing);
 
 	int N_probes_h = (k_probing>0) ? (hadamHgh - hadamLow) : 1;
 	std::complex<double> scale_val = std::complex<double>(-1.0 / double(N_probes_h), 0.0);
@@ -149,10 +151,14 @@ int main(int argc, char **argv)
 					}
 				}
 				else{
+					
+					phi_op->copy(phi);
+					if(plainOp) phi_op->apply_gamma5();
+
 					if(spinColorDil || k_probing>0){ 
-						TIME(qloops_std->oneEnd_trick(phi,*sourceDil,scale_val,true)); 
+						TIME(qloops_std->oneEnd_trick(*phi_op, *sourceDil, scale_val, true)); 
 					} else {
-						TIME(qloops_std->oneEnd_trick(phi,source,scale_val,true));
+						TIME(qloops_std->oneEnd_trick(*phi_op, source, scale_val, true));
 					}
 				}
 			}
@@ -164,6 +170,9 @@ int main(int argc, char **argv)
 					std::string tag_mu = tag + "_g" + std::to_string(mu+1);
 					TIME(qloops_mu[mu]->dumpLoops(ft, loopsPrefix + tag_mu + options_tag, confID, corr_file_format, isrc));
 				}
+			}
+			else if(plainOp) {
+				TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + options_tag, confID, corr_file_format, isrc));
 			}
 			else {
 				TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + "_g5" + options_tag, confID, corr_file_format, isrc));
