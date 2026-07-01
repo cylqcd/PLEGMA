@@ -330,20 +330,23 @@ int main(int argc, char **argv) {
 
           TIME(corrD.D_diagrams( reductionsT1, reductionsT2 ));
 
-          TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
-          TIME(corrD1.convertTreductiontoDiagram( reductionsT1, 0, false, true, true ));
+          PLEGMA_ScattCorrelator<float> reductionsT1D(source_reduction, mptot_filt);
+          PLEGMA_ScattCorrelator<float> reductionsT2D(source_reduction, mptot_filt);
 
-          TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
-          TIME(corrD2.convertTreductiontoDiagram( reductionsT2, 0, false, true, true ));
+          TIME(reductionsT1D.T1(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
+          TIME(corrD1.convertTreductiontoDiagram( reductionsT1D, -1, false, true, true ));
 
-          TIME(reductionsT2.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
-          TIME(corrD3.convertTreductiontoDiagram( reductionsT2, 0, false, true, true ));
+          TIME(reductionsT2D.T2(glist_source_delta, glist_sink_delta, propUP, propDN, propUP));
+          TIME(corrD2.convertTreductiontoDiagram( reductionsT2D, -1, false, true, true ));
 
-          TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
-          TIME(corrD4.convertTreductiontoDiagram( reductionsT1, 0, false, true, true ));
+          TIME(reductionsT2D.T2(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
+          TIME(corrD3.convertTreductiontoDiagram( reductionsT2D, -1, false, true, true ));
 
-          TIME(reductionsT1.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
-          TIME(corrD5.convertTreductiontoDiagram( reductionsT1, 0, false, true, true ));
+          TIME(reductionsT1D.T1(glist_source_delta, glist_sink_delta, propUP, propUP, propDN));
+          TIME(corrD4.convertTreductiontoDiagram( reductionsT1D, -1, false, true, true ));
+
+          TIME(reductionsT1D.T1(glist_source_delta, glist_sink_delta, propDN, propUP, propUP));
+          TIME(corrD5.convertTreductiontoDiagram( reductionsT1D, -1, false, true, true ));
 
         }
           
@@ -410,7 +413,6 @@ int main(int argc, char **argv) {
                   computed_light = true;
                 }*/
 
-	      PLEGMA_Propagator<float> seqProp;
 	      // ensuring mu positive
 	      if(mu != run_mu) {
 		updateOptions(LIGHT);
@@ -431,6 +433,8 @@ int main(int argc, char **argv) {
                 momList filtered_sinkList = sourcemomentumList_threept.extract(momentum_f1, 1);
 
                 for (int sigma=0; sigma<3; sigma++){
+
+	          PLEGMA_Propagator<float> seqProp;
 				     
 	          for(int nu = 0 ; nu < 4 ; nu++){
 
@@ -473,7 +477,6 @@ int main(int argc, char **argv) {
                         TIME(vectorAuxD.rotateToPhysicalBasis(vectorInOut,sgn));
                         TIME(vectorInOut.copy(vectorAuxD));
                       }
-
 
 		      TIME(solver.solve(vectorInOut, vectorInOut));
 
