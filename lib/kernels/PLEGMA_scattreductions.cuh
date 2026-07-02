@@ -397,7 +397,7 @@ static void T_reductions_host( ProfileStruct &ps, TRED T, PLEGMA_ScattCorrelator
 //  listGammas_f.array=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, gammas_f.size()*sizeof(GAMMAS_SCATT));
 
   listGammas_i.array=(GAMMAS_SCATT*)device_malloc(gammas_i.size()*sizeof(GAMMAS_SCATT));
-  listGammas_f.array=(GAMMAS_SCATT*)device_malloc(gammas_i.size()*sizeof(GAMMAS_SCATT));
+  listGammas_f.array=(GAMMAS_SCATT*)device_malloc(gammas_f.size()*sizeof(GAMMAS_SCATT));
 
 //  cudaMalloc((void**)&listGammas_i.array, gammas_i.size()*sizeof(GAMMAS_SCATT));
 //  cudaMalloc((void**)&listGammas_f.array, gammas_f.size()*sizeof(GAMMAS_SCATT));
