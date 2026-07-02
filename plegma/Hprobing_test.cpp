@@ -31,8 +31,6 @@ int main(int argc, char **argv)
 	int Nhadam = (k_probing>0) ? 2*std::pow(2,N_DIMS*(k_probing-1)) : 1;
 	int hadamHgh = Nhadam;
 	bool spinColorDil = false;
-	bool vectorOp = false;
-	bool plainOp = false;
 	int start_src = 0;
 	auto add_options = [&](Options& options) {
 		options.set("accum-loops", "Accumulate loops over the stochastic source vectors", verbosity, accumFlag);
@@ -41,8 +39,6 @@ int main(int argc, char **argv)
 		options.set("hadamard-low", "From which Hadamard vector to start (Options:[0,max))", verbosity, hadamLow);
 		options.set("hadamard-high", "Up to which Hadamard vector to stop (Options: 0>= , <=max) (default max)", verbosity, hadamHgh);
 		options.set("spin-color-dil", "Whether we want spin color dilution",verbosity,spinColorDil);
-		options.set("vector-op", "Whether we want to use gmuD instead", verbosity, vectorOp);
-		options.set("plain-op", "Whether we want to use the plain dirac operator without gamma_5", verbosity, plainOp);
 		options.set("start-src", "Starting index for the stochastic sources (inclusive)", verbosity, start_src);
 	};
 	add_options(*HGC_options);
@@ -96,16 +92,9 @@ int main(int argc, char **argv)
 	bool oneDLoops = false;
   	bool twoDLoops = false;
 	PLEGMA_QLoops<double> *qloops_std = nullptr;
-	if(!vectorOp) qloops_std = new PLEGMA_QLoops<double>(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
-	PLEGMA_QLoops<double> *qloops_mu[4] = {nullptr};
-	if(vectorOp){
-		for(int mu=0; mu<4; mu++){
-			qloops_mu[mu] = new PLEGMA_QLoops<double>(BOTH, NO_GHOSTS, true, oneDLoops, twoDLoops);
-		}
-	}
+	qloops_std = new PLEGMA_QLoops<double>(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
+
 	PLEGMA_Vector<double> phi;
-	PLEGMA_Vector<double> *phi_op = nullptr;
-	phi_op = new PLEGMA_Vector<double>(DEVICE);
 	PLEGMA_Vector<double> source(DEVICE);
 	int rng_seed = 42;
 	source.randInit(rng_seed);
@@ -123,8 +112,7 @@ int main(int argc, char **argv)
 	// PLEGMA_printf("DEBUG: hierarchical N_probes_h=%d scale_val=% .12e\n", N_probes_h, scale_val.real());
 
 	std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
-	GAMMAS g5gmu[4] = {G5G1, G5G2, G5G3, G5G4};
-	for(int isrc = start_src; isrc < numSourcePositions; isrc++){ // numSourcePosition is actually stochastic source position but anyway
+	for(int isrc = start_src; isrc < numSourcePositions; isrc++){
 		PLEGMA_printf("\n ### Calculations for source-position %d begin now ###\n\n", isrc);
     	source.stochastic_Z(2);
 		for(int ih = hadamLow; ih < hadamHgh; ih++){
@@ -139,61 +127,25 @@ int main(int argc, char **argv)
 				}
 				phi.scale(1./(2.*inv_params.kappa));
 				// PLEGMA_printf("DEBUG: scale_val = (% .12e, % .12e)\n", scale_val.real(), scale_val.imag());
-				if(vectorOp){
-					for(int mu=0; mu<4; mu++){
-						phi_op->copy(phi);
-						phi_op->apply_gamma(g5gmu[mu], LEFT);
-						if(spinColorDil || k_probing>0) {
-							TIME(qloops_mu[mu]->oneEnd_trick(*phi_op, *sourceDil, scale_val, true));
-						} else {
-							TIME(qloops_mu[mu]->oneEnd_trick(*phi_op, source, scale_val, true));
-						}
-					}
-				}
-				else{
-					
-					phi_op->copy(phi);
-					if(plainOp) phi_op->apply_gamma5();
 
-					if(spinColorDil || k_probing>0){ 
-						TIME(qloops_std->oneEnd_trick(*phi_op, *sourceDil, scale_val, true)); 
-					} else {
-						TIME(qloops_std->oneEnd_trick(*phi_op, source, scale_val, true));
-					}
+				if(spinColorDil || k_probing>0){ 
+					TIME(qloops_std->oneEnd_trick(phi, *sourceDil, scale_val, true)); 
+				} else {
+					TIME(qloops_std->oneEnd_trick(phi, source, scale_val, true));
 				}
 			}
 		}
       
 		if((isrc+1)%NdumpStep == 0){
-			if(vectorOp){
-				for(int mu=0; mu<4; mu++){
-					std::string tag_mu = tag + "_g" + std::to_string(mu+1);
-					TIME(qloops_mu[mu]->dumpLoops(ft, loopsPrefix + tag_mu + options_tag, confID, corr_file_format, isrc));
-				}
-			}
-			else if(plainOp) {
-				TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + options_tag, confID, corr_file_format, isrc));
-			}
-			else {
-				TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + "_g5" + options_tag, confID, corr_file_format, isrc));
-			}
+			TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + options_tag, confID, corr_file_format, isrc));
 		}
 		if(!accumFlag){ // In case we do not accumulate we clear the buffers
-			if(vectorOp){
-				for(int mu=0; mu<4; mu++)
-					qloops_mu[mu]->clearAccumBuffs();
-			} else {
-				qloops_std->clearAccumBuffs();
-			}
+			qloops_std->clearAccumBuffs();
 		}
   	}
 
 	if(qloops_std) delete qloops_std;
 	if(sourceDil) delete sourceDil;
-	if(phi_op) delete phi_op;
-	for(int mu=0; mu<4; mu++){
-		if(qloops_mu[mu]) delete qloops_mu[mu];
-	}
 	delete hprob;
 
 	while(not threads.empty()) {threads.back().join(); threads.pop_back();}
