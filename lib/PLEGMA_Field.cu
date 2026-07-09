@@ -5,7 +5,9 @@
 #include <PLEGMA_Random.h>
 #include <vector>
 #include <algorithm>
+#include <cstring>
 #include <time.h>
+#include <mpi.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_utils.h>
 #include <PLEGMA_FT.cuh>
@@ -449,6 +451,10 @@ void PLEGMA_Field<Float>::initSideGhostP2P() {
 
   if (comm_size() == 1) return;
 
+  char local_node[MPI_MAX_PROCESSOR_NAME] = {};
+  int node_name_len = 0;
+  MPI_Get_processor_name(local_node, &node_name_len);
+
   // Get IPC handle for this field's device allocation (cudaMalloc base ptr).
   // Every rank must participate in the following reduction, otherwise a rank
   // with IPC disabled would make its neighbours hang during handle exchange.
@@ -469,6 +475,18 @@ void PLEGMA_Field<Float>::initSideGhostP2P() {
   for (int i = 0; i < N_DIMS; i++) {
     if (!HGC_dimBreak[i] || comm_dim(i) == 1) continue;
     for (int s = 0; s < 2; s++) {
+      char peer_node[MPI_MAX_PROCESSOR_NAME] = {};
+      MsgHandle *recv_node = comm_declare_receive_relative(peer_node, i, delta[s], MPI_MAX_PROCESSOR_NAME);
+      MsgHandle *send_node = comm_declare_send_relative(local_node, i, -delta[s], MPI_MAX_PROCESSOR_NAME);
+      comm_start(recv_node);
+      comm_start(send_node);
+      comm_wait(recv_node);
+      comm_wait(send_node);
+      comm_free(recv_node);
+      comm_free(send_node);
+
+      if (std::strncmp(local_node, peer_node, MPI_MAX_PROCESSOR_NAME) != 0) continue;
+
       cudaIpcMemHandle_t peer_handle;
       MsgHandle *recv_handle = comm_declare_receive_relative(&peer_handle, i, delta[s], sizeof(cudaIpcMemHandle_t));
       MsgHandle *send_handle = comm_declare_send_relative(&my_handle, i, -delta[s], sizeof(cudaIpcMemHandle_t));
@@ -619,8 +637,52 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
         }
       }
     }
-    // P2P barrier: all ranks' pack kernels and staging copies must finish before any P2P write
-    if (p2p_side_any) comm_barrier();
+    // P2P neighbour handshake: only wait for peers that will receive a direct
+    // write from this rank, instead of synchronising the full communicator.
+    std::vector<MsgHandle*> p2p_ready_recvs;
+    std::vector<MsgHandle*> p2p_ready_sends;
+    unsigned char p2p_ready_recv_token[N_DIMS][2] = {};
+    unsigned char p2p_ready_send_token[N_DIMS][2] = {};
+    for (short i = 0; i < N_DIMS; i++) {
+      if (!((dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT))) continue;
+      for (short s = 0; s < DIR_BOTH; s++) {
+        if (!(sign == s || sign == DIR_BOTH)) continue;
+        int recv_disp = (s==DIR_PLUS) ? +1 : -1;
+        int send_disp = -recv_disp;
+        if (p2p_side_avail[i][s]) {
+          MsgHandle *handle = comm_declare_receive_relative(&p2p_ready_recv_token[i][s], i, send_disp,
+                                                            sizeof(p2p_ready_recv_token[i][s]));
+          p2p_ready_recvs.push_back(handle);
+          comm_start(handle);
+        }
+        if (p2p_side_recv_avail[i][s]) {
+          p2p_ready_send_token[i][s] = 1;
+          MsgHandle *handle = comm_declare_send_relative(&p2p_ready_send_token[i][s], i, recv_disp,
+                                                         sizeof(p2p_ready_send_token[i][s]));
+          p2p_ready_sends.push_back(handle);
+          comm_start(handle);
+        }
+      }
+    }
+    for (auto handle : p2p_ready_recvs) { comm_wait(handle); comm_free(handle); }
+    for (auto handle : p2p_ready_sends) { comm_wait(handle); comm_free(handle); }
+
+    std::vector<MsgHandle*> p2p_done_recvs;
+    std::vector<MsgHandle*> p2p_done_sends;
+    unsigned char p2p_done_recv_token[N_DIMS][2] = {};
+    unsigned char p2p_done_send_token[N_DIMS][2] = {};
+    for (short i = 0; i < N_DIMS; i++) {
+      if (!((dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT))) continue;
+      for (short s = 0; s < DIR_BOTH; s++) {
+        if (!(sign == s || sign == DIR_BOTH)) continue;
+        if (!p2p_side_recv_avail[i][s]) continue;
+        int recv_disp = (s==DIR_PLUS) ? +1 : -1;
+        MsgHandle *handle = comm_declare_receive_relative(&p2p_done_recv_token[i][s], i, recv_disp,
+                                                          sizeof(p2p_done_recv_token[i][s]));
+        p2p_done_recvs.push_back(handle);
+        comm_start(handle);
+      }
+    }
     size_t total_nbytes = 0;
     size_t p2p_nbytes   = 0;
     size_t mpi_send_nbytes = 0;
@@ -646,6 +708,11 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	                        + (HGC_sideGhost[i][s]/scaleT + total_length) * field_length * 2;
 	      Float *stage_src = d_side_ghost_pack_ptr[i][s] ? d_side_ghost_pack_ptr[i][s] : pointer_device;
 	      qudaMemcpy(peer_dst, stage_src, nbytes, qudaMemcpyDeviceToDevice);
+        p2p_done_send_token[i][s] = 1;
+        MsgHandle *done_handle = comm_declare_send_relative(&p2p_done_send_token[i][s], i, -disp,
+                                                            sizeof(p2p_done_send_token[i][s]));
+        p2p_done_sends.push_back(done_handle);
+        comm_start(done_handle);
 	      p2p_nbytes += nbytes;
 	    } else {
 	      Float *pointer_send    = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
@@ -659,6 +726,8 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	}
       }
     }
+    for (auto handle : p2p_done_recvs) { comm_wait(handle); comm_free(handle); }
+    for (auto handle : p2p_done_sends) { comm_wait(handle); comm_free(handle); }
     double t_mpi0 = MPI_Wtime();
     if(HGC_verbosity>2)
       PLEGMA_printf("  [SGhost] sync=%.4fs stage+send=%.4fs p2p_bytes=%zu mpi_bytes=%zu\n",
@@ -667,9 +736,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
   }
   if(action==FINISH || action==DO_ALL) {
     double t_wait0 = MPI_Wtime();
-    // P2P: synchronous qudaMemcpy already complete; barrier ensures all peers' writes are done
-    if (p2p_side_any) comm_barrier();
-    // Wait for any remaining MPI messages (non-P2P directions)
+    // Wait for any remaining MPI messages (non-P2P directions).
     while (! messages.empty()) {
       comm_wait(messages.back());
       comm_free(messages.back());
