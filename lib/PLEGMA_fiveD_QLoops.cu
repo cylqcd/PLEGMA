@@ -42,6 +42,13 @@ static bool build_deriv_cache_vec(PLEGMA_Vector<Float> &out,
   return true;
 }
 
+bool useful_prefix4(int d, int cx, int cy, int cz);
+
+static inline bool useful_prefix3(int d, int cx, int cy, int cz)
+{
+  return useful_prefix4(d, cx, cy, cz);
+}
+
 template<typename Float, typename QLoopsT>
 static bool direct_contraction_from_cache_G5(
     int total_order, int cache_order, const int *derivs, int n,
@@ -265,8 +272,8 @@ static bool build_deriv_cache_vec_multi(
   if (!decode_deriv_dir(d, dir, time_mode)) return false;
   const std::size_t Nsc = in.size();
   for (std::size_t i = 0; i < Nsc; ++i) {
-    covariant_derivative(*out[i], *in[i], gauge, dir, time_mode);
-    out[i]->communicateGhost();
+    TIME_V(covariant_derivative(*out[i], *in[i], gauge, dir, time_mode));
+    TIME_V(out[i]->communicateGhost());
   }
   return true;
 }
@@ -330,8 +337,8 @@ static bool contract_after_one_more_deriv_from_cache_G5_multi(
 
   const std::size_t Nsc = cache_vec.size();
   for (std::size_t i = 0; i < Nsc; ++i) {
-    covariant_derivative(*vecout[i], *cache_vec[i], gauge, dir, time_mode);
-    vecout[i]->communicateGhost();
+    TIME_V(covariant_derivative(*vecout[i], *cache_vec[i], gauge, dir, time_mode));
+    // TIME_V(vecout[i]->communicateGhost());
   }
 
   PRINT_PATTERN("[%d-after-D-G5-multi] %s ; cache%d D_%s ; derivs = %s\n",
@@ -355,6 +362,131 @@ static bool contract_after_one_more_deriv_from_cache_G5_multi(
 }
 
 template<typename Float, typename FloatGauge, typename QLoopsT>
+void contractG5_fourD_patterns_multi(
+    std::vector<PLEGMA_Vector<Float>*>& x_l,
+    std::vector<PLEGMA_Vector<Float>*>& x_r,
+    PLEGMA_Gauge<FloatGauge>& gauge,
+    QLoopsT& qLoops,
+    PLEGMA_FT<Float>& ft,
+    const std::vector<Float>& vals,
+    bool accumulate,
+    int maxOrder)
+{
+  const std::size_t Nsc = x_l.size();
+  if (Nsc == 0) PLEGMA_error("contractG5_fourD_patterns_multi: empty isc list");
+  if (x_r.size() != Nsc || vals.size() != Nsc)
+    PLEGMA_error("contractG5_fourD_patterns_multi: size mismatch (Nsc=%zu)", Nsc);
+
+  PRINT_PATTERN("contractG5_fourD_patterns_multi: maxOrder=%d Nsc=%zu\n",
+                maxOrder, Nsc);
+
+  std::vector<std::unique_ptr<PLEGMA_Vector<Float>>>
+      vec_cache1(Nsc), vec_cache2(Nsc), vec_cache3(Nsc), vec_cache4(Nsc);
+  for (std::size_t i = 0; i < Nsc; ++i) {
+    vec_cache1[i].reset(new PLEGMA_Vector<Float>(BOTH, FIRST_SIDE));
+    vec_cache2[i].reset(new PLEGMA_Vector<Float>(BOTH, FIRST_SIDE));
+    vec_cache3[i].reset(new PLEGMA_Vector<Float>(BOTH, FIRST_SIDE));
+    vec_cache4[i].reset(new PLEGMA_Vector<Float>(BOTH, FIRST_SIDE));
+  }
+
+  int count1 = 0, count2 = 0, count3 = 0, count4 = 0, count5 = 0;
+  int seq[4] = {0, 0, 0, 0};
+
+  {
+    ThrpPattern pat;
+    pat.gamma = G4;
+    pat.n_deriv = 0;
+    pat.derivs.fill(-1);
+    contractG5_patterns_multi(qLoops, x_l, x_r, vals, pat);
+    qLoops.batchStore(ft, accumulate);
+    ++count1;
+  }
+
+  for (int d1 : DERIV_DIRS) {
+    if (maxOrder < 2) break;
+    seq[0] = d1;
+    {
+      short dir = -1; int time_mode = TIME_PLUS;
+      if (!decode_deriv_dir(d1, dir, time_mode)) continue;
+      for (std::size_t i = 0; i < Nsc; ++i) {
+        covariant_derivative(*vec_cache1[i], *x_r[i], gauge, dir, time_mode);
+        vec_cache1[i]->communicateGhost();
+      }
+    }
+
+    int cx1 = 0, cy1 = 0, cz1 = 0;
+    add_spatial_count(d1, cx1, cy1, cz1);
+
+    if (direct_contraction_from_cache_G5_multi(
+            2, 1, seq, 1, cx1, cy1, cz1,
+            x_l, vec_cache1, qLoops, ft, vals, accumulate)) {
+      ++count2;
+    }
+
+    for (int d2 : DERIV_DIRS) {
+      if (maxOrder < 3) break;
+      if (cancel_time_pair(d1, d2)) continue;
+      seq[1] = d2;
+      if (!build_deriv_cache_vec_multi(vec_cache2, vec_cache1, gauge, d2))
+        continue;
+
+      int cx2 = cx1, cy2 = cy1, cz2 = cz1;
+      add_spatial_count(d2, cx2, cy2, cz2);
+
+      if (direct_contraction_from_cache_G5_multi(
+              3, 2, seq, 2, cx2, cy2, cz2,
+              x_l, vec_cache2, qLoops, ft, vals, accumulate)) {
+        ++count3;
+      }
+
+      for (int d3 : DERIV_DIRS) {
+        if (maxOrder < 4) break;
+        if (cancel_time_pair(d2, d3)) continue;
+        seq[2] = d3;
+
+        int cx3 = cx2, cy3 = cy2, cz3 = cz2;
+        add_spatial_count(d3, cx3, cy3, cz3);
+
+        // For maxOrder=5, keep the four-derivative branch only when the
+        // prefix can still lead to a valid contraction.
+        if (!useful_prefix3(d3, cx3, cy3, cz3)) continue;
+        if (!build_deriv_cache_vec_multi(vec_cache3, vec_cache2, gauge, d3))
+          continue;
+
+        if (direct_contraction_from_cache_G5_multi(
+                4, 3, seq, 3, cx3, cy3, cz3,
+                x_l, vec_cache3, qLoops, ft, vals, accumulate)) {
+          ++count4;
+        }
+
+        for (int d4 : DERIV_DIRS) {
+          if (maxOrder < 5) break;
+          if (cancel_time_pair(d3, d4)) continue;
+          seq[3] = d4;
+
+          int cx4 = cx3, cy4 = cy3, cz4 = cz3;
+          add_spatial_count(d4, cx4, cy4, cz4);
+
+          if (contract_after_one_more_deriv_from_cache_G5_multi(
+                  5, 3, seq, 4, d4, cx4, cy4, cz4,
+                  x_l, vec_cache3, vec_cache4, gauge, qLoops, ft,
+                  vals, accumulate)) {
+            ++count5;
+          }
+        }
+      }
+    }
+  }
+
+  PRINT_PATTERN("G5 fourD multi patterns total order 1: %d\n", count1);
+  PRINT_PATTERN("G5 fourD multi patterns total order 2: %d\n", count2);
+  PRINT_PATTERN("G5 fourD multi patterns total order 3: %d\n", count3);
+  PRINT_PATTERN("G5 fourD multi patterns total order 4: %d\n", count4);
+  PRINT_PATTERN("G5 fourD multi patterns total order 5: %d\n", count5);
+  PRINT_PATTERN("G5 batch entries so far: %zu\n", qLoops.batchSize());
+}
+
+template<typename Float, typename FloatGauge, typename QLoopsT>
 void contractG5_fiveD_patterns_multi(
     std::vector<PLEGMA_Vector<Float>*>& x_l,
     std::vector<PLEGMA_Vector<Float>*>& x_r,
@@ -369,6 +501,11 @@ void contractG5_fiveD_patterns_multi(
   if (Nsc == 0) PLEGMA_error("contractG5_fiveD_patterns_multi: empty isc list");
   if (x_r.size() != Nsc || vals.size() != Nsc)
     PLEGMA_error("contractG5_fiveD_patterns_multi: size mismatch (Nsc=%zu)", Nsc);
+
+  if (maxOrder == 5) {
+    contractG5_fourD_patterns_multi(x_l, x_r, gauge, qLoops, ft, vals, accumulate, maxOrder);
+    return;
+  }
 
   PRINT_PATTERN("contractG5_fiveD_patterns_multi: maxOrder=%d Nsc=%zu\n",
                 maxOrder, Nsc);
@@ -568,3 +705,24 @@ template void contractG5_fiveD_patterns_multi<double, float, PLEGMA_QLoops_fast<
     std::vector<PLEGMA_Vector<double>*>&, std::vector<PLEGMA_Vector<double>*>&,
     PLEGMA_Gauge<float>&, PLEGMA_QLoops_fast<double>&, PLEGMA_FT<double>&,
     const std::vector<double>&, bool, int);
+
+// Multi-isc fourD instantiations.
+template void contractG5_fourD_patterns_multi<float, float, PLEGMA_QLoops_fast<float>>(
+  std::vector<PLEGMA_Vector<float>*>&, std::vector<PLEGMA_Vector<float>*>&,
+  PLEGMA_Gauge<float>&, PLEGMA_QLoops_fast<float>&, PLEGMA_FT<float>&,
+  const std::vector<float>&, bool, int);
+
+template void contractG5_fourD_patterns_multi<float, double, PLEGMA_QLoops_fast<float>>(
+  std::vector<PLEGMA_Vector<float>*>&, std::vector<PLEGMA_Vector<float>*>&,
+  PLEGMA_Gauge<double>&, PLEGMA_QLoops_fast<float>&, PLEGMA_FT<float>&,
+  const std::vector<float>&, bool, int);
+
+template void contractG5_fourD_patterns_multi<double, double, PLEGMA_QLoops_fast<double>>(
+  std::vector<PLEGMA_Vector<double>*>&, std::vector<PLEGMA_Vector<double>*>&,
+  PLEGMA_Gauge<double>&, PLEGMA_QLoops_fast<double>&, PLEGMA_FT<double>&,
+  const std::vector<double>&, bool, int);
+
+template void contractG5_fourD_patterns_multi<double, float, PLEGMA_QLoops_fast<double>>(
+  std::vector<PLEGMA_Vector<double>*>&, std::vector<PLEGMA_Vector<double>*>&,
+  PLEGMA_Gauge<float>&, PLEGMA_QLoops_fast<double>&, PLEGMA_FT<double>&,
+  const std::vector<double>&, bool, int);
