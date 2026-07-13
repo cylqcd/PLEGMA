@@ -22,6 +22,13 @@ using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT
 #define CMPLX_FLOAT std::complex<Float>
+#define PLEGMA_DBG_PRINTF(...)               \
+  do {                                       \
+    if (HGC_verbosity >= 3) {                \
+      fprintf(stderr, __VA_ARGS__);          \
+      fflush(stderr);                        \
+    }                                        \
+  } while (0)
 
 //--------------------------//
 // class PLEGMA_Field //
@@ -438,6 +445,8 @@ void PLEGMA_Field<Float>::printInfo(){
 // ---------------------------------------------------------------------------
 template<typename Float>
 void PLEGMA_Field<Float>::initSideGhostP2P() {
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: initSideGhostP2P START\n", comm_rank());
+  
   // Close any previously opened handles first (re-init safety)
   for (int i = 0; i < N_DIMS; i++)
     for (int s = 0; s < 2; s++) {
@@ -453,87 +462,161 @@ void PLEGMA_Field<Float>::initSideGhostP2P() {
 
   char local_node[MPI_MAX_PROCESSOR_NAME] = {};
   int node_name_len = 0;
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: calling MPI_Get_processor_name\n", comm_rank());
   MPI_Get_processor_name(local_node, &node_name_len);
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: got processor name: '%s' (len=%d)\n", comm_rank(), local_node, node_name_len);
 
   // Get IPC handle for this field's device allocation (cudaMalloc base ptr).
   // Every rank must participate in the following reduction, otherwise a rank
   // with IPC disabled would make its neighbours hang during handle exchange.
   cudaIpcMemHandle_t my_handle;
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: calling cudaIpcGetMemHandle\n", comm_rank());
   int handle_ok = (cudaIpcGetMemHandle(&my_handle, static_cast<void*>(d_elem)) == cudaSuccess) ? 1 : 0;
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: cudaIpcGetMemHandle handle_ok=%d\n", comm_rank(), handle_ok);
   int handle_ok_sum = handle_ok;
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: calling comm_allreduce_int\n", comm_rank());
   comm_allreduce_int(handle_ok_sum);
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: comm_allreduce_int done, handle_ok_sum=%d comm_size=%d\n", 
+          comm_rank(), handle_ok_sum, comm_size());
   if (handle_ok_sum != static_cast<int>(comm_size())) {
     if (HGC_verbosity > 0 && comm_rank() == 0)
       PLEGMA_printf("[P2P] cudaIpcGetMemHandle failed on at least one rank - using MPI fallback\n");
     return;
   }
 
-  // For each split dimension open the allocation of the neighbour we write to:
-  //   s=DIR_PLUS  -> send goes to MINUS neighbour (disp=-1)
-  //   s=DIR_MINUS -> send goes to PLUS  neighbour (disp=+1)
-  const int delta[2] = {-1, +1};  // delta[DIR_PLUS]=-1, delta[DIR_MINUS]=+1
+  // Collect all processor hostnames using MPI_Allgather (global, not relative comm)
+  // This avoids any asymmetry issues and prevents stack-buffer corruption
+  char *all_hostnames = new char[comm_size() * MPI_MAX_PROCESSOR_NAME];
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: calling MPI_Allgather for all hostnames\n", comm_rank());
+  MPI_Allgather(local_node, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+                all_hostnames, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+                MPI_COMM_WORLD);
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: MPI_Allgather done\n", comm_rank());
+
+  // For each split dimension, determine same-node status and exchange IPC handles
+  // Using simple relative communicator exchanges (already handles correct neighbor discovery)
+  const int delta[2] = {-1, +1};
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: entering dimension loop\n", comm_rank());
+  
   for (int i = 0; i < N_DIMS; i++) {
+    PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim %d: HGC_dimBreak=%d comm_dim=%d\n", 
+            comm_rank(), i, HGC_dimBreak[i], comm_dim(i));
     if (!HGC_dimBreak[i] || comm_dim(i) == 1) continue;
+    
+    // For each direction, use relative comm to exchange hostnames and IPC handles
     for (int s = 0; s < 2; s++) {
+      // Use the predefined delta array: delta[0]=-1, delta[1]=+1
+      // This directly corresponds to rank neighbor displacement
+      int disp = delta[s];
+      
+      // Step 1: Exchange hostnames to detect cross-node
       char peer_node[MPI_MAX_PROCESSOR_NAME] = {};
-      MsgHandle *recv_node = comm_declare_receive_relative(peer_node, i, delta[s], MPI_MAX_PROCESSOR_NAME);
-      MsgHandle *send_node = comm_declare_send_relative(local_node, i, -delta[s], MPI_MAX_PROCESSOR_NAME);
+      PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: exchanging hostname (disp=%d)\n", comm_rank(), i, s, disp);
+      
+      MsgHandle *recv_node = comm_declare_receive_relative(peer_node, i, disp, MPI_MAX_PROCESSOR_NAME);
+      MsgHandle *send_node = comm_declare_send_relative(local_node, i, -disp, MPI_MAX_PROCESSOR_NAME);
       comm_start(recv_node);
       comm_start(send_node);
       comm_wait(recv_node);
       comm_wait(send_node);
       comm_free(recv_node);
       comm_free(send_node);
-
-      if (std::strncmp(local_node, peer_node, MPI_MAX_PROCESSOR_NAME) != 0) continue;
-
-      cudaIpcMemHandle_t peer_handle;
-      MsgHandle *recv_handle = comm_declare_receive_relative(&peer_handle, i, delta[s], sizeof(cudaIpcMemHandle_t));
-      MsgHandle *send_handle = comm_declare_send_relative(&my_handle, i, -delta[s], sizeof(cudaIpcMemHandle_t));
+      
+      bool is_same_node = (std::strncmp(local_node, peer_node, MPI_MAX_PROCESSOR_NAME) == 0);
+      PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: peer_node='%s' local_node='%s' same_node=%d\n", 
+              comm_rank(), i, s, peer_node, local_node, is_same_node ? 1 : 0);
+      
+      // Step 2: Exchange IPC handles (128-byte buffer for all to avoid truncation)
+      // IMPORTANT: Always send our own real handle unconditionally.
+      // The send direction (-disp) is different from the hostname-recv direction (disp).
+      // The receiver will decide whether to open the handle based on their own same-node check.
+      unsigned char exchange_buf[128] = {};
+      unsigned char peer_buf[128] = {};
+      
+      // Always copy real handle into send buffer (receiver decides whether to use it)
+      std::memcpy(exchange_buf, &my_handle, sizeof(cudaIpcMemHandle_t));
+      if (is_same_node) {
+        PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: prepared real IPC handle (same-node push target)\n", comm_rank(), i, s);
+      } else {
+        PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: prepared real IPC handle (cross-node push target, but send direction may be same-node)\n", comm_rank(), i, s);
+      }
+      
+      MsgHandle *recv_handle = comm_declare_receive_relative(peer_buf, i, disp, sizeof(peer_buf));
+      MsgHandle *send_handle = comm_declare_send_relative(exchange_buf, i, -disp, sizeof(exchange_buf));
       comm_start(recv_handle);
       comm_start(send_handle);
+      PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: waiting for 128-byte exchange\n", comm_rank(), i, s);
       comm_wait(recv_handle);
       comm_wait(send_handle);
       comm_free(recv_handle);
       comm_free(send_handle);
-
-      void *mapped = nullptr;
-      cudaError_t err = cudaIpcOpenMemHandle(&mapped, peer_handle,
-                                             cudaIpcMemLazyEnablePeerAccess);
-      if (err == cudaSuccess) {
-        p2p_peer_d_elem[i][s] = mapped;
-        p2p_side_avail[i][s]  = true;
-      } else if (comm_rank() == 0) {
-        PLEGMA_printf("[P2P] cudaIpcOpenMemHandle failed for (dim=%d,s=%d) - MPI fallback\n", i, s);
+      
+      // Step 3: Process received data based on same-node status
+      p2p_side_avail[i][s] = is_same_node;
+      
+      if (is_same_node) {
+        cudaIpcMemHandle_t peer_handle;
+        std::memcpy(&peer_handle, peer_buf, sizeof(cudaIpcMemHandle_t));
+        void *mapped = nullptr;
+        cudaError_t err = cudaIpcOpenMemHandle(&mapped, peer_handle, cudaIpcMemLazyEnablePeerAccess);
+        if (err == cudaSuccess) {
+          p2p_peer_d_elem[i][s] = mapped;
+          PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: cudaIpcOpenMemHandle SUCCESS, mapped=%p\n", 
+                  comm_rank(), i, s, mapped);
+        } else {
+          PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: cudaIpcOpenMemHandle FAILED err=%d\n", 
+                  comm_rank(), i, s, err);
+          p2p_side_avail[i][s] = false;
+        }
+      } else {
+        p2p_peer_d_elem[i][s] = nullptr;
+        PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: cross-node, no IPC mapping\n", comm_rank(), i, s);
       }
     }
   }
+  
+  delete[] all_hostnames;
 
   // Tell each target whether we will write its ghost slot through P2P.  The
   // receive side must be tracked separately from the send side because mixed
   // intra-node / inter-node decompositions may use P2P in only one direction.
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: starting status exchange loop\n", comm_rank());
   bool local_p2p_any = false;
   for (int i = 0; i < N_DIMS; i++) {
     if (!HGC_dimBreak[i] || comm_dim(i) == 1) continue;
     for (int s = 0; s < 2; s++) {
+      int disp = delta[s];  // delta[0]=-1, delta[1]=+1
+      PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: exchanging P2P status (disp=%d)\n", comm_rank(), i, s, disp);
       unsigned char send_status = p2p_side_avail[i][s] ? 1 : 0;
       unsigned char recv_status = 0;
-      MsgHandle *recv_handle = comm_declare_receive_relative(&recv_status, i, -delta[s], sizeof(recv_status));
-      MsgHandle *send_handle = comm_declare_send_relative(&send_status, i, delta[s], sizeof(send_status));
+      // Correct direction: ghost[i][s] is filled by neighbor at -delta[s] direction
+      // (message loop: s=0 recv from +1 = -delta[0]; s=1 recv from -1 = -delta[1])
+      // So we recv the filler's p2p_side_avail from -delta[s], and send ours to delta[s].
+      MsgHandle *recv_handle = comm_declare_receive_relative(&recv_status, i, -disp, sizeof(recv_status));
+      MsgHandle *send_handle = comm_declare_send_relative(&send_status, i,  disp, sizeof(send_status));
       comm_start(recv_handle);
       comm_start(send_handle);
+      PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: waiting for status exchange\n", comm_rank(), i, s);
       comm_wait(recv_handle);
       comm_wait(send_handle);
+      PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dim=%d s=%d: status exchange done. send_status=%d recv_status=%d\n", 
+              comm_rank(), i, s, send_status, recv_status);
       comm_free(recv_handle);
       comm_free(send_handle);
 
       p2p_side_recv_avail[i][s] = (recv_status != 0);
       local_p2p_any = local_p2p_any || p2p_side_avail[i][s] || p2p_side_recv_avail[i][s];
     }
+    PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dimension %d complete, calling barrier\n", comm_rank(), i);
+    comm_barrier();
+    PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: dimension %d barrier done\n", comm_rank(), i);
   }
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: finished status exchange loop, local_p2p_any=%d\n", comm_rank(), local_p2p_any);
 
   int p2p_any_sum = local_p2p_any ? 1 : 0;
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: calling final comm_allreduce_int for p2p_any\n", comm_rank());
   comm_allreduce_int(p2p_any_sum);
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: final allreduce done, p2p_any_sum=%d\n", comm_rank(), p2p_any_sum);
   p2p_side_any = (p2p_any_sum != 0);
 
   if (HGC_verbosity > 0 && comm_rank() == 0)
@@ -551,18 +634,19 @@ void PLEGMA_Field<Float>::initSideGhostP2P() {
     size_t stage_floats = 0;
     for (int i = 0; i < N_DIMS; i++)
       for (int s = 0; s < 2; s++)
-        if (p2p_side_avail[i][s]) stage_floats += HGC_surface3D[i] * field_length * 2;
+        if (p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]) stage_floats += HGC_surface3D[i] * field_length * 2;
     if (stage_floats > 0) {
       d_side_ghost_pack_stage = static_cast<Float*>(device_malloc(stage_floats * sizeof(Float)));
       Float *cur = d_side_ghost_pack_stage;
       for (int i = 0; i < N_DIMS; i++)
         for (int s = 0; s < 2; s++)
-          if (p2p_side_avail[i][s]) {
+          if (p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]) {
             d_side_ghost_pack_ptr[i][s] = cur;
             cur += HGC_surface3D[i] * field_length * 2;
           }
     }
   }
+  PLEGMA_DBG_PRINTF("[P2P_DBG] rank %d: initSideGhostP2P COMPLETED\n", comm_rank());
 }
 
 template<typename Float>
@@ -587,6 +671,9 @@ void PLEGMA_Field<Float>::freeSideGhostP2P() {
 
 template<typename Float>
 void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTION action){
+  PLEGMA_DBG_PRINTF("[SGhost-ENTRY-DBG] rank %d entered communicateSideGhost(dir=%d, sign=%d, action=%d)\n", 
+          comm_rank(), dir, sign, action);
+  
   if(comm_size() == 1) return;
   assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
   
@@ -599,15 +686,20 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 
   // Lazy P2P initialisation (once per field instance, after QUDA/MPI are ready)
   if (!p2p_side_init_done) {
+    PLEGMA_DBG_PRINTF("[SGhost-P2P-INIT] rank %d: calling initSideGhostP2P\n", comm_rank());
     p2p_side_init_done = true;
     if (ghost_flag >= FIRST_SIDE && comm_size() > 1) initSideGhostP2P();
+    PLEGMA_DBG_PRINTF("[SGhost-P2P-INIT] rank %d: initSideGhostP2P completed\n", comm_rank());
   }
 
   bool isAll = (dir<0) ? true:false;
   bool runT = Total_length()==HGC_localVolume;
   size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+  PLEGMA_DBG_PRINTF("[SGhost-START-INIT] rank %d: dir=%d isAll=%d runT=%d scaleT=%zu action=%d\n", 
+          comm_rank(), dir, isAll, runT, scaleT, action);
 
   if(action==START || action==DO_ALL) {
+    PLEGMA_DBG_PRINTF("[SGhost-START-COPY] rank %d: starting copy_side_to_ghost loop\n", comm_rank());
     for(short i=0; i<N_DIMS; i++){
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
 	for(short s = 0; s < DIR_BOTH; s++){
@@ -618,27 +710,35 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	}
       }
     }
+    PLEGMA_DBG_PRINTF("[SGhost-START-COPY] rank %d: finished copy_side_to_ghost loop\n", comm_rank());
     double t_sync0 = MPI_Wtime();
+    PLEGMA_DBG_PRINTF("[SGhost-START-SYNC] rank %d: about to qudaDeviceSynchronize\n", comm_rank());
     qudaDeviceSynchronize();
+    PLEGMA_DBG_PRINTF("[SGhost-START-SYNC] rank %d: qudaDeviceSynchronize completed\n", comm_rank());
     double t_d2h0 = MPI_Wtime();
     if(checkErr) checkQudaError();
     // Pre-BARRIER: copy pack data to a local device staging buffer.
     // This fixes the race in the PUSH model: after BARRIER, rank A's d_elem[ghost[i][s]]
     // is simultaneously read (outgoing push) and written (incoming push from neighbour).
+    PLEGMA_DBG_PRINTF("[SGhost-START-STAGING] rank %d: p2p_side_any=%d d_side_ghost_pack_stage=%p\n", 
+            comm_rank(), p2p_side_any, d_side_ghost_pack_stage);
     if (p2p_side_any && d_side_ghost_pack_stage) {
+      PLEGMA_DBG_PRINTF("[SGhost-START-STAGING] rank %d: starting staging buffer copy\n", comm_rank());
       for (short i = 0; i < N_DIMS; i++) {
         if (!((dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT))) continue;
         for (short s = 0; s < DIR_BOTH; s++) {
           if (!(sign == s || sign == DIR_BOTH)) continue;
-          if (!p2p_side_avail[i][s] || !d_side_ghost_pack_ptr[i][s]) continue;
+          if (!(p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]) || !d_side_ghost_pack_ptr[i][s]) continue;
           size_t nb = HGC_surface3D[i]/scaleT * field_length * 2 * sizeof(Float);
           Float *src = d_elem + (HGC_sideGhost[i][s]/scaleT + total_length) * field_length * 2;
           qudaMemcpy(d_side_ghost_pack_ptr[i][s], src, nb, qudaMemcpyDeviceToDevice);
         }
       }
+      PLEGMA_DBG_PRINTF("[SGhost-START-STAGING] rank %d: finished staging buffer copy\n", comm_rank());
     }
     // P2P neighbour handshake: only wait for peers that will receive a direct
     // write from this rank, instead of synchronising the full communicator.
+    PLEGMA_DBG_PRINTF("[SGhost-START-HANDSHAKE] rank %d: starting P2P ready handshake\n", comm_rank());
     std::vector<MsgHandle*> p2p_ready_recvs;
     std::vector<MsgHandle*> p2p_ready_sends;
     unsigned char p2p_ready_recv_token[N_DIMS][2] = {};
@@ -664,9 +764,23 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
         }
       }
     }
-    for (auto handle : p2p_ready_recvs) { comm_wait(handle); comm_free(handle); }
-    for (auto handle : p2p_ready_sends) { comm_wait(handle); comm_free(handle); }
+    PLEGMA_DBG_PRINTF("[SGhost-START-HANDSHAKE] rank %d: finished declaring P2P ready messages, recvs.size()=%zu sends.size()=%zu\n", 
+            comm_rank(), p2p_ready_recvs.size(), p2p_ready_sends.size());
+    for (auto handle : p2p_ready_recvs) { 
+      PLEGMA_DBG_PRINTF("[SGhost-START-HANDSHAKE] rank %d: waiting on p2p_ready_recv %p\n", comm_rank(), (void*)handle);
+      comm_wait(handle); 
+      PLEGMA_DBG_PRINTF("[SGhost-START-HANDSHAKE] rank %d: p2p_ready_recv %p completed\n", comm_rank(), (void*)handle);
+      comm_free(handle); 
+    }
+    for (auto handle : p2p_ready_sends) { 
+      PLEGMA_DBG_PRINTF("[SGhost-START-HANDSHAKE] rank %d: waiting on p2p_ready_send %p\n", comm_rank(), (void*)handle);
+      comm_wait(handle); 
+      PLEGMA_DBG_PRINTF("[SGhost-START-HANDSHAKE] rank %d: p2p_ready_send %p completed\n", comm_rank(), (void*)handle);
+      comm_free(handle); 
+    }
+    PLEGMA_DBG_PRINTF("[SGhost-START-HANDSHAKE] rank %d: finished P2P ready handshake\n", comm_rank());
 
+    PLEGMA_DBG_PRINTF("[SGhost-START-DONE] rank %d: starting P2P done handshake\n", comm_rank());
     std::vector<MsgHandle*> p2p_done_recvs;
     std::vector<MsgHandle*> p2p_done_sends;
     unsigned char p2p_done_recv_token[N_DIMS][2] = {};
@@ -683,9 +797,11 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
         comm_start(handle);
       }
     }
+    PLEGMA_DBG_PRINTF("[SGhost-START-DONE] rank %d: declared p2p_done_recvs.size()=%zu\n", comm_rank(), p2p_done_recvs.size());
     size_t total_nbytes = 0;
     size_t p2p_nbytes   = 0;
     size_t mpi_send_nbytes = 0;
+    PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: entering message loop\n", comm_rank());
     for(short i=0; i<N_DIMS; i++){
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
 	for(short s = 0; s < DIR_BOTH; s++){
@@ -696,10 +812,13 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       const bool outgoing_p2p = p2p_side_avail[i][s];
       const bool incoming_p2p = p2p_side_recv_avail[i][s];
       int disp = (s==DIR_PLUS) ? +1 : -1;
+      PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: dim=%d s=%d outgoing_p2p=%d incoming_p2p=%d\n", 
+              comm_rank(), i, s, outgoing_p2p, incoming_p2p);
       if (!incoming_p2p) {
         Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
         messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
         comm_start(messages.back());
+        PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: started receive for dim=%d s=%d\n", comm_rank(), i, s);
       }
       if (outgoing_p2p) {
 	      // P2P PUSH from staging buffer (not from d_elem ghost slot).
@@ -714,18 +833,24 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
         p2p_done_sends.push_back(done_handle);
         comm_start(done_handle);
 	      p2p_nbytes += nbytes;
+        PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: P2P push for dim=%d s=%d\n", comm_rank(), i, s);
 	    } else {
 	      Float *pointer_send    = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	      qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
+          // If this ghost slot receives P2P push from peer, read from staging to avoid race
+          Float *src_for_mpi = (d_side_ghost_pack_ptr[i][s] && incoming_p2p) ? d_side_ghost_pack_ptr[i][s] : pointer_device;
+	      qudaMemcpy(pointer_send, src_for_mpi, nbytes, qudaMemcpyDeviceToHost);
 	      disp *= -1;
 	      messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
 	      comm_start(messages.back());
         mpi_send_nbytes += nbytes;
+        PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: started send for dim=%d s=%d (src=%s)\n", comm_rank(), i, s, src_for_mpi == d_side_ghost_pack_ptr[i][s] ? "staging" : "device");
 	    }
 	  }	    
 	}
       }
     }
+    PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: finished message loop, total_nbytes=%zu p2p_nbytes=%zu mpi_send=%zu messages.size()=%zu\n", 
+            comm_rank(), total_nbytes, p2p_nbytes, mpi_send_nbytes, messages.size());
     for (auto handle : p2p_done_recvs) { comm_wait(handle); comm_free(handle); }
     for (auto handle : p2p_done_sends) { comm_wait(handle); comm_free(handle); }
     double t_mpi0 = MPI_Wtime();
@@ -735,13 +860,19 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     if(checkErr) checkQudaError();
   }
   if(action==FINISH || action==DO_ALL) {
+    PLEGMA_DBG_PRINTF("[SGhost-FINISH-ENTRY-DBG] rank %d: entered FINISH phase for dir=%d sign=%d\n", comm_rank(), dir, sign);
     double t_wait0 = MPI_Wtime();
     // Wait for any remaining MPI messages (non-P2P directions).
+    PLEGMA_DBG_PRINTF("[SGhost-FINISH-DBG] rank %d: about to wait for MPI messages, messages.size()=%zu\n", 
+            comm_rank(), messages.size());
     while (! messages.empty()) {
+      PLEGMA_DBG_PRINTF("[SGhost-FINISH-DBG] rank %d: waiting on message %p\n", comm_rank(), (void*)messages.back());
       comm_wait(messages.back());
+      PLEGMA_DBG_PRINTF("[SGhost-FINISH-DBG] rank %d: message %p completed\n", comm_rank(), (void*)messages.back());
       comm_free(messages.back());
       messages.pop_back();
     }
+    PLEGMA_DBG_PRINTF("[SGhost-FINISH-DBG] rank %d: finished waiting for MPI messages\n", comm_rank());
     double t_h2d0 = MPI_Wtime();
     // Copy received data to device – skip P2P pairs (already landed in d_elem)
     size_t total_h2d = 0;
@@ -769,6 +900,8 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       PLEGMA_printf("  [SGhost] wait=%.4fs H2D=%.4fs p2p_bytes=%zu h2d_bytes=%zu\n",
                     t_h2d0-t_wait0, t_h2d1-t_h2d0, total_p2d, total_h2d);
     if(checkErr) checkQudaError();
+    PLEGMA_DBG_PRINTF("[SGhost-EXIT-DBG] rank %d: exiting communicateSideGhost(dir=%d, sign=%d, action=%d)\n", 
+            comm_rank(), dir, sign, action);
   }
 }
 
@@ -1538,10 +1671,9 @@ if (comm_rank() == 0) {
     if (v < minv) minv = v;
     if (v > maxv) maxv = v;
   }
-  fprintf(stderr, "[DEBUG] elems=%zu, nonzeros=%zu (%.3f%%), min=% .6e, max=% .6e\n",
+  PLEGMA_DBG_PRINTF("[DEBUG] elems=%zu, nonzeros=%zu (%.3f%%), min=% .6e, max=% .6e\n",
         ncmp, nz, 100.0 * (double)nz / (double)ncmp, minv, maxv);
 
-              fflush(stderr);
 }
 
   if(comm_rank() == 0){
