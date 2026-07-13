@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstring>
+#include <cstdlib>
 #include <time.h>
 #include <mpi.h>
 #include <PLEGMA_BLAS.h>
@@ -19,6 +20,15 @@
 #include <quda_api.h>
 #include <device.h>
 using namespace plegma;
+
+namespace {
+bool plegma_rdma_enabled()
+{
+  const char *env = std::getenv("PLEGMA_ENABLE_RDMA");
+  if (env) return std::strcmp(env, "1") == 0;
+  return comm_gdr_enabled();
+}
+}
 
 #define DEVICE_MEMORY_REPORT
 #define CMPLX_FLOAT std::complex<Float>
@@ -629,20 +639,26 @@ void PLEGMA_Field<Float>::initSideGhostP2P() {
   for (int i = 0; i < N_DIMS; i++)
     for (int s = 0; s < 2; s++)
       d_side_ghost_pack_ptr[i][s] = nullptr;
-  if (p2p_side_any) {
+  const bool gdr_enabled = plegma_rdma_enabled();
+  if (p2p_side_any || gdr_enabled) {
     if (d_side_ghost_pack_stage) { device_free(d_side_ghost_pack_stage); d_side_ghost_pack_stage = nullptr; }
     size_t stage_floats = 0;
+    const bool runT = (total_length == HGC_localVolume);
+    const size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
     for (int i = 0; i < N_DIMS; i++)
       for (int s = 0; s < 2; s++)
-        if (p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]) stage_floats += HGC_surface3D[i] * field_length * 2;
+        if (p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]
+            || (gdr_enabled && HGC_dimBreak[i] && comm_dim(i) > 1))
+          stage_floats += HGC_surface3D[i] / scaleT * field_length * 2;
     if (stage_floats > 0) {
       d_side_ghost_pack_stage = static_cast<Float*>(device_malloc(stage_floats * sizeof(Float)));
       Float *cur = d_side_ghost_pack_stage;
       for (int i = 0; i < N_DIMS; i++)
         for (int s = 0; s < 2; s++)
-          if (p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]) {
+          if (p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]
+              || (gdr_enabled && HGC_dimBreak[i] && comm_dim(i) > 1)) {
             d_side_ghost_pack_ptr[i][s] = cur;
-            cur += HGC_surface3D[i] * field_length * 2;
+            cur += HGC_surface3D[i] / scaleT * field_length * 2;
           }
     }
   }
@@ -695,6 +711,7 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
   bool isAll = (dir<0) ? true:false;
   bool runT = Total_length()==HGC_localVolume;
   size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+  const bool use_gdr = plegma_rdma_enabled();
   PLEGMA_DBG_PRINTF("[SGhost-START-INIT] rank %d: dir=%d isAll=%d runT=%d scaleT=%zu action=%d\n", 
           comm_rank(), dir, isAll, runT, scaleT, action);
 
@@ -722,13 +739,14 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     // is simultaneously read (outgoing push) and written (incoming push from neighbour).
     PLEGMA_DBG_PRINTF("[SGhost-START-STAGING] rank %d: p2p_side_any=%d d_side_ghost_pack_stage=%p\n", 
             comm_rank(), p2p_side_any, d_side_ghost_pack_stage);
-    if (p2p_side_any && d_side_ghost_pack_stage) {
+    if (d_side_ghost_pack_stage) {
       PLEGMA_DBG_PRINTF("[SGhost-START-STAGING] rank %d: starting staging buffer copy\n", comm_rank());
       for (short i = 0; i < N_DIMS; i++) {
         if (!((dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT))) continue;
         for (short s = 0; s < DIR_BOTH; s++) {
           if (!(sign == s || sign == DIR_BOTH)) continue;
-          if (!(p2p_side_avail[i][s] || p2p_side_recv_avail[i][s]) || !d_side_ghost_pack_ptr[i][s]) continue;
+          const bool need_stage = p2p_side_avail[i][s] || p2p_side_recv_avail[i][s] || use_gdr;
+          if (!need_stage || !d_side_ghost_pack_ptr[i][s]) continue;
           size_t nb = HGC_surface3D[i]/scaleT * field_length * 2 * sizeof(Float);
           Float *src = d_elem + (HGC_sideGhost[i][s]/scaleT + total_length) * field_length * 2;
           qudaMemcpy(d_side_ghost_pack_ptr[i][s], src, nb, qudaMemcpyDeviceToDevice);
@@ -815,10 +833,13 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: dim=%d s=%d outgoing_p2p=%d incoming_p2p=%d\n", 
               comm_rank(), i, s, outgoing_p2p, incoming_p2p);
       if (!incoming_p2p) {
-        Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
+        Float *pointer_receive = use_gdr
+          ? d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2
+          : h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
         messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
         comm_start(messages.back());
-        PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: started receive for dim=%d s=%d\n", comm_rank(), i, s);
+        PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: started receive for dim=%d s=%d (%s)\n",
+                          comm_rank(), i, s, use_gdr ? "device" : "host");
       }
       if (outgoing_p2p) {
 	      // P2P PUSH from staging buffer (not from d_elem ghost slot).
@@ -835,15 +856,25 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	      p2p_nbytes += nbytes;
         PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: P2P push for dim=%d s=%d\n", comm_rank(), i, s);
 	    } else {
-	      Float *pointer_send    = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
-          // If this ghost slot receives P2P push from peer, read from staging to avoid race
-          Float *src_for_mpi = (d_side_ghost_pack_ptr[i][s] && incoming_p2p) ? d_side_ghost_pack_ptr[i][s] : pointer_device;
-	      qudaMemcpy(pointer_send, src_for_mpi, nbytes, qudaMemcpyDeviceToHost);
-	      disp *= -1;
-	      messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
-	      comm_start(messages.back());
+        // If this ghost slot may be overwritten by an inbound transfer,
+        // send from staging to avoid read/write overlap.
+          Float *src_for_mpi = (d_side_ghost_pack_ptr[i][s] && (incoming_p2p || use_gdr))
+            ? d_side_ghost_pack_ptr[i][s]
+            : pointer_device;
+        disp *= -1;
+        if (use_gdr) {
+          messages.push_back(comm_declare_send_relative(src_for_mpi, i, disp, nbytes));
+        } else {
+          Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
+          qudaMemcpy(pointer_send, src_for_mpi, nbytes, qudaMemcpyDeviceToHost);
+          messages.push_back(comm_declare_send_relative(pointer_send, i, disp, nbytes));
+        }
+        comm_start(messages.back());
         mpi_send_nbytes += nbytes;
-        PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: started send for dim=%d s=%d (src=%s)\n", comm_rank(), i, s, src_for_mpi == d_side_ghost_pack_ptr[i][s] ? "staging" : "device");
+        PLEGMA_DBG_PRINTF("[SGhost-START-LOOP] rank %d: started send for dim=%d s=%d (src=%s mode=%s)\n",
+                          comm_rank(), i, s,
+                          src_for_mpi == d_side_ghost_pack_ptr[i][s] ? "staging" : "device",
+                          use_gdr ? "device" : "host");
 	    }
 	  }	    
 	}
@@ -876,14 +907,16 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     double t_h2d0 = MPI_Wtime();
     // Copy received data to device – skip P2P pairs (already landed in d_elem)
     size_t total_h2d = 0;
-    size_t total_p2d = 0;
+    size_t total_direct = 0;
     for(short i=0; i<N_DIMS; i++){
       if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
 	for(short s = 0; s < DIR_BOTH; s++){
 	  if(sign == s || sign==DIR_BOTH){
 	    size_t nb = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
       if (p2p_side_recv_avail[i][s]) {
-	      total_p2d += nb;  // already in d_elem via P2P
+        total_direct += nb;  // already in d_elem via P2P push
+      } else if (use_gdr) {
+        total_direct += nb;  // received directly in d_elem by GPU-aware comm
 	    } else {
 	      Float *host   = h_ext_ghost_r + HGC_sideGhost[i][s]/scaleT*field_length*2;
 	      Float *device = d_elem + (HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
@@ -897,8 +930,8 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     }
     double t_h2d1 = MPI_Wtime();
     if(HGC_verbosity>2)
-      PLEGMA_printf("  [SGhost] wait=%.4fs H2D=%.4fs p2p_bytes=%zu h2d_bytes=%zu\n",
-                    t_h2d0-t_wait0, t_h2d1-t_h2d0, total_p2d, total_h2d);
+      PLEGMA_printf("  [SGhost] wait=%.4fs H2D=%.4fs direct_bytes=%zu h2d_bytes=%zu\n",
+                    t_h2d0-t_wait0, t_h2d1-t_h2d0, total_direct, total_h2d);
     if(checkErr) checkQudaError();
     PLEGMA_DBG_PRINTF("[SGhost-EXIT-DBG] rank %d: exiting communicateSideGhost(dir=%d, sign=%d, action=%d)\n", 
             comm_rank(), dir, sign, action);
