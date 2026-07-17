@@ -23,6 +23,9 @@ namespace plegma{
   **/
   template<typename Float>
   void elemWiseMul(int NN, Float* x, Float* y){
+    //printf("NN = %d\n", NN);
+    //printf("x = %p\n", (void*)x);
+    //printf("y = %p\n", (void*)y);
     Float2<Float>* x_2 = (Float2<Float>*) x;
     Float2<Float>* y_2 = (Float2<Float>*) y;
     try{

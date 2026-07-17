@@ -257,44 +257,38 @@ int main(int argc, char **argv) {
 		prop13D.absorb(prop1, global_fixSinkTime);
 		prop23D.absorb(prop2, global_fixSinkTime);
 		smearedGauge3D.absorb(smearedGauge, global_fixSinkTime);
-		PLEGMA_printf("CP1\n");
 
 	      for(int nu = 0 ; nu < 4 ; nu++)
 		for(int c2 = 0 ; c2 < 3 ; c2++){
 		  {
-		    PLEGMA_printf("CP2\n");
-		    if(&prop1 != &prop2){
-		      PLEGMA_printf("CP3\n");
+		    if(&prop1 != &prop2)
 		      vectorAuxF3D.seqSourceNucleon(prop13D, prop23D, get_projector(Projs[iproj]), nucleon, nu, c2);
-		    }
-		    else{
-		      PLEGMA_printf("CP4\n");
+		    else
 		      vectorAuxF3D.seqSourceNucleon(prop13D, get_projector(Projs[iproj]), nucleon, nu, c2);
-		    }
-					
-		    PLEGMA_printf("CP5\n"); 
+		
+    		    cudaError_t err = cudaDeviceSynchronize();
+ 		    PLEGMA_printf("After seqSourceNucleon sync: %s\n", cudaGetErrorString(err));		    
+		    PLEGMA_printf("CP5\n");
+		    int dev;
+		    cudaGetDevice(&dev);
+		    PLEGMA_printf("Current CUDA device before mulMomentumPhases = %d\n", dev);
+		    
+		    int ndev;
+		    cudaGetDeviceCount(&ndev);
+		    PLEGMA_printf("Number of CUDA devices = %d\n", ndev); 
 		    vectorAuxF3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
 		    PLEGMA_printf("CP6\n");
 		    std::complex<float> Isingle(0,1);
-		    PLEGMA_printf("CP7\n");
 		    float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 					 + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
 					 + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-		    PLEGMA_printf("CP8\n");
 		    vectorAuxF3D.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
-		    PLEGMA_printf("CP9\n");
 		    vectorAuxF3D.conjugate();
-		    PLEGMA_printf("CP10\n");
 		    vectorAuxF3D.apply_gamma(G5);
-		    PLEGMA_printf("CP11\n");
 		    vector1.copy(vectorAuxF3D);
-		    PLEGMA_printf("CP12\n");
 		    TIME(vector2.gaussianSmearing(vector1,smearedGauge3D, nsmearGauss, alphaGauss));
-		    PLEGMA_printf("CP13\n");
 		    vectorInOut.absorb(vector2, global_fixSinkTime);
-		    PLEGMA_printf("CP14\n");
 		  }
-		  PLEGMA_printf("CP15\n");
 		  double norm = vectorInOut.norm();
 		  vectorInOut.scale(1/norm);
 		  if(run_mu > 0) {
