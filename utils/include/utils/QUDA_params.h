@@ -1,0 +1,109 @@
+//-----------------//
+// QUDA Parameters //
+//-----------------//
+#ifdef ALLOCATE
+#define define(var,...) var EQUAL(__VA_ARGS__)
+#else
+#define define(var,...) extern var 
+#endif
+
+#ifdef MULTI_GPU
+define(int device_number, -1);
+#else
+define(int device_number, 0);
+#endif
+
+define(bool qudaInitialized, false);
+
+define(QudaVerbosity verbosity_level, QUDA_SUMMARIZE);
+define(QudaDslashType dslash_type, QUDA_TWISTED_CLOVER_DSLASH);
+define(QudaReconstructType link_recon, QUDA_RECONSTRUCT_NO);
+define(QudaReconstructType link_recon_sloppy, QUDA_RECONSTRUCT_INVALID);
+define(QudaReconstructType link_recon_precondition, QUDA_RECONSTRUCT_INVALID);
+define(QudaPrecision prec, QUDA_DOUBLE_PRECISION);
+define(QudaPrecision  prec_sloppy, QUDA_INVALID_PRECISION);
+define(QudaPrecision  prec_precondition, QUDA_INVALID_PRECISION);
+define(QudaPrecision prec_null, QUDA_INVALID_PRECISION);
+
+// Dirac operator options
+define(double mass, 0.1);  // mass of Dirac operator
+define(double kappa, -1.0); // kappa of Dirac operator
+define(double mu, 0.1); // mu of twisted mass operator
+define(double csw, 0.1);
+define(double anisotropy, 1.0);
+define(QudaTwistFlavorType twist_flavor, QUDA_TWIST_SINGLET);
+define(bool compute_clover, false);
+define(QudaMassNormalization normalization, QUDA_MASS_NORMALIZATION); // mass normalization of Dirac operators
+define(QudaDagType dagger, QUDA_DAG_NO);
+define(bool isEven, true);
+
+// Solver options
+define(double tol, 1e-9); // tolerance for inverter
+define(double tol_hq, 0.1); // heavy-quark tolerance for inverter
+define(double reliable_delta, 1e-4);
+define(int niter,100);
+define(QudaMatPCType matpc_type, QUDA_MATPC_EVEN_EVEN);
+define(QudaSolveType solve_type, QUDA_DIRECT_PC_SOLVE);
+define(bool verify_results, false);
+define(bool kernel_pack_t, false);
+define(int pipeline, 0); // length of pipeline for fused operations in GCR or BiCGstab-l
+define(int solution_accumulator_pipeline, 0);
+define(QudaInverterType inv_type, QUDA_GCR_INVERTER);
+
+// MG options
+define(bool  use_mg, true); //Use the multigrid preconditioner 
+define(int gcrNkrylov, 10); // number of inner iterations for GCR, or l for BiCGstab-l
+define(int nvec[QUDA_MAX_MG_LEVEL], {});
+define(int mg_levels, 2);
+define(bool generate_nullspace, true);
+define(bool generate_all_levels, true);
+define(int nu_pre[QUDA_MAX_MG_LEVEL], {});
+define(int nu_post[QUDA_MAX_MG_LEVEL], {});
+define(int mg_block_size[QUDA_MAX_MG_LEVEL][QUDA_MAX_DIM], {});
+define(int mg_block_volume[QUDA_MAX_MG_LEVEL], {});
+define(double mu_factor[QUDA_MAX_MG_LEVEL], {});
+define(QudaVerbosity mg_verbosity[QUDA_MAX_MG_LEVEL], {});
+define(QudaInverterType setup_inv[QUDA_MAX_MG_LEVEL],{});
+define(int num_setup_iter[QUDA_MAX_MG_LEVEL], {});
+define(double setup_tol, 5e-6);
+define(int setup_maxiter, 500);
+define(QudaSetupType setup_type, QUDA_NULL_VECTOR_SETUP);
+define(bool pre_orthonormalize, false);
+define(bool post_orthonormalize, true);
+define(double omega, 0.85);
+define(int n_vec_batch[QUDA_MAX_MG_LEVEL], {});
+define(QudaInverterType coarse_solver[QUDA_MAX_MG_LEVEL], {});
+define(QudaInverterType smoother_type[QUDA_MAX_MG_LEVEL], {});
+define(double coarse_solver_tol[QUDA_MAX_MG_LEVEL], {});
+define(double smoother_tol[QUDA_MAX_MG_LEVEL], {});
+define(int coarse_solver_maxiter[QUDA_MAX_MG_LEVEL], {});
+define(int mg_coarse_solver_ca_basis_size[QUDA_MAX_MG_LEVEL], {});
+define(QudaSchwarzType schwarz_type[QUDA_MAX_MG_LEVEL], {});
+define(int schwarz_cycle[QUDA_MAX_MG_LEVEL], {});
+define(QudaBoolean mg_eig[QUDA_MAX_MG_LEVEL], {});
+define(int mg_eig_nEv[QUDA_MAX_MG_LEVEL], {});
+define(int mg_eig_nKr[QUDA_MAX_MG_LEVEL], {});
+define(int mg_eig_nConv[QUDA_MAX_MG_LEVEL], {});
+define(QudaBoolean  mg_eig_require_convergence[QUDA_MAX_MG_LEVEL], {});
+define(int mg_eig_check_interval[QUDA_MAX_MG_LEVEL], {});
+define(int mg_eig_max_restarts[QUDA_MAX_MG_LEVEL], {}); 
+define(QudaBoolean mg_eig_use_normop[QUDA_MAX_MG_LEVEL], {});
+define(QudaBoolean mg_eig_use_dagger[QUDA_MAX_MG_LEVEL], {});
+define(double mg_eig_tol[QUDA_MAX_MG_LEVEL], {}); 
+define(QudaBoolean mg_eig_use_poly_acc[QUDA_MAX_MG_LEVEL], {});
+define(int mg_eig_poly_deg[QUDA_MAX_MG_LEVEL], {});
+define(double mg_eig_amin[QUDA_MAX_MG_LEVEL], {});
+define(double mg_eig_amax[QUDA_MAX_MG_LEVEL], {});
+define(QudaEigSpectrumType mg_eig_spectrum[QUDA_MAX_MG_LEVEL], {});
+define(QudaBoolean mg_eig_coarse_guess, {});
+define(QudaEigType mg_eig_type[QUDA_MAX_MG_LEVEL], {});
+define(QudaBoolean preserve_deflation, {}); 
+
+
+define(std::string vec_infile, "");
+define(std::string vec_outfile, "");
+define(std::string eig_vec_infile, "");
+define(std::string eig_vec_outfile, "");
+
+
+#undef define
