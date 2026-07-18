@@ -33,7 +33,6 @@ int main(int argc, char **argv) {
   std::string mom_path = "%+d_%+d_%+d.txt";
   std::string mom_path1 = "%+d_%+d_%+d.txt";
   std::string mom_path2 = "%+d_%+d_%+d.txt";
-  //std::string mom_path3 = "%+d_%+d_%+d.txt";
 
   auto add_options = [&](Options& options) {
     options.set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
@@ -163,11 +162,6 @@ int main(int argc, char **argv) {
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
       for(int imom=0; imom<12; imom++) {
 
-      /*asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_px%+dpy%+dpz%+d",
-	       source[0], source[1], source[2], source[3], sinkMom[0], sinkMom[1], sinkMom[2]);
-      threep_filename = given_threep_filename + src_string;
-      free(src_string);*/ //Should be moved three lines down
-
       std::vector<int> sinkMom = {0,0,0};
       sinkMom[(imom/4)%3] = (imom%2)*2-1;       //-+-+ in positions 1,2,3
       sinkMom[(imom/4+1)%3] = ((imom/2)%2)*2-1; //--++ in positions 2,3,1
@@ -266,18 +260,7 @@ int main(int argc, char **argv) {
 		    else
 		      vectorAuxF3D.seqSourceNucleon(prop13D, get_projector(Projs[iproj]), nucleon, nu, c2);
 		
-    		    cudaError_t err = cudaDeviceSynchronize();
- 		    PLEGMA_printf("After seqSourceNucleon sync: %s\n", cudaGetErrorString(err));		    
-		    PLEGMA_printf("CP5\n");
-		    int dev;
-		    cudaGetDevice(&dev);
-		    PLEGMA_printf("Current CUDA device before mulMomentumPhases = %d\n", dev);
-		    
-		    int ndev;
-		    cudaGetDeviceCount(&ndev);
-		    PLEGMA_printf("Number of CUDA devices = %d\n", ndev); 
 		    vectorAuxF3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
-		    PLEGMA_printf("CP6\n");
 		    std::complex<float> Isingle(0,1);
 		    float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
 					 + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
@@ -313,12 +296,10 @@ int main(int argc, char **argv) {
 	      PLEGMA_Correlator<double> corr2(corr_space, source, 0, tsinkMtsource+1);
 	      corr2.setFixMomList(momenta4);
 	      PLEGMA_Correlator<double> corr3(corr_space, source);
-	      //corr3.setFixMomList(momenta5);
 	      PLEGMA_Correlator<double> *accum1,*accum3;
 	      accum1=nullptr;
 	      accum3=nullptr;
 
-	      /*
 	      // LOCAL contractions
 	      TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
@@ -333,39 +314,13 @@ int main(int argc, char **argv) {
 	      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
 	      THREAD(corr.writeFile( filename, corr_file_format));
-	      */
 
 	      // TWOD contractions
 	      TIME(corr2.contractNucleonThrp_twoD(seqProp, propF, contractGauge, signProps, gammas));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr2.getTotalSize()*2; iv++) corr2.H_elem()[iv] *= signPer;
 	      THREAD(corr2.writeFile( filename, corr_file_format));
 
-	      // THREED contractions
-	      //TIME(corr3.contractNucleonThrp_threeD(seqProp, propF, contractGauge, signProps, gammas));
-	      //if(signPer < 0) for(size_t iv = 0 ; iv < corr3.getTotalSize()*2; iv++) corr3.H_elem()[iv] *= signPer;
-	      //THREAD(corr3.writeFile( filename, corr_file_format));
-
 	      
-	      // LOCAL contractions
-	      //TIME(corr.contractNucleonThrp_local(seqProp, propF2, signProps, gammas));
-	      //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-	      //corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-	      //THREAD(corr.writeFile(filename, corr_file_format));
-				     
-	      /*
-	      // ONED contractions
-	      TIME(corr.contractNucleonThrp_oneD(seqProp, propF2, contractGauge, signProps, gammas));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-	      THREAD(corr.writeFile( filename, corr_file_format));*/
-				     
-	      // noe contractions
-	      //TIME(corr.contractNucleonThrp_noe(seqProp, propF2, contractGauge, signProps));
-	      //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      //corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-	      //THREAD(corr.writeFile( filename, corr_file_format));
-	      
-
 	      int mu;
 	      ORIENTATION dir;
 	      int count3=0;
@@ -416,8 +371,8 @@ int main(int argc, char **argv) {
 	    }
 	  }
 	}
-	
 #endif
+	
       }
       // If twop_filename exists we skip the rest
       if(access( twop_filename.c_str(), F_OK ) != -1) {

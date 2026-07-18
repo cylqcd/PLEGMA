@@ -1266,12 +1266,6 @@ void PLEGMA_Field<Float>::setUnit(std::vector<int> indDiag){
 template<typename Float>
 template<typename FloatMom>
 void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign){
-  int dev;
-  cudaGetDevice(&dev);
-  int ndev;
-  cudaGetDeviceCount(&ndev);  
-  PLEGMA_printf("Inside mulMomentumPhases: device=%d ndevices=%d\n", dev, ndev);
-
   if(!isAllocDevice) PLEGMA_error("This function needs allocation on the device to work\n");
   if(sign != +1 && sign != -1) PLEGMA_error("Sign should be either +1 or -1\n");
   if(mom.size() != 3 && mom.size() != 4) PLEGMA_error("Momentum size vector should be either 3 or 4\n");
@@ -1279,34 +1273,22 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   if( (total_length == HGC_localVolume3D) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
-
-  //PLEGMA_printf("before allocation\n");
   Float2<Float> *x;
   x=(Float2<Float> *)device_malloc(V*2*sizeof(Float));
-  //PLEGMA_printf("after allocation x=%p\n", x);
-
   //cudaMalloc((void**)&x, V*2*sizeof(Float));
-  //PLEGMA_printf("before memset\n");
   qudaMemset((void*) x,0,V*2*sizeof(Float));
-  //PLEGMA_printf("after memset\n");
-
   if(checkErr) checkQudaError();
   std::vector<Float> momF(mom.begin(), mom.end());
   
-  //PLEGMA_printf("before createMomField\n");
   cudaError_t err = cudaGetLastError();
-  PLEGMA_printf("CUDA before createMomField: %s\n", cudaGetErrorString(err));
-  
+  //PLEGMA_printf("CUDA before createMomField: %s\n", cudaGetErrorString(err));
   cudaDeviceSynchronize();
   err = cudaGetLastError();
-  PLEGMA_printf("CUDA sync before createMomField: %s\n", cudaGetErrorString(err));
+  //PLEGMA_printf("CUDA sync before createMomField: %s\n", cudaGetErrorString(err));
+  
   createMomField(x, momF, D3D4, sign);
-  //PLEGMA_printf("after createMomField\n");
-
-  //PLEGMA_printf("before elemWiseMul\n");
   for(int dof = 0; dof < field_length; dof++)
     plegma::elemWiseMul(V,(Float*) x, d_elem + dof*total_length*2);
-  //PLEGMA_printf("after elemWiseMul\n");
   device_free(x);
 }
 
