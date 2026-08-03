@@ -50,7 +50,7 @@ namespace plegma {
     private:
       int k;  // index for the coloring distance
       int Nc; // Number of colors = Number of Hadamard vectors
-      short d; // Number of dimension of Hprob (For now d=4)
+      short d; // Number of dimension of Hprobing (3 or 4)
       short D; // Distance of coloring D=2^k
       short Lu; // extent of the elementaty coloring block (assume symmetric block)
       int* h_arrVc; // array to hold the coloring of the lattice on HOST
@@ -58,25 +58,51 @@ namespace plegma {
       int* arrlc; // array to hold the elementary coloring block
       void createElemColBlock(){for(int i = 0; i < Nc; i++) arrlc[i]=i;}
       void createColLattice(){
-        std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]};
-        std::vector<int> lu = {Lu,Lu,Lu,Lu};
-        std::vector<int> bx(d);
-        std::vector<int> lx(d); 
+        std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]}; 
+        /*
+         * Only d dimensions enter the coloring.
+         *
+         * d = 3:
+         *   colored coordinates are x[0], x[1], x[2],
+         *   while x[3] is ignored.
+         *
+         * d = 4:
+         *   all four coordinates enter the coloring.
+         */
+        const std::vector<int> block_extents(d, Lu);
+        std::vector<int> block_position(d);
+        std::vector<int> position_in_block(d);
         for(size_t i=0; i < HGC_localVolume; i++){
-          std::vector<int> x = getIndToVec(i,lL);
-          for(int j = 0 ; j < d; j++) bx[j] = x[j]/lu[j];
-          int eo=0;
-          for(int j = 0 ; j < d; j++) eo += bx[j];
-          eo=eo & 1;
-          for(int j = 0 ; j < d; j++)  lx[j] = x[j] - lu[j] * bx[j];
-          h_arrVc[i] = arrlc[getVecToInd(lx,lu)*2+eo];
+          // Full four-dimensional coordinate
+          const std::vector<int> x = getIndToVec(static_cast<int>(i), lattice_extents);
+
+          int block_parity = 0;
+
+          for(int j = 0; j < d; j++){
+
+            block_position[j] = x[j] / Lu;
+
+            position_in_block[j] =
+                x[j] - Lu * block_position[j];
+
+            block_parity += block_position[j];
+          }
+
+          block_parity &= 1;
+
+          const int elementary_index =
+              getVecToInd(position_in_block, block_extents);
+
+          h_arrVc[i] =
+              arrlc[2 * elementary_index + block_parity];
         }
       }
       //  void checkColoring();
+      
     public:
       PLEGMA_Hprobing(int k_probing, int d=4):k(k_probing),Nc(0),d(d),D(0),Lu(0),h_arrVc(nullptr),d_arrVc(nullptr),arrlc(nullptr){
         if(!HGC_init_PLEGMA_flag){ fprintf(stderr, "Error PLEGMA should be initialized before use this class"); exit(-1);}
-        if(d != 4) PLEGMA_error("Hierarchical probing supports only 4D coloring up to now");
+        if(d != 4 && d != 3) PLEGMA_error("Hierarchical probing supports only 3D and 4D coloring");
         if(k<=0) PLEGMA_error("The index of the Hprobing should greater than zero");
         Nc = 2*std::pow(2,d*(k-1));
         D = std::pow(2,k);

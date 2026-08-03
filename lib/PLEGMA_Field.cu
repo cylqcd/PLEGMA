@@ -904,14 +904,14 @@ void PLEGMA_Field<FloatOut>::copy(PLEGMA_Field<FloatIn> &f, ALLOCATION_FLAG wher
 }
 
 template<typename Float>
-void PLEGMA_Field<Float>::applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof){
+void PLEGMA_Field<Float>::applyHprobColoring(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof){
   if(total_length != HGC_localVolume || fin.Total_length() != HGC_localVolume) PLEGMA_error("Probing for now works only for 4D fields");
   if(ih >= hprob.get_NHad()) PLEGMA_error("You have exceeded the size of the Hadamard matrix");
   copy(fin,DEVICE);
   for(int i = 0 ; i < Field_length(); i++){
     std::vector<int>::iterator it = std::find(indDof.begin(), indDof.end(), i);
     if(it != indDof.end()){
-      apply_hprob_coloring_4D(D_elem() + i*total_length*2, hprob.D_arrVc(), ih);
+      apply_hprob_coloring(D_elem() + i*total_length*2, hprob.D_arrVc(), ih);
     }
   }
 }

@@ -118,8 +118,8 @@ int main(int argc, char **argv)
 		for(int ih = hadamLow; ih < hadamHgh; ih++){
 			for(int isc = 0; isc < Nsc; isc++){
 				if(spinColorDil){ sourceDil->dilutespincolor(source,isc/N_COLS,isc%N_COLS);}
-				if(spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(*sourceDil,*hprob,ih,indDof);}
-				else if(!spinColorDil && k_probing>0){ sourceDil->applyHpropColoring4D(source,*hprob,ih,indDof);}
+				if(spinColorDil && k_probing>0){ sourceDil->applyHprobColoring(*sourceDil,*hprob,ih,indDof);}
+				else if(!spinColorDil && k_probing>0){ sourceDil->applyHprobColoring(source,*hprob,ih,indDof);}
 				if(spinColorDil || k_probing>0){
 					TIME(solver->solve(phi,*sourceDil)); 
 				} else {

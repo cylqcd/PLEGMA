@@ -382,7 +382,7 @@ struct HadCol{
 };
 
 template<typename Float>
-static void apply_hprob_coloring_4D(Float* d_elems, int *d_colors, int ih){
+static void apply_hprob_coloring(Float* d_elems, int *d_colors, int ih){
   // make sure before that is not a 3D field
   int V = HGC_localVolume;
   thrust::device_ptr<int> th_c(d_colors);
