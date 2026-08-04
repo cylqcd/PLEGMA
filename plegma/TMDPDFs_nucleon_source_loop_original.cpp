@@ -28,14 +28,10 @@ int main(int argc, char **argv)
   size_t nStout;
   HGC_options->set("nstout", "Number of stout smearing steps", verbosity, nStout);
   
-  std::string proj_unp;
-  HGC_options->set("which_projector_unpolarized", "Which projector to use for 3pt function", verbosity, proj_unp);
-  WHICHPROJECTOR which_proj_unp=get_projector(proj_unp.c_str());
-
-  std::string proj_pol;
-  HGC_options->set("which_projector_polarized", "Which projector to use for 3pt function", verbosity, proj_pol);
-  WHICHPROJECTOR which_proj_pol=get_projector(proj_pol.c_str());
-
+  std::string proj;
+  HGC_options->set("which_projector", "Which projector to use for 3pt function", verbosity, proj);
+  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
+  
   bool calc3pt = true;
   HGC_options->set("calc3pt", "If true then the 3pt function is computed", verbosity, calc3pt);
 
@@ -126,10 +122,8 @@ int main(int argc, char **argv)
   PLEGMA_Propagator<float> *propDN = new PLEGMA_Propagator<float>(BOTH);
   PLEGMA_Propagator<float> *propUP_SS = new PLEGMA_Propagator<float>(BOTH);
   PLEGMA_Propagator<float> *propDN_SS = new PLEGMA_Propagator<float>(BOTH);
-  PLEGMA_Propagator<float> *seqPropOut1_unp = new PLEGMA_Propagator<float>(BOTH);
-  PLEGMA_Propagator<float> *seqPropOut2_unp = new PLEGMA_Propagator<float>(BOTH);
-  PLEGMA_Propagator<float> *seqPropOut1_pol = new PLEGMA_Propagator<float>(BOTH);
-  PLEGMA_Propagator<float> *seqPropOut2_pol = new PLEGMA_Propagator<float>(BOTH);
+  PLEGMA_Propagator<float> *seqPropOut1 = new PLEGMA_Propagator<float>(BOTH);
+  PLEGMA_Propagator<float> *seqPropOut2 = new PLEGMA_Propagator<float>(BOTH);
   PLEGMA_Propagator<float> *propIn = new PLEGMA_Propagator<float>(BOTH);
   PLEGMA_Propagator<float> *propExchange = nullptr;
 
@@ -147,8 +141,7 @@ int main(int argc, char **argv)
     seqPropOut2[is] = new PLEGMA_Propagator<float>(BOTH);
   } */
   PLEGMA_Propagator<float> *prop1 = new PLEGMA_Propagator<float>(BOTH);
-  PLEGMA_Propagator<float> *prop2_unp = new PLEGMA_Propagator<float>(BOTH);
-  PLEGMA_Propagator<float> *prop2_pol = new PLEGMA_Propagator<float>(BOTH);
+  PLEGMA_Propagator<float> *prop2 = new PLEGMA_Propagator<float>(BOTH);
 
 #if 1
   PLEGMA_Su3field<float> *su3_1 = new PLEGMA_Su3field<float>(BOTH);
@@ -262,8 +255,8 @@ int main(int argc, char **argv)
 
           PLEGMA_Vector3D<float> vectorAux3D;
 
-          if(nucleon == PROTON) vectorAux3D.seqSourceNucleon(propUP3D, which_proj_unp, nucleon, nu, c2);
-          else vectorAux3D.seqSourceNucleon(propDN3D, which_proj_unp, nucleon, nu, c2);
+          if(nucleon == PROTON) vectorAux3D.seqSourceNucleon(propUP3D, which_proj, nucleon, nu, c2);
+          else vectorAux3D.seqSourceNucleon(propDN3D, which_proj, nucleon, nu, c2);
           vectorAux3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
           std::complex<float> Isingle(0,1);
           float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
@@ -281,45 +274,13 @@ int main(int argc, char **argv)
           solver->solve(vectorOut, vectorIn);
           vectorOut.cscale(norm);
           vectorAuxF.copy(vectorOut);
-          seqPropOut1_unp->absorb(vectorAuxF, nu, c2);
+          seqPropOut1->absorb(vectorAuxF, nu, c2);
         }//loop over color
 
       }//loop over spin
 
-      for(int nu = 0 ; nu < 4 ; nu++) {//loop over spin
-        for(int c2 = 0 ; c2 < 3 ; c2++) {//loop over color
-
-          PLEGMA_Vector3D<float> vectorAux3D;
-
-          if(nucleon == PROTON) vectorAux3D.seqSourceNucleon(propUP3D, which_proj_pol, nucleon, nu, c2);
-          else vectorAux3D.seqSourceNucleon(propDN3D, which_proj_pol, nucleon, nu, c2);
-          vectorAux3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
-          std::complex<float> Isingle(0,1);
-          float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
-            + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-            + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-          vectorAux3D.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
-          vectorAux3D.conjugate();
-          vectorAux3D.apply_gamma(G5);
-          vectorAuxF.absorb(vectorAux3D, global_fixSinkTime);
-          vectorAuxD.copy(vectorAuxF);
-          vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
-
-          double norm = vectorIn.norm();
-          vectorIn.cscale(1/norm);
-          solver->solve(vectorOut, vectorIn);
-          vectorOut.cscale(norm);
-          vectorAuxF.copy(vectorOut);
-          seqPropOut1_pol->absorb(vectorAuxF, nu, c2);
-        }//loop over color
-
-      }//loop over spin
-      
-      
-      seqPropOut1_unp->apply_gamma(G5);
-      seqPropOut1_unp->conjugate();
-      seqPropOut1_pol->apply_gamma(G5);
-      seqPropOut1_pol->conjugate();
+      seqPropOut1->apply_gamma(G5);
+      seqPropOut1->conjugate();
 
     //} //loop over source positions
     int signProps1 = (nucleon == PROTON) ? -1: +1;
@@ -343,8 +304,8 @@ int main(int argc, char **argv)
   
           PLEGMA_Vector3D<float> vectorAux3D;
   
-          if(nucleon == PROTON) vectorAux3D.seqSourceNucleon(propUP3D, propDN3D, which_proj_unp, nucleon, nu, c2);
-          else vectorAux3D.seqSourceNucleon(propDN3D, propUP3D, which_proj_unp, nucleon, nu, c2);
+          if(nucleon == PROTON) vectorAux3D.seqSourceNucleon(propUP3D, propDN3D, which_proj, nucleon, nu, c2);
+          else vectorAux3D.seqSourceNucleon(propDN3D, propUP3D, which_proj, nucleon, nu, c2);
   
           vectorAux3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
           std::complex<float> Isingle(0,1);
@@ -363,48 +324,14 @@ int main(int argc, char **argv)
           solver->solve(vectorOut, vectorIn);
           vectorOut.cscale(norm);
           vectorAuxF.copy(vectorOut);
-          seqPropOut2_unp->absorb(vectorAuxF, nu, c2);
+          seqPropOut2->absorb(vectorAuxF, nu, c2);
   
         }//loop over color
 
       }//loop over spin
 
-      for(int nu = 0 ; nu < 4 ; nu++) {//loop over spin
-        for(int c2 = 0 ; c2 < 3 ; c2++) {//loop over color
-
-          PLEGMA_Vector3D<float> vectorAux3D;
-
-          if(nucleon == PROTON) vectorAux3D.seqSourceNucleon(propUP3D, propDN3D, which_proj_pol, nucleon, nu, c2);
-          else vectorAux3D.seqSourceNucleon(propDN3D, propUP3D, which_proj_pol, nucleon, nu, c2);
-
-          vectorAux3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
-          std::complex<float> Isingle(0,1);
-          float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
-            + ((float)sinkMom[1] * sourcePositions[isource][1])/HGC_totalL[1]
-            + ((float)sinkMom[2] * sourcePositions[isource][2])/HGC_totalL[2]);
-          vectorAux3D.cscale(std::exp<float>(+phase*Isingle)); // put momentum from the point source
-          vectorAux3D.conjugate();
-          vectorAux3D.apply_gamma(G5);
-          vectorAuxF.absorb(vectorAux3D, global_fixSinkTime);
-          vectorAuxD.copy(vectorAuxF);
-          vectorIn.gaussianSmearing(vectorAuxD,smearedGauge, nsmearGauss, alphaGauss);
-
-          double norm = vectorIn.norm();
-          vectorIn.cscale(1/norm);
-          solver->solve(vectorOut, vectorIn);
-          vectorOut.cscale(norm);
-          vectorAuxF.copy(vectorOut);
-          seqPropOut2_pol->absorb(vectorAuxF, nu, c2);
-
-        }//loop over color
-
-      }//loop over spin
-
-
-      seqPropOut2_unp->apply_gamma(G5);
-      seqPropOut2_unp->conjugate();
-      seqPropOut2_pol->apply_gamma(G5);
-      seqPropOut2_pol->conjugate();
+      seqPropOut2->apply_gamma(G5);
+      seqPropOut2->conjugate();
     //} //loop over source positions
 
     int signProps2 = (nucleon == PROTON) ? +1: -1;
@@ -473,20 +400,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -495,26 +422,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -523,66 +450,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B
@@ -623,20 +493,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -645,26 +515,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -673,65 +543,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B
@@ -803,20 +617,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, -l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, -l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -825,26 +639,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, -l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, -l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, -l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, -l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -853,65 +667,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, -l, b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, -l, b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, -l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, -l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, -l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, -l, b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B
@@ -952,20 +710,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, -l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, -l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -974,26 +732,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, -l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, -l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, -l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, -l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
@@ -1002,65 +760,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, -l, b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, -l, b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, -l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, -l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, -l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, -l, b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B
@@ -1132,20 +834,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1154,26 +856,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1182,65 +884,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B
@@ -1281,20 +927,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1303,26 +949,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1331,65 +977,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B
@@ -1461,20 +1051,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, -l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, -l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1483,26 +1073,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, -l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, -l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, -l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, -l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1511,65 +1101,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, -l, -b, z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, -l, -b, z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, -l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, -l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, -l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, -l, -b, z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B
@@ -1610,20 +1144,20 @@ int main(int argc, char **argv)
 
           if(nucleon == PROTON) prop1->copy(*propDN);
           else prop1->copy(*propUP);
-          prop2_unp->copy(*seqPropOut1_unp);
+          prop2->copy(*seqPropOut1);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps1, gammas, -l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps1, gammas, -l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1632,26 +1166,26 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps1, gammas, -l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps1, gammas, -l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
 
           if(nucleon == PROTON) prop1->copy(*propUP);
           else prop1->copy(*propDN);
-          prop2_unp->copy(*seqPropOut2_unp);
+          prop2->copy(*seqPropOut2);
           for(int zi = 0; zi < z; zi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_unp; prop2_unp = propExchange;
-            prop2_unp->shift(*propIn, 4 + WilsDir);
+            propExchange = propIn; propIn = prop2; prop2 = propExchange;
+            prop2->shift(*propIn, 4 + WilsDir);
           }
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir1);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL1, signProps2, gammas, -l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL1, signProps2, gammas, -l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           for(int bi = 0; bi < b; bi++) {
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, 4 + Bdir1);
@@ -1660,65 +1194,9 @@ int main(int argc, char **argv)
             propExchange = propIn; propIn = prop1; prop1 = propExchange;
             prop1->shift(*propIn, Bdir2);
           }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_unp, *prop1, *WL2, signProps2, gammas, -l, -b, -z);
+          corrThrpWL.contractNucleonThrp_staple(*prop2, *prop1, *WL2, signProps2, gammas, -l, -b, -z);
           if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_unp+".h5").c_str());
-
-	  if(nucleon == PROTON) prop1->copy(*propDN);
-          else prop1->copy(*propUP);
-          prop2_pol->copy(*seqPropOut1_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps1, gammas, -l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps1, gammas, -l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP1_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-
-          if(nucleon == PROTON) prop1->copy(*propUP);
-          else prop1->copy(*propDN);
-          prop2_pol->copy(*seqPropOut2_pol);
-          for(int zi = 0; zi < z; zi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, WilsDir);
-            propExchange = propIn; propIn = prop2_pol; prop2_pol = propExchange;
-            prop2_pol->shift(*propIn, 4 + WilsDir);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir1);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL1, signProps2, gammas, -l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir1)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, 4 + Bdir1);
-          }
-          for(int bi = 0; bi < b; bi++) {
-            propExchange = propIn; propIn = prop1; prop1 = propExchange;
-            prop1->shift(*propIn, Bdir2);
-          }
-          corrThrpWL.contractNucleonThrp_staple(*prop2_pol, *prop1, *WL2, signProps2, gammas, -l, -b, -z);
-          if(signPer < 0) for(int iv = 0 ; iv < corrThrpWL.getTotalSize()*2; iv++) corrThrpWL.H_elem()[iv] *= signPer;
-          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+"_proj_"+proj_pol+".h5").c_str());
+          corrThrpWL.writeHDF5( (threep_filename +".CP2_Bdir_"+std::to_string(Bdir2)+"_ts_"+std::to_string(tSinks[ts])+"_stout_"+std::to_string(nStout)+".h5").c_str());
           //delete corrThrpWL;
         //}//loop over source positions
       }//loop over values of B

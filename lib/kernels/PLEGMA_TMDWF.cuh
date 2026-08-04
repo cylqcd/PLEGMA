@@ -3,8 +3,10 @@ using namespace plegma;
 const int N_TMDWF_MESONS=1;
 // TODO: This is hard to extend. These variables should replaced by compile-time functions.
 const __device__ short int mesons_TMDWF_indices[N_TMDWF_MESONS][16][4] = {0,0,0,0,0,0,1,1,0,0,2,2,0,0,3,3,1,1,0,0,1,1,1,1,1,1,2,2,1,1,3,3,2,2,0,0,2,2,1,1,2,2,2,2,2,2,3,3,3,3,0,0,3,3,1,1,3,3,2,2,3,3,3,3};
+const __device__ short int mesons_TMDWF_indices2[N_TMDWF_MESONS][16][4] = {0,2,0,0,0,2,1,1,0,2,2,2,0,2,3,3,1,3,0,0,1,3,1,1,1,3,2,2,1,3,3,3,2,0,0,0,2,0,1,1,2,0,2,2,2,0,3,3,3,1,0,0,3,1,1,1,3,1,2,2,3,1,3,3};
 
 const __device__ float mesons_TMDWF_values[N_TMDWF_MESONS][16] = {-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,1,1,1,1,1};
+const __device__ float mesons_TMDWF_values2[N_TMDWF_MESONS][16] = {-1,-1,-1,-1,1,1,1,1,-1,-1,-1,-1,1,1,1,1};
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
@@ -43,6 +45,13 @@ __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
 	short int delta = mesons_TMDWF_indices[ip][is][3];
 	short int alpha = mesons_TMDWF_indices[ip][is][0];
 	FloatC value = mesons_TMDWF_values[ip][is];
+  short int beta2 = mesons_TMDWF_indices2[ip][is][2];
+	short int gamma2 = mesons_TMDWF_indices2[ip][is][1];
+	short int delta2 = mesons_TMDWF_indices2[ip][is][3];
+	short int alpha2 = mesons_TMDWF_indices2[ip][is][0];
+	Float2<float> value2;
+  value2.x = 0.;
+  value2.y = mesons_TMDWF_values2[ip][is];
 #pragma unroll
 	for(int a = 0 ; a < N_COLS ; a++){
 #pragma unroll
@@ -50,7 +59,7 @@ __global__ void contract_TMDWF_mesons_device( propTex<FloatA> texProp1,
 #pragma unroll
 	    for(int c = 0 ; c < N_COLS ; c++){
 	      accum[ip] = accum[ip] + value * prop1[alpha][beta][c][a] * conj(prop2[gamma][delta][b][a]) * staple[b][c];
-	      accum[N_TMDWF_MESONS+ip] = accum[N_TMDWF_MESONS+ip] + value * prop1[alpha][beta][c][a] * conj(prop2[gamma][delta][b][a]) * staple[b][c];
+	      accum[N_TMDWF_MESONS+ip] = accum[N_TMDWF_MESONS+ip] + value2 * prop1[alpha2][beta2][c][a] * conj(prop2[gamma2][delta2][b][a]) * staple[b][c];
 	    }
 	  }
 	}

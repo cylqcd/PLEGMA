@@ -94,6 +94,12 @@ target_link_libraries(TMDs_nucleon_p1 ${PLEGMA_LIBS})
 cuda_add_executable(TMDs_nucleon_p2 TMDs_nucleon_p2.cpp)
 target_link_libraries(TMDs_nucleon_p2 ${PLEGMA_LIBS})
 
+cuda_add_executable(TMDs_test TMDs_test.cpp)
+target_link_libraries(TMDs_test ${PLEGMA_LIBS})
+
+cuda_add_executable(PDF_staple PDF_staple.cpp)
+target_link_libraries(PDF_staple ${PLEGMA_LIBS})
+
 cuda_add_executable(staple staple.cpp)
 target_link_libraries(staple ${PLEGMA_LIBS})
 
@@ -112,6 +118,9 @@ target_link_libraries(SoftFunction ${PLEGMA_LIBS})
 cuda_add_executable(SoftFunction2 SoftFunction2.cpp)
 target_link_libraries(SoftFunction2 ${PLEGMA_LIBS})
 
+cuda_add_executable(SoftFunction_source_loop SoftFunction_source_loop.cpp)
+target_link_libraries(SoftFunction_source_loop ${PLEGMA_LIBS})
+
 cuda_add_executable(SoftFunction_new SoftFunction_new.cpp)
 target_link_libraries(SoftFunction_new ${PLEGMA_LIBS})
 
@@ -120,6 +129,9 @@ target_link_libraries(formfactor ${PLEGMA_LIBS})
 
 cuda_add_executable(TMDPDFs_nucleon TMDPDFs_nucleon.cpp)
 target_link_libraries(TMDPDFs_nucleon ${PLEGMA_LIBS})
+
+cuda_add_executable(TMDPDFs_nucleon_optim TMDPDFs_nucleon_optim.cpp)
+target_link_libraries(TMDPDFs_nucleon_optim ${PLEGMA_LIBS})
 
 cuda_add_executable(TMDPDFs_nucleon_source_loop TMDPDFs_nucleon_source_loop.cpp)
 target_link_libraries(TMDPDFs_nucleon_source_loop ${PLEGMA_LIBS})
