@@ -22,8 +22,6 @@ int main(int argc, char **argv)
 {
 	initializeOptions(argc, argv, true, listOpt);
 	//================ Add your options in this between initializeOptions and initializePLEGMA ================//
-	bool accumFlag = true;
-	int NdumpStep = 1;
 	std::string loopsPrefix="./";
 	int k_probing = 0;
 	HGC_options->set("k-probing", "Hierarchical probing, with distance D=2**k (Options:0,1,2,3,...) (0 means No probing)", verbosity, k_probing);
@@ -33,8 +31,6 @@ int main(int argc, char **argv)
 	bool spinColorDil = false;
 	int start_src = 0;
 	auto add_options = [&](Options& options) {
-		options.set("accum-loops", "Accumulate loops over the stochastic source vectors", verbosity, accumFlag);
-		options.set("dump-step", "If accumulation is ON, Every how many stochastic vector to dump results", verbosity, NdumpStep);
 		options.set("output-path", "Path to the directory to dump results", verbosity, loopsPrefix);
 		options.set("hadamard-low", "From which Hadamard vector to start (Options:[0,max))", verbosity, hadamLow);
 		options.set("hadamard-high", "Up to which Hadamard vector to stop (Options: 0>= , <=max) (default max)", verbosity, hadamHgh);
@@ -75,9 +71,6 @@ int main(int argc, char **argv)
 
 	applyBoundaryConditions(gauge,true);
 
-	if(!accumFlag) NdumpStep = 1;
-	if(accumFlag && (NdumpStep<1)) PLEGMA_error("dump-step should be >= 1");
-
 	// ensuring mu negative
 	if(mu>0) mu*=-1.;
   	QUDA_solver *solver = new QUDA_solver(mu);
@@ -108,7 +101,7 @@ int main(int argc, char **argv)
 	if(k_probing>0) hprob = new PLEGMA_Hprobing(k_probing);
 
 	int N_probes_h = (k_probing>0) ? (hadamHgh - hadamLow) : 1;
-	std::complex<double> scale_val = std::complex<double>(-1.0 / double(N_probes_h), 0.0);
+	std::complex<double> scale_val = std::complex<double>(-1.0, 0.0);
 	// PLEGMA_printf("DEBUG: hierarchical N_probes_h=%d scale_val=% .12e\n", N_probes_h, scale_val.real());
 
 	std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
@@ -116,6 +109,7 @@ int main(int argc, char **argv)
 		PLEGMA_printf("\n ### Calculations for source-position %d begin now ###\n\n", isrc);
     	source.stochastic_Z(2);
 		for(int ih = hadamLow; ih < hadamHgh; ih++){
+			qloops_std->clearAccumBuffs();
 			for(int isc = 0; isc < Nsc; isc++){
 				if(spinColorDil){ sourceDil->dilutespincolor(source,isc/N_COLS,isc%N_COLS);}
 				if(spinColorDil && k_probing>0){ sourceDil->applyHprobColoring(*sourceDil,*hprob,ih,indDof);}
@@ -133,14 +127,9 @@ int main(int argc, char **argv)
 				} else {
 					TIME(qloops_std->oneEnd_trick(phi, source, scale_val, true));
 				}
+
+				TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + options_tag, confID, corr_file_format, isrc, ih));
 			}
-		}
-      
-		if((isrc+1)%NdumpStep == 0){
-			TIME(qloops_std->dumpLoops(ft, loopsPrefix + tag + options_tag, confID, corr_file_format, isrc));
-		}
-		if(!accumFlag){ // In case we do not accumulate we clear the buffers
-			qloops_std->clearAccumBuffs();
 		}
   	}
 

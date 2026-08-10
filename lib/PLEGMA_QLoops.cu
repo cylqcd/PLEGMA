@@ -473,6 +473,86 @@ void PLEGMA_QLoops<Float>::dumpLoops(PLEGMA_FT<Float>* ft[2],
   }
 }
 
+template<typename Float>
+void PLEGMA_QLoops<Float>::dumpLoops(PLEGMA_FT<Float>* ft[2],
+                                     std::string filenamePrefix,
+                                     std::string confID,
+                                     FILE_FORMAT format,
+                                     int isc,
+                                     int ih
+                                    )
+{ 
+  using sv = std::vector<std::string>;
+  if (format != ASCII_FORMAT && format != HDF5_FORMAT)
+    PLEGMA_error("This executable can write only in ascii and hdf5 format");
+
+  const std::string suffix = (format == ASCII_FORMAT) ? ".dat" : ".h5";
+  const std::string fname_base =
+    (isc >= 0 && ih >= 0)
+    ? join(sv({
+        "Conf" + confID,
+        "Ns" + std::to_string(isc),
+        "Nh" + std::to_string(ih)
+      }), "/")
+    : (isc >= 0)
+    ? join(sv({
+        "Conf" + confID,
+        "Ns" + std::to_string(isc)
+      }), "/")
+    : join(sv({
+        "Conf" + confID
+      }), "/");
+
+  this->load(this->H_loc());
+  ft[0]->apply(*this, FT_GEMV);
+  {
+    std::string fnameUl = fname_base + join(sv({"localLoops","loop"}), "/");
+    ft[0]->writeFile((format == HDF5_FORMAT)
+      ? filenamePrefix + suffix + fnameUl
+      : filenamePrefix + findAndReplace(fnameUl,'/','_') + suffix, format);
+  }
+
+  if (this->IsOneD()) {
+    for (int mu = 0; mu < N_DIMS; ++mu) {
+      {
+        std::string fnameOneD = fname_base + join(sv({"oneD","dir"+std::to_string(mu),"loop"}), "/");
+        this->load(this->H_oneD()[mu]);
+        ft[0]->apply(*this, FT_GEMV);
+        ft[0]->scale(0.25);
+        ft[0]->writeFile((format == HDF5_FORMAT)
+          ? filenamePrefix + suffix + fnameOneD
+          : filenamePrefix + findAndReplace(fnameOneD,'/','_') + suffix, format);
+      }
+      {
+        std::string fnameOneDC = fname_base + join(sv({"oneDC","dir"+std::to_string(mu),"loop"}), "/");
+        this->load(this->H_oneDC()[mu]);
+        ft[0]->apply(*this, FT_GEMV);
+        ft[0]->scale(0.25);
+        ft[0]->writeFile((format == HDF5_FORMAT)
+          ? filenamePrefix + suffix + fnameOneDC
+          : filenamePrefix + findAndReplace(fnameOneDC,'/','_') + suffix, format);
+      }
+    }
+  }
+
+  if (this->IsTwoD()) {
+    int count = 0;
+    for (auto munu : this->get_twoD_index()) {
+      int mu = std::get<0>(munu), nu = std::get<1>(munu);
+      std::string fnameTwoD =
+        fname_base + join(sv({"twoD","dirs"+std::to_string(mu)+std::to_string(nu),"loop"}), "/");
+
+      this->load(this->H_twoD()[count]);
+      ft[1]->apply(*this, FT_GEMV);
+      if (mu != 3 && nu != 3) ft[1]->scale(0.25);
+      else                    ft[1]->scale(0.125);
+      ft[1]->writeFile((format == HDF5_FORMAT)
+        ? filenamePrefix + suffix + fnameTwoD
+        : filenamePrefix + findAndReplace(fnameTwoD,'/','_') + suffix, format);
+      ++count;
+    }
+  }
+}
 
 template class PLEGMA_QLoops<float>;
 template class PLEGMA_QLoops<double>;
