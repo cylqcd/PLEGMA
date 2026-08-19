@@ -58,7 +58,7 @@ namespace plegma {
       int* arrlc; // array to hold the elementary coloring block
       void createElemColBlock(){for(int i = 0; i < Nc; i++) arrlc[i]=i;}
       void createColLattice(){
-        std::vector<int> lL = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]}; 
+        std::vector<int> lattice_extents = {HGC_localL[0], HGC_localL[1], HGC_localL[2], HGC_localL[3]}; 
         /*
          * Only d dimensions enter the coloring.
          *

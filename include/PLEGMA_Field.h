@@ -155,7 +155,7 @@ namespace plegma {
     void scale(Float val);
     void cscale(std::complex<Float> val);
     
-    void applyHpropColoring4D(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
+    void applyHprobColoring(PLEGMA_Field<Float> &fin,PLEGMA_Hprobing &hprob, int ih, std::vector<int> indDof);
 
     void applyCprobColoring(PLEGMA_Field<Float> &fin,PLEGMA_Cprobing &cprob,int color_index,const std::vector<int> &indDof);
 
