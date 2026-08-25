@@ -13,6 +13,9 @@
 #include <io/PLEGMA_lime.h>
 #include <comm_quda.h>
 #include <communicator_quda.h>
+#include <malloc_quda.h>
+#include <quda_api.h>
+#include <device.h>
 using namespace plegma;
 
 #define DEVICE_MEMORY_REPORT
@@ -44,7 +47,9 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
   site_shape = {field_l};
 
   ghost_length = 0;
+  single_ghost_length = 0;
   ghost_corner_length = 0;
+  single_corner_length = 0;
   ghost_vertex_length = 0;
   
   if(ghost_flag>NO_GHOSTS) {
@@ -53,6 +58,9 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
     if(vol_l==HGC_localVolume) {
       for(int i = 0 ; i < N_DIMS ; i++){
 	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i];
+        if(ghost_flag >= SECOND_SIDE) ghost_length += 2*HGC_surface3D[i];
+        if(ghost_flag >= THIRD_SIDE) ghost_length += 2*HGC_surface3D[i];
+
 	for(int j = i+1; j < N_DIMS; j++){
 	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[OFF2(i,j)];
 	  for(int k = j+1; k < N_DIMS; k++){
@@ -60,23 +68,32 @@ initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l) {
 	  }	
 	}
       }
-      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == HGC_sideGhostVolume);
-      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == HGC_cornerGhostVolume);
+      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == (ghost_flag >= THIRD_SIDE ? 3 : ghost_flag >= SECOND_SIDE ? 2 : 1)*HGC_sideGhostVolume);
+      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == (ghost_flag >= SECOND_CORNER ? 3 : 1)*HGC_cornerGhostVolume);
       if(ghost_flag >= FIRST_VERTEX) assert(ghost_vertex_length == HGC_vertexGhostVolume);
-    } else if(vol_l==HGC_localVolume3D) {
+  } else if(vol_l==HGC_localVolume3D) {
       for(int i = 0 ; i < N_DIMS-1 ; i++){
-	if(ghost_flag >= FIRST_SIDE) ghost_length += 2*HGC_surface3D[i]/HGC_localL[DIM_T];
+	if(ghost_flag >= FIRST_SIDE) {
+          ghost_length += 2*HGC_surface3D[i]/HGC_localL[DIM_T];
+          single_ghost_length += 2*HGC_surface3D[i]/HGC_localL[DIM_T];
+        }
+        if(ghost_flag >= SECOND_SIDE) ghost_length += 2*HGC_surface3D[i]/HGC_localL[DIM_T];
+        if(ghost_flag >= THIRD_SIDE) ghost_length += 2*HGC_surface3D[i]/HGC_localL[DIM_T];
 	for(int j = i+1; j < N_DIMS-1; j++){
-	  if(ghost_flag >= FIRST_CORNER) ghost_corner_length += 4*HGC_surface2D[OFF2(i,j)]/HGC_localL[DIM_T];
+	  if(ghost_flag >= FIRST_CORNER){
+            ghost_corner_length += 4*HGC_surface2D[OFF2(i,j)]/HGC_localL[DIM_T];
+            single_corner_length += 4*HGC_surface2D[OFF2(i,j)]/HGC_localL[DIM_T];
+          }
+          if(ghost_flag >= SECOND_CORNER) ghost_corner_length += 8*HGC_surface2D[OFF2(i,j)]/HGC_localL[DIM_T];
 	  for(int k = j+1; k < N_DIMS-1; k++){
 	    if(ghost_flag >= FIRST_VERTEX) ghost_vertex_length += 8*HGC_surface1D[OFF3(i,j,k)]/HGC_localL[DIM_T];
 	  }	
 	}
       }
-      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == HGC_sideGhostVolume3D);
-      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == HGC_cornerGhostVolume3D);
+      if(ghost_flag >= FIRST_SIDE) assert(ghost_length == (ghost_flag >= THIRD_SIDE ? 3 : ghost_flag >= SECOND_SIDE ? 2 : 1)*HGC_sideGhostVolume3D);
+      if(ghost_flag >= FIRST_CORNER) assert(ghost_corner_length == (ghost_flag >= SECOND_CORNER ? 3 : 1)*HGC_cornerGhostVolume3D);
       if(ghost_flag >= FIRST_VERTEX) assert(ghost_vertex_length == HGC_vertexGhostVolume3D);
-    }
+   }
   }
   
   if( alloc_flag == BOTH ){
@@ -129,16 +146,16 @@ PLEGMA_Field<Float>::PLEGMA_Field(ALLOCATION_FLAG alloc_flag, CLASS_ENUM classT,
     field_name = "PLEGMA_GAUGE";
     setSiteShape({N_DIMS, N_COLS, N_COLS});
     break;    
-  case U1GAUGE:
-    initialize(alloc_flag, N_DIMS, HGC_localVolume);
-    field_name = "PLEGMA_U1GAUGE";
-    setSiteShape({N_DIMS});
-    break;    
   case GAUGE3D:
     initialize(alloc_flag, N_DIMS * N_COLS * N_COLS, HGC_localVolume3D);
     field_name = "PLEGMA_GAUGE3D";
     setSiteShape({N_DIMS, N_COLS, N_COLS});
     break;
+  case GAUGEU1:
+    initialize(alloc_flag, N_DIMS, HGC_localVolume);
+    field_name = "PLEGMA_GAUGEU1";
+    setSiteShape({N_DIMS});
+    break;    
   case VECTOR:
     initialize(alloc_flag, N_SPINS * N_COLS, HGC_localVolume);
     field_name = "PLEGMA_VECTOR";
@@ -205,14 +222,14 @@ void PLEGMA_Field<Float>::unpack(Float *out){
 template<typename Float>
 void PLEGMA_Field<Float>::load(){
   if(allocation != BOTH) PLEGMA_error("Load from Host to Device needs BOTH allocation");
-  cudaMemcpy(d_elem, h_elem, Bytes_total(), cudaMemcpyHostToDevice );
+  qudaMemcpy(d_elem, h_elem, Bytes_total(), qudaMemcpyHostToDevice );
   if(checkErr) checkQudaError();
 }
 
 template<typename Float>
 void PLEGMA_Field<Float>::unload() const{
   if(allocation != BOTH) PLEGMA_error("Unload from Device to Host needs BOTH allocation");
-  cudaMemcpy(h_elem, d_elem, Bytes_total(), cudaMemcpyDeviceToHost);
+  qudaMemcpy(h_elem, d_elem, Bytes_total(), qudaMemcpyDeviceToHost);
   if(checkErr) checkQudaError();
 }
 
@@ -227,8 +244,8 @@ void PLEGMA_Field<Float>::create_host(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::create_device(){
-//  d_elem=(Float *)device_malloc(Bytes_total_plus_ghost());
-  cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
+  d_elem=(Float *)device_malloc(Bytes_total_plus_ghost());
+  //cudaMalloc((void**)&d_elem,Bytes_total_plus_ghost());
   if(checkErr) checkQudaError();
 #ifdef DEVICE_MEMORY_REPORT
   // device memory in MB
@@ -276,7 +293,7 @@ void PLEGMA_Field<Float>::destroy_host(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::destroy_device(){
-  cudaFree(d_elem);
+  device_free(d_elem);
   if(checkErr) checkQudaError();
   d_elem = NULL;
 #ifdef DEVICE_MEMORY_REPORT
@@ -321,7 +338,7 @@ void PLEGMA_Field<Float>::zero_host(){
 
 template<typename Float>
 void PLEGMA_Field<Float>::zero_device(){
-  if(isAllocDevice)cudaMemset(d_elem,0,Bytes_total_plus_ghost());
+  if(isAllocDevice)qudaMemset(d_elem,0,Bytes_total_plus_ghost());
 }
 
 template<typename Float>
@@ -402,11 +419,12 @@ void PLEGMA_Field<Float>::printInfo(){
   PLEGMA_printf("The flag for the device allocation is %d\n",(int) isAllocDevice);
 }
 
+
 template<typename Float>
 void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
   assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
-  
+
   if(ghost_flag < FIRST_SIDE)
     PLEGMA_error("First side ghosts have not been allocated.\n");
   if(dir<-1 || dir>=N_DIMS)
@@ -418,30 +436,52 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
   bool runT = Total_length()==HGC_localVolume;
   size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
 
-  if(action==START || action==DO_ALL)
-    for(short i=0; i<N_DIMS; i++)
-      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
-	for(short s = 0; s < DIR_BOTH; s++)
-	  if(sign == s || sign==DIR_BOTH){
-	    // collecting elements from device
-	    copy_side_to_ghost(toField2<pFloat2>(*this), i, s);
+  if(action==START || action==DO_ALL) {
+    for(short i=0; i<N_DIMS; i++){
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+        for(short s = 0; s < DIR_BOTH; s++){
+          if(sign == s || sign==DIR_BOTH){
+            // collecting elements from device
+            #ifdef GPU_DIRECT
+            copy_side_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, s, FIRST_SIDE);
+            #else
+            copy_side_to_ghost(toField2<pFloat2>(*this), i, s, FIRST_SIDE);
+            #endif
+          }
+        }
+      }
+    }
+    cudaDeviceSynchronize();
+    if(checkErr) checkQudaError();
+    for(short i=0; i<N_DIMS; i++){
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+        for(short s = 0; s < DIR_BOTH; s++){
+          if(sign == s || sign==DIR_BOTH){
+            size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
 
-	    Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	    Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
-	    Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
-	    int disp;
-	    size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
-	    
-	    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-	    if(checkErr) checkQudaError();
-	      
-	    disp = (s==DIR_PLUS) ? +1 : -1;
-	    messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
-	    comm_start(messages.back());
-	    disp *= -1;
-	    messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
-	    comm_start(messages.back());
-	  }
+            #ifdef GPU_DIRECT
+            Float *pointer_receive = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
+            Float *pointer_send = d_ext_ghost+HGC_sideGhost[i][s]/scaleT*field_length*2;
+            #else
+            Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
+            Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
+            Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
+            cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+            #endif
+
+            int disp;
+            disp = (s==DIR_PLUS) ? +1 : -1;
+            messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
+            comm_start(messages.back());
+            disp *= -1;
+            messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
+            comm_start(messages.back());
+          }
+        }
+      }
+    }
+    if(checkErr) checkQudaError();
+  }
   if(action==FINISH || action==DO_ALL) {
     // waiting for communications
     while (! messages.empty()) {
@@ -449,24 +489,222 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
       comm_free(messages.back());
       messages.pop_back();
     }
+    #ifndef GPU_DIRECT
     //copying to device
     if(isAll && sign==DIR_BOTH) {
       Float *host = h_ext_ghost_r;
       Float *device = d_elem+total_length*field_length*2;
-      cudaMemcpy(device, host, Bytes_ghost(),cudaMemcpyHostToDevice);
+      cudaMemcpy(device, host, Bytes_singleghost(),cudaMemcpyHostToDevice);
       if(checkErr) checkQudaError();
     } else {
-      for(short i=0; i<N_DIMS; i++)
-	if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
-	  for(short s = 0; s < DIR_BOTH; s++)
-	    if(sign == s || sign==DIR_BOTH){
-	      Float *host = h_ext_ghost_r + HGC_sideGhost[dir][s]/scaleT*field_length*2;
-	      Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length)*field_length*2;
-	      cudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
-			 cudaMemcpyHostToDevice);
-	      if(checkErr) checkQudaError();
-	    }
+      for(short i=0; i<N_DIMS; i++){
+        if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+          for(short s = 0; s < DIR_BOTH; s++){
+            if(sign == s || sign==DIR_BOTH){
+              Float *host = h_ext_ghost_r + HGC_sideGhost[dir][s]/scaleT*field_length*2;
+              Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length)*field_length*2;
+              cudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
+                         cudaMemcpyHostToDevice);
+              if(checkErr) checkQudaError();
+            }
+          }
+        }
+      }
     }
+    #endif
+  }
+}
+
+template<typename Float>
+void PLEGMA_Field<Float>::communicateSecondSideGhost(short dir, ORIENTATION sign, ACTION action){
+  if(comm_size() == 1) return;
+  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+
+  if(ghost_flag < SECOND_SIDE)
+    PLEGMA_error("Second side ghosts have not been allocated.\n");
+  if(dir<-1 || dir>=N_DIMS)
+    PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
+  if(sign<0 || sign>DIR_BOTH)
+    PLEGMA_error("Directions should be an orientation enum");
+
+  bool isAll = (dir<0) ? true:false;
+  bool runT = Total_length()==HGC_localVolume;
+  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+
+  if(action==START || action==DO_ALL) {
+    for(short i=0; i<N_DIMS; i++){
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+        for(short s = 0; s < DIR_BOTH; s++){
+          if(sign == s || sign==DIR_BOTH){
+            // collecting elements from device
+            #ifdef GPU_DIRECT
+            copy_side_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, s, SECOND_SIDE);
+            #else
+            copy_side_to_ghost(toField2<pFloat2>(*this), i, s, SECOND_SIDE);
+            #endif
+          }
+        }
+      }
+    }
+    cudaDeviceSynchronize();
+    if(checkErr) checkQudaError();
+    for(short i=0; i<N_DIMS; i++){
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+        for(short s = 0; s < DIR_BOTH; s++){
+          if(sign == s || sign==DIR_BOTH){
+            size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
+
+            #ifdef GPU_DIRECT
+            Float *pointer_receive = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length+single_ghost_length+single_corner_length+ghost_vertex_length)*field_length*2;
+            Float *pointer_send = d_ext_ghost+(HGC_sideGhost[i][s]/scaleT+single_ghost_length+single_corner_length+ghost_vertex_length)*field_length*2;
+            #else
+            Float *pointer_receive = h_ext_ghost_r+(HGC_sideGhost[i][s]/scaleT+single_ghost_length)*field_length*2;
+            Float *pointer_send = h_ext_ghost_s+(HGC_sideGhost[i][s]/scaleT+single_ghost_length)*field_length*2;
+            Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length+single_ghost_length+single_corner_length+ghost_vertex_length)*field_length*2;
+            cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+            #endif
+
+            int disp;
+            disp = (s==DIR_PLUS) ? +1 : -1;
+            messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
+            comm_start(messages.back());
+            disp *= -1;
+            messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
+            comm_start(messages.back());
+          }
+        }
+      }
+    }
+    if(checkErr) checkQudaError();
+  }
+  if(action==FINISH || action==DO_ALL) {
+    // waiting for communications
+    while (! messages.empty()) {
+      comm_wait(messages.back());
+      comm_free(messages.back());
+      messages.pop_back();
+    }
+    #ifndef GPU_DIRECT
+    //copying to device
+    if(isAll && sign==DIR_BOTH) {
+      Float *host = h_ext_ghost_r+single_ghost_length*field_length*2;
+      Float *device = d_elem+(total_length+single_ghost_length+single_corner_length+ghost_vertex_length)*field_length*2;
+      cudaMemcpy(device, host, Bytes_singleghost(),cudaMemcpyHostToDevice);
+      if(checkErr) checkQudaError();
+    } else {
+      for(short i=0; i<N_DIMS; i++){
+        if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+          for(short s = 0; s < DIR_BOTH; s++){
+            if(sign == s || sign==DIR_BOTH){
+              Float *host = h_ext_ghost_r + (HGC_sideGhost[dir][s]/scaleT+single_ghost_length)*field_length*2;
+              Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length+single_ghost_length+single_corner_length+ghost_vertex_length)*field_length*2;
+              cudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
+                         cudaMemcpyHostToDevice);
+              if(checkErr) checkQudaError();
+            }
+          }
+        }
+      }
+    }
+    #endif
+  }
+}
+
+
+
+
+template<typename Float>
+void PLEGMA_Field<Float>::communicateThirdSideGhost(short dir, ORIENTATION sign, ACTION action){
+  if(comm_size() == 1) return;
+  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+
+  if(ghost_flag < THIRD_SIDE)
+    PLEGMA_error("Third side ghosts have not been allocated.\n");
+  if(dir<-1 || dir>=N_DIMS)
+    PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
+  if(sign<0 || sign>DIR_BOTH)
+    PLEGMA_error("Directions should be an orientation enum");
+
+  bool isAll = (dir<0) ? true:false;
+  bool runT = Total_length()==HGC_localVolume;
+  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+
+  if(action==START || action==DO_ALL) {
+    for(short i=0; i<N_DIMS; i++){
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+        for(short s = 0; s < DIR_BOTH; s++){
+          if(sign == s || sign==DIR_BOTH){
+            // collecting elements from device
+            #ifdef GPU_DIRECT
+            copy_side_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, s, THIRD_SIDE);
+            #else
+            copy_side_to_ghost(toField2<pFloat2>(*this), i, s, THIRD_SIDE);
+            #endif
+          }
+        }
+      }
+    }
+    cudaDeviceSynchronize();
+    if(checkErr) checkQudaError();
+    for(short i=0; i<N_DIMS; i++){
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+        for(short s = 0; s < DIR_BOTH; s++){
+          if(sign == s || sign==DIR_BOTH){
+            size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
+
+            #ifdef GPU_DIRECT
+            Float *pointer_receive = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length+2*single_ghost_length+3*single_corner_length+ghost_vertex_length)*field_length*2;
+            Float *pointer_send = d_ext_ghost+(HGC_sideGhost[i][s]/scaleT+2*single_ghost_length+3*single_corner_length+ghost_vertex_length)*field_length*2;
+            #else
+            Float *pointer_receive = h_ext_ghost_r+(HGC_sideGhost[i][s]/scaleT+2*single_ghost_length)*field_length*2;
+            Float *pointer_send = h_ext_ghost_s+(HGC_sideGhost[i][s]/scaleT+2*single_ghost_length)*field_length*2;
+            Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length+2*single_ghost_length+3*single_corner_length+ghost_vertex_length)*field_length*2;
+            qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
+            #endif
+
+            int disp;
+            disp = (s==DIR_PLUS) ? +1 : -1;
+            messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
+            comm_start(messages.back());
+            disp *= -1;
+            messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
+            comm_start(messages.back());
+          }
+        }
+      }
+    }
+    if(checkErr) checkQudaError();
+  }
+  if(action==FINISH || action==DO_ALL) {
+    // waiting for communications
+    while (! messages.empty()) {
+      comm_wait(messages.back());
+      comm_free(messages.back());
+      messages.pop_back();
+    }
+    #ifndef GPU_DIRECT
+    //copying to device
+    if(isAll && sign==DIR_BOTH) {
+      Float *host = h_ext_ghost_r +2*single_ghost_length*field_length*2;
+      Float *device = d_elem+(total_length+2*single_ghost_length+3*single_corner_length+ghost_vertex_length)*field_length*2;
+      qudaMemcpy(device, host, Bytes_singleghost(),qudaMemcpyHostToDevice);
+      if(checkErr) checkQudaError();
+    } else {
+      for(short i=0; i<N_DIMS; i++){
+        if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) ){
+          for(short s = 0; s < DIR_BOTH; s++){
+            if(sign == s || sign==DIR_BOTH){
+              Float *host = h_ext_ghost_r + (HGC_sideGhost[dir][s]/scaleT+2*single_ghost_length)*field_length*2;
+              Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length+2*single_ghost_length+3*single_corner_length+ghost_vertex_length)*field_length*2;
+              qudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
+                         qudaMemcpyHostToDevice);
+              if(checkErr) checkQudaError();
+            }
+          }
+        }
+      }
+    }
+    #endif
   }
 }
 
@@ -474,7 +712,7 @@ template<typename Float>
 void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
   assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
-  
+
   if(ghost_flag < FIRST_CORNER)
     PLEGMA_error("First corner ghosts have not been allocated.\n");
   if(dir<-1 || dir>=N_DIMS)
@@ -488,36 +726,65 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
 
   std::vector<MsgHandle*> messages;
 
-  if(action==START || action==DO_ALL)
-    for(short i=0; i<N_DIMS; i++)
-      for(short j=i+1; j<N_DIMS; j++)
-	if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
-	    for(short s1 = 0; s1 < DIR_BOTH; s1++)
-	      for(short s2 = 0; s2 < DIR_BOTH; s2++)
-		if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
-		  // collecting elements from device
-		  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2);
-		  
-		  Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
-		  Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
-		  Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
-		  int disp[N_DIMS] = {0};
-		  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
+  if(action==START || action==DO_ALL) {
+    for(short i=0; i<N_DIMS; i++){
+      for(short j=i+1; j<N_DIMS; j++){
+        if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+          for(short s1 = 0; s1 < DIR_BOTH; s1++){
+            for(short s2 = 0; s2 < DIR_BOTH; s2++){
+              if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                // collecting elements from device
+                #ifdef GPU_DIRECT
+                copy_corner_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, j, s1, s2, FIRST_CORNER);
+                #else
+                copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2, FIRST_CORNER);
+                #endif
+              }
+            }
+          }
+        }
+      }
+    }
+    cudaDeviceSynchronize();
+    if(checkErr) checkQudaError();
+    for(short i=0; i<N_DIMS; i++){
+      for(short j=i+1; j<N_DIMS; j++){
+        if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+          for(short s1 = 0; s1 < DIR_BOTH; s1++){
+            for(short s2 = 0; s2 < DIR_BOTH; s2++){
+              if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
 
-		  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
-		  if(checkErr) checkQudaError();
-	    
-		  // communicating
-		  disp[i] = (s1==DIR_PLUS) ? +1 : -1;
-		  disp[j] = (s2==DIR_PLUS) ? +1 : -1;
-		  messages.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes)); 
-		  comm_start(messages.back());
-		  disp[i] *= -1;
-		  disp[j] *= -1;
-		  messages.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
-		  disp[i] = 0; disp[j] = 0;	  
-		  comm_start(messages.back());
-		}
+                #ifdef GPU_DIRECT
+                Float *pointer_receive = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+single_ghost_length)*field_length*2;
+                Float *pointer_send = d_ext_ghost + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+single_ghost_length)*field_length*2;
+
+                #else
+                Float *pointer_receive = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+                Float *pointer_send = h_ext_ghost_corner_s + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+                Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+single_ghost_length)*field_length*2;
+                cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+                #endif
+
+                // communicating
+                int disp[N_DIMS] = {0};
+                disp[i] = (s1==DIR_PLUS) ? +1 : -1;
+                disp[j] = (s2==DIR_PLUS) ? +1 : -1;
+                messages.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes));
+                comm_start(messages.back());
+                disp[i] *= -1;
+                disp[j] *= -1;
+                messages.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+                disp[i] = 0; disp[j] = 0;
+                comm_start(messages.back());
+              }
+            }
+          }
+        }
+      }
+    }
+    if(checkErr) checkQudaError();
+  }
   if(action==FINISH || action==DO_ALL) {
     // waiting for communications
     while (! messages.empty()) {
@@ -525,29 +792,278 @@ void PLEGMA_Field<Float>::communicateCornerGhost(short dir, ORIENTATION sign, AC
       comm_free(messages.back());
       messages.pop_back();
     }
+    #ifndef GPU_DIRECT
     //copying to device
     if(isAll && sign==DIR_BOTH) {
       Float *hostCorner = h_ext_ghost_corner_r;
-      Float *device = d_elem+(total_length+ghost_length)*field_length*2;
-      cudaMemcpy(device,hostCorner,Bytes_ghostCorner(),cudaMemcpyHostToDevice);
+      Float *device = d_elem+(total_length+single_ghost_length)*field_length*2;
+      cudaMemcpy(device,hostCorner,Bytes_singleCorner(),cudaMemcpyHostToDevice);
       if(checkErr) checkQudaError();
     } else {
-      for(short i=0; i<N_DIMS; i++)
-	for(short j=i+1; j<N_DIMS; j++)
-	  if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT))
-	      for(short s1 = 0; s1 < DIR_BOTH; s1++)
-		for(short s2 = 0; s2 < DIR_BOTH; s2++)
-		  if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
-		    Float *hostCorner = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
-		    Float *device = d_elem+(HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+ghost_length)*field_length*2;
-		    cudaMemcpy(device, hostCorner, HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
-			       cudaMemcpyHostToDevice);
-		    if(checkErr) checkQudaError();
-		  }
+      for(short i=0; i<N_DIMS; i++){
+        for(short j=i+1; j<N_DIMS; j++){
+          if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+            for(short s1 = 0; s1 < DIR_BOTH; s1++){
+              for(short s2 = 0; s2 < DIR_BOTH; s2++){
+                if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                  Float *hostCorner = h_ext_ghost_corner_r + HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT*field_length*2;
+                  Float *device = d_elem+(HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+single_ghost_length)*field_length*2;
+                  cudaMemcpy(device, hostCorner, HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
+                       cudaMemcpyHostToDevice);
+                  if(checkErr) checkQudaError();
+                }
+              }
+            }
+          }
+        }
+      }
     }
+    #endif
+  }
+}
+template<typename Float>
+void PLEGMA_Field<Float>::communicateSecondCornerGhost(short dir, ORIENTATION sign, ACTION action){
+  if(comm_size() == 1) return;
+  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+
+  if(ghost_flag < SECOND_CORNER)
+    PLEGMA_error("Second corner ghosts have not been allocated.\n");
+  if(dir<-1 || dir>=N_DIMS)
+    PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
+  if(sign<0 || sign>DIR_BOTH)
+    PLEGMA_error("Directions should be an orientation enum");
+
+  bool isAll = (dir<0) ? true:false;
+  bool runT = Total_length()==HGC_localVolume;
+  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+
+  std::vector<MsgHandle*> messages;
+
+  if(action==START || action==DO_ALL) {
+    for(short i=0; i<N_DIMS; i++){
+      for(short j=0; j<N_DIMS; j++){
+        if(i != j){
+          if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+            for(short s1 = 0; s1 < DIR_BOTH; s1++){
+              for(short s2 = 0; s2 < DIR_BOTH; s2++){
+                if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                  // collecting elements from device
+                  #ifdef GPU_DIRECT
+                  copy_corner_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, j, s1, s2, SECOND_CORNER);
+                  #else
+                  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2, SECOND_CORNER);
+                  #endif
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    cudaDeviceSynchronize();
+    if(checkErr) checkQudaError();
+    for(short i=0; i<N_DIMS; i++){
+      for(short j=0; j<N_DIMS; j++){
+        if(i != j){
+          if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+            for(short s1 = 0; s1 < DIR_BOTH; s1++){
+              for(short s2 = 0; s2 < DIR_BOTH; s2++){
+                if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
+
+                  #ifdef GPU_DIRECT
+                  Float *pointer_receive = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+                  Float *pointer_send = d_ext_ghost + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+
+                  #else
+                  Float *pointer_receive = h_ext_ghost_corner_r + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+(i<j ? 1:2)*single_corner_length)*field_length*2;
+                  Float *pointer_send = h_ext_ghost_corner_s + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+(i<j ? 1:2)*single_corner_length)*field_length*2;
+                  Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+                  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+                  #endif
+
+                  // communicating
+                  int disp[N_DIMS] = {0};
+                  disp[i] = (s1==DIR_PLUS) ? +1 : -1;
+                  disp[j] = (s2==DIR_PLUS) ? +1 : -1;
+                  messages.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes));
+                  comm_start(messages.back());
+                  disp[i] *= -1;
+                  disp[j] *= -1;
+                  messages.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+                  disp[i] = 0; disp[j] = 0;
+                  comm_start(messages.back());
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if(checkErr) checkQudaError();
+  }
+  if(action==FINISH || action==DO_ALL) {
+    // waiting for communications
+    while (! messages.empty()) {
+      comm_wait(messages.back());
+      comm_free(messages.back());
+      messages.pop_back();
+    }
+    #ifndef GPU_DIRECT
+    //copying to device
+    if(isAll && sign==DIR_BOTH) {
+      Float *hostCorner = h_ext_ghost_corner_r+single_corner_length*field_length*2;
+      Float *device = d_elem+(total_length+2*single_ghost_length+single_corner_length+ghost_vertex_length)*field_length*2;
+      cudaMemcpy(device,hostCorner,2*Bytes_singleCorner(),cudaMemcpyHostToDevice);
+      if(checkErr) checkQudaError();
+    } else {
+      for(short i=0; i<N_DIMS; i++){
+        for(short j=0; j<N_DIMS; j++){
+          if(i != j){
+            if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+              for(short s1 = 0; s1 < DIR_BOTH; s1++){
+                for(short s2 = 0; s2 < DIR_BOTH; s2++){
+                  if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                    Float *hostCorner = h_ext_ghost_corner_r + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+(i<j ? 1:2)*single_corner_length)*field_length*2;
+                    Float *device = d_elem+(HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+                    qudaMemcpy(device, hostCorner, HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
+                               qudaMemcpyHostToDevice);
+                    if(checkErr) checkQudaError();
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    #endif
   }
 }
 
+#if 0
+
+template<typename Float>
+void PLEGMA_Field<Float>::communicateSecondCornerGhost(short dir, ORIENTATION sign, ACTION action){
+  if(comm_size() == 1) return;
+  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+
+  if(ghost_flag < SECOND_CORNER)
+    PLEGMA_error("Second corner ghosts have not been allocated.\n");
+  if(dir<-1 || dir>=N_DIMS)
+    PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
+  if(sign<0 || sign>DIR_BOTH)
+    PLEGMA_error("Directions should be an orientation enum");
+
+  bool isAll = (dir<0) ? true:false;
+  bool runT = Total_length()==HGC_localVolume;
+  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+
+  std::vector<MsgHandle*> messages;
+
+  if(action==START || action==DO_ALL) {
+    for(short i=0; i<N_DIMS; i++){
+      for(short j=0; j<N_DIMS; j++){
+        if(i != j){
+          if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+            for(short s1 = 0; s1 < DIR_BOTH; s1++){
+              for(short s2 = 0; s2 < DIR_BOTH; s2++){
+                if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                  // collecting elements from device
+                  #ifdef GPU_DIRECT
+                  copy_corner_to_ghost_ext(toField2<pFloat2>(*this), d_ext_ghost, i, j, s1, s2, SECOND_CORNER);
+                  #else
+                  copy_corner_to_ghost(toField2<pFloat2>(*this), i, j, s1, s2, SECOND_CORNER);
+                  #endif
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    cudaDeviceSynchronize();
+    if(checkErr) checkQudaError();
+    for(short i=0; i<N_DIMS; i++){
+      for(short j=0; j<N_DIMS; j++){
+        if(i != j){
+          if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+            for(short s1 = 0; s1 < DIR_BOTH; s1++){
+              for(short s2 = 0; s2 < DIR_BOTH; s2++){
+                if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                  size_t nbytes = HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float);
+
+                  #ifdef GPU_DIRECT
+                  Float *pointer_receive = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+                  Float *pointer_send = d_ext_ghost + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+
+                  #else
+                  Float *pointer_receive = h_ext_ghost_corner_r + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+(i<j ? 1:2)*single_corner_length)*field_length*2;
+                  Float *pointer_send = h_ext_ghost_corner_s + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+(i<j ? 1:2)*single_corner_length)*field_length*2;
+                  Float *pointer_device = d_elem + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+                  cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+                  #endif
+
+                  // communicating
+                  int disp[N_DIMS] = {0};
+                  disp[i] = (s1==DIR_PLUS) ? +1 : -1;
+                  disp[j] = (s2==DIR_PLUS) ? +1 : -1;
+                  messages.push_back(comm_declare_receive_displaced(pointer_receive,disp,nbytes));
+                  comm_start(messages.back());
+                  disp[i] *= -1;
+                  disp[j] *= -1;
+                  messages.push_back(comm_declare_send_displaced(pointer_send,disp,nbytes));
+                  disp[i] = 0; disp[j] = 0;
+                  comm_start(messages.back());
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if(checkErr) checkQudaError();
+  }
+  if(action==FINISH || action==DO_ALL) {
+    // waiting for communications
+    while (! messages.empty()) {
+      comm_wait(messages.back());
+      comm_free(messages.back());
+      messages.pop_back();
+    }
+    #ifndef GPU_DIRECT
+    //copying to device
+    if(isAll && sign==DIR_BOTH) {
+      Float *hostCorner = h_ext_ghost_corner_r+single_corner_length*field_length*2;
+      Float *device = d_elem+(total_length+2*single_ghost_length+single_corner_length+ghost_vertex_length)*field_length*2;
+      cudaMemcpy(device,hostCorner,2*Bytes_singleCorner(),cudaMemcpyHostToDevice);
+      if(checkErr) checkQudaError();
+    } else {
+      for(short i=0; i<N_DIMS; i++){
+        for(short j=0; j<N_DIMS; j++){
+          if(i != j){
+            if( HGC_dimBreak[i] && HGC_dimBreak[j] && (dir == i || dir == j || isAll) && (j < N_DIMS-1 || runT)){
+              for(short s1 = 0; s1 < DIR_BOTH; s1++){
+                for(short s2 = 0; s2 < DIR_BOTH; s2++){
+                  if(sign == s1 || sign == s2 || sign==DIR_BOTH) {
+                    Float *hostCorner = h_ext_ghost_corner_r + (HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+(i<j ? 1:2)*single_corner_length)*field_length*2;
+                    Float *device = d_elem+(HGC_cornerGhost[OFF2SIGN(i,j,s1,s2)]/scaleT+total_length+2*single_ghost_length+(i<j ? 1:2)*single_corner_length+ghost_vertex_length)*field_length*2;
+                    cudaMemcpy(device, hostCorner, HGC_surface2D[OFF2(i,j)]/scaleT*field_length*2*sizeof(Float),
+                               cudaMemcpyHostToDevice);
+                    if(checkErr) checkQudaError();
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    #endif
+  }
+}
+
+#endif
 template<typename Float>
 void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
@@ -582,7 +1098,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		    int disp[N_DIMS] = {0};
 		    size_t nbytes = HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float);
 
-		    cudaMemcpy(pointer_send, pointer_device, nbytes, cudaMemcpyDeviceToHost);
+		    qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
 		    if(checkErr) checkQudaError();
 	    
 		    // communicating
@@ -609,7 +1125,7 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
     if(isAll && sign==DIR_BOTH) {
       Float *hostVertex = h_ext_ghost_vertex_r;
       Float *device = d_elem+(total_length+ghost_length)*field_length*2;
-      cudaMemcpy(device,hostVertex,Bytes_ghostVertex(),cudaMemcpyHostToDevice);
+      qudaMemcpy(device,hostVertex,Bytes_ghostVertex(),qudaMemcpyHostToDevice);
       if(checkErr) checkQudaError();
     } else {
       for(short i=0; i<N_DIMS; i++)
@@ -622,8 +1138,8 @@ void PLEGMA_Field<Float>::communicateVertexGhost(short dir, ORIENTATION sign, AC
 		    if(sign == s1 || sign == s2 || sign == s3 || sign==DIR_BOTH) {
 		      Float *hostVertex = h_ext_ghost_vertex_r + HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT*field_length*2;
 		      Float *device = d_elem+(HGC_vertexGhost[OFF3SIGN(i,j,k,s1,s2,s3)]/scaleT+total_length+ghost_length+ghost_corner_length)*field_length*2;
-		      cudaMemcpy(device, hostVertex, HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float),
-				 cudaMemcpyHostToDevice);
+		      qudaMemcpy(device, hostVertex, HGC_surface1D[OFF3(i,j,k)]/scaleT*field_length*2*sizeof(Float),
+				 qudaMemcpyHostToDevice);
 		      if(checkErr) checkQudaError();
 		  }
     }
@@ -645,8 +1161,16 @@ void PLEGMA_Field<Float>::communicateGhost(short dir, ORIENTATION sign, GHOST_FL
   if(which_ghost >= FIRST_VERTEX){
     communicateVertexGhost(dir, sign, action);
   }
+  if(which_ghost >= SECOND_SIDE){
+    communicateSecondSideGhost(dir, sign, action);
+  }
+  if(which_ghost >= SECOND_CORNER){
+    communicateSecondCornerGhost(dir, sign, action);
+  }
+  if(which_ghost >= THIRD_SIDE){
+    communicateThirdSideGhost(dir, sign, action);
+  }
 }
-
 template<typename Float>
 void PLEGMA_Field<Float>::conjugate(){
   // we have to make sure that we have the ghost
@@ -743,15 +1267,15 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
   Float2<Float> *x;
-  //x=((Float2<Float>) *)device_malloc(V*2*sizeof(Float));
-  cudaMalloc((void**)&x, V*2*sizeof(Float));
-  cudaMemset((void*) x,0,V*2*sizeof(Float));
+  x=(Float2<Float> *)device_malloc(V*2*sizeof(Float));
+  //cudaMalloc((void**)&x, V*2*sizeof(Float));
+  qudaMemset((void*) x,0,V*2*sizeof(Float));
   if(checkErr) checkQudaError();
   std::vector<Float> momF(mom.begin(), mom.end());
   createMomField(x, momF, D3D4, sign);
   for(int dof = 0; dof < field_length; dof++)
     plegma::elemWiseMul(V,(Float*) x, d_elem + dof*total_length*2);
-  cudaFree(x);
+  device_free(x);
 }
 
 template<typename Float>
@@ -801,8 +1325,8 @@ static void cudaCopyOrCast(PLEGMA_Field<FloatOut> &fieldOut, PLEGMA_Field<FloatI
   if(typeid(FloatIn) != typeid(FloatOut) )
     cudaCast(toField2<pFloat2>(fieldOut), toField2<pFloat2>(fieldIn));
   else
-    cudaMemcpy(fieldOut.D_elem(), fieldIn.D_elem(), fieldIn.Bytes_total(), 
-	       cudaMemcpyDeviceToDevice);
+    qudaMemcpy(fieldOut.D_elem(), fieldIn.D_elem(), fieldIn.Bytes_total(), 
+	       qudaMemcpyDeviceToDevice);
   checkQudaError();
 }
 
@@ -863,16 +1387,22 @@ void PLEGMA_Field<Float>::absorb(const PLEGMA_Field3D<Float> &field, int global_
   
   int my_it = global_it - HGC_procPosition[3] * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
-  if(not is_myIt) return;
-  
+
   size_t V4 = HGC_localVolume*2;
   size_t V3 = HGC_localVolume3D*2;
+  { 
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3 * sizeof(Float));
+    PLEGMA_memcpy(tempquda,tempquda,V3 * sizeof(Float),qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+  }
+  if(not is_myIt) return;
+  
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
   for(int i = 0; i < this->Field_length(); i++) {
     pointer_src = (field.D_elem() + i*V3);
     pointer_dst = (this->D_elem() + i*V4 + my_it*V3);
-    cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
+    PLEGMA_memcpy(pointer_dst, pointer_src, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
   }
   checkQudaError();
 }
@@ -1005,7 +1535,7 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
   if(!srcfield.IsAllocDevice()) PLEGMA_error("This function needs allocation of input field on the device to work\n");
   
   if(global_it >= HGC_totalL[3]) PLEGMA_error("The global time slice you provided exceed the temporal extent\n");
-  if( this->field_name.compare(srcfield.Field_name()) != 0) PLEGMA_error("Fields types does not match\n");
+  if( this->field_name.compare(srcfield.Field_name()) != 0) PLEGMA_error("Fields types does not match %s %s \n",this->field_name.c_str(),srcfield.Field_name().c_str());
 
   //check dimensions
   
@@ -1016,14 +1546,24 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
 
+  static bool init_absorbTimeslice = false;
+
+  if (!init_absorbTimeslice) {
+    Float2<Float> *tempquda=(Float2<Float> *)device_malloc(V3*2 * sizeof(Float));
+    PLEGMA_memcpy(tempquda, tempquda, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    device_free(tempquda);
+    init_absorbTimeslice=true;
+  }
+
 
   for(int i = 0 ; i < this->field_length; i++){
-    if( forcetozero )
-      cudaMemset( this->d_elem + i*V4*2, 0, V4*2*sizeof(Float));
+    if( forcetozero ){
+      qudaMemset( this->d_elem + i*V4*2, 0, V4*2*sizeof(Float));
+    }
     if(is_myIt){
       pointer_dst = (this->d_elem + i*V4*2 + my_it*V3*2);
       pointer_src = (srcfield.D_elem() + i*V4*2 + my_it*V3*2);
-      cudaMemcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      PLEGMA_memcpy(pointer_dst, pointer_src, V3*2 * sizeof(Float), qudaMemcpyDeviceToDevice);
     }
   }
   comm_barrier();
@@ -1072,22 +1612,41 @@ void PLEGMA_Field3D<Float>::absorb(const PLEGMA_Field<Float> &field, int global_
   size_t V4 = HGC_localVolume*2;
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
+
+  static bool init_absorb_vec3D_vec4D = false;
+  if (!init_absorb_vec3D_vec4D) 
+  {
+
+    Float2<Float> *tmpquda=(Float2<Float> *)device_malloc(V3 * sizeof(Float));
+    Float *tmphost=(Float*)malloc(sizeof(Float)*V3);
+    if (broadcast ==true){
+      PLEGMA_memcpy(tmphost, tmpquda, V3 * sizeof(Float), qudaMemcpyDeviceToHost);
+      PLEGMA_memcpy(tmpquda, tmphost, V3 * sizeof(Float), qudaMemcpyHostToDevice);
+    }
+    PLEGMA_memset(tmpquda, 0, V3 * sizeof(Float));
+    PLEGMA_memcpy(tmpquda, tmpquda, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
+    device_free(tmpquda);
+    free(tmphost);
+    init_absorb_vec3D_vec4D=true;
+  }
+
+
   for(int i = 0; i < this->Field_length(); i++) {
     pointer_dst = (this->D_elem() + i*V3);
     if(this->activeTimeSlice) {
       pointer_src = (field.D_elem() + i*V4 + my_it*V3);
-      cudaMemcpy(pointer_dst, pointer_src, V3 * sizeof(Float), cudaMemcpyDeviceToDevice);
+      PLEGMA_memcpy(pointer_dst, pointer_src, V3 * sizeof(Float), qudaMemcpyDeviceToDevice);
     }
     if (broadcast == true){
       int time_rank=global_it/HGC_localL[3];
       Float *temp=(Float *)malloc(sizeof(Float)*V3);
-      cudaMemcpy(temp, pointer_dst, V3* sizeof(Float), cudaMemcpyDeviceToHost);
+      PLEGMA_memcpy(temp, pointer_dst, V3* sizeof(Float), qudaMemcpyDeviceToHost);
       MPI_Bcast(temp, V3 , MPI_Type<Float>(), time_rank, HGC_timeComm);
-      cudaMemcpy(pointer_dst, temp, V3* sizeof(Float), cudaMemcpyHostToDevice);
+      PLEGMA_memcpy(pointer_dst, temp, V3* sizeof(Float), qudaMemcpyHostToDevice);
       free(temp);
     }
     if (broadcast == false && !(this->activeTimeSlice)){
-      cudaMemset(pointer_dst, 0, V3 * sizeof(Float));
+      PLEGMA_memset(pointer_dst, 0, V3 * sizeof(Float));
     }
   }
   checkQudaError();

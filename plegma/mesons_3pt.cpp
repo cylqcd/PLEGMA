@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
                                  {  // absorbing the source and put momentum to the sink
                                    PLEGMA_Vector3D<double> vector1,vector2;
                                    vector1.absorb(vectorSource_oet,sourcePositions[isource][DIM_T]);
-                                   vector1.mulMomentumPhases(sourceMom,-1);
+                                   vector1.mulMomentumPhases(sourceMom,+1);
 
 				   TIME(vector2.gaussianSmearing(vector1, smearedGauge3D, nSmear0, alphaGauss));
 
@@ -592,7 +592,7 @@ int main(int argc, char **argv) {
                        PLEGMA_Vector3D<float> vectorAuxF;
                        vectorAuxF.copy(prop);
 
-                       vectorAuxF.mulMomentumPhases(momentum_f1,-1); // put momentum at the sink
+                       vectorAuxF.mulMomentumPhases(momentum_f1,+1); // put momentum at the sink
                        vectorAuxD1.copy(vectorAuxF);
                        TIME(vectorAuxD2.gaussianSmearing(vectorAuxD1,smearedGauge3D_sink, nSmear, alphaGauss));
                        vectorInOut.absorb(vectorAuxD2, global_fixSinkTime);

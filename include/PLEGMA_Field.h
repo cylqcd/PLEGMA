@@ -27,9 +27,12 @@ namespace plegma {
     size_t ghost_length; /*!< Member variable to hold the size of ghosts that involve in the communication (only side ghosts) */
     size_t ghost_corner_length; /*!< Member variable to hold the size of ghosts that involve in the communication (ghosts which are on the corners) */
     size_t ghost_vertex_length;
+    size_t single_ghost_length;
+    size_t single_corner_length;
     
     Float *h_elem; /*!< Member variable pointer to the elements of the field on CPU */
     Float *d_elem; /*!< Member variable pointer to the elements of the field on GPU */
+    Float *d_ext_ghost;
     Float *h_ext_ghost_r; /*!< Member variable pointer to the side ghost elements of the field on CPU (receive version)*/
     Float *h_ext_ghost_s; /*!< Member variable pointer to the side ghost elements of the field on CPU (send version)*/
     Float *h_ext_ghost_corner_r; /*!< Member variable pointer to the corner ghost elements of the field on CPU (receive version)*/
@@ -72,6 +75,7 @@ namespace plegma {
        @param field_l: see "field_length"
        @param vol_l: see "total_length"
      */
+
     void initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l);
   public:
     /**
@@ -126,6 +130,8 @@ namespace plegma {
      * @return a pointer to access device elements of the field
      */
     Float* D_elem() const { return d_elem; }
+    void D_elem(Float* ptr) { d_elem = ptr; }
+
     /**
      * @return a boolean if the host memory is allocated
      */
@@ -134,6 +140,7 @@ namespace plegma {
      * @return a boolean if the device memory is allocated
      */
     bool IsAllocDevice() const { return isAllocDevice;}
+
     /**
      * @return the kind of allocation we have for the field
      */
@@ -151,8 +158,11 @@ namespace plegma {
      * @return the length of the ghost part of the field in lattice points (local)
      */
     size_t Ghost_length() const { return ghost_length;} // the length of the ghost
+    size_t SingleGhost_length() const { return single_ghost_length;} // the length of a single ghost
     size_t GhostCorner_length() const { return ghost_corner_length;} // the length of the ghost for corners
+    size_t SingleCorner_length() const { return single_corner_length;} // the length of a single ghost for corners
     size_t GhostVertex_length() const { return ghost_vertex_length;} // the length of the ghost for vertex
+    size_t TotalGhost_length() const { return Ghost_length()+GhostCorner_length()+GhostVertex_length();}
     /**
      * @return the length of the field + ghost in lattice points (local)
      */
@@ -162,9 +172,12 @@ namespace plegma {
      * @return the bytes the length of the field including d.o.f
      */
     size_t Bytes_total() const { return this->Total_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_total_ghost() const { return this->TotalGhost_length()*this->Field_length()*2*sizeof(Float); }
     /**
      * @return the bytes the length of the ghost including d.o.f
      */
+    size_t Bytes_singleghost() const { return this->SingleGhost_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_singleCorner() const { return this->SingleCorner_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghost() const { return this->Ghost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostVertex() const { return this->GhostVertex_length()*this->Field_length()*2*sizeof(Float); }
@@ -207,11 +220,16 @@ namespace plegma {
      * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
      */
     void communicateSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateSecondSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateThirdSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+
     /**
      * @brief Communicates side+corner ghosts in chosen direction,orientation
      * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
      */
     void communicateCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+    void communicateSecondCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+
     void communicateVertexGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     /**
      * @brief Communicates side or side+corner ghosts in chosen direction,orientation give the ghost type

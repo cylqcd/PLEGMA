@@ -49,14 +49,14 @@ struct ProfileStruct{
 };
 
 template<int ...>
-struct seq { };
+struct sequential { };
 
 template<int N, int ...S>
 struct gens : gens<N-1, N-1, S...> { };
 
 template<int ...S>
 struct gens<0, S...> {
-  typedef seq<S...> type;
+  typedef sequential<S...> type;
 };
 
 // class to perform the kernel tuning
@@ -171,7 +171,7 @@ protected:
 
   // launching utilities  
   template<int ...S>
-  void callKernel(TuneParam tp, const qudaStream_t stream, seq<S...>) {
+  void callKernel(TuneParam tp, const qudaStream_t stream, sequential<S...>) {
     if( typeid(ProfileStruct &)==typeid(std::get<0>(args))) {
       // in case ProfileStruct is the first argument we call it as a function
       (*kernel)(std::get<S>(args)...);
@@ -273,10 +273,15 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!ps.tuned) tune();
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
+  if(!ps.tuned) ps.tp = tuneLaunch(*this, getTuning(), (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,device::get_stream(0));
 #endif
   checkQudaError();
+}
+
+template<class ...types, class ...typesK>
+PLEGMA_kernel_tuner<typesK...>* tuner(ProfileStruct &ps, std::string kname, void (*kernel)(typesK...), types&&... kArgs){
+  return new PLEGMA_kernel_tuner<typesK...>(ps, kname, kernel, kArgs...);
 }
 
 template<class ...types, class ...typesK>

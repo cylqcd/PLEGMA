@@ -5,6 +5,15 @@
 #include <PLEGMA_threep.cuh>
 #include <PLEGMA_Vector.h>
 
+#define CUDA_CHECK(call)                                     \
+do {                                                         \
+    cudaError_t err = call;                                  \
+    if (err != cudaSuccess) {                                \
+        PLEGMA_error("CUDA error at %s : %s -> %s\n", __FILE__ , __LINE__ ,cudaGetErrorString(err));  \
+        exit(EXIT_FAILURE);                                  \
+    }                                                        \
+} while (0)
+
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
@@ -102,8 +111,8 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+  CUDA_CHECK(cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS)));
+  CUDA_CHECK(cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice));
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -113,7 +122,7 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  CUDA_CHECK(cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) ));
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   
   auto propTex1 = toTexture<PorVtex<b,FloatA>>(prop1);

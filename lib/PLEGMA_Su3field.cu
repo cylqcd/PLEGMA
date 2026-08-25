@@ -3,6 +3,7 @@
 #include <PLEGMA_su3field.cuh>
 #include <PLEGMA_field_utils.cuh>
 #include <PLEGMA_SU3_projection.cuh>
+#include <quda_api.h>
 using namespace plegma;
 
 //--------------------------//
@@ -15,8 +16,8 @@ PLEGMA_Su3field<Float>::PLEGMA_Su3field(ALLOCATION_FLAG alloc_flag, GHOST_FLAG g
 
 template<typename Float>
 void PLEGMA_Su3field<Float>::absorbDir_device(PLEGMA_Gauge<Float> &u,int dir){
-  cudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
-  	     this->Bytes_total(), cudaMemcpyDeviceToDevice);
+  qudaMemcpy(this->d_elem, u.D_elem()+dir*(this->field_length)*(this->total_length)*2,
+  	     this->Bytes_total(), qudaMemcpyDeviceToDevice);
   checkQudaError();
 }
 
@@ -132,7 +133,7 @@ void PLEGMA_Su3field<Float>::staples(PLEGMA_Su3field<Float> **u, int dir, PLEGMA
       this->add(tmp2,rho);
     }
   tmp1.shift(*this,4+dir);
-  cudaMemcpy(this->D_elem(), tmp1.D_elem(), this->Bytes_total(), cudaMemcpyDeviceToDevice);
+  qudaMemcpy(this->D_elem(), tmp1.D_elem(), this->Bytes_total(), qudaMemcpyDeviceToDevice);
   checkQudaError();
 }
 
@@ -146,7 +147,7 @@ void PLEGMA_Su3field<Float>::wilsonLineUpdate(PLEGMA_Su3field<Float> &inOut, PLE
    * to build a Wilson line in +x direction you should provide dirOr=4+0.
    */
   if( !((dirOr >= 0) && (dirOr <= 7)) ) PLEGMA_error("Error you provided a direction which is not supported");
-  cudaMemcpy(tmp.D_elem(), inOut.D_elem(), tmp.Bytes_total(), cudaMemcpyDeviceToDevice);
+  qudaMemcpy(tmp.D_elem(), inOut.D_elem(), tmp.Bytes_total(), qudaMemcpyDeviceToDevice);
   checkQudaError();
   if(dirOr > 3){
     //          x->->->->

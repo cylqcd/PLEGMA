@@ -1,6 +1,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_heavy_light_tetraquarks.cuh>
-
+#include <malloc_quda.h>
+#include <quda_api.h>
 
 template<typename FloatA, typename FloatC>
 __global__ void contract_props(propTex<FloatA> texProp1, propTex<FloatA> texProp2, propTex<FloatA> texProp3,
@@ -89,21 +90,27 @@ void contract_tetraquarks_host(ProfileStruct &ps,
   Float2<FloatC> *d_partial_block = NULL;
   size_t alloc_size = (runFT==true) ? (volume * (ps.tp.grid.x/time_step)):volume;
   hostMalloc(h_partial_block, alloc_size * sizeof(Float2<FloatC>));
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  //cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC> *)device_malloc(alloc_size*sizeof(Float2<FloatC>));
+
   
   short *idxs, *col_contr;
   Float2<float> *vals;
   int size = 0;
   for(int j=0; j<TETRA_prop_prods_count[i].size(); j++)
     size += TETRA_prop_prods_count[i][j];
-  cudaMalloc((void**)&idxs, 8*size*sizeof(short));
-  cudaMalloc((void**)&col_contr, 8*size*sizeof(short));
-  cudaMalloc((void**)&vals, size*sizeof(Float2<float>));
+//cudaMalloc((void**)&idxs, 8*size*sizeof(short));
+  idxs=(short*)device_malloc(8*size*sizeof(short));
+//  cudaMalloc((void**)&col_contr, 8*size*sizeof(short));
+  col_contr=(short*)device_malloc(8*size*sizeof(short));
+//  cudaMalloc((void**)&vals, size*sizeof(Float2<float>));
+  vals=(Float2<float>*)device_malloc(8*size*sizeof(Float2<float>));
+
   int shift = 0;
   for(int j=0; j<TETRA_prop_prods_count[i].size(); j++) {
-    cudaMemcpy(idxs+8*shift, TETRA_prop_prods_idxs[i][j], 8*TETRA_prop_prods_count[i][j]*sizeof(short), cudaMemcpyHostToDevice);
-    cudaMemcpy(col_contr+8*shift, TETRA_prop_prods_col_contr[i][j], 8*TETRA_prop_prods_count[i][j]*sizeof(short), cudaMemcpyHostToDevice);
-    cudaMemcpy(vals+shift, TETRA_prop_prods_vals[i][j], TETRA_prop_prods_count[i][j]*sizeof(Float2<float>), cudaMemcpyHostToDevice);
+    qudaMemcpy(idxs+8*shift, TETRA_prop_prods_idxs[i][j], 8*TETRA_prop_prods_count[i][j]*sizeof(short), qudaMemcpyHostToDevice);
+    qudaMemcpy(col_contr+8*shift, TETRA_prop_prods_col_contr[i][j], 8*TETRA_prop_prods_count[i][j]*sizeof(short), qudaMemcpyHostToDevice);
+    qudaMemcpy(vals+shift, TETRA_prop_prods_vals[i][j], TETRA_prop_prods_count[i][j]*sizeof(Float2<float>), qudaMemcpyHostToDevice);
     shift += TETRA_prop_prods_count[i][j];
   }
 
@@ -126,7 +133,7 @@ void contract_tetraquarks_host(ProfileStruct &ps,
 	  (*propTex1, *propTex2, *propTex3, *propTex4, d_partial_block, TETRA_prop_prods_count[i][j], idxs+8*shift, col_contr+8*shift, vals+shift,
 	   source, runFT, *moms, it, std::min(t_size-it, time_step), maxT);
       
-      cudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), cudaMemcpyDeviceToHost);
+      qudaMemcpy(h_partial_block , d_partial_block , alloc_size*sizeof(Float2<FloatC>), qudaMemcpyDeviceToHost);
       if(runFT==true){
 	int accumX = ps.tp.grid.x/time_step;
 	Float2<FloatC> *reduction = result + (j*t_size + it)*volume3D;

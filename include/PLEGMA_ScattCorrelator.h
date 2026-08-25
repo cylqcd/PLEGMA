@@ -26,6 +26,7 @@ namespace plegma {
   protected:
 
     std::vector<std::vector<GAMMAS_SCATT>> GList;
+    int eigvecnum;
     momList plist;
 
     std::string labels;    //     index_struct = "gsssc" (because spin first)
@@ -41,7 +42,7 @@ namespace plegma {
 
     PLEGMA_ScattCorrelator(site source, std::vector<std::vector<int>> fixMomsVec, int totalT=HGC_totalL[DIM_T]);
 
-    PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT=HGC_totalL[DIM_T]);
+    PLEGMA_ScattCorrelator(site source, momList &listmom, int totalT=HGC_totalL[DIM_T], int eigvecnum=1);
 
     ~PLEGMA_ScattCorrelator(){;}
 
@@ -101,7 +102,7 @@ namespace plegma {
      *          in most cases we do set this to false
      *
      **/
-    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2,bool conj_v=false );
+    void V2( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2,bool conj_v=true );
     /**
      *
      *  @brief performs V3 type reduction produces one spin and one color indices tensor from a fermion vector and a fermion propagator
@@ -138,7 +139,7 @@ namespace plegma {
      *
      *
      **/
-    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=false );
+    void V4( PLEGMA_Vector<Float> &Phi, std::vector<GAMMAS_SCATT> &Gammas, PLEGMA_Propagator<Float> &S1,  PLEGMA_Propagator<Float> &S2, bool conj_v=true );
     /**
      *
      *  @brief performs V5 type reduction produces two spin and one color indices tensor from two fermion vectors
@@ -198,11 +199,11 @@ namespace plegma {
      *  @param PLEGMA_Propagator<Float> &S3: propagator 3: won't be transposed
     **/
     void T2( std::vector<GAMMAS_SCATT> &Gammas_i, std::vector<GAMMAS_SCATT> &Gammas_f, PLEGMA_Propagator<Float> &S1, PLEGMA_Propagator<Float> &S2, PLEGMA_Propagator<Float> &S3 );
-    void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 );
+    void PhiPhi( PLEGMA_Vector<Float> &Phi_0, std::vector<GAMMAS_SCATT> &Gammas,  PLEGMA_Vector<Float> &Phi_1 , bool transpQ = false);
 
     //manipulation
     //Note that in the case of oet B, W diagram g0 refers not to gamma_i2 but to gamma_f2
-    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false );
+    void V3V2reduction( PLEGMA_ScattCorrelator<Float> &srcV3,PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp, int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false, bool threept=false );
 
     void V5V6reduction(PLEGMA_ScattCorrelator<Float> &srcV6, 
 	                      std::shared_ptr<Float> &Phi0, 
@@ -212,7 +213,7 @@ namespace plegma {
 			      bool transp=false, bool transpgamma_i1=false, bool transgamma_f1=false, 
 			      Float *factor=NULL);
 
-    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false ); 
+    void V3V2reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int index_abs, bool transp,  int g0, bool transp_i1=false, Float* factor=NULL, bool transp_f1=false, bool oet=false, bool threept=false ); 
 
     void V5V6reduction_matrix( PLEGMA_ScattCorrelator<Float> &srcV6, 
 	                             std::shared_ptr<Float> &Phi0, 
@@ -226,7 +227,10 @@ namespace plegma {
     void absorbTimeslice(PLEGMA_ScattCorrelator<Float> &srcCorr, int global_it, bool forcetozero=false); 
 
     //manipulation to construct N like diagram from NjN
-    void absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int pf1, bool forcetozero=false);
+    void absorbSourceSinkSpinMom(PLEGMA_ScattCorrelator<Float> &srcCorr, int alpha, int beta, int gf1index, int pf1, bool forcetozero=false);
+
+    // manipulation constructing  exact exact part of the deflated correlation function
+    void absorbEigIndex( PLEGMA_ScattCorrelator<Float> &srcCorr, int eigindex, bool forcetozero=false);
 
     //manipulation to construct P like diagram from pi j pi
     void absorbGammai2Gammaf2momentumf2(PLEGMA_ScattCorrelator<Float> &srcCorr, int  i_gamma_i2, int i_gamma_f2, int i_pf1, bool forcetozero=false );
@@ -258,12 +262,28 @@ namespace plegma {
 
     
     //diagrams
-    void B_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false, bool oet=false );
-    void W_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false );
+    void Recombination(PLEGMA_ScattCorrelator<Float> &srcV3, 
+	               PLEGMA_ScattCorrelator<Float> &srcV2, 
+	               bool matrix, 
+		       int index_abs, 
+		       bool transp_source_sink, 
+		       int ig_i2, 
+		       bool transpgamma_i1, 
+		       bool transpgamma_f1, 
+		       bool oet=false, 
+		       bool threept=false, 
+		       bool accum=false);
+
+    void B_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagram_index, bool accum=false, bool oet=false, bool threept=false );
+    void W_diagrams( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2, int diagramm_index, bool accum=false, bool threept=false );
     void W_diagrams_oet(PLEGMA_ScattCorrelator<Float> &srcV6, std::shared_ptr<Float> &Phi0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int input_mom_f2, int diagram_index, bool accum=false);
 
     void Z_diagrams( std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV3), std::array<PLEGMA_ScattCorrelator<Float>,4> (&srcV2),int diagramm_index, bool accum=false );
+    void Z_diagrams(std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV3), std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2),int srcV2index, int diagramm_index, bool accum=false );
+
     void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, int ig_i2,  int diagramm_index, bool accum=false );
+    void Z_diagrams_without_dilution( PLEGMA_ScattCorrelator<Float> &srcV3, std::vector<PLEGMA_ScattCorrelator<Float>*> (&srcV2), int srcV2index,  int diagramm_index, bool accum=false, bool threept=false);
+
     void Z_diagrams_without_dilution_check(PLEGMA_ScattCorrelator<Float> &srcV3,
                                                 PLEGMA_ScattCorrelator<Float> &srcV2, int i_g_i2,
                                                 std::string proporder, int diagram_number, bool transp_i1, bool transp_f1, bool accum );
@@ -274,7 +294,9 @@ namespace plegma {
 
     void M_diagrams( PLEGMA_ScattCorrelator<Float> &CorrNucleon, PLEGMA_ScattCorrelator<Float> &CorrPion, Float *data, bool accum=false );
 
-    void LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1reduction, PLEGMA_ScattCorrelator<Float> &T2reduction, PLEGMA_ScattCorrelator<Float> &Loop, bool accum=false );
+//    void LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1reduction, PLEGMA_ScattCorrelator<Float> &T2reduction, PLEGMA_ScattCorrelator<Float> &Loop, bool accum=false );
+    void LT_diagrams( PLEGMA_ScattCorrelator<Float> &T1reduction, PLEGMA_ScattCorrelator<Float> &T2reduction,int sign, bool accum=false );
+
 
     void D1ii_diagrams(PLEGMA_ScattCorrelator<Float> &srcV3, PLEGMA_ScattCorrelator<Float> &srcV2, Float * loopcontribution,  const int ig_i2, const int diagram_index, bool accum=false);
 
@@ -287,6 +309,7 @@ namespace plegma {
 
     void T_diagrams_piNsink(PLEGMA_ScattCorrelator<Float> &srcV2, PLEGMA_ScattCorrelator<Float> &srcV3,int diagram_index, bool accum=false);
 
+    void Loop_diagrams( PLEGMA_Vector<Float> &Phi_0, PLEGMA_Vector<Float> &Phi_1, bool accum=false);
     void Loop_diagrams( PLEGMA_Vector<Float>* &Phi_0, PLEGMA_Vector<Float>* &Phi_1, int i_pi2,bool dn=false, bool accum=false);
     void P_diagrams( std::vector<PLEGMA_Vector<Float>*> &Phi_0, std::vector<PLEGMA_Vector<Float>*> &Phi_1, int i_pi2, bool accum=false );
 
@@ -304,6 +327,8 @@ namespace plegma {
 
     void multiply_by_time_slice(std::shared_ptr<Float>&);
     void applyBoundaryConditions( bool antiperiodic, int n_coherent_source=1, int *attract_look_up_table=NULL );
+    void applyBoundaryConditions_3pt( bool antiperiodic, int n_coherent_source, int *attract_look_up_table, int source_sink_separation ); 
+
     void apply_phase( );
 
 

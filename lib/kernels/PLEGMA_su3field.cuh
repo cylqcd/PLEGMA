@@ -1,5 +1,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
+#include <malloc_quda.h>
+#include <quda_api.h>
 using namespace plegma;
 
 template<typename FloatA>
@@ -174,13 +176,13 @@ static void sum_real_trace_host(ProfileStruct& ps, PLEGMA_Su3field<FloatS> &su3M
   int gridDimX = ps.tp.grid.x;
   
   hostMalloc(h_partial_sum, gridDimX * sizeof(Float) );
-  cudaMalloc((void**)&d_partial_sum, gridDimX * sizeof(Float));
+  d_partial_sum=(Float*)device_malloc(gridDimX * sizeof(Float));
 //  d_partial_sum=quda::device_malloc_(__func__, quda::file_name(__FILE__), __LINE__, gridDimX * sizeof(Float));
 
   sum_real_trace_kernel<Float,FloatS><<<ps.tp.grid,ps.tp.block,ps.tp.shared_bytes>>>(toField2<su3_2>(su3M), d_partial_sum);
 
-  cudaMemcpy(h_partial_sum, d_partial_sum , gridDimX * sizeof(Float) , cudaMemcpyDeviceToHost);
-  cudaFree(d_partial_sum);
+  qudaMemcpy(h_partial_sum, d_partial_sum , gridDimX * sizeof(Float) , qudaMemcpyDeviceToHost);
+  device_free(d_partial_sum);
   checkQudaError();
 
   for(int i = 0 ; i < gridDimX ; i++)

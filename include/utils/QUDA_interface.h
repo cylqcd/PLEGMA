@@ -17,7 +17,7 @@ namespace quda {
     QudaMultigridParam mg_param;
     Dirac *D, *DSloppy, *DPre;
     DiracMatrix *M, *MSloppy, *MPre;
-    ColorSpinorField *b, *x;
+    std::vector<ColorSpinorField> b, x;
 #ifdef QUDA_INCLUDES_COMMIT_775a033
     QudaEigParam *mg_eig_param;
 #endif
@@ -26,15 +26,32 @@ namespace quda {
     QudaInvertParam getInvParams() const{return inv_param;}
     SolverParam* getSolverParam() const{return solverParam;}
     void UpdateSolver();
-    QUDA_solver(double mu);
+    void UpdateGaugeSolver();
+
+    double Mu() const { return inv_param.mu;}
+    int Nrhs()  const { return inv_param.num_src;}
+
+    QUDA_solver(double mu, int nsrc);
     virtual ~QUDA_solver();
-    ColorSpinorField* solve(ColorSpinorField * rhs);
-    template<typename Float>
-    ColorSpinorField* solve(PLEGMA_Vector<Float> &vectorIn);
-    template<typename Float>
-    void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
-    template<typename Float>
-    void runOneIter(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+    std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
+
+    template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Vector<Float> &vectorIn);
+    template<typename Float> std::vector<ColorSpinorField> solve(PLEGMA_Propagator<Float> &vectorIn);
+
+
+    template<typename Float> void solve(PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in);
+    template<typename Float> void solve(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+
+    template<typename Float> void runOneIter( PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in);
+    template<typename Float> void runOneIter( PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in);
+
+
+    template<bool bl, typename Float>
+    std::vector<ColorSpinorField> solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &vectorIn);
+    template<bool bl, typename Float>
+    void solve(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &out, typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &in);
+    template<bool bl, typename Float>
+    void runOneIter(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &out, typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &in);
   };
 
   enum APP_TYPE {M,Mdag,MdagM,MMdag};
@@ -43,7 +60,7 @@ namespace quda {
     DiracParam dParam;
     QudaInvertParam inv_param;
     Dirac *D;
-    ColorSpinorField *in, *out;
+    std::vector<ColorSpinorField> in, out;
     template<APP_TYPE type> void apply();
   public:
      //only QUDA_WILSON_DSLASH, QUDA_CLOVER_WILSON_DSLASH, QUDA_TWISTED_MASS_DSLASH, QUDA_TWISTED_CLOVER_DSLASH
@@ -52,8 +69,30 @@ namespace quda {
     void print(){dParam.print();}
     void switchMu(double mu);
     void switchKappa(double kappa);
+    template<APP_TYPE type, bool bl, typename Float> void apply(typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &out, typename std::conditional<bl==true, PLEGMA_Vector<Float>,  PLEGMA_Propagator<Float>>::type &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
     template<APP_TYPE type, typename Float> void apply(PLEGMA_Vector<Float> &out, PLEGMA_Vector<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
+    template<APP_TYPE type, typename Float> void apply(PLEGMA_Propagator<Float> &out, PLEGMA_Propagator<Float> &in, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default it is without any normalization
+
     template<APP_TYPE type, typename Float> void apply(Float *dout, Float *din, QudaMassNormalization normType = QUDA_KAPPA_NORMALIZATION); // Default is without any normalization // Note that dout and din are device pointers
   };
-}
 
+  // Forwarding overloads for PLEGMA_Vector
+  template<quda::APP_TYPE type, typename Float>
+  void quda::QUDA_dirac::apply(PLEGMA_Vector<Float> &Pout,
+                             PLEGMA_Vector<Float> &Pin,
+                             QudaMassNormalization normType)
+  {
+    // Forward to the generic bl=true template
+    return apply<type, true, Float>(Pout, Pin, normType);
+  }
+
+  // Forwarding overloads for PLEGMA_Propagator
+  template<quda::APP_TYPE type, typename Float>
+  void quda::QUDA_dirac::apply(PLEGMA_Propagator<Float> &Pout,
+                             PLEGMA_Propagator<Float> &Pin,
+                             QudaMassNormalization normType)
+  {
+    // Forward to the generic bl=false template
+    return apply<type, false, Float>(Pout, Pin, normType);
+  }
+}

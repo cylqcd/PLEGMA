@@ -2,6 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <PLEGMA_Hprobing.h>
 #include <stdio.h>
+#include <quda_api.h>
 using namespace plegma;
 using namespace quda;
 
@@ -149,6 +150,7 @@ int main(int argc, char **argv)
   
   // Reading from Lime file and loading to device
   PLEGMA_Gauge<double> gauge;
+  PLEGMA_Gauge<double> gauge_flowed;
   gauge.readFile(latfile, LIME_FORMAT);
   gauge.calculatePlaq();
 
@@ -203,7 +205,7 @@ int main(int argc, char **argv)
   
   // // ensuring mu negative
   if(mu>0) mu*=-1.;
-  QUDA_solver *solverDN = new QUDA_solver(mu);
+  QUDA_solver *solverDN = new QUDA_solver(mu,1);
   QudaInvertParam inv_params = solverDN->getInvParams();
   
   QUDA_dirac *D = nullptr;
@@ -229,8 +231,59 @@ int main(int argc, char **argv)
   if(!debugMode) source.randInit(rng_seed);
   PLEGMA_Vector<double> *sourceDil = nullptr;
   if(k_probing>0 || spinColorDil) sourceDil = new PLEGMA_Vector<double>(DEVICE);
+
+
+  //Flowing the gauge fields
+  wilsonFlow_QUDA(gauge_flowed,
+                  gauge,
+                  3, 
+                  0.0001,
+                  0,
+                  true,
+                  false);
+
+
+/*
+
+  QudaGaugeObservableParam *obs_param = new QudaGaugeObservableParam[3];
+
+  for (int i = 0; i < 3; i++) {
+    obs_param[i] = newQudaGaugeObservableParam();
+    obs_param[i].compute_polyakov_loop = QUDA_BOOLEAN_TRUE;
+    obs_param[i].compute_plaquette = QUDA_BOOLEAN_TRUE;
+    obs_param[i].compute_qcharge = QUDA_BOOLEAN_FALSE;
+    obs_param[i].su_project = QUDA_BOOLEAN_FALSE;
+  }
+
+  // We here set all the problem parameters for all possible smearing types.
+  QudaGaugeSmearParam smear_param = newQudaGaugeSmearParam();
+  smear_param.smear_type = QUDA_GAUGE_SMEAR_WILSON_FLOW;
+  smear_param.n_steps = 3;
+  smear_param.meas_interval = 1;
+  smear_param.epsilon = 0.001;
+
+  performWFlowQuda(&smear_param, obs_param);
+
+  double* new_gauge[N_DIMS];
+  for(int i=0; i<N_DIMS; i++) hostMalloc(new_gauge[i], gauge.Bytes_total()/N_DIMS);
+
+  QudaGaugeParam gauge_param = newQudaGaugeParam();
+  setGaugeParam(gauge_param);
+  gauge_param.type = QUDA_SMEARED_LINKS;
+  gauge_param.reconstruct=QUDA_RECONSTRUCT_NO;
+  gauge_param.make_resident_gauge =0;
+
+  saveGaugeQuda(new_gauge, &gauge_param);
+
+  packGaugeToNormal(gauge_flowed,new_gauge);
+  gauge_flowed.load();
+  gauge_flowed.calculatePlaq();
+
+  for(int i=0; i<N_DIMS; i++) hostFree(new_gauge[i], gauge.Bytes_total()/N_DIMS);
+*/
+
     
-  if(oneDLoops) gauge.communicateGhost();
+  if(oneDLoops) gauge_flowed.communicateGhost();
 
   // if LMR is enabled do the exact part
 #if defined(HAVE_EIGENSOLVER)
@@ -239,14 +292,14 @@ int main(int argc, char **argv)
       double eigVal = std::get<0>(eigSol->getEigVals()[i]);
       long int iorder = std::get<3>(eigSol->getEigVals()[i]);
       double *eigVec = eigSol->getEigVecs() + iorder*eigSol->getSize_per_Vec()*2;
-      cudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), cudaMemcpyHostToDevice);
+      qudaMemcpy(phi.D_elem(), eigVec, eigSol->getBytes_per_Vec(), qudaMemcpyHostToDevice);
       checkQudaError();
-      if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1./eigVal,true); //standard one-end trick
+      if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge_flowed,-1./eigVal,true); //standard one-end trick
       else qloops_std.oneEnd_trick(phi,phi,-1./eigVal,true); //standard one-end trick
 
       D->apply<M>(phi_r,phi);
       phi_r.apply_gamma5();
-      if(oneDLoops || twoDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp,qLtmp, gauge, +1./eigVal, true); //generalized one-end trick
+      if(oneDLoops || twoDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp,qLtmp, gauge_flowed, +1./eigVal, true); //generalized one-end trick
       else qloops_gen.oneEnd_trick(phi, phi_r, +1./eigVal, true); //generalized one-end trick
     }
 #endif
@@ -293,12 +346,13 @@ int main(int argc, char **argv)
 	  if(lowModesRecon)
 	    eigSol->projectVector(phi); // In place application of deflation projector operator on solution vector
 #endif
-	  if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge,-1.,true); //standard one-end trick
+	  if(oneDLoops || twoDLoops) qloops_std.oneEnd_trick(phi,phi,tmp,qLtmp,gauge_flowed,-1.,true); //standard one-end trick
 	  else qloops_std.oneEnd_trick(phi,phi,-1.,true); //standard one-end trick
-
+          PLEGMA_printf("Here we are\n");
 	  D->apply<M>(phi_r,phi);
+          PLEGMA_printf("Here we were\n");
 	  phi_r.apply_gamma5();
-	  if(oneDLoops || twoDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp,qLtmp, gauge, +1., true); //generalized one-end trick
+	  if(oneDLoops || twoDLoops) qloops_gen.oneEnd_trick(phi, phi_r, tmp,qLtmp, gauge_flowed, +1., true); //generalized one-end trick
 	  else qloops_gen.oneEnd_trick(phi, phi_r, +1., true); //generalized one-end trick
 	  double t2=MPI_Wtime();
 	  PLEGMA_printf("Contraction time is %f\n",t2-t1);

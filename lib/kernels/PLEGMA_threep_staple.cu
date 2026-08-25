@@ -4,7 +4,7 @@
 #include <PLEGMA_kernel_getSet.cuh>
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_threep.cuh>
-
+#include <quda_api.h>
 using namespace plegma;
 template<typename T>
 struct KernelArr {T* array; int size;};
@@ -38,8 +38,8 @@ __global__ void threep_staple_device(Float2<FloatC>* block2,
     su3Tx.get(su3,vid);
 
     bool notZfac=(mu<0) && (nu<0) && (c1<0) && (c2<0);
-    if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3);
-    else open_mul_Prop_G_Prop<true,ACC_ZERO,true>(R,prop1,prop2,su3,mu,nu,c1,c2);
+    if(notZfac) partial_trace_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3);
+    else open_mul_Prop_G_Prop<true,ACC_ZERO,false>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
     for(int iop = 0; iop < listGammas.size; iop++){
       int opId=listGammas.array[iop];
@@ -84,8 +84,9 @@ static void threep_staple_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
-  cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice);
+//  cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS));
+  listGammas.array=(GAMMAS*)device_malloc(gammas.size()*sizeof(GAMMAS));
+  qudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -95,7 +96,8 @@ static void threep_staple_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+//  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC> *)device_malloc(alloc_size*sizeof(Float2<FloatC>));
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
   auto propTex1 = toTexture<propTex>(prop1);
@@ -122,7 +124,7 @@ static void threep_staple_host(ProfileStruct &ps, Float2<FloatC> *result,
          source, signProps, runFT, *moms, mu,nu,c1,c2);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
-      cudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+      qudaMemcpy(h_partial_block, d_partial_block, (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
 
       if(runFT==true){

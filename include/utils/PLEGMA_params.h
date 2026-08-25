@@ -14,6 +14,7 @@ define(int dims[N_DIMS], {8,8,8,16});
 define(int procs[N_DIMS], {1,1,1,1});
 define(std::string latfile);
 define(int verbosity, 1);
+define(std::vector<momentum> momenta, {});
 
 define(int nsmearAPE, 20);
 define(double alphaAPE, 0.5);
@@ -30,6 +31,8 @@ define(std::string pathListVecs);
 define(std::vector<std::string> listVecs);
 define(std::string pathListSourcePositions);
 define(std::string pathListMomenta);
+define(std::string pathListMomenta_twopt);
+define(std::string pathListMomenta_threept);
 define(std::vector<site> sourcePositions, {});
 define(int maxQsq, 64);
 define(FILE_FORMAT corr_file_format, HDF5_FORMAT);

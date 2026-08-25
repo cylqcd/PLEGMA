@@ -9,10 +9,35 @@ enum FILE_FORMAT{ASCII_FORMAT, HDF5_FORMAT, LIME_FORMAT, DEFAULT_FORMAT};
 
 enum ALLOCATION_FLAG{EVERY=-1,NONE=0,HOST,DEVICE,BOTH};
 
-enum CLASS_ENUM{CUSTOM,SCALAR,SU3FIELD,GAUGE,GAUGE3D,VECTOR,VECTOR3D,PROPAGATOR,PROPAGATOR3D,QLOOPS,FMUNU,U1GAUGE};
-enum GHOST_FLAG{ALL_GHOSTS=-1,NO_GHOSTS,FIRST_SIDE,FIRST_CORNER,FIRST_VERTEX};
+enum CLASS_ENUM{CUSTOM,SCALAR,SU3FIELD,GAUGE,GAUGE3D,GAUGEU1,VECTOR,VECTOR3D,PROPAGATOR,PROPAGATOR3D,QLOOPS,FMUNU,U1GAUGE};
+enum GHOST_FLAG{ALL_GHOSTS=-1,NO_GHOSTS,FIRST_SIDE,FIRST_CORNER,FIRST_VERTEX,SECOND_SIDE,SECOND_CORNER,THIRD_SIDE};
+
 enum WHICHPARTICLE{PROTON,NEUTRON};
-enum WHICHPROJECTOR{P4_P,P4G5G1_P,P4G5G2_P,P4G5G3_P,P4_M,P4G5G1_M,P4G5G2_M,P4G5G3_M,P_00,P_01,P_02,P_03,P_10, P_11, P_12, P_13, P_20, P_21, P_22, P_23, P_30, P_31, P_32, P_33, N_PROJS}; // Do not change this order and keep N_PROJS last
+enum WHICHPROJECTOR{P4_P,
+                    P4G5G1_P,
+                    P4G5G2_P,
+                    P4G5G3_P,
+                    P4_M,
+                    P4G5G1_M,
+                    P4G5G2_M,
+                    P4G5G3_M,
+                    P_00,
+                    P_01,
+                    P_02,
+                    P_03,
+                    P_10,
+                    P_11,
+                    P_12, 
+                    P_13, 
+                    P_20,
+                    P_21, 
+                    P_22, 
+                    P_23, 
+                    P_30, 
+                    P_31, 
+                    P_32, 
+                    P_33, 
+                    N_PROJS}; // Do not change this order and keep N_PROJS last
 enum WHICHFLAVOR{LIGHT,STRANGE,CHARM};
 enum THRP_TYPE{THRP_LOCAL2,THRP_NOETHER2,THRP_ONED2};
 
@@ -32,12 +57,12 @@ enum GAMMAS_SCATT {ID,
                    CG_1,
                    CG_2,
                    CG_3,
-                   CG_1_G_4,
+/*                   CG_1_G_4,
                    CG_2_G_4,
                    CG_3_G_4,
                    CG_1_G_4_G_5,
                    CG_2_G_4_G_5,
-                   CG_3_G_4_G_5, 
+                   CG_3_G_4_G_5, */
                    G_5_G_1,
                    G_1_G_5,
                    G_5_G_2,
@@ -57,8 +82,16 @@ enum GAMMAS_SCATT {ID,
                    CG_4,
                    CG_5_G_4,
                    CG_4_G_5,
-                   CG_5_G_4_G_5}; // Do not change this order
-const std::string GAMMAS_SCATT_STR[35] = {"1",
+                   CG_5_G_4_G_5,
+                   S_12,
+                   S_13,
+		   S_23,
+                   S_41,
+                   S_42,
+                   S_43,
+                   MC,
+                   MCG5}; // Do not change this order
+const std::string GAMMAS_SCATT_STR[37] = {"1",
                                           "g1",
                                           "g2",
                                           "g3",
@@ -67,12 +100,12 @@ const std::string GAMMAS_SCATT_STR[35] = {"1",
                                           "cg1",
                                           "cg2",
                                           "cg3",
-                                          "cg1g4",
-                                          "cg2g4",
-                                          "cg3g4",
-                                          "cg1g4g5",
-                                          "cg2g4g5",
-                                          "cg3g4g5",
+                                   //       "cg1g4",
+                                   //       "cg2g4",
+                                   //       "cg3g4",
+                                   //       "cg1g4g5",
+                                   //       "cg2g4g5",
+                                   //       "cg3g4g5",
                                           "g5g1",
                                           "g1g5",
                                           "g5g2",
@@ -92,7 +125,15 @@ const std::string GAMMAS_SCATT_STR[35] = {"1",
                                           "Cg4",
                                           "Cg5g4",
                                           "Cg4g5",
-                                          "Cg5g4g5"};
+                                          "Cg5g4g5",
+                                          "S12",
+                                          "S13",
+                                          "S23",
+                                          "S41",
+                                          "S42",
+                                          "S43",
+                                          "MC",
+                                          "MCG5"};
  
 
  

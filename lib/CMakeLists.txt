@@ -4,13 +4,20 @@ set (PLEGMA_OBJS
   PLEGMA_Propagator.cu
   PLEGMA_Vector.cu
   PLEGMA_Gauge.cu
+  PLEGMA_GaugeU1.cu
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
   kernels/PLEGMA_baryons_NtoN.cu
+  kernels/PLEGMA_baryons_NtoN_OS.cu
   kernels/PLEGMA_seqSourceNucleon.cu
+  kernels/PLEGMA_seqSourceNucleonDelta.cu
+  kernels/PLEGMA_seqSourceNucleonDeltaSource.cu
   kernels/PLEGMA_threep_local.cu
   kernels/PLEGMA_threep_noe.cu
+  kernels/PLEGMA_mesons_noe.cu
+  kernels/PLEGMA_mesons_noe_SIB.cu
+  kernels/PLEGMA_mesons_noe_LIBE.cu
   kernels/PLEGMA_threep_oneD.cu
   kernels/PLEGMA_threep_twoD.cu
   kernels/PLEGMA_threep_threeD_part1.cu
@@ -24,21 +31,20 @@ set (PLEGMA_OBJS
   PLEGMA_FT.cu
   PLEGMA_BLAS.cu
   PLEGMA_Fmunu.cu
-  PLEGMA_U1Gauge.cu	
 )
 if(PLEGMA_UDSC_BARYONS)
   LIST(APPEND PLEGMA_OBJS
     kernels/PLEGMA_baryons_udsc.cu
     kernels/PLEGMA_baryons_udsc_arrays.cu
-    kernels/PLEGMA_heavy_light_tetraquarks.cu
-    kernels/PLEGMA_heavy_light_tetraquarks_stochastic.cu
-    kernels/PLEGMA_heavy_light_tetraquarks_open_contractions.cu
-    kernels/PLEGMA_heavy_light_tetraquarks_arrays.cu
-    kernels/PLEGMA_heavy_light_tetraquarks_arrays_stoch.cu
-    kernels/PLEGMA_bcud_tetraquarks.cu
-    kernels/PLEGMA_bcud_tetraquarks_stochastic.cu
-    kernels/PLEGMA_bcud_tetraquarks_arrays.cu
-    kernels/PLEGMA_bcud_tetraquarks_arrays_stoch.cu
+    #    kernels/PLEGMA_heavy_light_tetraquarks.cu
+    #kernels/PLEGMA_heavy_light_tetraquarks_stochastic.cu
+    #kernels/PLEGMA_heavy_light_tetraquarks_open_contractions.cu
+    #kernels/PLEGMA_heavy_light_tetraquarks_arrays.cu
+    #kernels/PLEGMA_heavy_light_tetraquarks_arrays_stoch.cu
+    #kernels/PLEGMA_bcud_tetraquarks.cu
+    #kernels/PLEGMA_bcud_tetraquarks_stochastic.cu
+    #kernels/PLEGMA_bcud_tetraquarks_arrays.cu
+    #kernels/PLEGMA_bcud_tetraquarks_arrays_stoch.cu
   )
 endif()
 if(PLEGMA_SCATTERING_CONTRACTIONS)
@@ -74,6 +80,8 @@ LIST(REMOVE_ITEM PLEGMA_OBJS ${QUDA_CU_OBJS})
 
 # include_directories
 include_directories(${QUDA_HOME}/lib/)
+include_directories(${QUDA_HOME}/_deps/eigen-src/)
+include_directories(${QUDA_SRC}/include/targets/cuda/)
 #PLEGMA: 
 include_directories(code_pieces)
 include_directories(SYSTEM ${PLEGMA_GSLHOME}/include)

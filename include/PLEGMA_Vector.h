@@ -25,8 +25,8 @@ namespace plegma {
     PLEGMA_Vector(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Vector(){;}
     
-    void copyToQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
-    void copyFromQUDA( quda::ColorSpinorField *cudaVector, bool isEv = false);
+    void copyToQUDA( std::vector<quda::ColorSpinorField>& cudaVector,  bool isEv = false);
+    void copyFromQUDA( std::vector<quda::ColorSpinorField>& cudaVector, bool isEv = false);
 
     /**
        @brief Applies N times Gaussian(Wuppertal) smearing operator on all time-slices of a vector. NOTE: works also for Vector3D
@@ -67,6 +67,8 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
+
+    void absorb(PLEGMA_Propagator<Float> *prop, int nu , int c2);
     
     void dilutespin(PLEGMA_Vector<Float> &vecIn, int spin);
 
@@ -93,12 +95,21 @@ namespace plegma {
        @brief Performs the similarity transformation of gamma matrices from tmLQCD to QUDA-UKQCD and vice versa
      **/
     void rotate_uk_ch_g5g4();
+    void rotate_uk_ch_etmc();
     void covD(PLEGMA_Vector<Float> &vecIn, PLEGMA_Gauge<Float> &gauge, int dirOr);
     void mulGV(PLEGMA_Vector<Float> &vecIn, PLEGMA_Su3field<Float> &u);
+    void pack_propagator(PLEGMA_Vector<Float> &in_ppa, PLEGMA_Vector<Float> &in_pma, int t0, int deltat, bool initialize=true);
+    void pack_fermion_to_sink(std::vector<PLEGMA_Vector<Float>*> &stochastic_vector, int sinktime);
+
+    void pack_propagator_from_source_to_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
+
+    void pack_propagator_as_sink(PLEGMA_Vector<Float> &in, int sinktimeslice, int source_sink_separation, bool initialize);
+
+
   };
 
-  template<typename Float> void copyToQUDA(quda::ColorSpinorField *cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
-  template<typename Float> void copyFromQUDA(Float* delem, quda::ColorSpinorField *cudaVector, bool isEv = false);
+  template<typename Float> void copyToQUDA(std::vector<quda::ColorSpinorField>& cudaVector, Float* delem, bool isEv = false); // delem is a device pointer
+  template<typename Float> void copyFromQUDA(Float* delem, std::vector<quda::ColorSpinorField>& cudaVector,  bool isEv = false);
 
   /////////////////////////////////////
   // CLASS: PLEGMA_Vector3D ///////////
@@ -135,6 +146,9 @@ namespace plegma {
      **/
     void absorb(PLEGMA_Propagator<Float> &prop, int global_it, int nu, int c2, bool  broadcast=false);
 
+    void absorb(PLEGMA_Vector<Float> &vec, int global_it, bool  broadcast=false);
+
+
     void gaussianSmearing(PLEGMA_Vector3D<Float> &vecIn, PLEGMA_Gauge3D<Float> &gauge, int nsmearGauss, Float alphaGauss) {
       this->activeTimeSlice = vecIn.activeTimeSlice;
       return ((PLEGMA_Vector<Float>*) this)->gaussianSmearing(vecIn,gauge,nsmearGauss,alphaGauss);
@@ -147,6 +161,10 @@ namespace plegma {
     }
     
     std::vector<Float> rms(std::vector<int> listR2, const site& sourceposition) const;
+
+    void seqSourceNucleonDelta(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2, int c_gamma);
+    void seqSourceNucleonDelta(PLEGMA_Propagator3D<Float> &prop, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2, int c_gamma);
+
 
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2);
     void seqSourceNucleon(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2);

@@ -332,20 +332,21 @@ template<typename Float>
 __inline__ void V_M_V( Float * V1, Float * V2, GAMMAS_SCATT gamma, bool transp, Float *Dest ){
    *(Dest+0)=0.;
    *(Dest+1)=0.;
+   assert(gamma == CG_5);
    #pragma unroll
    for(int nz_e = 0 ; nz_e < 4 ; nz_e++){  
      int beta0= (!transp) ? gammaInd_scatt[gamma][nz_e][0] : gammaInd_scatt[gamma][nz_e][1];
      int beta1= (!transp) ? gammaInd_scatt[gamma][nz_e][1] : gammaInd_scatt[gamma][nz_e][0];
      #pragma unroll
      for (int nz_c = 0; nz_c < 3; nz_c++) {
-       *(Dest+0)+= +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+       *(Dest+0)+= //+V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
                    -V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1]
+                   //-V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1]
                    -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0];
        *(Dest+1)+= -V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+1]
-                   +V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0]
-                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1];
+                   //+V1[2*(beta0*N_COLS+nz_c)+1]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+0]
+                   +V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][1]*V2[2*(beta1*N_COLS+nz_c)+0];
+                   //+V1[2*(beta0*N_COLS+nz_c)+0]*gamma_scatt[gamma][nz_e][0]*V2[2*(beta1*N_COLS+nz_c)+1];
      }
    }
 }
@@ -410,6 +411,7 @@ __inline__ void V_MVM( Float * V1, GAMMAS_SCATT gamma1, GAMMAS_SCATT gamma2, Flo
  **/
 template<typename Float>
 __inline__ void V_TR_MM( Float * V1, GAMMAS_SCATT gamma,bool transp, Float *Dest ){
+  assert(gamma==CG_5);
   #pragma unroll
   for (int nz_c = 0 ; nz_c < 3 ; nz_c++){
     *(Dest+2*nz_c+0) = 0;
@@ -421,10 +423,10 @@ __inline__ void V_TR_MM( Float * V1, GAMMAS_SCATT gamma,bool transp, Float *Dest
     for(int nz_e_inner = 0 ; nz_e_inner < 4 ; nz_e_inner++){
       int beta0=(!transp) ? gammaInd_scatt[gamma][nz_e_inner][0] : gammaInd_scatt[gamma][nz_e_inner][1];
       int beta1=(!transp) ? gammaInd_scatt[gamma][nz_e_inner][1] : gammaInd_scatt[gamma][nz_e_inner][0];
-      *(Dest+2*nz_c+0)+=+gamma_scatt[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
+      *(Dest+2*nz_c+0)+=//+gamma_scatt[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
                         -gamma_scatt[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
-      *(Dest+2*nz_c+1)+=+gamma_scatt[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0]
-                        +gamma_scatt[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
+      *(Dest+2*nz_c+1)+=+gamma_scatt[gamma][nz_e_inner][1]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+0];
+                        //+gamma_scatt[gamma][nz_e_inner][0]*V1[2*(beta1*N_SPINS*N_COLS+beta0*N_COLS+nz_c)+1];
     }
   }
   

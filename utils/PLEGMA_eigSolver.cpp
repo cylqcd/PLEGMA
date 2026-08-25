@@ -2,6 +2,7 @@
 #include <PLEGMA_utils.h>
 #include <algorithm>
 #include <PLEGMA_BLAS.h>
+#include <quda_api.h>
 using namespace plegma;
 using namespace quda;
 
@@ -48,6 +49,7 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
   hostMalloc(h_eigVecs,size_NkV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NkV*2*sizeof(double));
 #elif defined(QUDAEIG)
+  eig_param = newQudaEigParam();
   hostMalloc(h_eigVecs,size_NeV*2*sizeof(double));
   if(!isReadEigenVectors) hostMalloc(h_eigVals,p.NeV*2*sizeof(double));
   hostMalloc(h_eigVecs_p, p.NeV*sizeof(double*)); // need to check if this does the trick
@@ -73,11 +75,15 @@ EigSolver::EigSolver(EigSolverParams params, QudaDslashType dslashType,bool isRe
 #if defined(QUDAEIG)
   eig_inv_param = newQudaInvertParam();
   setInvertParam(eig_inv_param);
+  eig_inv_param.residual_type=QUDA_L2_ABSOLUTE_RESIDUAL;
+//  eig_inv_param.dagger=QUDA_DAG_YES;
   eig_inv_param.dslash_type = dslashType;
   eig_inv_param.solve_type = QUDA_DIRECT_SOLVE;
   eig_inv_param.input_location = QUDA_CPU_FIELD_LOCATION;
   eig_inv_param.output_location = QUDA_CPU_FIELD_LOCATION;
   eig_param.invert_param = &eig_inv_param;
+  eig_param.invert_param->cuda_prec_eigensolver = prec;
+  eig_param.invert_param->clover_cuda_prec_eigensolver = prec;
 #endif
   tmp1 = new PLEGMA_Vector<double>(DEVICE);
   tmp2 = new PLEGMA_Vector<double>(DEVICE);
@@ -150,7 +156,7 @@ static void applyOperator(double *out, double *in, int size_per_Vec){
 #else
 void EigSolver::applyOperator(double *out, double *in){  
 #endif
-  cudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,cudaMemcpyHostToDevice);
+  qudaMemcpy(d_in->D_elem(),in,bytes_per_Vec,qudaMemcpyHostToDevice);
   checkQudaError();
   
   if(!G_isACC) dOp->apply<MdagM>(*d_out,*d_in);
@@ -188,7 +194,7 @@ void EigSolver::applyOperator(double *out, double *in){
       }
     }
   }
-  cudaMemcpy(out,d_out->D_elem(),bytes_per_Vec,cudaMemcpyDeviceToHost);
+  qudaMemcpy(out,d_out->D_elem(),bytes_per_Vec,qudaMemcpyDeviceToHost);
   checkQudaError();
 }
 
@@ -215,11 +221,11 @@ void EigSolver::initEigSolver(){
   int arpack_log_u = 9999;
   if(!p.logFile.empty() && comm_rank() == 0){
     char *tmps = strdup(p.logFile.c_str());
-    initlog_(&arpack_log_u, tmps, p.logFile.length());
+//    initlog_(&arpack_log_u, tmps, p.logFile.length());
     free(tmps);
     int msglvl0 = 0;//, msglvl1 = 1, msglvl2 = 2, msglvl3 = 3;
     int msglvl3 = 3;
-    pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
+//    pmcinitdebug_(&arpack_log_u, &msglvl3, &msglvl3, &msglvl0, &msglvl3, &msglvl0, &msglvl0, &msglvl3);
   }
 #elif HAVE_PRIMME
   primme_initialize(&primme_pars);
@@ -241,21 +247,24 @@ void EigSolver::initEigSolver(){
   primme_set_method(p.primme_method, &primme_pars);
 #elif QUDAEIG
   eig_param.eig_type = QUDA_EIG_TR_LANCZOS; // Up to now QUDA only provides the thick restarted Lanczos
+  eig_param.block_size = 1;
   if(p.spectrumPart == "SR") eig_param.spectrum = QUDA_SPECTRUM_SR_EIG;
   else if(p.spectrumPart == "LR") eig_param.spectrum = QUDA_SPECTRUM_LR_EIG;
   else PLEGMA_error("Not implemented");
   eig_param.location = QUDA_CUDA_FIELD_LOCATION;
-  eig_param.nConv = p.NeV;
-  eig_param.nEv = p.NeV;
-  eig_param.nKr = p.NkV;
+  eig_param.n_conv = p.NeV;
+  eig_param.n_ev = p.NeV;
+  eig_param.n_kr = p.NkV;
   eig_param.tol = p.tol;
   eig_param.batched_rotate = p.batched_rotate;
   eig_param.require_convergence = QUDA_BOOLEAN_TRUE;
   eig_param.check_interval = 10;
   eig_param.max_restarts = 1000;
   eig_param.cuda_prec_ritz = QUDA_DOUBLE_PRECISION;
+  eig_param.compute_gamma5= QUDA_BOOLEAN_FALSE;
   eig_param.use_norm_op = QUDA_BOOLEAN_TRUE; // put it on so it will do M^+ M
   eig_param.use_dagger = QUDA_BOOLEAN_FALSE;
+  eig_param.compute_gamma5 = QUDA_BOOLEAN_FALSE;
   eig_param.compute_svd = QUDA_BOOLEAN_FALSE;
   eig_param.use_poly_acc = G_isACC ? QUDA_BOOLEAN_TRUE : QUDA_BOOLEAN_FALSE;
   eig_param.poly_deg = G_PolyDeg;
@@ -391,7 +400,7 @@ void EigSolver::computeEigVecs(){
   if(info == 1) PLEGMA_printf("Warning: Maximum number of iterations reached.\n");
   if(info == 3) PLEGMA_error("No shifts could be applied during implicit, Arnoldi update, try increasing NkV\n");
   int arpack_log_u = 9999;
-  if(!p.logFile.empty() && comm_rank() == 0)finilog_(&arpack_log_u);
+//  if(!p.logFile.empty() && comm_rank() == 0) finilog_(&arpack_log_u);
 
   free(bmat);
   free(howmany);
@@ -427,7 +436,7 @@ void EigSolver::computeEigVals(){
   double* ptr_tmp = h_eigVecs;
   for(int j = 0 ; j < p.NeV; j++){
     double one[2] = {1.,0.};
-    cudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
+    qudaMemcpy(tmp1->D_elem(),ptr_tmp,bytes_per_Vec,qudaMemcpyHostToDevice);
     checkQudaError();
     dOp->apply<MdagM>(*tmp2,*tmp1);
     std::complex<double> eval = cuBLAS::dot(size_per_Vec, tmp1->D_elem(), tmp2->D_elem(), HGC_fullComm);
@@ -493,7 +502,7 @@ void EigSolver::dumpEvalsVdagG5V(std::string filename){
   std::vector<double> VdagG5V;
   double* ptr_tmp = h_eigVecs;
   for (int j = 0; j < p.NeV; ++j) {
-    cudaMemcpy(g5V.D_elem(),ptr_tmp,bytes_per_Vec,cudaMemcpyHostToDevice);
+    qudaMemcpy(g5V.D_elem(),ptr_tmp,bytes_per_Vec,qudaMemcpyHostToDevice);
     checkQudaError();
     V.copy(g5V);
     g5V.apply_gamma(G5);

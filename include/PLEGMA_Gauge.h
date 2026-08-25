@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h>
+#include <PLEGMA_GaugeU1.h>
 #include "complex"
 
 #ifndef _PLEGMA_GAUGE_H
@@ -120,6 +121,8 @@ namespace plegma {
      **/
     void gluonField(PLEGMA_Gauge<Float> &uIn);
     void U3xU1(PLEGMA_Gauge<Float> &u3, PLEGMA_U1Gauge<Float> &u1);
+    void mul_dag(PLEGMA_Gauge<Float> &uIn);
+    void qedPhase(PLEGMA_GaugeU1<Float> &uIn, Float phase);
   };
 
   /////////////////////////////////////

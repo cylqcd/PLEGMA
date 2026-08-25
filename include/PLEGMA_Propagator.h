@@ -1,4 +1,5 @@
 #include <PLEGMA_Field.h>
+#include <color_spinor_field.h>
 
 #ifndef _PLEGMA_PROPAGATOR_H
 #define _PLEGMA_PROPAGATOR_H
@@ -17,6 +18,10 @@ namespace plegma {
   public:
     PLEGMA_Propagator(ALLOCATION_FLAG alloc_flag=BOTH, GHOST_FLAG ghost_flag=FIRST_SIDE);
     ~PLEGMA_Propagator(){;}
+
+    void copyToQUDA( std::vector<ColorSpinorField>& cudaVector,  bool isEv = false);
+    void copyFromQUDA( std::vector<ColorSpinorField>& cudaVector, bool isEv = false);
+
     
     void apply_gamma(GAMMAS gMat, LEFTRIGHT LR = LEFT);
     void apply_gamma5();
@@ -53,6 +58,36 @@ namespace plegma {
        @return void
      **/    
     void absorb(PLEGMA_Vector3D<Float> &vec, int global_it, int nu, int c2);
+
+/**
+       @brief Applies N times Gaussian(Wuppertal) smearing operator on all time-slices of a vector. NOTE: works also for Vector3D
+       @param PLEGMA_Vector<Float> &vecIn, The 4D input vector (Exchange of boundaries happens inside the function)
+       @param PLEGMA_Gauge<Float> &gauge, The gauge field that will be used in the Gaussian smearing operator (Exchange of boundaries happens inside the function)
+       @param int nsmearGauss, The number of times to apply the operator (if zero copies inVec to outVec)
+       @param Float alphaGauss, alpha parameter of the Gaussian smearing
+    **/
+
+    void gaussianSmearing(PLEGMA_Propagator<Float> &propIn, PLEGMA_Gauge<Float> &gauge, int nsmearGauss, Float alphaGauss);
+
+
+    /** 
+       @brief packing the sinktime slice in all other time slices
+       @param the initial propagator to be broadcasted
+       @param PLEGMA_Propagator<Float> in initial propagator to be broadcasted
+       @param int sinktimeslice  the sinktime slice to be broadcasted
+     **/ 
+    void pack_propagator_as_sink(PLEGMA_Propagator<Float> &in, int sinktimeslice, int max_source_sink_separations, bool initial);
+
+    /**
+       @brief packing the sinktime slice in all other time slices
+       @param the initial propagator to be broadcasted
+       @param PLEGMA_Propagator<Float> in initial propagator to be broadcasted
+       @param int sinktimeslice  the sinktime slice to be broadcasted
+     **/
+    void pack_propagator_from_source_to_sink(PLEGMA_Propagator<Float> &in, int sinktimeslice, int source_sink_separations, bool initial);
+
+
+
     
     void applyBoundaries_device(int t0);
     void rotateToPhysicalBase_host(int sign);

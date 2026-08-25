@@ -71,6 +71,7 @@ define(QudaSetupType setup_type, QUDA_NULL_VECTOR_SETUP);
 define(bool pre_orthonormalize, false);
 define(bool post_orthonormalize, true);
 define(double omega, 0.85);
+define(int n_vec_batch[QUDA_MAX_MG_LEVEL], {});
 define(QudaInverterType coarse_solver[QUDA_MAX_MG_LEVEL], {});
 define(QudaInverterType smoother_type[QUDA_MAX_MG_LEVEL], {});
 define(double coarse_solver_tol[QUDA_MAX_MG_LEVEL], {});

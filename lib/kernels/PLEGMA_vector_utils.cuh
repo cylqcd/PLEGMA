@@ -19,10 +19,30 @@ static __global__ void rotate_uk_ch_g5g4_kernel(vector2<Float> vec){
 }
 
 template<typename Float>
+static __global__ void rotate_uk_ch_etmc_kernel(vector2<Float> vec){
+  int sid = blockIdx.x*blockDim.x + threadIdx.x;
+  Float2<Float> Sin[N_SPINS][N_COLS];
+  Float2<Float> Sout[N_SPINS][N_COLS];
+  if (sid >= vec.volume()) return;
+  vec.get(Sin,sid);
+  U_uk_ch_etmc(Sout,Sin);
+  vec.set(Sout,sid);
+}
+
+
+template<typename Float>
 void rotate_uk_ch_g5g4_k(vector2<Float> vec){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (vec.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
   rotate_uk_ch_g5g4_kernel<<<gridDim,blockDim>>>(vec);
+}
+
+
+template<typename Float>
+void rotate_uk_ch_etmc_k(vector2<Float> vec){
+  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+  dim3 gridDim( (vec.volume() + blockDim.x -1)/blockDim.x , 1 , 1);
+  rotate_uk_ch_etmc_kernel<<<gridDim,blockDim>>>(vec);
 }
 
 
@@ -122,26 +142,26 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
 }
 
 template<typename FloatIn, typename FloatOut> 
-static void copy_to_QUDA(FloatIn* in,ColorSpinorField &qudaVec, bool isEven){
+static void copy_to_QUDA(FloatIn* in, std::vector<ColorSpinorField>& qudaVec, int src, bool isEven){
   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
   dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
+  if( (qudaVec[src]).SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) qudaVec.V(), NULL);
+      copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) (qudaVec[src]).data(), NULL);
     else
-      copy_to_QUDA<FloatIn,FloatOut,false,true><<<gridDim,blockDim>>>(in, NULL,(FloatOut*) qudaVec.V());
+      copy_to_QUDA<FloatIn,FloatOut,false,true><<<gridDim,blockDim>>>(in, NULL,(FloatOut*) (qudaVec[src]).data());
   } else
-    copy_to_QUDA<FloatIn,FloatOut,true,true><<<gridDim,blockDim>>>(in, (FloatOut*) qudaVec.Even().V(),(FloatOut*) qudaVec.Odd().V());
+    copy_to_QUDA<FloatIn,FloatOut,true,true><<<gridDim,blockDim>>>(in, (FloatOut*) (qudaVec[src]).Even().data(),(FloatOut*) (qudaVec[src]).Odd().data());
 }
 
 template<typename FloatIn> 
-static void copy_to_QUDA(FloatIn* in, ColorSpinorField &qudaVec, bool isEven){
-  if( qudaVec.Precision() == QUDA_SINGLE_PRECISION )
-    copy_to_QUDA<FloatIn,float>(in, qudaVec, isEven);
-  else if ( qudaVec.Precision() == QUDA_DOUBLE_PRECISION )
-    copy_to_QUDA<FloatIn,double>(in, qudaVec, isEven);
+static void copy_to_QUDA(FloatIn* in,std::vector<ColorSpinorField>& qudaVec,int src,  bool isEven){
+  if( (qudaVec[src]).Precision() == QUDA_SINGLE_PRECISION )
+    copy_to_QUDA<FloatIn,float>(in, qudaVec, src, isEven);
+  else if ( (qudaVec[src]).Precision() == QUDA_DOUBLE_PRECISION )
+    copy_to_QUDA<FloatIn,double>(in, qudaVec, src, isEven);
   else
-    PLEGMA_error("Precision %d not supported", qudaVec.Precision());
+    PLEGMA_error("Precision %d not supported", (qudaVec[src]).Precision());
 
   checkQudaError();
 }
@@ -188,25 +208,25 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
 }
 
 template<typename FloatOut, typename FloatIn> 
-static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
+static void copy_from_QUDA(FloatOut* out, std::vector<ColorSpinorField>& qudaVec,int src, bool isEven){
   ProfileStruct ps(HGC_localVolume);
-  if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
+  if( (qudaVec[src]).SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
     if( isEven )
-      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) (qudaVec[src]).data(), (FloatIn*) NULL);
     else
-      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
+      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) (qudaVec[src]).data());
   } else
-    tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+    tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) (qudaVec[src]).Even().data(),(FloatIn*) (qudaVec[src]).Odd().data());
 }
 
 template<typename FloatOut> 
-static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
-  if( qudaVec.Precision() == QUDA_SINGLE_PRECISION )
-    copy_from_QUDA<FloatOut,float>(out, qudaVec, isEven);
-  else if ( qudaVec.Precision() == QUDA_DOUBLE_PRECISION )
-    copy_from_QUDA<FloatOut,double>(out, qudaVec, isEven);
+static void copy_from_QUDA(FloatOut* out, std::vector<ColorSpinorField> &qudaVec, int src, bool isEven){
+  if( (qudaVec[src]).Precision() == QUDA_SINGLE_PRECISION )
+    copy_from_QUDA<FloatOut,float>(out, qudaVec, src, isEven);
+  else if ( (qudaVec[src]).Precision() == QUDA_DOUBLE_PRECISION )
+    copy_from_QUDA<FloatOut,double>(out, qudaVec, src, isEven);
   else
-    PLEGMA_error("Precision %d not supported", qudaVec.Precision());
+    PLEGMA_error("Precision %d not supported", (qudaVec[src]).Precision());
   
   checkQudaError();
 }
@@ -261,8 +281,13 @@ static void compute_rms(const PLEGMA_Vector3D<Float> &vec, std::vector<int> &lis
   int *d_listR2 = nullptr;
   Float *d_absPsi = nullptr;
   if(listR2.size() != absPsi.size()) PLEGMA_error("List sizes should match");
-  cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int)); checkQudaError();
-  cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); checkQudaError();
+//  cudaMalloc((void**)&d_listR2, listR2.size() * sizeof(int));
+  d_listR2=(int *)device_malloc(listR2.size() * sizeof(int));
+  checkQudaError();
+//  cudaMalloc((void**)&d_absPsi, absPsi.size() * sizeof(Float)); 
+  d_absPsi=(Float *)device_malloc(absPsi.size() * sizeof(Float));
+
+  checkQudaError();
   cudaMemcpy(d_listR2,listR2.data(), listR2.size() * sizeof(int), cudaMemcpyHostToDevice); checkQudaError();
   cudaMemset(d_absPsi,0,absPsi.size() * sizeof(Float)); checkQudaError();
   thrust::counting_iterator<int> first(0);
