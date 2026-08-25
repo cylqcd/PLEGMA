@@ -121,10 +121,10 @@ __device__ void contractNucleonDeltaSeqSource(vector2<FloatC>& vec, propTex<Floa
                       if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][lu][c2][c2p];
                     }
                     else if (c_gamma==1){
-                      if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
+                      if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][b][c2][c2p];
                     }
                     else if (c_gamma==2){
-                      if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
+                      if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][lu][c2][c2p];
                     }
                     else if (c_gamma==3){
                       if( a == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][b][c2][c2p];
@@ -137,16 +137,16 @@ __device__ void contractNucleonDeltaSeqSource(vector2<FloatC>& vec, propTex<Floa
                     }
                     else if (c_gamma==6){
                       if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][lu][c2][c2p];
-                      if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
-                      if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
+                      if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][b][c2][c2p];
+                      if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][lu][c2][c2p];
                       if( a == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][b][c2][c2p];
                       if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[a][ku][c1][c1p] * P[nu][b][c2][c2p];   	
                       if( mu == gu &&  b == c_nu ) spinor[gu][c3] += factor * P2[a][ku][c1][c1p] * P[nu][lu][c2][c2p];
 	            }
                     else if (c_gamma==7){
                       if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][lu][c2][c2p];
-                      if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
-                      if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
+                      if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][b][c2][c2p];
+                      if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][lu][c2][c2p];
                       if( a == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][b][c2][c2p];
 
                     }
@@ -199,10 +199,10 @@ __device__ void contractNucleonDeltaSeqSource(vector2<FloatC>& vec, propTex<Floa
                     if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][lu][c2][c2p];
                   }
                   else if (c_gamma==1){
-                    if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
+                    if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][b][c2][c2p];
                   }
                   else if (c_gamma==2){
-                    if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
+                    if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][lu][c2][c2p];
                   }
                   else if (c_gamma==3){
                     if( a == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][b][c2][c2p];
@@ -215,16 +215,16 @@ __device__ void contractNucleonDeltaSeqSource(vector2<FloatC>& vec, propTex<Floa
                   }
                   else if (c_gamma==6){
                     if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][lu][c2][c2p];
-                    if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
-                    if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
+                    if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][b][c2][c2p];
+                    if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][lu][c2][c2p];
                     if( a == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][b][c2][c2p];
                     if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[a][ku][c1][c1p] * P[nu][b][c2][c2p];
                     if( mu == gu &&  b == c_nu ) spinor[gu][c3] += factor * P2[a][ku][c1][c1p] * P[nu][lu][c2][c2p];
                   }
                   else if (c_gamma==7){
                     if( mu == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][lu][c2][c2p];
-                    if( mu == gu && ku == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[a][b][c2][c2p];
-                    if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][lu][c1][c1p] * P[mu][ku][c2][c2p];
+                    if( mu == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[a][b][c2][c2p];
+                    if( a == gu && b == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][lu][c2][c2p];
                     if( a == gu && lu == c_nu ) spinor[gu][c3] += factor * P2[nu][ku][c1][c1p] * P[mu][b][c2][c2p];
 
                   }
