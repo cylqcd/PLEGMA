@@ -8,6 +8,8 @@
 #include <PLEGMA_mesons_loop_SIB.cuh>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_TMDWF.cuh>
+#include <PLEGMA_TMDWF_new.cuh>
+#include <PLEGMA_QWF.cuh>
 #include <PLEGMA_mesonsNew.cuh>
 #include <PLEGMA_mesonsOpen.cuh>
 #include <PLEGMA_mesons_SIB.cuh>
@@ -218,12 +220,12 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
 		    PLEGMA_Propagator<Float> &prop2,
-		    PLEGMA_Su3field<float> &staple, int l){
+		    PLEGMA_Su3field<float> &staple, int l, int b, int z){
 
   shape = {1};
   char d1[50],d2[50];
-  sprintf(d1,"twop_meson_1_l_%d",l);
-  sprintf(d2,"twop_meson_2_l_%d",l);
+  sprintf(d2,"twop_meson_2_l_%d_b_%d_z_%d",l,b,z);
+  sprintf(d1,"twop_meson_1_l_%d_b_%d_z_%d",l,b,z);
   datasets =  {d1, d2};
   groups =  {"mesons"};
   description = "g4 ";
@@ -236,6 +238,21 @@ template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractBaryonsEEE(Float* ptr, Float* evs, int nvecs, size_t vec_size, bool dev_ptr){
 }
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractTMDWFMesonsNew(PLEGMA_Propagator<Float> &prop1,
+		    PLEGMA_Propagator<Float> &prop2,
+		    PLEGMA_Su3field<float> &staple, int l, int b, int z){
+
+  shape = {16};
+  datasets = {"l_"+std::to_string(l)+"b_"+std::to_string(b)+"z_"+std::to_string(z)};
+  groups =  {"staple"};
+  description = "1,g1,g2,g3,g4,g5,g5g1,g5g2,g5g3,g5g4,s12,s13,s23,s41,s42,s43";
+  
+  initialize();
+  contract_TMDWF_mesons_new(prop1,prop2,*this, staple);
+}
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -885,20 +902,38 @@ contractNucleonThrp_wilsonLine(PLEGMA_Propagator<Float> &bwdProp,
 template<typename Float>
 void PLEGMA_Correlator<Float>::
 contractNucleonThrp_staple(PLEGMA_Propagator<Float> &bwdProp,
-                           PLEGMA_Propagator<Float> &fwdProp,
-			   PLEGMA_Su3field<Float> &su3,
-			   int signProps, std::vector<GAMMAS> gammas, bool isZfac,int b, int l, int z){			   
-  if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,(int) gammas.size()};
-  else shape = {(int) gammas.size()};
-  char d1[50];
-  sprintf(d1,"b_%d_l_%d_z_%d",b,l,z);
-  datasets =  {d1};	
+			       PLEGMA_Propagator<Float> &fwdProp,
+			       PLEGMA_Su3field<Float> &su3,
+			       int signProps, std::vector<GAMMAS> gammas,
+			       int l, int b, int z){
+  /* if(isZfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,(int) gammas.size()};
+  else */ shape = {(int) gammas.size()};
+  datasets = {"l_"+std::to_string(l)+"b_"+std::to_string(b)+"z_"+std::to_string(z)};
   groups =  {"staple"};
+
   description = getGammasString(gammas);
   initialize();
-
+  
   if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
-  threep_staple(*this,bwdProp,fwdProp,signProps,su3,gammas,isZfac);  
+  threep_wilsonLine(*this,bwdProp,fwdProp,signProps,su3,gammas);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
+                         PLEGMA_Propagator<Float> &prop2,
+                         PLEGMA_Su3field<float> &staple, int l, int b, int z, bool zfac){
+
+  if(zfac) shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,16};
+  else shape = {16};
+  char d1[50];
+  sprintf(d1,"l_%db_%dz_%d",l,b,z);
+  datasets =  {d1};
+  groups =  {"mesons"};
+  description = "g4 ";
+
+  initialize();
+  contract_TMDWF_mesons_zfac(prop1,prop2,*this, staple, zfac);
 }
 
 template<typename Float>
@@ -950,22 +985,6 @@ contractTMDWFMesonsTrick_Zfac(PLEGMA_Propagator<Float> &prop1,
   contract_TMDWF_mesons_trick_zfac(prop1,*this, staple);
 }
 
-template<typename Float>
-void PLEGMA_Correlator<Float>::
-contractTMDWFMesons_Zfac(PLEGMA_Propagator<Float> &prop1,
-                         PLEGMA_Propagator<Float> &prop2,
-                         PLEGMA_Su3field<float> &staple, int b, int l){
-
-  shape = {N_SPINS,N_SPINS,N_COLS,N_COLS,16};
-  char d1[50];
-  sprintf(d1,"b_%d_l_%d",b,l);
-  datasets =  {d1};
-  groups =  {"mesons"};
-  description = "g4 ";
-
-  initialize();
-  contract_TMDWF_mesons_zfac(prop1,prop2,*this, staple);
-}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::

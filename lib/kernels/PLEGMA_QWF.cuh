@@ -1,3 +1,4 @@
+#pragma once
 #include <PLEGMA_kernel_utils.cuh>
 using namespace plegma;
 
@@ -96,6 +97,7 @@ __global__ void contract_TMDWF_mesons_zfac_device(propTex<FloatA>texProp1,
       for(int g1=0;g1<4;g1++){
         int alpha = gIn[ip][g1][0];
         int beta = gIn[ip][g1][1];
+if(mu != -1 && nu != -1 && c1 != -1 && c2 != -1) {
         if (beta == nu){
           Float2<FloatC> value = g[ip][g1];
 #pragma unroll
@@ -109,6 +111,27 @@ __global__ void contract_TMDWF_mesons_zfac_device(propTex<FloatA>texProp1,
             }
           }
         }
+} else {
+#pragma unroll
+        for(int mu1 = 0; mu1 < N_SPINS; mu1++) {
+            if(beta == mu1) {
+              Float2<FloatC> value = g[ip][g1];
+#pragma unroll
+              for(int rho = 0 ; rho < N_SPINS ; rho++){
+#pragma unroll
+                for(int a = 0 ; a < N_COLS ; a++){
+#pragma unroll
+	                for(int b = 0 ; b < N_COLS ; b++){
+#pragma unroll
+                    for(int c3 = 0; c3 < N_COLS; c3++) {
+                      accum[ip] = accum[ip] + value * prop1[mu1][rho][c3][a] * conj(prop2[alpha][rho][b][a]) * staple[c3][b];
+                    }
+                  }
+                }
+              }
+            }
+        }
+}
       }
     }
   }
@@ -202,9 +225,11 @@ void contract_TMDWF_mesons_trick_zfac_host( ProfileStruct &ps,PLEGMA_Propagator<
 
 template<typename FloatA,typename FloatB,typename FloatC>
 void contract_TMDWF_mesons_zfac_host( ProfileStruct &ps,PLEGMA_Propagator<FloatA>& prop1,PLEGMA_Propagator<FloatB>& prop2,
-                                            PLEGMA_Correlator<FloatC>& corr, PLEGMA_Su3field<float>& staple,Float2<FloatC> *result){
-
-  int extra = N_SPINS*N_SPINS*N_COLS*N_COLS;
+                                            PLEGMA_Correlator<FloatC>& corr, PLEGMA_Su3field<float>& staple,Float2<FloatC> *result, bool zfac){
+  
+  int extra, mu, nu, c1, c2;
+  if(zfac) extra = N_SPINS*N_SPINS*N_COLS*N_COLS;
+  else extra = 1;
   int t_size = corr.localT(); if(t_size==0) return;
   int maxT = corr.endT() - corr.startT();
   int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);
@@ -239,10 +264,14 @@ void contract_TMDWF_mesons_zfac_host( ProfileStruct &ps,PLEGMA_Propagator<FloatA
 
   for(int it=0; it < t_size; it+=time_step) {
     for(int et=0; et < extra; et++){
-      int mu=et/N_SPINS/N_COLS/N_COLS;
-      int nu=(et/N_COLS/N_COLS)%N_SPINS;
-      int c1=(et/N_COLS)%N_COLS;
-      int c2=et%N_COLS;
+      if(zfac) {
+        mu=et/N_SPINS/N_COLS/N_COLS;
+        nu=(et/N_COLS/N_COLS)%N_SPINS;
+        c1=(et/N_COLS)%N_COLS;
+        c2=et%N_COLS;
+      } else {
+        mu = nu = c1 = c2 = -1;
+      }
       dim3 grid = ps.tp.grid;
       grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
       contract_TMDWF_mesons_zfac_device
@@ -311,10 +340,12 @@ static void contract_TMDWF_mesons_trick_zfac(PLEGMA_Propagator<FloatA>& prop1,PL
 }
 	    
 template<typename FloatA,typename FloatB,typename FloatC>
-static void contract_TMDWF_mesons_zfac(PLEGMA_Propagator<FloatA>& prop1,PLEGMA_Propagator<FloatB>& prop2,PLEGMA_Correlator<FloatC>& corr, PLEGMA_Su3field<float>& staple){
+static void contract_TMDWF_mesons_zfac(PLEGMA_Propagator<FloatA>& prop1,PLEGMA_Propagator<FloatB>& prop2,PLEGMA_Correlator<FloatC>& corr, PLEGMA_Su3field<float>& staple, bool zfac){
 
   bool runFT = (corr.getCorrSpace()==MOMENTUM_SPACE);
-  int site_size = N_SPINS*N_SPINS*N_COLS*N_COLS*16;
+  int site_size;
+  if(zfac) site_size = N_SPINS*N_SPINS*N_COLS*N_COLS*16;
+  else site_size = 16;
 
   if(corr.getSiteSize() != site_size)
     PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
@@ -337,7 +368,7 @@ static void contract_TMDWF_mesons_zfac(PLEGMA_Propagator<FloatA>& prop1,PLEGMA_P
   ps.tune_globally = true;
 
   tuneAndRun( ps, "contract_TMDWF_mesons_zfac", contract_TMDWF_mesons_zfac_host<FloatA,FloatB,FloatC>,
-              ps, prop1, prop2, corr, staple, result);
+              ps, prop1, prop2, corr, staple, result, zfac);
 
   if(runFT) {
     MPI_Allreduce(result, corr.H_elem(), corr.getTotalSize()*2, MPI_Type<FloatC>(), MPI_SUM, HGC_spaceComm);

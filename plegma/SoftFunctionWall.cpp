@@ -8,8 +8,13 @@ int main(int argc, char **argv)
 {
 
   static std::vector<std::string> listOpt = {"verbosity", "load-gauge", "nsmear-APE", "alpha-APE", "nsmear-gauss", "alpha-gauss",
+<<<<<<< HEAD
 					     "nsrc", "src-filename", "maxQsq", "twop-filename","threep-filename",  "corr-file-format",
 					     "corr-space", "tSinks","Projs","xiMomSm","sinkMom","which_particle","gammas"};
+=======
+					     "nsrc", "src-filename", "maxQsq",  "corr-file-format",
+					     "corr-space","xiMomSm","gammas"};
+>>>>>>> origin/TMD
 
   initializeOptions(argc, argv, true, listOpt);
 
@@ -19,7 +24,11 @@ int main(int argc, char **argv)
   HGC_options->set("rho_stout", "Rho parameter stout smearing", verbosity, rhoStout);
 
   int nStout;
+<<<<<<< HEAD
   HGC_options->set("n_stout", "n parameter stout smearing", verbosity, nStout);
+=======
+  HGC_options->set("nstout", "n parameter stout smearing", verbosity, nStout);
+>>>>>>> origin/TMD
 
   int L_LEN;
   HGC_options->set("l-len", "length of l", verbosity, L_LEN);
@@ -36,12 +45,25 @@ int main(int argc, char **argv)
   int z = 0;
   HGC_options->set("z-len", "length of z", verbosity, z);
 
+<<<<<<< HEAD
+=======
+  std::vector<int> sinkMom(4);
+  HGC_options->set("sinkMom", "momentum at the sink", verbosity, sinkMom);
+
+>>>>>>> origin/TMD
   std::vector<int> PMom = {0,0,0};
   HGC_options->set("P-momentum", "If added to the momentum transfer delta gives the sink momentum", verbosity, PMom);
 
   std::vector<int> pMom = {0,0,0};
   HGC_options->set("p-momentum", "If added to the momentum transfer delta gives the sink momentum", verbosity, pMom);
 
+<<<<<<< HEAD
+=======
+  std::string proj;
+  HGC_options->set("which_projector", "Which projector to use for 3pt function", verbosity, proj);
+  WHICHPROJECTOR which_proj=get_projector(proj.c_str());
+
+>>>>>>> origin/TMD
   int tsrc;
   HGC_options->set("t-source", "Time of source vector", verbosity, tsrc);
 
@@ -153,7 +175,11 @@ int main(int argc, char **argv)
 
   PLEGMA_Correlator<float> corr(corr_space, source);
   corr.setFixMomVec(sinkMom);
+<<<<<<< HEAD
   corr.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,0,0);
+=======
+  corr.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,0,0,0);
+>>>>>>> origin/TMD
   corr.writeFile(twop_filename, corr_file_format);
 
   if(mu != -mu_ud) {
@@ -240,7 +266,11 @@ int main(int argc, char **argv)
       }
 
       WL->conjugate();
+<<<<<<< HEAD
       corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,b,l);
+=======
+      corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,l,b,0);
+>>>>>>> origin/TMD
       corrqwf.writeFile(qwf_filename.c_str(), corr_file_format);
     }
 
@@ -278,7 +308,11 @@ int main(int argc, char **argv)
       }
 
       WL->conjugate();
+<<<<<<< HEAD
       corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,b,-l);
+=======
+      corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,-l,b,0);
+>>>>>>> origin/TMD
       corrqwf.writeFile(qwf_filename.c_str(), corr_file_format);
       
     }
@@ -341,7 +375,11 @@ int main(int argc, char **argv)
       }
 
       WL->conjugate();
+<<<<<<< HEAD
       corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,-b,l);
+=======
+      corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,l,-b,0);
+>>>>>>> origin/TMD
       corrqwf.writeFile(qwf_filename.c_str(), corr_file_format);
 
     }
@@ -380,7 +418,11 @@ int main(int argc, char **argv)
       }
 
       WL->conjugate();
+<<<<<<< HEAD
       corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,-b,-l);
+=======
+      corrqwf.contractTMDWFMesons_Zfac(*propUPPp,*propUPp,*WL,-l,-b,0);
+>>>>>>> origin/TMD
       corrqwf.writeFile(qwf_filename.c_str(), corr_file_format);
 
     }

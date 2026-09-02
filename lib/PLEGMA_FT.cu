@@ -76,7 +76,7 @@ template<typename Float>
 void PLEGMA_FT<Float>::checkAllocation(int newDof){
   dof = newDof;
   sizeN=Nmoms()*dimT*dof*2;
-  h_elem.reset(new Float[sizeN]);
+  h_elem = std::shared_ptr<Float>(new Float[sizeN],std::default_delete<Float[]>());
   zero();
 }
 
@@ -107,7 +107,12 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
       hostPtr[i*N_DIMS+j]=(int) std::lround(momList[i][j]);
     }
   }
-  cudaMemcpy(devPtr, hostPtr, sizeof(hostPtr), cudaMemcpyHostToDevice );
+  cudaError_t err=cudaMemcpy(devPtr, hostPtr, sizeof(hostPtr), cudaMemcpyHostToDevice );
+
+  if (err != cudaSuccess) {
+    PLEGMA_error("cudaMemcpy in getTexMomList failed: %s\n",
+                 cudaGetErrorString(err));
+  }
   resDesc.res.linear.devPtr = devPtr;
   resDesc.res.linear.sizeInBytes = sizeof(hostPtr);
 
@@ -115,10 +120,33 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
   memset(&texDesc, 0, sizeof(texDesc));
   texDesc.readMode = cudaReadModeElementType;
 
-  cudaTextureObject_t tex;
-  cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
-  
-  return std::shared_ptr<tex_mom_list>(new tex_mom_list(Nmoms(), tex, devPtr), [](tex_mom_list* moms) { cudaDestroyTextureObject(moms->tex); device_free(moms->devPtr);});
+  cudaTextureObject_t tex=0;
+  err = cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+  if (err != cudaSuccess) {
+    device_free(devPtr);
+    PLEGMA_error("cudaCreateTextureObject failed: %s\n",
+                 cudaGetErrorString(err));
+  }
+  return std::shared_ptr<tex_mom_list>(
+    new tex_mom_list(Nmoms(), tex, devPtr),
+    [](tex_mom_list* moms) {
+      if (!moms)
+        return;
+
+      if (moms->tex != 0) {
+        cudaError_t err = cudaDestroyTextureObject(moms->tex);
+        if (err != cudaSuccess) {
+          fprintf(stderr,
+                  "cudaDestroyTextureObject(momentum) failed: %s\n",
+                  cudaGetErrorString(err));
+        }
+      }
+
+      if (moms->devPtr)
+        device_free(moms->devPtr);
+
+      delete moms;
+    });
 }
 
 template<typename Float>

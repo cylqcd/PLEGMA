@@ -511,4 +511,3 @@ static void contract_mesons_fourp_ultralocal_oneendtrick(PLEGMA_Propagator<Float
     hostFree(result, corr.getTotalSize()*sizeof(Float2<FloatE>));
   }
 }
-	    
