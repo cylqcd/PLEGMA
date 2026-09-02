@@ -252,6 +252,7 @@ void PLEGMA_Field<Float>::create_device(){
   HGC_deviceMemory += Bytes_total_plus_ghost()/(1024.*1024.);          
   if(HGC_verbosity>1) PLEGMA_printf("Device memory in use is %f MB A PLEGMA \n",HGC_deviceMemory);
 #endif
+  isAllocDevice = true;
   zero_device();
   if(ghost_flag >= FIRST_SIDE){
 #ifdef HAVE_PINNED_GHOST
@@ -281,7 +282,6 @@ void PLEGMA_Field<Float>::create_device(){
 #endif
   }
   if(checkErr) checkQudaError();
-  isAllocDevice = true;
 }
 
 template<typename Float>
@@ -365,7 +365,6 @@ void PLEGMA_Field<Float>::zero_where(ALLOCATION_FLAG alloc_flag){
 template<typename Float>
 cudaTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
 #ifdef PLEGMA_TEXTURE
-  cudaTextureObject_t tex;
   cudaChannelFormatDesc desc;
   memset(&desc, 0, sizeof(cudaChannelFormatDesc));
   int precision = PLEGMA_Field<Float>::Precision();
@@ -396,8 +395,44 @@ cudaTextureObject_t PLEGMA_Field<Float>::createTexObject() const{
   memset(&texDesc, 0, sizeof(texDesc));
   texDesc.readMode = cudaReadModeElementType;
 
-  cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+  cudaTextureObject_t tex = 0;
+
+  cudaError_t err = cudaCreateTextureObject(&tex, &resDesc, &texDesc, nullptr);
+
+  if (err != cudaSuccess) {
+    int rank = -1;
+    int device = -1;
+    
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    cudaGetDevice(&device);
+    cudaDeviceProp prop{};
+    cudaGetDeviceProperties(&prop, device);
+
+    const size_t bytes = Bytes_total_plus_ghost();
+    const size_t element_bytes = Precision() == 4 ? sizeof(float2) : sizeof(int4);
+    const size_t elements = bytes / element_bytes;
+
+    fprintf(stderr,
+          "[rank %d device %d] "
+          "cudaCreateTextureObject failed: %s\n"
+          "  d_elem=%p\n"
+          "  bytes=%zu\n"
+          "  texture elements=%zu\n"
+          "  precision=%d\n",
+          rank,
+          device,
+          cudaGetErrorString(err),
+          static_cast<void*>(d_elem),
+          bytes,
+          elements,
+          Precision());
+    fflush(stderr);
+
+    PLEGMA_error("Could not create propagator texture\n");
+  }
+
   return tex;
+
 #else
   return 0;
 #endif
@@ -419,7 +454,7 @@ void PLEGMA_Field<Float>::printInfo(){
   PLEGMA_printf("The flag for the device allocation is %d\n",(int) isAllocDevice);
 }
 
-
+#if 0
 template<typename Float>
 void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTION action){
   if(comm_size() == 1) return;
@@ -514,6 +549,75 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
     #endif
   }
 }
+#endif
+template<typename Float>
+void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTION action){
+  if(comm_size() == 1) return;
+  assert(Total_length()==HGC_localVolume || Total_length()==HGC_localVolume3D);
+
+  if(ghost_flag < FIRST_SIDE)
+    PLEGMA_error("First side ghosts have not been allocated.\n");
+  if(dir<-1 || dir>=N_DIMS)
+    PLEGMA_error("Directions should be in [-1,%d] range with -1 all directions",N_DIMS);
+  if(sign<0 || sign>DIR_BOTH)
+    PLEGMA_error("Directions should be an orientation enum");
+
+  bool isAll = (dir<0) ? true:false;
+  bool runT = Total_length()==HGC_localVolume;
+  size_t scaleT = runT ? 1 : HGC_localL[DIM_T];
+
+  if(action==START || action==DO_ALL)
+    for(short i=0; i<N_DIMS; i++)
+      if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
+        for(short s = 0; s < DIR_BOTH; s++)
+          if(sign == s || sign==DIR_BOTH){
+            // collecting elements from device
+            copy_side_to_ghost(toField2<pFloat2>(*this), i, s, FIRST_SIDE);
+
+            Float *pointer_receive = h_ext_ghost_r+HGC_sideGhost[i][s]/scaleT*field_length*2;
+            Float *pointer_send = h_ext_ghost_s+HGC_sideGhost[i][s]/scaleT*field_length*2;
+            Float *pointer_device = d_elem+(HGC_sideGhost[i][s]/scaleT+total_length)*field_length*2;
+            int disp;
+            size_t nbytes = HGC_surface3D[i]/scaleT*field_length*2*sizeof(Float);
+
+            qudaMemcpy(pointer_send, pointer_device, nbytes, qudaMemcpyDeviceToHost);
+            if(checkErr) checkQudaError();
+
+            disp = (s==DIR_PLUS) ? +1 : -1;
+            messages.push_back(comm_declare_receive_relative(pointer_receive,i,disp,nbytes));
+            comm_start(messages.back());
+            disp *= -1;
+            messages.push_back(comm_declare_send_relative(pointer_send,i,disp,nbytes));
+            comm_start(messages.back());
+          }
+  if(action==FINISH || action==DO_ALL) {
+    // waiting for communications
+    while (! messages.empty()) {
+      comm_wait(messages.back());
+      comm_free(messages.back());
+      messages.pop_back();
+    }
+    //copying to device
+    if(isAll && sign==DIR_BOTH) {
+      Float *host = h_ext_ghost_r;
+      Float *device = d_elem+total_length*field_length*2;
+      qudaMemcpy(device, host, Bytes_ghost(),qudaMemcpyHostToDevice);
+      if(checkErr) checkQudaError();
+    } else {
+      for(short i=0; i<N_DIMS; i++)
+        if( (dir == i || isAll) && HGC_dimBreak[i] && (i < N_DIMS-1 || runT) )
+          for(short s = 0; s < DIR_BOTH; s++)
+            if(sign == s || sign==DIR_BOTH){
+              Float *host = h_ext_ghost_r + HGC_sideGhost[dir][s]/scaleT*field_length*2;
+              Float *device = d_elem + (HGC_sideGhost[dir][s]/scaleT+total_length)*field_length*2;
+              qudaMemcpy(device, host, HGC_surface3D[dir]/scaleT*field_length*2*sizeof(Float),
+                         qudaMemcpyHostToDevice);
+              if(checkErr) checkQudaError();
+            }
+    }
+  }
+}
+
 
 template<typename Float>
 void PLEGMA_Field<Float>::communicateSecondSideGhost(short dir, ORIENTATION sign, ACTION action){
@@ -1266,11 +1370,34 @@ void PLEGMA_Field<Float>::mulMomentumPhases(std::vector<FloatMom> mom, int sign)
   if( (total_length == HGC_localVolume3D) && mom.size() != 3 ) PLEGMA_error("A 3D field needs a 3D momentum vector\n");
   int D3D4 = mom.size();
   int V = D3D4 == 3 ? HGC_localVolume3D : HGC_localVolume;
+  auto checkpoint = [](const char *where) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  cudaError_t err = cudaPeekAtLastError();
+  if (err == cudaSuccess)
+    err = cudaDeviceSynchronize();
+
+  if (err != cudaSuccess) {
+    fprintf(stderr, "[rank %d] CUDA ERROR at %s: %s\n",
+            rank, where, cudaGetErrorString(err));
+    fflush(stderr);
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
+};
+
+checkpoint("mulMomentumPhases entry");
   Float2<Float> *x;
   x=(Float2<Float> *)device_malloc(V*2*sizeof(Float));
+  checkpoint("after device_malloc");
+
   //cudaMalloc((void**)&x, V*2*sizeof(Float));
   qudaMemset((void*) x,0,V*2*sizeof(Float));
+  checkpoint("after qudaMemset");
+
   if(checkErr) checkQudaError();
+  checkpoint("before momfield");
+
   std::vector<Float> momF(mom.begin(), mom.end());
   createMomField(x, momF, D3D4, sign);
   for(int dof = 0; dof < field_length; dof++)
