@@ -27,22 +27,68 @@ struct MomF{
 };
 
 template<typename Float>
-static void createMomField(Float2<Float> *x, std::vector<Float> mom, int D3D4, int sign){
-  if(D3D4 == 3){
-    if(mom.size() != 3) PLEGMA_error("A momentum vector in three dimensions need three components\n");}
-  else if (D3D4 == 4){
-    if(mom.size() != 4) PLEGMA_error("A momentum vector in four dimensions need four components\n");}
-  else PLEGMA_error("Not supported");
-  int V = (D3D4 == 3) ? HGC_localVolume/HGC_localL[3] : HGC_localVolume;
+static void createMomField(Float2<Float>* x, const std::vector<Float>& mom, int D3D4, int sign){
+  if (D3D4 == 3) {
+    if (mom.size() != 3)
+      PLEGMA_error(
+          "A momentum vector in three dimensions "
+          "needs three components\n");
+  } else if (D3D4 == 4) {
+    if (mom.size() != 4)
+      PLEGMA_error(
+          "A momentum vector in four dimensions "
+          "needs four components\n");
+  } else {
+    PLEGMA_error("Momentum dimension must be 3 or 4\n");
+  }
+
+  const int V =
+      D3D4 == 3
+          ? HGC_localVolume / HGC_localL[3]
+          : HGC_localVolume;
+
   thrust::counting_iterator<int> first(0);
   thrust::counting_iterator<int> last = first + V;
-  thrust::device_ptr<Float2<Float> > dev_ptr(x);
-  typedef thrust::tuple<thrust::counting_iterator<int>, thrust::device_ptr<Float2<Float> > > tplIntDev;
-  typedef thrust::zip_iterator<tplIntDev> zipTplIntDev;
-  zipTplIntDev z1 = thrust::make_zip_iterator(thrust::make_tuple(first,dev_ptr));
-  zipTplIntDev z2 = thrust::make_zip_iterator(thrust::make_tuple(last,dev_ptr + V));
-  if(D3D4 == 3) thrust::for_each(z1,z2,MomF<Float>(sign,mom[0],mom[1],mom[2],0));
-  else thrust::for_each(z1,z2,MomF<Float>(sign,mom[0],mom[1],mom[2],mom[3]));
+
+  thrust::device_ptr<Float2<Float>> dev_ptr(x);
+
+  using tplIntDev = thrust::tuple<
+      thrust::counting_iterator<int>,
+      thrust::device_ptr<Float2<Float>>>;
+
+  using zipTplIntDev =
+      thrust::zip_iterator<tplIntDev>;
+
+  zipTplIntDev z1 =
+      thrust::make_zip_iterator(
+          thrust::make_tuple(first, dev_ptr));
+
+  zipTplIntDev z2 =
+      thrust::make_zip_iterator(
+          thrust::make_tuple(last, dev_ptr + V));
+
+  if (D3D4 == 3) {
+    thrust::for_each(
+        z1,
+        z2,
+        MomF<Float>(
+            sign, mom[0], mom[1], mom[2], 0));
+  } else {
+    thrust::for_each(
+        z1,
+        z2,
+        MomF<Float>(
+            sign, mom[0], mom[1], mom[2], mom[3]));
+  }
+
+  // Detect launch/configuration errors without forcing synchronization.
+  cudaError_t err = cudaPeekAtLastError();
+
+  if (err != cudaSuccess) {
+    PLEGMA_error(
+        "createMomField Thrust launch failed: %s\n",
+        cudaGetErrorString(err));
+  }
 }
 
 
@@ -54,8 +100,8 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
   int V3 = HGC_localVolume/HGC_localL[3];
   int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
   Float2<Float> *x;
-  cudaMalloc((void**)&x, V*2*sizeof(Float));
-  cudaMemset(x,0,V*2*sizeof(Float));
+  x=(Float *)device_malloc(V*2*sizeof(Float));
+  qudaMemset(x,0,V*2*sizeof(Float));
   checkQudaError();
   for(int imom = 0; imom < Nmom; imom++){
     createMomField(x,mom[imom],ft.Dims(),-sign); // change sign to compensate dagger
@@ -68,7 +114,7 @@ static void FT_dot(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vect
 	ft.H_elem()[it*f.Field_length()*Nmom*2 + idf*Nmom*2 + imom*2 + 1] += res.imag();
       }
   }
-  cudaFree(x);
+  device_free(x);
 }
 
 template<typename Float>
@@ -79,9 +125,9 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
   int V3 = HGC_localVolume/HGC_localL[3];
   int V = ft.Dims() == 3 ? V3 : HGC_localVolume;
   Float2<Float> *x,*d_res;
-  cudaMalloc((void**)&x, V*2*sizeof(Float));
-  cudaMemset(x,0,V*2*sizeof(Float));
-  cudaMalloc((void**)&d_res, f.Field_length() * ft.DimT() * 2*sizeof(Float));
+  x=(Float2<Float> *)device_malloc( V*2*sizeof(Float));
+  qudaMemset(x,0,V*2*sizeof(Float));
+  d_res=(Float2<Float> *)device_malloc(f.Field_length() * ft.DimT() * 2*sizeof(Float));
   checkQudaError();
   Float2<Float> h_res[f.Field_length()*ft.DimT()];
   Float2<Float> *h_ft = (Float2<Float> *) ft.H_elem();
@@ -95,8 +141,8 @@ static void FT_gemv(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Float> &f, std::vec
       for(int it = 0 ; it < ft.DimT(); it++)
 	  h_ft[it*f.Field_length()*Nmom + idf*Nmom + imom] += h_res[idf*ft.DimT()+it];
   }
-  cudaFree(x);
-  cudaFree(d_res);
+  device_free(x);
+  device_free(d_res);
 }
 
 
@@ -130,14 +176,14 @@ static void fourier_transform_3D_k(PLEGMA_FT<Float> &ft, const PLEGMA_Field<Floa
   ProfileStruct ps(SpVol, shared_size);
   tune(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   size_t alloc_size=ft.Nmoms()*site_size*ps.tp.grid.x*2*sizeof(Float);
-  cudaMalloc((void**)&d_partial_block, alloc_size);
+  d_partial_block=(Float *)device_malloc(alloc_size);//(cudaMalloc((void**)&d_partial_block, alloc_size);
   checkQudaError();
   run(ps, "fourier_transform_3D_kernel", fourier_transform_3D_kernel<Float>, d_partial_block, toField2<pFloat2>(field), texMomList, it, sign);
   Float *h_partial_block = NULL;
   hostMalloc(h_partial_block,alloc_size);
-  cudaMemcpy(h_partial_block,d_partial_block,alloc_size,cudaMemcpyDeviceToHost);
+  qudaMemcpy(h_partial_block,d_partial_block,alloc_size,qudaMemcpyDeviceToHost);
   checkQudaError();
-  cudaFree(d_partial_block);
+  device_free(d_partial_block);
   int gridDimX = ps.tp.grid.x;
   Float *reduction;
   hostMalloc(reduction,ft.Nmoms()*site_size*2*sizeof(Float));
