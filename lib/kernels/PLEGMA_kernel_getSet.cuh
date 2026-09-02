@@ -1000,17 +1000,46 @@ namespace plegma {
     return T<Float>((Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true);
   }
 
-  template<template<typename> class T, template<typename> class Tfield, typename Float>
-  static inline std::shared_ptr<T<Float>> toTexture(const Tfield<Float>& field) {
-    return std::shared_ptr<T<Float>>(new T<Float>(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T<Float>* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
+  template<template<typename> class T, template<typename> class Tfield,typename Float>static inline std::shared_ptr<T<Float>> toTexture(const Tfield<Float>& field){
+       const cudaTextureObject_t tex = field.createTexObject();
+
+       return std::shared_ptr<T<Float>>(new T<Float>(tex, reinterpret_cast<Float2<Float>*>(field.D_elem()), field.Field_length(), field.is4D(), true), [](T<Float>* ptr) {
+	  if (ptr == nullptr)
+             return;
+#ifdef PLEGMA_TEXTURE
+          if (ptr->tex != 0) {
+             const cudaError_t err = cudaDestroyTextureObject(ptr->tex);
+             if (err != cudaSuccess) {
+	       PLEGMA_error("cudaDestroyTextureObject failed: %s\n",cudaGetErrorString(err));
+             }
+          } 
+#endif
+
+          delete ptr;
+       });
   }
 
-  template<class T, template<typename> class Tfield, typename Float>
-  static inline std::shared_ptr<T> toTexture(const Tfield<Float>& field) {
-    return std::shared_ptr<T>(new T(field.createTexObject(), (Float2<Float>*) field.D_elem(), field.Field_length(), field.is4D(), true), [&](T* ptr){field.destroyTexObject(ptr->tex); delete ptr;});
-  }
 
-    
+  template<class T, template<typename> class Tfield, typename Float> static inline std::shared_ptr<T> toTexture(const Tfield<Float>& field){
+       const cudaTextureObject_t tex = field.createTexObject();
+
+       return std::shared_ptr<T>( new T( tex, reinterpret_cast<Float2<Float>*>(field.D_elem()), field.Field_length(), field.is4D(), true), [](T* ptr) {
+        if (ptr == nullptr)
+          return;
+
+#ifdef PLEGMA_TEXTURE
+        if (ptr->tex != 0) {
+          const cudaError_t err = cudaDestroyTextureObject(ptr->tex);
+
+          if (err != cudaSuccess) {
+             PLEGMA_error("cudaDestroyTextureObject failed: %s\n", cudaGetErrorString(err));
+          }
+        }
+#endif
+
+        delete ptr;
+      });
+  }
 
 }
 #endif
