@@ -1,5 +1,6 @@
 #include <PLEGMA_global.h>
 #include <tune_quda.h>
+#include <targets/cuda/quda_cuda_api.h>
 using namespace quda;
 
 #ifndef PLEGMA_KERNEL_TUNER_H
@@ -195,14 +196,20 @@ public:
   }
     
   // initialisation
-  void initTuneParam(TuneParam &param) const {
+  // void initTuneParam(TuneParam &param) const {
+  //   Tunable::initTuneParam(param);
+  // }
+  void initTuneParam(TuneParam &param) const override {
     Tunable::initTuneParam(param);
+    param.aux = make_int4(1, 1, 1, 1);
   }
   
   // tuning functions
   void tune();
   void run();
-  void apply(const cudaStream_t &stream);
+  // void apply(const cudaStream_t &stream);
+  // void apply();
+  void apply(const qudaStream_t &stream) override;
   void apply();
 
   using Tunable::tuned;
@@ -228,8 +235,10 @@ void PLEGMA_kernel_tuner<types...>::tune(){
 }
 
 // apply tuning and/or running with/without tuning
+// template<class ...types>
+// void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
 template<class ...types>
-void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
+void PLEGMA_kernel_tuner<types...>::apply(const qudaStream_t &stream) {
 #ifdef PLEGMA_NO_TUNING
   // asked for no tuning, using default parameters
   tune();
@@ -244,24 +253,36 @@ void PLEGMA_kernel_tuner<types...>::apply(const cudaStream_t &stream){
   }
   if( onlyTuning && !activeTuning() ) return;
 
-  launchKernel(ps.tp,stream);
+  // launchKernel(ps.tp,stream);
+  launchKernel(ps.tp, target::cuda::get_stream(stream));
 
-  // HACK: For unknown reason, the Out Of Memory error state is not seen in QUDA/lib/tune.cpp
-  // by error = cudaGetLastError(); (line 765).
-  // So here we use jitify_error to communicate to the tuner the failure of the kernel.
-  cudaError_t error = cudaPeekAtLastError();
-  if( activeTuning() && ps.tune_globally ) {
-    double tmp = error;
-    comm_allreduce_max(&tmp);
-    error = (cudaError_t) tmp;
-  }
-  if( error != cudaSuccess ) jitify_error = (CUresult) error;
-  if( !activeTuning() ) checkCudaError();
+  // // HACK: For unknown reason, the Out Of Memory error state is not seen in QUDA/lib/tune.cpp
+  // // by error = cudaGetLastError(); (line 765).
+  // // So here we use jitify_error to communicate to the tuner the failure of the kernel.
+  // cudaError_t error = cudaPeekAtLastError();
+  // if( activeTuning() && ps.tune_globally ) {
+  //   double tmp = error;
+  //   // comm_allreduce_max(&tmp);
+  //   comm_allreduce_max(tmp);
+  //   error = (cudaError_t) tmp;
+  // }
+  // if( error != cudaSuccess ) jitify_error = (CUresult) error;
+  // if( !activeTuning() ) checkCudaError();
+
+  // During tuning, current QUDA synchronizes the device and checks the
+  // launch error itself. Outside tuning, check the launch here.
+  if (!activeTuning()) checkCudaError();
 #endif
 }
 
+// template<class ...types>
+// void PLEGMA_kernel_tuner<types...>::apply(){ apply(0); }
+
 template<class ...types>
-void PLEGMA_kernel_tuner<types...>::apply(){ apply(0); }
+void PLEGMA_kernel_tuner<types...>::apply()
+{
+  apply(device::get_default_stream());
+}
   
 template<class ...types>
 void PLEGMA_kernel_tuner<types...>::run(){
@@ -269,7 +290,8 @@ void PLEGMA_kernel_tuner<types...>::run(){
   if(!ps.tuned) tune();
   launchKernel(ps.tp.grid,ps.tp.block,ps.tp.shared_bytes,0);
 #else
-  if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
+  // if(!ps.tuned) ps.tp = tuneLaunch(*this, QUDA_TUNE_NO, (QudaVerbosity) HGC_verbosity);
+  if (!ps.tuned) ps.tp = tuneLaunch(*this, false, (QudaVerbosity) HGC_verbosity);
   launchKernel(ps.tp,0);
 #endif
   checkCudaError();

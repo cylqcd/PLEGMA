@@ -121,17 +121,51 @@ static __global__ void copy_to_QUDA(FloatIn *in, FloatOut *outEven, FloatOut *ou
   }
 }
 
-template<typename FloatIn, typename FloatOut> 
-static void copy_to_QUDA(FloatIn* in,ColorSpinorField &qudaVec, bool isEven){
-  dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
-  dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
-  if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
-    if( isEven )
-      copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) qudaVec.V(), NULL);
-    else
-      copy_to_QUDA<FloatIn,FloatOut,false,true><<<gridDim,blockDim>>>(in, NULL,(FloatOut*) qudaVec.V());
-  } else
-    copy_to_QUDA<FloatIn,FloatOut,true,true><<<gridDim,blockDim>>>(in, (FloatOut*) qudaVec.Even().V(),(FloatOut*) qudaVec.Odd().V());
+// template<typename FloatIn, typename FloatOut> 
+// static void copy_to_QUDA(FloatIn* in,ColorSpinorField &qudaVec, bool isEven){
+//   dim3 blockDim( THREADS_PER_BLOCK , 1, 1);
+//   dim3 gridDim( (HGC_localVolume + blockDim.x -1)/blockDim.x , 1 , 1);
+//   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
+//     if( isEven )
+//       copy_to_QUDA<FloatIn,FloatOut,true,false><<<gridDim,blockDim>>>(in,(FloatOut*) qudaVec.V(), NULL);
+//     else
+//       copy_to_QUDA<FloatIn,FloatOut,false,true><<<gridDim,blockDim>>>(in, NULL,(FloatOut*) qudaVec.V());
+//   } else
+//     copy_to_QUDA<FloatIn,FloatOut,true,true><<<gridDim,blockDim>>>(in, (FloatOut*) qudaVec.Even().V(),(FloatOut*) qudaVec.Odd().V());
+// }
+
+template<typename FloatIn, typename FloatOut>
+static void copy_to_QUDA(
+    FloatIn *in,
+    ColorSpinorField &qudaVec,
+    bool isEven)
+{
+  dim3 blockDim(THREADS_PER_BLOCK, 1, 1);
+  dim3 gridDim(
+      (HGC_localVolume + blockDim.x - 1) / blockDim.x,
+      1, 1);
+
+  if (qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET) {
+    if (isEven) {
+      copy_to_QUDA<FloatIn, FloatOut, true, false>
+          <<<gridDim, blockDim>>>(
+              in,
+              qudaVec.data<FloatOut *>(),
+              nullptr);
+    } else {
+      copy_to_QUDA<FloatIn, FloatOut, false, true>
+          <<<gridDim, blockDim>>>(
+              in,
+              nullptr,
+              qudaVec.data<FloatOut *>());
+    }
+  } else {
+    copy_to_QUDA<FloatIn, FloatOut, true, true>
+        <<<gridDim, blockDim>>>(
+            in,
+            qudaVec.Even().data<FloatOut *>(),
+            qudaVec.Odd().data<FloatOut *>());
+  }
 }
 
 template<typename FloatIn> 
@@ -187,16 +221,53 @@ static __global__ void copy_from_QUDA_kernel(FloatOut *out, FloatIn *inEven, Flo
   }
 }
 
-template<typename FloatOut, typename FloatIn> 
-static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
+// template<typename FloatOut, typename FloatIn> 
+// static void copy_from_QUDA(FloatOut* out, ColorSpinorField &qudaVec, bool isEven){
+//   ProfileStruct ps(HGC_localVolume);
+//   if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
+//     if( isEven )
+//       tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
+//     else
+//       tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
+//   } else
+//     tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+// }
+
+template<typename FloatOut, typename FloatIn>
+static void copy_from_QUDA(
+    FloatOut *out,
+    ColorSpinorField &qudaVec,
+    bool isEven)
+{
   ProfileStruct ps(HGC_localVolume);
-  if( qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET ){
-    if( isEven )
-      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,false>,out,(FloatIn*) qudaVec.V(), (FloatIn*) NULL);
-    else
-      tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,false,true>, out, (FloatIn*) NULL,(FloatIn*) qudaVec.V());
-  } else
-    tuneAndRun(ps, "copy_from_QUDA_kernel", copy_from_QUDA_kernel<FloatOut,FloatIn,true,true>, out, (FloatIn*) qudaVec.Even().V(),(FloatIn*) qudaVec.Odd().V());
+
+  if (qudaVec.SiteSubset() == QUDA_PARITY_SITE_SUBSET) {
+    if (isEven) {
+      tuneAndRun(
+          ps,
+          "copy_from_QUDA_kernel",
+          copy_from_QUDA_kernel<FloatOut, FloatIn, true, false>,
+          out,
+          qudaVec.data<FloatIn *>(),
+          static_cast<FloatIn *>(nullptr));
+    } else {
+      tuneAndRun(
+          ps,
+          "copy_from_QUDA_kernel",
+          copy_from_QUDA_kernel<FloatOut, FloatIn, false, true>,
+          out,
+          static_cast<FloatIn *>(nullptr),
+          qudaVec.data<FloatIn *>());
+    }
+  } else {
+    tuneAndRun(
+        ps,
+        "copy_from_QUDA_kernel",
+        copy_from_QUDA_kernel<FloatOut, FloatIn, true, true>,
+        out,
+        qudaVec.Even().data<FloatIn *>(),
+        qudaVec.Odd().data<FloatIn *>());
+  }
 }
 
 template<typename FloatOut> 

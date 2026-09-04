@@ -1,3 +1,4 @@
+#pragma once
 #if defined(HAVE_MKL) && defined(HAVE_OPENBLAS)
 #error Cannot define both mkl and openBLAS
 #endif
@@ -13,7 +14,7 @@
 
 #include <cublas_v2.h>
 #include <mpi.h>
-#pragma once
+// #pragma once
 enum OPER_MATR_BLAS {NOTRANS, TRANS, DAGGER};
 namespace cBLAS{
   //========================================================//

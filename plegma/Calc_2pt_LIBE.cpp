@@ -220,6 +220,11 @@ int main(int argc, char **argv)
 			for (int imu = 0; imu < mu_l.size(); imu++) {
 				double run_mu = mu_l[imu];
 
+			    if (kappa != kappa0) {
+					kappa = kappa0;
+					solver.UpdateSolver();
+				}
+
 				std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_u(3);
 				std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_d(3);
 
@@ -691,10 +696,10 @@ int main(int argc, char **argv)
 				}
 
 			}
+			while(not threads.empty()) {threads.back().join(); threads.pop_back();}
 		}
 	}
-	while(not threads.empty()) {threads.back().join(); threads.pop_back();}
 
-	//finalize();
+	finalize();
 	return 0;
 }

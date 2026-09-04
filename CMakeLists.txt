@@ -31,7 +31,11 @@ if("${QUDA_HOME}" STREQUAL "")
   message( FATAL_ERROR "QUDA_HOME must be defined" )
 endif()
 FIND_LIBRARY(QUDA_LIB quda ${QUDA_HOME}/lib)
-include_directories(SYSTEM ${QUDA_HOME}/include)
+include_directories(
+  SYSTEM
+  ${QUDA_HOME}/include
+  ${QUDA_HOME}/include/targets/cuda
+)
 
 set(QUDA_SRC "" CACHE PATH "path to QUDA src directory")
 if("${QUDA_SRC}" STREQUAL "")
@@ -111,9 +115,17 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS DEVEL RELEASE STRICT DEBUG 
 # using dirs in LD_LIBRARY_PATh for searching for libraries
 string(REPLACE ":" ";" LIBRARY_DIRS $ENV{LD_LIBRARY_PATH})
 
-set(DEFAULT_GPU_ARCH sm_60)
-set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, sm_21, sm_30, sm_35, sm_37, sm_50, sm_52, sm_60, sm_70, sm_80)")
-set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60 sm_70 sm_80)
+set(DEFAULT_GPU_ARCH sm_90)
+set(
+  GPU_ARCH ${DEFAULT_GPU_ARCH}
+  CACHE STRING
+  "Set the legacy GPU architecture"
+)
+
+set_property(
+  CACHE GPU_ARCH PROPERTY STRINGS
+  sm_60 sm_70 sm_80 sm_90
+)
 
 # max threads
 set(PLEGMA_MAX_THREADS 256 CACHE INT "maximum number of threads per block in tuner")
@@ -255,7 +267,7 @@ find_package(PythonInterp)
 if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
   find_package(CUDAWrapper)
   set(USING_CUDA_LANG_SUPPORT True)
-  set(CMAKE_CUDA_STANDARD 14)
+  set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED True)
 else()
   set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE FILEPATH "Host side compiler used by NVCC")
@@ -351,7 +363,9 @@ include_directories(SYSTEM ${PLEGMA_LIMEHOME}/include)
 LIST(APPEND CUDA_LIBS ${CUDA_cufft_LIBRARY} ${CUDA_curand_LIBRARY})
 LIST(APPEND CUDA_LIBS ${CUDA_cublas_LIBRARY})
 LIST(APPEND CUDA_LIBS ${CUDA_nvrtc_LIBRARY})
-LIST(APPEND CUDA_LIBS ${CUDA_nvToolsExt_LIBRARY})
+if(CUDA_nvToolsExt_LIBRARY)
+  list(APPEND CUDA_LIBS ${CUDA_nvToolsExt_LIBRARY})
+endif()
 
 find_package(LibDL)
 LIST(APPEND CUDA_LIBS ${LIBDL_LIBRARIES})
@@ -406,10 +420,10 @@ add_definitions(-D__COMPUTE_CAPABILITY__=${COMP_CAP})
 
 # NVCC FLAGS independet off build type
 if(NOT USING_CUDA_LANG_SUPPORT)
-  set(CUDA_NVCC_FLAGS "-std c++11 -arch=${GPU_ARCH} -ftz=true -prec-div=false -prec-sqrt=false")
+  set(CUDA_NVCC_FLAGS
+      "-std=c++17 -arch=${GPU_ARCH} -ftz=true -prec-div=false -prec-sqrt=false")
 else()
   set(CUDA_NVCC_FLAGS "-ftz=true -prec-div=false -prec-sqrt=false")
-  set(CMAKE_CUDA_FLAGS "-arch=${GPU_ARCH}" CACHE STRING "Flags used by the CUDA compiler" FORCE)
 endif()
 
 # some clang warnings shouds be warning even when turning warnings into errors
@@ -449,8 +463,8 @@ set(CMAKE_CUDA_FLAGS_STRICT "${CMAKE_CUDA_FLAGS_DEVEL}" CACHE STRING
     "Flags used by the CUDA compiler during strict jenkins builds."
     FORCE )
 set(CMAKE_CUDA_FLAGS_RELEASE "${CUDA_NVCC_FLAGS} -O3 -w" CACHE STRING
-    "Flags used by the CUDA compiler during release builds."
-    FORCE )
+  "Flags used by the CUDA compiler during release builds."
+)
 set(CMAKE_CUDA_FLAGS_HOSTDEBUG "${CUDA_NVCC_FLAGS} -g -lineinfo -DHOST_DEBUG" CACHE STRING
     "Flags used by the C++ compiler during host-debug builds."
     FORCE )

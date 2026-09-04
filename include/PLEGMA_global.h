@@ -3,6 +3,7 @@
 //======== External libraries =========//
 #include <mpi.h>
 #include <cuda.h>
+#include <cuda_runtime.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <typeinfo>
@@ -13,8 +14,14 @@
 #include <numeric>
 #include <array>
 #include <algorithm>
+#ifdef HAVE_OPENBLAS
+#include <cblas.h>
+#endif
 #include <quda.h>
 #include <quda_internal.h>
+#include <cublas_v2.h>
+#include <tune_key.h>
+#include <tune_quda.h>
 #include <cublas_v2.h>
 #ifdef __GNUG__ // gnu C++ compiler
 #include <cxxabi.h>
@@ -44,8 +51,42 @@ using namespace std::chrono_literals;
 #include <global/PLEGMA_macros.hpp>
 
 namespace plegma {
+
+using quda::Topology;
+using quda::MsgHandle;
+
+using quda::comm_abort;
+using quda::comm_barrier;
+using quda::comm_broadcast;
+using quda::comm_hostname;
+using quda::comm_rank;
+using quda::comm_rank_from_coords;
+
+using quda::getLastTuneKey;
+using quda::saveTuneCache;
+
   //======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//
 #include <global/PLEGMA_prints.hpp>
+
+inline void checkCudaError()
+{
+  cudaError_t error = cudaGetLastError();
+
+#ifdef HOST_DEBUG
+  if (error == cudaSuccess) {
+    error = cudaDeviceSynchronize();
+  }
+#endif
+
+  if (error != cudaSuccess) {
+    std::fprintf(
+        stderr,
+        "CUDA error: %s\n",
+        cudaGetErrorString(error)
+    );
+    quda::comm_abort(1);
+  }
+}
 
   //======== Enumerations =========//
 #include <global/PLEGMA_enums.h>

@@ -145,8 +145,8 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
 
   inv_param.Ls = 1;
 
-  inv_param.sp_pad = 0;
-  inv_param.cl_pad = 0;
+  // inv_param.sp_pad = 0;
+  // inv_param.cl_pad = 0;
 
   inv_param.cpu_prec = cpu_prec;
   inv_param.cuda_prec = cuda_prec;
@@ -212,6 +212,7 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.setup_maxiter[i] = setup_maxiter;
     mg_param.spin_block_size[i] = 1;
     mg_param.n_vec[i] = nvec[i] == 0 ? 24 : nvec[i]; // default to 24 vectors if not set
+    mg_param.n_vec_batch[i] = mg_param.n_vec[i];
     mg_param.precision_null[i] = prec_null; // precision to store the null-space basis
     mg_param.nu_pre[i] = nu_pre[i];
     mg_param.nu_post[i] = nu_post[i];
@@ -281,22 +282,37 @@ void setMultigridParam(QudaMultigridParam &mg_param) {
     mg_param.use_eig_solver[level]=mg_eig[level];
 #endif
 
-#ifdef QUDA_INCLUDES_COMMIT_55782743
-  mg_param.preserve_deflation = preserve_deflation;
-#endif
-#ifndef QUDA_INCLUDES_COMMIT_55782743
-  if(preserve_deflation) PLEGMA_error("The current version of QUDA does not include the preserve_deflation feature");
-#endif
+// #ifdef QUDA_INCLUDES_COMMIT_55782743
+//   mg_param.preserve_deflation = preserve_deflation;
+// #endif
+// #ifndef QUDA_INCLUDES_COMMIT_55782743
+//   if(preserve_deflation) PLEGMA_error("The current version of QUDA does not include the preserve_deflation feature");
+// #endif
+mg_param.preserve_deflation = preserve_deflation;
   // set file i/o parameters
-#ifdef QUDA_INCLUDES_COMMIT_1dec1db
-  for (int i=0; i<mg_param.n_level; i++) {
-    strcpy(mg_param.vec_infile[i], (vec_infile+(vec_infile!=""?("_"+std::to_string(i)):"")).c_str());
-    strcpy(mg_param.vec_outfile[i], (vec_outfile+(vec_outfile!=""?("_"+std::to_string(i)):"")).c_str());
+// #ifdef QUDA_INCLUDES_COMMIT_1dec1db
+//   for (int i=0; i<mg_param.n_level; i++) {
+//     strcpy(mg_param.vec_infile[i], (vec_infile+(vec_infile!=""?("_"+std::to_string(i)):"")).c_str());
+//     strcpy(mg_param.vec_outfile[i], (vec_outfile+(vec_outfile!=""?("_"+std::to_string(i)):"")).c_str());
+//   }
+// #else
+//   strcpy(mg_param.vec_infile, vec_infile.c_str());
+//   strcpy(mg_param.vec_outfile, vec_outfile.c_str());
+// #endif
+
+  for (int i = 0; i < mg_param.n_level; i++) {
+    strcpy(
+        mg_param.vec_infile[i],
+        (vec_infile
+             + (vec_infile != "" ? "_" + std::to_string(i) : ""))
+            .c_str());
+
+    strcpy(
+        mg_param.vec_outfile[i],
+        (vec_outfile
+             + (vec_outfile != "" ? "_" + std::to_string(i) : ""))
+            .c_str());
   }
-#else
-  strcpy(mg_param.vec_infile, vec_infile.c_str());
-  strcpy(mg_param.vec_outfile, vec_outfile.c_str());
-#endif
   
   // these need to be set for now but are actually ignored by the MG setup
   // needed to make it pass the initialization test
@@ -330,8 +346,8 @@ void setInvertParam(QudaInvertParam &inv_param) {
 
   inv_param.Ls = 1;
 
-  inv_param.sp_pad = 0;
-  inv_param.cl_pad = 0;
+  // inv_param.sp_pad = 0;
+  // inv_param.cl_pad = 0;
 
   inv_param.cpu_prec = cpu_prec;
   inv_param.cuda_prec = cuda_prec;

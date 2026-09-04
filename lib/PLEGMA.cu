@@ -7,13 +7,13 @@
 #include <limits>
 #include <string.h>
 #include <PLEGMA_io.h>
-#include <communicator_quda.h>
+// #include <communicator_quda.h>
 #include <comm_quda.h>
 
 //#define TIMING_REPORT
 using namespace plegma;
 std::vector<std::string> HDF5::open_files;
-Communicator &get_current_communicator();
+// Communicator &get_current_communicator();
 
 void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
   std::vector<double> runtime;
@@ -35,11 +35,13 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
     for(int i = 0 ; i < N_DIMS ; i++)
       HGC_localL[i] = localL[i];
 
-    HGC_default_topo = get_current_communicator().default_topo;
+    // HGC_default_topo = get_current_communicator().default_topo;
+    // HGC_default_topo = quda::comm_default_topology();
     HGC_verbosity = verbosity;
     for(int i = 0 ; i < N_DIMS ; i++) {
       HGC_nProc[i] = nProcs[i];
-      if(HGC_nProc[i] != comm_dim(i))
+      // if(HGC_nProc[i] != comm_dim(i))
+      if (HGC_nProc[i] != quda::comm_dim(i))
 	PLEGMA_error("nProcs and comm_dim do not match for dim %d",i);
     }
     
@@ -166,7 +168,9 @@ void plegma::PLEGMA_init(int localL[4], int nProcs[4], int verbosity){
 #endif
 
     for(int i= 0 ; i < N_DIMS ; i++)
-      HGC_procPosition[i] = comm_coords(HGC_default_topo)[i];
+      // HGC_procPosition[i] = comm_coords(HGC_default_topo)[i];
+      // HGC_procPosition[i] = quda::comm_coords(HGC_default_topo)[i];
+      HGC_procPosition[i] = quda::comm_coord(i);
 	 );
 
     TIME(

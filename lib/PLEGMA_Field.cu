@@ -1102,7 +1102,8 @@ void PLEGMA_Field<Float>::absorbTimeslice(PLEGMA_Field<Float> &srcfield, int glo
 
   //check dimensions
   
-  int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  // int my_it = global_it - comm_coords(HGC_default_topo)[3] * HGC_localL[3];
+  int my_it = global_it - quda::comm_coord(3) * HGC_localL[3];
   bool is_myIt = (my_it >= 0) && ( my_it < HGC_localL[3] );
   int V3 = HGC_localVolume/HGC_localL[3];
   int V4 = HGC_localVolume;

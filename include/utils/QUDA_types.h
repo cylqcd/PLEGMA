@@ -284,8 +284,15 @@ inline QudaSchwarzType get_schwarz_type(std::string s) {
 inline QudaTwistFlavorType get_flavor_type(std::string s) {
   if(s=="singlet")
     return QUDA_TWIST_SINGLET;
-  else if(s=="deg-doublet")
-    return QUDA_TWIST_DEG_DOUBLET;
+  // else if(s=="deg-doublet")
+  //   return QUDA_TWIST_DEG_DOUBLET;
+  else if(s=="deg-doublet") {
+    PLEGMA_error(
+        "deg-doublet is not supported by this QUDA version; "
+        "use singlet solves with the appropriate twist signs\n"
+    );
+    return QUDA_TWIST_INVALID;
+  }
   else if(s=="nondeg-doublet")
     return QUDA_TWIST_NONDEG_DOUBLET;
   else if(s=="no")
@@ -300,8 +307,8 @@ inline std::string get_flavor_str(QudaTwistFlavorType type) {
   switch(type) {
   case QUDA_TWIST_SINGLET:
     return "singlet";
-  case QUDA_TWIST_DEG_DOUBLET:
-    return "deg-doublet";
+  // case QUDA_TWIST_DEG_DOUBLET:
+  //   return "deg-doublet";
   case QUDA_TWIST_NONDEG_DOUBLET:
     return "nondeg-doublet";
   case QUDA_TWIST_NO:
@@ -321,10 +328,24 @@ inline QudaInverterType get_solver_type(std::string s) {
     return QUDA_GCR_INVERTER;
   else if(s=="pcg")
     return QUDA_PCG_INVERTER;
-  else if(s=="mpcg")
-    return QUDA_MPCG_INVERTER; 
-  else if(s=="mpbicgstab")
-    return QUDA_MPBICGSTAB_INVERTER;
+  // else if(s=="mpcg")
+  //   return QUDA_MPCG_INVERTER; 
+  // else if(s=="mpbicgstab")
+  //   return QUDA_MPBICGSTAB_INVERTER;
+  else if(s=="mpcg") {
+    PLEGMA_error(
+        "mpcg is not a separate solver type in this QUDA version; "
+        "configure mixed precision through the QUDA precision parameters\n"
+    );
+    return QUDA_INVALID_INVERTER;
+  }
+  else if(s=="mpbicgstab") {
+    PLEGMA_error(
+        "mpbicgstab is not a separate solver type in this QUDA version; "
+        "configure mixed precision through the QUDA precision parameters\n"
+    );
+    return QUDA_INVALID_INVERTER;
+  }
   else if(s=="mr")
     return QUDA_MR_INVERTER;
   else if(s=="sd")
@@ -377,10 +398,10 @@ inline std::string get_solver_str(QudaInverterType type) {
     return "gcr";
   case QUDA_PCG_INVERTER:
     return "pcg";
-  case QUDA_MPCG_INVERTER:
-    return "mpcg";
-  case QUDA_MPBICGSTAB_INVERTER:
-    return "mpbicgstab";
+  // case QUDA_MPCG_INVERTER:
+  //   return "mpcg";
+  // case QUDA_MPBICGSTAB_INVERTER:
+  //   return "mpbicgstab";
   case QUDA_MR_INVERTER:
     return "mr";
   case QUDA_SD_INVERTER:
