@@ -23,12 +23,15 @@ template<bool b, typename FloatA> using local_PorV = typename std::conditional< 
 
 template<bool b, typename FloatA> using PorV = typename std::conditional< b==true,  PLEGMA_Propagator<FloatA>&,  PLEGMA_Vector<FloatA>&>::type;
 template<bool b, typename FloatA> using PorVtex = typename std::conditional< b==true,  propTex<FloatA>,  vectorTex<FloatA>>::type;
+template<bool b, typename FloatA> using PorVaccess = typename std::conditional< b == true, prop2<FloatA>, vector2<FloatA>>::type;
 
 
 template<bool b,typename FloatC, typename FloatA, typename FloatB>
 __global__ void threep_local_device(Float2<FloatC>* block2,
-                                   typename std::conditional<b==true, propTex<FloatA>,  vectorTex<FloatA>>::type texture1,
-                                   typename std::conditional<b==true, propTex<FloatB>,  vectorTex<FloatB>>::type texture2,
+		PorVaccess<b, FloatA> texture1,
+                                   PorVaccess<b, FloatB> texture2,
+                                   //typename std::conditional<b==true, propTex<FloatA>,  vectorTex<FloatA>>::type texture1,
+                                   //typename std::conditional<b==true, propTex<FloatB>,  vectorTex<FloatB>>::type texture2,
 
 				    KernelArr<GAMMAS> listGammas,
 				    int it, int time_step, int maxT, int4 source,
@@ -111,8 +114,10 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   KernelArr<GAMMAS> listGammas;
   listGammas.size = gammas.size();
-  CUDA_CHECK(cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS)));
-  CUDA_CHECK(cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice));
+  //CUDA_CHECK(cudaMalloc((void**)&listGammas.array, gammas.size()*sizeof(GAMMAS)));
+  //CUDA_CHECK(cudaMemcpy(listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), cudaMemcpyHostToDevice));
+  listGammas.array= (GAMMAS *)device_malloc(sizeof(GAMMAS)*listGammas.size);
+  qudaMemcpy( listGammas.array, gammas.data(), gammas.size()*sizeof(GAMMAS), qudaMemcpyHostToDevice);
 
   if(HGC_verbosity > 2)
     if(corr.hasSource())
@@ -122,11 +127,15 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  CUDA_CHECK(cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) ));
+  //CUDA_CHECK(cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) ));
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size*sizeof(Float2<FloatC>));
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   
-  auto propTex1 = toTexture<PorVtex<b,FloatA>>(prop1);
-  auto propTex2 = toTexture<PorVtex<b,FloatB>>(prop2);
+  //auto propTex1 = toTexture<PorVtex<b,FloatA>>(prop1);
+  //auto propTex2 = toTexture<PorVtex<b,FloatB>>(prop2);
+
+  PorVaccess<b, FloatA> propAccess1(reinterpret_cast<Float2<FloatA>*>(prop1.D_elem()), prop1.Field_length(), prop1.is4D(), true);
+  PorVaccess<b, FloatB> propAccess2(reinterpret_cast<Float2<FloatB>*>(prop2.D_elem()), prop2.Field_length(), prop2.is4D(), true);
   
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
@@ -144,11 +153,13 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
       grid.x = (grid.x/time_step)*t_step;
       threep_local_device<b,FloatC,FloatA, FloatB>
 	<<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-	(d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms, mu,nu,c1,c2);
-      error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+	//(d_partial_block, *propTex1, *propTex2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms, mu,nu,c1,c2);
+        //error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+        (d_partial_block, propAccess1, propAccess2, listGammas, it, t_step, maxT, source, signProps, runFT, *moms, mu,nu,c1,c2);
 
-      cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+      //cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
       error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+      qudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
 
       if(runFT==true){
 	int accumX = ps.tp.grid.x/time_step;
@@ -169,9 +180,12 @@ static void threep_local_host(ProfileStruct &ps, Float2<FloatC> *result,
   }
 
  exit:
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
-  cudaFree(listGammas.array);
+  //hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  //cudaFree(d_partial_block);
+  //cudaFree(listGammas.array);
+  hostFree(h_partial_block, alloc_size * sizeof(*h_partial_block));
+  device_free(d_partial_block);
+  device_free(listGammas.array);
 }
 
 template<bool b, typename FloatC,typename FloatA, typename FloatB>

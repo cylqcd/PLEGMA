@@ -93,37 +93,25 @@ void PLEGMA_Propagator<Float>::gaussianSmearing(PLEGMA_Propagator<Float> &propIn
 
 template<typename Float>
 void PLEGMA_Propagator<Float>::derivative(PLEGMA_Propagator<Float> &propIn, PLEGMA_Gauge<Float> &gauge, int mu, ORIENTATION dir){
-
   auto texGauge = toTexture<gaugeTex>(gauge);
-
-  auto texPropIn = toTexture<propTex>(propIn);
-
+  auto texPropIn = toField2<prop2>(propIn);
   auto texPropOut = toField2<prop2>(*this);
-
   propIn.communicateSideGhost(mu, dir, DO_ALL);
 
   switch(dir){
-
     case(DIR_PLUS):
-
-      derivative_propagator_Plus(texPropOut, *texPropIn, *texGauge, mu);
-
+      derivative_propagator_Plus(texPropOut, texPropIn, *texGauge, mu);
       break;
 
     case(DIR_MINUS):
-
-      derivative_propagator_Minus(texPropOut, *texPropIn, *texGauge, mu);
-
+      derivative_propagator_Minus(texPropOut, texPropIn, *texGauge, mu);
       break;
 
     case(DIR_BOTH):
-
-      derivative_propagator_Both(texPropOut, *texPropIn, *texGauge, mu);
-
+      derivative_propagator_Both(texPropOut, texPropIn, *texGauge, mu);
       break;
 
   }
-
 }
 
 

@@ -33,7 +33,6 @@ int main(int argc, char **argv) {
   std::string mom_path = "%+d_%+d_%+d.txt";
   std::string mom_path1 = "%+d_%+d_%+d.txt";
   std::string mom_path2 = "%+d_%+d_%+d.txt";
-  //std::string mom_path3 = "%+d_%+d_%+d.txt";
 
   auto add_options = [&](Options& options) {
     options.set("whichParticle", "Which particle we want to do the 3pf. Options (proton, neutron)", verbosity, prOrNt);
@@ -91,6 +90,7 @@ int main(int argc, char **argv) {
 
     updateOptions(LIGHT);
     TIME(QUDA_solver solver(mu,1));
+    //TIME(QUDA_solver solver_dn(-mu,1));
 
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
@@ -121,6 +121,14 @@ int main(int argc, char **argv) {
 				   PLEGMA_printf("Going to invert %s for component %d\n",
 						 fl==LIGHT ? "LIGHT" : (fl == STRANGE ? "STRANGE" : "CHARM"), isc);
 				   TIME(solver.solve(vectorInOut, vectorInOut));
+				   //if(run_mu > 0) {
+				   //  mu=run_mu; 
+				   //  TIME(solver_up.solve(vectorInOut, vectorInOut));
+				   //}
+				   //if(run_mu < 0) {
+				   //  mu=run_mu;
+				   //  TIME(solver_dn.solve(vectorInOut, vectorInOut));
+				   //}
 				   if(prop_SL.getAllocation() != NONE) {
 				     prop_SL.absorb(vectorInOut, isc/3, isc%3);
 				   }
@@ -153,16 +161,11 @@ int main(int argc, char **argv) {
 	}
 	
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
-      for(int imom=0; imom<12; imom++) {
-
-      /*asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_px%+dpy%+dpz%+d",
-	       source[0], source[1], source[2], source[3], sinkMom[0], sinkMom[1], sinkMom[2]);
-      threep_filename = given_threep_filename + src_string;
-      free(src_string);*/ //Should be moved three lines down
+      for(int imom=0; imom<1; imom++) {
 
       std::vector<int> sinkMom = {0,0,0};
-      sinkMom[(imom/4)%3] = (imom%2)*2-1;       //-+-+ in positions 1,2,3
-      sinkMom[(imom/4+1)%3] = ((imom/2)%2)*2-1; //--++ in positions 2,3,1
+      //sinkMom[(imom/4)%3] = (imom%2)*2-1;       //-+-+ in positions 1,2,3
+      //sinkMom[(imom/4+1)%3] = ((imom/2)%2)*2-1; //--++ in positions 2,3,1
       
       asprintf(&src_string, "_sx%02dsy%02dsz%02dst%03d_px%+dpy%+dpz%+d",
                source[0], source[1], source[2], source[3], sinkMom[0], sinkMom[1], sinkMom[2]);
@@ -244,7 +247,6 @@ int main(int argc, char **argv) {
 		mu = run_mu;
 		solver.UpdateSolver();
 	      }
-	      
 	      {
 		// 3D propagators at t_sink
 		prop13D.absorb(prop1, global_fixSinkTime);
@@ -258,7 +260,7 @@ int main(int argc, char **argv) {
 		      vectorAuxF3D.seqSourceNucleon(prop13D, prop23D, get_projector(Projs[iproj]), nucleon, nu, c2);
 		    else
 		      vectorAuxF3D.seqSourceNucleon(prop13D, get_projector(Projs[iproj]), nucleon, nu, c2);
-					 
+		
 		    vectorAuxF3D.mulMomentumPhases(sinkMom,-1); // put momentum at the sink
 		    std::complex<float> Isingle(0,1);
 		    float phase = 2.*PI*(((float) sinkMom[0] * sourcePositions[isource][0])/HGC_totalL[0]
@@ -274,6 +276,14 @@ int main(int argc, char **argv) {
 		  double norm = vectorInOut.norm();
 		  vectorInOut.scale(1/norm);
 		  TIME(solver.solve(vectorInOut, vectorInOut));
+		  //if(run_mu > 0) {
+		  //  mu=run_mu;
+		  //  TIME(solver_up.solve(vectorInOut, vectorInOut));
+		  //}
+		  //if(run_mu < 0) {
+		  //  mu=run_mu;
+		  //  TIME(solver_dn.solve(vectorInOut, vectorInOut));
+		  //}
 		  vectorInOut.scale(norm);
 		  seqProp.absorb(vectorInOut, nu, c2);
 		}
@@ -288,20 +298,22 @@ int main(int argc, char **argv) {
 	      PLEGMA_Correlator<double> corr2(corr_space, source, 0, tsinkMtsource+1);
 	      corr2.setFixMomList(momenta4);
 	      PLEGMA_Correlator<double> corr3(corr_space, source);
-	      //corr3.setFixMomList(momenta5);
-	      PLEGMA_Correlator<double> *accum1,*accum3;
+	      PLEGMA_Correlator<double> *accum1,*accum2,*accum3;
 	      accum1=nullptr;
+	      accum2=nullptr;
 	      accum3=nullptr;
-	  
+
 	      // LOCAL contractions
 	      TIME(corr.contractNucleonThrp_local(seqProp, propF, signProps, gammas));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
 	      THREAD(corr.writeFile(filename, corr_file_format));
+	      //PLEGMA_printf("%e\n",corr.H_elem()[0]);
 				     
 	      // ONED contractions
 	      TIME(corr1.contractNucleonThrp_oneD(seqProp, propF, contractGauge, signProps, gammas));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr1.getTotalSize()*2; iv++) corr1.H_elem()[iv] *= signPer;
 	      THREAD(corr1.writeFile( filename, corr_file_format));
+              //PLEGMA_printf("%e\n",corr1.H_elem()[0]);
 				     
 	      // noe contractions
 	      TIME(corr.contractNucleonThrp_noe(seqProp, propF, contractGauge, signProps));
@@ -312,38 +324,14 @@ int main(int argc, char **argv) {
 	      TIME(corr2.contractNucleonThrp_twoD(seqProp, propF, contractGauge, signProps, gammas));
 	      if(signPer < 0) for(size_t iv = 0 ; iv < corr2.getTotalSize()*2; iv++) corr2.H_elem()[iv] *= signPer;
 	      THREAD(corr2.writeFile( filename, corr_file_format));
-
-	      // THREED contractions
-	      //TIME(corr3.contractNucleonThrp_threeD(seqProp, propF, contractGauge, signProps, gammas));
-	      //if(signPer < 0) for(size_t iv = 0 ; iv < corr3.getTotalSize()*2; iv++) corr3.H_elem()[iv] *= signPer;
-	      //THREAD(corr3.writeFile( filename, corr_file_format));
-
-	      
-	      // LOCAL contractions
-	      //TIME(corr.contractNucleonThrp_local(seqProp, propF2, signProps, gammas));
-	      //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;      
-	      //corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-	      //THREAD(corr.writeFile(filename, corr_file_format));
-				     
-	      /*
-	      // ONED contractions
-	      TIME(corr.contractNucleonThrp_oneD(seqProp, propF2, contractGauge, signProps, gammas));
-	      if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-	      THREAD(corr.writeFile( filename, corr_file_format));*/
-				     
-	      // noe contractions
-	      //TIME(corr.contractNucleonThrp_noe(seqProp, propF2, contractGauge, signProps));
-	      //if(signPer < 0) for(size_t iv = 0 ; iv < corr.getTotalSize()*2; iv++) corr.H_elem()[iv] *= signPer;
-	      //corr.setDatasets((std::vector<std::string>) {"threep_OS"});
-	      //THREAD(corr.writeFile( filename, corr_file_format));
-	      
+              //PLEGMA_printf("%e\n",corr2.H_elem()[0]);
 
 	      int mu;
 	      ORIENTATION dir;
+	      int count2=0;
 	      int count3=0;
 
-
+	     
 	      TIME_LOOP(
 	      for (int i=0; i<5; i++){
 	        dir = (i<3) ? DIR_BOTH : (i==3) ? DIR_PLUS : DIR_MINUS;
@@ -358,6 +346,11 @@ int main(int argc, char **argv) {
 		  dir = (j<3) ? DIR_BOTH : (j==3) ? DIR_PLUS : DIR_MINUS;
 		  mu = (j<3) ? j : 3;
 		  prop32.derivative(prop31,contractGauge,mu,dir);
+		  corr3.contractNucleonThrp_local(seqProp, prop32, signProps, gammas);
+		  if(signPer < 0) for(size_t iv = 0 ; iv < corr3.getTotalSize()*2; iv++) corr3.H_elem()[iv] *= signPer;
+		  if (accum2) accum2->insert(corr3,count2);
+		  else accum2=new PLEGMA_Correlator<double> (corr3,23);
+		  count2++;
 		  for (int k=0; k<5; k++){
 		    if (((j==3) && (k==4)) || ((j==4) && (k==3))) continue;
 		    dir = (k<3) ? DIR_BOTH : (k==3) ? DIR_PLUS : DIR_MINUS;
@@ -372,10 +365,12 @@ int main(int argc, char **argv) {
 		}
 	      }
 	      );
-	      
 
 	      accum1->setDatasets((std::vector<std::string>) {"ThreeD_OneD"});
 	      TIME(accum1->writeFile(filename,corr_file_format));
+
+	      accum2->setDatasets((std::vector<std::string>) {"ThreeD_TwoD"});
+	      TIME(accum2->writeFile(filename,corr_file_format));
 
 	      accum3->setDatasets((std::vector<std::string>) {"ThreeD_ThreeD"});
               TIME(accum3->writeFile(filename,corr_file_format));
@@ -390,8 +385,8 @@ int main(int argc, char **argv) {
 	    }
 	  }
 	}
-	
 #endif
+	
       }
       // If twop_filename exists we skip the rest
       if(access( twop_filename.c_str(), F_OK ) != -1) {

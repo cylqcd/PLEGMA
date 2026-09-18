@@ -7,8 +7,8 @@
 
 template<typename FloatC, typename FloatA, typename FloatB, typename FloatG>
 __global__ void threep_noe_device(Float2<FloatC>* block2,
-				  propTex<FloatA> prop1Tex, propTex<FloatB> prop2Tex,
-				  gaugeTex<FloatG> gaugeTex,
+				  prop2<FloatA> prop1Tex, prop2<FloatB> prop2Tex,
+				  gauge2<FloatG> gaugeTex,
 				  int it, int time_step, int maxT, int4 source,
 				  int signProps, bool runFT, tex_mom_list moms){
   int grid3D = gridDim.x/time_step;
@@ -94,12 +94,15 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
 
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
-  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size*sizeof(Float2<FloatC>) );
+  //cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
-  auto propTex1 = toTexture<propTex>(prop1);
-  auto propTex2 = toTexture<propTex>(prop2);
-  auto gaugetex = toTexture<gaugeTex>(gauge);
+  //auto propTex1 = toTexture<propTex>(prop1);
+  //auto propTex2 = toTexture<propTex>(prop2);
+  auto propAccess1 = plegma::toField2<plegma::prop2>(prop1);
+  auto propAccess2 = plegma::toField2<plegma::prop2>(prop2);
+  auto gaugetex = toField2<gauge2>(gauge);
 
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
@@ -109,11 +112,13 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
     grid.x = (grid.x/time_step)*t_step;
     threep_noe_device<FloatC,FloatA, FloatB, FloatG>
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (d_partial_block, *propTex1, *propTex2, *gaugetex, it, t_step, maxT, source, signProps, runFT, *moms);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+      (d_partial_block, propAccess1, propAccess2, gaugetex, it, t_step, maxT, source, signProps, runFT, *moms);
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+
+   //cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) goto exit;
+    qudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*t_step*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost); 
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
@@ -133,8 +138,10 @@ static void threep_noe_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_Co
   }
 
  exit:
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
-  cudaFree(d_partial_block);
+  //hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  //cudaFree(d_partial_block);
+  hostFree(h_partial_block, alloc_size * sizeof(*h_partial_block));
+  device_free(d_partial_block);
 }
 
 template<typename FloatC,typename FloatA, typename FloatB, typename FloatG>

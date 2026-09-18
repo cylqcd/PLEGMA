@@ -164,7 +164,7 @@ static __global__ void prop_mul_V_Vdag_kernel(prop2<Float> prop, vectorTex<Float
 }
 
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
-__global__ void derivative_propagator_Plus_kernel(prop2<FloatOut> out, propTex<FloatIn> propInTex, gaugeTex<FloatGauge> gaugeTex, int mu){
+__global__ void derivative_propagator_Plus_kernel(prop2<FloatOut> out, prop2<FloatIn> propInTex, gaugeTex<FloatGauge> gaugeTex, int mu){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= out.volume()) return;
 
@@ -181,7 +181,7 @@ __global__ void derivative_propagator_Plus_kernel(prop2<FloatOut> out, propTex<F
 }
 
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
-__global__ void derivative_propagator_Minus_kernel(prop2<FloatOut> out, propTex<FloatIn> propInTex, gaugeTex<FloatGauge> gaugeTex, int mu){
+__global__ void derivative_propagator_Minus_kernel(prop2<FloatOut> out, prop2<FloatIn> propInTex, gaugeTex<FloatGauge> gaugeTex, int mu){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= out.volume()) return;
 
@@ -197,7 +197,7 @@ __global__ void derivative_propagator_Minus_kernel(prop2<FloatOut> out, propTex<
 }
 
 template<typename FloatOut, typename FloatIn, typename FloatGauge>
-__global__ void derivative_propagator_Both_kernel(prop2<FloatOut> out, propTex<FloatIn> propInTex, gaugeTex<FloatGauge> gaugeTex, int mu){
+__global__ void derivative_propagator_Both_kernel(prop2<FloatOut> out, prop2<FloatIn> propInTex, gaugeTex<FloatGauge> gaugeTex, int mu){
   int sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= out.volume()) return;
 
@@ -223,21 +223,21 @@ static void prop_mul_V_Vdag(prop2<Float> prop, vectorTex<Float>& vectex1, vector
 }
 
 template <typename FloatOut, typename FloatIn, typename FloatGauge>
-static void derivative_propagator_Plus(prop2<FloatOut>& out, propTex<FloatIn>& propInTex, gaugeTex<FloatGauge>& gaugeTex, int mu){
+static void derivative_propagator_Plus(prop2<FloatOut>& out, prop2<FloatIn>& propInTex, gaugeTex<FloatGauge>& gaugeTex, int mu){
   ProfileStruct ps(out.volume());
   tuneAndRun(ps, "derivative_propagator_Plus_kernel", derivative_propagator_Plus_kernel<FloatOut,FloatIn,FloatGauge>,
              out, propInTex, gaugeTex, mu);
 }
 
 template <typename FloatOut, typename FloatIn, typename FloatGauge>
-static void derivative_propagator_Minus(prop2<FloatOut>& out, propTex<FloatIn>& propInTex, gaugeTex<FloatGauge>& gaugeTex, int mu){
+static void derivative_propagator_Minus(prop2<FloatOut>& out, prop2<FloatIn>& propInTex, gaugeTex<FloatGauge>& gaugeTex, int mu){
   ProfileStruct ps(out.volume());
   tuneAndRun(ps, "derivative_propagator_Minus_kernel", derivative_propagator_Minus_kernel<FloatOut,FloatIn,FloatGauge>,
              out, propInTex, gaugeTex, mu);
 }
 
 template <typename FloatOut, typename FloatIn, typename FloatGauge>
-static void derivative_propagator_Both(prop2<FloatOut>& out, propTex<FloatIn>& propInTex, gaugeTex<FloatGauge>& gaugeTex, int mu){
+static void derivative_propagator_Both(prop2<FloatOut>& out, prop2<FloatIn>& propInTex, gaugeTex<FloatGauge>& gaugeTex, int mu){
   ProfileStruct ps(out.volume());
   tuneAndRun(ps, "derivative_propagator_Both_kernel", derivative_propagator_Both_kernel<FloatOut,FloatIn,FloatGauge>,
              out, propInTex, gaugeTex, mu);

@@ -11,28 +11,28 @@ enum BARYONS_TYPE{NtoN,
 		  N_BARYONS}; // N_BARYONS must be last 
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_NtoN_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_NtoN_kernel(prop2<FloatA>& texProp1, prop2<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
 __device__ void contract_NtoN_wall_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, propTex<FloatA>& texProp3, propTex<FloatB>& texProp4, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_NtoR_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_NtoR_kernel(prop2<FloatA>& texProp1, prop2<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_RtoN_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_RtoN_kernel(prop2<FloatA>& texProp1, prop2<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__device__ void contract_RtoR_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_RtoR_kernel(prop2<FloatA>& texProp1, prop2<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC, int gamma>
-__device__ void contract_deltas_iso1o2_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_deltas_iso1o2_kernel(prop2<FloatA>& texProp1, prop2<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC, int gamma>
-__device__ void contract_deltas_iso3o2_kernel(propTex<FloatA>& texProp1, propTex<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
+__device__ void contract_deltas_iso3o2_kernel(prop2<FloatA>& texProp1, prop2<FloatB>& texProp2, Float2<FloatC> accum[2*N_SPINS*N_SPINS], int vid);
 
 template<typename FloatA, typename FloatB, typename FloatC>
-__global__ void contract_baryons_device(propTex<FloatA> texProp1, propTex<FloatB> texProp2, Float2<FloatC>* block2,
+__global__ void contract_baryons_device(prop2<FloatA> texProp1, prop2<FloatB> texProp2, Float2<FloatC>* block2,
 					int it, int time_step, int maxT, int4 source, BARYONS_TYPE ip, bool runFT, tex_mom_list mom_list){
 
   int grid3D = gridDim.x/time_step;
@@ -190,7 +190,7 @@ static void contract_baryons_host( ProfileStruct &ps,
   Float2<FloatC> *h_partial_block = NULL;
   Float2<FloatC> *d_partial_block = NULL;
   d_partial_block=(Float2<FloatC>*)device_malloc(alloc_size*sizeof(Float2<FloatC>) );
-//  cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
+  //cudaMalloc((void**)&d_partial_block, alloc_size * sizeof(Float2<FloatC>) );
   // Checking for allocation error. In case we return and let the tuner handle the error.
   cudaError_t error=cudaPeekAtLastError();
   if(error != cudaSuccess) {
@@ -199,20 +199,21 @@ static void contract_baryons_host( ProfileStruct &ps,
   }
   hostMalloc(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
 
-  auto propTex1 = toTexture<propTex>(prop1);
-  auto propTex2 = toTexture<propTex>(prop2);
+  auto propAccess1 = plegma::toField2<plegma::prop2>(prop1);
+  auto propAccess2 = plegma::toField2<plegma::prop2>(prop2);
 
   for(int it=0; it < t_size; it+=time_step) {
     dim3 grid = ps.tp.grid;
     grid.x = (grid.x/time_step)*std::min(t_size-it, time_step);
     contract_baryons_device
       <<<grid,ps.tp.block,ps.tp.shared_bytes>>>
-      (*propTex1, *propTex2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source,
-       (BARYONS_TYPE) ip, runFT, *mom_list);
-    error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+      (propAccess1, propAccess2, d_partial_block, it, std::min(t_size-it, time_step), maxT, source,
+       static_cast<BARYONS_TYPE>(ip), runFT, *mom_list);
+    //error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
 
-    cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
+    //cudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>) , cudaMemcpyDeviceToHost);
     error=cudaPeekAtLastError(); if(error != cudaSuccess) break;
+    qudaMemcpy(h_partial_block , d_partial_block , (alloc_size/time_step)*std::min(t_size-it, time_step)*sizeof(Float2<FloatC>) , qudaMemcpyDeviceToHost);
 
     if(runFT==true){
       int accumX = ps.tp.grid.x/time_step;
@@ -233,8 +234,10 @@ static void contract_baryons_host( ProfileStruct &ps,
 
     }
   }
-  hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
-  cudaFree(d_partial_block);
+  //hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
+  //cudaFree(d_partial_block);
+  hostFree(h_partial_block, alloc_size * sizeof(*h_partial_block));
+  device_free(d_partial_block);
 }
 
 template<typename FloatA, typename FloatB, typename FloatC>
