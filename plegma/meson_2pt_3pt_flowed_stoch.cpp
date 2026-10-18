@@ -45,6 +45,52 @@ static std::vector<double> runtime;
 #include <cstddef>
 #include <cstdlib>
 
+#include <blas_quda.h>
+namespace quda { void setDiracParam(DiracParam &, QudaInvertParam *, const bool); }
+
+// Optional check of the float sequential column actually saved in Host memory.
+// All calls and temporary RHS copies are guarded by check-seq-residual (default 0).
+// Uses the native full M, not an independent Dirac implementation.
+class SeqResidualSolver : public QUDA_solver {
+public:
+  using QUDA_solver::QUDA_solver;
+  void check_stored_seq_column(PLEGMA_Vector<float> &stored,
+                               PLEGMA_Vector<double> &source, int column,
+                               double run_mu, bool stored_is_physical) {
+    qudaDeviceSynchronize();
+    DiracParam params{};
+    setDiracParam(params, &inv_param, false);
+    auto full = std::unique_ptr<Dirac>(Dirac::create(params));
+    ColorSpinorParam fp(x.at(0));
+    fp.create = QUDA_ZERO_FIELD_CREATE;
+    std::vector<ColorSpinorField> input, output, rhs;
+    input.emplace_back(fp); output.emplace_back(fp); rhs.emplace_back(fp);
+    PLEGMA_Vector<double> physical, twisted;
+    physical.copy(stored);
+    // Only the temporary validation vector is converted to the solver basis.
+    // With --rotate=0 the saved field is already in that basis.
+    if (stored_is_physical)
+      twisted.rotateToPhysicalBasis(physical, -run_mu / std::abs(run_mu));
+    else
+      twisted.copy(physical);
+    qudaDeviceSynchronize();
+    twisted.copyToQUDA(input, false);
+    source.copyToQUDA(rhs, false);
+    qudaDeviceSynchronize();
+    full->M(output, input);
+    qudaDeviceSynchronize();
+    if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION ||
+        inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
+      blas::ax(1 / (2 * inv_param.kappa), output.at(0));
+    blas::axpy(-1.0, rhs.at(0), output.at(0));
+    qudaDeviceSynchronize();
+    double residual = std::sqrt(blas::norm2(output.at(0)) / blas::norm2(rhs.at(0)));
+    PLEGMA_printf("[SEQUENTIAL_STORED_RESIDUAL] column=%d relative=%.16e\n", column, residual);
+    if (!std::isfinite(residual) || residual > 1e-5)
+      PLEGMA_error("Stored float sequential column %d fails full-equation gate: %.16e", column, residual);
+  }
+};
+
 int main(int argc, char **argv) {
   std::vector<std::string> listOpt = {"verbosity",
                                       "load-gauge",
@@ -71,6 +117,18 @@ int main(int argc, char **argv) {
   int max_order = 6;
   HGC_options->set("max-order", "Max derivative order for fiveD patterns (1-6)",
                    verbosity, max_order);
+
+  int check_seq_residual = 0;
+  HGC_options->set("check-seq-residual", "Check stored float sequential columns with full M (0/1; default 0)",
+                   verbosity, check_seq_residual);
+  if (check_seq_residual != 0 && check_seq_residual != 1)
+    PLEGMA_error("check-seq-residual must be 0 or 1");
+
+  int spectator_periodic = 0;
+  HGC_options->set("spectator-periodic", "Use P spectator ONLY; active and seq inversions remain AP (0/1)",
+                   verbosity, spectator_periodic);
+  if (spectator_periodic != 0 && spectator_periodic != 1)
+    PLEGMA_error("spectator-periodic must be 0 or 1");
 
   // ---- Stochastic source options ----
   int nsamples = 1;
@@ -119,6 +177,15 @@ int main(int argc, char **argv) {
         "Run flags: rotateQ=%d pionQ=%d kaonQ_uins=%d kaonQ_sins=%d  mu_ud=%g  mu_s=%g"
         "  nsamples=%d  seed=%d\n",
         (int)rotateQ, (int)pionQ, (int)kaonQ_uins, (int)kaonQ_sins, mu_ud, mu_s, nsamples, seed);
+
+    if (spectator_periodic && (kaonQ_uins || kaonQ_sins))
+      PLEGMA_error("Spectator BC pilot supports pion only");
+    // The source-wrap implementation below uses local time as global time.
+    // Reject unsupported mixed-BC temporal decompositions before any inversions.
+    if (spectator_periodic && HGC_localL[DIM_T] != HGC_totalL[DIM_T])
+      PLEGMA_error("AP-P source-wrap alignment currently requires no temporal decomposition");
+    PLEGMA_printf("[BC_ASSIGNMENT] active=AP sequential=AP spectator=%s\n",
+                  spectator_periodic ? "P" : "AP");
 
     // ---- Gauge field ----
     PLEGMA_Gauge<double> smearedGauge(BOTH);
@@ -169,8 +236,19 @@ int main(int argc, char **argv) {
       mu_ud = mu_ud_save;
       TIME(resetFermionFlowSmearedGauge());
       TIME(updateGaugeQuda(gauge, true));
-      auto solver_up = std::make_unique<QUDA_solver>(mu, 1);
-      QUDA_solver &solver = *solver_up;
+      auto solver_up = std::make_unique<SeqResidualSolver>(mu, 1);
+      auto switch_light_boundary = [&](bool antiperiodic) {
+        // Destroy Dirac/MG references BEFORE replacing resident gauge/clover.
+        solver_up.reset();
+        qudaDeviceSynchronize();
+        updateOptions(LIGHT);
+        mu = mu_ud_save;
+        mu_ud = mu_ud_save;
+        updateGaugeQuda(gauge, antiperiodic);
+        solver_up = std::make_unique<SeqResidualSolver>(mu, 1);
+        PLEGMA_printf("[BC_SWITCH] loaded=%s fresh_solver_and_multigrid=1\n",
+                      antiperiodic ? "AP" : "P");
+      };
 
       std::vector<SourceSeqData> all_source_seq_data;
       all_source_seq_data.reserve(numSourcePositions);
@@ -180,7 +258,7 @@ int main(int argc, char **argv) {
       updateOptions(LIGHT);
       mu    = mu_ud_save;
       mu_ud = mu_ud_save;
-      solver.UpdateSolver();
+      solver_up->UpdateSolver();
 
       site &src = sourcePositions[isrc];
       PLEGMA_printf("\n=== Source %d at (%02d,%02d,%02d,%02d) ===\n",
@@ -215,7 +293,7 @@ int main(int argc, char **argv) {
         if (mu != run_mu) {
           updateOptions(fl);
           mu = run_mu;
-          solver.UpdateSolver();
+          solver_up->UpdateSolver();
         }
 
         // Single Z4 noise vector shared by all 12 spin-color columns
@@ -244,7 +322,7 @@ int main(int argc, char **argv) {
             v4D1.copy(v4D2);
           }
 
-          TIME(solver.solve(v4D1, v4D1));
+          TIME(solver_up->solve(v4D1, v4D1));
 
           if (rotateQ) {
             TIME(v4D2.rotateToPhysicalBasis(v4D1, run_mu / abs(run_mu)));
@@ -305,7 +383,7 @@ int main(int argc, char **argv) {
         updateOptions(seq_fl);
         mu = seq_mu;
         PLEGMA_printf("mu after updateOptions %f\n", mu);
-        solver.UpdateSolver();
+        solver_up->UpdateSolver();
         const int seq_nsmear = (seq_fl == LIGHT) ? nsmearGauss : nsmearGauss_s;
 
         SeqChannelData cd;
@@ -323,7 +401,7 @@ int main(int argc, char **argv) {
           const int sink_t = (src[3] + dt_sink) % HGC_totalL[3];
 
           gauge.calculatePlaq();
-          solver.UpdateSolver();
+          solver_up->UpdateSolver();
 
           PLEGMA_Gauge3D<double> smearedGauge3D_sink;
           smearedGauge3D_sink.absorb(smearedGauge, sink_t);
@@ -355,7 +433,12 @@ int main(int argc, char **argv) {
               if (rotateQ) rhs4D1.rotateToPhysicalBasis(rhs4D2, mu / abs(mu));
               else         rhs4D1.copy(rhs4D2);
 
-              TIME(solver.solve(rhs4D1, rhs4D1));
+              std::unique_ptr<PLEGMA_Vector<double>> validation_seq_rhs;
+              if (check_seq_residual) {
+                validation_seq_rhs = std::make_unique<PLEGMA_Vector<double>>();
+                validation_seq_rhs->copy(rhs4D1);
+              }
+              TIME(solver_up->solve(rhs4D1, rhs4D1));
               if (rotateQ) rhs4D2.rotateToPhysicalBasis(rhs4D1, mu / abs(mu));
               else         rhs4D2.copy(rhs4D1);
 
@@ -364,6 +447,14 @@ int main(int argc, char **argv) {
               PLEGMA_Vector<float> rhs4D2_f;
               rhs4D2_f.copy(rhs4D2);
               seq_h->absorbVectorToHost(rhs4D2_f, nu, c2);
+              if (check_seq_residual) {
+                PLEGMA_Vector<float> seq_column;
+                seq_column.absorbFromHost(*seq_h, nu, c2);
+                qudaDeviceSynchronize();
+                if (nrm > 0.0) validation_seq_rhs->scale(nrm);
+                solver_up->check_stored_seq_column(seq_column, *validation_seq_rhs,
+                                                   nu * 3 + c2, seq_mu, rotateQ != 0);
+              }
             }
           }
           cd.seq_host.push_back(std::move(seq_h));
@@ -442,7 +533,7 @@ int main(int argc, char **argv) {
         updateOptions(LIGHT);
         mu    = mu_ud_save;
         mu_ud = mu_ud_save;
-        solver.UpdateSolver();
+        solver_up->UpdateSolver();
 
         // ---- 2-point functions ----
         if (do_pion) {
@@ -474,6 +565,73 @@ int main(int argc, char **argv) {
         // the memory-heavy sequential inversions.
         auto prop_q_sl_backup = make_host_prop_backup(prop_q_sl_ptr, "after_q_sl_backup");
         auto prop_s_sl_backup = make_host_prop_backup(prop_s_sl_d_ptr, "after_s_sl_backup");
+
+        if (spectator_periodic && do_pion) {
+          auto ap_ss_host = make_host_prop_backup(prop_q_ss_ptr, "AP_SS_host_before_P");
+          switch_light_boundary(false);
+          PLEGMA_printf("[FORWARD_BC] spectator P, same noise seed=%d\n", seed_q);
+          {
+            PLEGMA_Propagator<float> periodic_sl(BOTH);
+            prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+            TIME(build_quark_prop_stoch(periodic_sl, *prop_q_ss_ptr, +mu_ud_save,
+                                        LIGHT, nsmearGauss, src, smearedGauge3D_src, seed_q));
+          }
+          {
+            // Keep the AP active line fixed. The spectator has just been solved
+            // with periodic temporal boundary conditions using the original source
+            // and noise. Write this unaligned AP-P contraction before changing P.
+            PLEGMA_Propagator<float> ap_ss(BOTH);
+            ap_ss.copy(*ap_ss_host, HOST);
+            ap_ss.load();
+            auto write_mixed = [&](const char *tag) {
+              PLEGMA_Correlator<float> corr(corr_space, src, maxQsq);
+              TIME(corr.contractMesonsNew(ap_ss, *prop_q_ss_ptr));
+              TIME(corr.writeFile(twop_out + tag + sample_tag, corr_file_format));
+            };
+            write_mixed("_mixed_raw_pion");
+            prop_q_ss_ptr->unload();
+            const size_t vol = HGC_localVolume;
+            const size_t spatial = HGC_localVolume3D;
+            float *p = prop_q_ss_ptr->H_elem();
+            const float *a = ap_ss_host->H_elem();
+            // Align the mixed-BC correlator to the established A-data convention:
+            // chi(t;ts) = -1 for GLOBAL lattice time t < source time ts, +1 otherwise.
+            // This is a source-wrap sign convention, NOT a correction to the P
+            // inverse, NOT a flow-time phase, and NOT removal of all thermal terms.
+            // Multiply the sink-smeared P spectator once, in physical basis, before
+            // constructing any sequential source. The AP active line is unchanged.
+            //
+            // site/spatial is local time. The early geometry guard above ensures
+            // it equals global time; temporal MPI support needs a separate test.
+            for (size_t row = 0; row < 144; ++row)
+              for (size_t site = 0; site < vol; ++site) {
+                const float phase = (int(site / spatial) < src[3]) ? -1.f : 1.f;
+                p[2*(row*vol+site)] *= phase;
+                p[2*(row*vol+site)+1] *= phase;
+              }
+            prop_q_ss_ptr->load();
+            write_mixed("_mixed_aligned_pion");
+            auto aligned_p_host = std::make_unique<PLEGMA_Propagator<float>>(HOST);
+            aligned_p_host->copy(*prop_q_ss_ptr, HOST);
+            // Independent C2 linearity control: contract AP against the actual
+            // mean spectator (AP + chi*P)/2. This remains a propagator-level direct
+            // contraction, rather than an arithmetic mean of completed correlators.
+            for (size_t i = 0; i < 144*vol*2; ++i) p[i] = 0.5f*(a[i]+p[i]);
+            prop_q_ss_ptr->load();
+            write_mixed("_even_direct_pion");
+            // The mean spectator above is a C2 control only. Restore chi*P before
+            // constructing sequential sources; AP active and seq inversions stay AP.
+            // Later C3 contractions inherit this phase through the sequential field.
+            // Do NOT multiply C2/C3 again in patterns, the writer, or old-A analysis.
+            prop_q_ss_ptr->copy(*aligned_p_host, HOST);
+            prop_q_ss_ptr->load();
+            PLEGMA_printf("[SPECTATOR_PHASE] chi(t)=-1 for global_t<source_t=%d; sequential_input=aligned_P\n",
+                          src[3]);
+          }
+          // chi changes the source convention only; all sequential inversions and
+          // active/operator flow still use AP. Patterns keeps its original API.
+          switch_light_boundary(true);
+        }
 
         // ---- 3-point: Phase 1 – solve all seq props for this sample ----
         const double seq_mu_light = -std::abs(mu_ud_save);

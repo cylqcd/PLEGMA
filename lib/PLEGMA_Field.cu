@@ -753,6 +753,8 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
         }
       }
       PLEGMA_DBG_PRINTF("[SGhost-START-STAGING] rank %d: finished staging buffer copy\n", comm_rank());
+      // Finish the staging snapshot before READY lets a peer overwrite our ghost slots.
+      qudaDeviceSynchronize();
     }
     // P2P neighbour handshake: only wait for peers that will receive a direct
     // write from this rank, instead of synchronising the full communicator.
@@ -848,6 +850,8 @@ void PLEGMA_Field<Float>::communicateSideGhost(short dir, ORIENTATION sign, ACTI
 	                        + (HGC_sideGhost[i][s]/scaleT + total_length) * field_length * 2;
 	      Float *stage_src = d_side_ghost_pack_ptr[i][s] ? d_side_ghost_pack_ptr[i][s] : pointer_device;
 	      qudaMemcpy(peer_dst, stage_src, nbytes, qudaMemcpyDeviceToDevice);
+        // DONE must mean the peer data is complete, not just queued on this GPU.
+        qudaDeviceSynchronize();
         p2p_done_send_token[i][s] = 1;
         MsgHandle *done_handle = comm_declare_send_relative(&p2p_done_send_token[i][s], i, -disp,
                                                             sizeof(p2p_done_send_token[i][s]));

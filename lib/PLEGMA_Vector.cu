@@ -201,6 +201,29 @@ void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> &prop, int nu , int c
   checkQudaError();
 }
 template<typename Float>
+void PLEGMA_Vector<Float>::absorbFromHost(const PLEGMA_Propagator<Float> &prop, int nu, int c2){
+  if(nu < 0 || nu >= N_SPINS || c2 < 0 || c2 >= N_COLS)
+    PLEGMA_error("absorbFromHost: spin/color column index out of range");
+  if(!prop.IsAllocHost())
+    PLEGMA_error("absorbFromHost: input propagator has no Host storage");
+  if(!this->IsAllocDevice())
+    PLEGMA_error("absorbFromHost: output vector has no device storage");
+
+  const size_t V4 = HGC_localVolume;
+  if(prop.Total_length() != V4 || this->Total_length() != V4)
+    PLEGMA_error("absorbFromHost: both fields must cover the local 4D volume");
+  for(int spin = 0; spin < N_SPINS; ++spin)
+    for(int color = 0; color < N_COLS; ++color){
+      const size_t row = spin*N_SPINS*N_COLS*N_COLS
+                         + nu*N_COLS*N_COLS + color*N_COLS + c2;
+      Float *dst = this->D_elem() + (spin*N_COLS + color)*V4*2;
+      const Float *src = prop.H_elem() + row*V4*2;
+      qudaMemcpy(dst, src, V4*2*sizeof(Float), qudaMemcpyHostToDevice);
+    }
+  checkQudaError();
+}
+
+template<typename Float>
 void PLEGMA_Vector<Float>::absorb(PLEGMA_Propagator<Float> *prop, int nu , int c2){
   Float *pointer_src = NULL;
   Float *pointer_dst = NULL;
