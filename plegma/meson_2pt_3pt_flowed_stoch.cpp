@@ -26,6 +26,8 @@
 #include "QUDA_wilson_flow.h"
 #include <PLEGMA.h>
 #include <PLEGMA_utils.h>
+#include <comm_quda.h>
+#include "utils/PLEGMA_flow_output.h"
 #include "PLEGMA_fiveD.h"
 #include <memory>
 
@@ -45,51 +47,6 @@ static std::vector<double> runtime;
 #include <cstddef>
 #include <cstdlib>
 
-#include <blas_quda.h>
-namespace quda { void setDiracParam(DiracParam &, QudaInvertParam *, const bool); }
-
-// Optional check of the float sequential column actually saved in Host memory.
-// All calls and temporary RHS copies are guarded by check-seq-residual (default 0).
-// Uses the native full M, not an independent Dirac implementation.
-class SeqResidualSolver : public QUDA_solver {
-public:
-  using QUDA_solver::QUDA_solver;
-  void check_stored_seq_column(PLEGMA_Vector<float> &stored,
-                               PLEGMA_Vector<double> &source, int column,
-                               double run_mu, bool stored_is_physical) {
-    qudaDeviceSynchronize();
-    DiracParam params{};
-    setDiracParam(params, &inv_param, false);
-    auto full = std::unique_ptr<Dirac>(Dirac::create(params));
-    ColorSpinorParam fp(x.at(0));
-    fp.create = QUDA_ZERO_FIELD_CREATE;
-    std::vector<ColorSpinorField> input, output, rhs;
-    input.emplace_back(fp); output.emplace_back(fp); rhs.emplace_back(fp);
-    PLEGMA_Vector<double> physical, twisted;
-    physical.copy(stored);
-    // Only the temporary validation vector is converted to the solver basis.
-    // With --rotate=0 the saved field is already in that basis.
-    if (stored_is_physical)
-      twisted.rotateToPhysicalBasis(physical, -run_mu / std::abs(run_mu));
-    else
-      twisted.copy(physical);
-    qudaDeviceSynchronize();
-    twisted.copyToQUDA(input, false);
-    source.copyToQUDA(rhs, false);
-    qudaDeviceSynchronize();
-    full->M(output, input);
-    qudaDeviceSynchronize();
-    if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION ||
-        inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
-      blas::ax(1 / (2 * inv_param.kappa), output.at(0));
-    blas::axpy(-1.0, rhs.at(0), output.at(0));
-    qudaDeviceSynchronize();
-    double residual = std::sqrt(blas::norm2(output.at(0)) / blas::norm2(rhs.at(0)));
-    PLEGMA_printf("[SEQUENTIAL_STORED_RESIDUAL] column=%d relative=%.16e\n", column, residual);
-    if (!std::isfinite(residual) || residual > 1e-5)
-      PLEGMA_error("Stored float sequential column %d fails full-equation gate: %.16e", column, residual);
-  }
-};
 
 int main(int argc, char **argv) {
   std::vector<std::string> listOpt = {"verbosity",
@@ -151,8 +108,22 @@ int main(int argc, char **argv) {
                    verbosity, nsmearGauss_s);
 
   double flow_t0 = 2.5;  // dimensionless t0 for this ensemble (in lattice units)
-  HGC_options->set("t0-ref", "Dimensionless Wilson-flow reference scale t0 for this ensemble (lattice units); sets t_target=2.5*t0, checkpoints every 0.5*t0",
+  HGC_options->set("t0-ref", "Dimensionless Wilson-flow reference scale t0 in lattice units",
                    verbosity, flow_t0);
+  double flow_max_t0 = 2.5;
+  double flow_save_after_t0 = -1.0;
+  double flow_save_every_t0 = 0.1;
+  int flow_plan_only = 0;
+  HGC_options->set("flow-max-t0", "Maximum flow time in units of t0 (multiple of 0.1; default 2.5)",
+                   verbosity, flow_max_t0);
+  HGC_options->set("flow-save-after-t0", "Save 3pt only strictly after this tf/t0 (-1: no cutoff; default -1)",
+                   verbosity, flow_save_after_t0);
+  HGC_options->set("flow-save-every-t0", "3pt output spacing in units of t0 (multiple of 0.1; default 0.1; always include final point)",
+                   verbosity, flow_save_every_t0);
+  HGC_options->set("flow-plan-only", "Print the flow/output schedule and exit before GPU initialization (0/1)",
+                   verbosity, flow_plan_only);
+  if (flow_plan_only != 0 && flow_plan_only != 1)
+    PLEGMA_error("flow-plan-only must be 0 or 1");
 
   // ---- Run-mode flags (0/1) ----
   int rotateQ    = 1;  // apply twisted-mass rotation to physical basis
@@ -164,6 +135,33 @@ int main(int argc, char **argv) {
   HGC_options->set("kaon-uins", "Compute K+ 2pt + u-insertion 3pt channel (0/1)",     verbosity, kaonQ_uins);
   HGC_options->set("kaon-sins", "Compute K+ s-insertion 3pt channel (0/1)",           verbosity, kaonQ_sins);
 
+  std::unique_ptr<FlowOutputSchedule> flow_schedule;
+  try {
+    flow_schedule = std::make_unique<FlowOutputSchedule>(
+        flow_t0, flow_max_t0, flow_save_after_t0, flow_save_every_t0);
+  } catch (const std::exception &error) {
+    PLEGMA_error("Invalid flow output schedule: %s", error.what());
+  }
+  PLEGMA_printf("[FLOW_OUTPUT_WINDOW] t0=%.12g max_tf_over_t0=%.12g save_after=%.12g save_every=%.12g epsilon=%.12g checkpoints=%d\n",
+                flow_t0, flow_max_t0, flow_save_after_t0, flow_save_every_t0,
+                FlowOutputSchedule::epsilon, flow_schedule->checkpoints());
+  if (flow_plan_only) {
+    HGC_options->close();
+    for (int ic = 0; ic <= flow_schedule->checkpoints(); ++ic) {
+      const int target = flow_schedule->targetStep(ic);
+      const double time = target * FlowOutputSchedule::epsilon;
+      PLEGMA_printf("[FLOW_OUTPUT_PLAN] checkpoint=%d requested_tf_over_t0=%.12g step=%d actual_t=%.12g tau=%d save=%d\n",
+                    ic, flow_schedule->nominalRatio(ic), target, time,
+                    (int)std::lround(time / (0.1 * flow_t0)),
+                    (int)flow_schedule->save(ic));
+    }
+    delete HGC_options;
+    HGC_options = nullptr;
+    // Release QUDA communicators before MPI_Finalize on this preview-only path.
+    quda::comm_finalize();
+    finalizeComms();
+    return 0;
+  }
   initializePLEGMA();
   {
     if (!pionQ && !kaonQ_uins && !kaonQ_sins) {
@@ -232,7 +230,7 @@ int main(int argc, char **argv) {
       mu_ud = mu_ud_save;
       TIME(resetFermionFlowSmearedGauge());
       TIME(updateGaugeQuda(gauge, true));
-      auto solver_up = std::make_unique<SeqResidualSolver>(mu, 1);
+      auto solver_up = std::make_unique<QUDA_solver>(mu, 1);
       auto switch_light_boundary = [&](bool antiperiodic) {
         // Destroy Dirac/MG references BEFORE replacing resident gauge/clover.
         solver_up.reset();
@@ -241,7 +239,7 @@ int main(int argc, char **argv) {
         mu = mu_ud_save;
         mu_ud = mu_ud_save;
         updateGaugeQuda(gauge, antiperiodic);
-        solver_up = std::make_unique<SeqResidualSolver>(mu, 1);
+        solver_up = std::make_unique<QUDA_solver>(mu, 1);
         PLEGMA_printf("[BC_SWITCH] loaded=%s fresh_solver_and_multigrid=1\n",
                       antiperiodic ? "AP" : "P");
       };
@@ -679,11 +677,9 @@ int main(int argc, char **argv) {
                     src[0], src[1], src[2], src[3],
                     cd.tag.c_str(), (int)cd.active_as_bwd);
 
-      const double epsilon     = 0.02;
+      const double epsilon     = FlowOutputSchedule::epsilon;
       const double t0          = flow_t0;
-      const double t_target    = 2.5 * t0;
-      const int    n_steps     = (int)std::lround(t_target / epsilon);
-      const int    n_flow_save = (int)std::lround(t_target / (0.1 * t0));
+      const int    n_flow_save = flow_schedule->checkpoints();
 
       for (size_t its = 0; its < tSinks.size(); ++its) {
         const int dt_sink = tSinks[its];
@@ -714,8 +710,8 @@ int main(int argc, char **argv) {
         double t    = 0.0;
         int    step = 0;
 
-        // nt=0 checkpoint (no flow)
-        {
+        // nt=0 is omitted when a strict output lower bound is requested.
+        if (flow_schedule->save(0)) {
           const std::string base = threep_out + cd.tag + "_dt"
                                  + std::to_string(dt_sink) + "_tau00";
           const std::string threep_name_local = base + "_local";
@@ -759,7 +755,7 @@ int main(int argc, char **argv) {
         TIME(updateGaugeQuda(gauge, true));
 
         for (int ic = 1; ic <= n_flow_save; ++ic) {
-          const int target_step  = (int)std::lround((double)n_steps * ic / n_flow_save);
+          const int target_step  = flow_schedule->targetStep(ic);
           const int chunk_steps  = target_step - step;
           if (chunk_steps <= 0) continue;
           const bool keep_flow_gauge = (ic < n_flow_save);
@@ -774,6 +770,13 @@ int main(int argc, char **argv) {
           PLEGMA_printf("  checkpoint %d/%d: step=%d  t=%.6f\n",
                         ic, n_flow_save, step, t);
 
+          // Always evolve through every checkpoint; skip only the expensive
+          // 3pt contractions and their files outside the requested output set.
+          if (!flow_schedule->save(ic)) {
+            PLEGMA_printf("[FLOW_OUTPUT_SKIP] checkpoint=%d requested_tf_over_t0=%.12g\n",
+                          ic, flow_schedule->nominalRatio(ic));
+            continue;
+          }
           {
             char tau_tag[32];
             snprintf(tau_tag, sizeof(tau_tag), "_tau%02d",

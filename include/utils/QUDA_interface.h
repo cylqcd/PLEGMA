@@ -26,6 +26,10 @@ namespace quda {
     QudaInvertParam getInvParams() const{return inv_param;}
     SolverParam* getSolverParam() const{return solverParam;}
     void UpdateSolver();
+    // Check a stored sequential column with the native full operator.
+    void check_stored_seq_column(PLEGMA_Vector<float> &stored,
+                                 PLEGMA_Vector<double> &source, int column,
+                                 double run_mu, bool stored_is_physical);
 
 
     double Mu() const { return inv_param.mu;}

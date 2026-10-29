@@ -3,6 +3,9 @@
 #include <invert_quda.h>
 #include <PLEGMA_BLAS.h>
 #include <multigrid.h>
+#include <blas_quda.h>
+#include <cmath>
+#include <memory>
 using namespace std;
 using namespace quda;
 
@@ -264,6 +267,45 @@ QUDA_solver::QUDA_solver(double mu, int nsrc) {
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();
+}
+
+
+// Optional full-M check of the float sequential field stored on HOST.
+// Call sites remain guarded by --check-seq-residual (default 0).
+void QUDA_solver::check_stored_seq_column(PLEGMA_Vector<float> &stored,
+                                          PLEGMA_Vector<double> &source, int column,
+                                          double run_mu, bool stored_is_physical) {
+    qudaDeviceSynchronize();
+    DiracParam params{};
+    setDiracParam(params, &inv_param, false);
+    auto full = std::unique_ptr<Dirac>(Dirac::create(params));
+    ColorSpinorParam fp(x.at(0));
+    fp.create = QUDA_ZERO_FIELD_CREATE;
+    std::vector<ColorSpinorField> input, output, rhs;
+    input.emplace_back(fp); output.emplace_back(fp); rhs.emplace_back(fp);
+    PLEGMA_Vector<double> physical, twisted;
+    physical.copy(stored);
+    // Only the temporary validation vector is converted to the solver basis.
+    // With --rotate=0 the saved field is already in that basis.
+    if (stored_is_physical)
+      twisted.rotateToPhysicalBasis(physical, -run_mu / std::abs(run_mu));
+    else
+      twisted.copy(physical);
+    qudaDeviceSynchronize();
+    twisted.copyToQUDA(input, false);
+    source.copyToQUDA(rhs, false);
+    qudaDeviceSynchronize();
+    full->M(output, input);
+    qudaDeviceSynchronize();
+    if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION ||
+        inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
+      blas::ax(1 / (2 * inv_param.kappa), output.at(0));
+    blas::axpy(-1.0, rhs.at(0), output.at(0));
+    qudaDeviceSynchronize();
+    double residual = std::sqrt(blas::norm2(output.at(0)) / blas::norm2(rhs.at(0)));
+    PLEGMA_printf("[SEQUENTIAL_STORED_RESIDUAL] column=%d relative=%.16e\n", column, residual);
+    if (!std::isfinite(residual) || residual > 1e-5)
+      PLEGMA_error("Stored float sequential column %d fails full-equation gate: %.16e", column, residual);
 }
 
 
