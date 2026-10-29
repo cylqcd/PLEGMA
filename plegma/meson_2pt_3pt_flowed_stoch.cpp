@@ -180,10 +180,6 @@ int main(int argc, char **argv) {
 
     if (spectator_periodic && (kaonQ_uins || kaonQ_sins))
       PLEGMA_error("Spectator BC pilot supports pion only");
-    // The source-wrap implementation below uses local time as global time.
-    // Reject unsupported mixed-BC temporal decompositions before any inversions.
-    if (spectator_periodic && HGC_localL[DIM_T] != HGC_totalL[DIM_T])
-      PLEGMA_error("AP-P source-wrap alignment currently requires no temporal decomposition");
     PLEGMA_printf("[BC_ASSIGNMENT] active=AP sequential=AP spectator=%s\n",
                   spectator_periodic ? "P" : "AP");
 
@@ -601,11 +597,14 @@ int main(int argc, char **argv) {
             // Multiply the sink-smeared P spectator once, in physical basis, before
             // constructing any sequential source. The AP active line is unchanged.
             //
-            // site/spatial is local time. The early geometry guard above ensures
-            // it equals global time; temporal MPI support needs a separate test.
+            // Host propagator storage uses local lexicographic time. Convert
+            // with the Cartesian time coordinate, not the MPI rank number:
+            // temporal decomposition must preserve the single-rank chi(t;ts).
+            const int time_origin = HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
             for (size_t row = 0; row < 144; ++row)
               for (size_t site = 0; site < vol; ++site) {
-                const float phase = (int(site / spatial) < src[3]) ? -1.f : 1.f;
+                const int global_t = time_origin + static_cast<int>(site / spatial);
+                const float phase = (global_t < src[DIM_T]) ? -1.f : 1.f;
                 p[2*(row*vol+site)] *= phase;
                 p[2*(row*vol+site)+1] *= phase;
               }
