@@ -82,19 +82,16 @@ namespace plegma {
 
             block_position[j] = x[j] / Lu;
 
-            position_in_block[j] =
-                x[j] - Lu * block_position[j];
+            position_in_block[j] = x[j] - Lu * block_position[j];
 
             block_parity += block_position[j];
           }
 
           block_parity &= 1;
 
-          const int elementary_index =
-              getVecToInd(position_in_block, block_extents);
+          const int elementary_index = getVecToInd(position_in_block, block_extents);
 
-          h_arrVc[i] =
-              arrlc[2 * elementary_index + block_parity];
+          h_arrVc[i] = arrlc[2 * elementary_index + block_parity];
         }
       }
       //  void checkColoring();
@@ -111,7 +108,7 @@ namespace plegma {
         PLEGMA_printf("Distance of neigbors is %d\n",D);
         PLEGMA_printf("The extent of the elementary symmetric color block is %d\n",Lu);
         for(int i = 0 ; i < d ; i++){
-          if(D >= HGC_localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
+          if(D > HGC_localL[i]) PLEGMA_error("The coloring distance is larger than the lattice extent in direction %d\n",i);
           if( (HGC_localL[i] % (2*Lu)) != 0 )
             PLEGMA_error("2*Lu cannot fit in the local lattice extent in direction %d. Try to increase local size in this direction",i);
         }

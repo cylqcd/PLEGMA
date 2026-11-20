@@ -144,11 +144,6 @@ int main(int argc, char **argv)
 				isource, sourcePositions[isource][0], sourcePositions[isource][1],
 				sourcePositions[isource][2], sourcePositions[isource][3]);
 			
-			if(kappa != kappa0) {
-				kappa = kappa0;
-				solver.UpdateSolver();
-			}
-			
 			std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_s(3);
 			std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_c(3);
 			for (int isgn = 0; isgn < 3; isgn++) {
@@ -178,10 +173,10 @@ int main(int argc, char **argv)
 			"_aN" + std::to_string(nsmearAPE) + "a" + convNumToStr(alphaAPE) + src_string + ".h5";
 			free(src_string);
 
-			if(access( twop_filename.c_str(), F_OK ) != -1) {
-				PLEGMA_printf("File %s already exists, skipping source %d\n", twop_filename.c_str(), isource);
-				continue;
-			}
+			// if(access( twop_filename.c_str(), F_OK ) != -1) {
+			// 	PLEGMA_printf("File %s already exists, skipping source %d\n", twop_filename.c_str(), isource);
+			// 	continue;
+			// }
 
 
 			auto computePropagator = [&](PLEGMA_Propagator<double>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
@@ -219,6 +214,11 @@ int main(int argc, char **argv)
 
 			for (int imu = 0; imu < mu_l.size(); imu++) {
 				double run_mu = mu_l[imu];
+
+				if(kappa != kappa0) {
+					kappa = kappa0;
+					solver.UpdateSolver();
+				}
 
 				std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_u(3);
 				std::vector<std::shared_ptr<PLEGMA_Propagator<double>>> props_d(3);

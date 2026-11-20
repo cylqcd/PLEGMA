@@ -3,6 +3,7 @@
 #include <set>
 #include <optional>
 #include <PLEGMA_Hprobing.h>
+#include <fstream>
 
 std::vector<double> runtime;
 #define TIME(fnc)  runtime.push_back(MPI_Wtime()); fnc;			\
@@ -25,24 +26,32 @@ int main(int argc, char **argv)
 	std::string loopsPrefix="./";
 	int k_probing = 0;
 	HGC_options->set("k-probing", "Hierarchical probing, with distance D=2**k (Options:0,1,2,3,...) (0 means No probing)", verbosity, k_probing);
+	int probing_dimension = 4;
+	HGC_options->set("probing-dimension", "Dimension for the hierarchical probing", verbosity, probing_dimension);
+	if (probing_dimension != 3 && probing_dimension != 4)
+    	PLEGMA_error("Hierarchical probing supports only 3D and 4D coloring");
 	int hadamLow=0;
-	int Nhadam = (k_probing>0) ? 2*std::pow(2,N_DIMS*(k_probing-1)) : 1;
+	int Nhadam = (k_probing>0) ? 2*std::pow(2, probing_dimension*(k_probing-1)) : 1;
 	int hadamHgh = Nhadam;
 	bool spinColorDil = false;
 	int start_src = 0;
-	int probing_dimension = 4;
+	std::string dbg_out_path=".";
+	std::string reference_noise_path;
 	auto add_options = [&](Options& options) {
 		options.set("output-path", "Path to the directory to dump results", verbosity, loopsPrefix);
 		options.set("hadamard-low", "From which Hadamard vector to start (Options:[0,max))", verbosity, hadamLow);
 		options.set("hadamard-high", "Up to which Hadamard vector to stop (Options: 0>= , <=max) (default max)", verbosity, hadamHgh);
 		options.set("spin-color-dil", "Whether we want spin color dilution",verbosity,spinColorDil);
 		options.set("start-src", "Starting index for the stochastic sources (inclusive)", verbosity, start_src);
-		options.set("probing-dimension", "Dimension for the hierarchical probing", verbosity, probing_dimension);
+		options.set("reference-noise-path", "Directory of converted reference Z2 binaries (one source only)", verbosity, reference_noise_path);
+		options.set("debug-output-path", "Where to save the debug outputs", verbosity, dbg_out_path);
 	};
 	add_options(*HGC_options);
+	if(!dbg_out_path.empty() && dbg_out_path.back() != '/')
+    dbg_out_path += "/";
 	int Nsc = spinColorDil ? N_SPINS*N_COLS : 1;
 	if((k_probing>0) && (hadamLow<0 || hadamHgh<0)) PLEGMA_error("Negative values for number of Hadamard vector not allowed");
-	if((k_probing>0) && (hadamLow>hadamHgh))  PLEGMA_error("hadamard-high should be > hadamard-low");
+	if((k_probing>0) && (hadamLow>=hadamHgh))  PLEGMA_error("hadamard-high should be > hadamard-low");
 	if((k_probing>0) && (hadamHgh>Nhadam)) PLEGMA_error("hadamard-high should be <= from max number of Hadamard vectors");
 	std::string tag = "/traceH";
 	std::string options_tag = "";
@@ -88,15 +97,15 @@ int main(int argc, char **argv)
 	qloops_std = new PLEGMA_QLoops<double>(BOTH,NO_GHOSTS,true,oneDLoops,twoDLoops);
 
 	PLEGMA_Vector<double> phi;
-	PLEGMA_Vector<double> source(DEVICE);
+	PLEGMA_Vector<double> source(BOTH);
 	int rng_seed = 42;
-	source.randInit(rng_seed);
+	if(reference_noise_path.empty()) source.randInit(rng_seed);
 
 	PLEGMA_Hprobing *hprob = nullptr;
 
-	std::size_t foundPos = latfile.find("conf.");
-	if(foundPos == std::string::npos) PLEGMA_error("Cannot find (conf.) in configuration path to get confID");
-	std::string confID = latfile.substr(foundPos+5,latfile.length());
+	// std::size_t foundPos = latfile.find("conf.");
+	// if(foundPos == std::string::npos) PLEGMA_error("Cannot find (conf.) in configuration path to get confID");
+	std::string confID = "crosscheck"; //latfile.substr(foundPos+5,latfile.length());
 
 	if(k_probing>0) hprob = new PLEGMA_Hprobing(k_probing, probing_dimension);
 
@@ -105,7 +114,6 @@ int main(int argc, char **argv)
 
 		int rank;
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
 		if(rank == 0){
 
 			const int *colors = hprob->H_arrVc();
@@ -161,44 +169,276 @@ int main(int argc, char **argv)
 
 	std::vector<std::vector<double>> local_collected;
 	local_collected.reserve(M_collect);
+
+	std::vector<int> collected_ih;
+	collected_ih.reserve(M_collect);
+
+	auto dump_vector_binary =
+    [](PLEGMA_Vector<double>& vec,
+       const std::string& filename,
+       int nReImLocal)
+	{
+		vec.unload();
+
+		const double *ptr = vec.H_elem();
+
+		if(!ptr){
+			PLEGMA_printf(
+				"DEBUG ERROR: H_elem() is null for %s\n",
+				filename.c_str()
+			);
+			return;
+		}
+
+		std::ofstream out(
+			filename,
+			std::ios::binary
+		);
+
+		out.write(
+			reinterpret_cast<const char*>(ptr),
+			nReImLocal * sizeof(double)
+		);
+
+		out.close();
+	};
 	// -----------------------------------------------------------------------
+
+
+    if(!reference_noise_path.empty()) {
+        if(numSourcePositions - start_src != 1)
+            PLEGMA_error("Reference noise requires exactly one source: nsrc=start-src+1");
+        const int local[4] = {32,32,16,16};
+        const int grid[4] = {1,1,2,4};
+        for(int d=0; d<4; ++d) {
+            if(HGC_localL[d] != local[d] || HGC_nProc[d] != grid[d])
+                PLEGMA_error("Reference binaries require local xyzt=32 32 16 16 and procs=1 1 2 4");
+        }
+    }
+    auto load_reference_noise = [&]() {
+        // Use actual communicator coordinates rather than assuming rank numbering.
+        const int file_rank = 4*commCoords(2) + commCoords(3);
+        const std::string filename = reference_noise_path + "/reference_Z2_rank"
+                                   + std::to_string(file_rank) + ".bin";
+        const std::streamsize bytes = static_cast<std::streamsize>(nReImLocal)*sizeof(double);
+        std::ifstream input(filename, std::ios::binary | std::ios::ate);
+        if(!input || input.tellg() != static_cast<std::streamoff>(bytes))
+            PLEGMA_error("Missing or wrong-size reference noise: %s", filename.c_str());
+        input.seekg(0);
+        input.read(reinterpret_cast<char*>(source.H_elem()), bytes);
+        if(!input) PLEGMA_error("Cannot read reference noise: %s", filename.c_str());
+        const double *p = source.H_elem();
+        for(int j=0; j<nComplexLocal; ++j) {
+            if((p[2*j] != 1.0 && p[2*j] != -1.0) || p[2*j+1] != 0.0)
+                PLEGMA_error("Reference contains invalid Z2 entry: %s", filename.c_str());
+        }
+        source.load();
+    };
 
 	std::vector<int> indDof = {0,1,2,3,4,5,6,7,8,9,10,11};
 	for(int isrc = start_src; isrc < numSourcePositions; isrc++){
 		PLEGMA_printf("\n ### Calculations for source-position %d begin now ###\n\n", isrc);
-    	source.stochastic_Z(2);
+    	if(reference_noise_path.empty()) {
+            source.stochastic_Z(2);
+        } else {
+            load_reference_noise();
+        }
+        if(isrc == start_src) {
+            dump_vector_binary(source, dbg_out_path + "debug_raw_Z2_rank"
+                               + std::to_string(rank) + ".bin", nReImLocal);
+        }
 		for(int ih = hadamLow; ih < hadamHgh; ih++){
 			qloops_std->clearAccumBuffs();
 			for(int isc = 0; isc < Nsc; isc++){
 				if(spinColorDil){ sourceDil->dilutespincolor(source,isc/N_COLS,isc%N_COLS);}
-				if(spinColorDil && k_probing>0){ sourceDil->applyHprobColoring(*sourceDil,*hprob,ih,indDof);}
-				else if(!spinColorDil && k_probing>0){ sourceDil->applyHprobColoring(source,*hprob,ih,indDof);}
 
-				// ------------ DEBUG ----------------------------------------------------
-				sourceDil->unload();
+				// ---------------------------------------------------------
+				// DEBUG: keep copy of source immediately BEFORE HP coloring
+				// ---------------------------------------------------------
 
-				// --- COPY THIS PROBE INTO LOCAL STORAGE ---
-				if(isrc == start_src && isc == 0 && Collected < M_collect){
+				std::vector<double> before;
 
-					const double *host_ptr = sourceDil->H_elem();
+				bool debug_this_probe =
+					(k_probing > 0 &&
+					isrc == start_src &&
+					isc == 0 &&
+					ih < std::min(hadamLow + 8, hadamHgh));
 
-					if(!host_ptr){
+				if(debug_this_probe){
+
+					PLEGMA_Vector<double> *before_vec =
+						spinColorDil ? sourceDil : &source;
+
+					before_vec->unload();
+
+					const double *before_ptr = before_vec->H_elem();
+
+					if(!before_ptr){
 						PLEGMA_printf(
-							"DEBUG: host_ptr is null while collecting probe %d\n",
-							Collected
+							"DEBUG ERROR: before_ptr is null for ih=%d\n",
+							ih
 						);
 					}
 					else{
-						std::vector<double> tmp(nReImLocal);
+						before.resize(nReImLocal);
 
 						for(int i = 0; i < nReImLocal; i++)
-							tmp[i] = host_ptr[i];
-
-						local_collected.push_back(std::move(tmp));
-						Collected++;
+							before[i] = before_ptr[i];
 					}
 				}
-				// -----------------------------------------------------------------------
+
+				// ---------------------------------------------------------
+				// DEBUG: source immediately BEFORE hierarchical coloring
+				// ---------------------------------------------------------
+
+				if(k_probing > 0 &&
+				isrc == start_src &&
+				isc == 0 &&
+				ih == hadamLow)
+				{
+					if(spinColorDil){
+						dump_vector_binary(
+							*sourceDil,
+							dbg_out_path
+							+ "debug_before_H_"
+							+ std::to_string(ih)
+							+ "_rank"
+							+ std::to_string(rank)
+							+ ".bin",
+							nReImLocal
+						);
+					}
+					else{
+						dump_vector_binary(
+							source,
+							dbg_out_path
+							+ "debug_before_H_"
+							+ std::to_string(ih)
+							+ "_rank"
+							+ std::to_string(rank)
+							+ ".bin",
+							nReImLocal
+						);
+					}
+				}
+
+				if(spinColorDil && k_probing>0){ sourceDil->applyHprobColoring(*sourceDil,*hprob,ih,indDof);}
+				else if(!spinColorDil && k_probing>0){ sourceDil->applyHprobColoring(source,*hprob,ih,indDof);}
+
+				// ---------------------------------------------------------
+				// DEBUG: source AFTER hierarchical coloring
+				// ---------------------------------------------------------
+
+				if(k_probing > 0 &&
+				isrc == start_src &&
+				isc == 0 &&
+				ih < std::min(hadamLow + 8, hadamHgh))
+				{
+					dump_vector_binary(
+						*sourceDil,
+						dbg_out_path
+						+ "debug_k"
+						+ std::to_string(k_probing)
+						+ "_after_H_"
+						+ std::to_string(ih)
+						+ "_rank"
+						+ std::to_string(rank)
+						+ ".bin",
+						nReImLocal
+					);
+				}
+
+				// ------------ DEBUG ----------------------------------------------------
+				if(k_probing > 0){
+					sourceDil->unload();
+
+					// --- COPY THIS PROBE INTO LOCAL STORAGE ---
+					if(isrc == start_src && isc == 0 && Collected < M_collect){
+
+						const double *host_ptr = sourceDil->H_elem();
+
+						if(!host_ptr){
+							PLEGMA_printf(
+								"DEBUG: host_ptr is null while collecting probe %d\n",
+								Collected
+							);
+						}
+						else{
+							std::vector<double> tmp(nReImLocal);
+
+							for(int i = 0; i < nReImLocal; i++)
+								tmp[i] = host_ptr[i];
+
+							local_collected.push_back(std::move(tmp));
+							collected_ih.push_back(ih);
+							Collected++;
+						}
+					}
+					// -----------------------------------------------------------------------
+				}
+
+				if(debug_this_probe){
+
+					const double *after = sourceDil->H_elem();
+
+					if(!after){
+						PLEGMA_printf(
+							"DEBUG ERROR: after ptr is null for ih=%d\n",
+							ih
+						);
+					}
+					else if(before.size() != nReImLocal){
+					    PLEGMA_printf(
+							"DEBUG ERROR: before vector unavailable for ih=%d\n",
+							ih
+						);
+					}
+					else if(rank == 0){
+						PLEGMA_printf(
+							"\n===== COLOR APPLICATION CHECK ih=%d =====\n",
+							ih
+						);
+
+						const int Nprint = 20;
+
+						for(int c = 0;
+							c < std::min(Nprint, nComplexLocal);
+							c++)
+						{
+							std::complex<double> z_before(
+								before[2*c],
+								before[2*c+1]
+							);
+
+							std::complex<double> z_after(
+								after[2*c],
+								after[2*c+1]
+							);
+
+							std::complex<double> ratio(0.0,0.0);
+
+							if(std::abs(z_before) > 1e-14)
+								ratio = z_after / z_before;
+
+							PLEGMA_printf(
+								"c=%4d  before=(% .3f,% .3f)"
+								"  after=(% .3f,% .3f)"
+								"  ratio=(% .3f,% .3f)\n",
+								c,
+								z_before.real(),
+								z_before.imag(),
+								z_after.real(),
+								z_after.imag(),
+								ratio.real(),
+								ratio.imag()
+							);
+						}
+
+						PLEGMA_printf(
+							"==========================================\n"
+						);
+					}
+				}
 
 				if(spinColorDil || k_probing>0){
 					TIME(solver->solve(phi,*sourceDil)); 
@@ -312,7 +552,7 @@ int main(int argc, char **argv)
 		if(rank == 0){
 
 			PLEGMA_printf(
-				"\n===== HADAMARD PROBE ORTHOGONALITY CHECK: P = %d =====\n",
+				"\n===== COLORED STOCHASTIC PROBE ORTHOGONALITY CHECK: P = %d =====\n",
 				Pcollected
 			);
 
@@ -322,8 +562,8 @@ int main(int argc, char **argv)
 
 			for(int i = 0; i < Pcollected; i++)
 				PLEGMA_printf(
-					"  i=%2d   norm2=%.12e\n",
-					i,
+					"  ih=%2d   norm2=%.12e\n",
+					collected_ih[i],
 					norms[i]
 				);
 
