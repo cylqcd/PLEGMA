@@ -14,6 +14,7 @@ define(int dims[N_DIMS], {8,8,8,16});
 define(int procs[N_DIMS], {1,1,1,1});
 define(std::string latfile);
 define(int verbosity, 1);
+define(std::vector<momentum> momenta, {});
 
 define(int nsmearAPE, 20);
 define(double alphaAPE, 0.5);

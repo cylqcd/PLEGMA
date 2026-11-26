@@ -8,6 +8,7 @@ namespace plegma {
 
   // forward declaration
   template<typename Float>  class PLEGMA_Vector;
+  template<typename Float>  class PLEGMA_Vector3D;
   template<typename Float>  class PLEGMA_Propagator;
   template<typename Float>  class PLEGMA_Propagator3D;
   template<typename Float>  class PLEGMA_Fmunu;
@@ -194,6 +195,21 @@ namespace plegma {
     void preparePatternMetadata(const std::string &group,
                                 const std::string &dataset,
                                 const std::string &descr, bool isZfac = false);
+    void contractEigVecs(Float *ptr, int nvecs, size_t vec_size, bool dev_ptr);
+
+    void contractPropEigVecs(PLEGMA_Propagator<Float> &prop1, Float *spinVals,
+			     Float *ptr, int nvecs, size_t vec_size, bool dev_ptr);
+
+    void contractPropEigVecsClosed(PLEGMA_Propagator<Float> &prop1, Float *spinVals,
+		    Float *ptr, int nvecs, size_t vec_size, bool dev_ptr);
+
+    void contractLoop(PLEGMA_Vector3D<Float> &vec,
+		    PLEGMA_Propagator3D<Float> &prop);
+
+    void contractLoopSIB(PLEGMA_Vector3D<Float> &vec,
+		    PLEGMA_Propagator3D<Float> &prop);
+
+
     void contractMesons(PLEGMA_Propagator<Float> &prop1,
 			PLEGMA_Propagator<Float> &prop2);
 
@@ -208,6 +224,42 @@ namespace plegma {
     void contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
 			    PLEGMA_Propagator<Float> &prop2,
 			    bool all_cols=true);
+
+    void contractMesons1ps(PLEGMA_Propagator<Float> &prop1,
+                           PLEGMA_Propagator<Float> &prop2,
+                           PLEGMA_Gauge<Float> &gauge,
+                           bool all_cols=true);
+
+    void contractMesonsSIB(PLEGMA_Propagator<Float> &prop1,
+                           PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsOpenSIB(PLEGMA_Propagator<Float> &prop1,
+                               PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsSIR(PLEGMA_Propagator<Float> &prop1,
+                           PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsOpenSIR(PLEGMA_Propagator<Float> &prop1,
+                               PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsOpenDefl(PLEGMA_Propagator<Float> &prop1,
+                                PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesons1psSIB(PLEGMA_Propagator<Float> &prop1,
+                              PLEGMA_Propagator<Float> &prop2,
+                              PLEGMA_Gauge<Float> &gauge);
+
+    void contractMesonsLIBE(PLEGMA_Propagator<Float> &prop1,
+                           PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesonsOpenLIBE(PLEGMA_Propagator<Float> &prop1,
+                               PLEGMA_Propagator<Float> &prop2);
+
+    void contractMesons1psLIBE(PLEGMA_Propagator<Float> &prop1,
+                              PLEGMA_Propagator<Float> &prop2,
+                              PLEGMA_Gauge<Float> &gauge);
+
+
     
     void contractMesonsAll(PLEGMA_Propagator<Float> &prop1,
 			   PLEGMA_Propagator<Float> &prop2);
@@ -219,13 +271,17 @@ namespace plegma {
 			     PLEGMA_Propagator<Float> &prop2,
 			     PLEGMA_Propagator<Float> &prop3,
 			     PLEGMA_Propagator<Float> &prop4);
-    
+
+    void contractBaryonsEEE(Float *ptr, Float* evs, int nvecs, size_t vec_size, bool dev_ptr);
+
+
     void contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
-			     PLEGMA_Propagator<Float> &propDN, 
-			     PLEGMA_Propagator<Float> &propST, 
-			     PLEGMA_Propagator<Float> &propCH,
-			     bool only_st=false, bool only_ch=false);
-  
+                             PLEGMA_Propagator<Float> &propDN,
+                             PLEGMA_Propagator<Float> &propST,
+                             PLEGMA_Propagator<Float> &propCH,
+           bool only_up = false, bool only_dn = false,
+           bool only_st = false, bool only_ch = false, bool excludeHeavyOnly = false);
+
     template<typename Float2>
     void contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
 			     PLEGMA_Propagator<Float2> &propST, 

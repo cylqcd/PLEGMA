@@ -33,7 +33,7 @@ template<typename FloatInOut, int side>
 static __global__ void copy_side_to_ghost_kernel(pFloat2<FloatInOut> F, short dir, short sign){
   size_t sid = blockIdx.x*blockDim.x + threadIdx.x;
   if (sid >= F.sideGhostL(dir)) return;
-  
+
   size_t id[4], tmp_sid=sid;
   #pragma unroll
   for(int i = 0 ; i<N_DIMS; i++) {

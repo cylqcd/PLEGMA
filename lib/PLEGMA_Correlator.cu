@@ -4,18 +4,31 @@
 #include <PLEGMA_Propagator.h>
 #include <string>
 #include <PLEGMA_QWF.cuh>
+#include <PLEGMA_mesons_loop.cuh>
+#include <PLEGMA_mesons_loop_SIB.cuh>
 #include <PLEGMA_mesons.cuh>
 #include <PLEGMA_TMDWF.cuh>
 #include <PLEGMA_mesonsNew.cuh>
 #include <PLEGMA_mesonsOpen.cuh>
+#include <PLEGMA_mesons_SIB.cuh>
+#include <PLEGMA_mesons_SIR.cuh>
+#include <PLEGMA_mesonsOpen_SIR.cuh>
+#include <PLEGMA_mesonsOpen_SIB.cuh>
+#include <PLEGMA_mesonsOpen_defl.cuh>
+#include <PLEGMA_mesons_LIBE.cuh>
+#include <PLEGMA_mesonsOpen_LIBE.cuh>
 #include <PLEGMA_mesonsAll.cuh>
 #include <PLEGMA_baryons.cuh>
+#include <PLEGMA_baryons_EEE.cuh>
 #include <PLEGMA_threep.cuh>
 #include <functional>
+#include <PLEGMA_mesons_exact_exact.cuh>
+#include <PLEGMA_mesons_stoch_exact.cuh>
+#include <PLEGMA_mesons_stoch_exact_closed.cuh>
 #ifdef PLEGMA_UDSC_BARYONS
 #include <PLEGMA_baryons_udsc.cuh>
-#include <PLEGMA_heavy_light_tetraquarks.cuh>
-#include <PLEGMA_bcud_tetraquarks.cuh>
+//#include <PLEGMA_heavy_light_tetraquarks.cuh>
+//#include <PLEGMA_bcud_tetraquarks.cuh>
 #endif
 
 using namespace plegma;
@@ -60,6 +73,28 @@ preparePatternMetadata(const std::string& group,
 
   initialize();
 }
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractEigVecs(Float* ptr, int nvecs, size_t vec_size, bool dev_ptr){
+}
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractPropEigVecs(PLEGMA_Propagator<Float> &prop1, Float *spinVals, Float* ptr, int nvecs, size_t vec_size, bool dev_ptr){
+}
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractPropEigVecsClosed(PLEGMA_Propagator<Float> &prop1, Float *spinVals, Float* ptr, int nvecs, size_t vec_size, bool dev_ptr){
+}
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractLoop(PLEGMA_Vector3D<Float> &vect,
+	     PLEGMA_Propagator3D<Float> &prop){
+}
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractLoopSIB(PLEGMA_Vector3D<Float> &vect,
+		PLEGMA_Propagator3D<Float> &prop){
+}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -94,6 +129,24 @@ contractMesonsNew(PLEGMA_Propagator<Float> &prop1,
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
+contractMesonsSIR(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2){
+}
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsSIB(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2){
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsLIBE(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2){
+}
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
 contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
 		  PLEGMA_Propagator<Float> &prop2,
 		  bool all_cols){
@@ -105,6 +158,54 @@ contractMesonsOpen(PLEGMA_Propagator<Float> &prop1,
   
   initialize();
   contract_mesons_open(prop1,prop2,*this,all_cols);
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsOpenSIR(PLEGMA_Propagator<Float> &prop1,
+		      PLEGMA_Propagator<Float> &prop2){
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsOpenSIB(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2){
+}
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsOpenDefl(PLEGMA_Propagator<Float> &prop1,
+		       PLEGMA_Propagator<Float> &prop2){
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesonsOpenLIBE(PLEGMA_Propagator<Float> &prop1,
+		      PLEGMA_Propagator<Float> &prop2){
+}
+
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesons1ps(PLEGMA_Propagator<Float> &prop1,
+		  PLEGMA_Propagator<Float> &prop2,
+		  PLEGMA_Gauge<Float> &gauge,
+		  bool all_cols){
+}
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesons1psSIB(PLEGMA_Propagator<Float> &prop1,
+		     PLEGMA_Propagator<Float> &prop2,
+		     PLEGMA_Gauge<Float> &gauge){
+}
+
+
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractMesons1psLIBE(PLEGMA_Propagator<Float> &prop1,
+		     PLEGMA_Propagator<Float> &prop2,
+		     PLEGMA_Gauge<Float> &gauge){
 }
 
 template<typename Float>
@@ -149,6 +250,10 @@ contractTMDWFMesons(PLEGMA_Propagator<Float> &prop1,
   contract_TMDWF_mesons(prop1,prop2,*this, staple);
 }
 
+template<typename Float>
+void PLEGMA_Correlator<Float>::
+contractBaryonsEEE(Float* ptr, Float* evs, int nvecs, size_t vec_size, bool dev_ptr){
+}
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::
@@ -198,8 +303,9 @@ void PLEGMA_Correlator<Float>::
 contractBaryonsUDSC(PLEGMA_Propagator<Float> &propUP,
 		    PLEGMA_Propagator<Float> &propDN, 
 		    PLEGMA_Propagator<Float> &propST, 
-		    PLEGMA_Propagator<Float> &propCH, 
-		    bool only_st, bool only_ch){
+		    PLEGMA_Propagator<Float> &propCH,
+		    bool only_up, bool only_dn, 
+		    bool only_st, bool only_ch, bool excludeHeavyOnly){
 
 #ifdef PLEGMA_UDSC_BARYONS
   shape = {};
@@ -256,6 +362,7 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
             PLEGMA_Propagator<Float2> &propBT,
             bool only_st, bool only_ch){
 #ifdef PLEGMA_UDSC_BARYONS
+#if 0
   shape = {};
   description = "";
   datasets = {};
@@ -303,6 +410,7 @@ contractTetraquarks(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks(propLT, propST, propCH, propBT, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -322,7 +430,7 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
   description = "";
   datasets = {};
   groups = {};
-
+#if 0
   bool not_lt = propLT.getAllocation() == NONE;
   bool not_st = propST.getAllocation() == NONE;
   bool not_ch = propCH.getAllocation() == NONE;
@@ -365,6 +473,7 @@ contractTetraquarksBCUD(PLEGMA_Propagator<Float2> &propLT,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud(propLT, propST, propCH, propBT, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -388,6 +497,7 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
   description = "";
   datasets = {};
   groups = {};
+#if 0
 
   bool not_lt = propLT1.getAllocation() == NONE;
   bool not_st = propST1.getAllocation() == NONE;
@@ -424,6 +534,7 @@ contractTetraquarksStochastic(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_stochastic(propLT1, propLT2,propST1, propST2, propBT1, propBT2, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -448,7 +559,7 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
   description = "";
   datasets = {};
   groups = {};
-
+#if 0
   bool not_lt = propLT1.getAllocation() == NONE;
   bool not_st = propST1.getAllocation() == NONE;
   bool not_ch = propCH1.getAllocation() == NONE;
@@ -487,6 +598,7 @@ contractTetraquarksStochasticBCUD(PLEGMA_Propagator<Float2> &propLT1,
       PLEGMA_printf("%s, ", name.c_str());
     PLEGMA_printf("\n");
   contract_tetraquarks_bcud_stochastic(propLT1, propLT2,propST1, propST2, propCH1, propCH2, propBT1, propBT2, *this, todo);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -500,6 +612,7 @@ void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int s1, std::string Quarks){
 #ifdef PLEGMA_UDSC_BARYONS
+#if 0
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
 
@@ -529,6 +642,7 @@ contractTetraquarkScatteringOpenIndex(PLEGMA_Propagator<Float2> &prop1,
 
    initialize();
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -542,7 +656,7 @@ void PLEGMA_Correlator<Float>::
 contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1,
           PLEGMA_Propagator<Float2> &prop2, std::vector<GAMMAS> gammas, int randInd1, int randInd2, int s1, std::string Quarks){
 #ifdef PLEGMA_UDSC_BARYONS
-
+#if 0
    if(gammas.size() == 0) PLEGMA_error("List of gammas provided is empty");
 
    std::string GammaString = getGammasString(gammas);
@@ -568,6 +682,7 @@ contractTetraquarkScatteringOpenIndexStochastic(PLEGMA_Propagator<Float2> &prop1
 
 //     PLEGMA_printf("contractTetraquarkScatteringOpenIndexStochastic is going to run:");
    contract_tetraquark_scattering_open_index(*this,prop1,prop2,gammas, s1);
+#endif
 #else
   PLEGMA_error("Flag PLEGMA_UDSC_BARYONS not defined");
 #endif
@@ -676,6 +791,7 @@ contractNucleonThrp_twoD(PLEGMA_Propagator<Float> &bwdProp,
   PLEGMA_error("contractNucleonThrp_twoD: PLEGMA built without PLEGMA_THREEP_THREED support\n");
 #endif
 }
+
 
 template<typename Float>
 void PLEGMA_Correlator<Float>::

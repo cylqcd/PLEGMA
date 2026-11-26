@@ -44,3 +44,20 @@ inline void readSourceList() {
   }
 }
 
+
+inline void readMomentaList() {
+  std::ifstream file(pathListMomenta.c_str(), std::ifstream::in);
+  if(file.fail()) PLEGMA_error("Cannot open file to read momenta list: %s\n", pathListMomenta.c_str());
+  momentum mom;
+  while (file >> mom) {
+    momenta.push_back(mom);
+  }
+  file.close();
+  PLEGMA_printf("Read %d momenta.\n", momenta.size());
+  if(verbosity) {
+    PLEGMA_printf("\nList of read momenta:\n");
+    for(int j=0; j<momenta.size(); j++) {
+      PLEGMA_printf("mom[%d]: %d-%d-%d\n", j, momenta[j][0], momenta[j][1], momenta[j][2]);
+    }
+  }
+}

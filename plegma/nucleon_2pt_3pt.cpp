@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
    }
 
     updateOptions(LIGHT);
-    TIME(QUDA_solver solver(mu));
+    TIME(QUDA_solver solver(mu,1));
 
     std::string given_twop_filename = twop_filename;
     std::string given_threep_filename = threep_filename;
@@ -128,13 +128,13 @@ int main(int argc, char **argv) {
       
       PLEGMA_Propagator<float> propUP;
       PLEGMA_Propagator<float> propDN;
+
       { // Whithin this scope we keep track also of the propagator non smeared on the sink
-	PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
+        PLEGMA_Propagator<float> propUP_SL(tSinks.size()>0 ? BOTH:NONE);
 	PLEGMA_Propagator<float> propDN_SL(tSinks.size()>0 ? BOTH:NONE);
 
-	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));
+	TIME(computePropagator(propUP, propUP_SL, mu_ud, LIGHT, nsmearGauss, false));	
 	TIME(computePropagator(propDN, propDN_SL, -mu_ud, LIGHT, nsmearGauss, false));
-	
 #ifdef PLEGMA_NUCLEON_3PF_FIX_SINK
 	for(size_t its = 0; its < tSinks.size(); its++){
 	  int tsinkMtsource = tSinks[its];
@@ -388,4 +388,3 @@ int main(int argc, char **argv) {
   finalize();
   return 0;
 }
-

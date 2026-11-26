@@ -85,6 +85,7 @@ namespace plegma {
        @param field_l: see "field_length"
        @param vol_l: see "total_length"
      */
+
     void initialize(ALLOCATION_FLAG alloc_flag, int field_l, size_t vol_l);
   public:
     /**
@@ -139,6 +140,8 @@ namespace plegma {
      * @return a pointer to access device elements of the field
      */
     Float* D_elem() const { return d_elem; }
+    void D_elem(Float* ptr) { d_elem = ptr; }
+
     /**
      * @return a boolean if the host memory is allocated
      */
@@ -147,6 +150,7 @@ namespace plegma {
      * @return a boolean if the device memory is allocated
      */
     bool IsAllocDevice() const { return isAllocDevice;}
+
     /**
      * @return the kind of allocation we have for the field
      */
@@ -182,6 +186,8 @@ namespace plegma {
     /**
      * @return the bytes the length of the ghost including d.o.f
      */
+    size_t Bytes_singleghost() const { return this->SingleGhost_length()*this->Field_length()*2*sizeof(Float); }
+    size_t Bytes_singleCorner() const { return this->SingleCorner_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghost() const { return this->Ghost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_singleghost() const { return this->SingleGhost_length()*this->Field_length()*2*sizeof(Float); }
     size_t Bytes_ghostCorner() const { return this->GhostCorner_length()*this->Field_length()*2*sizeof(Float); }
@@ -228,17 +234,14 @@ namespace plegma {
     void communicateSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateSecondSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateThirdSideGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
-    /**
-     * @brief Initialise / finalise CUDA IPC P2P side-ghost exchange
-     */
-    void initSideGhostP2P();
-    void freeSideGhostP2P();
+
     /**
      * @brief Communicates side+corner ghosts in chosen direction,orientation
      * @param dirOr: choose the dir,orien. If negative does all dir, orien. If >=0 then (0,1,2,3,4,5,6,7,8) -> (+x,+y,+z,+t,-x,-y,-z,-t)
      */
     void communicateCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     void communicateSecondCornerGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
+
     void communicateVertexGhost(short dir=-1, ORIENTATION sign=DIR_BOTH, ACTION action=DO_ALL);
     /**
      * @brief Communicates side or side+corner ghosts in chosen direction,orientation give the ghost type

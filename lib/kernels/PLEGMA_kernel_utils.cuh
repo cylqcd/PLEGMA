@@ -671,6 +671,110 @@ namespace plegma {
       }
     if(isGdag) Gdag(D);
   }
+  template<ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G_Prop_meson_LIBE(Float2<FloatA> A[N_COLS][N_COLS][N_SPINS][N_SPINS],
+                                                                 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+                                                                 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+                                                                 Float2<FloatD> D[N_COLS][N_COLS]){
+    if(isGdag) Gdag(D);
+#pragma unroll
+    for(int s1 = 0; s1 < N_COLS; s1++)
+#pragma unroll
+      for(int s2 = 0; s2 < N_COLS; s2++)
+#pragma unroll
+        for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+          for(int nu = 0 ; nu < N_SPINS; nu++){
+            if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
+              A[s1][s2][mu][nu].x=0.; A[s1][s2][mu][nu].y=0.;
+            }
+#pragma unroll
+            for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+              for(int b = 0; b < N_COLS; b++)
+#pragma unroll
+                for(int c = 0; c < N_COLS; c++) {
+                  if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
+                    A[s1][s2][mu][nu] +=  conj(C[mu][rho][b][s2]) * D[b][c] * B[nu][rho][c][s1];
+                  }
+                  else{
+                    A[s1][s2][mu][nu] -=  conj(C[mu][rho][b][s2]) * D[b][c] * B[nu][rho][c][s1];
+                  }
+                }
+          }
+    if(isGdag) Gdag(D);
+  }
+
+
+    template<ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G_Prop_meson_SIB(Float2<FloatA> A[5][N_SPINS][N_SPINS],
+                                                                 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][N_COLS],
+                                                                 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][N_COLS],
+                                                                 Float2<FloatD> D[N_COLS][N_COLS]){
+    if(isGdag) Gdag(D);
+#pragma unroll
+    for(int s = 0; s < 5; s++){
+      int s3 = (s+1) / 2; // 0, 1, 1, 2, 2
+      int s1 = s3 * ((s+1) % 2); // 0, 0, 1, 0, 2
+      int s2 = s3 * ((s+0) % 2); // 0, 1, 0, 2, 0
+
+#pragma unroll
+        for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+          for(int nu = 0 ; nu < N_SPINS; nu++){
+            if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
+              A[s][mu][nu].x=0.; A[s][mu][nu].y=0.;
+            }
+#pragma unroll
+            for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+              for(int b = 0; b < N_COLS; b++)
+#pragma unroll
+                for(int c = 0; c < N_COLS; c++) {
+                  if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
+                    A[s][mu][nu] +=  conj(B[mu][rho][b][s2]) * D[b][c] * C[nu][rho][c][s1];
+                  }
+                  else{
+                    A[s][mu][nu] -=  conj(B[mu][rho][b][s2]) * D[b][c] * C[nu][rho][c][s1];
+                  }
+                }
+          }
+    }
+    if(isGdag) Gdag(D);
+  }
+    template<int COLS, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
+  __inline__ __device__ void partial_trace_mul_Prop_G_Prop_meson(Float2<FloatA> A[N_SPINS][N_SPINS],
+                                                                 Float2<FloatB> B[N_SPINS][N_SPINS][N_COLS][COLS],
+                                                                 Float2<FloatC> C[N_SPINS][N_SPINS][N_COLS][COLS],
+                                                                 Float2<FloatD> D[N_COLS][N_COLS]){
+    if(isGdag) Gdag(D);
+#pragma unroll
+    for(int mu = 0 ; mu < N_SPINS; mu++)
+#pragma unroll
+      for(int nu = 0 ; nu < N_SPINS; nu++){
+        if(aty == ACC_ZERO || aty == ZERO_PLUS || aty == ZERO_MINUS){
+          A[mu][nu].x=0.; A[mu][nu].y=0.;
+        }
+#pragma unroll
+        for(int rho = 0 ; rho < N_SPINS; rho++)
+#pragma unroll
+          for(int a = 0; a < COLS; a++)
+#pragma unroll
+            for(int b = 0; b < N_COLS; b++)
+#pragma unroll
+              for(int c = 0; c < N_COLS; c++){
+                if(aty == ACC_ZERO || aty == ACC_PLUS || aty == ZERO_PLUS){
+                  A[mu][nu] +=  conj(B[mu][rho][b][a]) * D[b][c] * C[nu][rho][c][a];
+                }
+                else{
+                  A[mu][nu] -=  conj(B[mu][rho][b][a]) * D[b][c] * C[nu][rho][c][a];
+                }
+              }
+
+      }
+    if(isGdag) Gdag(D);
+  }
+
 
   template<bool isLeftTrans, ACCUM_TYPE aty, bool isGdag,typename FloatA, typename FloatB, typename FloatC, typename FloatD>
   __inline__ __device__ void partial_trace_mul_Vec_G_Vec(Float2<FloatA> A[N_SPINS][N_SPINS],

@@ -33,11 +33,11 @@ __global__ void threep_oneD_device(Float2<FloatC>* block2,
   int t=it+tid; if(t>=maxT) t=(source.w%DGC_localL[DIM_T])+t-maxT;
   int vid = sid3D + t*DGC_localVolume3D;
   bool notZfac = (mu<0) && (nu<0) && (c1<0) && (c2<0);
-  
   Float2<FloatC> accum[N_DIMS*N_SPINS*N_SPINS];
   #pragma unroll
   for(int i = 0; i < N_DIMS*N_SPINS*N_SPINS; i++)
     accum[i]=0;
+
  
 
   if (sid3D < DGC_localVolume3D){
@@ -56,15 +56,15 @@ __global__ void threep_oneD_device(Float2<FloatC>* block2,
       partial_trace_mul_Prop_G_Prop<true,ZERO_PLUS,false>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       // - term x, x-dir^, x-dir
-      /*texture1.get(prop1,vid);*/ gaugeTex.get<Minus>(su3,dir,vid,dir); texture2.get<Minus>(prop2,vid,dir);
+      /*texture1.get(prop1,vid);*/gaugeTex.get<Minus>(su3,dir,vid,dir); texture2.get<Minus>(prop2,vid,dir);
       partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       // + term x-dir, x-dir, x
-      texture1.get<Minus>(prop1,vid,dir); /*gaugeTex.get<Minus>(su3,dir,vid,dir);*/ texture2.get(prop2,vid);
+      texture1.get<Minus>(prop1,vid,dir);/*gaugeTex.get<Minus>(su3,dir,vid,dir);*/texture2.get(prop2,vid);
       partial_trace_mul_Prop_G_Prop<true,ACC_PLUS,false>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       // - term x+dir, x^, x
-      texture1.get<Plus>(prop1,vid,dir); gaugeTex.get(su3,dir,vid); /*texture2.get(prop2,vid);*/
+      texture1.get<Plus>(prop1,vid,dir); gaugeTex.get(su3,dir,vid);/*texture2.get(prop2,vid);*/
       partial_trace_mul_Prop_G_Prop<true,ACC_MINUS,true>(R,prop1,prop2,su3,mu,nu,c1,c2);
 
       // END REGION
@@ -88,10 +88,16 @@ __global__ void threep_oneD_device(Float2<FloatC>* block2,
       }
     }
   }
+  if (blockIdx.x == 0 && threadIdx.x == 0) {
+    printf("accum[0]=(%e,%e), accum[last]=(%e,%e)\n",
+           (double)accum[0].x, (double)accum[0].y,
+           (double)accum[N_DIMS*listGammas.size - 1].x,
+           (double)accum[N_DIMS*listGammas.size - 1].y);
+}
   int source_pos[3] = {source.x, source.y, source.z}; 
   if(runFT){
-    extern __shared__ int ext_shared_cache[];
-    Float2<FloatC> *shared_cache = (Float2<FloatC> *) ext_shared_cache;
+    extern __shared__ unsigned char ext_shared_cache[];
+    Float2<FloatC> *shared_cache = reinterpret_cast<Float2<FloatC>*>(ext_shared_cache);
     fourier_transform_3D(block2, accum, shared_cache, N_DIMS*listGammas.size, sid3D, source_pos, moms, 0, +1, time_step, tid);
   } else{
     if (sid3D < DGC_localVolume3D)

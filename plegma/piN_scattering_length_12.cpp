@@ -111,11 +111,11 @@ int main(int argc, char **argv) {
 
 
     // Loading to QUDA and computing plaquette also there
-    updateGaugeQuda(gauge, false);
-    plaqQuda();
+  //  updateGaugeQuda(gauge, false);
+   // plaqQuda();
 
-    updateOptions(LIGHT);
-    TIME(QUDA_solver solver_p(mu,1));
+    //updateOptions(LIGHT);
+    //TIME(QUDA_solver solver_p(mu,1));
 
     //Get the confnumber for latfile
     char *ssource;
@@ -199,11 +199,11 @@ int main(int argc, char **argv) {
 
 
       auto solve1 = [&](plegma::PLEGMA_Vector<double> &ppa,
-                        plegma::PLEGMA_Vector<double> &pma, 
+                        //plegma::PLEGMA_Vector<double> &pma, 
 		        plegma::PLEGMA_Vector3D<double> &in,
 			site source){
 	    PLEGMA_Vector<double> vectorInOut_a;
-            PLEGMA_Vector<double> vectorInOut_p;
+           // PLEGMA_Vector<double> vectorInOut_p;
 	    PLEGMA_Vector<double> vectorAuxD;
 
 	    { // Smearing the source
@@ -213,44 +213,44 @@ int main(int argc, char **argv) {
                TIME(vector1.gaussianSmearing(in, smearedGauge3D, nsmearGauss, alphaGauss));
                vectorInOut_a.absorb(vector1,source[DIM_T]);
             }
-	    vectorInOut_p.copy(vectorInOut_a);
+	    //vectorInOut_p.copy(vectorInOut_a);
             // Inverting
             PLEGMA_printf("Going to invert for antiperiodic case\n" );
-            updateGaugeQuda(gauge, true);
-            TIME(solver_a.UpdateSolver());
+            //updateGaugeQuda(gauge, true);
+            //TIME(solver_a.UpdateSolver());
             TIME(solver_a.solve(vectorInOut_a, vectorInOut_a));
-            PLEGMA_printf("Going to invert for periodic case \n");
-            updateGaugeQuda(gauge, false);
-            TIME(solver_p.UpdateSolver());
-            TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
+            //PLEGMA_printf("Going to invert for periodic case \n");
+            //updateGaugeQuda(gauge, false);
+            //TIME(solver_p.UpdateSolver());
+            //TIME(solver_p.solve(vectorInOut_p, vectorInOut_p));
             
-	    ppa.copy(vectorInOut_p);
-            ppa.add(vectorInOut_a,1);
+	    //ppa.copy(vectorInOut_p);
+            //ppa.add(vectorInOut_a,1);
 
-	    pma.copy(vectorInOut_p);
-            pma.add(vectorInOut_a,-1);
+	    //pma.copy(vectorInOut_p);
+            //pma.add(vectorInOut_a,-1);
             
-            vectorAuxD.copy(ppa);
+            vectorAuxD.copy(vectorInOut_a);
             TIME(ppa.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 
-            vectorAuxD.copy(pma);
-            TIME(pma.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
+            //vectorAuxD.copy(pma);
+            //TIME(pma.gaussianSmearing(vectorAuxD, smearedGauge, nsmearGauss, alphaGauss));
 
       };
       auto computePropagator = [&](PLEGMA_Propagator<float>& prop_packed
                                    ) {
 	    for(int isc = 0 ; isc < 12 ; isc++){
-              PLEGMA_Vector<double> vectorInOut_ppa,vectorInOut_pma;
+              PLEGMA_Vector<double> vectorInOut_ppa;//,vectorInOut_pma;
 	      PLEGMA_Vector<float>  vectorAuxF;
               PLEGMA_Vector<double>  vectorAuxD;
               PLEGMA_Vector3D<double> vector1;
               vector1.pointSource(source, isc/3, isc%3, DEVICE);
-              solve1(vectorInOut_ppa, vectorInOut_pma, vector1, source);
-              vectorAuxD.pack_propagator(vectorInOut_ppa, 
-                                         vectorInOut_pma,
-                                         source[DIM_T],
-                                         HGC_totalL[DIM_T]/2);
-	      vectorAuxF.copy(vectorAuxD);
+              solve1(vectorInOut_ppa, vector1, source);
+              //vectorAuxD.pack_propagator(vectorInOut_ppa, 
+              //                           vectorInOut_pma,
+              //                           source[DIM_T],
+              //                           HGC_totalL[DIM_T]/2);
+	      vectorAuxF.copy(vectorInOut_ppa);
               prop_packed.absorb(vectorAuxF, isc/3, isc%3);
 	    };
 
@@ -306,7 +306,7 @@ int main(int argc, char **argv) {
 
         PLEGMA_Vector<double> vectorPropagator_stochastic;
         PLEGMA_Vector<double> vectorPropagator_stochastic_ppa;
-        PLEGMA_Vector<double> vectorPropagator_stochastic_pma;
+        //PLEGMA_Vector<double> vectorPropagator_stochastic_pma;
         if (readstochastic==0){
 	  vectorSource_stochastic.stochastic_Z(nroots);
           PLEGMA_Vector<float> vectorAuxF;
@@ -315,43 +315,44 @@ int main(int argc, char **argv) {
           vectorAuxF.writeLIME("globalTfulltimedilution_source_nstoch"+std::to_string(i)+"_"+confnumber);
           vectorPropagator_stochastic.scale(0.0);
           vectorPropagator_stochastic_ppa.scale(0.0);
-          vectorPropagator_stochastic_pma.scale(0.0);
+          //vectorPropagator_stochastic_pma.scale(0.0);
             
           if (timedilution){
             PLEGMA_printf("#piNdiagrams: Full time dilution is turned on\n");
             for (int timeidx=0; timeidx< HGC_totalL[DIM_T]; ++timeidx){
               PLEGMA_printf("Inversion for timeslice %d\n", timeidx);
 
-              PLEGMA_Vector<double> vectorInOut_ppa, vectorInOut_pma;
+              PLEGMA_Vector<double> vectorInOut_ppa;//, vectorInOut_pma;
               PLEGMA_Vector3D<double> vectorIn;
 
 	      vectorIn.absorb(vectorSource_stochastic,timeidx);
 
               site source_in=site({0,0,0,timeidx});
-              double norm;
-              norm=vectorIn.norm();
-              PLEGMA_printf("Norm2 %e\n", norm);
+              //double norm;
+              //norm=vectorIn.norm();
+              //PLEGMA_printf("Norm2 %e\n", norm);
 
 
-              solve1(vectorInOut_ppa, vectorInOut_pma, vectorIn, source_in);
-              norm=vectorInOut_ppa.norm();
-              PLEGMA_printf("PPA Norm2 %e\n", norm);
-              norm=vectorInOut_pma.norm();
-              PLEGMA_printf("PMA Norm2 %e\n", norm);
+              solve1(vectorInOut_ppa, vectorIn, source_in);
+              //norm=vectorInOut_ppa.norm();
+              //PLEGMA_printf("PPA Norm2 %e\n", norm);
+              //norm=vectorInOut_pma.norm();
+              //PLEGMA_printf("PMA Norm2 %e\n", norm);
 
               
-              PLEGMA_printf("Inversion done for timeslice %d\n", timeidx);
+              //PLEGMA_printf("Inversion done for timeslice %d\n", timeidx);
 
 
 	      vectorPropagator_stochastic_ppa.absorbTimeslice(vectorInOut_ppa, timeidx, false);
-	      vectorPropagator_stochastic_pma.absorbTimeslice(vectorInOut_pma, timeidx, false);
+	      //vectorPropagator_stochastic_pma.absorbTimeslice(vectorInOut_pma, timeidx, false);
 
 	    }
 	  }
-          vectorPropagator_stochastic.pack_propagator(vectorPropagator_stochastic_ppa,
-                                                      vectorPropagator_stochastic_pma,
-                                                      source[DIM_T],
-                                                      HGC_totalL[DIM_T]/2);
+          //vectorPropagator_stochastic.pack_propagator(vectorPropagator_stochastic_ppa,
+          //                                            vectorPropagator_stochastic_pma,
+          //                                            source[DIM_T],
+          //                                            HGC_totalL[DIM_T]/2);
+          vectorPropagator_stochastic.copy(vectorPropagator_stochastic_ppa);
           vectorAuxF.copy(vectorPropagator_stochastic);
           vectorAuxF.unload();
           vectorAuxF.writeLIME("globalTfulltimedilution_propagator_nstoch"+std::to_string(i)+"_"+confnumber);
@@ -459,7 +460,7 @@ int main(int argc, char **argv) {
         //pi plus at the source
         for(int isc = 0 ; isc < 12 ; isc++){
           PLEGMA_Vector<double> vectorAuxD;
-          PLEGMA_Vector<double> vectorInOut_ppa, vectorInOut_pma;
+          PLEGMA_Vector<double> vectorInOut_ppa;//, vectorInOut_pma;
           PLEGMA_Vector<float> vectorAuxF;
           //Performing the smearing
           PLEGMA_Vector3D<double> vector1;
@@ -468,13 +469,13 @@ int main(int argc, char **argv) {
           vector1.absorb( vectorAuxD, source[3]);
           vector1.mulMomentumPhases(momentum_i2,1);
 	  vector1.apply_gamma_scatt(glist_source_meson[0]);
-	  solve1(vectorInOut_ppa, vectorInOut_pma, vector1, source);
-          vectorAuxD.pack_propagator(vectorInOut_ppa, 
-                                     vectorInOut_pma,
-                                     source[DIM_T],
-                                     HGC_totalL[DIM_T]/2);
+	  solve1(vectorInOut_ppa, vector1, source);
+          //vectorAuxD.pack_propagator(vectorInOut_ppa, 
+          //                           vectorInOut_pma,
+          //                           source[DIM_T],
+          //                           HGC_totalL[DIM_T]/2);
                                      
-          vectorAuxF.copy(vectorAuxD);
+          vectorAuxF.copy(vectorInOut_ppa);
           propTS.absorb(vectorAuxF, isc/3, isc%3);
 	}
 
@@ -514,7 +515,7 @@ int main(int argc, char **argv) {
 					false,
 					0,
 					true,//checked
-					false,
+					false,//checked
 					false,
 					false,
 					true));
@@ -526,7 +527,7 @@ int main(int argc, char **argv) {
                                            false,
                                            0,
                                            true,//checked
-                                           false,
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -537,8 +538,8 @@ int main(int argc, char **argv) {
                                            0,
                                            false,
                                            0,
-                                           true,
-                                           false,
+                                           true,//checked
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -549,20 +550,20 @@ int main(int argc, char **argv) {
                                            1,
                                            false,
                                            0,
-                                           true,
-                                           false,
+                                           true,//checked
+                                           false,//checked
                                            false,
                                            false,
                                            true));
 
           TIME(corrB5_2pt.Recombination(reductions_V3_B,
                                          *reductions_V2_B[i],
-                                           true,
+                                           false,
                                            2,
                                            true,
                                            0,
-                                           true,
-                                           false,
+                                           true,//checked
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -573,8 +574,8 @@ int main(int argc, char **argv) {
                                            1,
                                            false,
                                            0,
-                                           true,
-                                           false,
+                                           true,//-1 sign from here
+                                           false,//-1 sign from here
                                            false,
                                            false,
                                            true));
@@ -585,8 +586,8 @@ int main(int argc, char **argv) {
                                            2,
                                            false,
                                            0,
-                                           true,
-                                           false,
+                                           true,//-1 sign from here
+                                           false,//-1 sign from here
                                            false,
                                            false,
                                            true));
@@ -597,8 +598,8 @@ int main(int argc, char **argv) {
                                            0,
                                            false,
                                            0,
-                                           false,
-                                           false,
+                                           false,//-1 sign from here
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -609,8 +610,8 @@ int main(int argc, char **argv) {
                                            2, 
                                            true,
                                            0,
-                                           false,
-                                           false,
+                                           false,//-1 sign from here
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -621,8 +622,8 @@ int main(int argc, char **argv) {
                                            0, 
                                            false,
                                            0,
-                                           false,
-                                           false,
+                                           false,//-1 sign from here
+                                           false,//-1 sign from here
                                            false,
                                            false,
                                            true));
@@ -633,8 +634,8 @@ int main(int argc, char **argv) {
                                            1, 
                                            false,
                                            0,
-                                           false,
-                                           false,
+                                           false,//checked
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -645,8 +646,8 @@ int main(int argc, char **argv) {
                                            2, 
                                            true,
                                            0,
-                                           true,
-                                           false,
+                                           true,//-1 sign from here
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -657,8 +658,8 @@ int main(int argc, char **argv) {
                                            1, 
                                            false,
                                            0,
-                                           false,
-                                           false,
+                                           false,//checked
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -669,8 +670,8 @@ int main(int argc, char **argv) {
                                            0, 
                                            false,
                                            0,
-                                           false,
-                                           false,
+                                           false,//checked
+                                           false,//checked
                                            false,
                                            false,
                                            true));
@@ -680,11 +681,15 @@ int main(int argc, char **argv) {
 	
 	}
 
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_B";
+
         TIME(produceOutput(corrB1_2pt, outfilename, "4pt", n_stochastic_samples));
         TIME(produceOutput(corrB2_2pt, outfilename, "4pt", n_stochastic_samples));
         TIME(produceOutput(corrB3_2pt, outfilename, "4pt", n_stochastic_samples));
         TIME(produceOutput(corrB4_2pt, outfilename, "4pt", n_stochastic_samples));
         TIME(produceOutput(corrB5_2pt, outfilename, "4pt", n_stochastic_samples));
+
+        outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_W";
 
         TIME(produceOutput(corrW1_2pt, outfilename, "4pt", n_stochastic_samples));
         TIME(produceOutput(corrW2_2pt, outfilename, "4pt", n_stochastic_samples));
@@ -724,16 +729,16 @@ int main(int argc, char **argv) {
         vectorIn1.absorb(vectorSource_stochastic,source_local[DIM_T]);
 
         PLEGMA_Vector<double> vectorAuxD;
-        PLEGMA_Vector<double> vectorInOut_ppa, vectorInOut_pma;
+        PLEGMA_Vector<double> vectorInOut_ppa;//, vectorInOut_pma;
 
-        solve1(vectorInOut_ppa, vectorInOut_pma, vectorIn1, source_local);
-        vectorAuxD.pack_propagator(vectorInOut_ppa,
-                                   vectorInOut_pma,
-                                   source_local[DIM_T],
-                                   HGC_totalL[DIM_T]/2);
+        solve1(vectorInOut_ppa,  vectorIn1, source_local);
+        //vectorAuxD.pack_propagator(vectorInOut_ppa,
+       //                            vectorInOut_pma,
+       //                            source_local[DIM_T],
+       //                            HGC_totalL[DIM_T]/2);
 
 
-        stochastic_oet_prop_zero_mom_packed.copy(vectorAuxD);   
+        stochastic_oet_prop_zero_mom_packed.copy(vectorInOut_ppa);   
 
       }//end of do_stochastic_oet
 
@@ -799,17 +804,17 @@ int main(int argc, char **argv) {
 
           
             PLEGMA_Vector<double> vectorAuxD;
-            PLEGMA_Vector<double> vectorInOut_ppa, vectorInOut_pma;
+            PLEGMA_Vector<double> vectorInOut_ppa;//, vectorInOut_pma;
             PLEGMA_Vector<float> vectorAuxF;
     
-            solve1(vectorInOut_ppa, vectorInOut_pma, vectorIn1, source_local);
-            vectorAuxD.pack_propagator(vectorInOut_ppa,
-                                       vectorInOut_pma,
-                                       source_local[DIM_T],
-                                       HGC_totalL[DIM_T]/2);
+            solve1(vectorInOut_ppa, vectorIn1, source_local);
+            //vectorAuxD.pack_propagator(vectorInOut_ppa,
+            //                           vectorInOut_pma,
+            //                           source_local[DIM_T],
+             //                          HGC_totalL[DIM_T]/2);
 
             
-            stochastic_oet_prop_fini_mom_packed.copy(vectorAuxD);
+            stochastic_oet_prop_fini_mom_packed.copy(vectorInOut_ppa);
     
 
           }
@@ -822,15 +827,22 @@ int main(int argc, char **argv) {
           TIME(reductionsV3_Z.V3( st_oet_fini, glist_sink_meson, prop_packed, true));
 
           
-          TIME(corrZ1_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, false, 0, false,  0, true, false, false, false, true ));
+          TIME(corrZ1_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, false, 0, false,  0, true, false, false, false, true ));//-1 factor from gamma_i1 
+                                               //-1 factor from gamma f1
 
-          TIME(corrZ2_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, false, 2, true,  0, true, false, false, true, false ));
+          TIME(corrZ2_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, false, 2, true,  0, true, false, false, true, false ));//-1 factor from gamma_i1
+                                              //-1 factor from gamma_f1
 
-          TIME(corrZ3_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, true,  1, false, 0, true, false, false, false, true ));
+          TIME(corrZ3_2pt.Recombination( reductionsV3_Z, reductionsV2_Z, true,  1, false, 0, true, false, false, false, true ));//-1 factor from gamma_i1
+                                              //checked from gamma_f1
 
-          TIME(corrZ4_2pt.Recombination( reductionsV3_Z, reductionsV4_Z, false, 2, false, 0, true, false, false, false, true ));
+          TIME(corrZ4_2pt.Recombination( reductionsV3_Z, reductionsV4_Z, false, 2, false, 0, true, false, false, false, true ));//checked for gamma_i1
+                                              //checked for gamma_f1
           
-          TIME(corrZ5_2pt.Recombination( reductionsV3_Z, reductionsV4_Z, true, 0, false, 0, true, false, false, false, true ));
+          TIME(corrZ5_2pt.Recombination( reductionsV3_Z, reductionsV4_Z, true, 0, false, 0, true, false, false, false, true ));//-1 factor from gamma_i1
+                                             //checked for gamma_f1
+
+          outfilename=outdiagramPrefix+confnumber+ sourcepositiontext+"_Z";
 
           TIME(produceOutput(corrZ1_2pt, outfilename, "4pt"));
           TIME(produceOutput(corrZ2_2pt, outfilename, "4pt"));

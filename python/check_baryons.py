@@ -29,9 +29,15 @@ one = np.eye(NS, dtype=complex)
     
 C = I*gy.dot(gt)
 
+
 g5 = gx.dot(gy.dot(gz.dot(gt)))
 
+Cgx = C.dot(gx)
+Cgy = C.dot(gy)
 Cg5 = C.dot(g5)
+print(Cg5)
+print(Cgx)
+stop("")
 
 igtCg5= I*gt.dot(Cg5)
 

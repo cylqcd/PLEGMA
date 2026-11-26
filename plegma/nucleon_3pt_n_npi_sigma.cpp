@@ -33,8 +33,8 @@ void produceOutput_2pt_packed( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
                     int n_stochastic_samples,
-		    int n_coherent_source,
-		    int *attract_look_up_table){
+                    int n_coherent_source,
+                    int *attract_look_up_table){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
   TIME(source.applyBoundaryConditions( true, n_coherent_source, attract_look_up_table ));
@@ -48,9 +48,9 @@ void produceOutput_3pt( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
                     int n_stochastic_samples,
-		    int n_coherent_source,
+                    int n_coherent_source,
                     int *attract_look_up_table,
-		    int source_sink_separation){
+                    int source_sink_separation){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
   TIME(source.applyBoundaryConditions_3pt( true, n_coherent_source, attract_look_up_table, source_sink_separation ));
@@ -72,7 +72,7 @@ void produceOutput( PLEGMA_ScattCorrelator<float> source,
 void produceOutput_2pt_packed( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
-		    int n_coherent_source,
+                    int n_coherent_source,
                     int *attract_look_up_table
                   ){
   TIME(source.apply_phase());
@@ -85,15 +85,17 @@ void produceOutput_2pt_packed( PLEGMA_ScattCorrelator<float> source,
 void produceOutput_3pt( PLEGMA_ScattCorrelator<float> source,
                     std::string outputFilename,
                     std::string diagram_name,
-		    int n_coherent_source,
+                    int n_coherent_source,
                     int *attract_look_up_table,
-		    int source_sink_separation
+                    int source_sink_separation
                   ){
   TIME(source.apply_phase());
   TIME(source.apply_sign(diagram_name));
   TIME(source.applyBoundaryConditions_3pt( true,n_coherent_source, attract_look_up_table, source_sink_separation ));
   TIME(source.writeHDF5( outputFilename ));
 }
+
+
 
   
 int main(int argc, char **argv) {

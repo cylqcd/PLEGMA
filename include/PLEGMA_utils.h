@@ -66,6 +66,12 @@ void wilsonFlow_collectEnergy_QUDA(std::vector<double> &energy_out,
                                   
 
 
+void wilsonFlow_QUDA(PLEGMA_Gauge<double> &gaugeOut,
+                     PLEGMA_Gauge<double> &gaugeIn, int n_steps, double epsilon,
+                     double t0_start, bool compute_plaquette,
+                     bool compute_qcharge);
+
+
 
 //============= QUDA_params.cpp ===================================//
 void infoQuda();

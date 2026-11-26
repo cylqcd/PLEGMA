@@ -76,13 +76,13 @@ int main(int argc, char **argv)
 		    sourcePositions[isource][2], sourcePositions[isource][3]);
 
       site& source = sourcePositions[isource];
-      PLEGMA_Propagator<float> propUP(run_ud ? BOTH : NONE);
-      PLEGMA_Propagator<float> propDN(run_ud ? BOTH : NONE);
+      PLEGMA_Propagator<double> propUP(run_ud ? BOTH : NONE);
+      PLEGMA_Propagator<double> propDN(run_ud ? BOTH : NONE);
 
       PLEGMA_Gauge3D<double> smearedGauge3D;
       smearedGauge3D.absorb(smearedGauge, source[DIM_T]);
 
-      auto computePropagator = [&](PLEGMA_Propagator<float>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
+      auto computePropagator = [&](PLEGMA_Propagator<double>& prop, const double run_mu, WHICHFLAVOR fl, int nSmear) {
 				 // ensuring mu value
 				 if(mu != run_mu) {
 				   updateOptions(fl);
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 
 				    PLEGMA_Vector<double> vectorInOut;
 				    PLEGMA_Vector<double> vectorAuxD;
-                                    PLEGMA_Vector<float> vectorAuxF;
+                                    PLEGMA_Vector<double> vectorAuxF;
 				    // Smearing the source
 				    PLEGMA_Vector3D<double> vector1, vector2;
 				    vector1.pointSource(source, isc/3, isc%3, DEVICE);
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 
 	TIME(computePropagator(propDN, -mu_ud, LIGHT, nsmearGauss));
 
-	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+	PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 	TIME(corr.contractMesons(propUP, propDN));
 	
 	char *dset1, *dset2;
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
       int nSmaller = std::min(mu_s.size(),mu_c.size());
       char cSmaller = (nSmaller==(int)mu_s.size()) ? 's' : 'c';
 
-      PLEGMA_Propagator<float> propS[nSmaller];
+      PLEGMA_Propagator<double> propS[nSmaller];
       for(int ismall=0; ismall < nSmaller; ismall++) {
 	for(int i=0;i<QUDA_MAX_MG_LEVEL;i++) mu_factor[i] = 1;
 	double run_mu = (cSmaller=='s') ? mu_s[ismall] : mu_c[ismall];
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
       
       int nLarger = (cSmaller!='s') ? mu_s.size() : mu_c.size();
       if(nLarger > 0) {
-	PLEGMA_Propagator<float> propL;
+	PLEGMA_Propagator<double> propL;
 	for(int ilarge=0; ilarge < nLarger; ilarge++) {
 	  double run_mu = (cSmaller!='s') ? mu_s[ilarge] : mu_c[ilarge];
 	  int nsmear = (cSmaller!='s') ? nsmearGauss_s : nsmearGauss_c;
@@ -155,9 +155,9 @@ int main(int argc, char **argv)
 	  
 	  if(nSmaller>0) {
 	    for(int ismall=0; ismall < nSmaller; ismall++) {
-	      PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? propS[ismall] : propL;
-	      PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
-	      PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+	      PLEGMA_Propagator<double> &propST = (cSmaller=='s') ? propS[ismall] : propL;
+	      PLEGMA_Propagator<double> &propCH = (cSmaller=='c') ? propS[ismall] : propL;
+	      PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 	      bool only_st = (ismall>0 && cSmaller=='s') || (ilarge>0 && cSmaller!='s');
 	      bool only_ch = (ismall>0 && cSmaller=='c') || (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -211,10 +211,10 @@ int main(int argc, char **argv)
 	      }
 	    }
 	  } else {
-	    PLEGMA_Propagator<float> none(NONE);
-	    PLEGMA_Propagator<float> &propST = (cSmaller=='s') ? none : propL;
-	    PLEGMA_Propagator<float> &propCH = (cSmaller=='c') ? none : propL;
-	    PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+	    PLEGMA_Propagator<double> none(NONE);
+	    PLEGMA_Propagator<double> &propST = (cSmaller=='s') ? none : propL;
+	    PLEGMA_Propagator<double> &propCH = (cSmaller=='c') ? none : propL;
+	    PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 	    bool only_st = (ilarge>0 && cSmaller!='s');
 	    bool only_ch = (ilarge>0 && cSmaller!='c');
 #ifdef PLEGMA_UDSC_BARYONS
@@ -261,8 +261,8 @@ int main(int argc, char **argv)
 	}
       } else if(run_ud) {
 #ifdef PLEGMA_UDSC_BARYONS
-	PLEGMA_Propagator<float> none(NONE);
-	PLEGMA_Correlator<float> corr(corr_space, source, maxQsq);
+	PLEGMA_Propagator<double> none(NONE);
+	PLEGMA_Correlator<double> corr(corr_space, source, maxQsq);
 	TIME(corr.contractBaryonsUDSC(propUP, propDN, none, none));
 	
 	char * group;

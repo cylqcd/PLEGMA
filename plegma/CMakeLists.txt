@@ -83,6 +83,14 @@ if(PLEGMA_BUILD_MESON_CORR)
 
   cuda_add_executable(Calc_2pt_wilson Calc_2pt_wilson.cpp)
   target_link_libraries(Calc_2pt_wilson ${PLEGMA_LIBS})
+cuda_add_executable(nucleon_2pt_3pt_delta nucleon_2pt_3pt_delta.cpp)
+target_link_libraries(nucleon_2pt_3pt_delta ${PLEGMA_LIBS})
+
+cuda_add_executable(nucleon_2pt_3pt_delta_check nucleon_2pt_3pt_delta_check.cpp)
+target_link_libraries(nucleon_2pt_3pt_delta_check ${PLEGMA_LIBS})
+
+cuda_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
+target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
 
   cuda_add_executable(Calc_2pt_marconi Calc_2pt_marconi.cpp)
   target_link_libraries(Calc_2pt_marconi ${PLEGMA_LIBS})
@@ -172,6 +180,8 @@ if(PLEGMA_SCATTERING_CONTRACTIONS)
   cuda_add_executable(checking_Doet checking_Doet.cpp)
   target_link_libraries(checking_Doet ${PLEGMA_LIBS})
 
+if (PLEGMA_SCATTERING_CONTRACTIONS)
+
   cuda_add_executable(testScattReductions EXCLUDE_FROM_ALL testScattReductions.cpp)
   target_link_libraries(testScattReductions ${PLEGMA_LIBS})
 
@@ -180,6 +190,9 @@ if(PLEGMA_SCATTERING_CONTRACTIONS)
 
   cuda_add_executable(nucleon_3pt_n_npi EXCLUDE_FROM_ALL nucleon_3pt_n_npi.cpp)
   target_link_libraries(nucleon_3pt_n_npi ${PLEGMA_LIBS})
+
+  cuda_add_executable(nucleon_3pt_n_npi_delta EXCLUDE_FROM_ALL nucleon_3pt_n_npi_delta.cpp)
+  target_link_libraries(nucleon_3pt_n_npi_delta ${PLEGMA_LIBS})
 
   cuda_add_executable(nucleon_3pt_n_npi_wd1ii EXCLUDE_FROM_ALL nucleon_3pt_n_npi_wd1ii.cpp)
   target_link_libraries(nucleon_3pt_n_npi_wd1ii ${PLEGMA_LIBS})
@@ -198,6 +211,10 @@ if(PLEGMA_SCATTERING_CONTRACTIONS)
 
   cuda_add_executable(piN_scattering_length_12 EXCLUDE_FROM_ALL piN_scattering_length_12.cpp)
   target_link_libraries(piN_scattering_length_12 ${PLEGMA_LIBS})
+
+  cuda_add_executable(Yan_NpiScattering_Wilson EXCLUDE_FROM_ALL Yan_NpiScattering_Wilson.cpp)
+  target_link_libraries(Yan_NpiScattering_Wilson ${PLEGMA_LIBS})
+
 endif(PLEGMA_SCATTERING_CONTRACTIONS)
 
 # --- Higher-order covariant derivative applications (requires PLEGMA_HIGHER_DERIV=ON) ---

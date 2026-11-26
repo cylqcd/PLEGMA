@@ -6,6 +6,7 @@
 #include <PLEGMA_vector_utils.cuh> 
 #include <PLEGMA_gaussian_smearing.cuh> 
 #include <PLEGMA_seqSourceNucleon.cuh> 
+#include <PLEGMA_seqSourceNucleonDelta.cuh> 
 #include <PLEGMA_covD.cuh>
 #include <split_grid.h>  // single-arg comm_rank_from_coords(const int*)
 #ifdef PLEGMA_SCATTERING_CONTRACTIONS
@@ -712,6 +713,26 @@ namespace plegma{
     PLEGMA_error("seqSourceNucleon: PLEGMA built without PLEGMA_THREEP_THREED support\n");
 #endif
   }
+
+template<typename Float>
+  void PLEGMA_Vector3D<Float>::seqSourceNucleonDelta(PLEGMA_Propagator3D<Float> &prop, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2, int c_sigma){
+    this->activeTimeSlice = prop.activeTimeSlice;
+    this->zero_device();
+
+    auto texProp = toTexture<propTex>(prop);
+    contractNucleonDeltaSeqSource<Float,Float>(toField2<vector2>(*this), *texProp, proj, particle, c_nu, c_c2, c_sigma);
+  }
+
+  template<typename Float>
+  void PLEGMA_Vector3D<Float>::seqSourceNucleonDelta(PLEGMA_Propagator3D<Float> &prop1, PLEGMA_Propagator3D<Float> &prop2, WHICHPROJECTOR proj, WHICHPARTICLE particle, int c_nu, int c_c2, int c_sigma){
+    this->activeTimeSlice = prop1.activeTimeSlice;
+    this->zero_device();
+
+    auto texProp1 = toTexture<propTex>(prop1);
+    auto texProp2 = toTexture<propTex>(prop2);
+    contractNucleonDeltaSeqSource<Float,Float,Float>(toField2<vector2>(*this), *texProp1, *texProp2, proj, particle, c_nu, c_c2, c_sigma);
+  }
+
   
   
   template class PLEGMA_Vector3D<float>;
