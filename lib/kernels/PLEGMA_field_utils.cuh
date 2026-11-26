@@ -1,3 +1,4 @@
+#include <thrust/iterator/zip_iterator.h>
 #include <cublas_v2.h>
 #include <PLEGMA_BLAS.h>
 #include <PLEGMA_Thrust.h>

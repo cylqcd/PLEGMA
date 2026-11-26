@@ -42,28 +42,31 @@ using namespace std::chrono_literals;
 #define N_SPINS    4
 
 //======== Preprocessor macros =========//
+
 #include <global/PLEGMA_macros.hpp>
+
 #include <tune_quda.h>
 #include <comm_quda.h>
-// The following CCCL headers must be included before 'using namespace quda'
-// to avoid double4 ambiguity: CUDA 13 defines quda::double4 = ::double4_32a,
-// but CCCL (thrust/cub/cuda::std) specialize templates for ::double4.
-// After 'using namespace quda', bare 'double4' becomes ambiguous between
-// ::double4 and quda::double4. Pre-including ensures the specializations are
-// processed before that ambiguity exists (#pragma once prevents re-processing).
+
+namespace quda {
+  int comm_rank_from_coords(const int *coords);
+}
+
 #include <curand_kernel.h>
-// Pre-include CCCL headers (cub/util_type.cuh pulls in cuda_fp8.h/cuda_fp6.h;
-// thrust and cuda::std include further FP type specializations).
-// Must be OUTSIDE __CUDACC__ guard: driver_types.h (included by CUDA runtime)
-// includes cuda_fp8.h in CUDA 13, so g++-compiled .cpp files also trigger
-// the double4 ambiguity unless these are pre-included before 'using namespace quda'.
-// Note: on CUDA 13 platforms where CCCL lives under include/cccl/ (no top-level
-// symlinks), CMakeLists.txt adds include/cccl/ as a system include so these
-// bare paths resolve correctly for both nvcc and g++.
+#include <Eigen/Core>
+#include <thrust/iterator/zip_iterator.h>
+
+
+// Include CCCL headers before 'using namespace quda' to avoid
+// CUDA 13 ambiguity between ::double4 and quda::double4.
+#include <curand_kernel.h>
 #include <thrust/type_traits/is_trivially_relocatable.h>
 #include <cub/util_type.cuh>
 #include <cuda/std/tuple>
+#include <Eigen/Core>
+#include <thrust/iterator/zip_iterator.h>
 using namespace quda;
+
 
 namespace plegma {
   //======== PLEGMA_printf, PLEGMA_error, PLEGMA_warning =========//

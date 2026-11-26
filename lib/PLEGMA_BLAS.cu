@@ -1,5 +1,6 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_Thrust.h>
+#include <thrust/iterator/zip_iterator.h>
 
 namespace plegma{
   

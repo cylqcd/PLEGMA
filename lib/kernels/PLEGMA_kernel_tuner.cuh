@@ -62,6 +62,8 @@ struct gens<0, S...> {
 // class to perform the kernel tuning
 template<class ...types>
 class PLEGMA_kernel_tuner : public Tunable{
+public:
+  using quda::Tunable::tuned;
 
 protected:
 

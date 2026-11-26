@@ -103,7 +103,7 @@ std::shared_ptr<tex_mom_list> PLEGMA_FT<Float>::getTexMomList() {
   Float intp;
   for(int i=0; i<Nmoms(); i++) {
     for(int j=0; j<dims; j++) {
-      if(abs(std::modf(momList[i][j],&intp)) > std::numeric_limits<Float>::epsilon()) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
+      if(std::abs(std::modf(momList[i][j],&intp)) > std::numeric_limits<Float>::epsilon()) PLEGMA_warning("Function getTexMomList expects integers momenta but non integers are given");
       hostPtr[i*N_DIMS+j]=(int) std::lround(momList[i][j]);
     }
   }

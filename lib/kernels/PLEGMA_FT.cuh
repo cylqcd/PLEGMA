@@ -1,6 +1,7 @@
 #include <PLEGMA_Field.h>
 #include <PLEGMA_FT.h>
 #include <PLEGMA_kernel_utils.cuh>
+#include <thrust/iterator/zip_iterator.h>
 
 using namespace plegma;
 template<typename Float>

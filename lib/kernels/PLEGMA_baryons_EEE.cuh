@@ -251,9 +251,9 @@ static void contract_baryons_EEE(Float* evecs, Float* evals, int nvecs, size_t v
 	MPI_Allgather(result, corr.getTotalSize()/8*2, MPI_Type<Float>(),
 		      finalE, corr.getTotalSize()/8*2, MPI_Type<Float>(), HGC_timeComm);
 
-	std::complex<Float>* out = (complex<Float>*) corr.H_elem();
-	std::complex<Float>* in = (complex<Float>*) finalE;
-	std::complex<Float>* evs = (complex<Float>*) evals;
+	std::complex<Float>* out = (std::complex<Float>*) corr.H_elem();
+	std::complex<Float>* in = (std::complex<Float>*) finalE;
+	std::complex<Float>* evs = (std::complex<Float>*) evals;
 	int t_size = corr.localT();
 	size_t volume = corr.getVolSize()/t_size;
 	size_t size = corr.getTotalSize()/2;
@@ -266,7 +266,7 @@ static void contract_baryons_EEE(Float* evecs, Float* evals, int nvecs, size_t v
 	    int t0pt = (t0+t1+HGC_procPosition[DIM_T] * HGC_localL[DIM_T])%HGC_totalL[DIM_T];
 	    for(int v=0; v<volume; v++)
 	      for(int is=0; is<site_size/2; is++) {
-		complex<Float> tmp = in[(t0*volume+v)*4+is/4]*conj(in[(t0pt*volume+v)*4+(is+2)%4]);
+		std::complex<Float> tmp = in[(t0*volume+v)*4+is/4]*conj(in[(t0pt*volume+v)*4+(is+2)%4]);
 		out[0*size+(t1*volume+v)*site_size/2+is] += eval * tmp;
 		out[1*size+(t1*volume+v)*site_size/2+is] += conj(eval) * tmp;
 	      }

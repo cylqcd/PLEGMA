@@ -86,9 +86,6 @@ if(PLEGMA_BUILD_MESON_CORR)
 cuda_add_executable(nucleon_2pt_3pt_delta nucleon_2pt_3pt_delta.cpp)
 target_link_libraries(nucleon_2pt_3pt_delta ${PLEGMA_LIBS})
 
-cuda_add_executable(nucleon_2pt_3pt_delta_check nucleon_2pt_3pt_delta_check.cpp)
-target_link_libraries(nucleon_2pt_3pt_delta_check ${PLEGMA_LIBS})
-
 cuda_add_executable(nucleon_2pt_3pt_npi nucleon_2pt_3pt_npi.cpp)
 target_link_libraries(nucleon_2pt_3pt_npi ${PLEGMA_LIBS})
 
@@ -139,6 +136,11 @@ option(PLEGMA_BUILD_RENORM "Build renormalization Z-factor executables" OFF)
 if(PLEGMA_BUILD_RENORM)
   cuda_add_executable(Zfac Zfac.cpp)
   target_link_libraries(Zfac ${PLEGMA_LIBS})
+cuda_add_executable(qLoops qLoops.cpp)
+target_link_libraries(qLoops ${PLEGMA_LIBS})
+
+cuda_add_executable(qLoops_WilsonLine qLoops_WilsonLine.cpp)
+target_link_libraries(qLoops_WilsonLine ${PLEGMA_LIBS})
 
   cuda_add_executable(ZfacStaple ZfacStaple.cpp)
   target_link_libraries(ZfacStaple ${PLEGMA_LIBS})

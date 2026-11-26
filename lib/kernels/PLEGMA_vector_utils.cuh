@@ -3,6 +3,7 @@
 #include <PLEGMA_kernel_utils.cuh>
 #include <PLEGMA_gammas.cuh>
 #include <PLEGMA_kernel_tuner.cuh>
+#include <thrust/iterator/zip_iterator.h>
 #include <PLEGMA_Thrust.h>
 using namespace plegma;
 using namespace quda;
