@@ -26,12 +26,17 @@ namespace quda {
     QudaInvertParam getInvParams() const{return inv_param;}
     SolverParam* getSolverParam() const{return solverParam;}
     void UpdateSolver();
-    void UpdateGaugeSolver();
+    // Check a stored sequential column with the native full operator.
+    void check_stored_seq_column(PLEGMA_Vector<float> &stored,
+                                 PLEGMA_Vector<double> &source, int column,
+                                 double run_mu, bool stored_is_physical);
+
 
     double Mu() const { return inv_param.mu;}
     int Nrhs()  const { return inv_param.num_src;}
 
     QUDA_solver(double mu, int nsrc);
+    explicit QUDA_solver(double mu);  // convenience: nsrc=1
     virtual ~QUDA_solver();
     std::vector<ColorSpinorField> solve(std::vector<ColorSpinorField>& rhs);
 

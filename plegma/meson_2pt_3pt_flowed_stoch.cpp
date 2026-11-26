@@ -1,0 +1,847 @@
+// meson_2pt_3pt_flowed_stoch.cpp
+//
+// Stochastic-source version of meson_2pt_3pt_flowed.cpp.
+//
+// Key difference: instead of a point source δ(x - x₀) for each of the
+// 12 spin-color components, this code uses a Z4 stochastic noise vector
+// ηᵅᵃ(x) that is non-zero over the ENTIRE source timeslice but restricted
+// to a single spin-color (α,a) via dilution.  The 12 diluted components
+// share the same noise realization so that the one-end trick (OET) holds:
+//
+//   C(t) = Σₓ Tr[S^stoch(x,t) Γ S^stoch†(x,t)]
+//          ──→ Σ_{x,y} Tr[S(x,t;y,t₀) Γ S†(x,t;y,t₀)]   (noise avg.)
+//
+// which is the all-to-all propagator on the source timeslice, equivalent
+// to summing point-source results over all source positions – at the same
+// cost of 12 inversions per noise sample.
+//
+// For multiple noise samples (nsamples > 1) each sample writes to a file
+// tagged with _sampleN; average over samples in the analysis stage.
+//
+// New options compared to point-source code:
+//   --nsamples <int>   Number of Z4 noise samples per source position (default 1)
+//   --seed   <int>   Base seed for noise generation              (default 1234)
+
+#include "PLEGMA_global.h"
+#include "QUDA_wilson_flow.h"
+#include <PLEGMA.h>
+#include <PLEGMA_utils.h>
+#include <comm_quda.h>
+#include "utils/PLEGMA_flow_output.h"
+#include "PLEGMA_fiveD.h"
+#include <memory>
+
+std::vector<std::thread> threads;
+using namespace plegma;
+using namespace quda;
+
+static std::vector<double> runtime;
+#define TIME(fnc)                                                              \
+  runtime.push_back(MPI_Wtime());                                              \
+  fnc;                                                                         \
+  PLEGMA_printf("TIME for " #fnc " %f sec\n", MPI_Wtime() - runtime.back());   \
+  runtime.pop_back()
+
+#include <complex>
+#include <cstdio>
+#include <cstddef>
+#include <cstdlib>
+
+
+int main(int argc, char **argv) {
+  std::vector<std::string> listOpt = {"verbosity",
+                                      "load-gauge",
+                                      "nsmear-APE",
+                                      "alpha-APE",
+                                      "nsmear-gauss",
+                                      "alpha-gauss",
+                                      "nsrc",
+                                      "src-filename",
+                                      "twop-filename",
+                                      "threep-filename",
+                                      "corr-file-format",
+                                      "corr-space",
+                                      "tSinks",
+                                      "maxQsq",
+                                      "max-order",
+                                      "rotate",
+                                      "pion",
+                                      "kaon-uins",
+                                      "kaon-sins"};
+
+  initializeOptions(argc, argv, true, listOpt);
+
+  int max_order = 6;
+  HGC_options->set("max-order", "Max derivative order for fiveD patterns (1-6)",
+                   verbosity, max_order);
+
+  int check_seq_residual = 0;
+  HGC_options->set("check-seq-residual", "Check stored float sequential columns with full M (0/1; default 0)",
+                   verbosity, check_seq_residual);
+  if (check_seq_residual != 0 && check_seq_residual != 1)
+    PLEGMA_error("check-seq-residual must be 0 or 1");
+
+  int spectator_periodic = 0;
+  HGC_options->set("spectator-periodic", "Use P spectator ONLY; active and seq inversions remain AP (0/1)",
+                   verbosity, spectator_periodic);
+  if (spectator_periodic != 0 && spectator_periodic != 1)
+    PLEGMA_error("spectator-periodic must be 0 or 1");
+
+  // ---- Stochastic source options ----
+  int nsamples = 1;
+  int seed   = 1234;
+  HGC_options->set("nsamples",
+                   "Number of Z4 stochastic noise samples per source position",
+                   verbosity, nsamples);
+  HGC_options->set("seed",
+                   "Base seed for Z4 noise generation (each sample/source gets a unique derived seed)",
+                   verbosity, seed);
+
+  // ---- Strange (kaon) options ----
+  double mu_s = std::numeric_limits<double>::quiet_NaN();
+  double mu_ud = mu;
+  int nsmearGauss_s = nsmearGauss;
+  HGC_options->set("Q-mu-s", "twisted-mass mu for strange quark (kaon)",
+                   verbosity, mu_s);
+  HGC_options->set("nsmear-gauss-s",
+                   "Gaussian smearing steps for strange quark propagator",
+                   verbosity, nsmearGauss_s);
+
+  double flow_t0 = 2.5;  // dimensionless t0 for this ensemble (in lattice units)
+  HGC_options->set("t0-ref", "Dimensionless Wilson-flow reference scale t0 in lattice units",
+                   verbosity, flow_t0);
+  double flow_max_t0 = 2.5;
+  double flow_save_after_t0 = -1.0;
+  double flow_save_every_t0 = 0.1;
+  int flow_plan_only = 0;
+  HGC_options->set("flow-max-t0", "Maximum flow time in units of t0 (multiple of 0.1; default 2.5)",
+                   verbosity, flow_max_t0);
+  HGC_options->set("flow-save-after-t0", "Save 3pt only strictly after this tf/t0 (-1: no cutoff; default -1)",
+                   verbosity, flow_save_after_t0);
+  HGC_options->set("flow-save-every-t0", "3pt output spacing in units of t0 (multiple of 0.1; default 0.1; always include final point)",
+                   verbosity, flow_save_every_t0);
+  HGC_options->set("flow-plan-only", "Print the flow/output schedule and exit before GPU initialization (0/1)",
+                   verbosity, flow_plan_only);
+  if (flow_plan_only != 0 && flow_plan_only != 1)
+    PLEGMA_error("flow-plan-only must be 0 or 1");
+
+  // ---- Run-mode flags (0/1) ----
+  int rotateQ    = 1;  // apply twisted-mass rotation to physical basis
+  int pionQ      = 1;  // compute pion 2pt + 3pt  (needs prop_q_sl, prop_q_ss)
+  int kaonQ_uins = 0;  // compute K+ 2pt + uins 3pt (needs prop_q_sl, prop_q_ss, prop_s_ss_d)
+  int kaonQ_sins = 0;  // compute K+ sins 3pt        (needs prop_q_ss, prop_s_sl_d)
+  HGC_options->set("rotate",    "Apply twisted-mass rotation to physical basis (0/1)", verbosity, rotateQ);
+  HGC_options->set("pion",      "Compute pion 2pt+3pt channel (0/1)",                  verbosity, pionQ);
+  HGC_options->set("kaon-uins", "Compute K+ 2pt + u-insertion 3pt channel (0/1)",     verbosity, kaonQ_uins);
+  HGC_options->set("kaon-sins", "Compute K+ s-insertion 3pt channel (0/1)",           verbosity, kaonQ_sins);
+
+  std::unique_ptr<FlowOutputSchedule> flow_schedule;
+  try {
+    flow_schedule = std::make_unique<FlowOutputSchedule>(
+        flow_t0, flow_max_t0, flow_save_after_t0, flow_save_every_t0);
+  } catch (const std::exception &error) {
+    PLEGMA_error("Invalid flow output schedule: %s", error.what());
+  }
+  PLEGMA_printf("[FLOW_OUTPUT_WINDOW] t0=%.12g max_tf_over_t0=%.12g save_after=%.12g save_every=%.12g epsilon=%.12g checkpoints=%d\n",
+                flow_t0, flow_max_t0, flow_save_after_t0, flow_save_every_t0,
+                FlowOutputSchedule::epsilon, flow_schedule->checkpoints());
+  if (flow_plan_only) {
+    HGC_options->close();
+    for (int ic = 0; ic <= flow_schedule->checkpoints(); ++ic) {
+      const int target = flow_schedule->targetStep(ic);
+      const double time = target * FlowOutputSchedule::epsilon;
+      PLEGMA_printf("[FLOW_OUTPUT_PLAN] checkpoint=%d requested_tf_over_t0=%.12g step=%d actual_t=%.12g tau=%d save=%d\n",
+                    ic, flow_schedule->nominalRatio(ic), target, time,
+                    (int)std::lround(time / (0.1 * flow_t0)),
+                    (int)flow_schedule->save(ic));
+    }
+    delete HGC_options;
+    HGC_options = nullptr;
+    // Release QUDA communicators before MPI_Finalize on this preview-only path.
+    quda::comm_finalize();
+    finalizeComms();
+    return 0;
+  }
+  initializePLEGMA();
+  {
+    if (!pionQ && !kaonQ_uins && !kaonQ_sins) {
+      PLEGMA_printf("WARNING: all channels disabled -- forcing pion on.\n");
+      pionQ = 1;
+    }
+    if ((kaonQ_uins || kaonQ_sins) && std::isnan(mu_s))
+      PLEGMA_error("kaonQ_uins/sins enabled but --Q-mu-s was not provided. Please set --Q-mu-s.");
+
+    PLEGMA_printf(
+        "Run flags: rotateQ=%d pionQ=%d kaonQ_uins=%d kaonQ_sins=%d  mu_ud=%g  mu_s=%g"
+        "  nsamples=%d  seed=%d\n",
+        (int)rotateQ, (int)pionQ, (int)kaonQ_uins, (int)kaonQ_sins, mu_ud, mu_s, nsamples, seed);
+
+    if (spectator_periodic && (kaonQ_uins || kaonQ_sins))
+      PLEGMA_error("Spectator BC pilot supports pion only");
+    PLEGMA_printf("[BC_ASSIGNMENT] active=AP sequential=AP spectator=%s\n",
+                  spectator_periodic ? "P" : "AP");
+
+    // ---- Gauge field ----
+    PLEGMA_Gauge<double> smearedGauge(BOTH);
+    PLEGMA_Gauge<double> gauge(BOTH);
+
+    gauge.readFile(latfile, LIME_FORMAT);
+    initGaugeQuda(gauge, true);
+    plaqQuda();
+
+    TIME(smearedGauge.APEsmearing(gauge, nsmearAPE, alphaAPE, 3));
+    PLEGMA_printf("Plaquette after APE-smearing:\n");
+    smearedGauge.calculatePlaq();
+
+    auto print_gpu_mem = [](const char *tag) {
+      size_t free_bytes = 0, total_bytes = 0;
+      cudaMemGetInfo(&free_bytes, &total_bytes);
+      PLEGMA_printf("[GPU_MEM] %s: free=%.2f GiB  total=%.2f GiB\n", tag,
+                    free_bytes / 1073741824.0, total_bytes / 1073741824.0);
+    };
+
+    const std::string twop_base   = twop_filename;
+    const std::string threep_base = threep_filename;
+    const double mu_ud_save = mu_ud;
+
+    struct SeqChannelData {
+      std::string tag;
+      bool active_as_bwd = false;
+      std::shared_ptr<PLEGMA_Propagator<float>> fwd_backup;     // HOST-only
+      std::vector<std::unique_ptr<PLEGMA_Propagator<float>>> seq_host; // HOST-only per tsink
+    };
+
+    struct SourceSeqData {
+      site src;
+      std::string threep_out;
+      std::vector<std::vector<SeqChannelData>> sample_seq_data;
+    };
+
+    auto run_channel_pass = [&](bool do_pion,
+                                bool do_kaon_uins,
+                                bool do_kaon_sins,
+                                const char *pass_name) {
+      PLEGMA_printf("\n========== Channel pass: %s (pion=%d kaon_uins=%d kaon_sins=%d) =========="
+                    "\n", pass_name, (int)do_pion, (int)do_kaon_uins,
+                    (int)do_kaon_sins);
+
+      updateOptions(LIGHT);
+      mu    = mu_ud_save;
+      mu_ud = mu_ud_save;
+      TIME(resetFermionFlowSmearedGauge());
+      TIME(updateGaugeQuda(gauge, true));
+      auto solver_up = std::make_unique<QUDA_solver>(mu, 1);
+      auto switch_light_boundary = [&](bool antiperiodic) {
+        // Destroy Dirac/MG references BEFORE replacing resident gauge/clover.
+        solver_up.reset();
+        qudaDeviceSynchronize();
+        updateOptions(LIGHT);
+        mu = mu_ud_save;
+        mu_ud = mu_ud_save;
+        updateGaugeQuda(gauge, antiperiodic);
+        solver_up = std::make_unique<QUDA_solver>(mu, 1);
+        PLEGMA_printf("[BC_SWITCH] loaded=%s fresh_solver_and_multigrid=1\n",
+                      antiperiodic ? "AP" : "P");
+      };
+
+      std::vector<SourceSeqData> all_source_seq_data;
+      all_source_seq_data.reserve(numSourcePositions);
+
+      // ---- Source loop ----
+      for (int isrc = 0; isrc < numSourcePositions; ++isrc) {
+      updateOptions(LIGHT);
+      mu    = mu_ud_save;
+      mu_ud = mu_ud_save;
+      solver_up->UpdateSolver();
+
+      site &src = sourcePositions[isrc];
+      PLEGMA_printf("\n=== Source %d at (%02d,%02d,%02d,%02d) ===\n",
+                    isrc, src[0], src[1], src[2], src[3]);
+
+      PLEGMA_Gauge3D<double> smearedGauge3D_src;
+      smearedGauge3D_src.absorb(smearedGauge, src[DIM_T]);
+
+      // ------------------------------------------------------------------
+      // build_quark_prop_stoch
+      // ------------------------------------------------------------------
+      // Replaces the point-source build_quark_prop with a Z4 stochastic
+      // timeslice source.  Workflow per spin-color component (α,a):
+      //
+      //   1. Generate a single 4D Z4 noise vector η (shared across all 12).
+      //   2. Spin-color dilute: η^{α,a}(x) = η(x) if (spin,color)==(α,a) else 0.
+      //   3. Extract source timeslice → 3D; apply 3D Gaussian smearing.
+      //   4. Embed 3D → 4D at t=t_src; rotate; invert; rotate back.
+      //   5. Absorb solution into prop_sl (local sink).
+      //   6. Smear solution (sink side); absorb into prop_ss (smeared sink).
+      //
+      // Using ONE noise vector for all 12 columns is essential for the OET:
+      // the off-diagonal noise contributions average to zero over samples.
+      // ------------------------------------------------------------------
+      auto build_quark_prop_stoch = [&](PLEGMA_Propagator<float> &prop_sl,
+                                        PLEGMA_Propagator<float> &prop_ss,
+                                        double run_mu, WHICHFLAVOR fl,
+                                        int nSmear,
+                                        const site &src_site,
+                                        PLEGMA_Gauge3D<double> &smGauge3D,
+                                        int noise_seed) {
+        if (mu != run_mu) {
+          updateOptions(fl);
+          mu = run_mu;
+          solver_up->UpdateSolver();
+        }
+
+        // Single Z4 noise vector shared by all 12 spin-color columns
+        PLEGMA_Vector<double> eta_full(BOTH);
+        eta_full.randInit(noise_seed);
+        eta_full.stochastic_Z(4);
+
+        for (int isc = 0; isc < 12; ++isc) {
+          PLEGMA_Vector<double> v4D1, v4D2;
+
+          // (a) Spin-color dilution in 4D
+          PLEGMA_Vector<double> eta_dil(BOTH);
+          eta_dil.dilutespincolor(eta_full, isc / 3, isc % 3);
+
+          // (b) Extract source timeslice → 3D and apply source-side smearing
+          PLEGMA_Vector3D<double> eta3D, eta3D_sm;
+          eta3D.absorb(eta_dil, src_site[DIM_T]);
+          TIME(eta3D_sm.gaussianSmearing(eta3D, smGauge3D, nSmear, alphaGauss));
+
+          // (c) Embed smeared 3D source → 4D at t=t_src
+          v4D2.absorb(eta3D_sm, src_site[DIM_T]);
+
+          if (rotateQ) {
+            TIME(v4D1.rotateToPhysicalBasis(v4D2, run_mu / abs(run_mu)));
+          } else {
+            v4D1.copy(v4D2);
+          }
+
+          TIME(solver_up->solve(v4D1, v4D1));
+
+          if (rotateQ) {
+            TIME(v4D2.rotateToPhysicalBasis(v4D1, run_mu / abs(run_mu)));
+          } else {
+            v4D2.copy(v4D1);
+          }
+
+          // (d) Store SL (smeared source, local sink)
+          PLEGMA_Vector<float> v4D2_f;
+          v4D2_f.copy(v4D2);
+          prop_sl.absorb(v4D2_f, isc / 3, isc % 3);
+
+          // (e) Smear sink side → store SS (smeared source, smeared sink)
+          PLEGMA_Vector<double> v_sm;
+          TIME(v_sm.gaussianSmearing(v4D2, smearedGauge, nSmear, alphaGauss));
+          PLEGMA_Vector<float> v_sm_f;
+          v_sm_f.copy(v_sm);
+          prop_ss.absorb(v_sm_f, isc / 3, isc % 3);
+        }
+      };
+
+      // Per-source filename tags (same as original; sample tag added in noise loop)
+      char *src_tag = nullptr;
+      const std::string conf_tag = latfile.substr(latfile.length() - 4);
+      // Stochastic source fills the full spatial volume; only the source
+      // timeslice is meaningful, so we drop sx/sy/sz from the filename.
+      asprintf(&src_tag, "_st%02d", src[3]);
+      const std::string twop_out   = twop_base   + src_tag + "_chi." + conf_tag;
+      const std::string threep_out = threep_base + src_tag + "_chi." + conf_tag;
+
+      SourceSeqData source_seq_data;
+      source_seq_data.src = src;
+      source_seq_data.threep_out = threep_out;
+
+      // ------------------------------------------------------------------
+      // Noise sample loop
+      // ------------------------------------------------------------------
+      // Seed scheme:
+      //   Kaon:  C2_kaon = contractMesonsNew(u, sbar) and all C3_kaon channels
+      //          involve the pair (u, sbar).  For the stochastic estimate of
+      //          C2 to avoid fluctuating through zero (which would blow up the
+      //          ratio R = C3/C2), u and sbar MUST share the same Z4 noise
+      //          vector eta_full.  Using different seeds gives two independent
+      //          noise vectors whose product has unit-scale fluctuations and
+      //          can become negative, destroying the signal.
+      //          => seed_s = seed_sd = seed_q  (all kaon quarks share eta_u)
+      // ── Phase-1 lambda: solve all seq props for one channel, store HOST copies ──
+      auto solve_seq_channel = [&](
+          const std::string &tag,
+          std::shared_ptr<PLEGMA_Propagator<float>> fwd_backup,
+          PLEGMA_Propagator<float> &fwd_smeared,
+          WHICHFLAVOR seq_fl, double seq_mu,
+          bool active_as_bwd = false) -> SeqChannelData {
+        PLEGMA_printf("\n--- solve_seq_channel: tag='%s' seq_fl=%s seq_mu=%g ---\n",
+                      tag.c_str(),
+                      seq_fl == LIGHT ? "LIGHT" : (seq_fl == STRANGE ? "STRANGE" : "CHARM"),
+                      seq_mu);
+        updateOptions(seq_fl);
+        mu = seq_mu;
+        PLEGMA_printf("mu after updateOptions %f\n", mu);
+        solver_up->UpdateSolver();
+        const int seq_nsmear = (seq_fl == LIGHT) ? nsmearGauss : nsmearGauss_s;
+
+        SeqChannelData cd;
+        cd.tag = tag;
+        cd.active_as_bwd = active_as_bwd;
+        cd.fwd_backup = std::move(fwd_backup);
+        if (!cd.fwd_backup)
+          PLEGMA_error("Missing HOST backup for sequential channel '%s'", tag.c_str());
+
+        // Solve seq prop for each tsink; keep only a HOST copy to save GPU memory.
+        for (size_t its = 0; its < tSinks.size(); ++its) {
+          const int dt_sink = tSinks[its];
+          if (dt_sink >= HGC_totalL[3])
+            PLEGMA_error("Provided tsink=%d is >= temporal extent", dt_sink);
+          const int sink_t = (src[3] + dt_sink) % HGC_totalL[3];
+
+          gauge.calculatePlaq();
+          solver_up->UpdateSolver();
+
+          PLEGMA_Gauge3D<double> smearedGauge3D_sink;
+          smearedGauge3D_sink.absorb(smearedGauge, sink_t);
+
+          PLEGMA_Propagator3D<float> prop_q_3D;
+          prop_q_3D.absorb(fwd_smeared, sink_t);
+          prop_q_3D.apply_gamma(G5, LEFT);
+
+          auto seq_h = std::make_unique<PLEGMA_Propagator<float>>(HOST);
+          for (int nu = 0; nu < 4; ++nu) {
+            for (int c2 = 0; c2 < 3; ++c2) {
+              PLEGMA_Vector3D<float> seq3D_f;
+              seq3D_f.absorb(prop_q_3D, nu, c2);
+              PLEGMA_Vector3D<double> seq3D;
+              seq3D.copy(seq3D_f);
+
+              PLEGMA_Vector3D<double> seq3D_sm_d;
+              TIME(seq3D_sm_d.gaussianSmearing(seq3D, smearedGauge3D_sink,
+                                               seq_nsmear, alphaGauss));
+
+              PLEGMA_Vector<double> rhs4D1, rhs4D2;
+              rhs4D2.absorb(seq3D_sm_d, sink_t);
+              PLEGMA_printf("[SEQDBG] sink_t=%d dt_sink=%d nu=%d c2=%d\n",
+                            sink_t, dt_sink, nu, c2);
+              PLEGMA_printf("[SEQDBG] rhs4D2.norm=%e\n", rhs4D2.norm());
+
+              const double nrm = rhs4D2.norm();
+              if (nrm > 0.0) rhs4D2.scale(1.0 / nrm);
+              if (rotateQ) rhs4D1.rotateToPhysicalBasis(rhs4D2, mu / abs(mu));
+              else         rhs4D1.copy(rhs4D2);
+
+              std::unique_ptr<PLEGMA_Vector<double>> validation_seq_rhs;
+              if (check_seq_residual) {
+                validation_seq_rhs = std::make_unique<PLEGMA_Vector<double>>();
+                validation_seq_rhs->copy(rhs4D1);
+              }
+              TIME(solver_up->solve(rhs4D1, rhs4D1));
+              if (rotateQ) rhs4D2.rotateToPhysicalBasis(rhs4D1, mu / abs(mu));
+              else         rhs4D2.copy(rhs4D1);
+
+              if (nrm > 0.0) rhs4D2.scale(nrm);
+
+              PLEGMA_Vector<float> rhs4D2_f;
+              rhs4D2_f.copy(rhs4D2);
+              seq_h->absorbVectorToHost(rhs4D2_f, nu, c2);
+              if (check_seq_residual) {
+                PLEGMA_Vector<float> seq_column;
+                seq_column.absorbFromHost(*seq_h, nu, c2);
+                qudaDeviceSynchronize();
+                if (nrm > 0.0) validation_seq_rhs->scale(nrm);
+                solver_up->check_stored_seq_column(seq_column, *validation_seq_rhs,
+                                                   nu * 3 + c2, seq_mu, rotateQ != 0);
+              }
+            }
+          }
+          cd.seq_host.push_back(std::move(seq_h));
+        }
+        return cd;
+      }; // solve_seq_channel
+
+      // Storage for pre-computed seq props across all noise samples for this source
+      auto &sample_seq_data = source_seq_data.sample_seq_data;
+
+      // ------------------------------------------------------------------
+      for (int ir = 0; ir < nsamples; ++ir) {
+        sample_seq_data.emplace_back();  // one entry per sample
+        const std::string sample_tag = (nsamples > 1)
+                                       ? ("_sample" + std::to_string(ir))
+                                       : "";
+        // Use src[3] (source timeslice) rather than the loop index isrc so that
+        // the seed depends only on the physical source position, not on how
+        // many sources are batched together in the same run.
+        const int seed_q  = seed + src[3] * 100000 + ir * 10 + 0;  // u  (+mu)
+        // Kaon noise cancellation: s and sbar reuse the same seed as u so that
+        // all kaon propagators are derived from the same eta_full.
+        const int seed_s  = seed_q;   // s  (-mu_s): same eta as u
+        const int seed_sd = seed_q;   // sbar (+mu_s): same eta as u
+
+        PLEGMA_printf("\n  --- Noise sample %d / %d (seed_q=%d) ---\n",
+                      ir, nsamples, seed_q);
+
+        // ---- Light sector ----
+        //   prop_q_sl (+mu_ud, SL): pion || kaon_uins
+        //   prop_q_ss (+mu_ud, SS): pion || kaon_uins || kaon_sins
+        std::unique_ptr<PLEGMA_Propagator<float>> prop_q_sl_ptr, prop_q_ss_ptr;
+        if (do_pion || do_kaon_uins) {
+          prop_q_sl_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          TIME(build_quark_prop_stoch(*prop_q_sl_ptr, *prop_q_ss_ptr, +mu_ud_save, LIGHT,
+                                      nsmearGauss, src, smearedGauge3D_src, seed_q));
+        } else if (do_kaon_sins) {
+          prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          {
+            PLEGMA_Propagator<float> dummy_sl(BOTH);
+            TIME(build_quark_prop_stoch(dummy_sl, *prop_q_ss_ptr, +mu_ud_save, LIGHT,
+                                        nsmearGauss, src, smearedGauge3D_src, seed_q));
+          }
+        }
+
+        // ---- Strange sector ----
+        //   prop_s_ss_d (+mu_s, SS): kaon_uins  (kaon 2pt + uins seq smear)
+        //   prop_s_sl_d (+mu_s, SL): kaon_sins  (sins fwd line)
+        std::unique_ptr<PLEGMA_Propagator<float>> prop_s_ss_d_ptr, prop_s_sl_d_ptr;
+        if (do_kaon_uins && do_kaon_sins) {
+          prop_s_sl_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          prop_s_ss_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          TIME(build_quark_prop_stoch(*prop_s_sl_d_ptr, *prop_s_ss_d_ptr, +mu_s,
+                                      STRANGE, nsmearGauss_s, src,
+                                      smearedGauge3D_src, seed_s));
+        } else if (do_kaon_uins) {
+          prop_s_ss_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          {
+            PLEGMA_Propagator<float> dummy_sl(BOTH);
+            TIME(build_quark_prop_stoch(dummy_sl, *prop_s_ss_d_ptr, +mu_s,
+                                        STRANGE, nsmearGauss_s, src,
+                                        smearedGauge3D_src, seed_sd));
+          }
+        } else if (do_kaon_sins) {
+          prop_s_sl_d_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+          {
+            PLEGMA_Propagator<float> dummy_ss(BOTH);
+            TIME(build_quark_prop_stoch(*prop_s_sl_d_ptr, dummy_ss, +mu_s,
+                                        STRANGE, nsmearGauss_s, src,
+                                        smearedGauge3D_src, seed_s));
+          }
+        }
+
+        // Restore light options after potential STRANGE updateOptions in kaon channels
+        updateOptions(LIGHT);
+        mu    = mu_ud_save;
+        mu_ud = mu_ud_save;
+        solver_up->UpdateSolver();
+
+        // ---- 2-point functions ----
+        if (do_pion) {
+          PLEGMA_Correlator<float> corr2(corr_space, src, maxQsq);
+          TIME(corr2.contractMesonsNew(*prop_q_ss_ptr, *prop_q_ss_ptr));
+          TIME(corr2.writeFile(twop_out + "_pion" + sample_tag, corr_file_format));
+        }
+        if (do_kaon_uins) {
+          PLEGMA_Correlator<float> corr2(corr_space, src, maxQsq);
+          TIME(corr2.contractMesonsNew(*prop_q_ss_ptr, *prop_s_ss_d_ptr));
+          TIME(corr2.writeFile(twop_out + "_kaon" + sample_tag, corr_file_format));
+        }
+
+        auto make_host_prop_backup = [&](std::unique_ptr<PLEGMA_Propagator<float>> &prop,
+                                         const char *label) {
+          if (!prop) return std::shared_ptr<PLEGMA_Propagator<float>>();
+          PLEGMA_printf("[MEM] backing up %s to HOST and releasing device copy before seq solves\n",
+                        label);
+          prop->unload();
+          auto backup = std::make_shared<PLEGMA_Propagator<float>>(HOST);
+          backup->copy(*prop, HOST);
+          prop.reset();
+          print_gpu_mem(label);
+          return backup;
+        };
+
+        // These forward lines are only needed again in the later flow/contraction
+        // phase, so keep HOST backups and release their device allocations before
+        // the memory-heavy sequential inversions.
+        auto prop_q_sl_backup = make_host_prop_backup(prop_q_sl_ptr, "after_q_sl_backup");
+        auto prop_s_sl_backup = make_host_prop_backup(prop_s_sl_d_ptr, "after_s_sl_backup");
+
+        if (spectator_periodic && do_pion) {
+          auto ap_ss_host = make_host_prop_backup(prop_q_ss_ptr, "AP_SS_host_before_P");
+          switch_light_boundary(false);
+          PLEGMA_printf("[FORWARD_BC] spectator P, same noise seed=%d\n", seed_q);
+          {
+            PLEGMA_Propagator<float> periodic_sl(BOTH);
+            prop_q_ss_ptr = std::make_unique<PLEGMA_Propagator<float>>(BOTH);
+            TIME(build_quark_prop_stoch(periodic_sl, *prop_q_ss_ptr, +mu_ud_save,
+                                        LIGHT, nsmearGauss, src, smearedGauge3D_src, seed_q));
+          }
+          {
+            // Keep the AP active line fixed. The spectator has just been solved
+            // with periodic temporal boundary conditions using the original source
+            // and noise. Write this unaligned AP-P contraction before changing P.
+            PLEGMA_Propagator<float> ap_ss(BOTH);
+            ap_ss.copy(*ap_ss_host, HOST);
+            ap_ss.load();
+            auto write_mixed = [&](const char *tag) {
+              PLEGMA_Correlator<float> corr(corr_space, src, maxQsq);
+              TIME(corr.contractMesonsNew(ap_ss, *prop_q_ss_ptr));
+              TIME(corr.writeFile(twop_out + tag + sample_tag, corr_file_format));
+            };
+            write_mixed("_mixed_raw_pion");
+            prop_q_ss_ptr->unload();
+            const size_t vol = HGC_localVolume;
+            const size_t spatial = HGC_localVolume3D;
+            float *p = prop_q_ss_ptr->H_elem();
+            const float *a = ap_ss_host->H_elem();
+            // Align the mixed-BC correlator to the established A-data convention:
+            // chi(t;ts) = -1 for GLOBAL lattice time t < source time ts, +1 otherwise.
+            // This is a source-wrap sign convention, NOT a correction to the P
+            // inverse, NOT a flow-time phase, and NOT removal of all thermal terms.
+            // Multiply the sink-smeared P spectator once, in physical basis, before
+            // constructing any sequential source. The AP active line is unchanged.
+            //
+            // Host propagator storage uses local lexicographic time. Convert
+            // with the Cartesian time coordinate, not the MPI rank number:
+            // temporal decomposition must preserve the single-rank chi(t;ts).
+            const int time_origin = HGC_procPosition[DIM_T] * HGC_localL[DIM_T];
+            for (size_t row = 0; row < 144; ++row)
+              for (size_t site = 0; site < vol; ++site) {
+                const int global_t = time_origin + static_cast<int>(site / spatial);
+                const float phase = (global_t < src[DIM_T]) ? -1.f : 1.f;
+                p[2*(row*vol+site)] *= phase;
+                p[2*(row*vol+site)+1] *= phase;
+              }
+            prop_q_ss_ptr->load();
+            write_mixed("_mixed_aligned_pion");
+            auto aligned_p_host = std::make_unique<PLEGMA_Propagator<float>>(HOST);
+            aligned_p_host->copy(*prop_q_ss_ptr, HOST);
+            // Independent C2 linearity control: contract AP against the actual
+            // mean spectator (AP + chi*P)/2. This remains a propagator-level direct
+            // contraction, rather than an arithmetic mean of completed correlators.
+            for (size_t i = 0; i < 144*vol*2; ++i) p[i] = 0.5f*(a[i]+p[i]);
+            prop_q_ss_ptr->load();
+            write_mixed("_even_direct_pion");
+            // The mean spectator above is a C2 control only. Restore chi*P before
+            // constructing sequential sources; AP active and seq inversions stay AP.
+            // Later C3 contractions inherit this phase through the sequential field.
+            // Do NOT multiply C2/C3 again in patterns, the writer, or old-A analysis.
+            prop_q_ss_ptr->copy(*aligned_p_host, HOST);
+            prop_q_ss_ptr->load();
+            PLEGMA_printf("[SPECTATOR_PHASE] chi(t)=-1 for global_t<source_t=%d; sequential_input=aligned_P\n",
+                          src[3]);
+          }
+          // chi changes the source convention only; all sequential inversions and
+          // active/operator flow still use AP. Patterns keeps its original API.
+          switch_light_boundary(true);
+        }
+
+        // ---- 3-point: Phase 1 – solve all seq props for this sample ----
+        const double seq_mu_light = -std::abs(mu_ud_save);
+
+        // First solve all channels that need q_ss as the sink-smeared forward
+        // propagator, then release q_ss before moving to s_ss-only channels.
+        if (do_pion) {
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_pion_uins" + sample_tag, prop_q_sl_backup, *prop_q_ss_ptr,
+                                LIGHT, seq_mu_light));
+        }
+        if (do_kaon_sins) {
+          const double seq_mu_s = -std::abs(mu_s);
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_kaon_sins" + sample_tag, prop_s_sl_backup, *prop_q_ss_ptr,
+                                STRANGE, seq_mu_s, true));
+        }
+        prop_q_ss_ptr.reset();
+        print_gpu_mem("after_q_ss_released");
+
+        if (do_kaon_uins) {
+          sample_seq_data.back().push_back(
+              solve_seq_channel("_kaon_uins" + sample_tag, prop_q_sl_backup, *prop_s_ss_d_ptr,
+                                LIGHT, seq_mu_light));
+        }
+        prop_s_ss_d_ptr.reset();
+        print_gpu_mem("after_s_ss_released");
+      } // noise sample loop
+
+      all_source_seq_data.push_back(std::move(source_seq_data));
+      free(src_tag);
+    } // source loop
+
+    // Free solver (MG + clover) only after all sources/samples/channels have
+    // been solved and copied to HOST memory.
+    solver_up.reset();
+    print_gpu_mem("after_solver_freed");
+
+    // Phase 2: FiveD + Wilson-flow contractions for all cached sources.
+    auto contract_cached_channel = [&](const SourceSeqData &source_seq_data,
+                                       const SeqChannelData &cd) {
+      site src = source_seq_data.src;
+      const std::string &threep_out = source_seq_data.threep_out;
+
+      PLEGMA_printf("\n--- contract_channel: src=(%02d,%02d,%02d,%02d) tag='%s' active_as_bwd=%d ---\n",
+                    src[0], src[1], src[2], src[3],
+                    cd.tag.c_str(), (int)cd.active_as_bwd);
+
+      const double epsilon     = FlowOutputSchedule::epsilon;
+      const double t0          = flow_t0;
+      const int    n_flow_save = flow_schedule->checkpoints();
+
+      for (size_t its = 0; its < tSinks.size(); ++its) {
+        const int dt_sink = tSinks[its];
+
+        // Load fwd prop: HOST float -> device double
+        PLEGMA_Propagator<double> prop_tmp_a(BOTH);
+        prop_tmp_a.copy(*cd.fwd_backup, HOST);
+        prop_tmp_a.load();
+
+        // Load seq prop: HOST float -> float device -> double device+host
+        PLEGMA_Propagator<double> seq_in_a(BOTH);
+        {
+          PLEGMA_Propagator<float> seq_f(BOTH);
+          seq_f.copy(*cd.seq_host[its], HOST);
+          seq_f.load();
+          seq_in_a.copy(seq_f);
+        } // seq_f freed
+
+        PLEGMA_Propagator<double> *in     = &prop_tmp_a;
+        PLEGMA_Propagator<double> *seq_in = &seq_in_a;
+
+        PLEGMA_Gauge<float> contractGauge(BOTH);
+        contractGauge.copy(gauge);
+        applyBoundaryConditions(contractGauge, true);
+
+        PLEGMA_Correlator<float> corr3_oneD(corr_space, src, maxQsq);
+
+        double t    = 0.0;
+        int    step = 0;
+
+        // nt=0 is omitted when a strict output lower bound is requested.
+        if (flow_schedule->save(0)) {
+          const std::string base = threep_out + cd.tag + "_dt"
+                                 + std::to_string(dt_sink) + "_tau00";
+          const std::string threep_name_local = base + "_local";
+          const std::string threep_name_oneD  = base + "_oneD";
+          const std::string threep_patterns   = base + "_patterns";
+
+          PLEGMA_Propagator<float> in_f(BOTH);
+          PLEGMA_Propagator<float> seq_in_f(BOTH);
+          in_f.copy(*in);
+          seq_in_f.copy(*seq_in);
+          PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
+          PLEGMA_Propagator<float> *fwd_contract = &in_f;
+          if (cd.active_as_bwd) {
+            in_f.conjugate();
+            in_f.apply_gamma(G5, LEFT);
+            bwd_contract = &in_f;
+            fwd_contract = &seq_in_f;
+          } else {
+            seq_in_f.conjugate();
+            seq_in_f.apply_gamma(G5, LEFT);
+          }
+          // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
+          //                                      0, {G1,G2,G3,G4,G5G4}));
+          TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
+                                                    contractGauge, 0, {G1,G2,G3,G4,G5G4}));
+          TIME(contractNucleonThrp_fiveD_patterns(
+              *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
+              maxQsq, threep_patterns, max_order));
+          // TIME(corr3.writeFile(threep_name_local, corr_file_format));
+          TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
+        }
+
+        // Flow output buffers
+        PLEGMA_Propagator<double> prop_tmp_b(BOTH);
+        PLEGMA_Propagator<double> *out = &prop_tmp_b;
+        PLEGMA_Propagator<double> seq_tmp_b(BOTH);
+        PLEGMA_Propagator<double> *seq_out = &seq_tmp_b;
+        PLEGMA_Gauge<double> gauge_flowed(BOTH);
+
+        TIME(resetFermionFlowSmearedGauge());
+        TIME(updateGaugeQuda(gauge, true));
+
+        for (int ic = 1; ic <= n_flow_save; ++ic) {
+          const int target_step  = flow_schedule->targetStep(ic);
+          const int chunk_steps  = target_step - step;
+          if (chunk_steps <= 0) continue;
+          const bool keep_flow_gauge = (ic < n_flow_save);
+
+          TIME(fermionFlow_PLEGMA(*out, *in, *seq_out, *seq_in, gauge_flowed,
+                                  gauge, chunk_steps, epsilon, t,
+                                  false, false, true, keep_flow_gauge, 1));
+          std::swap(in,  out);
+          std::swap(seq_in, seq_out);
+          step = target_step;
+          t    = step * epsilon;
+          PLEGMA_printf("  checkpoint %d/%d: step=%d  t=%.6f\n",
+                        ic, n_flow_save, step, t);
+
+          // Always evolve through every checkpoint; skip only the expensive
+          // 3pt contractions and their files outside the requested output set.
+          if (!flow_schedule->save(ic)) {
+            PLEGMA_printf("[FLOW_OUTPUT_SKIP] checkpoint=%d requested_tf_over_t0=%.12g\n",
+                          ic, flow_schedule->nominalRatio(ic));
+            continue;
+          }
+          {
+            char tau_tag[32];
+            snprintf(tau_tag, sizeof(tau_tag), "_tau%02d",
+                     (int)std::lround(t / (0.1 * t0)));
+            const std::string base = threep_out + cd.tag + "_dt"
+                                   + std::to_string(dt_sink) + tau_tag;
+            const std::string threep_name_local  = base + "_local";
+            const std::string threep_name_oneD   = base + "_oneD";
+            const std::string threep_patterns    = base + "_patterns";
+
+            contractGauge.copy(gauge_flowed);
+
+            PLEGMA_Propagator<float> in_f(BOTH);
+            PLEGMA_Propagator<float> seq_in_f(BOTH);
+            in_f.copy(*in);
+            seq_in_f.copy(*seq_in);
+            PLEGMA_Propagator<float> *bwd_contract = &seq_in_f;
+            PLEGMA_Propagator<float> *fwd_contract = &in_f;
+            if (cd.active_as_bwd) {
+              in_f.conjugate();
+              in_f.apply_gamma(G5, LEFT);
+              bwd_contract = &in_f;
+              fwd_contract = &seq_in_f;
+            } else {
+              seq_in_f.conjugate();
+              seq_in_f.apply_gamma(G5, LEFT);
+            }
+            // TIME(corr3.contractNucleonThrp_local(*bwd_contract, *fwd_contract,
+            //                                      0, {G1,G2,G3,G4,G5G4}));
+            TIME(corr3_oneD.contractNucleonThrp_oneD(*bwd_contract, *fwd_contract,
+                                                      contractGauge, 0, {G1,G2,G3,G4,G5G4}));
+            TIME(contractNucleonThrp_fiveD_patterns(
+                *bwd_contract, *fwd_contract, contractGauge, corr_space, src,
+                maxQsq, threep_patterns, max_order));
+            // TIME(corr3.writeFile(threep_name_local, corr_file_format));
+            TIME(corr3_oneD.writeFile(threep_name_oneD, corr_file_format));
+          }
+        } // checkpoint loop
+      }   // tsink loop
+    }; // contract_cached_channel
+
+    for (auto &source_seq_data : all_source_seq_data) {
+      for (auto &sample_cds : source_seq_data.sample_seq_data) {
+        for (auto &cd : sample_cds) {
+          contract_cached_channel(source_seq_data, cd);
+        }
+      }
+    }
+
+    all_source_seq_data.clear();
+    print_gpu_mem(pass_name);
+    }; // run_channel_pass
+
+    if (pionQ)
+      run_channel_pass(true, false, false, "pion");
+    if (kaonQ_uins)
+      run_channel_pass(false, true, false, "kaon_uins");
+    if (kaonQ_sins)
+      run_channel_pass(false, false, true, "kaon_sins");
+
+    while (not threads.empty()) {
+      threads.back().join();
+      threads.pop_back();
+    }
+  }
+  finalize();
+  return 0;
+}

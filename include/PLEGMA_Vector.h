@@ -69,6 +69,14 @@ namespace plegma {
     void absorb(PLEGMA_Propagator<Float> &prop, int nu , int c2);
 
     void absorb(PLEGMA_Propagator<Float> *prop, int nu , int c2);
+
+    /**
+       @brief Copies column (nu,c2) of a Host 4D propagator into this device 4D vector.
+       The Host copy must be current and this vector must have device storage.
+       Copies only local interior sites; no ghost exchange or basis conversion.
+       Inverse column mapping of PLEGMA_Propagator::absorbVectorToHost.
+     **/
+    void absorbFromHost(const PLEGMA_Propagator<Float> &prop, int nu, int c2);
     
     void dilutespin(PLEGMA_Vector<Float> &vecIn, int spin);
 

@@ -57,11 +57,11 @@ struct InVar{
 
 //Useful for unpacking tuple
 //Taken from https://stackoverflow.com/questions/7858817/unpacking-a-tuple-to-call-a-matching-function-pointer/7858971#7858971
-template<int ...> struct seq {};
+template<int ...> struct int_seq {};
 
 template<int N, int ...S> struct gens : gens<N-1, N-1, S...> {};
 
-template<int ...S> struct gens<0, S...>{ typedef seq<S...> type; };
+template<int ...S> struct gens<0, S...>{ typedef int_seq<S...> type; };
 
 template<class ...types>
 struct SolverTimings{
@@ -76,7 +76,7 @@ struct SolverTimings{
   }
 
   template<int...S>
-  void _append(double time,seq<S...>){
+  void _append(double time,int_seq<S...>){
     timings.push_back(std::make_tuple(time,std::get<S>(variables)->get()...));
   }
   void append(double time){
@@ -150,7 +150,7 @@ struct SolverTimings{
       t0 = MPI_Wtime()-t1;
       MPI_Allreduce(&t0, &t1, 1, MPI_Type(t0), MPI_MAX, HGC_fullComm);
       // Rescaling the time with the residual
-      t1=t1*log(tol)/log(solver.getSolverParam()->true_res);
+      t1=t1*log(solver.getSolverParam()->tol)/log(solver.getSolverParam()->true_res[0]);
       append(t1);
       PLEGMA_printf("MG_Tuner: new ");
       print(timings[timings.size()-1]);

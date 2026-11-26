@@ -4,6 +4,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+# Uncomment to use __device__ instead of __constant__ for gamma arrays
+# (needed on some GPU/driver combinations where __constant__ causes issues):
+add_compile_definitions(PLEGMA_CONST_TO_DEVICE)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 17)
 include(CheckIncludeFileCXX)
@@ -20,10 +23,8 @@ set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # add a directory for cmake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-enable_language(C)
-enable_language(CXX)
 
-project("PLEGMA" VERSION 0.0.1 LANGUAGES)
+project("PLEGMA" VERSION 0.0.1 LANGUAGES C CXX)
 
 # TODO: add authomatic download and compilation of QUDA
 set(QUDA_HOME "" CACHE PATH "path to QUDA")
@@ -96,7 +97,10 @@ endif(GIT_FOUND)
 
 include(ExternalProject)
 
-find_package(Boost)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
+  cmake_policy(SET CMP0167 NEW)
+endif()
+find_package(Boost QUIET)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 else()
@@ -126,7 +130,7 @@ set(GPU_ARCH ${DEFAULT_GPU_ARCH} CACHE STRING "set the GPU architecture (sm_20, 
 set_property(CACHE GPU_ARCH PROPERTY STRINGS sm_20 sm_21 sm_30 sm_35 sm_37 sm_50 sm_52 sm_60 sm_70 sm_80 sm_90)
 
 # max threads
-set(PLEGMA_MAX_THREADS 256 CACHE INT "maximum number of threads per block in tuner")
+set(PLEGMA_MAX_THREADS 256 CACHE STRING "maximum number of threads per block in tuner")
 mark_as_advanced(PLEGMA_MAX_THREADS)
 add_definitions(-DMAX_THREADS=${PLEGMA_MAX_THREADS})
 
@@ -159,6 +163,12 @@ set(PLEGMA_LIGHT_BARYONS FALSE CACHE BOOL "compile contractions for all light ba
 if(PLEGMA_LIGHT_BARYONS)
   add_definitions(-DPLEGMA_LIGHT_BARYONS)
 endif()
+# compile three-point functions with 3-derivative operators
+set(PLEGMA_THREEP_THREED TRUE CACHE BOOL "compile three-point function threD kernels")
+if(PLEGMA_THREEP_THREED)
+  add_definitions(-DPLEGMA_THREEP_THREED)
+endif()
+
 set(PLEGMA_SCATTERING_CONTRACTIONS FALSE CACHE BOOL "compile contractions for pi-N scattering")
 if (PLEGMA_SCATTERING_CONTRACTIONS)
   add_definitions(-DPLEGMA_SCATTERING_CONTRACTIONS)
@@ -268,7 +278,6 @@ mark_as_advanced(PLEGMA_RUN_TESTS)
 # everything below here is processing the setup
 #######################################################################
 # we need to check for some packages
-find_package(PythonInterp)
 
 if(${CMAKE_VERSION} VERSION_GREATER 3.7.99)
   find_package(CUDAWrapper)
@@ -410,6 +419,21 @@ add_definitions(-DMPI_COMMS)
 # COMPILER OPTIONS and BUILD types
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
+# CUDA 13 moved CCCL (thrust/cub/cuda::std) to include/cccl/ with no top-level
+# symlinks. nvcc auto-searches cccl/; g++ needs it added explicitly.
+# Normalize CUDA_INCLUDE_DIRS to resolve any embedded ".." (e.g. lib/../include).
+foreach(_cuda_inc ${CUDA_INCLUDE_DIRS})
+  get_filename_component(_cuda_inc_real "${_cuda_inc}" REALPATH)
+  if(EXISTS "${_cuda_inc_real}/cccl")
+    include_directories(SYSTEM "${_cuda_inc_real}/cccl")
+    # Add CUDA lib dir as rpath-link so the linker can resolve libhwloc's
+    # transitive DT_NEEDED on libcudart.so.13 (OpenMPI hwloc built with CUDA).
+    get_filename_component(_cuda_inc_parent "${_cuda_inc_real}" DIRECTORY)
+    set(CMAKE_EXE_LINKER_FLAGS
+        "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath-link,${_cuda_inc_parent}/lib")
+    break()
+  endif()
+endforeach()
 include_directories(include)
 include_directories(utils)
 include_directories(lib)

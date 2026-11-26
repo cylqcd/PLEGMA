@@ -192,6 +192,9 @@ namespace plegma {
       std::vector<std::string> d = {s};
       setGroups(d);
     }
+    void preparePatternMetadata(const std::string &group,
+                                const std::string &dataset,
+                                const std::string &descr, bool isZfac = false);
     void contractEigVecs(Float *ptr, int nvecs, size_t vec_size, bool dev_ptr);
 
     void contractPropEigVecs(PLEGMA_Propagator<Float> &prop1, Float *spinVals,

@@ -8,6 +8,7 @@ set (PLEGMA_OBJS
   PLEGMA_Field.cu
   PLEGMA_Su3field.cu
   PLEGMA_Random.cu
+  PLEGMA_prop_quda_offset.cu
   kernels/PLEGMA_baryons_NtoN.cu
   kernels/PLEGMA_baryons_NtoN_OS.cu
   kernels/PLEGMA_seqSourceNucleon.cu
@@ -19,11 +20,20 @@ set (PLEGMA_OBJS
   kernels/PLEGMA_mesons_noe_SIB.cu
   kernels/PLEGMA_mesons_noe_LIBE.cu
   kernels/PLEGMA_threep_oneD.cu
+)
+if(PLEGMA_THREEP_THREED)
+  LIST(APPEND PLEGMA_OBJS
   kernels/PLEGMA_threep_twoD.cu
-  kernels/PLEGMA_threep_threeD_part1.cu
-  kernels/PLEGMA_threep_threeD_part2.cu
-  kernels/PLEGMA_threep_threeD_part3.cu
-  kernels/PLEGMA_threep_threeD_part4.cu
+  kernels/PLEGMA_baryons_NtoN.cu
+  kernels/PLEGMA_seqSourceNucleon.cu
+    kernels/PLEGMA_threep_threeD_part1.cu
+    kernels/PLEGMA_threep_threeD_part2.cu
+    kernels/PLEGMA_threep_threeD_part3.cu
+    kernels/PLEGMA_threep_threeD_part4.cu
+  )
+endif()
+
+LIST(APPEND PLEGMA_OBJS
   kernels/PLEGMA_threep_wilsonLine.cu
   kernels/PLEGMA_threep_staple.cu
   kernels/PLEGMA_threep_qgq.cu	
@@ -62,6 +72,23 @@ if(PLEGMA_LIGHT_BARYONS)
     kernels/PLEGMA_baryons_RtoN.cu
     kernels/PLEGMA_baryons_RtoR.cu
     kernels/PLEGMA_baryons_deltas.cu
+  )
+endif()
+
+# --- Wilson flow for fermions (adjointFermionFlow_QUDA: experimental, not validated) ---
+LIST(APPEND PLEGMA_OBJS QUDA_wilson_flow.cu)
+
+# --- Higher-order covariant derivative contractions ---
+# Contracts up to 6th order using 5 directions (X, Y, Z, T+, T-).
+# Covers both connected (nucleon 3pt) and disconnected (quark loop) diagrams.
+# Also includes fast device-side QLoops accumulator (avoids repeated D2H transfers).
+option(PLEGMA_HIGHER_DERIV "Build higher-order covariant derivative contractions" OFF)
+if(PLEGMA_HIGHER_DERIV)
+  LIST(APPEND PLEGMA_OBJS
+    PLEGMA_fiveD.cu
+    PLEGMA_fiveD_QLoops.cu
+    kernels/PLEGMA_oneD.cu
+    kernels/contractG5_fast.cu
   )
 endif()
 

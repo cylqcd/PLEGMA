@@ -157,7 +157,7 @@ static void threep_twoD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
   int time_step = get_time_step(ps.tp.grid.x, ps.tp.block.x);
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
   size_t volume = corr.getVolSize()/t_size;
-  int extra=N_DIMS*(N_DIMS-1);
+  int extra=N_DIMS*N_DIMS;
   if(isZfac) extra*=N_SPINS*N_SPINS*N_COLS*N_COLS;
   size_t size = corr.getTotalSize()/extra/t_size*time_step;
   int site_size = corr.getSiteSize()/extra;
@@ -190,12 +190,14 @@ static void threep_twoD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
   if(error != cudaSuccess || h_partial_block==NULL) goto exit;
   for(int it=0; it < t_size; it+=time_step) {
     for(int et=0; et < extra; et++) {
-      int dir1 = (et/(N_DIMS-1)) % N_DIMS;
-      int dir2 = et % (N_DIMS-1);
-      if(dir2>=dir1) dir2++;
+      // int dir1 = (et/N_DIMS) % N_DIMS;
+      // int dir2 = et % N_DIMS;
+      // if(dir2>=dir1) dir2++;
+      int dir1 = et / N_DIMS;
+      int dir2 = et % N_DIMS;
       int mu=-1, nu=-1, c1=-1, c2=-1;
       if(isZfac) {
-	int tt = et/(N_DIMS*(N_DIMS-1));
+	int tt = et/(N_DIMS*N_DIMS);
 	mu=tt/N_SPINS/N_COLS/N_COLS;
 	nu=(tt/N_COLS/N_COLS)%N_SPINS;
 	c1=(tt/N_COLS)%N_COLS;
@@ -232,7 +234,7 @@ static void threep_twoD_host(ProfileStruct &ps, Float2<FloatC> *result, PLEGMA_C
   }
 
  exit:
-  hostFree(h_partial_block, alloc_size*sizeof(FloatC));
+  hostFree(h_partial_block, alloc_size*sizeof(Float2<FloatC>));
   device_free(d_partial_block);
   device_free(listGammas.array);
 }
@@ -249,13 +251,13 @@ void threep_twoD(PLEGMA_Correlator<FloatC> &corr,
     PLEGMA_error("Error maximum number of gamma matrices is 16");
 
   bool runFT = (corr.getCorrSpace() == MOMENTUM_SPACE);
-  int site_size = N_DIMS*(N_DIMS-1)*gammas.size();
+  int site_size = N_DIMS*N_DIMS*gammas.size();
 
   if(isZfac)
     site_size *= N_SPINS*N_SPINS*N_COLS*N_COLS;
   
   if(corr.getSiteSize() != site_size)
-    PLEGMA_error("Correlator siteSize do not match: %d != %d\n", corr.getSiteSize(), site_size);
+    PLEGMA_error("Correlator siteSize do not match aaaa: %d != %d\n", corr.getSiteSize(), site_size);
 
   site_size = gammas.size();
   ProfileStruct ps(HGC_localVolume3D, (runFT==true) ? site_size*sizeof(Float2<FloatC>) : 0);

@@ -3,6 +3,9 @@
 #include <invert_quda.h>
 #include <PLEGMA_BLAS.h>
 #include <multigrid.h>
+#include <blas_quda.h>
+#include <cmath>
+#include <memory>
 using namespace std;
 using namespace quda;
 
@@ -21,6 +24,7 @@ using namespace quda;
 namespace quda{
   void createDirac(Dirac *&d, Dirac *&dSloppy, Dirac *&dPre, QudaInvertParam &param, const bool pc_solve);
   void setDiracParam(DiracParam &diracParam, QudaInvertParam *inv_param, const bool pc);
+  QUDA_solver::QUDA_solver(double mu) : QUDA_solver(mu, 1) {}
 }
 
 static TimeProfile profileQUDA("QUDA"); 
@@ -90,52 +94,50 @@ void gFixingLandauOVR_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &
   gaugeOut.calculatePlaq();
 }
 
-void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,PLEGMA_Gauge<double> &gaugeIn, bool antiperiodic){
-
+void gSmear_QUDA(PLEGMA_Gauge<double> &gaugeOut,
+                PLEGMA_Gauge<double> &gaugeIn,
+                bool antiperiodic) {
   updateGaugeQuda(gaugeIn, antiperiodic);
 
   QudaGaugeParam gauge_param = newQudaGaugeParam();
   setGaugeParam(gauge_param);
   gauge_param.type = QUDA_SMEARED_LINKS;
-  gauge_param.reconstruct=QUDA_RECONSTRUCT_NO;
-  gauge_param.make_resident_gauge =0;
+  gauge_param.reconstruct = QUDA_RECONSTRUCT_NO;
+  gauge_param.make_resident_gauge = 0;
 
-  double* new_gauge[N_DIMS];
-  for(int i=0; i<N_DIMS; i++) hostMalloc(new_gauge[i], gaugeIn.Bytes_total()/N_DIMS);
-  
-  QudaGaugeObservableParam *obs_param = new QudaGaugeObservableParam[51];
+  const size_t bytes_per_direction = gaugeIn.Bytes_total() / N_DIMS;
+  double *new_gauge[N_DIMS];
+  for (int i = 0; i < N_DIMS; ++i)
+    hostMalloc(new_gauge[i], bytes_per_direction);
 
-  for (int i = 0; i < 51; i++) {
-    obs_param[i] = newQudaGaugeObservableParam();
-    obs_param[i].compute_polyakov_loop = QUDA_BOOLEAN_TRUE;
-    obs_param[i].compute_plaquette = QUDA_BOOLEAN_TRUE;
-    obs_param[i].compute_qcharge = QUDA_BOOLEAN_FALSE;
-    obs_param[i].su_project = QUDA_BOOLEAN_FALSE; 
- }
-  // We here set all the problem parameters for all possible smearing types.
+  QudaGaugeObservableParam obs_param[51];
+  for (auto &obs : obs_param) {
+    obs = newQudaGaugeObservableParam();
+    obs.compute_polyakov_loop = QUDA_BOOLEAN_TRUE;
+    obs.compute_plaquette = QUDA_BOOLEAN_TRUE;
+    obs.compute_qcharge = QUDA_BOOLEAN_FALSE;
+    obs.su_project = QUDA_BOOLEAN_FALSE;
+  }
+
   QudaGaugeSmearParam smear_param = newQudaGaugeSmearParam();
   smear_param.smear_type = QUDA_GAUGE_SMEAR_HYP;
   smear_param.n_steps = 1;
   smear_param.meas_interval = 1;
-  smear_param.alpha1 = 0.75;  // typical HYP values
+  smear_param.alpha1 = 0.75;
   smear_param.alpha2 = 0.60;
   smear_param.alpha3 = 0.30;
   smear_param.restart = QUDA_BOOLEAN_TRUE;
-  //smear_param.return_result = QUDA_BOOLEAN_TRUE;
- 
 
   performGaugeSmearQuda(&smear_param, obs_param);
   plaqQuda();
-
-
   saveGaugeQuda(new_gauge, &gauge_param);
-  
-  packGaugeToNormal(gaugeOut,new_gauge);
+
+  packGaugeToNormal(gaugeOut, new_gauge);
   gaugeOut.load();
   gaugeOut.calculatePlaq();
 
-  for(int i=0; i<N_DIMS; i++) hostFree(new_gauge[i], gaugeIn.Bytes_total()/N_DIMS);
-
+  for (int i = 0; i < N_DIMS; ++i)
+    hostFree(new_gauge[i], bytes_per_direction);
 }
 
 void wilsonFlow_QUDA(PLEGMA_Gauge<double> &gaugeOut,
@@ -334,6 +336,45 @@ QUDA_solver::QUDA_solver(double mu, int nsrc) {
   profiler->TPSTOP(QUDA_PROFILE_TOTAL);
   profiler->Print();
   profiler->TPRESET();
+}
+
+
+// Optional full-M check of the float sequential field stored on HOST.
+// Call sites remain guarded by --check-seq-residual (default 0).
+void QUDA_solver::check_stored_seq_column(PLEGMA_Vector<float> &stored,
+                                          PLEGMA_Vector<double> &source, int column,
+                                          double run_mu, bool stored_is_physical) {
+    qudaDeviceSynchronize();
+    DiracParam params{};
+    setDiracParam(params, &inv_param, false);
+    auto full = std::unique_ptr<Dirac>(Dirac::create(params));
+    ColorSpinorParam fp(x.at(0));
+    fp.create = QUDA_ZERO_FIELD_CREATE;
+    std::vector<ColorSpinorField> input, output, rhs;
+    input.emplace_back(fp); output.emplace_back(fp); rhs.emplace_back(fp);
+    PLEGMA_Vector<double> physical, twisted;
+    physical.copy(stored);
+    // Only the temporary validation vector is converted to the solver basis.
+    // With --rotate=0 the saved field is already in that basis.
+    if (stored_is_physical)
+      twisted.rotateToPhysicalBasis(physical, -run_mu / std::abs(run_mu));
+    else
+      twisted.copy(physical);
+    qudaDeviceSynchronize();
+    twisted.copyToQUDA(input, false);
+    source.copyToQUDA(rhs, false);
+    qudaDeviceSynchronize();
+    full->M(output, input);
+    qudaDeviceSynchronize();
+    if (inv_param.mass_normalization == QUDA_MASS_NORMALIZATION ||
+        inv_param.mass_normalization == QUDA_ASYMMETRIC_MASS_NORMALIZATION)
+      blas::ax(1 / (2 * inv_param.kappa), output.at(0));
+    blas::axpy(-1.0, rhs.at(0), output.at(0));
+    qudaDeviceSynchronize();
+    double residual = std::sqrt(blas::norm2(output.at(0)) / blas::norm2(rhs.at(0)));
+    PLEGMA_printf("[SEQUENTIAL_STORED_RESIDUAL] column=%d relative=%.16e\n", column, residual);
+    if (!std::isfinite(residual) || residual > 1e-5)
+      PLEGMA_error("Stored float sequential column %d fails full-equation gate: %.16e", column, residual);
 }
 
 
